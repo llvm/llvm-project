@@ -1,5 +1,5 @@
-# RUN: dsymutil --linker=llvm -f -o - -oso-prepend-path=%p/../ -y %s | llvm-dwarfdump --verify - | FileCheck -check-prefixes=VERIFY %s
-# RUN: dsymutil --linker=llvm -f -o - -oso-prepend-path=%p/../ -y %s | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/../ -y %s | llvm-dwarfdump --verify - | FileCheck -check-prefixes=VERIFY %s
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/../ -y %s | llvm-dwarfdump -a - | FileCheck %s
 
 # This test checks that types from several object files are
 # uniqued(moved into the artificial compile unit for types).
@@ -132,11 +132,11 @@ CHECK: 0x[[STRING:[0-9a-f]*]]: DW_TAG_typedef{{.*[[:space:]].*}}DW_AT_type{{.*}}
 
 CHECK:DW_TAG_reference_type
 
-CHECK: 0x[[CONST_STR_REF:[0-9a-f]*]]: DW_TAG_reference_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[CONST_STRING:[0-9a-f]*]] "const string"
+CHECK: 0x[[CONST_STR_REF:[0-9a-f]*]]: DW_TAG_reference_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[CONST_STRING:[0-9a-f]*]] "const std::__1::string"
 
 CHECK:DW_TAG_const_type
 
-CHECK: 0x[[CONST_STRING]]: DW_TAG_const_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[STRING]] "string"
+CHECK: 0x[[CONST_STRING]]: DW_TAG_const_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[STRING]] "std::__1::string"
 
 
 CHECK: Compile Unit:
@@ -148,7 +148,7 @@ CHECK: DW_AT_high_pc
 CHECK: DW_AT_name{{.*}}"PrintSize"
 CHECK: DW_TAG_formal_parameter
 CHECK: DW_AT_name{{.*}}"String"
-CHECK: DW_AT_type{{.*}}0x00000000[[CONST_STR_REF]] "const string &"
+CHECK: DW_AT_type{{.*}}0x00000000[[CONST_STR_REF]] "const std::__1::string &"
 
 CHECK: Compile Unit:
 CHECK: DW_TAG_compile_unit

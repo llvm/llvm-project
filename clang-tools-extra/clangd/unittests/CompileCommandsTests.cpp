@@ -18,6 +18,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -370,9 +371,8 @@ TEST(ArgStripperTest, OrderDependent) {
 }
 
 TEST(PrintArgvTest, All) {
-  std::vector<llvm::StringRef> Args = {
-      "one", "two", "thr ee", "f\"o\"ur", "fi\\ve", "$"
-  };
+  std::vector<llvm::StringRef> Args = {"one",      "two",    "thr ee",
+                                       "f\"o\"ur", "fi\\ve", "$"};
   const char *Expected = R"(one two "thr ee" "f\"o\"ur" "fi\\ve" $)";
   EXPECT_EQ(Expected, printArgv(Args));
 }
@@ -450,6 +450,101 @@ TEST(CommandMangler, PathsAsPositional) {
   Mangler(Cmd, "a.cc");
   EXPECT_THAT(Cmd.CommandLine, Contains("foo"));
 }
+
+TEST(CommandMangler, RespectsOriginalResourceDir) {
+  auto Mangler = CommandMangler::forTests();
+  Mangler.ResourceDir = testPath("fake/resources");
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "-resource-dir", testPath("true/resources"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("-resource-dir " + testPath("true/resources")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/resources"))));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "-resource-dir=" + testPath("true/resources"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("-resource-dir=" + testPath("true/resources")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/resources"))));
+  }
+}
+
+TEST(CommandMangler, RespectsOriginalSysroot) {
+  auto Mangler = CommandMangler::forTests();
+  Mangler.Sysroot = testPath("fake/sysroot");
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "-isysroot", testPath("true/sysroot"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("-isysroot " + testPath("true/sysroot")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/sysroot"))));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "-isysroot" + testPath("true/sysroot"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("-isysroot" + testPath("true/sysroot")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/sysroot"))));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "--sysroot", testPath("true/sysroot"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("--sysroot " + testPath("true/sysroot")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/sysroot"))));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang++", "--sysroot=" + testPath("true/sysroot"),
+                       "foo.cc"};
+    Mangler(Cmd, "foo.cc");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("--sysroot=" + testPath("true/sysroot")));
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                Not(HasSubstr(testPath("fake/sysroot"))));
+  }
+}
+
+TEST(CommandMangler, StdLatestFlag) {
+  const auto Mangler = CommandMangler::forTests();
+  tooling::CompileCommand Cmd;
+  Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
+  Mangler(Cmd, "/Users/foo.cc");
+  // Check that the /std:c++latest flag is not dropped
+  EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+}
+
+TEST(CommandMangler, StdLatestFlag_Inference) {
+  const auto Mangler = CommandMangler::forTests();
+  tooling::CompileCommand Cmd;
+  Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
+  Mangler(Cmd, "/Users/foo.hpp");
+  // Check that the /std:c++latest flag is not dropped during inference
+  EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

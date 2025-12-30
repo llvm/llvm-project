@@ -107,7 +107,7 @@ define <2 x i8> @mul_x_selectp2_vec(<2 x i8> %xx, i1 %c) {
 define i8 @shl_add_log_may_cause_poison_pr62175_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_add_log_may_cause_poison_pr62175_fail(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 4, [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[SHL]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[Y:%.*]], [[SHL]]
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ;
   %shl = shl i8 4, %x

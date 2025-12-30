@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: minu
 
 define zeroext i8 @f(ptr noalias nocapture %src) nounwind readonly {

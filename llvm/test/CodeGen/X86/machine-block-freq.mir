@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=x86_64-gnu-linux --passes='print<machine-block-freq>' -filetype=null 2>&1 %s | FileCheck %s
+
+---
+name:            is_odd
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    liveins: $edi
+  
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY killed %0
+    %4:gr32 = MOV32ri 2
+    $eax = COPY %1
+    CDQ implicit-def $eax, implicit-def $edx, implicit $eax
+    IDIV32r %4, implicit-def $eax, implicit-def $edx, implicit-def $eflags, implicit $eax, implicit $edx
+    %5:gr32 = COPY $edx
+    CMP32ri %5, 1, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+  
+  bb.1:
+    %7:gr32 = MOV32ri 1
+    $eax = COPY %7
+    RET64 implicit $eax
+  
+  bb.2:
+    %6:gr32 = MOV32r0 implicit-def $eflags
+    $eax = COPY %6
+    RET64 implicit $eax
+...
+
+# CHECK: block-frequency-info: is_odd
+# CHECK:  - BB1: float = 0.5
+# CHECK:  - BB2: float = 0.5

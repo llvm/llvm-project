@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s
 
 ; Checks that we don't crash when code produces a build_vector with two undef operands.
 

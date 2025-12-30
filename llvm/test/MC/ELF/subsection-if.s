@@ -1,8 +1,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 # RUN: llvm-readelf -x .text %t | FileCheck %s
-# RUN: not llvm-mc -filetype=obj -triple=x86_64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: llvm-mc -filetype=obj -triple=x86_64 --defsym ERR=1 %s -o %t1
+# RUN: llvm-readelf -x .text %t1 | FileCheck %s --check-prefix=CHECK1
 
 # CHECK: 0x00000000 9090
+# CHECK1: 0x00000000 90909090 90
 
 .subsection 1
 661:

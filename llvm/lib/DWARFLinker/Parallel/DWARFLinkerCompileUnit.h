@@ -201,7 +201,7 @@ public:
     bool setPlacementIfUnset(DieOutputPlacement Placement) {
       auto InputData = Flags.load();
       if ((InputData & 0x7) == NotSet)
-        if (Flags.compare_exchange_weak(InputData, (InputData | Placement)))
+        if (Flags.compare_exchange_strong(InputData, (InputData | Placement)))
           return true;
 
       return false;
@@ -401,8 +401,9 @@ public:
   const RangesTy &getFunctionRanges() const { return Ranges; }
 
   /// Clone and emit this compilation unit.
-  Error cloneAndEmit(std::optional<Triple> TargetTriple,
-                     TypeUnit *ArtificialTypeUnit);
+  Error
+  cloneAndEmit(std::optional<std::reference_wrapper<const Triple>> TargetTriple,
+               TypeUnit *ArtificialTypeUnit);
 
   /// Clone and emit debug locations(.debug_loc/.debug_loclists).
   Error cloneAndEmitDebugLocations();
@@ -422,7 +423,7 @@ public:
            BumpPtrAllocator &Allocator, TypeUnit *ArtificialTypeUnit);
 
   // Clone and emit line table.
-  Error cloneAndEmitLineTable(Triple &TargetTriple);
+  Error cloneAndEmitLineTable(const Triple &TargetTriple);
 
   /// Clone attribute location axpression.
   void cloneDieAttrExpression(const DWARFExpression &InputExpression,

@@ -9,6 +9,7 @@ set(CLANG_TOOLS_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 
 llvm_canonicalize_cmake_booleans(
   CLANG_TIDY_ENABLE_STATIC_ANALYZER
+  CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
   CLANG_PLUGIN_SUPPORT
   LLVM_INSTALL_TOOLCHAIN_ONLY
   )
@@ -28,9 +29,6 @@ configure_lit_site_cfg(
   )
 
 set(CLANG_TOOLS_TEST_DEPS
-  # For the clang-apply-replacements test that uses clang-rename.
-  clang-rename
-
   # For the clang-doc tests that emit bitcode files.
   llvm-bcanalyzer
 
@@ -53,13 +51,11 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-resource-headers
 
   clang-tidy
-  # Clang-tidy tests need clang for building modules.
-  clang
 )
 
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS
-  FileCheck count not
+  FileCheck count not split-file
 )
 foreach(dep ${LLVM_UTILS_DEPS})
   if(TARGET ${dep})
@@ -67,41 +63,31 @@ foreach(dep ${LLVM_UTILS_DEPS})
   endif()
 endforeach()
 
-if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  if (NOT WIN32 OR NOT LLVM_LINK_LLVM_DYLIB)
-    llvm_add_library(
-        CTTestTidyModule
-        MODULE clang-tidy/CTTestTidyModule.cpp
-        PLUGIN_TOOL clang-tidy
-        DEPENDS clang-tidy-headers)
-  endif()
+if (NOT WIN32 OR NOT LLVM_LINK_LLVM_DYLIB)
+  llvm_add_library(
+      CTTestTidyModule
+      MODULE clang-tidy/CTTestTidyModule.cpp
+      PLUGIN_TOOL clang-tidy)
+endif()
 
-  if(CLANG_BUILT_STANDALONE)
-    # LLVMHello library is needed below
-    if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Transforms/Hello
-       AND NOT TARGET LLVMHello)
-      add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Transforms/Hello
-        lib/Transforms/Hello)
+if(TARGET CTTestTidyModule)
+    list(APPEND CLANG_TOOLS_TEST_DEPS CTTestTidyModule)
+    target_include_directories(CTTestTidyModule PUBLIC BEFORE "${CLANG_TOOLS_SOURCE_DIR}")
+    if(CLANG_PLUGIN_SUPPORT AND (WIN32 OR CYGWIN))
+      set(LLVM_LINK_COMPONENTS
+        Support
+      )
     endif()
-  endif()
-
-  if(TARGET CTTestTidyModule)
-      list(APPEND CLANG_TOOLS_TEST_DEPS CTTestTidyModule LLVMHello)
-      target_include_directories(CTTestTidyModule PUBLIC BEFORE "${CLANG_TOOLS_SOURCE_DIR}")
-      if(CLANG_PLUGIN_SUPPORT AND (WIN32 OR CYGWIN))
-        set(LLVM_LINK_COMPONENTS
-          Support
-        )
-      endif()
-  endif()
 endif()
 
 add_lit_testsuite(check-clang-extra "Running clang-tools-extra/test"
    ${CMAKE_CURRENT_BINARY_DIR}
    DEPENDS ${CLANG_TOOLS_TEST_DEPS}
    )
-set_target_properties(check-clang-extra PROPERTIES FOLDER "Clang extra tools' tests")
 
 add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}
+   SKIP "^clang-doc"
   )
+
+add_subdirectory(clang-doc)

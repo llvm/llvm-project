@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/Utility/Scalar.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
@@ -143,7 +144,7 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsFloatingPointType(bool &is_complex) const;
 
   bool IsFunctionType() const;
 
@@ -262,6 +263,12 @@ public:
   size_t GetPointerByteSize() const;
   /// \}
 
+  unsigned GetPtrAuthKey() const;
+
+  unsigned GetPtrAuthDiscriminator() const;
+
+  bool GetPtrAuthAddressDiversity() const;
+
   /// Accessors.
   /// \{
 
@@ -269,9 +276,16 @@ public:
   /// TypeSystem::TypeSystemSPWrapper can be compared for equality.
   TypeSystemSPWrapper GetTypeSystem() const;
 
+  template <typename TypeSystemType>
+  std::shared_ptr<TypeSystemType> GetTypeSystem() const {
+    return GetTypeSystem().dyn_cast_or_null<TypeSystemType>();
+  }
+
   ConstString GetTypeName(bool BaseOnly = false) const;
 
   ConstString GetDisplayTypeName() const;
+
+  ConstString GetMangledTypeName() const;
 
   uint32_t
   GetTypeInfo(CompilerType *pointee_or_element_compiler_type = nullptr) const;
@@ -369,6 +383,12 @@ public:
 
   /// Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) const;
+
+  /// Return a new CompilerType adds a ptrauth modifier from the given 32-bit
+  /// opaque payload to this type if this type is valid and the type system
+  /// supports ptrauth modifiers, else return an invalid type. Note that this
+  /// does not check if this type is a pointer.
+  CompilerType AddPtrAuthModifier(uint32_t payload) const;
   /// \}
 
   /// Exploring the type.
@@ -376,18 +396,19 @@ public:
   struct IntegralTemplateArgument;
 
   /// Return the size of the type in bytes.
-  std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
+  llvm::Expected<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
   /// Return the size of the type in bits.
-  std::optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
+  llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 
   std::optional<size_t> GetTypeBitAlign(ExecutionContextScope *exe_scope) const;
 
-  uint32_t GetNumChildren(bool omit_empty_base_classes,
-                          const ExecutionContext *exe_ctx) const;
+  llvm::Expected<uint32_t>
+  GetNumChildren(bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) const;
 
   lldb::BasicType GetBasicTypeEnumeration() const;
 
@@ -415,13 +436,14 @@ public:
   CompilerType GetVirtualBaseClassAtIndex(size_t idx,
                                           uint32_t *bit_offset_ptr) const;
 
-  uint32_t GetIndexOfFieldWithName(const char *name,
-                                   CompilerType *field_compiler_type = nullptr,
-                                   uint64_t *bit_offset_ptr = nullptr,
-                                   uint32_t *bitfield_bit_size_ptr = nullptr,
-                                   bool *is_bitfield_ptr = nullptr) const;
+  CompilerDecl GetStaticFieldWithName(llvm::StringRef name) const;
 
-  CompilerType GetChildCompilerTypeAtIndex(
+  llvm::Expected<CompilerType>
+  GetDereferencedType(ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) const;
+
+  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,
       std::string &child_name, uint32_t &child_byte_size,
@@ -432,19 +454,26 @@ public:
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(llvm::StringRef name,
-                                   bool omit_empty_base_classes) const;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(llvm::StringRef name,
+                          bool omit_empty_base_classes) const;
 
   /// Lookup a child member given a name. This function will match member names
   /// only and will descend into "clang_type" children in search for the first
   /// member in this class, or any base class that matches "name".
+  ///
+  /// \param child_indexes returns an index path for the result.
+  /// \returns 0 if unsuccessful, otherwise the length of the index path.
+  ///
   /// TODO: Return all matches for a given name by returning a
-  /// vector<vector<uint32_t>>
-  /// so we catch all names that match a given child name, not just the first.
+  /// vector<vector<uint32_t>> so we catch all names that match a
+  /// given child name, not just the first.
   size_t
   GetIndexOfChildMemberWithName(llvm::StringRef name,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
+
+  CompilerType GetDirectNestedTypeWithName(llvm::StringRef name) const;
 
   /// Return the number of template arguments the type has.
   /// If expand_pack is true, then variadic argument packs are automatically
@@ -525,7 +554,7 @@ bool operator==(const CompilerType &lhs, const CompilerType &rhs);
 bool operator!=(const CompilerType &lhs, const CompilerType &rhs);
 
 struct CompilerType::IntegralTemplateArgument {
-  llvm::APSInt value;
+  Scalar value;
   CompilerType type;
 };
 

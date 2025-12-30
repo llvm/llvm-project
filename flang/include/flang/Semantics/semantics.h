@@ -9,13 +9,16 @@
 #ifndef FORTRAN_SEMANTICS_SEMANTICS_H_
 #define FORTRAN_SEMANTICS_SEMANTICS_H_
 
+#include "module-dependences.h"
+#include "program-tree.h"
 #include "scope.h"
 #include "symbol.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -64,7 +67,8 @@ using ConstructStack = std::vector<ConstructNode>;
 class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
-      const common::LanguageFeatureControl &, parser::AllCookedSources &);
+      const common::LanguageFeatureControl &, const common::LangOptions &,
+      parser::AllCookedSources &);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {
@@ -72,7 +76,8 @@ public:
   }
   const common::LanguageFeatureControl &languageFeatures() const {
     return languageFeatures_;
-  };
+  }
+  const common::LangOptions &langOptions() const { return langOpts_; }
   int GetDefaultKind(TypeCategory) const;
   int doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
@@ -105,9 +110,19 @@ public:
   }
   Scope &globalScope() { return globalScope_; }
   Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
+  Scope *currentHermeticModuleFileScope() {
+    return currentHermeticModuleFileScope_;
+  }
+  void set_currentHermeticModuleFileScope(Scope *scope) {
+    currentHermeticModuleFileScope_ = scope;
+  }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
+  ModuleDependences &moduleDependences() { return moduleDependences_; }
+  std::map<const Symbol *, SourceName> &moduleFileOutputRenamings() {
+    return moduleFileOutputRenamings_;
+  }
 
   SemanticsContext &set_location(
       const std::optional<parser::CharBlock> &location) {
@@ -139,11 +154,14 @@ public:
     warnOnNonstandardUsage_ = x;
     return *this;
   }
+  SemanticsContext &set_maxErrors(size_t x) {
+    maxErrors_ = x;
+    return *this;
+  }
   SemanticsContext &set_warningsAreErrors(bool x) {
     warningsAreErrors_ = x;
     return *this;
   }
-
   SemanticsContext &set_debugModuleWriter(bool x) {
     debugModuleWriter_ = x;
     return *this;
@@ -151,6 +169,8 @@ public:
 
   const DeclTypeSpec &MakeNumericType(TypeCategory, int kind = 0);
   const DeclTypeSpec &MakeLogicalType(int kind = 0);
+
+  std::size_t maxErrors() const { return maxErrors_; }
 
   bool AnyFatalError() const;
 
@@ -180,9 +200,69 @@ public:
     return message;
   }
 
+  template <typename... A>
+  parser::Message *Warn(parser::Messages &messages,
+      common::LanguageFeature feature, parser::CharBlock at, A &&...args) {
+    return messages.Warn(IsInModuleFile(at), languageFeatures_, feature, at,
+        std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::Messages &messages,
+      common::UsageWarning warning, parser::CharBlock at, A &&...args) {
+    return messages.Warn(IsInModuleFile(at), languageFeatures_, warning, at,
+        std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::ContextualMessages &messages,
+      common::LanguageFeature feature, parser::CharBlock at, A &&...args) {
+    return messages.Warn(IsInModuleFile(at), languageFeatures_, feature, at,
+        std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::ContextualMessages &messages,
+      common::UsageWarning warning, parser::CharBlock at, A &&...args) {
+    return messages.Warn(IsInModuleFile(at), languageFeatures_, warning, at,
+        std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::ContextualMessages &messages,
+      common::LanguageFeature feature, A &&...args) {
+    return messages.Warn(IsInModuleFile(messages.at()), languageFeatures_,
+        feature, messages.at(), std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::ContextualMessages &messages,
+      common::UsageWarning warning, A &&...args) {
+    return messages.Warn(IsInModuleFile(messages.at()), languageFeatures_,
+        warning, messages.at(), std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(
+      common::LanguageFeature feature, parser::CharBlock at, A &&...args) {
+    return Warn(messages_, feature, at, std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(
+      common::UsageWarning warning, parser::CharBlock at, A &&...args) {
+    return Warn(messages_, warning, at, std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(common::LanguageFeature feature, A &&...args) {
+    CHECK(location_);
+    return Warn(feature, *location_, std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(common::UsageWarning warning, A &&...args) {
+    CHECK(location_);
+    return Warn(warning, *location_, std::forward<A>(args)...);
+  }
+
+  void EmitMessages(llvm::raw_ostream &);
+
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
   void UpdateScopeIndex(Scope &, parser::CharBlock);
+  void DumpScopeIndex(llvm::raw_ostream &) const;
 
   bool IsInModuleFile(parser::CharBlock) const;
 
@@ -213,8 +293,10 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
-  void UsePPCBuiltinTypesModule();
   const Scope &GetCUDABuiltinsScope();
+  const Scope &GetCUDADeviceScope();
+
+  void UsePPCBuiltinTypesModule();
   void UsePPCBuiltinsModule();
   Scope *GetPPCBuiltinTypesScope() { return ppcBuiltinTypesScope_; }
   const Scope *GetPPCBuiltinsScope() const { return ppcBuiltinsScope_; }
@@ -247,6 +329,14 @@ public:
   // behavior.
   CommonBlockList GetCommonBlocks() const;
 
+  void NoteDefinedSymbol(const Symbol &);
+  bool IsSymbolDefined(const Symbol &) const;
+
+  void DumpSymbols(llvm::raw_ostream &);
+
+  // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
+  ProgramTree &SaveProgramTree(ProgramTree &&);
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -255,12 +345,13 @@ private:
       std::multimap<parser::CharBlock, Scope &, ScopeIndexComparator>;
   ScopeIndex::iterator SearchScopeIndex(parser::CharBlock);
 
-  void CheckIndexVarRedefine(
+  parser::Message *CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   void CheckError(const Symbol &);
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl &languageFeatures_;
+  const common::LangOptions &langOpts_;
   parser::AllCookedSources &allCookedSources_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
@@ -275,8 +366,10 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  Scope *currentHermeticModuleFileScope_{nullptr};
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
+  std::size_t maxErrors_{0};
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
   struct IndexVarInfo {
@@ -290,17 +383,23 @@ private:
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
   Scope *ppcBuiltinTypesScope_{nullptr}; // module __Fortran_PPC_types
   std::optional<const Scope *> cudaBuiltinsScope_; // module __CUDA_builtins
+  std::optional<const Scope *> cudaDeviceScope_; // module cudadevice
   const Scope *ppcBuiltinsScope_{nullptr}; // module __ppc_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
+  ModuleDependences moduleDependences_;
+  std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
+  UnorderedSymbolSet isDefined_;
+  std::list<ProgramTree> programTrees_;
 };
 
 class Semantics {
 public:
-  explicit Semantics(SemanticsContext &context, parser::Program &program,
-      bool debugModuleWriter = false)
-      : context_{context}, program_{program} {
-    context.set_debugModuleWriter(debugModuleWriter);
+  explicit Semantics(SemanticsContext &context, parser::Program &program)
+      : context_{context}, program_{program} {}
+  Semantics &set_hermeticModuleFileOutput(bool yes = true) {
+    hermeticModuleFileOutput_ = yes;
+    return *this;
   }
 
   SemanticsContext &context() const { return context_; }
@@ -309,13 +408,14 @@ public:
     return context_.FindScope(where);
   }
   bool AnyFatalError() const { return context_.AnyFatalError(); }
-  void EmitMessages(llvm::raw_ostream &) const;
+  void EmitMessages(llvm::raw_ostream &);
   void DumpSymbols(llvm::raw_ostream &);
   void DumpSymbolsSources(llvm::raw_ostream &) const;
 
 private:
   SemanticsContext &context_;
   parser::Program &program_;
+  bool hermeticModuleFileOutput_{false};
 };
 
 // Base class for semantics checkers.

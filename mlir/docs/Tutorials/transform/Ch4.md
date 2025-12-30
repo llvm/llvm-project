@@ -27,7 +27,7 @@ directly within the transform dialect.
 ## Simple match
 
 Let us reconsider the “fully connected layer” example from [Chapter
-1](Ch1.md#chaining-transformations-with-handles), reproduced below for
+1](Ch1.md/#chaining-transformations-with-handles), reproduced below for
 convenience.
 
 
@@ -42,13 +42,13 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
             outs(%output: tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise addition.
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
   %c0f = arith.constant 0.0 : f32
-  %relued = linalg.elemwise_binary { fun = #linalg.binary_fn<max_signed> }
+  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
     ins(%biased, %c0f : tensor<512x512xf32>, f32)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
@@ -59,7 +59,7 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
 
 In Chapter 1, we were calling the test transform interpreter pass with
 additional arguments, `bind-first-extra-to-ops=linalg.matmul
-bind-second-extra-to-ops=linalg.elemwise_binary`, to provide initial
+bind-second-extra-to-ops=linalg.elementwise`, to provide initial
 associations for operation handles. Instead, we can use match operations to
 discover relevant operations in the payload IR. Match operations can be combined
 with “regular” transform operations using, e.g., the
@@ -97,7 +97,7 @@ module @transforms attributes { transform.with_named_sequence } {
   // rewriter sequence on success.
   transform.named_sequence @match_elemwise(
       %entry: !transform.any_op {transform.readonly}) -> !transform.any_op {
-    transform.match.operation_name %entry ["linalg.elemwise_binary"]
+    transform.match.operation_name %entry ["linalg.elementwise"]
       : !transform.any_op
     transform.yield %entry : !transform.any_op
   }
@@ -110,13 +110,13 @@ module @transforms attributes { transform.with_named_sequence } {
   // This is a rewriter sequence.
   transform.named_sequence @print_elemwise(
       %elemwise_binary: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand
+    transform.debug.emit_remark_at
       %elemwise_binary, "elementwise binary" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_matmul(
       %matmul: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %matmul, "matmul" : !transform.any_op
+    transform.debug.emit_remark_at %matmul, "matmul" : !transform.any_op
     transform.yield
   }
 }
@@ -127,7 +127,7 @@ module @transforms attributes { transform.with_named_sequence } {
 This script can be executed using the non-test interpreter pass running on the
 root operation of the translation unit without additional flags: `mlir-opt
 --transform-interpreter`. It will emit corresponding remarks at
-`linalg.elemwise_binary` and `linalg.matmul` operations. In debug builds, the
+`linalg.elementwise` and `linalg.matmul` operations. In debug builds, the
 infrastructure provides a convenient method to understand the matching process
 by passing `-debug-only=transform-matcher` to `mlir-opt` or a derived tool. It
 will print the silenceable failure messages produced by the match operations
@@ -169,7 +169,7 @@ transform.named_sequence @match_matmul_elemwise(
     %last: !transform.any_op {transform.readonly})
     -> (!transform.any_op, !transform.any_op, !transform.any_op) {
   // The last operation must be an elementwise binary.
-  transform.match.operation_name %last ["linalg.elemwise_binary"]
+  transform.match.operation_name %last ["linalg.elementwise"]
     : !transform.any_op
   // Its first operand must be defined by another operation, to which we
   // will get a handle here. We are guaranteed that the first operand exists
@@ -179,7 +179,7 @@ transform.named_sequence @match_matmul_elemwise(
   %middle = transform.get_producer_of_operand %last[0]
     : (!transform.any_op) -> !transform.any_op
   // The defining operation must itself be an elementwise binary.
-  transform.match.operation_name %middle ["linalg.elemwise_binary"]
+  transform.match.operation_name %middle ["linalg.elementwise"]
     : !transform.any_op
   // And the first operand of that operation must be defined by yet another
   // operation.
@@ -205,7 +205,7 @@ transform.named_sequence @__transform_main(
     %root: !transform.any_op {transform.readonly}) {
   // Collect groups of operations that match the criteria specified in the
   // named sequence.
-  %matmul, %el1, %el2 = transform.collect_matching @match_matmul_elemwise in %root 
+  %matmul, %el1, %el2 = transform.collect_matching @match_matmul_elemwise in %root
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
   %elemwise = transform.merge_handles %el1, %el2 : !transform.any_op
 
@@ -355,7 +355,7 @@ mlir::transform::HasOperandSatisfyingOp::apply(
     transform::detail::prepareValueMappings(
         yieldedMappings, getBody().front().getTerminator()->getOperands(),
         state);
-    results.setParams(getPosition().cast<OpResult>(),
+    results.setParams(cast<OpResult>(getPosition()),
                       {rewriter.getI32IntegerAttr(operand.getOperandNumber())});
     for (auto &&[result, mapping] : llvm::zip(getResults(), yieldedMappings))
       results.setMappedValues(result, mapping);
@@ -399,7 +399,7 @@ transform.named_sequence @match_matmul_elemwise(
     -> (!transform.any_op, !transform.any_op, !transform.any_op,
         !transform.param<i32>) {
   // The last operation must be an elementwise binary.
-  transform.match.operation_name %last ["linalg.elemwise_binary"]
+  transform.match.operation_name %last ["linalg.elementwise"]
     : !transform.any_op
 
   // One of its operands must be defined by another operation, to which we
@@ -413,7 +413,7 @@ transform.named_sequence @match_matmul_elemwise(
     %def = transform.get_defining_op %operand
       : (!transform.any_value) -> !transform.any_op
     // The defining operation must itself be an elementwise binary.
-    transform.match.operation_name %def ["linalg.elemwise_binary"]
+    transform.match.operation_name %def ["linalg.elementwise"]
       : !transform.any_op
     transform.yield %def : !transform.any_op
   }
@@ -578,4 +578,8 @@ example, obtain the access map of each input as a parameter and extract the
 accessed dimensions as other parameters that can be compared with each other to
 ensure the subscripts are `m,k` for LHS, `k,n` for RHS and `m,n` for the
 init/result given the `m,n,k` notation for loops.
+
+## Appendix: Autogenerated Documentation
+
+[include "Tutorials/transform/MyExtensionCh4.md"]
 

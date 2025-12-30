@@ -21,6 +21,7 @@
 
 namespace llvm {
 
+class CSKYRegisterInfo;
 class CSKYSubtarget;
 
 class CSKYInstrInfo : public CSKYGenInstrInfo {
@@ -33,29 +34,27 @@ protected:
   const CSKYSubtarget &STI;
 
 public:
-  explicit CSKYInstrInfo(CSKYSubtarget &STI);
+  CSKYInstrInfo(const CSKYSubtarget &STI, const CSKYRegisterInfo &RI);
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, Register SrcReg,
-                           bool IsKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,

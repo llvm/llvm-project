@@ -5,94 +5,110 @@
 # RUN: llvm-readobj --notes %t.o | FileCheck %s --match-full-lines --check-prefix=LLVM
 # RUN: llvm-readelf --notes %t.o | FileCheck %s --match-full-lines --check-prefix=GNU
 
-# LLVM:      Notes [
+# LLVM:      NoteSections [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_hsa_code_object_version
 # LLVM-NEXT:     Offset: 0x40
 # LLVM-NEXT:     Size: 0x18
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMD
 # LLVM-NEXT:       Data size: 0x8
 # LLVM-NEXT:       Type: NT_AMD_HSA_CODE_OBJECT_VERSION (AMD HSA Code Object Version)
 # LLVM-NEXT:       AMD HSA Code Object Version: [Major: 2, Minor: 1]
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_hsa_hsail
 # LLVM-NEXT:     Offset: 0x58
 # LLVM-NEXT:     Size: 0x1C
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMD
 # LLVM-NEXT:       Data size: 0xC
 # LLVM-NEXT:       Type: NT_AMD_HSA_HSAIL (AMD HSA HSAIL Properties)
 # LLVM-NEXT:       AMD HSA HSAIL Properties: [HSAIL Major: 2, HSAIL Minor: 1, Profile: 1, Machine Model: 2, Default Float Round: 3]
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_hsa_isa_version
 # LLVM-NEXT:     Offset: 0x74
 # LLVM-NEXT:     Size: 0x2C
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMD
 # LLVM-NEXT:       Data size: 0x1B
 # LLVM-NEXT:       Type: NT_AMD_HSA_ISA_VERSION (AMD HSA ISA Version)
 # LLVM-NEXT:       AMD HSA ISA Version: [Vendor: AMD, Architecture: AMDGPU, Major: 8, Minor: 0, Stepping: 2]
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_hsa_metadata_0
 # LLVM-NEXT:     Offset: 0xA0
 # LLVM-NEXT:     Size: 0x10
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMD
 # LLVM-NEXT:       Data size: 0x0
 # LLVM-NEXT:       Type: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 # LLVM-NEXT:       AMD HSA Metadata:
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_hsa_metadata_1
 # LLVM-NEXT:     Offset: 0xB0
 # LLVM-NEXT:     Size: 0x18
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMD
 # LLVM-NEXT:       Data size: 0x6
 # LLVM-NEXT:       Type: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 # LLVM-NEXT:       AMD HSA Metadata: abcde
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_hsa_isa_name_0
 # LLVM-NEXT:     Offset: 0xC8
 # LLVM-NEXT:     Size: 0x10
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMD
 # LLVM-NEXT:       Data size: 0x0
 # LLVM-NEXT:       Type: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 # LLVM-NEXT:       AMD HSA ISA Name:
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_hsa_isa_name_1
 # LLVM-NEXT:     Offset: 0xD8
 # LLVM-NEXT:     Size: 0x18
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMD
 # LLVM-NEXT:       Data size: 0x6
 # LLVM-NEXT:       Type: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 # LLVM-NEXT:       AMD HSA ISA Name: abcdef
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_pal_metadata
 # LLVM-NEXT:     Offset: 0xF0
 # LLVM-NEXT:     Size: 0x28
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: AMD
 # LLVM-NEXT:       Data size: 0x18
 # LLVM-NEXT:       Type: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 # LLVM-NEXT:       AMD PAL Metadata: [2: 1][4: 2][8: 4]
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 

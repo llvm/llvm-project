@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
 
 // void store(floating-point-type, memory_order = memory_order::seq_cst) volatile noexcept;
 // void store(floating-point-type, memory_order = memory_order::seq_cst) noexcept;
@@ -107,7 +106,7 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // TODO https://llvm.org/PR48634
   // test<long double>();
 
   return 0;

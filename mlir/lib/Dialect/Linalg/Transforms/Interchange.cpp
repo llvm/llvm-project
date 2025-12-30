@@ -18,14 +18,9 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include <type_traits>
 
 #define DEBUG_TYPE "linalg-interchange"
 
@@ -60,9 +55,9 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   assert(permutationMap && "unexpected null map");
 
   // Start a guarded inplace update.
-  rewriter.startRootUpdate(genericOp);
-  auto guard =
-      llvm::make_scope_exit([&]() { rewriter.finalizeRootUpdate(genericOp); });
+  rewriter.startOpModification(genericOp);
+  auto guard = llvm::make_scope_exit(
+      [&]() { rewriter.finalizeOpModification(genericOp); });
 
   // 2. Compute the interchanged indexing maps.
   SmallVector<AffineMap> newIndexingMaps;
@@ -79,8 +74,7 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   ArrayRef<Attribute> itTypes = genericOp.getIteratorTypes().getValue();
   SmallVector<Attribute> itTypesVector;
   llvm::append_range(itTypesVector, itTypes);
-  SmallVector<int64_t> permutation(interchangeVector.begin(),
-                                   interchangeVector.end());
+  SmallVector<int64_t> permutation(interchangeVector);
   applyPermutationToVector(itTypesVector, permutation);
   genericOp.setIteratorTypesAttr(rewriter.getArrayAttr(itTypesVector));
 
@@ -94,7 +88,8 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
       allIndices.reserve(genericOp.getNumLoops());
       llvm::transform(llvm::seq<uint64_t>(0, genericOp.getNumLoops()),
                       std::back_inserter(allIndices), [&](uint64_t dim) {
-                        return rewriter.create<IndexOp>(indexOp->getLoc(), dim);
+                        return IndexOp::create(rewriter, indexOp->getLoc(),
+                                               dim);
                       });
       rewriter.replaceOpWithNewOp<affine::AffineApplyOp>(
           indexOp, permutationMap.getSubMap(indexOp.getDim()), allIndices);

@@ -1,4 +1,4 @@
-//===--- ClangTidyDiagnosticConsumer.h - clang-tidy -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 #include <optional>
+#include <utility>
 
 namespace clang {
 
@@ -68,24 +69,28 @@ struct ClangTidyStats {
 /// \endcode
 class ClangTidyContext {
 public:
+  ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider)
+      : ClangTidyContext(std::move(OptionsProvider), false, false, false) {}
   /// Initializes \c ClangTidyContext instance.
   ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
-                   bool AllowEnablingAnalyzerAlphaCheckers = false,
-                   bool EnableModuleHeadersParsing = false);
+                   bool AllowEnablingAnalyzerAlphaCheckers,
+                   bool EnableModuleHeadersParsing,
+                   bool ExperimentalCustomChecks);
   /// Sets the DiagnosticsEngine that diag() will emit diagnostics to.
   // FIXME: this is required initialization, and should be a constructor param.
   // Fix the context -> diag engine -> consumer -> context initialization cycle.
-  void setDiagnosticsEngine(DiagnosticsEngine *DiagEngine) {
+  void setDiagnosticsEngine(std::unique_ptr<DiagnosticOptions> DiagOpts,
+                            DiagnosticsEngine *DiagEngine) {
+    this->DiagOpts = std::move(DiagOpts);
     this->DiagEngine = DiagEngine;
   }
 
   ~ClangTidyContext();
 
+  ClangTidyContext(const ClangTidyContext &) = delete;
+  ClangTidyContext &operator=(const ClangTidyContext &) = delete;
+
   /// Report any errors detected using this method.
-  ///
-  /// This is still under heavy development and will likely change towards using
-  /// tablegen'd diagnostic IDs.
-  /// FIXME: Figure out a way to manage ID spaces.
   DiagnosticBuilder diag(StringRef CheckName, SourceLocation Loc,
                          StringRef Description,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
@@ -205,6 +210,10 @@ public:
     return EnableModuleHeadersParsing;
   }
 
+  // whether experimental custom checks can be enabled.
+  // enabled with `--experimental-custom-checks`
+  bool canExperimentalCustomChecks() const { return ExperimentalCustomChecks; }
+
   void setSelfContainedDiags(bool Value) { SelfContainedDiags = Value; }
 
   bool areDiagsSelfContained() const { return SelfContainedDiags; }
@@ -212,11 +221,10 @@ public:
   using DiagLevelAndFormatString = std::pair<DiagnosticIDs::Level, std::string>;
   DiagLevelAndFormatString getDiagLevelAndFormatString(unsigned DiagnosticID,
                                                        SourceLocation Loc) {
-    return {
-        static_cast<DiagnosticIDs::Level>(
-            DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
-        std::string(
-            DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
+    return {static_cast<DiagnosticIDs::Level>(
+                DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
+            std::string(
+                DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID))};
   }
 
   void setOptionsCollector(llvm::StringSet<> *Collector) {
@@ -228,6 +236,7 @@ private:
   // Writes to Stats.
   friend class ClangTidyDiagnosticConsumer;
 
+  std::unique_ptr<DiagnosticOptions> DiagOpts = nullptr;
   DiagnosticsEngine *DiagEngine = nullptr;
   std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider;
 
@@ -253,6 +262,7 @@ private:
 
   bool AllowEnablingAnalyzerAlphaCheckers;
   bool EnableModuleHeadersParsing;
+  bool ExperimentalCustomChecks;
 
   bool SelfContainedDiags = false;
 
@@ -287,6 +297,11 @@ public:
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;
 
+  void BeginSourceFile(const LangOptions &LangOpts,
+                       const Preprocessor *PP = nullptr) override;
+
+  void EndSourceFile() override;
+
   // Retrieve the diagnostics that were captured.
   std::vector<ClangTidyError> take();
 
@@ -298,6 +313,10 @@ private:
   /// Returns the \c HeaderFilter constructed for the options set in the
   /// context.
   llvm::Regex *getHeaderFilter();
+
+  /// Returns the \c ExcludeHeaderFilter constructed for the options set in the
+  /// context.
+  llvm::Regex *getExcludeHeaderFilter();
 
   /// Updates \c LastErrorRelatesToUserCode and LastErrorPassesLineFilter
   /// according to the diagnostic \p Location.
@@ -313,9 +332,15 @@ private:
   bool EnableNolintBlocks;
   std::vector<ClangTidyError> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;
+  std::unique_ptr<llvm::Regex> ExcludeHeaderFilter;
   bool LastErrorRelatesToUserCode = false;
   bool LastErrorPassesLineFilter = false;
   bool LastErrorWasIgnored = false;
+  /// Tracks whether we're currently inside a
+  /// `BeginSourceFile()/EndSourceFile()` pair. Outside of a source file, we
+  /// should only receive diagnostics that have to source location, such as
+  /// command-line warnings.
+  bool InSourceFile = false;
 };
 
 } // end namespace tidy

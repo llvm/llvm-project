@@ -13,7 +13,6 @@
 
 #include "../../clang-tidy/ClangTidyCheck.h"
 #include "../../clang-tidy/ClangTidyModule.h"
-#include "../../clang-tidy/ClangTidyModuleRegistry.h"
 #include "AST.h"
 #include "Config.h"
 #include "Diagnostics.h"
@@ -25,7 +24,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -42,7 +40,11 @@
 #include <memory>
 #include <vector>
 
-namespace clang::clangd {
+namespace clang {
+
+class Module;
+
+namespace clangd {
 namespace {
 struct Inclusion {
   Inclusion(const SourceManager &SM, SourceLocation HashLoc,
@@ -72,7 +74,7 @@ struct ReplayPreamblePPCallback : public PPCallbacks {
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, OptionalFileEntryRef,
-                          StringRef, StringRef, const clang::Module *,
+                          StringRef, StringRef, const clang::Module *, bool,
                           SrcMgr::CharacteristicKind) override {
     Includes.emplace_back(SM, HashLoc, IncludeTok, FileName, IsAngled,
                           FilenameRange);
@@ -170,4 +172,5 @@ TEST(ReplayPreambleTest, IncludesAndSkippedFiles) {
   }
 }
 } // namespace
-} // namespace clang::clangd
+} // namespace clangd
+} // namespace clang

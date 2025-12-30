@@ -165,13 +165,12 @@ contains
     logical :: l
     complex :: z
     y = y + z'1'  !OK
-    !ERROR: Operands of + must be numeric; have untyped and COMPLEX(4)
+    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types untyped and COMPLEX(4)
     z = z'1' + z
     y = +z'1'  !OK
     !ERROR: Operand of unary - must be numeric; have untyped
     y = -z'1'
-    !ERROR: Operands of + must be numeric; have LOGICAL(4) and untyped
-    y = x + z'1'
+    y = x + z'1' ! matches "add" with conversion of untyped to integer
     !ERROR: A NULL() pointer is not allowed as an operand here
     l = x /= null()
     !ERROR: A NULL() pointer is not allowed as a relational operand
@@ -340,7 +339,7 @@ module m8
     call generic(null(), ip) ! ok
     call generic(null(mold=ip), null()) ! ok
     call generic(null(), null(mold=ip)) ! ok
-    !ERROR: One or more actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    !ERROR: The actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
     call generic(null(), null())
   end subroutine
 end
@@ -358,7 +357,7 @@ module m9
   end subroutine
   subroutine test
     external underspecified
-    !ERROR: One or more actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    !ERROR: The actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
     call generic(underspecified)
   end subroutine
 end module

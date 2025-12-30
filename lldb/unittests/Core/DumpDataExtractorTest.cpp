@@ -137,7 +137,7 @@ TEST_F(DumpDataExtractorTest, Formats) {
   TestDump('?', lldb::eFormatChar, "'?'");
   TestDump('\x1A', lldb::eFormatCharPrintable, ".");
   TestDump('#', lldb::eFormatCharPrintable, "#");
-  TestDump(std::complex<float>(1.2, 3.4), lldb::eFormatComplex, "1.2 + 3.4i");
+  TestDump(std::complex<float>(1.2f, 3.4f), lldb::eFormatComplex, "1.2 + 3.4i");
   TestDump(std::complex<double>(4.5, 6.7), lldb::eFormatComplex, "4.5 + 6.7i");
 
   // long double is not tested here because for some platforms we treat it as 10
@@ -163,6 +163,9 @@ TEST_F(DumpDataExtractorTest, Formats) {
   TestDump(0xcafef00d, lldb::Format::eFormatHex, "0xcafef00d");
   TestDump(0xcafef00d, lldb::Format::eFormatHexUppercase, "0xCAFEF00D");
   TestDump(0.456, lldb::Format::eFormatFloat, "0.45600000000000002");
+  TestDump(std::vector<uint64_t>{0x47ae147ae147ae14, 0x40011147ae147ae1},
+           lldb::Format::eFormatFloat128,
+           "4.26999999999999999999999999999999963");
   TestDump(9, lldb::Format::eFormatOctal, "011");
   // Chars packed into an integer.
   TestDump<uint32_t>(0x4C4C4442, lldb::Format::eFormatOSType, "'LLDB'");
@@ -388,6 +391,9 @@ TEST_F(DumpDataExtractorTest, ItemByteSizeErrors) {
   TestDumpWithItemByteSize(
       18, lldb::Format::eFormatFloat,
       "error: unsupported byte size (18) for float format");
+  TestDumpWithItemByteSize(
+      17, lldb::Format::eFormatFloat128,
+      "error: unsupported byte size (17) for float format");
 
   // We want sizes to exactly match one of float/double.
   TestDumpWithItemByteSize(

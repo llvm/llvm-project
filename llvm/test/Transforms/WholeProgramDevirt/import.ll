@@ -40,7 +40,7 @@ define i32 @call1(ptr %obj) #0 {
 ; constant propagation.
 
 ; CHECK: define i1 @call2
-define i1 @call2(ptr %obj) #0 {
+define i1 @call2(ptr %obj, i32 %arg1) #0 {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 8, metadata !"typeid2")
   %fptr = extractvalue {ptr, i1} %pair, 0
@@ -51,8 +51,8 @@ define i1 @call2(ptr %obj) #0 {
 cont:
   ; SINGLE-IMPL: call i1 @singleimpl2
   ; INDIR: call i1 %
-  ; BRANCH-FUNNEL: call i1 @__typeid_typeid2_8_branch_funnel(ptr nest %vtable, ptr %obj, i32 undef)
-  %result = call i1 %fptr(ptr %obj, i32 undef)
+  ; BRANCH-FUNNEL: call i1 @__typeid_typeid2_8_branch_funnel(ptr nest %vtable, ptr %obj, i32 %arg1)
+  %result = call i1 %fptr(ptr %obj, i32 %arg1)
   ret i1 %result
 
 trap:

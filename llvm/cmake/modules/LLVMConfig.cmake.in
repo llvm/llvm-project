@@ -36,6 +36,8 @@ set(LLVM_TARGETS_WITH_JIT @LLVM_TARGETS_WITH_JIT@)
 
 set(LLVM_TARGET_TRIPLE "@LLVM_TARGET_TRIPLE@")
 
+set(LLVM_TARGET_TRIPLE_ENV "@LLVM_TARGET_TRIPLE_ENV@")
+
 set(LLVM_HOST_TRIPLE "@LLVM_HOST_TRIPLE@")
 
 set(LLVM_ABI_BREAKING_CHECKS @LLVM_ABI_BREAKING_CHECKS@)
@@ -58,11 +60,6 @@ set(LLVM_ENABLE_RTTI @LLVM_ENABLE_RTTI@)
 set(LLVM_ENABLE_LIBEDIT @HAVE_LIBEDIT@)
 if(LLVM_ENABLE_LIBEDIT)
   find_package(LibEdit)
-endif()
-
-set(LLVM_ENABLE_TERMINFO @LLVM_ENABLE_TERMINFO@)
-if(LLVM_ENABLE_TERMINFO)
-  find_package(Terminfo)
 endif()
 
 set(LLVM_ENABLE_THREADS @LLVM_ENABLE_THREADS@)
@@ -90,6 +87,11 @@ if(LLVM_ENABLE_CURL)
   find_package(CURL)
 endif()
 
+set(LLVM_ENABLE_HTTPLIB @LLVM_ENABLE_HTTPLIB@)
+if(LLVM_ENABLE_HTTPLIB)
+  find_package(httplib)
+endif()
+
 set(LLVM_WITH_Z3 @LLVM_WITH_Z3@)
 
 set(LLVM_ENABLE_DIA_SDK @LLVM_ENABLE_DIA_SDK@)
@@ -99,6 +101,8 @@ set(LLVM_NATIVE_ARCH @LLVM_NATIVE_ARCH@)
 set(LLVM_ENABLE_PIC @LLVM_ENABLE_PIC@)
 
 set(LLVM_BUILD_32_BITS @LLVM_BUILD_32_BITS@)
+
+set(LLVM_ENABLE_TELEMETRY @LLVM_ENABLE_TELEMETRY@)
 
 if (NOT "@LLVM_PTHREAD_LIB@" STREQUAL "")
   set(LLVM_PTHREAD_LIB "@LLVM_PTHREAD_LIB@")
@@ -151,14 +155,17 @@ endif()
 if(NOT TARGET intrinsics_gen)
   add_custom_target(intrinsics_gen)
 endif()
+if(NOT TARGET vt_gen)
+  add_custom_target(vt_gen)
+endif()
 if(NOT TARGET omp_gen)
   add_custom_target(omp_gen)
 endif()
 if(NOT TARGET acc_gen)
   add_custom_target(acc_gen)
 endif()
-if(NOT TARGET RISCVTargetParserTableGen)
-  add_custom_target(RISCVTargetParserTableGen)
+if(NOT TARGET target_parser_gen)
+  add_custom_target(target_parser_gen)
 endif()
 
 set_property(GLOBAL PROPERTY LLVM_TARGETS_CONFIGURED On)

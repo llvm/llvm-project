@@ -1,7 +1,3 @@
-; xfail this test on hexagon because upstream llc is not emitting the
-; correct DWARF info. Downstream llc is.
-; XFAIL: target=hexagon-{{.*}}
-
 ; RUN: %llc_dwarf -O0 -filetype=obj %s -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; Use correct signedness when emitting constants of derived (sugared) types.
 

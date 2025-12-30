@@ -6,15 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_TIMEVAL_H__
-#define __LLVM_LIBC_TYPES_TIMEVAL_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_TIMEVAL_H
+#define LLVM_LIBC_TYPES_STRUCT_TIMEVAL_H
 
-#include <llvm-libc-types/suseconds_t.h>
-#include <llvm-libc-types/time_t.h>
+#include "suseconds_t.h"
+#include "time_t.h"
 
+#if defined(__APPLE__)
+// Darwin provides its own definition for struct timeval. Include it directly
+// to ensure type compatibility and avoid redefinition errors.
+#include <sys/_types/_timeval.h>
+#else
 struct timeval {
   time_t tv_sec;       // Seconds
   suseconds_t tv_usec; // Micro seconds
 };
+#endif // __APPLE__
 
-#endif // __LLVM_LIBC_TYPES_TIMEVAL_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_TIMEVAL_H

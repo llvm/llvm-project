@@ -13,8 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
-#include "clang/AST/ExprCXX.h"
-#include "clang/Analysis/FlowSensitive/DebugSupport.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/SimplifyConstraints.h"
@@ -85,7 +84,7 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
 // Can't use `StringSet` as the return type as it doesn't support `operator==`.
 template <typename T>
 static llvm::DenseSet<llvm::StringRef> getKeys(const llvm::StringMap<T> &Map) {
-  return llvm::DenseSet<llvm::StringRef>(Map.keys().begin(), Map.keys().end());
+  return llvm::DenseSet<llvm::StringRef>(llvm::from_range, Map.keys());
 }
 
 RecordStorageLocation &DataflowAnalysisContext::createRecordStorageLocation(
@@ -159,8 +158,9 @@ Atom
 DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
                                             Atom SecondToken) {
   Atom Token = arena().makeFlowConditionToken();
-  FlowConditionDeps[Token].insert(FirstToken);
-  FlowConditionDeps[Token].insert(SecondToken);
+  auto &TokenDeps = FlowConditionDeps[Token];
+  TokenDeps.insert(FirstToken);
+  TokenDeps.insert(SecondToken);
   addFlowConditionConstraint(Token,
                              arena().makeOr(arena().makeAtomRef(FirstToken),
                                             arena().makeAtomRef(SecondToken)));
@@ -169,7 +169,7 @@ DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
 
 Solver::Result DataflowAnalysisContext::querySolver(
     llvm::SetVector<const Formula *> Constraints) {
-  return S->solve(Constraints.getArrayRef());
+  return S.solve(Constraints.getArrayRef());
 }
 
 bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
@@ -191,8 +191,8 @@ bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
 
 bool DataflowAnalysisContext::flowConditionAllows(Atom Token,
                                                   const Formula &F) {
-  if (F.isLiteral(true))
-    return true;
+  if (F.isLiteral(false))
+    return false;
 
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
@@ -206,6 +206,24 @@ bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeNot(arena().makeEquals(Val1, Val2)));
   return isUnsatisfiable(std::move(Constraints));
+}
+
+llvm::DenseSet<Atom> DataflowAnalysisContext::collectDependencies(
+    llvm::DenseSet<Atom> Tokens) const {
+  // Use a worklist algorithm, with `Remaining` holding the worklist and
+  // `Tokens` tracking which atoms have already been added to the worklist.
+  std::vector<Atom> Remaining(Tokens.begin(), Tokens.end());
+  while (!Remaining.empty()) {
+    Atom CurrentToken = Remaining.back();
+    Remaining.pop_back();
+    if (auto DepsIt = FlowConditionDeps.find(CurrentToken);
+        DepsIt != FlowConditionDeps.end())
+      for (Atom A : DepsIt->second)
+        if (Tokens.insert(A).second)
+          Remaining.push_back(A);
+  }
+
+  return Tokens;
 }
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
@@ -224,6 +242,8 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
 
     auto ConstraintsIt = FlowConditionConstraints.find(Token);
     if (ConstraintsIt == FlowConditionConstraints.end()) {
+      // The flow condition is unconstrained. Just add the atom directly, which
+      // is equivalent to asserting it is true.
       Constraints.insert(&arena().makeAtomRef(Token));
     } else {
       // Bind flow condition token via `iff` to its set of constraints:
@@ -237,6 +257,65 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
       for (Atom A : DepsIt->second)
         Remaining.push_back(A);
   }
+}
+
+static void getReferencedAtoms(const Formula &F,
+                               llvm::DenseSet<dataflow::Atom> &Refs) {
+  switch (F.kind()) {
+  case Formula::AtomRef:
+    Refs.insert(F.getAtom());
+    break;
+  case Formula::Literal:
+    break;
+  case Formula::Not:
+    getReferencedAtoms(*F.operands()[0], Refs);
+    break;
+  case Formula::And:
+  case Formula::Or:
+  case Formula::Implies:
+  case Formula::Equal:
+    ArrayRef<const Formula *> Operands = F.operands();
+    getReferencedAtoms(*Operands[0], Refs);
+    getReferencedAtoms(*Operands[1], Refs);
+    break;
+  }
+}
+
+SimpleLogicalContext DataflowAnalysisContext::exportLogicalContext(
+    llvm::DenseSet<dataflow::Atom> TargetTokens) const {
+  SimpleLogicalContext LC;
+
+  // Copy `Invariant` even if it is null, to initialize the field.
+  LC.Invariant = Invariant;
+  if (Invariant != nullptr)
+    getReferencedAtoms(*Invariant, TargetTokens);
+
+  llvm::DenseSet<dataflow::Atom> Dependencies =
+      collectDependencies(std::move(TargetTokens));
+
+  for (dataflow::Atom Token : Dependencies) {
+    // Only process the token if it is constrained. Unconstrained tokens don't
+    // have dependencies.
+    const Formula *Constraints = FlowConditionConstraints.lookup(Token);
+    if (Constraints == nullptr)
+      continue;
+    LC.TokenDefs[Token] = Constraints;
+
+    if (auto DepsIt = FlowConditionDeps.find(Token);
+        DepsIt != FlowConditionDeps.end())
+      LC.TokenDeps[Token] = DepsIt->second;
+  }
+
+  return LC;
+}
+
+void DataflowAnalysisContext::initLogicalContext(SimpleLogicalContext LC) {
+  Invariant = LC.Invariant;
+  FlowConditionConstraints = std::move(LC.TokenDefs);
+  // TODO: The dependencies in `LC.TokenDeps` can be reconstructed from
+  // `LC.TokenDefs`. Give the caller the option to reconstruct, rather than
+  // providing them directly, to save caller space (memory/disk).
+  FlowConditionDeps = std::move(LC.TokenDeps);
 }
 
 static void printAtomList(const llvm::SmallVector<Atom> &Atoms,
@@ -288,8 +367,8 @@ void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
   }
 }
 
-const ControlFlowContext *
-DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
+const AdornedCFG *
+DataflowAnalysisContext::getAdornedCFG(const FunctionDecl *F) {
   // Canonicalize the key:
   F = F->getDefinition();
   if (F == nullptr)
@@ -298,11 +377,11 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
   if (It != FunctionContexts.end())
     return &It->second;
 
-  if (F->hasBody()) {
-    auto CFCtx = ControlFlowContext::build(*F);
+  if (F->doesThisDeclarationHaveABody()) {
+    auto ACFG = AdornedCFG::build(*F);
     // FIXME: Handle errors.
-    assert(CFCtx);
-    auto Result = FunctionContexts.insert({F, std::move(*CFCtx)});
+    assert(ACFG);
+    auto Result = FunctionContexts.insert({F, std::move(*ACFG)});
     return &Result.first->second;
   }
 
@@ -337,10 +416,10 @@ static std::unique_ptr<Logger> makeLoggerFromCommandLine() {
   return Logger::html(std::move(StreamFactory));
 }
 
-DataflowAnalysisContext::DataflowAnalysisContext(std::unique_ptr<Solver> S,
-                                                 Options Opts)
-    : S(std::move(S)), A(std::make_unique<Arena>()), Opts(Opts) {
-  assert(this->S != nullptr);
+DataflowAnalysisContext::DataflowAnalysisContext(
+    Solver &S, std::unique_ptr<Solver> &&OwnedSolver, Options Opts)
+    : S(S), OwnedSolver(std::move(OwnedSolver)), A(std::make_unique<Arena>()),
+      Opts(Opts) {
   // If the -dataflow-log command-line flag was set, synthesize a logger.
   // This is ugly but provides a uniform method for ad-hoc debugging dataflow-
   // based tools.
@@ -359,55 +438,3 @@ DataflowAnalysisContext::~DataflowAnalysisContext() = default;
 
 } // namespace dataflow
 } // namespace clang
-
-using namespace clang;
-
-const Expr &clang::dataflow::ignoreCFGOmittedNodes(const Expr &E) {
-  const Expr *Current = &E;
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
-    Current = EWC->getSubExpr();
-    assert(Current != nullptr);
-  }
-  Current = Current->IgnoreParens();
-  assert(Current != nullptr);
-  return *Current;
-}
-
-const Stmt &clang::dataflow::ignoreCFGOmittedNodes(const Stmt &S) {
-  if (auto *E = dyn_cast<Expr>(&S))
-    return ignoreCFGOmittedNodes(*E);
-  return S;
-}
-
-// FIXME: Does not precisely handle non-virtual diamond inheritance. A single
-// field decl will be modeled for all instances of the inherited field.
-static void getFieldsFromClassHierarchy(QualType Type,
-                                        clang::dataflow::FieldSet &Fields) {
-  if (Type->isIncompleteType() || Type->isDependentType() ||
-      !Type->isRecordType())
-    return;
-
-  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
-    Fields.insert(Field);
-  if (auto *CXXRecord = Type->getAsCXXRecordDecl())
-    for (const CXXBaseSpecifier &Base : CXXRecord->bases())
-      getFieldsFromClassHierarchy(Base.getType(), Fields);
-}
-
-/// Gets the set of all fields in the type.
-clang::dataflow::FieldSet clang::dataflow::getObjectFields(QualType Type) {
-  FieldSet Fields;
-  getFieldsFromClassHierarchy(Type, Fields);
-  return Fields;
-}
-
-bool clang::dataflow::containsSameFields(
-    const clang::dataflow::FieldSet &Fields,
-    const clang::dataflow::RecordStorageLocation::FieldToLoc &FieldLocs) {
-  if (Fields.size() != FieldLocs.size())
-    return false;
-  for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
-    if (!Fields.contains(cast_or_null<FieldDecl>(Field)))
-      return false;
-  return true;
-}

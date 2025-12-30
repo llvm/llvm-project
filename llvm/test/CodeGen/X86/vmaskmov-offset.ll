@@ -76,7 +76,7 @@ define void @one_mask_bit_set2(ptr %addr, <4 x float> %val) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   VEXTRACTPSmr [[COPY1]], 1, $noreg, 8, $noreg, [[COPY]], 2 :: (store (s32) into %ir.addr + 8)
+  ; CHECK-NEXT:   VEXTRACTPSmri [[COPY1]], 1, $noreg, 8, $noreg, [[COPY]], 2 :: (store (s32) into %ir.addr + 8)
   ; CHECK-NEXT:   RET 0
   call void @llvm.masked.store.v4f32.p0(<4 x float> %val, ptr %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
   ret void

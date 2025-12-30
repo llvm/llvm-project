@@ -23,6 +23,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace hlfir {
 #define GEN_PASS_DEF_CONVERTHLFIRTOFIR
@@ -31,28 +32,6 @@ namespace hlfir {
 
 using namespace mlir;
 
-static mlir::Value genAllocatableTempFromSourceBox(mlir::Location loc,
-                                                   fir::FirOpBuilder &builder,
-                                                   mlir::Value sourceBox) {
-  assert(sourceBox.getType().isa<fir::BaseBoxType>() &&
-         "must be a base box type");
-  // Use the runtime to make a quick and dirty temp with the rhs value.
-  // Overkill for scalar rhs that could be done in much more clever ways.
-  // Note that temp descriptor must have the allocatable flag set so that
-  // the runtime will allocate it with the shape and type parameters of
-  // the RHS.
-  // This has the huge benefit of dealing with all cases, including
-  // polymorphic entities.
-  mlir::Type fromHeapType = fir::HeapType::get(fir::unwrapRefType(
-      sourceBox.getType().cast<fir::BaseBoxType>().getEleTy()));
-  mlir::Type fromBoxHeapType = fir::BoxType::get(fromHeapType);
-  mlir::Value fromMutableBox =
-      fir::factory::genNullBoxStorage(builder, loc, fromBoxHeapType);
-  fir::runtime::genAssignTemporary(builder, loc, fromMutableBox, sourceBox);
-  mlir::Value copy = builder.create<fir::LoadOp>(loc, fromMutableBox);
-  return copy;
-}
-
 namespace {
 /// May \p lhs alias with \p rhs?
 /// TODO: implement HLFIR alias analysis.
@@ -60,7 +39,7 @@ class AssignOpConversion : public mlir::OpRewritePattern<hlfir::AssignOp> {
 public:
   explicit AssignOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assignOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = assignOp->getLoc();
@@ -69,7 +48,7 @@ public:
     auto module = assignOp->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, module);
 
-    if (rhs.getType().isa<hlfir::ExprType>()) {
+    if (mlir::isa<hlfir::ExprType>(rhs.getType())) {
       mlir::emitError(loc, "hlfir must be bufferized with --bufferize-hlfir "
                            "pass before being converted to FIR");
       return mlir::failure();
@@ -104,8 +83,8 @@ public:
           rhsType = fir::LogicalType::get(builder.getContext(), 4);
           rhsVal = builder.createConvert(loc, rhsType, rhsVal);
         }
-        mlir::Value temp = builder.create<fir::AllocaOp>(loc, rhsType);
-        builder.create<fir::StoreOp>(loc, rhsVal, temp);
+        mlir::Value temp = fir::AllocaOp::create(builder, loc, rhsType);
+        fir::StoreOp::create(builder, loc, rhsVal, temp);
         rhsExv = temp;
       }
       return fir::getBase(builder.createBox(loc, rhsExv));
@@ -158,7 +137,7 @@ public:
       // reallocate and modify "toMutableBox" even if it is taking it by
       // reference.
       auto toMutableBox = builder.createTemporary(loc, to.getType());
-      builder.create<fir::StoreOp>(loc, to, toMutableBox);
+      fir::StoreOp::create(builder, loc, to, toMutableBox);
       if (assignOp.isTemporaryLHS())
         fir::runtime::genAssignTemporary(builder, loc, toMutableBox, from);
       else
@@ -170,13 +149,18 @@ public:
           !assignOp.isTemporaryLHS() &&
           mlir::isa<fir::RecordType>(fir::getElementTypeOf(lhsExv));
 
+      mlir::ArrayAttr accessGroups;
+      if (auto attrs = assignOp.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+              "access_groups"))
+        accessGroups = attrs;
+
       // genScalarAssignment() must take care of potential overlap
       // between LHS and RHS. Note that the overlap is possible
       // also for components of LHS/RHS, and the Assign() runtime
       // must take care of it.
-      fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv,
-                                        needFinalization,
-                                        assignOp.isTemporaryLHS());
+      fir::factory::genScalarAssignment(
+          builder, loc, lhsExv, rhsExv, needFinalization,
+          assignOp.isTemporaryLHS(), accessGroups);
     }
     rewriter.eraseOp(assignOp);
     return mlir::success();
@@ -204,20 +188,26 @@ public:
             .genIfOp(loc, {resultAddrType}, isContiguous,
                      /*withElseRegion=*/true)
             .genThen(
-                [&]() { builder.create<fir::ResultOp>(loc, inputVariable); })
+                [&]() { fir::ResultOp::create(builder, loc, inputVariable); })
             .genElse([&] {
               // Create temporary on the heap. Note that the runtime is used and
               // that is desired: since the data copy happens under a runtime
               // check (for IsContiguous) the copy loops can hardly provide any
               // value to optimizations, instead, the optimizer just wastes
               // compilation time on these loops.
-              mlir::Value temp =
-                  genAllocatableTempFromSourceBox(loc, builder, inputVariable);
+              mlir::Value temp = copyInOp.getTempBox();
+              fir::runtime::genCopyInAssign(builder, loc, temp, inputVariable);
+              mlir::Value copy = fir::LoadOp::create(builder, loc, temp);
               // Get rid of allocatable flag in the fir.box.
-              temp = builder.create<fir::ReboxOp>(loc, resultAddrType, temp,
-                                                  /*shape=*/mlir::Value{},
-                                                  /*slice=*/mlir::Value{});
-              builder.create<fir::ResultOp>(loc, temp);
+              if (mlir::cast<fir::BaseBoxType>(resultAddrType).isAssumedRank())
+                copy = fir::ReboxAssumedRankOp::create(
+                    builder, loc, resultAddrType, copy,
+                    fir::LowerBoundModifierAttribute::Preserve);
+              else
+                copy = fir::ReboxOp::create(builder, loc, resultAddrType, copy,
+                                            /*shape=*/mlir::Value{},
+                                            /*slice=*/mlir::Value{});
+              fir::ResultOp::create(builder, loc, copy);
             })
             .getResults()[0];
     return {addr, builder.genNot(loc, isContiguous)};
@@ -234,20 +224,20 @@ public:
                      /*withElseRegion=*/true)
             .genThen([&]() {
               CopyInResult res = genNonOptionalCopyIn(loc, builder, copyInOp);
-              builder.create<fir::ResultOp>(
-                  loc, mlir::ValueRange{res.addr, res.wasCopied});
+              fir::ResultOp::create(builder, loc,
+                                    mlir::ValueRange{res.addr, res.wasCopied});
             })
             .genElse([&] {
               mlir::Value absent =
-                  builder.create<fir::AbsentOp>(loc, resultAddrType);
-              builder.create<fir::ResultOp>(
-                  loc, mlir::ValueRange{absent, isPresent});
+                  fir::AbsentOp::create(builder, loc, resultAddrType);
+              fir::ResultOp::create(builder, loc,
+                                    mlir::ValueRange{absent, isPresent});
             })
             .getResults();
     return {res[0], res[1]};
   }
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CopyInOp copyInOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyInOp.getLoc();
@@ -265,7 +255,7 @@ public:
   explicit CopyOutOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CopyOutOp copyOutOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyOutOp.getLoc();
@@ -274,34 +264,26 @@ public:
     builder.genIfThen(loc, copyOutOp.getWasCopied())
         .genThen([&]() {
           mlir::Value temp = copyOutOp.getTemp();
+          mlir::Value varMutableBox;
+          // Generate CopyOutAssign runtime call.
           if (mlir::Value var = copyOutOp.getVar()) {
-            auto mutableBoxTo = builder.createTemporary(loc, var.getType());
-            builder.create<fir::StoreOp>(loc, var, mutableBoxTo);
-            // Generate CopyOutAssign() call to copy data from the temporary
-            // to the actualArg. Note that in case the actual argument
-            // is ALLOCATABLE/POINTER the CopyOutAssign() implementation
-            // should not engage its reallocation, because the temporary
-            // is rank, shape and type compatible with it.
-            // Moreover, CopyOutAssign() guarantees that there will be no
-            // finalization for the LHS even if it is of a derived type
-            // with finalization.
-            fir::runtime::genCopyOutAssign(builder, loc, mutableBoxTo, temp,
-                                           /*skipToInit=*/true);
+            // Set the variable descriptor pointer in order to copy data from
+            // the temporary to the actualArg. Note that in case the actual
+            // argument is ALLOCATABLE/POINTER the CopyOutAssign()
+            // implementation should not engage its reallocation, because the
+            // temporary is rank, shape and type compatible with it. Moreover,
+            // CopyOutAssign() guarantees that there will be no finalization for
+            // the LHS even if it is of a derived type with finalization.
+            varMutableBox = builder.createTemporary(loc, var.getType());
+            fir::StoreOp::create(builder, loc, var, varMutableBox);
+          } else {
+            // Even when there is no need to copy back the data (e.g., the dummy
+            // argument was intent(in), CopyOutAssign is called to
+            // destroy/deallocate the temporary.
+            varMutableBox = fir::ZeroOp::create(builder, loc, temp.getType());
           }
-          // Destroy components of the temporary (if any).
-          fir::runtime::genDerivedTypeDestroyWithoutFinalization(builder, loc,
-                                                                 temp);
-          mlir::Type heapType =
-              fir::HeapType::get(fir::dyn_cast_ptrOrBoxEleTy(temp.getType()));
-          mlir::Value tempAddr =
-              builder.create<fir::BoxAddrOp>(loc, heapType, temp);
-
-          // Deallocate the top-level entity of the temporary.
-          //
-          // Note that this FreeMemOp is coupled with the runtime
-          // allocation engaged by the code generated by
-          // genAllocatableTempFromSourceBox().
-          builder.create<fir::FreeMemOp>(loc, tempAddr);
+          fir::runtime::genCopyOutAssign(builder, loc, varMutableBox,
+                                         copyOutOp.getTemp());
         })
         .end();
     rewriter.eraseOp(copyOutOp);
@@ -314,52 +296,70 @@ public:
   explicit DeclareOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = declareOp->getLoc();
     mlir::Value memref = declareOp.getMemref();
     fir::FortranVariableFlagsAttr fortranAttrs;
+    cuf::DataAttributeAttr dataAttr;
     if (auto attrs = declareOp.getFortranAttrs())
       fortranAttrs =
           fir::FortranVariableFlagsAttr::get(rewriter.getContext(), *attrs);
-    auto firDeclareOp = rewriter.create<fir::DeclareOp>(
-        loc, memref.getType(), memref, declareOp.getShape(),
-        declareOp.getTypeparams(), declareOp.getUniqName(), fortranAttrs);
+    if (auto attr = declareOp.getDataAttr())
+      dataAttr = cuf::DataAttributeAttr::get(rewriter.getContext(), *attr);
+    auto firDeclareOp = fir::DeclareOp::create(
+        rewriter, loc, memref.getType(), memref, declareOp.getShape(),
+        declareOp.getTypeparams(), declareOp.getDummyScope(),
+        /*storage=*/declareOp.getStorage(),
+        /*storage_offset=*/declareOp.getStorageOffset(),
+        declareOp.getUniqName(), fortranAttrs, dataAttr,
+        declareOp.getDummyArgNoAttr());
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
     // is verbatim.
-    mlir::NamedAttrList elidedAttrs =
-        mlir::NamedAttrList{firDeclareOp->getAttrs()};
+    llvm::SmallSet<llvm::StringRef, 8> elidedAttrs;
+    for (const mlir::NamedAttribute &firAttr : firDeclareOp->getAttrs())
+      elidedAttrs.insert(firAttr.getName());
+    elidedAttrs.insert(declareOp.getSkipReboxAttrName());
     for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
-      if (!elidedAttrs.get(attr.getName()))
+      if (!elidedAttrs.contains(attr.getName()))
         firDeclareOp->setAttr(attr.getName(), attr.getValue());
 
     auto firBase = firDeclareOp.getResult();
     mlir::Value hlfirBase;
     mlir::Type hlfirBaseType = declareOp.getBase().getType();
-    if (hlfirBaseType.isa<fir::BaseBoxType>()) {
+    if (mlir::isa<fir::BaseBoxType>(hlfirBaseType)) {
       fir::FirOpBuilder builder(rewriter, declareOp.getOperation());
       // Helper to generate the hlfir fir.box with the local lower bounds and
       // type parameters.
       auto genHlfirBox = [&]() -> mlir::Value {
-        if (!firBase.getType().isa<fir::BaseBoxType>()) {
+        if (auto baseBoxType =
+                mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
+          if (declareOp.getSkipRebox())
+            return firBase;
+          // Rebox so that lower bounds and attributes are correct.
+          if (baseBoxType.isAssumedRank())
+            return fir::ReboxAssumedRankOp::create(
+                builder, loc, hlfirBaseType, firBase,
+                fir::LowerBoundModifierAttribute::SetToOnes);
+          if (!fir::extractSequenceType(baseBoxType.getEleTy()) &&
+              baseBoxType == hlfirBaseType)
+            return firBase;
+          return fir::ReboxOp::create(builder, loc, hlfirBaseType, firBase,
+                                      declareOp.getShape(),
+                                      /*slice=*/mlir::Value{});
+        } else {
           llvm::SmallVector<mlir::Value> typeParams;
-          auto maybeCharType =
-              fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType))
-                  .dyn_cast<fir::CharacterType>();
+          auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(
+              fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType)));
           if (!maybeCharType || maybeCharType.hasDynamicLen())
             typeParams.append(declareOp.getTypeparams().begin(),
                               declareOp.getTypeparams().end());
-          return builder.create<fir::EmboxOp>(
-              loc, hlfirBaseType, firBase, declareOp.getShape(),
-              /*slice=*/mlir::Value{}, typeParams);
-        } else {
-          // Rebox so that lower bounds are correct.
-          return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
-                                              declareOp.getShape(),
-                                              /*slice=*/mlir::Value{});
+          return fir::EmboxOp::create(builder, loc, hlfirBaseType, firBase,
+                                      declareOp.getShape(),
+                                      /*slice=*/mlir::Value{}, typeParams);
         }
       };
       if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
@@ -372,7 +372,7 @@ public:
         // is used for accessing the bounds etc. Using the HLFIR box,
         // that holds the same base_addr at this point, makes
         // the representation a little bit more clear.
-        if (hlfirBase.getType() == firBase.getType())
+        if (hlfirBase.getType() == declareOp.getOriginalBase().getType())
           firBase = hlfirBase;
       } else {
         // Need to conditionally rebox/embox the optional: the input fir.box
@@ -380,26 +380,26 @@ public:
         // preserve the optional aspect: the hlfir fir.box should be null if
         // the entity is absent so that later fir.is_present on the hlfir base
         // are valid.
-        mlir::Value isPresent =
-            builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), firBase);
-        hlfirBase = builder
-                        .genIfOp(loc, {hlfirBaseType}, isPresent,
-                                 /*withElseRegion=*/true)
-                        .genThen([&] {
-                          builder.create<fir::ResultOp>(loc, genHlfirBox());
-                        })
-                        .genElse([&]() {
-                          mlir::Value absent =
-                              builder.create<fir::AbsentOp>(loc, hlfirBaseType);
-                          builder.create<fir::ResultOp>(loc, absent);
-                        })
-                        .getResults()[0];
+        mlir::Value isPresent = fir::IsPresentOp::create(
+            builder, loc, builder.getI1Type(), firBase);
+        hlfirBase =
+            builder
+                .genIfOp(loc, {hlfirBaseType}, isPresent,
+                         /*withElseRegion=*/true)
+                .genThen(
+                    [&] { fir::ResultOp::create(builder, loc, genHlfirBox()); })
+                .genElse([&]() {
+                  mlir::Value absent =
+                      fir::AbsentOp::create(builder, loc, hlfirBaseType);
+                  fir::ResultOp::create(builder, loc, absent);
+                })
+                .getResults()[0];
       }
-    } else if (hlfirBaseType.isa<fir::BoxCharType>()) {
+    } else if (mlir::isa<fir::BoxCharType>(hlfirBaseType)) {
       assert(declareOp.getTypeparams().size() == 1 &&
              "must contain character length");
-      hlfirBase = rewriter.create<fir::EmboxCharOp>(
-          loc, hlfirBaseType, firBase, declareOp.getTypeparams()[0]);
+      hlfirBase = fir::EmboxCharOp::create(
+          rewriter, loc, hlfirBaseType, firBase, declareOp.getTypeparams()[0]);
     } else {
       if (hlfirBaseType != firBase.getType()) {
         declareOp.emitOpError()
@@ -427,16 +427,21 @@ class DesignateOpConversion
     llvm::SmallVector<mlir::Value> firstElementIndices;
     auto indices = designate.getIndices();
     int i = 0;
-    for (auto isTriplet : designate.getIsTripletAttr().asArrayRef()) {
+    auto attrs = designate.getIsTripletAttr();
+    for (auto isTriplet : attrs.asArrayRef()) {
       // Coordinate of the first element are the index and triplets lower
-      // bounds
+      // bounds.
       firstElementIndices.push_back(indices[i]);
       i = i + (isTriplet ? 3 : 1);
     }
-    mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy);
-    base = builder.create<fir::ArrayCoorOp>(
-        loc, arrayCoorType, base, shape,
-        /*slice=*/mlir::Value{}, firstElementIndices, firBaseTypeParameters);
+
+    mlir::Type originalDesignateType = designate.getResult().getType();
+    const bool isVolatile = fir::isa_volatile_type(originalDesignateType);
+    mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy, isVolatile);
+
+    base = fir::ArrayCoorOp::create(builder, loc, arrayCoorType, base, shape,
+                                    /*slice=*/mlir::Value{},
+                                    firstElementIndices, firBaseTypeParameters);
     return base;
   }
 
@@ -444,7 +449,7 @@ public:
   explicit DesignateOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DesignateOp designate,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = designate.getLoc();
@@ -459,6 +464,8 @@ public:
     llvm::SmallVector<mlir::Value> firBaseTypeParameters;
     auto [base, shape] = hlfir::genVariableFirBaseShapeAndParams(
         loc, builder, baseEntity, firBaseTypeParameters);
+    const bool isVolatile = fir::isa_volatile_type(designateResultType) ||
+                            fir::isa_volatile_type(base.getType());
     mlir::Type baseEleTy = hlfir::getFortranElementType(base.getType());
     mlir::Type resultEleTy = hlfir::getFortranElementType(designateResultType);
 
@@ -466,9 +473,9 @@ public:
     if (designate.getComponent()) {
       mlir::Type baseRecordType = baseEntity.getFortranElementType();
       if (fir::isRecordWithTypeParameters(baseRecordType))
-        TODO(loc, "hlfir.designate with a parametrized derived type base");
-      fieldIndex = builder.create<fir::FieldIndexOp>(
-          loc, fir::FieldType::get(builder.getContext()),
+        TODO(loc, "hlfir.designate with a parameterized derived type base");
+      fieldIndex = fir::FieldIndexOp::create(
+          builder, loc, fir::FieldType::get(builder.getContext()),
           designate.getComponent().value(), baseRecordType,
           /*typeParams=*/mlir::ValueRange{});
       if (baseEntity.isScalar()) {
@@ -476,11 +483,14 @@ public:
         // - scalar%scalar_component [substring|complex_part] or
         // - scalar%static_size_array_comp
         // - scalar%array(indices) [substring| complex part]
-        mlir::Type componentType = baseEleTy.cast<fir::RecordType>().getType(
-            designate.getComponent().value());
-        mlir::Type coorTy = fir::ReferenceType::get(componentType);
-        base = builder.create<fir::CoordinateOp>(loc, coorTy, base, fieldIndex);
-        if (componentType.isa<fir::BaseBoxType>()) {
+        mlir::Type componentType =
+            mlir::cast<fir::RecordType>(baseEleTy).getType(
+                designate.getComponent().value());
+        mlir::Type coorTy = fir::ReferenceType::get(componentType, isVolatile);
+
+        base =
+            fir::CoordinateOp::create(builder, loc, coorTy, base, fieldIndex);
+        if (mlir::isa<fir::BaseBoxType>(componentType)) {
           auto variableInterface = mlir::cast<fir::FortranVariableOpInterface>(
               designate.getOperation());
           if (variableInterface.isAllocatable() ||
@@ -489,21 +499,24 @@ public:
             return mlir::success();
           }
           TODO(loc,
-               "addressing parametrized derived type automatic components");
+               "addressing parameterized derived type automatic components");
         }
         baseEleTy = hlfir::getFortranElementType(componentType);
         shape = designate.getComponentShape();
-      } else {
-        // array%component[(indices) substring|complex part] cases.
-        // Component ref of array bases are dealt with below in embox/rebox.
-        assert(designateResultType.isa<fir::BaseBoxType>());
       }
     }
 
-    if (designateResultType.isa<fir::BaseBoxType>()) {
-      // Generate embox or rebox.
+    if (mlir::isa<fir::BaseBoxType>(designateResultType) ||
+        // Convert the component array slices using embox/rebox
+        // even if the result is a contiguous array section, e.g.:
+        //   hlfir.designate %base{"i"} shape %shape :
+        //       (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>>,
+        //        !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>>
+        // fir.coordinate_of should probably be a better option, though.
+        (fieldIndex && baseEntity.isArray())) {
+      // Generate embox or rebox for slicing.
       mlir::Type eleTy = fir::unwrapPassByRefType(designateResultType);
-      bool isScalarDesignator = !eleTy.isa<fir::SequenceType>();
+      bool isScalarDesignator = !mlir::isa<fir::SequenceType>(eleTy);
       mlir::Value sourceBox;
       if (isScalarDesignator) {
         // The base box will be used for emboxing the scalar element.
@@ -536,12 +549,12 @@ public:
             mlir::Value iIdx = builder.createConvert(loc, idxTy, i);
             mlir::Value lbIdx = builder.createConvert(loc, idxTy, lb);
             sliceFields.emplace_back(
-                builder.create<mlir::arith::SubIOp>(loc, iIdx, lbIdx));
+                mlir::arith::SubIOp::create(builder, loc, iIdx, lbIdx));
           }
         }
       } else if (!isScalarDesignator) {
         // Otherwise, this is an array section with triplets.
-        auto undef = builder.create<fir::UndefOp>(loc, idxTy);
+        auto undef = fir::UndefOp::create(builder, loc, idxTy);
         unsigned i = 0;
         for (auto isTriplet : designate.getIsTriplet()) {
           triples.push_back(subscripts[i++]);
@@ -562,7 +575,7 @@ public:
         mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
         substring[0] = builder.createConvert(loc, idxTy, substring[0]);
         substring[0] =
-            builder.create<mlir::arith::SubIOp>(loc, substring[0], one);
+            mlir::arith::SubIOp::create(builder, loc, substring[0], one);
         substring.push_back(designate.getTypeparams()[0]);
       }
       if (designate.getComplexPart()) {
@@ -574,18 +587,34 @@ public:
       mlir::Value slice;
       if (!triples.empty())
         slice =
-            builder.create<fir::SliceOp>(loc, triples, sliceFields, substring);
+            fir::SliceOp::create(builder, loc, triples, sliceFields, substring);
       else
         assert(sliceFields.empty() && substring.empty());
-      llvm::SmallVector<mlir::Type> resultType{designateResultType};
+
+      // If the designate's result type is not a box, then create
+      // a box type to be used for the result of the embox/rebox.
+      mlir::Type resultType = designateResultType;
+      if (!mlir::isa<fir::BaseBoxType>(resultType))
+        resultType = fir::wrapInClassOrBoxType(resultType);
+
+      resultType = fir::updateTypeWithVolatility(resultType, isVolatile);
+
       mlir::Value resultBox;
-      if (base.getType().isa<fir::BaseBoxType>())
+      if (mlir::isa<fir::BaseBoxType>(base.getType())) {
         resultBox =
-            builder.create<fir::ReboxOp>(loc, resultType, base, shape, slice);
-      else
+            fir::ReboxOp::create(builder, loc, resultType, base, shape, slice);
+      } else {
         resultBox =
-            builder.create<fir::EmboxOp>(loc, resultType, base, shape, slice,
-                                         firBaseTypeParameters, sourceBox);
+            fir::EmboxOp::create(builder, loc, resultType, base, shape, slice,
+                                 firBaseTypeParameters, sourceBox);
+      }
+
+      if (!mlir::isa<fir::BaseBoxType>(designateResultType)) {
+        // If the designate's result is not a box, use the raw address
+        // as the new result.
+        resultBox = fir::BoxAddrOp::create(rewriter, loc, resultBox);
+        resultBox = builder.createConvert(loc, designateResultType, resultBox);
+      }
       rewriter.replaceOp(designate, resultBox);
       return mlir::success();
     }
@@ -594,8 +623,10 @@ public:
     // first element of a contiguous array section with compile time constant
     // shape. The base may be an array, or a scalar.
     mlir::Type resultAddressType = designateResultType;
-    if (auto boxCharType = designateResultType.dyn_cast<fir::BoxCharType>())
-      resultAddressType = fir::ReferenceType::get(boxCharType.getEleTy());
+    if (auto boxCharType =
+            mlir::dyn_cast<fir::BoxCharType>(designateResultType))
+      resultAddressType =
+          fir::ReferenceType::get(boxCharType.getEleTy(), isVolatile);
 
     // Array element indexing.
     if (!designate.getIndices().empty()) {
@@ -616,22 +647,26 @@ public:
     // Scalar complex part ref
     if (designate.getComplexPart()) {
       // Sequence types should have already been handled by this point
-      assert(!designateResultType.isa<fir::SequenceType>());
+      assert(!mlir::isa<fir::SequenceType>(designateResultType));
       auto index = builder.createIntegerConstant(loc, builder.getIndexType(),
                                                  *designate.getComplexPart());
-      auto coorTy = fir::ReferenceType::get(resultEleTy);
-      base = builder.create<fir::CoordinateOp>(loc, coorTy, base, index);
+      auto coorTy = fir::ReferenceType::get(resultEleTy, isVolatile);
+
+      base = fir::CoordinateOp::create(builder, loc, coorTy, base, index);
     }
 
     // Cast/embox the computed scalar address if needed.
-    if (designateResultType.isa<fir::BoxCharType>()) {
+    if (mlir::isa<fir::BoxCharType>(designateResultType)) {
       assert(designate.getTypeparams().size() == 1 &&
              "must have character length");
-      auto emboxChar = builder.create<fir::EmboxCharOp>(
-          loc, designateResultType, base, designate.getTypeparams()[0]);
+      auto emboxChar =
+          fir::EmboxCharOp::create(builder, loc, designateResultType, base,
+                                   designate.getTypeparams()[0]);
+
       rewriter.replaceOp(designate, emboxChar.getResult());
     } else {
       base = builder.createConvert(loc, designateResultType, base);
+
       rewriter.replaceOp(designate, base);
     }
     return mlir::success();
@@ -662,19 +697,19 @@ public:
   explicit ParentComponentOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ParentComponentOp parentComponent,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = parentComponent.getLoc();
     mlir::Type resultType = parentComponent.getType();
-    if (!parentComponent.getType().isa<fir::BoxType>()) {
+    if (!mlir::isa<fir::BoxType>(parentComponent.getType())) {
       mlir::Value baseAddr = parentComponent.getMemref();
       // Scalar parent component ref without any length type parameters. The
       // input may be a fir.class if it is polymorphic, since this is a scalar
       // and the output will be monomorphic, the base address can be extracted
       // from the fir.class.
-      if (baseAddr.getType().isa<fir::BaseBoxType>())
-        baseAddr = rewriter.create<fir::BoxAddrOp>(loc, baseAddr);
+      if (mlir::isa<fir::BaseBoxType>(baseAddr.getType()))
+        baseAddr = fir::BoxAddrOp::create(rewriter, loc, baseAddr);
       rewriter.replaceOpWithNewOp<fir::ConvertOp>(parentComponent, resultType,
                                                   baseAddr);
       return mlir::success();
@@ -682,7 +717,7 @@ public:
     // Array parent component ref or PDTs.
     hlfir::Entity base{parentComponent.getMemref()};
     mlir::Value baseAddr = base.getBase();
-    if (!baseAddr.getType().isa<fir::BaseBoxType>()) {
+    if (!mlir::isa<fir::BaseBoxType>(baseAddr.getType())) {
       // Embox cannot directly be used to address parent components: it expects
       // the output type to match the input type when there are no slices. When
       // the types have at least one component, a slice to the first element can
@@ -692,8 +727,8 @@ public:
           fir::BoxType::get(base.getElementOrSequenceType());
       assert(!base.hasLengthParameters() &&
              "base must be a box if it has any type parameters");
-      baseAddr = rewriter.create<fir::EmboxOp>(
-          loc, baseBoxType, baseAddr, parentComponent.getShape(),
+      baseAddr = fir::EmboxOp::create(
+          rewriter, loc, baseBoxType, baseAddr, parentComponent.getShape(),
           /*slice=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{});
     }
     rewriter.replaceOpWithNewOp<fir::ReboxOp>(parentComponent, resultType,
@@ -710,7 +745,7 @@ public:
   explicit NoReassocOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NoReassocOp noreassoc,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::NoReassocOp>(noreassoc,
@@ -723,7 +758,7 @@ class NullOpConversion : public mlir::OpRewritePattern<hlfir::NullOp> {
 public:
   explicit NullOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NullOp nullop,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::ZeroOp>(nullop, nullop.getType());
@@ -736,7 +771,7 @@ class GetExtentOpConversion
 public:
   using mlir::OpRewritePattern<hlfir::GetExtentOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::GetExtentOp getExtentOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Value shape = getExtentOp.getShape();
@@ -744,10 +779,13 @@ public:
     // the hlfir.shape_of operation which led to the creation of this get_extent
     // operation should now have been lowered to a fir.shape operation
     if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
-      fir::ShapeType shapeTy = shape.getType().cast<fir::ShapeType>();
+      fir::ShapeType shapeTy = mlir::cast<fir::ShapeType>(shape.getType());
       llvm::APInt dim = getExtentOp.getDim();
       uint64_t dimVal = dim.getLimitedValue(shapeTy.getRank());
       mlir::Value extent = s.getExtents()[dimVal];
+      fir::FirOpBuilder builder(rewriter, getExtentOp.getOperation());
+      extent = builder.createConvert(getExtentOp.getLoc(),
+                                     builder.getIndexType(), extent);
       rewriter.replaceOp(getExtentOp, extent);
       return mlir::success();
     }
@@ -784,7 +822,3 @@ public:
 };
 
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createConvertHLFIRtoFIRPass() {
-  return std::make_unique<ConvertHLFIRtoFIR>();
-}

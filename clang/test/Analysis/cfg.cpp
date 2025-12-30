@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -fheinous-gnu-extensions -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -Wno-error=invalid-gnu-asm-cast -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -fheinous-gnu-extensions -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -Wno-error=invalid-gnu-asm-cast -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
 
 // This file tests how we construct two different flavors of the Clang CFG -
@@ -70,7 +70,7 @@ void F(EmptyE e) {
 // CHECK-NEXT: Succs (1): B1
 // CHECK: [B1]
 // CHECK-NEXT:   1: __builtin_object_size
-// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, BuiltinFnToFnPtr, unsigned long (*)(const void *, int) noexcept)
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, BuiltinFnToFnPtr, __size_t (*)(const void *, int) noexcept)
 // CHECK-NEXT:   3: [B1.2](dummy(), 0)
 // CHECK-NEXT:   4: (void)[B1.3] (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2

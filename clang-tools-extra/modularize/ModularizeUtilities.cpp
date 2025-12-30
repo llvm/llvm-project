@@ -12,17 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ModularizeUtilities.h"
+#include "CoverageChecker.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "CoverageChecker.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "ModularizeUtilities.h"
 
 using namespace clang;
 using namespace llvm;
@@ -47,17 +47,14 @@ ModularizeUtilities::ModularizeUtilities(std::vector<std::string> &InputPaths,
       ProblemFilesPath(ProblemFilesListPath), HasModuleMap(false),
       MissingHeaderCount(0),
       // Init clang stuff needed for loading the module map and preprocessing.
-      LangOpts(new LangOptions()), DiagIDs(new DiagnosticIDs()),
-      DiagnosticOpts(new DiagnosticOptions()),
-      DC(llvm::errs(), DiagnosticOpts.get()),
-      Diagnostics(
-          new DiagnosticsEngine(DiagIDs, DiagnosticOpts.get(), &DC, false)),
+      LangOpts(new LangOptions()), DiagIDs(DiagnosticIDs::create()),
+      DC(llvm::errs(), DiagnosticOpts),
+      Diagnostics(new DiagnosticsEngine(DiagIDs, DiagnosticOpts, &DC, false)),
       TargetOpts(new ModuleMapTargetOptions()),
-      Target(TargetInfo::CreateTargetInfo(*Diagnostics, TargetOpts)),
+      Target(TargetInfo::CreateTargetInfo(*Diagnostics, *TargetOpts)),
       FileMgr(new FileManager(FileSystemOpts)),
-      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)),
-      HeaderInfo(new HeaderSearch(std::make_shared<HeaderSearchOptions>(),
-                                  *SourceMgr, *Diagnostics, *LangOpts,
+      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)), HSOpts(),
+      HeaderInfo(new HeaderSearch(HSOpts, *SourceMgr, *Diagnostics, *LangOpts,
                                   Target.get())) {}
 
 // Create instance of ModularizeUtilities, to simplify setting up
@@ -72,8 +69,7 @@ ModularizeUtilities *ModularizeUtilities::createModularizeUtilities(
 // Load all header lists and dependencies.
 std::error_code ModularizeUtilities::loadAllHeaderListsAndDependencies() {
   // For each input file.
-  for (auto I = InputFilePaths.begin(), E = InputFilePaths.end(); I != E; ++I) {
-    llvm::StringRef InputPath = *I;
+  for (llvm::StringRef InputPath : InputFilePaths) {
     // If it's a module map.
     if (InputPath.ends_with(".modulemap")) {
       // Load the module map.
@@ -195,7 +191,7 @@ std::error_code ModularizeUtilities::loadSingleHeaderListsAndDependencies(
     // Get canonical form.
     HeaderFileName = getCanonicalPath(HeaderFileName);
     // Save the resulting header file path and dependencies.
-    HeaderFileNames.push_back(std::string(HeaderFileName.str()));
+    HeaderFileNames.push_back(std::string(HeaderFileName));
     Dependencies[HeaderFileName.str()] = Dependents;
   }
   return std::error_code();
@@ -248,7 +244,7 @@ std::error_code ModularizeUtilities::loadProblemHeaderList(
     // Get canonical form.
     HeaderFileName = getCanonicalPath(HeaderFileName);
     // Save the resulting header file path.
-    ProblemFileNames.push_back(std::string(HeaderFileName.str()));
+    ProblemFileNames.push_back(std::string(HeaderFileName));
   }
   return std::error_code();
 }
@@ -291,7 +287,7 @@ std::error_code ModularizeUtilities::loadModuleMap(
     Target.get(), *HeaderInfo));
 
   // Parse module.modulemap file into module map.
-  if (ModMap->parseModuleMapFile(ModuleMapEntry, false, Dir)) {
+  if (ModMap->parseAndLoadModuleMapFile(ModuleMapEntry, false, Dir)) {
     return std::error_code(1, std::generic_category());
   }
 
@@ -358,7 +354,7 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   } else if (std::optional<clang::Module::DirectoryName> UmbrellaDir =
                  Mod.getUmbrellaDirAsWritten()) {
     // If there normal headers, assume these are umbrellas and skip collection.
-    if (Mod.Headers->size() == 0) {
+    if (Mod.getHeaders(Module::HK_Normal).empty()) {
       // Collect headers in umbrella directory.
       if (!collectUmbrellaHeaders(UmbrellaDir->Entry.getName(),
                                   UmbrellaDependents))
@@ -371,16 +367,8 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   // modules or because they are meant to be included by another header,
   // and thus should be ignored by modularize.
 
-  int NormalHeaderCount = Mod.Headers[clang::Module::HK_Normal].size();
-
-  for (int Index = 0; Index < NormalHeaderCount; ++Index) {
-    DependentsVector NormalDependents;
-    // Collect normal header.
-    const clang::Module::Header &Header(
-      Mod.Headers[clang::Module::HK_Normal][Index]);
-    std::string HeaderPath = getCanonicalPath(Header.Entry.getName());
-    HeaderFileNames.push_back(HeaderPath);
-  }
+  for (const auto &Header : Mod.getHeaders(clang::Module::HK_Normal))
+    HeaderFileNames.push_back(getCanonicalPath(Header.Entry.getName()));
 
   int MissingCountThisModule = Mod.MissingHeaders.size();
 
@@ -435,11 +423,9 @@ static std::string replaceDotDot(StringRef Path) {
   llvm::sys::path::const_iterator B = llvm::sys::path::begin(Path),
     E = llvm::sys::path::end(Path);
   while (B != E) {
-    if (B->compare(".") == 0) {
-    }
-    else if (B->compare("..") == 0)
+    if (*B == "..")
       llvm::sys::path::remove_filename(Buffer);
-    else
+    else if (*B != ".")
       llvm::sys::path::append(Buffer, *B);
     ++B;
   }
@@ -454,7 +440,7 @@ static std::string replaceDotDot(StringRef Path) {
 // \returns The file path in canonical form.
 std::string ModularizeUtilities::getCanonicalPath(StringRef FilePath) {
   std::string Tmp(replaceDotDot(FilePath));
-  std::replace(Tmp.begin(), Tmp.end(), '\\', '/');
+  llvm::replace(Tmp, '\\', '/');
   StringRef Tmp2(Tmp);
   if (Tmp2.starts_with("./"))
     Tmp = std::string(Tmp2.substr(2));
@@ -487,7 +473,7 @@ std::string ModularizeUtilities::getDirectoryFromPath(StringRef Path) {
   sys::path::remove_filename(Directory);
   if (Directory.size() == 0)
     return ".";
-  return std::string(Directory.str());
+  return std::string(Directory);
 }
 
 // Add unique problem file.

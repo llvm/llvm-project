@@ -8,14 +8,14 @@
 
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Target/RegisterFlags.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-private-types.h"
 #include "llvm/ADT/bit.h"
 
@@ -54,7 +54,8 @@ static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
       };
   dump_options.SetChildPrintingDecider(decider).SetHideRootType(true);
 
-  vobj_sp->Dump(strm, dump_options);
+  if (llvm::Error error = vobj_sp->Dump(strm, dump_options))
+    strm << "error: " << toString(std::move(error));
 }
 
 void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,

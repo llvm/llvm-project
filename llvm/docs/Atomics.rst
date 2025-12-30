@@ -14,9 +14,16 @@ asynchronous signals.
 The atomic instructions are designed specifically to provide readable IR and
 optimized code generation for the following:
 
-* The C++11 ``<atomic>`` header.  (`C++11 draft available here
-  <http://www.open-std.org/jtc1/sc22/wg21/>`_.) (`C11 draft available here
-  <http://www.open-std.org/jtc1/sc22/wg14/>`_.)
+* The C++ ``<atomic>`` header and C ``<stdatomic.h>`` headers. These
+  were originally added in C++11 and C11. The memory model has been
+  subsequently adjusted to correct errors in the initial
+  specification, so LLVM currently intends to implement the version
+  specified by C++20. (See the `C++20 draft standard
+  <https://isocpp.org/files/papers/N4860.pdf>`_ or the unofficial
+  `latest C++ draft <https://eel.is/c++draft/>`_. A `C2x draft
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3047.pdf>`_ is
+  also available, though the text has not yet been updated with the
+  errata corrected by C++20.)
 
 * Proper semantics for Java-style memory, for both ``volatile`` and regular
   shared variables. (`Java Specification
@@ -36,8 +43,8 @@ address, the first store can be erased. This transformation is not allowed for a
 pair of volatile stores. On the other hand, a non-volatile non-atomic load can
 be moved across a volatile load freely, but not an Acquire load.
 
-This document is intended to provide a guide to anyone either writing a frontend
-for LLVM or working on optimization passes for LLVM with a guide for how to deal
+This document is intended to guide anyone writing a frontend
+for LLVM or working on optimization passes for LLVM on how to deal
 with instructions with special semantics in the presence of concurrency. This
 is not intended to be a precise guide to the semantics; the details can get
 extremely complicated and unreadable, and are not usually necessary.
@@ -87,7 +94,7 @@ The following is equivalent in non-concurrent situations:
 
 However, LLVM is not allowed to transform the former to the latter: it could
 indirectly introduce undefined behavior if another thread can access ``x`` at
-the same time. That thread would read `undef` instead of the value it was
+the same time. That thread would read ``undef`` instead of the value it was
 expecting, which can lead to undefined behavior down the line. (This example is
 particularly of interest because before the concurrency model was implemented,
 LLVM would perform this transformation.)
@@ -110,13 +117,14 @@ where threads and signals are involved.
 atomic store (where the store is conditional for ``cmpxchg``), but no other
 memory operation can happen on any thread between the load and store.
 
-A ``fence`` provides Acquire and/or Release ordering which is not part of
-another operation; it is normally used along with Monotonic memory operations.
-A Monotonic load followed by an Acquire fence is roughly equivalent to an
-Acquire load, and a Monotonic store following a Release fence is roughly
-equivalent to a Release store. SequentiallyConsistent fences behave as both
-an Acquire and a Release fence, and offer some additional complicated
-guarantees, see the C++11 standard for details.
+A ``fence`` provides Acquire and/or Release ordering which is not part
+of another operation; it is normally used along with Monotonic memory
+operations.  A Monotonic load followed by an Acquire fence is roughly
+equivalent to an Acquire load, and a Monotonic store following a
+Release fence is roughly equivalent to a Release
+store. SequentiallyConsistent fences behave as both an Acquire and a
+Release fence, and additionally provide a total ordering with some
+complicated guarantees, see the C++ standard for details.
 
 Frontends generating atomic instructions generally need to be aware of the
 target to some degree; atomic instructions are guaranteed to be lock-free, and
@@ -141,7 +149,7 @@ NotAtomic
 NotAtomic is the obvious, a load or store which is not atomic. (This isn't
 really a level of atomicity, but is listed here for comparison.) This is
 essentially a regular load or store. If there is a race on a given memory
-location, loads from that location return undef.
+location, loads from that location return ``undef``.
 
 Relevant standard
   This is intended to match shared variables in C/C++, and to be used in any
@@ -222,7 +230,7 @@ essentially guarantees that if you take all the operations affecting a specific
 address, a consistent ordering exists.
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_relaxed``; see those
+  This corresponds to the C++/C ``memory_order_relaxed``; see those
   standards for the exact definition.
 
 Notes for frontends
@@ -252,8 +260,8 @@ Acquire provides a barrier of the sort necessary to acquire a lock to access
 other memory with normal loads and stores.
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_acquire``. It should also be
-  used for C++11/C11 ``memory_order_consume``.
+  This corresponds to the C++/C ``memory_order_acquire``. It should also be
+  used for C++/C ``memory_order_consume``.
 
 Notes for frontends
   If you are writing a frontend which uses this directly, use with caution.
@@ -282,7 +290,7 @@ Release is similar to Acquire, but with a barrier of the sort necessary to
 release a lock.
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_release``.
+  This corresponds to the C++/C ``memory_order_release``.
 
 Notes for frontends
   If you are writing a frontend which uses this directly, use with caution.
@@ -308,7 +316,7 @@ AcquireRelease (``acq_rel`` in IR) provides both an Acquire and a Release
 barrier (for fences and operations which both read and write memory).
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_acq_rel``.
+  This corresponds to the C++/C ``memory_order_acq_rel``.
 
 Notes for frontends
   If you are writing a frontend which uses this directly, use with caution.
@@ -331,7 +339,7 @@ and Release semantics for stores. Additionally, it guarantees that a total
 ordering exists between all SequentiallyConsistent operations.
 
 Relevant standard
-  This corresponds to the C++11/C11 ``memory_order_seq_cst``, Java volatile, and
+  This corresponds to the C++/C ``memory_order_seq_cst``, Java volatile, and
   the gcc-compatible ``__sync_*`` builtins which do not specify otherwise.
 
 Notes for frontends
@@ -400,7 +408,7 @@ operations:
   MemoryDependencyAnalysis (which is also used by other passes like GVN).
 
 * Folding a load: Any atomic load from a constant global can be constant-folded,
-  because it cannot be observed.  Similar reasoning allows sroa with
+  because it cannot be observed.  Similar reasoning allows SROA with
   atomic loads and stores.
 
 Atomics and Codegen
@@ -421,7 +429,7 @@ support *ALL* operations of that size in a lock-free manner.
 
 When the target implements atomic ``cmpxchg`` or LL/SC instructions (as most do)
 this is trivial: all the other operations can be implemented on top of those
-primitives. However, on many older CPUs (e.g. ARMv5, SparcV8, Intel 80386) there
+primitives. However, on many older CPUs (e.g. ARMv5, Sparc V8, Intel 80386) there
 are atomic load and store instructions, but no ``cmpxchg`` or LL/SC. As it is
 invalid to implement ``atomic load`` using the native instruction, but
 ``cmpxchg`` using a library call to a function that uses a mutex, ``atomic
@@ -467,7 +475,7 @@ atomic constructs. Here are some lowerings it can do:
   ``shouldExpandAtomicRMWInIR``, ``emitMaskedAtomicRMWIntrinsic``,
   ``shouldExpandAtomicCmpXchgInIR``, and ``emitMaskedAtomicCmpXchgIntrinsic``.
 
-For an example of these look at the ARM (first five lowerings) or RISC-V (last
+For an example of these, look at the ARM (first five lowerings) or RISC-V (last
 lowering) backend.
 
 AtomicExpandPass supports two strategies for lowering atomicrmw/cmpxchg to
@@ -534,7 +542,7 @@ to take note of:
 
 - They support all sizes and alignments -- including those which cannot be
   implemented natively on any existing hardware. Therefore, they will certainly
-  use mutexes in for some sizes/alignments.
+  use mutexes for some sizes/alignments.
 
 - As a consequence, they cannot be shipped in a statically linked
   compiler-support library, as they have state which must be shared amongst all
@@ -560,7 +568,7 @@ Libcalls: __sync_*
 Some targets or OS/target combinations can support lock-free atomics, but for
 various reasons, it is not practical to emit the instructions inline.
 
-There's two typical examples of this.
+There are two typical examples of this.
 
 Some CPUs support multiple instruction sets which can be switched back and forth
 on function-call boundaries. For example, MIPS supports the MIPS16 ISA, which
@@ -581,7 +589,7 @@ case. The only common architecture without that property is SPARC -- SPARCV8 SMP
 systems were common, yet it doesn't support any sort of compare-and-swap
 operation.
 
-Some targets (like RISCV) support a ``+forced-atomics`` target feature, which
+Some targets (like RISC-V) support a ``+forced-atomics`` target feature, which
 enables the use of lock-free atomics even if LLVM is not aware of any specific
 OS support for them. In this case, the user is responsible for ensuring that
 necessary ``__sync_*`` implementations are available. Code using
@@ -645,6 +653,6 @@ implemented in both ``compiler-rt`` and ``libgcc`` libraries
   iN __aarch64_ldeorN_ORDER(iN val, iN *ptr)
   iN __aarch64_ldsetN_ORDER(iN val, iN *ptr)
 
-Please note, if LSE instruction set is specified for AArch64 target then
+Please note, if LSE instruction set is specified for AArch64 target, then
 out-of-line atomics calls are not generated and single-instruction atomic
 operations are used in place.

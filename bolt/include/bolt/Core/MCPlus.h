@@ -14,10 +14,8 @@
 #ifndef BOLT_CORE_MCPLUS_H
 #define BOLT_CORE_MCPLUS_H
 
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Support/Casting.h"
 #include <vector>
 
 namespace llvm {
@@ -73,7 +71,13 @@ public:
     kOffset,              /// Offset in the function.
     kLabel,               /// MCSymbol pointing to this instruction.
     kSize,                /// Size of the instruction.
-    kGeneric              /// First generic annotation.
+    kDynamicBranch,       /// Jit instruction patched at runtime.
+    kRASigned,            /// Inst is in a range where RA is signed.
+    kRAUnsigned,          /// Inst is in a range where RA is unsigned.
+    kRememberState,       /// Inst has rememberState CFI.
+    kRestoreState,        /// Inst has restoreState CFI.
+    kNegateState,         /// Inst has OpNegateRAState CFI.
+    kGeneric,             /// First generic annotation.
   };
 
   virtual void print(raw_ostream &OS) const = 0;

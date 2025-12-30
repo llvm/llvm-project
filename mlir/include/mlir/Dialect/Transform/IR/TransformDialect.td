@@ -19,11 +19,12 @@ def Transform_Dialect : Dialect {
   let cppNamespace = "::mlir::transform";
 
   let hasOperationAttrVerify = 1;
+  let useDefaultAttributePrinterParser = 1;
   let extraClassDeclaration = [{
     /// Symbol name for the default entry point "named sequence".
     constexpr const static ::llvm::StringLiteral
         kTransformEntryPointSymbolName = "__transform_main";
-    
+
     /// Name of the attribute attachable to the symbol table operation
     /// containing named sequences. This is used to trigger verification.
     constexpr const static ::llvm::StringLiteral
@@ -33,12 +34,6 @@ def Transform_Dialect : Dialect {
     /// identified as root by the default interpreter pass.
     constexpr const static ::llvm::StringLiteral kTargetTagAttrName =
         "transform.target_tag";
-
-    /// Name of the attribute attachable to an operation, indicating that
-    /// TrackingListener failures should be silenced.
-    constexpr const static ::llvm::StringLiteral
-        kSilenceTrackingFailuresAttrName =
-            "transform.silence_tracking_failures";
 
     /// Names of the attributes indicating whether an argument of an external
     /// transform dialect symbol is consumed or only read.

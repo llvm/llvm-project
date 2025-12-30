@@ -27,11 +27,9 @@ entry:
 define void @medium_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: medium_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $512, %edx # imm = 0x200
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    movl $128, %ecx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 4 %ptr, i8 0, i32 512, i1 false)
@@ -41,11 +39,9 @@ entry:
 define void @large_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: large_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $4096, %edx # imm = 0x1000
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    movl $1024, %ecx # imm = 0x400
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 4 %ptr, i8 0, i32 4096, i1 false)
@@ -55,11 +51,9 @@ entry:
 define void @huge_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: huge_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $8192, %edx # imm = 0x2000
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    movl $2048, %ecx # imm = 0x800
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 4 %ptr, i8 0, i32 8192, i1 false)
@@ -69,11 +63,9 @@ entry:
 define void @odd_length_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: odd_length_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $255, %edx
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    movl $255, %ecx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosb %al, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 4 %ptr, i8 0, i32 255, i1 false)
@@ -83,11 +75,10 @@ entry:
 define void @align_1_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: align_1_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $256, %edx # imm = 0x100
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    pushq $64
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 1 %ptr, i8 0, i32 256, i1 false)
@@ -97,11 +88,10 @@ entry:
 define void @align_2_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: align_2_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $256, %edx # imm = 0x100
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    pushq $64
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 2 %ptr, i8 0, i32 256, i1 false)
@@ -111,11 +101,10 @@ entry:
 define void @align_4_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: align_4_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $256, %edx # imm = 0x100
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    pushq $64
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 4 %ptr, i8 0, i32 256, i1 false)
@@ -125,14 +114,26 @@ entry:
 define void @align_8_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: align_8_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $256, %edx # imm = 0x100
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    pushq $64
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 8 %ptr, i8 0, i32 256, i1 false)
+  ret void
+}
+
+define void @small_memset_to_rep_stos_64(ptr %ptr) minsize nounwind {
+; CHECK-LABEL: small_memset_to_rep_stos_64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq $32
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  call void @llvm.memset.p0.i64(ptr align 8 %ptr, i8 0, i64 128, i1 false)
   ret void
 }
 

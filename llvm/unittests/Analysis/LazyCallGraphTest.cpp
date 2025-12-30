@@ -34,7 +34,7 @@ std::unique_ptr<Module> parseAssembly(LLVMContext &Context,
 
   // A failure here means that the test itself is buggy.
   if (!M)
-    report_fatal_error(OS.str().c_str());
+    report_fatal_error(ErrMsg.c_str());
 
   return M;
 }
@@ -142,83 +142,83 @@ static const char DiamondOfTriangles[] =
 static const char DiamondOfTrianglesRefGraph[] =
      "define void @a1() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @a2, void ()** %a\n"
-     "  store void ()* @b2, void ()** %a\n"
-     "  store void ()* @c3, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @a2, ptr %a\n"
+     "  store ptr @b2, ptr %a\n"
+     "  store ptr @c3, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @a2() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @a3, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @a3, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @a3() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @a1, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @a1, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @b1() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @b2, void ()** %a\n"
-     "  store void ()* @d3, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @b2, ptr %a\n"
+     "  store ptr @d3, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @b2() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @b3, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @b3, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @b3() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @b1, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @b1, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @c1() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @c2, void ()** %a\n"
-     "  store void ()* @d2, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @c2, ptr %a\n"
+     "  store ptr @d2, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @c2() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @c3, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @c3, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @c3() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @c1, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @c1, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @d1() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @d2, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @d2, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @d2() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @d3, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @d3, ptr %a\n"
      "  ret void\n"
      "}\n"
      "define void @d3() {\n"
      "entry:\n"
-     "  %a = alloca void ()*\n"
-     "  store void ()* @d1, void ()** %a\n"
+     "  %a = alloca ptr\n"
+     "  store ptr @d1, ptr %a\n"
      "  ret void\n"
      "}\n";
 
 static LazyCallGraph buildCG(Module &M) {
-  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   auto GetTLI = [&TLI](Function &F) -> TargetLibraryInfo & { return TLI; };
 
@@ -1005,20 +1005,20 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertionLargeRefCycle) {
   std::unique_ptr<Module> M =
       parseAssembly(Context, "define void @a() {\n"
                              "entry:\n"
-                             "  %p = alloca void ()*\n"
-                             "  store void ()* @b, void ()** %p\n"
+                             "  %p = alloca ptr\n"
+                             "  store ptr @b, ptr %p\n"
                              "  ret void\n"
                              "}\n"
                              "define void @b() {\n"
                              "entry:\n"
-                             "  %p = alloca void ()*\n"
-                             "  store void ()* @c, void ()** %p\n"
+                             "  %p = alloca ptr\n"
+                             "  store ptr @c, ptr %p\n"
                              "  ret void\n"
                              "}\n"
                              "define void @c() {\n"
                              "entry:\n"
-                             "  %p = alloca void ()*\n"
-                             "  store void ()* @d, void ()** %p\n"
+                             "  %p = alloca ptr\n"
+                             "  store ptr @d, ptr %p\n"
                              "  ret void\n"
                              "}\n"
                              "define void @d() {\n"
@@ -1155,7 +1155,7 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   ASSERT_EQ(&D2F, D1Call->getCalledFunction());
   C1Call->setCalledFunction(&D3.getFunction());
   D1Call->setCalledFunction(&D3.getFunction());
-  ASSERT_EQ(0u, D2F.getNumUses());
+  ASSERT_TRUE(D2F.use_empty());
 
   // Insert new edges first.
   CRC.insertTrivialCallEdge(C1, D3);
@@ -1169,7 +1169,7 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   LazyCallGraph::SCC &NewDC = *NewCs.begin();
   EXPECT_EQ(&NewDC, CG.lookupSCC(D1));
   EXPECT_EQ(&NewDC, CG.lookupSCC(D3));
-  auto NewRCs = DRC.removeInternalRefEdge(D1, {&D2});
+  auto NewRCs = DRC.removeInternalRefEdges({{&D1, &D2}});
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &NewDRC = *NewRCs[0];
   EXPECT_EQ(&NewDRC, CG.lookupRefSCC(D1));
@@ -1186,7 +1186,8 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   EXPECT_TRUE(D2RC.isParentOf(NewDRC));
 
   // Now that we've updated the call graph, D2 is dead, so remove it.
-  CG.removeDeadFunction(D2F);
+  CG.markDeadFunction(D2F);
+  CG.removeDeadFunctions({&D2F});
 
   // Check that the graph still looks the same.
   EXPECT_EQ(&ARC, CG.lookupRefSCC(A1));
@@ -1305,25 +1306,25 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
   LLVMContext Context;
   // A nice fully connected (including self-edges) RefSCC.
   std::unique_ptr<Module> M = parseAssembly(
-      Context, "define void @a(i8** %ptr) {\n"
+      Context, "define void @a(ptr %ptr) {\n"
                "entry:\n"
-               "  store i8* bitcast (void(i8**)* @a to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+               "  store ptr @a, ptr %ptr\n"
+               "  store ptr @b, ptr %ptr\n"
+               "  store ptr @c, ptr %ptr\n"
                "  ret void\n"
                "}\n"
-               "define void @b(i8** %ptr) {\n"
+               "define void @b(ptr %ptr) {\n"
                "entry:\n"
-               "  store i8* bitcast (void(i8**)* @a to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+               "  store ptr @a, ptr %ptr\n"
+               "  store ptr @b, ptr %ptr\n"
+               "  store ptr @c, ptr %ptr\n"
                "  ret void\n"
                "}\n"
-               "define void @c(i8** %ptr) {\n"
+               "define void @c(ptr %ptr) {\n"
                "entry:\n"
-               "  store i8* bitcast (void(i8**)* @a to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+               "  store ptr @a, ptr %ptr\n"
+               "  store ptr @b, ptr %ptr\n"
+               "  store ptr @c, ptr %ptr\n"
                "  ret void\n"
                "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -1344,7 +1345,7 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
   // Remove the edge from b -> a, which should leave the 3 functions still in
   // a single connected component because of a -> b -> c -> a.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdge(B, {&A});
+      RC.removeInternalRefEdges({{&B, &A}});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(A));
   EXPECT_EQ(&RC, CG.lookupRefSCC(B));
@@ -1360,7 +1361,7 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
 
   // Remove the edge from c -> a, which should leave 'a' in the original RefSCC
   // and form a new RefSCC for 'b' and 'c'.
-  NewRCs = RC.removeInternalRefEdge(C, {&A});
+  NewRCs = RC.removeInternalRefEdges({{&C, &A}});
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &BCRC = *NewRCs[0];
   LazyCallGraph::RefSCC &ARC = *NewRCs[1];
@@ -1383,25 +1384,25 @@ TEST(LazyCallGraphTest, InternalMultiEdgeRemoval) {
   LLVMContext Context;
   // A nice fully connected (including self-edges) RefSCC.
   std::unique_ptr<Module> M = parseAssembly(
-      Context, "define void @a(i8** %ptr) {\n"
+      Context, "define void @a(ptr %ptr) {\n"
                "entry:\n"
-               "  store i8* bitcast (void(i8**)* @a to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+               "  store ptr @a, ptr %ptr\n"
+               "  store ptr @b, ptr %ptr\n"
+               "  store ptr @c, ptr %ptr\n"
                "  ret void\n"
                "}\n"
-               "define void @b(i8** %ptr) {\n"
+               "define void @b(ptr %ptr) {\n"
                "entry:\n"
-               "  store i8* bitcast (void(i8**)* @a to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+               "  store ptr @a, ptr %ptr\n"
+               "  store ptr @b, ptr %ptr\n"
+               "  store ptr @c, ptr %ptr\n"
                "  ret void\n"
                "}\n"
-               "define void @c(i8** %ptr) {\n"
+               "define void @c(ptr %ptr) {\n"
                "entry:\n"
-               "  store i8* bitcast (void(i8**)* @a to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
-               "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+               "  store ptr @a, ptr %ptr\n"
+               "  store ptr @b, ptr %ptr\n"
+               "  store ptr @c, ptr %ptr\n"
                "  ret void\n"
                "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -1425,7 +1426,7 @@ TEST(LazyCallGraphTest, InternalMultiEdgeRemoval) {
 
   // Remove the edges from b -> a and b -> c, leaving b in its own RefSCC.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdge(B, {&A, &C});
+      RC.removeInternalRefEdges({{&B, &A}, {&B, &C}});
 
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &BRC = *NewRCs[0];
@@ -1453,22 +1454,22 @@ TEST(LazyCallGraphTest, InternalNoOpEdgeRemoval) {
   // Reference edges: a -> b -> c -> a
   //      Call edges: a -> c -> b -> a
   std::unique_ptr<Module> M = parseAssembly(
-      Context, "define void @a(i8** %ptr) {\n"
+      Context, "define void @a(ptr %ptr) {\n"
                "entry:\n"
-               "  call void @b(i8** %ptr)\n"
-               "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+               "  call void @b(ptr %ptr)\n"
+               "  store ptr @c, ptr %ptr\n"
                "  ret void\n"
                "}\n"
-               "define void @b(i8** %ptr) {\n"
+               "define void @b(ptr %ptr) {\n"
                "entry:\n"
-               "  store i8* bitcast (void(i8**)* @a to i8*), i8** %ptr\n"
-               "  call void @c(i8** %ptr)\n"
+               "  store ptr @a, ptr %ptr\n"
+               "  call void @c(ptr %ptr)\n"
                "  ret void\n"
                "}\n"
-               "define void @c(i8** %ptr) {\n"
+               "define void @c(ptr %ptr) {\n"
                "entry:\n"
-               "  call void @a(i8** %ptr)\n"
-               "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
+               "  call void @a(ptr %ptr)\n"
+               "  store ptr @b, ptr %ptr\n"
                "  ret void\n"
                "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -1494,7 +1495,7 @@ TEST(LazyCallGraphTest, InternalNoOpEdgeRemoval) {
 
   // Remove the edge from a -> c which doesn't change anything.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdge(AN, {&CN});
+      RC.removeInternalRefEdges({{&AN, &CN}});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
   EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
@@ -1509,8 +1510,8 @@ TEST(LazyCallGraphTest, InternalNoOpEdgeRemoval) {
 
   // Remove the edge from b -> a and c -> b; again this doesn't change
   // anything.
-  NewRCs = RC.removeInternalRefEdge(BN, {&AN});
-  NewRCs = RC.removeInternalRefEdge(CN, {&BN});
+  NewRCs = RC.removeInternalRefEdges({{&BN, &AN}});
+  NewRCs = RC.removeInternalRefEdges({{&CN, &BN}});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
   EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
@@ -1621,24 +1622,24 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCall) {
                              "entry:\n"
                              "  call void @b()\n"
                              "  call void @c()\n"
-                             "  store void()* @d, void()** undef\n"
+                             "  store ptr @d, ptr undef\n"
                              "  ret void\n"
                              "}\n"
                              "define void @b() {\n"
                              "entry:\n"
-                             "  store void()* @c, void()** undef\n"
+                             "  store ptr @c, ptr undef\n"
                              "  call void @d()\n"
                              "  ret void\n"
                              "}\n"
                              "define void @c() {\n"
                              "entry:\n"
-                             "  store void()* @b, void()** undef\n"
+                             "  store ptr @b, ptr undef\n"
                              "  call void @d()\n"
                              "  ret void\n"
                              "}\n"
                              "define void @d() {\n"
                              "entry:\n"
-                             "  store void()* @a, void()** undef\n"
+                             "  store ptr @a, ptr undef\n"
                              "  ret void\n"
                              "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -1744,13 +1745,13 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallNoCycleInterleaved) {
                              "}\n"
                              "define void @c3() {\n"
                              "entry:\n"
-                             "  store void()* @b1, void()** undef\n"
+                             "  store ptr @b1, ptr undef\n"
                              "  call void @d()\n"
                              "  ret void\n"
                              "}\n"
                              "define void @d() {\n"
                              "entry:\n"
-                             "  store void()* @a, void()** undef\n"
+                             "  store ptr @a, ptr undef\n"
                              "  ret void\n"
                              "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -1829,7 +1830,7 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallBothPartitionAndMerge) {
   // a cycle.
   //
   // Diagram for the graph we want on the left and the graph we use to force
-  // the ordering on the right. Edges ponit down or right.
+  // the ordering on the right. Edges point down or right.
   //
   //   A    |    A    |
   //  / \   |   / \   |
@@ -1874,13 +1875,13 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallBothPartitionAndMerge) {
                              "}\n"
                              "define void @f() {\n"
                              "entry:\n"
-                             "  store void()* @b, void()** undef\n"
+                             "  store ptr @b, ptr undef\n"
                              "  call void @g()\n"
                              "  ret void\n"
                              "}\n"
                              "define void @g() {\n"
                              "entry:\n"
-                             "  store void()* @a, void()** undef\n"
+                             "  store ptr @a, ptr undef\n"
                              "  ret void\n"
                              "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -1961,9 +1962,9 @@ TEST(LazyCallGraphTest, HandleBlockAddress) {
                              "bb:\n"
                              "  unreachable\n"
                              "}\n"
-                             "define void @g(i8** %ptr) {\n"
+                             "define void @g(ptr %ptr) {\n"
                              "entry:\n"
-                             "  store i8* blockaddress(@f, %bb), i8** %ptr\n"
+                             "  store ptr blockaddress(@f, %bb), ptr %ptr\n"
                              "  ret void\n"
                              "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -1990,9 +1991,9 @@ TEST(LazyCallGraphTest, HandleBlockAddress2) {
       parseAssembly(Context, "define void @f() {\n"
                              "  ret void\n"
                              "}\n"
-                             "define void @g(i8** %ptr) {\n"
+                             "define void @g(ptr %ptr) {\n"
                              "bb:\n"
-                             "  store i8* blockaddress(@g, %bb), i8** %ptr\n"
+                             "  store ptr blockaddress(@g, %bb), ptr %ptr\n"
                              "  ret void\n"
                              "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -2017,31 +2018,31 @@ TEST(LazyCallGraphTest, ReplaceNodeFunction) {
   // function.
   std::unique_ptr<Module> M =
       parseAssembly(Context,
-                    "define void @a(i8** %ptr) {\n"
+                    "define void @a(ptr %ptr) {\n"
                     "entry:\n"
-                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  store ptr @d, ptr %ptr\n"
                     "  ret void\n"
                     "}\n"
-                    "define void @b(i8** %ptr) {\n"
+                    "define void @b(ptr %ptr) {\n"
                     "entry:\n"
-                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
-                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
-                    "  call void @d(i8** %ptr)"
+                    "  store ptr @d, ptr %ptr\n"
+                    "  store ptr @d, ptr %ptr\n"
+                    "  call void @d(ptr %ptr)"
                     "  ret void\n"
                     "}\n"
-                    "define void @c(i8** %ptr) {\n"
+                    "define void @c(ptr %ptr) {\n"
                     "entry:\n"
-                    "  call void @d(i8** %ptr)"
-                    "  call void @d(i8** %ptr)"
-                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  call void @d(ptr %ptr)"
+                    "  call void @d(ptr %ptr)"
+                    "  store ptr @d, ptr %ptr\n"
                     "  ret void\n"
                     "}\n"
-                    "define void @d(i8** %ptr) {\n"
+                    "define void @d(ptr %ptr) {\n"
                     "entry:\n"
-                    "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
-                    "  call void @c(i8** %ptr)"
-                    "  call void @d(i8** %ptr)"
-                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  store ptr @b, ptr %ptr\n"
+                    "  call void @c(ptr %ptr)"
+                    "  call void @d(ptr %ptr)"
+                    "  store ptr @d, ptr %ptr\n"
                     "  ret void\n"
                     "}\n");
   LazyCallGraph CG = buildCG(*M);
@@ -2097,25 +2098,25 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRef) {
   // A graph with a couple of RefSCCs.
   std::unique_ptr<Module> M =
       parseAssembly(Context,
-                    "define void @a(i8** %ptr) {\n"
+                    "define void @a(ptr %ptr) {\n"
                     "entry:\n"
-                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  store ptr @d, ptr %ptr\n"
                     "  ret void\n"
                     "}\n"
-                    "define void @b(i8** %ptr) {\n"
+                    "define void @b(ptr %ptr) {\n"
                     "entry:\n"
-                    "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+                    "  store ptr @c, ptr %ptr\n"
                     "  ret void\n"
                     "}\n"
-                    "define void @c(i8** %ptr) {\n"
+                    "define void @c(ptr %ptr) {\n"
                     "entry:\n"
-                    "  call void @d(i8** %ptr)"
+                    "  call void @d(ptr %ptr)"
                     "  ret void\n"
                     "}\n"
-                    "define void @d(i8** %ptr) {\n"
+                    "define void @d(ptr %ptr) {\n"
                     "entry:\n"
-                    "  call void @c(i8** %ptr)"
-                    "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
+                    "  call void @c(ptr %ptr)"
+                    "  store ptr @b, ptr %ptr\n"
                     "  ret void\n"
                     "}\n"
                     "define void @dead() {\n"
@@ -2163,7 +2164,8 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRef) {
 
   // Now delete 'dead'. There are no uses of this function but there are
   // spurious references.
-  CG.removeDeadFunction(DeadN.getFunction());
+  CG.markDeadFunction(DeadN.getFunction());
+  CG.removeDeadFunctions({&DeadN.getFunction()});
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2212,7 +2214,8 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.removeDeadFunction(AN.getFunction());
+  CG.markDeadFunction(AN.getFunction());
+  CG.removeDeadFunctions({&AN.getFunction()});
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2269,7 +2272,8 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive2) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.removeDeadFunction(AN.getFunction());
+  CG.markDeadFunction(AN.getFunction());
+  CG.removeDeadFunctions({&AN.getFunction()});
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2320,7 +2324,8 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive3) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.removeDeadFunction(AN.getFunction());
+  CG.markDeadFunction(AN.getFunction());
+  CG.removeDeadFunctions({&AN.getFunction()});
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2352,7 +2357,7 @@ TEST(LazyCallGraphTest, AddSplitFunction1) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
-  (void)CallInst::Create(G, {}, "", &*F.getEntryBlock().begin());
+  (void)CallInst::Create(G, {}, "", F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2393,7 +2398,7 @@ TEST(LazyCallGraphTest, AddSplitFunction2) {
 
   // Create f -ref-> g.
   (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2436,7 +2441,7 @@ TEST(LazyCallGraphTest, AddSplitFunction3) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
-  (void)CallInst::Create(G, {}, "", &*F.getEntryBlock().begin());
+  (void)CallInst::Create(G, {}, "", F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2482,7 +2487,7 @@ TEST(LazyCallGraphTest, AddSplitFunction4) {
 
   // Create f -ref-> g.
   (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2528,7 +2533,7 @@ TEST(LazyCallGraphTest, AddSplitFunction5) {
 
   // Create f -ref-> g.
   (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2572,7 +2577,7 @@ TEST(LazyCallGraphTest, AddSplitFunction6) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
-  (void)CallInst::Create(G, {}, "", &*F.getEntryBlock().begin());
+  (void)CallInst::Create(G, {}, "", F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2623,7 +2628,7 @@ TEST(LazyCallGraphTest, AddSplitFunction7) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
-  (void)CallInst::Create(G, {}, "", &*F.getEntryBlock().begin());
+  (void)CallInst::Create(G, {}, "", F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2676,7 +2681,7 @@ TEST(LazyCallGraphTest, AddSplitFunction8) {
 
   // Create f -ref-> g.
   (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2729,7 +2734,7 @@ TEST(LazyCallGraphTest, AddSplitFunction9) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
-  (void)CallInst::Create(G, {}, "", &*F.getEntryBlock().begin());
+  (void)CallInst::Create(G, {}, "", F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2773,7 +2778,7 @@ TEST(LazyCallGraphTest, AddSplitFunctions1) {
 
   // Create f -ref-> g.
   (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2817,7 +2822,7 @@ TEST(LazyCallGraphTest, AddSplitFunctions2) {
 
   // Create f -ref-> g.
   (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2870,9 +2875,9 @@ TEST(LazyCallGraphTest, AddSplitFunctions3) {
 
   // Create f -ref-> g1 and f -ref-> g2.
   (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
   (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2929,9 +2934,9 @@ TEST(LazyCallGraphTest, AddSplitFunctions4) {
 
   // Create f -ref-> g1 and f -ref-> g2.
   (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
   (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
@@ -2960,7 +2965,7 @@ TEST(LazyCallGraphTest, AddSplitFunctions5) {
   LLVMContext Context;
   std::unique_ptr<Module> M =
       parseAssembly(Context, "define void @f() {\n"
-                             "  %1 = bitcast void ()* @f2 to i8*\n"
+                             "  %1 = bitcast ptr @f2 to ptr\n"
                              "  ret void\n"
                              "}\n"
                              "define void @f2() {\n"
@@ -2999,9 +3004,9 @@ TEST(LazyCallGraphTest, AddSplitFunctions5) {
 
   // Create f -ref-> g1 and f -ref-> g2.
   (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
   (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
-                                    &*F.getEntryBlock().begin());
+                                    F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 

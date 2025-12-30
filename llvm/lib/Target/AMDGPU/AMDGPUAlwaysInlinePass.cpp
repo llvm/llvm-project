@@ -42,7 +42,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
- }
+  }
 };
 
 } // End anonymous namespace
@@ -65,7 +65,7 @@ recursivelyVisitUsers(GlobalValue &GV,
       continue;
 
     if (Instruction *I = dyn_cast<Instruction>(U)) {
-      Function *F = I->getParent()->getParent();
+      Function *F = I->getFunction();
       if (!AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
         // FIXME: This is a horrible hack. We should always respect noinline,
         // and just let us hit the error when we can't handle this.
@@ -89,15 +89,16 @@ recursivelyVisitUsers(GlobalValue &GV,
 static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
   std::vector<GlobalAlias*> AliasesToRemove;
 
+  bool Changed = false;
   SmallPtrSet<Function *, 8> FuncsToAlwaysInline;
   SmallPtrSet<Function *, 8> FuncsToNoInline;
   Triple TT(M.getTargetTriple());
 
   for (GlobalAlias &A : M.aliases()) {
     if (Function* F = dyn_cast<Function>(A.getAliasee())) {
-      if (TT.getArch() == Triple::amdgcn &&
-          A.getLinkage() != GlobalValue::InternalLinkage)
+      if (TT.isAMDGCN() && A.getLinkage() != GlobalValue::InternalLinkage)
         continue;
+      Changed = true;
       A.replaceAllUsesWith(F);
       AliasesToRemove.push_back(&A);
     }
@@ -153,7 +154,7 @@ static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
   for (Function *F : FuncsToNoInline)
     F->addFnAttr(Attribute::NoInline);
 
-  return !FuncsToAlwaysInline.empty() || !FuncsToNoInline.empty();
+  return Changed || !FuncsToAlwaysInline.empty() || !FuncsToNoInline.empty();
 }
 
 bool AMDGPUAlwaysInline::runOnModule(Module &M) {
@@ -166,6 +167,6 @@ ModulePass *llvm::createAMDGPUAlwaysInlinePass(bool GlobalOpt) {
 
 PreservedAnalyses AMDGPUAlwaysInlinePass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
-  alwaysInlineImpl(M, GlobalOpt);
-  return PreservedAnalyses::all();
+  const bool Changed = alwaysInlineImpl(M, GlobalOpt);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

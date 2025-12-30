@@ -32,7 +32,7 @@ template <class ELFT> struct NoteTestData {
     Nhdr->n_type = Type;
 
     auto NameOffset = Data.begin() + sizeof(*Nhdr);
-    std::copy(Name.begin(), Name.end(), NameOffset);
+    llvm::copy(Name, NameOffset);
 
     auto DescOffset =
         Data.begin() + alignTo(sizeof(*Nhdr) + Nhdr->n_namesz, Align);
@@ -100,34 +100,42 @@ static_assert(
                    decltype(BBAddrMap::BBEntry::ID)>,
     "PGOAnalysisMap should use the same type for basic block ID as BBAddrMap");
 
-TEST(ELFTypesTest, PGOAnalysisMapFeaturesEncodingTest) {
-  const std::array<PGOAnalysisMap::Features, 7> Decoded = {
-      {{false, false, false},
-       {true, false, false},
-       {false, true, false},
-       {false, false, true},
-       {true, true, false},
-       {false, true, true},
-       {true, true, true}}};
-  const std::array<uint8_t, 7> Encoded = {
-      {0b000, 0b001, 0b010, 0b100, 0b011, 0b110, 0b111}};
+TEST(ELFTypesTest, BBAddrMapFeaturesEncodingTest) {
+  const std::array<BBAddrMap::Features, 14> Decoded = {
+      {{false, false, false, false, false, false, false, false},
+       {true, false, false, false, false, false, false, false},
+       {false, true, false, false, false, false, false, false},
+       {false, false, true, false, false, false, false, false},
+       {false, false, false, true, false, false, false, false},
+       {true, true, false, false, false, false, false, false},
+       {false, true, true, false, false, false, false, false},
+       {false, true, true, true, false, false, false, false},
+       {true, true, true, true, false, false, false, false},
+       {false, false, false, false, true, false, false, false},
+       {false, false, false, false, false, true, false, false},
+       {false, false, false, false, false, false, true, false},
+       {false, false, false, false, false, false, false, true},
+       {false, false, false, false, false, false, true, true}}};
+  const std::array<uint16_t, 14> Encoded = {
+      {0b0000, 0b0001, 0b0010, 0b0100, 0b1000, 0b0011, 0b0110, 0b1110, 0b1111,
+       0b1'0000, 0b10'0000, 0b100'0000, 0b1000'0000, 0b1100'0000}};
   for (const auto &[Feat, EncodedVal] : llvm::zip(Decoded, Encoded))
     EXPECT_EQ(Feat.encode(), EncodedVal);
   for (const auto &[Feat, EncodedVal] : llvm::zip(Decoded, Encoded)) {
-    Expected<PGOAnalysisMap::Features> FeatEnableOrError =
-        PGOAnalysisMap::Features::decode(EncodedVal);
+    Expected<BBAddrMap::Features> FeatEnableOrError =
+        BBAddrMap::Features::decode(EncodedVal);
     ASSERT_THAT_EXPECTED(FeatEnableOrError, Succeeded());
     EXPECT_EQ(*FeatEnableOrError, Feat);
   }
 }
 
-TEST(ELFTypesTest, PGOAnalysisMapFeaturesInvalidEncodingTest) {
+TEST(ELFTypesTest, BBAddrMapFeaturesInvalidEncodingTest) {
   const std::array<std::string, 2> Errors = {
-      "invalid encoding for PGOAnalysisMap::Features: 0x8",
-      "invalid encoding for PGOAnalysisMap::Features: 0xff"};
-  const std::array<uint8_t, 2> Values = {{0b1000, 0b1111'1111}};
+      "invalid encoding for BBAddrMap::Features: 0x100",
+      "invalid encoding for BBAddrMap::Features: 0x1000"};
+  const std::array<uint16_t, 2> Values = {{0b1'0000'0000, 0b1'0000'0000'0000}};
   for (const auto &[Val, Error] : llvm::zip(Values, Errors)) {
-    EXPECT_THAT_ERROR(PGOAnalysisMap::Features::decode(Val).takeError(),
+    EXPECT_THAT_ERROR(BBAddrMap::Features::decode(Val).takeError(),
                       FailedWithMessage(Error));
   }
 }

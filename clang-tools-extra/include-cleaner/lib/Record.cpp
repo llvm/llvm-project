@@ -14,6 +14,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 #include <algorithm>
 #include <assert.h>
@@ -65,7 +67,8 @@ public:
                           StringRef SpelledFilename, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind) override {
     if (!Active)
       return;
@@ -177,9 +180,13 @@ public:
   RecordPragma(const CompilerInstance &CI, PragmaIncludes *Out)
       : RecordPragma(CI.getPreprocessor(), Out) {}
   RecordPragma(const Preprocessor &P, PragmaIncludes *Out)
-      : SM(P.getSourceManager()), HeaderInfo(P.getHeaderSearchInfo()), Out(Out),
-        Arena(std::make_shared<llvm::BumpPtrAllocator>()),
-        UniqueStrings(*Arena) {}
+      : SM(P.getSourceManager()), HeaderInfo(P.getHeaderSearchInfo()),
+        L(P.getLangOpts().CPlusPlus ? tooling::stdlib::Lang::CXX
+                                    : tooling::stdlib::Lang::C),
+        Out(Out), Arena(std::make_shared<llvm::BumpPtrAllocator>()),
+        UniqueStrings(*Arena),
+        MainFileStem(llvm::sys::path::stem(
+            SM.getNonBuiltinFilenameForID(SM.getMainFileID()).value_or(""))) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -201,9 +208,7 @@ public:
   void EndOfMainFile() override {
     for (auto &It : Out->IWYUExportBy) {
       llvm::sort(It.getSecond());
-      It.getSecond().erase(
-          std::unique(It.getSecond().begin(), It.getSecond().end()),
-          It.getSecond().end());
+      It.getSecond().erase(llvm::unique(It.getSecond()), It.getSecond().end());
     }
     Out->Arena.emplace_back(std::move(Arena));
   }
@@ -214,20 +219,22 @@ public:
                           OptionalFileEntryRef File,
                           llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
-                          const clang::Module * /*Imported*/,
+                          const clang::Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
     FileID HashFID = SM.getFileID(HashLoc);
     int HashLine = SM.getLineNumber(HashFID, SM.getFileOffset(HashLoc));
     std::optional<Header> IncludedHeader;
     if (IsAngled)
       if (auto StandardHeader =
-              tooling::stdlib::Header::named("<" + FileName.str() + ">")) {
+              tooling::stdlib::Header::named("<" + FileName.str() + ">", L)) {
         IncludedHeader = *StandardHeader;
       }
     if (!IncludedHeader && File)
       IncludedHeader = *File;
-    checkForExport(HashFID, HashLine, std::move(IncludedHeader), File);
+    checkForExport(HashFID, HashLine, IncludedHeader, File);
     checkForKeep(HashLine, File);
+    checkForDeducedAssociated(IncludedHeader);
   }
 
   void checkForExport(FileID IncludingFile, int HashLine,
@@ -267,6 +274,27 @@ public:
       KeepStack.pop_back(); // Pop immediately for single-line keep pragma.
   }
 
+  // Consider marking H as the "associated header" of the main file.
+  //
+  // Our heuristic:
+  // - it must be the first #include in the main file
+  // - it must have the same name stem as the main file (foo.h and foo.cpp)
+  // (IWYU pragma: associated is also supported, just not by this function).
+  //
+  // We consider the associated header as if it had a keep pragma.
+  // (Unlike IWYU, we don't treat #includes inside the associated header as if
+  // they were written in the main file.)
+  void checkForDeducedAssociated(std::optional<Header> H) {
+    namespace path = llvm::sys::path;
+    if (!InMainFile || SeenAssociatedCandidate)
+      return;
+    SeenAssociatedCandidate = true; // Only the first #include is our candidate.
+    if (!H || H->kind() != Header::Physical)
+      return;
+    if (path::stem(H->physical().getName(), path::Style::posix) == MainFileStem)
+      Out->ShouldKeep.insert(H->physical().getUniqueID());
+  }
+
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
     auto &SM = PP.getSourceManager();
     auto Pragma =
@@ -278,7 +306,9 @@ public:
     int CommentLine = SM.getLineNumber(CommentFID, CommentOffset);
 
     if (InMainFile) {
-      if (Pragma->starts_with("keep")) {
+      if (Pragma->starts_with("keep") ||
+          // Limited support for associated headers: never consider unused.
+          Pragma->starts_with("associated")) {
         KeepStack.push_back({CommentLine, false});
       } else if (Pragma->starts_with("begin_keep")) {
         KeepStack.push_back({CommentLine, true});
@@ -336,10 +366,14 @@ private:
   bool InMainFile = false;
   const SourceManager &SM;
   const HeaderSearch &HeaderInfo;
+  const tooling::stdlib::Lang L;
   PragmaIncludes *Out;
   std::shared_ptr<llvm::BumpPtrAllocator> Arena;
   /// Intern table for strings. Contents are on the arena.
   llvm::StringSaver UniqueStrings;
+  // Used when deducing associated header.
+  llvm::StringRef MainFileStem;
+  bool SeenAssociatedCandidate = false;
 
   struct ExportPragma {
     // The line number where we saw the begin_exports or export pragma.

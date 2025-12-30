@@ -16,9 +16,9 @@ target triple = "thumbv7--windows-msvc19.0.24210"
 %class.field = type { i8 }
 
 ; Function Attrs: nounwind
-define arm_aapcs_vfpcc void @"\01??1field@@AAA@XZ"(%class.field* nocapture readnone %this) unnamed_addr #0 align 2 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define arm_aapcs_vfpcc void @"\01??1field@@AAA@XZ"(ptr nocapture readnone %this) unnamed_addr #0 align 2 personality ptr @__CxxFrameHandler3 {
 entry:
-  invoke arm_aapcs_vfpcc void @free(i8* null)
+  invoke arm_aapcs_vfpcc void @free(ptr null)
           to label %invoke.cont unwind label %terminate
 
 invoke.cont:                                      ; preds = %entry
@@ -30,14 +30,14 @@ terminate:                                        ; preds = %entry
   unreachable
 }
 
-declare arm_aapcs_vfpcc void @free(i8*) local_unnamed_addr #1
+declare arm_aapcs_vfpcc void @free(ptr) local_unnamed_addr #1
 
 declare arm_aapcs_vfpcc i32 @__CxxFrameHandler3(...)
 
 declare arm_aapcs_vfpcc void @__std_terminate() local_unnamed_addr
 
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+strict-align,+vfp3" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+strict-align,+vfp3" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+strict-align,+vfp3" "use-soft-float"="false" }
+attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+strict-align,+vfp3" "use-soft-float"="false" }
 attributes #2 = { noreturn nounwind }
 
 !llvm.module.flags = !{!0, !1}

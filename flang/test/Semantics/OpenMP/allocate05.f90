@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! allocate directives that appear in a target region must specify an allocator
@@ -16,7 +18,7 @@ use omp_lib
   !$omp end target
 
   !$omp target
-      !ERROR: ALLOCATE directives that appear in a TARGET region must specify an allocator clause
+      !ERROR: An ALLOCATE directive in a TARGET region must specify an ALLOCATOR clause or REQUIRES(DYNAMIC_ALLOCATORS) must be specified
       !$omp allocate
           allocate ( darray(a, b) )
   !$omp end target

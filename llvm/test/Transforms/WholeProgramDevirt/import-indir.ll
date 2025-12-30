@@ -10,6 +10,7 @@
 ; SUMMARY-NEXT:      Live:                true
 ; SUMMARY-NEXT:      Local:               false
 ; SUMMARY-NEXT:      CanAutoHide:         false
+; SUMMARY-NEXT:      ImportType:          0
 ; SUMMARY-NEXT:      TypeTestAssumeVCalls:
 ; SUMMARY-NEXT:        - GUID:            123
 ; SUMMARY-NEXT:          Offset:          0
@@ -30,6 +31,14 @@
 ; SUMMARY-NEXT:            GUID:            456
 ; SUMMARY-NEXT:            Offset:          8
 ; SUMMARY-NEXT:          Args: [ 24, 12 ]
+; SUMMARY-NEXT: 43:
+; SUMMARY-NEXT:   - Linkage:                0
+; SUMMARY-NEXT:     Visibility:             0
+; SUMMARY-NEXT:     NotEligibleToImport:   false
+; SUMMARY-NEXT:     Live:                  true
+; SUMMARY-NEXT:     Local:                 false
+; SUMMARY-NEXT:     CanAutoHide:           false
+; SUMMARY-NEXT:     ImportType:            1
 ; SUMMARY-NEXT: TypeIdMap:
 ; SUMMARY-NEXT:   typeid1:
 ; SUMMARY-NEXT:     TTRes:
@@ -83,7 +92,7 @@ define i1 @f1(ptr %obj) {
 }
 
 ; CHECK: define i1 @f2
-define i1 @f2(ptr %obj) {
+define i1 @f2(ptr %obj, i32 %arg1) {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 4, metadata !"typeid1")
   %fptr = extractvalue {ptr, i1} %pair, 0
@@ -94,7 +103,7 @@ define i1 @f2(ptr %obj) {
 
 cont:
   ; CHECK: call i1 %
-  %result = call i1 %fptr(ptr %obj, i32 undef)
+  %result = call i1 %fptr(ptr %obj, i32 %arg1)
   ret i1 %result
 
 trap:

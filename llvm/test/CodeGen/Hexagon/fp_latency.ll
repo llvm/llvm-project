@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon -fp-contract=fast -pipeliner-prune-loop-carried=false < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon -fp-contract=fast -pipeliner-prune-loop-carried=false < %s | FileCheck %s
 
 ; Test that there is 1 packet between the FP result and its use.
 

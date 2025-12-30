@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <libproc.h>
 #include <map>
+#include <mutex>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -69,8 +70,8 @@ static ProcessMap *GetProcessMap(bool can_create) {
   static ProcessMap *g_process_map_ptr = NULL;
 
   if (can_create && g_process_map_ptr == NULL) {
-    static pthread_mutex_t g_process_map_mutex = PTHREAD_MUTEX_INITIALIZER;
-    PTHREAD_MUTEX_LOCKER(locker, &g_process_map_mutex);
+    static std::mutex g_process_map_mutex;
+    std::lock_guard<std::mutex> guard(g_process_map_mutex);
     if (g_process_map_ptr == NULL)
       g_process_map_ptr = new ProcessMap;
   }
@@ -475,9 +476,17 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
         extern int communication_fd;
 
         if (communication_fd == -1) {
-          fprintf(stderr, "Trying to attach to a translated process with the "
-                          "native debugserver, exiting...\n");
-          exit(1);
+          DNBLogError("Trying to attach to a translated process with the "
+                      "native debugserver, exiting...\n");
+          return INVALID_NUB_PROCESS_ARCH;
+        }
+
+        struct stat st;
+        if (::stat(translated_debugserver, &st) != 0) {
+          DNBLogError("Translated inferior process but Rosetta debugserver not "
+                      "found at %s",
+                      translated_debugserver);
+          return INVALID_NUB_PROCESS_ARCH;
         }
 
         snprintf(fdstr, sizeof(fdstr), "--fd=%d", communication_fd);
@@ -1062,6 +1071,14 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
   return INVALID_NUB_ADDRESS;
 }
 
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+DNBGetMainBinaryCPUTypes(nub_process_t pid) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->GetMainBinaryCPUTypes(pid);
+  return {};
+}
+
 JSONGenerator::ObjectSP
 DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands) {
   MachProcessSP procSP;
@@ -1084,7 +1101,7 @@ DNBGetLibrariesInfoForAddresses(nub_process_t pid,
 JSONGenerator::ObjectSP DNBGetSharedCacheInfo(nub_process_t pid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetSharedCacheInfo(pid);
+    return procSP->GetInferiorSharedCacheInfo(pid);
   }
   return JSONGenerator::ObjectSP();
 }
@@ -1367,6 +1384,16 @@ int DNBProcessMemoryRegionInfo(nub_process_t pid, nub_addr_t addr,
     return procSP->Task().GetMemoryRegionInfo(addr, region_info);
 
   return -1;
+}
+
+nub_bool_t DNBProcessGetMemoryTags(nub_process_t pid, nub_addr_t addr,
+                                   nub_size_t size,
+                                   std::vector<uint8_t> &tags) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->Task().GetMemoryTags(addr, size, tags);
+
+  return false;
 }
 
 std::string DNBProcessGetProfileData(nub_process_t pid,

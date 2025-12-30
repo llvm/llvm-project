@@ -35,22 +35,21 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 class MachineBasicBlock;
 class MachineRegisterInfo;
 
-class LiveVariables : public MachineFunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  LiveVariables() : MachineFunctionPass(ID) {
-    initializeLiveVariablesPass(*PassRegistry::getPassRegistry());
-  }
+class LiveVariables {
+  friend class LiveVariablesWrapperPass;
 
+public:
   /// VarInfo - This represents the regions where a virtual register is live in
   /// the program.  We represent this with three different pieces of
   /// information: the set of blocks in which the instruction is live
@@ -101,15 +100,17 @@ public:
     }
 
     /// findKill - Find a kill instruction in MBB. Return NULL if none is found.
-    MachineInstr *findKill(const MachineBasicBlock *MBB) const;
+    LLVM_ABI MachineInstr *findKill(const MachineBasicBlock *MBB) const;
 
     /// isLiveIn - Is Reg live in to MBB? This means that Reg is live through
     /// MBB, or it is killed in MBB. If Reg is only used by PHI instructions in
     /// MBB, it is not considered live in.
-    bool isLiveIn(const MachineBasicBlock &MBB, Register Reg,
-                  MachineRegisterInfo &MRI);
+    LLVM_ABI bool isLiveIn(const MachineBasicBlock &MBB, Register Reg,
+                           MachineRegisterInfo &MRI);
 
-    void dump() const;
+    LLVM_ABI void print(raw_ostream &OS) const;
+
+    LLVM_ABI void dump() const;
   };
 
 private:
@@ -135,11 +136,16 @@ private:   // Intermediate data structures
   // register references are presumed dead across basic blocks.
   std::vector<MachineInstr *> PhysRegUse;
 
-  std::vector<SmallVector<unsigned, 4>> PHIVarInfo;
+  std::vector<SmallVector<Register, 4>> PHIVarInfo;
 
   // DistanceMap - Keep track the distance of a MI from the start of the
   // current basic block.
   DenseMap<MachineInstr*, unsigned> DistanceMap;
+
+  // For legacy pass.
+  LiveVariables() = default;
+
+  LLVM_ABI void analyze(MachineFunction &MF);
 
   /// HandlePhysRegKill - Add kills of Reg and its sub-registers to the
   /// uses. Pay special attention to the sub-register uses which may come below
@@ -151,18 +157,16 @@ private:   // Intermediate data structures
 
   void HandlePhysRegUse(Register Reg, MachineInstr &MI);
   void HandlePhysRegDef(Register Reg, MachineInstr *MI,
-                        SmallVectorImpl<unsigned> &Defs);
-  void UpdatePhysRegDefs(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs);
+                        SmallVectorImpl<Register> &Defs);
+  void UpdatePhysRegDefs(MachineInstr &MI, SmallVectorImpl<Register> &Defs);
 
   /// FindLastRefOrPartRef - Return the last reference or partial reference of
   /// the specified register.
   MachineInstr *FindLastRefOrPartRef(Register Reg);
 
   /// FindLastPartialDef - Return the last partial def of the specified
-  /// register. Also returns the sub-registers that're defined by the
-  /// instruction.
-  MachineInstr *FindLastPartialDef(Register Reg,
-                                   SmallSet<unsigned, 4> &PartDefRegs);
+  /// register.
+  MachineInstr *FindLastPartialDef(Register Reg);
 
   /// analyzePHINodes - Gather information about the PHI nodes in here. In
   /// particular, we want to map the variable information of a virtual
@@ -170,13 +174,15 @@ private:   // Intermediate data structures
   /// is coming from.
   void analyzePHINodes(const MachineFunction& Fn);
 
-  void runOnInstr(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs,
+  void runOnInstr(MachineInstr &MI, SmallVectorImpl<Register> &Defs,
                   unsigned NumRegs);
 
   void runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs);
-public:
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+public:
+  LLVM_ABI LiveVariables(MachineFunction &MF);
+
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   //===--------------------------------------------------------------------===//
   //  API to update live variable information
@@ -185,12 +191,12 @@ public:
   /// known to have a single def that dominates all uses. This can be useful
   /// after removing some uses of \p Reg. It is not necessary for the whole
   /// machine function to be in SSA form.
-  void recomputeForSingleDefVirtReg(Register Reg);
+  LLVM_ABI void recomputeForSingleDefVirtReg(Register Reg);
 
   /// replaceKillInstruction - Update register kill info by replacing a kill
   /// instruction with a new one.
-  void replaceKillInstruction(Register Reg, MachineInstr &OldMI,
-                              MachineInstr &NewMI);
+  LLVM_ABI void replaceKillInstruction(Register Reg, MachineInstr &OldMI,
+                                       MachineInstr &NewMI);
 
   /// addVirtualRegisterKilled - Add information about the fact that the
   /// specified register is killed after being used by the specified
@@ -226,7 +232,7 @@ public:
 
   /// removeVirtualRegistersKilled - Remove all killed info for the specified
   /// instruction.
-  void removeVirtualRegistersKilled(MachineInstr &MI);
+  LLVM_ABI void removeVirtualRegistersKilled(MachineInstr &MI);
 
   /// addVirtualRegisterDead - Add information about the fact that the specified
   /// register is dead after being used by the specified instruction. If
@@ -246,8 +252,8 @@ public:
       return false;
 
     bool Removed = false;
-    for (MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
+    for (MachineOperand &MO : MI.all_defs()) {
+      if (MO.getReg() == Reg) {
         MO.setIsDead(false);
         Removed = true;
         break;
@@ -258,24 +264,21 @@ public:
     return true;
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  void releaseMemory() override {
-    VirtRegInfo.clear();
-  }
-
   /// getVarInfo - Return the VarInfo structure for the specified VIRTUAL
   /// register.
-  VarInfo &getVarInfo(Register Reg);
+  LLVM_ABI VarInfo &getVarInfo(Register Reg);
 
-  void MarkVirtRegAliveInBlock(VarInfo& VRInfo, MachineBasicBlock* DefBlock,
-                               MachineBasicBlock *BB);
-  void MarkVirtRegAliveInBlock(VarInfo &VRInfo, MachineBasicBlock *DefBlock,
-                               MachineBasicBlock *BB,
-                               SmallVectorImpl<MachineBasicBlock *> &WorkList);
+  LLVM_ABI void MarkVirtRegAliveInBlock(VarInfo &VRInfo,
+                                        MachineBasicBlock *DefBlock,
+                                        MachineBasicBlock *BB);
+  LLVM_ABI void
+  MarkVirtRegAliveInBlock(VarInfo &VRInfo, MachineBasicBlock *DefBlock,
+                          MachineBasicBlock *BB,
+                          SmallVectorImpl<MachineBasicBlock *> &WorkList);
 
-  void HandleVirtRegDef(Register reg, MachineInstr &MI);
-  void HandleVirtRegUse(Register reg, MachineBasicBlock *MBB, MachineInstr &MI);
+  LLVM_ABI void HandleVirtRegDef(Register reg, MachineInstr &MI);
+  LLVM_ABI void HandleVirtRegUse(Register reg, MachineBasicBlock *MBB,
+                                 MachineInstr &MI);
 
   bool isLiveIn(Register Reg, const MachineBasicBlock &MBB) {
     return getVarInfo(Reg).isLiveIn(MBB, Reg, *MRI);
@@ -284,20 +287,60 @@ public:
   /// isLiveOut - Determine if Reg is live out from MBB, when not considering
   /// PHI nodes. This means that Reg is either killed by a successor block or
   /// passed through one.
-  bool isLiveOut(Register Reg, const MachineBasicBlock &MBB);
+  LLVM_ABI bool isLiveOut(Register Reg, const MachineBasicBlock &MBB);
 
   /// addNewBlock - Add a new basic block BB between DomBB and SuccBB. All
   /// variables that are live out of DomBB and live into SuccBB will be marked
   /// as passing live through BB. This method assumes that the machine code is
   /// still in SSA form.
-  void addNewBlock(MachineBasicBlock *BB,
-                   MachineBasicBlock *DomBB,
-                   MachineBasicBlock *SuccBB);
+  LLVM_ABI void addNewBlock(MachineBasicBlock *BB, MachineBasicBlock *DomBB,
+                            MachineBasicBlock *SuccBB);
 
-  void addNewBlock(MachineBasicBlock *BB,
-                   MachineBasicBlock *DomBB,
-                   MachineBasicBlock *SuccBB,
-                   std::vector<SparseBitVector<>> &LiveInSets);
+  LLVM_ABI void addNewBlock(MachineBasicBlock *BB, MachineBasicBlock *DomBB,
+                            MachineBasicBlock *SuccBB,
+                            std::vector<SparseBitVector<>> &LiveInSets);
+};
+
+class LiveVariablesAnalysis : public AnalysisInfoMixin<LiveVariablesAnalysis> {
+  friend AnalysisInfoMixin<LiveVariablesAnalysis>;
+  LLVM_ABI static AnalysisKey Key;
+
+public:
+  using Result = LiveVariables;
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+};
+
+class LiveVariablesPrinterPass
+    : public PassInfoMixin<LiveVariablesPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit LiveVariablesPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class LLVM_ABI LiveVariablesWrapperPass : public MachineFunctionPass {
+  LiveVariables LV;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  LiveVariablesWrapperPass() : MachineFunctionPass(ID) {
+    initializeLiveVariablesWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    LV.analyze(MF);
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  void releaseMemory() override { LV.VirtRegInfo.clear(); }
+
+  LiveVariables &getLV() { return LV; }
 };
 
 } // End llvm namespace

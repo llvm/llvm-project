@@ -1,6 +1,6 @@
 ! Verify that `-mllvm` options are forwarded to LLVM and `-mmlir` to MLIR.
 
-! In practice, '-mmlir --help' is a super-set of '-mllvm --help' and that limits what we can test here. With a better seperation of
+! In practice, '-mmlir --help' is a super-set of '-mllvm --help' and that limits what we can test here. With a better separation of
 ! LLVM, MLIR and Flang global options, we should be able to write a stricter test.
 
 ! RUN: %flang_fc1  -mmlir --help | FileCheck %s --check-prefix=MLIR

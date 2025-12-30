@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Arith/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -23,8 +25,8 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
   std::function<Value(AffineExpr)> buildExpr = [&](AffineExpr e) -> Value {
     switch (e.getKind()) {
     case AffineExprKind::Constant:
-      return b.create<ConstantIndexOp>(loc,
-                                       cast<AffineConstantExpr>(e).getValue());
+      return ConstantIndexOp::create(b, loc,
+                                     cast<AffineConstantExpr>(e).getValue());
     case AffineExprKind::DimId:
       return operands[cast<AffineDimExpr>(e).getPosition()];
     case AffineExprKind::SymbolId:
@@ -32,28 +34,28 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
                       map.getNumDims()];
     case AffineExprKind::Add: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<AddIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                              buildExpr(binaryExpr.getRHS()));
+      return AddIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                            buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::Mul: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<MulIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                              buildExpr(binaryExpr.getRHS()));
+      return MulIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                            buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::FloorDiv: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<DivSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                               buildExpr(binaryExpr.getRHS()));
+      return DivSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                             buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::CeilDiv: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<CeilDivSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                                   buildExpr(binaryExpr.getRHS()));
+      return CeilDivSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                                 buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::Mod: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
-      return b.create<RemSIOp>(loc, buildExpr(binaryExpr.getLHS()),
-                               buildExpr(binaryExpr.getRHS()));
+      return RemSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
+                             buildExpr(binaryExpr.getRHS()));
     }
     }
     llvm_unreachable("unsupported AffineExpr kind");
@@ -61,16 +63,16 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
   return buildExpr(map.getResult(0));
 }
 
-static FailureOr<OpFoldResult>
-reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
-                Value value, std::optional<int64_t> dim,
-                ValueBoundsConstraintSet::StopConditionFn stopCondition,
-                bool closedUB) {
+FailureOr<OpFoldResult> mlir::arith::reifyValueBound(
+    OpBuilder &b, Location loc, presburger::BoundType type,
+    const ValueBoundsConstraintSet::Variable &var,
+    ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
   // Compute bound.
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeBound(
-          boundMap, mapOperands, type, value, dim, stopCondition, closedUB)))
+          boundMap, mapOperands, type, var, std::move(stopCondition),
+          closedUB)))
     return failure();
 
   // Materialize tensor.dim/memref.dim ops.
@@ -90,10 +92,10 @@ reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
            "expected dynamic dim");
     if (isa<RankedTensorType>(value.getType())) {
       // A tensor dimension is used: generate a tensor.dim.
-      operands.push_back(b.create<tensor::DimOp>(loc, value, *dim));
+      operands.push_back(tensor::DimOp::create(b, loc, value, *dim));
     } else if (isa<MemRefType>(value.getType())) {
       // A memref dimension is used: generate a memref.dim.
-      operands.push_back(b.create<memref::DimOp>(loc, value, *dim));
+      operands.push_back(memref::DimOp::create(b, loc, value, *dim));
     } else {
       llvm_unreachable("cannot generate DimOp for unsupported shaped type");
     }
@@ -117,9 +119,10 @@ reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
 
 FailureOr<OpFoldResult> mlir::arith::reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    int64_t dim, ValueBoundsConstraintSet::StopConditionFn stopCondition,
+    int64_t dim, const ValueBoundsConstraintSet::StopConditionFn &stopCondition,
     bool closedUB) {
-  auto reifyToOperands = [&](Value v, std::optional<int64_t> d) {
+  auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
+                             ValueBoundsConstraintSet &cstr) {
     // We are trying to reify a bound for `value` in terms of the owning op's
     // operands. Construct a stop condition that evaluates to "true" for any SSA
     // value expect for `value`. I.e., the bound will be computed in terms of
@@ -127,18 +130,20 @@ FailureOr<OpFoldResult> mlir::arith::reifyShapedValueDimBound(
     // the owner of `value`.
     return v != value;
   };
-  return reifyValueBound(b, loc, type, value, dim,
+  return reifyValueBound(b, loc, type, {value, dim},
                          stopCondition ? stopCondition : reifyToOperands,
                          closedUB);
 }
 
 FailureOr<OpFoldResult> mlir::arith::reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
-  auto reifyToOperands = [&](Value v, std::optional<int64_t> d) {
+    const ValueBoundsConstraintSet::StopConditionFn &stopCondition,
+    bool closedUB) {
+  auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
+                             ValueBoundsConstraintSet &cstr) {
     return v != value;
   };
-  return reifyValueBound(b, loc, type, value, /*dim=*/std::nullopt,
+  return reifyValueBound(b, loc, type, value,
                          stopCondition ? stopCondition : reifyToOperands,
                          closedUB);
 }

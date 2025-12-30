@@ -1,6 +1,7 @@
 # Description:
 #   MLIR Tutorial
 
+load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 licenses(["notice"])
@@ -25,16 +26,10 @@ td_library(
 
 gentbl_cc_library(
     name = "ToyInterfacesIncGen",
-    tbl_outs = [
-        (
-            ["-gen-op-interface-decls"],
-            "include/toy/ShapeInferenceOpInterfaces.h.inc",
-        ),
-        (
-            ["-gen-op-interface-defs"],
-            "include/toy/ShapeInferenceOpInterfaces.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "include/toy/ShapeInferenceOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/toy/ShapeInferenceOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "include/toy/ShapeInferenceInterface.td",
     deps = [":ToyOpsTdFiles"],
@@ -42,24 +37,12 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "ToyOpsIncGen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "include/toy/Ops.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "include/toy/Ops.cpp.inc",
-        ),
-        (
-            ["-gen-dialect-decls"],
-            "include/toy/Dialect.h.inc",
-        ),
-        (
-            ["-gen-dialect-defs"],
-            "include/toy/Dialect.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "include/toy/Ops.h.inc": ["-gen-op-decls"],
+        "include/toy/Ops.cpp.inc": ["-gen-op-defs"],
+        "include/toy/Dialect.h.inc": ["-gen-dialect-decls"],
+        "include/toy/Dialect.cpp.inc": ["-gen-dialect-defs"],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "include/toy/Ops.td",
     deps = [":ToyOpsTdFiles"],
@@ -68,12 +51,7 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "ToyCombineIncGen",
     strip_include_prefix = "mlir",
-    tbl_outs = [
-        (
-            ["-gen-rewriters"],
-            "mlir/ToyCombine.inc",
-        ),
-    ],
+    tbl_outs = {"mlir/ToyCombine.inc": ["-gen-rewriters"]},
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/ToyCombine.td",
     deps = [":ToyOpsTdFiles"],
@@ -107,6 +85,8 @@ cc_binary(
         "//mlir:ArithDialect",
         "//mlir:ArithToLLVM",
         "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:BytecodeReader",
+        "//mlir:CallOpInterfaces",
         "//mlir:CastInterfaces",
         "//mlir:ControlFlowToLLVM",
         "//mlir:ExecutionEngine",
@@ -116,6 +96,7 @@ cc_binary(
         "//mlir:FuncToLLVM",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
+        "//mlir:InliningUtils",
         "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
         "//mlir:LLVMIRTransforms",

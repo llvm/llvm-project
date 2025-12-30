@@ -21,16 +21,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "bpf-preserve-di-type"
-
-namespace llvm {
-constexpr StringRef BPFCoreSharedInfo::TypeIdAttr;
-} // namespace llvm
 
 using namespace llvm;
 
@@ -116,8 +111,8 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     GV->setMetadata(LLVMContext::MD_preserve_access_index, MD);
 
     // Load the global variable which represents the type info.
-    auto *LDInst =
-        new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+    auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                                Call->getIterator());
     Instruction *PassThroughInst =
         BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
     Call->replaceAllUsesWith(PassThroughInst);

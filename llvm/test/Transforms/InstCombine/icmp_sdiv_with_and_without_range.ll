@@ -19,7 +19,7 @@ define i1 @without_range(ptr %A) {
 define i1 @with_range(ptr %A) {
 ; CHECK-LABEL: @with_range(
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A:%.*]], align 8, !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A_VAL]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign ult i32 [[A_VAL]], 2
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A.val = load i32, ptr %A, align 8, !range !0

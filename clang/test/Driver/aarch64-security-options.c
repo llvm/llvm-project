@@ -1,17 +1,17 @@
 // Check the -msign-return-address= option, which has a required argument to
 // select scope.
 // RUN: %clang --target=aarch64 -c %s -### -msign-return-address=none                             2>&1 | \
-// RUN: FileCheck %s --check-prefix=RA-OFF --check-prefix=KEY --check-prefix=BTE-OFF --check-prefix=WARN
+// RUN: FileCheck %s --check-prefix=RA-OFF --check-prefix=KEY --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
 
 // RUN: %clang --target=aarch64 -c %s -### -msign-return-address=non-leaf                         2>&1 | \
-// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-OFF --check-prefix=WARN
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
 
 // RUN: %clang --target=aarch64 -c %s -### -msign-return-address=all                              2>&1 | \
-// RUN: FileCheck %s --check-prefix=RA-ALL      --check-prefix=KEY-A --check-prefix=BTE-OFF --check-prefix=WARN
+// RUN: FileCheck %s --check-prefix=RA-ALL      --check-prefix=KEY-A --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
 
 // -mbranch-protection with standard
 // RUN: %clang --target=aarch64 -c %s -### -mbranch-protection=standard                                2>&1 | \
-// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=WARN
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN
 
 // If the -msign-return-address and -mbranch-protection are both used, the
 // right-most one controls return address signing.
@@ -41,6 +41,9 @@
 
 // BTE-OFF-NOT: "-mbranch-target-enforce"
 // BTE-ON: "-mbranch-target-enforce"
+
+// GCS-OFF-NOT: "-mguarded-control-stack"
+// GCS-ON: "-mguarded-control-stack"
 
 // CONFLICT: "-msign-return-address=none"
 

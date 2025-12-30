@@ -29,7 +29,7 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    leaq global(%rax,%rax,2), %r14
 ; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r15
 ; CHECK-NEXT:    xorl %r13d, %r13d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb8
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    callq bar@PLT
@@ -50,7 +50,7 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.4: # %bb17
 ; CHECK-NEXT:    callq widget@PLT
-; CHECK-NEXT:  .LBB0_5: # Block address taken
+; CHECK-NEXT:  .LBB0_5: # Inline asm indirect target
 ; CHECK-NEXT:    # %bb18
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movw $0, 14(%r14)

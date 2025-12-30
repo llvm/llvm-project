@@ -1,9 +1,9 @@
-<!--===- docs/Overview.md 
-  
+<!--===- docs/Overview.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Overview of Compiler Phases
@@ -13,7 +13,7 @@
 local:
 ---
 ```
-The Flang compiler transforms Fortran source code into an executable file. 
+The Flang compiler transforms Fortran source code into an executable file.
 This transformation proceeds in three high level phases -- analysis, lowering,
 and code generation/linking.
 
@@ -39,12 +39,12 @@ produce a readable version of the outputs.
 
 Each detailed phase produces either correct output or fatal errors.
 
-# Analysis
+## Analysis
 
 This high level phase validates that the program is correct and creates all of
 the information needed for lowering.
 
-## Prescan and Preprocess
+### Prescan and Preprocess
 
 See [Preprocessing.md](Preprocessing.md).
 
@@ -64,12 +64,12 @@ See [Preprocessing.md](Preprocessing.md).
 
 **Entry point:** `parser::Parsing::Prescan`
 
-**Commands:** 
- - `flang-new -fc1 -E src.f90` dumps the cooked character stream
- - `flang-new -fc1 -fdebug-dump-provenance src.f90` dumps provenance
+**Commands:**
+ - `flang -fc1 -E src.f90` dumps the cooked character stream
+ - `flang -fc1 -fdebug-dump-provenance src.f90` dumps provenance
    information
 
-## Parsing
+### Parsing
 
 **Input:** Cooked character stream
 
@@ -80,17 +80,17 @@ representing a syntactically correct program, rooted at the program unit.  See:
 **Entry point:** `parser::Parsing::Parse`
 
 **Commands:**
-  - `flang-new -fc1 -fdebug-dump-parse-tree-no-sema src.f90` dumps the parse tree
-  - `flang-new -fc1 -fdebug-unparse src.f90` converts the parse tree to normalized Fortran
-  - `flang-new -fc1 -fdebug-dump-parsing-log src.f90` runs an instrumented parse and dumps the log
-  - `flang-new -fc1 -fdebug-measure-parse-tree src.f90` measures the parse tree
+  - `flang -fc1 -fdebug-dump-parse-tree-no-sema src.f90` dumps the parse tree
+  - `flang -fc1 -fdebug-unparse src.f90` converts the parse tree to normalized Fortran
+  - `flang -fc1 -fdebug-dump-parsing-log src.f90` runs an instrumented parse and dumps the log
+  - `flang -fc1 -fdebug-measure-parse-tree src.f90` measures the parse tree
 
-## Semantic processing
+### Semantic processing
 
 **Input:** the parse tree, the cooked character stream, and provenance
 information
 
-**Output:** 
+**Output:**
 * a symbol table
 * modified parse tree
 * module files, (see: [ModFiles.md](ModFiles.md))
@@ -101,15 +101,15 @@ information
 **Entry point:** `semantics::Semantics::Perform`
 
 For more detail on semantic analysis, see: [Semantics.md](Semantics.md).
-Semantic processing performs several tasks: 
+Semantic processing performs several tasks:
 * validates labels, see: [LabelResolution.md](LabelResolution.md).
-* canonicalizes DO statements, 
+* canonicalizes DO statements,
 * canonicalizes OpenACC and OpenMP code
 * resolves names, building a tree of scopes and symbols
 * rewrites the parse tree to correct parsing mistakes (when needed) once semantic information is available to clarify the program's meaning
 * checks the validity of declarations
 * analyzes expressions and statements, emitting error messages where appropriate
-* creates module files if the source code contains modules, 
+* creates module files if the source code contains modules,
   see [ModFiles.md](ModFiles.md).
 
 In the course of semantic analysis, the compiler:
@@ -121,18 +121,18 @@ In the course of semantic analysis, the compiler:
 At the end of semantic processing, all validation of the user's program is complete.  This is the last detailed phase of analysis processing.
 
 **Commands:**
-  - `flang-new -fc1 -fdebug-dump-parse-tree src.f90` dumps the parse tree after semantic analysis
-  - `flang-new -fc1 -fdebug-dump-symbols src.f90` dumps the symbol table
-  - `flang-new -fc1 -fdebug-dump-all src.f90` dumps both the parse tree and the symbol table
+  - `flang -fc1 -fdebug-dump-parse-tree src.f90` dumps the parse tree after semantic analysis
+  - `flang -fc1 -fdebug-dump-symbols src.f90` dumps the symbol table
+  - `flang -fc1 -fdebug-dump-all src.f90` dumps both the parse tree and the symbol table
 
-# Lowering
+## Lowering
 
 Lowering takes the parse tree and symbol table produced by analysis and
 produces LLVM IR.
 
-## Create the lowering bridge
+### Create the lowering bridge
 
-**Inputs:** 
+**Inputs:**
   - the parse tree
   - the symbol table
   - The default KINDs for intrinsic types (specified by default or command line option)
@@ -148,7 +148,7 @@ The lowering bridge is a container that holds all of the information needed for 
 
 **Entry point:** lower::LoweringBridge::create
 
-## Initial lowering
+### Initial lowering
 
 **Input:** the lowering bridge
 
@@ -163,10 +163,10 @@ contain a list of evaluations.  All of these contain pointers back into the
 parse tree.  The compiler walks the PFT generating FIR.
 
 **Commands:**
-  - `flang-new -fc1 -fdebug-dump-pft src.f90` dumps the pre-FIR tree
-  - `flang-new -fc1 -emit-mlir src.f90` dumps the FIR to the files src.mlir
+  - `flang -fc1 -fdebug-dump-pft src.f90` dumps the pre-FIR tree
+  - `flang -fc1 -emit-mlir src.f90` dumps the FIR to the files src.mlir
 
-## Transformation passes
+### Transformation passes
 
 **Input:** initial version of the FIR code
 
@@ -180,10 +180,10 @@ perform various optimizations and transformations.  The final pass creates an
 LLVM IR representation of the program.
 
 **Commands:**
-  - `flang-new -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
-  - `flang-new -fc1 -emit-llvm src.f90` dumps the LLVM IR to src.ll
+  - `flang -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
+  - `flang -fc1 -emit-llvm src.f90` dumps the LLVM IR to src.ll
 
-# Object code generation and linking
+## Object code generation and linking
 
 After the LLVM IR is created, the flang driver invokes LLVM's existing
 infrastructure to generate object code and invoke a linker to create the

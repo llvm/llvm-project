@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_FORMATTEDSTREAM_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 
@@ -27,7 +28,7 @@ namespace llvm {
 /// doesn't attempt to handle everything Unicode can do (combining characters,
 /// right-to-left markers, etc), but should cover the cases likely to appear in
 /// source code or diagnostic messages.
-class formatted_raw_ostream : public raw_ostream {
+class LLVM_ABI formatted_raw_ostream : public raw_ostream {
   /// TheStream - The real stream we output to. We set it to be
   /// unbuffered, since we're already doing our own buffering.
   ///
@@ -51,6 +52,10 @@ class formatted_raw_ostream : public raw_ostream {
   /// value, so that we can compute the display width of the character once we
   /// have the rest of it.
   SmallString<4> PartialUTF8Char;
+
+  /// DisableScan - Temporarily disable scanning of output. Used to ignore color
+  /// codes.
+  bool DisableScan;
 
   void write_impl(const char *Ptr, size_t Size) override;
 
@@ -89,8 +94,32 @@ class formatted_raw_ostream : public raw_ostream {
       SetUnbuffered();
     TheStream->SetUnbuffered();
 
+    enable_colors(TheStream->colors_enabled());
+
     Scanned = nullptr;
   }
+
+  void PreDisableScan() {
+    assert(!DisableScan);
+    ComputePosition(getBufferStart(), GetNumBytesInBuffer());
+    assert(PartialUTF8Char.empty());
+    DisableScan = true;
+  }
+
+  void PostDisableScan() {
+    assert(DisableScan);
+    DisableScan = false;
+    Scanned = getBufferStart() + GetNumBytesInBuffer();
+  }
+
+  struct DisableScanScope {
+    formatted_raw_ostream *S;
+
+    DisableScanScope(formatted_raw_ostream *FRO) : S(FRO) {
+      S->PreDisableScan();
+    }
+    ~DisableScanScope() { S->PostDisableScan(); }
+  };
 
 public:
   /// formatted_raw_ostream - Open the specified file for
@@ -104,12 +133,12 @@ public:
   /// underneath it.
   ///
   formatted_raw_ostream(raw_ostream &Stream)
-      : TheStream(nullptr), Position(0, 0) {
+      : TheStream(nullptr), Position(0, 0), DisableScan(false) {
     setStream(Stream);
   }
-  explicit formatted_raw_ostream() : TheStream(nullptr), Position(0, 0) {
-    Scanned = nullptr;
-  }
+  explicit formatted_raw_ostream()
+      : TheStream(nullptr), Position(0, 0), Scanned(nullptr),
+        DisableScan(false) {}
 
   ~formatted_raw_ostream() override {
     flush();
@@ -136,17 +165,27 @@ public:
   }
 
   raw_ostream &resetColor() override {
-    TheStream->resetColor();
+    if (colors_enabled()) {
+      DisableScanScope S(this);
+      raw_ostream::resetColor();
+    }
     return *this;
   }
 
   raw_ostream &reverseColor() override {
-    TheStream->reverseColor();
+    if (colors_enabled()) {
+      DisableScanScope S(this);
+      raw_ostream::reverseColor();
+    }
     return *this;
   }
 
-  raw_ostream &changeColor(enum Colors Color, bool Bold, bool BG) override {
-    TheStream->changeColor(Color, Bold, BG);
+  raw_ostream &changeColor(enum Colors Color, bool Bold = false,
+                           bool BG = false) override {
+    if (colors_enabled()) {
+      DisableScanScope S(this);
+      raw_ostream::changeColor(Color, Bold, BG);
+    }
     return *this;
   }
 
@@ -169,15 +208,15 @@ private:
 
 /// fouts() - This returns a reference to a formatted_raw_ostream for
 /// standard output.  Use it like: fouts() << "foo" << "bar";
-formatted_raw_ostream &fouts();
+LLVM_ABI formatted_raw_ostream &fouts();
 
 /// ferrs() - This returns a reference to a formatted_raw_ostream for
 /// standard error.  Use it like: ferrs() << "foo" << "bar";
-formatted_raw_ostream &ferrs();
+LLVM_ABI formatted_raw_ostream &ferrs();
 
 /// fdbgs() - This returns a reference to a formatted_raw_ostream for
 /// debug output.  Use it like: fdbgs() << "foo" << "bar";
-formatted_raw_ostream &fdbgs();
+LLVM_ABI formatted_raw_ostream &fdbgs();
 
 } // end llvm namespace
 

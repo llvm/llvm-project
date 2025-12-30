@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -26,6 +26,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -44,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -58,8 +60,7 @@
 #include <optional>
 #include <system_error>
 using namespace clang;
-using namespace clang::driver;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace llvm;
 using namespace llvm::opt;
 
@@ -70,8 +71,8 @@ struct AssemblerInvocation {
   /// @name Target Options
   /// @{
 
-  /// The name of the target triple to assemble for.
-  std::string Triple;
+  /// The target triple to assemble for.
+  llvm::Triple Triple;
 
   /// If given, the name of the target CPU to determine which instructions
   /// are legal.
@@ -89,10 +90,13 @@ struct AssemblerInvocation {
   /// @{
 
   std::vector<std::string> IncludePaths;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoInitialTextSection : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SaveTemporaryLabels : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned GenDwarfForAssembly : 1;
-  unsigned RelaxELFRelocations : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Dwarf64 : 1;
   unsigned DwarfVersion;
   std::string DwarfDebugFlags;
@@ -117,7 +121,9 @@ struct AssemblerInvocation {
     FT_Obj   ///< Object file output.
   };
   FileType OutputType;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowHelp : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowVersion : 1;
 
   /// @}
@@ -125,19 +131,28 @@ struct AssemblerInvocation {
   /// @{
 
   unsigned OutputAsmVariant;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowEncoding : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ShowInst : 1;
 
   /// @}
   /// @name Assembler Options
   /// @{
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RelaxAll : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoExecStack : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FatalWarnings : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoWarn : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoTypeCheck : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IncrementalLinkerCompatible : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned EmbedBitcode : 1;
 
   /// Whether to emit DWARF unwind info.
@@ -145,7 +160,18 @@ struct AssemblerInvocation {
 
   // Whether to emit compact-unwind for non-canonical entries.
   // Note: maybe overriden by other constraints.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned EmitCompactUnwindNonCanonical : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Crel : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ImplicitMapsyms : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned X86RelaxRelocations : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned X86Sse2Avx : 1;
 
   /// The name of the relocation model to use.
   std::string RelocationModel;
@@ -166,9 +192,12 @@ struct AssemblerInvocation {
   std::string AsSecureLogFile;
   /// @}
 
+  void setTriple(llvm::StringRef Str) {
+    Triple = llvm::Triple(llvm::Triple::normalize(Str));
+  }
+
 public:
   AssemblerInvocation() {
-    Triple = "";
     NoInitialTextSection = 0;
     InputFile = "-";
     OutputPath = "-";
@@ -187,6 +216,10 @@ public:
     EmbedBitcode = 0;
     EmitDwarfUnwind = EmitDwarfUnwindType::Default;
     EmitCompactUnwindNonCanonical = false;
+    Crel = false;
+    ImplicitMapsyms = 0;
+    X86RelaxRelocations = 0;
+    X86Sse2Avx = 0;
   }
 
   static bool CreateFromArgs(AssemblerInvocation &Res,
@@ -231,7 +264,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   // Construct the invocation.
 
   // Target Options
-  Opts.Triple = llvm::Triple::normalize(Args.getLastArgValue(OPT_triple));
+  Opts.setTriple(Args.getLastArgValue(OPT_triple));
   if (Arg *A = Args.getLastArg(options::OPT_darwin_target_variant_triple))
     Opts.DarwinTargetVariantTriple = llvm::Triple(A->getValue());
   if (Arg *A = Args.getLastArg(OPT_darwin_target_variant_sdk_version_EQ)) {
@@ -248,7 +281,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 
   // Use the default target triple if unspecified.
   if (Opts.Triple.empty())
-    Opts.Triple = llvm::sys::getDefaultTargetTriple();
+    Opts.setTriple(llvm::sys::getDefaultTargetTriple());
 
   // Language Options
   Opts.IncludePaths = Args.getAllArgValues(OPT_I);
@@ -266,7 +299,6 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
             .Default(llvm::DebugCompressionType::None);
   }
 
-  Opts.RelaxELFRelocations = !Args.hasArg(OPT_mrelax_relocations_no);
   if (auto *DwarfFormatArg = Args.getLastArg(OPT_gdwarf64, OPT_gdwarf32))
     Opts.Dwarf64 = DwarfFormatArg->getOption().matches(OPT_gdwarf64);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
@@ -356,6 +388,10 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 
   Opts.EmitCompactUnwindNonCanonical =
       Args.hasArg(OPT_femit_compact_unwind_non_canonical);
+  Opts.Crel = Args.hasArg(OPT_crel);
+  Opts.ImplicitMapsyms = Args.hasArg(OPT_mmapsyms_implicit);
+  Opts.X86RelaxRelocations = !Args.hasArg(OPT_mrelax_relocations_no);
+  Opts.X86Sse2Avx = Args.hasArg(OPT_msse2avx);
 
   Opts.AsSecureLogFile = Args.getLastArgValue(OPT_as_secure_log_file);
 
@@ -381,15 +417,19 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
 }
 
 static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
-                                 DiagnosticsEngine &Diags) {
+                                 DiagnosticsEngine &Diags,
+                                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
   if (!TheTarget)
-    return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+    return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
-      MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer = [&] {
+    // FIXME(sandboxing): Make this a proper input file.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
+  }();
 
   if (std::error_code EC = Buffer.getError()) {
     return Diags.Report(diag::err_fe_error_reading)
@@ -404,13 +444,21 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   // Record the location of the include directories so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(Opts.IncludePaths);
+  SrcMgr.setVirtualFileSystem(VFS);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(Opts.Triple));
   assert(MRI && "Unable to create target register info!");
 
   MCTargetOptions MCOptions;
+  MCOptions.MCRelaxAll = Opts.RelaxAll;
   MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
   MCOptions.EmitCompactUnwindNonCanonical = Opts.EmitCompactUnwindNonCanonical;
+  MCOptions.MCSaveTempLabels = Opts.SaveTemporaryLabels;
+  MCOptions.Crel = Opts.Crel;
+  MCOptions.ImplicitMapSyms = Opts.ImplicitMapsyms;
+  MCOptions.X86RelaxRelocations = Opts.X86RelaxRelocations;
+  MCOptions.X86Sse2Avx = Opts.X86Sse2Avx;
+  MCOptions.CompressDebugSections = Opts.CompressDebugSections;
   MCOptions.AsSecureLogFile = Opts.AsSecureLogFile;
 
   std::unique_ptr<MCAsmInfo> MAI(
@@ -419,9 +467,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   // Ensure MCAsmInfo initialization occurs before any use, otherwise sections
   // may be created with a combination of default and explicit settings.
-  MAI->setCompressDebugSections(Opts.CompressDebugSections);
 
-  MAI->setRelaxELFRelocations(Opts.RelaxELFRelocations);
 
   bool IsBinary = Opts.OutputType == AssemblerInvocation::FT_Obj;
   if (Opts.OutputPath.empty())
@@ -439,7 +485,10 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
-  assert(STI && "Unable to create subtarget info!");
+  if (!STI) {
+    return Diags.Report(diag::err_fe_unable_to_create_subtarget)
+           << Opts.CPU << FS.empty() << FS;
+  }
 
   MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr,
                 &MCOptions);
@@ -459,14 +508,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC));
-  if (Opts.DarwinTargetVariantTriple)
-    MOFI->setDarwinTargetVariantTriple(*Opts.DarwinTargetVariantTriple);
-  if (!Opts.DarwinTargetVariantSDKVersion.empty())
-    MOFI->setDarwinTargetVariantSDKVersion(Opts.DarwinTargetVariantSDKVersion);
   Ctx.setObjectFileInfo(MOFI.get());
 
-  if (Opts.SaveTemporaryLabels)
-    Ctx.setAllowTemporaryLabels(false);
   if (Opts.GenDwarfForAssembly)
     Ctx.setGenDwarfForAssembly(true);
   if (!Opts.DwarfDebugFlags.empty())
@@ -503,12 +546,15 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.MCNoWarn = Opts.NoWarn;
   MCOptions.MCFatalWarnings = Opts.FatalWarnings;
   MCOptions.MCNoTypeCheck = Opts.NoTypeCheck;
+  MCOptions.ShowMCInst = Opts.ShowInst;
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MCOptions.ABIName = Opts.TargetABI;
 
   // FIXME: There is a bit of code duplication with addPassesToEmitFile.
   if (Opts.OutputType == AssemblerInvocation::FT_Asm) {
-    MCInstPrinter *IP = TheTarget->createMCInstPrinter(
-        llvm::Triple(Opts.Triple), Opts.OutputAsmVariant, *MAI, *MCII, *MRI);
+    std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+        llvm::Triple(Opts.Triple), Opts.OutputAsmVariant, *MAI, *MCII, *MRI));
 
     std::unique_ptr<MCCodeEmitter> CE;
     if (Opts.ShowEncoding)
@@ -517,10 +563,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
 
     auto FOut = std::make_unique<formatted_raw_ostream>(*Out);
-    Str.reset(TheTarget->createAsmStreamer(
-        Ctx, std::move(FOut), /*asmverbose*/ true,
-        /*useDwarfDirectory*/ true, IP, std::move(CE), std::move(MAB),
-        Opts.ShowInst));
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
+                                           std::move(CE), std::move(MAB)));
   } else if (Opts.OutputType == AssemblerInvocation::FT_Null) {
     Str.reset(createNullStreamer(Ctx));
   } else {
@@ -543,10 +587,14 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
-        T, Ctx, std::move(MAB), std::move(OW), std::move(CE), *STI,
-        Opts.RelaxAll, Opts.IncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ true));
-    Str.get()->initSections(Opts.NoExecStack, *STI);
+        T, Ctx, std::move(MAB), std::move(OW), std::move(CE), *STI));
+    if (T.isOSBinFormatMachO() && T.isOSDarwin()) {
+      Triple *TVT = Opts.DarwinTargetVariantTriple
+                        ? &*Opts.DarwinTargetVariantTriple
+                        : nullptr;
+      Str->emitVersionForTarget(T, VersionTuple(), TVT,
+                                Opts.DarwinTargetVariantSDKVersion);
+    }
   }
 
   // When -fembed-bitcode is passed to clang_as, a 1-byte marker
@@ -554,23 +602,20 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   if (Opts.EmbedBitcode && Ctx.getObjectFileType() == MCContext::IsMachO) {
     MCSection *AsmLabel = Ctx.getMachOSection(
         "__LLVM", "__asm", MachO::S_REGULAR, 4, SectionKind::getReadOnly());
-    Str.get()->switchSection(AsmLabel);
-    Str.get()->emitZeros(1);
+    Str->switchSection(AsmLabel);
+    Str->emitZeros(1);
   }
-
-  // Assembly to object compilation should leverage assembly info.
-  Str->setUseAssemblerInfoForParsing(true);
 
   bool Failed = false;
 
   std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(SrcMgr, Ctx, *Str.get(), *MAI));
+      createMCAsmParser(SrcMgr, Ctx, *Str, *MAI));
 
   // FIXME: init MCTargetOptions from sanitizer flags here.
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
   if (!TAP)
-    Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+    Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 
   // Set values for symbols, if any.
   for (auto &S : Opts.SymbolDefs) {
@@ -584,7 +629,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   }
 
   if (!Failed) {
-    Parser->setTargetParser(*TAP.get());
+    Parser->setTargetParser(*TAP);
     Failed = Parser->Run(Opts.NoInitialTextSection);
   }
 
@@ -592,8 +637,9 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 }
 
 static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags) {
-  bool Failed = ExecuteAssemblerImpl(Opts, Diags);
+                             DiagnosticsEngine &Diags,
+                             IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+  bool Failed = ExecuteAssemblerImpl(Opts, Diags, VFS);
 
   // Delete output file if there were errors.
   if (Failed) {
@@ -623,12 +669,16 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   InitializeAllAsmParsers();
 
   // Construct our diagnostic client.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(errs(), &*DiagOpts);
+  DiagnosticOptions DiagOpts;
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(errs(), DiagOpts);
   DiagClient->setPrefix("clang -cc1as");
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
+
+  auto VFS = [] {
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return vfs::getRealFileSystem();
+  }();
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -644,8 +694,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     getDriverOptTable().printHelp(
         llvm::outs(), "clang -cc1as [options] file...",
         "Clang Integrated Assembler", /*ShowHidden=*/false,
-        /*ShowAllAliases=*/false,
-        llvm::opt::Visibility(driver::options::CC1AsOption));
+        /*ShowAllAliases=*/false, llvm::opt::Visibility(options::CC1AsOption));
 
     return 0;
   }
@@ -668,11 +717,12 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
+                                      /*Errs=*/nullptr, /*VFS=*/VFS.get());
   }
 
   // Execute the invocation, unless there were parsing errors.
-  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags);
+  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags, VFS);
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.

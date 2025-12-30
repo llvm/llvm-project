@@ -12,8 +12,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cctype>
+#include <optional>
 
 namespace llvm {
 
@@ -25,78 +24,51 @@ class StringToOffsetTable {
   StringMap<unsigned> StringOffset;
   std::string AggregateString;
 
+  /// If this is to be a static class member, the prefix to use (i.e. class name
+  /// plus ::)
+  const StringRef ClassPrefix;
+  const bool AppendZero;
+  const bool UsePrefixForStorageMember;
+
 public:
-  bool Empty() const { return StringOffset.empty(); }
-
-  unsigned GetOrAddStringOffset(StringRef Str, bool appendZero = true) {
-    auto IterBool =
-        StringOffset.insert(std::make_pair(Str, AggregateString.size()));
-    if (IterBool.second) {
-      // Add the string to the aggregate if this is the first time found.
-      AggregateString.append(Str.begin(), Str.end());
-      if (appendZero)
-        AggregateString += '\0';
-    }
-
-    return IterBool.first->second;
+  StringToOffsetTable(bool AppendZero = true, StringRef ClassPrefix = "",
+                      bool UsePrefixForStorageMember = true)
+      : ClassPrefix(ClassPrefix), AppendZero(AppendZero),
+        UsePrefixForStorageMember(UsePrefixForStorageMember) {
+    // Ensure we always put the empty string at offset zero. That lets empty
+    // initialization also be zero initialization for offsets into the table.
+    GetOrAddStringOffset("");
   }
 
-  void EmitString(raw_ostream &O) {
-    // Escape the string.
-    SmallString<256> Str;
-    raw_svector_ostream(Str).write_escaped(AggregateString);
-    AggregateString = std::string(Str.str());
+  bool empty() const { return StringOffset.empty(); }
+  size_t size() const { return AggregateString.size(); }
 
-    O << "    \"";
-    unsigned CharsPrinted = 0;
-    for (unsigned i = 0, e = AggregateString.size(); i != e; ++i) {
-      if (CharsPrinted > 70) {
-        O << "\"\n    \"";
-        CharsPrinted = 0;
-      }
-      O << AggregateString[i];
-      ++CharsPrinted;
+  unsigned GetOrAddStringOffset(StringRef Str);
 
-      // Print escape sequences all together.
-      if (AggregateString[i] != '\\')
-        continue;
-
-      assert(i + 1 < AggregateString.size() && "Incomplete escape sequence!");
-      if (isdigit(AggregateString[i + 1])) {
-        assert(isdigit(AggregateString[i + 2]) &&
-               isdigit(AggregateString[i + 3]) &&
-               "Expected 3 digit octal escape!");
-        O << AggregateString[++i];
-        O << AggregateString[++i];
-        O << AggregateString[++i];
-        CharsPrinted += 3;
-      } else {
-        O << AggregateString[++i];
-        ++CharsPrinted;
-      }
-    }
-    O << "\"";
+  // Returns the offset of `Str` in the table if its preset, else return
+  // std::nullopt.
+  std::optional<unsigned> GetStringOffset(StringRef Str) const {
+    auto II = StringOffset.find(Str);
+    if (II == StringOffset.end())
+      return std::nullopt;
+    return II->second;
   }
 
-  /// Emit the string using character literals. MSVC has a limitation that
-  /// string literals cannot be longer than 64K.
-  void EmitCharArray(raw_ostream &O) {
-    assert(AggregateString.find(')') == std::string::npos &&
-           "can't emit raw string with closing parens");
-    int Count = 0;
-    O << ' ';
-    for (char C : AggregateString) {
-      O << " \'";
-      O.write_escaped(StringRef(&C, 1));
-      O << "\',";
-      Count++;
-      if (Count > 14) {
-        O << "\n ";
-        Count = 0;
-      }
-    }
-    O << '\n';
-  }
+  // Emit a string table definition with the provided name.
+  //
+  // When possible, this uses string-literal concatenation to emit the string
+  // contents in a readable and searchable way. However, for (very) large string
+  // tables MSVC cannot reliably use string literals and so there we use a large
+  // character array. We still use a line oriented emission and add comments to
+  // provide searchability even in this case.
+  //
+  // The string table, and its input string contents, are always emitted as both
+  // `static` and `constexpr`. Both `Name` and (`Name` + "Storage") must be
+  // valid identifiers to declare.
+  void EmitStringTableDef(raw_ostream &OS, const Twine &Name) const;
+
+  // Emit the string as one single string.
+  void EmitString(raw_ostream &O) const;
 };
 
 } // end namespace llvm

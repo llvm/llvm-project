@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple aarch64 -mattr=+dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ERROR < %t %s
-// RUN: not llvm-mc -triple aarch64 -mattr=+v8r -show-encoding < %s 2> %t
+// RUN: not llvm-mc -triple aarch64 -mattr=+v8r,+dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ERROR < %t %s
 
 udot v0.2s, v1.8b, v2.4b[4]

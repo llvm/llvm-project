@@ -84,11 +84,11 @@ try to be explicitly typed when possible.
 
 The transform IR values have transform IR types, which should implement exactly one of:
 
-  * [TransformHandleTypeInterface](Transform.md#transformhandletypeinterface-transformhandletypeinterface),
+  * [TransformHandleTypeInterface](#transformhandletypeinterface-transformhandletypeinterface),
 
-  * [TransformValueHandleTypeInterface](Transform.md#transformvaluehandletypeinterface-transformvaluehandletypeinterface),
+  * [TransformValueHandleTypeInterface](#transformvaluehandletypeinterface-transformvaluehandletypeinterface),
 
-  * [TransformParamTypeInterface](Transform.md##transformparamtypeinterface-transformparamtypeinterface).
+  * [TransformParamTypeInterface](#transformparamtypeinterface-transformparamtypeinterface).
 
 The goal of these type interfaces, beyond providing a common base for accepted
 types, is to verify the properties of the associated objects. For example, a
@@ -415,13 +415,41 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/TransformOps.md"]
 
+## Tune Extension Operations
+
+[include "Dialects/TuneExtensionOps.md"]
+
+## SMT Extension Operations
+
+[include "Dialects/SMTExtensionOps.md"]
+
 ## Affine Transform Operations
 
 [include "Dialects/AffineLoopTransformOps.md"]
 
+## ARM Neon Transform Operations
+
+[include "Dialects/ArmNeonVectorTransformOps.md"]
+
+## ARM SVE Transform Operations
+
+[include "Dialects/ArmSVEVectorTransformOps.md"]
+
 ## Bufferization Transform Operations
 
 [include "Dialects/BufferizationTransformOps.md"]
+
+## Debug Transform Operations
+
+[include "Dialects/DebugExtensionOps.md"]
+
+## DLTI Transform Operations
+
+[include "Dialects/DLTITransformOps.md"]
+
+## IRDL (extension) Transform Operations
+
+[include "Dialects/IRDLExtensionOps.md"]
 
 ## Func Transform Operations
 

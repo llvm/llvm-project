@@ -12,12 +12,10 @@
 
 #include "NVPTXInstrInfo.h"
 #include "NVPTX.h"
-#include "NVPTXTargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
 
 using namespace llvm;
 
@@ -27,39 +25,35 @@ using namespace llvm;
 // Pin the vtable to this file.
 void NVPTXInstrInfo::anchor() {}
 
-NVPTXInstrInfo::NVPTXInstrInfo() : RegInfo() {}
+NVPTXInstrInfo::NVPTXInstrInfo(const NVPTXSubtarget &STI)
+    : NVPTXGenInstrInfo(STI, RegInfo), RegInfo() {}
 
 void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc) const {
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
+                                 bool RenamableDest, bool RenamableSrc) const {
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
 
-  if (RegInfo.getRegSizeInBits(*DestRC) != RegInfo.getRegSizeInBits(*SrcRC))
+  if (DestRC != SrcRC)
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
-  if (DestRC == &NVPTX::Int1RegsRegClass) {
-    Op = NVPTX::IMOV1rr;
-  } else if (DestRC == &NVPTX::Int16RegsRegClass) {
-    Op = NVPTX::IMOV16rr;
-  } else if (DestRC == &NVPTX::Int32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int32RegsRegClass ? NVPTX::IMOV32rr
-                                             : NVPTX::BITCONVERT_32_F2I);
-  } else if (DestRC == &NVPTX::Int64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int64RegsRegClass ? NVPTX::IMOV64rr
-                                             : NVPTX::BITCONVERT_64_F2I);
-  } else if (DestRC == &NVPTX::Float32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float32RegsRegClass ? NVPTX::FMOV32rr
-                                               : NVPTX::BITCONVERT_32_I2F);
-  } else if (DestRC == &NVPTX::Float64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float64RegsRegClass ? NVPTX::FMOV64rr
-                                               : NVPTX::BITCONVERT_64_I2F);
-  } else {
+  if (DestRC == &NVPTX::B1RegClass)
+    Op = NVPTX::MOV_B1_r;
+  else if (DestRC == &NVPTX::B16RegClass)
+    Op = NVPTX::MOV_B16_r;
+  else if (DestRC == &NVPTX::B32RegClass)
+    Op = NVPTX::MOV_B32_r;
+  else if (DestRC == &NVPTX::B64RegClass)
+    Op = NVPTX::MOV_B64_r;
+  else if (DestRC == &NVPTX::B128RegClass)
+    Op = NVPTX::MOV_B128_r;
+  else
     llvm_unreachable("Bad register copy");
-  }
+
   BuildMI(MBB, I, DL, get(Op), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
 }

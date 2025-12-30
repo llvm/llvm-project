@@ -14,9 +14,9 @@ declare i32 @memcmp(ptr, ptr, i64)
 define void @fold_memcmp_i32a_i32b_pIb(i32 %I, ptr %pcmp)
 ; CHECK-LABEL: @fold_memcmp_i32a_i32b_pIb(
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 0, ptr [[PST_1_1_2]], align 4
-; CHECK-NEXT:    [[PST_1_1_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[PST_1_1_3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[PST_1_1_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -50,23 +50,23 @@ define void @fold_memcmp_i32a_i32b_pIb(i32 %I, ptr %pcmp)
 define void @fold_memcmp_A_B_pIb(i32 %I, ptr %pcmp) {
 ; CHECK-LABEL: @fold_memcmp_A_B_pIb(
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PST_0_0_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[PST_0_0_2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 0, ptr [[PST_0_0_2]], align 4
-; CHECK-NEXT:    [[PST_0_0_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[PST_0_0_3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[PST_0_0_3]], align 4
-; CHECK-NEXT:    [[PST_0_0_4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[PST_0_0_4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 0, ptr [[PST_0_0_4]], align 4
-; CHECK-NEXT:    [[PST_0_1_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    [[PST_0_1_1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; CHECK-NEXT:    store i32 -1, ptr [[PST_0_1_1]], align 4
-; CHECK-NEXT:    [[PST_0_1_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    [[PST_0_1_2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 20
 ; CHECK-NEXT:    store i32 -1, ptr [[PST_0_1_2]], align 4
-; CHECK-NEXT:    [[PST_0_1_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    [[PST_0_1_3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; CHECK-NEXT:    store i32 -1, ptr [[PST_0_1_3]], align 4
-; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; CHECK-NEXT:    store i32 1, ptr [[PST_1_0_1]], align 4
-; CHECK-NEXT:    [[PST_1_0_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    [[PST_1_0_2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 20
 ; CHECK-NEXT:    store i32 1, ptr [[PST_1_0_2]], align 4
-; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; CHECK-NEXT:    store i32 1, ptr [[PST_1_0_3]], align 4
 ; CHECK-NEXT:    ret void
 ;

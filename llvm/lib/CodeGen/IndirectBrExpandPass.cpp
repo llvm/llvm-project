@@ -100,7 +100,7 @@ FunctionPass *llvm::createIndirectBrExpandPass() {
 }
 
 bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   SmallVector<IndirectBrInst *, 1> IndirectBrs;
 
@@ -113,14 +113,13 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
       // Handle the degenerate case of no successors by replacing the indirectbr
       // with unreachable as there is no successor available.
       if (IBr->getNumSuccessors() == 0) {
-        (void)new UnreachableInst(F.getContext(), IBr);
+        (void)new UnreachableInst(F.getContext(), IBr->getIterator());
         IBr->eraseFromParent();
         continue;
       }
 
       IndirectBrs.push_back(IBr);
-      for (BasicBlock *SuccBB : IBr->successors())
-        IndirectBrSuccs.insert(SuccBB);
+      IndirectBrSuccs.insert_range(IBr->successors());
     }
 
   if (IndirectBrs.empty())
@@ -145,8 +144,8 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
     if (BlockAddressUseIt == BB.use_end())
       continue;
 
-    assert(std::find_if(std::next(BlockAddressUseIt), BB.use_end(),
-                        IsBlockAddressUse) == BB.use_end() &&
+    assert(std::none_of(std::next(BlockAddressUseIt), BB.use_end(),
+                        IsBlockAddressUse) &&
            "There should only ever be a single blockaddress use because it is "
            "a constant and should be uniqued.");
 
@@ -183,7 +182,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
         for (BasicBlock *SuccBB : IBr->successors())
           Updates.push_back({DominatorTree::Delete, IBr->getParent(), SuccBB});
       }
-      (void)new UnreachableInst(F.getContext(), IBr);
+      (void)new UnreachableInst(F.getContext(), IBr->getIterator());
       IBr->eraseFromParent();
     }
     if (DTU) {
@@ -207,9 +206,10 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
   }
 
   auto GetSwitchValue = [CommonITy](IndirectBrInst *IBr) {
-    return CastInst::CreatePointerCast(
-        IBr->getAddress(), CommonITy,
-        Twine(IBr->getAddress()->getName()) + ".switch_cast", IBr);
+    return CastInst::CreatePointerCast(IBr->getAddress(), CommonITy,
+                                       Twine(IBr->getAddress()->getName()) +
+                                           ".switch_cast",
+                                       IBr->getIterator());
   };
 
   SmallVector<DominatorTree::UpdateType, 8> Updates;
@@ -243,7 +243,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
       Updates.reserve(IndirectBrs.size() + 2 * IndirectBrSuccs.size());
     for (auto *IBr : IndirectBrs) {
       SwitchPN->addIncoming(GetSwitchValue(IBr), IBr->getParent());
-      BranchInst::Create(SwitchBB, IBr);
+      BranchInst::Create(SwitchBB, IBr->getIterator());
       if (DTU) {
         Updates.push_back({DominatorTree::Insert, IBr->getParent(), SwitchBB});
         for (BasicBlock *SuccBB : IBr->successors())

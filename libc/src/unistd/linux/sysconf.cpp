@@ -10,18 +10,22 @@
 
 #include "src/__support/common.h"
 
-#include "src/errno/libc_errno.h"
-#include <linux/param.h> // For EXEC_PAGESIZE.
-#include <unistd.h>
+#include "hdr/unistd_macros.h"
+#include "src/__support/OSUtil/linux/auxv.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   long ret = 0;
   if (name == _SC_PAGESIZE) {
-    // TODO: get this information from the auxvector.
-    return EXEC_PAGESIZE;
+    cpp::optional<unsigned long> page_size = auxv::get(AT_PAGESZ);
+    if (page_size)
+      return static_cast<long>(*page_size);
+    ret = -1;
   }
+
   // TODO: Complete the rest of the sysconf options.
   if (ret < 0) {
     libc_errno = EINVAL;
@@ -30,4 +34,4 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

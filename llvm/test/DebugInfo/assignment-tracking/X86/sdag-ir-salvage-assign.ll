@@ -2,6 +2,7 @@
 ; RUN:    -stop-before finalize-isel %s -o -  \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+
 ; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare \
 ; RUN:    -stop-before finalize-isel %s -o -  \
 ; RUN:    -experimental-debug-variable-locations=true \

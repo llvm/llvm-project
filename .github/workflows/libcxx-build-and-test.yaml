@@ -23,8 +23,8 @@ on:
       - 'cmake/**'
       - '.github/workflows/libcxx-build-and-test.yaml'
   schedule:
-    # Run nightly at 8 AM UTC (or roughly 3 AM eastern)
-    - cron: '0 3 * * *'
+    # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
+    - cron: '0 8 * * *'
 
 permissions:
   contents: read # Default everything to read-only
@@ -33,62 +33,47 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-
-env:
-  CMAKE: "/opt/bin/cmake"
-  # LLVM POST-BRANCH bump version
-  # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
-  # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-  LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
-  LLVM_PREVIOUS_VERSION: "17"
-  LLVM_OLDEST_VERSION: "16"
-  GCC_STABLE_VERSION: "13"
-  LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-18"
-  CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
-
-
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: llvm-premerge-libcxx-runners
     continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         config: [
+          'frozen-cxx03-headers',
           'generic-cxx03',
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-18' ]
-        cxx: [ 'clang++-18' ]
-        clang_tidy: [ 'ON' ]
+        cc: [  'clang-22' ]
+        cxx: [ 'clang++-22' ]
         include:
           - config: 'generic-gcc'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
+            cc: 'gcc-15'
+            cxx: 'g++-15'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-runners-8-set
+    runs-on: llvm-premerge-libcxx-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -101,43 +86,39 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-18' ]
-        cxx: [ 'clang++-18' ]
-        clang_tidy: [ 'ON' ]
+        cc: [ 'clang-22' ]
+        cxx: [ 'clang++-22' ]
         include:
           - config: 'generic-gcc-cxx11'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
-          - config: 'generic-cxx23'
-            cc: 'clang-16'
-            cxx: 'clang++-16'
-            clang_tidy: 'OFF'
-          - config: 'generic-cxx23'
-            cc: 'clang-17'
-            cxx: 'clang++-17'
-            clang_tidy: 'OFF'
+            cc: 'gcc-15'
+            cxx: 'g++-15'
+          - config: 'generic-cxx26'
+            cc: 'clang-21'
+            cxx: 'clang++-21'
+          - config: 'generic-cxx26'
+            cc: 'clang-20'
+            cxx: 'clang++-20'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
-          name: ${{ matrix.config }}-results
+          name: ${{ matrix.config }}-${{ matrix.cxx }}-results
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage3:
     if: github.repository_owner == 'llvm'
-    needs: [ stage1, stage2 ]
+    needs: [ stage2 ]
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -147,14 +128,16 @@ jobs:
           'generic-abi-unstable',
           'generic-hardening-mode-debug',
           'generic-hardening-mode-extensive',
+          'generic-hardening-mode-extensive-observe-semantic',
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
           'generic-merged',
-          'generic-modules-lsv',
+          'generic-modules-cxx17-lsv',
           'generic-no-exceptions',
           'generic-no-experimental',
           'generic-no-filesystem',
           'generic-no-localization',
+          'generic-no-terminal',
           'generic-no-random_device',
           'generic-no-threads',
           'generic-no-tzdb',
@@ -163,48 +146,150 @@ jobs:
           'generic-no-rtti',
           'generic-optimized-speed',
           'generic-static',
-          'generic-with_llvm_unwinder',
-          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
-          # or don't provide much value since the benchmark run results are too noise on the bots.
-          'benchmarks',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-runners-8-set' ]
-        std_modules: [ 'OFF' ]
+        machine: [ 'llvm-premerge-libcxx-runners' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-runners-8-set
-          std_modules: 'ON'
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-asan'
-          machine: libcxx-runners-8-set
-          std_modules: 'OFF'
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-tsan'
-          machine: libcxx-runners-8-set
-          std_modules: 'OFF'
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-ubsan'
-          machine: libcxx-runners-8-set
-          std_modules: 'OFF'
+          machine: llvm-premerge-libcxx-runners
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-8-set
-          std_modules: 'OFF'
+          machine: llvm-premerge-libcxx-runners
     runs-on: ${{ matrix.machine }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-18
-          CXX: clang++-18
-          ENABLE_CLANG_TIDY: "OFF"
-          ENABLE_STD_MODULES: ${{ matrix.std_modules }}
-      - uses: actions/upload-artifact@v3
+          CC: clang-22
+          CXX: clang++-22
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: ${{ matrix.config }}-results
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+
+  macos:
+    needs: [ stage2 ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - config: generic-cxx03
+          os: macos-15
+        - config: generic-cxx23
+          os: macos-15
+        - config: generic-modules
+          os: macos-15
+        - config: apple-configuration
+          os: macos-15
+        # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
+        #       older system-provided libc++.dylib). Doing this properly would require building the test suite on a
+        #       recent macOS using a recent Clang (hence recent Xcode), and then running the actual test suite on an
+        #       older mac. We could do that by e.g. sharing artifacts between the two jobs.
+        #
+        #       However, our Lit configuration currently doesn't provide a good way to do that in a batch, so our only
+        #       alternative is to actually build on the same host that we're going to run on. Sadly, that doesn't work
+        #       since older macOSes don't support newer Xcodes. For now, we run the "backdeployment" jobs on recent
+        #       macOS versions as a way to avoid rotting that configuration, but it doesn't provide a lot of additional
+        #       coverage.
+        - config: apple-system
+          os: macos-15
+        - config: apple-system-hardened
+          os: macos-15
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
+        with:
+          # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
+          xcode-version: '26.0'
+      - uses: seanmiddleditch/gha-setup-ninja@3b1f8f94a2f8254bd26914c4ab9474d4f0015f67 # v6
+      - name: Build and test
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install psutil
+          xcrun bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: clang
+          CXX: clang++
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()  # Upload artifacts even if the build or test suite fails
+        with:
+          name: macos-${{ matrix.config }}-results
+          path: |
+            **/test-results.xml
+            **/*.abilist
+            **/CMakeConfigureLog.yaml
+            **/CMakeError.log
+            **/CMakeOutput.log
+            **/crash_diagnostics/*
+
+  windows:
+    needs: [ stage2 ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - { config: clang-cl-dll,             mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-static,          mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-no-vcruntime,    mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-debug,           mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: clang-cl-static-crt,      mingw: false, cc: clang-cl, cxx: clang-cl }
+        - { config: mingw-dll,                mingw: true,  cc: cc,       cxx: c++ }
+        - { config: mingw-dll,                mingw: true,  cc: i686-w64-mingw32-clang, cxx: i686-w64-mingw32-clang++ }
+        - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++ }
+        - { config: mingw-incomplete-sysroot, mingw: true,  cc: cc,       cxx: c++ }
+        - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++, runner: windows-11-arm }
+    runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Install dependencies
+        run: |
+          pip install psutil
+      - name: Install a current LLVM
+        if: ${{ matrix.mingw != true }}
+        run: |
+          choco install -y llvm --version=20.1.8 --allow-downgrade
+      - name: Install llvm-mingw
+        if: ${{ matrix.mingw == true }}
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250709/llvm-mingw-20250709-ucrt-${{ matrix.runner == 'windows-11-arm' && 'aarch64' || 'x86_64' }}.zip
+          powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
+          del llvm-mingw*.zip
+          mv llvm-mingw* c:\llvm-mingw
+          echo "c:\llvm-mingw\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Simulate a from-scratch build of llvm-mingw
+        if: ${{ matrix.config == 'mingw-incomplete-sysroot' }}
+        run: |
+          rm -r c:\llvm-mingw\include\c++
+          rm -r c:\llvm-mingw\*-w64-mingw32\lib\libc++*
+          rm -r c:\llvm-mingw\*-w64-mingw32\lib\libunwind*
+      - name: Add Git Bash to the path
+        run: |
+          echo "c:\Program Files\Git\usr\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Set up the MSVC dev environment
+        if: ${{ matrix.mingw != true }}
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - name: Add the installed Clang at the start of the path
+        if: ${{ matrix.mingw != true }}
+        run: |
+          echo "c:\Program Files\LLVM\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Build and test
+        run: bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}

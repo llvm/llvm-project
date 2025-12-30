@@ -16,8 +16,11 @@
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/Visitors.h"
 
+#include "llvm/ADT/SmallPtrSet.h"
+
 namespace llvm {
 class BitVector;
+class raw_ostream;
 } // namespace llvm
 
 namespace mlir {
@@ -26,8 +29,8 @@ template <typename ValueRangeT>
 class ValueTypeRange;
 
 /// `Block` represents an ordered list of `Operation`s.
-class Block : public IRObjectWithUseList<BlockOperand>,
-              public llvm::ilist_node_with_parent<Block, Region> {
+class alignas(8) Block : public IRObjectWithUseList<BlockOperand>,
+                         public llvm::ilist_node_with_parent<Block, Region> {
 public:
   explicit Block() = default;
   ~Block();
@@ -66,6 +69,10 @@ public:
   /// Unlink this block from its current region and insert it right before the
   /// specific block.
   void moveBefore(Block *block);
+
+  /// Unlink this block from its current region and insert it right before the
+  /// block that the given iterator points to in the region region.
+  void moveBefore(Region *region, llvm::iplist<Block>::iterator iterator);
 
   /// Unlink this Block from its parent region and delete it.
   void erase();
@@ -198,12 +205,14 @@ public:
   }
 
   /// Return an iterator range over the operation within this block excluding
-  /// the terminator operation at the end.
+  /// the terminator operation at the end. If the block has no terminator,
+  /// return an iterator range over the entire block. If it is unknown if the
+  /// block has a terminator (i.e., last block operation is unregistered), also
+  /// return an iterator range over the entire block.
   iterator_range<iterator> without_terminator() {
     if (begin() == end())
       return {begin(), end()};
-    auto endIt = --end();
-    return {begin(), endIt};
+    return without_terminator_impl();
   }
 
   //===--------------------------------------------------------------------===//
@@ -214,7 +223,8 @@ public:
   /// the block might have a valid terminator operation.
   Operation *getTerminator();
 
-  /// Check whether this block might have a terminator.
+  /// Return "true" if this block might have a terminator. Return "true" if
+  /// the last operation is unregistered.
   bool mightHaveTerminator();
 
   //===--------------------------------------------------------------------===//
@@ -258,6 +268,19 @@ public:
   succ_iterator succ_begin() { return getSuccessors().begin(); }
   succ_iterator succ_end() { return getSuccessors().end(); }
   SuccessorRange getSuccessors() { return SuccessorRange(this); }
+
+  /// Return "true" if there is a path from this block to the given block
+  /// (according to the successors relationship). Both blocks must be in the
+  /// same region. Paths that contain a block from `except` do not count.
+  /// This function returns "false" if `other` is in `except`.
+  ///
+  /// Note: This function performs a block graph traversal and its complexity
+  /// linear in the number of blocks in the parent region.
+  ///
+  /// Note: Reachability is a necessary but insufficient condition for
+  /// dominance. Do not use this function in places where you need to check for
+  /// dominance.
+  bool isReachable(Block *other, SmallPtrSet<Block *, 16> &&except = {});
 
   //===--------------------------------------------------------------------===//
   // Walkers
@@ -382,6 +405,9 @@ public:
   void printAsOperand(raw_ostream &os, AsmState &state);
 
 private:
+  /// Same as `without_terminator`, but assumes that the block is not empty.
+  iterator_range<iterator> without_terminator_impl();
+
   /// Pair of the parent object that owns this block and a bit that signifies if
   /// the operations within this block have a valid ordering.
   llvm::PointerIntPair<Region *, /*IntBits=*/1, bool> parentValidOpOrderPair;
@@ -397,6 +423,29 @@ private:
 
   friend struct llvm::ilist_traits<Block>;
 };
+
+raw_ostream &operator<<(raw_ostream &, Block &);
 } // namespace mlir
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::Block::iterator> {
+  static mlir::Block::iterator getEmptyKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlir::Block::iterator((mlir::Operation *)pointer);
+  }
+  static mlir::Block::iterator getTombstoneKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlir::Block::iterator((mlir::Operation *)pointer);
+  }
+  static unsigned getHashValue(mlir::Block::iterator iter) {
+    return hash_value(iter.getNodePtr());
+  }
+  static bool isEqual(mlir::Block::iterator lhs, mlir::Block::iterator rhs) {
+    return lhs == rhs;
+  }
+};
+
+} // end namespace llvm
 
 #endif // MLIR_IR_BLOCK_H

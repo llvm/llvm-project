@@ -62,6 +62,11 @@ def GPU_Dialect : Dialect {
     static bool isWorkgroupMemoryAddressSpace(Attribute memorySpace);
   }];
 
+  let discardableAttrs = (ins
+    "::mlir::DenseI32ArrayAttr":$known_block_size,
+    "::mlir::DenseI32ArrayAttr":$known_grid_size
+  );
+
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
@@ -109,7 +114,7 @@ def GPU_MMAMatrix : DialectType<
   GPU_Dialect, IsMMAMatrixTypePred, "MMAMatrix type">;
 
 // Memref type acceptable to gpu.subgroup_mma_{load|store}_matrix ops.
-def GPU_MMAMemRef : MemRefOf<[I8, I32, F16, F32, VectorOfRankAndType<[1], [I8, I32, F16, F32]>]>;
+def GPU_MMAMemRef : MemRefOf<[I8, I32, F16, F32, F64, VectorOfRankAndType<[1], [I8, I32, F16, F32, F64]>]>;
 
 class MMAMatrixOf<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, IsMMAMatrixTypePred,

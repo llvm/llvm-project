@@ -2,13 +2,13 @@
 target datalayout = "e-p:16:8:8-i8:8:8-i16:8:8-i32:8:8"
 target triple = "msp430-elf"
 
-%struct.httpd_fs_file = type { i8*, i16 }
-%struct.psock = type { %struct.pt, %struct.pt, i8*, i8*, i8*, i16, i16, %struct.httpd_fs_file, i16, i8, i8 }
+%struct.httpd_fs_file = type { ptr, i16 }
+%struct.psock = type { %struct.pt, %struct.pt, ptr, ptr, ptr, i16, i16, %struct.httpd_fs_file, i16, i8, i8 }
 %struct.pt = type { i16 }
 
-@foo = external global i8*
+@foo = external global ptr
 
-define signext i8 @psock_readto(%struct.psock* nocapture %psock, i8 zeroext %c) nounwind {
+define signext i8 @psock_readto(ptr nocapture %psock, i8 zeroext %c) nounwind {
 entry:
   switch i16 undef, label %sw.epilog [
     i16 0, label %sw.bb
@@ -46,10 +46,10 @@ while.cond36.i:                                   ; preds = %while.body41.i, %wh
   br i1 undef, label %do.body, label %while.body41.i
 
 while.body41.i:                                   ; preds = %while.cond36.i
-  %tmp43.i = load i8*, i8** @foo                      ; <i8*> [#uses=2]
-  %tmp44.i = load i8, i8* %tmp43.i                    ; <i8> [#uses=1]
-  %ptrincdec50.i = getelementptr inbounds i8, i8* %tmp43.i, i16 1 ; <i8*> [#uses=1]
-  store i8* %ptrincdec50.i, i8** @foo
+  %tmp43.i = load ptr, ptr @foo                      ; <i8*> [#uses=2]
+  %tmp44.i = load i8, ptr %tmp43.i                    ; <i8> [#uses=1]
+  %ptrincdec50.i = getelementptr inbounds i8, ptr %tmp43.i, i16 1 ; <i8*> [#uses=1]
+  store ptr %ptrincdec50.i, ptr @foo
   %cmp55.i = icmp eq i8 %tmp44.i, %c              ; <i1> [#uses=1]
   br i1 %cmp55.i, label %do.end41, label %while.cond36.i
 

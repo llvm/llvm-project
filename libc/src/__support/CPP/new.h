@@ -1,4 +1,4 @@
-//===-- Libc specific custom operator new and delete ------------*- C++ -*-===//
+//===-- Libc-internal alternative to <new> ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 
+#include "hdr/func/free.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/compiler.h"
 
 #include <stddef.h> // For size_t
-#include <stdlib.h> // For malloc, free etc.
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
@@ -23,59 +25,24 @@ enum class align_val_t : size_t {};
 
 } // namespace std
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
-class AllocChecker {
-  bool success = false;
-
-  LIBC_INLINE AllocChecker &operator=(bool status) {
-    success = status;
-    return *this;
-  }
-
-public:
-  LIBC_INLINE AllocChecker() = default;
-
-  LIBC_INLINE operator bool() const { return success; }
-
-  LIBC_INLINE static void *alloc(size_t s, AllocChecker &ac) {
-    void *mem = ::malloc(s);
-    ac = (mem != nullptr);
-    return mem;
-  }
-
-  LIBC_INLINE static void *aligned_alloc(size_t s, std::align_val_t align,
-                                         AllocChecker &ac) {
-    void *mem = ::aligned_alloc(static_cast<size_t>(align), s);
-    ac = (mem != nullptr);
-    return mem;
-  }
-};
-
-} // namespace LIBC_NAMESPACE
-
-LIBC_INLINE void *operator new(size_t size,
-                               LIBC_NAMESPACE::AllocChecker &ac) noexcept {
-  return LIBC_NAMESPACE::AllocChecker::alloc(size, ac);
+template <class T> [[nodiscard]] constexpr T *launder(T *p) {
+  static_assert(__has_builtin(__builtin_launder),
+                "cpp::launder requires __builtin_launder");
+  return __builtin_launder(p);
 }
 
-LIBC_INLINE void *operator new(size_t size, std::align_val_t align,
-                               LIBC_NAMESPACE::AllocChecker &ac) noexcept {
-  return LIBC_NAMESPACE::AllocChecker::aligned_alloc(size, align, ac);
-}
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
-LIBC_INLINE void *operator new[](size_t size,
-                                 LIBC_NAMESPACE::AllocChecker &ac) noexcept {
-  return LIBC_NAMESPACE::AllocChecker::alloc(size, ac);
-}
+LIBC_INLINE void *operator new(size_t, void *p) { return p; }
 
-LIBC_INLINE void *operator new[](size_t size, std::align_val_t align,
-                                 LIBC_NAMESPACE::AllocChecker &ac) noexcept {
-  return LIBC_NAMESPACE::AllocChecker::aligned_alloc(size, align, ac);
-}
+LIBC_INLINE void *operator new[](size_t, void *p) { return p; }
 
 // The ideal situation would be to define the various flavors of operator delete
-// inlinelike we do with operator new above. However, since we need operator
+// inline like we do with operator new above. However, since we need operator
 // delete prototypes to match those specified by the C++ standard, we cannot
 // define them inline as the C++ standard does not allow inline definitions of
 // replacement operator delete implementations. Note also that we assign a
@@ -85,8 +52,12 @@ LIBC_INLINE void *operator new[](size_t size, std::align_val_t align,
 // header file in all libc source files where operator delete is called ensures
 // that only libc call sites use these replacement operator delete functions.
 
+#ifndef LIBC_COMPILER_IS_MSVC
 #define DELETE_NAME(name)                                                      \
   __asm__(LIBC_MACRO_TO_STRING(LIBC_NAMESPACE) "_" LIBC_MACRO_TO_STRING(name))
+#else
+#define DELETE_NAME(name)
+#endif // LIBC_COMPILER_IS_MSVC
 
 void operator delete(void *) noexcept DELETE_NAME(delete);
 void operator delete(void *, std::align_val_t) noexcept

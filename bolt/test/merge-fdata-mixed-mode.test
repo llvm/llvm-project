@@ -1,0 +1,15 @@
+## Check that merge-fdata tool correctly reports error message
+## when trying to merge 'no-lbr' and 'lbr' profiles
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: not merge-fdata %t/a.fdata %t/b.fdata 2>&1 | FileCheck %s
+
+# CHECK: cannot mix profile with and without no_lbr
+
+#--- a.fdata
+no_lbr
+main 1
+#--- b.fdata
+main 1

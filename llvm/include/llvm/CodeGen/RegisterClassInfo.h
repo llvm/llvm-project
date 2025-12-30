@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 
@@ -49,6 +50,8 @@ class RegisterClassInfo {
   // entry is valid when its tag matches.
   unsigned Tag = 0;
 
+  bool Reverse = false;
+
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
@@ -56,8 +59,8 @@ class RegisterClassInfo {
   // Used only to determine if an update for CalleeSavedAliases is necessary.
   SmallVector<MCPhysReg, 16> LastCalleeSavedRegs;
 
-  // Map register alias to the callee saved Register.
-  SmallVector<MCPhysReg, 4> CalleeSavedAliases;
+  // Map regunit to the callee saved Register.
+  SmallVector<MCPhysReg> CalleeSavedAliases;
 
   // Indicate if a specified callee saved register be in the allocation order
   // exactly as written in the tablegen descriptions or listed later.
@@ -72,7 +75,7 @@ class RegisterClassInfo {
   ArrayRef<uint8_t> RegCosts;
 
   // Compute all information about RC.
-  void compute(const TargetRegisterClass *RC) const;
+  LLVM_ABI void compute(const TargetRegisterClass *RC) const;
 
   // Return an up-to-date RCInfo for RC.
   const RCInfo &get(const TargetRegisterClass *RC) const {
@@ -83,11 +86,13 @@ class RegisterClassInfo {
   }
 
 public:
-  RegisterClassInfo();
+  LLVM_ABI RegisterClassInfo();
 
-  /// runOnFunction - Prepare to answer questions about MF. This must be called
+  /// runOnFunction - Prepare to answer questions about MF. Rev indicates to
+  /// use reversed raw order when compute register order. This must be called
   /// before any other methods are used.
-  void runOnMachineFunction(const MachineFunction &MF);
+  LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
+                                     bool Rev = false);
 
   /// getNumAllocatableRegs - Returns the number of actually allocatable
   /// registers in RC in the current function.
@@ -113,12 +118,16 @@ public:
   }
 
   /// getLastCalleeSavedAlias - Returns the last callee saved register that
-  /// overlaps PhysReg, or NoRegister if Reg doesn't overlap a
+  /// overlaps PhysReg, or NoRegister if PhysReg doesn't overlap a
   /// CalleeSavedAliases.
   MCRegister getLastCalleeSavedAlias(MCRegister PhysReg) const {
-    if (PhysReg.id() < CalleeSavedAliases.size())
-      return CalleeSavedAliases[PhysReg];
-    return MCRegister::NoRegister;
+    MCRegister CSR;
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      CSR = CalleeSavedAliases[static_cast<unsigned>(Unit)];
+      if (CSR)
+        break;
+    }
+    return CSR;
   }
 
   /// Get the minimum register cost in RC's allocation order.
@@ -146,7 +155,7 @@ public:
   }
 
 protected:
-  unsigned computePSetLimit(unsigned Idx) const;
+  LLVM_ABI unsigned computePSetLimit(unsigned Idx) const;
 };
 
 } // end namespace llvm

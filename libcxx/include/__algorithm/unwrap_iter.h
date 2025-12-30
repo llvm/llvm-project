@@ -13,7 +13,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/declval.h>
 #include <__utility/move.h>
 
@@ -46,7 +46,7 @@ struct __unwrap_iter_impl {
 // It's a contiguous iterator, so we can use a raw pointer instead
 template <class _Iter>
 struct __unwrap_iter_impl<_Iter, true> {
-  using _ToAddressT = decltype(std::__to_address(std::declval<_Iter>()));
+  using _ToAddressT _LIBCPP_NODEBUG = decltype(std::__to_address(std::declval<_Iter>()));
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iter __rewrap(_Iter __orig_iter, _ToAddressT __unwrapped_iter) {
     return __orig_iter + (__unwrapped_iter - std::__to_address(__orig_iter));
@@ -80,6 +80,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _OrigIter __rewrap_iter(_OrigIter __orig
 
 _LIBCPP_END_NAMESPACE_STD
 
-_LIBCPP_PUSH_MACROS
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_UNWRAP_ITER_H

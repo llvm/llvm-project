@@ -17,7 +17,10 @@ unittest("AMDGPUTests") {
   include_dirs = [ "//llvm/lib/Target/AMDGPU" ]
   sources = [
     "AMDGPUUnitTests.cpp",
+    "CSETest.cpp",
     "DwarfRegMappings.cpp",
     "ExecMayBeModifiedBeforeAnyUse.cpp",
+    "LiveRegUnits.cpp",
+    "PALMetadata.cpp",
   ]
 }

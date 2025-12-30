@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=X64
 
 ; FIXME: Missing fsub(x,fneg(y)) -> fadd(x,y) fold
-define float @fneg_strict_fsub_to_strict_fadd(float %x, float %y) nounwind {
+define float @fneg_strict_fsub_to_strict_fadd(float %x, float %y) nounwind strictfp {
 ; X86-LABEL: fneg_strict_fsub_to_strict_fadd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
@@ -13,6 +13,7 @@ define float @fneg_strict_fsub_to_strict_fadd(float %x, float %y) nounwind {
 ; X86-NEXT:    subss %xmm1, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
+; X86-NEXT:    wait
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
@@ -27,7 +28,7 @@ define float @fneg_strict_fsub_to_strict_fadd(float %x, float %y) nounwind {
 }
 
 ; FIXME: Missing fsub(x,fneg(y)) -> fadd(x,y) fold
-define double @fneg_strict_fsub_to_strict_fadd_d(double %x, double %y) nounwind {
+define double @fneg_strict_fsub_to_strict_fadd_d(double %x, double %y) nounwind strictfp {
 ; X86-LABEL: fneg_strict_fsub_to_strict_fadd_d:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -40,6 +41,7 @@ define double @fneg_strict_fsub_to_strict_fadd_d(double %x, double %y) nounwind 
 ; X86-NEXT:    subsd %xmm1, %xmm0
 ; X86-NEXT:    movsd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
+; X86-NEXT:    wait
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -55,7 +57,7 @@ define double @fneg_strict_fsub_to_strict_fadd_d(double %x, double %y) nounwind 
 }
 
 ; FIXME: Missing fneg(fsub(x,y)) -> fsub(y,x) fold
-define float @strict_fsub_fneg_to_strict_fsub(float %x, float %y) nounwind {
+define float @strict_fsub_fneg_to_strict_fsub(float %x, float %y) nounwind strictfp {
 ; X86-LABEL: strict_fsub_fneg_to_strict_fsub:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
@@ -64,6 +66,7 @@ define float @strict_fsub_fneg_to_strict_fsub(float %x, float %y) nounwind {
 ; X86-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
+; X86-NEXT:    wait
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
@@ -78,7 +81,7 @@ define float @strict_fsub_fneg_to_strict_fsub(float %x, float %y) nounwind {
 }
 
 ; FIXME: Missing fneg(fsub(x,y)) -> fsub(y,x) fold
-define double @strict_fsub_fneg_to_strict_fsub_d(double %x, double %y) nounwind {
+define double @strict_fsub_fneg_to_strict_fsub_d(double %x, double %y) nounwind strictfp {
 ; X86-LABEL: strict_fsub_fneg_to_strict_fsub_d:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
@@ -90,6 +93,7 @@ define double @strict_fsub_fneg_to_strict_fsub_d(double %x, double %y) nounwind 
 ; X86-NEXT:    xorpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movlpd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
+; X86-NEXT:    wait
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl

@@ -19,8 +19,8 @@ struct S {
 };
 
 // CHECK: store i32 0, ptr @arr
-// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr @arr, i32 0, i32 1), ptr noundef @.str)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (i8, ptr @arr, i64 4), ptr noundef @.str)
 // CHECK: store i32 1, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 1)
-// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr @arr, i64 1, i32 1), ptr noundef @.str.1)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (i8, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 1), i64 4), ptr noundef @.str.1)
 // CHECK: store i32 2, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 2)
-// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (%struct.S, ptr @arr, i64 2, i32 1), ptr noundef @.str.2)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (i8, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 2), i64 4), ptr noundef @.str.2)

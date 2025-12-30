@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ;
 ; Generate hardware loop when unknown trip count loop is vectorized.
 

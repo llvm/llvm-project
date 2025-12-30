@@ -16,11 +16,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <vector>
 
@@ -36,6 +38,7 @@ class InstrItineraryData;
 struct InstrStage;
 class InstructionSelector;
 class LegalizerInfo;
+class LibcallLoweringInfo;
 class MachineInstr;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
@@ -52,6 +55,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class Triple;
+struct SchedRegion;
 
 //===----------------------------------------------------------------------===//
 ///
@@ -59,10 +63,11 @@ class Triple;
 /// Target-specific options that control code generation and printing should
 /// be exposed through a TargetSubtargetInfo-derived class.
 ///
-class TargetSubtargetInfo : public MCSubtargetInfo {
+class LLVM_ABI TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
+                      StringRef FS, ArrayRef<StringRef> PN,
+                      ArrayRef<SubtargetFeatureKV> PF,
                       ArrayRef<SubtargetSubTypeKV> PD,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
@@ -122,9 +127,8 @@ public:
 
   virtual const LegalizerInfo *getLegalizerInfo() const { return nullptr; }
 
-  /// getRegisterInfo - If register information is available, return it.  If
-  /// not, return null.
-  virtual const TargetRegisterInfo *getRegisterInfo() const { return nullptr; }
+  /// Return the target's register information.
+  virtual const TargetRegisterInfo *getRegisterInfo() const = 0;
 
   /// If the information for the register banks is available, return it.
   /// Otherwise return nullptr.
@@ -135,6 +139,12 @@ public:
   virtual const InstrItineraryData *getInstrItineraryData() const {
     return nullptr;
   }
+
+  /// Configure the LibcallLoweringInfo for this subtarget. The libcalls will be
+  /// pre-configured with defaults based on RuntimeLibcallsInfo. This may be
+  /// used to override those decisions, such as disambiguating alternative
+  /// implementations.
+  virtual void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {}
 
   /// Resolve a SchedClass at runtime, where SchedClass identifies an
   /// MCSchedClassDesc with the isVariant property. This may return the ID of
@@ -198,11 +208,18 @@ public:
   /// True if the subtarget should run MachinePipeliner
   virtual bool enableMachinePipeliner() const { return true; };
 
+  /// True if the subtarget should run WindowScheduler.
+  virtual bool enableWindowScheduler() const { return true; }
+
   /// True if the subtarget should enable joining global copies.
   ///
   /// By default this is enabled if the machine scheduler is enabled, but
   /// can be overridden.
   virtual bool enableJoinGlobalCopies() const;
+
+  /// Hack to bring up option. This should be unconditionally true, all targets
+  /// should enable it and delete this.
+  virtual bool enableTerminalRule() const { return false; }
 
   /// True if the subtarget should run a scheduler after register allocation.
   ///
@@ -226,7 +243,17 @@ public:
   /// scheduling heuristics (no custom MachineSchedStrategy) to make
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                   unsigned NumRegionInstrs) const {}
+                                   const SchedRegion &Region) const {}
+
+  /// Override generic post-ra scheduling policy within a region.
+  ///
+  /// This is a convenient way for targets that don't provide any custom
+  /// scheduling heuristics (no custom MachineSchedStrategy) to make
+  /// changes to the generic  post-ra scheduling policy.
+  /// Note that some options like tracking register pressure won't take effect
+  /// in post-ra scheduling.
+  virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                         const SchedRegion &Region) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.
@@ -234,7 +261,9 @@ public:
   // and UseOpIdx are the indices of the operands in Def and Use, respectively.
   // Otherwise, either may be -1.
   virtual void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
-                                     int UseOpIdx, SDep &Dep) const {}
+                                     int UseOpIdx, SDep &Dep,
+                                     const TargetSchedModel *SchedModel) const {
+  }
 
   // For use with PostRAScheduling: get the anti-dependence breaking that should
   // be performed before post-RA scheduling.
@@ -307,7 +336,7 @@ public:
   /// written in the tablegen descriptions, false if it should allocate
   /// the specified physical register later if is it callee-saved.
   virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                           unsigned PhysReg) const {
+                                           MCRegister PhysReg) const {
     return false;
   }
 
@@ -323,8 +352,19 @@ public:
   /// helps removing redundant copies generated by register allocator when
   /// handling complex eviction chains.
   virtual bool enableSpillageCopyElimination() const { return false; }
-};
 
+  /// Get the list of MacroFusion predicates.
+  virtual std::vector<MacroFusionPredTy> getMacroFusions() const { return {}; };
+
+  /// Whether the target has instructions where an early-clobber result
+  /// operand cannot overlap with an undef input operand.
+  virtual bool requiresDisjointEarlyClobberAndUndef() const {
+    // Conservatively assume such instructions exist by default.
+    return true;
+  }
+
+  virtual bool isRegisterReservedByUser(Register R) const { return false; }
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_TARGETSUBTARGETINFO_H

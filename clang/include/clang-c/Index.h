@@ -36,7 +36,7 @@
 #define CINDEX_VERSION_MAJOR 0
 #define CINDEX_VERSION_MINOR 64
 
-#define CINDEX_VERSION_ENCODE(major, minor) (((major)*10000) + ((minor)*1))
+#define CINDEX_VERSION_ENCODE(major, minor) (((major) * 10000) + ((minor) * 1))
 
 #define CINDEX_VERSION                                                         \
   CINDEX_VERSION_ENCODE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR)
@@ -1644,8 +1644,9 @@ enum CXCursorKind {
   CXCursor_ObjCSelfExpr = 146,
 
   /** OpenMP 5.0 [2.1.5, Array Section].
+   * OpenACC 3.3 [2.7.1, Data Specification for Data Clauses (Sub Arrays)]
    */
-  CXCursor_OMPArraySectionExpr = 147,
+  CXCursor_ArraySectionExpr = 147,
 
   /** Represents an @available(...) check.
    */
@@ -1675,7 +1676,7 @@ enum CXCursorKind {
   CXCursor_ConceptSpecializationExpr = 153,
 
   /**
-   * Expression that references a C++20 concept.
+   * Expression that references a C++20 requires expression.
    */
   CXCursor_RequiresExpr = 154,
 
@@ -1685,7 +1686,12 @@ enum CXCursorKind {
    */
   CXCursor_CXXParenListInitExpr = 155,
 
-  CXCursor_LastExpr = CXCursor_CXXParenListInitExpr,
+  /**
+   *  Represents a C++26 pack indexing expression.
+   */
+  CXCursor_PackIndexingExpr = 156,
+
+  CXCursor_LastExpr = CXCursor_PackIndexingExpr,
 
   /* Statements */
   CXCursor_FirstStmt = 200,
@@ -2140,7 +2146,83 @@ enum CXCursorKind {
    */
   CXCursor_OMPScopeDirective = 306,
 
-  CXCursor_LastStmt = CXCursor_OMPScopeDirective,
+  /** OpenMP reverse directive.
+   */
+  CXCursor_OMPReverseDirective = 307,
+
+  /** OpenMP interchange directive.
+   */
+  CXCursor_OMPInterchangeDirective = 308,
+
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPAssumeDirective = 309,
+
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPStripeDirective = 310,
+
+  /** OpenMP fuse directive
+   */
+  CXCursor_OMPFuseDirective = 311,
+
+  /** OpenACC Compute Construct.
+   */
+  CXCursor_OpenACCComputeConstruct = 320,
+
+  /** OpenACC Loop Construct.
+   */
+  CXCursor_OpenACCLoopConstruct = 321,
+
+  /** OpenACC Combined Constructs.
+   */
+  CXCursor_OpenACCCombinedConstruct = 322,
+
+  /** OpenACC data Construct.
+   */
+  CXCursor_OpenACCDataConstruct = 323,
+
+  /** OpenACC enter data Construct.
+   */
+  CXCursor_OpenACCEnterDataConstruct = 324,
+
+  /** OpenACC exit data Construct.
+   */
+  CXCursor_OpenACCExitDataConstruct = 325,
+
+  /** OpenACC host_data Construct.
+   */
+  CXCursor_OpenACCHostDataConstruct = 326,
+
+  /** OpenACC wait Construct.
+   */
+  CXCursor_OpenACCWaitConstruct = 327,
+
+  /** OpenACC init Construct.
+   */
+  CXCursor_OpenACCInitConstruct = 328,
+
+  /** OpenACC shutdown Construct.
+   */
+  CXCursor_OpenACCShutdownConstruct = 329,
+
+  /** OpenACC set Construct.
+   */
+  CXCursor_OpenACCSetConstruct = 330,
+
+  /** OpenACC update Construct.
+   */
+  CXCursor_OpenACCUpdateConstruct = 331,
+
+  /** OpenACC atomic Construct.
+   */
+  CXCursor_OpenACCAtomicConstruct = 332,
+
+  /** OpenACC cache Construct.
+   */
+  CXCursor_OpenACCCacheConstruct = 333,
+
+  CXCursor_LastStmt = CXCursor_OpenACCCacheConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -2952,7 +3034,12 @@ enum CXTypeKind {
 
   CXType_ExtVector = 176,
   CXType_Atomic = 177,
-  CXType_BTFTagAttributed = 178
+  CXType_BTFTagAttributed = 178,
+
+  /* HLSL Types */
+  CXType_HLSLResource = 179,
+  CXType_HLSLAttributedResource = 180,
+  CXType_HLSLInlineSpirv = 181
 };
 
 /**
@@ -2981,6 +3068,20 @@ enum CXCallingConv {
   CXCallingConv_SwiftAsync = 17,
   CXCallingConv_AArch64SVEPCS = 18,
   CXCallingConv_M68kRTD = 19,
+  CXCallingConv_PreserveNone = 20,
+  CXCallingConv_RISCVVectorCall = 21,
+  CXCallingConv_RISCVVLSCall_32 = 22,
+  CXCallingConv_RISCVVLSCall_64 = 23,
+  CXCallingConv_RISCVVLSCall_128 = 24,
+  CXCallingConv_RISCVVLSCall_256 = 25,
+  CXCallingConv_RISCVVLSCall_512 = 26,
+  CXCallingConv_RISCVVLSCall_1024 = 27,
+  CXCallingConv_RISCVVLSCall_2048 = 28,
+  CXCallingConv_RISCVVLSCall_4096 = 29,
+  CXCallingConv_RISCVVLSCall_8192 = 30,
+  CXCallingConv_RISCVVLSCall_16384 = 31,
+  CXCallingConv_RISCVVLSCall_32768 = 32,
+  CXCallingConv_RISCVVLSCall_65536 = 33,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200
@@ -3533,8 +3634,8 @@ CINDEX_LINKAGE enum CXTypeNullabilityKind clang_Type_getNullability(CXType T);
 
 /**
  * List the possible error codes for \c clang_Type_getSizeOf,
- *   \c clang_Type_getAlignOf, \c clang_Type_getOffsetOf and
- *   \c clang_Cursor_getOffsetOf.
+ *   \c clang_Type_getAlignOf, \c clang_Type_getOffsetOf,
+ *   \c clang_Cursor_getOffsetOf, and \c clang_getOffsetOfBase.
  *
  * A value of this enumeration type can be returned if the target type is not
  * a valid argument to sizeof, alignof or offsetof.
@@ -3700,6 +3801,15 @@ CINDEX_LINKAGE enum CXRefQualifierKind clang_Type_getCXXRefQualifier(CXType T);
 CINDEX_LINKAGE unsigned clang_isVirtualBase(CXCursor);
 
 /**
+ * Returns the offset in bits of a CX_CXXBaseSpecifier relative to the parent
+ * class.
+ *
+ * Returns a small negative number if the offset cannot be computed. See
+ * CXTypeLayoutError for error codes.
+ */
+CINDEX_LINKAGE long long clang_getOffsetOfBase(CXCursor Parent, CXCursor Base);
+
+/**
  * Represents the C++ access control level to a base class for a
  * cursor with kind CX_CXXBaseSpecifier.
  */
@@ -3733,6 +3843,63 @@ enum CX_StorageClass {
   CX_SC_Auto,
   CX_SC_Register
 };
+
+/**
+ * Represents a specific kind of binary operator which can appear at a cursor.
+ */
+enum CX_BinaryOperatorKind {
+  CX_BO_Invalid = 0,
+  CX_BO_PtrMemD = 1,
+  CX_BO_PtrMemI = 2,
+  CX_BO_Mul = 3,
+  CX_BO_Div = 4,
+  CX_BO_Rem = 5,
+  CX_BO_Add = 6,
+  CX_BO_Sub = 7,
+  CX_BO_Shl = 8,
+  CX_BO_Shr = 9,
+  CX_BO_Cmp = 10,
+  CX_BO_LT = 11,
+  CX_BO_GT = 12,
+  CX_BO_LE = 13,
+  CX_BO_GE = 14,
+  CX_BO_EQ = 15,
+  CX_BO_NE = 16,
+  CX_BO_And = 17,
+  CX_BO_Xor = 18,
+  CX_BO_Or = 19,
+  CX_BO_LAnd = 20,
+  CX_BO_LOr = 21,
+  CX_BO_Assign = 22,
+  CX_BO_MulAssign = 23,
+  CX_BO_DivAssign = 24,
+  CX_BO_RemAssign = 25,
+  CX_BO_AddAssign = 26,
+  CX_BO_SubAssign = 27,
+  CX_BO_ShlAssign = 28,
+  CX_BO_ShrAssign = 29,
+  CX_BO_AndAssign = 30,
+  CX_BO_XorAssign = 31,
+  CX_BO_OrAssign = 32,
+  CX_BO_Comma = 33,
+  CX_BO_LAST = CX_BO_Comma
+};
+
+/**
+ * \brief Returns the operator code for the binary operator.
+ *
+ * @deprecated: use clang_getCursorBinaryOperatorKind instead.
+ */
+CINDEX_LINKAGE enum CX_BinaryOperatorKind
+clang_Cursor_getBinaryOpcode(CXCursor C);
+
+/**
+ * \brief Returns a string containing the spelling of the binary operator.
+ *
+ * @deprecated: use clang_getBinaryOperatorKindSpelling instead
+ */
+CINDEX_LINKAGE CXString
+clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op);
 
 /**
  * Returns the storage class for a function or variable declaration.
@@ -4058,6 +4225,26 @@ CINDEX_LINKAGE CXString clang_getCursorPrettyPrinted(CXCursor Cursor,
                                                      CXPrintingPolicy Policy);
 
 /**
+ * Pretty-print the underlying type using a custom printing policy.
+ *
+ * If the type is invalid, an empty string is returned.
+ */
+CINDEX_LINKAGE CXString clang_getTypePrettyPrinted(CXType CT,
+                                                   CXPrintingPolicy cxPolicy);
+
+/**
+ * Get the fully qualified name for a type.
+ *
+ * This includes full qualification of all template parameters.
+ *
+ * Policy - Further refine the type formatting
+ * WithGlobalNsPrefix - If non-zero, function will prepend a '::' to qualified
+ * names
+ */
+CINDEX_LINKAGE CXString clang_getFullyQualifiedName(
+    CXType CT, CXPrintingPolicy Policy, unsigned WithGlobalNsPrefix);
+
+/**
  * Retrieve the display name for the entity referenced by this cursor.
  *
  * The display name contains extra information that helps identify the cursor,
@@ -4311,6 +4498,129 @@ CINDEX_LINKAGE CXStringSet *clang_Cursor_getCXXManglings(CXCursor);
  * class interface or implementation at the cursor.
  */
 CINDEX_LINKAGE CXStringSet *clang_Cursor_getObjCManglings(CXCursor);
+
+/**
+ * @}
+ */
+
+/**
+ * \defgroup CINDEX_MODULE Inline Assembly introspection
+ *
+ * The functions in this group provide access to information about GCC-style
+ * inline assembly statements.
+ *
+ * @{
+ */
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, return the assembly template string.
+ * As per LLVM IR Assembly Template language, template placeholders for
+ * inputs and outputs are either of the form $N where N is a decimal number
+ * as an index into the input-output specification,
+ * or ${N:M} where N is a decimal number also as an index into the
+ * input-output specification and M is the template argument modifier.
+ * The index N in both cases points into the the total inputs and outputs,
+ * or more specifically, into the list of outputs followed by the inputs,
+ * starting from index 0 as the first available template argument.
+ *
+ * This function also returns a valid empty string if the cursor does not point
+ * at a GCC inline assembly block.
+ *
+ * Users are responsible for releasing the allocation of returned string via
+ * \c clang_disposeString.
+ */
+
+CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyTemplate(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, check if the assembly block has goto
+ * labels.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblyHasGoto(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the number of outputs.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumOutputs(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the number of inputs.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumInputs(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the constraint and expression cursor
+ * to the Index-th input.
+ * This function returns 1 when the cursor points at a GCC inline assembly
+ * statement, `Index` is within bounds and both the `Constraint` and `Expr` are
+ * not NULL.
+ * Otherwise, this function returns 0 but leaves `Constraint` and `Expr`
+ * intact.
+ *
+ * Users are responsible for releasing the allocation of `Constraint` via
+ * \c clang_disposeString.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyInput(CXCursor Cursor,
+                                                         unsigned Index,
+                                                         CXString *Constraint,
+                                                         CXCursor *Expr);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the constraint and expression cursor
+ * to the Index-th output.
+ * This function returns 1 when the cursor points at a GCC inline assembly
+ * statement, `Index` is within bounds and both the `Constraint` and `Expr` are
+ * not NULL.
+ * Otherwise, this function returns 0 but leaves `Constraint` and `Expr`
+ * intact.
+ *
+ * Users are responsible for releasing the allocation of `Constraint` via
+ * \c clang_disposeString.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyOutput(CXCursor Cursor,
+                                                          unsigned Index,
+                                                          CXString *Constraint,
+                                                          CXCursor *Expr);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the clobbers in it.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumClobbers(CXCursor Cursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the Index-th clobber of it.
+ * This function returns a valid empty string if the cursor does not point
+ * at a GCC inline assembly block or `Index` is out of bounds.
+ *
+ * Users are responsible for releasing the allocation of returned string via
+ * \c clang_disposeString.
+ */
+
+CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyClobber(CXCursor Cursor,
+                                                           unsigned Index);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, check if the inline assembly is
+ * `volatile`.
+ * This function returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblyVolatile(CXCursor Cursor);
 
 /**
  * @}
@@ -5767,66 +6077,6 @@ CINDEX_LINKAGE void clang_EvalResult_dispose(CXEvalResult E);
  * @}
  */
 
-/** \defgroup CINDEX_REMAPPING Remapping functions
- *
- * @{
- */
-
-/**
- * A remapping of original source files and their translated files.
- */
-typedef void *CXRemapping;
-
-/**
- * Retrieve a remapping.
- *
- * \param path the path that contains metadata about remappings.
- *
- * \returns the requested remapping. This remapping must be freed
- * via a call to \c clang_remap_dispose(). Can return NULL if an error occurred.
- */
-CINDEX_LINKAGE CXRemapping clang_getRemappings(const char *path);
-
-/**
- * Retrieve a remapping.
- *
- * \param filePaths pointer to an array of file paths containing remapping info.
- *
- * \param numFiles number of file paths.
- *
- * \returns the requested remapping. This remapping must be freed
- * via a call to \c clang_remap_dispose(). Can return NULL if an error occurred.
- */
-CINDEX_LINKAGE
-CXRemapping clang_getRemappingsFromFileList(const char **filePaths,
-                                            unsigned numFiles);
-
-/**
- * Determine the number of remappings.
- */
-CINDEX_LINKAGE unsigned clang_remap_getNumFiles(CXRemapping);
-
-/**
- * Get the original and the associated filename from the remapping.
- *
- * \param original If non-NULL, will be set to the original filename.
- *
- * \param transformed If non-NULL, will be set to the filename that the original
- * is associated with.
- */
-CINDEX_LINKAGE void clang_remap_getFilenames(CXRemapping, unsigned index,
-                                             CXString *original,
-                                             CXString *transformed);
-
-/**
- * Dispose the remapping.
- */
-CINDEX_LINKAGE void clang_remap_dispose(CXRemapping);
-
-/**
- * @}
- */
-
 /** \defgroup CINDEX_HIGH Higher level API functions
  *
  * @{
@@ -6516,77 +6766,123 @@ CINDEX_LINKAGE unsigned clang_Type_visitFields(CXType T, CXFieldVisitor visitor,
                                                CXClientData client_data);
 
 /**
+ * Visit the base classes of a type.
+ *
+ * This function visits all the direct base classes of a the given cursor,
+ * invoking the given \p visitor function with the cursors of each
+ * visited base. The traversal may be ended prematurely, if
+ * the visitor returns \c CXFieldVisit_Break.
+ *
+ * \param T the record type whose field may be visited.
+ *
+ * \param visitor the visitor function that will be invoked for each
+ * field of \p T.
+ *
+ * \param client_data pointer data supplied by the client, which will
+ * be passed to the visitor each time it is invoked.
+ *
+ * \returns a non-zero value if the traversal was terminated
+ * prematurely by the visitor returning \c CXFieldVisit_Break.
+ */
+CINDEX_LINKAGE unsigned clang_visitCXXBaseClasses(CXType T,
+                                                  CXFieldVisitor visitor,
+                                                  CXClientData client_data);
+
+/**
+ * Visit the class methods of a type.
+ *
+ * This function visits all the methods of the given cursor,
+ * invoking the given \p visitor function with the cursors of each
+ * visited method. The traversal may be ended prematurely, if
+ * the visitor returns \c CXFieldVisit_Break.
+ *
+ * \param T The record type whose field may be visited.
+ *
+ * \param visitor The visitor function that will be invoked for each
+ * field of \p T.
+ *
+ * \param client_data Pointer data supplied by the client, which will
+ * be passed to the visitor each time it is invoked.
+ *
+ * \returns A non-zero value if the traversal was terminated
+ * prematurely by the visitor returning \c CXFieldVisit_Break.
+ */
+CINDEX_LINKAGE unsigned clang_visitCXXMethods(CXType T, CXFieldVisitor visitor,
+                                              CXClientData client_data);
+
+/**
  * Describes the kind of binary operators.
  */
 enum CXBinaryOperatorKind {
   /** This value describes cursors which are not binary operators. */
-  CXBinaryOperator_Invalid,
+  CXBinaryOperator_Invalid = 0,
   /** C++ Pointer - to - member operator. */
-  CXBinaryOperator_PtrMemD,
+  CXBinaryOperator_PtrMemD = 1,
   /** C++ Pointer - to - member operator. */
-  CXBinaryOperator_PtrMemI,
+  CXBinaryOperator_PtrMemI = 2,
   /** Multiplication operator. */
-  CXBinaryOperator_Mul,
+  CXBinaryOperator_Mul = 3,
   /** Division operator. */
-  CXBinaryOperator_Div,
+  CXBinaryOperator_Div = 4,
   /** Remainder operator. */
-  CXBinaryOperator_Rem,
+  CXBinaryOperator_Rem = 5,
   /** Addition operator. */
-  CXBinaryOperator_Add,
+  CXBinaryOperator_Add = 6,
   /** Subtraction operator. */
-  CXBinaryOperator_Sub,
+  CXBinaryOperator_Sub = 7,
   /** Bitwise shift left operator. */
-  CXBinaryOperator_Shl,
+  CXBinaryOperator_Shl = 8,
   /** Bitwise shift right operator. */
-  CXBinaryOperator_Shr,
+  CXBinaryOperator_Shr = 9,
   /** C++ three-way comparison (spaceship) operator. */
-  CXBinaryOperator_Cmp,
+  CXBinaryOperator_Cmp = 10,
   /** Less than operator. */
-  CXBinaryOperator_LT,
+  CXBinaryOperator_LT = 11,
   /** Greater than operator. */
-  CXBinaryOperator_GT,
+  CXBinaryOperator_GT = 12,
   /** Less or equal operator. */
-  CXBinaryOperator_LE,
+  CXBinaryOperator_LE = 13,
   /** Greater or equal operator. */
-  CXBinaryOperator_GE,
+  CXBinaryOperator_GE = 14,
   /** Equal operator. */
-  CXBinaryOperator_EQ,
+  CXBinaryOperator_EQ = 15,
   /** Not equal operator. */
-  CXBinaryOperator_NE,
+  CXBinaryOperator_NE = 16,
   /** Bitwise AND operator. */
-  CXBinaryOperator_And,
+  CXBinaryOperator_And = 17,
   /** Bitwise XOR operator. */
-  CXBinaryOperator_Xor,
+  CXBinaryOperator_Xor = 18,
   /** Bitwise OR operator. */
-  CXBinaryOperator_Or,
+  CXBinaryOperator_Or = 19,
   /** Logical AND operator. */
-  CXBinaryOperator_LAnd,
+  CXBinaryOperator_LAnd = 20,
   /** Logical OR operator. */
-  CXBinaryOperator_LOr,
+  CXBinaryOperator_LOr = 21,
   /** Assignment operator. */
-  CXBinaryOperator_Assign,
+  CXBinaryOperator_Assign = 22,
   /** Multiplication assignment operator. */
-  CXBinaryOperator_MulAssign,
+  CXBinaryOperator_MulAssign = 23,
   /** Division assignment operator. */
-  CXBinaryOperator_DivAssign,
+  CXBinaryOperator_DivAssign = 24,
   /** Remainder assignment operator. */
-  CXBinaryOperator_RemAssign,
+  CXBinaryOperator_RemAssign = 25,
   /** Addition assignment operator. */
-  CXBinaryOperator_AddAssign,
+  CXBinaryOperator_AddAssign = 26,
   /** Subtraction assignment operator. */
-  CXBinaryOperator_SubAssign,
+  CXBinaryOperator_SubAssign = 27,
   /** Bitwise shift left assignment operator. */
-  CXBinaryOperator_ShlAssign,
+  CXBinaryOperator_ShlAssign = 28,
   /** Bitwise shift right assignment operator. */
-  CXBinaryOperator_ShrAssign,
+  CXBinaryOperator_ShrAssign = 29,
   /** Bitwise AND assignment operator. */
-  CXBinaryOperator_AndAssign,
+  CXBinaryOperator_AndAssign = 30,
   /** Bitwise XOR assignment operator. */
-  CXBinaryOperator_XorAssign,
+  CXBinaryOperator_XorAssign = 31,
   /** Bitwise OR assignment operator. */
-  CXBinaryOperator_OrAssign,
+  CXBinaryOperator_OrAssign = 32,
   /** Comma operator. */
-  CXBinaryOperator_Comma
+  CXBinaryOperator_Comma = 33,
+  CXBinaryOperator_Last = CXBinaryOperator_Comma
 };
 
 /**
@@ -6660,6 +6956,21 @@ clang_getCursorUnaryOperatorKind(CXCursor cursor);
 /**
  * @}
  */
+
+/* CINDEX_DEPRECATED - disabled to silence MSVC deprecation warnings */
+typedef void *CXRemapping;
+
+CINDEX_DEPRECATED CINDEX_LINKAGE CXRemapping clang_getRemappings(const char *);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE CXRemapping
+clang_getRemappingsFromFileList(const char **, unsigned);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE unsigned clang_remap_getNumFiles(CXRemapping);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE void
+clang_remap_getFilenames(CXRemapping, unsigned, CXString *, CXString *);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE void clang_remap_dispose(CXRemapping);
 
 LLVM_CLANG_C_EXTERN_C_END
 

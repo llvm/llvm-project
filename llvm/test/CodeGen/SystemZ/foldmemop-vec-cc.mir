@@ -4,12 +4,12 @@
 # Test that folding does not occur if it would introduce a clobbering of a live CC.
 
 --- |
-  define void @fun0(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun0(double %arg0, double %arg1, ptr %Dst) { ret void }
 
 ...
 
 # CHECK-LABEL: fun0:
-# CHECK: ld      %f1, 160(%r15)          # 8-byte Folded Reload
+# CHECK: ld      %f1, 160(%r15)          # 8-byte Reload
 # CHECK-NEXT: wfadb   %f0, %f0, %f1
 ---
 name:            fun0

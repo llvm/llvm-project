@@ -23,6 +23,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/ProfileData/Coverage/MCDCTypes.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
@@ -30,14 +31,16 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <system_error>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -69,13 +72,13 @@ enum class coveragemap_error {
   invalid_or_missing_arch_specifier
 };
 
-const std::error_category &coveragemap_category();
+LLVM_ABI const std::error_category &coveragemap_category();
 
 inline std::error_code make_error_code(coveragemap_error E) {
   return std::error_code(static_cast<int>(E), coveragemap_category());
 }
 
-class CoverageMapError : public ErrorInfo<CoverageMapError> {
+class LLVM_ABI CoverageMapError : public ErrorInfo<CoverageMapError> {
 public:
   CoverageMapError(coveragemap_error Err, const Twine &ErrStr = Twine())
       : Err(Err), Msg(ErrStr.str()) {
@@ -208,11 +211,19 @@ public:
   ArrayRef<CounterExpression> getExpressions() const { return Expressions; }
 
   /// Return a counter that represents the expression that adds LHS and RHS.
-  Counter add(Counter LHS, Counter RHS, bool Simplify = true);
+  LLVM_ABI Counter add(Counter LHS, Counter RHS, bool Simplify = true);
 
   /// Return a counter that represents the expression that subtracts RHS from
   /// LHS.
-  Counter subtract(Counter LHS, Counter RHS, bool Simplify = true);
+  LLVM_ABI Counter subtract(Counter LHS, Counter RHS, bool Simplify = true);
+
+  /// K to V map. K will be Counter in most cases. V may be Counter or
+  /// Expression.
+  using SubstMap = std::map<Counter, Counter>;
+
+  /// \return A counter equivalent to \C, with each term in its
+  /// expression replaced with term from \p Map.
+  LLVM_ABI Counter subst(Counter C, const SubstMap &Map);
 };
 
 using LineColPair = std::pair<unsigned, unsigned>;
@@ -249,19 +260,6 @@ struct CounterMappingRegion {
     MCDCBranchRegion
   };
 
-  using MCDCConditionID = unsigned int;
-  struct MCDCParameters {
-    /// Byte Index of Bitmap Coverage Object for a Decision Region.
-    unsigned BitmapIdx = 0;
-
-    /// Number of Conditions used for a Decision Region.
-    unsigned NumConditions = 0;
-
-    /// IDs used to represent a branch region and other branch regions
-    /// evaluated based on True and False branches.
-    MCDCConditionID ID = 0, TrueID = 0, FalseID = 0;
-  };
-
   /// Primary Counter that is also used for Branch Regions (TrueCount).
   Counter Count;
 
@@ -269,13 +267,25 @@ struct CounterMappingRegion {
   Counter FalseCount;
 
   /// Parameters used for Modified Condition/Decision Coverage
-  MCDCParameters MCDCParams;
+  mcdc::Parameters MCDCParams;
+
+  const auto &getDecisionParams() const {
+    return mcdc::getParams<const mcdc::DecisionParameters>(MCDCParams);
+  }
+
+  const auto &getBranchParams() const {
+    return mcdc::getParams<const mcdc::BranchParameters>(MCDCParams);
+  }
 
   unsigned FileID = 0;
   unsigned ExpandedFileID = 0;
   unsigned LineStart, ColumnStart, LineEnd, ColumnEnd;
 
   RegionKind Kind;
+
+  bool isBranch() const {
+    return (Kind == BranchRegion || Kind == MCDCBranchRegion);
+  }
 
   CounterMappingRegion(Counter Count, unsigned FileID, unsigned ExpandedFileID,
                        unsigned LineStart, unsigned ColumnStart,
@@ -284,23 +294,23 @@ struct CounterMappingRegion {
         LineStart(LineStart), ColumnStart(ColumnStart), LineEnd(LineEnd),
         ColumnEnd(ColumnEnd), Kind(Kind) {}
 
-  CounterMappingRegion(Counter Count, Counter FalseCount,
-                       MCDCParameters MCDCParams, unsigned FileID,
+  CounterMappingRegion(Counter Count, Counter FalseCount, unsigned FileID,
                        unsigned ExpandedFileID, unsigned LineStart,
                        unsigned ColumnStart, unsigned LineEnd,
-                       unsigned ColumnEnd, RegionKind Kind)
+                       unsigned ColumnEnd, RegionKind Kind,
+                       const mcdc::Parameters &MCDCParams = std::monostate())
       : Count(Count), FalseCount(FalseCount), MCDCParams(MCDCParams),
         FileID(FileID), ExpandedFileID(ExpandedFileID), LineStart(LineStart),
         ColumnStart(ColumnStart), LineEnd(LineEnd), ColumnEnd(ColumnEnd),
         Kind(Kind) {}
 
-  CounterMappingRegion(MCDCParameters MCDCParams, unsigned FileID,
-                       unsigned ExpandedFileID, unsigned LineStart,
+  CounterMappingRegion(const mcdc::DecisionParameters &MCDCParams,
+                       unsigned FileID, unsigned LineStart,
                        unsigned ColumnStart, unsigned LineEnd,
                        unsigned ColumnEnd, RegionKind Kind)
-      : MCDCParams(MCDCParams), ExpandedFileID(ExpandedFileID),
-        LineStart(LineStart), ColumnStart(ColumnStart), LineEnd(LineEnd),
-        ColumnEnd(ColumnEnd), Kind(Kind) {}
+      : MCDCParams(MCDCParams), FileID(FileID), LineStart(LineStart),
+        ColumnStart(ColumnStart), LineEnd(LineEnd), ColumnEnd(ColumnEnd),
+        Kind(Kind) {}
 
   static CounterMappingRegion
   makeRegion(Counter Count, unsigned FileID, unsigned LineStart,
@@ -334,27 +344,21 @@ struct CounterMappingRegion {
   static CounterMappingRegion
   makeBranchRegion(Counter Count, Counter FalseCount, unsigned FileID,
                    unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
-                   unsigned ColumnEnd) {
-    return CounterMappingRegion(Count, FalseCount, MCDCParameters(), FileID, 0,
-                                LineStart, ColumnStart, LineEnd, ColumnEnd,
-                                BranchRegion);
+                   unsigned ColumnEnd,
+                   const mcdc::Parameters &MCDCParams = std::monostate()) {
+    return CounterMappingRegion(
+        Count, FalseCount, FileID, 0, LineStart, ColumnStart, LineEnd,
+        ColumnEnd,
+        (std::get_if<mcdc::BranchParameters>(&MCDCParams) ? MCDCBranchRegion
+                                                          : BranchRegion),
+        MCDCParams);
   }
 
   static CounterMappingRegion
-  makeBranchRegion(Counter Count, Counter FalseCount, MCDCParameters MCDCParams,
-                   unsigned FileID, unsigned LineStart, unsigned ColumnStart,
-                   unsigned LineEnd, unsigned ColumnEnd) {
-    return CounterMappingRegion(Count, FalseCount, MCDCParams, FileID, 0,
-                                LineStart, ColumnStart, LineEnd, ColumnEnd,
-                                MCDCParams.ID == 0 ? BranchRegion
-                                                   : MCDCBranchRegion);
-  }
-
-  static CounterMappingRegion
-  makeDecisionRegion(MCDCParameters MCDCParams, unsigned FileID,
-                     unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
-                     unsigned ColumnEnd) {
-    return CounterMappingRegion(MCDCParams, FileID, 0, LineStart, ColumnStart,
+  makeDecisionRegion(const mcdc::DecisionParameters &MCDCParams,
+                     unsigned FileID, unsigned LineStart, unsigned ColumnStart,
+                     unsigned LineEnd, unsigned ColumnEnd) {
+    return CounterMappingRegion(MCDCParams, FileID, LineStart, ColumnStart,
                                 LineEnd, ColumnEnd, MCDCDecisionRegion);
   }
 
@@ -369,16 +373,18 @@ struct CounterMappingRegion {
 struct CountedRegion : public CounterMappingRegion {
   uint64_t ExecutionCount;
   uint64_t FalseExecutionCount;
-  bool Folded;
+  bool TrueFolded;
+  bool FalseFolded;
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(0), Folded(false) {}
+        FalseExecutionCount(0), TrueFolded(false), FalseFolded(true) {}
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
                 uint64_t FalseExecutionCount)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(FalseExecutionCount), Folded(false) {}
+        FalseExecutionCount(FalseExecutionCount), TrueFolded(false),
+        FalseFolded(false) {}
 };
 
 /// MCDC Record grouping all information together.
@@ -391,9 +397,60 @@ struct MCDCRecord {
   /// are effectively ignored.
   enum CondState { MCDC_DontCare = -1, MCDC_False = 0, MCDC_True = 1 };
 
-  using TestVector = llvm::SmallVector<CondState>;
-  using TestVectors = llvm::SmallVector<TestVector>;
-  using BoolVector = llvm::SmallVector<bool>;
+  /// Emulate SmallVector<CondState> with a pair of BitVector.
+  ///
+  ///          True  False DontCare (Impossible)
+  /// Values:  True  False False    True
+  /// Visited: True  True  False    False
+  class TestVector {
+    BitVector Values;  /// True/False (False when DontCare)
+    BitVector Visited; /// ~DontCare
+
+  public:
+    /// Default values are filled with DontCare.
+    TestVector(unsigned N) : Values(N), Visited(N) {}
+
+    /// Emulate RHS SmallVector::operator[]
+    CondState operator[](int I) const {
+      return (Visited[I] ? (Values[I] ? MCDC_True : MCDC_False)
+                         : MCDC_DontCare);
+    }
+
+    /// Equivalent to buildTestVector's Index.
+    auto getIndex() const { return Values.getData()[0]; }
+
+    /// Set the condition \p Val at position \p I.
+    /// This emulates LHS SmallVector::operator[].
+    void set(int I, CondState Val) {
+      Visited[I] = (Val != MCDC_DontCare);
+      Values[I] = (Val == MCDC_True);
+    }
+
+    /// Emulate SmallVector::push_back.
+    void push_back(CondState Val) {
+      Visited.push_back(Val != MCDC_DontCare);
+      Values.push_back(Val == MCDC_True);
+      assert(Values.size() == Visited.size());
+    }
+
+    /// For each element:
+    /// - False if either is DontCare
+    /// - False if both have the same value
+    /// - True if both have the opposite value
+    /// ((A.Values ^ B.Values) & A.Visited & B.Visited)
+    /// Dedicated to findIndependencePairs().
+    auto getDifferences(const TestVector &B) const {
+      const auto &A = *this;
+      BitVector AB = A.Values;
+      AB ^= B.Values;
+      AB &= A.Visited;
+      AB &= B.Visited;
+      return AB;
+    }
+  };
+
+  using TestVectors = llvm::SmallVector<std::pair<TestVector, CondState>>;
+  using BoolVector = std::array<BitVector, 2>;
   using TVRowPair = std::pair<unsigned, unsigned>;
   using TVPairMap = llvm::DenseMap<unsigned, TVRowPair>;
   using CondIDMap = llvm::DenseMap<unsigned, unsigned>;
@@ -402,26 +459,31 @@ struct MCDCRecord {
 private:
   CounterMappingRegion Region;
   TestVectors TV;
-  TVPairMap IndependencePairs;
+  std::optional<TVPairMap> IndependencePairs;
   BoolVector Folded;
   CondIDMap PosToID;
   LineColPairMap CondLoc;
 
 public:
-  MCDCRecord(CounterMappingRegion Region, TestVectors TV,
-             TVPairMap IndependencePairs, BoolVector Folded, CondIDMap PosToID,
-             LineColPairMap CondLoc)
-      : Region(Region), TV(TV), IndependencePairs(IndependencePairs),
-        Folded(Folded), PosToID(PosToID), CondLoc(CondLoc){};
+  MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
+             BoolVector &&Folded, CondIDMap &&PosToID, LineColPairMap &&CondLoc)
+      : Region(Region), TV(std::move(TV)), Folded(std::move(Folded)),
+        PosToID(std::move(PosToID)), CondLoc(std::move(CondLoc)) {
+    findIndependencePairs();
+  }
 
-  CounterMappingRegion getDecisionRegion() const { return Region; }
+  // Compare executed test vectors against each other to find an independence
+  // pairs for each condition.  This processing takes the most time.
+  LLVM_ABI void findIndependencePairs();
+
+  const CounterMappingRegion &getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
-    assert(Region.MCDCParams.NumConditions != 0 &&
-           "In MC/DC, NumConditions should never be zero!");
-    return Region.MCDCParams.NumConditions;
+    return Region.getDecisionParams().NumConditions;
   }
   unsigned getNumTestVectors() const { return TV.size(); }
-  bool isCondFolded(unsigned Condition) const { return Folded[Condition]; }
+  bool isCondFolded(unsigned Condition) const {
+    return Folded[false][Condition] || Folded[true][Condition];
+  }
 
   /// Return the evaluation of a condition (indicated by Condition) in an
   /// executed test vector (indicated by TestVectorIndex), which will be True,
@@ -430,13 +492,22 @@ public:
   /// accessing conditions in the TestVectors requires a translation from a
   /// ordinal position to actual condition ID. This is done via PosToID[].
   CondState getTVCondition(unsigned TestVectorIndex, unsigned Condition) {
-    return TV[TestVectorIndex][PosToID[Condition]];
+    return TV[TestVectorIndex].first[PosToID[Condition]];
+  }
+
+  /// Return the number of True and False decisions for all executed test
+  /// vectors.
+  std::pair<unsigned, unsigned> getDecisions() const {
+    const unsigned TrueDecisions =
+        llvm::count(llvm::make_second_range(TV), CondState::MCDC_True);
+
+    return {TrueDecisions, TV.size() - TrueDecisions};
   }
 
   /// Return the Result evaluation for an executed test vector.
   /// See MCDCRecordProcessor::RecordTestVector().
   CondState getTVResult(unsigned TestVectorIndex) {
-    return TV[TestVectorIndex][getNumConditions()];
+    return TV[TestVectorIndex].second;
   }
 
   /// Determine whether a given condition (indicated by Condition) is covered
@@ -445,10 +516,10 @@ public:
   /// TestVectors requires a translation from a ordinal position to actual
   /// condition ID. This is done via PosToID[].
   bool isConditionIndependencePairCovered(unsigned Condition) const {
+    assert(IndependencePairs);
     auto It = PosToID.find(Condition);
-    if (It != PosToID.end())
-      return IndependencePairs.contains(It->second);
-    llvm_unreachable("Condition ID without an Ordinal mapping");
+    assert(It != PosToID.end() && "Condition ID without an Ordinal mapping");
+    return IndependencePairs->contains(It->second);
   }
 
   /// Return the Independence Pair that covers the given condition. Because
@@ -458,7 +529,8 @@ public:
   /// via PosToID[].
   TVRowPair getConditionIndependencePair(unsigned Condition) {
     assert(isConditionIndependencePairCovered(Condition));
-    return IndependencePairs[PosToID[Condition]];
+    assert(IndependencePairs);
+    return (*IndependencePairs)[PosToID[Condition]];
   }
 
   float getPercentCovered() const {
@@ -479,9 +551,9 @@ public:
 
   std::string getConditionHeaderString(unsigned Condition) {
     std::ostringstream OS;
-    OS << "Condition C" << Condition + 1 << " --> (";
-    OS << CondLoc[Condition].first << ":" << CondLoc[Condition].second;
-    OS << ")\n";
+    const auto &[Line, Col] = CondLoc[Condition];
+    OS << "Condition C" << Condition + 1 << " --> (" << Line << ":" << Col
+       << ")\n";
     return OS.str();
   }
 
@@ -558,40 +630,86 @@ public:
   }
 };
 
+namespace mcdc {
+/// Compute TestVector Indices "TVIdx" from the Conds graph.
+///
+/// Clang CodeGen handles the bitmap index based on TVIdx.
+/// llvm-cov reconstructs conditions from TVIdx.
+///
+/// For each leaf "The final decision",
+/// - TVIdx should be unique.
+/// - TVIdx has the Width.
+///   - The width represents the number of possible paths.
+///   - The minimum width is 1 "deterministic".
+/// - The order of leaves are sorted by Width DESC. It expects
+///   latter TVIdx(s) (with Width=1) could be pruned and altered to
+///   other simple branch conditions.
+///
+class TVIdxBuilder {
+public:
+  struct MCDCNode {
+    int InCount = 0; /// Reference count; temporary use
+    int Width;       /// Number of accumulated paths (>= 1)
+    ConditionIDs NextIDs;
+  };
+
+#ifndef NDEBUG
+  /// This is no longer needed after the assignment.
+  /// It may be used in assert() for reconfirmation.
+  SmallVector<MCDCNode> SavedNodes;
+#endif
+
+  /// Output: Index for TestVectors bitmap (These are not CondIDs)
+  SmallVector<std::array<int, 2>> Indices;
+
+  /// Output: The number of test vectors.
+  /// Error with HardMaxTVs if the number has exploded.
+  int NumTestVectors;
+
+  /// Hard limit of test vectors
+  static constexpr auto HardMaxTVs =
+      std::numeric_limits<decltype(NumTestVectors)>::max();
+
+public:
+  /// Calculate and assign Indices
+  /// \param NextIDs The list of {FalseID, TrueID} indexed by ID
+  ///        The first element [0] should be the root node.
+  /// \param Offset Offset of index to final decisions.
+  LLVM_ABI TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs,
+                        int Offset = 0);
+};
+} // namespace mcdc
+
 /// A Counter mapping context is used to connect the counters, expressions
 /// and the obtained counter values.
 class CounterMappingContext {
   ArrayRef<CounterExpression> Expressions;
   ArrayRef<uint64_t> CounterValues;
-  ArrayRef<uint8_t> BitmapBytes;
+  BitVector Bitmap;
 
 public:
   CounterMappingContext(ArrayRef<CounterExpression> Expressions,
-                        ArrayRef<uint64_t> CounterValues = std::nullopt)
+                        ArrayRef<uint64_t> CounterValues = {})
       : Expressions(Expressions), CounterValues(CounterValues) {}
 
   void setCounts(ArrayRef<uint64_t> Counts) { CounterValues = Counts; }
-  void setBitmapBytes(ArrayRef<uint8_t> Bytes) { BitmapBytes = Bytes; }
+  void setBitmap(BitVector &&Bitmap_) { Bitmap = std::move(Bitmap_); }
 
-  void dump(const Counter &C, raw_ostream &OS) const;
+  LLVM_ABI void dump(const Counter &C, raw_ostream &OS) const;
   void dump(const Counter &C) const { dump(C, dbgs()); }
 
   /// Return the number of times that a region of code associated with this
   /// counter was executed.
-  Expected<int64_t> evaluate(const Counter &C) const;
-
-  /// Return the number of times that a region of code associated with this
-  /// counter was executed.
-  Expected<BitVector>
-  evaluateBitmap(const CounterMappingRegion *MCDCDecision) const;
+  LLVM_ABI Expected<int64_t> evaluate(const Counter &C) const;
 
   /// Return an MCDC record that indicates executed test vectors and condition
   /// pairs.
-  Expected<MCDCRecord>
-  evaluateMCDCRegion(CounterMappingRegion Region, BitVector Bitmap,
-                     ArrayRef<CounterMappingRegion> Branches);
+  LLVM_ABI Expected<MCDCRecord>
+  evaluateMCDCRegion(const CounterMappingRegion &Region,
+                     ArrayRef<const CounterMappingRegion *> Branches,
+                     bool IsVersion11);
 
-  unsigned getMaxCounterID(const Counter &C) const;
+  LLVM_ABI unsigned getMaxCounterID(const Counter &C) const;
 };
 
 /// Code coverage information for a single function.
@@ -620,17 +738,18 @@ struct FunctionRecord {
   FunctionRecord(FunctionRecord &&FR) = default;
   FunctionRecord &operator=(FunctionRecord &&) = default;
 
-  void pushMCDCRecord(MCDCRecord Record) { MCDCRecords.push_back(Record); }
+  void pushMCDCRecord(MCDCRecord &&Record) {
+    MCDCRecords.push_back(std::move(Record));
+  }
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
                   uint64_t FalseCount) {
-    if (Region.Kind == CounterMappingRegion::BranchRegion ||
-        Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
+    if (Region.isBranch()) {
       CountedBranchRegions.emplace_back(Region, Count, FalseCount);
-      // If both counters are hard-coded to zero, then this region represents a
+      // If either counter is hard-coded to zero, then this region represents a
       // constant-folded branch.
-      if (Region.Count.isZero() && Region.FalseCount.isZero())
-        CountedBranchRegions.back().Folded = true;
+      CountedBranchRegions.back().TrueFolded = Region.Count.isZero();
+      CountedBranchRegions.back().FalseFolded = Region.FalseCount.isZero();
       return;
     }
     if (CountedRegions.empty())
@@ -640,20 +759,34 @@ struct FunctionRecord {
 };
 
 /// Iterator over Functions, optionally filtered to a single file.
+/// When filtering to a single file, the iterator requires a list of potential
+/// indices where to find the desired records to avoid quadratic behavior when
+/// repeatedly iterating over functions from different files.
 class FunctionRecordIterator
     : public iterator_facade_base<FunctionRecordIterator,
                                   std::forward_iterator_tag, FunctionRecord> {
   ArrayRef<FunctionRecord> Records;
+  ArrayRef<unsigned> RecordIndices;
+  ArrayRef<unsigned>::iterator CurrentIndex;
   ArrayRef<FunctionRecord>::iterator Current;
   StringRef Filename;
 
   /// Skip records whose primary file is not \c Filename.
-  void skipOtherFiles();
+  LLVM_ABI void skipOtherFiles();
 
 public:
   FunctionRecordIterator(ArrayRef<FunctionRecord> Records_,
-                         StringRef Filename = "")
-      : Records(Records_), Current(Records.begin()), Filename(Filename) {
+                         StringRef Filename = "",
+                         ArrayRef<unsigned> RecordIndices_ = {})
+      : Records(Records_), RecordIndices(RecordIndices_),
+        CurrentIndex(RecordIndices.begin()),
+        // If `RecordIndices` is provided, we can skip directly to the first
+        // index it provides.
+        Current(CurrentIndex == RecordIndices.end() ? Records.begin()
+                                                    : &Records[*CurrentIndex]),
+        Filename(Filename) {
+    assert(Filename.empty() == RecordIndices_.empty() &&
+           "If `Filename` is specified, `RecordIndices` must also be provided");
     skipOtherFiles();
   }
 
@@ -666,10 +799,28 @@ public:
   const FunctionRecord &operator*() const { return *Current; }
 
   FunctionRecordIterator &operator++() {
-    assert(Current != Records.end() && "incremented past end");
-    ++Current;
+    advanceOne();
     skipOtherFiles();
     return *this;
+  }
+
+private:
+  void advanceOne() {
+    if (RecordIndices.empty()) {
+      // Iteration over all entries, advance in the list of records.
+      assert(Current != Records.end() && "incremented past end");
+      ++Current;
+    } else {
+      // Iterator over entries filtered by file name. Advance in the list of
+      // indices, and adjust the cursor in the list of records accordingly.
+      assert(CurrentIndex != RecordIndices.end() && "incremented past end");
+      ++CurrentIndex;
+      if (CurrentIndex == RecordIndices.end()) {
+        Current = Records.end();
+      } else {
+        Current = &Records[*CurrentIndex];
+      }
+    }
   }
 };
 
@@ -798,13 +949,18 @@ class CoverageData {
   std::vector<CountedRegion> BranchRegions;
   std::vector<MCDCRecord> MCDCRecords;
 
+  bool SingleByteCoverage = false;
+
 public:
   CoverageData() = default;
 
-  CoverageData(StringRef Filename) : Filename(Filename) {}
+  CoverageData(bool Single, StringRef Filename)
+      : Filename(Filename), SingleByteCoverage(Single) {}
 
   /// Get the name of the file this data covers.
   StringRef getFilename() const { return Filename; }
+
+  bool getSingleByteCoverage() const { return SingleByteCoverage; }
 
   /// Get an iterator over the coverage segments for this object. The segments
   /// are guaranteed to be uniqued and sorted by location.
@@ -838,29 +994,36 @@ class CoverageMapping {
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
 
+  std::optional<bool> SingleByteCoverage;
+
   CoverageMapping() = default;
 
   // Load coverage records from readers.
   static Error loadFromReaders(
       ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
-      IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage);
+      std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+          &ProfileReader,
+      CoverageMapping &Coverage);
 
   // Load coverage records from file.
   static Error
   loadFromFile(StringRef Filename, StringRef Arch, StringRef CompilationDir,
-               IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
-               bool &DataFound,
+               std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+                   &ProfileReader,
+               CoverageMapping &Coverage, bool &DataFound,
                SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
 
   /// Add a function record corresponding to \p Record.
-  Error loadFunctionRecord(const CoverageMappingRecord &Record,
-                           IndexedInstrProfReader &ProfileReader);
+  Error loadFunctionRecord(
+      const CoverageMappingRecord &Record,
+      const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+          &ProfileReader);
 
   /// Look up the indices for function records which are at least partially
   /// defined in the specified file. This is guaranteed to return a superset of
   /// such records: extra records not in the file may be included if there is
   /// a hash collision on the filename. Clients must be robust to collisions.
-  ArrayRef<unsigned>
+  LLVM_ABI ArrayRef<unsigned>
   getImpreciseRecordIndicesForFilename(StringRef Filename) const;
 
 public:
@@ -868,17 +1031,18 @@ public:
   CoverageMapping &operator=(const CoverageMapping &) = delete;
 
   /// Load the coverage mapping using the given readers.
-  static Expected<std::unique_ptr<CoverageMapping>>
+  LLVM_ABI static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
-       IndexedInstrProfReader &ProfileReader);
+       std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+           &ProfileReader);
 
   /// Load the coverage mapping from the given object files and profile. If
   /// \p Arches is non-empty, it must specify an architecture for each object.
   /// Ignores non-instrumented object files unless all are not instrumented.
-  static Expected<std::unique_ptr<CoverageMapping>>
-  load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       vfs::FileSystem &FS, ArrayRef<StringRef> Arches = std::nullopt,
-       StringRef CompilationDir = "",
+  LLVM_ABI static Expected<std::unique_ptr<CoverageMapping>>
+  load(ArrayRef<StringRef> ObjectFilenames,
+       std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
+       ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
        bool CheckBinaryIDs = false);
 
@@ -898,20 +1062,22 @@ public:
 
   /// Returns a lexicographically sorted, unique list of files that are
   /// covered.
-  std::vector<StringRef> getUniqueSourceFiles() const;
+  LLVM_ABI std::vector<StringRef> getUniqueSourceFiles() const;
 
   /// Get the coverage for a particular file.
   ///
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
-  CoverageData getCoverageForFile(StringRef Filename) const;
+  LLVM_ABI CoverageData getCoverageForFile(StringRef Filename) const;
 
   /// Get the coverage for a particular function.
-  CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
+  LLVM_ABI CoverageData
+  getCoverageForFunction(const FunctionRecord &Function) const;
 
   /// Get the coverage for an expansion within a coverage set.
-  CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion) const;
+  LLVM_ABI CoverageData
+  getCoverageForExpansion(const ExpansionRecord &Expansion) const;
 
   /// Gets all of the functions covered by this profile.
   iterator_range<FunctionRecordIterator> getCoveredFunctions() const {
@@ -922,15 +1088,17 @@ public:
   /// Gets all of the functions in a particular file.
   iterator_range<FunctionRecordIterator>
   getCoveredFunctions(StringRef Filename) const {
-    return make_range(FunctionRecordIterator(Functions, Filename),
-                      FunctionRecordIterator());
+    return make_range(
+        FunctionRecordIterator(Functions, Filename,
+                               getImpreciseRecordIndicesForFilename(Filename)),
+        FunctionRecordIterator());
   }
 
   /// Get the list of function instantiation groups in a particular file.
   ///
   /// Every instantiation group in a program is attributed to exactly one file:
   /// the file in which the definition for the common function begins.
-  std::vector<InstantiationGroup>
+  LLVM_ABI std::vector<InstantiationGroup>
   getInstantiationGroups(StringRef Filename) const;
 };
 
@@ -947,8 +1115,9 @@ class LineCoverageStats {
   LineCoverageStats() = default;
 
 public:
-  LineCoverageStats(ArrayRef<const CoverageSegment *> LineSegments,
-                    const CoverageSegment *WrappedSegment, unsigned Line);
+  LLVM_ABI LineCoverageStats(ArrayRef<const CoverageSegment *> LineSegments,
+                             const CoverageSegment *WrappedSegment,
+                             unsigned Line);
 
   uint64_t getExecutionCount() const { return ExecutionCount; }
 
@@ -987,7 +1156,7 @@ public:
 
   const LineCoverageStats &operator*() const { return Stats; }
 
-  LineCoverageIterator &operator++();
+  LLVM_ABI LineCoverageIterator &operator++();
 
   LineCoverageIterator getEnd() const {
     auto EndIt = *this;
@@ -1046,19 +1215,19 @@ namespace accessors {
 /// Return the structural hash associated with the function.
 template <class FuncRecordTy, llvm::endianness Endian>
 uint64_t getFuncHash(const FuncRecordTy *Record) {
-  return support::endian::byte_swap<uint64_t, Endian>(Record->FuncHash);
+  return support::endian::byte_swap<uint64_t>(Record->FuncHash, Endian);
 }
 
 /// Return the coverage map data size for the function.
 template <class FuncRecordTy, llvm::endianness Endian>
 uint64_t getDataSize(const FuncRecordTy *Record) {
-  return support::endian::byte_swap<uint32_t, Endian>(Record->DataSize);
+  return support::endian::byte_swap<uint32_t>(Record->DataSize, Endian);
 }
 
 /// Return the function lookup key. The value is considered opaque.
 template <class FuncRecordTy, llvm::endianness Endian>
 uint64_t getFuncNameRef(const FuncRecordTy *Record) {
-  return support::endian::byte_swap<uint64_t, Endian>(Record->NameRef);
+  return support::endian::byte_swap<uint64_t>(Record->NameRef, Endian);
 }
 
 /// Return the PGO name of the function. Used for formats in which the name is
@@ -1111,14 +1280,14 @@ struct CovMapFunctionRecordV1 {
 
   /// Return function lookup key. The value is consider opaque.
   template <llvm::endianness Endian> IntPtrT getFuncNameRef() const {
-    return support::endian::byte_swap<IntPtrT, Endian>(NamePtr);
+    return support::endian::byte_swap<IntPtrT>(NamePtr, Endian);
   }
 
   /// Return the PGO name of the function.
   template <llvm::endianness Endian>
   Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName) const {
     IntPtrT NameRef = getFuncNameRef<Endian>();
-    uint32_t NameS = support::endian::byte_swap<uint32_t, Endian>(NameSize);
+    uint32_t NameS = support::endian::byte_swap<uint32_t>(NameSize, Endian);
     FuncName = ProfileNames.getFuncName(NameRef, NameS);
     if (NameS && FuncName.empty())
       return make_error<CoverageMapError>(coveragemap_error::malformed,
@@ -1216,7 +1385,7 @@ struct CovMapFunctionRecordV3 {
 
   /// Get the filename set reference.
   template <llvm::endianness Endian> uint64_t getFilenamesRef() const {
-    return support::endian::byte_swap<uint64_t, Endian>(FilenamesRef);
+    return support::endian::byte_swap<uint64_t>(FilenamesRef, Endian);
   }
 
   /// Read the inline coverage mapping. Ignore the buffer parameter, it is for
@@ -1247,19 +1416,19 @@ struct CovMapHeader {
 #define COVMAP_HEADER(Type, LLVMType, Name, Init) Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
   template <llvm::endianness Endian> uint32_t getNRecords() const {
-    return support::endian::byte_swap<uint32_t, Endian>(NRecords);
+    return support::endian::byte_swap<uint32_t>(NRecords, Endian);
   }
 
   template <llvm::endianness Endian> uint32_t getFilenamesSize() const {
-    return support::endian::byte_swap<uint32_t, Endian>(FilenamesSize);
+    return support::endian::byte_swap<uint32_t>(FilenamesSize, Endian);
   }
 
   template <llvm::endianness Endian> uint32_t getCoverageSize() const {
-    return support::endian::byte_swap<uint32_t, Endian>(CoverageSize);
+    return support::endian::byte_swap<uint32_t>(CoverageSize, Endian);
   }
 
   template <llvm::endianness Endian> uint32_t getVersion() const {
-    return support::endian::byte_swap<uint32_t, Endian>(Version);
+    return support::endian::byte_swap<uint32_t>(Version, Endian);
   }
 };
 

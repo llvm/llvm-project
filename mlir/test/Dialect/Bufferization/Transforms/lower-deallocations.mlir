@@ -29,10 +29,10 @@ func.func @conversion_dealloc_simple(%arg0: memref<2xf32>, %arg1: i1) {
   return
 }
 
-//      CHECk: scf.if [[ARG1]] {
-// CHECk-NEXT:   memref.dealloc [[ARG0]] : memref<2xf32>
-// CHECk-NEXT: }
-// CHECk-NEXT: return
+//      CHECK: scf.if [[ARG1]] {
+// CHECK-NEXT:   memref.dealloc [[ARG0]] : memref<2xf32>
+// CHECK-NEXT: }
+// CHECK-NEXT: return
 
 // -----
 
@@ -154,3 +154,44 @@ func.func @conversion_dealloc_multiple_memrefs_and_retained(%arg0: memref<2xf32>
 // CHECK-NEXT:     memref.store [[DEALLOC_COND]], [[DEALLOC_CONDS_OUT]][[[OUTER_ITER]]]
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
+
+// -----
+
+// This test check dealloc_helper function is generated on each nested symbol
+// table operation when needed and only generated once.
+module @conversion_nest_module_dealloc_helper {
+  func.func @top_level_func(%arg0: memref<2xf32>, %arg1: memref<5xf32>, %arg2: memref<1xf32>, %arg3: i1, %arg4: i1, %arg5: memref<2xf32>) -> (i1, i1) {
+    %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<5xf32>) if (%arg3, %arg4) retain (%arg2, %arg5 : memref<1xf32>, memref<2xf32>)
+    func.return %0#0, %0#1 : i1, i1
+  }
+  module @nested_module_not_need_dealloc_helper {
+    func.func @nested_module_not_need_dealloc_helper_func(%arg0: memref<2xf32>, %arg1: memref<1xf32>, %arg2: i1, %arg3: memref<2xf32>) -> (i1, i1) {
+      %0:2 = bufferization.dealloc (%arg0 : memref<2xf32>) if (%arg2) retain (%arg1, %arg3 : memref<1xf32>, memref<2xf32>)
+      return %0#0, %0#1 : i1, i1
+    }
+  }
+  module @nested_module_need_dealloc_helper {
+    func.func @nested_module_need_dealloc_helper_func0(%arg0: memref<2xf32>, %arg1: memref<5xf32>, %arg2: memref<1xf32>, %arg3: i1, %arg4: i1, %arg5: memref<2xf32>) -> (i1, i1) {
+      %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<5xf32>) if (%arg3, %arg4) retain (%arg2, %arg5 : memref<1xf32>, memref<2xf32>)
+      func.return %0#0, %0#1 : i1, i1
+    }
+    func.func @nested_module_need_dealloc_helper_func1(%arg0: memref<2xf32>, %arg1: memref<5xf32>, %arg2: memref<1xf32>, %arg3: i1, %arg4: i1, %arg5: memref<2xf32>) -> (i1, i1) {
+      %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<5xf32>) if (%arg3, %arg4) retain (%arg2, %arg5 : memref<1xf32>, memref<2xf32>)
+      func.return %0#0, %0#1 : i1, i1
+    }
+  }
+}
+
+// CHECK:     module @conversion_nest_module_dealloc_helper {
+// CHECK:       func.func @top_level_func
+// CHECK:         call @dealloc_helper
+// CHECK:       module @nested_module_not_need_dealloc_helper {
+// CHECK:         func.func @nested_module_not_need_dealloc_helper_func
+// CHECK-NOT:       @dealloc_helper
+// CHECK:       module @nested_module_need_dealloc_helper {
+// CHECK:         func.func @nested_module_need_dealloc_helper_func0
+// CHECK:           call @dealloc_helper
+// CHECK:         func.func @nested_module_need_dealloc_helper_func1
+// CHECK:           call @dealloc_helper
+// CHECK:         func.func private @dealloc_helper
+// CHECK:       func.func private @dealloc_helper

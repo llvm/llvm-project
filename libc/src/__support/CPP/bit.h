@@ -11,48 +11,72 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/sanitizer.h"
 
-#include <stdint.h>
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
-namespace LIBC_NAMESPACE::cpp {
-
-#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if __has_builtin(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
-// This implementation of bit_cast requires trivially-constructible To, to avoid
-// UB in the implementation.
-template <
-    typename To, typename From,
-    typename = cpp::enable_if_t<sizeof(To) == sizeof(From) &&
-                                cpp::is_trivially_constructible<To>::value &&
-                                cpp::is_trivially_copyable<To>::value &&
-                                cpp::is_trivially_copyable<From>::value>>
-LIBC_INLINE constexpr To bit_cast(const From &from) {
-  MSAN_UNPOISON(&from, sizeof(From));
-#if LIBC_HAS_BUILTIN(__builtin_bit_cast)
-  return __builtin_bit_cast(To, from);
+template <unsigned N>
+LIBC_INLINE static void inline_copy(const char *from, char *to) {
+#if __has_builtin(__builtin_memcpy_inline)
+  __builtin_memcpy_inline(to, from, N);
 #else
-  To to;
-  char *dst = reinterpret_cast<char *>(&to);
-  const char *src = reinterpret_cast<const char *>(&from);
-#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
-  __builtin_memcpy_inline(dst, src, sizeof(To));
-#else
-  for (unsigned i = 0; i < sizeof(To); ++i)
-    dst[i] = src[i];
-#endif // LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
-  return to;
-#endif // LIBC_HAS_BUILTIN(__builtin_bit_cast)
+  for (unsigned i = 0; i < N; ++i)
+    to[i] = from[i];
+#endif // __has_builtin(__builtin_memcpy_inline)
 }
 
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr bool has_single_bit(T value) {
+// This implementation of bit_cast requires trivially-constructible To, to avoid
+// UB in the implementation.
+template <typename To, typename From>
+LIBC_INLINE constexpr cpp::enable_if_t<
+    (sizeof(To) == sizeof(From)) &&
+        cpp::is_trivially_constructible<To>::value &&
+        cpp::is_trivially_copyable<To>::value &&
+        cpp::is_trivially_copyable<From>::value,
+    To>
+bit_cast(const From &from) {
+  MSAN_UNPOISON(&from, sizeof(From));
+#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
+  return __builtin_bit_cast(To, from);
+#else
+  To to{};
+  char *dst = reinterpret_cast<char *>(&to);
+  const char *src = reinterpret_cast<const char *>(&from);
+  inline_copy<sizeof(From)>(src, dst);
+  return to;
+#endif // __has_builtin(__builtin_bit_cast)
+}
+
+// The following simple bit copy from a smaller type to maybe-larger type.
+template <typename To, typename From>
+LIBC_INLINE constexpr cpp::enable_if_t<
+    (sizeof(To) >= sizeof(From)) &&
+        cpp::is_trivially_constructible<To>::value &&
+        cpp::is_trivially_copyable<To>::value &&
+        cpp::is_trivially_copyable<From>::value,
+    void>
+bit_copy(const From &from, To &to) {
+  MSAN_UNPOISON(&from, sizeof(From));
+  char *dst = reinterpret_cast<char *>(&to);
+  const char *src = reinterpret_cast<const char *>(&from);
+  inline_copy<sizeof(From)>(src, dst);
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>,
+                                                     bool>
+has_single_bit(T value) {
   return (value != 0) && ((value & (value - 1)) == 0);
 }
 
@@ -70,8 +94,17 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr int countr_zero(T value) {
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_ctzg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countr_zero(T value) {
+  return __builtin_ctzg(value, cpp::numeric_limits<T>::digits);
+}
+#else
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countr_zero(T value) {
   if (!value)
     return cpp::numeric_limits<T>::digits;
   if (value & 0x1)
@@ -88,20 +121,21 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
     shift >>= 1;
     mask >>= shift;
   }
-  return zero_bits;
+  return static_cast<int>(zero_bits);
 }
-#if LIBC_HAS_BUILTIN(__builtin_ctzs)
+#if __has_builtin(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_ctz)
+#endif // __has_builtin(__builtin_ctzs)
+#if __has_builtin(__builtin_ctz)
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_ctzl)
+#endif // __has_builtin(__builtin_ctz)
+#if __has_builtin(__builtin_ctzl)
 ADD_SPECIALIZATION(countr_zero, unsigned long, __builtin_ctzl)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_ctzll)
+#endif // __has_builtin(__builtin_ctzl)
+#if __has_builtin(__builtin_ctzll)
 ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
-#endif
+#endif // __has_builtin(__builtin_ctzll)
+#endif // __has_builtin(__builtin_ctzg)
 
 /// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
@@ -109,8 +143,17 @@ ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr int countl_zero(T value) {
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_clzg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countl_zero(T value) {
+  return __builtin_clzg(value, cpp::numeric_limits<T>::digits);
+}
+#else
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countl_zero(T value) {
   if (!value)
     return cpp::numeric_limits<T>::digits;
   // Bisection method.
@@ -123,20 +166,21 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
     else
       zero_bits |= shift;
   }
-  return zero_bits;
+  return static_cast<int>(zero_bits);
 }
-#if LIBC_HAS_BUILTIN(__builtin_clzs)
+#if __has_builtin(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_clz)
+#endif // __has_builtin(__builtin_clzs)
+#if __has_builtin(__builtin_clz)
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_clzl)
+#endif // __has_builtin(__builtin_clz)
+#if __has_builtin(__builtin_clzl)
 ADD_SPECIALIZATION(countl_zero, unsigned long, __builtin_clzl)
-#endif
-#if LIBC_HAS_BUILTIN(__builtin_clzll)
+#endif // __has_builtin(__builtin_clzl)
+#if __has_builtin(__builtin_clzll)
 ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
-#endif
+#endif // __has_builtin(__builtin_clzll)
+#endif // __has_builtin(__builtin_clzg)
 
 #undef ADD_SPECIALIZATION
 
@@ -147,9 +191,10 @@ ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of all ones.
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr int countl_one(T value) {
-  return cpp::countl_zero<T>(~value);
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countl_one(T value) {
+  return cpp::countl_zero<T>(static_cast<T>(~value));
 }
 
 /// Count the number of ones from the least significant bit to the first
@@ -159,17 +204,19 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of all ones.
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr int countr_one(T value) {
-  return cpp::countr_zero<T>(~value);
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countr_one(T value) {
+  return cpp::countr_zero<T>(static_cast<T>(~value));
 }
 
 /// Returns the number of bits needed to represent value if value is nonzero.
 /// Returns 0 otherwise.
 ///
 /// Ex. bit_width(5) == 3.
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr int bit_width(T value) {
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+bit_width(T value) {
   return cpp::numeric_limits<T>::digits - cpp::countl_zero(value);
 }
 
@@ -177,11 +224,12 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 /// nonzero.  Returns 0 otherwise.
 ///
 /// Ex. bit_floor(5) == 4.
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr T bit_floor(T value) {
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+bit_floor(T value) {
   if (!value)
     return 0;
-  return T(1) << (cpp::bit_width(value) - 1);
+  return static_cast<T>(T(1) << (cpp::bit_width(value) - 1));
 }
 
 /// Returns the smallest integral power of two no smaller than value if value is
@@ -191,40 +239,44 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 ///
 /// The return value is undefined if the input is larger than the largest power
 /// of two representable in T.
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr T bit_ceil(T value) {
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+bit_ceil(T value) {
   if (value < 2)
     return 1;
-  return T(1) << cpp::bit_width<T>(value - 1u);
+  return static_cast<T>(T(1) << cpp::bit_width(value - 1U));
 }
 
 // Rotate algorithms make use of "Safe, Efficient, and Portable Rotate in C/C++"
 // from https://blog.regehr.org/archives/1063.
 
 // Forward-declare rotr so that rotl can use it.
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr T rotr(T value, int rotate);
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+rotr(T value, int rotate);
 
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr T rotl(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+rotl(T value, int rotate) {
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
-    return cpp::rotr(value, -rotate);
-  return (value << rotate) | (value >> (N - rotate));
+    return cpp::rotr<T>(value, -rotate);
+  return static_cast<T>((value << rotate) | (value >> (N - rotate)));
 }
 
-template <typename T, typename>
-[[nodiscard]] LIBC_INLINE constexpr T rotr(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+rotr(T value, int rotate) {
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
-    return cpp::rotl(value, -rotate);
-  return (value >> rotate) | (value << (N - rotate));
+    return cpp::rotl<T>(value, -rotate);
+  return static_cast<T>((value >> rotate) | (value << (N - rotate)));
 }
 
 // TODO: Do we need this function at all? How is it different from
@@ -238,6 +290,47 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
   }
 }
 
-} // namespace LIBC_NAMESPACE::cpp
+/// Count number of 1's aka population count or Hamming weight.
+///
+/// Only unsigned integral types are allowed.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_popcountg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+popcount(T value) {
+  return __builtin_popcountg(value);
+}
+#else // !__has_builtin(__builtin_popcountg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+popcount(T value) {
+  int count = 0;
+  while (value) {
+    value &= value - 1;
+    ++count;
+  }
+  return count;
+}
+#define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \
+  template <>                                                                  \
+  [[nodiscard]] LIBC_INLINE constexpr int popcount<TYPE>(TYPE value) {         \
+    return BUILTIN(value);                                                     \
+  }
+#if __has_builtin(__builtin_popcount)
+ADD_SPECIALIZATION(unsigned char, __builtin_popcount)
+ADD_SPECIALIZATION(unsigned short, __builtin_popcount)
+ADD_SPECIALIZATION(unsigned, __builtin_popcount)
+#endif // __builtin_popcount
+#if __has_builtin(__builtin_popcountl)
+ADD_SPECIALIZATION(unsigned long, __builtin_popcountl)
+#endif // __builtin_popcountl
+#if __has_builtin(__builtin_popcountll)
+ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
+#endif // __builtin_popcountll
+#endif // __builtin_popcountg
+#undef ADD_SPECIALIZATION
+
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H

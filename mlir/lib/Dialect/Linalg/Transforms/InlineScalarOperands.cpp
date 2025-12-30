@@ -23,7 +23,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGINLINESCALAROPERANDS
+#define GEN_PASS_DEF_LINALGINLINESCALAROPERANDSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -35,7 +35,7 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     SmallVector<size_t> scalarOperands;
@@ -60,9 +60,9 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
 
     Location loc = genericOp->getLoc();
     SmallVector<Value> outputOperands = genericOp.getOutputs();
-    auto newOp = rewriter.create<GenericOp>(
-        loc, genericOp->getResultTypes(), newOperands, outputOperands,
-        newIndexingMaps, genericOp.getIteratorTypesArray());
+    auto newOp = GenericOp::create(rewriter, loc, genericOp->getResultTypes(),
+                                   newOperands, outputOperands, newIndexingMaps,
+                                   genericOp.getIteratorTypesArray());
     rewriter.cloneRegionBefore(genericOp.getRegion(), newOp.getRegion(),
                                newOp.getRegion().begin());
 
@@ -77,10 +77,13 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
       SmallVector<Value> indicesValues;
       for (auto idx : indices)
         indicesValues.emplace_back(
-            rewriter.create<arith::ConstantIndexOp>(loc, idx));
-      Value extractedValue = rewriter.create<tensor::ExtractOp>(
-          loc, opOperand->get(), indicesValues);
-      body->getArgument(idx).replaceAllUsesWith(extractedValue);
+            arith::ConstantIndexOp::create(rewriter, loc, idx));
+      Value scalarValue = opOperand->get();
+      if (isa<RankedTensorType>(scalarValue.getType())) {
+        scalarValue = tensor::ExtractOp::create(rewriter, loc, scalarValue,
+                                                indicesValues);
+      }
+      body->getArgument(idx).replaceAllUsesWith(scalarValue);
       body->eraseArgument(idx);
     }
 
@@ -101,18 +104,16 @@ void mlir::linalg::populateInlineConstantOperandsPatterns(
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgInlineScalarOperandsPass
-    : public impl::LinalgInlineScalarOperandsBase<
+    : public impl::LinalgInlineScalarOperandsPassBase<
           LinalgInlineScalarOperandsPass> {
+  using impl::LinalgInlineScalarOperandsPassBase<
+      LinalgInlineScalarOperandsPass>::LinalgInlineScalarOperandsPassBase;
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext &ctx = getContext();
     RewritePatternSet patterns(&ctx);
     populateInlineConstantOperandsPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+    (void)applyPatternsGreedily(op, std::move(patterns));
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgInlineScalarOperandsPass() {
-  return std::make_unique<LinalgInlineScalarOperandsPass>();
-}

@@ -1,7 +1,7 @@
 # RUN: dsymutil -f -o %t --verify -oso-prepend-path=%p/../Inputs -y %s
 # RUN: llvm-dwarfdump %t | FileCheck %s
 
-# RUN: dsymutil --linker llvm -f -o %t --verify -oso-prepend-path=%p/../Inputs -y %s
+# RUN: dsymutil --linker parallel -f -o %t --verify -oso-prepend-path=%p/../Inputs -y %s
 # RUN: llvm-dwarfdump %t | FileCheck %s
 
 ---

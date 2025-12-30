@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 
 ; CHECK-LABEL: danny:
 ; CHECK: mux(p0,r1,##1065353216)

@@ -12,8 +12,8 @@
 
 #include <__config>
 #include <__functional/binary_function.h>
-#include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
+#include <__type_traits/invoke.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -36,16 +36,15 @@ public:
 
   // invoke
   template <class... _ArgTypes>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-
-      typename __invoke_return<type, _ArgTypes...>::type
-      operator()(_ArgTypes&&... __args) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<const _Tp&, _ArgTypes...>
+  operator()(_ArgTypes&&... __args) const _NOEXCEPT_(__is_nothrow_invocable_v<const _Tp&, _ArgTypes...>) {
     return std::__invoke(__f_, std::forward<_ArgTypes>(__args)...);
   }
 };
 
 template <class _Rp, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn<_Rp _Tp::*> mem_fn(_Rp _Tp::*__pm) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn<_Rp _Tp::*>
+mem_fn(_Rp _Tp::* __pm) _NOEXCEPT {
   return __mem_fn<_Rp _Tp::*>(__pm);
 }
 

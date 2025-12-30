@@ -9,7 +9,9 @@
 #ifndef LLDB_TARGET_DYNAMICLOADER_H
 #define LLDB_TARGET_DYNAMICLOADER_H
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Target/CoreFileMemoryRanges.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
@@ -329,9 +331,28 @@ public:
   /// safe to call certain APIs or SPIs.
   virtual bool IsFullyInitialized() { return true; }
 
+  /// Return the `start` \b address in the dynamic loader module.
+  /// This is the address the process will begin executing with
+  /// `process launch --stop-at-entry`.
+  virtual std::optional<lldb_private::Address> GetStartAddress() {
+    return std::nullopt;
+  }
+
+  /// Returns a list of memory ranges that should be saved in the core file,
+  /// specific for this dynamic loader.
+  ///
+  /// For example, an implementation of this function can save the thread
+  /// local data of a given thread.
+  virtual void CalculateDynamicSaveCoreRanges(
+      lldb_private::Process &process,
+      std::vector<lldb_private::MemoryRegionInfo> &ranges,
+      llvm::function_ref<bool(const lldb_private::Thread &)>
+          save_thread_predicate) {};
+
 protected:
   // Utility methods for derived classes
 
+  /// Find a module in the target that matches the given file.
   lldb::ModuleSP FindModuleViaTarget(const FileSpec &file);
 
   /// Checks to see if the target module has changed, updates the target

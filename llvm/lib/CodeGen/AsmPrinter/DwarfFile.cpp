@@ -121,7 +121,19 @@ void DwarfFile::addScopeLabel(LexicalScope *LS, DbgLabel *Label) {
 
 std::pair<uint32_t, RangeSpanList *>
 DwarfFile::addRange(const DwarfCompileUnit &CU, SmallVector<RangeSpan, 2> R) {
-  CURangeLists.push_back(
-      RangeSpanList{Asm->createTempSymbol("debug_ranges"), &CU, std::move(R)});
+  bool CanReuseLastRange = false;
+
+  if (!CURangeLists.empty()) {
+    auto Last = CURangeLists.back();
+    if (Last.CU == &CU && Last.Ranges == R) {
+      CanReuseLastRange = true;
+    }
+  }
+
+  if (!CanReuseLastRange) {
+    CURangeLists.push_back(RangeSpanList{Asm->createTempSymbol("debug_ranges"),
+                                         &CU, std::move(R)});
+  }
+
   return std::make_pair(CURangeLists.size() - 1, &CURangeLists.back());
 }

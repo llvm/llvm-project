@@ -21,25 +21,25 @@ define void @fold_strncmp_a_b_n(ptr %pcmp, i64 %n) {
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[N:%.*]], 0
 ; CHECK-NEXT:    [[C0_1:%.*]] = sext i1 [[TMP1]] to i32
-; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 [[C0_1]], ptr [[S0_1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C0_2:%.*]] = sext i1 [[TMP2]] to i32
-; CHECK-NEXT:    [[S0_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[S0_2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 [[C0_2]], ptr [[S0_2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C0_3:%.*]] = sext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[S0_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[S0_3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 [[C0_3]], ptr [[S0_3]], align 4
-; CHECK-NEXT:    [[S0_4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    [[S0_4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; CHECK-NEXT:    store i32 0, ptr [[S0_4]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C0_5:%.*]] = sext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[S0_5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    [[S0_5:%.*]] = getelementptr i8, ptr [[PCMP]], i64 20
 ; CHECK-NEXT:    store i32 [[C0_5]], ptr [[S0_5]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C5_0:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[S5_0:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    [[S5_0:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; CHECK-NEXT:    store i32 [[C5_0]], ptr [[S5_0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -117,23 +117,23 @@ define void @fold_strncmp_a_c_n(ptr %pcmp, i64 %n) {
 ; CHECK-NEXT:    store i32 [[C0_0]], ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C0_1:%.*]] = sext i1 [[TMP2]] to i32
-; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 [[C0_1]], ptr [[S0_1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C0_2:%.*]] = sext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[S0_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[S0_2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 [[C0_2]], ptr [[S0_2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C0_3:%.*]] = sext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[S0_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[S0_3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 [[C0_3]], ptr [[S0_3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[N]], 3
 ; CHECK-NEXT:    [[C0_4:%.*]] = sext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[S0_4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    [[S0_4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; CHECK-NEXT:    store i32 [[C0_4]], ptr [[S0_4]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[N]], 3
 ; CHECK-NEXT:    [[C0_5:%.*]] = sext i1 [[TMP6]] to i32
-; CHECK-NEXT:    [[S0_5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    [[S0_5:%.*]] = getelementptr i8, ptr [[PCMP]], i64 20
 ; CHECK-NEXT:    store i32 [[C0_5]], ptr [[S0_5]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -188,27 +188,27 @@ define void @fold_strncmp_a_d_n(ptr %pcmp, i64 %n) {
 ; CHECK-NEXT:    store i32 [[C0_0]], ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C0_1:%.*]] = sext i1 [[TMP2]] to i32
-; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 [[C0_1]], ptr [[S0_1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N]], 3
 ; CHECK-NEXT:    [[C1_1:%.*]] = zext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[S1_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[S1_1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 [[C1_1]], ptr [[S1_1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[N]], 2
 ; CHECK-NEXT:    [[C2_2:%.*]] = zext i1 [[TMP4]] to i32
-; CHECK-NEXT:    [[S2_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[S2_2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 [[C2_2]], ptr [[S2_2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C4_4:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[S4_4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    [[S4_4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; CHECK-NEXT:    store i32 [[C4_4]], ptr [[S4_4]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C4_4_2:%.*]] = sext i1 [[TMP6]] to i32
-; CHECK-NEXT:    [[S4_4_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    [[S4_4_2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 20
 ; CHECK-NEXT:    store i32 [[C4_4_2]], ptr [[S4_4_2]], align 4
-; CHECK-NEXT:    [[S5_5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    [[S5_5:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; CHECK-NEXT:    store i32 0, ptr [[S5_5]], align 4
-; CHECK-NEXT:    [[S6_6:%.*]] = getelementptr i32, ptr [[PCMP]], i64 7
+; CHECK-NEXT:    [[S6_6:%.*]] = getelementptr i8, ptr [[PCMP]], i64 28
 ; CHECK-NEXT:    store i32 0, ptr [[S6_6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -301,13 +301,13 @@ define void @fold_strncmp_d_e_n(ptr %pcmp, i64 %n) {
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[N:%.*]], 0
 ; CHECK-NEXT:    [[C0_1:%.*]] = zext i1 [[TMP1]] to i32
-; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[S0_1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 [[C0_1]], ptr [[S0_1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    [[C1_0:%.*]] = sext i1 [[TMP2]] to i32
-; CHECK-NEXT:    [[S1_0:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[S1_0:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 [[C1_0]], ptr [[S1_0]], align 4
-; CHECK-NEXT:    [[S1_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[S1_1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 0, ptr [[S1_1]], align 4
 ; CHECK-NEXT:    ret void
 ;

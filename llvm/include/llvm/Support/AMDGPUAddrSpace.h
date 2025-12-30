@@ -31,8 +31,8 @@ enum : unsigned {
   GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
   REGION_ADDRESS = 2, ///< Address space for region memory. (GDS)
 
-  CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
   LOCAL_ADDRESS = 3,    ///< Address space for local memory.
+  CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
   PRIVATE_ADDRESS = 5,  ///< Address space for private memory.
 
   CONSTANT_ADDRESS_32BIT = 6, ///< Address space for 32-bit constant memory.
@@ -81,6 +81,92 @@ enum : unsigned {
   UNKNOWN_ADDRESS_SPACE = ~0u,
 };
 } // end namespace AMDGPUAS
+
+namespace AMDGPU {
+inline bool isFlatGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS || AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+}
+
+inline bool isExtendedGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+}
+
+inline bool isConstantAddressSpace(unsigned AS) {
+  switch (AS) {
+    using namespace AMDGPUAS;
+  case CONSTANT_ADDRESS:
+  case CONSTANT_ADDRESS_32BIT:
+  case CONSTANT_BUFFER_0:
+  case CONSTANT_BUFFER_1:
+  case CONSTANT_BUFFER_2:
+  case CONSTANT_BUFFER_3:
+  case CONSTANT_BUFFER_4:
+  case CONSTANT_BUFFER_5:
+  case CONSTANT_BUFFER_6:
+  case CONSTANT_BUFFER_7:
+  case CONSTANT_BUFFER_8:
+  case CONSTANT_BUFFER_9:
+  case CONSTANT_BUFFER_10:
+  case CONSTANT_BUFFER_11:
+  case CONSTANT_BUFFER_12:
+  case CONSTANT_BUFFER_13:
+  case CONSTANT_BUFFER_14:
+  case CONSTANT_BUFFER_15:
+    return true;
+  default:
+    return false;
+  }
+}
+
+namespace DWARFAS {
+enum : unsigned {
+  GLOBAL = 0,
+  GENERIC = 1,
+  REGION = 2,
+  LOCAL = 3,
+  PRIVATE_LANE = 5,
+  PRIVATE_WAVE = 6,
+  DEFAULT = GLOBAL,
+};
+} // namespace DWARFAS
+
+namespace impl {
+// TODO: Move this into mapToDWARFAddrSpace when we switch to C++23
+// (see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2647r1.html)
+static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
+    DWARFAS::GENERIC,     //< AMDGPUAS::FLAT_ADDRESS
+    DWARFAS::GLOBAL,      //< AMDGPUAS::GLOBAL_ADDRESS
+    DWARFAS::REGION,      //< AMDGPUAS::REGION_ADDRESS
+    DWARFAS::LOCAL,       //< AMDGPUAS::LOCAL_ADDRESS
+    DWARFAS::GLOBAL,      //< AMDGPUAS::CONSTANT_ADDRESS
+    DWARFAS::PRIVATE_LANE //< AMDGPUAS::PRIVATE_ADDRESS
+};
+} // end namespace impl
+
+/// If @p LLVMAddressSpace has a corresponding DWARF encoding,
+/// return it; otherwise return the sentinel value -1 to indicate
+/// no such mapping exists.
+///
+/// This maps private/scratch to the focused lane view.
+///
+/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.rst
+/// table "AMDGPU DWARF Address Space Mapping".
+///
+/// Note: This could return std::optional<int> but that would require
+/// an extra #include.
+constexpr int mapToDWARFAddrSpace(unsigned LLVMAddrSpace) {
+  constexpr unsigned SizeOfLLVMToDWARFAddrSpaceMapping =
+      sizeof(impl::LLVMToDWARFAddrSpaceMapping) /
+      sizeof(impl::LLVMToDWARFAddrSpaceMapping[0]);
+  if (LLVMAddrSpace < SizeOfLLVMToDWARFAddrSpaceMapping)
+    return impl::LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
+  return -1;
+}
+} // end namespace AMDGPU
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_AMDGPUADDRSPACE_H

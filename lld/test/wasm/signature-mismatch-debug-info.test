@@ -1,0 +1,8 @@
+# This is a regression test that ensures a function signature mismatch in
+# functions with debug info does not cause does not cause a segmentation fault
+# when writing .debug_info section.
+
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/signature-mismatch-debug-info-a.s -o %t.a.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/signature-mismatch-debug-info-b.s -o %t.b.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/signature-mismatch-debug-info-main.s -o %t.main.o
+; RUN: wasm-ld -o %t.wasm %t.a.o %t.b.o %t.main.o --export=main --no-entry

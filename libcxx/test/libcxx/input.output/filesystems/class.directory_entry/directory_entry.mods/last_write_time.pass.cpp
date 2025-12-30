@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: availability-filesystem-missing
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: no-filesystem
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../../src
+// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src
 
 // This test relies on calling functions from the libcxx internal headers
 // of <filesystem>; the Windows implementation uses different
@@ -18,7 +17,7 @@
 // UNSUPPORTED: windows
 
 // This test assumes that time is stored as a 64 bit value when on MVS it is stored as 32 bit
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 // <filesystem>
 

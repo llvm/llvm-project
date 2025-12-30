@@ -27,7 +27,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -269,11 +268,11 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       return Name;
     // System libraries from the Windows SDK for Windows 11 contain this symbol.
     // It looks like a CFG guard: we just skip it for now.
-    if (Name.equals("/<XFGHASHMAP>/"))
+    if (Name == "/<XFGHASHMAP>/")
       return Name;
     // Some libraries (e.g., arm64rt.lib) from the Windows WDK
     // (version 10.0.22000.0) contain this undocumented special member.
-    if (Name.equals("/<ECSYMBOLS>/"))
+    if (Name == "/<ECSYMBOLS>/")
       return Name;
     // It's a long name.
     // Get the string table offset.
@@ -308,7 +307,7 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       if (End == StringRef::npos || End < 1 ||
           Parent->getStringTable()[End - 1] != '/') {
         return malformedError("string table at long name offset " +
-                              Twine(StringOffset) + "not terminated");
+                              Twine(StringOffset) + " not terminated");
       }
       return Parent->getStringTable().slice(StringOffset, End - 1);
     }
@@ -474,9 +473,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
   }
 
   Header = Parent->createArchiveMemberHeader(
-      Start,
-      Parent ? Parent->getData().size() - (Start - Parent->getData().data())
-             : 0,
+      Start, Parent->getData().size() - (Start - Parent->getData().data()),
       Err);
 
   // If we are pointed to real data, Start is not a nullptr, then there must be
@@ -567,7 +564,7 @@ Expected<std::string> Archive::Child::getFullName() const {
   SmallString<128> FullName = sys::path::parent_path(
       Parent->getMemoryBufferRef().getBufferIdentifier());
   sys::path::append(FullName, Name);
-  return std::string(FullName.str());
+  return std::string(FullName);
 }
 
 Expected<StringRef> Archive::Child::getBuffer() const {
@@ -585,7 +582,8 @@ Expected<StringRef> Archive::Child::getBuffer() const {
   if (!FullNameOrErr)
     return FullNameOrErr.takeError();
   const std::string &FullName = *FullNameOrErr;
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(FullName);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+      MemoryBuffer::getFile(FullName, false, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = Buf.getError())
     return errorCodeToError(EC);
   Parent->ThinBuffers.push_back(std::move(*Buf));
@@ -708,7 +706,7 @@ void Archive::setFirstRegular(const Child &C) {
 
 Archive::Archive(MemoryBufferRef Source, Error &Err)
     : Binary(Binary::ID_Archive, Source) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   StringRef Buffer = Data.getBuffer();
   // Check for sufficient magic.
   if (Buffer.starts_with(ThinArchiveMagic)) {
@@ -969,12 +967,19 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   Err = Error::success();
 }
 
-object::Archive::Kind Archive::getDefaultKindForHost() {
-  Triple HostTriple(sys::getProcessTriple());
-  return HostTriple.isOSDarwin()
-             ? object::Archive::K_DARWIN
-             : (HostTriple.isOSAIX() ? object::Archive::K_AIXBIG
-                                     : object::Archive::K_GNU);
+object::Archive::Kind Archive::getDefaultKindForTriple(const Triple &T) {
+  if (T.isOSDarwin())
+    return object::Archive::K_DARWIN;
+  if (T.isOSAIX())
+    return object::Archive::K_AIXBIG;
+  if (T.isOSWindows())
+    return object::Archive::K_COFF;
+  return object::Archive::K_GNU;
+}
+
+object::Archive::Kind Archive::getDefaultKind() {
+  Triple HostTriple(sys::getDefaultTargetTriple());
+  return getDefaultKindForTriple(HostTriple);
 }
 
 Archive::child_iterator Archive::child_begin(Error &Err,

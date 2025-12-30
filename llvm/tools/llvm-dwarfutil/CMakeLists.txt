@@ -7,10 +7,11 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   CodeGenTypes
-  DWARFLinkerBase
   DWARFLinker
+  DWARFLinkerClassic
   DWARFLinkerParallel
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
   ObjCopy
   Object

@@ -39,22 +39,28 @@ define <vscale x 16 x i32> @foo(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, 
 ; CHECK-NEXT:    mv s1, sp
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    addi t0, s1, 64
-; CHECK-NEXT:    vs8r.v v8, (t0)
 ; CHECK-NEXT:    csrr t1, vlenb
 ; CHECK-NEXT:    slli t1, t1, 3
 ; CHECK-NEXT:    add t1, s1, t1
 ; CHECK-NEXT:    addi t1, t1, 64
+; CHECK-NEXT:    vs8r.v v8, (t0)
 ; CHECK-NEXT:    vs8r.v v8, (t1)
-; CHECK-NEXT:    sd t0, 8(sp)
 ; CHECK-NEXT:    sd t1, 0(sp)
+; CHECK-NEXT:    sd t0, 8(sp)
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    addi sp, s0, -96
+; CHECK-NEXT:    .cfi_def_cfa sp, 96
 ; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 80(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore s1
 ; CHECK-NEXT:    addi sp, sp, 96
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %ret = call <vscale x 16 x i32> @bar(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, <vscale x 16 x i32> %x, <vscale x 16 x i32> %x, <vscale x 16 x i32> %x, <vscale x 16 x i32> %x)
   ret <vscale x 16 x i32> %ret

@@ -1,5 +1,4 @@
 ! RUN: not %flang -fsyntax-only -fopenmp %s 2>&1 | FileCheck %s
-! REQUIRES: shell
 ! OpenMP Version 4.5
 ! Check invalid branches into or out of OpenMP structured blocks.
 
@@ -105,4 +104,12 @@ program omp_invalid_branch
   !$omp end parallel
   9 print *, "2nd alternate return"
 
+  !CHECK: invalid branch into an OpenMP structured block
+  goto 100
+  !$omp scope
+    100 continue
+    !CHECK: invalid branch leaving an OpenMP structured block
+    goto 200
+  !$omp end scope
+  200 continue
 end program

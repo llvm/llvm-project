@@ -30,7 +30,7 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), *callable);
     } else {
-      context.messages().Say(
+      context.Warn(common::UsageWarning::FoldingFailure,
           "%s(complex(kind=%d)) cannot be folded on host"_warn_en_US, name,
           KIND);
     }
@@ -82,12 +82,21 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldOperation(
   if (auto array{ApplyElementwise(context, x)}) {
     return *array;
   }
-  using Result = Type<TypeCategory::Complex, KIND>;
+  using ComplexType = Type<TypeCategory::Complex, KIND>;
   if (auto folded{OperandsAreConstants(x)}) {
-    return Expr<Result>{
-        Constant<Result>{Scalar<Result>{folded->first, folded->second}}};
+    using RealType = typename ComplexType::Part;
+    Constant<ComplexType> result{
+        Scalar<ComplexType>{folded->first, folded->second}};
+    if (const auto *re{UnwrapConstantValue<RealType>(x.left())};
+        re && re->result().isFromInexactLiteralConversion()) {
+      result.result().set_isFromInexactLiteralConversion();
+    } else if (const auto *im{UnwrapConstantValue<RealType>(x.right())};
+        im && im->result().isFromInexactLiteralConversion()) {
+      result.result().set_isFromInexactLiteralConversion();
+    }
+    return Expr<ComplexType>{std::move(result)};
   }
-  return Expr<Result>{std::move(x)};
+  return Expr<ComplexType>{std::move(x)};
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions

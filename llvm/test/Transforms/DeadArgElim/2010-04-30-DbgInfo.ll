@@ -8,12 +8,21 @@
 
 define ptr @vfs_addname(ptr %name, i32 %len, i32 %hash, i32 %flags) nounwind ssp !dbg !1 {
 ;
+; CHECK-LABEL: define {{[^@]+}}@vfs_addname
+; CHECK-SAME: (ptr [[NAME:%.*]], i32 [[LEN:%.*]], i32 [[HASH:%.*]], i32 [[FLAGS:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:      #dbg_value(ptr [[NAME]], [[META11:![0-9]+]], !DIExpression(), [[META12:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 [[LEN]], [[META13:![0-9]+]], !DIExpression(), [[META12]])
+; CHECK-NEXT:      #dbg_value(i32 [[HASH]], [[META14:![0-9]+]], !DIExpression(), [[META12]])
+; CHECK-NEXT:      #dbg_value(i32 [[FLAGS]], [[META15:![0-9]+]], !DIExpression(), [[META12]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fastcc ptr @add_name_internal(ptr [[NAME]], i32 [[HASH]]) #[[ATTR2:[0-9]+]], !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:    ret ptr [[TMP0]], !dbg [[DBG16]]
+;
 entry:
   call void @llvm.dbg.value(metadata ptr %name, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   call void @llvm.dbg.value(metadata i32 %len, metadata !10, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   call void @llvm.dbg.value(metadata i32 %hash, metadata !11, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   call void @llvm.dbg.value(metadata i32 %flags, metadata !12, metadata !DIExpression()), !dbg !DILocation(scope: !1)
-; CHECK:  call fastcc ptr @add_name_internal(ptr %name, i32 %hash) [[NUW:#[0-9]+]], !dbg !{{[0-9]+}}
   %0 = call fastcc ptr @add_name_internal(ptr %name, i32 %len, i32 %hash, i8 zeroext 0, i32 %flags) nounwind, !dbg !13 ; <ptr> [#uses=1]
   ret ptr %0, !dbg !13
 }
@@ -21,6 +30,24 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 define internal fastcc ptr @add_name_internal(ptr %name, i32 %len, i32 %hash, i8 zeroext %extra, i32 %flags) noinline nounwind ssp !dbg !16 {
+;
+; CHECK-LABEL: define {{[^@]+}}@add_name_internal
+; CHECK-SAME: (ptr [[NAME:%.*]], i32 [[HASH:%.*]]) #[[ATTR1:[0-9]+]] !dbg [[DBG18:![0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:      #dbg_value(ptr [[NAME]], [[META22:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 poison, [[META24:![0-9]+]], !DIExpression(), [[META23]])
+; CHECK-NEXT:      #dbg_value(i32 [[HASH]], [[META25:![0-9]+]], !DIExpression(), [[META23]])
+; CHECK-NEXT:      #dbg_value(i8 poison, [[META26:![0-9]+]], !DIExpression(), [[META23]])
+; CHECK-NEXT:      #dbg_value(i32 poison, [[META27:![0-9]+]], !DIExpression(), [[META23]])
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[HASH]], 0, !dbg [[DBG28:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[BB:%.*]], label [[BB1:%.*]], !dbg [[DBG28]]
+; CHECK:       bb:
+; CHECK-NEXT:    br label [[BB2:%.*]], !dbg [[DBG30:![0-9]+]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB2]], !dbg [[DBG31:![0-9]+]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi ptr [ @.str, [[BB]] ], [ [[NAME]], [[BB1]] ]
+; CHECK-NEXT:    ret ptr [[DOT0]], !dbg [[DBG31]]
 ;
 entry:
   call void @llvm.dbg.value(metadata ptr %name, metadata !15, metadata !DIExpression()), !dbg !DILocation(scope: !16)
@@ -45,9 +72,7 @@ bb2:                                              ; preds = %bb1, %bb
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { nounwind ssp }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #2 = { noinline nounwind ssp }
-; CHECK: attributes [[NUW]] = { nounwind }
+; CHECK: attributes #1 = { noinline nounwind ssp }
 
 !llvm.dbg.cu = !{!3}
 !llvm.module.flags = !{!30}
@@ -68,9 +93,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 !14 = distinct !DILexicalBlock(line: 12, column: 0, file: !28, scope: !1)
 !15 = !DILocalVariable(name: "name", line: 17, arg: 1, scope: !16, file: !2, type: !6)
 ; CHECK: !DISubprogram(name: "add_name_internal"
-; CHECK-SAME: type: ![[MD:[0-9]+]]
 !16 = distinct !DISubprogram(name: "add_name_internal", linkageName: "add_name_internal", line: 22, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, file: !28, scope: !2, type: !17)
-; CHECK: ![[MD]] = !DISubroutineType(cc: DW_CC_nocall, types: !{{[0-9]+}})
 !17 = !DISubroutineType(types: !18)
 !18 = !{!6, !6, !9, !9, !19, !9}
 !19 = !DIBasicType(tag: DW_TAG_base_type, name: "unsigned char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)

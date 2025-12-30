@@ -994,7 +994,7 @@ to_chars_result _Floating_to_chars(
     if constexpr (_Overload == _Floating_to_chars_overload::_Plain) {
         _LIBCPP_ASSERT_INTERNAL(_Fmt == chars_format{}, ""); // plain overload must pass chars_format{} internally
     } else {
-        _LIBCPP_ASSERT_UNCATEGORIZED(_Fmt == chars_format::general || _Fmt == chars_format::scientific
+        _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(_Fmt == chars_format::general || _Fmt == chars_format::scientific
                          || _Fmt == chars_format::fixed || _Fmt == chars_format::hex,
             "invalid format in to_chars()");
     }

@@ -228,7 +228,8 @@ public:
   ExternalSource(ASTContext &ChildASTCtxt, FileManager &ChildFM,
                  ASTContext &ParentASTCtxt, FileManager &ParentFM);
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      const DeclContext *OriginalDC) override;
   void
   completeVisibleDeclsMap(const clang::DeclContext *childDeclContext) override;
 };
@@ -237,11 +238,9 @@ public:
 // compiler instance before the super `ExecuteAction` triggers parsing
 void IncrementalSyntaxOnlyAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  ExternalSource *myExternalSource =
-      new ExternalSource(CI.getASTContext(), CI.getFileManager(),
-                         ParentCI->getASTContext(), ParentCI->getFileManager());
-  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> astContextExternalSource(
-      myExternalSource);
+  auto astContextExternalSource = llvm::makeIntrusiveRefCnt<ExternalSource>(
+      CI.getASTContext(), CI.getFileManager(), ParentCI->getASTContext(),
+      ParentCI->getFileManager());
   CI.getASTContext().setExternalSource(astContextExternalSource);
   CI.getASTContext().getTranslationUnitDecl()->setHasExternalVisibleStorage(
       true);
@@ -270,8 +269,9 @@ ExternalSource::ExternalSource(ASTContext &ChildASTCtxt, FileManager &ChildFM,
   Importer.reset(importer);
 }
 
-bool ExternalSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                    DeclarationName Name) {
+bool ExternalSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
 
   IdentifierTable &ParentIdTable = ParentASTCtxt.Idents;
 
@@ -357,19 +357,17 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
                                      unsigned Col,
                                      const CompilerInstance *ParentCI,
                                      std::vector<std::string> &CCResults) {
-  auto DiagOpts = DiagnosticOptions();
   auto consumer = ReplCompletionConsumer(CCResults, *this);
 
   auto diag = InterpCI->getDiagnosticsPtr();
   std::unique_ptr<ASTUnit> AU(ASTUnit::LoadFromCompilerInvocationAction(
       InterpCI->getInvocationPtr(), std::make_shared<PCHContainerOperations>(),
-      diag));
+      nullptr, diag));
   llvm::SmallVector<clang::StoredDiagnostic, 8> sd = {};
   llvm::SmallVector<const llvm::MemoryBuffer *, 1> tb = {};
   InterpCI->getFrontendOpts().Inputs[0] = FrontendInputFile(
       CodeCompletionFileName, Language::CXX, InputKind::Source);
-  auto Act = std::unique_ptr<IncrementalSyntaxOnlyAction>(
-      new IncrementalSyntaxOnlyAction(ParentCI));
+  auto Act = std::make_unique<IncrementalSyntaxOnlyAction>(ParentCI);
   std::unique_ptr<llvm::MemoryBuffer> MB =
       llvm::MemoryBuffer::getMemBufferCopy(Content, CodeCompletionFileName);
   llvm::SmallVector<ASTUnit::RemappedFile, 4> RemappedFiles;
@@ -380,9 +378,9 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
   AU->setOwnsRemappedFileBuffers(false);
   AU->CodeComplete(CodeCompletionFileName, 1, Col, RemappedFiles, false, false,
                    false, consumer,
-                   std::make_shared<clang::PCHContainerOperations>(), *diag,
-                   InterpCI->getLangOpts(), InterpCI->getSourceManager(),
-                   InterpCI->getFileManager(), sd, tb, std::move(Act));
+                   std::make_shared<clang::PCHContainerOperations>(), diag,
+                   InterpCI->getLangOpts(), AU->getSourceManagerPtr(),
+                   AU->getFileManagerPtr(), sd, tb, std::move(Act));
 }
 
 } // namespace clang

@@ -47,7 +47,7 @@ define void @g(ptr %p, i1 %c) {
 ; CHECK-NEXT:    br label [[D]]
 ; CHECK:       d:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i8> [ <i8 1, i8 -1>, [[A]] ], [ <i8 -1, i8 1>, [[B]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], splat (i8 1)
 ; CHECK-NEXT:    store <2 x i8> [[TMP2]], ptr [[P_0]], align 1
 ; CHECK-NEXT:    ret void
 ;

@@ -88,16 +88,16 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86
-// RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fsanitize=address \
-// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
-// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     -fuse-ld=ld 2>&1\
-// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-ASAN-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-NOEXCEPT-X86
+// RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fsanitize=address \
+// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=ld 2>&1\
+// RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-ASAN-X86
 // RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -fsanitize=address -fno-exceptions \
 // RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
@@ -131,8 +131,15 @@
 // RUN:     -fuse-ld=ld 2>&1\
 // RUN:     | FileCheck %s -check-prefixes=CHECK-MULTILIB-X86,CHECK-MULTILIB-COMPAT-X86
 // CHECK-MULTILIB-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-MULTILIB-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}asan"
+// CHECK-MULTILIB-NOEXCEPT-X86: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}noexcept{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-MULTILIB-ASAN-X86: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}asan{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-MULTILIB-ASAN-NOEXCEPT-X86: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}asan+noexcept{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-MULTILIB-HWASAN-X86: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}hwasan{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-MULTILIB-HWASAN-NOEXCEPT-X86: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}hwasan+noexcept{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-MULTILIB-COMPAT-X86: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}compat{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-MULTILIB-X86: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-MULTILIB-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}noexcept"
+// CHECK-MULTILIB-ASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}asan"
 // CHECK-MULTILIB-ASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}asan+noexcept"
 // CHECK-MULTILIB-HWASAN-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}hwasan"
 // CHECK-MULTILIB-HWASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}hwasan+noexcept"

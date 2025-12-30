@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes=loop-rotate -verify-memoryssa < %s | FileCheck %s
-; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' < %s | FileCheck %s
-; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' -verify-memoryssa  < %s | FileCheck %s
+; RUN: opt -S -passes='require<target-ir>,require<assumptions>,loop(loop-rotate)' < %s | FileCheck %s
+; RUN: opt -S -passes='require<target-ir>,require<assumptions>,loop(loop-rotate)' -verify-memoryssa  < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -146,11 +146,7 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: inaccessiblememonly nounwind
-declare void @llvm.experimental.noalias.scope.decl(metadata) #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { inaccessiblememonly nounwind }
-attributes #2 = { nounwind readnone speculatable }
+declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

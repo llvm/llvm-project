@@ -83,3 +83,21 @@ struct SubMove : SubSubMove {
   SubMove(SubSubMove &&);
 };
 TEST(SubMove);
+
+
+#if __cplusplus >= 202302L
+// clang used to crash compiling this code.
+namespace BlockInLambda {
+  struct S {
+    constexpr ~S();
+  };
+
+  void func(S const &a) {
+    [a](auto b) {
+      ^{
+        (void)a;
+      }();
+    }(12);
+  }
+}
+#endif

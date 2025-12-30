@@ -18,11 +18,22 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "BOLT"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
+# We prefer the lit internal shell which provides a better user experience on failures
+# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
+# env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -92,12 +103,25 @@ link_fdata_cmd = os.path.join(config.test_source_root, "link_fdata.py")
 
 tool_dirs = [config.llvm_tools_dir, config.test_source_root]
 
+llvm_bolt_args = []
+
+if config.libbolt_rt_instr:
+    llvm_bolt_args.append(f"--runtime-instrumentation-lib={config.libbolt_rt_instr}")
+
+if config.libbolt_rt_hugify:
+    llvm_bolt_args.append(f"--runtime-hugify-lib={config.libbolt_rt_hugify}")
+
 tools = [
     ToolSubst("llc", unresolved="fatal"),
     ToolSubst("llvm-dwarfdump", unresolved="fatal"),
-    ToolSubst("llvm-bolt", unresolved="fatal"),
+    ToolSubst(
+        "llvm-bolt",
+        unresolved="fatal",
+        extra_args=llvm_bolt_args,
+    ),
     ToolSubst("llvm-boltdiff", unresolved="fatal"),
     ToolSubst("llvm-bolt-heatmap", unresolved="fatal"),
+    ToolSubst("llvm-bolt-binary-analysis", unresolved="fatal"),
     ToolSubst("llvm-bat-dump", unresolved="fatal"),
     ToolSubst("perf2bolt", unresolved="fatal"),
     ToolSubst("yaml2obj", unresolved="fatal"),
@@ -114,6 +138,7 @@ tools = [
         unresolved="fatal",
         extra_args=[link_fdata_cmd],
     ),
+    ToolSubst("process-debug-line", unresolved="fatal"),
     ToolSubst("merge-fdata", unresolved="fatal"),
     ToolSubst("llvm-readobj", unresolved="fatal"),
     ToolSubst("llvm-dwp", unresolved="fatal"),

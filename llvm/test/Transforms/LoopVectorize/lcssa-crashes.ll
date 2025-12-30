@@ -3,22 +3,29 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-define void @test() {
+define void @test(i32 %tc, ptr %p) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    br label [[FOR_BODY_LR_PH_I_I_I:%.*]]
 ; CHECK:       for.body.lr.ph.i.i.i:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TC:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_END_I_I_I:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_I_I_I:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_LR_PH_I_I_I]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_LR_PH_I_I_I]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_I_I_I:%.*]]
 ; CHECK:       for.body.i.i.i:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC_I_I_I:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -26,10 +33,10 @@ define void @test() {
 ; CHECK:       for.inc.i.i.i:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], undef
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[TC]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end.i.i.i:
-; CHECK-NEXT:    [[LCSSA:%.*]] = phi ptr [ undef, [[FOR_INC_I_I_I]] ], [ undef, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi ptr [ [[P:%.*]], [[FOR_INC_I_I_I]] ], [ [[P]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    unreachable
 ;
   br label %for.body.lr.ph.i.i.i
@@ -44,11 +51,11 @@ for.body.i.i.i:
 for.inc.i.i.i:
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp ne i32 %lftr.wideiv, undef
+  %exitcond = icmp ne i32 %lftr.wideiv, %tc
   br i1 %exitcond, label %for.body.i.i.i, label %for.end.i.i.i
 
 for.end.i.i.i:
-  %lcssa = phi ptr [ undef, %for.inc.i.i.i ]
+  %lcssa = phi ptr [ %p, %for.inc.i.i.i ]
   unreachable
 }
 
@@ -56,7 +63,7 @@ for.end.i.i.i:
 define void @test2(ptr %x) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    indirectbr ptr [[X:%.*]], [label [[L0:%.*]], label %L1]
+; CHECK-NEXT:    indirectbr ptr [[X:%.*]], [label [[L0:%.*]], label [[L1:%.*]]]
 ; CHECK:       L0:
 ; CHECK-NEXT:    br label [[L0]]
 ; CHECK:       L1:
@@ -73,29 +80,59 @@ L1:
 }
 
 ; This loop has different uniform instructions before and after LCSSA.
-define void @test3() {
+define void @test3(ptr %p) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD41:%.*]] = add i32 undef, undef
+; CHECK-NEXT:    [[ADD41:%.*]] = add i32 3, 3
 ; CHECK-NEXT:    [[IDXPROM4736:%.*]] = zext i32 [[ADD41]] to i64
-; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
-; CHECK:       while.body:
-; CHECK-NEXT:    [[IDXPROM4738:%.*]] = phi i64 [ [[IDXPROM47:%.*]], [[WHILE_BODY]] ], [ [[IDXPROM4736]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[POS_337:%.*]] = phi i32 [ [[INC46:%.*]], [[WHILE_BODY]] ], [ [[ADD41]], [[ENTRY]] ]
-; CHECK-NEXT:    [[INC46]] = add i32 [[POS_337]], 1
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [1024 x i8], ptr undef, i64 0, i64 [[IDXPROM4738]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY1:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INC46:%.*]] = add i32 6, 1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 7, 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 8, 1
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 9, 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[INC46]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP6]], i32 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP7]], i32 3
+; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P:%.*]], i64 0, i64 6
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX48]], align 1
-; CHECK-NEXT:    [[AND43:%.*]] = and i32 [[INC46]], 3
-; CHECK-NEXT:    [[CMP44:%.*]] = icmp eq i32 [[AND43]], 0
-; CHECK-NEXT:    [[IDXPROM47]] = zext i32 [[INC46]] to i64
-; CHECK-NEXT:    br i1 [[CMP44]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3:%.*]]
+; CHECK:       pred.store.if1:
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P]], i64 0, i64 7
+; CHECK-NEXT:    store i8 0, ptr [[TMP15]], align 1
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
+; CHECK:       pred.store.continue2:
+; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
+; CHECK:       pred.store.if3:
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P]], i64 0, i64 8
+; CHECK-NEXT:    store i8 0, ptr [[TMP17]], align 1
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE5]]
+; CHECK:       pred.store.continue4:
+; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
+; CHECK:       pred.store.if5:
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P]], i64 0, i64 9
+; CHECK-NEXT:    store i8 0, ptr [[TMP19]], align 1
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE7]]
+; CHECK:       pred.store.continue6:
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> <i1 false, i1 false, i1 true, i1 true>, i1 false)
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-NEXT:    [[INC46_LCSSA:%.*]] = extractelement <4 x i32> [[TMP11]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label [[WHILE_END:%.*]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[INC46_LCSSA:%.*]] = phi i32 [ [[INC46]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[ADD58:%.*]] = add i32 [[INC46_LCSSA]], 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %add41 = add i32 undef, undef
+  %add41 = add i32 3, 3
   %idxprom4736 = zext i32 %add41 to i64
   br label %while.body
 
@@ -103,8 +140,8 @@ while.body:
   %idxprom4738 = phi i64 [ %idxprom47, %while.body ], [ %idxprom4736, %entry ]
   %pos.337 = phi i32 [ %inc46, %while.body ], [ %add41, %entry ]
   %inc46 = add i32 %pos.337, 1
-  %arrayidx48 = getelementptr inbounds [1024 x i8], ptr undef, i64 0, i64 %idxprom4738
-  store i8 0, i8* %arrayidx48, align 1
+  %arrayidx48 = getelementptr inbounds [1024 x i8], ptr %p, i64 0, i64 %idxprom4738
+  store i8 0, ptr %arrayidx48, align 1
   %and43 = and i32 %inc46, 3
   %cmp44 = icmp eq i32 %and43, 0
   %idxprom47 = zext i32 %inc46 to i64
@@ -119,7 +156,7 @@ while.end:
 define i32 @pr57508(ptr %src) {
 ; CHECK-LABEL: @pr57508(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -128,18 +165,16 @@ define i32 @pr57508(ptr %src) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 2000
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 2000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[LOCAL:%.*]] = phi i32 [ [[LOCAL_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 2000, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[LOCAL:%.*]] = phi i32 [ [[LOCAL_NEXT:%.*]], [[LOOP]] ], [ 2000, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[LOCAL_NEXT]] = add i32 [[LOCAL]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 2000
-; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb:

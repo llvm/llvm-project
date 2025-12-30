@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -std=c++20 \
-// RUN:    -fsyntax-only -ast-dump -ast-dump-filter test | FileCheck %s
+// RUN:    -ast-dump -ast-dump-filter test | FileCheck %s
 
 #include "Inputs/std-coroutine.h"
 
@@ -52,8 +52,7 @@ Task test()  {
 // CHECK-NEXT:       |-CXXMemberCallExpr  {{.*}} 'std::suspend_always'
 // CHECK-NEXT:       |   | `-MemberExpr {{.*}} .initial_suspend
 //                   ...
-// FIXME: the CoreturnStmt should be marked as implicit
-// CHECK: CoreturnStmt {{.*}} <col:6>{{$}}
+// CHECK: CoreturnStmt {{.*}} <col:6> implicit
 
 Task test2()  {
 // Writen souce code, verify no implicit bit for the co_return expr.
@@ -65,5 +64,4 @@ Task test2()  {
 // CHECK:        |-DeclStmt {{.*}}
 // CHECK-NEXT:   | `-VarDecl {{.*}} implicit used __promise
 //               ...
-// FIXME: the CoreturnStmt should be marked as implicit
-// CHECK: CoreturnStmt {{.*}} <col:6>{{$}}
+// CHECK: CoreturnStmt {{.*}} <col:6> implicit

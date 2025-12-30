@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
@@ -77,14 +77,6 @@ void assert_sign_symbol_none_value(std::money_base::pattern p)
     assert(p.field[1] == std::money_base::symbol);
     assert(p.field[2] == std::money_base::none);
     assert(p.field[3] == std::money_base::value);
-}
-
-void assert_value_none_symbol_sign(std::money_base::pattern p)
-{
-    assert(p.field[0] == std::money_base::value);
-    assert(p.field[1] == std::money_base::none);
-    assert(p.field[2] == std::money_base::symbol);
-    assert(p.field[3] == std::money_base::sign);
 }
 
 void assert_sign_value_none_symbol(std::money_base::pattern p)

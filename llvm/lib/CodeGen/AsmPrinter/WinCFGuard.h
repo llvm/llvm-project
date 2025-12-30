@@ -30,8 +30,6 @@ public:
   WinCFGuard(AsmPrinter *A);
   ~WinCFGuard() override;
 
-  void setSymbolSize(const MCSymbol *Sym, uint64_t Size) override {}
-
   /// Emit the Control Flow Guard function ID table.
   void endModule() override;
 
@@ -44,12 +42,6 @@ public:
   /// Please note that some AsmPrinter implementations may not call
   /// beginFunction at all.
   void endFunction(const MachineFunction *MF) override;
-
-  /// Process beginning of an instruction.
-  void beginInstruction(const MachineInstr *MI) override {}
-
-  /// Process end of an instruction.
-  void endInstruction() override {}
 };
 
 } // namespace llvm

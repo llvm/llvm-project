@@ -10,22 +10,25 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
+template <WriteMode write_mode>
+LIBC_INLINE int convert_string(Writer<write_mode> *writer,
+                               const FormatSection &to_conv) {
   size_t string_len = 0;
   const char *str_ptr = reinterpret_cast<const char *>(to_conv.conv_val_ptr);
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   if (str_ptr == nullptr) {
-    str_ptr = "null";
+    str_ptr = "(null)";
   }
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
@@ -58,6 +61,6 @@ LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H

@@ -27,6 +27,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
@@ -40,7 +41,7 @@ class ScopedReport {
  public:
   explicit ScopedReport(bool fatal) : fatal(fatal) {
     Lock lock(&error_message_lock_);
-    error_message_ptr_ = fatal ? &error_message_ : nullptr;
+    error_message_ptr_ = &error_message_;
     ++hwasan_report_count;
   }
 
@@ -213,67 +214,105 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       break;
     tag_t base_tag =
         reinterpret_cast<uptr>(record_addr) >> kRecordAddrBaseTagShift;
-    uptr fp = (record >> kRecordFPShift) << kRecordFPLShift;
+    const uptr fp = (record >> kRecordFPShift) << kRecordFPLShift;
+    CHECK_LT(fp, kRecordFPModulus);
     uptr pc_mask = (1ULL << kRecordFPShift) - 1;
     uptr pc = record & pc_mask;
     FrameInfo frame;
-    if (Symbolizer::GetOrInit()->SymbolizeFrame(pc, &frame)) {
-      for (LocalInfo &local : frame.locals) {
-        if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
-          continue;
-        if (!(local.name && internal_strlen(local.name)) &&
-            !(local.function_name && internal_strlen(local.name)) &&
-            !(local.decl_file && internal_strlen(local.decl_file)))
-          continue;
-        tag_t obj_tag = base_tag ^ local.tag_offset;
-        if (obj_tag != addr_tag)
-          continue;
-        // Guess top bits of local variable from the faulting address, because
-        // we only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
-        uptr local_beg = (fp + local.frame_offset) |
-                         (untagged_addr & ~(uptr(kRecordFPModulus) - 1));
+    if (!Symbolizer::GetOrInit()->SymbolizeFrame(pc, &frame))
+      continue;
+    for (LocalInfo &local : frame.locals) {
+      if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
+        continue;
+      if (!(local.name && internal_strlen(local.name)) &&
+          !(local.function_name && internal_strlen(local.function_name)) &&
+          !(local.decl_file && internal_strlen(local.decl_file)))
+        continue;
+      tag_t obj_tag = base_tag ^ local.tag_offset;
+      if (obj_tag != addr_tag)
+        continue;
+
+      // We only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
+      // So we know only `FP % kRecordFPModulus`, and we can only calculate
+      // `local_beg % kRecordFPModulus`.
+      // Out of all possible `local_beg` we will only consider 2 candidates
+      // nearest to the `untagged_addr`.
+      uptr local_beg_mod = (fp + local.frame_offset) % kRecordFPModulus;
+      // Pick `local_beg` in the same 1 MiB block as `untagged_addr`.
+      uptr local_beg =
+          RoundDownTo(untagged_addr, kRecordFPModulus) + local_beg_mod;
+      // Pick the largest `local_beg <= untagged_addr`. It's either the current
+      // one or the one before.
+      if (local_beg > untagged_addr)
+        local_beg -= kRecordFPModulus;
+
+      uptr offset = -1ull;
+      const char *whence;
+      const char *cause = nullptr;
+      uptr best_beg;
+
+      // Try two 1 MiB blocks options and pick nearest one.
+      for (uptr i = 0; i < 2; ++i, local_beg += kRecordFPModulus) {
         uptr local_end = local_beg + local.size;
-
-        if (!found_local) {
-          Printf("\nPotentially referenced stack objects:\n");
-          found_local = true;
-        }
-
-        uptr offset;
-        const char *whence;
-        const char *cause;
+        if (local_beg > local_end)
+          continue;  // This is a wraparound.
         if (local_beg <= untagged_addr && untagged_addr < local_end) {
           offset = untagged_addr - local_beg;
           whence = "inside";
           cause = "use-after-scope";
-        } else if (untagged_addr >= local_end) {
-          offset = untagged_addr - local_end;
-          whence = "after";
-          cause = "stack-buffer-overflow";
-        } else {
-          offset = local_beg - untagged_addr;
-          whence = "before";
-          cause = "stack-buffer-overflow";
+          best_beg = local_beg;
+          break;  // This is as close at it can be.
         }
-        Decorator d;
-        Printf("%s", d.Error());
-        Printf("Cause: %s\n", cause);
-        Printf("%s", d.Default());
-        Printf("%s", d.Location());
-        StackTracePrinter::GetOrInit()->RenderSourceLocation(
-            &location, local.decl_file, local.decl_line, /* column= */ 0,
-            common_flags()->symbolize_vs_style,
-            common_flags()->strip_path_prefix);
-        Printf(
-            "%p is located %zd bytes %s a %zd-byte local variable %s [%p,%p) "
-            "in %s %s\n",
-            untagged_addr, offset, whence, local_end - local_beg, local.name,
-            local_beg, local_end, local.function_name, location.data());
-        location.clear();
-        Printf("%s\n", d.Default());
+
+        if (untagged_addr >= local_end) {
+          uptr new_offset = untagged_addr - local_end;
+          if (new_offset < offset) {
+            offset = new_offset;
+            whence = "after";
+            cause = "stack-buffer-overflow";
+            best_beg = local_beg;
+          }
+        } else {
+          uptr new_offset = local_beg - untagged_addr;
+          if (new_offset < offset) {
+            offset = new_offset;
+            whence = "before";
+            cause = "stack-buffer-overflow";
+            best_beg = local_beg;
+          }
+        }
       }
-      frame.Clear();
+
+      // To fail the `untagged_addr` must be near nullptr, which is impossible
+      // with Linux user space memory layout.
+      if (!cause)
+        continue;
+
+      if (!found_local) {
+        Printf("\nPotentially referenced stack objects:\n");
+        found_local = true;
+      }
+
+      Decorator d;
+      Printf("%s", d.Error());
+      Printf("Cause: %s\n", cause);
+      Printf("%s", d.Default());
+      Printf("%s", d.Location());
+      StackTracePrinter::GetOrInit()->RenderSourceLocation(
+          &location, local.decl_file, local.decl_line, /* column= */ 0,
+          common_flags()->symbolize_vs_style,
+          common_flags()->strip_path_prefix);
+      Printf(
+          "%p is located %zd bytes %s a %zd-byte local variable %s "
+          "[%p,%p) "
+          "in %s %s\n",
+          (void *)untagged_addr, offset, whence, local.size, local.name,
+          (void *)best_beg, (void *)(best_beg + local.size),
+          local.function_name, location.data());
+      location.clear();
+      Printf("%s\n", d.Default());
     }
+    frame.Clear();
   }
 
   if (found_local)
@@ -290,8 +329,8 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       break;
     uptr pc_mask = (1ULL << 48) - 1;
     uptr pc = record & pc_mask;
-    frame_desc.AppendF("  record_addr:0x%zx record:0x%zx",
-                       reinterpret_cast<uptr>(record_addr), record);
+    frame_desc.AppendF("  record_addr:%p record:0x%zx",
+                       reinterpret_cast<const void *>(record_addr), record);
     SymbolizedStackHolder symbolized_stack(
         Symbolizer::GetOrInit()->SymbolizePC(pc));
     const SymbolizedStack *frame = symbolized_stack.get();
@@ -388,7 +427,7 @@ static void PrintTagInfoAroundAddr(uptr addr, uptr num_rows,
       print_tag(s, row + i);
       s.Append(row + i == addr ? "]" : " ");
     }
-    s.AppendF("\n");
+    s.Append("\n");
   }
 }
 
@@ -418,10 +457,10 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
                              tag_t short_tag = get_short_tag(tag_addr);
                              s.AppendF("%02x", short_tag);
                            } else {
-                             s.AppendF("..");
+                             s.Append("..");
                            }
                          });
-  s.AppendF(
+  s.Append(
       "See "
       "https://clang.llvm.org/docs/"
       "HardwareAssistedAddressSanitizerDesign.html#short-granules for a "
@@ -699,9 +738,9 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
     Printf("%s", d.Default());
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
-           untagged_addr, offset, whence,
-           candidate.heap.end - candidate.heap.begin, candidate.heap.begin,
-           candidate.heap.end);
+           (void*)untagged_addr, offset, whence,
+           candidate.heap.end - candidate.heap.begin,
+           (void*)candidate.heap.begin, (void*)candidate.heap.end);
     Printf("%s", d.Allocation());
     Printf("allocated by thread T%u here:\n", candidate.heap.thread_id);
     Printf("%s", d.Default());
@@ -724,11 +763,11 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
       Printf(
           "%p is located %zd bytes %s a %zd-byte global variable "
           "%s [%p,%p) in %s\n",
-          untagged_addr,
+          (void *)untagged_addr,
           candidate.after ? untagged_addr - (info.start + info.size)
                           : info.start - untagged_addr,
           candidate.after ? "after" : "before", info.size, info.name,
-          info.start, info.start + info.size, module_name);
+          (void *)info.start, (void *)(info.start + info.size), module_name);
     } else {
       uptr size = GetGlobalSizeFromDescriptor(candidate.untagged_addr);
       if (size == 0)
@@ -736,14 +775,14 @@ void BaseReport::PrintHeapOrGlobalCandidate() const {
         Printf(
             "%p is located %s a global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            untagged_addr, candidate.after ? "after" : "before",
-            candidate.untagged_addr, module_name, module_address);
+            (void*)untagged_addr, candidate.after ? "after" : "before",
+            (u32)candidate.untagged_addr, module_name, (u32)module_address);
       else
         Printf(
             "%p is located %s a %zd-byte global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            untagged_addr, candidate.after ? "after" : "before", size,
-            candidate.untagged_addr, module_name, module_address);
+            (void*)untagged_addr, candidate.after ? "after" : "before", size,
+            (u32)candidate.untagged_addr, module_name, (u32)module_address);
     }
     Printf("%s", d.Default());
   }
@@ -754,8 +793,8 @@ void BaseReport::PrintAddressDescription() const {
   int num_descriptions_printed = 0;
 
   if (MemIsShadow(untagged_addr)) {
-    Printf("%s%p is HWAsan shadow memory.\n%s", d.Location(), untagged_addr,
-           d.Default());
+    Printf("%s%p is HWAsan shadow memory.\n%s", d.Location(),
+           (void *)untagged_addr, d.Default());
     return;
   }
 
@@ -764,7 +803,7 @@ void BaseReport::PrintAddressDescription() const {
     Printf(
         "%s[%p,%p) is a %s %s heap chunk; "
         "size: %zd offset: %zd\n%s",
-        d.Location(), heap.begin, heap.begin + heap.size,
+        d.Location(), (void *)heap.begin, (void *)(heap.begin + heap.size),
         heap.from_small_heap ? "small" : "large",
         heap.is_allocated ? "allocated" : "unallocated", heap.size,
         untagged_addr - heap.begin, d.Default());
@@ -783,8 +822,8 @@ void BaseReport::PrintAddressDescription() const {
     Printf("%s", d.Error());
     Printf("\nCause: stack tag-mismatch\n");
     Printf("%s", d.Location());
-    Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
-           sa.thread_id());
+    Printf("Address %p is located in stack of thread T%zd\n",
+           (void *)untagged_addr, (ssize)sa.thread_id());
     Printf("%s", d.Default());
     announce_by_id(sa.thread_id());
     PrintStackAllocations(sa.get(), ptr_tag, untagged_addr);
@@ -804,9 +843,9 @@ void BaseReport::PrintAddressDescription() const {
     Printf("\nCause: use-after-free\n");
     Printf("%s", d.Location());
     Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
-           untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
-           har.requested_size, UntagAddr(har.tagged_addr),
-           UntagAddr(har.tagged_addr) + har.requested_size);
+           (void*)untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
+           (ssize)har.requested_size, (void*)UntagAddr(har.tagged_addr),
+           (void*)(UntagAddr(har.tagged_addr) + har.requested_size));
     Printf("%s", d.Allocation());
     Printf("freed by thread T%u here:\n", ha.free_thread_id);
     Printf("%s", d.Default());
@@ -820,7 +859,7 @@ void BaseReport::PrintAddressDescription() const {
     // Print a developer note: the index of this heap object
     // in the thread's deallocation ring buffer.
     Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", ha.ring_index + 1,
-           flags()->heap_history_size);
+           (ssize)flags()->heap_history_size);
     Printf("hwasan_dev_note_num_matching_addrs: %zd\n", ha.num_matching_addrs);
     Printf("hwasan_dev_note_num_matching_addrs_4b: %zd\n",
            ha.num_matching_addrs_4b);
@@ -877,10 +916,11 @@ InvalidFreeReport::~InvalidFreeReport() {
   const Thread *thread = GetCurrentThread();
   if (thread) {
     Report("ERROR: %s: %s on address %p at pc %p on thread T%zd\n",
-           SanitizerToolName, bug_type, untagged_addr, pc, thread->unique_id());
+           SanitizerToolName, bug_type, (void *)untagged_addr, (void *)pc,
+           (ssize)thread->unique_id());
   } else {
     Report("ERROR: %s: %s on address %p at pc %p on unknown thread\n",
-           SanitizerToolName, bug_type, untagged_addr, pc);
+           SanitizerToolName, bug_type, (void *)untagged_addr, (void *)pc);
   }
   Printf("%s", d.Access());
   if (shadow.addr) {
@@ -929,7 +969,8 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   Printf("%s", d.Error());
   const char *bug_type = "allocation-tail-overwritten";
   Report("ERROR: %s: %s; heap object [%p,%p) of size %zd\n", SanitizerToolName,
-         bug_type, untagged_addr, untagged_addr + orig_size, orig_size);
+         bug_type, (void *)untagged_addr, (void *)(untagged_addr + orig_size),
+         orig_size);
   Printf("\n%s", d.Default());
   Printf(
       "Stack of invalid access unknown. Issue detected at deallocation "
@@ -947,16 +988,16 @@ TailOverwrittenReport::~TailOverwrittenReport() {
 
   InternalScopedString s;
   u8 *tail = tail_copy;
-  s.AppendF("Tail contains: ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF(".. ");
+  s.Append("Tail contains: ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.Append(".. ");
   for (uptr i = 0; i < tail_size; i++) s.AppendF("%02x ", tail[i]);
-  s.AppendF("\n");
-  s.AppendF("Expected:      ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF(".. ");
+  s.Append("\n");
+  s.Append("Expected:      ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.Append(".. ");
   for (uptr i = 0; i < tail_size; i++) s.AppendF("%02x ", actual_expected[i]);
-  s.AppendF("\n");
-  s.AppendF("               ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF("   ");
+  s.Append("\n");
+  s.Append("               ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.Append("   ");
   for (uptr i = 0; i < tail_size; i++)
     s.AppendF("%s ", actual_expected[i] != tail[i] ? "^^" : "  ");
 
@@ -999,7 +1040,7 @@ TagMismatchReport::~TagMismatchReport() {
   uptr pc = GetTopPc(stack);
   Printf("%s", d.Error());
   Report("ERROR: %s: %s on address %p at pc %p\n", SanitizerToolName, bug_type,
-         untagged_addr, pc);
+         (void *)untagged_addr, (void *)pc);
 
   Thread *t = GetCurrentThread();
 
@@ -1011,12 +1052,12 @@ TagMismatchReport::~TagMismatchReport() {
         GetShortTagCopy(MemToShadow(untagged_addr + mismatch_offset));
     Printf(
         "%s of size %zu at %p tags: %02x/%02x(%02x) (ptr/mem) in thread T%zd\n",
-        is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
-        mem_tag, short_tag, t->unique_id());
+        is_store ? "WRITE" : "READ", access_size, (void *)untagged_addr,
+        ptr_tag, mem_tag, short_tag, (ssize)t->unique_id());
   } else {
     Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem) in thread T%zd\n",
-           is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
-           mem_tag, t->unique_id());
+           is_store ? "WRITE" : "READ", access_size, (void *)untagged_addr,
+           ptr_tag, mem_tag, (ssize)t->unique_id());
   }
   if (mismatch_offset)
     Printf("Invalid access starting at offset %zu\n", mismatch_offset);
@@ -1055,7 +1096,7 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
 // hwasan_tag_mismatch_{aarch64,riscv64}.S).
 void ReportRegisters(const uptr *frame, uptr pc) {
-  Printf("\nRegisters where the failure occurred (pc %p):\n", pc);
+  Printf("\nRegisters where the failure occurred (pc %p):\n", (void *)pc);
 
   // We explicitly print a single line (4 registers/line) each iteration to
   // reduce the amount of logcat error messages printed. Each Printf() will

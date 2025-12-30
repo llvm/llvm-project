@@ -68,22 +68,27 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: combine_previous
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r1
-  ; CHECK: bb.1 (align 4):
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $r0
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
-  ; CHECK:   renamable $q0 = MVE_VORR renamable $q1, renamable $q1, 0, $noreg, $noreg, killed renamable $q0
-  ; CHECK:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr
-  ; CHECK:   renamable $q0 = MVE_VORR killed renamable $q1, killed renamable $q1, 1, killed renamable $vpr, $noreg, killed renamable $q0
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
-  ; CHECK: bb.2:
-  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.3 (align 4):
-  ; CHECK:   CONSTPOOL_ENTRY 0, %const.0, 4
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (align 4):
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
+  ; CHECK-NEXT:   renamable $q0 = MVE_VORR renamable $q1, renamable $q1, 0, $noreg, $noreg, killed renamable $q0
+  ; CHECK-NEXT:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr
+  ; CHECK-NEXT:   renamable $q0 = MVE_VORR killed renamable $q1, killed renamable $q1, 1, killed renamable $vpr, $noreg, killed renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (align 4):
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 0, %const.0, 4
   bb.0:
     successors: %bb.6(0x80000000)
     liveins: $r0, $r1, $r2
@@ -156,24 +161,29 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: combine_middle
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $q2, $r0, $r1
-  ; CHECK:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r1
-  ; CHECK: bb.1 (align 4):
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $q2, $r0
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
-  ; CHECK:   renamable $q2 = MVE_VORR renamable $q1, renamable $q1, 0, $noreg, $noreg, killed renamable $q2
-  ; CHECK:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr
-  ; CHECK:   renamable $q2 = MVE_VORR renamable $q1, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q2
-  ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   dead renamable $q1 = MVE_VORR killed renamable $q1, renamable $q0, 1, killed renamable $vpr, $noreg, killed renamable $q1
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
-  ; CHECK: bb.2:
-  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.3 (align 4):
-  ; CHECK:   CONSTPOOL_ENTRY 0, %const.0, 4
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $q2, $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (align 4):
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $q2, $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
+  ; CHECK-NEXT:   renamable $q2 = MVE_VORR renamable $q1, renamable $q1, 0, $noreg, $noreg, killed renamable $q2
+  ; CHECK-NEXT:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr
+  ; CHECK-NEXT:   renamable $q2 = MVE_VORR renamable $q1, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q2
+  ; CHECK-NEXT:   MVE_VPST 8, implicit $vpr
+  ; CHECK-NEXT:   dead renamable $q1 = MVE_VORR killed renamable $q1, renamable $q0, 1, killed renamable $vpr, $noreg, killed renamable $q1
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (align 4):
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 0, %const.0, 4
   bb.0:
     successors: %bb.6(0x80000000)
     liveins: $r0, $r1, $r2
@@ -247,23 +257,28 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: combine_last
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $q2, $r0, $r1
-  ; CHECK:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r1
-  ; CHECK: bb.1 (align 4):
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $q2, $r0
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
-  ; CHECK:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr
-  ; CHECK:   renamable $q2 = MVE_VORR renamable $q1, renamable $q1, 1, killed renamable $vpr, $noreg, killed renamable $q2
-  ; CHECK:   MVE_VPTv4f32 8, renamable $q2, renamable $q1, 12, implicit-def $vpr
-  ; CHECK:   dead renamable $q1 = MVE_VORR killed renamable $q1, renamable $q0, 1, killed renamable $vpr, $noreg, killed renamable $q1
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
-  ; CHECK: bb.2:
-  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.3 (align 4):
-  ; CHECK:   CONSTPOOL_ENTRY 0, %const.0, 4
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $q2, $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (align 4):
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $q2, $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
+  ; CHECK-NEXT:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr
+  ; CHECK-NEXT:   renamable $q2 = MVE_VORR renamable $q1, renamable $q1, 1, killed renamable $vpr, $noreg, killed renamable $q2
+  ; CHECK-NEXT:   MVE_VPTv4f32 8, renamable $q2, renamable $q1, 12, implicit-def $vpr
+  ; CHECK-NEXT:   dead renamable $q1 = MVE_VORR killed renamable $q1, renamable $q0, 1, killed renamable $vpr, $noreg, killed renamable $q1
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (align 4):
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 0, %const.0, 4
   bb.0:
     successors: %bb.6(0x80000000)
     liveins: $r0, $r1, $r2
@@ -337,22 +352,27 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: combine_kill_flags
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $q2, $r0, $r1
-  ; CHECK:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r1
-  ; CHECK: bb.1 (align 4):
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $q2, $r0
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
-  ; CHECK:   renamable $q2 = MVE_VORR killed renamable $q2, renamable $q1, 0, $noreg, $noreg, killed renamable $q2
-  ; CHECK:   MVE_VPTv4f32 8, renamable $q0, killed renamable $q1, 12, implicit-def $vpr
-  ; CHECK:   renamable $q0 = MVE_VORR killed renamable $q0, killed renamable $q0, 1, killed renamable $vpr, $noreg, killed renamable $q0
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
-  ; CHECK: bb.2:
-  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.3 (align 4):
-  ; CHECK:   CONSTPOOL_ENTRY 0, %const.0, 4
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $q2, $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (align 4):
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $q2, $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
+  ; CHECK-NEXT:   renamable $q2 = MVE_VORR killed renamable $q2, renamable $q1, 0, $noreg, $noreg, killed renamable $q2
+  ; CHECK-NEXT:   MVE_VPTv4f32 8, renamable $q0, killed renamable $q1, 12, implicit-def $vpr
+  ; CHECK-NEXT:   renamable $q0 = MVE_VORR killed renamable $q0, killed renamable $q0, 1, killed renamable $vpr, $noreg, killed renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (align 4):
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 0, %const.0, 4
   bb.0:
     successors: %bb.6(0x80000000)
     liveins: $r0, $r1, $r2
@@ -424,24 +444,29 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: no_combination_diff_reg_value
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r1
-  ; CHECK: bb.1 (align 4):
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $r0
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
-  ; CHECK:   renamable $q1 = MVE_VORR killed renamable $q1, renamable $q0, 0, $noreg, $noreg, killed renamable $q1
-  ; CHECK:   renamable $vpr = MVE_VCMPf32 renamable $q1, renamable $q0, 12, 0, killed $noreg, $noreg
-  ; CHECK:   renamable $q0 = MVE_VORR renamable $q1, renamable $q1, 0, $noreg, $noreg, killed renamable $q0
-  ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   renamable $q0 = MVE_VORR killed renamable $q1, killed renamable $q1, 1, killed renamable $vpr, $noreg, killed renamable $q0
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
-  ; CHECK: bb.2:
-  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.3 (align 4):
-  ; CHECK:   CONSTPOOL_ENTRY 0, %const.0, 4
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (align 4):
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
+  ; CHECK-NEXT:   renamable $q1 = MVE_VORR killed renamable $q1, renamable $q0, 0, $noreg, $noreg, killed renamable $q1
+  ; CHECK-NEXT:   renamable $vpr = MVE_VCMPf32 renamable $q1, renamable $q0, 12, 0, killed $noreg, $noreg
+  ; CHECK-NEXT:   renamable $q0 = MVE_VORR renamable $q1, renamable $q1, 0, $noreg, $noreg, killed renamable $q0
+  ; CHECK-NEXT:   MVE_VPST 8, implicit $vpr
+  ; CHECK-NEXT:   renamable $q0 = MVE_VORR killed renamable $q1, killed renamable $q1, 1, killed renamable $vpr, $noreg, killed renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (align 4):
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 0, %const.0, 4
   bb.0:
     successors: %bb.6(0x80000000)
     liveins: $r0, $r1, $r2
@@ -515,23 +540,28 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: no_combination_vcmp_already_merged
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $q2, $r0, $r1
-  ; CHECK:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r1
-  ; CHECK: bb.1 (align 4):
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $q2, $r0
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
-  ; CHECK:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr
-  ; CHECK:   renamable $q2 = MVE_VORR renamable $q1, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q2
-  ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   dead renamable $q1 = MVE_VORR killed renamable $q1, renamable $q0, 1, killed renamable $vpr, $noreg, killed renamable $q1
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
-  ; CHECK: bb.2:
-  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
-  ; CHECK: bb.3 (align 4):
-  ; CHECK:   CONSTPOOL_ENTRY 0, %const.0, 4
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $q2, $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q0 = MVE_VDUP32 renamable $r1, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (align 4):
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $q2, $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg
+  ; CHECK-NEXT:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr
+  ; CHECK-NEXT:   renamable $q2 = MVE_VORR renamable $q1, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q2
+  ; CHECK-NEXT:   MVE_VPST 8, implicit $vpr
+  ; CHECK-NEXT:   dead renamable $q1 = MVE_VORR killed renamable $q1, renamable $q0, 1, killed renamable $vpr, $noreg, killed renamable $q1
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (align 4):
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 0, %const.0, 4
   bb.0:
     successors: %bb.6(0x80000000)
     liveins: $r0, $r1, $r2

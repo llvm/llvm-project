@@ -121,12 +121,6 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
-  /// Return true if the specified function should have a dedicated frame
-  /// pointer register.  This is true if the function has variable sized
-  /// allocas, if it needs dynamic stack realignment, if frame pointer
-  /// elimination is disabled, or if the frame address is taken.
-  bool hasFP(const MachineFunction &MF) const override;
-
   /// Under normal circumstances, when a frame pointer is not required, we
   /// reserve argument space for call sites in the function immediately on
   /// entry to the current function. This eliminates the need for add/sub sp
@@ -166,6 +160,13 @@ public:
   /// pointer by a constant value.
   void emitSPUpdate(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
                     int64_t NumBytes, bool InEpilogue) const;
+
+protected:
+  /// Return true if the specified function should have a dedicated frame
+  /// pointer register.  This is true if the function has variable sized
+  /// allocas, if it needs dynamic stack realignment, if frame pointer
+  /// elimination is disabled, or if the frame address is taken.
+  bool hasFPImpl(const MachineFunction &MF) const override;
 };
 } // namespace llvm
 

@@ -11,69 +11,128 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringMap.h"
 
 #define DEBUG_TYPE "dataflow"
 
-void clang::dataflow::copyRecord(RecordStorageLocation &Src,
-                                 RecordStorageLocation &Dst, Environment &Env) {
+namespace clang::dataflow {
+
+static void copyField(const ValueDecl &Field, StorageLocation *SrcFieldLoc,
+                      StorageLocation *DstFieldLoc, RecordStorageLocation &Dst,
+                      Environment &Env) {
+  assert(Field.getType()->isReferenceType() ||
+         (SrcFieldLoc != nullptr && DstFieldLoc != nullptr));
+
+  if (Field.getType()->isRecordType()) {
+    copyRecord(cast<RecordStorageLocation>(*SrcFieldLoc),
+               cast<RecordStorageLocation>(*DstFieldLoc), Env);
+  } else if (Field.getType()->isReferenceType()) {
+    Dst.setChild(Field, SrcFieldLoc);
+  } else {
+    if (Value *Val = Env.getValue(*SrcFieldLoc))
+      Env.setValue(*DstFieldLoc, *Val);
+    else
+      Env.clearValue(*DstFieldLoc);
+  }
+}
+
+static void copySyntheticField(QualType FieldType, StorageLocation &SrcFieldLoc,
+                               StorageLocation &DstFieldLoc, Environment &Env) {
+  if (FieldType->isRecordType()) {
+    copyRecord(cast<RecordStorageLocation>(SrcFieldLoc),
+               cast<RecordStorageLocation>(DstFieldLoc), Env);
+  } else {
+    if (Value *Val = Env.getValue(SrcFieldLoc))
+      Env.setValue(DstFieldLoc, *Val);
+    else
+      Env.clearValue(DstFieldLoc);
+  }
+}
+
+void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
+                Environment &Env, const QualType TypeToCopy) {
   auto SrcType = Src.getType().getCanonicalType().getUnqualifiedType();
   auto DstType = Dst.getType().getCanonicalType().getUnqualifiedType();
 
   auto SrcDecl = SrcType->getAsCXXRecordDecl();
   auto DstDecl = DstType->getAsCXXRecordDecl();
 
-  bool compatibleTypes =
+  const CXXRecordDecl *DeclToCopy =
+      TypeToCopy.isNull() ? nullptr : TypeToCopy->getAsCXXRecordDecl();
+
+  [[maybe_unused]] bool CompatibleTypes =
       SrcType == DstType ||
-      (SrcDecl && DstDecl && SrcDecl->isDerivedFrom(DstDecl));
-  (void)compatibleTypes;
+      (SrcDecl != nullptr && DstDecl != nullptr &&
+       (SrcDecl->isDerivedFrom(DstDecl) || DstDecl->isDerivedFrom(SrcDecl) ||
+        (DeclToCopy != nullptr && SrcDecl->isDerivedFrom(DeclToCopy) &&
+         DstDecl->isDerivedFrom(DeclToCopy))));
 
   LLVM_DEBUG({
-    if (!compatibleTypes) {
+    if (!CompatibleTypes) {
       llvm::dbgs() << "Source type " << Src.getType() << "\n";
       llvm::dbgs() << "Destination type " << Dst.getType() << "\n";
     }
   });
-  assert(compatibleTypes);
+  assert(CompatibleTypes);
 
-  for (auto [Field, DstFieldLoc] : Dst.children()) {
-    StorageLocation *SrcFieldLoc = Src.getChild(*Field);
-
-    assert(Field->getType()->isReferenceType() ||
-           (SrcFieldLoc != nullptr && DstFieldLoc != nullptr));
-
-    if (Field->getType()->isRecordType()) {
-      copyRecord(cast<RecordStorageLocation>(*SrcFieldLoc),
-                 cast<RecordStorageLocation>(*DstFieldLoc), Env);
-    } else if (Field->getType()->isReferenceType()) {
-      Dst.setChild(*Field, SrcFieldLoc);
-    } else {
-      if (Value *Val = Env.getValue(*SrcFieldLoc))
-        Env.setValue(*DstFieldLoc, *Val);
-      else
-        Env.clearValue(*DstFieldLoc);
+  if (SrcType == DstType || (SrcDecl != nullptr && DstDecl != nullptr &&
+                             SrcDecl->isDerivedFrom(DstDecl))) {
+    // Dst may have children modeled from other derived types than SrcType, e.g.
+    // after casts of Dst to other types derived from DstType. Only copy the
+    // children and synthetic fields present in both Dst and SrcType.
+    const FieldSet FieldsInSrcType =
+        Env.getDataflowAnalysisContext().getModeledFields(SrcType);
+    for (auto [Field, DstFieldLoc] : Dst.children())
+      if (const auto *FieldAsFieldDecl = dyn_cast<FieldDecl>(Field);
+          FieldAsFieldDecl && FieldsInSrcType.contains(FieldAsFieldDecl))
+        copyField(*Field, Src.getChild(*Field), DstFieldLoc, Dst, Env);
+    const llvm::StringMap<QualType> SyntheticFieldsForSrcType =
+        Env.getDataflowAnalysisContext().getSyntheticFields(SrcType);
+    for (const auto &[Name, DstFieldLoc] : Dst.synthetic_fields())
+      if (SyntheticFieldsForSrcType.contains(Name))
+        copySyntheticField(DstFieldLoc->getType(), Src.getSyntheticField(Name),
+                           *DstFieldLoc, Env);
+  } else if (SrcDecl != nullptr && DstDecl != nullptr &&
+             DstDecl->isDerivedFrom(SrcDecl)) {
+    // Src may have children modeled from other derived types than DstType, e.g.
+    // after other casts of Src to those types (likely in different branches,
+    // but without flow-condition-dependent field modeling). Only copy the
+    // children and synthetic fields of Src that are present in DstType.
+    const FieldSet FieldsInDstType =
+        Env.getDataflowAnalysisContext().getModeledFields(DstType);
+    for (auto [Field, SrcFieldLoc] : Src.children()) {
+      if (const auto *FieldAsFieldDecl = dyn_cast<FieldDecl>(Field);
+          FieldAsFieldDecl && FieldsInDstType.contains(FieldAsFieldDecl))
+        copyField(*Field, SrcFieldLoc, Dst.getChild(*Field), Dst, Env);
+    }
+    const llvm::StringMap<QualType> SyntheticFieldsForDstType =
+        Env.getDataflowAnalysisContext().getSyntheticFields(DstType);
+    for (const auto &[Name, SrcFieldLoc] : Src.synthetic_fields()) {
+      if (SyntheticFieldsForDstType.contains(Name))
+        copySyntheticField(SrcFieldLoc->getType(), *SrcFieldLoc,
+                           Dst.getSyntheticField(Name), Env);
+    }
+  } else {
+    for (const FieldDecl *Field :
+         Env.getDataflowAnalysisContext().getModeledFields(TypeToCopy)) {
+      copyField(*Field, Src.getChild(*Field), Dst.getChild(*Field), Dst, Env);
+    }
+    for (const auto &[SyntheticFieldName, SyntheticFieldType] :
+         Env.getDataflowAnalysisContext().getSyntheticFields(TypeToCopy)) {
+      copySyntheticField(SyntheticFieldType,
+                         Src.getSyntheticField(SyntheticFieldName),
+                         Dst.getSyntheticField(SyntheticFieldName), Env);
     }
   }
-
-  for (const auto &[Name, SynthFieldLoc] : Src.synthetic_fields()) {
-    if (SynthFieldLoc->getType()->isRecordType()) {
-      copyRecord(*cast<RecordStorageLocation>(SynthFieldLoc),
-                 cast<RecordStorageLocation>(Dst.getSyntheticField(Name)), Env);
-    } else {
-      if (Value *Val = Env.getValue(*SynthFieldLoc))
-        Env.setValue(Dst.getSyntheticField(Name), *Val);
-      else
-        Env.clearValue(Dst.getSyntheticField(Name));
-    }
-  }
-
-  RecordValue *DstVal = &Env.create<RecordValue>(Dst);
-  Env.setValue(Dst, *DstVal);
 }
 
-bool clang::dataflow::recordsEqual(const RecordStorageLocation &Loc1,
-                                   const Environment &Env1,
-                                   const RecordStorageLocation &Loc2,
-                                   const Environment &Env2) {
+bool recordsEqual(const RecordStorageLocation &Loc1, const Environment &Env1,
+                  const RecordStorageLocation &Loc2, const Environment &Env2) {
   LLVM_DEBUG({
     if (Loc2.getType().getCanonicalType().getUnqualifiedType() !=
         Loc1.getType().getCanonicalType().getUnqualifiedType()) {
@@ -116,3 +175,5 @@ bool clang::dataflow::recordsEqual(const RecordStorageLocation &Loc1,
 
   return true;
 }
+
+} // namespace clang::dataflow

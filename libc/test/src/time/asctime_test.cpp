@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/time/asctime.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
+
+using LlvmLibcAsctime = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 static inline char *call_asctime(struct tm *tm_data, int year, int month,
                                  int mday, int hour, int min, int sec, int wday,
@@ -19,15 +22,15 @@ static inline char *call_asctime(struct tm *tm_data, int year, int month,
   return LIBC_NAMESPACE::asctime(tm_data);
 }
 
-TEST(LlvmLibcAsctime, Nullptr) {
+TEST_F(LlvmLibcAsctime, Nullptr) {
   char *result;
   result = LIBC_NAMESPACE::asctime(nullptr);
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 }
 
 // Weekdays are in the range 0 to 6. Test passing invalid value in wday.
-TEST(LlvmLibcAsctime, InvalidWday) {
+TEST_F(LlvmLibcAsctime, InvalidWday) {
   struct tm tm_data;
 
   // Test with wday = -1.
@@ -40,7 +43,7 @@ TEST(LlvmLibcAsctime, InvalidWday) {
                0,    // sec
                -1,   // wday
                0);   // yday
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
 
   // Test with wday = 7.
   call_asctime(&tm_data,
@@ -52,11 +55,11 @@ TEST(LlvmLibcAsctime, InvalidWday) {
                0,    // sec
                7,    // wday
                0);   // yday
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
 }
 
 // Months are from January to December. Test passing invalid value in month.
-TEST(LlvmLibcAsctime, InvalidMonth) {
+TEST_F(LlvmLibcAsctime, InvalidMonth) {
   struct tm tm_data;
 
   // Test with month = 0.
@@ -69,7 +72,7 @@ TEST(LlvmLibcAsctime, InvalidMonth) {
                0,    // sec
                4,    // wday
                0);   // yday
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
 
   // Test with month = 13.
   call_asctime(&tm_data,
@@ -81,10 +84,10 @@ TEST(LlvmLibcAsctime, InvalidMonth) {
                0,    // sec
                4,    // wday
                0);   // yday
-  ASSERT_EQ(EINVAL, libc_errno);
+  ASSERT_ERRNO_EQ(EINVAL);
 }
 
-TEST(LlvmLibcAsctime, ValidWeekdays) {
+TEST_F(LlvmLibcAsctime, ValidWeekdays) {
   struct tm tm_data;
   char *result;
   // 1970-01-01 00:00:00.
@@ -124,7 +127,7 @@ TEST(LlvmLibcAsctime, ValidWeekdays) {
   ASSERT_STREQ("Sun Jan  4 00:00:00 1970\n", result);
 }
 
-TEST(LlvmLibcAsctime, ValidMonths) {
+TEST_F(LlvmLibcAsctime, ValidMonths) {
   struct tm tm_data;
   char *result;
   // 1970-01-01 00:00:00.
@@ -164,7 +167,7 @@ TEST(LlvmLibcAsctime, ValidMonths) {
   ASSERT_STREQ("Thu Dec 31 23:59:59 1970\n", result);
 }
 
-TEST(LlvmLibcAsctime, EndOf32BitEpochYear) {
+TEST_F(LlvmLibcAsctime, EndOf32BitEpochYear) {
   struct tm tm_data;
   char *result;
   // Test for maximum value of a signed 32-bit integer.
@@ -181,7 +184,7 @@ TEST(LlvmLibcAsctime, EndOf32BitEpochYear) {
   ASSERT_STREQ("Tue Jan 19 03:14:07 2038\n", result);
 }
 
-TEST(LlvmLibcAsctime, Max64BitYear) {
+TEST_F(LlvmLibcAsctime, Max64BitYear) {
   if (sizeof(time_t) == 4)
     return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),
@@ -209,6 +212,6 @@ TEST(LlvmLibcAsctime, Max64BitYear) {
                         50,         // sec
                         2,          // wday
                         50);        // yday
-  ASSERT_EQ(EOVERFLOW, libc_errno);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
   ASSERT_STREQ(nullptr, result);
 }

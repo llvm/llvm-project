@@ -11,9 +11,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
-#include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 
 namespace mlir::arm_sme {
+
+unsigned getSizeInBytes(TypeSize type) {
+  switch (type) {
+  case arm_sme::TypeSize::Byte:
+    return 1;
+  case arm_sme::TypeSize::Half:
+    return 2;
+  case arm_sme::TypeSize::Word:
+    return 4;
+  case arm_sme::TypeSize::Double:
+    return 8;
+  }
+  llvm_unreachable("unknown type size");
+  return 0;
+}
 
 unsigned getSMETileSliceMinNumElts(Type type) {
   assert(isValidSMETileElementType(type) && "invalid tile type!");
@@ -69,8 +83,104 @@ LogicalResult verifyOperationHasValidTileId(Operation *op) {
     return success(); // Not having a tile ID (yet) is okay.
   if (!tileId.getType().isSignlessInteger(32))
     return tileOp.emitOpError("tile ID should be a 32-bit signless integer");
-  // TODO: Verify value of tile ID is in range.
   return success();
+}
+
+scf::ForOp createLoopOverTileSlices(
+    PatternRewriter &rewriter, Location loc, Value initTile,
+    std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody) {
+  OpBuilder::InsertionGuard g(rewriter);
+  auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  auto minTileSlices = arith::ConstantIndexOp::create(
+      rewriter, loc, llvm::cast<VectorType>(initTile.getType()).getDimSize(0));
+  auto vscale =
+      vector::VectorScaleOp::create(rewriter, loc, rewriter.getIndexType());
+  auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  auto numTileSlices =
+      arith::MulIOp::create(rewriter, loc, minTileSlices, vscale);
+  auto forOp = scf::ForOp::create(rewriter, loc, lowerBound, numTileSlices,
+                                  step, ValueRange{initTile});
+  rewriter.setInsertionPointToStart(forOp.getBody());
+  Value nextTile =
+      makeLoopBody(rewriter, loc, /*tileSliceIndex=*/forOp.getInductionVar(),
+                   /*currentTile=*/forOp.getRegionIterArg(0));
+  scf::YieldOp::create(rewriter, loc, nextTile);
+  return forOp;
+}
+
+bool isMultipleOfSMETileVectorType(VectorType vType) {
+  if (vType.getRank() != 2 || !vType.allDimsScalable())
+    return false;
+
+  auto elementType = vType.getElementType();
+  if (!isValidSMETileElementType(elementType))
+    return false;
+
+  unsigned minNumElts = getSMETileSliceMinNumElts(elementType);
+
+  int64_t vectorRows = vType.getDimSize(0);
+  int64_t vectorCols = vType.getDimSize(1);
+
+  return (vectorRows > minNumElts || vectorCols > minNumElts) &&
+         vectorRows % minNumElts == 0 && vectorCols % minNumElts == 0;
+}
+
+VectorType getSMETileTypeForElement(Type elementType) {
+  unsigned minNumElts = getSMETileSliceMinNumElts(elementType);
+  return VectorType::get({minNumElts, minNumElts}, elementType, {true, true});
+}
+
+void eraseTriviallyDeadTileOps(IRRewriter &rewriter,
+                               FunctionOpInterface function) {
+  SmallVector<Operation *> worklist;
+  function->walk([&](Operation *op) {
+    auto armSMEOp = dyn_cast<arm_sme::ArmSMETileOpInterface>(op);
+    if (armSMEOp && isOpTriviallyDead(armSMEOp))
+      worklist.push_back(armSMEOp);
+  });
+  while (!worklist.empty()) {
+    Operation *op = worklist.pop_back_val();
+    if (!isOpTriviallyDead(op))
+      continue;
+    for (Value value : op->getOperands()) {
+      if (auto armSMEOp = value.getDefiningOp<arm_sme::ArmSMETileOpInterface>())
+        worklist.push_back(armSMEOp);
+    }
+    rewriter.eraseOp(op);
+  }
+}
+
+bool isTriviallyCloneableTileOp(arm_sme::ArmSMETileOpInterface tileOp) {
+  return tileOp && tileOp->getNumResults() == 1 &&
+         tileOp->getNumOperands() == 0 && isPure(tileOp);
+}
+
+bool hasTileResult(arm_sme::ArmSMETileOpInterface tileOp) {
+  for (Value result : tileOp->getResults()) {
+    if (arm_sme::isValidSMETileVectorType(result.getType()))
+      return true;
+  }
+  return false;
+}
+
+OpOperand *getTileOpOperand(arm_sme::ArmSMETileOpInterface tileOp) {
+  if (!tileOp)
+    return nullptr;
+  auto isTileOperandType = [](OpOperand &operand) {
+    return arm_sme::isValidSMETileVectorType(operand.get().getType());
+  };
+  assert(llvm::count_if(tileOp->getOpOperands(), isTileOperandType) <= 1 &&
+         "expected at most one tile operand");
+  OpOperand *tileOperand =
+      llvm::find_if(tileOp->getOpOperands(), isTileOperandType);
+  if (tileOperand == tileOp->getOpOperands().end())
+    return nullptr;
+  return tileOperand;
+}
+
+bool isTileTypeGreaterOrEqual(ArmSMETileType typeA, ArmSMETileType typeB) {
+  // Note: This is <= due to how tile types are numbered in ArmSMEOps.td.
+  return static_cast<unsigned>(typeA) <= static_cast<unsigned>(typeB);
 }
 
 } // namespace mlir::arm_sme

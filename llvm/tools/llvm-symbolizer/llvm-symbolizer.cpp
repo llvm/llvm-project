@@ -34,7 +34,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
@@ -57,12 +56,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -73,7 +73,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class SymbolizerOptTable : public opt::GenericOptTable {
 public:
-  SymbolizerOptTable() : GenericOptTable(InfoTable) {
+  SymbolizerOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -237,9 +238,12 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
   bool StartsWithDigit = std::isdigit(AddrSpec.front());
 
   // GNU addr2line assumes the address is hexadecimal and allows a redundant
-  // "0x" or "0X" prefix; do the same for compatibility.
-  if (IsAddr2Line)
-    AddrSpec.consume_front("0x") || AddrSpec.consume_front("0X");
+  // "0x", "0X" prefix or an optional `+` sign; do the same for
+  // compatibility.
+  if (IsAddr2Line) {
+    AddrSpec.consume_front_insensitive("0x") ||
+        AddrSpec.consume_front_insensitive("+0x");
+  }
 
   // If address specification is a number, treat it as a module offset.
   if (!AddrSpec.getAsInteger(IsAddr2Line ? 16 : 0, Offset)) {
@@ -338,6 +342,14 @@ static void symbolizeInput(const opt::InputArgList &Args,
   object::BuildID BuildID(IncomingBuildID.begin(), IncomingBuildID.end());
   uint64_t Offset = 0;
   StringRef Symbol;
+
+  // An empty input string may be used to check if the process is alive and
+  // responding to input. Do not emit a message on stderr in this case but
+  // respond on stdout.
+  if (InputString.empty()) {
+    printUnknownLineInfo(ModuleName, Printer);
+    return;
+  }
   if (Error E = parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
                              StringRef(InputString), Cmd, ModuleName, BuildID,
                              Symbol, Offset)) {
@@ -462,7 +474,6 @@ static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symboliz
 }
 
 int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 
   ToolName = argv[0];
@@ -484,12 +495,15 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   } else {
     Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
   }
+  Opts.SkipLineZero = Args.hasArg(OPT_skip_line_zero);
   Opts.DebugFileDirectory = Args.getAllArgValues(OPT_debug_file_directory_EQ);
   Opts.DefaultArch = Args.getLastArgValue(OPT_default_arch_EQ).str();
   Opts.Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, !IsAddr2Line);
   Opts.DWPName = Args.getLastArgValue(OPT_dwp_EQ).str();
   Opts.FallbackDebugPath =
       Args.getLastArgValue(OPT_fallback_debug_path_EQ).str();
+  Opts.GsymFileDirectory = Args.getAllArgValues(OPT_gsym_file_directory_EQ);
+  Opts.DisableGsym = Args.hasArg(OPT_disable_gsym);
   Opts.PrintFunctions = decideHowToPrintFunctions(Args, IsAddr2Line);
   parseIntArg(Args, OPT_print_source_context_lines_EQ,
               Config.SourceContextLines);

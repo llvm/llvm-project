@@ -63,7 +63,7 @@ public:
 };
 
 void f() {
-  template<typename T> class X; // expected-error{{expression}}
+  template<typename T> class X; // expected-error{{templates can only be declared in namespace or class scope}}
 }
 
 template<typename T> class X1 var; // expected-error {{variable has incomplete type 'class X1'}} \

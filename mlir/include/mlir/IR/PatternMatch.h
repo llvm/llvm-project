@@ -15,6 +15,7 @@
 #include "llvm/Support/TypeName.h"
 #include <optional>
 
+using llvm::SmallPtrSetImpl;
 namespace mlir {
 
 class PatternRewriter;
@@ -234,40 +235,18 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// RewritePattern is the common base class for all DAG to DAG replacements.
-/// There are two possible usages of this class:
-///   * Multi-step RewritePattern with "match" and "rewrite"
-///     - By overloading the "match" and "rewrite" functions, the user can
-///       separate the concerns of matching and rewriting.
-///   * Single-step RewritePattern with "matchAndRewrite"
-///     - By overloading the "matchAndRewrite" function, the user can perform
-///       the rewrite in the same call as the match.
-///
 class RewritePattern : public Pattern {
 public:
   virtual ~RewritePattern() = default;
 
-  /// Rewrite the IR rooted at the specified operation with the result of
-  /// this pattern, generating any new operations with the specified
-  /// builder.  If an unexpected error is encountered (an internal
-  /// compiler error), it is emitted through the normal MLIR diagnostic
-  /// hooks and the IR is left in a valid state.
-  virtual void rewrite(Operation *op, PatternRewriter &rewriter) const;
-
   /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind().
-  virtual LogicalResult match(Operation *op) const;
-
-  /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind(). If successful, this
-  /// function will automatically perform the rewrite.
+  /// which is the same operation code as getRootKind(). If successful, perform
+  /// the rewrite.
+  ///
+  /// Note: Implementations must modify the IR if and only if the function
+  /// returns "success".
   virtual LogicalResult matchAndRewrite(Operation *op,
-                                        PatternRewriter &rewriter) const {
-    if (succeeded(match(op))) {
-      rewrite(op, rewriter);
-      return success();
-    }
-    return failure();
-  }
+                                        PatternRewriter &rewriter) const = 0;
 
   /// This method provides a convenient interface for creating and initializing
   /// derived rewrite patterns of the given type `T`.
@@ -288,23 +267,19 @@ protected:
   using Pattern::Pattern;
 
 private:
-  /// Trait to check if T provides a `getOperationName` method.
+  /// Trait to check if T provides a `initialize` method.
   template <typename T, typename... Args>
   using has_initialize = decltype(std::declval<T>().initialize());
   template <typename T>
   using detect_has_initialize = llvm::is_detected<has_initialize, T>;
 
-  /// Initialize the derived pattern by calling its `initialize` method.
+  /// Initialize the derived pattern by calling its `initialize` method if
+  /// available.
   template <typename T>
-  static std::enable_if_t<detect_has_initialize<T>::value>
-  initializePattern(T &pattern) {
-    pattern.initialize();
+  static void initializePattern(T &pattern) {
+    if constexpr (detect_has_initialize<T>::value)
+      pattern.initialize();
   }
-  /// Empty derived pattern initializer for patterns that do not have an
-  /// initialize method.
-  template <typename T>
-  static std::enable_if_t<!detect_has_initialize<T>::value>
-  initializePattern(T &) {}
 
   /// An anchor for the virtual table.
   virtual void anchor();
@@ -318,34 +293,16 @@ template <typename SourceOp>
 struct OpOrInterfaceRewritePatternBase : public RewritePattern {
   using RewritePattern::RewritePattern;
 
-  /// Wrappers around the RewritePattern methods that pass the derived op type.
-  void rewrite(Operation *op, PatternRewriter &rewriter) const final {
-    rewrite(cast<SourceOp>(op), rewriter);
-  }
-  LogicalResult match(Operation *op) const final {
-    return match(cast<SourceOp>(op));
-  }
+  /// Wrapper around the RewritePattern method that passes the derived op type.
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op), rewriter);
   }
 
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
-  /// overridden by the derived pattern class.
-  virtual void rewrite(SourceOp op, PatternRewriter &rewriter) const {
-    llvm_unreachable("must override rewrite or matchAndRewrite");
-  }
-  virtual LogicalResult match(SourceOp op) const {
-    llvm_unreachable("must override match or matchAndRewrite");
-  }
+  /// Method that operates on the SourceOp type. Must be overridden by the
+  /// derived pattern class.
   virtual LogicalResult matchAndRewrite(SourceOp op,
-                                        PatternRewriter &rewriter) const {
-    if (succeeded(match(op))) {
-      rewrite(op, rewriter);
-      return success();
-    }
-    return failure();
-  }
+                                        PatternRewriter &rewriter) const = 0;
 };
 } // namespace detail
 
@@ -354,13 +311,17 @@ struct OpOrInterfaceRewritePatternBase : public RewritePattern {
 /// opposed to a raw Operation.
 template <typename SourceOp>
 struct OpRewritePattern
-    : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+    : public mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpRewritePattern;
+
   /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching and a list of generated
   /// ops.
   OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1,
                    ArrayRef<StringRef> generatedNames = {})
-      : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
+      : mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp>(
             SourceOp::getOperationName(), benefit, context, generatedNames) {}
 };
 
@@ -369,9 +330,13 @@ struct OpRewritePattern
 /// of a raw Operation.
 template <typename SourceOp>
 struct OpInterfaceRewritePattern
-    : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+    : public mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpInterfaceRewritePattern;
+
   OpInterfaceRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
-      : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
+      : mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp>(
             Pattern::MatchInterfaceOpTypeTag(), SourceOp::getInterfaceID(),
             benefit, context) {}
 };
@@ -382,6 +347,10 @@ struct OpInterfaceRewritePattern
 template <template <typename> class TraitType>
 class OpTraitRewritePattern : public RewritePattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpTraitRewritePattern;
+
   OpTraitRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
       : RewritePattern(Pattern::MatchTraitOpTypeTag(), TypeID::get<TraitType>(),
                        benefit, context) {}
@@ -402,12 +371,16 @@ public:
     Listener()
         : OpBuilder::Listener(ListenerBase::Kind::RewriterBaseListener) {}
 
+    /// Notify the listener that the specified block is about to be erased.
+    /// At this point, the block has zero uses.
+    virtual void notifyBlockErased(Block *block) {}
+
     /// Notify the listener that the specified operation was modified in-place.
     virtual void notifyOperationModified(Operation *op) {}
 
-    /// Notify the listener that the specified operation is about to be replaced
-    /// with another operation. This is called before the uses of the old
-    /// operation have been changed.
+    /// Notify the listener that all uses of the specified operation's results
+    /// are about to be replaced with the results of another operation. This is
+    /// called before the uses of the old operation have been changed.
     ///
     /// By default, this function calls the "operation replaced with values"
     /// notification.
@@ -416,26 +389,38 @@ public:
       notifyOperationReplaced(op, replacement->getResults());
     }
 
-    /// Notify the listener that the specified operation is about to be replaced
-    /// with the a range of values, potentially produced by other operations.
-    /// This is called before the uses of the operation have been changed.
+    /// Notify the listener that all uses of the specified operation's results
+    /// are about to be replaced with the a range of values, potentially
+    /// produced by other operations. This is called before the uses of the
+    /// operation have been changed.
     virtual void notifyOperationReplaced(Operation *op,
                                          ValueRange replacement) {}
 
     /// Notify the listener that the specified operation is about to be erased.
     /// At this point, the operation has zero uses.
-    virtual void notifyOperationRemoved(Operation *op) {}
+    ///
+    /// Note: This notification is not triggered when unlinking an operation.
+    virtual void notifyOperationErased(Operation *op) {}
 
-    /// Notify the listener that the pattern failed to match the given
-    /// operation, and provide a callback to populate a diagnostic with the
-    /// reason why the failure occurred. This method allows for derived
-    /// listeners to optionally hook into the reason why a rewrite failed, and
-    /// display it to users.
-    virtual LogicalResult
+    /// Notify the listener that the specified pattern is about to be applied
+    /// at the specified root operation.
+    virtual void notifyPatternBegin(const Pattern &pattern, Operation *op) {}
+
+    /// Notify the listener that a pattern application finished with the
+    /// specified status. "success" indicates that the pattern was applied
+    /// successfully. "failure" indicates that the pattern could not be
+    /// applied. The pattern may have communicated the reason for the failure
+    /// with `notifyMatchFailure`.
+    virtual void notifyPatternEnd(const Pattern &pattern,
+                                  LogicalResult status) {}
+
+    /// Notify the listener that the pattern failed to match, and provide a
+    /// callback to populate a diagnostic with the reason why the failure
+    /// occurred. This method allows for derived listeners to optionally hook
+    /// into the reason why a rewrite failed, and display it to users.
+    virtual void
     notifyMatchFailure(Location loc,
-                       function_ref<void(Diagnostic &)> reasonCallback) {
-      return failure();
-    }
+                       function_ref<void(Diagnostic &)> reasonCallback) {}
 
     static bool classof(const OpBuilder::Listener *base);
   };
@@ -444,105 +429,117 @@ public:
   /// struct can be used as a base to create listener chains, so that multiple
   /// listeners can be notified of IR changes.
   struct ForwardingListener : public RewriterBase::Listener {
-    ForwardingListener(OpBuilder::Listener *listener) : listener(listener) {}
+    ForwardingListener(OpBuilder::Listener *listener)
+        : listener(listener),
+          rewriteListener(
+              dyn_cast_if_present<RewriterBase::Listener>(listener)) {}
 
-    void notifyOperationInserted(Operation *op) override {
-      listener->notifyOperationInserted(op);
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+      if (listener)
+        listener->notifyOperationInserted(op, previous);
     }
-    void notifyBlockCreated(Block *block) override {
-      listener->notifyBlockCreated(block);
+    void notifyBlockInserted(Block *block, Region *previous,
+                             Region::iterator previousIt) override {
+      if (listener)
+        listener->notifyBlockInserted(block, previous, previousIt);
+    }
+    void notifyBlockErased(Block *block) override {
+      if (rewriteListener)
+        rewriteListener->notifyBlockErased(block);
     }
     void notifyOperationModified(Operation *op) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyOperationModified(op);
     }
     void notifyOperationReplaced(Operation *op, Operation *newOp) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyOperationReplaced(op, newOp);
     }
     void notifyOperationReplaced(Operation *op,
                                  ValueRange replacement) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+      if (rewriteListener)
         rewriteListener->notifyOperationReplaced(op, replacement);
     }
-    void notifyOperationRemoved(Operation *op) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
-        rewriteListener->notifyOperationRemoved(op);
+    void notifyOperationErased(Operation *op) override {
+      if (rewriteListener)
+        rewriteListener->notifyOperationErased(op);
     }
-    LogicalResult notifyMatchFailure(
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override {
+      if (rewriteListener)
+        rewriteListener->notifyPatternBegin(pattern, op);
+    }
+    void notifyPatternEnd(const Pattern &pattern,
+                          LogicalResult status) override {
+      if (rewriteListener)
+        rewriteListener->notifyPatternEnd(pattern, status);
+    }
+    void notifyMatchFailure(
         Location loc,
         function_ref<void(Diagnostic &)> reasonCallback) override {
-      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
-        return rewriteListener->notifyMatchFailure(loc, reasonCallback);
-      return failure();
+      if (rewriteListener)
+        rewriteListener->notifyMatchFailure(loc, reasonCallback);
     }
 
   private:
     OpBuilder::Listener *listener;
+    RewriterBase::Listener *rewriteListener;
+  };
+
+  /// A listener that logs notification events to llvm::dbgs() before
+  /// forwarding to the base listener.
+  struct PatternLoggingListener : public RewriterBase::ForwardingListener {
+    PatternLoggingListener(OpBuilder::Listener *listener, StringRef patternName)
+        : RewriterBase::ForwardingListener(listener), patternName(patternName) {
+    }
+
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override;
+    void notifyOperationModified(Operation *op) override;
+    void notifyOperationReplaced(Operation *op, Operation *newOp) override;
+    void notifyOperationReplaced(Operation *op,
+                                 ValueRange replacement) override;
+    void notifyOperationErased(Operation *op) override;
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override;
+
+  private:
+    StringRef patternName;
   };
 
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
   /// of control to the region and passing it the correct block arguments.
-  virtual void inlineRegionBefore(Region &region, Region &parent,
-                                  Region::iterator before);
+  void inlineRegionBefore(Region &region, Region &parent,
+                          Region::iterator before);
   void inlineRegionBefore(Region &region, Block *before);
 
-  /// Clone the blocks that belong to "region" before the given position in
-  /// another region "parent". The two regions must be different. The caller is
-  /// responsible for creating or updating the operation transferring flow of
-  /// control to the region and passing it the correct block arguments.
-  virtual void cloneRegionBefore(Region &region, Region &parent,
-                                 Region::iterator before, IRMapping &mapping);
-  void cloneRegionBefore(Region &region, Region &parent,
-                         Region::iterator before);
-  void cloneRegionBefore(Region &region, Block *before);
-
-  /// This method replaces the uses of the results of `op` with the values in
-  /// `newValues` when the provided `functor` returns true for a specific use.
-  /// The number of values in `newValues` is required to match the number of
-  /// results of `op`. `allUsesReplaced`, if non-null, is set to true if all of
-  /// the uses of `op` were replaced. Note that in some rewriters, the given
-  /// 'functor' may be stored beyond the lifetime of the rewrite being applied.
-  /// As such, the function should not capture by reference and instead use
-  /// value capture as necessary.
-  virtual void
-  replaceOpWithIf(Operation *op, ValueRange newValues, bool *allUsesReplaced,
-                  llvm::unique_function<bool(OpOperand &) const> functor);
-  void replaceOpWithIf(Operation *op, ValueRange newValues,
-                       llvm::unique_function<bool(OpOperand &) const> functor) {
-    replaceOpWithIf(op, newValues, /*allUsesReplaced=*/nullptr,
-                    std::move(functor));
-  }
-
-  /// This method replaces the uses of the results of `op` with the values in
-  /// `newValues` when a use is nested within the given `block`. The number of
-  /// values in `newValues` is required to match the number of results of `op`.
-  /// If all uses of this operation are replaced, the operation is erased.
-  void replaceOpWithinBlock(Operation *op, ValueRange newValues, Block *block,
-                            bool *allUsesReplaced = nullptr);
-
-  /// This method replaces the results of the operation with the specified list
-  /// of values. The number of provided values must match the number of results
-  /// of the operation. The replaced op is erased.
+  /// Replace the results of the given (original) operation with the specified
+  /// list of values (replacements). The result types of the given op and the
+  /// replacements must match. The original op is erased.
   virtual void replaceOp(Operation *op, ValueRange newValues);
 
-  /// This method replaces the results of the operation with the specified
-  /// new op (replacement). The number of results of the two operations must
-  /// match. The replaced op is erased.
+  /// Replace the results of the given (original) operation with the specified
+  /// new op (replacement). The result types of the two ops must match. The
+  /// original op is erased.
   virtual void replaceOp(Operation *op, Operation *newOp);
 
-  /// Replaces the result op with a new op that is created without verification.
-  /// The result values of the two ops must be the same types.
+  /// Replace the results of the given (original) op with a new op that is
+  /// created without verification (replacement). The result values of the two
+  /// ops must match. The original op is erased.
   template <typename OpTy, typename... Args>
   OpTy replaceOpWithNewOp(Operation *op, Args &&...args) {
-    auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+    auto builder = static_cast<OpBuilder *>(this);
+    auto newOp =
+        OpTy::create(*builder, op->getLoc(), std::forward<Args>(args)...);
     replaceOp(op, newOp.getOperation());
     return newOp;
   }
 
   /// This method erases an operation that is known to have no uses.
+  ///
+  /// If the current insertion point is before the erased operation, it is
+  /// adjusted to the following operation (or the end of the block). If the
+  /// current insertion point is within the erased operation, the insertion
+  /// point is left in an invalid state.
   virtual void eraseOp(Operation *op);
 
   /// This method erases all operations in a block.
@@ -557,9 +554,12 @@ public:
   /// somewhere in the middle (or beginning) of the dest block, the source block
   /// must have no successors. Otherwise, the resulting IR would have
   /// unreachable operations.
+  ///
+  /// If the insertion point is within the source block, it is adjusted to the
+  /// destination block.
   virtual void inlineBlockBefore(Block *source, Block *dest,
                                  Block::iterator before,
-                                 ValueRange argValues = std::nullopt);
+                                 ValueRange argValues = {});
 
   /// Inline the operations of block 'source' before the operation 'op'. The
   /// source block will be deleted and must have no uses. 'argValues' is used to
@@ -567,8 +567,11 @@ public:
   ///
   /// The source block must have no successors. Otherwise, the resulting IR
   /// would have unreachable operations.
+  ///
+  /// If the insertion point is within the source block, it is adjusted to the
+  /// destination block.
   void inlineBlockBefore(Block *source, Operation *op,
-                         ValueRange argValues = std::nullopt);
+                         ValueRange argValues = {});
 
   /// Inline the operations of block 'source' into the end of block 'dest'. The
   /// source block will be deleted and must have no uses. 'argValues' is used to
@@ -576,50 +579,80 @@ public:
   ///
   /// The dest block must have no successors. Otherwise, the resulting IR would
   /// have unreachable operation.
-  void mergeBlocks(Block *source, Block *dest,
-                   ValueRange argValues = std::nullopt);
+  ///
+  /// If the insertion point is within the source block, it is adjusted to the
+  /// destination block.
+  void mergeBlocks(Block *source, Block *dest, ValueRange argValues = {});
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
-  virtual Block *splitBlock(Block *block, Block::iterator before);
+  Block *splitBlock(Block *block, Block::iterator before);
+
+  /// Unlink this operation from its current block and insert it right before
+  /// `existingOp` which may be in the same or another block in the same
+  /// function.
+  void moveOpBefore(Operation *op, Operation *existingOp);
+
+  /// Unlink this operation from its current block and insert it right before
+  /// `iterator` in the specified block.
+  void moveOpBefore(Operation *op, Block *block, Block::iterator iterator);
+
+  /// Unlink this operation from its current block and insert it right after
+  /// `existingOp` which may be in the same or another block in the same
+  /// function.
+  void moveOpAfter(Operation *op, Operation *existingOp);
+
+  /// Unlink this operation from its current block and insert it right after
+  /// `iterator` in the specified block.
+  void moveOpAfter(Operation *op, Block *block, Block::iterator iterator);
+
+  /// Unlink this block and insert it right before `existingBlock`.
+  void moveBlockBefore(Block *block, Block *anotherBlock);
+
+  /// Unlink this block and insert it right before the location that the given
+  /// iterator points to in the given region.
+  void moveBlockBefore(Block *block, Region *region, Region::iterator iterator);
 
   /// This method is used to notify the rewriter that an in-place operation
   /// modification is about to happen. A call to this function *must* be
-  /// followed by a call to either `finalizeRootUpdate` or `cancelRootUpdate`.
-  /// This is a minor efficiency win (it avoids creating a new operation and
-  /// removing the old one) but also often allows simpler code in the client.
-  virtual void startRootUpdate(Operation *op) {}
+  /// followed by a call to either `finalizeOpModification` or
+  /// `cancelOpModification`. This is a minor efficiency win (it avoids creating
+  /// a new operation and removing the old one) but also often allows simpler
+  /// code in the client.
+  virtual void startOpModification(Operation *op) {}
 
-  /// This method is used to signal the end of a root update on the given
-  /// operation. This can only be called on operations that were provided to a
-  /// call to `startRootUpdate`.
-  virtual void finalizeRootUpdate(Operation *op);
+  /// This method is used to signal the end of an in-place modification of the
+  /// given operation. This can only be called on operations that were provided
+  /// to a call to `startOpModification`.
+  virtual void finalizeOpModification(Operation *op);
 
-  /// This method cancels a pending root update. This can only be called on
-  /// operations that were provided to a call to `startRootUpdate`.
-  virtual void cancelRootUpdate(Operation *op) {}
+  /// This method cancels a pending in-place modification. This can only be
+  /// called on operations that were provided to a call to
+  /// `startOpModification`.
+  virtual void cancelOpModification(Operation *op) {}
 
-  /// This method is a utility wrapper around a root update of an operation. It
-  /// wraps calls to `startRootUpdate` and `finalizeRootUpdate` around the given
-  /// callable.
+  /// This method is a utility wrapper around an in-place modification of an
+  /// operation. It wraps calls to `startOpModification` and
+  /// `finalizeOpModification` around the given callable.
   template <typename CallableT>
-  void updateRootInPlace(Operation *root, CallableT &&callable) {
-    startRootUpdate(root);
+  void modifyOpInPlace(Operation *root, CallableT &&callable) {
+    startOpModification(root);
     callable();
-    finalizeRootUpdate(root);
+    finalizeOpModification(root);
   }
 
-  /// Find uses of `from` and replace them with `to`. It also marks every
-  /// modified uses and notifies the rewriter that an in-place operation
-  /// modification is about to happen.
-  void replaceAllUsesWith(Value from, Value to) {
-    return replaceAllUsesWith(from.getImpl(), to);
-  }
-  template <typename OperandType, typename ValueT>
-  void replaceAllUsesWith(IRObjectWithUseList<OperandType> *from, ValueT &&to) {
-    for (OperandType &operand : llvm::make_early_inc_range(from->getUses())) {
+  /// Find uses of `from` and replace them with `to`. Also notify the listener
+  /// about every in-place op modification (for every use that was replaced).
+  virtual void replaceAllUsesWith(Value from, Value to) {
+    for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
       Operation *op = operand.getOwner();
-      updateRootInPlace(op, [&]() { operand.set(to); });
+      modifyOpInPlace(op, [&]() { operand.set(to); });
+    }
+  }
+  void replaceAllUsesWith(Block *from, Block *to) {
+    for (BlockOperand &operand : llvm::make_early_inc_range(from->getUses())) {
+      Operation *op = operand.getOwner();
+      modifyOpInPlace(op, [&]() { operand.set(to); });
     }
   }
   void replaceAllUsesWith(ValueRange from, ValueRange to) {
@@ -628,29 +661,62 @@ public:
       replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
   }
 
+  /// Find uses of `from` and replace them with `to`. Also notify the listener
+  /// about every in-place op modification (for every use that was replaced)
+  /// and that the `from` operation is about to be replaced.
+  ///
+  /// Note: This function cannot be called `replaceAllUsesWith` because the
+  /// overload resolution, when called with an op that can be implicitly
+  /// converted to a Value, would be ambiguous.
+  void replaceAllOpUsesWith(Operation *from, ValueRange to);
+  void replaceAllOpUsesWith(Operation *from, Operation *to);
+
   /// Find uses of `from` and replace them with `to` if the `functor` returns
-  /// true. It also marks every modified uses and notifies the rewriter that an
-  /// in-place operation modification is about to happen.
-  void replaceUsesWithIf(Value from, Value to,
-                         function_ref<bool(OpOperand &)> functor);
+  /// true. Also notify the listener about every in-place op modification (for
+  /// every use that was replaced). The optional `allUsesReplaced` flag is set
+  /// to "true" if all uses were replaced.
+  virtual void replaceUsesWithIf(Value from, Value to,
+                                 function_ref<bool(OpOperand &)> functor,
+                                 bool *allUsesReplaced = nullptr);
   void replaceUsesWithIf(ValueRange from, ValueRange to,
-                         function_ref<bool(OpOperand &)> functor) {
-    assert(from.size() == to.size() && "incorrect number of replacements");
-    for (auto it : llvm::zip(from, to))
-      replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor);
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr);
+  // Note: This function cannot be called `replaceOpUsesWithIf` because the
+  // overload resolution, when called with an op that can be implicitly
+  // converted to a Value, would be ambiguous.
+  void replaceOpUsesWithIf(Operation *from, ValueRange to,
+                           function_ref<bool(OpOperand &)> functor,
+                           bool *allUsesReplaced = nullptr) {
+    replaceUsesWithIf(from->getResults(), to, functor, allUsesReplaced);
+  }
+
+  /// Find uses of `from` within `block` and replace them with `to`. Also notify
+  /// the listener about every in-place op modification (for every use that was
+  /// replaced). The optional `allUsesReplaced` flag is set to "true" if all
+  /// uses were replaced.
+  void replaceOpUsesWithinBlock(Operation *op, ValueRange newValues,
+                                Block *block, bool *allUsesReplaced = nullptr) {
+    replaceOpUsesWithIf(
+        op, newValues,
+        [block](OpOperand &use) {
+          return block->getParentOp()->isProperAncestor(use.getOwner());
+        },
+        allUsesReplaced);
   }
 
   /// Find uses of `from` and replace them with `to` except if the user is
-  /// `exceptedUser`. It also marks every modified uses and notifies the
-  /// rewriter that an in-place operation modification is about to happen.
+  /// `exceptedUser`. Also notify the listener about every in-place op
+  /// modification (for every use that was replaced).
   void replaceAllUsesExcept(Value from, Value to, Operation *exceptedUser) {
     return replaceUsesWithIf(from, to, [&](OpOperand &use) {
       Operation *user = use.getOwner();
       return user != exceptedUser;
     });
   }
+  void replaceAllUsesExcept(Value from, Value to,
+                            const SmallPtrSetImpl<Operation *> &preservedUsers);
 
-  /// Used to notify the rewriter that the IR failed to be rewritten because of
+  /// Used to notify the listener that the IR failed to be rewritten because of
   /// a match failure, and provide a callback to populate a diagnostic with the
   /// reason why the failure occurred. This method allows for derived rewriters
   /// to optionally hook into the reason why a rewrite failed, and display it to
@@ -658,20 +724,16 @@ public:
   template <typename CallbackT>
   std::enable_if_t<!std::is_convertible<CallbackT, Twine>::value, LogicalResult>
   notifyMatchFailure(Location loc, CallbackT &&reasonCallback) {
-#ifndef NDEBUG
     if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-      return rewriteListener->notifyMatchFailure(
+      rewriteListener->notifyMatchFailure(
           loc, function_ref<void(Diagnostic &)>(reasonCallback));
     return failure();
-#else
-    return failure();
-#endif
   }
   template <typename CallbackT>
   std::enable_if_t<!std::is_convertible<CallbackT, Twine>::value, LogicalResult>
   notifyMatchFailure(Operation *op, CallbackT &&reasonCallback) {
     if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-      return rewriteListener->notifyMatchFailure(
+      rewriteListener->notifyMatchFailure(
           op->getLoc(), function_ref<void(Diagnostic &)>(reasonCallback));
     return failure();
   }
@@ -692,6 +754,8 @@ protected:
       : OpBuilder(ctx, listener) {}
   explicit RewriterBase(const OpBuilder &otherBuilder)
       : OpBuilder(otherBuilder) {}
+  explicit RewriterBase(Operation *op, OpBuilder::Listener *listener = nullptr)
+      : OpBuilder(op, listener) {}
   virtual ~RewriterBase();
 
 private:
@@ -712,6 +776,8 @@ public:
   explicit IRRewriter(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
       : RewriterBase(ctx, listener) {}
   explicit IRRewriter(const OpBuilder &builder) : RewriterBase(builder) {}
+  explicit IRRewriter(Operation *op, OpBuilder::Listener *listener = nullptr)
+      : RewriterBase(op, listener) {}
 };
 
 //===----------------------------------------------------------------------===//
@@ -726,6 +792,7 @@ public:
 /// place.
 class PatternRewriter : public RewriterBase {
 public:
+  explicit PatternRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
   using RewriterBase::RewriterBase;
 
   /// A hook used to indicate if the pattern rewriter can recover from failure
@@ -788,8 +855,7 @@ public:
   RewritePatternSet &add(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/std::nullopt,
-                 std::forward<ConstructorArg>(arg),
+    (addImpl<Ts>(/*debugLabels=*/{}, std::forward<ConstructorArg>(arg),
                  std::forward<ConstructorArgs>(args)...),
      ...);
     return *this;
@@ -806,7 +872,9 @@ public:
                                   ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(debugLabels, arg, args...), ...);
+    (addImpl<Ts>(debugLabels, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
 
@@ -872,7 +940,9 @@ public:
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/std::nullopt, arg, args...), ...);
+    (addImpl<Ts>(/*debugLabels=*/{}, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
 

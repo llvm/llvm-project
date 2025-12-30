@@ -32,7 +32,7 @@ define i32 @add_mask_sign_commute_i32(i32 %x) {
 define <2 x i32> @add_mask_sign_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: @add_mask_sign_v2i32(
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ISNEG]], <2 x i32> <i32 7, i32 7>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ISNEG]], <2 x i32> splat (i32 7), <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = ashr <2 x i32> %x, <i32 31, i32 31>

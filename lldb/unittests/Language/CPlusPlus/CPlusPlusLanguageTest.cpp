@@ -9,6 +9,8 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -28,6 +30,10 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"foo::~bar(baz)", "", "foo", "~bar", "(baz)", "", "foo::~bar"},
       {"a::b::c::d(e,f)", "", "a::b::c", "d", "(e,f)", "", "a::b::c::d"},
       {"void f(int)", "void", "", "f", "(int)", "", "f"},
+      {"std::vector<int>foo::bar()", "std::vector<int>", "foo", "bar", "()", "",
+       "foo::bar"},
+      {"int foo::bar::func01(int a, double b)", "int", "foo::bar", "func01",
+       "(int a, double b)", "", "foo::bar::func01"},
 
       // Operators
       {"std::basic_ostream<char, std::char_traits<char> >& "
@@ -63,6 +69,12 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "const",
        "std::__1::ranges::__begin::__fn::operator()[abi:v160000]<char const, "
        "18ul>"},
+      {"bool Ball[abi:BALL]<int>::operator<<[abi:operator]<int>(int)", "bool",
+       "Ball[abi:BALL]<int>", "operator<<[abi:operator]<int>", "(int)", "",
+       "Ball[abi:BALL]<int>::operator<<[abi:operator]<int>"},
+      {"bool Ball[abi:BALL]<int>::operator>>[abi:operator]<int>(int)", "bool",
+       "Ball[abi:BALL]<int>", "operator>>[abi:operator]<int>", "(int)", "",
+       "Ball[abi:BALL]<int>::operator>>[abi:operator]<int>"},
       // Internal classes
       {"operator<<(Cls, Cls)::Subclass::function()", "",
        "operator<<(Cls, Cls)::Subclass", "function", "()", "",
@@ -99,6 +111,8 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "std::forward<decltype(nullptr)>"},
 
       // Templates
+      {"vector<int > foo::bar::func(int)", "vector<int >", "foo::bar", "func",
+       "(int)", "", "foo::bar::func"},
       {"void llvm::PM<llvm::Module, llvm::AM<llvm::Module>>::"
        "addPass<llvm::VP>(llvm::VP)",
        "void", "llvm::PM<llvm::Module, llvm::AM<llvm::Module>>",
@@ -212,7 +226,7 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "A::operator<=>[abi:tag]<A::B>"}};
 
   for (const auto &test : test_cases) {
-    CPlusPlusLanguage::MethodName method(ConstString(test.input));
+    CPlusPlusLanguage::CxxMethodName method(ConstString(test.input));
     EXPECT_TRUE(method.IsValid()) << test.input;
     if (method.IsValid()) {
       EXPECT_EQ(test.return_type, method.GetReturnType().str());
@@ -243,22 +257,22 @@ TEST(CPlusPlusLanguage, InvalidMethodNameParsing) {
   };
 
   for (const auto &name : test_cases) {
-    CPlusPlusLanguage::MethodName method{ConstString(name)};
+    CPlusPlusLanguage::CxxMethodName method{ConstString(name)};
     EXPECT_FALSE(method.IsValid()) << name;
   }
 }
 
 TEST(CPlusPlusLanguage, ContainsPath) {
-  CPlusPlusLanguage::MethodName 
-      reference_1(ConstString("int foo::bar::func01(int a, double b)"));
-  CPlusPlusLanguage::MethodName
-      reference_2(ConstString("int foofoo::bar::func01(std::string a, int b)"));
-  CPlusPlusLanguage::MethodName reference_3(ConstString("int func01()"));
-  CPlusPlusLanguage::MethodName 
-      reference_4(ConstString("bar::baz::operator bool()"));
-  CPlusPlusLanguage::MethodName reference_5(
+  CPlusPlusLanguage::CxxMethodName reference_1(
+      ConstString("int foo::bar::func01(int a, double b)"));
+  CPlusPlusLanguage::CxxMethodName reference_2(
+      ConstString("int foofoo::bar::func01(std::string a, int b)"));
+  CPlusPlusLanguage::CxxMethodName reference_3(ConstString("int func01()"));
+  CPlusPlusLanguage::CxxMethodName reference_4(
+      ConstString("bar::baz::operator bool()"));
+  CPlusPlusLanguage::CxxMethodName reference_5(
       ConstString("bar::baz::operator bool<int, Type<double>>()"));
-  CPlusPlusLanguage::MethodName reference_6(ConstString(
+  CPlusPlusLanguage::CxxMethodName reference_6(ConstString(
       "bar::baz::operator<<<Type<double>, Type<std::vector<double>>>()"));
 
   EXPECT_TRUE(reference_1.ContainsPath(""));
@@ -339,7 +353,7 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
   llvm::StringRef context, basename;
   for (const auto &test : test_cases) {
     EXPECT_TRUE(CPlusPlusLanguage::ExtractContextAndIdentifier(
-        test.input.c_str(), context, basename));
+        test.input, context, basename));
     EXPECT_EQ(test.context, context.str());
     EXPECT_EQ(test.basename, basename.str());
   }
@@ -396,4 +410,207 @@ TEST(CPlusPlusLanguage, GenerateAlternateFunctionManglings) {
 TEST(CPlusPlusLanguage, CPlusPlusNameParser) {
   // Don't crash.
   CPlusPlusNameParser((const char *)nullptr);
+}
+
+TEST(CPlusPlusLanguage, DoesNotMatchCxx) {
+  // Test that a symbol name that is NOT C++ does not match C++.
+
+  SubsystemRAII<CPlusPlusLanguage> lang;
+  Language *CPlusPlusLang =
+      Language::FindPlugin(lldb::eLanguageTypeC_plus_plus);
+
+  EXPECT_TRUE(CPlusPlusLang != nullptr);
+
+  Mangled swiftSymbol("$sS");
+  EXPECT_FALSE(CPlusPlusLang->SymbolNameFitsToLanguage(swiftSymbol));
+}
+
+TEST(CPlusPlusLanguage, MatchesCxx) {
+  // Test that a symbol name that is C++ does match C++ (both Itanium and MSVC).
+
+  SubsystemRAII<CPlusPlusLanguage> lang;
+  Language *CPlusPlusLang =
+      Language::FindPlugin(lldb::eLanguageTypeC_plus_plus);
+
+  EXPECT_TRUE(CPlusPlusLang != nullptr);
+
+  Mangled itaniumSymbol("_Z3Foo");
+  EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(itaniumSymbol));
+  Mangled itaniumExtensionSymbol("___Z3Bar_block_invoke");
+  EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(itaniumExtensionSymbol));
+  Mangled msvcSymbol("??x@@3AH");
+  EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(msvcSymbol));
+}
+
+struct ManglingSubstitutorTestCase {
+  llvm::StringRef mangled;
+  llvm::StringRef from;
+  llvm::StringRef to;
+  llvm::StringRef expected;
+  bool expect_error;
+};
+
+struct ManglingSubstitutorTestFixture
+    : public ::testing::TestWithParam<ManglingSubstitutorTestCase> {};
+
+ManglingSubstitutorTestCase g_mangled_substitutor_type_test_cases[] = {
+    {/*.mangled*/ "_Z3fooa", /*from*/ "a", /*to*/ "c", /*expected*/ "_Z3fooc",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3fooy", /*from*/ "y", /*to*/ "m", /*expected*/ "_Z3foom",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3foox", /*from*/ "x", /*to*/ "l", /*expected*/ "_Z3fool",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3baraa", /*from*/ "a", /*to*/ "c", /*expected*/ "_Z3barcc",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3foov", /*from*/ "x", /*to*/ "l", /*expected*/ "",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3fooB3Tagv", /*from*/ "Tag", /*to*/ "random",
+     /*expected*/ "", /*expect_error*/ false},
+    {/*.mangled*/ "_Z3foocc", /*from*/ "a", /*to*/ "c", /*expected*/ "",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3fooIaE3barIaEEvaT_", /*from*/ "a", /*to*/ "c",
+     /*expected*/ "_ZN3fooIcE3barIcEEvcT_", /*expect_error*/ false},
+    {/*.mangled*/ "foo", /*from*/ "x", /*to*/ "l", /*expected*/ "",
+     /*expect_error*/ true},
+    {/*.mangled*/ "", /*from*/ "x", /*to*/ "l", /*expected*/ "",
+     /*expect_error*/ true},
+    // FIXME: these two cases are odd behaviours, though not realistic in
+    // practice.
+    {/*.mangled*/ "_Z3foox", /*from*/ "", /*to*/ "l", /*expected*/ "_Z3foolx",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3foox", /*from*/ "x", /*to*/ "", /*expected*/ "_Z3foo",
+     /*expect_error*/ false}};
+
+TEST_P(ManglingSubstitutorTestFixture, Type) {
+  // Tests the CPlusPlusLanguage::SubstituteType_ItaniumMangle API.
+
+  const auto &[mangled, from, to, expected, expect_error] = GetParam();
+
+  auto subst_or_err =
+      CPlusPlusLanguage::SubstituteType_ItaniumMangle(mangled, from, to);
+  if (expect_error) {
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Failed());
+  } else {
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, expected);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ManglingSubstitutorTypeTests, ManglingSubstitutorTestFixture,
+    ::testing::ValuesIn(g_mangled_substitutor_type_test_cases));
+
+struct ManglingSubstitutorStructorTestFixture
+    : public ::testing::TestWithParam<ManglingSubstitutorTestCase> {};
+
+ManglingSubstitutorTestCase g_mangled_substitutor_structor_test_cases[] = {
+    {/*.mangled*/ "_ZN3FooC1Ev", /*from*/ "C1", /*to*/ "C2",
+     /*expected*/ "_ZN3FooC2Ev", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooC4Ev", /*from*/ "C4", /*to*/ "C2",
+     /*expected*/ "_ZN3FooC2Ev", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooC2Ev", /*from*/ "C1", /*to*/ "C2", /*expected*/ "",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooD1Ev", /*from*/ "D1", /*to*/ "D2",
+     /*expected*/ "_ZN3FooD2Ev", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooD2Ev", /*from*/ "D1", /*to*/ "D2", /*expected*/ "",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooD4Ev", /*from*/ "D4", /*to*/ "D2",
+     /*expected*/ "_ZN3FooD2Ev", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN2D12C1C1I2C12D1EE2C12D1", /*from*/ "C1", /*to*/ "C2",
+     /*expected*/ "_ZN2D12C1C2I2C12D1EE2C12D1", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN2D12C1D1I2C12D1EE2C12D1", /*from*/ "D1", /*to*/ "D2",
+     /*expected*/ "_ZN2D12C1D2I2C12D1EE2C12D1", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooC6Ev", /*from*/ "D1", /*to*/ "D2", /*expected*/ "",
+     /*expect_error*/ true},
+    {/*.mangled*/ "_ZN2D12C1B2D1C1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*from*/ "C1", /*to*/ "C2",
+     /*expected*/ "_ZN2D12C1B2D1C2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN2D12C1B2D1D1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*from*/ "D1", /*to*/ "D2",
+     /*expected*/ "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*expect_error*/ false},
+};
+
+TEST_P(ManglingSubstitutorStructorTestFixture, Structors) {
+  // Tests the CPlusPlusLanguage::SubstituteStructor_ItaniumMangle API.
+
+  const auto &[mangled, from, to, expected, expect_error] = GetParam();
+
+  auto subst_or_err =
+      CPlusPlusLanguage::SubstituteStructor_ItaniumMangle(mangled, from, to);
+  if (expect_error) {
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Failed());
+  } else {
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, expected);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ManglingSubstitutorStructorTests, ManglingSubstitutorStructorTestFixture,
+    ::testing::ValuesIn(g_mangled_substitutor_structor_test_cases));
+
+TEST(CPlusPlusLanguage, ManglingSubstitutor_StructorAlias) {
+  // Tests the CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle API.
+  {
+    // Invalid mangling.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle("Foo");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Failed());
+  }
+
+  {
+    // Ctor C1 alias.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN3FooC1Ev");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN3FooC2Ev");
+  }
+
+  {
+    // Dtor D1 alias.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN3FooD1Ev");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN3FooD2Ev");
+  }
+
+  {
+    // Ctor C2 not aliased.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN3FooC2Ev");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_FALSE(*subst_or_err);
+  }
+
+  {
+    // Dtor D2 not aliased.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN3FooD2Ev");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_FALSE(*subst_or_err);
+  }
+
+  {
+    // Check that ctor variants in other parts of the name don't get replaced.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN2D12C1B2D1C1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1C2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+  }
+
+  {
+    // Check that dtor variants in other parts of the name don't get replaced.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN2D12C1B2D1D1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+  }
 }

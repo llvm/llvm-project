@@ -6,7 +6,7 @@ referred to as "LLVM Flang" to differentiate itself from ["Classic
 Flang"](https://github.com/flang-compiler/flang) - these are two separate and
 independent Fortran compilers. LLVM Flang is under active development. While it
 is capable of generating executables for a number of examples, some
-functionality is still missing. See [GettingInvolved](GettingInvolved) for tips
+functionality is still missing. See [Getting Involved](GettingInvolved) for tips
 on how to get in touch with us and to learn more about the current status.
 
 ```{eval-rst}
@@ -14,6 +14,23 @@ on how to get in touch with us and to learn more about the current status.
    :titlesonly:
 
    ReleaseNotes
+```
+
+# Using Flang
+
+```{eval-rst}
+.. toctree::
+   :titlesonly:
+
+   GettingStarted
+   FlangCommandLineReference
+   FortranStandardsSupport
+   Extensions
+   Directives
+   OpenMPSupport
+   Real16MathSupport
+   Unsigned
+   FAQ
 ```
 
 # Contributing to Flang
@@ -27,7 +44,6 @@ on how to get in touch with us and to learn more about the current status.
    DesignGuideline
    FortranForCProgrammers
    GettingInvolved
-   GettingStarted
    ImplementingASemanticCheck
    PullRequestChecklist
 ```
@@ -41,19 +57,19 @@ on how to get in touch with us and to learn more about the current status.
    Aliasing
    AliasingAnalysisFIR
    ArrayComposition
+   ArrayRepacking
    AssumedRank
    BijectiveInternalNameUniquing
    Calls
    Character
    ComplexOperations
    ControlFlowGraph
-   Directives
+   DebugGeneration
    DoConcurrent
-   Extensions
+   DoConcurrentConversionToOpenMP
    F202X
    FIRArrayOperations
    FIRLangRef
-   FlangCommandLineReference
    FlangDriver
    FortranFeatureHistory
    FortranIR
@@ -66,10 +82,14 @@ on how to get in touch with us and to learn more about the current status.
    LabelResolution
    ModFiles
    OpenACC
+   OpenACC-descriptor-management.md
    OpenMP-4.5-grammar.md
+   OpenMP-declare-target
+   OpenMP-descriptor-management
    OpenMP-semantics
    OptionComparison
    Overview
+   ParallelMultiImageFortranRuntime
    ParameterizedDerivedTypes
    ParserCombinators
    Parsing
@@ -77,6 +97,7 @@ on how to get in touch with us and to learn more about the current status.
    Preprocessing
    ProcedurePointer
    RuntimeDescriptor
+   RuntimeEnvironment
    RuntimeTypeInfo
    Semantics
    f2018-grammar.md
@@ -87,6 +108,5 @@ on how to get in touch with us and to learn more about the current status.
 
 ```{eval-rst}
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 ```

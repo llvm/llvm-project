@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen \
-; RUN:     < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' < %s | FileCheck %s
 ;
 ; Check that this will not crash our code generation.
 ;

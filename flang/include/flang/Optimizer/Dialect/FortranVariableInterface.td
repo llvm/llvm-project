@@ -22,51 +22,57 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     query about all their Fortran properties.
   }];
 
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/"Get the address produced by the definition",
-      /*retTy=*/"mlir::Value",
-      /*methodName=*/"getBase",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/"Get the address produced by the definition",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getBase",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getResult();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get Fortran attributes",
-      /*retTy=*/"std::optional<fir::FortranVariableFlagsEnum>",
-      /*methodName=*/"getFortranAttrs",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get Fortran attributes",
+           /*retTy=*/"std::optional<fir::FortranVariableFlagsEnum>",
+           /*methodName=*/"getFortranAttrs",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getFortran_attrs();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get the shape of the variable. May be a null value.",
-      /*retTy=*/"mlir::Value",
-      /*methodName=*/"getShape",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get the shape of the variable. May be a null value.",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getShape",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getShape();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Get explicit type parameters of the variable",
-      /*retTy=*/"mlir::OperandRange",
-      /*methodName=*/"getExplicitTypeParams",
-      /*args=*/(ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Get explicit type parameters of the variable",
+           /*retTy=*/"mlir::OperandRange",
+           /*methodName=*/"getExplicitTypeParams",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
         ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
         return op.getTypeparams();
-      }]
-    >,
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Set Fortran attributes",
+           /*retTy=*/"void",
+           /*methodName=*/"setFortranAttrs",
+           /*args=*/(ins "fir::FortranVariableFlagsEnum":$flags),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        op.setFortran_attrs(fir::FortranVariableFlagsAttr::get(op->getContext(), flags));
+      }]>,
   ];
 
   let extraClassDeclaration = [{
@@ -75,7 +81,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     /// variable.
     mlir::Type getElementOrSequenceType() {
       mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getBase().getType()));
-      if (auto boxCharType = type.dyn_cast<fir::BoxCharType>())
+      if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(type))
         return boxCharType.getEleTy();
       return type;
     }
@@ -87,13 +93,13 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is the variable an array?
     bool isArray() {
-      return getElementOrSequenceType().isa<fir::SequenceType>();
+      return mlir::isa<fir::SequenceType>(getElementOrSequenceType());
     }
 
     /// Return the rank of the entity if it is known at compile time.
     std::optional<unsigned> getRank() {
       if (auto sequenceType =
-            getElementOrSequenceType().dyn_cast<fir::SequenceType>()) {
+            mlir::dyn_cast<fir::SequenceType>(getElementOrSequenceType())) {
         if (sequenceType.hasUnknownShape())
           return {};
         return sequenceType.getDimension();
@@ -106,6 +112,20 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       auto attrs = getFortranAttrs();
       return attrs && bitEnumContainsAny(*attrs,
                         fir::FortranVariableFlagsEnum::pointer);
+    }
+
+    /// Is this variable a Cray pointer?
+    bool isCrayPointer() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::cray_pointer);
+    }
+
+    /// Is this variable a Cray pointee?
+    bool isCrayPointee() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::cray_pointee);
     }
 
     /// Is this variable a Fortran allocatable?
@@ -133,7 +153,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is this a Fortran character variable?
     bool isCharacter() {
-      return getElementType().isa<fir::CharacterType>();
+      return mlir::isa<fir::CharacterType>(getElementType());
     }
 
     /// Is this a Fortran character variable with an explicit length?
@@ -149,7 +169,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is this variable represented as a fir.box or fir.class value?
     bool isBoxValue() {
-      return getBase().getType().isa<fir::BaseBoxType>();
+      return mlir::isa<fir::BaseBoxType>(getBase().getType());
     }
 
     /// Is this variable represented as a fir.box or fir.class address?
@@ -184,6 +204,13 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
                         fir::FortranVariableFlagsEnum::target);
     }
 
+    /// Is this variable captured in an internal procedure via Fortran host association?
+    bool isCapturedInInternalProcedure() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::internal_assoc);
+    }
+
     /// Is this variable a Fortran intent(in)?
     bool isIntentIn() {
       auto attrs = getFortranAttrs();
@@ -192,12 +219,119 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     }
 
     /// Interface verifier imlementation for declare operations.
-    mlir::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
+    llvm::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
 
   }];
 
   let cppNamespace = "fir";
 
+}
+
+def fir_FortranVariableStorageOpInterface
+    : OpInterface<"FortranVariableStorageOpInterface",
+                  [fir_FortranVariableOpInterface]> {
+  let description = [{
+    An extension of FortranVariableOpInterface for operations that provide
+    information about the physical storage layout of the variable.
+    The operations provide the raw address of the physical storage
+    and the byte offset where the variable begins within the physical
+    storage.
+    The storage is a reference to an array of known size consisting
+    of i8 elements. This is how Flang represents COMMON and EQUIVALENCE
+    storage blocks with the member variables located within the storage
+    at different offsets. The storage offset for a variable must not
+    exceed the storage size. Note that the zero-sized variables
+    may start at the offset that is after the final byte of the storage.
+    When getStorage() returns nullptr, getStorageOffset() must return 0.
+    This means that nothing is known about the physical storage
+    of the variable (beyond the information maybe provided
+    by the concrete operation itself, e.g. fir.declare defines
+    the physical storage of a variable via memref operand,
+    where the variable starts).
+  }];
+
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/"Returns the raw address of the physical storage",
+           /*retTy=*/"mlir::Value",
+           /*methodName=*/"getStorage",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        return op.getStorage();
+      }]>,
+       InterfaceMethod<
+           /*desc=*/"Returns the byte offset where the variable begins "
+                    "within the physical storage",
+           /*retTy=*/"std::uint64_t",
+           /*methodName=*/"getStorageOffset",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImplementation=*/[{
+        ConcreteOp op = mlir::cast<ConcreteOp>(this->getOperation());
+        return op.getStorageOffset();
+      }]>,
+  ];
+
+  let cppNamespace = "fir";
+  let verify =
+      [{ return detail::verifyFortranVariableStorageOpInterface($_op); }];
+}
+
+def fir_FortranObjectViewOpInterface
+    : OpInterface<"FortranObjectViewOpInterface"> {
+  let description = [{
+    Interface for operations that may produce results that allow accessing
+    objects in memory based on the operands of these operations.
+    For example:
+    ```
+    %0 = fir.convert %x : (!llvm.ptr) -> !fir.llvm_ptr<i32>
+    ```
+    When the result of `fir.convert` is used to access an object in memory,
+    FIR alias analysis may want to pass through `fir.convert` to be able
+    to find the original Fortran object that is being accessed.
+    This interface provides methods that allow discovering information
+    about the accessed object and the characteristics of the resulting
+    "view" of the object, e.g. whether the result and the input
+    access the object from the same location within the object or
+    whether they are offsetted (which may happen, for example, in case of
+    `fir.array_coor` operation).
+  }];
+  let cppNamespace = "::fir";
+
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/
+           [{ Returns the operand which the given OpResult is based on. }],
+           /*retTy=*/"::mlir::Value",
+           /*methodName=*/"getViewSource",
+           /*args=*/(ins "::mlir::OpResult":$resultView),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        assert($_op.getOperation() == resultView.getOwner() &&
+               "resultView must be a result of this operation");
+        return $_op.getViewSource(resultView);
+      }]>,
+       InterfaceMethod<
+           /*desc=*/[{
+        Returns the constant offset (in bytes) applied to the corresponding
+        operand to produce the resulting view.
+        If it is not possible to identify the constant offset,
+        the result is nullopt.
+        Note that the offset may be negative, e.g. when addressing
+        an array section with a negative stride.
+      }],
+           /*retTy=*/"std::optional<std::int64_t>",
+           /*methodName=*/"getViewOffset",
+           /*args=*/(ins "::mlir::OpResult":$resultView),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        assert($_op.getOperation() == resultView.getOwner() &&
+               "resultView must be a result of this operation");
+        return $_op.getViewOffset(resultView);
+      }]>,
+  ];
 }
 
 #endif  // FORTRANVARIABLEINTERFACE

@@ -14,12 +14,10 @@
 #include "Utils/CodegenUtils.h"
 #include "Utils/LoopEmitter.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -30,10 +28,6 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/AffineExprVisitor.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/TensorEncoding.h"
-#include "llvm/ADT/SmallBitVector.h"
 
 #include <optional>
 
@@ -86,7 +80,7 @@ static bool findAffine(Merger &merger, TensorId tid, Level lvl, AffineExpr a,
   case AffineExprKind::Add:
   case AffineExprKind::Mul:
   case AffineExprKind::Constant: {
-    assert(isDenseLT(lt));
+    assert(lt.hasDenseSemantic());
     if (auto binOp = dyn_cast<AffineBinaryOpExpr>(a)) {
       // We do not set dim level format for affine expression like d0 + d1 on
       // either loop index at d0 or d1. We continue the recursion merely to
@@ -211,7 +205,7 @@ static unsigned getNumNonTrivialIdxExpOnSparseLvls(AffineMap map,
          "AffineMap does not have dimension-rank many results");
   unsigned num = 0;
   for (Level l = 0; l < lvlRank; l++) {
-    if (!isa<AffineDimExpr>(exprs[l]) && !stt.isDenseLvl(l))
+    if (!isa<AffineDimExpr>(exprs[l]) && !stt.getLvlType(l).hasDenseSemantic())
       num++;
   }
   return num;
@@ -322,8 +316,8 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
         if (!isInit) {
           Value zero = constantZero(builder, loc,
                                     getElementTypeOrSelf(tensor.getType()));
-          builder.create<linalg::FillOp>(loc, ValueRange{zero},
-                                         ValueRange{init});
+          linalg::FillOp::create(builder, loc, ValueRange{zero},
+                                 ValueRange{init});
         }
         return init;
       },
@@ -354,9 +348,12 @@ static Value genSubscript(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
   const auto stt = getSparseTensorType(t->get());
   if (stt.hasEncoding()) {
     // For sparse tensors we only push the last-level's position onto `args`.
-    const auto pos = env.emitter().getPosits()[tid].back();
-    assert(pos);
-    args.push_back(pos);
+    const auto pos = env.emitter().getValPosits(tid);
+    assert(!pos.empty());
+    args.append(pos);
+    // Simply returns the tensor to extract value using iterators.
+    if (env.options().sparseEmitStrategy == SparseEmitStrategy::kSparseIterator)
+      return t->get();
   } else {
     // For dense tensors we push all level's coordinates onto `args`.
     const Level lvlRank = stt.getLvlRank();
@@ -382,7 +379,7 @@ static Value genInsertionLoad(CodegenEnv &env, OpBuilder &builder,
   }
   // Load from expanded access pattern.
   Value index = genIndex(env, t);
-  return builder.create<memref::LoadOp>(loc, env.getExpandValues(), index);
+  return memref::LoadOp::create(builder, loc, env.getExpandValues(), index);
 }
 
 /// Generates insertion code to implement dynamic tensor load for reduction.
@@ -398,9 +395,25 @@ static Value genInsertionLoadReduce(CodegenEnv &env, OpBuilder &builder,
   Value values = env.getExpandValues();
   Value filled = env.getExpandFilled();
   Value index = genIndex(env, t);
-  Value isFilled = builder.create<memref::LoadOp>(loc, filled, index);
-  Value valAtIndex = builder.create<memref::LoadOp>(loc, values, index);
-  return builder.create<arith::SelectOp>(loc, isFilled, valAtIndex, identity);
+  Value isFilled = memref::LoadOp::create(builder, loc, filled, index);
+  Value valAtIndex = memref::LoadOp::create(builder, loc, values, index);
+  return arith::SelectOp::create(builder, loc, isFilled, valAtIndex, identity);
+}
+
+static Value genConditionalInsert(Location loc, OpBuilder &builder, Value cond,
+                                  Value sparseOut, ValueRange ivs, Value v) {
+  scf::IfOp condInsert =
+      scf::IfOp::create(builder, loc, sparseOut.getType(), cond, true);
+  // True branch.
+  builder.setInsertionPointToStart(condInsert.thenBlock());
+  Value res = tensor::InsertOp::create(builder, loc, v, sparseOut, ivs);
+  scf::YieldOp::create(builder, loc, res);
+  // False branch.
+  builder.setInsertionPointToStart(condInsert.elseBlock());
+  scf::YieldOp::create(builder, loc, sparseOut);
+  // Value assignment.
+  builder.setInsertionPointAfter(condInsert);
+  return condInsert.getResult(0);
 }
 
 /// Generates insertion code to implement dynamic tensor store.
@@ -423,22 +436,21 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
       //     return updated chain
       //   else
       //     return unmodified chain
-      scf::IfOp ifValidLexInsert = builder.create<scf::IfOp>(
-          loc, chain.getType(), env.getValidLexInsert(),
-          /*else=*/true);
-      // True branch.
-      builder.setInsertionPointToStart(ifValidLexInsert.thenBlock());
-      Value res = builder.create<InsertOp>(loc, rhs, chain, ivs);
-      builder.create<scf::YieldOp>(loc, res);
-      // False branch.
-      builder.setInsertionPointToStart(ifValidLexInsert.elseBlock());
-      builder.create<scf::YieldOp>(loc, chain);
-      // Value assignment.
-      builder.setInsertionPointAfter(ifValidLexInsert);
-      env.updateInsertionChain(ifValidLexInsert.getResult(0));
+      Value out = genConditionalInsert(loc, builder, env.getValidLexInsert(),
+                                       chain, ivs, rhs);
+      env.updateInsertionChain(out);
     } else {
+      Value sparseOut;
+      if (!hasAnySparseType(env.op().getInputs().getTypes())) {
+        // This is an all-dense -> sparse kernel, test rhs != 0 before
+        // insertion.
+        Value nz = genIsNonzero(builder, loc, rhs);
+        sparseOut = genConditionalInsert(loc, builder, nz, chain, ivs, rhs);
+      } else {
+        sparseOut = tensor::InsertOp::create(builder, loc, rhs, chain, ivs);
+      }
       // Generates regular insertion chain.
-      env.updateInsertionChain(builder.create<InsertOp>(loc, rhs, chain, ivs));
+      env.updateInsertionChain(sparseOut);
     }
     return;
   }
@@ -456,25 +468,25 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
   Value fval = constantI1(builder, loc, false);
   Value tval = constantI1(builder, loc, true);
   // If statement.
-  Value isFilled = builder.create<memref::LoadOp>(loc, filled, index);
-  Value cond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                             isFilled, fval);
-  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, builder.getIndexType(), cond,
-                                             /*else=*/true);
+  Value isFilled = memref::LoadOp::create(builder, loc, filled, index);
+  Value cond = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                                     isFilled, fval);
+  scf::IfOp ifOp = scf::IfOp::create(builder, loc, builder.getIndexType(), cond,
+                                     /*else=*/true);
   // True branch.
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  builder.create<memref::StoreOp>(loc, tval, filled, index);
-  builder.create<memref::StoreOp>(loc, index, added, count);
+  memref::StoreOp::create(builder, loc, tval, filled, index);
+  memref::StoreOp::create(builder, loc, index, added, count);
   Value one = constantIndex(builder, loc, 1);
-  Value add = builder.create<arith::AddIOp>(loc, count, one);
-  builder.create<scf::YieldOp>(loc, add);
+  Value add = arith::AddIOp::create(builder, loc, count, one);
+  scf::YieldOp::create(builder, loc, add);
   // False branch.
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  builder.create<scf::YieldOp>(loc, count);
+  scf::YieldOp::create(builder, loc, count);
   builder.setInsertionPointAfter(ifOp);
   // Value assignment.
   env.updateExpandCount(ifOp.getResult(0));
-  builder.create<memref::StoreOp>(loc, rhs, values, index);
+  memref::StoreOp::create(builder, loc, rhs, values, index);
 }
 
 /// Generates a load on a dense or sparse tensor.
@@ -483,18 +495,31 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   Value val = env.exp(exp).val;
   if (val)
     return val;
-  // Load during insertion.
+  // Get tensor operand.
   linalg::GenericOp op = env.op();
+  Location loc = op.getLoc();
   OpOperand *t = &op->getOpOperand(env.exp(exp).tensor);
+  // Fold binary-valued tensor into explicit value.
+  const auto stt = getSparseTensorType(t->get());
+  if (auto explVal = stt.getExplicitVal())
+    return genValFromAttr(builder, loc, explVal);
+  // Load during insertion.
   if (env.isSparseOutput(t)) {
     if (env.isCustomReduc())
       return genInsertionLoadReduce(env, builder, t);
     return genInsertionLoad(env, builder, t);
   }
+
   // Actual load.
   SmallVector<Value> args;
   Value ptr = genSubscript(env, builder, t, args);
-  return builder.create<memref::LoadOp>(op.getLoc(), ptr, args);
+  if (llvm::isa<TensorType>(ptr.getType())) {
+    assert(env.options().sparseEmitStrategy ==
+           SparseEmitStrategy::kSparseIterator);
+    return ExtractValOp::create(builder, loc, ptr,
+                                llvm::getSingleElement(args));
+  }
+  return memref::LoadOp::create(builder, loc, ptr, args);
 }
 
 /// Generates a store on a dense or sparse tensor.
@@ -521,7 +546,7 @@ static void genTensorStore(CodegenEnv &env, OpBuilder &builder, ExprId exp,
   if (!env.isSparseOutput(t)) {
     SmallVector<Value> args;
     Value ptr = genSubscript(env, builder, t, args);
-    builder.create<memref::StoreOp>(loc, rhs, ptr, args);
+    memref::StoreOp::create(builder, loc, rhs, ptr, args);
     return;
   }
   // Store during sparse insertion.
@@ -532,7 +557,7 @@ static void genTensorStore(CodegenEnv &env, OpBuilder &builder, ExprId exp,
   // Select operation insertion.
   Value chain = env.getInsertionChain();
   scf::IfOp ifOp =
-      builder.create<scf::IfOp>(loc, chain.getType(), rhs, /*else=*/true);
+      scf::IfOp::create(builder, loc, chain.getType(), rhs, /*else=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   // Existing value was preserved to be used here.
   assert(env.exp(exp).val);
@@ -541,10 +566,10 @@ static void genTensorStore(CodegenEnv &env, OpBuilder &builder, ExprId exp,
   env.merger().clearExprValue(exp);
   // Yield modified insertion chain along true branch.
   Value mchain = env.getInsertionChain();
-  builder.create<scf::YieldOp>(op.getLoc(), mchain);
+  scf::YieldOp::create(builder, op.getLoc(), mchain);
   // Yield original insertion chain along false branch.
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  builder.create<scf::YieldOp>(loc, chain);
+  scf::YieldOp::create(builder, loc, chain);
   // Done with if statement.
   env.updateInsertionChain(ifOp->getResult(0));
   builder.setInsertionPointAfter(ifOp);
@@ -573,7 +598,7 @@ static Value relinkBranch(CodegenEnv &env, RewriterBase &rewriter, Block *block,
       assert(!getSparseTensorType(t->get()).hasEncoding()); // dense!
       SmallVector<Value> args;
       Value ptr = genSubscript(env, rewriter, t, args);
-      return rewriter.create<memref::LoadOp>(op.getLoc(), ptr, args);
+      return memref::LoadOp::create(rewriter, op.getLoc(), ptr, args);
     }
   } else if (Operation *def = e.getDefiningOp()) {
     // Handle index computation.
@@ -583,7 +608,7 @@ static Value relinkBranch(CodegenEnv &env, RewriterBase &rewriter, Block *block,
     if (def->getBlock() == block) {
       rewriter.setInsertionPoint(def);
       for (unsigned i = 0, n = def->getNumOperands(); i < n; i++) {
-        rewriter.updateRootInPlace(def, [&]() {
+        rewriter.modifyOpInPlace(def, [&]() {
           def->setOperand(
               i, relinkBranch(env, rewriter, block, def->getOperand(i)));
         });
@@ -744,7 +769,8 @@ static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopId curr,
     Type t2 = MemRefType::get(dynShape, builder.getI1Type());
     Type t3 = MemRefType::get(dynShape, builder.getIndexType());
     Type t4 = builder.getIndexType();
-    auto r = builder.create<ExpandOp>(loc, TypeRange({t1, t2, t3, t4}), tensor);
+    auto r =
+        ExpandOp::create(builder, loc, TypeRange({t1, t2, t3, t4}), tensor);
     assert(r.getNumResults() == 4);
     env.startExpand(r.getResult(0), r.getResult(1), r.getResult(2),
                     r.getResult(3));
@@ -757,8 +783,8 @@ static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopId curr,
     Value added = env.getExpandAdded();
     Value count = env.getExpandCount();
     Value chain = env.getInsertionChain();
-    Value compress = builder.create<CompressOp>(loc, values, filled, added,
-                                                count, chain, indices);
+    Value compress = CompressOp::create(builder, loc, values, filled, added,
+                                        count, chain, indices);
     env.updateInsertionChain(compress);
     env.endExpand();
   }
@@ -801,7 +827,7 @@ static bool shouldTryParallize(CodegenEnv &env, LoopId curr,
     // `CodegenEnv::lt(TensorId, LoopId)`. The returned LT from CodegenEnv
     // should be consistent with the LT indexed by <TensorId, Level>.
     const auto lt = env.lt(env.unpackTensorLevel(tidLvl).first, curr);
-    return isCompressedLT(lt) || isSingletonLT(lt);
+    return lt.hasSparseSemantic();
   });
   return isParallelFor(env, /*isOuter=*/curr == 0, isSparse);
 }
@@ -811,12 +837,13 @@ static bool shouldTryParallize(CodegenEnv &env, LoopId curr,
 /// one sparse level in the list.
 static Operation *genCoIteration(CodegenEnv &env, OpBuilder &builder,
                                  ArrayRef<TensorLevel> tidLvls,
-                                 bool tryParallel, bool needsUniv) {
+                                 unsigned numCases, bool tryParallel,
+                                 bool needsUniv) {
   Operation *loop = *env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
     // Construct while-loop with a parameter for each index.
     return env.emitter().enterCoIterationOverTensorsAtLvls(
-        builder, env.op().getLoc(), tidLvls, reduc, tryParallel,
-        /*genDedup=*/true, needsUniv);
+        builder, env.op().getLoc(), tidLvls, numCases, reduc, tryParallel,
+        needsUniv);
   });
   assert(loop);
   return loop;
@@ -825,9 +852,11 @@ static Operation *genCoIteration(CodegenEnv &env, OpBuilder &builder,
 /// Generates a for-loop or a while-loop, depending on whether it implements
 /// singleton iteration or co-iteration over the given conjunction.
 static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, LoopId curr,
-                          bool needsUniv, ArrayRef<TensorLevel> tidLvls) {
+                          unsigned numCases, bool needsUniv,
+                          ArrayRef<TensorLevel> tidLvls) {
   bool tryParallel = shouldTryParallize(env, curr, tidLvls);
-  return genCoIteration(env, builder, tidLvls, tryParallel, needsUniv);
+  return genCoIteration(env, builder, tidLvls, numCases, tryParallel,
+                        needsUniv);
 }
 
 /// Generates the induction structure for a while-loop.
@@ -862,12 +891,32 @@ static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder,
         env.updateInsertionChain(ifOp->getResult(y++));
       }
       assert(y == yields.size());
-      builder.create<scf::YieldOp>(loc, yields);
+      scf::YieldOp::create(builder, loc, yields);
       builder.setInsertionPointAfter(ifOp);
     }
   }
   // No need to set the insertion point here as LoopEmitter keeps track of the
   // basic block where scf::Yield should be inserted.
+}
+
+/// Generates a case region in the coiterate operation.
+static void genCoIterationCase(CodegenEnv &env, OpBuilder &builder,
+                               unsigned caseIdx, LatPointId allCase,
+                               LatPointId curCase,
+                               MutableArrayRef<Value> reduc) {
+  assert(allCase == curCase || env.merger().latGT(allCase, curCase));
+  const BitVector &allCaseBits = env.merger().lat(allCase).simple;
+  const BitVector &curCaseBits = env.merger().lat(curCase).simple;
+
+  /// Computes the subset of iterators that are valid in the current case being
+  /// generated.
+  I64BitSet caseBit(0);
+  for (auto [idx, set] : llvm::enumerate(allCaseBits.set_bits()))
+    if (curCaseBits.test(set))
+      caseBit.set(idx);
+
+  env.emitter().enterCurrentCoIterationCase(builder, env.op().getLoc(), caseBit,
+                                            caseIdx, reduc);
 }
 
 /// Generates a single if-statement within a while-loop.
@@ -891,18 +940,18 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId curr,
         }
         assert(curr == env.merger().loop(b));
         Value clause;
-        if (isCompressedLT(lt) || isSingletonLT(lt) ||
-            isLooseCompressedLT(lt) || is2OutOf4LT(lt)) {
+        if (lt.hasSparseSemantic()) {
           assert(lvl.has_value());
-          const Value crd = env.emitter().getCoords()[tid][*lvl];
+          const Value crd = env.emitter().getCoord(tid, *lvl);
           const Value lvar = env.getLoopVar(curr);
-          clause = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                                 crd, lvar);
+          clause = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                                         crd, lvar);
         } else {
-          assert(isDenseLT(lt) || isUndefLT(lt));
+          assert(lt.hasDenseSemantic() || isUndefLT(lt));
           clause = constantI1(builder, loc, true);
         }
-        cond = cond ? builder.create<arith::AndIOp>(loc, cond, clause) : clause;
+        cond =
+            cond ? arith::AndIOp::create(builder, loc, cond, clause) : clause;
       });
   if (env.isReduc()) {
     types.push_back(env.getReduc().getType());
@@ -913,7 +962,7 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId curr,
     types.push_back(builder.getIndexType());
   if (env.getInsertionChain())
     types.push_back(env.getInsertionChain().getType());
-  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, cond, /*else=*/true);
+  scf::IfOp ifOp = scf::IfOp::create(builder, loc, types, cond, /*else=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   return ifOp;
 }
@@ -941,7 +990,7 @@ static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
     env.updateInsertionChain(insInput);
   }
   if (!operands.empty())
-    builder.create<scf::YieldOp>(env.op().getLoc(), operands);
+    scf::YieldOp::create(builder, env.op().getLoc(), operands);
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
 }
 
@@ -989,7 +1038,7 @@ static bool getAllTidLvlsInLatPoints(
           hasNonUnique = !isUniqueLT(lt) || hasNonUnique;
           callback(env.makeTensorLevel(tid, *lvl), nullptr);
           numloopCond++;
-        } else if (isDenseLT(lt) || isIdxReduc) {
+        } else if (lt.hasDenseSemantic() || isIdxReduc) {
           callback(env.makeTensorLevel(tid, *lvl), nullptr);
         } else {
           assert(isUndefLT(lt));
@@ -1011,7 +1060,8 @@ static bool getAllTidLvlsInLatPoints(
             AffineExpr exp = affines[l];
             // Skip simple affine expression and non-dense levels (which
             // have their own filter loop).
-            if (isa<AffineDimExpr>(exp) || !stt.isDenseLvl(l))
+            LevelType lt = stt.getLvlType(l);
+            if (isa<AffineDimExpr>(exp) || !lt.hasDenseSemantic())
               continue;
 
             // Constant affine expression are handled in genLoop.
@@ -1032,10 +1082,14 @@ static bool getAllTidLvlsInLatPoints(
       });
 
   if (isDenseLT(env.lt(outTid, curr))) {
-    // Note that we generate dense indices of the output tensor
-    // unconditionally, since they may not appear in the lattice, but may be
-    // needed for linearized env.
-    callback(env.makeTensorLevel(outTid, *outLvl), nullptr);
+    auto stt = getSparseTensorType(env.op().getOutputs().front());
+    // Note that we generate dense indices of the output tensor unconditionally,
+    // since they may not appear in the lattice, but may be needed for
+    // linearized env.
+    // TODO: we should avoid introducing corner cases for all-dense sparse
+    // tensors.
+    if (stt.hasEncoding() && stt.isAllDense())
+      callback(env.makeTensorLevel(outTid, *outLvl), nullptr);
   }
 
   if (numloopCond == 0) {
@@ -1047,7 +1101,11 @@ static bool getAllTidLvlsInLatPoints(
   }
   // If we just need to one loop conditions and the conditions is not imposed on
   // non-unique level, the loop can be generated by a for loop.
-  return numloopCond == 1 && !hasNonUnique;
+  // Or, if we are generating sparse-iterator-based loops, we always generate
+  // `sparse_tensor.iterate` regardless whether the level is unique or not.
+  return numloopCond == 1 &&
+         (!hasNonUnique || env.options().sparseEmitStrategy ==
+                               SparseEmitStrategy::kSparseIterator);
 }
 
 /// Starts a loop sequence at given level. Returns true if
@@ -1064,6 +1122,11 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
 
   SmallVector<TensorLevel> tidLvls;
   getAllTidLvlsInLatPoints(env, l0, curr, [&](TensorLevel tl, AffineExpr) {
+    // TODO: remove this! The same tensor level might be added for multiple
+    // times due to the special handling for all-dense "sparse" output tensor
+    // (see L1038).
+    if (llvm::is_contained(tidLvls, tl))
+      return;
     tidLvls.emplace_back(tl);
   });
 
@@ -1095,8 +1158,9 @@ static void genConstantDenseAddressFromLevel(CodegenEnv &env,
     assert(lvlExprs.size() == static_cast<size_t>(lvlRank));
     for (Level l = startLvl; l < lvlRank; l++) {
       AffineExpr lvlExpr = lvlExprs[l];
-      if (enc.isDenseLvl(l) && isa<AffineConstantExpr>(lvlExpr))
-        env.emitter().genDenseAffineAddress(
+      if (enc.getLvlType(l).hasDenseSemantic() &&
+          isa<AffineConstantExpr>(lvlExpr))
+        env.emitter().locateLvlAtAffineAddress(
             builder, loc, env.makeTensorLevel(tid, l), lvlExpr);
       else
         return; // break on first non-dense non-constant level
@@ -1131,7 +1195,10 @@ static bool translateBitsToTidLvlPairs(
 /// Starts a single loop in current sequence.
 static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
                                               OpBuilder &builder, LoopId curr,
-                                              LatPointId li, bool needsUniv) {
+                                              LatPointId li, unsigned numCases,
+                                              bool needsUniv) {
+  // TODO: numCases only used when generating iterator-based loops. Cleanup
+  // after fully migration.
   // The set of tensors + lvls to generate loops on
   SmallVector<TensorLevel> tidLvls;
 
@@ -1142,10 +1209,10 @@ static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
       translateBitsToTidLvlPairs(env, li, curr, tidLvls, affineTidLvls);
 
   // Emit the for/while-loop control.
-  Operation *loop = genLoop(env, builder, curr, needsUniv, tidLvls);
+  Operation *loop = genLoop(env, builder, curr, numCases, needsUniv, tidLvls);
   Location loc = env.op().getLoc();
   for (auto [tidLvl, exp] : affineTidLvls) {
-    env.emitter().genDenseAffineAddress(builder, loc, tidLvl, exp);
+    env.emitter().locateLvlAtAffineAddress(builder, loc, tidLvl, exp);
   }
 
   // Until now, we have entered every <tid, lvl> pair in {cond, extra,
@@ -1215,42 +1282,73 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
   // Start a loop sequence.
   bool needsUniv = startLoopSeq(env, rewriter, exp, curr, lts);
 
-  // Emit a loop for every lattice point L0 >= Li in this loop sequence.
-  // We cannot change this to `for (const LatPointId li : env.set(lts))`
-  // because the loop body causes data-movement which invalidates
-  // the iterator.
+  // When using sparse-iterator-based loops, we only need one loops, as
+  // opposed to a loop sequence, to cover all the iterator spaces.
   const unsigned lsize = env.set(lts).size();
-  for (unsigned i = 0; i < lsize; i++) {
-    const LatPointId li = env.set(lts)[i];
-    // Start a loop.
-    auto [loop, isSingleCond] = startLoop(env, rewriter, curr, li, needsUniv);
-
-    // Visit all lattices points with Li >= Lj to generate the
-    // loop-body, possibly with if statements for coiteration.
-    Value redInput = env.getReduc();
-    Value cntInput = env.getExpandCount();
-    Value insInput = env.getInsertionChain();
-    Value validIns = env.getValidLexInsert();
-    // We cannot change this to `for (const LatPointId lj : env.set(lts))`
-    // because the loop body causes data-movement which invalidates the
-    // iterator.
+  if (env.generatingSparseIterator()) {
+    // Get the largest lattice point and start a loop.
+    const LatPointId li = env.set(lts)[0];
+    auto [loop, isSingleCond] =
+        startLoop(env, rewriter, curr, li, lsize, needsUniv);
+    assert(isSingleCond == llvm::isa<IterateOp>(loop));
+    // We cannot change this to `for (const LatPointId li : env.set(lts))`
+    // because the loop body causes data-movement which invalidates
+    // the iterator.
     for (unsigned j = 0; j < lsize; j++) {
       const LatPointId lj = env.set(lts)[j];
       const ExprId ej = env.lat(lj).exp;
-      if (li == lj || env.merger().latGT(li, lj)) {
-        // Recurse into body of each branch.
-        if (!isSingleCond) {
-          scf::IfOp ifOp = genIf(env, rewriter, curr, lj);
+      // Recurse into body of each branch.
+      if (!isSingleCond) {
+        env.genLoopBoundary([&, curr, j, li, lj](MutableArrayRef<Value> reduc) {
+          genCoIterationCase(env, rewriter, /*caseIdx*/ j, li, lj, reduc);
           genStmt(env, rewriter, ej, curr + 1);
-          endIf(env, rewriter, ifOp, redInput, cntInput, insInput, validIns);
-        } else {
-          genStmt(env, rewriter, ej, curr + 1);
-        }
+          // TODO: handle yield values.
+          assert(reduc.empty() && "Not Implemented");
+          sparse_tensor::YieldOp::create(rewriter, env.op().getLoc());
+          return std::nullopt;
+        });
+        // endIf(env, rewriter, ifOp, redInput, cntInput, insInput, validIns);
+      } else {
+        genStmt(env, rewriter, ej, curr + 1);
       }
     }
-
     // End a loop.
     needsUniv = endLoop(env, rewriter, loop, curr, needsUniv, isSingleCond);
+  } else {
+    // Emit a loop for every lattice point L0 >= Li in this loop sequence.
+    for (unsigned i = 0; i < lsize; i++) {
+      const LatPointId li = env.set(lts)[i];
+      // Start a loop.
+      auto [loop, isSingleCond] =
+          startLoop(env, rewriter, curr, li, lsize, needsUniv);
+
+      // Visit all lattices points with Li >= Lj to generate the
+      // loop-body, possibly with if statements for coiteration.
+      Value redInput = env.getReduc();
+      Value cntInput = env.getExpandCount();
+      Value insInput = env.getInsertionChain();
+      Value validIns = env.getValidLexInsert();
+      // We cannot change this to `for (const LatPointId lj : env.set(lts))`
+      // because the loop body causes data-movement which invalidates the
+      // iterator.
+      for (unsigned j = 0; j < lsize; j++) {
+        const LatPointId lj = env.set(lts)[j];
+        const ExprId ej = env.lat(lj).exp;
+        if (li == lj || env.merger().latGT(li, lj)) {
+          // Recurse into body of each branch.
+          if (!isSingleCond) {
+            scf::IfOp ifOp = genIf(env, rewriter, curr, lj);
+            genStmt(env, rewriter, ej, curr + 1);
+            endIf(env, rewriter, ifOp, redInput, cntInput, insInput, validIns);
+          } else {
+            genStmt(env, rewriter, ej, curr + 1);
+          }
+        }
+      }
+
+      // End a loop.
+      needsUniv = endLoop(env, rewriter, loop, curr, needsUniv, isSingleCond);
+    }
   }
 
   // End a loop sequence.
@@ -1297,7 +1395,7 @@ public:
   LogicalResult matchAndRewrite(linalg::GenericOp op,
                                 PatternRewriter &rewriter) const override {
     // Only accept single output operations with pure tensor semantics.
-    if (op.getNumDpsInits() != 1 || !op.hasTensorSemantics())
+    if (op.getNumDpsInits() != 1 || !op.hasPureTensorSemantics())
       return failure();
 
     // Only accept trivial affine indices.
@@ -1361,7 +1459,7 @@ public:
       return failure();
 
     // Recursively generates code if admissible.
-    env.startEmit();
+    env.startEmit(options.sparseEmitStrategy);
     genBuffers(env, rewriter);
     // TODO: Constant affine expression should be handled differently when using
     // slice-based codegen, it does not matter now because we already reject the

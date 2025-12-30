@@ -32,18 +32,18 @@ define void @loop_or(ptr noalias %pIn, ptr noalias %pOut, i32 %s) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[PIN:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[PIN:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[WIDE_LOAD]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[WIDE_LOAD4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <4 x i32> [[TMP2]], <i32 65793, i32 65793, i32 65793, i32 65793>
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw <4 x i32> [[TMP3]], <i32 65793, i32 65793, i32 65793, i32 65793>
-; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint <4 x i32> [[TMP4]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
-; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint <4 x i32> [[TMP5]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[POUT:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 4
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <4 x i32> [[TMP2]], splat (i32 65793)
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw <4 x i32> [[TMP3]], splat (i32 65793)
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint <4 x i32> [[TMP4]], splat (i32 -16777216)
+; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint <4 x i32> [[TMP5]], splat (i32 -16777216)
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[POUT:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -57,12 +57,12 @@ define void @loop_or(ptr noalias %pIn, ptr noalias %pOut, i32 %s) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER5]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[PIN]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PIN]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP11]] to i32
 ; CHECK-NEXT:    [[OR2:%.*]] = mul nuw nsw i32 [[CONV]], 65793
 ; CHECK-NEXT:    [[OR3:%.*]] = or disjoint i32 [[OR2]], -16777216
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[POUT]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i32, ptr [[POUT]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i32 [[OR3]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]

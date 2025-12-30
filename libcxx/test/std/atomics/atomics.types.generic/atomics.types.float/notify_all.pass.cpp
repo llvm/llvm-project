@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: no-threads
-// XFAIL: availability-synchronization_library-missing
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
 
 //  void notify_all() volatile noexcept;
 //  void notify_all() noexcept;
@@ -93,7 +91,7 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // TODO https://llvm.org/PR48634
   // test<long double>();
 
   return 0;

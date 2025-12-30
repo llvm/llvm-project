@@ -1,7 +1,18 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null %std_cxx17-
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++17
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c
+
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++17 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c -fexperimental-new-constant-interpreter -DNEW_INTERP
 
 // FIXME Location is (frontend)
 // cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
@@ -25,6 +36,11 @@ struct U
 };
 struct V : U
 {
+};
+struct W // cxx20-note 2{{candidate constructor}}
+{
+  int a;
+  int b;
 };
 
 inline void operator delete(void *); // expected-warning {{replacement function 'operator delete' cannot be declared 'inline'}}
@@ -93,7 +109,7 @@ void bad_news(int *ip)
 #elif __cplusplus <= 201103L
   // expected-error@-4 {{array size expression must have integral or unscoped enumeration type, not 'double'}}
 #else
-  // expected-warning@-6 {{implicit conversion from 'double' to 'unsigned int' changes value from 1.1 to 1}}
+  // expected-warning@-6 {{implicit conversion from 'double' to '__size_t' (aka 'unsigned int') changes value from 1.1 to 1}}
 #endif
 
   (void)new int[1][i];  // expected-note {{read of non-const variable 'i' is not allowed in a constant expression}}
@@ -154,6 +170,47 @@ void no_matching_placement_new() {
   (void)new(&buffer) X; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
 }
 
+void const_placement_new() {
+  const int value = 42;
+  (void)new(&value) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  struct X { int n; };
+  const X cx = {5};
+  (void)new(&cx) X{10}; // expected-error {{placement new expression with a const-qualified argument of type 'const X *' is not allowed}}
+  const X* const cx2 = 0;
+  (void)new(cx2) X{10}; // expected-error {{placement new expression with a const-qualified argument of type 'const X *const' is not allowed}}
+  const int arr[1] = {1};
+  (void)new(&arr[0]) int(10); // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  const void* ptr = 0;
+  (void)new(ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'const void *' is not allowed}}
+  const int complex_arr[5][3] = {};
+  (void)new(&complex_arr[0][0]) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+  (void)new(complex_arr[0]) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int[3]' is not allowed}}
+  const char str[] = "test";
+  (void)new(str) int; // expected-error {{placement new expression with a const-qualified argument of type 'const char[5]' is not allowed}}
+  const int* const* ptr_to_const_ptr_to_const = 0;
+  (void)new(ptr_to_const_ptr_to_const) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *const *' is not allowed}}
+  int* const* ptr_to_const_ptr = 0;
+  (void)new(ptr_to_const_ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'int *const *' is not allowed}}
+  typedef const int* ConstIntPtr;
+  ConstIntPtr cip = 0;
+  (void)new(cip) int; // expected-error {{placement new expression with a const-qualified argument of type 'ConstIntPtr' (aka 'const int *') is not allowed}}
+  typedef const void* ConstVoidPtr;
+}
+
+void const_placement_new_param(const void* ptr) {
+  new (ptr) int; // expected-error {{placement new expression with a const-qualified argument of type 'const void *' is not allowed}}
+}
+
+template<typename T>
+void const_template_placement_new(const T* storage) {
+  (void)new(storage) int; // expected-error {{placement new expression with a const-qualified argument of type 'const int *' is not allowed}}
+}
+
+void const_template_placement_new_instantiation() {
+  int x = 5;
+  const_template_placement_new(&x); // expected-note {{in instantiation of function template specialization 'const_template_placement_new<int>' requested here}}
+}
+
 void good_deletes()
 {
   delete (int*)0;
@@ -165,14 +222,13 @@ void good_deletes()
 void bad_deletes()
 {
   delete 0; // expected-error {{cannot delete expression of type 'int'}}
-  delete [0] (int*)0;
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{expected expression}}
-#else
-  // expected-error@-4 {{expected variable name or 'this' in lambda capture list}}
-#endif
-  delete (void*)0; // expected-warning {{cannot delete expression with pointer-to-'void' type 'void *'}}
-  delete (T*)0; // expected-warning {{deleting pointer to incomplete type}}
+  delete [0] (int*)0; // expected-error {{expected variable name or 'this' in lambda capture list}}
+  delete (void*)0;
+  // cxx98-23-warning@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
+  delete (T*)0;
+  // cxx98-23-warning@-1 {{deleting pointer to incomplete type}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'T'}}
   ::S::delete (int*)0; // expected-error {{expected unqualified-id}}
 }
 
@@ -236,7 +292,7 @@ void loadEngineFor() {
 }
 
 template <class T> struct TBase {
-  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as first parameter; use size_t}}
+  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as its 1st parameter; use size_t}}
 };
 
 TBase<int> t1;
@@ -340,23 +396,28 @@ namespace PR5918 { // Look for template operator new overloads.
 namespace Test1 {
 
 void f() {
-  (void)new int[10](1, 2); // expected-error {{array 'new' cannot have initialization arguments}}
+  (void)new int[10](1, 2); // precxx20-error {{array 'new' cannot have initialization arguments}}
 
   typedef int T[10];
-  (void)new T(1, 2); // expected-error {{array 'new' cannot have initialization arguments}}
+  (void)new T(1, 2); // precxx20-error {{array 'new' cannot have initialization arguments}}
 }
 
 template<typename T>
 void g(unsigned i) {
-  (void)new T[1](i); // expected-error {{array 'new' cannot have initialization arguments}}
+  (void)new T[1](i); // precxx20-error {{array 'new' cannot have initialization arguments}}
 }
 
 template<typename T>
 void h(unsigned i) {
-  (void)new T(i); // expected-error {{array 'new' cannot have initialization arguments}}
+  (void)new T(i); // precxx20-error {{array 'new' cannot have initialization arguments}}
 }
 template void h<unsigned>(unsigned);
-template void h<unsigned[10]>(unsigned); // expected-note {{in instantiation of function template specialization 'Test1::h<unsigned int[10]>' requested here}}
+template void h<unsigned[10]>(unsigned); // precxx20-note {{in instantiation of function template specialization 'Test1::h<unsigned int[10]>' requested here}}
+
+void i() {
+  new W[2](1, 2, 3); // precxx20-error {{array 'new' cannot have initialization arguments}}
+  // cxx20-error@-1 {{no viable conversion from 'int' to 'W'}}
+}
 
 }
 
@@ -446,7 +507,7 @@ namespace TemplateDestructors {
 
 namespace DeleteParam {
   struct X {
-    void operator delete(X*); // expected-error{{first parameter of 'operator delete' must have type 'void *'}}
+    void operator delete(X*); // expected-error{{1st parameter of 'operator delete' must have type 'void *'}}
   };
 
   struct Y {
@@ -507,8 +568,10 @@ namespace DeleteIncompleteClass {
 
 namespace DeleteIncompleteClassPointerError {
   struct A; // expected-note {{forward declaration}}
-  void f(A *x) { 1+delete x; } // expected-warning {{deleting pointer to incomplete type}} \
-                               // expected-error {{invalid operands to binary expression}}
+  void f(A *x) { 1+delete x; }
+  // expected-error@-1 {{invalid operands to binary expression}}
+  // cxx98-23-warning@-2 {{deleting pointer to incomplete type}}
+  // since-cxx26-error@-3 {{cannot delete pointer to incomplete type 'A'}}
 }
 
 namespace PR10504 {
@@ -517,6 +580,22 @@ namespace PR10504 {
   };
   void f(A *x) { delete x; } // expected-warning {{delete called on 'PR10504::A' that is abstract but has non-virtual destructor}}
 }
+
+#if __cplusplus >= 201103L
+enum GH99278_1 {
+    zero = decltype(delete static_cast<GH99278_1*>(nullptr), 0){}
+    // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
+};
+template <typename = void>
+struct GH99278_2 {
+  union b {};
+  struct c {
+    c() { delete d; }
+    b *d;
+  } f;
+};
+GH99278_2<void> e;
+#endif
 
 struct PlacementArg {};
 inline void *operator new[](size_t, const PlacementArg &) throw () {
@@ -556,7 +635,7 @@ namespace P12023 {
 
   int main()
   {
-    CopyCounter* f = new CopyCounter[10](CopyCounter()); // expected-error {{cannot have initialization arguments}}
+    CopyCounter* f = new CopyCounter[10](CopyCounter()); // precxx20-error {{cannot have initialization arguments}}
       return 0;
   }
 }
@@ -639,7 +718,7 @@ int *fail = dependent_array_size("hello"); // expected-note {{instantiation of}}
 // FIXME: Our behavior here is incredibly inconsistent. GCC allows
 // constant-folding in array bounds in new-expressions.
 int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
-#if __cplusplus >= 201402L
+#if __cplusplus >= 201402L && !defined(NEW_INTERP)
 // expected-error@-2 {{array size is not a constant expression}}
 // expected-note@-3 {{cannot refer to element 12 of non-array}}
 #elif __cplusplus < 201103L

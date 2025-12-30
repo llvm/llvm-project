@@ -16,5 +16,4 @@ if(CAN_TARGET_x86_64)
   add_lit_testsuite(check-sanmd "Running the SanitizerBinaryMetadata tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${METADATA_TEST_DEPS})
-  set_target_properties(check-sanmd PROPERTIES FOLDER "Compiler-RT Misc")
 endif()

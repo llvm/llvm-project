@@ -37,7 +37,7 @@ define ptr @test_simplify2(ptr %str) {
 
 define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([6 x i8], ptr @.str2, i64 0, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @.str2, i64 1)
 ;
   %ret = call ptr @strstr(ptr @.str2, ptr @.str3)
   ret ptr %ret
@@ -58,7 +58,7 @@ define ptr @test_simplify4(ptr %str) {
 define i1 @test_simplify5(ptr %str, ptr %pat) {
 ; CHECK-LABEL: @test_simplify5(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PAT:%.*]])
-; CHECK-NEXT:    [[STRNCMP:%.*]] = call i32 @strncmp(ptr [[STR:%.*]], ptr [[PAT]], i64 [[STRLEN]])
+; CHECK-NEXT:    [[STRNCMP:%.*]] = call i32 @strncmp(ptr [[STR:%.*]], ptr nonnull [[PAT]], i64 [[STRLEN]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[STRNCMP]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;

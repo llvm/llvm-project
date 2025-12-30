@@ -18,26 +18,23 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(ptr %a, ptr %b) {
 ; AVX256VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k2} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm1, %xmm1
-; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm2 {%k1} {z}
-; AVX256VL-NEXT:    vpmovdw %ymm2, %xmm2
-; AVX256VL-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0,1],xmm1[2],xmm2[3],xmm1[4],xmm2[5,6,7]
-; AVX256VL-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[6,7,12,13,4,5,8,9,6,7,14,15,14,15,0,1]
-; AVX256VL-NEXT:    vpmovsxwd %xmm3, %ymm3
-; AVX256VL-NEXT:    vpslld $31, %ymm3, %ymm3
-; AVX256VL-NEXT:    vptestmd %ymm3, %ymm3, %k1
-; AVX256VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
-; AVX256VL-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[6,7,12,13,2,3,u,u,6,7,u,u,14,15,0,1]
-; AVX256VL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[3],xmm2[4],xmm1[5],xmm2[6,7]
-; AVX256VL-NEXT:    vpmovsxwd %xmm1, %ymm1
-; AVX256VL-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k0
-; AVX256VL-NEXT:    kunpckbw %k1, %k0, %k0
-; AVX256VL-NEXT:    kshiftrw $8, %k0, %k2
-; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k2} {z}
+; AVX256VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[0,2,1,3]
+; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm3 {%k1} {z}
+; AVX256VL-NEXT:    vpmovdw %ymm3, %xmm3
+; AVX256VL-NEXT:    vpshufb {{.*#+}} xmm4 = xmm3[6,7,12,13,2,3,u,u,6,7,u,u,14,15,0,1]
+; AVX256VL-NEXT:    vpblendw {{.*#+}} xmm2 = xmm4[0,1,2],xmm2[3],xmm4[4],xmm2[5],xmm4[6,7]
+; AVX256VL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1],xmm1[2],xmm3[3],xmm1[4],xmm3[5,6,7]
+; AVX256VL-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[6,7,12,13,4,5,8,9,6,7,14,15,14,15,0,1]
+; AVX256VL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX256VL-NEXT:    vpmovsxwd %ymm1, %zmm1
+; AVX256VL-NEXT:    vpslld $31, %zmm1, %zmm1
+; AVX256VL-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm1, %xmm1
+; AVX256VL-NEXT:    kshiftrw $8, %k1, %k1
 ; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX256VL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX256VL-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
 ; AVX256VL-NEXT:    vzeroupper
 ; AVX256VL-NEXT:    retq
 ;
@@ -47,12 +44,12 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(ptr %a, ptr %b) {
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm1
 ; AVX512VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    vptestnmd %ymm1, %ymm1, %k2
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512VL-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
 ; AVX512VL-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; AVX512VL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -65,7 +62,7 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(ptr %a, ptr %b) {
 ; AVX256VLBW-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; AVX256VLBW-NEXT:    vpmovm2w %k1, %ymm0
 ; AVX256VLBW-NEXT:    vpmovm2w %k0, %ymm1
-; AVX256VLBW-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
+; AVX256VLBW-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
 ; AVX256VLBW-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
 ; AVX256VLBW-NEXT:    vpmovw2m %ymm2, %k0
 ; AVX256VLBW-NEXT:    vpmovm2b %k0, %xmm0
@@ -78,9 +75,9 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(ptr %a, ptr %b) {
 ; AVX512VLBW-NEXT:    vmovdqa (%rsi), %ymm1
 ; AVX512VLBW-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; AVX512VLBW-NEXT:    vptestnmd %ymm1, %ymm1, %k2
-; AVX512VLBW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512VLBW-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512VLBW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
+; AVX512VLBW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VLBW-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; AVX512VLBW-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
 ; AVX512VLBW-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; AVX512VLBW-NEXT:    vptestmd %zmm2, %zmm2, %k0
 ; AVX512VLBW-NEXT:    vpmovm2b %k0, %xmm0
@@ -93,12 +90,12 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(ptr %a, ptr %b) {
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k2
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
 ; AVX512F-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -109,9 +106,9 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(ptr %a, ptr %b) {
 ; AVX512BW-NEXT:    vmovdqa (%rsi), %ymm1
 ; AVX512BW-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512BW-NEXT:    vptestnmd %zmm1, %zmm1, %k2
-; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512BW-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; AVX512BW-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
 ; AVX512BW-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; AVX512BW-NEXT:    vptestmd %zmm2, %zmm2, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
@@ -135,14 +132,12 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX256VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX256VL-NEXT:    vpmovsxbd %xmm1, %ymm1
 ; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
-; AVX256VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX256VL-NEXT:    vpmovsxbd %xmm1, %ymm1
-; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k2
-; AVX256VL-NEXT:    vpmovsxbd %xmm0, %ymm0
-; AVX256VL-NEXT:    vptestmd %ymm0, %ymm0, %k3
+; AVX256VL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX256VL-NEXT:    vptestmd %zmm0, %zmm0, %k2
 ; AVX256VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k3} {z}
+; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k2} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm1, %xmm1
+; AVX256VL-NEXT:    kshiftrw $8, %k2, %k2
 ; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm2 {%k2} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm2, %xmm2
 ; AVX256VL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
@@ -152,21 +147,16 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm2 {%k1} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm2, %xmm2
 ; AVX256VL-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[1,1,1,1]
-; AVX256VL-NEXT:    vpternlogq $220, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm2
-; AVX256VL-NEXT:    vpmovsxwd %xmm2, %ymm1
-; AVX256VL-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
-; AVX256VL-NEXT:    vextracti128 $1, %ymm2, %xmm1
-; AVX256VL-NEXT:    vpmovsxwd %xmm1, %ymm1
-; AVX256VL-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX256VL-NEXT:    vptestmd %ymm1, %ymm1, %k0
-; AVX256VL-NEXT:    kunpckbw %k1, %k0, %k0
-; AVX256VL-NEXT:    kshiftrw $8, %k0, %k2
-; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k2} {z}
+; AVX256VL-NEXT:    vpternlogq {{.*#+}} ymm2 = (ymm2 & ~mem) | ymm1
+; AVX256VL-NEXT:    vpmovsxwd %ymm2, %zmm1
+; AVX256VL-NEXT:    vpslld $31, %zmm1, %zmm1
+; AVX256VL-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm1, %xmm1
+; AVX256VL-NEXT:    kshiftrw $8, %k1, %k1
 ; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX256VL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX256VL-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
 ; AVX256VL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX256VL-NEXT:    retq
 ;
@@ -179,12 +169,12 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX512NOBW-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512NOBW-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512NOBW-NEXT:    vptestmd %zmm0, %zmm0, %k2
-; AVX512NOBW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512NOBW-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512NOBW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
+; AVX512NOBW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512NOBW-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; AVX512NOBW-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
 ; AVX512NOBW-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; AVX512NOBW-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; AVX512NOBW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512NOBW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512NOBW-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512NOBW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX512NOBW-NEXT:    retq

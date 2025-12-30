@@ -1,8 +1,10 @@
-add_header_library(
+add_object_library(
   baremetal_util
+  SRCS
+    io.cpp
+    exit.cpp
   HDRS
     io.h
-    quick_exit.h
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.string_view

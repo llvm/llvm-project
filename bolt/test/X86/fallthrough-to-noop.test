@@ -1,5 +1,5 @@
-# Check that profile data for the fall-through jump is not ignored when there is
-# a conditional jump followed by a no-op.
+## Check that profile data for the fall-through jump is not ignored when there is
+## a conditional jump followed by a no-op.
 
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 RUN:   %S/Inputs/ft_to_noop.s -o %t.o
@@ -13,11 +13,11 @@ CHECK:      Binary Function "foo" after building cfg
 CHECK:        Exec Count  : 20
 CHECK:        Profile Acc : 100.0%
 
-# This block is terminated with a conditional jump to .Ltmp0 followed by a
-# no-op. The profile data contains a count for the fall-through (3) which
-# is different from what would be inferred (2). However the destination
-# offset of this fall-through jump in the profile data points to the no-op
-# following the jump and not the start of the fall-through block .LFT0.
+## This block is terminated with a conditional jump to .Ltmp0 followed by a
+## no-op. The profile data contains a count for the fall-through (3) which
+## is different from what would be inferred (2). However the destination
+## offset of this fall-through jump in the profile data points to the no-op
+## following the jump and not the start of the fall-through block .LFT0.
 CHECK:      Entry Point
 CHECK-NEXT:   Exec Count : 20
 CHECK:        Successors: .Ltmp[[#BB1:]] (mispreds: 0, count: 18), .LFT[[#BB2:]] (mispreds: 0, count: 3)

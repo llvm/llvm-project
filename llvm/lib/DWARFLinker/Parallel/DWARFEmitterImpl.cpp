@@ -10,6 +10,7 @@
 #include "DWARFLinkerCompileUnit.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -34,19 +35,21 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
   TripleName = TheTriple.getTriple();
 
   // Create all the MC Objects.
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return createStringError(std::errc::invalid_argument,
                              "no register info for target %s",
                              TripleName.c_str());
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return createStringError(std::errc::invalid_argument,
                              "no asm info for target %s", TripleName.c_str());
 
-  MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+  MSTI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   if (!MSTI)
     return createStringError(std::errc::invalid_argument,
                              "no subtarget info for target %s",
@@ -77,20 +80,19 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
 
   switch (OutFileType) {
   case DWARFLinker::OutputFileType::Assembly: {
-    MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
-                                         *MAI, *MII, *MRI);
+    std::unique_ptr<MCInstPrinter> MIP(TheTarget->createMCInstPrinter(
+        TheTriple, MAI->getAssemblerDialect(), *MAI, *MII, *MRI));
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), true, true, MIP,
-        std::unique_ptr<MCCodeEmitter>(MCE), std::unique_ptr<MCAsmBackend>(MAB),
-        true);
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), std::move(MIP),
+        std::unique_ptr<MCCodeEmitter>(MCE),
+        std::unique_ptr<MCAsmBackend>(MAB));
     break;
   }
   case DWARFLinker::OutputFileType::Object: {
     MS = TheTarget->createMCObjectStreamer(
         TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
         MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
-        *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false);
+        *MSTI);
     break;
   }
   }
@@ -101,7 +103,7 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
                              TripleName.c_str());
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return createStringError(std::errc::invalid_argument,
@@ -118,72 +120,6 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
   DebugInfoSectionSize = 0;
 
   return Error::success();
-}
-
-void DwarfEmitterImpl::emitSwiftAST(StringRef Buffer) {
-  MCSection *SwiftASTSection = MOFI->getDwarfSwiftASTSection();
-  SwiftASTSection->setAlignment(Align(32));
-  MS->switchSection(SwiftASTSection);
-  MS->emitBytes(Buffer);
-}
-
-/// Emit the swift reflection section stored in \p Buffer.
-void DwarfEmitterImpl::emitSwiftReflectionSection(
-    llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
-    StringRef Buffer, uint32_t Alignment, uint32_t) {
-  MCSection *ReflectionSection =
-      MOFI->getSwift5ReflectionSection(ReflSectionKind);
-  if (ReflectionSection == nullptr)
-    return;
-  ReflectionSection->setAlignment(Align(Alignment));
-  MS->switchSection(ReflectionSection);
-  MS->emitBytes(Buffer);
-}
-
-void DwarfEmitterImpl::emitSectionContents(StringRef SecData,
-                                           StringRef SecName) {
-  if (SecData.empty())
-    return;
-
-  if (MCSection *Section = switchSection(SecName)) {
-    MS->switchSection(Section);
-
-    MS->emitBytes(SecData);
-  }
-}
-
-MCSection *DwarfEmitterImpl::switchSection(StringRef SecName) {
-  return StringSwitch<MCSection *>(SecName)
-      .Case("debug_info", MC->getObjectFileInfo()->getDwarfInfoSection())
-      .Case("debug_abbrev", MC->getObjectFileInfo()->getDwarfAbbrevSection())
-      .Case("debug_line", MC->getObjectFileInfo()->getDwarfLineSection())
-      .Case("debug_loc", MC->getObjectFileInfo()->getDwarfLocSection())
-      .Case("debug_ranges", MC->getObjectFileInfo()->getDwarfRangesSection())
-      .Case("debug_frame", MC->getObjectFileInfo()->getDwarfFrameSection())
-      .Case("debug_aranges", MC->getObjectFileInfo()->getDwarfARangesSection())
-      .Case("debug_rnglists",
-            MC->getObjectFileInfo()->getDwarfRnglistsSection())
-      .Case("debug_loclists",
-            MC->getObjectFileInfo()->getDwarfLoclistsSection())
-      .Case("debug_macro", MC->getObjectFileInfo()->getDwarfMacroSection())
-      .Case("debug_macinfo", MC->getObjectFileInfo()->getDwarfMacinfoSection())
-      .Case("debug_addr", MC->getObjectFileInfo()->getDwarfAddrSection())
-      .Case("debug_str", MC->getObjectFileInfo()->getDwarfStrSection())
-      .Case("debug_line_str", MC->getObjectFileInfo()->getDwarfLineStrSection())
-      .Case("debug_str_offsets",
-            MC->getObjectFileInfo()->getDwarfStrOffSection())
-      .Case("debug_pubnames",
-            MC->getObjectFileInfo()->getDwarfPubNamesSection())
-      .Case("debug_pubtypes",
-            MC->getObjectFileInfo()->getDwarfPubTypesSection())
-      .Case("debug_names", MC->getObjectFileInfo()->getDwarfDebugNamesSection())
-      .Case("apple_names", MC->getObjectFileInfo()->getDwarfAccelNamesSection())
-      .Case("apple_namespac",
-            MC->getObjectFileInfo()->getDwarfAccelNamespaceSection())
-      .Case("apple_objc", MC->getObjectFileInfo()->getDwarfAccelObjCSection())
-      .Case("apple_types", MC->getObjectFileInfo()->getDwarfAccelTypesSection())
-
-      .Default(nullptr);
 }
 
 void DwarfEmitterImpl::emitAbbrevs(

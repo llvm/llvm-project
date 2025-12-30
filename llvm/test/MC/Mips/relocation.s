@@ -8,6 +8,9 @@
 // RUN:     | llvm-readobj --sections --section-data - \
 // RUN:     | FileCheck -check-prefix=DATA %s
 
+/// MCNullStreamer can handle directives like .tprelword .dtprelword
+// RUN: llvm-mc -triple mips -filetype=null %s
+
 // Test that we produce the correct relocation.
 // FIXME: move more relocation only tests here.
 
@@ -237,7 +240,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: addiu $2, $3, %tprel_lo(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %tprel_lo(foo), kind: fixup_Mips_TPREL_LO
 
-// DATA-NEXT:  00C0: D85FFFFF CBFFFFFF EC580000 EC480000
+// DATA-NEXT:  00C0: D85FFFFF 00000000 CBFFFFFF EC580000
                                            // ?????: R_MIPS_GLOB_DAT foo
         .set mips32r6
         beqzc $2, foo                      // RELOC: R_MIPS_PC21_S2 foo
@@ -262,7 +265,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: lwpc $2, foo # encoding: [A,A,0b01001AAA,0xec]
                                            // FIXUP: # fixup A - offset: 0, value: foo, kind: fixup_MIPS_PC19_S2
 
-// DATA-NEXT:  00D0: 24620000 24620000 00000000
+// DATA-NEXT:  00D0: EC480000 24620000 24620000 00000000
         addiu $2, $3, %pcrel_hi(foo)       // RELOC: R_MIPS_PCHI16 foo
                                            // ENCBE: addiu $2, $3, %pcrel_hi(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %pcrel_hi(foo) # encoding: [A,A,0x62,0x24]

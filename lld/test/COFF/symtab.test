@@ -86,6 +86,15 @@
 # CHECK-NEXT:     StorageClass: External (0x2)
 # CHECK-NEXT:     AuxSymbolCount: 0
 # CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: weak_main
+# CHECK-NEXT:     Value: 0
+# CHECK-NEXT:     Section: .text (1)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Null (0x0)
+# CHECK-NEXT:     StorageClass: External (0x2)
+# CHECK-NEXT:     AuxSymbolCount: 0
+# CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
 # NO:       Symbols [
@@ -237,4 +246,13 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_LABEL
+  - Name:            weak_main
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex:        10
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_ALIAS
 ...

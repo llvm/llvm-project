@@ -1,4 +1,3 @@
-
 name: Build CI Container
 
 permissions:
@@ -11,50 +10,63 @@ on:
     paths:
       - .github/workflows/build-ci-container.yml
       - '.github/workflows/containers/github-action-ci/**'
+      - '.github/actions/build-container/**'
+      - '.github/actions/push-container/**'
   pull_request:
-    branches:
-      - main
     paths:
       - .github/workflows/build-ci-container.yml
       - '.github/workflows/containers/github-action-ci/**'
+      - '.github/actions/build-container/**'
+      - '.github/actions/push-container/**'
 
 jobs:
   build-ci-container:
+    name: Build Container ${{ matrix.container-name }} ${{ (contains(matrix.runs-on, 'arm') && 'ARM64') || 'X64' }}
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        runs-on:
+          - depot-ubuntu-24.04-16
+          - depot-ubuntu-24.04-arm-16
+        container-name:
+          - ''
+          - agent
+        test-command:
+          - cd $HOME && printf '#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }' | clang++ -x c++ - && ./a.out | grep Hello
     steps:
-      - name: Write Variables
-        id: vars
-        run: |
-          tag=`date +%s`
-          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-22.04"
-          echo "container-name=$container_name" >> $GITHUB_OUTPUT
-          echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
-
       - name: Checkout LLVM
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
-          sparse-checkout: .github/workflows/containers/github-action-ci/
+          sparse-checkout: |
+            .github/workflows/containers/github-action-ci/
+            .github/actions/build-container
 
       - name: Build Container
-        working-directory: ./.github/workflows/containers/github-action-ci/
-        run: |
-          podman build -t ${{ steps.vars.outputs.container-name-tag }} .
-          podman tag ${{ steps.vars.outputs.container-name-tag }} ${{ steps.vars.outputs.container-name }}:latest
+        uses: ./.github/actions/build-container
+        with:
+          container-name: ci-ubuntu-24.04${{ matrix.container-name && format('-{0}', matrix.container-name)}}
+          context: .github/workflows/containers/github-action-ci/
+          dockerfile: .github/workflows/containers/github-action-ci/Dockerfile
+          target: ci-container${{ matrix.container-name && format('-{0}', matrix.container-name) }}
+          test-command: ${{ matrix.test-command }}
 
-      - name: Test Container
-        run: |
-          for image in ${{ steps.vars.outputs.container-name-tag }} ${{  steps.vars.outputs.container-name }}; do
-            podman run --rm -it $image /usr/bin/bash -x -c 'printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
-          done
+  push-ci-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-ci-container
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: |
+            .github/actions/push-container
 
-      - name: Push Container
-        if: github.event_name == 'push'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
-          podman push ${{ steps.vars.outputs.container-name-tag }}
-          podman push ${{ steps.vars.outputs.container-name }}:latest
+      - uses: ./.github/actions/push-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

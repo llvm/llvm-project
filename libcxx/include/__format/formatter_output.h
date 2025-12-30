@@ -16,6 +16,8 @@
 #include <__bit/countl.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
 #include <__format/formatter.h>
@@ -28,12 +30,14 @@
 #include <__memory/pointer_traits.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <cstddef>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -41,25 +45,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __formatter {
 
-_LIBCPP_HIDE_FROM_ABI constexpr char __hex_to_upper(char __c) {
-  switch (__c) {
-  case 'a':
-    return 'A';
-  case 'b':
-    return 'B';
-  case 'c':
-    return 'C';
-  case 'd':
-    return 'D';
-  case 'e':
-    return 'E';
-  case 'f':
-    return 'F';
-  }
-  return __c;
-}
-
-struct _LIBCPP_EXPORTED_FROM_ABI __padding_size_result {
+struct __padding_size_result {
   size_t __before_;
   size_t __after_;
 };
@@ -97,8 +83,8 @@ __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it)
-    -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto
+__copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__copy(__str);
     return __out_it;
@@ -113,16 +99,16 @@ _LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterat
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it)
-    -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto
+__copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __last}, std::move(__out_it));
 }
 
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it)
-    -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto
+__copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{std::to_address(__first), __n}, std::move(__out_it));
 }
 
@@ -133,9 +119,11 @@ template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto __transform(
-    _Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it, _UnaryOperation __operation)
-    -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto
+__transform(_Iterator __first,
+            _Iterator __last,
+            output_iterator<const _OutCharT&> auto __out_it,
+            _UnaryOperation __operation) -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__transform(__first, __last, std::move(__operation));
     return __out_it;
@@ -163,45 +151,41 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value)
   }
 }
 
-#  ifndef _LIBCPP_HAS_NO_UNICODE
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, char>)
 _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));
-  if (__bytes == 0)
-    return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+#  if _LIBCPP_HAS_UNICODE
+  if constexpr (same_as<_CharT, char>) {
+    std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));
+    if (__bytes == 0)
+      return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
 
-  for (size_t __i = 0; __i < __n; ++__i)
-    __out_it = __formatter::__copy(
-        std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + __bytes, std::move(__out_it));
-  return __out_it;
-}
+    for (size_t __i = 0; __i < __n; ++__i)
+      __out_it = __formatter::__copy(
+          std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + __bytes, std::move(__out_it));
+    return __out_it;
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
+  } else if constexpr (same_as<_CharT, wchar_t>) {
+    if constexpr (sizeof(wchar_t) == 2) {
+      if (!__unicode::__is_high_surrogate(__value.__data[0]))
+        return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
 
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  if (!__unicode::__is_high_surrogate(__value.__data[0]))
-    return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
-
-  for (size_t __i = 0; __i < __n; ++__i)
-    __out_it = __formatter::__copy(
-        std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + 2, std::move(__out_it));
-  return __out_it;
-}
-
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+      for (size_t __i = 0; __i < __n; ++__i)
+        __out_it = __formatter::__copy(
+            std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + 2, std::move(__out_it));
+      return __out_it;
+    } else if constexpr (sizeof(wchar_t) == 4) {
+      return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+    } else {
+      static_assert(false, "expected sizeof(wchar_t) to be 2 or 4");
+    }
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
+  } else {
+    static_assert(false, "Unexpected CharT");
+  }
+#  else  // _LIBCPP_HAS_UNICODE
   return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+#  endif // _LIBCPP_HAS_UNICODE
 }
-#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  else    // _LIBCPP_HAS_NO_UNICODE
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
-}
-#  endif   // _LIBCPP_HAS_NO_UNICODE
 
 /// Writes the input to the output with the required padding.
 ///
@@ -289,8 +273,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(
 ///
 /// \pre !__specs.__has_precision()
 ///
-/// \note When \c _LIBCPP_HAS_NO_UNICODE is defined the function assumes the
-/// input is ASCII.
+/// \note When \c _LIBCPP_HAS_UNICODE is false the function assumes the input is ASCII.
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
     basic_string_view<_CharT> __str,
@@ -321,8 +304,10 @@ _LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __pre
 
 } // namespace __formatter
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FORMAT_FORMATTER_OUTPUT_H

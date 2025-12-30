@@ -33,8 +33,8 @@ selected:        false
 tracksRegLiveness: true
 # CHECK-LABEL: name:            test_mul_vec256
 # CHECK: registers:
-# CHECK:  - { id: 0, class: vecr, preferred-register: '' }
-# CHECK:  - { id: 1, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
+# CHECK:  - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -56,8 +56,8 @@ selected:        false
 tracksRegLiveness: true
 # CHECK-LABEL: name:            test_add_vec256
 # CHECK: registers:
-# CHECK:  - { id: 0, class: vecr, preferred-register: '' }
-# CHECK:  - { id: 1, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
+# CHECK:  - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -79,8 +79,8 @@ selected:        false
 tracksRegLiveness: true
 # CHECK-LABEL: name:            test_sub_vec256
 # CHECK: registers:
-# CHECK:  - { id: 0, class: vecr, preferred-register: '' }
-# CHECK:  - { id: 1, class: vecr, preferred-register: '' }
+# CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
+# CHECK:  - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -100,8 +100,8 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 # CHECK:       registers:
-# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '' }
-# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -122,8 +122,8 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 # CHECK:       registers:
-# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
-# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

@@ -36,15 +36,17 @@ ProcessSP ProcessTrace::CreateInstance(TargetSP target_sp,
                                        bool can_connect) {
   if (can_connect)
     return nullptr;
-  return std::make_shared<ProcessTrace>(target_sp, listener_sp);
+  return std::make_shared<ProcessTrace>(target_sp, listener_sp,
+                                        crash_file ? *crash_file : FileSpec());
 }
 
 bool ProcessTrace::CanDebug(TargetSP target_sp, bool plugin_specified_by_name) {
   return plugin_specified_by_name;
 }
 
-ProcessTrace::ProcessTrace(TargetSP target_sp, ListenerSP listener_sp)
-    : PostMortemProcess(target_sp, listener_sp) {}
+ProcessTrace::ProcessTrace(TargetSP target_sp, ListenerSP listener_sp,
+                           const FileSpec &core_file)
+    : PostMortemProcess(target_sp, listener_sp, core_file) {}
 
 ProcessTrace::~ProcessTrace() {
   Clear();
@@ -122,7 +124,7 @@ bool ProcessTrace::GetProcessInfo(ProcessInstanceInfo &info) {
 size_t ProcessTrace::DoReadMemory(addr_t addr, void *buf, size_t size,
                                   Status &error) {
   Address resolved_address;
-  GetTarget().GetSectionLoadList().ResolveLoadAddress(addr, resolved_address);
+  GetTarget().ResolveLoadAddress(addr, resolved_address);
 
   return GetTarget().ReadMemoryFromFileCache(resolved_address, buf, size,
                                              error);

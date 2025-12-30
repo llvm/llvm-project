@@ -21,7 +21,6 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -120,7 +119,7 @@ bool Input::mapTag(StringRef Tag, bool Default) {
     return Default;
   }
   // Return true iff found tag matches supplied tag.
-  return Tag.equals(foundTag);
+  return Tag == foundTag;
 }
 
 void Input::beginMapping() {
@@ -145,7 +144,7 @@ std::vector<StringRef> Input::keys() {
   return Ret;
 }
 
-bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
+bool Input::preflightKey(StringRef Key, bool Required, bool, bool &UseDefault,
                          void *&SaveInfo) {
   UseDefault = false;
   if (EC)
@@ -169,7 +168,7 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
       UseDefault = true;
     return false;
   }
-  MN->ValidKeys.push_back(Key);
+  MN->ValidKeys.push_back(Key.str());
   HNode *Value = MN->Mapping[Key].first;
   if (!Value) {
     if (Required)
@@ -267,11 +266,11 @@ void Input::beginEnumScalar() {
   ScalarMatchFound = false;
 }
 
-bool Input::matchEnumScalar(const char *Str, bool) {
+bool Input::matchEnumScalar(StringRef Str, bool) {
   if (ScalarMatchFound)
     return false;
   if (ScalarHNode *SN = dyn_cast<ScalarHNode>(CurrentNode)) {
-    if (SN->value().equals(Str)) {
+    if (SN->value() == Str) {
       ScalarMatchFound = true;
       return true;
     }
@@ -303,14 +302,14 @@ bool Input::beginBitSetScalar(bool &DoClear) {
   return true;
 }
 
-bool Input::bitSetMatch(const char *Str, bool) {
+bool Input::bitSetMatch(StringRef Str, bool) {
   if (EC)
     return false;
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
     unsigned Index = 0;
     for (auto &N : SQ->Entries) {
       if (ScalarHNode *SN = dyn_cast<ScalarHNode>(N)) {
-        if (SN->value().equals(Str)) {
+        if (SN->value() == Str) {
           BitValuesUsed[Index] = true;
           return true;
         }
@@ -542,7 +541,7 @@ std::vector<StringRef> Output::keys() {
   report_fatal_error("invalid call");
 }
 
-bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,
+bool Output::preflightKey(StringRef Key, bool Required, bool SameAsDefault,
                           bool &UseDefault, void *&SaveInfo) {
   UseDefault = false;
   SaveInfo = nullptr;
@@ -667,7 +666,7 @@ void Output::beginEnumScalar() {
   EnumerationMatchFound = false;
 }
 
-bool Output::matchEnumScalar(const char *Str, bool Match) {
+bool Output::matchEnumScalar(StringRef Str, bool Match) {
   if (Match && !EnumerationMatchFound) {
     newLineCheck();
     outputUpToEndOfLine(Str);
@@ -696,7 +695,7 @@ bool Output::beginBitSetScalar(bool &DoClear) {
   return true;
 }
 
-bool Output::bitSetMatch(const char *Str, bool Matches) {
+bool Output::bitSetMatch(StringRef Str, bool Matches) {
   if (Matches) {
     if (NeedBitValueComma)
       output(", ");
@@ -718,58 +717,26 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
     outputUpToEndOfLine("''");
     return;
   }
-  if (MustQuote == QuotingType::None) {
-    // Only quote if we must.
-    outputUpToEndOfLine(S);
-    return;
-  }
-
-  const char *const Quote = MustQuote == QuotingType::Single ? "'" : "\"";
-  output(Quote); // Starting quote.
-
-  // When using double-quoted strings (and only in that case), non-printable characters may be
-  // present, and will be escaped using a variety of unicode-scalar and special short-form
-  // escapes. This is handled in yaml::escape.
-  if (MustQuote == QuotingType::Double) {
-    output(yaml::escape(S, /* EscapePrintable= */ false));
-    outputUpToEndOfLine(Quote);
-    return;
-  }
-
-  unsigned i = 0;
-  unsigned j = 0;
-  unsigned End = S.size();
-  const char *Base = S.data();
-
-  // When using single-quoted strings, any single quote ' must be doubled to be escaped.
-  while (j < End) {
-    if (S[j] == '\'') {                    // Escape quotes.
-      output(StringRef(&Base[i], j - i));  // "flush".
-      output(StringLiteral("''"));         // Print it as ''
-      i = j + 1;
-    }
-    ++j;
-  }
-  output(StringRef(&Base[i], j - i));
-  outputUpToEndOfLine(Quote); // Ending quote.
+  output(S, MustQuote);
+  outputUpToEndOfLine("");
 }
 
 void Output::blockScalarString(StringRef &S) {
   if (!StateStack.empty())
     newLineCheck();
   output(" |");
-  outputNewLine();
 
   unsigned Indent = StateStack.empty() ? 1 : StateStack.size();
 
   auto Buffer = MemoryBuffer::getMemBuffer(S, "", false);
   for (line_iterator Lines(*Buffer, false); !Lines.is_at_end(); ++Lines) {
+    outputNewLine();
     for (unsigned I = 0; I < Indent; ++I) {
       output("  ");
     }
     output(*Lines);
-    outputNewLine();
   }
+  outputUpToEndOfLine("");
 }
 
 void Output::scalarTag(std::string &Tag) {
@@ -782,6 +749,8 @@ void Output::scalarTag(std::string &Tag) {
 
 void Output::setError(const Twine &message) {
 }
+
+std::error_code Output::error() { return {}; }
 
 bool Output::canElideEmptySequence() {
   // Normally, with an optional key/value where the value is an empty sequence,
@@ -799,6 +768,46 @@ bool Output::canElideEmptySequence() {
 void Output::output(StringRef s) {
   Column += s.size();
   Out << s;
+}
+
+void Output::output(StringRef S, QuotingType MustQuote) {
+  if (MustQuote == QuotingType::None) {
+    // Only quote if we must.
+    output(S);
+    return;
+  }
+
+  StringLiteral Quote = MustQuote == QuotingType::Single ? StringLiteral("'")
+                                                         : StringLiteral("\"");
+  output(Quote); // Starting quote.
+
+  // When using double-quoted strings (and only in that case), non-printable
+  // characters may be present, and will be escaped using a variety of
+  // unicode-scalar and special short-form escapes. This is handled in
+  // yaml::escape.
+  if (MustQuote == QuotingType::Double) {
+    output(yaml::escape(S, /* EscapePrintable= */ false));
+    output(Quote);
+    return;
+  }
+
+  unsigned i = 0;
+  unsigned j = 0;
+  unsigned End = S.size();
+  const char *Base = S.data();
+
+  // When using single-quoted strings, any single quote ' must be doubled to be
+  // escaped.
+  while (j < End) {
+    if (S[j] == '\'') {                   // Escape quotes.
+      output(StringRef(&Base[i], j - i)); // "flush".
+      output(StringLiteral("''"));        // Print it as ''
+      i = j + 1;
+    }
+    ++j;
+  }
+  output(StringRef(&Base[i], j - i));
+  output(Quote); // Ending quote.
 }
 
 void Output::outputUpToEndOfLine(StringRef s) {
@@ -830,30 +839,44 @@ void Output::newLineCheck(bool EmptySequence) {
     return;
 
   unsigned Indent = StateStack.size() - 1;
-  bool OutputDash = false;
+  bool PossiblyNestedSeq = false;
+  auto I = StateStack.rbegin(), E = StateStack.rend();
 
-  if (StateStack.back() == inSeqFirstElement ||
-      StateStack.back() == inSeqOtherElement) {
-    OutputDash = true;
-  } else if ((StateStack.size() > 1) &&
-             ((StateStack.back() == inMapFirstKey) ||
-              inFlowSeqAnyElement(StateStack.back()) ||
-              (StateStack.back() == inFlowMapFirstKey)) &&
-             inSeqAnyElement(StateStack[StateStack.size() - 2])) {
-    --Indent;
-    OutputDash = true;
+  if (inSeqAnyElement(*I)) {
+    PossiblyNestedSeq = true; // Not possibly but always.
+    ++Indent;
+  } else if (*I == inMapFirstKey || *I == inFlowMapFirstKey ||
+             inFlowSeqAnyElement(*I)) {
+    PossiblyNestedSeq = true;
+    ++I; // Skip back().
   }
 
-  for (unsigned i = 0; i < Indent; ++i) {
+  unsigned OutputDashCount = 0;
+  if (PossiblyNestedSeq) {
+    // Count up consecutive inSeqFirstElement from the end, unless
+    // inSeqFirstElement is the top of nested sequence.
+    while (I != E) {
+      // Don't count the top of nested sequence.
+      if (!inSeqAnyElement(*I))
+        break;
+
+      ++OutputDashCount;
+
+      // Stop counting if consecutive inSeqFirstElement ends.
+      if (*I++ != inSeqFirstElement)
+        break;
+    }
+  }
+
+  for (unsigned I = OutputDashCount; I < Indent; ++I)
     output("  ");
-  }
-  if (OutputDash) {
+
+  for (unsigned I = 0; I < OutputDashCount; ++I)
     output("- ");
-  }
 }
 
 void Output::paddedKey(StringRef key) {
-  output(key);
+  output(key, needsQuotes(key, false));
   output(":");
   const char *spaces = "                ";
   if (key.size() < strlen(spaces))
@@ -872,7 +895,7 @@ void Output::flowKey(StringRef Key) {
     Column = ColumnAtMapFlowStart;
     output("  ");
   }
-  output(Key);
+  output(Key, needsQuotes(Key, false));
   output(": ");
 }
 

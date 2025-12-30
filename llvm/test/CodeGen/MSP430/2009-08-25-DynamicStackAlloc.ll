@@ -6,8 +6,8 @@ target triple = "msp430-generic-generic"
 define i16 @foo() nounwind readnone {
 entry:
   %result = alloca i16, align 1                   ; <i16*> [#uses=2]
-  store volatile i16 0, i16* %result
-  %tmp = load volatile i16, i16* %result               ; <i16> [#uses=1]
+  store volatile i16 0, ptr %result
+  %tmp = load volatile i16, ptr %result               ; <i16> [#uses=1]
   ret i16 %tmp
 }
 
@@ -22,8 +22,8 @@ while.cond:                                       ; preds = %while.cond, %entry
 
 while.end:                                        ; preds = %while.cond
   %result.i = alloca i16, align 1                 ; <i16*> [#uses=2]
-  store volatile i16 0, i16* %result.i
-  %tmp.i = load volatile i16, i16* %result.i           ; <i16> [#uses=0]
+  store volatile i16 0, ptr %result.i
+  %tmp.i = load volatile i16, ptr %result.i           ; <i16> [#uses=0]
   ret i16 0
 }
 

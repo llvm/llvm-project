@@ -14,7 +14,7 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #  include "sanitizer_allocator_internal.h"
 #  include "sanitizer_atomic.h"
@@ -28,8 +28,20 @@
 #  include "sanitizer_procmaps.h"
 #  include "sanitizer_solaris.h"
 
+#  if SANITIZER_HAIKU
+#    define _GNU_SOURCE
+#    define _DEFAULT_SOURCE
+#  endif
+
 #  if SANITIZER_NETBSD
-#    define _RTLD_SOURCE  // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#    // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#    define _RTLD_SOURCE
+#    include <machine/mcontext.h>
+#    undef _RTLD_SOURCE
+#    include <sys/param.h>
+#    if __NetBSD_Version__ >= 1099001200
+#      include <machine/lwp_private.h>
+#    endif
 #  endif
 
 #  include <dlfcn.h>  // for dlsym()
@@ -39,6 +51,10 @@
 #  include <sys/mman.h>
 #  include <sys/resource.h>
 #  include <syslog.h>
+
+#  if SANITIZER_GLIBC
+#    include <gnu/libc-version.h>
+#  endif
 
 #  if !defined(ElfW)
 #    define ElfW(type) Elf_##type
@@ -53,7 +69,9 @@
 // that, it was never implemented. So just define it to zero.
 #    undef MAP_NORESERVE
 #    define MAP_NORESERVE 0
-extern const Elf_Auxinfo *__elf_aux_vector;
+extern const Elf_Auxinfo *__elf_aux_vector __attribute__((weak));
+extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
+                               struct sigaction *oldact);
 #  endif
 
 #  if SANITIZER_NETBSD
@@ -68,18 +86,9 @@ extern const Elf_Auxinfo *__elf_aux_vector;
 #    include <thread.h>
 #  endif
 
-#  if SANITIZER_ANDROID
-#    include <android/api-level.h>
-#    if !defined(CPU_COUNT) && !defined(__aarch64__)
-#      include <dirent.h>
-#      include <fcntl.h>
-struct __sanitizer::linux_dirent {
-  long d_ino;
-  off_t d_off;
-  unsigned short d_reclen;
-  char d_name[];
-};
-#    endif
+#  if SANITIZER_HAIKU
+#    include <kernel/OS.h>
+#    include <sys/link_elf.h>
 #  endif
 
 #  if !SANITIZER_ANDROID
@@ -93,12 +102,22 @@ SANITIZER_WEAK_ATTRIBUTE int real_sigaction(int signum, const void *act,
                                             void *oldact);
 
 int internal_sigaction(int signum, const void *act, void *oldact) {
-#  if !SANITIZER_GO
+#  if SANITIZER_FREEBSD
+  // On FreeBSD, call the sigaction syscall directly (part of libsys in FreeBSD
+  // 15) since the libc version goes via a global interposing table. Due to
+  // library initialization order the table can be relocated after the call to
+  // InitializeDeadlySignals() which then crashes when dereferencing the
+  // uninitialized pointer in libc.
+  return __sys_sigaction(signum, (const struct sigaction *)act,
+                         (struct sigaction *)oldact);
+#  else
+#    if !SANITIZER_GO
   if (&real_sigaction)
     return real_sigaction(signum, act, oldact);
-#  endif
+#    endif
   return sigaction(signum, (const struct sigaction *)act,
                    (struct sigaction *)oldact);
+#  endif
 }
 
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
@@ -137,6 +156,19 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
       stacksize = kMaxThreadStackSize;
     *stack_top = segment.end;
     *stack_bottom = segment.end - stacksize;
+
+    uptr maxAddr = GetMaxUserVirtualAddress();
+    // Edge case: the stack mapping on some systems may be off-by-one e.g.,
+    //     fffffffdf000-1000000000000 rw-p 00000000 00:00 0 [stack]
+    // instead of:
+    //     fffffffdf000- ffffffffffff
+    // The out-of-range stack_top can result in an invalid shadow address
+    // calculation, since those usually assume the parameters are in range.
+    if (*stack_top == maxAddr + 1)
+      *stack_top = maxAddr;
+    else
+      CHECK_LE(*stack_top, maxAddr);
+
     return;
   }
   uptr stacksize = 0;
@@ -171,27 +203,6 @@ bool SetEnv(const char *name, const char *value) {
 }
 #  endif
 
-__attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
-                                                   int *patch) {
-#  ifdef _CS_GNU_LIBC_VERSION
-  char buf[64];
-  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
-  if (len >= sizeof(buf))
-    return false;
-  buf[len] = 0;
-  static const char kGLibC[] = "glibc ";
-  if (internal_strncmp(buf, kGLibC, sizeof(kGLibC) - 1) != 0)
-    return false;
-  const char *p = buf + sizeof(kGLibC) - 1;
-  *major = internal_simple_strtoll(p, &p, 10);
-  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
-  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
-  return true;
-#  else
-  return false;
-#  endif
-}
-
 // True if we can use dlpi_tls_data. glibc before 2.25 may leave NULL (BZ
 // #19826) so dlpi_tls_data cannot be used.
 //
@@ -201,112 +212,166 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
 __attribute__((unused)) static int g_use_dlpi_tls_data;
 
 #  if SANITIZER_GLIBC && !SANITIZER_GO
-__attribute__((unused)) static size_t g_tls_size;
-void InitTlsSize() {
-  int major, minor, patch;
-  g_use_dlpi_tls_data =
-      GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
-
-#    if defined(__aarch64__) || defined(__x86_64__) || \
-        defined(__powerpc64__) || defined(__loongarch__)
-  void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
-  size_t tls_align;
-  ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
-#    endif
+static void GetGLibcVersion(int *major, int *minor, int *patch) {
+  const char *p = gnu_get_libc_version();
+  *major = internal_simple_strtoll(p, &p, 10);
+  // Caller does not expect anything else.
+  CHECK_EQ(*major, 2);
+  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
 }
-#  else
-void InitTlsSize() {}
-#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
-
-// On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
-// of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
-// to get the pointer to thread-specific data keys in the thread control block.
-#  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \
-      !SANITIZER_ANDROID && !SANITIZER_GO
-// sizeof(struct pthread) from glibc.
-static atomic_uintptr_t thread_descriptor_size;
 
 static uptr ThreadDescriptorSizeFallback() {
-  uptr val = 0;
-#    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
+#    if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || \
+        SANITIZER_RISCV64
   int major;
   int minor;
   int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
-    /* sizeof(struct pthread) values from various glibc versions.  */
-    if (SANITIZER_X32)
-      val = 1728;  // Assume only one particular version for x32.
-    // For ARM sizeof(struct pthread) changed in Glibc 2.23.
-    else if (SANITIZER_ARM)
-      val = minor <= 22 ? 1120 : 1216;
-    else if (minor <= 3)
-      val = FIRST_32_SECOND_64(1104, 1696);
-    else if (minor == 4)
-      val = FIRST_32_SECOND_64(1120, 1728);
-    else if (minor == 5)
-      val = FIRST_32_SECOND_64(1136, 1728);
-    else if (minor <= 9)
-      val = FIRST_32_SECOND_64(1136, 1712);
-    else if (minor == 10)
-      val = FIRST_32_SECOND_64(1168, 1776);
-    else if (minor == 11 || (minor == 12 && patch == 1))
-      val = FIRST_32_SECOND_64(1168, 2288);
-    else if (minor <= 14)
-      val = FIRST_32_SECOND_64(1168, 2304);
-    else if (minor < 32)  // Unknown version
-      val = FIRST_32_SECOND_64(1216, 2304);
-    else  // minor == 32
-      val = FIRST_32_SECOND_64(1344, 2496);
-  }
-#    elif defined(__s390__) || defined(__sparc__)
+  GetGLibcVersion(&major, &minor, &patch);
+#    endif
+
+#    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
+  /* sizeof(struct pthread) values from various glibc versions.  */
+  if (SANITIZER_X32)
+    return 1728;  // Assume only one particular version for x32.
+  // For ARM sizeof(struct pthread) changed in Glibc 2.23.
+  if (SANITIZER_ARM)
+    return minor <= 22 ? 1120 : 1216;
+  if (minor <= 3)
+    return FIRST_32_SECOND_64(1104, 1696);
+  if (minor == 4)
+    return FIRST_32_SECOND_64(1120, 1728);
+  if (minor == 5)
+    return FIRST_32_SECOND_64(1136, 1728);
+  if (minor <= 9)
+    return FIRST_32_SECOND_64(1136, 1712);
+  if (minor == 10)
+    return FIRST_32_SECOND_64(1168, 1776);
+  if (minor == 11 || (minor == 12 && patch == 1))
+    return FIRST_32_SECOND_64(1168, 2288);
+  if (minor <= 14)
+    return FIRST_32_SECOND_64(1168, 2304);
+  if (minor < 32)  // Unknown version
+    return FIRST_32_SECOND_64(1216, 2304);
+  // minor == 32
+  return FIRST_32_SECOND_64(1344, 2496);
+#    endif
+
+#    if SANITIZER_RISCV64
+  // TODO: consider adding an optional runtime check for an unknown (untested)
+  // glibc version
+  if (minor <= 28)  // WARNING: the highest tested version is 2.29
+    return 1772;    // no guarantees for this one
+  if (minor <= 31)
+    return 1772;  // tested against glibc 2.29, 2.31
+  return 1936;    // tested against glibc 2.32
+#    endif
+
+#    if defined(__s390__) || defined(__sparc__)
   // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
   // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
   // changed since 2007-05. Technically this applies to i386/x86_64 as well but
   // we call _dl_get_tls_static_info and need the precise size of struct
   // pthread.
   return FIRST_32_SECOND_64(524, 1552);
-#    elif defined(__mips__)
+#    endif
+
+#    if defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
-  val = FIRST_32_SECOND_64(1152, 1776);
-#    elif SANITIZER_LOONGARCH64
-  val = 1856;  // from glibc 2.36
-#    elif SANITIZER_RISCV64
-  int major;
-  int minor;
-  int patch;
-  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
-    // TODO: consider adding an optional runtime check for an unknown (untested)
-    // glibc version
-    if (minor <= 28)  // WARNING: the highest tested version is 2.29
-      val = 1772;     // no guarantees for this one
-    else if (minor <= 31)
-      val = 1772;  // tested against glibc 2.29, 2.31
-    else
-      val = 1936;  // tested against glibc 2.32
+  return FIRST_32_SECOND_64(1152, 1776);
+#    endif
+
+#    if SANITIZER_LOONGARCH64
+  return 1856;  // from glibc 2.36
+#    endif
+
+#    if defined(__aarch64__)
+  // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
+  return 1776;
+#    endif
+
+#    if defined(__powerpc64__)
+  return 1776;  // from glibc.ppc64le 2.20-8.fc21
+#    endif
+}
+#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
+
+#  if SANITIZER_FREEBSD && !SANITIZER_GO
+// FIXME: Implementation is very GLIBC specific, but it's used by FreeBSD.
+static uptr ThreadDescriptorSizeFallback() {
+#    if defined(__s390__) || defined(__sparc__)
+  // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
+  // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
+  // changed since 2007-05. Technically this applies to i386/x86_64 as well but
+  // we call _dl_get_tls_static_info and need the precise size of struct
+  // pthread.
+  return FIRST_32_SECOND_64(524, 1552);
+#    endif
+
+#    if defined(__mips__)
+  // TODO(sagarthakur): add more values as per different glibc versions.
+  return FIRST_32_SECOND_64(1152, 1776);
+#    endif
+
+#    if SANITIZER_LOONGARCH64
+  return 1856;  // from glibc 2.36
+#    endif
+
+#    if defined(__aarch64__)
+  // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
+  return 1776;
+#    endif
+
+#    if defined(__powerpc64__)
+  return 1776;  // from glibc.ppc64le 2.20-8.fc21
+#    endif
+
+  return 0;
+}
+#  endif  // SANITIZER_FREEBSD && !SANITIZER_GO
+
+#  if (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
+// On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
+// of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
+// to get the pointer to thread-specific data keys in the thread control block.
+// sizeof(struct pthread) from glibc.
+static uptr thread_descriptor_size;
+
+uptr ThreadDescriptorSize() { return thread_descriptor_size; }
+
+#    if SANITIZER_GLIBC
+__attribute__((unused)) static size_t g_tls_size;
+#    endif
+
+void InitTlsSize() {
+#    if SANITIZER_GLIBC
+  int major, minor, patch;
+  GetGLibcVersion(&major, &minor, &patch);
+  g_use_dlpi_tls_data = major == 2 && minor >= 25;
+
+  if (major == 2 && minor >= 34) {
+    // _thread_db_sizeof_pthread is a GLIBC_PRIVATE symbol that is exported in
+    // glibc 2.34 and later.
+    if (unsigned *psizeof = static_cast<unsigned *>(
+            dlsym(RTLD_DEFAULT, "_thread_db_sizeof_pthread"))) {
+      thread_descriptor_size = *psizeof;
+    }
   }
 
-#    elif defined(__aarch64__)
-  // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
-  val = 1776;
-#    elif defined(__powerpc64__)
-  val = 1776;  // from glibc.ppc64le 2.20-8.fc21
-#    endif
-  return val;
-}
+#      if defined(__aarch64__) || defined(__x86_64__) || \
+          defined(__powerpc64__) || defined(__loongarch__)
+  auto *get_tls_static_info = (void (*)(size_t *, size_t *))dlsym(
+      RTLD_DEFAULT, "_dl_get_tls_static_info");
+  size_t tls_align;
+  // Can be null if static link.
+  if (get_tls_static_info)
+    get_tls_static_info(&g_tls_size, &tls_align);
+#      endif
 
-uptr ThreadDescriptorSize() {
-  uptr val = atomic_load_relaxed(&thread_descriptor_size);
-  if (val)
-    return val;
-  // _thread_db_sizeof_pthread is a GLIBC_PRIVATE symbol that is exported in
-  // glibc 2.34 and later.
-  if (unsigned *psizeof = static_cast<unsigned *>(
-          dlsym(RTLD_DEFAULT, "_thread_db_sizeof_pthread")))
-    val = *psizeof;
-  if (!val)
-    val = ThreadDescriptorSizeFallback();
-  atomic_store_relaxed(&thread_descriptor_size, val);
-  return val;
+#    endif  // SANITIZER_GLIBC
+
+  if (!thread_descriptor_size)
+    thread_descriptor_size = ThreadDescriptorSizeFallback();
 }
 
 #    if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64 || \
@@ -329,7 +394,13 @@ static uptr TlsPreTcbSize() {
   return kTlsPreTcbSize;
 }
 #    endif
+#  else   // (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
+void InitTlsSize() {}
+uptr ThreadDescriptorSize() { return 0; }
+#  endif  // (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
 
+#  if (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_SOLARIS) && \
+      !SANITIZER_ANDROID && !SANITIZER_GO
 namespace {
 struct TlsBlock {
   uptr begin, end, align;
@@ -551,21 +622,22 @@ static void GetTls(uptr *addr, uptr *size) {
   *addr = tp - RoundUpTo(*size, align);
   *size = tp - *addr + ThreadDescriptorSize();
 #      else
-  if (SANITIZER_GLIBC)
-    *size += 1664;
-  else if (SANITIZER_FREEBSD)
-    *size += 128;  // RTLD_STATIC_TLS_EXTRA
-#        if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
+#        if SANITIZER_GLIBC
+  *size += 1664;
+#        elif SANITIZER_FREEBSD
+  *size += 128;  // RTLD_STATIC_TLS_EXTRA
+#          if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
   const uptr pre_tcb_size = TlsPreTcbSize();
   *addr -= pre_tcb_size;
   *size += pre_tcb_size;
-#        else
+#          else
   // arm and aarch64 reserve two words at TP, so this underestimates the range.
   // However, this is sufficient for the purpose of finding the pointers to
   // thread-specific data keys.
   const uptr tcb_size = ThreadDescriptorSize();
   *addr -= tcb_size;
   *size += tcb_size;
+#          endif
 #        endif
 #      endif
 #    elif SANITIZER_NETBSD
@@ -582,6 +654,7 @@ static void GetTls(uptr *addr, uptr *size) {
       *addr = (uptr)tcb->tcb_dtv[1];
     }
   }
+#    elif SANITIZER_HAIKU
 #    else
 #      error "Unknown OS"
 #    endif
@@ -601,25 +674,32 @@ uptr GetTlsSize() {
 }
 #  endif
 
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
 #  if SANITIZER_GO
   // Stub implementation for Go.
-  *stk_addr = *stk_size = *tls_addr = *tls_size = 0;
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
 #  else
-  GetTls(tls_addr, tls_size);
+  uptr tls_addr = 0;
+  uptr tls_size = 0;
+  GetTls(&tls_addr, &tls_size);
+  *tls_begin = tls_addr;
+  *tls_end = tls_addr + tls_size;
 
   uptr stack_top, stack_bottom;
   GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
+  *stk_begin = stack_bottom;
+  *stk_end = stack_top;
 
   if (!main) {
     // If stack and tls intersect, make them non-intersecting.
-    if (*tls_addr > *stk_addr && *tls_addr < *stk_addr + *stk_size) {
-      if (*stk_addr + *stk_size < *tls_addr + *tls_size)
-        *tls_size = *stk_addr + *stk_size - *tls_addr;
-      *stk_size = *tls_addr - *stk_addr;
+    if (*tls_begin > *stk_begin && *tls_begin < *stk_end) {
+      if (*stk_end < *tls_end)
+        *tls_end = *stk_end;
+      *stk_end = *tls_begin;
     }
   }
 #  endif
@@ -645,8 +725,13 @@ static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
     if (phdr->p_type == PT_LOAD) {
       uptr cur_beg = info->dlpi_addr + phdr->p_vaddr;
       uptr cur_end = cur_beg + phdr->p_memsz;
+#  if SANITIZER_HAIKU
+      bool executable = phdr->p_flags & PF_EXECUTE;
+      bool writable = phdr->p_flags & PF_WRITE;
+#  else
       bool executable = phdr->p_flags & PF_X;
       bool writable = phdr->p_flags & PF_W;
+#  endif
       cur_module.addAddressRange(cur_beg, cur_end, executable, writable);
     } else if (phdr->p_type == PT_NOTE) {
 #  ifdef NT_GNU_BUILD_ID
@@ -698,47 +783,13 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   return 0;
 }
 
-#  if SANITIZER_ANDROID && __ANDROID_API__ < 21
-extern "C" __attribute__((weak)) int dl_iterate_phdr(
-    int (*)(struct dl_phdr_info *, size_t, void *), void *);
-#  endif
-
-static bool requiresProcmaps() {
-#  if SANITIZER_ANDROID && __ANDROID_API__ <= 22
-  // Fall back to /proc/maps if dl_iterate_phdr is unavailable or broken.
-  // The runtime check allows the same library to work with
-  // both K and L (and future) Android releases.
-  return AndroidGetApiLevel() <= ANDROID_LOLLIPOP_MR1;
-#  else
-  return false;
-#  endif
-}
-
-static void procmapsInit(InternalMmapVectorNoCtor<LoadedModule> *modules) {
-  MemoryMappingLayout memory_mapping(/*cache_enabled*/ true);
-  memory_mapping.DumpListOfModules(modules);
-}
-
 void ListOfModules::init() {
   clearOrInit();
-  if (requiresProcmaps()) {
-    procmapsInit(&modules_);
-  } else {
-    DlIteratePhdrData data = {&modules_, true};
-    dl_iterate_phdr(dl_iterate_phdr_cb, &data);
-  }
+  DlIteratePhdrData data = {&modules_, true};
+  dl_iterate_phdr(dl_iterate_phdr_cb, &data);
 }
 
-// When a custom loader is used, dl_iterate_phdr may not contain the full
-// list of modules. Allow callers to fall back to using procmaps.
-void ListOfModules::fallbackInit() {
-  if (!requiresProcmaps()) {
-    clearOrInit();
-    procmapsInit(&modules_);
-  } else {
-    clear();
-  }
-}
+void ListOfModules::fallbackInit() { clear(); }
 
 // getrusage does not give us the current RSS, only the max RSS.
 // Still, this is better than nothing if /proc/self/statm is not available
@@ -784,45 +835,17 @@ u32 GetNumberOfCPUs() {
   int req[2];
   uptr len = sizeof(ncpu);
   req[0] = CTL_HW;
+#    ifdef HW_NCPUONLINE
+  req[1] = HW_NCPUONLINE;
+#    else
   req[1] = HW_NCPU;
+#    endif
   CHECK_EQ(internal_sysctl(req, 2, &ncpu, &len, NULL, 0), 0);
   return ncpu;
-#  elif SANITIZER_ANDROID && !defined(CPU_COUNT) && !defined(__aarch64__)
-  // Fall back to /sys/devices/system/cpu on Android when cpu_set_t doesn't
-  // exist in sched.h. That is the case for toolchains generated with older
-  // NDKs.
-  // This code doesn't work on AArch64 because internal_getdents makes use of
-  // the 64bit getdents syscall, but cpu_set_t seems to always exist on AArch64.
-  uptr fd = internal_open("/sys/devices/system/cpu", O_RDONLY | O_DIRECTORY);
-  if (internal_iserror(fd))
-    return 0;
-  InternalMmapVector<u8> buffer(4096);
-  uptr bytes_read = buffer.size();
-  uptr n_cpus = 0;
-  u8 *d_type;
-  struct linux_dirent *entry = (struct linux_dirent *)&buffer[bytes_read];
-  while (true) {
-    if ((u8 *)entry >= &buffer[bytes_read]) {
-      bytes_read = internal_getdents(fd, (struct linux_dirent *)buffer.data(),
-                                     buffer.size());
-      if (internal_iserror(bytes_read) || !bytes_read)
-        break;
-      entry = (struct linux_dirent *)buffer.data();
-    }
-    d_type = (u8 *)entry + entry->d_reclen - 1;
-    if (d_type >= &buffer[bytes_read] ||
-        (u8 *)&entry->d_name[3] >= &buffer[bytes_read])
-      break;
-    if (entry->d_ino != 0 && *d_type == DT_DIR) {
-      if (entry->d_name[0] == 'c' && entry->d_name[1] == 'p' &&
-          entry->d_name[2] == 'u' && entry->d_name[3] >= '0' &&
-          entry->d_name[3] <= '9')
-        n_cpus++;
-    }
-    entry = (struct linux_dirent *)(((u8 *)entry) + entry->d_reclen);
-  }
-  internal_close(fd);
-  return n_cpus;
+#  elif SANITIZER_HAIKU
+  system_info info;
+  get_system_info(&info);
+  return info.cpu_count;
 #  elif SANITIZER_SOLARIS
   return sysconf(_SC_NPROCESSORS_ONLN);
 #  else
@@ -865,11 +888,8 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE int __android_log_write(int prio,
 void WriteOneLineToSyslog(const char *s) {
   if (&async_safe_write_log) {
     async_safe_write_log(SANITIZER_ANDROID_LOG_INFO, GetProcessName(), s);
-  } else if (AndroidGetApiLevel() > ANDROID_KITKAT) {
-    syslog(LOG_INFO, "%s", s);
   } else {
-    CHECK(&__android_log_write);
-    __android_log_write(SANITIZER_ANDROID_LOG_INFO, nullptr, s);
+    syslog(LOG_INFO, "%s", s);
   }
 }
 
@@ -983,9 +1003,8 @@ void UnmapFromTo(uptr from, uptr to) {
 }
 
 uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
-                      uptr min_shadow_base_alignment,
-                      UNUSED uptr &high_mem_end) {
-  const uptr granularity = GetMmapGranularity();
+                      uptr min_shadow_base_alignment, UNUSED uptr &high_mem_end,
+                      uptr granularity) {
   const uptr alignment =
       Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
   const uptr left_padding =

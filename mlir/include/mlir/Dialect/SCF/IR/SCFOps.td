@@ -77,22 +77,33 @@ def ConditionOp : SCF_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def ExecuteRegionOp : SCF_Op<"execute_region", [
-    DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>, RecursiveMemoryEffects]> {
   let summary = "operation that executes its region exactly once";
   let description = [{
-    The `execute_region` operation is used to allow multiple blocks within SCF
-    and other operations which can hold only one block.  The `execute_region`
+    The `scf.execute_region` operation is used to allow multiple blocks within SCF
+    and other operations which can hold only one block.  The `scf.execute_region`
     operation executes the region held exactly once and cannot have any operands.
     As such, its region has no arguments. All SSA values that dominate the op can
     be accessed inside the op. The op's region can have multiple blocks and the
     blocks can have multiple distinct terminators. Values returned from this op's
     region define the op's results.
+    The optional 'no_inline' flag can be set to request the ExecuteRegionOp to be
+    preserved as much as possible and not being inlined in the parent block until
+    an explicit lowering step.
 
     Example:
 
     ```mlir
     scf.for %i = 0 to 128 step %c1 {
       %y = scf.execute_region -> i32 {
+        %x = load %A[%i] : memref<128xi32>
+        scf.yield %x : i32
+      }
+    }
+
+    // the same as above but with no_inline attribute
+    scf.for %i = 0 to 128 step %c1 {
+      %y = scf.execute_region -> i32 no_inline {
         %x = load %A[%i] : memref<128xi32>
         scf.yield %x : i32
       }
@@ -119,6 +130,10 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
     ```
   }];
 
+  let arguments = (ins
+    UnitAttr:$no_inline
+  );
+
   let results = (outs Variadic<AnyType>);
 
   let regions = (region AnyRegion:$region);
@@ -135,10 +150,11 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
 
 def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
-       ["getInitsMutable", "getSingleInductionVar", "getSingleLowerBound",
-        "getSingleStep", "getSingleUpperBound", "getYieldedValuesMutable",
-        "getLoopResults", "promoteIfSingleIteration",
-        "replaceWithAdditionalYields"]>,
+       ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
+        "getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
+        "getLoopUpperBounds", "getStaticTripCount", "getYieldedValuesMutable",
+        "promoteIfSingleIteration", "replaceWithAdditionalYields",
+        "yieldTiledValuesAndReplace"]>,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -152,9 +168,14 @@ def ForOp : SCF_Op<"for",
     operation defines an SSA value for its induction variable. It has one
     region capturing the loop body. The induction variable is represented as an
     argument of this region. This SSA value is a signless integer or index.
-    The step is a value of same type but required to be positive. The lower and
-    upper bounds specify a half-open range: the range includes the lower bound
-    but does not include the upper bound.
+    The step is a value of same type but required to be positive, the lower and
+    upper bounds can be also negative or zero. The lower and upper bounds
+    specify a half-open range: the iteration is executed iff the comparison of
+    induction variable value is less than the upper bound and bigger or equal
+    to the lower bound.
+
+    By default, the integer comparison is signed. If the `unsignedCmp` unit
+    attribute is specified, the integer comparison is unsigned.
 
     The body region must contain exactly one block that terminates with
     `scf.yield`. Calling ForOp::build will create such a region and insert
@@ -167,8 +188,8 @@ def ForOp : SCF_Op<"for",
       ... // body
     }
     ...
-    // Integer case.
-    scf.for %iv_32 = %lb_32 to %ub_32 step %step_32 : i32 {
+    // Unsigned integer case.
+    scf.for unsigned %iv_32 = %lb_32 to %ub_32 step %step_32 : i32 {
       ... // body
     }
     ```
@@ -241,27 +262,23 @@ def ForOp : SCF_Op<"for",
   let arguments = (ins AnySignlessIntegerOrIndex:$lowerBound,
                        AnySignlessIntegerOrIndex:$upperBound,
                        AnySignlessIntegerOrIndex:$step,
-                       Variadic<AnyType>:$initArgs);
+                       Variadic<AnyType>:$initArgs,
+                       UnitAttr:$unsignedCmp);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
-      CArg<"ValueRange", "std::nullopt">:$iterArgs,
+  let builders = [OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound,
+      "Value":$step, CArg<"ValueRange", "{}">:$initArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
-           "nullptr">)>
-  ];
+           "nullptr">,
+      CArg<"bool", "false">:$unsignedCmp)>];
 
   let extraClassDeclaration = [{
     using BodyBuilderFn =
         function_ref<void(OpBuilder &, Location, Value, ValueRange)>;
 
     Value getInductionVar() { return getBody()->getArgument(0); }
-
-    Block::BlockArgListType getRegionIterArgs() {
-      return getBody()->getArguments().drop_front(getNumInductionVars());
-    }
 
     /// Return the `index`-th region iteration argument.
     BlockArgument getRegionIterArg(unsigned index) {
@@ -304,12 +321,14 @@ def ForallOp : SCF_Op<"forall", [
        AttrSizedOperandSegments,
        AutomaticAllocationScope,
        DeclareOpInterfaceMethods<LoopLikeOpInterface,
-          ["promoteIfSingleIteration", "getSingleInductionVar",
-          "getSingleLowerBound", "getSingleUpperBound", "getSingleStep"]>,
+          ["getInitsMutable", "getRegionIterArgs", "getLoopInductionVars",
+           "getLoopLowerBounds", "getLoopUpperBounds", "getLoopSteps",
+           "promoteIfSingleIteration", "yieldTiledValuesAndReplace"]>,
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       DestinationStyleOpInterface
+       DestinationStyleOpInterface,
+       HasParallelRegion
      ]> {
   let summary = "evaluate a block multiple times in parallel";
   let description = [{
@@ -345,7 +364,7 @@ def ForallOp : SCF_Op<"forall", [
 
     The only allowed terminator is `scf.forall.in_parallel`.
     `scf.forall` returns one value per `shared_out` operand. The
-    actions of the `in_parallel` terminators specify how to combine the
+    actions of the `scf.forall.in_parallel` terminators specify how to combine the
     partial results of all parallel invocations into a full value, in some
     unspecified order. The "destination" of each such op must be a `shared_out`
     block argument of the `scf.forall` op.
@@ -511,22 +530,31 @@ def ForallOp : SCF_Op<"forall", [
   ];
 
   let extraClassDeclaration = [{
-    // Get lower bounds as OpFoldResult.
+    /// Get induction variables.
+    SmallVector<Value> getInductionVars() {
+      std::optional<SmallVector<Value>> maybeInductionVars = getLoopInductionVars();
+      assert(maybeInductionVars.has_value() && "expected values");
+      return *maybeInductionVars;
+    }
+    /// Get lower bounds as OpFoldResult.
     SmallVector<OpFoldResult> getMixedLowerBound() {
-      Builder b(getOperation()->getContext());
-      return getMixedValues(getStaticLowerBound(), getDynamicLowerBound(), b);
+      std::optional<SmallVector<OpFoldResult>> maybeLowerBounds = getLoopLowerBounds();
+      assert(maybeLowerBounds.has_value() && "expected values");
+      return *maybeLowerBounds;
     }
 
-    // Get upper bounds as OpFoldResult.
+    /// Get upper bounds as OpFoldResult.
     SmallVector<OpFoldResult> getMixedUpperBound() {
-      Builder b(getOperation()->getContext());
-      return getMixedValues(getStaticUpperBound(), getDynamicUpperBound(), b);
+      std::optional<SmallVector<OpFoldResult>> maybeUpperBounds = getLoopUpperBounds();
+      assert(maybeUpperBounds.has_value() && "expected values");
+      return *maybeUpperBounds;
     }
 
-    // Get steps as OpFoldResult.
+    /// Get steps as OpFoldResult.
     SmallVector<OpFoldResult> getMixedStep() {
-      Builder b(getOperation()->getContext());
-      return getMixedValues(getStaticStep(), getDynamicStep(), b);
+      std::optional<SmallVector<OpFoldResult>> maybeSteps = getLoopSteps();
+      assert(maybeSteps.has_value() && "expected values");
+      return *maybeSteps;
     }
 
     /// Get lower bounds as values.
@@ -585,12 +613,9 @@ def ForallOp : SCF_Op<"forall", [
                                     getNumDynamicControlOperands() + getRank());
     }
 
-    ArrayRef<BlockArgument> getOutputBlockArguments() {
-      return getBody()->getArguments().drop_front(getRank());
-    }
-
-    ::mlir::ValueRange getInductionVars() {
-      return getBody()->getArguments().take_front(getRank());
+    BlockArgument getTiedBlockArgument(OpResult opResult) {
+      assert(opResult.getDefiningOp() == getOperation()  && "invalid OpResult");
+      return getBody()->getArgument(getRank() + opResult.getResultNumber());
     }
 
     ::mlir::Value getInductionVar(int64_t idx) {
@@ -604,16 +629,33 @@ def ForallOp : SCF_Op<"forall", [
     /// Checks if the lbs are zeros and steps are ones.
     bool isNormalized();
 
-    // The ensureTerminator method generated by SingleBlockImplicitTerminator is
-    // unaware of the fact that our terminator also needs a region to be
-    // well-formed. We override it here to ensure that we do the right thing.
-    static void ensureTerminator(Region & region, OpBuilder & builder,
-                                 Location loc);
-
     InParallelOp getTerminator();
 
     // Declare the shared_outs as inits/outs to DestinationStyleOpInterface.
     MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
+
+    /// Returns operations within scf.forall.in_parallel whose destination
+    /// operand is the block argument `bbArg`.
+    SmallVector<Operation*> getCombiningOps(BlockArgument bbArg);
+
+    /// Returns the subset of DeviceMappingArrayAttrs of type
+    /// DeviceMappingAttrInterface.
+    SmallVector<DeviceMappingAttrInterface> getDeviceMappingAttrs();
+
+    /// Returns the at most one DeviceMaskingAttrInterface in the mapping.
+    /// If more than one DeviceMaskingAttrInterface is specified, returns
+    /// failure. If no mapping is present, returns nullptr.
+    FailureOr<DeviceMaskingAttrInterface> getDeviceMaskingAttr();
+
+    /// Returns true if the mapping specified for this forall op is linear.
+    bool usesLinearMapping();
+
+    /// RegionBranchOpInterface
+
+    OperandRange getEntrySuccessorOperands(RegionSuccessor successor) {
+      return getInits();
+    }
+
   }];
 }
 
@@ -624,12 +666,12 @@ def ForallOp : SCF_Op<"forall", [
 def InParallelOp : SCF_Op<"forall.in_parallel", [
        Pure,
        Terminator,
-       DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
+       DeclareOpInterfaceMethods<InParallelOpInterface>,
        HasParent<"ForallOp">,
       ] # GraphRegionNoTerminator.traits> {
   let summary = "terminates a `forall` block";
   let description = [{
-    `scf.forall.in_parallel` is a designated terminator for
+    The `scf.forall.in_parallel` is a designated terminator for
     the `scf.forall` operation.
 
     It has a single region with a single block that contains a flat list of ops.
@@ -649,8 +691,6 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
     OpBuilder<(ins)>,
   ];
 
-  // TODO: Add a `InParallelOpInterface` interface for ops that can
-  // appear inside in_parallel.
   let extraClassDeclaration = [{
     ::llvm::SmallVector<::mlir::BlockArgument> getDests();
     ::llvm::iterator_range<::mlir::Block::iterator> getYieldingOps();
@@ -666,7 +706,7 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
     "getEntrySuccessorRegions"]>,
     InferTypeOpAdaptor, SingleBlockImplicitTerminator<"scf::YieldOp">,
-    RecursiveMemoryEffects, NoRegionArguments]> {
+    RecursiveMemoryEffects, RecursivelySpeculatable, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for
@@ -766,14 +806,15 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
 def ParallelOp : SCF_Op<"parallel",
     [AutomaticAllocationScope,
      AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getSingleInductionVar",
-          "getSingleLowerBound", "getSingleUpperBound", "getSingleStep"]>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getLoopInductionVars",
+          "getLoopLowerBounds", "getLoopUpperBounds", "getLoopSteps"]>,
      RecursiveMemoryEffects,
      DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-     SingleBlockImplicitTerminator<"scf::ReduceOp">]> {
+     SingleBlockImplicitTerminator<"scf::ReduceOp">,
+     HasParallelRegion]> {
   let summary = "parallel for operation";
   let description = [{
-    The "scf.parallel" operation represents a loop nest taking 4 groups of SSA
+    The `scf.parallel` operation represents a loop nest taking 4 groups of SSA
     values as operands that represent the lower bounds, upper bounds, steps and
     initial values, respectively. The operation defines a variadic number of
     SSA values for its induction variables. It has one region capturing the
@@ -782,7 +823,7 @@ def ParallelOp : SCF_Op<"parallel",
     machine word. The steps are values of type index, required to be positive.
     The lower and upper bounds specify a half-open range: the range includes
     the lower bound but does not include the upper bound. The initial values
-    have the same types as results of "scf.parallel". If there are no results,
+    have the same types as results of `scf.parallel`. If there are no results,
     the keyword `init` can be omitted.
 
     Semantically we require that the iteration space can be iterated in any
@@ -791,17 +832,17 @@ def ParallelOp : SCF_Op<"parallel",
 
     The parallel loop operation supports reduction of values produced by
     individual iterations into a single result. This is modeled using the
-    "scf.reduce" terminator operation (see "scf.reduce" for details). The i-th
-    result of an "scf.parallel" operation is associated with the i-th initial
-    value operand, the i-th operand of the "scf.reduce" operation (the value to
-    be reduced) and the i-th region of the "scf.reduce" operation (the reduction
+    `scf.reduce` terminator operation (see `scf.reduce` for details). The i-th
+    result of an `scf.parallel` operation is associated with the i-th initial
+    value operand, the i-th operand of the `scf.reduce` operation (the value to
+    be reduced) and the i-th region of the `scf.reduce` operation (the reduction
     function). Consequently, we require that the number of results of an
-    "scf.parallel" op matches the number of initial values and the the number of
-    reductions in the "scf.reduce" terminator.
+    `scf.parallel` op matches the number of initial values and the the number of
+    reductions in the `scf.reduce` terminator.
 
     The body region must contain exactly one block that terminates with a
-    "scf.reduce" operation. If an "scf.parallel" op has no reductions, the
-    terminator has no operands and no regions. The "scf.parallel" parser will
+    `scf.reduce` operation. If an `scf.parallel` op has no reductions, the
+    terminator has no operands and no regions. The `scf.parallel` parser will
     automatically insert the terminator for ops that have no reductions if it is
     absent.
 
@@ -846,8 +887,11 @@ def ParallelOp : SCF_Op<"parallel",
   ];
 
   let extraClassDeclaration = [{
-    ValueRange getInductionVars() {
-      return getBody()->getArguments();
+    /// Get induction variables.
+    SmallVector<Value> getInductionVars() {
+      std::optional<SmallVector<Value>> maybeInductionVars = getLoopInductionVars();;
+      assert(maybeInductionVars.has_value() && "expected values");
+      return *maybeInductionVars;
     }
     unsigned getNumLoops() { return getStep().size(); }
     unsigned getNumReductions() { return getInitVals().size(); }
@@ -867,25 +911,25 @@ def ReduceOp : SCF_Op<"reduce", [
     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>]> {
   let summary = "reduce operation for scf.parallel";
   let description = [{
-    "scf.reduce" is the terminator for "scf.parallel" operations. It can model
+    The `scf.reduce` operation is the terminator for `scf.parallel` operations. It can model
     an arbitrary number of reductions. It has one region per reduction. Each
     region has one block with two arguments which have the same type as the
-    corresponding operand of "scf.reduce". The operands of the op are the values
+    corresponding operand of `scf.reduce`. The operands of the op are the values
     that should be reduce; one value per reduction.
 
     The i-th reduction (i.e., the i-th region and the i-th operand) corresponds
-    the i-th initial value and the i-th result of the enclosing "scf.parallel"
+    the i-th initial value and the i-th result of the enclosing `scf.parallel`
     op.
 
-    The "scf.reduce" operation contains regions whose entry blocks expect two
+    The `scf.reduce` operation contains regions whose entry blocks expect two
     arguments of the same type as the corresponding operand. As the iteration
     order of the enclosing parallel loop and hence reduction order is
     unspecified, the results of the reductions may be non-deterministic unless
     the reductions are associative and commutative.
 
-    The result of a reduction region ("scf.reduce.return" operand) must have the
-    same type as the corresponding "scf.reduce" operand and the corresponding
-    "scf.parallel" initial value.
+    The result of a reduction region (`scf.reduce.return` operand) must have the
+    same type as the corresponding `scf.reduce` operand and the corresponding
+    `scf.parallel` initial value.
 
     Example:
 
@@ -921,9 +965,9 @@ def ReduceReturnOp :
     SCF_Op<"reduce.return", [HasParent<"ReduceOp">, Pure, Terminator]> {
   let summary = "terminator for reduce operation";
   let description = [{
-    "scf.reduce.return" is a special terminator operation for the block inside
-    "scf.reduce" regions. It terminates the region. It should have the same
-    operand type as the corresponding operand of the enclosing "scf.reduce" op.
+    The `scf.reduce.return` operation is a special terminator operation for the block inside
+    `scf.reduce` regions. It terminates the region. It should have the same
+    operand type as the corresponding operand of the enclosing `scf.reduce` op.
 
     Example:
 
@@ -1066,7 +1110,7 @@ def WhileOp : SCF_Op<"while",
   let regions = (region SizedRegion<1>:$before, SizedRegion<1>:$after);
 
   let builders = [
-    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$operands,
+    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$inits,
       "function_ref<void(OpBuilder &, Location, ValueRange)>":$beforeBuilder,
       "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>
   ];
@@ -1151,7 +1195,7 @@ def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
     Block &getCaseBlock(unsigned idx);
   }];
 
-  let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -1164,12 +1208,12 @@ def YieldOp : SCF_Op<"yield", [Pure, ReturnLike, Terminator,
                  "WhileOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
-    "scf.yield" yields an SSA value from the SCF dialect op region and
+    The `scf.yield` operation yields an SSA value from the SCF dialect op region and
     terminates the regions. The semantics of how the values are yielded is
     defined by the parent operation.
-    If "scf.yield" has any operands, the operands must match the parent
+    If `scf.yield` has any operands, the operands must match the parent
     operation's results.
-    If the parent operation defines no values, then the "scf.yield" may be
+    If the parent operation defines no values, then the `scf.yield` may be
     left out in the custom syntax and the builders will insert one implicitly.
     Otherwise, it has to be present in the syntax to indicate which values are
     yielded.

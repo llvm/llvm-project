@@ -10,7 +10,7 @@
 #define AFFINE_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -60,6 +60,37 @@ def SimplifyBoundedAffineOpsOp
       $target `with` `[` ($bounded_values^ `:` type($bounded_values))? `]`
           `within` $lower_bounds `and` $upper_bounds attr-dict
           `:` type($target)
+  }];
+}
+
+def SimplifyMinMaxAffineOpsOp :
+  Op<Transform_Dialect, "affine.simplify_min_max_affine_ops", [
+    DeclareOpInterfaceMethods<TransformOpInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+  ]> {
+  let description = [{
+    Simplify the targeted `affine.min` / `affine.max` ops using the
+    `mlir::affine::simplifyAffineMinMaxOps` transform.
+
+    Example:
+    ```
+    %0 = transform.structured.match ops{["affine.max"]} in %arg1
+    transform.affine.simplify_min_max_affine_ops %0 : !transform.any_op
+    ```
+
+    #### Return modes
+
+    This transform consumes the target handle and does not produce any results.
+    This transforms definitely fails if any of the targeted operations is not an
+    `affine.min` or `affine.max` operation, or if the canonicalization patterns
+    failed to converge.
+    This transform silently fails if none of the operations were simplified.
+    Otherwise, it succeeds.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let assemblyFormat = [{
+      $target attr-dict `:` type($target)
   }];
 }
 

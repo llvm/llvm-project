@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_CTYPE_ISPRINT_H
 #define LLVM_LIBC_SRC_CTYPE_ISPRINT_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 int isprint(int c);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif //  LLVM_LIBC_SRC_CTYPE_ISPRINT_H

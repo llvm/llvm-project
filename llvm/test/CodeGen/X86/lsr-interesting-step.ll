@@ -10,12 +10,12 @@ define void @foo() nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $2, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb7
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_2 Depth 2
 ; CHECK-NEXT:    movl $2, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb11
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2

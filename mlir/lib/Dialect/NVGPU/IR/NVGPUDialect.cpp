@@ -12,19 +12,14 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -32,10 +27,10 @@ using namespace mlir::nvgpu;
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
 
-void nvgpu::NVGPUDialect::initialize() {
+void NVGPUDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
@@ -43,11 +38,11 @@ void nvgpu::NVGPUDialect::initialize() {
       >();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
       >();
 }
 
-bool nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
+bool NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
   if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
@@ -57,7 +52,7 @@ bool nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   return false;
 }
 
-bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
+bool NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
   Attribute memorySpace = type.getMemorySpace();
   return isSharedMemoryAddressSpace(memorySpace);
 }
@@ -70,9 +65,9 @@ LogicalResult DeviceAsyncCopyOp::verify() {
   auto srcMemref = llvm::cast<MemRefType>(getSrc().getType());
   auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
 
-  if (!isLastMemrefDimUnitStride(srcMemref))
+  if (!srcMemref.isLastDimUnitStride())
     return emitError("source memref most minor dim must have unit stride");
-  if (!isLastMemrefDimUnitStride(dstMemref))
+  if (!dstMemref.isLastDimUnitStride())
     return emitError("destination memref most minor dim must have unit stride");
   if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref))
     return emitError()
@@ -145,7 +140,6 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
                                      TypedValue<VectorType> matrixC,
                                      const std::array<int64_t, 3> &mmaShape,
                                      bool tf32Enabled, bool sparse = false) {
-
   // The verification for mma.sync covering various shapes and data types is
   // based on the fundamental tensor core shape.
 
@@ -202,6 +196,18 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
   //
   // Basic verification
   //
+
+  if (aShape.size() != 2) {
+    return op->emitError() << "matrixA must be 2 dimensional vector";
+  }
+
+  if (bShape.size() != 2) {
+    return op->emitError() << "matrixB must be 2 dimensional vector";
+  }
+
+  if (cShape.size() != 2) {
+    return op->emitError() << "matrixC must be 2 dimensional vector";
+  }
 
   auto [m, n, k] = mmaShape;
 
@@ -285,7 +291,6 @@ LogicalResult MmaSparseSyncOp::verify() {
 // NVGPU_LdMatrixOp
 //===----------------------------------------------------------------------===//
 LogicalResult LdMatrixOp::verify() {
-
   // ldmatrix reads data from source in shared memory
   auto srcMemref = llvm::cast<MemRefType>(getSrcMemref().getType());
 
@@ -321,6 +326,9 @@ LogicalResult LdMatrixOp::verify() {
   if (isTranspose && !(elementBitWidth == 16))
     return emitError()
            << "nvgpu.ldmatrix transpose works only at 16b granularity";
+  if (resShape.size() != 2) {
+    return emitError() << "results must be 2 dimensional vector";
+  }
   if (!(resShape[1] == numElementsPer32b))
     return emitError() << "expected vector register shape[1] = "
                        << numElementsPer32b;
@@ -335,8 +343,21 @@ LogicalResult LdMatrixOp::verify() {
 // NVGPU_TmaAsyncLoadOp
 //===----------------------------------------------------------------------===//
 
+static unsigned getSwizzleBytes(TensorMapSwizzleKind kind) {
+  switch (kind) {
+  case TensorMapSwizzleKind::SWIZZLE_32B:
+    return 32;
+  case TensorMapSwizzleKind::SWIZZLE_64B:
+    return 64;
+  case TensorMapSwizzleKind::SWIZZLE_128B:
+    return 128;
+  default:
+    return 0;
+  }
+}
+
 std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
-    Operation *op, nvgpu::TensorMapDescriptorType descType,
+    Operation *op, TensorMapDescriptorType descType,
     std::optional<MemRefType> memrefType = std::nullopt) {
   MemRefType descMemref = descType.getTensor();
   // Limitation
@@ -351,6 +372,25 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
   // Support only static shape for the time being
   if (!descMemref.hasStaticShape())
     return op->emitError() << "the tensor map descriptor must be static shaped";
+
+  for (auto dim : descMemref.getShape()) {
+    if (dim <= 0 || dim > kMaxTMADimension) {
+      return op->emitError() << "the tensor map descriptor must have "
+                                "dimensions between 1 and "
+                             << kMaxTMADimension << " but it is " << dim;
+    }
+  }
+  if (descMemref.getRank() > 1 &&
+      descType.getSwizzle() != TensorMapSwizzleKind::SWIZZLE_NONE) {
+    unsigned lastDimensionByte =
+        descMemref.getElementTypeBitWidth() * descMemref.getShape().back() / 8;
+    unsigned expectByte = getSwizzleBytes(descType.getSwizzle());
+    if (lastDimensionByte != expectByte)
+      return op->emitError() << "the tensormap descriptor must have last "
+                                "dimension of "
+                             << expectByte << " bytes but it is "
+                             << lastDimensionByte << " bytes";
+  }
 
   // No verification if memref type is not provided
   if (!memrefType.has_value())
@@ -380,12 +420,41 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
                            << descMemref << " != " << dstMemref;
   }
 
+  int lastDimBytes =
+      descMemref.getShape().back() * descMemref.getElementTypeBitWidth() / 8;
+  if (lastDimBytes % kTMALastdimByte != 0) {
+    return op->emitError() << "the bytes in the last dimension of the tensor "
+                              "map must be a multiple of 16";
+  }
   return std::nullopt;
 }
 
 LogicalResult TmaAsyncLoadOp::verify() {
   std::optional<InFlightDiagnostic> error = verifyTmaDescriptorWithMemref(
       *this, getTensorMapDescriptor().getType(), getDst().getType());
+  if (error.has_value())
+    return error.value();
+
+  if (getCoordinates().size() > kMaxTMATensorDimension) {
+    return emitError() << "Maximum " << kMaxTMATensorDimension
+                       << " coordinates are supported.";
+  }
+  if (getCoordinates().size() !=
+      size_t(getTensorMapDescriptor().getType().getTensor().getRank())) {
+    return emitError() << "number of coordinates do not match with the rank of "
+                          "tensor descriptor map.";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVGPU_TmaAsyncStoreOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TmaAsyncStoreOp::verify() {
+  std::optional<InFlightDiagnostic> error = verifyTmaDescriptorWithMemref(
+      *this, getTensorMapDescriptor().getType(), getSrc().getType());
   if (error.has_value())
     return error.value();
 
@@ -469,8 +538,8 @@ LogicalResult isAllowedWGMMADataType(Type typeD, Type typeA, Type typeB) {
     return success();
   // F16 += f8 + f8
   // F32 += f8 + f8
-  if ((typeA.isFloat8E5M2() || typeA.isFloat8E4M3FN()) &&
-      (typeB.isFloat8E5M2() || typeB.isFloat8E4M3FN()) &&
+  if (isa<Float8E5M2Type, Float8E4M3FNType>(typeA) &&
+      isa<Float8E5M2Type, Float8E4M3FNType>(typeB) &&
       (typeD.isF32() || typeD.isF16()))
     return success();
 
@@ -492,7 +561,7 @@ LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
                                     80,  96,  112, 128, 144, 160,
                                     176, 192, 208, 224, 240, 256};
   if (typeA.isBF16() || typeA.isF16() || typeA.isF32() || typeA.isTF32() ||
-      typeA.isFloat8E4M3FN() || typeA.isFloat8E5M2())
+      isa<Float8E5M2Type, Float8E4M3FNType>(typeA))
     if (llvm::is_contained(allowedN, sizeN))
       return success();
 
@@ -584,8 +653,7 @@ LogicalResult WarpgroupMmaStoreOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
-
-  nvgpu::WarpgroupAccumulatorType accType = getMatrixC().getType();
+  WarpgroupAccumulatorType accType = getMatrixC().getType();
   int64_t sizeM = accType.getFragmented().getDimSize(0);
   int64_t sizeN = accType.getFragmented().getDimSize(1);
   Type elemType = accType.getFragmented().getElementType();
@@ -601,6 +669,21 @@ LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// RcpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult RcpOp::verify() {
+  RcpRoundingModeAttr rounding = getRoundingAttr();
+  bool ftz = getFtz();
+  // Currently, only `rcp_approx` and `ftz` is supported.
+  if (rounding.getValue() != RcpRoundingMode::APPROX || !ftz) {
+    return emitOpError() << "has a limitation. " << rounding
+                         << " or non-ftz is not supported yet.";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd dialect, type, and op definitions
 //===----------------------------------------------------------------------===//
 
@@ -610,7 +693,7 @@ LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
 #include "mlir/Dialect/NVGPU/IR/NVGPUEnums.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"

@@ -51,7 +51,7 @@ message(
 # Create a separate config for each tool we support.
 foreach(tool ${SUPPORTED_TOOLS})
   string(TOUPPER ${tool} tool_toupper)
-  if(${tool_toupper}_SUPPORTED_ARCH AND NOT COMPILER_RT_STANDALONE_BUILD)
+  if(${tool_toupper}_SUPPORTED_ARCH AND (NOT COMPILER_RT_STANDALONE_BUILD OR LLVM_RUNTIMES_BUILD))
     list(APPEND SANITIZER_COMMON_TEST_DEPS ${tool})
   endif()
   set(TEST_ARCH ${${tool_toupper}_SUPPORTED_ARCH})
@@ -59,14 +59,12 @@ foreach(tool ${SUPPORTED_TOOLS})
     darwin_filter_host_archs(${tool_toupper}_SUPPORTED_ARCH TEST_ARCH)
   endif()
   if(${tool} STREQUAL "asan")
-    list(REMOVE_ITEM TEST_ARCH sparc sparcv9)
+    list(REMOVE_ITEM TEST_ARCH sparcv9)
   endif()
   if(OS_NAME MATCHES "SunOS" AND ${tool} STREQUAL "asan")
     list(REMOVE_ITEM TEST_ARCH x86_64)
   endif()
 
-  # TODO(dliew): We should iterate over the different
-  # Apple platforms, not just macOS.
   foreach(arch ${TEST_ARCH})
     set(SANITIZER_COMMON_LIT_TEST_MODE ${tool})
     set(SANITIZER_COMMON_TEST_TARGET_ARCH ${arch})
@@ -89,31 +87,82 @@ foreach(tool ${SUPPORTED_TOOLS})
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
     # FIXME(dliew): LSan i386 on Darwin is completely broken right now.
     # so don't run the tests by default.
+    # Tests fail on arm64, see https://github.com/llvm/llvm-project/issues/131678
     if (NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND
              ${tool} STREQUAL "lsan" AND
-             ${arch} STREQUAL "i386"))
+             (${arch} STREQUAL "i386" OR ${arch} MATCHES "arm64")))
       list(APPEND SANITIZER_COMMON_TESTSUITES
            ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
     endif()
   endforeach()
 endforeach()
 
+# iOS and iOS simulator test suites
+# These are not added into "check-all", in order to run these tests, use
+# "check-sanitizer-iossim-arm64" and similar. They also require an extra environment
+# variable to select which iOS device or simulator to use, e.g.:
+# SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER="iPhone 16"
+if(APPLE)
+  set(SANITIZER_APPLE_PLATFORMS ${SANITIZER_COMMON_SUPPORTED_OS})
+
+  foreach(platform ${SANITIZER_APPLE_PLATFORMS})
+    if ("${platform}" STREQUAL "osx")
+      # Skip macOS because it's handled by the code above that builds tests for the host machine.
+      continue()
+    endif()
+    list_intersect(
+      SANITIZER_COMMON_TEST_${platform}_ARCHS
+      ALL_SANITIZER_COMMON_SUPPORTED_ARCH
+      DARWIN_${platform}_ARCHS
+    )
+    foreach(arch ${SANITIZER_COMMON_TEST_${platform}_ARCHS})
+      set(SANITIZER_COMMON_TESTSUITES_${platform}_${arch})
+      foreach(tool ${SUPPORTED_TOOLS})
+        if ("${tool}" STREQUAL "lsan")
+          continue()
+        endif()
+
+        set(SANITIZER_COMMON_LIT_TEST_MODE ${tool})
+
+        get_test_cflags_for_apple_platform(
+          "${platform}"
+          "${arch}"
+          SANITIZER_COMMON_TEST_TARGET_CFLAGS)
+        set(CONFIG_NAME "${tool}-${arch}-${platform}")
+        set(SANITIZER_COMMON_TEST_CONFIG_SUFFIX "-${arch}-${platform}")
+        set(SANITIZER_COMMON_TEST_APPLE_PLATFORM "${platform}")
+        set(SANITIZER_COMMON_TEST_TARGET_ARCH "${arch}")
+        set(SANITIZER_COMMON_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
+        configure_lit_site_cfg(
+          ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+          ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
+
+        list(APPEND SANITIZER_COMMON_TESTSUITES_${platform}_${arch}
+             ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
+      endforeach()
+
+      add_lit_testsuite(check-sanitizer-${platform}-${arch}
+        "sanitizer-common ${platform} ${arch} tests"
+        ${SANITIZER_COMMON_TESTSUITES_${platform}_${arch}}
+        EXCLUDE_FROM_CHECK_ALL
+        DEPENDS ${SANITIZER_COMMON_TEST_DEPS})
+    endforeach()
+  endforeach()
+endif()
+
+
 # Unit tests.
-if(COMPILER_RT_INCLUDE_TESTS)
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
-  # FIXME: support unit test in the android test runner
-  if (NOT ANDROID)
-    list(APPEND SANITIZER_COMMON_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
-    list(APPEND SANITIZER_COMMON_TEST_DEPS SanitizerUnitTests)
-  endif()
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
+# FIXME: support unit test in the android test runner
+if (NOT ANDROID)
+  list(APPEND SANITIZER_COMMON_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
+  list(APPEND SANITIZER_COMMON_TEST_DEPS SanitizerUnitTests)
 endif()
 
 if(SANITIZER_COMMON_TESTSUITES)
   add_lit_testsuite(check-sanitizer "Running sanitizer_common tests"
     ${SANITIZER_COMMON_TESTSUITES}
     DEPENDS ${SANITIZER_COMMON_TEST_DEPS})
-  set_target_properties(check-sanitizer PROPERTIES FOLDER
-                        "Compiler-RT Misc")
 endif()

@@ -69,7 +69,7 @@ public:
   class Key {
   public:
     /// Constructs a key for an identified struct.
-    Key(StringRef name, bool opaque, ArrayRef<Type> types = std::nullopt)
+    Key(StringRef name, bool opaque, ArrayRef<Type> types = {})
         : types(types), name(name), identified(true), packed(false),
           opaque(opaque) {}
     /// Constructs a key for a literal struct.
@@ -131,8 +131,7 @@ public:
     /// Compares two keys.
     bool operator==(const Key &other) const {
       if (isIdentified())
-        return other.isIdentified() &&
-               other.getIdentifier().equals(getIdentifier());
+        return other.isIdentified() && other.getIdentifier() == getIdentifier();
 
       return !other.isIdentified() && other.isPacked() == isPacked() &&
              other.getTypeList() == getTypeList();

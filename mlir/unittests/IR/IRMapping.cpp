@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 
 using namespace mlir;
 
@@ -25,10 +26,10 @@ TEST(IRMapping, TypedValue) {
   Block block;
   builder.setInsertionPointToEnd(&block);
 
-  Value i64Val = builder.create<test::TestOpConstant>(
-      loc, builder.getI64Type(), builder.getI64IntegerAttr(0));
-  Value f64Val = builder.create<test::TestOpConstant>(
-      loc, builder.getF64Type(), builder.getF64FloatAttr(0.0));
+  Value i64Val = test::TestOpConstant::create(
+      builder, loc, builder.getI64Type(), builder.getI64IntegerAttr(0));
+  Value f64Val = test::TestOpConstant::create(
+      builder, loc, builder.getF64Type(), builder.getF64FloatAttr(0.0));
 
   IRMapping mapping;
   mapping.map(i64Val, f64Val);

@@ -15,8 +15,8 @@
 # POSTCHECK-NEXT: DW_AT_name [DW_FORM_strp]
 # POSTCHECK-SAME: "main.cpp"
 
-# Testing that BOLT transforms DW_AT_high_pc of form DW_FORM_udata correctly into DW_AT_ranges.
-# Manually changed so that DW_AT_high_pc is DW_FORM_udata, and that DW_AT_name is after it.
+## Testing that BOLT transforms DW_AT_high_pc of form DW_FORM_udata correctly into DW_AT_ranges.
+## Manually changed so that DW_AT_high_pc is DW_FORM_udata, and that DW_AT_name is after it.
 # int main() {
 #    return 0;
 # }

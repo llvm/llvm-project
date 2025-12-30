@@ -15,15 +15,12 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/ParallelCG.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -41,8 +38,6 @@
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/UpdateCompilerUsed.h"
 #include "llvm/Linker/Linker.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
@@ -50,9 +45,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
@@ -60,7 +53,6 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
-#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
 #include <system_error>
@@ -110,21 +102,20 @@ cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-cl::opt<std::string> LTOStatsFile(
-    "lto-stats-file",
-    cl::desc("Save statistics to the specified file"),
-    cl::Hidden);
+static cl::opt<std::string>
+    LTOStatsFile("lto-stats-file",
+                 cl::desc("Save statistics to the specified file"), cl::Hidden);
 
-cl::opt<std::string> AIXSystemAssemblerPath(
+static cl::opt<std::string> AIXSystemAssemblerPath(
     "lto-aix-system-assembler",
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
 
-cl::opt<bool>
+static cl::opt<bool>
     LTORunCSIRInstr("cs-profile-generate",
                     cl::desc("Perform context sensitive PGO instrumentation"));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
 } // namespace llvm
@@ -137,10 +128,6 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
 
   Config.CodeModel = std::nullopt;
   Config.StatsFile = LTOStatsFile;
-  Config.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
-    PM.add(createObjCARCContractPass());
-  };
-
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
 }
@@ -148,8 +135,7 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
 LTOCodeGenerator::~LTOCodeGenerator() = default;
 
 void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
-  for (const StringRef &Undef : Mod->getAsmUndefinedRefs())
-    AsmUndefinedRefs.insert(Undef);
+  AsmUndefinedRefs.insert_range(Mod->getAsmUndefinedRefs());
 }
 
 bool LTOCodeGenerator::addModule(LTOModule *Mod) {
@@ -389,16 +375,12 @@ bool LTOCodeGenerator::determineTarget() {
   if (TargetMach)
     return true;
 
-  TripleStr = MergedModule->getTargetTriple();
-  if (TripleStr.empty()) {
-    TripleStr = sys::getDefaultTargetTriple();
-    MergedModule->setTargetTriple(TripleStr);
-  }
-  llvm::Triple Triple(TripleStr);
+  if (MergedModule->getTargetTriple().empty())
+    MergedModule->setTargetTriple(Triple(sys::getDefaultTargetTriple()));
 
   // create target machine from info for merged modules
   std::string ErrMsg;
-  MArch = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
+  MArch = TargetRegistry::lookupTarget(MergedModule->getTargetTriple(), ErrMsg);
   if (!MArch) {
     emitError(ErrMsg);
     return false;
@@ -407,20 +389,10 @@ bool LTOCodeGenerator::determineTarget() {
   // Construct LTOModule, hand over ownership of module and target. Use MAttr as
   // the default set of features.
   SubtargetFeatures Features(join(Config.MAttrs, ""));
-  Features.getDefaultSubtargetFeatures(Triple);
+  Features.getDefaultSubtargetFeatures(MergedModule->getTargetTriple());
   FeatureStr = Features.getString();
-  // Set a default CPU for Darwin triples.
-  if (Config.CPU.empty() && Triple.isOSDarwin()) {
-    if (Triple.getArch() == llvm::Triple::x86_64)
-      Config.CPU = "core2";
-    else if (Triple.getArch() == llvm::Triple::x86)
-      Config.CPU = "yonah";
-    else if (Triple.isArm64e())
-      Config.CPU = "apple-a12";
-    else if (Triple.getArch() == llvm::Triple::aarch64 ||
-             Triple.getArch() == llvm::Triple::aarch64_32)
-      Config.CPU = "cyclone";
-  }
+  if (Config.CPU.empty())
+    Config.CPU = lto::getThinLTODefaultCPU(MergedModule->getTargetTriple());
 
   // If data-sections is not explicitly set or unset, set data-sections by
   // default to match the behaviour of lld and gold plugin.
@@ -436,8 +408,8 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      TripleStr, Config.CPU, FeatureStr, Config.Options, Config.RelocModel,
-      std::nullopt, Config.CGOptLevel));
+      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, Config.Options,
+      Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make
@@ -573,6 +545,7 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
   if (DiagnosticOutputFile) {
     DiagnosticOutputFile->keep();
     // FIXME: LTOCodeGenerator dtor is not invoked on Darwin
+    DiagnosticOutputFile.finalize();
     DiagnosticOutputFile->os().flush();
   }
 }
@@ -581,6 +554,9 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
 bool LTOCodeGenerator::optimize() {
   if (!this->determineTarget())
     return false;
+
+  // libLTO parses options late, so re-set them here.
+  Context.setDiscardValueNames(LTODiscardValueNames);
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,
@@ -760,7 +736,8 @@ namespace {
 class LTODiagnosticInfo : public DiagnosticInfo {
   const Twine &Msg;
 public:
-  LTODiagnosticInfo(const Twine &DiagMsg, DiagnosticSeverity Severity=DS_Error)
+  LTODiagnosticInfo(const Twine &DiagMsg LLVM_LIFETIME_BOUND,
+                    DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
 };

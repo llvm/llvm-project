@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -23,24 +24,24 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
-    : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
-
 MCAsmBackend::~MCAsmBackend() = default;
+
+MCContext &MCAsmBackend::getContext() const { return Asm->getContext(); }
 
 std::unique_ptr<MCObjectWriter>
 MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   auto TW = createObjectTargetWriter();
+  bool IsLE = Endian == llvm::endianness::little;
   switch (TW->getFormat()) {
-  case Triple::ELF:
-    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)),
-                                 OS, Endian == llvm::endianness::little);
   case Triple::MachO:
-    return createMachObjectWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
-                                  OS, Endian == llvm::endianness::little);
+    return std::make_unique<MachObjectWriter>(
+        cast<MCMachObjectTargetWriter>(std::move(TW)), OS, IsLE);
   case Triple::COFF:
     return createWinCOFFObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS);
+  case Triple::ELF:
+    return std::make_unique<ELFObjectWriter>(
+        cast<MCELFObjectTargetWriter>(std::move(TW)), OS, IsLE);
   case Triple::SPIRV:
     return createSPIRVObjectWriter(
         cast<MCSPIRVObjectTargetWriter>(std::move(TW)), OS);
@@ -54,7 +55,7 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
     return createXCOFFObjectWriter(
         cast<MCXCOFFObjectTargetWriter>(std::move(TW)), OS);
   case Triple::DXContainer:
-    return createDXContainerObjectWriter(
+    return std::make_unique<DXContainerObjectWriter>(
         cast<MCDXContainerTargetWriter>(std::move(TW)), OS);
   default:
     llvm_unreachable("unexpected object format");
@@ -70,7 +71,7 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
     return createWinCOFFDwoObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS, DwoOS);
   case Triple::ELF:
-    return createELFDwoObjectWriter(
+    return std::make_unique<ELFObjectWriter>(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, DwoOS,
         Endian == llvm::endianness::little);
   case Triple::Wasm:
@@ -85,7 +86,8 @@ std::optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // clang-format off
   static const MCFixupKindInfo Builtins[] = {
       {"FK_NONE", 0, 0, 0},
       {"FK_Data_1", 0, 8, 0},
@@ -93,49 +95,50 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_Data_4", 0, 32, 0},
       {"FK_Data_8", 0, 64, 0},
       {"FK_Data_leb128", 0, 0, 0},
-      {"FK_PCRel_1", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_2", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_4", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_8", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_GPRel_1", 0, 8, 0},
-      {"FK_GPRel_2", 0, 16, 0},
-      {"FK_GPRel_4", 0, 32, 0},
-      {"FK_GPRel_8", 0, 64, 0},
-      {"FK_DTPRel_4", 0, 32, 0},
-      {"FK_DTPRel_8", 0, 64, 0},
-      {"FK_TPRel_4", 0, 32, 0},
-      {"FK_TPRel_8", 0, 64, 0},
       {"FK_SecRel_1", 0, 8, 0},
       {"FK_SecRel_2", 0, 16, 0},
       {"FK_SecRel_4", 0, 32, 0},
       {"FK_SecRel_8", 0, 64, 0},
   };
+  // clang-format on
 
-  assert((size_t)Kind <= std::size(Builtins) && "Unknown fixup kind");
-  return Builtins[Kind];
+  assert(size_t(Kind - FK_NONE) < std::size(Builtins) && "Unknown fixup kind");
+  return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(
-    const MCFixup &Fixup, bool Resolved, uint64_t Value,
-    const MCRelaxableFragment *DF, const MCAsmLayout &Layout,
-    const bool WasForced) const {
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                const MCFixup &Fixup,
+                                                const MCValue &, uint64_t Value,
+                                                bool Resolved) const {
   if (!Resolved)
     return true;
-  return fixupNeedsRelaxation(Fixup, Value, DF, Layout);
+  return fixupNeedsRelaxation(Fixup, Value);
+}
+
+void MCAsmBackend::maybeAddReloc(const MCFragment &F, const MCFixup &Fixup,
+                                 const MCValue &Target, uint64_t &Value,
+                                 bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
+  assert(getContext().isMachO());
   // Consider a NULL personality (ie., no personality encoding) to be canonical
   // because it's always at 0.
   if (!Sym)
     return true;
-
-  if (!Sym->isMachO())
-    llvm_unreachable("Expected MachO symbols only");
 
   StringRef name = Sym->getName();
   // XXX: We intentionally leave out "___gcc_personality_v0" because, despite
   // being system-defined like these two, it is not very commonly-used.
   // Reserving an empty slot for it seems silly.
   return name == "___gxx_personality_v0" || name == "___objc_personality_v0";
+}
+
+const MCSubtargetInfo *MCAsmBackend::getSubtargetInfo(const MCFragment &F) {
+  const MCSubtargetInfo *STI = nullptr;
+  STI = F.getSubtargetInfo();
+  assert(!F.hasInstructions() || STI != nullptr);
+  return STI;
 }

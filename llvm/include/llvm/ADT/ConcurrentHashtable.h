@@ -13,6 +13,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Parallel.h"
@@ -23,7 +24,6 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
-#include <type_traits>
 
 namespace llvm {
 
@@ -176,7 +176,7 @@ public:
 
 #if LLVM_ENABLE_THREADS
     // Lock bucket.
-    CurBucket.Guard.lock();
+    std::scoped_lock<std::mutex> Lock(CurBucket.Guard);
 #endif
 
     HashesPtr BucketHashes = CurBucket.Hashes;
@@ -194,11 +194,6 @@ public:
 
         CurBucket.NumberOfEntries++;
         RehashBucket(CurBucket);
-
-#if LLVM_ENABLE_THREADS
-        CurBucket.Guard.unlock();
-#endif
-
         return {NewData, true};
       }
 
@@ -207,10 +202,6 @@ public:
         KeyDataTy *EntryData = BucketEntries[CurEntryIdx];
         if (Info::isEqual(Info::getKey(*EntryData), NewValue)) {
           // Already existed entry matched with inserted data is found.
-#if LLVM_ENABLE_THREADS
-          CurBucket.Guard.unlock();
-#endif
-
           return {EntryData, false};
         }
       }
@@ -252,9 +243,8 @@ public:
 
     OS << "\nOverall number of entries = " << OverallNumberOfEntries;
     OS << "\nOverall number of non empty buckets = " << NumberOfNonEmptyBuckets;
-    for (auto &BucketSize : BucketSizesMap)
-      OS << "\n Number of buckets with size " << BucketSize.first << ": "
-         << BucketSize.second;
+    for (auto [Size, Count] : BucketSizesMap)
+      OS << "\n Number of buckets with size " << Size << ": " << Count;
 
     std::stringstream stream;
     stream << std::fixed << std::setprecision(2)
@@ -352,10 +342,8 @@ protected:
     CurBucket.Size = NewBucketSize;
 
     // Delete old bucket entries.
-    if (SrcHashes != nullptr)
-      delete[] SrcHashes;
-    if (SrcEntries != nullptr)
-      delete[] SrcEntries;
+    delete[] SrcHashes;
+    delete[] SrcEntries;
   }
 
   uint32_t getBucketIdx(hash_code Hash) { return Hash & HashMask; }

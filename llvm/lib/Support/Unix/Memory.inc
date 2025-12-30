@@ -86,7 +86,7 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
 #else
   fd = open("/dev/zero", O_RDWR);
   if (fd == -1) {
-    EC = std::error_code(errno, std::generic_category());
+    EC = errnoAsErrorCode();
     return MemoryBlock();
   }
 #endif
@@ -122,7 +122,7 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
       return allocateMappedMemory(NumBytes, nullptr, PFlags, EC);
     }
 
-    EC = std::error_code(errno, std::generic_category());
+    EC = errnoAsErrorCode();
 #if !defined(MAP_ANON)
     close(fd);
 #endif
@@ -153,7 +153,7 @@ std::error_code Memory::releaseMappedMemory(MemoryBlock &M) {
     return std::error_code();
 
   if (0 != ::munmap(M.Address, M.AllocatedSize))
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   M.Address = nullptr;
   M.AllocatedSize = 0;
@@ -186,7 +186,7 @@ std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
   if (InvalidateCache && !(Protect & PROT_READ)) {
     int Result = ::mprotect((void *)Start, End - Start, Protect | PROT_READ);
     if (Result != 0)
-      return std::error_code(errno, std::generic_category());
+      return errnoAsErrorCode();
 
     Memory::InvalidateInstructionCache(M.Address, M.AllocatedSize);
     InvalidateCache = false;
@@ -196,7 +196,7 @@ std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
   int Result = ::mprotect((void *)Start, End - Start, Protect);
 
   if (Result != 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   if (InvalidateCache)
     Memory::InvalidateInstructionCache(M.Address, M.AllocatedSize);

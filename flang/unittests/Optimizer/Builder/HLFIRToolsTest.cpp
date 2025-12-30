@@ -25,14 +25,14 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
+    moduleOp = mlir::ModuleOp::create(builder, loc);
+    builder.setInsertionPointToStart(moduleOp->getBody());
     mlir::func::FuncOp func = mlir::func::FuncOp::create(
-        loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
+        builder, loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
-    mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
-    firBuilder = std::make_unique<fir::FirOpBuilder>(mod, kindMap);
+    firBuilder = std::make_unique<fir::FirOpBuilder>(builder, kindMap);
   }
 
   mlir::Value createDeclare(fir::ExtendedValue exv) {
@@ -43,8 +43,8 @@ public:
 
   mlir::Value createConstant(std::int64_t cst) {
     mlir::Type indexType = firBuilder->getIndexType();
-    return firBuilder->create<mlir::arith::ConstantOp>(
-        getLoc(), indexType, firBuilder->getIntegerAttr(indexType, cst));
+    return mlir::arith::ConstantOp::create(*firBuilder, getLoc(), indexType,
+        firBuilder->getIntegerAttr(indexType, cst));
   }
 
   mlir::Location getLoc() { return firBuilder->getUnknownLoc(); }
@@ -52,15 +52,16 @@ public:
 
   int varCounter = 0;
   mlir::MLIRContext context;
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 };
 
 TEST_F(HLFIRToolsTest, testScalarRoundTrip) {
   auto &builder = getBuilder();
   mlir::Location loc = getLoc();
-  mlir::Type f32Type = mlir::FloatType::getF32(&context);
+  mlir::Type f32Type = mlir::Float32Type::get(&context);
   mlir::Type scalarf32Type = builder.getRefType(f32Type);
-  mlir::Value scalarf32Addr = builder.create<fir::UndefOp>(loc, scalarf32Type);
+  mlir::Value scalarf32Addr = fir::UndefOp::create(builder, loc, scalarf32Type);
   fir::ExtendedValue scalarf32{scalarf32Addr};
   hlfir::EntityWithAttributes scalarf32Entity(createDeclare(scalarf32));
   auto [scalarf32Result, cleanup] =
@@ -81,10 +82,10 @@ TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
   llvm::SmallVector<mlir::Value> lbounds{
       createConstant(-1), createConstant(-2)};
 
-  mlir::Type f32Type = mlir::FloatType::getF32(&context);
+  mlir::Type f32Type = mlir::Float32Type::get(&context);
   mlir::Type seqf32Type = builder.getVarLenSeqTy(f32Type, 2);
   mlir::Type arrayf32Type = builder.getRefType(seqf32Type);
-  mlir::Value arrayf32Addr = builder.create<fir::UndefOp>(loc, arrayf32Type);
+  mlir::Value arrayf32Addr = fir::UndefOp::create(builder, loc, arrayf32Type);
   fir::ArrayBoxValue arrayf32{arrayf32Addr, extents, lbounds};
   hlfir::EntityWithAttributes arrayf32Entity(createDeclare(arrayf32));
   auto [arrayf32Result, cleanup] =
@@ -112,7 +113,7 @@ TEST_F(HLFIRToolsTest, testScalarCharRoundTrip) {
   mlir::Type charType = fir::CharacterType::getUnknownLen(&context, 1);
   mlir::Type scalarCharType = builder.getRefType(charType);
   mlir::Value scalarCharAddr =
-      builder.create<fir::UndefOp>(loc, scalarCharType);
+      fir::UndefOp::create(builder, loc, scalarCharType);
   fir::CharBoxValue scalarChar{scalarCharAddr, len};
   hlfir::EntityWithAttributes scalarCharEntity(createDeclare(scalarChar));
   auto [scalarCharResult, cleanup] =
@@ -137,7 +138,7 @@ TEST_F(HLFIRToolsTest, testArrayCharRoundTrip) {
   mlir::Type charType = fir::CharacterType::getUnknownLen(&context, 1);
   mlir::Type seqCharType = builder.getVarLenSeqTy(charType, 2);
   mlir::Type arrayCharType = builder.getRefType(seqCharType);
-  mlir::Value arrayCharAddr = builder.create<fir::UndefOp>(loc, arrayCharType);
+  mlir::Value arrayCharAddr = fir::UndefOp::create(builder, loc, arrayCharType);
   fir::CharArrayBoxValue arrayChar{arrayCharAddr, len, extents, lbounds};
   hlfir::EntityWithAttributes arrayCharEntity(createDeclare(arrayChar));
   auto [arrayCharResult, cleanup] =
@@ -169,7 +170,7 @@ TEST_F(HLFIRToolsTest, testArrayCharBoxRoundTrip) {
   mlir::Type seqCharType = builder.getVarLenSeqTy(charType, 2);
   mlir::Type arrayCharBoxType = fir::BoxType::get(seqCharType);
   mlir::Value arrayCharAddr =
-      builder.create<fir::UndefOp>(loc, arrayCharBoxType);
+      fir::UndefOp::create(builder, loc, arrayCharBoxType);
   llvm::SmallVector<mlir::Value> explicitTypeParams{len};
   fir::BoxValue arrayChar{arrayCharAddr, lbounds, explicitTypeParams};
   hlfir::EntityWithAttributes arrayCharEntity(createDeclare(arrayChar));

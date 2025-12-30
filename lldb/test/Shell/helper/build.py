@@ -9,12 +9,8 @@ import subprocess
 import sys
 
 if sys.platform == "win32":
-    # This module was renamed in Python 3.  Make sure to import it using a
-    # consistent name regardless of python version.
-    try:
-        import winreg
-    except:
-        import _winreg as winreg
+    import winreg
+
 
 if __name__ != "__main__":
     raise RuntimeError("Do not import this script, run it instead")
@@ -441,9 +437,9 @@ class MsvcBuilder(Builder):
         if not subdirs:
             return None
 
-        from distutils.version import StrictVersion
+        from packaging import version
 
-        subdirs.sort(key=lambda x: StrictVersion(x))
+        subdirs.sort(key=lambda x: version.parse(x))
 
         if self.verbose:
             full_path = os.path.join(vcinstalldir, subdirs[-1])
@@ -517,11 +513,9 @@ class MsvcBuilder(Builder):
             if not sdk_versions:
                 return (None, None)
 
-            # Windows SDK version numbers consist of 4 dotted components, so we
-            # have to use LooseVersion, as StrictVersion supports 3 or fewer.
-            from distutils.version import LooseVersion
+            from packaging import version
 
-            sdk_versions.sort(key=lambda x: LooseVersion(x), reverse=True)
+            sdk_versions.sort(key=lambda x: version.parse(x), reverse=True)
             option_value_name = "OptionId.DesktopCPP" + self.msvc_arch_str
             for v in sdk_versions:
                 try:
@@ -685,13 +679,13 @@ class MsvcBuilder(Builder):
             args.append("-fms-compatibility-version=19")
         args.append("/c")
 
+        if self.std:
+            args.append("/std:" + self.std)
+
         args.append("/Fo" + obj)
         if self.toolchain_type == "clang-cl":
             args.append("--")
         args.append(source)
-
-        if self.std:
-            args.append("/std:" + self.std)
 
         return ("compiling", [source], obj, self.compile_env, args)
 
@@ -810,7 +804,19 @@ class GccBuilder(Builder):
         args.extend(self._obj_file_names())
 
         if sys.platform == "darwin":
+            # By default, macOS doesn't allow injecting the ASAN
+            # runtime into system processes.
+            system_clang = (
+                subprocess.check_output(["xcrun", "-find", "clang"])
+                .strip()
+                .decode("utf-8")
+            )
+            system_liblto = os.path.join(
+                os.path.dirname(os.path.dirname(system_clang)), "lib", "libLTO.dylib"
+            )
             args.extend(["-isysroot", self.apple_sdk])
+            args.extend(["-Wl,-lto_library", "-Wl," + system_liblto])
+
         elif self.objc_gnustep_lib:
             args.extend(["-L", self.objc_gnustep_lib, "-lobjc"])
             if sys.platform == "linux":

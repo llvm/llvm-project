@@ -17,6 +17,9 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m3  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m4  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m5  | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1    | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1a   | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1b   | FileCheck %s
 
 declare <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> %d, <16 x i8> %k)
 declare <16 x i8> @llvm.aarch64.crypto.aesmc(<16 x i8> %d)
@@ -203,7 +206,7 @@ entry:
   %aese1 = call <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> %in1, <16 x i8> %in1) #2
   %in2 = load <16 x i8>, ptr %p2, align 16
   %aesmc1= call <16 x i8> @llvm.aarch64.crypto.aesmc(<16 x i8> %aese1) #2
-  %aese2 = call <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> %in1, <16 x i8> %in2) #2
+  %aese2 = call <16 x i8> @llvm.aarch64.crypto.aese(<16 x i8> %aesmc1, <16 x i8> %in2) #2
   store <16 x i8> %aesmc1, ptr %x3, align 16
   %in3 = load <16 x i8>, ptr %p3, align 16
   %aesmc2= call <16 x i8> @llvm.aarch64.crypto.aesmc(<16 x i8> %aese2) #2

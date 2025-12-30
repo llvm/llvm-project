@@ -6,9 +6,16 @@ tablegen("NVPTXGenDAGISel") {
   td_file = "NVPTX.td"
 }
 
+tablegen("NVPTXGenSDNodeInfo") {
+  visibility = [ ":LLVMNVPTXCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "NVPTX.td"
+}
+
 static_library("LLVMNVPTXCodeGen") {
   deps = [
     ":NVPTXGenDAGISel",
+    ":NVPTXGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -34,8 +41,10 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXAssignValidGlobalNames.cpp",
     "NVPTXAtomicLower.cpp",
     "NVPTXCtorDtorLowering.cpp",
+    "NVPTXForwardParams.cpp",
     "NVPTXFrameLowering.cpp",
     "NVPTXGenericToNVVM.cpp",
+    "NVPTXIRPeephole.cpp",
     "NVPTXISelDAGToDAG.cpp",
     "NVPTXISelLowering.cpp",
     "NVPTXImageOptimizer.cpp",
@@ -50,7 +59,9 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXProxyRegErasure.cpp",
     "NVPTXRegisterInfo.cpp",
     "NVPTXReplaceImageHandles.cpp",
+    "NVPTXSelectionDAGInfo.cpp",
     "NVPTXSubtarget.cpp",
+    "NVPTXTagInvariantLoads.cpp",
     "NVPTXTargetMachine.cpp",
     "NVPTXTargetTransformInfo.cpp",
     "NVPTXUtilities.cpp",

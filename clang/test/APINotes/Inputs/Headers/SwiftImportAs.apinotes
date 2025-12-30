@@ -1,0 +1,69 @@
+---
+Name: SwiftImportAs
+Tags:
+- Name: ImmortalRefType
+  SwiftImportAs: reference
+  Methods:
+    - Name: methodReturningFrt__
+    - Name: methodReturningFrt_returns_unretained
+      SwiftReturnOwnership: unretained
+    - Name: methodReturningFrt_returns_retained
+      SwiftReturnOwnership: retained
+- Name: RefCountedType
+  SwiftImportAs: reference
+  SwiftReleaseOp: RCRelease
+  SwiftRetainOp: RCRetain
+  SwiftConformsTo: MySwiftModule.MySwiftRefCountedProtocol
+- Name: RefCountedTypeWithDefaultConvention
+  SwiftImportAs: reference
+  SwiftReleaseOp: release
+  SwiftRetainOp: retain
+  SwiftDefaultOwnership: unretained
+- Name: OpaqueRefCountedType
+  SwiftImportAs: reference
+  SwiftReleaseOp: ORCRelease
+  SwiftRetainOp: ORCRetain
+- Name: NonCopyableType
+  SwiftCopyable: false
+  SwiftConformsTo: MySwiftModule.MySwiftNonCopyableProtocol
+- Name: CopyableType
+  SwiftCopyable: true
+- Name: NonEscapableType
+  SwiftEscapable: false
+- Name: EscapableType
+  SwiftEscapable: true
+- Name: NoncopyableWithDestroyType
+  SwiftCopyable: false
+  SwiftDestroyOp: NCDDestroy
+- Name: ImportAsUnsafeStruct
+  SwiftSafety: unsafe
+- Name: StructWithUnsafeMethod
+  Methods:
+    - Name: ImportAsUnsafeMethod
+      SwiftSafety: unsafe
+    - Name: ImportAsUnsafeMethodActuallySafe
+      SwiftSafety: safe
+
+Functions:
+  - Name: functionReturningFrt__
+  - Name: functionReturningFrt_returns_unretained
+    SwiftReturnOwnership: unretained
+  - Name: functionReturningFrt_returns_retained
+    SwiftReturnOwnership: retained
+  - Name: ImportAsUnsafe
+    SwiftSafety: unsafe
+  - Name: ImportAsUnsafeAlreadyAnnotated
+    SwiftSafety: unspecified
+Typedefs:
+  - Name: WrappedOptions
+    SwiftWrapper: struct
+    SwiftConformsTo: Swift.OptionSet
+SwiftVersions:
+  - Version: 3.0
+    Functions:
+      - Name: ImportAsUnsafeVersioned
+        SwiftSafety: unsafe
+  - Version: 6.0
+    Functions:
+      - Name: ImportAsUnsafeVersioned
+        SwiftSafety: safe

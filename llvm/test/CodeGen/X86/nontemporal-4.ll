@@ -36,7 +36,7 @@ define void @test_constant_v4f32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [2.0000004731118679E+0,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -78,7 +78,7 @@ define void @test_constant_v2i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v2i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [4.9406564584124654E-324,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
@@ -124,7 +124,7 @@ define void @test_constant_v4i32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [2.1219957909652723E-314,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -168,7 +168,7 @@ define void @test_constant_v8i16_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [4.1720559249406128E-309,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -212,7 +212,7 @@ define void @test_constant_v16i8_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [7.9499288951273625E-275,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -278,11 +278,11 @@ define void @test_constant_v8f32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-5.1200036668777466E+2,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -340,13 +340,13 @@ define void @test_constant_v4i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v4i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -406,11 +406,11 @@ define void @test_constant_v8i32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -470,11 +470,11 @@ define void @test_constant_v16i16_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -534,11 +534,11 @@ define void @test_constant_v32i8_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-3.826728214441238E+279,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.6485712323024388E+202,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -659,9 +659,9 @@ define void @test_constant_v4i64_align16(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v4i64_align16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551614,18446744073709551613]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551614,18446744073709551613]
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [0,18446744073709551615]
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
   store <4 x i64> <i64 0, i64 -1, i64 -2, i64 -3>, ptr %dst, align 16, !nontemporal !1
@@ -687,9 +687,9 @@ define void @test_constant_v8i32_align16(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v8i32_align16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967292,4294967291,4294967290,4294967289]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967292,4294967291,4294967290,4294967289]
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,4294967295,4294967294,4294967293]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,4294967295,4294967294,4294967293]
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
   store <8 x i32> <i32 0, i32 -1, i32 -2, i32 -3, i32 -4, i32 -5, i32 -6, i32 -7>, ptr %dst, align 16, !nontemporal !1
@@ -803,19 +803,19 @@ define void @test_constant_v16f32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-5.1200036668777466E+2,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.3107209417724609E+5,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-2.0971535092773438E+6,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -905,21 +905,21 @@ define void @test_constant_v8i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v8i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -1011,19 +1011,19 @@ define void @test_constant_v16i32_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -1115,19 +1115,19 @@ define void @test_constant_v32i16_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.6853227412070812E+308,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.2358925997317751E+308,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -1219,19 +1219,19 @@ define void @test_constant_v64i8_align1(ptr %dst) nounwind {
 ; SSE4A:       # %bb.0:
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-3.826728214441238E+279,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 24(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-1.6485712323024388E+202,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 16(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 40(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-7.1020783099933495E+124,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 32(%rdi)
 ; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE4A-NEXT:    movntsd %xmm0, 56(%rdi)
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [-3.0595730451167367E+47,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 48(%rdi)
 ; SSE4A-NEXT:    retq
 ;
@@ -1408,13 +1408,13 @@ define void @test_constant_v8i64_align16(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v8i64_align16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551614,18446744073709551613]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551614,18446744073709551613]
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [0,18446744073709551615]
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551610,18446744073709551609]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551610,18446744073709551609]
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551612,18446744073709551611]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551612,18446744073709551611]
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
 ; AVX512-NEXT:    retq
   store <8 x i64> <i64 0, i64 -1, i64 -2, i64 -3, i64 -4, i64 -5, i64 -6, i64 -7>, ptr %dst, align 16, !nontemporal !1
@@ -1448,13 +1448,13 @@ define void @test_constant_v16i32_align16(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v16i32_align16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967292,4294967291,4294967290,4294967289]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967292,4294967291,4294967290,4294967289]
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,4294967295,4294967294,4294967293]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,4294967295,4294967294,4294967293]
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967284,4294967283,4294967282,4294967281]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967284,4294967283,4294967282,4294967281]
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967288,4294967287,4294967286,4294967285]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967288,4294967287,4294967286,4294967285]
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
 ; AVX512-NEXT:    retq
   store <16 x i32> <i32 0, i32 -1, i32 -2, i32 -3, i32 -4, i32 -5, i32 -6, i32 -7, i32 -8, i32 -9, i32 -10, i32 -11, i32 -12, i32 -13, i32 -14, i32 -15>, ptr %dst, align 16, !nontemporal !1
@@ -1634,9 +1634,9 @@ define void @test_constant_v8i64_align32(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v8i64_align32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551612,18446744073709551611,18446744073709551610,18446744073709551609]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [18446744073709551612,18446744073709551611,18446744073709551610,18446744073709551609]
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [0,18446744073709551615,18446744073709551614,18446744073709551613]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,18446744073709551615,18446744073709551614,18446744073709551613]
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1668,9 +1668,9 @@ define void @test_constant_v16i32_align32(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v16i32_align32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967288,4294967287,4294967286,4294967285,4294967284,4294967283,4294967282,4294967281]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4294967288,4294967287,4294967286,4294967285,4294967284,4294967283,4294967282,4294967281]
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [0,4294967295,4294967294,4294967293,4294967292,4294967291,4294967290,4294967289]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [0,4294967295,4294967294,4294967293,4294967292,4294967291,4294967290,4294967289]
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

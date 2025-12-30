@@ -252,12 +252,12 @@ define i64 @zext_i1_to_i64(i1 %a) nounwind {
 define i16 @zext_i8_to_i16(i8 %a) nounwind {
 ; RV32I-LABEL: zext_i8_to_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: zext_i8_to_i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    ret
   %1 = zext i8 %a to i16
   ret i16 %1
@@ -266,12 +266,12 @@ define i16 @zext_i8_to_i16(i8 %a) nounwind {
 define i32 @zext_i8_to_i32(i8 %a) nounwind {
 ; RV32I-LABEL: zext_i8_to_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: zext_i8_to_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    ret
   %1 = zext i8 %a to i32
   ret i32 %1
@@ -280,13 +280,13 @@ define i32 @zext_i8_to_i32(i8 %a) nounwind {
 define i64 @zext_i8_to_i64(i8 %a) nounwind {
 ; RV32I-LABEL: zext_i8_to_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: zext_i8_to_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    ret
   %1 = zext i8 %a to i64
   ret i64 %1
@@ -410,12 +410,12 @@ define i64 @zext_nneg_i1_to_i64(i1 %a) nounwind {
 define i16 @zext_nneg_i8_to_i16(i8 %a) nounwind {
 ; RV32I-LABEL: zext_nneg_i8_to_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: zext_nneg_i8_to_i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    ret
   %1 = zext nneg i8 %a to i16
   ret i16 %1
@@ -424,12 +424,12 @@ define i16 @zext_nneg_i8_to_i16(i8 %a) nounwind {
 define i32 @zext_nneg_i8_to_i32(i8 %a) nounwind {
 ; RV32I-LABEL: zext_nneg_i8_to_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: zext_nneg_i8_to_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    ret
   %1 = zext nneg i8 %a to i32
   ret i32 %1
@@ -438,13 +438,13 @@ define i32 @zext_nneg_i8_to_i32(i8 %a) nounwind {
 define i64 @zext_nneg_i8_to_i64(i8 %a) nounwind {
 ; RV32I-LABEL: zext_nneg_i8_to_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: zext_nneg_i8_to_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    ret
   %1 = zext nneg i8 %a to i64
   ret i64 %1
@@ -674,8 +674,7 @@ define i32 @sext_of_not_cmp_i32(i32 %x) {
 ;
 ; RV64-LABEL: sext_of_not_cmp_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    addi a0, a0, -7
+; RV64-NEXT:    addiw a0, a0, -7
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    ret
@@ -718,8 +717,7 @@ define i32 @dec_of_zexted_cmp_i32(i32 %x) {
 ;
 ; RV64-LABEL: dec_of_zexted_cmp_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    addi a0, a0, -7
+; RV64-NEXT:    addiw a0, a0, -7
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    ret
@@ -750,3 +748,185 @@ define i64 @dec_of_zexted_cmp_i64(i64 %x) {
   %dec = sub i64 %zext, 1
   ret i64 %dec
 }
+
+define void @zext_nneg_dominating_icmp_i64(i16 signext %0) {
+; RV32I-LABEL: zext_nneg_dominating_icmp_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bltz a0, .LBB46_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    srai a1, a0, 31
+; RV32I-NEXT:    tail bar_i64
+; RV32I-NEXT:  .LBB46_2:
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_dominating_icmp_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bltz a0, .LBB46_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar_i64
+; RV64-NEXT:  .LBB46_2:
+; RV64-NEXT:    ret
+  %2 = icmp sgt i16 %0, -1
+  br i1 %2, label %3, label %5
+
+3:
+  %4 = zext nneg i16 %0 to i64
+  tail call void @bar_i64(i64 %4)
+  br label %5
+
+5:
+  ret void
+}
+
+declare void @bar_i64(i64)
+
+define void @zext_nneg_dominating_icmp_i32(i16 signext %0) {
+; RV32I-LABEL: zext_nneg_dominating_icmp_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bltz a0, .LBB47_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    tail bar_i32
+; RV32I-NEXT:  .LBB47_2:
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_dominating_icmp_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bltz a0, .LBB47_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar_i32
+; RV64-NEXT:  .LBB47_2:
+; RV64-NEXT:    ret
+  %2 = icmp sgt i16 %0, -1
+  br i1 %2, label %3, label %5
+
+3:
+  %4 = zext nneg i16 %0 to i32
+  tail call void @bar_i32(i32 %4)
+  br label %5
+
+5:
+  ret void
+}
+
+declare void @bar_i32(i32)
+
+; Test that we propage zext nneg when we sign extend it on RV64 for the call to
+; bar_i32.
+define void @zext_nneg_dominating_icmp_i32_signext(i16 signext %0) {
+; RV32I-LABEL: zext_nneg_dominating_icmp_i32_signext:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bltz a0, .LBB48_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    tail bar_i32
+; RV32I-NEXT:  .LBB48_2:
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_dominating_icmp_i32_signext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bltz a0, .LBB48_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar_i32
+; RV64-NEXT:  .LBB48_2:
+; RV64-NEXT:    ret
+  %2 = icmp sgt i16 %0, -1
+  br i1 %2, label %3, label %5
+
+3:
+  %4 = zext nneg i16 %0 to i32
+  tail call void @bar_i32(i32 signext %4)
+  br label %5
+
+5:
+  ret void
+}
+
+; Test that we propage zext nneg when we zero extend it on RV64 for the call to
+; bar_i32.
+define void @zext_nneg_dominating_icmp_i32_zeroext(i16 signext %0) {
+; RV32I-LABEL: zext_nneg_dominating_icmp_i32_zeroext:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bltz a0, .LBB49_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    tail bar_i32
+; RV32I-NEXT:  .LBB49_2:
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_dominating_icmp_i32_zeroext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bltz a0, .LBB49_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar_i32
+; RV64-NEXT:  .LBB49_2:
+; RV64-NEXT:    ret
+  %2 = icmp sgt i16 %0, -1
+  br i1 %2, label %3, label %5
+
+3:
+  %4 = zext nneg i16 %0 to i32
+  tail call void @bar_i32(i32 signext %4)
+  br label %5
+
+5:
+  ret void
+}
+
+; The load is used extended and non-extended in the successor basic block. The
+; signed compare will cause the non-extended value to exported out of the first
+; basic block using a sext to XLen. We need to CSE the zext nneg with the sext
+; so that we can form a sextload.
+define void @load_zext_nneg_sext_cse(ptr %p) nounwind {
+; RV32I-LABEL: load_zext_nneg_sext_cse:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    lh s0, 0(a0)
+; RV32I-NEXT:    bltz s0, .LBB50_2
+; RV32I-NEXT:  # %bb.1: # %bb1
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    call bar_i16
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    tail bar_i32
+; RV32I-NEXT:  .LBB50_2: # %bb2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: load_zext_nneg_sext_cse:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    lh s0, 0(a0)
+; RV64-NEXT:    bltz s0, .LBB50_2
+; RV64-NEXT:  # %bb.1: # %bb1
+; RV64-NEXT:    mv a0, s0
+; RV64-NEXT:    call bar_i16
+; RV64-NEXT:    mv a0, s0
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    tail bar_i32
+; RV64-NEXT:  .LBB50_2: # %bb2
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    ret
+  %load = load i16, ptr %p
+  %zext = zext nneg i16 %load to i32
+  %cmp = icmp sgt i16 %load, -1
+  br i1 %cmp, label %bb1, label %bb2
+
+bb1:
+  tail call void @bar_i16(i16 signext %load)
+  tail call void @bar_i32(i32 signext %zext)
+  br label %bb2
+
+bb2:
+  ret void
+}
+declare void @bar_i16(i16);

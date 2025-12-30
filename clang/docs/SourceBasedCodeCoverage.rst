@@ -64,14 +64,19 @@ To compile code with coverage enabled, pass ``-fprofile-instr-generate
 Note that linking together code with and without coverage instrumentation is
 supported. Uninstrumented code simply won't be accounted for in reports.
 
+To compile code with Modified Condition/Decision Coverage (MC/DC) enabled,
+pass ``-fcoverage-mcdc`` in addition to the clang options specified above.
+MC/DC is an advanced form of code coverage most applicable to the embedded
+space.
+
 Running the instrumented program
 ================================
 
-The next step is to run the instrumented program. When the program exits it
+The next step is to run the instrumented program. When the program exits, it
 will write a **raw profile** to the path specified by the ``LLVM_PROFILE_FILE``
 environment variable. If that variable does not exist, the profile is written
 to ``default.profraw`` in the current directory of the program. If
-``LLVM_PROFILE_FILE`` contains a path to a non-existent directory, the missing
+``LLVM_PROFILE_FILE`` specifies a path to a non-existent directory, the missing
 directory structure will be created.  Additionally, the following special
 **pattern strings** are rewritten:
 
@@ -88,6 +93,11 @@ directory structure will be created.  Additionally, the following special
   from the pool, locking it, and updating it before the program exits.  If N is
   not specified (i.e the pattern is "%m"), it's assumed that ``N = 1``. The
   merge pool specifier can only occur once per filename pattern.
+
+* "%b" expands out to the binary ID (build ID). It can be used with "%Nm" to
+  avoid binary signature collisions. To use it, the program should be compiled
+  with the build ID linker option (``--build-id`` for GNU ld or LLD,
+  ``/build-id`` for lld-link on Windows). Linux, Windows, and AIX are supported.
 
 * "%c" expands out to nothing, but enables a mode in which profile counter
   updates are continuously synced to a file. This means that if the
@@ -118,7 +128,7 @@ and set bias to the offset between the original and the new counter location,
 at which point every subsequent counter access will be to the new location,
 which allows updating profile directly akin to the continuous mode.
 
-The advantage of this approach is that doesn't require any special OS support.
+The advantage of this approach is that it doesn't require any special OS support.
 The disadvantage is the extra overhead due to additional instructions required
 for each counter access (overhead both in terms of binary size and performance)
 plus duplication of counters (i.e. one copy in the binary itself and another
@@ -127,7 +137,7 @@ other platforms by passing the ``-runtime-counter-relocation`` option to the
 backend during compilation.
 
 For a program such as the `Lit <https://llvm.org/docs/CommandGuide/lit.html>`_
-testing tool which invokes other programs, it may be necessary to set
+testing tool, which invokes other programs, it may be necessary to set
 ``LLVM_PROFILE_FILE`` for each invocation. The pattern strings "%p" or "%Nm"
 may help to avoid corruption due to concurrency. Note that "%p" is also a Lit
 token and needs to be escaped as "%%p".
@@ -139,7 +149,7 @@ token and needs to be escaped as "%%p".
 Creating coverage reports
 =========================
 
-Raw profiles have to be **indexed** before they can be used to generate
+Raw profiles must be **indexed** before they can be used to generate
 coverage reports. This is done using the "merge" tool in ``llvm-profdata``
 (which can combine multiple raw profiles and index them at the same time):
 
@@ -211,6 +221,10 @@ region counts:
     |      4|    1|}
     ------------------
 
+If the application was instrumented for Modified Condition/Decision Coverage
+(MC/DC) using the clang option ``-fcoverage-mcdc``, an MC/DC subview can be
+enabled using ``--show-mcdc`` that will show detailed MC/DC information for
+each complex condition boolean expression containing at most six conditions.
 
 To generate a file-level summary of coverage statistics instead of a
 line-oriented report, try:
@@ -226,13 +240,13 @@ line-oriented report, try:
     TOTAL                   13                 0   100.00%           3                 0   100.00%          13                 0   100.00%           12                  2    83.33%
 
 The ``llvm-cov`` tool supports specifying a custom demangler, writing out
-reports in a directory structure, and generating html reports. For the full
+reports in a directory structure, and generating HTML reports. For the full
 list of options, please refer to the `command guide
 <https://llvm.org/docs/CommandGuide/llvm-cov.html>`_.
 
 A few final notes:
 
-* The ``-sparse`` flag is optional but can result in dramatically smaller
+* The ``-sparse`` flag is optional but can produce dramatically smaller
   indexed profiles. This option should not be used if the indexed profile will
   be reused for PGO.
 
@@ -241,7 +255,7 @@ A few final notes:
   information directly into an existing raw profile on disk. The details are
   out of scope.
 
-* The ``llvm-profdata`` tool can be used to merge together multiple raw or
+* The ``llvm-profdata`` tool can be used to merge multiple raw or
   indexed profiles. To combine profiling data from multiple runs of a program,
   try e.g:
 
@@ -259,7 +273,7 @@ the exported data at a high level in the llvm-cov source code.
 Interpreting reports
 ====================
 
-There are five statistics tracked in a coverage summary:
+There are six statistics tracked in a coverage summary:
 
 * Function coverage is the percentage of functions which have been executed at
   least once. A function is considered to be executed if any of its
@@ -285,13 +299,31 @@ There are five statistics tracked in a coverage summary:
   source code that may each evaluate to either "true" or "false".  These
   conditions may comprise larger boolean expressions linked by boolean logical
   operators. For example, "x = (y == 2) || (z < 10)" is a boolean expression
-  that is comprised of two individual conditions, each of which evaluates to
+  comprised of two individual conditions, each of which evaluates to
   either true or false, producing four total branch outcomes.
 
-Of these five statistics, function coverage is usually the least granular while
-branch coverage is the most granular. 100% branch coverage for a function
-implies 100% region coverage for a function. The project-wide totals for each
-statistic are listed in the summary.
+* Modified Condition/Decision Coverage (MC/DC) is the percentage of individual
+  branch conditions that have been shown to independently affect the decision
+  outcome of the boolean expression they comprise. This is accomplished using
+  the analysis of executed control flow through the expression (i.e. test
+  vectors) to show that as a condition's outcome is varied between "true" and
+  false", the decision's outcome also varies between "true" and false", while
+  the outcome of all other conditions is held fixed (or they are masked out as
+  unevaluatable, as happens in languages whose logical operators have
+  short-circuit semantics).  MC/DC builds on top of branch coverage and
+  requires that all code blocks and all execution paths have been tested.  This
+  statistic is hidden by default in reports, but it can be enabled via the
+  ``-show-mcdc-summary`` option as long as code was also compiled using the
+  clang option ``-fcoverage-mcdc``.
+
+  * Boolean expressions comprised of only one condition (and therefore
+    have no logical operators) are not included in MC/DC analysis and are
+    trivially deducible using branch coverage.
+
+Of these six statistics, function coverage is usually the least granular while
+branch coverage (with MC/DC) is the most granular. 100% branch coverage for a
+function implies 100% region coverage for a function. The project-wide totals
+for each statistic are listed in the summary.
 
 Format compatibility guarantees
 ===============================
@@ -334,7 +366,7 @@ By default the compiler runtime uses a static initializer to determine the
 profile output path and to register a writer function. To collect profiles
 without using static initializers, do this manually:
 
-* Export a ``int __llvm_profile_runtime`` symbol from each instrumented shared
+* Export an ``int __llvm_profile_runtime`` symbol from each instrumented shared
   library and executable. When the linker finds a definition of this symbol, it
   knows to skip loading the object which contains the profiling runtime's
   static initializer.
@@ -348,7 +380,7 @@ without using static initializers, do this manually:
   to ``__llvm_profile_write_file``.
 
 * Forward-declare ``int __llvm_profile_write_file(void)`` and call it to write
-  out a profile. This function returns 0 when it succeeds, and a non-zero value
+  out a profile. This function returns 0 on success, and a non-zero value
   otherwise. Calling this function multiple times appends profile data to an
   existing on-disk raw profile.
 
@@ -386,7 +418,7 @@ Collecting coverage reports for the llvm project
 ================================================
 
 To prepare a coverage report for llvm (and any of its sub-projects), add
-``-DLLVM_BUILD_INSTRUMENTED_COVERAGE=On`` to the cmake configuration. Raw
+``-DLLVM_BUILD_INSTRUMENTED_COVERAGE=On`` to the CMake configuration. Raw
 profiles will be written to ``$BUILD_DIR/profiles/``. To prepare an html
 report, run ``llvm/utils/prepare-code-coverage-artifact.py``.
 
@@ -397,7 +429,7 @@ To specify an alternate directory for raw profiles, use
 Drawbacks and limitations
 =========================
 
-* Prior to version 2.26, the GNU binutils BFD linker is not able link programs
+* Prior to version 2.26, the GNU binutils BFD linker cannot link programs
   compiled with ``-fcoverage-mapping`` in its ``--gc-sections`` mode.  Possible
   workarounds include disabling ``--gc-sections``, upgrading to a newer version
   of BFD, or using the Gold linker.
@@ -453,6 +485,42 @@ Branch coverage is tied directly to branch-generating conditions in the source
 code.  Users should not see hidden branches that aren't actually tied to the
 source code.
 
+MC/DC Instrumentation
+---------------------
+
+When instrumenting for Modified Condition/Decision Coverage (MC/DC) using the
+clang option ``-fcoverage-mcdc``, there are two hard limits.
+
+The maximum number of terms is limited to 32767, which is practical for
+handwritten expressions. To be more restrictive in order to enforce coding rules,
+use ``-Xclang -fmcdc-max-conditions=n``. Expressions with exceeded condition
+counts ``n`` will generate warnings and will be excluded in the MC/DC coverage.
+
+The number of test vectors (the maximum number of possible combinations of
+expressions) is limited to 2,147,483,646. In this case, approximately
+256MiB (==2GiB/8) is used to record test vectors.
+
+To reduce memory usage, users can limit the maximum number of test vectors per
+expression with ``-Xclang -fmcdc-max-test-vectors=m``.
+If the number of test vectors resulting from the analysis of an expression
+exceeds ``m``, a warning will be issued and the expression will be excluded
+from the MC/DC coverage.
+
+The number of test vectors ``m``, for ``n`` terms in an expression, can be
+``m <= 2^n`` in the theoretical worst case, but is usually much smaller.
+In simple cases, such as expressions consisting of a sequence of single
+operators, ``m == n+1``. For example, ``(a && b && c && d && e && f && g)``
+requires 8 test vectors.
+
+Expressions such as ``((a0 && b0) || (a1 && b1) || ...)`` can cause the
+number of test vectors to increase exponentially.
+
+Also, if a boolean expression is embedded in the nest of another boolean
+expression but separated by a non-logical operator, this is also not supported.
+For example, in ``x = (a && b && c && func(d && f))``, the ``d && f`` case
+starts a new boolean expression that is separated from the other conditions by
+the operator ``func()``.  When this is encountered, a warning will be generated
+and the boolean expression will not be instrumented.
 
 Switch statements
 -----------------

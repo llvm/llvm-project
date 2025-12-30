@@ -11,9 +11,7 @@
 
 #include "bolt/Passes/DataflowAnalysis.h"
 #include "bolt/Passes/RegAnalysis.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Timer.h"
 #include <optional>
 
 namespace opts {
@@ -135,8 +133,7 @@ protected:
           RA.getInstClobberList(Point, Regs);
         else
           RA.getInstUsedRegsList(Point, Regs, false);
-        Regs &= this->BC.MIB->getAliases(*TrackingReg);
-        if (Regs.any())
+        if (Regs.anyCommon(this->BC.MIB->getAliases(*TrackingReg)))
           Next.set(this->ExprToIdx[&Point]);
       }
     }

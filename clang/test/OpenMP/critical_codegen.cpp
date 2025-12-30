@@ -35,6 +35,8 @@ int main() {
 // ALL-NEXT:  			store i8 2, ptr [[A_ADDR]]
 // IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
 // IRBUILDER:			[[AFTER]]
+// IRBUILDER-NEXT:		br label %[[OMP_REGION_FINALIZE:[^ ,]+]]
+// IRBUILDER:			[[OMP_REGION_FINALIZE]]
 // ALL-NEXT:  			call {{.*}}void @__kmpc_end_critical(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[UNNAMED_LOCK]])
 #pragma omp critical
   a = 2;
@@ -106,12 +108,12 @@ struct S {
 void critical_ref(S &s) {
   // ALL: [[S_ADDR:%.+]] = alloca ptr,
   // ALL: [[S_REF:%.+]] = load ptr, ptr [[S_ADDR]],
-  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, ptr [[S_REF]], i32 0, i32 0
+  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_REF]], i32 0, i32 0
   ++s.a;
   // ALL: call void @__kmpc_critical(
 #pragma omp critical
   // ALL: [[S_REF:%.+]] = load ptr, ptr [[S_ADDR]],
-  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, ptr [[S_REF]], i32 0, i32 0
+  // ALL: [[S_A_REF:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_REF]], i32 0, i32 0
   ++s.a;
   // ALL: call void @__kmpc_end_critical(
 }

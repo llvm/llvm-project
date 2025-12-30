@@ -19,28 +19,24 @@ __attribute__((noinline)) int bar() { return 4; }
 
 int foo() {
   __llvm_profile_reset_counters();
-  // PROFGEN: call void @__llvm_profile_reset_counters()
-  // PROFUSE-NOT: call void @__llvm_profile_reset_counters()
+  // PROFGEN: call {{(arm_aapcs_vfpcc )?}}void @__llvm_profile_reset_counters()
+  // PROFUSE-NOT: call {{(arm_aapcs_vfpcc )?}}void @__llvm_profile_reset_counters()
   return bar();
 }
 
-// PROFUSE-NOT: declare void @__llvm_profile_reset_counters()
+// PROFUSE-NOT: declare {{(arm_aapcs_vfpcc )?}}void @__llvm_profile_reset_counters()
 
 int main() {
   int z = foo() + 3;
   __llvm_profile_set_filename("rawprof.profraw");
-  // PROFGEN: call void @__llvm_profile_set_filename(ptr noundef @{{.*}})
-  // PROFUSE-NOT: call void @__llvm_profile_set_filename(ptr noundef @{{.*}})
+  // PROFGEN: call {{(arm_aapcs_vfpcc )?}}void @__llvm_profile_set_filename(ptr noundef @{{.*}})
+  // PROFUSE-NOT: call {{(arm_aapcs_vfpcc )?}}void @__llvm_profile_set_filename(ptr noundef @{{.*}})
   if (__llvm_profile_dump())
     return 2;
-  // PROFGEN: %call1 = call {{(signext )*}}i32 @__llvm_profile_dump()
-  // PROFUSE-NOT: %call1 = call {{(signext )*}}i32 @__llvm_profile_dump()
-  __llvm_orderfile_dump();
-  // PROFGEN: %call2 = call {{(signext )*}}i32 @__llvm_orderfile_dump()
-  // PROFUSE-NOT: %call2 = call {{(signext )*}}i32 @__llvm_orderfile_dump()
+  // PROFGEN: %{{.*}} = call {{(arm_aapcs_vfpcc )?}}{{(signext )*}}i32 @__llvm_profile_dump()
+  // PROFUSE-NOT: %{{.*}} = call {{(arm_aapcs_vfpcc )?}}{{(signext )*}}i32 @__llvm_profile_dump()
   return z + bar() - 11;
 }
 
 // PROFUSE-NOT: declare void @__llvm_profile_set_filename(ptr noundef)
 // PROFUSE-NOT: declare signext i32 @__llvm_profile_dump()
-// PROFUSE-NOT: declare signext i32 @__llvm_orderfile_dump()

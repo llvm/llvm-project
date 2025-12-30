@@ -90,15 +90,13 @@ public:
 
   ~LibcxxStdAtomicSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_real_child = nullptr;
@@ -110,41 +108,47 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     LibcxxStdAtomicSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp) {}
 
-bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::Update() {
   ValueObjectSP atomic_value = GetLibCxxAtomicValue(m_backend);
   if (atomic_value)
     m_real_child = GetLibCxxAtomicValue(m_backend).get();
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdAtomicSyntheticFrontEnd::CalculateNumChildren() {
   return m_real_child ? 1 : 0;
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (idx == 0)
     return m_real_child->GetSP()->Clone(ConstString("Value"));
   return nullptr;
 }
 
-size_t lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  return name == "Value" ? 0 : UINT32_MAX;
+  if (name == "Value")
+    return 0;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibcxxAtomicSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  if (valobj_sp)
+  if (valobj_sp && IsLibCxxAtomic(*valobj_sp))
     return new LibcxxStdAtomicSyntheticFrontEnd(valobj_sp);
   return nullptr;
+}
+
+bool lldb_private::formatters::IsLibCxxAtomic(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("__a_") != nullptr;
+  return false;
 }

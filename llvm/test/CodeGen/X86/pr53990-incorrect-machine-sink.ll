@@ -16,7 +16,7 @@ define void @test(i1 %c, ptr %p, ptr noalias %p2) nounwind {
 ; CHECK-NEXT:    movq (%rsi), %r14
 ; CHECK-NEXT:    movb $1, %r15b
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %sink
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movq %r14, (%rbx)

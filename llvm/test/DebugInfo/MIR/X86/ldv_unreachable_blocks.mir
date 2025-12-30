@@ -2,7 +2,7 @@
 # CHECK: DW_TAG_subprogram
 # Test that LiveDebugValues can handle MBBs that are not reachable in a RPOT.
 --- |
-  define hidden zeroext i1 @__foo_block_invoke(i8* nocapture noundef readonly %.block_descriptor, i64 noundef %type) !dbg !5 {
+  define hidden zeroext i1 @__foo_block_invoke(ptr nocapture noundef readonly %.block_descriptor, i64 noundef %type) !dbg !5 {
   entry:
     %call2.i = tail call zeroext i8 @foo_len(), !dbg !10
     %cmp.i102.i = icmp ult i8 %call2.i, 64, !dbg !10

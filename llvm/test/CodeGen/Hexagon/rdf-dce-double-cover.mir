@@ -1,0 +1,53 @@
+# RUN: llc -mtriple=hexagon -run-pass hexagon-rdf-opt -verify-machineinstrs %s -o - | FileCheck %s
+
+# Check that the L2_loadrd_io load from stack to $d6
+# register, in bb.0, is not considered as dead code by RDF
+# $d6 is used in A2_minp instruction in bb.1
+
+#CHECK-LABEL: bb.0
+#CHECK: renamable $d6 = L2_loadrd_io %stack.{{[0-9]+}}, 0
+
+--- |
+
+ define dso_local i32 @fred(ptr %a) local_unnamed_addr {
+   ret i32 0
+ }
+
+...
+---
+name: fred
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $d3:0x0000000000000003, $r5, $r8
+
+    renamable $p0 = C2_cmpgtui renamable $r8, 1
+    renamable $r8 = A2_addi killed renamable $r8, -1
+    renamable $d6 = L2_loadrd_io %stack.0, 0  :: (load (s64) from %stack.0)
+    renamable $r12, renamable $r5 = L2_loadri_pi killed renamable $r5, 4 :: (load (s32) from %ir.a)
+    J2_loop0r %bb.1, killed renamable $r8, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jumpf killed renamable $p0, %bb.2, implicit-def $pc
+    J2_jump %bb.1, implicit-def $pc
+
+  bb.1:
+    successors: %bb.2, %bb.1
+    liveins: $d3:0x0000000000000003, $d6:0x0000000000000003, $r5
+
+    renamable $d3 = A2_minp killed renamable $d3, renamable $d6
+    renamable $r12, renamable $r5 = L2_loadri_pi killed renamable $r5, 4 :: (load (s32) from %ir.a + 4)
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def $pc
+
+  bb.2:
+    liveins: $d3:0x0000000000000003, $d6:0x0000000000000003
+
+    renamable $r0 = A2_tfr renamable $r6
+    J2_jumpr $r31, implicit-def $pc, implicit $r0
+...
+

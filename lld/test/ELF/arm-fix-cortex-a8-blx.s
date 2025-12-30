@@ -7,7 +7,7 @@
 /// will emit these without a relocation, but they could be produced by ELF
 /// processing tools.
 
-// CHECK: ld.lld: detected cortex-a8-657419 erratum sequence starting at 21FFE in unpatched output.
+// CHECK: ld.lld: detected cortex-a8-657419 erratum sequence starting at 21FFE in unpatched output
 
  .syntax unified
  .text

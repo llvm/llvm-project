@@ -33,6 +33,24 @@ func.func @inotequal_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vecto
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.IsFinite
+//===----------------------------------------------------------------------===//
+
+func.func @isfinite_scalar(%arg0: f32) -> i1 {
+  // CHECK: spirv.IsFinite {{.*}} : f32
+  %0 = spirv.IsFinite %arg0 : f32
+  return %0 : i1
+}
+
+func.func @isfinite_vector(%arg0: vector<2xf32>) -> vector<2xi1> {
+  // CHECK: spirv.IsFinite {{.*}} : vector<2xf32>
+  %0 = spirv.IsFinite %arg0 : vector<2xf32>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.IsInf
 //===----------------------------------------------------------------------===//
 
@@ -166,7 +184,7 @@ func.func @logicalUnary(%arg0 : i1)
 
 func.func @logicalUnary(%arg0 : i32)
 {
-  // expected-error @+1 {{'operand' must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{'operand' must be bool or fixed-length vector of bool values of length 2/3/4/8/16, but got 'i32'}}
   %0 = spirv.LogicalNot %arg0 : i32
   return
 }
@@ -180,7 +198,7 @@ func.func @logicalUnary(%arg0 : i32)
 func.func @select_op_bool(%arg0: i1) -> () {
   %0 = spirv.Constant true
   %1 = spirv.Constant false
-  // CHECK : spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, i1
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, i1
   %2 = spirv.Select %arg0, %0, %1 : i1, i1
   return
 }
@@ -188,7 +206,7 @@ func.func @select_op_bool(%arg0: i1) -> () {
 func.func @select_op_int(%arg0: i1) -> () {
   %0 = spirv.Constant 2 : i32
   %1 = spirv.Constant 3 : i32
-  // CHECK : spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, i32
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, i32
   %2 = spirv.Select %arg0, %0, %1 : i1, i32
   return
 }
@@ -196,15 +214,23 @@ func.func @select_op_int(%arg0: i1) -> () {
 func.func @select_op_float(%arg0: i1) -> () {
   %0 = spirv.Constant 2.0 : f32
   %1 = spirv.Constant 3.0 : f32
-  // CHECK : spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, f32
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, f32
   %2 = spirv.Select %arg0, %0, %1 : i1, f32
+  return
+}
+
+func.func @select_op_bfloat16(%arg0: i1) -> () {
+  %0 = spirv.Constant 2.0 : bf16
+  %1 = spirv.Constant 3.0 : bf16
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, bf16
+  %2 = spirv.Select %arg0, %0, %1 : i1, bf16
   return
 }
 
 func.func @select_op_ptr(%arg0: i1) -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK : spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.ptr<f32, Function>
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.ptr<f32, Function>
   %2 = spirv.Select %arg0, %0, %1 : i1, !spirv.ptr<f32, Function>
   return
 }
@@ -212,7 +238,7 @@ func.func @select_op_ptr(%arg0: i1) -> () {
 func.func @select_op_vec(%arg0: i1) -> () {
   %0 = spirv.Constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
   %1 = spirv.Constant dense<[5.0, 6.0, 7.0]> : vector<3xf32>
-  // CHECK : spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, vector<3xf32>
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, vector<3xf32>
   %2 = spirv.Select %arg0, %0, %1 : i1, vector<3xf32>
   return
 }
@@ -220,7 +246,7 @@ func.func @select_op_vec(%arg0: i1) -> () {
 func.func @select_op_vec_condn_vec(%arg0: vector<3xi1>) -> () {
   %0 = spirv.Constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
   %1 = spirv.Constant dense<[5.0, 6.0, 7.0]> : vector<3xf32>
-  // CHECK : spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : vector<3xi1>, vector<3xf32>
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : vector<3xi1>, vector<3xf32>
   %2 = spirv.Select %arg0, %0, %1 : vector<3xi1>, vector<3xf32>
   return
 }

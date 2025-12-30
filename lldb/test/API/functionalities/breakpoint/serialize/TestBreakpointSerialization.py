@@ -60,7 +60,7 @@ class BreakpointSerialization(TestBase):
             exe_module.IsValid(), "Failed to find the executable module in target"
         )
         sym_ctx_list = exe_module.FindFunctions("main")
-        self.assertTrue(sym_ctx_list.GetSize() == 1, "Unable to find function 'main'")
+        self.assertEqual(sym_ctx_list.GetSize(), 1, "Unable to find function 'main'")
         sym_ctx = sym_ctx_list.GetContextAtIndex(0)
         self.assertTrue(
             sym_ctx.IsValid(), "SBSymbolContext representing function 'main' is invalid"
@@ -209,6 +209,11 @@ class BreakpointSerialization(TestBase):
                 copy_text,
                 "Source and dest breakpoints are not identical: \nsource: %s\ndest: %s"
                 % (source_text, copy_text),
+            )
+            self.assertEqual(
+                source_bp.GetNumLocations(),
+                copy_bp.GetNumLocations(),
+                "Source and dest num locations are not the same",
             )
 
     def do_check_resolvers(self):
@@ -386,7 +391,7 @@ class BreakpointSerialization(TestBase):
         source_bps.Clear()
 
         bkpt = self.orig_target.BreakpointCreateByName(
-            "blubby", lldb.eFunctionNameTypeAuto, empty_module_list, empty_cu_list
+            "main", lldb.eFunctionNameTypeAuto, empty_module_list, empty_cu_list
         )
         bkpt.SetIgnoreCount(10)
         bkpt.SetThreadName("grubby")
@@ -394,7 +399,7 @@ class BreakpointSerialization(TestBase):
         all_bps.Append(bkpt)
 
         bkpt = self.orig_target.BreakpointCreateByName(
-            "blubby", lldb.eFunctionNameTypeFull, empty_module_list, empty_cu_list
+            "main", lldb.eFunctionNameTypeFull, empty_module_list, empty_cu_list
         )
         bkpt.SetCondition("something != something_else")
         bkpt.SetQueueName("grubby")

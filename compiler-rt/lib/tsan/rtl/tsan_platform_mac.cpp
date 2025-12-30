@@ -46,8 +46,8 @@
 namespace __tsan {
 
 #if !SANITIZER_GO
-static char main_thread_state[sizeof(ThreadState)] ALIGNED(
-    SANITIZER_CACHE_LINE_SIZE);
+alignas(SANITIZER_CACHE_LINE_SIZE) static char main_thread_state[sizeof(
+    ThreadState)];
 static ThreadState *dead_thread_state;
 static pthread_key_t thread_state_key;
 
@@ -226,9 +226,20 @@ static void ThreadTerminateCallback(uptr thread) {
 void InitializePlatformEarly() {
 #  if !SANITIZER_GO && SANITIZER_IOS
   uptr max_vm = GetMaxUserVirtualAddress() + 1;
-  if (max_vm != HiAppMemEnd()) {
-    Printf("ThreadSanitizer: unsupported vm address limit %p, expected %p.\n",
-           (void *)max_vm, (void *)HiAppMemEnd());
+  if (max_vm < HiAppMemEnd()) {
+    Report(
+        "ThreadSanitizer: Unsupported virtual memory layout:\n\tVM address "
+        "limit = %p\n\tExpected %p.\n",
+        (void*)max_vm, (void*)HiAppMemEnd());
+    Die();
+  }
+  // In some configurations, the max_vm is expanded, but much of this space is
+  // already mapped. TSAN will not work in this configuration.
+  if (!MemoryRangeIsAvailable(HiAppMemEnd() - 1, HiAppMemEnd() - 1)) {
+    Report(
+        "ThreadSanitizer: Unsupported virtual memory layout: Address %p is "
+        "already mapped.\n",
+        (void*)(HiAppMemEnd() - 1));
     Die();
   }
 #endif
@@ -239,13 +250,18 @@ static uptr longjmp_xor_key = 0;
 void InitializePlatform() {
   DisableCoreDumperIfNecessary();
 #if !SANITIZER_GO
-  CheckAndProtect();
+  if (!CheckAndProtect(true, true, true)) {
+    Printf("FATAL: ThreadSanitizer: found incompatible memory layout.\n");
+    Die();
+  }
 
   InitializeThreadStateStorage();
 
   ThreadEventCallbacks callbacks = {
       .create = ThreadCreateCallback,
+      .start = nullptr,
       .terminate = ThreadTerminateCallback,
+      .destroy = nullptr,
   };
   InstallPthreadIntrospectionHook(callbacks);
 #endif

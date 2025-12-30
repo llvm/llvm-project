@@ -2,7 +2,7 @@
 //
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
-// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE: %{run} = mlir-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
 // DEFINE:   --e main --entry-point-result=void \
@@ -20,7 +20,7 @@
   map = ( i, j ) ->
   ( i            : dense,
     j floordiv 4 : dense,
-    j mod 4      : block2_4
+    j mod 4      : structured[2, 4]
   )
 }>
 

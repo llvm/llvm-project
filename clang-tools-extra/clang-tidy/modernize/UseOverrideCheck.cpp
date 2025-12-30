@@ -1,4 +1,4 @@
-//===--- UseOverrideCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseOverrideCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -34,7 +35,6 @@ void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
-
   auto IgnoreDestructorMatcher =
       IgnoreDestructors ? cxxMethodDecl(unless(cxxDestructorDecl()))
                         : cxxMethodDecl();
@@ -54,9 +54,9 @@ void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
 static SmallVector<Token, 16>
 parseTokens(CharSourceRange Range, const MatchFinder::MatchResult &Result) {
   const SourceManager &Sources = *Result.SourceManager;
-  std::pair<FileID, unsigned> LocInfo =
+  const std::pair<FileID, unsigned> LocInfo =
       Sources.getDecomposedLoc(Range.getBegin());
-  StringRef File = Sources.getBufferData(LocInfo.first);
+  const StringRef File = Sources.getBufferData(LocInfo.first);
   const char *TokenBegin = File.data() + LocInfo.second;
   Lexer RawLexer(Sources.getLocForStartOfFile(LocInfo.first),
                  Result.Context->getLangOpts(), File.begin(), TokenBegin,
@@ -84,10 +84,6 @@ parseTokens(CharSourceRange Range, const MatchFinder::MatchResult &Result) {
   return Tokens;
 }
 
-static StringRef getText(const Token &Tok, const SourceManager &Sources) {
-  return {Sources.getCharacterData(Tok.getLocation()), Tok.getLength()};
-}
-
 void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Method = Result.Nodes.getNodeAs<FunctionDecl>("method");
   const SourceManager &Sources = *Result.SourceManager;
@@ -102,12 +98,12 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
       Method->isOutOfLine())
     return;
 
-  bool HasVirtual = Method->isVirtualAsWritten();
-  bool HasOverride = Method->getAttr<OverrideAttr>();
-  bool HasFinal = Method->getAttr<FinalAttr>();
+  const bool HasVirtual = Method->isVirtualAsWritten();
+  const bool HasOverride = Method->getAttr<OverrideAttr>();
+  const bool HasFinal = Method->getAttr<FinalAttr>();
 
-  bool OnlyVirtualSpecified = HasVirtual && !HasOverride && !HasFinal;
-  unsigned KeywordCount = HasVirtual + HasOverride + HasFinal;
+  const bool OnlyVirtualSpecified = HasVirtual && !HasOverride && !HasFinal;
+  const unsigned KeywordCount = HasVirtual + HasOverride + HasFinal;
 
   if ((!OnlyVirtualSpecified && KeywordCount == 1) ||
       (!HasVirtual && HasOverride && HasFinal && AllowOverrideAndFinal))
@@ -119,12 +115,12 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (KeywordCount == 0) {
     Message = "annotate this function with '%0' or (rarely) '%1'";
   } else {
-    StringRef Redundant =
+    const StringRef Redundant =
         HasVirtual ? (HasOverride && HasFinal && !AllowOverrideAndFinal
                           ? "'virtual' and '%0' are"
                           : "'virtual' is")
                    : "'%0' is";
-    StringRef Correct = HasFinal ? "'%1'" : "'%0'";
+    const StringRef Correct = HasFinal ? "'%1'" : "'%0'";
 
     Message = (llvm::Twine(Redundant) +
                " redundant since the function is already declared " + Correct)
@@ -134,103 +130,47 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   auto Diag = diag(Method->getLocation(), Message)
               << OverrideSpelling << FinalSpelling;
 
-  CharSourceRange FileRange = Lexer::makeFileCharRange(
+  const CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Method->getSourceRange()), Sources,
       getLangOpts());
 
   if (!FileRange.isValid())
     return;
 
-  // FIXME: Instead of re-lexing and looking for specific macros such as
-  // 'ABSTRACT', properly store the location of 'virtual' and '= 0' in each
-  // FunctionDecl.
+  // FIXME: Instead of re-lexing and looking for the 'virtual' token,
+  // store the location of 'virtual' in each FunctionDecl.
   SmallVector<Token, 16> Tokens = parseTokens(FileRange, Result);
 
   // Add 'override' on inline declarations that don't already have it.
   if (!HasFinal && !HasOverride) {
-    SourceLocation InsertLoc;
-    std::string ReplacementText = (OverrideSpelling + " ").str();
-    SourceLocation MethodLoc = Method->getLocation();
-
-    for (Token T : Tokens) {
-      if (T.is(tok::kw___attribute) &&
-          !Sources.isBeforeInTranslationUnit(T.getLocation(), MethodLoc)) {
-        InsertLoc = T.getLocation();
-        break;
-      }
-    }
-
-    if (Method->hasAttrs()) {
-      for (const clang::Attr *A : Method->getAttrs()) {
-        if (!A->isImplicit() && !A->isInherited()) {
-          SourceLocation Loc =
-              Sources.getExpansionLoc(A->getRange().getBegin());
-          if ((!InsertLoc.isValid() ||
-               Sources.isBeforeInTranslationUnit(Loc, InsertLoc)) &&
-              !Sources.isBeforeInTranslationUnit(Loc, MethodLoc))
-            InsertLoc = Loc;
-        }
-      }
-    }
-
-    if (InsertLoc.isInvalid() && Method->doesThisDeclarationHaveABody() &&
-        Method->getBody() && !Method->isDefaulted()) {
-      // For methods with inline definition, add the override keyword at the
-      // end of the declaration of the function, but prefer to put it on the
-      // same line as the declaration if the beginning brace for the start of
-      // the body falls on the next line.
-      ReplacementText = (" " + OverrideSpelling).str();
-      auto *LastTokenIter = std::prev(Tokens.end());
-      // When try statement is used instead of compound statement as
-      // method body - insert override keyword before it.
-      if (LastTokenIter->is(tok::kw_try))
-        LastTokenIter = std::prev(LastTokenIter);
-      InsertLoc = LastTokenIter->getEndLoc();
-    }
-
-    if (!InsertLoc.isValid()) {
-      // For declarations marked with "= 0" or "= [default|delete]", the end
-      // location will point until after those markings. Therefore, the override
-      // keyword shouldn't be inserted at the end, but before the '='.
-      if (Tokens.size() > 2 &&
-          (getText(Tokens.back(), Sources) == "0" ||
-           Tokens.back().is(tok::kw_default) ||
-           Tokens.back().is(tok::kw_delete)) &&
-          getText(Tokens[Tokens.size() - 2], Sources) == "=") {
-        InsertLoc = Tokens[Tokens.size() - 2].getLocation();
-        // Check if we need to insert a space.
-        if ((Tokens[Tokens.size() - 2].getFlags() & Token::LeadingSpace) == 0)
-          ReplacementText = (" " + OverrideSpelling + " ").str();
-      } else if (getText(Tokens.back(), Sources) == "ABSTRACT")
-        InsertLoc = Tokens.back().getLocation();
-    }
-
-    if (!InsertLoc.isValid()) {
-      InsertLoc = FileRange.getEnd();
-      ReplacementText = (" " + OverrideSpelling).str();
-    }
-
     // If the override macro has been specified just ensure it exists,
     // if not don't apply a fixit but keep the warning.
     if (OverrideSpelling != "override" &&
         !Context.Idents.get(OverrideSpelling).hasMacroDefinition())
       return;
 
-    Diag << FixItHint::CreateInsertion(InsertLoc, ReplacementText);
+    Diag << FixItHint::CreateInsertion(
+        Lexer::getLocForEndOfToken(
+            Method->getTypeSourceInfo()->getTypeLoc().getEndLoc(), 0, Sources,
+            getLangOpts()),
+        (" " + OverrideSpelling).str());
   }
 
-  if (HasFinal && HasOverride && !AllowOverrideAndFinal) {
-    SourceLocation OverrideLoc = Method->getAttr<OverrideAttr>()->getLocation();
+  if (HasFinal && HasOverride && !AllowOverrideAndFinal)
     Diag << FixItHint::CreateRemoval(
-        CharSourceRange::getTokenRange(OverrideLoc, OverrideLoc));
-  }
+        Method->getAttr<OverrideAttr>()->getLocation());
 
   if (HasVirtual) {
-    for (Token Tok : Tokens) {
+    for (const Token Tok : Tokens) {
       if (Tok.is(tok::kw_virtual)) {
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            Tok.getLocation(), Tok.getLocation()));
-        break;
+        std::optional<Token> NextToken =
+            utils::lexer::findNextTokenIncludingComments(
+                Tok.getEndLoc(), Sources, getLangOpts());
+        if (NextToken.has_value()) {
+          Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+              Tok.getLocation(), NextToken->getLocation()));
+          break;
+        }
       }
     }
   }

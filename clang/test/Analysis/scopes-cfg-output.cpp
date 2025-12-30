@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -analyze -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 class A {
@@ -1074,7 +1074,7 @@ void test_switch_with_compound_with_default() {
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B0 (EXIT)]
 // CHECK-NEXT:   Preds (1): B1
-int test_switch_with_compound_without_default() {
+void test_switch_with_compound_without_default() {
   char c = '1';
   switch (int i = getX()) {
     case 0:
@@ -1437,12 +1437,14 @@ void test_cleanup_functions() {
 // CHECK-NEXT:    4: return;
 // CHECK-NEXT:    5: CleanupFunction (cleanup_int)
 // CHECK-NEXT:    6: CFGScopeEnd(i)
+// CHECK-NEXT:    7: CFGScopeEnd(m)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:    1: return;
 // CHECK-NEXT:    2: CleanupFunction (cleanup_int)
 // CHECK-NEXT:    3: CFGScopeEnd(i)
+// CHECK-NEXT:    4: CFGScopeEnd(m)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B3]
@@ -1469,7 +1471,7 @@ void test_cleanup_functions2(int m) {
 // CHECK:       [B1]
 // CHECK-NEXT:    1: CFGScopeBegin(f)
 // CHECK-NEXT:    2:  (CXXConstructExpr, [B1.3], F)
-// CHECK-NEXT:    3: __attribute__((cleanup(cleanup_F))) F f;
+// CHECK-NEXT:    3: F f __attribute__((cleanup(cleanup_F)));
 // CHECK-NEXT:    4: CleanupFunction (cleanup_F)
 // CHECK-NEXT:    5: [B1.3].~F() (Implicit destructor)
 // CHECK-NEXT:    6: CFGScopeEnd(f)

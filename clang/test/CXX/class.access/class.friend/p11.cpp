@@ -12,7 +12,7 @@ namespace test0 {
 namespace test1 {
   void foo() {
     class A {
-      friend void bar(); // expected-error {{no matching function found in local scope}}
+      friend void bar(); // expected-error {{cannot define friend function in a local class definition}}
     };
   }
 }
@@ -22,7 +22,7 @@ namespace test2 {
 
   void foo() { // expected-note 2{{'::test2::foo' declared here}}
     struct S1 {
-      friend void foo(); // expected-error {{no matching function 'foo' found in local scope; did you mean '::test2::foo'?}}
+      friend void foo(); // expected-error {{cannot define friend function 'foo' in a local class definition; did you mean '::test2::foo'?}}
     };
 
     void foo(); // expected-note {{local declaration nearly matches}}
@@ -32,24 +32,24 @@ namespace test2 {
 
     {
       struct S2 {
-        friend void foo(); // expected-error {{no matching function found in local scope}}
+        friend void foo(); // expected-error {{cannot define friend function in a local class definition}}
       };
     }
 
     {
       int foo;
       struct S3 {
-        friend void foo(); // expected-error {{no matching function 'foo' found in local scope; did you mean '::test2::foo'?}}
+        friend void foo(); // expected-error {{cannot define friend function 'foo' in a local class definition; did you mean '::test2::foo'?}}
       };
     }
 
     struct S4 {
-      friend void bar(); // expected-error {{no matching function 'bar' found in local scope; did you mean '::test2::bar'?}}
+      friend void bar(); // expected-error {{cannot define friend function 'bar' in a local class definition; did you mean '::test2::bar'?}}
     };
 
     { void bar(); }
     struct S5 {
-      friend void bar(); // expected-error {{no matching function 'bar' found in local scope; did you mean '::test2::bar'?}}
+      friend void bar(); // expected-error {{cannot define friend function 'bar' in a local class definition; did you mean '::test2::bar'?}}
     };
 
     {
@@ -76,7 +76,7 @@ namespace test2 {
 
     struct S9 {
       struct Inner {
-        friend void baz(); // expected-error {{no matching function 'baz' found in local scope; did you mean 'bar'?}}
+        friend void baz(); // expected-error {{cannot define friend function 'baz' in a local class definition; did you mean 'bar'?}}
       };
     };
 
@@ -84,8 +84,8 @@ namespace test2 {
       void quux() {}
       void foo() {
         struct Inner1 {
-          friend void bar(); // expected-error {{no matching function 'bar' found in local scope; did you mean '::test2::bar'?}}
-          friend void quux(); // expected-error {{no matching function found in local scope}}
+          friend void bar(); // expected-error {{cannot define friend function 'bar' in a local class definition; did you mean '::test2::bar'?}}
+          friend void quux(); // expected-error {{cannot define friend function in a local class definition}}
         };
 
         void bar();

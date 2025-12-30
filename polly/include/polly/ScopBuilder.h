@@ -663,19 +663,6 @@ class ScopBuilder final {
   ///         nullptr if it cannot be hoisted at all.
   isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
 
-  /// Collect loads which might form a reduction chain with @p StoreMA.
-  ///
-  /// Check if the stored value for @p StoreMA is a binary operator with one or
-  /// two loads as operands. If the binary operand is commutative & associative,
-  /// used only once (by @p StoreMA) and its load operands are also used only
-  /// once, we have found a possible reduction chain. It starts at an operand
-  /// load and includes the binary operator and @p StoreMA.
-  ///
-  /// Note: We allow only one use to ensure the load and binary operator cannot
-  ///       escape this block or into any other store except @p StoreMA.
-  void collectCandidateReductionLoads(MemoryAccess *StoreMA,
-                                      SmallVectorImpl<MemoryAccess *> &Loads);
-
   /// Build the access relation of all memory accesses of @p Stmt.
   void buildAccessRelations(ScopStmt &Stmt);
 

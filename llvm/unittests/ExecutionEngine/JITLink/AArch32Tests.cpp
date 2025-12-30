@@ -8,6 +8,7 @@
 
 #include <llvm/BinaryFormat/ELF.h>
 #include <llvm/ExecutionEngine/JITLink/aarch32.h>
+#include <llvm/Support/Compiler.h>
 
 #include "gtest/gtest.h"
 
@@ -39,7 +40,8 @@ struct MutableWord {
 namespace llvm {
 namespace jitlink {
 
-Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType);
+Expected<aarch32::EdgeKind_aarch32>
+getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &Cfg);
 Expected<uint32_t> getELFRelocationType(Edge::Kind Kind);
 
 } // namespace jitlink
@@ -47,7 +49,8 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind);
 
 TEST(AArch32_ELF, EdgeKinds) {
   // Fails: Invalid ELF type -> JITLink kind
-  Expected<uint32_t> ErrKind = getJITLinkEdgeKind(ELF::R_ARM_NONE);
+  aarch32::ArmConfig Cfg;
+  Expected<uint32_t> ErrKind = getJITLinkEdgeKind(ELF::R_ARM_ME_TOO, Cfg);
   EXPECT_TRUE(errorToBool(ErrKind.takeError()));
 
   // Fails: Invalid JITLink kind -> ELF type
@@ -59,7 +62,7 @@ TEST(AArch32_ELF, EdgeKinds) {
     EXPECT_FALSE(errorToBool(ELFType.takeError()))
         << "Failed to translate JITLink kind -> ELF type";
 
-    Expected<Edge::Kind> JITLinkKind = getJITLinkEdgeKind(*ELFType);
+    Expected<Edge::Kind> JITLinkKind = getJITLinkEdgeKind(*ELFType, Cfg);
     EXPECT_FALSE(errorToBool(JITLinkKind.takeError()))
         << "Failed to translate ELF type -> JITLink kind";
 
@@ -94,21 +97,21 @@ namespace llvm {
 namespace jitlink {
 namespace aarch32 {
 
-HalfWords encodeImmBT4BlT1BlxT2(int64_t Value);
-HalfWords encodeImmBT4BlT1BlxT2_J1J2(int64_t Value);
-uint32_t encodeImmBA1BlA1BlxA2(int64_t Value);
-HalfWords encodeImmMovtT1MovwT3(uint16_t Value);
-HalfWords encodeRegMovtT1MovwT3(int64_t Value);
-uint32_t encodeImmMovtA1MovwA2(uint16_t Value);
-uint32_t encodeRegMovtA1MovwA2(int64_t Value);
+LLVM_ABI HalfWords encodeImmBT4BlT1BlxT2(int64_t Value);
+LLVM_ABI HalfWords encodeImmBT4BlT1BlxT2_J1J2(int64_t Value);
+LLVM_ABI uint32_t encodeImmBA1BlA1BlxA2(int64_t Value);
+LLVM_ABI HalfWords encodeImmMovtT1MovwT3(uint16_t Value);
+LLVM_ABI HalfWords encodeRegMovtT1MovwT3(int64_t Value);
+LLVM_ABI uint32_t encodeImmMovtA1MovwA2(uint16_t Value);
+LLVM_ABI uint32_t encodeRegMovtA1MovwA2(int64_t Value);
 
-int64_t decodeImmBT4BlT1BlxT2(uint32_t Hi, uint32_t Lo);
-int64_t decodeImmBT4BlT1BlxT2_J1J2(uint32_t Hi, uint32_t Lo);
-int64_t decodeImmBA1BlA1BlxA2(int64_t Value);
-uint16_t decodeImmMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
-int64_t decodeRegMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
-uint16_t decodeImmMovtA1MovwA2(uint64_t Value);
-int64_t decodeRegMovtA1MovwA2(uint64_t Value);
+LLVM_ABI int64_t decodeImmBT4BlT1BlxT2(uint32_t Hi, uint32_t Lo);
+LLVM_ABI int64_t decodeImmBT4BlT1BlxT2_J1J2(uint32_t Hi, uint32_t Lo);
+LLVM_ABI int64_t decodeImmBA1BlA1BlxA2(int64_t Value);
+LLVM_ABI uint16_t decodeImmMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
+LLVM_ABI int64_t decodeRegMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
+LLVM_ABI uint16_t decodeImmMovtA1MovwA2(uint64_t Value);
+LLVM_ABI int64_t decodeRegMovtA1MovwA2(uint64_t Value);
 
 } // namespace aarch32
 } // namespace jitlink

@@ -10,15 +10,24 @@ import argparse
 from itertools import product
 from string import Template
 
+
 class MMAType:
     def __init__(self, ptx_type):
         self.ptx_type = ptx_type
         self.llvm_type = {
+            "e4m3": "i32",
+            "e5m2": "i32",
+            "e3m2": "i32",
+            "e2m3": "i32",
+            "e2m1": "i32",
             "f16": "<2 x half>",
             "f32": "float",
             "f64": "double",
             "s32": "i32",
             "b16": "i32",
+            "b8": "i32",
+            "b8x16.b6x16_p32": "i32",
+            "b8x16.b4x16_p64": "i32",
             "s8": "i32",
             "u8": "i32",
             "s4": "i32",
@@ -30,8 +39,8 @@ class MMAType:
 
         self.ptx_reg_pattern = {
             "f16": "%r[0-9]+",
-            "f32": "%f[0-9]+",
-            "f64": "%fd[0-9]+",
+            "f32": "%r[0-9]+",
+            "f64": "%rd[0-9]+",
         }.get(ptx_type, "%r[0-9]+")
 
     def __repr__(self):
@@ -39,7 +48,7 @@ class MMAType:
 
 
 class MMAFrag:
-    def __init__(self, geom, frag, ptx_elt_type):
+    def __init__(self, geom, frag, ptx_elt_type, is_mma_sparse=False):
         self.geom = geom
         self.frag = frag
         self.mma_type = MMAType(ptx_elt_type)
@@ -75,12 +84,68 @@ class MMAFrag:
             "m16n8k16:b:s8": 1,
             "m16n8k16:c:s32": 4,
             "m16n8k16:d:s32": 4,
-            "m16n8k32:a:u8": 4,
-            "m16n8k32:a:s8": 4,
+            "m16n8k32:a:u8": 2 if is_mma_sparse else 4,
+            "m16n8k32:a:s8": 2 if is_mma_sparse else 4,
             "m16n8k32:b:u8": 2,
             "m16n8k32:b:s8": 2,
             "m16n8k32:c:s32": 4,
             "m16n8k32:d:s32": 4,
+            # e4m3/e5m2/e3m2/e2m3/e2m1 -> f16/f32 @ m16n8k16/m16n8k32
+            "m16n8k16:a:e4m3": 2,
+            "m16n8k16:a:e5m2": 2,
+            "m16n8k32:a:e4m3": 4,
+            "m16n8k32:a:e5m2": 4,
+            "m16n8k32:a:e3m2": 4,
+            "m16n8k32:a:e2m3": 4,
+            "m16n8k32:a:e2m1": 4,
+            "m16n8k16:b:e4m3": 1,
+            "m16n8k16:b:e5m2": 1,
+            "m16n8k32:b:e4m3": 2,
+            "m16n8k32:b:e5m2": 2,
+            "m16n8k32:b:e3m2": 2,
+            "m16n8k32:b:e2m3": 2,
+            "m16n8k32:b:e2m1": 2,
+            # mma sp
+            "m16n8k32:a:bf16": 4,
+            "m16n8k32:a:f16": 4,
+            "m16n8k32:b:bf16": 4,
+            "m16n8k32:b:f16": 4,
+            "m16n8k32:c:f16": 2,
+            "m16n8k32:c:f32": 4,
+            "m16n8k32:d:f16": 2,
+            "m16n8k32:d:f32": 4,
+            "m16n8k16:a:tf32": 4,
+            "m16n8k16:b:tf32": 4,
+            "m16n8k16:c:tf32": 4,
+            "m16n8k16:d:tf32": 4,
+            "m16n8k64:a:u8": 4,
+            "m16n8k64:a:s8": 4,
+            "m16n8k64:a:e4m3": 4,
+            "m16n8k64:a:e5m2": 4,
+            "m16n8k64:a:e3m2": 4,
+            "m16n8k64:a:e2m3": 4,
+            "m16n8k64:a:e2m1": 4,
+            "m16n8k64:b:u8": 4,
+            "m16n8k64:b:s8": 4,
+            "m16n8k64:b:e4m3": 4,
+            "m16n8k64:b:e5m2": 4,
+            "m16n8k64:b:e3m2": 4,
+            "m16n8k64:b:e2m3": 4,
+            "m16n8k64:b:e2m1": 4 if is_mma_sparse else 2,
+            "m16n8k64:c:f16": 2,
+            "m16n8k64:c:f32": 4,
+            "m16n8k64:d:f16": 2,
+            "m16n8k64:d:f32": 4,
+            "m16n8k128:a:u4": 4,
+            "m16n8k128:a:s4": 4,
+            "m16n8k128:a:e2m1": 4,
+            "m16n8k128:b:u4": 4,
+            "m16n8k128:b:s4": 4,
+            "m16n8k128:b:e2m1": 4,
+            "m16n8k128:c:s32": 4,
+            "m16n8k128:c:f32": 4,
+            "m16n8k128:d:s32": 4,
+            "m16n8k128:d:f32": 4,
             # u4/s4 -> s32 @ m8n8k32 (u4/s4)
             "m8n8k32:a:u4": 1,
             "m8n8k32:a:s4": 1,
@@ -94,8 +159,8 @@ class MMAFrag:
             "m16n8k32:b:s4": 1,
             "m16n8k32:c:s32": 4,
             "m16n8k32:d:s32": 4,
-            "m16n8k64:a:u4": 4,
-            "m16n8k64:a:s4": 4,
+            "m16n8k64:a:u4": 2 if is_mma_sparse else 4,
+            "m16n8k64:a:s4": 2 if is_mma_sparse else 4,
             "m16n8k64:b:u4": 2,
             "m16n8k64:b:s4": 2,
             "m16n8k64:c:s32": 4,
@@ -120,7 +185,7 @@ class MMAFrag:
             "m8n32k16:b:bf16": 8,
             "m32n8k16:a:bf16": 8,
             "m32n8k16:b:bf16": 2,
-            "m16n8k16:a:bf16": 4,
+            "m16n8k16:a:bf16": 2 if is_mma_sparse else 4,
             "m16n8k16:b:bf16": 2,
             "m16n8k16:c:f32": 4,
             "m16n8k16:d:f32": 4,
@@ -132,6 +197,18 @@ class MMAFrag:
             "m8n8k4:b:f64": 1,
             "m8n8k4:c:f64": 2,
             "m8n8k4:d:f64": 2,
+            "m16n8k4:a:f64": 2,
+            "m16n8k4:b:f64": 1,
+            "m16n8k4:c:f64": 4,
+            "m16n8k4:d:f64": 4,
+            "m16n8k8:a:f64": 4,
+            "m16n8k8:b:f64": 2,
+            "m16n8k8:c:f64": 4,
+            "m16n8k8:d:f64": 4,
+            "m16n8k16:a:f64": 8,
+            "m16n8k16:b:f64": 4,
+            "m16n8k16:c:f64": 4,
+            "m16n8k16:d:f64": 4,
             # tf32 -> s32 @ m16n16k8
             "m16n16k8:a:tf32": 4,
             "m16n16k8:b:tf32": 4,
@@ -139,7 +216,7 @@ class MMAFrag:
             "m16n8k4:b:tf32": 1,
             "m16n8k4:c:f32": 4,
             "m16n8k4:d:f32": 4,
-            "m16n8k8:a:tf32": 4,
+            "m16n8k8:a:tf32": 2 if is_mma_sparse else 4,
             "m16n8k8:b:tf32": 2,
             "m16n8k8:c:f32": 4,
             "m16n8k8:d:f32": 4,
@@ -151,7 +228,7 @@ class MMAFrag:
             "m16n8k8:d:f16": 2,
             "m16n8k8:c:f32": 4,
             "m16n8k8:d:f32": 4,
-            "m16n8k16:a:f16": 4,
+            "m16n8k16:a:f16": 2 if is_mma_sparse else 4,
             "m16n8k16:b:f16": 2,
             "m16n8k16:c:f16": 2,
             "m16n8k16:d:f16": 2,
@@ -161,6 +238,25 @@ class MMAFrag:
             "m8n8:x1:b16": 1,
             "m8n8:x2:b16": 2,
             "m8n8:x4:b16": 4,
+            "m16n16:x1:b8": 2,
+            "m16n16:x2:b8": 4,
+            "m16n16:x1:b8x16.b6x16_p32": 2,
+            "m16n16:x2:b8x16.b6x16_p32": 4,
+            "m16n16:x1:b8x16.b4x16_p64": 2,
+            "m16n16:x2:b8x16.b4x16_p64": 4,
+            "m8n16:x1:b8x16.b6x16_p32": 1,
+            "m8n16:x2:b8x16.b6x16_p32": 2,
+            "m8n16:x4:b8x16.b6x16_p32": 4,
+            "m8n16:x1:b8x16.b4x16_p64": 1,
+            "m8n16:x2:b8x16.b4x16_p64": 2,
+            "m8n16:x4:b8x16.b4x16_p64": 4,
+            # stmatrix
+            "m8n8:x1:b16": 1,
+            "m8n8:x2:b16": 2,
+            "m8n8:x4:b16": 4,
+            "m16n8:x1:b8": 1,
+            "m16n8:x2:b8": 2,
+            "m16n8:x4:b8": 4,
         }.get(
             "%s:%s:%s" % (geom, frag, ptx_elt_type),
             {
@@ -195,7 +291,7 @@ class MMAOp:
         return "{A:%s, B:%s, C:%s, D:%s}" % (self.a, self.b, self.c, self.d)
 
 
-def make_mma_ops(geoms, types_a, types_b, types_c, types_d):
+def make_mma_ops(geoms, types_a, types_b, types_c, types_d, is_mma_sparse=False):
     ops = []
     for geom, type_a, type_c in product(geoms, types_a, types_c):
         for type_b, type_d in product(
@@ -203,10 +299,10 @@ def make_mma_ops(geoms, types_a, types_b, types_c, types_d):
         ):
             ops.append(
                 MMAOp(
-                    MMAFrag(geom, "a", type_a),
-                    MMAFrag(geom, "b", type_b),
-                    MMAFrag(geom, "c", type_c),
-                    MMAFrag(geom, "d", type_d),
+                    MMAFrag(geom, "a", type_a, is_mma_sparse),
+                    MMAFrag(geom, "b", type_b, is_mma_sparse),
+                    MMAFrag(geom, "c", type_c, is_mma_sparse),
+                    MMAFrag(geom, "d", type_d, is_mma_sparse),
                 )
             )
     return ops
@@ -220,6 +316,13 @@ def make_ldst_ops(geoms, frags, types):
 
 
 def make_ldmatrix_ops(geoms, frags, types):
+    return [
+        MMAFrag(geom, frag, ptx_type)
+        for (geom, frag, ptx_type) in product(geoms, frags, types)
+    ]
+
+
+def make_stmatrix_ops(geoms, frags, types):
     return [
         MMAFrag(geom, frag, ptx_type)
         for (geom, frag, ptx_type) in product(geoms, frags, types)
@@ -248,7 +351,9 @@ def get_wmma_ops():
 
 def get_mma_ops():
     return (
-        make_mma_ops(["m8n8k4"], ["f64"], [], ["f64"], [])
+        make_mma_ops(
+            ["m8n8k4", "m16n8k4", "m16n8k8", "m16n8k16"], ["f64"], [], ["f64"], []
+        )
         + make_mma_ops(["m16n8k4", "m16n8k8"], ["tf32"], [], ["f32"], [])
         + make_mma_ops(["m16n8k16", "m16n8k8"], ["bf16"], [], ["f32"], [])
         + make_mma_ops(
@@ -265,6 +370,20 @@ def get_mma_ops():
             ["m8n8k32", "m16n8k32", "m16n8k64"], ["s4", "u4"], ["s4", "u4"], ["s32"], []
         )
         + make_mma_ops(["m8n8k128", "m16n8k128", "m16n8k256"], ["b1"], [], ["s32"], [])
+        + make_mma_ops(
+            ["m16n8k16"],
+            ["e4m3", "e5m2"],
+            ["e4m3", "e5m2"],
+            ["f16", "f32"],
+            ["f16", "f32"],
+        )
+        + make_mma_ops(
+            ["m16n8k32"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["f16", "f32"],
+            ["f16", "f32"],
+        )
     )
 
 
@@ -289,7 +408,21 @@ def get_ldst_ops(kind):
 
 
 def get_ldmatrix_ops():
-    return make_ldmatrix_ops(["m8n8"], ["x1", "x2", "x4"], ["b16"])
+    return (
+        make_ldmatrix_ops(["m8n8"], ["x1", "x2", "x4"], ["b16"])
+        + make_ldmatrix_ops(
+            ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]
+        )
+        + make_ldmatrix_ops(
+            ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]
+        )
+    )
+
+
+def get_stmatrix_ops():
+    return make_stmatrix_ops(["m8n8"], ["x1", "x2", "x4"], ["b16"]) + make_stmatrix_ops(
+        ["m16n8"], ["x1", "x2", "x4"], ["b8"]
+    )
 
 
 def is_wmma_geom_supported(geom):
@@ -330,6 +463,36 @@ def is_mma_geom_supported(geom):
 def is_ldmatrix_geom_supported(geom):
     if geom in ["m8n8"]:
         return ptx_version >= 65 and gpu_arch >= 75
+    elif geom in ["m16n16"]:
+        return ptx_version >= 86 and gpu_arch >= 100 and aa
+    elif geom in ["m8n16"]:
+        return ptx_version >= 86 and gpu_arch >= 100 and aa
+    assert False  # Unexpected geometry.
+
+
+def is_stmatrix_geom_supported(geom):
+    if geom in ["m8n8"]:
+        return ptx_version >= 78 and gpu_arch >= 90
+    elif geom in ["m16n8"]:
+        return ptx_version >= 86 and gpu_arch >= 100 and aa
+    assert False  # Unexpected geometry.
+
+
+def is_ldmatrix_trans_supported(geom, trans):
+    if geom in ["m8n8"]:
+        return True
+    elif geom in ["m16n16"]:
+        return trans == ".trans"
+    elif geom in ["m8n16"]:
+        return trans == ""
+    assert False  # Unexpected geometry.
+
+
+def is_stmatrix_trans_supported(geom, trans):
+    if geom in ["m8n8"]:
+        return True
+    elif geom in ["m16n8"]:
+        return trans == ".trans"
     assert False  # Unexpected geometry.
 
 
@@ -342,6 +505,10 @@ def is_type_supported(ptx_type):
         return ptx_version >= 65 and gpu_arch >= 75
     if ptx_type in ["bf16", "tf32", "f64"]:
         return ptx_version >= 70
+    if ptx_type in ["e4m3", "e5m2"]:
+        return ptx_version >= 84 and gpu_arch >= 89
+    if ptx_type in ["e3m2", "e2m3", "e2m1"]:
+        return ptx_version >= 87 and gpu_arch >= 120 and aa
     return ptx_version >= 60 and gpu_arch >= 70
 
 
@@ -368,13 +535,13 @@ def is_wmma_variant_supported(op, layout_a, layout_b, rnd, satf):
     return True
 
 
-def is_mma_variant_supported(op, layout_a, layout_b, satf):
+def is_mma_variant_supported(op, layout_a, layout_b, kind, satf):
     if not (
         is_type_supported(op.a.mma_type.ptx_type) and is_mma_geom_supported(op.a.geom)
     ):
         return False
 
-    if satf and not op.a.mma_type.ptx_type in ["s8", "u8", "s4", "u4"]:
+    if satf and op.a.mma_type.ptx_type not in ["s8", "u8", "s4", "u4"]:
         return False
 
     # If the type of C is f32 then so must the type of D
@@ -392,13 +559,53 @@ def is_mma_variant_supported(op, layout_a, layout_b, satf):
     ):
         return False
 
+    if (
+        op.a.geom != "m8n8k4"
+        and op.a.mma_type.ptx_type == "f64"
+        and (ptx_version < 78 or gpu_arch < 90)
+    ):
+        return False
+
     # C and D type must be the same
-    if op.a.geom == "m16n8k16" and op.c.mma_type.ptx_type != op.d.mma_type.ptx_type:
+    if (
+        op.a.geom in ["m16n8k16", "m16n8k32"]
+        and op.c.mma_type.ptx_type != op.d.mma_type.ptx_type
+    ):
+        return False
+
+    if (
+        op.a.geom in ["m16n8k16", "m16n8k32"]
+        and any(
+            x in ["e4m3", "e5m2"]
+            for x in (op.a.mma_type.ptx_type, op.b.mma_type.ptx_type)
+        )
+        and ptx_version < 87
+    ):
+        return False
+
+    if kind != "" and not (ptx_version >= 87 and gpu_arch >= 120 and aa):
+        return False
+
+    if kind != "" and (
+        op.a.geom != "m16n8k32"
+        or op.a.mma_type.ptx_type not in ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"]
+    ):
+        return False
+
+    if (
+        kind == ""
+        and op.a.geom in ["m16n8k16", "m16n8k32"]
+        and any(
+            x in ["e3m2", "e2m3", "e2m1"]
+            for x in (op.a.mma_type.ptx_type, op.b.mma_type.ptx_type)
+        )
+    ):
         return False
 
     # Require row/col layout for all MMA except m8n8k4 on FP16
     if not (op.a.geom == "m8n8k4" and op.a.mma_type.ptx_type == "f16"):
         return layout_a == "row" and layout_b == "col"
+
     return True
 
 
@@ -417,10 +624,21 @@ def is_ldst_variant_supported(frag, layout):
     return True
 
 
-def is_ldmatrix_variant_supported(frag):
+def is_ldmatrix_variant_supported(frag, trans):
     if not (
         is_type_supported(frag.mma_type.ptx_type)
         and is_ldmatrix_geom_supported(frag.geom)
+        and is_ldmatrix_trans_supported(frag.geom, trans)
+    ):
+        return False
+    return frag.frag in ["x1", "x2", "x4"]
+
+
+def is_stmatrix_variant_supported(frag, trans):
+    if not (
+        is_type_supported(frag.mma_type.ptx_type)
+        and is_stmatrix_geom_supported(frag.geom)
+        and is_stmatrix_trans_supported(frag.geom, trans)
     ):
         return False
     return frag.frag in ["x1", "x2", "x4"]
@@ -653,7 +871,7 @@ define ${ret_ty} @test_${function}_o(i8 ${as}* %src) {
         ["", ".shared"],
         ["", ".trans"],
     ):
-        if not is_ldmatrix_variant_supported(frag):
+        if not is_ldmatrix_variant_supported(frag, trans):
             continue
 
         params = {
@@ -680,8 +898,75 @@ define ${ret_ty} @test_${function}_o(i8 ${as}* %src) {
     return generated_items
 
 
+def gen_stmatrix_tests():
+    stmatrix_template = """
+declare void @${intrinsic}(i8 ${as}* %dst, ${args});
+
+; CHECK-LABEL: .func {{.*}}test_${function}(
+define void @test_${function}(i8 ${as}* %dst, ${args}) {
+; CHECK: ${instruction} {{.*}}[%rd{{[0-9+]}}]
+; CHECK: {${check_args}}
+  call void @${intrinsic}(i8${as}* %dst, ${args});
+  ret void
+}
+
+; CHECK-LABEL: .func{{.*}}test_${function}_o(
+define void @test_${function}_o(i8 ${as}* %dst, ${args}) {
+; CHECK: ${instruction} {{.*}}[%rd{{[0-9+]}}+128],
+; CHECK: {${check_args}}
+  %dst1 = getelementptr i8, i8 ${as}* %dst, i32 128;
+  call void @${intrinsic}(i8 ${as}* %dst1, ${args});
+  ret void
+}
+"""
+    intrinsic_template = (
+        "llvm.nvvm.stmatrix.sync.aligned.${geom}.${frag}${trans}.${itype}.${pspace}"
+    )
+    instruction_template = (
+        "stmatrix.sync.aligned.${geom}.${frag}${trans}${space}.${itype}"
+    )
+    generated_items = []
+
+    for frag, space, trans in product(
+        get_stmatrix_ops(),
+        ["", ".shared"],
+        ["", ".trans"],
+    ):
+        if not is_stmatrix_variant_supported(frag, trans):
+            continue
+
+        params = {
+            "frag": frag.frag,
+            "space": space,
+            "trans": trans,
+            "itype": frag.mma_type.ptx_type,
+            "pspace": get_pspace(space),
+            "as": "addrspace(%d)" % get_aspace(space),
+            "geom": frag.geom,
+        }
+
+        test_params = params
+        test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+        test_params["function"] = test_params["intrinsic"].replace(".", "_")
+        test_params["instruction"] = Template(instruction_template).substitute(params)
+        test_params["args"] = make_wmma_slice_args(frag)
+        test_params["check_args"] = check_pattern(frag)
+
+        print(Template(stmatrix_template).substitute(test_params))
+        generated_items.append((test_params["intrinsic"], test_params["instruction"]))
+
+    return generated_items
+
 def mma_signature(op):
-    if op.a.mma_type.ptx_type == "f16":
+    if op.a.mma_type.ptx_type in ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"]:
+        # FP8/F8F6F4 ops identified by inputs, accumulator & result types.
+        return "%s.%s.%s.%s" % (
+            op.d.mma_type.ptx_type,
+            op.a.mma_type.ptx_type,
+            op.b.mma_type.ptx_type,
+            op.c.mma_type.ptx_type,
+        )
+    elif op.a.mma_type.ptx_type == "f16":
         # FP16 ops identified by accumulator & result type.
         return "%s.%s" % (op.d.mma_type.ptx_type, op.c.mma_type.ptx_type)
     elif op.a.mma_type.ptx_type != op.b.mma_type.ptx_type:
@@ -735,7 +1020,12 @@ define ${ret_ty} @test_${function}(
 """
 
     test_params = params
-    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["intrinsic"] = (
+        Template(intrinsic_template)
+        .substitute(params)
+        .replace("::", ".")
+        .replace("_", ".")
+    )
     test_params["function"] = test_params["intrinsic"].replace(".", "_")
     test_params["instruction"] = Template(instruction_template).substitute(params)
     test_params["ret_ty"] = make_wmma_ld_ret_ty(op.d)
@@ -800,16 +1090,20 @@ def gen_wmma_mma_tests():
 
 
 def gen_mma_tests():
-    mma_intrinsic_template = "llvm.nvvm.mma${b1op}.${geom}.${alayout}.${blayout}${satf}.${intrinsic_signature}"
-    mma_instruction_template = "mma.sync${aligned}.${geom}.${alayout}.${blayout}${satf}.${ptx_signature}${b1op}"
+    mma_intrinsic_template = "llvm.nvvm.mma${b1op}.${geom}.${alayout}.${blayout}${kind}${satf}.${intrinsic_signature}"
+    mma_instruction_template = "mma.sync${aligned}.${geom}.${alayout}.${blayout}${kind}${satf}.${ptx_signature}${b1op}"
 
     generated_items = []
 
-    for op, alayout, blayout, satf in product(
-        get_mma_ops(), ["row", "col"], ["row", "col"], [".satfinite", ""]
+    for op, alayout, blayout, kind, satf in product(
+        get_mma_ops(),
+        ["row", "col"],
+        ["row", "col"],
+        ["", ".kind::f8f6f4"],
+        [".satfinite", ""],
     ):
 
-        if not is_mma_variant_supported(op, alayout, blayout, satf):
+        if not is_mma_variant_supported(op, alayout, blayout, kind, satf):
             continue
 
         for b1op in get_b1_ops(op.a.mma_type.ptx_type):
@@ -822,6 +1116,7 @@ def gen_mma_tests():
                 "satf": satf,
                 "geom": op.a.geom,
                 "b1op": b1op,
+                "kind": kind,
             }
 
             intrinsic_template = mma_intrinsic_template
@@ -832,6 +1127,560 @@ def gen_mma_tests():
                     params, op, intrinsic_template, instruction_template
                 )
             )
+
+    return generated_items
+
+
+def get_mma_block_scale_ops():
+    return make_mma_ops(["m16n8k64"], ["e2m1"], [], ["f32"], []) + make_mma_ops(
+        ["m16n8k32"],
+        ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+        ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+        ["f32"],
+        [],
+    )
+
+
+def is_mma_block_scale_geom_supported(geom):
+    # geometries for FP.
+    if geom in [
+        "m16n8k32",
+        "m16n8k64",
+    ]:
+        return True
+    raise ValueError(f"Unexpected MMA block scale geometry: {geom}")
+
+
+def is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
+    if not (
+        is_type_supported(op.a.mma_type.ptx_type)
+        and is_mma_block_scale_geom_supported(op.a.geom)
+    ):
+        return False
+
+    if (
+        op.a.geom == "m16n8k64"
+        and kind == "mxf4"
+        and stype == "ue8m0"
+        and scale_vec_size in ["", ".scale_vec::2X"]
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k64"
+        and kind == "mxf4nvf4"
+        and stype == "ue8m0"
+        and scale_vec_size == ".scale_vec::2X"
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k64"
+        and kind == "mxf4nvf4"
+        and stype == "ue4m3"
+        and scale_vec_size == ".scale_vec::4X"
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k32"
+        and kind == "mxf8f6f4"
+        and stype == "ue8m0"
+        and scale_vec_size in ["", ".scale_vec::1X"]
+    ):
+        return True
+
+    return False
+
+
+def common_mma_block_scale_test_gen(
+    params, op, intrinsic_template, instruction_template
+):
+    mma_block_scale_template = """
+declare ${ret_ty} @${intrinsic}(
+        ${args});
+
+; CHECK-LABEL: .func {{.*}}test_${function}(
+define ${ret_ty} @test_${function}(
+        ${args}) {
+; CHECK: ${instruction}
+; CHECK-NEXT: ${check_d}
+; CHECK-NEXT: ${check_a}
+; CHECK-NEXT: ${check_b}
+; CHECK-NEXT: ${check_c}
+; CHECK-NEXT: ${check_scale_a_data}
+; CHECK-NEXT: ${check_byte_id_a}
+; CHECK-NEXT: ${check_thread_id_a}
+; CHECK-NEXT: ${check_scale_b_data}
+; CHECK-NEXT: ${check_byte_id_b}
+; CHECK-NEXT: ${check_thread_id_b}
+  %r = call ${ret_ty} @${intrinsic}(
+        ${args});
+  ret ${ret_ty} %r;
+}
+"""
+
+    test_params = params
+    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["function"] = test_params["intrinsic"].replace(".", "_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
+    test_params["ret_ty"] = make_wmma_ld_ret_ty(op.d)
+    test_params["check_a"] = check_pattern(op.a)
+    test_params["check_b"] = check_pattern(op.b)
+    test_params["check_c"] = check_pattern(op.c)
+    test_params["check_d"] = check_pattern(op.d)
+    test_params["check_scale_a_data"] = "{{%r[0-9]+}}"
+    test_params["check_byte_id_a"] = "{{%r[0-9]+}}"
+    test_params["check_thread_id_a"] = "{{%r[0-9]+}}"
+    test_params["check_scale_b_data"] = "{{%r[0-9]+}}"
+    test_params["check_byte_id_b"] = "{{%r[0-9]+}}"
+    test_params["check_thread_id_b"] = "{{%r[0-9]+}}"
+    args = ",\n        ".join(
+        list(make_wmma_slice_args(frag) for frag in (op.a, op.b, op.c))
+        + ["i32 %scale_a_data", "i16 %byte_id_a, i16 %thread_id_a"]
+        + ["i32 %scale_b_data", "i16 %byte_id_b, i16 %thread_id_b"]
+    )
+    test_params["args"] = args
+    print(Template(mma_block_scale_template).substitute(test_params))
+    return (test_params["intrinsic"], test_params["instruction"])
+
+
+def gen_mma_block_scale_tests():
+    if not (ptx_version >= 88 and gpu_arch >= 120 and aa):
+        return []
+
+    mma_block_scale_intrinsic_template = "llvm.nvvm.mma.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
+    mma_block_scale_instruction_template = "mma.sync.aligned.${geom}.row.col.kind::${kind}.block_scale${scale_vec_size}.${ptx_signature}.${stype}"
+
+    generated_items = []
+
+    for op, kind, scale_vec_size, stype in product(
+        get_mma_block_scale_ops(),
+        ["mxf4", "mxf4nvf4", "mxf8f6f4"],
+        ["", ".scale_vec::1X", ".scale_vec::2X", ".scale_vec::4X"],
+        ["ue8m0", "ue4m3"],
+    ):
+        if not is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
+            continue
+
+        params = {
+            "intrinsic_signature": mma_signature(op),
+            "ptx_signature": mma_ptx_signature(op),
+            "geom": op.a.geom,
+            "kind": kind,
+            "scale_vec_size": scale_vec_size,
+            "scale": scale_vec_size.replace("_vec::", ".").lower(),
+            "stype": stype,
+        }
+
+        intrinsic_template = mma_block_scale_intrinsic_template
+        instruction_template = mma_block_scale_instruction_template
+
+        generated_items.append(
+            common_mma_block_scale_test_gen(
+                params, op, intrinsic_template, instruction_template
+            )
+        )
+
+    return generated_items
+
+
+def get_mma_sp_ops():
+    return (
+        make_mma_ops(["m16n8k16", "m16n8k32"], ["bf16"], [], ["f32"], [], True)
+        + make_mma_ops(["m16n8k8", "m16n8k16"], ["tf32"], [], ["f32"], [], True)
+        + make_mma_ops(
+            ["m16n8k16", "m16n8k32"],
+            ["f16"],
+            [],
+            ["f16", "f32"],
+            ["f16", "f32"],
+            True,
+        )
+        + make_mma_ops(
+            ["m16n8k64", "m16n8k128"], ["s4", "u4"], ["s4", "u4"], ["s32"], [], True
+        )
+        + make_mma_ops(
+            ["m16n8k32", "m16n8k64"], ["s8", "u8"], ["s8", "u8"], ["s32"], [], True
+        )
+        + make_mma_ops(
+            ["m16n8k64"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["f16", "f32"],
+            ["f16", "f32"],
+            True,
+        )
+    )
+
+
+def is_mma_sp_geom_supported(geom):
+    # geometries for FP and ints.
+    if geom in [
+        "m16n8k16",
+        "m16n8k32",
+        "m16n8k8",
+        "m16n8k64",
+        "m16n8k128",
+    ]:
+        return ptx_version >= 71
+    raise ValueError(f"Unexpected sparse MMA geometry: {geom}")
+
+
+def is_mma_sp_variant_supported(op, metadata, kind, satf):
+    if metadata != "sp" and (ptx_version < 85 or gpu_arch < 80):
+        return False
+
+    if kind != "" and (ptx_version < 87 or gpu_arch < 120 or not aa):
+        return False
+
+    if not (
+        is_type_supported(op.a.mma_type.ptx_type)
+        and is_mma_sp_geom_supported(op.a.geom)
+    ):
+        return False
+
+    is_int = op.a.mma_type.ptx_type in ["s8", "u8", "s4", "u4"]
+
+    if satf and not is_int:
+        return False
+
+    # A and B type must be the same
+    if (
+        op.a.mma_type.ptx_type in ["f16", "bf16", "tf32"]
+        and op.a.mma_type.ptx_type != op.b.mma_type.ptx_type
+    ):
+        return False
+
+    # C and D type must be the same for m16n8k16/m16n8k32/m16n8k64
+    if (
+        op.a.geom in ["m16n8k16", "m16n8k32", "m16n8k64"]
+        and op.c.mma_type.ptx_type != op.d.mma_type.ptx_type
+    ):
+        return False
+
+    if kind == "" and (
+        op.a.mma_type.ptx_type in ["e3m2", "e2m3", "e2m1"]
+        or op.b.mma_type.ptx_type in ["e3m2", "e2m3", "e2m1"]
+    ):
+        return False
+
+    if (
+        kind == ""
+        and op.a.geom == "m16n8k64"
+        and (op.c.mma_type.ptx_type == "f16" or op.d.mma_type.ptx_type == "f16")
+    ):
+        return False
+
+    if kind != "" and (metadata == "sp" or op.a.geom != "m16n8k64" or is_int):
+        return False
+
+    return True
+
+
+def sp_selector_gen(op, block_scale=False):
+    if block_scale:
+        # PTX ISA 9.0 has the sparsity selector equal to 0 only
+        return range(1)
+
+    # (geom, type) -> allowed selector range
+    range_01 = {
+        ("m16n8k32", "bf16"),
+        ("m16n8k32", "f16"),
+        ("m16n8k16", "tf32"),
+        ("m16n8k32", "u8"),
+        ("m16n8k32", "s8"),
+        ("m16n8k64", "u4"),
+        ("m16n8k64", "s4"),
+    }
+
+    if (op.a.geom, op.a.mma_type.ptx_type) in range_01:
+        return range(2)
+    if op.a.geom == "m16n8k64" and op.a.mma_type.ptx_type in [
+        "u8",
+        "s8",
+        "e4m3",
+        "e5m2",
+        "e3m2",
+        "e2m3",
+        "e2m1",
+    ]:
+        return range(1)
+    if op.a.geom == "m16n8k128" and op.a.mma_type.ptx_type in [
+        "u4",
+        "s4",
+    ]:
+        return range(1)
+    return range(4)
+
+
+def common_mma_sp_test_gen(params, op, intrinsic_template, instruction_template):
+    mma_sp_decl_template = """
+declare ${ret_ty} @${intrinsic}(
+        ${args});
+"""
+
+    mma_sp_test_template = """
+; CHECK-LABEL: .func {{.*}}test_${function}_${selector}(
+define ${ret_ty} @test_${function}_${selector}(
+        ${args}) {
+; CHECK: ${instruction}
+; CHECK-NEXT: ${check_d}
+; CHECK-NEXT: ${check_a}
+; CHECK-NEXT: ${check_b}
+; CHECK-NEXT: ${check_c}
+; CHECK-NEXT: ${check_metadata}
+; CHECK-NEXT: ${check_selector}
+  %r = call ${ret_ty} @${intrinsic}(
+        ${call_args});
+  ret ${ret_ty} %r;
+}
+"""
+
+    test_params = params
+    test_params["intrinsic"] = (
+        Template(intrinsic_template)
+        .substitute(params)
+        .replace("::", ".")
+        .replace("_", ".")
+    )
+    test_params["function"] = test_params["intrinsic"].replace(".", "_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
+    test_params["ret_ty"] = make_wmma_ld_ret_ty(op.d)
+    test_params["check_a"] = check_pattern(op.a)
+    test_params["check_b"] = check_pattern(op.b)
+    test_params["check_c"] = check_pattern(op.c)
+    test_params["check_d"] = check_pattern(op.d)
+    test_params["check_metadata"] = "{{%r[0-9]+}}"
+    args = ",\n        ".join(
+        list(make_wmma_slice_args(frag) for frag in (op.a, op.b, op.c))
+        + ["i32 %metadata", "i32 %selector"]
+    )
+    test_params["args"] = args
+
+    print(Template(mma_sp_decl_template).substitute(test_params))
+
+    for selector in [str(r) for r in sp_selector_gen(op)]:
+        test_params["selector"] = selector
+        test_params["check_selector"] = "{{" + test_params["selector"] + "}}"
+        test_params["call_args"] = test_params["args"].replace(
+            "%selector", test_params["selector"]
+        )
+
+        print(Template(mma_sp_test_template).substitute(test_params))
+
+    return (test_params["intrinsic"], test_params["instruction"])
+
+
+def gen_mma_sp_tests():
+    if ptx_version < 71 or gpu_arch < 80:
+        return []
+
+    mma_sp_intrinsic_template = (
+        "llvm.nvvm.mma.${metadata}.${geom}.row.col${kind}${satf}.${intrinsic_signature}"
+    )
+    mma_sp_instruction_template = (
+        "mma.${metadata}.sync.aligned.${geom}.row.col${kind}${satf}.${ptx_signature}"
+    )
+
+    generated_items = []
+
+    for op, metadata, kind, satf in product(
+        get_mma_sp_ops(),
+        ["sp::ordered_metadata", "sp"],
+        ["", ".kind::f8f6f4"],
+        [".satfinite", ""],
+    ):
+        if not is_mma_sp_variant_supported(op, metadata, kind, satf):
+            continue
+
+        params = {
+            "intrinsic_signature": mma_signature(op),
+            "ptx_signature": mma_ptx_signature(op),
+            "satf": satf,
+            "geom": op.a.geom,
+            "metadata": metadata,
+            "kind": kind,
+        }
+
+        intrinsic_template = mma_sp_intrinsic_template
+        instruction_template = mma_sp_instruction_template
+
+        generated_items.append(
+            common_mma_sp_test_gen(params, op, intrinsic_template, instruction_template)
+        )
+
+    return generated_items
+
+
+def get_mma_sp_block_scale_ops():
+    return make_mma_ops(["m16n8k128"], ["e2m1"], [], ["f32"], [], True) + make_mma_ops(
+        ["m16n8k64"],
+        ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+        ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+        ["f32"],
+        [],
+        True,
+    )
+
+
+def is_mma_sp_block_scale_geom_supported(geom):
+    # geometries for FP.
+    if geom in [
+        "m16n8k64",
+        "m16n8k128",
+    ]:
+        return True
+    raise ValueError(f"Unexpected sparse MMA block scale geometry: {geom}")
+
+
+def is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
+    if not (
+        is_type_supported(op.a.mma_type.ptx_type)
+        and is_mma_sp_block_scale_geom_supported(op.a.geom)
+    ):
+        return False
+
+    if (
+        op.a.geom == "m16n8k128"
+        and kind == "mxf4"
+        and stype == "ue8m0"
+        and scale_vec_size in ["", ".scale_vec::2X"]
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k128"
+        and kind == "mxf4nvf4"
+        and stype == "ue8m0"
+        and scale_vec_size == ".scale_vec::2X"
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k128"
+        and kind == "mxf4nvf4"
+        and stype == "ue4m3"
+        and scale_vec_size == ".scale_vec::4X"
+    ):
+        return True
+
+    if (
+        op.a.geom == "m16n8k64"
+        and kind == "mxf8f6f4"
+        and stype == "ue8m0"
+        and scale_vec_size in ["", ".scale_vec::1X"]
+    ):
+        return True
+
+    return False
+
+
+def common_mma_sp_block_scale_test_gen(
+    params, op, intrinsic_template, instruction_template
+):
+    mma_sp_block_scale_decl_template = """
+declare ${ret_ty} @${intrinsic}(
+        ${args});
+"""
+
+    mma_sp_block_scale_test_template = """
+; CHECK-LABEL: .func {{.*}}test_${function}_${selector}(
+define ${ret_ty} @test_${function}_${selector}(
+        ${args}) {
+; CHECK: ${instruction}
+; CHECK-NEXT: ${check_d}
+; CHECK-NEXT: ${check_a}
+; CHECK-NEXT: ${check_b}
+; CHECK-NEXT: ${check_c}
+; CHECK-NEXT: ${check_metadata}
+; CHECK-NEXT: ${check_selector}
+; CHECK-NEXT: ${check_scale_a_data}
+; CHECK-NEXT: ${check_byte_id_a}
+; CHECK-NEXT: ${check_thread_id_a}
+; CHECK-NEXT: ${check_scale_b_data}
+; CHECK-NEXT: ${check_byte_id_b}
+; CHECK-NEXT: ${check_thread_id_b}
+  %r = call ${ret_ty} @${intrinsic}(
+        ${call_args});
+  ret ${ret_ty} %r;
+}
+"""
+
+    test_params = params
+    test_params["intrinsic"] = Template(intrinsic_template).substitute(params)
+    test_params["function"] = test_params["intrinsic"].replace(".", "_")
+    test_params["instruction"] = Template(instruction_template).substitute(params)
+    test_params["ret_ty"] = make_wmma_ld_ret_ty(op.d)
+    test_params["check_a"] = check_pattern(op.a)
+    test_params["check_b"] = check_pattern(op.b)
+    test_params["check_c"] = check_pattern(op.c)
+    test_params["check_d"] = check_pattern(op.d)
+    test_params["check_metadata"] = "{{%r[0-9]+}}"
+    test_params["check_scale_a_data"] = "{{%r[0-9]+}}"
+    test_params["check_byte_id_a"] = "{{%r[0-9]+}}"
+    test_params["check_thread_id_a"] = "{{%r[0-9]+}}"
+    test_params["check_scale_b_data"] = "{{%r[0-9]+}}"
+    test_params["check_byte_id_b"] = "{{%r[0-9]+}}"
+    test_params["check_thread_id_b"] = "{{%r[0-9]+}}"
+    args = ",\n        ".join(
+        list(make_wmma_slice_args(frag) for frag in (op.a, op.b, op.c))
+        + ["i32 %metadata", "i32 %selector"]
+        + ["i32 %scale_a_data", "i16 %byte_id_a, i16 %thread_id_a"]
+        + ["i32 %scale_b_data", "i16 %byte_id_b, i16 %thread_id_b"]
+    )
+    test_params["args"] = args
+
+    print(Template(mma_sp_block_scale_decl_template).substitute(test_params))
+
+    for selector in [str(r) for r in sp_selector_gen(op, True)]:
+        test_params["selector"] = selector
+        test_params["check_selector"] = "{{" + test_params["selector"] + "}}"
+        test_params["call_args"] = test_params["args"].replace(
+            "%selector", test_params["selector"]
+        )
+
+        print(Template(mma_sp_block_scale_test_template).substitute(test_params))
+
+    return (test_params["intrinsic"], test_params["instruction"])
+
+
+def gen_mma_sp_block_scale_tests():
+    if not (ptx_version >= 88 and gpu_arch >= 120 and aa):
+        return []
+
+    mma_sp_block_scale_intrinsic_template = "llvm.nvvm.mma.sp.ordered.metadata.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
+    mma_sp_block_scale_instruction_template = "mma.sp::ordered_metadata.sync.aligned.${geom}.row.col.kind::${kind}.block_scale${scale_vec_size}.${ptx_signature}.${stype}"
+
+    generated_items = []
+
+    for op, kind, scale_vec_size, stype in product(
+        get_mma_sp_block_scale_ops(),
+        ["mxf4", "mxf4nvf4", "mxf8f6f4"],
+        ["", ".scale_vec::1X", ".scale_vec::2X", ".scale_vec::4X"],
+        ["ue8m0", "ue4m3"],
+    ):
+        if not is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
+            continue
+
+        params = {
+            "intrinsic_signature": mma_signature(op),
+            "ptx_signature": mma_ptx_signature(op),
+            "geom": op.a.geom,
+            "kind": kind,
+            "scale_vec_size": scale_vec_size,
+            "scale": scale_vec_size.replace("_vec::", ".").lower(),
+            "stype": stype,
+        }
+
+        intrinsic_template = mma_sp_block_scale_intrinsic_template
+        instruction_template = mma_sp_block_scale_instruction_template
+
+        generated_items.append(
+            common_mma_sp_block_scale_test_gen(
+                params, op, intrinsic_template, instruction_template
+            )
+        )
 
     return generated_items
 
@@ -856,6 +1705,7 @@ def gen_check_unsupported_ops(items):
 ; NOALTFLOAT-NOT: .{{bf16|tf32}}
 ; NODOUBLE-NOT: .f64
 ; NOLDMATRIX-NOT: ldmatrix.sync.aligned
+; NOSTMATRIX-NOT: stmatrix.sync.aligned
 
 ; M16N16-DAG: m16n16k16.load.{{[ab].*}}.f16.p
 ; M16N16-DAG: m16n16k16.{{load|store}}.{{[cd].*\.(f16|f32)}}.p
@@ -944,6 +1794,39 @@ def gen_check_unsupported_ops(items):
 ; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x2.trans.shared.b16
 ; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x4.trans.shared.b16
 
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x1.trans.shared.b8
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x2.trans.shared.b8
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x1.trans.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x1.trans.b8x16.b4x16_p64
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x2.trans.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x2.trans.b8x16.b4x16_p64
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x1.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x1.b8x16.b4x16_p64
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.b8x16.b4x16_p64
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.b8x16.b4x16_p64
+
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x1.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x2.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x4.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x1.trans.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x2.trans.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x4.trans.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x1.shared.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x2.shared.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x4.shared.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x1.trans.shared.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x2.trans.shared.b16
+; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x4.trans.shared.b16
+
+; PTX86STMATRIX-DAG: stmatrix.sync.aligned.m16n8.x1.trans.b8
+; PTX86STMATRIX-DAG: stmatrix.sync.aligned.m16n8.x2.trans.b8
+; PTX86STMATRIX-DAG: stmatrix.sync.aligned.m16n8.x4.trans.b8
+; PTX86STMATRIX-DAG: stmatrix.sync.aligned.m16n8.x1.trans.shared.b8
+; PTX86STMATRIX-DAG: stmatrix.sync.aligned.m16n8.x2.trans.shared.b8
+; PTX86STMATRIX-DAG: stmatrix.sync.aligned.m16n8.x4.trans.shared.b8
+
 ; PTX71MMA-DAG: mma.m8n8k4.row.col.f64
 ; PTX71MMA-DAG: mma.m16n8k4.row.col.tf32
 ; PTX71MMA-DAG: mma.m16n8k8.row.col.tf32
@@ -989,21 +1872,28 @@ def gen_tests():
     items = gen_wmma_load_tests()
     items += gen_wmma_store_tests()
     items += gen_ldmatrix_tests()
+    items += gen_stmatrix_tests()
     items += gen_wmma_mma_tests()
     items += gen_mma_tests()
+    items += gen_mma_block_scale_tests()
+    items += gen_mma_sp_tests()
+    items += gen_mma_sp_block_scale_tests()
     gen_check_unsupported_ops(items)
 
 
 def main():
     global ptx_version
     global gpu_arch
+    global aa
     parser = argparse.ArgumentParser()
     parser.add_argument("--ptx", type=int, default=60)
     parser.add_argument("--gpu-arch", type=int, default=70)
+    parser.add_argument("--aa", action="store_true")
     args = parser.parse_args()
 
     ptx_version = args.ptx
     gpu_arch = args.gpu_arch
+    aa = args.aa
 
     gen_tests()
 

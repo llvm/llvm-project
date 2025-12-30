@@ -30,7 +30,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd "Workgroup" "Reduce" %[[ARG]] : f32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %[[ARG]] : f32 -> f32
     %reduced = gpu.all_reduce add %arg {} : (f32) -> (f32)
     gpu.return
   }
@@ -70,7 +70,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformIAdd "Workgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformIAdd <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
     %reduced = gpu.all_reduce add %arg {} : (i32) -> (i32)
     gpu.return
   }
@@ -110,7 +110,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd "Subgroup" "Reduce" %[[ARG]] : f32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Subgroup> <Reduce> %[[ARG]] : f32 -> f32
     %reduced = gpu.subgroup_reduce add %arg : (f32) -> (f32)
     gpu.return
   }
@@ -150,7 +150,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformIAdd "Subgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
     %reduced = gpu.subgroup_reduce add %arg : (i32) -> (i32)
     gpu.return
   }
@@ -190,7 +190,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMul "Workgroup" "Reduce" %[[ARG]] : f32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFMul <Workgroup> <Reduce> %[[ARG]] : f32 -> f32
     %reduced = gpu.all_reduce mul %arg {} : (f32) -> (f32)
     gpu.return
   }
@@ -230,7 +230,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformIMul "Workgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformIMul <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
     %reduced = gpu.all_reduce mul %arg {} : (i32) -> (i32)
     gpu.return
   }
@@ -270,7 +270,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMul "Subgroup" "Reduce" %[[ARG]] : f32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFMul <Subgroup> <Reduce> %[[ARG]] : f32 -> f32
     %reduced = gpu.subgroup_reduce mul %arg : (f32) -> (f32)
     gpu.return
   }
@@ -310,7 +310,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformIMul "Subgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformIMul <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
     %reduced = gpu.subgroup_reduce mul %arg : (i32) -> (i32)
     gpu.return
   }
@@ -350,7 +350,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMin "Workgroup" "Reduce" %[[ARG]] : f32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFMin <Workgroup> <Reduce> %[[ARG]] : f32 -> f32
     %reduced = gpu.all_reduce minnumf %arg {} : (f32) -> (f32)
     gpu.return
   }
@@ -392,7 +392,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformUMin "Workgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformUMin <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
     %r0 = gpu.all_reduce minsi %arg {} : (i32) -> (i32)
     %r1 = gpu.all_reduce minui %arg {} : (i32) -> (i32)
     gpu.return
@@ -433,7 +433,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMin "Subgroup" "Reduce" %[[ARG]] : f32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFMin <Subgroup> <Reduce> %[[ARG]] : f32 -> f32
     %reduced = gpu.subgroup_reduce minnumf %arg : (f32) -> (f32)
     gpu.return
   }
@@ -475,8 +475,8 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformSMin "Subgroup" "Reduce" %[[ARG]] : i32
-    // CHECK: %{{.*}} = spirv.GroupNonUniformUMin "Subgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformSMin <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformUMin <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
     %r0 = gpu.subgroup_reduce minsi %arg : (i32) -> (i32)
     %r1 = gpu.subgroup_reduce minui %arg : (i32) -> (i32)
     gpu.return
@@ -517,7 +517,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMax "Workgroup" "Reduce" %[[ARG]] : f32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %[[ARG]] : f32 -> f32
     %reduced = gpu.all_reduce maxnumf %arg {} : (f32) -> (f32)
     gpu.return
   }
@@ -559,8 +559,8 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformSMax "Workgroup" "Reduce" %[[ARG]] : i32
-    // CHECK: %{{.*}} = spirv.GroupNonUniformUMax "Workgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformSMax <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformUMax <Workgroup> <Reduce> %[[ARG]] : i32 -> i32
     %r0 = gpu.all_reduce maxsi %arg {} : (i32) -> (i32)
     %r1 = gpu.all_reduce maxui %arg {} : (i32) -> (i32)
     gpu.return
@@ -601,7 +601,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   gpu.func @test(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformFMax "Subgroup" "Reduce" %[[ARG]] : f32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFMax <Subgroup> <Reduce> %[[ARG]] : f32 -> f32
     %reduced = gpu.subgroup_reduce maxnumf %arg : (f32) -> (f32)
     gpu.return
   }
@@ -643,8 +643,8 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : i32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformSMax "Subgroup" "Reduce" %[[ARG]] : i32
-    // CHECK: %{{.*}} = spirv.GroupNonUniformUMax "Subgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformSMax <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformUMax <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
     %r0 = gpu.subgroup_reduce maxsi %arg : (i32) -> (i32)
     %r1 = gpu.subgroup_reduce maxui %arg : (i32) -> (i32)
     gpu.return
@@ -665,7 +665,7 @@ gpu.module @kernels {
   //  CHECK-SAME: (%[[ARG:.*]]: i32)
   gpu.func @test(%arg : vector<1xi32>) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformSMax "Subgroup" "Reduce" %[[ARG]] : i32
+    // CHECK: %{{.*}} = spirv.GroupNonUniformSMax <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
     %r0 = gpu.subgroup_reduce maxsi %arg : (vector<1xi32>) -> (vector<1xi32>)
     gpu.return
   }
@@ -788,4 +788,45 @@ gpu.module @kernels {
     gpu.return
   }
 }
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupUniformArithmeticKHR, GroupNonUniformClustered], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  // CHECK-LABEL:  spirv.func @test_subgroup_reduce_clustered
+  //  CHECK-SAME: (%[[ARG:.*]]: f32)
+  //  CHECK: %[[CLUSTER_SIZE:.*]] = spirv.Constant 8 : i32
+  gpu.func @test_subgroup_reduce_clustered(%arg : f32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Subgroup> <ClusteredReduce> %[[ARG]] cluster_size(%[[CLUSTER_SIZE]]) : f32, i32 -> f32
+    %reduced = gpu.subgroup_reduce add %arg cluster(size = 8) : (f32) -> (f32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+// Subgrop reduce with cluster stride > 1 is not yet supported.
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupUniformArithmeticKHR, GroupNonUniformClustered], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  gpu.func @test_invalid_subgroup_reduce_clustered_stride(%arg : f32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.subgroup_reduce'}}
+    %reduced = gpu.subgroup_reduce add %arg cluster(size = 8, stride = 2) : (f32) -> (f32)
+    gpu.return
+  }
+}
+
 }

@@ -123,9 +123,13 @@ const TargetRegisterClass *MipsInstructionSelector::getRegClassForTypeOnBank(
   const unsigned TySize = Ty.getSizeInBits();
 
   if (isRegInGprb(Reg, MRI)) {
-    assert((Ty.isScalar() || Ty.isPointer()) && TySize == 32 &&
+    assert((Ty.isScalar() || Ty.isPointer()) &&
+           (TySize == 32 || TySize == 64) &&
            "Register class not available for LLT, register bank combination");
-    return &Mips::GPR32RegClass;
+    if (TySize == 32)
+      return &Mips::GPR32RegClass;
+    if (TySize == 64)
+      return &Mips::GPR64RegClass;
   }
 
   if (isRegInFprb(Reg, MRI)) {
@@ -184,7 +188,8 @@ MipsInstructionSelector::selectLoadStoreOpCode(MachineInstr &I,
   const Register ValueReg = I.getOperand(0).getReg();
   const LLT Ty = MRI.getType(ValueReg);
   const unsigned TySize = Ty.getSizeInBits();
-  const unsigned MemSizeInBytes = (*I.memoperands_begin())->getSize();
+  const unsigned MemSizeInBytes =
+      (*I.memoperands_begin())->getSize().getValue();
   unsigned Opc = I.getOpcode();
   const bool isStore = Opc == TargetOpcode::G_STORE;
 
@@ -357,13 +362,6 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
              .addImm(0);
     break;
   }
-  case G_BRCOND: {
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::BNE))
-             .add(I.getOperand(0))
-             .addUse(Mips::ZERO)
-             .add(I.getOperand(1));
-    break;
-  }
   case G_BRJT: {
     unsigned EntrySize =
         MF.getJumpTableInfo()->getEntrySize(MF.getDataLayout());
@@ -462,7 +460,8 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     }
 
     // Unaligned memory access
-    if (MMO->getAlign() < MMO->getSize() &&
+    if ((!MMO->getSize().hasValue() ||
+         MMO->getAlign() < MMO->getSize().getValue()) &&
         !STI.systemSupportsUnalignedAccess()) {
       if (MMO->getSize() != 4 || !isRegInGprb(I.getOperand(0).getReg(), MRI))
         return false;
@@ -932,9 +931,10 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
 }
 
 namespace llvm {
-InstructionSelector *createMipsInstructionSelector(const MipsTargetMachine &TM,
-                                                   MipsSubtarget &Subtarget,
-                                                   MipsRegisterBankInfo &RBI) {
+InstructionSelector *
+createMipsInstructionSelector(const MipsTargetMachine &TM,
+                              const MipsSubtarget &Subtarget,
+                              const MipsRegisterBankInfo &RBI) {
   return new MipsInstructionSelector(TM, Subtarget, RBI);
 }
 } // end namespace llvm

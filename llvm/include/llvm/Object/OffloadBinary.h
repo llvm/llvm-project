@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -32,10 +33,11 @@ namespace object {
 /// The producer of the associated offloading image.
 enum OffloadKind : uint16_t {
   OFK_None = 0,
-  OFK_OpenMP,
-  OFK_Cuda,
-  OFK_HIP,
-  OFK_LAST,
+  OFK_OpenMP = (1 << 0),
+  OFK_Cuda = (1 << 1),
+  OFK_HIP = (1 << 2),
+  OFK_SYCL = (1 << 3),
+  OFK_LAST = (1 << 4),
 };
 
 /// The type of contents the offloading image contains.
@@ -46,6 +48,7 @@ enum ImageKind : uint16_t {
   IMG_Cubin,
   IMG_Fatbinary,
   IMG_PTX,
+  IMG_SPIRV,
   IMG_LAST,
 };
 
@@ -68,18 +71,19 @@ public:
 
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
-    ImageKind TheImageKind;
-    OffloadKind TheOffloadKind;
-    uint32_t Flags;
+    ImageKind TheImageKind = ImageKind::IMG_None;
+    OffloadKind TheOffloadKind = OffloadKind::OFK_None;
+    uint32_t Flags = 0;
     MapVector<StringRef, StringRef> StringData;
     std::unique_ptr<MemoryBuffer> Image;
   };
 
   /// Attempt to parse the offloading binary stored in \p Data.
-  static Expected<std::unique_ptr<OffloadBinary>> create(MemoryBufferRef);
+  LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
+      create(MemoryBufferRef);
 
   /// Serialize the contents of \p File to a binary buffer to be read later.
-  static SmallString<0> write(const OffloadingImage &);
+  LLVM_ABI static SmallString<0> write(const OffloadingImage &);
 
   static uint64_t getAlignment() { return 8; }
 
@@ -96,9 +100,7 @@ public:
   }
 
   // Iterator over all the key and value pairs in the binary.
-  string_iterator_range strings() const {
-    return string_iterator_range(StringData.begin(), StringData.end());
-  }
+  string_iterator_range strings() const { return StringData; }
 
   StringRef getString(StringRef Key) const { return StringData.lookup(Key); }
 
@@ -162,6 +164,20 @@ public:
               std::unique_ptr<MemoryBuffer> Buffer)
       : OwningBinary<OffloadBinary>(std::move(Binary), std::move(Buffer)) {}
 
+  /// Make a deep copy of this offloading file.
+  OffloadFile copy() const {
+    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBufferCopy(
+        getBinary()->getMemoryBufferRef().getBuffer(),
+        getBinary()->getMemoryBufferRef().getBufferIdentifier());
+
+    // This parsing should never fail because it has already been parsed.
+    auto NewBinaryOrErr = OffloadBinary::create(*Buffer);
+    assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
+    if (!NewBinaryOrErr)
+      llvm::consumeError(NewBinaryOrErr.takeError());
+    return OffloadFile(std::move(*NewBinaryOrErr), std::move(Buffer));
+  }
+
   /// We use the Triple and Architecture pair to group linker inputs together.
   /// This conversion function lets us use these inputs in a hash-map.
   operator TargetID() const {
@@ -171,20 +187,32 @@ public:
 
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
 /// of \p Binaries.
-Error extractOffloadBinaries(MemoryBufferRef Buffer,
-                             SmallVectorImpl<OffloadFile> &Binaries);
+LLVM_ABI Error extractOffloadBinaries(MemoryBufferRef Buffer,
+                                      SmallVectorImpl<OffloadFile> &Binaries);
 
 /// Convert a string \p Name to an image kind.
-ImageKind getImageKind(StringRef Name);
+LLVM_ABI ImageKind getImageKind(StringRef Name);
 
 /// Convert an image kind to its string representation.
-StringRef getImageKindName(ImageKind Name);
+LLVM_ABI StringRef getImageKindName(ImageKind Name);
 
 /// Convert a string \p Name to an offload kind.
-OffloadKind getOffloadKind(StringRef Name);
+LLVM_ABI OffloadKind getOffloadKind(StringRef Name);
 
 /// Convert an offload kind to its string representation.
-StringRef getOffloadKindName(OffloadKind Name);
+LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
+
+/// If the target is AMD we check the target IDs for mutual compatibility. A
+/// target id is a string conforming to the folowing BNF syntax:
+///
+///  target-id ::= '<arch> ( : <feature> ( '+' | '-' ) )*'
+///
+/// The features 'xnack' and 'sramecc' are currently supported. These can be in
+/// the state of on, off, and any when unspecified. A target marked as any can
+/// bind with either on or off. This is used to link mutually compatible
+/// architectures together. Returns false in the case of an exact match.
+LLVM_ABI bool areTargetsCompatible(const OffloadFile::TargetID &LHS,
+                                   const OffloadFile::TargetID &RHS);
 
 } // namespace object
 

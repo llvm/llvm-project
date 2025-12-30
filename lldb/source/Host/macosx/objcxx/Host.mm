@@ -102,12 +102,20 @@ using namespace lldb_private;
 static os_log_t g_os_log;
 static std::once_flag g_os_log_once;
 
-void Host::SystemLog(llvm::StringRef message) {
+void Host::SystemLog(Severity severity, llvm::StringRef message) {
   if (__builtin_available(macos 10.12, iOS 10, tvOS 10, watchOS 3, *)) {
     std::call_once(g_os_log_once, []() {
       g_os_log = os_log_create("com.apple.dt.lldb", "lldb");
     });
-    os_log(g_os_log, "%{public}s", message.str().c_str());
+    switch (severity) {
+    case lldb::eSeverityInfo:
+    case lldb::eSeverityWarning:
+      os_log(g_os_log, "%{public}s", message.str().c_str());
+      break;
+    case lldb::eSeverityError:
+      os_log_error(g_os_log, "%{public}s", message.str().c_str());
+      break;
+    }
   } else {
     llvm::errs() << message;
   }
@@ -200,21 +208,23 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   Status error;
   char unix_socket_name[PATH_MAX] = "/tmp/XXXXXX";
   if (::mktemp(unix_socket_name) == NULL) {
-    error.SetErrorString("failed to make temporary path for a unix socket");
+    error = Status::FromErrorString(
+        "failed to make temporary path for a unix socket");
     return error;
   }
 
   StreamString command;
   FileSpec darwin_debug_file_spec = HostInfo::GetSupportExeDir();
   if (!darwin_debug_file_spec) {
-    error.SetErrorString("can't locate the 'darwin-debug' executable");
+    error =
+        Status::FromErrorString("can't locate the 'darwin-debug' executable");
     return error;
   }
 
   darwin_debug_file_spec.SetFilename("darwin-debug");
 
   if (!FileSystem::Instance().Exists(darwin_debug_file_spec)) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "the 'darwin-debug' executable doesn't exists at '%s'",
         darwin_debug_file_spec.GetPath().c_str());
     return error;
@@ -306,7 +316,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
       unix_socket_name, [&] { return AcceptPIDFromInferior(connect_url); });
 
   if (!accept_thread)
-    return Status(accept_thread.takeError());
+    return Status::FromError(accept_thread.takeError());
 
   [applescript executeAndReturnError:nil];
 
@@ -442,6 +452,38 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
 #endif // TARGET_OS_OSX
 }
 
+llvm::Error Host::OpenURL(llvm::StringRef url) {
+#if !TARGET_OS_OSX
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
+#else  // !TARGET_OS_OSX
+  if (url.empty())
+    return llvm::createStringError("Cannot open empty URL.");
+
+  LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
+
+  CFCString url_cfstr(url.data(), kCFStringEncodingUTF8);
+  CFCReleaser<CFURLRef> cfurl = ::CFURLCreateWithString(
+      /*allocator=*/NULL,
+      /*URLString*/ url_cfstr.get(),
+      /*baseURL=*/NULL);
+
+  if (!cfurl.get())
+    return llvm::createStringError(
+        llvm::formatv("could not create CFURL from URL \"{0}\"", url));
+
+  OSStatus error = ::LSOpenCFURLRef(
+      /*inURL=*/cfurl.get(),
+      /*outLaunchedURL=*/NULL);
+
+  if (error != noErr)
+    return llvm::createStringError(
+        llvm::formatv("LSOpenCFURLRef failed: error {0:x}", error));
+
+  return llvm::Error::success();
+#endif // TARGET_OS_OSX
+}
+
 bool Host::IsInteractiveGraphicSession() {
 #if !TARGET_OS_OSX
   return false;
@@ -553,7 +595,9 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
       const llvm::Triple::ArchType triple_arch = triple.getArch();
       const bool check_for_ios_simulator =
           (triple_arch == llvm::Triple::x86 ||
-           triple_arch == llvm::Triple::x86_64);
+           triple_arch == llvm::Triple::x86_64 ||
+           triple_arch == llvm::Triple::aarch64);
+
       const char *cstr = data.GetCStr(&offset);
       if (cstr) {
         process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
@@ -579,21 +623,20 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
           }
 
           Environment &proc_env = process_info.GetEnvironment();
-          while ((cstr = data.GetCStr(&offset))) {
-            if (cstr[0] == '\0')
-              break;
-
-            if (check_for_ios_simulator) {
-              if (strncmp(cstr, "SIMULATOR_UDID=", strlen("SIMULATOR_UDID=")) ==
-                  0)
-                process_info.GetArchitecture().GetTriple().setOS(
-                    llvm::Triple::IOS);
-              else
-                process_info.GetArchitecture().GetTriple().setOS(
-                    llvm::Triple::MacOSX);
-            }
-
-            proc_env.insert(cstr);
+          bool is_simulator = false;
+          llvm::StringRef env_var;
+          while (!(env_var = data.GetCStr(&offset)).empty()) {
+            if (check_for_ios_simulator &&
+                env_var.starts_with("SIMULATOR_UDID="))
+              is_simulator = true;
+            proc_env.insert(env_var);
+          }
+          llvm::Triple &triple = process_info.GetArchitecture().GetTriple();
+          if (is_simulator) {
+            triple.setOS(llvm::Triple::IOS);
+            triple.setEnvironment(llvm::Triple::Simulator);
+          } else {
+            triple.setOS(llvm::Triple::MacOSX);
           }
           return true;
         }
@@ -699,8 +742,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
         !match_info.ProcessIDsMatch(process_info))
       continue;
 
-    // Get CPU type first so we can know to look for iOS simulator is we have
-    // x86 or x86_64
+    // Get CPU type first so we can know to look for iOS simulator if we have
+    // a compatible type.
     if (GetMacOSXProcessCPUType(process_info)) {
       if (GetMacOSXProcessArgs(&match_info, process_info)) {
         if (match_info.Matches(process_info))
@@ -775,8 +818,8 @@ static Status getXPCAuthorization(ProcessLaunchInfo &launch_info) {
         AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment,
                             kAuthorizationFlagDefaults, &authorizationRef);
     if (createStatus != errAuthorizationSuccess) {
-      error.SetError(1, eErrorTypeGeneric);
-      error.SetErrorString("Can't create authorizationRef.");
+      error = Status(1, eErrorTypeGeneric);
+      error = Status::FromErrorString("Can't create authorizationRef.");
       LLDB_LOG(log, "error: {0}", error);
       return error;
     }
@@ -827,8 +870,8 @@ static Status getXPCAuthorization(ProcessLaunchInfo &launch_info) {
       // logged in to the current audit session, we will need the trick in gdb
       // where
       // we ask the user to type in the root passwd in the terminal.
-      error.SetError(2, eErrorTypeGeneric);
-      error.SetErrorStringWithFormat(
+      error = Status(2, eErrorTypeGeneric);
+      error = Status::FromErrorStringWithFormat(
           "Launching as root needs root authorization.");
       LLDB_LOG(log, "error: {0}", error);
 
@@ -881,6 +924,10 @@ static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info) {
   return flags;
 }
 
+static void finalize_xpc(void *xpc_object) {
+  xpc_release((xpc_object_t)xpc_object);
+}
+
 static Status LaunchProcessXPC(const char *exe_path,
                                ProcessLaunchInfo &launch_info,
                                lldb::pid_t &pid) {
@@ -900,16 +947,17 @@ static Status LaunchProcessXPC(const char *exe_path,
         errAuthorizationSuccess) {
       send_auth = true;
     } else {
-      error.SetError(3, eErrorTypeGeneric);
-      error.SetErrorStringWithFormat("Launching root via XPC needs to "
-                                     "externalize authorization reference.");
+      error = Status(3, eErrorTypeGeneric);
+      error = Status::FromErrorStringWithFormat(
+          "Launching root via XPC needs to "
+          "externalize authorization reference.");
       LLDB_LOG(log, "error: {0}", error);
       return error;
     }
     xpc_service = LaunchUsingXPCRightName;
   } else {
-    error.SetError(4, eErrorTypeGeneric);
-    error.SetErrorStringWithFormat(
+    error = Status(4, eErrorTypeGeneric);
+    error = Status::FromErrorStringWithFormat(
         "Launching via XPC is only currently available for root.");
     LLDB_LOG(log, "error: {0}", error);
     return error;
@@ -945,7 +993,7 @@ static Status LaunchProcessXPC(const char *exe_path,
     }
   });
 
-  xpc_connection_set_finalizer_f(conn, xpc_finalizer_t(xpc_release));
+  xpc_connection_set_finalizer_f(conn, finalize_xpc);
   xpc_connection_resume(conn);
   xpc_object_t message = xpc_dictionary_create(nil, nil, 0);
 
@@ -965,20 +1013,29 @@ static Status LaunchProcessXPC(const char *exe_path,
   xpc_dictionary_set_int64(message, LauncherXPCServicePosixspawnFlagsKey,
                            GetPosixspawnFlags(launch_info));
   const FileAction *file_action = launch_info.GetFileActionForFD(STDIN_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  std::string file_action_path;
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdInPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
+
   file_action = launch_info.GetFileActionForFD(STDOUT_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdOutPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
+
   file_action = launch_info.GetFileActionForFD(STDERR_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdErrPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
 
   xpc_object_t reply =
       xpc_connection_send_message_with_reply_sync(conn, message);
@@ -991,8 +1048,8 @@ static Status LaunchProcessXPC(const char *exe_path,
       int errorCode =
           xpc_dictionary_get_int64(reply, LauncherXPCServiceCodeTypeKey);
 
-      error.SetError(errorCode, eErrorTypeGeneric);
-      error.SetErrorStringWithFormat(
+      error = Status(errorCode, eErrorTypeGeneric);
+      error = Status::FromErrorStringWithFormat(
           "Problems with launching via XPC. Error type : %i, code : %i",
           errorType, errorCode);
       LLDB_LOG(log, "error: {0}", error);
@@ -1003,8 +1060,8 @@ static Status LaunchProcessXPC(const char *exe_path,
       }
     }
   } else if (returnType == XPC_TYPE_ERROR) {
-    error.SetError(5, eErrorTypeGeneric);
-    error.SetErrorStringWithFormat(
+    error = Status(5, eErrorTypeGeneric);
+    error = Status::FromErrorStringWithFormat(
         "Problems with launching via XPC. XPC error : %s",
         xpc_dictionary_get_string(reply, XPC_ERROR_KEY_DESCRIPTION));
     LLDB_LOG(log, "error: {0}", error);
@@ -1032,10 +1089,10 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
 
   case FileAction::eFileActionClose:
     if (info->GetFD() == -1)
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "invalid fd for posix_spawn_file_actions_addclose(...)");
     else {
-      error.SetError(
+      error = Status(
           ::posix_spawn_file_actions_addclose(file_actions, info->GetFD()),
           eErrorTypePOSIX);
       if (error.Fail())
@@ -1048,27 +1105,36 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
 
   case FileAction::eFileActionDuplicate:
     if (info->GetFD() == -1)
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "invalid fd for posix_spawn_file_actions_adddup2(...)");
     else if (info->GetActionArgument() == -1)
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "invalid duplicate fd for posix_spawn_file_actions_adddup2(...)");
-    else {
-      error.SetError(
-          ::posix_spawn_file_actions_adddup2(file_actions, info->GetFD(),
-                                             info->GetActionArgument()),
-          eErrorTypePOSIX);
+    else if (info->GetFD() != info->GetActionArgument()) {
+      error =
+          Status(::posix_spawn_file_actions_adddup2(file_actions, info->GetFD(),
+                                                    info->GetActionArgument()),
+                 eErrorTypePOSIX);
       if (error.Fail())
         LLDB_LOG(log,
                  "error: {0}, posix_spawn_file_actions_adddup2 "
                  "(action={1}, fd={2}, dup_fd={3})",
                  error, file_actions, info->GetFD(), info->GetActionArgument());
+    } else {
+      error =
+          Status(::posix_spawn_file_actions_addinherit_np(file_actions, info->GetFD()),
+                 eErrorTypePOSIX);
+      if (error.Fail())
+        LLDB_LOG(log,
+                 "error: {0}, posix_spawn_file_actions_addinherit_np "
+                 "(action={1}, fd={2})",
+                 error, file_actions, info->GetFD());
     }
     break;
 
   case FileAction::eFileActionOpen:
     if (info->GetFD() == -1)
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "invalid fd in posix_spawn_file_actions_addopen(...)");
     else {
       int oflag = info->GetActionArgument();
@@ -1078,16 +1144,16 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
       if (oflag & O_CREAT)
         mode = 0640;
 
-      error.SetError(::posix_spawn_file_actions_addopen(
-                         file_actions, info->GetFD(),
-                         info->GetPath().str().c_str(), oflag, mode),
-                     eErrorTypePOSIX);
+      const std::string file_path(info->GetFileSpec().GetPath());
+      error = Status(
+          ::posix_spawn_file_actions_addopen(file_actions, info->GetFD(),
+                                             file_path.c_str(), oflag, mode),
+          eErrorTypePOSIX);
       if (error.Fail())
         LLDB_LOG(log,
                  "error: {0}, posix_spawn_file_actions_addopen (action={1}, "
                  "fd={2}, path='{3}', oflag={4}, mode={5})",
-                 error, file_actions, info->GetFD(), info->GetPath(), oflag,
-                 mode);
+                 error, file_actions, info->GetFD(), file_path, oflag, mode);
     }
     break;
   }
@@ -1101,7 +1167,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   Log *log(GetLog(LLDBLog::Host | LLDBLog::Process));
 
   posix_spawnattr_t attr;
-  error.SetError(::posix_spawnattr_init(&attr), eErrorTypePOSIX);
+  error = Status(::posix_spawnattr_init(&attr), eErrorTypePOSIX);
 
   if (error.Fail()) {
     LLDB_LOG(log, "error: {0}, ::posix_spawnattr_init ( &attr )", error);
@@ -1121,7 +1187,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
 
   short flags = GetPosixspawnFlags(launch_info);
 
-  error.SetError(::posix_spawnattr_setflags(&attr, flags), eErrorTypePOSIX);
+  error = Status(::posix_spawnattr_setflags(&attr, flags), eErrorTypePOSIX);
   if (error.Fail()) {
     LLDB_LOG(log,
              "error: {0}, ::posix_spawnattr_setflags ( &attr, flags={1:x} )",
@@ -1145,11 +1211,43 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   //  its parent.
   if (is_graphical && launch_info.GetFlags().Test(eLaunchFlagDebug) &&
       !launch_info.GetFlags().Test(eLaunchFlagInheritTCCFromParent)) {
-    error.SetError(setup_posix_spawn_responsible_flag(&attr), eErrorTypePOSIX);
+    error = Status(setup_posix_spawn_responsible_flag(&attr), eErrorTypePOSIX);
     if (error.Fail()) {
       LLDB_LOG(log, "error: {0}, setup_posix_spawn_responsible_flag(&attr)",
                error);
       return error;
+    }
+  }
+
+  if (launch_info.GetFlags().Test(eLaunchFlagMemoryTagging)) {
+    // The following function configures the spawn attributes to launch the
+    // process with memory tagging explicitly enabled.  We look it up
+    // dynamically since it is only available on newer OS.  Does nothing on
+    // hardware which does not support MTE.
+    //
+    //   int posix_spawnattr_set_use_sec_transition_shims_np(
+    //       posix_spawnattr_t *attr, uint32_t flags);
+    //
+    using posix_spawnattr_set_use_sec_transition_shims_np_t =
+        int (*)(posix_spawnattr_t *attr, uint32_t flags);
+    auto posix_spawnattr_enable_memory_tagging_fn =
+        (posix_spawnattr_set_use_sec_transition_shims_np_t)dlsym(
+            RTLD_DEFAULT, "posix_spawnattr_set_use_sec_transition_shims_np");
+    if (posix_spawnattr_enable_memory_tagging_fn) {
+      error = Status(posix_spawnattr_enable_memory_tagging_fn(&attr, 0),
+                     eErrorTypePOSIX);
+      if (error.Fail()) {
+        LLDB_LOG(log,
+                 "error: {0}, "
+                 "posix_spawnattr_set_use_sec_transition_shims_np(&attr, 0)",
+                 error);
+        return error;
+      }
+    } else {
+      LLDB_LOG(log,
+               "error: posix_spawnattr_set_use_sec_transition_shims_np not "
+               "available",
+               error);
     }
   }
 
@@ -1176,7 +1274,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
           (posix_spawnattr_setarchpref_np_t)dlsym(
               RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
       if (set_cpu_subtype && posix_spawnattr_setarchpref_np_fn) {
-        error.SetError((*posix_spawnattr_setarchpref_np_fn)(
+        error = Status((*posix_spawnattr_setarchpref_np_fn)(
                            &attr, 1, &cpu_type, &cpu_subtype, &ocount),
                        eErrorTypePOSIX);
         if (error.Fail())
@@ -1188,7 +1286,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
         if (error.Fail() || ocount != 1)
           return error;
       } else {
-        error.SetError(
+        error = Status(
             ::posix_spawnattr_setbinpref_np(&attr, 1, &cpu_type, &ocount),
             eErrorTypePOSIX);
         if (error.Fail())
@@ -1222,15 +1320,16 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     std::string working_dir_path = working_dir.GetPath();
     if (__pthread_chdir(working_dir_path.c_str()) < 0) {
       if (errno == ENOENT) {
-        error.SetErrorStringWithFormat("No such file or directory: %s",
-                                       working_dir_path.c_str());
+        error = Status::FromErrorStringWithFormat(
+            "No such file or directory: %s", working_dir_path.c_str());
       } else if (errno == ENOTDIR) {
-        error.SetErrorStringWithFormat("Path doesn't name a directory: %s",
-                                       working_dir_path.c_str());
+        error = Status::FromErrorStringWithFormat(
+            "Path doesn't name a directory: %s", working_dir_path.c_str());
       } else {
-        error.SetErrorStringWithFormat("An unknown error occurred when "
-                                       "changing directory for process "
-                                       "execution.");
+        error =
+            Status::FromErrorStringWithFormat("An unknown error occurred when "
+                                              "changing directory for process "
+                                              "execution.");
       }
       return error;
     }
@@ -1240,8 +1339,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   const size_t num_file_actions = launch_info.GetNumFileActions();
   if (num_file_actions > 0) {
     posix_spawn_file_actions_t file_actions;
-    error.SetError(::posix_spawn_file_actions_init(&file_actions),
-                   eErrorTypePOSIX);
+    error =
+        Status(::posix_spawn_file_actions_init(&file_actions), eErrorTypePOSIX);
     if (error.Fail()) {
       LLDB_LOG(log,
                "error: {0}, ::posix_spawn_file_actions_init ( &file_actions )",
@@ -1263,7 +1362,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
       }
     }
 
-    error.SetError(
+    error = Status(
         ::posix_spawnp(&result_pid, exe_path, &file_actions, &attr, argv, envp),
         eErrorTypePOSIX);
 
@@ -1281,9 +1380,9 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     }
 
   } else {
-    error.SetError(
-        ::posix_spawnp(&result_pid, exe_path, NULL, &attr, argv, envp),
-        eErrorTypePOSIX);
+    error =
+        Status(::posix_spawnp(&result_pid, exe_path, NULL, &attr, argv, envp),
+               eErrorTypePOSIX);
 
     if (error.Fail()) {
       LLDB_LOG(log,
@@ -1335,8 +1434,8 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
     FileSystem::Instance().ResolveExecutableLocation(exe_spec);
 
   if (!fs.Exists(exe_spec)) {
-    error.SetErrorStringWithFormatv("executable doesn't exist: '{0}'",
-                                    exe_spec);
+    error = Status::FromErrorStringWithFormatv(
+        "executable doesn't exist: '{0}'", exe_spec);
     return error;
   }
 
@@ -1345,8 +1444,9 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
     return LaunchInNewTerminalWithAppleScript(exe_spec.GetPath().c_str(),
                                               launch_info);
 #else
-    error.SetErrorString("launching a process in a new terminal is not "
-                         "supported on iOS devices");
+    error =
+        Status::FromErrorString("launching a process in a new terminal is not "
+                                "supported on iOS devices");
     return error;
 #endif
   }
@@ -1371,7 +1471,8 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   } else {
     // Invalid process ID, something didn't go well
     if (error.Success())
-      error.SetErrorString("process launch failed for unknown reasons");
+      error =
+          Status::FromErrorString("process launch failed for unknown reasons");
   }
   return error;
 }
@@ -1379,18 +1480,32 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
-    FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
-    if (!expand_tool_spec) {
-      error.SetErrorString(
-          "could not get support executable directory for lldb-argdumper tool");
-      return error;
+    FileSpec expand_tool_spec;
+    Environment host_env = Host::GetEnvironment();
+    std::string env_argdumper_path = host_env.lookup("LLDB_ARGDUMPER_PATH");
+    if (!env_argdumper_path.empty()) {
+      expand_tool_spec.SetFile(env_argdumper_path, FileSpec::Style::native);
+      Log *log(GetLog(LLDBLog::Host | LLDBLog::Process));
+      LLDB_LOGF(log,
+                "lldb-argdumper exe path set from environment variable: %s",
+                env_argdumper_path.c_str());
     }
-    expand_tool_spec.AppendPathComponent("lldb-argdumper");
-    if (!FileSystem::Instance().Exists(expand_tool_spec)) {
-      error.SetErrorStringWithFormat(
-          "could not find the lldb-argdumper tool: %s",
-          expand_tool_spec.GetPath().c_str());
-      return error;
+    bool argdumper_exists = FileSystem::Instance().Exists(env_argdumper_path);
+    if (!argdumper_exists) {
+      expand_tool_spec = HostInfo::GetSupportExeDir();
+      if (!expand_tool_spec) {
+        error = Status::FromErrorString(
+            "could not get support executable directory for "
+            "lldb-argdumper tool");
+        return error;
+      }
+      expand_tool_spec.AppendPathComponent("lldb-argdumper");
+      if (!FileSystem::Instance().Exists(expand_tool_spec)) {
+        error = Status::FromErrorStringWithFormat(
+            "could not find the lldb-argdumper tool: %s",
+            expand_tool_spec.GetPath().c_str());
+        return error;
+      }
     }
 
     StreamString expand_tool_spec_stream;
@@ -1406,8 +1521,8 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     if (!FileSystem::Instance().Exists(cwd)) {
       char *wd = getcwd(nullptr, 0);
       if (wd == nullptr) {
-        error.SetErrorStringWithFormat(
-            "cwd does not exist; cannot launch with shell argument expansion");
+        error = Status::FromErrorStringWithFormat(
+            "cwd does not exist: Cannot launch with shell argument expansion");
         return error;
       } else {
         FileSpec working_dir(wd);
@@ -1425,32 +1540,32 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       return e;
 
     if (status != 0) {
-      error.SetErrorStringWithFormat("lldb-argdumper exited with error %d",
-                                     status);
+      error = Status::FromErrorStringWithFormat(
+          "lldb-argdumper exited with error %d", status);
       return error;
     }
 
     auto data_sp = StructuredData::ParseJSON(output);
     if (!data_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto dict_sp = data_sp->GetAsDictionary();
     if (!data_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto args_sp = dict_sp->GetObjectForDotSeparatedPath("arguments");
     if (!args_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 
     auto args_array_sp = args_sp->GetAsArray();
     if (!args_array_sp) {
-      error.SetErrorString("invalid JSON");
+      error = Status::FromErrorString("invalid JSON");
       return error;
     }
 

@@ -13,7 +13,7 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; AVX1-LABEL: testv4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm3, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm2, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -199,7 +199,7 @@ define <4 x i64> @testv4i64u(<4 x i64> %in) nounwind {
 ; AVX1-LABEL: testv4i64u:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm3, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm2, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -385,7 +385,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX1-LABEL: testv8i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm4
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -541,7 +541,7 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ; AVX1-LABEL: testv8i32u:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm4
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -697,7 +697,7 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ; AVX1-LABEL: testv16i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm4
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -818,7 +818,7 @@ define <16 x i16> @testv16i16u(<16 x i16> %in) nounwind {
 ; AVX1-LABEL: testv16i16u:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm4
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -939,7 +939,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; AVX1-LABEL: testv32i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -1035,7 +1035,7 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ; AVX1-LABEL: testv32i8u:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -1128,10 +1128,30 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 }
 
 define <4 x i64> @foldv4i64() nounwind {
-; X64-LABEL: foldv4i64:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [55,0,64,56]
-; X64-NEXT:    retq
+; AVX1-LABEL: foldv4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [55,0,64,56]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [55,0,64,56]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: foldv4i64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [55,0,64,56]
+; AVX512VL-NEXT:    retq
+;
+; AVX512VLBWDQ-LABEL: foldv4i64:
+; AVX512VLBWDQ:       # %bb.0:
+; AVX512VLBWDQ-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [55,0,64,56]
+; AVX512VLBWDQ-NEXT:    retq
+;
+; AVX512-LABEL: foldv4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [55,0,64,56]
+; AVX512-NEXT:    retq
 ;
 ; X86-AVX-LABEL: foldv4i64:
 ; X86-AVX:       # %bb.0:
@@ -1142,10 +1162,30 @@ define <4 x i64> @foldv4i64() nounwind {
 }
 
 define <4 x i64> @foldv4i64u() nounwind {
-; X64-LABEL: foldv4i64u:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [55,0,64,56]
-; X64-NEXT:    retq
+; AVX1-LABEL: foldv4i64u:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [55,0,64,56]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv4i64u:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [55,0,64,56]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: foldv4i64u:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [55,0,64,56]
+; AVX512VL-NEXT:    retq
+;
+; AVX512VLBWDQ-LABEL: foldv4i64u:
+; AVX512VLBWDQ:       # %bb.0:
+; AVX512VLBWDQ-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [55,0,64,56]
+; AVX512VLBWDQ-NEXT:    retq
+;
+; AVX512-LABEL: foldv4i64u:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [55,0,64,56]
+; AVX512-NEXT:    retq
 ;
 ; X86-AVX-LABEL: foldv4i64u:
 ; X86-AVX:       # %bb.0:
@@ -1156,10 +1196,30 @@ define <4 x i64> @foldv4i64u() nounwind {
 }
 
 define <8 x i32> @foldv8i32() nounwind {
-; X64-LABEL: foldv8i32:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
-; X64-NEXT:    retq
+; AVX1-LABEL: foldv8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: foldv8i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX512VL-NEXT:    retq
+;
+; AVX512VLBWDQ-LABEL: foldv8i32:
+; AVX512VLBWDQ:       # %bb.0:
+; AVX512VLBWDQ-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX512VLBWDQ-NEXT:    retq
+;
+; AVX512-LABEL: foldv8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX512-NEXT:    retq
 ;
 ; X86-AVX-LABEL: foldv8i32:
 ; X86-AVX:       # %bb.0:
@@ -1170,10 +1230,30 @@ define <8 x i32> @foldv8i32() nounwind {
 }
 
 define <8 x i32> @foldv8i32u() nounwind {
-; X64-LABEL: foldv8i32u:
-; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
-; X64-NEXT:    retq
+; AVX1-LABEL: foldv8i32u:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv8i32u:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: foldv8i32u:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX512VL-NEXT:    retq
+;
+; AVX512VLBWDQ-LABEL: foldv8i32u:
+; AVX512VLBWDQ:       # %bb.0:
+; AVX512VLBWDQ-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX512VLBWDQ-NEXT:    retq
+;
+; AVX512-LABEL: foldv8i32u:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [23,0,32,24,0,29,27,25]
+; AVX512-NEXT:    retq
 ;
 ; X86-AVX-LABEL: foldv8i32u:
 ; X86-AVX:       # %bb.0:

@@ -1,4 +1,4 @@
-//===--- IncludeOrderCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
 
@@ -81,8 +82,8 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
   // to leave it in the top position.
   IncludeDirective ID = {HashLoc, FilenameRange, std::string(FileName),
@@ -161,15 +162,15 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
           continue;
         const IncludeDirective &CopyFrom = FileDirectives[IncludeIndices[I]];
 
-        SourceLocation FromLoc = CopyFrom.Range.getBegin();
+        const SourceLocation FromLoc = CopyFrom.Range.getBegin();
         const char *FromData = SM.getCharacterData(FromLoc);
-        unsigned FromLen = std::strcspn(FromData, "\n");
+        const unsigned FromLen = std::strcspn(FromData, "\n");
 
-        StringRef FixedName(FromData, FromLen);
+        const StringRef FixedName(FromData, FromLen);
 
-        SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
+        const SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
         const char *ToData = SM.getCharacterData(ToLoc);
-        unsigned ToLen = std::strcspn(ToData, "\n");
+        const unsigned ToLen = std::strcspn(ToData, "\n");
         auto ToRange =
             CharSourceRange::getCharRange(ToLoc, ToLoc.getLocWithOffset(ToLen));
 

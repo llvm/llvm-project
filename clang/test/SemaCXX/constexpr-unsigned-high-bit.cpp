@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -fexperimental-new-constant-interpreter %s
 
 #include <limits.h>
 

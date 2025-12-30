@@ -275,9 +275,12 @@ void dr258(void) {
  * Constant expressions
  */
 void dr261(void) {
-  /* This is still an integer constant expression despite the overflow. */
+  /* This is not an integer constant expression because of the overflow,
+   * but we fold it as a constant expression anyway as a GNU extension. */
   enum e1 {
-    ex1 = __INT_MAX__ + 1  /* expected-warning {{overflow in expression; result is -2147483648 with type 'int'}} */
+    ex1 = __INT_MAX__ + 1  /* expected-warning {{overflow in expression; result is -2'147'483'648 with type 'int'}}
+                              expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                              expected-note {{value 2147483648 is outside the range of representable values of type 'int'}} */
   };
 
   /* This is not an integer constant expression, because of the comma operator,
@@ -367,7 +370,7 @@ void dr266(void) {
    */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wlong-long"
-  (void)sizeof(int[__SIZE_MAX__ / 2][__SIZE_MAX__ / 2]); /* expected-error-re 2 {{array is too large ({{[0-9]+}} elements)}} */
+  (void)sizeof(int[__SIZE_MAX__ / 2][__SIZE_MAX__ / 2]); /* expected-error-re 2 {{array is too large ({{[0-9']+}} elements)}} */
 #pragma clang diagnostic pop
 }
 

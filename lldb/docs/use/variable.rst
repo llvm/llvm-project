@@ -366,6 +366,20 @@ The command to obtain the output shown in the example is:
 Initially, we will focus on summary strings, and then describe the Python
 binding mechanism.
 
+Summary Format Matching On Pointers
+-----------------------------------
+
+A summary formatter for a type ``T`` might or might not be appropriate to use
+for pointers to that type. If the formatter is only appropriate for the type and
+not its pointers, use the ``-p`` option to restrict it to match SBValues of type
+``T``. If you want the formatter to also match pointers to the type, you can use
+the ``-d`` option to specify how many pointer layers the formatter should match.
+The default value is 1, so if you don't specify ``-p`` or ``-d``, your formatter
+will be used on SBValues of type ``T`` and ``T*``. If you want to also match
+``T**`` set ``-d`` to 2, etc. In all cases, the SBValue passed to the summary
+formatter will be the matched ValueObject. lldb doesn't dereference the matched
+value down to the SBValue of type ``T`` before passing it to your formatter.
+
 Summary Strings
 ---------------
 
@@ -459,6 +473,15 @@ discussed previously, you can also customize the way variables are displayed in
 summary strings, regardless of the format they have applied to their types. To
 do that, you can use %format inside an expression path, as in ${var.x->x%u},
 which would display the value of x as an unsigned integer.
+
+Additionally, custom output can be achieved by using an LLVM format string,
+commencing with the ``:`` marker. To illustrate, compare ``${var.byte%x}`` and
+``${var.byte:x-}``. The former uses lldb's builtin hex formatting (``x``),
+which unconditionally inserts a ``0x`` prefix, and also zero pads the value to
+match the size of the type. The latter uses ``llvm::formatv`` formatting
+(``:x-``), and will print only the hex value, with no ``0x`` prefix, and no
+padding. This raw control is useful when composing multiple pieces into a
+larger whole.
 
 You can also use some other special format markers, not available for formats
 themselves, but which carry a special meaning when used in this context:
@@ -921,20 +944,27 @@ be implemented by the Python class):
 
    class SyntheticChildrenProvider:
       def __init__(self, valobj, internal_dict):
-         this call should initialize the Python object using valobj as the variable to provide synthetic children for
-      def num_children(self):
-         this call should return the number of children that you want your object to have
+         this call should initialize the Python object using valobj as the
+         variable to provide synthetic children for
+      def num_children(self, max_children):
+         this call should return the number of children that you want your
+         object to have[1]
       def get_child_index(self,name):
-         this call should return the index of the synthetic child whose name is given as argument
+         this call should return the index of the synthetic child whose name is
+         given as argument
       def get_child_at_index(self,index):
-         this call should return a new LLDB SBValue object representing the child at the index given as argument
+         this call should return a new LLDB SBValue object representing the
+         child at the index given as argument
       def update(self):
-         this call should be used to update the internal state of this Python object whenever the state of the variables in LLDB changes.[1]
+         this call should be used to update the internal state of this Python
+         object whenever the state of the variables in LLDB changes.[2]
          Also, this method is invoked before any other method in the interface.
       def has_children(self):
-         this call should return True if this object might have children, and False if this object can be guaranteed not to have children.[2]
+         this call should return True if this object might have children, and
+         False if this object can be guaranteed not to have children.[3]
       def get_value(self):
-         this call can return an SBValue to be presented as the value of the synthetic value under consideration.[3]
+         this call can return an SBValue to be presented as the value of the
+         synthetic value under consideration.[4]
 
 As a warning, exceptions that are thrown by python formatters are caught
 silently by LLDB and should be handled appropriately by the formatter itself.
@@ -942,7 +972,15 @@ Being more specific, in case of exceptions, LLDB might assume that the given
 object has no children or it might skip printing some children, as they are
 printed one by one.
 
-[1] This method is optional. Also, a boolean value must be returned (since lldb
+[1] The ``max_children`` argument is optional (since lldb 3.8.0) and indicates the
+maximum number of children that lldb is interested in (at this moment). If the
+computation of the number of children is expensive (for example, requires
+traversing a linked list to determine its size) your implementation may return
+``max_children`` rather than the actual number. If the computation is cheap (e.g., the
+number is stored as a field of the object), then you can always return the true
+number of children (that is, ignore the ``max_children`` argument).
+
+[2] This method is optional. Also, a boolean value must be returned (since lldb
 3.1.0). If ``False`` is returned, then whenever the process reaches a new stop,
 this method will be invoked again to generate an updated list of the children
 for a given variable. Otherwise, if ``True`` is returned, then the value is
@@ -950,11 +988,11 @@ cached and this method won't be called again, effectively freezing the state of
 the value in subsequent stops. Beware that returning ``True`` incorrectly could
 show misleading information to the user.
 
-[2] This method is optional (since lldb 3.2.0). While implementing it in terms
+[3] This method is optional (since lldb 3.2.0). While implementing it in terms
 of num_children is acceptable, implementors are encouraged to look for
 optimized coding alternatives whenever reasonable.
 
-[3] This method is optional (since lldb 3.5.2). The `SBValue` you return here
+[4] This method is optional (since lldb 3.5.2). The `SBValue` you return here
 will most likely be a numeric type (int, float, ...) as its value bytes will be
 used as-if they were the value of the root `SBValue` proper.  As a shortcut for
 this, you can inherit from lldb.SBSyntheticValueProvider, and just define
@@ -1185,16 +1223,15 @@ Categories
 ----------
 
 Categories are a way to group related formatters. For instance, LLDB itself
-groups the formatters for the libstdc++ types in a category named
-gnu-libstdc++. Basically, categories act like containers in which to store
-formatters for a same library or OS release.
+groups the formatters for STL types in a category named cpluspus. Basically,
+categories act like containers in which to store formatters for a same library
+or OS release.
 
 By default, several categories are created in LLDB:
 
 - default: this is the category where every formatter ends up, unless another category is specified
 - objc: formatters for basic and common Objective-C types that do not specifically depend on macOS
-- gnu-libstdc++: formatters for std::string, std::vector, std::list and std::map as implemented by libstdcpp
-- libcxx: formatters for std::string, std::vector, std::list and std::map as implemented by libcxx
+- cplusplus: formatters for STL types (currently only libc++ and libstdc++ are supported). Enabled when debugging C++ targets.
 - system: truly basic types for which a formatter is required
 - AppKit: Cocoa classes
 - CoreFoundation: CF classes
@@ -1202,13 +1239,13 @@ By default, several categories are created in LLDB:
 - CoreServices: CS classes
 - VectorTypes: compact display for several vector types
 
-If you want to use a custom category for your formatters, all the type ... add
-provide a --category (-w) option, that names the category to add the formatter
+If you want to use a custom category for your formatters, all the ``type ... add``
+provide a ``--category`` (``-w``) option, that names the category to add the formatter
 to. To delete the formatter, you then have to specify the correct category.
 
 Categories can be in one of two states: enabled and disabled. A category is
-initially disabled, and can be enabled using the type category enable command.
-To disable an enabled category, the command to use is type category disable.
+initially disabled, and can be enabled using the ``type category enable`` command.
+To disable an enabled category, the command to use is ``type category disable``.
 
 The order in which categories are enabled or disabled is significant, in that
 LLDB uses that order when looking for formatters. Therefore, when you enable a
@@ -1222,12 +1259,11 @@ that the search order is:
 - AppKit
 - CoreServices
 - CoreGraphics
-- gnu-libstdc++
-- libcxx
+- cplusplus
 - VectorTypes
 - system
 
-As said, gnu-libstdc++ and libcxx contain formatters for C++ STL data types.
+As said, cplusplus contain formatters for C++ STL data types.
 system contains formatters for char* and char[], which reflect the behavior of
 older versions of LLDB which had built-in formatters for these types. Because
 now these are formatters, you can even replace them with your own if so you

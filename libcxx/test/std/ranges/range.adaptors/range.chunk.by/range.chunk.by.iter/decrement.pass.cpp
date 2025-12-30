@@ -42,9 +42,9 @@ struct TrackingPred : TrackInitialization {
   constexpr bool operator()(int x, int y) const { return x <= y; }
 };
 
-template <class Iterator, IsConst Constant, class Sentinel = sentinel_wrapper<Iterator>>
+template <class Iter, IsConst Constant, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
-  using Underlying      = View<Iterator, Sentinel>;
+  using Underlying      = View<Iter, Sent>;
   using ChunkByView     = std::ranges::chunk_by_view<Underlying, std::ranges::less_equal>;
   using ChunkByIterator = std::ranges::iterator_t<ChunkByView>;
 
@@ -52,7 +52,7 @@ constexpr void test() {
   static_assert(HasPreDecrement<ChunkByIterator>);
 
   auto make_chunk_by_view = [](auto& arr) {
-    View view{Iterator{arr.data()}, Sentinel{Iterator{arr.data() + arr.size()}}};
+    View view{Iter{arr.data()}, Sent{Iter{arr.data() + arr.size()}}};
     return ChunkByView{std::move(view), std::ranges::less_equal{}};
   };
 
@@ -125,7 +125,7 @@ constexpr void test() {
   // Test with a predicate that takes by non-const reference
   if constexpr (!std::to_underlying(Constant)) {
     std::array array{1, 2, 3, -3, -2, -1};
-    View v{Iterator{array.data()}, Sentinel{Iterator{array.data() + array.size()}}};
+    View v{Iter{array.data()}, Sent{Iter{array.data() + array.size()}}};
     auto view = std::views::chunk_by(std::move(v), [](int& x, int& y) { return x <= y; });
 
     auto it = std::ranges::next(view.begin());
@@ -137,7 +137,7 @@ constexpr void test() {
   // Test with a predicate that is invocable but not callable (i.e. cannot be called like regular function 'f()')
   {
     std::array array = {1, 2, 3, -3, -2, -1};
-    auto v           = View{Iterator{array.data()}, Sentinel{Iterator{array.data() + array.size()}}} |
+    auto v           = View{Iter{array.data()}, Sent{Iter{array.data() + array.size()}}} |
              std::views::transform([](int x) { return IntWrapper{x}; });
     auto view = std::views::chunk_by(std::move(v), &IntWrapper::lessEqual);
 
@@ -151,7 +151,7 @@ constexpr void test() {
   if constexpr (std::ranges::common_range<Underlying>) {
     bool moved = false, copied = false;
     std::array array{1, 2, 1, 3};
-    View v{Iterator(array.data()), Sentinel(Iterator(array.data() + array.size()))};
+    View v{Iter(array.data()), Sent(Iter(array.data() + array.size()))};
     auto view = std::views::chunk_by(std::move(v), TrackingPred(&moved, &copied));
     assert(std::exchange(moved, false));
     auto it = view.end();

@@ -254,8 +254,8 @@ For example, with the same header list from above::
   }
 
 Note that headers with dependents will be ignored with a warning, as the
-Clang module mechanism doesn't support headers the rely on other headers
-to be included first.
+Clang module mechanism doesn't support headers that rely on other headers
+being included first.
 
 The module map format defines some keywords which can't be used in module
 names. If a header has one of these names, an underscore ('_') will be

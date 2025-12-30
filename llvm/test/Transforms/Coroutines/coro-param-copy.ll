@@ -41,7 +41,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -69,7 +69,7 @@ suspend:
 ; The next instruction is to recreate %y.cast in the original IR.
 ; CHECK-NEXT:  %y.addr.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 4
 ; CHECK-NEXT:  call void @llvm.memset.p0.i32(ptr %y.addr.reload.addr, i8 1, i32 4, i1 false)
-; CHECK-NEXT:  %index.addr1 = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 6
+; CHECK-NEXT:  %index.addr1 = getelementptr inbounds nuw %f.Frame, ptr %hdl, i32 0, i32 6
 ; CHECK-NEXT:  store i1 false, ptr %index.addr1, align 1
 ; CHECK-NEXT:  ret ptr %hdl
 
@@ -83,7 +83,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare void @llvm.memset.p0.i32(ptr, i8, i32, i1)
 

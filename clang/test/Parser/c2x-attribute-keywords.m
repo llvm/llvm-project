@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -triple aarch64-none-linux-gnu -target-feature +sme -verify %s
 
-enum __arm_streaming E1 : int; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+enum __arm_inout("za") E1 : int; // expected-error {{'__arm_inout' only applies to non-K&R-style functions}}
 
 @interface Base
 @end
@@ -15,5 +15,5 @@ enum __arm_streaming E1 : int; // expected-error {{'__arm_streaming' only applie
 
 
 void f(T *t) {
-  __arm_streaming[[t foo] bar]; // expected-error {{'__arm_streaming' cannot be applied to a statement}}
+  __arm_inout("za")[[t foo] bar]; // expected-error {{'__arm_inout' cannot be applied to a statement}}
 }

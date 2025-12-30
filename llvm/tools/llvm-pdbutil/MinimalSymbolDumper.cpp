@@ -213,6 +213,9 @@ static std::string formatSourceLanguage(SourceLanguage Lang) {
     RETURN_CASE(SourceLanguage, Rust, "rust");
     RETURN_CASE(SourceLanguage, ObjC, "objc");
     RETURN_CASE(SourceLanguage, ObjCpp, "objc++");
+    RETURN_CASE(SourceLanguage, AliasObj, "aliasobj");
+    RETURN_CASE(SourceLanguage, Go, "go");
+    RETURN_CASE(SourceLanguage, OldSwift, "swift");
   }
   return formatUnknownEnum(Lang);
 }
@@ -282,6 +285,7 @@ static std::string formatMachineType(CPUType Cpu) {
     RETURN_CASE(CPUType, Thumb, "thumb");
     RETURN_CASE(CPUType, ARMNT, "arm nt");
     RETURN_CASE(CPUType, D3D11_Shader, "d3d11 shader");
+    RETURN_CASE(CPUType, Unknown, "unknown");
   }
   return formatUnknownEnum(Cpu);
 }
@@ -769,7 +773,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
         else
           return MaybeFile.takeError();
       }
-      P.format(" setfile {0} 0x{1}", utohexstr(FileOffset));
+      P.format(" setfile {0} 0x{1}", Filename, utohexstr(FileOffset));
       break;
     }
 
@@ -949,5 +953,13 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
       formatSegmentOffset(JumpTable.BranchSegment, JumpTable.BranchOffset),
       formatSegmentOffset(JumpTable.TableSegment, JumpTable.TableOffset),
       JumpTable.EntriesCount);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            HotPatchFuncSym &JumpTable) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("function = {0}, name = {1}", typeIndex(JumpTable.Function),
+               JumpTable.Name);
   return Error::success();
 }

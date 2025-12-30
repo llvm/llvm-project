@@ -2,7 +2,7 @@
 
 # RUN: echo -e ".global variable\n.global DllMainCRTStartup\n.thumb\n.text\nDllMainCRTStartup:\nbx lr\n.data\nvariable:\n.long 42" > %t-lib.s
 # RUN: llvm-mc -triple=armv7-windows-gnu %t-lib.s -filetype=obj -o %t-lib.obj
-# RUN: lld-link -out:%t-lib.dll -dll -entry:DllMainCRTStartup %t-lib.obj -lldmingw -implib:%t-lib.lib
+# RUN: lld-link -out:%t-lib.dll -dll %t-lib.obj -lldmingw -implib:%t-lib.lib
 
 # RUN: llvm-mc -triple=armv7-windows-gnu %s -filetype=obj -o %t.obj
 # RUN: lld-link -lldmingw -out:%t.exe -entry:main %t.obj %t-lib.lib -verbose
@@ -33,6 +33,9 @@
     .text
     .thumb
 main:
+    bx lr
+    .global _pei386_runtime_relocator
+_pei386_runtime_relocator:
     bx lr
     .data
 ptr:

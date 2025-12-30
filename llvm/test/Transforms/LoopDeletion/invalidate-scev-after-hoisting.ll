@@ -4,11 +4,6 @@
 ; Make sure the SCEV for %invar is invalidated properly when the instruction is
 ; moved by LoopDeletion.
 
-; CHECK:      Determining loop execution counts for: @test
-; CHECK-NEXT: Loop %inner: backedge-taken count is (405 + %invar)<nuw><nsw>
-; CHECK-NEXT: Loop %inner: constant max backedge-taken count is 405
-; CHECK-NEXT: Loop %inner: symbolic max backedge-taken count is (405 + %invar)<nuw><nsw>
-; CHECK-NEXT: Loop %inner: Predicated backedge-taken count is (405 + %invar)<nuw><nsw>
 
 define void @test_pr57837() {
 ; CHECK-LABEL: @test_pr57837(
@@ -26,7 +21,7 @@ define void @test_pr57837() {
 ; CHECK-NEXT:    call void @use(i32 [[ADD_1]])
 ; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i32 [[INNER_IV]], 1
 ; CHECK-NEXT:    [[INVAR_ADD:%.*]] = add i32 [[INVAR]], 407
-; CHECK-NEXT:    [[INNER_CMP:%.*]] = icmp ult i32 [[INNER_IV_NEXT]], [[INVAR_ADD]]
+; CHECK-NEXT:    [[INNER_CMP:%.*]] = icmp samesign ult i32 [[INNER_IV_NEXT]], [[INVAR_ADD]]
 ; CHECK-NEXT:    br i1 [[INNER_CMP]], label [[INNER]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner.exit:
 ; CHECK-NEXT:    [[INVAR_LCSSA:%.*]] = phi i32 [ [[INVAR]], [[INNER]] ]

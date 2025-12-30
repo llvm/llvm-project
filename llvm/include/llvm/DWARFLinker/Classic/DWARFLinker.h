@@ -15,11 +15,13 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinkerCompileUnit.h"
 #include "llvm/DWARFLinker/DWARFLinkerBase.h"
+#include "llvm/DWARFLinker/IndexedValuesMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 
 namespace llvm {
@@ -33,25 +35,7 @@ namespace classic {
 class DeclContextTree;
 
 using Offset2UnitMap = DenseMap<uint64_t, CompileUnit *>;
-
-struct DebugDieValuePool {
-  DenseMap<uint64_t, uint64_t> DieValueMap;
-  SmallVector<uint64_t> DieValues;
-
-  uint64_t getValueIndex(uint64_t Value) {
-    DenseMap<uint64_t, uint64_t>::iterator It = DieValueMap.find(Value);
-    if (It == DieValueMap.end()) {
-      It = DieValueMap.insert(std::make_pair(Value, DieValues.size())).first;
-      DieValues.push_back(Value);
-    }
-    return It->second;
-  }
-
-  void clear() {
-    DieValueMap.clear();
-    DieValues.clear();
-  }
-};
+using DebugDieValuePool = IndexedValuesMap<uint64_t>;
 
 /// DwarfEmitter presents interface to generate all debug info tables.
 class DwarfEmitter {
@@ -59,7 +43,8 @@ public:
   virtual ~DwarfEmitter() = default;
 
   /// Emit section named SecName with data SecData.
-  virtual void emitSectionContents(StringRef SecData, StringRef SecName) = 0;
+  virtual void emitSectionContents(StringRef SecData,
+                                   DebugSectionKind SecKind) = 0;
 
   /// Emit the abbreviation table \p Abbrevs to the .debug_abbrev section.
   virtual void
@@ -138,10 +123,13 @@ public:
                              const AddressRanges &LinkedRanges) = 0;
 
   /// Emit specified \p LineTable into .debug_line table.
-  virtual void emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
-                                    const CompileUnit &Unit,
-                                    OffsetsStringPool &DebugStrPool,
-                                    OffsetsStringPool &DebugLineStrPool) = 0;
+  /// The optional parameter RowOffsets, if provided, will be populated with the
+  /// offsets of each line table row in the output .debug_line section.
+  virtual void
+  emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
+                       const CompileUnit &Unit, OffsetsStringPool &DebugStrPool,
+                       OffsetsStringPool &DebugLineStrPool,
+                       std::vector<uint64_t> *RowOffsets = nullptr) = 0;
 
   /// Emit the .debug_pubnames contribution for \p Unit.
   virtual void emitPubNamesForUnit(const CompileUnit &Unit) = 0;
@@ -205,17 +193,6 @@ public:
 
   /// Dump the file to the disk.
   virtual void finish() = 0;
-
-  /// Emit the swift_ast section stored in \p Buffer.
-  virtual void emitSwiftAST(StringRef Buffer) = 0;
-
-  /// Emit the swift reflection section stored in \p Buffer.
-  virtual void emitSwiftReflectionSection(
-      llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
-      StringRef Buffer, uint32_t Alignment, uint32_t Size) = 0;
-
-  /// Returns underlying AsmPrinter.
-  virtual AsmPrinter &getAsmPrinter() const = 0;
 };
 
 class DwarfStreamer;
@@ -235,7 +212,7 @@ using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
 /// a variable). These relocations are called ValidRelocs in the
 /// AddressesInfo and are gathered as a very first step when we start
 /// processing a object file.
-class DWARFLinker : public DWARFLinkerBase {
+class LLVM_ABI DWARFLinker : public DWARFLinkerBase {
 public:
   DWARFLinker(MessageHandlerTy ErrorHandler, MessageHandlerTy WarningHandler,
               std::function<StringRef(StringRef)> StringsTranslator)
@@ -249,10 +226,10 @@ public:
                                          StringsTranslator);
   }
 
-  Error createEmitter(const Triple &TheTriple, OutputFileType FileType,
-                      raw_pwrite_stream &OutFile);
-
-  DwarfEmitter *getEmitter();
+  /// Set output DWARF emitter.
+  void setOutputDWARFEmitter(DwarfEmitter *Emitter) {
+    TheDwarfEmitter = Emitter;
+  }
 
   /// Add object file to be linked. Pre-load compile unit die. Call
   /// \p OnCUDieLoaded for each compile unit die. If specified \p File
@@ -610,19 +587,21 @@ private:
     /// applied to the entry point of the function to get the linked address.
     /// \param Die the output DIE to use, pass NULL to create one.
     /// \returns the root of the cloned tree or null if nothing was selected.
-    DIE *cloneDIE(const DWARFDie &InputDIE, const DWARFFile &File,
-                  CompileUnit &U, int64_t PCOffset, uint32_t OutOffset,
-                  unsigned Flags, bool IsLittleEndian, DIE *Die = nullptr);
+    LLVM_ABI DIE *cloneDIE(const DWARFDie &InputDIE, const DWARFFile &File,
+                           CompileUnit &U, int64_t PCOffset, uint32_t OutOffset,
+                           unsigned Flags, bool IsLittleEndian,
+                           DIE *Die = nullptr);
 
     /// Construct the output DIE tree by cloning the DIEs we
     /// chose to keep above. If there are no valid relocs, then there's
     /// nothing to clone/emit.
-    uint64_t cloneAllCompileUnits(DWARFContext &DwarfContext,
-                                  const DWARFFile &File, bool IsLittleEndian);
+    LLVM_ABI uint64_t cloneAllCompileUnits(DWARFContext &DwarfContext,
+                                           const DWARFFile &File,
+                                           bool IsLittleEndian);
 
     /// Emit the .debug_addr section for the \p Unit.
-    void emitDebugAddrSection(CompileUnit &Unit,
-                              const uint16_t DwarfVersion) const;
+    LLVM_ABI void emitDebugAddrSection(CompileUnit &Unit,
+                                       const uint16_t DwarfVersion) const;
 
     using ExpressionHandlerRef = function_ref<void(
         SmallVectorImpl<uint8_t> &, SmallVectorImpl<uint8_t> &,
@@ -630,8 +609,9 @@ private:
 
     /// Compute and emit debug locations (.debug_loc, .debug_loclists)
     /// for \p Unit, patch the attributes referencing it.
-    void generateUnitLocations(CompileUnit &Unit, const DWARFFile &File,
-                               ExpressionHandlerRef ExprHandler);
+    LLVM_ABI void generateUnitLocations(CompileUnit &Unit,
+                                        const DWARFFile &File,
+                                        ExpressionHandlerRef ExprHandler);
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
@@ -728,7 +708,11 @@ private:
     /// already there.
     /// \returns is a name was found.
     bool getDIENames(const DWARFDie &Die, AttributesInfo &Info,
-                     OffsetsStringPool &StringPool, bool StripTemplate = false);
+                     OffsetsStringPool &StringPool, const DWARFFile &File,
+                     CompileUnit &Unit, bool StripTemplate = false);
+
+    llvm::StringRef getCanonicalDIEName(DWARFDie Die, const DWARFFile &File,
+                                        CompileUnit *Unit);
 
     uint32_t hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
                                     const DWARFFile &File,
@@ -779,7 +763,7 @@ private:
   BumpPtrAllocator DIEAlloc;
   /// @}
 
-  std::unique_ptr<DwarfStreamer> TheDwarfEmitter;
+  DwarfEmitter *TheDwarfEmitter = nullptr;
   std::vector<LinkContext> ObjectContexts;
 
   /// The CIEs that have been emitted in the output section. The actual CIE

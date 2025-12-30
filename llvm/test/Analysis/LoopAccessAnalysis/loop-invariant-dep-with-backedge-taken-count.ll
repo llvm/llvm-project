@@ -7,13 +7,8 @@
 define void @test_distance_greater_than_BTC_100(ptr %a) {
 ; CHECK-LABEL: 'test_distance_greater_than_BTC_100'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep.x, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -112,13 +107,8 @@ exit:
 define void @test_distance_greater_than_BTC_10000(ptr %a) {
 ; CHECK-LABEL: 'test_distance_greater_than_BTC_10000'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep.x, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -191,10 +181,10 @@ define void @test_btc_is_unknown_value(ptr %a, i32 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (400 + %a) High: (404 + %a))
 ; CHECK-NEXT:            Member: (400 + %a)
-; CHECK-NEXT:        Group [[GRP2:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: (4 + (4 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-EMPTY:

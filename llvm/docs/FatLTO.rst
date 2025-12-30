@@ -29,16 +29,16 @@ Overview
 Within LLVM, FatLTO is supported by choosing the ``FatLTODefaultPipeline``.
 This pipeline will:
 
-#) Run the pre-link UnifiedLTO pipeline on the current module.
+#) Run the pre-link (Thin)LTO pipeline on the current module.
 #) Embed the pre-link bitcode in a special ``.llvm.lto`` section.
-#) Finish optimizing the module using the post-link ThinLTO pipeline.
+#) Finish optimizing the module using the ModuleOptimization pipeline.
 #) Emit the object file, including the new ``.llvm.lto`` section.
 
 .. NOTE
 
    Previously, we conservatively ran independent pipelines on separate copies
    of the LLVM module to generate the bitcode section and the object code,
-   which happen to be identical to those used outside of FatLTO. While that
+   which happened to be identical to those used outside of FatLTO. While that
    resulted in  compiled artifacts that were identical to those produced by the
    default and (Thin)LTO pipelines, module cloning led to some cases of
    miscompilation, and we have moved away from trying to keep bitcode

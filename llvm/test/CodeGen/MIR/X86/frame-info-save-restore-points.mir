@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the save and restore points in
 # the machine frame info correctly.
 
@@ -11,8 +11,8 @@
     br i1 %tmp2, label %true, label %false
 
   true:
-    store i32 %a, i32* %tmp, align 4
-    %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+    store i32 %a, ptr %tmp, align 4
+    %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
     br label %false
 
   false:
@@ -20,7 +20,7 @@
     ret i32 %tmp.0
   }
 
-  declare i32 @doSomething(i32, i32*)
+  declare i32 @doSomething(i32, ptr)
 
 ...
 ---
@@ -30,14 +30,18 @@ liveins:
   - { reg: '$edi' }
   - { reg: '$esi' }
 # CHECK: frameInfo:
-# CHECK:      savePoint: '%bb.2'
-# CHECK-NEXT: restorePoint: '%bb.2'
+# CHECK:      savePoint:
+# CHECK-NEXT:   - point:           '%bb.2'
+# CHECK:      restorePoint:
+# CHECK-NEXT:   - point:           '%bb.2'
 # CHECK: stack
 frameInfo:
   maxAlignment:  4
   hasCalls:      true
-  savePoint:     '%bb.2'
-  restorePoint:  '%bb.2'
+  savePoint:
+   - point:           '%bb.2'
+  restorePoint:
+    - point:           '%bb.2'
 stack:
   - { id: 0, name: tmp, offset: 0, size: 4, alignment: 4 }
 body: |

@@ -14,6 +14,8 @@
 # RUN: %t/cxxfilt-15 --help | FileCheck %s
 # RUN: ln -s %llvm %t/cxxfilt-15.exe
 # RUN: %t/cxxfilt-15.exe --help | FileCheck %s
+# RUN: ln -s %llvm %t/c++filt
+# RUN: %t/c++filt --help | FileCheck %s
 
 # RUN: ln -s %llvm %t/llvm-15
 # RUN: %t/llvm-15 cxxfilt --help | FileCheck %s

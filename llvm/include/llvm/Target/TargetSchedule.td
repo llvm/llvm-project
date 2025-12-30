@@ -192,15 +192,10 @@ class ProcResourceUnits<ProcResourceKind kind, int num> {
   SchedMachineModel SchedModel = ?;
 }
 
-// EponymousProcResourceKind helps implement ProcResourceUnits by
-// allowing a ProcResourceUnits definition to reference itself. It
-// should not be referenced anywhere else.
-def EponymousProcResourceKind : ProcResourceKind;
-
 // Subtargets typically define processor resource kind and number of
 // units in one place.
 class ProcResource<int num> : ProcResourceKind,
-  ProcResourceUnits<EponymousProcResourceKind, num>;
+  ProcResourceUnits<!cast<ProcResourceKind>(NAME), num>;
 
 class ProcResGroup<list<ProcResource> resources> : ProcResourceKind {
   list<ProcResource> Resources = resources;
@@ -326,9 +321,13 @@ class SchedWriteRes<list<ProcResourceKind> resources> : SchedWrite,
 // Define values common to ReadAdvance and SchedReadAdvance.
 //
 // SchedModel ties these resources to a processor.
-class ProcReadAdvance<int cycles, list<SchedWrite> writes = []> {
+class ProcReadAdvance<int cycles, list<SchedWrite> writes = [],
+                      list<int> tunables = []> {
+  assert !le(!size(tunables), !size(writes)),
+         "cannot have more `tunables' than `writes'";
   int Cycles = cycles;
   list<SchedWrite> ValidWrites = writes;
+  list<int> CycleTunables = tunables;
   // Allow a processor to mark some scheduling classes as unsupported
   // for stronger verification.
   bit Unsupported = false;
@@ -345,15 +344,17 @@ class ProcReadAdvance<int cycles, list<SchedWrite> writes = []> {
 // indicate operands that are always read this number of Cycles later
 // than a normal register read, allowing the read's parent instruction
 // to issue earlier relative to the writer.
-class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = []>
-  : ProcReadAdvance<cycles, writes> {
+class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = [],
+                  list<int> tunables = []>
+  : ProcReadAdvance<cycles, writes, tunables> {
   SchedRead ReadType = read;
 }
 
 // Directly associate a new SchedRead type with a delay and optional
 // pipeline bypass. For use with InstRW or ItinRW.
-class SchedReadAdvance<int cycles, list<SchedWrite> writes = []> : SchedRead,
-  ProcReadAdvance<cycles, writes>;
+class SchedReadAdvance<int cycles, list<SchedWrite> writes = [],
+                       list<int> tunables = []>
+  : SchedRead, ProcReadAdvance<cycles, writes, tunables>;
 
 // Define SchedRead defaults. Reads seldom need special treatment.
 def ReadDefault : SchedRead;
@@ -376,6 +377,12 @@ class MCSchedPredicate<MCInstPredicate P> : SchedPredicateBase {
   SchedMachineModel SchedModel = ?;
 }
 
+// A scheduling predicate whose logic depends on a SubtargetFeature.
+class FeatureSchedPredicate<SubtargetFeature SF> : SchedPredicateBase {
+  SubtargetFeature Feature = SF;
+  SchedMachineModel SchedModel = ?;
+}
+
 // Define a predicate to determine which SchedVariant applies to a
 // particular MachineInstr. The code snippet is used as an
 // if-statement's expression. Available variables are MI, SchedModel,
@@ -392,6 +399,21 @@ class SchedPredicate<code pred> : SchedPredicateBase {
 // MCSchedPredicate, this is the default scheduling case used by llvm-mca.
 def NoSchedPred : MCSchedPredicate<TruePred>;
 
+// Logical combiners for schedule predicates.
+class SchedPredicateCombiner<list<SchedPredicateBase> predicates>
+    : SchedPredicateBase {
+  SchedMachineModel SchedModel = ?;
+  list<SchedPredicateBase> Predicates = predicates;
+}
+class AllOfSchedPreds<list<SchedPredicateBase> predicates>
+    : SchedPredicateCombiner<predicates>;
+class AnyOfSchedPreds<list<SchedPredicateBase> predicates>
+    : SchedPredicateCombiner<predicates>;
+class NotSchedPred<SchedPredicateBase predicate>
+    : SchedPredicateCombiner<[predicate]>;
+class NoneOfSchedPreds<list<SchedPredicateBase> predicates>
+    : NotSchedPred<AnyOfSchedPreds<predicates>>;
+
 // Associate a predicate with a list of SchedReadWrites. By default,
 // the selected SchedReadWrites are still associated with a single
 // operand and assumed to execute sequentially with additive
@@ -404,6 +426,8 @@ def NoSchedPred : MCSchedPredicate<TruePred>;
 class SchedVar<SchedPredicateBase pred, list<SchedReadWrite> selected> {
   SchedPredicateBase Predicate = pred;
   list<SchedReadWrite> Selected = selected;
+  // SchedModel silences warnings but is ignored.
+  SchedMachineModel SchedModel = ?;
 }
 
 // SchedModel silences warnings but is ignored.
@@ -584,116 +608,3 @@ class MemoryQueue<ProcResourceKind PR> {
 
 class LoadQueue<ProcResourceKind LDQueue> : MemoryQueue<LDQueue>;
 class StoreQueue<ProcResourceKind STQueue> : MemoryQueue<STQueue>;
-
-// The target instruction that FusionPredicate will be evaluated on.
-class FusionTarget;
-def first_fusion_target : FusionTarget;
-def second_fusion_target : FusionTarget;
-def both_fusion_target : FusionTarget;
-
-// Base class of FusionPredicate, etc. The avaliable variables are:
-// * const TargetInstrInfo &TII
-// * const TargetSubtargetInfo &STI
-// * const MachineRegisterInfo &MRI
-// * const MachineInstr *FirstMI
-// * const MachineInstr &SecondMI
-class FusionPredicate<FusionTarget target> {
-  FusionTarget Target = target;
-}
-class FirstFusionPredicate: FusionPredicate<first_fusion_target>;
-class SecondFusionPredicate: FusionPredicate<second_fusion_target>;
-class BothFusionPredicate: FusionPredicate<both_fusion_target>;
-
-// FusionPredicate with raw code predicate.
-class FusionPredicateWithCode<code pred> : FusionPredicate<both_fusion_target> {
-  code Predicate = pred;
-}
-
-// FusionPredicate with MCInstPredicate.
-class FusionPredicateWithMCInstPredicate<FusionTarget target, MCInstPredicate pred>
-  : FusionPredicate<target> {
-  MCInstPredicate Predicate = pred;
-}
-class FirstFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
-  : FusionPredicateWithMCInstPredicate<first_fusion_target, pred>;
-class SecondFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
-  : FusionPredicateWithMCInstPredicate<second_fusion_target, pred>;
-// The pred will be applied on both firstMI and secondMI.
-class BothFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
-  : FusionPredicateWithMCInstPredicate<second_fusion_target, pred>;
-
-// Tie firstOpIdx and secondOpIdx. The operand of `FirstMI` at position
-// `firstOpIdx` should be the same as the operand of `SecondMI` at position
-// `secondOpIdx`.
-class TieReg<int firstOpIdx, int secondOpIdx> : BothFusionPredicate {
-  int FirstOpIdx = firstOpIdx;
-  int SecondOpIdx = secondOpIdx;
-}
-
-// A predicate for wildcard. The generated code will be like:
-// ```
-// if (!FirstMI)
-//   return ReturnValue;
-// ```
-class WildcardPred<bit ret> : FirstFusionPredicate {
-  bit ReturnValue = ret;
-}
-def WildcardFalse : WildcardPred<0>;
-def WildcardTrue : WildcardPred<1>;
-
-// Indicates that the destination register of `FirstMI` should have one use if
-// it is a virtual register.
-class OneUsePred : FirstFusionPredicate;
-def OneUse : OneUsePred;
-
-// Handled by MacroFusionPredicatorEmitter backend.
-// The generated predicator will be like:
-// ```
-// bool isNAME(const TargetInstrInfo &TII,
-//             const TargetSubtargetInfo &STI,
-//             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI) {
-//   auto &MRI = SecondMI.getMF()->getRegInfo();
-//   /* Predicates */
-//   return true;
-// }
-// ```
-class Fusion<list<FusionPredicate> predicates> {
-  list<FusionPredicate> Predicates = predicates;
-}
-
-// The generated predicator will be like:
-// ```
-// bool isNAME(const TargetInstrInfo &TII,
-//             const TargetSubtargetInfo &STI,
-//             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI) {
-//   auto &MRI = SecondMI.getMF()->getRegInfo();
-//   /* Prolog */
-//   /* Predicate for `SecondMI` */
-//   /* Wildcard */
-//   /* Predicate for `FirstMI` */
-//   /* Check One Use */
-//   /* Tie registers */
-//   /* Epilog */
-//   return true;
-// }
-// ```
-class SimpleFusion<MCInstPredicate firstPred, MCInstPredicate secondPred,
-                   list<FusionPredicate> prolog = [],
-                   list<FusionPredicate> epilog = []>
-  : Fusion<!listconcat(
-                  prolog,
-                  [
-                    SecondFusionPredicateWithMCInstPredicate<secondPred>,
-                    WildcardTrue,
-                    FirstFusionPredicateWithMCInstPredicate<firstPred>,
-                    SecondFusionPredicateWithMCInstPredicate<
-                      CheckAny<[
-                        CheckIsVRegOperand<0>,
-                        CheckSameRegOperand<0, 1>
-                      ]>>,
-                    OneUse,
-                    TieReg<0, 1>,
-                  ],
-                  epilog)>;

@@ -1,11 +1,11 @@
-# This reproduces a bug with instrumentation crashes on internal call
+## This reproduces a bug with instrumentation crashes on internal call
 
 # REQUIRES: system-linux,bolt-runtime,target=x86_64{{.*}}
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # Delete our BB symbols so BOLT doesn't mark them as entry points
 # RUN: llvm-strip --strip-unneeded %t.o
-# RUN: ld.lld %t.o -o %t.exe -q -shared -fini=_fini
+# RUN: ld.lld %t.o -o %t.exe -q -shared -fini=_fini -init=_init
 # RUN: llvm-bolt --instrument %t.exe --relocs -o %t.out
 
   .text
@@ -47,6 +47,13 @@ _start:
 _fini:
   hlt
   .size _fini, .-_fini
+
+  .globl  _init
+  .type _init, %function
+  .p2align  4
+_init:
+  retq
+  .size _init, .-_init
 
   .data
   .globl var

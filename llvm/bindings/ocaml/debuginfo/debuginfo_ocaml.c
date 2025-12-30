@@ -15,6 +15,7 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include <assert.h>
 #include <string.h>
 
 #include "caml/memory.h"
@@ -137,6 +138,8 @@ static LLVMDIFlags map_DIFlag(LLVMDIFlag_i DIF) {
   case i_DIFlagPtrToMemberRep:
     return LLVMDIFlagPtrToMemberRep;
   }
+  assert(0 && "Invalid LLVMDIFlag");
+  return 0;
 }
 
 /* unit -> int */
@@ -380,7 +383,6 @@ value llvm_dibuild_get_or_create_array(value Builder, value Data) {
 
 value llvm_dibuild_create_subroutine_type(value Builder, value File,
                                           value ParameterTypes, value Flags) {
-  mlsize_t Count = Wosize_val(ParameterTypes);
   LLVMMetadataRef *Temp = from_val_array(ParameterTypes);
   LLVMMetadataRef Metadata = LLVMDIBuilderCreateSubroutineType(
       DIBuilder_val(Builder), Metadata_val(File), Temp,
@@ -616,9 +618,10 @@ value llvm_dibuild_create_member_pointer_type_bytecode(value *argv, int argn) {
   );
 }
 
-value llvm_dibuild_create_object_pointer_type(value Builder, value Type) {
+value llvm_dibuild_create_object_pointer_type(value Builder, value Type,
+                                              value Implicit) {
   LLVMMetadataRef Metadata = LLVMDIBuilderCreateObjectPointerType(
-      DIBuilder_val(Builder), Metadata_val(Type));
+      DIBuilder_val(Builder), Metadata_val(Type), Bool_val(Implicit));
   return to_val(Metadata);
 }
 
@@ -972,7 +975,7 @@ value llvm_dibuild_create_parameter_variable_bytecode(value *argv, int arg) {
 value llvm_dibuild_insert_declare_before_native(value Builder, value Storage,
                                                 value VarInfo, value Expr,
                                                 value DebugLoc, value Instr) {
-  LLVMValueRef Value = LLVMDIBuilderInsertDeclareBefore(
+  LLVMDbgRecordRef Value = LLVMDIBuilderInsertDeclareRecordBefore(
       DIBuilder_val(Builder), Value_val(Storage), Metadata_val(VarInfo),
       Metadata_val(Expr), Metadata_val(DebugLoc), Value_val(Instr));
   return to_val(Value);
@@ -992,7 +995,7 @@ value llvm_dibuild_insert_declare_before_bytecode(value *argv, int arg) {
 value llvm_dibuild_insert_declare_at_end_native(value Builder, value Storage,
                                                 value VarInfo, value Expr,
                                                 value DebugLoc, value Block) {
-  LLVMValueRef Value = LLVMDIBuilderInsertDeclareAtEnd(
+  LLVMDbgRecordRef Value = LLVMDIBuilderInsertDeclareRecordAtEnd(
       DIBuilder_val(Builder), Value_val(Storage), Metadata_val(VarInfo),
       Metadata_val(Expr), Metadata_val(DebugLoc), BasicBlock_val(Block));
   return to_val(Value);
@@ -1011,4 +1014,15 @@ value llvm_dibuild_insert_declare_at_end_bytecode(value *argv, int arg) {
 value llvm_dibuild_expression(value Builder, value Addr) {
   return to_val(LLVMDIBuilderCreateExpression(
       DIBuilder_val(Builder), (uint64_t *)Op_val(Addr), Wosize_val(Addr)));
+}
+
+/* llmodule -> bool */
+value llvm_is_new_dbg_info_format(value Module) {
+  return Val_bool(LLVMIsNewDbgInfoFormat(Module_val(Module)));
+}
+
+/* llmodule -> bool -> unit */
+value llvm_set_is_new_dbg_info_format(value Module, value UseNewFormat) {
+  LLVMSetIsNewDbgInfoFormat(Module_val(Module), Bool_val(UseNewFormat));
+  return Val_unit;
 }

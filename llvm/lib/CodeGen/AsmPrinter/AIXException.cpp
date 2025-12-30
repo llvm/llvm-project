@@ -14,12 +14,13 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 
-namespace llvm {
+using namespace llvm;
 
 AIXException::AIXException(AsmPrinter *A) : EHStreamer(A) {}
 
@@ -36,8 +37,8 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
   //   unsigned long personality;  /* Pointer to the personality routine */
   //   }
 
-  auto *EHInfo =
-      cast<MCSectionXCOFF>(Asm->getObjFileLowering().getCompactUnwindSection());
+  auto *EHInfo = static_cast<MCSectionXCOFF *>(
+      Asm->getObjFileLowering().getCompactUnwindSection());
   if (Asm->TM.getFunctionSections()) {
     // If option -ffunction-sections is on, append the function name to the
     // name of EH Info Table csect so that each function has its own EH Info
@@ -89,5 +90,3 @@ void AIXException::endFunction(const MachineFunction *MF) {
 
   emitExceptionInfoTable(LSDALabel, PerSym);
 }
-
-} // End of namespace llvm

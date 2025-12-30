@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Picolibc/newlib checks for the blank flag in isprint, which needs to be false
+// for tab. So they removed the _B flag from the ctype data, which causes this
+// test to fail.
+// See https://github.com/picolibc/picolibc/issues/778.
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <locale>

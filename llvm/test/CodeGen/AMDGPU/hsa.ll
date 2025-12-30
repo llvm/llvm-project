@@ -5,10 +5,10 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-flat-for-global | FileCheck --check-prefix=HSA-VI %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj | llvm-readobj -S --sd --syms - | FileCheck --check-prefix=ELF %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=4 | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W32 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 --check-prefix=GFX10-W64 %s
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.
@@ -43,7 +43,7 @@
 ; ELF:   00E0: 6E616D65 A673696D 706C65BB 2E707269
 ; ELF:   00F0: 76617465 5F736567 6D656E74 5F666978
 ; ELF:   0100: 65645F73 697A6500 AB2E7367 70725F63
-; ELF:   0110: 6F756E74 06B12E73 6770725F 7370696C
+; ELF:   0110: 6F756E74 10B12E73 6770725F 7370696C
 ; ELF:   0120: 6C5F636F 756E7400 A72E7379 6D626F6C
 ; ELF:   0130: A973696D 706C652E 6B64AB2E 76677072
 ; ELF:   0140: 5F636F75 6E7403B1 2E766770 725F7370
@@ -59,7 +59,7 @@
 ; ELF:   01E0: 73696D70 6C655F6E 6F5F6B65 726E6172
 ; ELF:   01F0: 6773BB2E 70726976 6174655F 7365676D
 ; ELF:   0200: 656E745F 66697865 645F7369 7A6500AB
-; ELF:   0210: 2E736770 725F636F 756E7400 B12E7367
+; ELF:   0210: 2E736770 725F636F 756E740E B12E7367
 ; ELF:   0220: 70725F73 70696C6C 5F636F75 6E7400A7
 ; ELF:   0230: 2E73796D 626F6CB5 73696D70 6C655F6E
 ; ELF:   0240: 6F5F6B65 726E6172 67732E6B 64AB2E76
@@ -106,7 +106,7 @@
 ; HSA: .Lfunc_end0:
 ; HSA: .size   simple, .Lfunc_end0-simple
 
-define amdgpu_kernel void @simple(ptr addrspace(1) %out) {
+define amdgpu_kernel void @simple(ptr addrspace(1) %out) #0 {
 entry:
   store i32 0, ptr addrspace(1) %out
   ret void
@@ -114,11 +114,13 @@ entry:
 
 ; HSA-LABEL: {{^}}simple_no_kernargs:
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 0
-define amdgpu_kernel void @simple_no_kernargs() {
+define amdgpu_kernel void @simple_no_kernargs() #0 {
 entry:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   ret void
 }
 
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

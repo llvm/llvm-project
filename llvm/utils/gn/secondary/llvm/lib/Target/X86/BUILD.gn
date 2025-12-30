@@ -12,9 +12,12 @@ tablegen("X86GenDAGISel") {
   td_file = "X86.td"
 }
 
-tablegen("X86GenCompressEVEXTables") {
-  visibility = [ ":LLVMX86CodeGen" ]
-  args = [ "-gen-x86-compress-evex-tables" ]
+tablegen("X86GenInstrMapping") {
+  visibility = [
+    ":LLVMX86CodeGen",
+    "AsmParser",
+  ]
+  args = [ "-gen-x86-instr-mapping" ]
   td_file = "X86.td"
 }
 
@@ -48,11 +51,11 @@ tablegen("X86GenRegisterBank") {
 static_library("LLVMX86CodeGen") {
   deps = [
     ":X86GenCallingConv",
-    ":X86GenCompressEVEXTables",
     ":X86GenDAGISel",
     ":X86GenFastISel",
     ":X86GenFoldTables",
     ":X86GenGlobalISel",
+    ":X86GenInstrMapping",
     ":X86GenRegisterBank",
     "MCTargetDesc",
     "TargetInfo",
@@ -63,12 +66,14 @@ static_library("LLVMX86CodeGen") {
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/CFGuard",
     "//llvm/lib/Transforms/Instrumentation",
+    "//llvm/lib/Transforms/Scalar",
   ]
   include_dirs = [ "." ]
   sources = [
@@ -83,8 +88,8 @@ static_library("LLVMX86CodeGen") {
     "X86CallFrameOptimization.cpp",
     "X86CallingConv.cpp",
     "X86CmovConversion.cpp",
+    "X86CodeGenPassBuilder.cpp",
     "X86CompressEVEX.cpp",
-    "X86DiscriminateMemOps.cpp",
     "X86DomainReassignment.cpp",
     "X86DynAllocaExpander.cpp",
     "X86ExpandPseudo.cpp",
@@ -104,7 +109,6 @@ static_library("LLVMX86CodeGen") {
     "X86ISelLoweringCall.cpp",
     "X86IndirectBranchTracking.cpp",
     "X86IndirectThunks.cpp",
-    "X86InsertPrefetch.cpp",
     "X86InsertWait.cpp",
     "X86InstCombineIntrinsic.cpp",
     "X86InstrFMA3Info.cpp",
@@ -130,12 +134,14 @@ static_library("LLVMX86CodeGen") {
     "X86SpeculativeExecutionSideEffectSuppression.cpp",
     "X86SpeculativeLoadHardening.cpp",
     "X86Subtarget.cpp",
+    "X86SuppressAPXForReloc.cpp",
     "X86TargetMachine.cpp",
     "X86TargetObjectFile.cpp",
     "X86TargetTransformInfo.cpp",
     "X86TileConfig.cpp",
     "X86VZeroUpper.cpp",
     "X86WinEHState.cpp",
+    "X86WinEHUnwindV2.cpp",
   ]
 }
 

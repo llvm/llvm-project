@@ -73,19 +73,19 @@ private:
     TripleName = TheTriple.getTriple();
 
     // Create all the MC Objects.
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
+    MRI.reset(TheTarget->createMCRegInfo(TheTriple));
     if (!MRI)
       return createStringError(std::errc::invalid_argument,
                                "no register info for target %s",
                                TripleName.c_str());
 
     MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
     if (!MAI)
       return createStringError(std::errc::invalid_argument,
                                "no asm info for target %s", TripleName.c_str());
 
-    MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+    MSTI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
     if (!MSTI)
       return createStringError(std::errc::invalid_argument,
                                "no subtarget info for target %s",
@@ -193,23 +193,38 @@ private:
       Section.emitString(Include.getForm(), *IncludeStr);
     }
 
+    bool HasChecksums = P.ContentTypes.HasMD5;
+    bool HasInlineSources = P.ContentTypes.HasSource;
+
+    dwarf::Form FileNameForm = dwarf::DW_FORM_string;
+    dwarf::Form LLVMSourceForm = dwarf::DW_FORM_string;
+
     if (P.FileNames.empty()) {
       // file_name_entry_format_count (ubyte).
       Section.emitIntVal(0, 1);
     } else {
+      FileNameForm = P.FileNames[0].Name.getForm();
+      LLVMSourceForm = P.FileNames[0].Source.getForm();
+
       // file_name_entry_format_count (ubyte).
-      Section.emitIntVal(2 + (P.ContentTypes.HasMD5 ? 1 : 0), 1);
+      Section.emitIntVal(
+          2 + (HasChecksums ? 1 : 0) + (HasInlineSources ? 1 : 0), 1);
 
       // file_name_entry_format (sequence of ULEB128 pairs).
       encodeULEB128(dwarf::DW_LNCT_path, Section.OS);
-      encodeULEB128(P.FileNames[0].Name.getForm(), Section.OS);
+      encodeULEB128(FileNameForm, Section.OS);
 
       encodeULEB128(dwarf::DW_LNCT_directory_index, Section.OS);
-      encodeULEB128(dwarf::DW_FORM_data1, Section.OS);
+      encodeULEB128(dwarf::DW_FORM_udata, Section.OS);
 
-      if (P.ContentTypes.HasMD5) {
+      if (HasChecksums) {
         encodeULEB128(dwarf::DW_LNCT_MD5, Section.OS);
         encodeULEB128(dwarf::DW_FORM_data16, Section.OS);
+      }
+
+      if (HasInlineSources) {
+        encodeULEB128(dwarf::DW_LNCT_LLVM_source, Section.OS);
+        encodeULEB128(LLVMSourceForm, Section.OS);
       }
     }
 
@@ -226,13 +241,26 @@ private:
 
       // A null-terminated string containing the full or relative path name of a
       // source file.
-      Section.emitString(File.Name.getForm(), *FileNameStr);
-      Section.emitIntVal(File.DirIdx, 1);
+      Section.emitString(FileNameForm, *FileNameStr);
+      encodeULEB128(File.DirIdx, Section.OS);
 
-      if (P.ContentTypes.HasMD5) {
+      if (HasChecksums) {
+        assert((File.Checksum.size() == 16) &&
+               "checksum size is not equal to 16 bytes.");
         Section.emitBinaryData(
             StringRef(reinterpret_cast<const char *>(File.Checksum.data()),
                       File.Checksum.size()));
+      }
+
+      if (HasInlineSources) {
+        std::optional<const char *> FileSourceStr =
+            dwarf::toString(File.Source);
+        if (!FileSourceStr) {
+          U.warn("cann't read string from line table.");
+          return;
+        }
+
+        Section.emitString(LLVMSourceForm, *FileSourceStr);
       }
     }
   }
@@ -287,6 +315,7 @@ private:
     unsigned FileNum = 1;
     unsigned LastLine = 1;
     unsigned Column = 0;
+    unsigned Discriminator = 0;
     unsigned IsStatement = 1;
     unsigned Isa = 0;
     uint64_t Address = -1ULL;
@@ -322,9 +351,15 @@ private:
         Section.emitIntVal(dwarf::DW_LNS_set_column, 1);
         encodeULEB128(Column, Section.OS);
       }
-
-      // FIXME: We should handle the discriminator here, but dsymutil doesn't
-      // consider it, thus ignore it for now.
+      if (Discriminator != Row.Discriminator && MC->getDwarfVersion() >= 4) {
+        Discriminator = Row.Discriminator;
+        unsigned Size = getULEB128Size(Discriminator);
+        Section.emitIntVal(dwarf::DW_LNS_extended_op, 1);
+        encodeULEB128(Size + 1, Section.OS);
+        Section.emitIntVal(dwarf::DW_LNE_set_discriminator, 1);
+        encodeULEB128(Discriminator, Section.OS);
+      }
+      Discriminator = 0;
 
       if (Isa != Row.Isa) {
         Isa = Row.Isa;
@@ -369,7 +404,7 @@ private:
         EncodingBuffer.resize(0);
         Address = -1ULL;
         LastLine = FileNum = IsStatement = 1;
-        RowsSinceLastSequence = Column = Isa = 0;
+        RowsSinceLastSequence = Column = Discriminator = Isa = 0;
       }
     }
 

@@ -13,6 +13,7 @@ foreach (file ${files})
 endforeach (file)
 
 add_custom_target(opt-viewer DEPENDS ${files})
+set_target_properties(opt-viewer PROPERTIES FOLDER "LLVM/Tools")
 if(NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets("install-opt-viewer"
                            DEPENDS opt-viewer

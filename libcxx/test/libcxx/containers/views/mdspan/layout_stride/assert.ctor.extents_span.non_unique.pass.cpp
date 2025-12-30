@@ -9,7 +9,7 @@
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: !libcpp-hardening-mode=debug
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -30,8 +30,9 @@
 //
 // Effects: Direct-non-list-initializes extents_ with e, and for all d in the range [0, rank_), direct-non-list-initializes strides_[d] with as_const(s[d]).
 
-#include <mdspan>
 #include <cassert>
+#include <mdspan>
+#include <span>
 
 #include "check_assertion.h"
 

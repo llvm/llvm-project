@@ -17,8 +17,7 @@
 ; SimpleLoopUnswitch not marking the Loop as removed, so we missed clearing
 ; the analysis caches.
 ;
-; CHECK: Running pass: SimpleLoopUnswitchPass on loop_begin
-; CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy
+; CHECK: Running pass: SimpleLoopUnswitchPass on loop %loop_begin in function test6
 ; CHECK-NEXT: Clearing all analysis results for: loop_a_inner
 
 

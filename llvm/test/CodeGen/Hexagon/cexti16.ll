@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: memuh(r{{[0-9]+}}<<#2+##a)
 
 @a = external global [5 x [2 x i16]]

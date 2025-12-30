@@ -13,7 +13,6 @@
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -77,7 +76,7 @@ public:
     SmallString<128> Path(Filename);
     llvm::sys::path::replace_extension(Path,
       NewSuffix + llvm::sys::path::extension(Path));
-    return std::string(Path.str());
+    return std::string(Path);
   }
 };
 
@@ -88,7 +87,7 @@ public:
     llvm::sys::fs::createTemporaryFile(llvm::sys::path::filename(Filename),
                                        llvm::sys::path::extension(Filename).drop_front(), fd,
                                        Path);
-    return std::string(Path.str());
+    return std::string(Path);
   }
 };
 } // end anonymous namespace
@@ -104,12 +103,13 @@ bool FixItAction::BeginSourceFileAction(CompilerInstance &CI) {
   }
   Rewriter.reset(new FixItRewriter(CI.getDiagnostics(), CI.getSourceManager(),
                                    CI.getLangOpts(), FixItOpts.get()));
-  return true;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
 void FixItAction::EndSourceFileAction() {
   // Otherwise rewrite all files.
   Rewriter->WriteFixedFiles();
+  ASTFrontendAction::EndSourceFileAction();
 }
 
 bool FixItRecompile::BeginInvocation(CompilerInstance &CI) {
@@ -213,7 +213,7 @@ public:
 
   void visitModuleFile(StringRef Filename,
                        serialization::ModuleKind Kind) override {
-    auto File = CI.getFileManager().getFile(Filename);
+    auto File = CI.getFileManager().getOptionalFileRef(Filename);
     assert(File && "missing file for loaded module?");
 
     // Only rewrite each module file once.
@@ -242,10 +242,10 @@ public:
     (*OS) << '\n';
 
     // Rewrite the contents of the module in a separate compiler instance.
-    CompilerInstance Instance(CI.getPCHContainerOperations(),
-                              &CI.getModuleCache());
-    Instance.setInvocation(
-        std::make_shared<CompilerInvocation>(CI.getInvocation()));
+    CompilerInstance Instance(
+        std::make_shared<CompilerInvocation>(CI.getInvocation()),
+        CI.getPCHContainerOperations(), &CI.getModuleCache());
+    Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
     Instance.createDiagnostics(
         new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
         /*ShouldOwnClient=*/true);
@@ -299,7 +299,7 @@ bool RewriteIncludesAction::BeginSourceFileAction(CompilerInstance &CI) {
         std::make_unique<RewriteImportsListener>(CI, OutputStream));
   }
 
-  return true;
+  return PreprocessorFrontendAction::BeginSourceFileAction(CI);
 }
 
 void RewriteIncludesAction::ExecuteAction() {

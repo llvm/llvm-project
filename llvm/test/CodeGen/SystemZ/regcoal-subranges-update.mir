@@ -25,12 +25,12 @@ body:             |
 
     ; CHECK-LABEL: name: main
     ; CHECK: [[LGHI:%[0-9]+]]:gr64bit = LGHI 43
-    ; CHECK: [[LGHI1:%[0-9]+]]:gr64bit = LGHI 43
-    ; CHECK: [[LGHI1]].subreg_l32:gr64bit = MSR [[LGHI1]].subreg_l32, [[LGHI1]].subreg_l32
-    ; CHECK: [[LGHI1]].subreg_l32:gr64bit = AHIMux [[LGHI1]].subreg_l32, 9, implicit-def dead $cc
-    ; CHECK: undef %3.subreg_l64:gr128bit = LGFI -245143785, implicit [[LGHI1]].subreg_l32
-    ; CHECK: [[DLGR:%[0-9]+]]:gr128bit = DLGR [[DLGR]], [[LGHI]]
-    ; CHECK: Return implicit [[DLGR]]
+    ; CHECK-NEXT: [[LGHI1:%[0-9]+]]:gr64bit = LGHI 43
+    ; CHECK-NEXT: undef [[LGHI1:%[0-9]+]].subreg_l32:gr64bit = MSR [[LGHI1]].subreg_l32, [[LGHI1]].subreg_l32
+    ; CHECK-NEXT: [[LGHI1:%[0-9]+]].subreg_l32:gr64bit = AHIMux [[LGHI1]].subreg_l32, 9, implicit-def dead $cc
+    ; CHECK-NEXT: undef [[LGFI:%[0-9]+]].subreg_l64:gr128bit = LGFI -245143785, implicit [[LGHI1]].subreg_l32
+    ; CHECK-NEXT: [[LGFI:%[0-9]+]]:gr128bit = DLGR [[LGFI]], [[LGHI]]
+    ; CHECK-NEXT: Return implicit [[LGFI]]
     %0:gr64bit = LGHI 43
     %1:gr32bit = COPY %0.subreg_l32
     %1:gr32bit = MSR %1, %1
@@ -49,24 +49,29 @@ body:             |
 ---
 name:            segfault
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 liveins:         []
 body:             |
   ; CHECK-LABEL: name: segfault
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[LGHI:%[0-9]+]]:addr64bit = LGHI 0
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0
-  ; CHECK:   [[LGFR:%[0-9]+]]:gr64bit = LGFR [[LGHI]].subreg_l32
-  ; CHECK:   $r2d = LGHI 123
-  ; CHECK:   $r3d = LGHI 0
-  ; CHECK:   $r4d = LGHI 0
-  ; CHECK:   $r5d = COPY [[LGFR]]
-  ; CHECK:   KILL killed $r2d, killed $r3d, killed $r4d, $r5d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
-  ; CHECK:   ADJCALLSTACKUP 0, 0
-  ; CHECK:   [[LGHI]]:addr64bit = nuw nsw LA [[LGHI]], 1, $noreg
-  ; CHECK:   J %bb.1
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[LGHI:%[0-9]+]]:addr64bit = LGHI 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0
+  ; CHECK-NEXT:   [[LGFR:%[0-9]+]]:gr64bit = LGFR [[LGHI]].subreg_l32
+  ; CHECK-NEXT:   $r2d = LGHI 123
+  ; CHECK-NEXT:   $r3d = LGHI 0
+  ; CHECK-NEXT:   $r4d = LGHI 0
+  ; CHECK-NEXT:   $r5d = COPY [[LGFR]]
+  ; CHECK-NEXT:   KILL killed $r2d, killed $r3d, killed $r4d, $r5d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0
+  ; CHECK-NEXT:   [[LGHI:%[0-9]+]]:addr64bit = nuw nsw LA [[LGHI]], 1, $noreg
+  ; CHECK-NEXT:   J %bb.1
   bb.0:
     successors: %bb.1(0x80000000)
 

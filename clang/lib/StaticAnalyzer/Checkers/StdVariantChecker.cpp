@@ -17,9 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <optional>
-#include <string_view>
 
 #include "TaggedUnionModeling.h"
 
@@ -31,7 +29,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(VariantHeldTypeMap, const MemRegion *, QualType)
 
 namespace clang::ento::tagged_union_modeling {
 
-const CXXConstructorDecl *
+static const CXXConstructorDecl *
 getConstructorDeclarationForCall(const CallEvent &Call) {
   const auto *ConstructorCall = dyn_cast<CXXConstructorCall>(&Call);
   if (!ConstructorCall)
@@ -76,7 +74,7 @@ bool isMoveAssignmentCall(const CallEvent &Call) {
   return AsMethodDecl->isMoveAssignmentOperator();
 }
 
-bool isStdType(const Type *Type, llvm::StringRef TypeName) {
+static bool isStdType(const Type *Type, llvm::StringRef TypeName) {
   auto *Decl = Type->getAsRecordDecl();
   if (!Decl)
     return false;
@@ -92,6 +90,9 @@ bool isStdVariant(const Type *Type) {
 static std::optional<ArrayRef<TemplateArgument>>
 getTemplateArgsFromVariant(const Type *VariantType) {
   const auto *TempSpecType = VariantType->getAs<TemplateSpecializationType>();
+  while (TempSpecType && TempSpecType->isTypeAlias())
+    TempSpecType =
+        TempSpecType->getAliasedType()->getAs<TemplateSpecializationType>();
   if (!TempSpecType)
     return {};
 
@@ -129,9 +130,11 @@ static llvm::StringRef indefiniteArticleBasedOnVowel(char a) {
 
 class StdVariantChecker : public Checker<eval::Call, check::RegionChanges> {
   // Call descriptors to find relevant calls
-  CallDescription VariantConstructor{{"std", "variant", "variant"}};
-  CallDescription VariantAssignmentOperator{{"std", "variant", "operator="}};
-  CallDescription StdGet{{"std", "get"}, 1, 1};
+  CallDescription VariantConstructor{CDM::CXXMethod,
+                                     {"std", "variant", "variant"}};
+  CallDescription VariantAssignmentOperator{CDM::CXXMethod,
+                                            {"std", "variant", "operator="}};
+  CallDescription StdGet{CDM::SimpleFunc, {"std", "get"}, 1, 1};
 
   BugType BadVariantType{this, "BadVariantType", "BadVariantType"};
 
@@ -211,18 +214,20 @@ private:
     if (!DefaultType)
       return;
 
-    ProgramStateRef State = ConstructorCall->getState();
+    ProgramStateRef State = C.getState();
     State = State->set<VariantHeldTypeMap>(ThisMemRegion, *DefaultType);
     C.addTransition(State);
   }
 
   bool handleStdGetCall(const CallEvent &Call, CheckerContext &C) const {
-    ProgramStateRef State = Call.getState();
+    ProgramStateRef State = C.getState();
 
-    const auto &ArgType = Call.getArgSVal(0)
-                              .getType(C.getASTContext())
-                              ->getPointeeType()
-                              .getTypePtr();
+    SVal ArgSVal = Call.getArgSVal(0);
+    if (ArgSVal.isUnknown())
+      return false;
+
+    const auto &ArgType =
+        ArgSVal.getType(C.getASTContext())->getPointeeType().getTypePtr();
     // We have to make sure that the argument is an std::variant.
     // There is another std::get with std::pair argument
     if (!isStdVariant(ArgType))

@@ -53,7 +53,7 @@ public:
   /// value is not an instance of `T`.
   template <typename T,
             typename ResultT = std::conditional_t<
-                std::is_convertible<T, bool>::value, T, std::optional<T>>>
+                std::is_constructible_v<bool, T>, T, std::optional<T>>>
   ResultT dyn_cast() const {
     return isa<T>() ? castImpl<T>() : ResultT();
   }
@@ -152,9 +152,7 @@ public:
   void push_back(TypeRange value) {
     // The lifetime of a TypeRange can't be guaranteed, so we'll need to
     // allocate a storage for it.
-    llvm::OwningArrayRef<Type> storage(value.size());
-    llvm::copy(value, storage.begin());
-    allocatedTypeRanges.emplace_back(std::move(storage));
+    allocatedTypeRanges.emplace_back(value.begin(), value.end());
     typeRanges.push_back(allocatedTypeRanges.back());
     results.push_back(&typeRanges.back());
   }
@@ -174,9 +172,7 @@ public:
   void push_back(ValueRange value) {
     // The lifetime of a ValueRange can't be guaranteed, so we'll need to
     // allocate a storage for it.
-    llvm::OwningArrayRef<Value> storage(value.size());
-    llvm::copy(value, storage.begin());
-    allocatedValueRanges.emplace_back(std::move(storage));
+    allocatedValueRanges.emplace_back(value.begin(), value.end());
     valueRanges.push_back(allocatedValueRanges.back());
     results.push_back(&valueRanges.back());
   }
@@ -206,8 +202,8 @@ protected:
   SmallVector<ValueRange> valueRanges;
   /// Memory allocated to store ranges in the result list whose lifetime was
   /// generated in the native function.
-  SmallVector<llvm::OwningArrayRef<Type>> allocatedTypeRanges;
-  SmallVector<llvm::OwningArrayRef<Value>> allocatedValueRanges;
+  SmallVector<std::vector<Type>> allocatedTypeRanges;
+  SmallVector<std::vector<Value>> allocatedValueRanges;
 };
 
 //===----------------------------------------------------------------------===//
@@ -318,8 +314,9 @@ protected:
 /// A generic PDL pattern constraint function. This function applies a
 /// constraint to a given set of opaque PDLValue entities. Returns success if
 /// the constraint successfully held, failure otherwise.
-using PDLConstraintFunction =
-    std::function<LogicalResult(PatternRewriter &, ArrayRef<PDLValue>)>;
+using PDLConstraintFunction = std::function<LogicalResult(
+    PatternRewriter &, PDLResultList &, ArrayRef<PDLValue>)>;
+
 /// A native PDL rewrite function. This function performs a rewrite on the
 /// given set of values. Any results from this rewrite that should be passed
 /// back to PDL should be added to the provided result list. This method is only
@@ -624,7 +621,7 @@ template <typename PDLFnT, std::size_t... I>
 void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
                 std::index_sequence<I...>) {
   // We only want to do verification in debug builds, same as with `assert`.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifndef NDEBUG
   using FnTraitsT = llvm::function_traits<PDLFnT>;
   auto errorFn = [&](const Twine &msg) -> LogicalResult {
     llvm::report_fatal_error(msg);
@@ -726,7 +723,7 @@ std::enable_if_t<
     PDLConstraintFunction>
 buildConstraintFn(ConstraintFnT &&constraintFn) {
   return [constraintFn = std::forward<ConstraintFnT>(constraintFn)](
-             PatternRewriter &rewriter,
+             PatternRewriter &rewriter, PDLResultList &,
              ArrayRef<PDLValue> values) -> LogicalResult {
     auto argIndices = std::make_index_sequence<
         llvm::function_traits<ConstraintFnT>::num_args - 1>();
@@ -842,10 +839,13 @@ public:
   /// Register a constraint function with PDL. A constraint function may be
   /// specified in one of two ways:
   ///
-  ///   * `LogicalResult (PatternRewriter &, ArrayRef<PDLValue>)`
+  ///   * `LogicalResult (PatternRewriter &,
+  ///                     PDLResultList &,
+  ///                     ArrayRef<PDLValue>)`
   ///
   ///   In this overload the arguments of the constraint function are passed via
-  ///   the low-level PDLValue form.
+  ///   the low-level PDLValue form, and the results are manually appended to
+  ///   the given result list.
   ///
   ///   * `LogicalResult (PatternRewriter &, ValueTs... values)`
   ///
@@ -960,8 +960,8 @@ public:
   }
 };
 class PDLResultList {};
-using PDLConstraintFunction =
-    std::function<LogicalResult(PatternRewriter &, ArrayRef<PDLValue>)>;
+using PDLConstraintFunction = std::function<LogicalResult(
+    PatternRewriter &, PDLResultList &, ArrayRef<PDLValue>)>;
 using PDLRewriteFunction = std::function<LogicalResult(
     PatternRewriter &, PDLResultList &, ArrayRef<PDLValue>)>;
 

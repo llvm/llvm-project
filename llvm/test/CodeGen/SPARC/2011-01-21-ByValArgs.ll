@@ -1,4 +1,4 @@
-;RUN: llc -march=sparc < %s | FileCheck %s
+;RUN: llc -mtriple=sparc < %s | FileCheck %s
 
 %struct.foo_t = type { i32, i32, i32 }
 
@@ -11,8 +11,8 @@ entry:
 ;CHECK:     st
 ;CHECK:     st
 ;CHECK:     bar
-  %0 = tail call i32 @bar(%struct.foo_t* byval(%struct.foo_t) @s) nounwind
+  %0 = tail call i32 @bar(ptr byval(%struct.foo_t) @s) nounwind
   ret i32 %0
 }
 
-declare i32 @bar(%struct.foo_t* byval(%struct.foo_t))
+declare i32 @bar(ptr byval(%struct.foo_t))

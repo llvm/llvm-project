@@ -50,7 +50,7 @@ define <4 x float> @test_negative_zero_1(<4 x float> %A) {
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    unpckhps {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    retq
@@ -726,9 +726,9 @@ define void @PR46461(i16 %x, ptr %y) {
 ; SSE-LABEL: PR46461:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzwl %di, %eax
-; SSE-NEXT:    shrl %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    psrld $1, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, 48(%rsi)
 ; SSE-NEXT:    movdqa %xmm0, 32(%rsi)
 ; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
@@ -738,9 +738,9 @@ define void @PR46461(i16 %x, ptr %y) {
 ; AVX1-LABEL: PR46461:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movzwl %di, %eax
-; AVX1-NEXT:    shrl %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)

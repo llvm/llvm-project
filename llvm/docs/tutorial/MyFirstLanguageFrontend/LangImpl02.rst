@@ -453,7 +453,7 @@ starts with:
           return LHS;
 
 This code gets the precedence of the current token and checks to see if
-if is too low. Because we defined invalid tokens to have a precedence of
+it is too low. Because we defined invalid tokens to have a precedence of
 -1, this check implicitly knows that the pair-stream ends when the token
 stream runs out of binary operators. If this check succeeds, we know
 that the token is a binary operator and that it will be included in this
@@ -716,15 +716,12 @@ Intermediate Representation (IR) from the AST.
 Full Code Listing
 =================
 
-Here is the complete code listing for our running example. Because this
-uses the LLVM libraries, we need to link them in. To do this, we use the
-`llvm-config <https://llvm.org/cmds/llvm-config.html>`_ tool to inform
-our makefile/command line about which options to use:
+Here is the complete code listing for our running example.
 
 .. code-block:: bash
 
     # Compile
-    clang++ -g -O3 toy.cpp `llvm-config --cxxflags`
+    clang++ -g -O3 toy.cpp
     # Run
     ./a.out
 

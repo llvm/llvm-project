@@ -1,4 +1,4 @@
-//===--- NoexceptSwapCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::performance {
 
 void NoexceptSwapCheck::registerMatchers(MatchFinder *Finder) {
-
   // Match non-const method with single argument that is non-const reference to
   // a class type that owns method and return void.
   // Matches: void Class::swap(Class&)
@@ -39,7 +38,8 @@ void NoexceptSwapCheck::registerMatchers(MatchFinder *Finder) {
                      .bind("type"))))),
       hasParameter(1, hasType(qualType(hasCanonicalType(
                           qualType(equalsBoundNode("type")))))));
-  Finder->addMatcher(functionDecl(unless(isDeleted()), hasName("swap"),
+  Finder->addMatcher(functionDecl(unless(isDeleted()),
+                                  hasAnyName("swap", "iter_swap"),
                                   anyOf(MethodMatcher, FunctionMatcher))
                          .bind(BindFuncDeclName),
                      this);

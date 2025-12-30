@@ -2,9 +2,9 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 " -split-input-file | FileCheck %s --check-prefix=NO-DROP
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map" -split-input-file -o /dev/null
@@ -65,13 +65,13 @@ func.func @main(%t: tensor<?xf32>, %sz: index, %idx: index) -> (f32, f32) {
 
 // -----
 
-func.func @return_arg(%A: tensor<?xf32>) -> tensor<?xf32> {
+func.func private @return_arg(%A: tensor<?xf32>) -> tensor<?xf32> {
   func.return %A : tensor<?xf32>
 }
-// CHECK-LABEL: func @return_arg
+// CHECK-LABEL: func private @return_arg
 // CHECK-SAME:      %[[A:.*]]: memref<?xf32
 //  CHECK-NOT:    return %[[A]]
 
-// NO-DROP-LABEL: func @return_arg
+// NO-DROP-LABEL: func private @return_arg
 //  NO-DROP-SAME:     %[[A:.*]]: memref<?xf32
 //       NO-DROP:   return %[[A]]

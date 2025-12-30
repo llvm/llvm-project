@@ -3,12 +3,12 @@
 
 ...
 ---
+# (x + y) - y -> x
 name:            simplify_to_x
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; (x + y) - y -> x
     ; CHECK-LABEL: name: simplify_to_x
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
@@ -23,12 +23,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+#  (x + y) - x -> y
 name:            simplify_to_y
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; (x + y) - x -> y
     ; CHECK-LABEL: name: simplify_to_y
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
@@ -43,12 +43,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# (x + 1) - 1 -> x
 name:            simplify_to_constant_x
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; (x + 1) - 1 -> x
     ; CHECK-LABEL: name: simplify_to_constant_x
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
@@ -64,12 +64,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# (x + y) - x -> y
 name:            simplify_to_constant_y
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; (x + y) - x -> y
     ; CHECK-LABEL: name: simplify_to_constant_y
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
@@ -85,12 +85,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# (x + y) - y -> x
 name:            vector_simplify_to_x
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
-    ; (x + y) - y -> x
     ; CHECK-LABEL: name: vector_simplify_to_x
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
@@ -105,12 +105,12 @@ body:             |
     RET_ReallyLR implicit $d0
 ...
 ---
+# (x + 1) - 1 -> x
 name:            splat_simplify_to_x
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
-    ; (x + 1) - 1 -> x
     ; CHECK-LABEL: name: splat_simplify_to_x
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
@@ -127,6 +127,7 @@ body:             |
     RET_ReallyLR implicit $d0
 ...
 ---
+#  (x + y) - x -> y
 name:            unique_registers_no_fold
 tracksRegLiveness: true
 body:             |
@@ -151,20 +152,18 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+# (x + y) - x -> y
 name:            unique_constants_no_fold
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; (x + y) - x -> y
     ; CHECK-LABEL: name: unique_constants_no_fold
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x1:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %x2:_(s32) = G_CONSTANT i32 2
     ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %y, %x1
-    ; CHECK-NEXT: %sub:_(s32) = G_SUB %add, %x2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %sub:_(s32) = G_ADD %y, [[C]]
     ; CHECK-NEXT: $w0 = COPY %sub(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x1:_(s32) = G_CONSTANT i32 1
@@ -176,12 +175,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+#  x - (y + x) -> 0 - y
 name:            simplify_to_neg_y
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; x - (y + x) -> 0 - y
     ; CHECK-LABEL: name: simplify_to_neg_y
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
@@ -198,12 +197,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+#  y - (y + x) -> 0 - x
 name:            simplify_to_neg_x
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; y - (y + x) -> 0 - x
     ; CHECK-LABEL: name: simplify_to_neg_x
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
@@ -220,12 +219,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+#  x - (y + x) -> 0 - y
 name:            simplify_to_neg_y_constant
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; x - (y + x) -> 0 - y
     ; CHECK-LABEL: name: simplify_to_neg_y_constant
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
@@ -243,12 +242,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+#  y - (y + x) -> 0 - x
 name:            simplify_to_neg_x_constant
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; y - (y + x) -> 0 - x
     ; CHECK-LABEL: name: simplify_to_neg_x_constant
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
@@ -266,12 +265,12 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+#  y - (y + x) -> 0 - x
 name:            vector_simplify_to_neg_x
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
-    ; y - (y + x) -> 0 - x
     ; CHECK-LABEL: name: vector_simplify_to_neg_x
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
@@ -289,12 +288,12 @@ body:             |
     RET_ReallyLR implicit $d0
 ...
 ---
+# x - (y + x) -> 0 - y
 name:            vector_simplify_to_neg_y_constant
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
-    ; x - (y + x) -> 0 - y
     ; CHECK-LABEL: name: vector_simplify_to_neg_y_constant
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
@@ -314,12 +313,12 @@ body:             |
     RET_ReallyLR implicit $d0
 ...
 ---
+# y - (y + x) -> 0 - x
 name:            unique_registers_neg_no_fold
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
-    ; y - (y + x) -> 0 - x
     ; CHECK-LABEL: name: unique_registers_neg_no_fold
     ; CHECK: liveins: $w0, $w1, $w2
     ; CHECK-NEXT: {{  $}}
@@ -339,20 +338,18 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
+#  x - (y + x) -> 0 - y
 name:            wrong_constant_neg_no_fold
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; x - (y + x) -> 0 - y
     ; CHECK-LABEL: name: wrong_constant_neg_no_fold
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %x1:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %x2:_(s32) = G_CONSTANT i32 2
     ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %y, %x1
-    ; CHECK-NEXT: %sub:_(s32) = G_SUB %x2, %add
+    ; CHECK-NEXT: %sub:_(s32) = G_SUB %x1, %y
     ; CHECK-NEXT: $w0 = COPY %sub(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x1:_(s32) = G_CONSTANT i32 1

@@ -16,6 +16,7 @@
 //     typedef UIntType result_type;
 
 #include <random>
+#include <cstdint>
 #include <type_traits>
 
 #include "test_macros.h"

@@ -23,12 +23,8 @@ enum testing
     zero, one, two
 };
 
-namespace std
-{
-
-template <> struct is_error_code_enum<testing> : public std::true_type {};
-
-}
+template <>
+struct std::is_error_code_enum<testing> : public std::true_type {};
 
 std::error_code
 make_error_code(testing x)

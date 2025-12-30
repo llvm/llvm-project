@@ -1,4 +1,3 @@
-include(CMakeParseArguments)
 include(CompilerRTUtils)
 
 function(get_aix_libatomic_default_link_flags link_flags export_list)
@@ -35,12 +34,10 @@ macro(archive_aix_libatomic name libname)
       if(TARGET ${target})
         file(MAKE_DIRECTORY ${output_dir})
         add_custom_command(OUTPUT "${output_dir}/libatomic.so.1"
-                           POST_BUILD
                            COMMAND ${CMAKE_COMMAND} -E
                            copy "$<TARGET_FILE:${target}>"
                                 "${output_dir}/libatomic.so.1"
                            # If built with MODULE, F_LOADONLY is set.
-                           # We have to remove this flag at POST_BUILD.
                            COMMAND ${CMAKE_STRIP} -X32_64 -E
                                 "${output_dir}/libatomic.so.1"
                            DEPENDS ${target})

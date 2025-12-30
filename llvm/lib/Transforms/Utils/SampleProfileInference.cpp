@@ -672,8 +672,8 @@ private:
 
     // Concatenate the two paths
     std::vector<FlowJump *> Result;
-    Result.insert(Result.end(), ForwardPath.begin(), ForwardPath.end());
-    Result.insert(Result.end(), BackwardPath.begin(), BackwardPath.end());
+    llvm::append_range(Result, ForwardPath);
+    llvm::append_range(Result, BackwardPath);
     return Result;
   }
 
@@ -1061,7 +1061,7 @@ void initializeNetwork(const ProfiParams &Params, MinCostMaxFlow &Network,
   assert(NumJumps > 0 && "Too few jumps in a function");
 
   // Introducing dummy source/sink pairs to allow flow circulation.
-  // The nodes corresponding to blocks of the function have indicies in
+  // The nodes corresponding to blocks of the function have indices in
   // the range [0 .. 2 * NumBlocks); the dummy sources/sinks are indexed by the
   // next four values.
   uint64_t S = 2 * NumBlocks;
@@ -1174,8 +1174,6 @@ std::pair<int64_t, int64_t> assignJumpCosts(const ProfiParams &Params,
     else
       CostInc = Params.CostJumpUnknownInc;
     CostDec = 0;
-  } else {
-    assert(Jump.Weight > 0 && "found zero-weight jump with a positive weight");
   }
   return std::make_pair(CostInc, CostDec);
 }

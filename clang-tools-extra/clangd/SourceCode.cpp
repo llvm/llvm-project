@@ -232,7 +232,11 @@ bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM) {
   if (Loc.isFileID())
     return true;
   auto Spelling = SM.getDecomposedSpellingLoc(Loc);
-  StringRef SpellingFile = SM.getSLocEntry(Spelling.first).getFile().getName();
+  bool InvalidSLocEntry = false;
+  const auto SLocEntry = SM.getSLocEntry(Spelling.first, &InvalidSLocEntry);
+  if (InvalidSLocEntry)
+    return false;
+  StringRef SpellingFile = SLocEntry.getFile().getName();
   if (SpellingFile == "<scratch space>")
     return false;
   if (SpellingFile == "<built-in>")
@@ -578,7 +582,21 @@ std::optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {
 
 format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
-                                          const ThreadsafeFS &TFS) {
+                                          const ThreadsafeFS &TFS,
+                                          bool FormatFile) {
+  // Unless we're formatting a substantial amount of code (the entire file
+  // or an arbitrarily large range), skip libFormat's heuristic check for
+  // .h files that tries to determine whether the file contains objective-c
+  // code. (This is accomplished by passing empty code contents to getStyle().
+  // The heuristic is the only thing that looks at the contents.)
+  // This is a workaround for PR60151, a known issue in libFormat where this
+  // heuristic can OOM on large files. If we *are* formatting the entire file,
+  // there's no point in doing this because the actual format::reformat() call
+  // will run into the same OOM; we'd just be risking inconsistencies between
+  // clangd and clang-format on smaller .h files where they disagree on what
+  // language is detected.
+  if (!FormatFile)
+    Content = {};
   auto Style = format::getStyle(format::DefaultFormatStyle, File,
                                 format::DefaultFallbackStyle, Content,
                                 TFS.view(/*CWD=*/std::nullopt).get());
@@ -796,8 +814,8 @@ llvm::SmallVector<llvm::StringRef> ancestorNamespaces(llvm::StringRef NS) {
 
 // Checks whether \p FileName is a valid spelling of main file.
 bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
-  auto FE = SM.getFileManager().getFile(FileName);
-  return FE && *FE == SM.getFileEntryForID(SM.getMainFileID());
+  auto FE = SM.getFileManager().getOptionalFileRef(FileName);
+  return FE && FE == SM.getFileEntryRefForID(SM.getMainFileID());
 }
 
 } // namespace
@@ -846,7 +864,7 @@ std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
       return true;
     return LHS < RHS;
   });
-  Found.erase(std::unique(Found.begin(), Found.end()), Found.end());
+  Found.erase(llvm::unique(Found), Found.end());
   return Found;
 }
 
@@ -1197,6 +1215,26 @@ EligibleRegion getEligiblePoints(llvm::StringRef Code,
     ER.EligiblePoints.emplace_back(offsetToPosition(Code, Code.size()));
   }
   return ER;
+}
+
+std::string getNamespaceAtPosition(StringRef Code, const Position &Pos,
+                                   const LangOptions &LangOpts) {
+  std::vector<std::string> Enclosing = {""};
+  parseNamespaceEvents(Code, LangOpts, [&](NamespaceEvent Event) {
+    if (Pos < Event.Pos)
+      return;
+    if (Event.Trigger == NamespaceEvent::UsingDirective)
+      return;
+    if (!Event.Payload.empty())
+      Event.Payload.append("::");
+    if (Event.Trigger == NamespaceEvent::BeginNamespace) {
+      Enclosing.emplace_back(std::move(Event.Payload));
+    } else {
+      Enclosing.pop_back();
+      assert(Enclosing.back() == Event.Payload);
+    }
+  });
+  return Enclosing.back();
 }
 
 bool isHeaderFile(llvm::StringRef FileName,

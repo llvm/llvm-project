@@ -9,12 +9,15 @@
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanDominatorTree.h"
+#include "VPlanTestBase.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
 namespace {
 
-TEST(VPDominatorTreeTest, DominanceNoRegionsTest) {
+using VPDominatorTreeTest = VPlanTestBase;
+
+TEST_F(VPDominatorTreeTest, DominanceNoRegionsTest) {
   //   VPBB0
   //    |
   //   R1 {
@@ -24,13 +27,13 @@ TEST(VPDominatorTreeTest, DominanceNoRegionsTest) {
   //    \    /
   //    VPBB4
   //  }
-  VPBasicBlock *VPPH = new VPBasicBlock("ph");
-  VPBasicBlock *VPBB0 = new VPBasicBlock("VPBB0");
-  VPBasicBlock *VPBB1 = new VPBasicBlock("VPBB1");
-  VPBasicBlock *VPBB2 = new VPBasicBlock("VPBB2");
-  VPBasicBlock *VPBB3 = new VPBasicBlock("VPBB3");
-  VPBasicBlock *VPBB4 = new VPBasicBlock("VPBB4");
-  VPRegionBlock *R1 = new VPRegionBlock(VPBB1, VPBB4);
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB0 = Plan.getEntry();
+  VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("VPBB3");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("VPBB4");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB1, VPBB4);
   VPBB2->setParent(R1);
   VPBB3->setParent(R1);
 
@@ -40,10 +43,9 @@ TEST(VPDominatorTreeTest, DominanceNoRegionsTest) {
   VPBlockUtils::connectBlocks(VPBB2, VPBB4);
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
 
-  auto TC = std::make_unique<VPValue>();
-  VPlan Plan(VPPH, &*TC, VPBB0);
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
+
+  VPDominatorTree VPDT(Plan);
 
   EXPECT_TRUE(VPDT.dominates(VPBB1, VPBB4));
   EXPECT_FALSE(VPDT.dominates(VPBB4, VPBB1));
@@ -70,7 +72,7 @@ checkDomChildren(VPDominatorTree &VPDT, VPBlockBase *Src,
   EXPECT_EQ(Children, ExpectedNodes);
 }
 
-TEST(VPDominatorTreeTest, DominanceRegionsTest) {
+TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
   {
     // 2 consecutive regions.
     // VPBB0
@@ -91,13 +93,13 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     //    R2BB2
     // }
     //
-    VPBasicBlock *VPPH = new VPBasicBlock("ph");
-    VPBasicBlock *VPBB0 = new VPBasicBlock("VPBB0");
-    VPBasicBlock *R1BB1 = new VPBasicBlock();
-    VPBasicBlock *R1BB2 = new VPBasicBlock();
-    VPBasicBlock *R1BB3 = new VPBasicBlock();
-    VPBasicBlock *R1BB4 = new VPBasicBlock();
-    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB4, "R1");
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB0 = Plan.getEntry();
+    VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
+    VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
+    VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("");
+    VPBasicBlock *R1BB4 = Plan.createVPBasicBlock("");
+    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB4);
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
     VPBlockUtils::connectBlocks(VPBB0, R1);
@@ -108,16 +110,14 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     // Cycle.
     VPBlockUtils::connectBlocks(R1BB3, R1BB3);
 
-    VPBasicBlock *R2BB1 = new VPBasicBlock();
-    VPBasicBlock *R2BB2 = new VPBasicBlock();
-    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
+    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
+    VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
+    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
-    auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB0);
-    VPDominatorTree VPDT;
-    VPDT.recalculate(Plan);
+    VPBlockUtils::connectBlocks(R2, Plan.getScalarHeader());
+    VPDominatorTree VPDT(Plan);
 
     checkDomChildren(VPDT, R1, {R1BB1});
     checkDomChildren(VPDT, R1BB1, {R1BB2, R1BB4, R1BB3});
@@ -167,16 +167,16 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     //   |
     //  VPBB2
     //
-    VPBasicBlock *VPPH = new VPBasicBlock("ph");
-    VPBasicBlock *R1BB1 = new VPBasicBlock("R1BB1");
-    VPBasicBlock *R1BB2 = new VPBasicBlock("R1BB2");
-    VPBasicBlock *R1BB3 = new VPBasicBlock("R1BB3");
-    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB3, "R1");
+    VPlan &Plan = getPlan();
+    VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
+    VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
+    VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
+    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB3);
 
-    VPBasicBlock *R2BB1 = new VPBasicBlock("R2BB1");
-    VPBasicBlock *R2BB2 = new VPBasicBlock("R2BB2");
-    VPBasicBlock *R2BB3 = new VPBasicBlock("R2BB3");
-    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB3, "R2");
+    VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
+    VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
+    VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB#");
+    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB3);
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB2, R2BB1);
@@ -189,15 +189,13 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBlockUtils::connectBlocks(R1BB2, R1BB3);
     VPBlockUtils::connectBlocks(R2, R1BB3);
 
-    VPBasicBlock *VPBB1 = new VPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB1 = Plan.getEntry();
     VPBlockUtils::connectBlocks(VPBB1, R1);
-    VPBasicBlock *VPBB2 = new VPBasicBlock("VPBB2");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
     VPBlockUtils::connectBlocks(R1, VPBB2);
 
-    auto TC = std::make_unique<VPValue>();
-    VPlan Plan(VPPH, &*TC, VPBB1);
-    VPDominatorTree VPDT;
-    VPDT.recalculate(Plan);
+    VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
+    VPDominatorTree VPDT(Plan);
 
     checkDomChildren(VPDT, VPBB1, {R1});
     checkDomChildren(VPDT, R1, {R1BB1});
@@ -208,7 +206,7 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     checkDomChildren(VPDT, R2BB2, {R2BB3});
     checkDomChildren(VPDT, R2BB3, {});
     checkDomChildren(VPDT, R1BB3, {VPBB2});
-    checkDomChildren(VPDT, VPBB2, {});
+    checkDomChildren(VPDT, VPBB2, {Plan.getScalarHeader()});
   }
 }
 

@@ -22,7 +22,6 @@
 #include <__concepts/semiregular.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
-#include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
@@ -31,7 +30,8 @@
 #include <__ranges/movable_box.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
@@ -40,6 +40,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -55,18 +58,24 @@ struct __get_wider_signed {
       return type_identity<int>{};
     else if constexpr (sizeof(_Int) < sizeof(long))
       return type_identity<long>{};
-    else
+    else if constexpr (sizeof(_Int) < sizeof(long long))
       return type_identity<long long>{};
-
-    static_assert(
-        sizeof(_Int) <= sizeof(long long), "Found integer-like type that is bigger than largest integer like type.");
+#  if _LIBCPP_HAS_INT128
+    else if constexpr (sizeof(_Int) <= sizeof(__int128))
+      return type_identity<__int128>{};
+#  else
+    else if constexpr (sizeof(_Int) <= sizeof(long long))
+      return type_identity<long long>{};
+#  endif
+    else
+      static_assert(false, "Found integer-like type that is bigger than the largest integer like type.");
   }
 
   using type = typename decltype(__call())::type;
 };
 
 template <class _Start>
-using _IotaDiffT =
+using _IotaDiffT _LIBCPP_NODEBUG =
     typename _If< (!integral<_Start> || sizeof(iter_difference_t<_Start>) > sizeof(_Start)),
                   type_identity<iter_difference_t<_Start>>,
                   __get_wider_signed<_Start> >::type;
@@ -310,8 +319,8 @@ public:
       : __value_(std::move(__value)), __bound_sentinel_(std::move(__bound_sentinel)) {
     // Validate the precondition if possible.
     if constexpr (totally_ordered_with<_Start, _BoundSentinel>) {
-      _LIBCPP_ASSERT_UNCATEGORIZED(
-          ranges::less_equal()(__value_, __bound_sentinel_), "Precondition violated: value is greater than bound.");
+      _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+          bool(__value_ <= __bound_sentinel_), "iota_view: bound must be reachable from value");
     }
   }
 
@@ -342,6 +351,8 @@ public:
     return __iterator{__bound_sentinel_};
   }
 
+  _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const { return __value_ == __bound_sentinel_; }
+
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires(same_as<_Start, _BoundSentinel> && __advanceable<_Start>) ||
             (integral<_Start> && integral<_BoundSentinel>) || sized_sentinel_for<_BoundSentinel, _Start>
@@ -370,10 +381,10 @@ namespace views {
 namespace __iota {
 struct __fn {
   template <class _Start>
+    requires(requires(_Start __s) { ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__s)); })
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Start&& __start) const
-      noexcept(noexcept(ranges::iota_view(std::forward<_Start>(__start))))
-          -> decltype(ranges::iota_view(std::forward<_Start>(__start))) {
-    return ranges::iota_view(std::forward<_Start>(__start));
+      noexcept(noexcept(ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start)))) {
+    return ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start));
   }
 
   template <class _Start, class _BoundSentinel>
@@ -388,11 +399,22 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto iota = __iota::__fn{};
 } // namespace __cpo
+
+#  if _LIBCPP_STD_VER >= 26
+
+inline constexpr auto indices = [](__integer_like auto __size) static {
+  return ranges::views::iota(decltype(__size){}, __size);
+};
+
+#  endif
+
 } // namespace views
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_IOTA_VIEW_H

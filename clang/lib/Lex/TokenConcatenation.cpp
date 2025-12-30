@@ -160,6 +160,10 @@ static char GetFirstChar(const Preprocessor &PP, const Token &Tok) {
 bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
                                      const Token &PrevTok,
                                      const Token &Tok) const {
+  // No space is required between header unit name in quote and semi.
+  if (PrevTok.is(tok::annot_header_unit) && Tok.is(tok::semi))
+    return false;
+
   // Conservatively assume that every annotation token that has a printable
   // form requires whitespace.
   if (PrevTok.isAnnotation())
@@ -193,9 +197,12 @@ bool TokenConcatenation::AvoidConcat(const Token &PrevPrevTok,
   if (Tok.isAnnotation()) {
     // Modules annotation can show up when generated automatically for includes.
     assert(Tok.isOneOf(tok::annot_module_include, tok::annot_module_begin,
-                       tok::annot_module_end) &&
+                       tok::annot_module_end, tok::annot_embed) &&
            "unexpected annotation in AvoidConcat");
+
     ConcatInfo = 0;
+    if (Tok.is(tok::annot_embed))
+      return true;
   }
 
   if (ConcatInfo == 0)

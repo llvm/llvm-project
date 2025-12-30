@@ -1,0 +1,27 @@
+//===- SPIRVPassRegistry.def - Registry of SPIRV passes -----*- C++--*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the
+// SPIRV backend.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("spirv-cbuffer-access", SPIRVCBufferAccess())
+MODULE_PASS("spirv-pushconstant-access", SPIRVPushConstantAccess(*static_cast<const SPIRVTargetMachine *>(this)))
+#undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("spirv-structurizer", SPIRVStructurizerWrapper())
+#undef FUNCTION_PASS

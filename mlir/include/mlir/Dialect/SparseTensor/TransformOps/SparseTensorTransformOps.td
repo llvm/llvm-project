@@ -11,7 +11,7 @@
 #ifndef SPARSETENSOR_TRANSFORM_OPS
 #define SPARSETENSOR_TRANSFORM_OPS
 
-include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
@@ -32,7 +32,10 @@ def MatchSparseInOut : Op<Transform_Dialect, "sparse_tensor.match.sparse_inout",
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$result);
 
-  let assemblyFormat = "$target attr-dict `:` custom<SemiFunctionType>(type($target), type($result))";
+  let assemblyFormat = [{
+    $target attr-dict `:`
+    custom<SemiFunctionType>(type($target), type($result), "false")
+  }];
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration # [{
     ::mlir::Value getOperandHandle() { return getTarget(); }
   }];

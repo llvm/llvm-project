@@ -106,7 +106,7 @@ void ExecutionEngine::dumpToObjectFile(StringRef filename) {
   }
   // Compilation is lazy and it doesn't populate object cache unless requested.
   // In case object dump is requested before cache is populated, we need to
-  // force compilation manually. 
+  // force compilation manually.
   if (cache->isEmpty()) {
     for (std::string &functionName : functionNames) {
       auto result = lookupPacked(functionName);
@@ -131,7 +131,7 @@ void ExecutionEngine::registerSymbols(
 void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
                                                      llvm::TargetMachine *tm) {
   llvmModule->setDataLayout(tm->createDataLayout());
-  llvmModule->setTargetTriple(tm->getTargetTriple().getTriple());
+  llvmModule->setTargetTriple(tm->getTargetTriple());
 }
 
 static std::string makePackedFunctionName(StringRef name) {
@@ -146,12 +146,10 @@ static void packFunctionArguments(Module *module) {
   llvm::IRBuilder<> builder(ctx);
   DenseSet<llvm::Function *> interfaceFunctions;
   for (auto &func : module->getFunctionList()) {
-    if (func.isDeclaration()) {
+    if (func.isDeclaration() || func.hasLocalLinkage())
       continue;
-    }
-    if (interfaceFunctions.count(&func)) {
+    if (interfaceFunctions.count(&func))
       continue;
-    }
 
     // Given a function `foo(<...>)`, define the interface function
     // `mlir_foo(i8**)`.
@@ -219,6 +217,9 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 }
 
 ExecutionEngine::~ExecutionEngine() {
+  // Execute the global destructors from the module being processed.
+  if (jit)
+    llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
     destroy();
@@ -234,6 +235,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // Remember all entry-points if object dumping is enabled.
   if (options.enableObjectDump) {
     for (auto funcOp : m->getRegion(0).getOps<LLVM::LLVMFuncOp>()) {
+      if (funcOp.getBlocks().empty())
+        continue;
       StringRef funcName = funcOp.getSymName();
       engine->functionNames.push_back(funcName.str());
     }
@@ -308,11 +311,15 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
-  auto objectLinkingLayerCreator = [&](ExecutionSession &session,
-                                       const Triple &tt) {
+  auto objectLinkingLayerCreator = [&](ExecutionSession &session) {
+    // Needed to respect AArch64 ABI requirements on the distance between
+    // TEXT and GOT sections.
+    bool reserveAlloc = llvmModule->getTargetTriple().isAArch64();
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper = options.sectionMemoryMapper]() {
-          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
+        session, [sectionMemoryMapper = options.sectionMemoryMapper,
+                  reserveAlloc](const MemoryBuffer &) {
+          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper,
+                                                        reserveAlloc);
         });
 
     // Register JIT event listeners if they are enabled.
@@ -324,7 +331,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     // COFF format binaries (Windows) need special handling to deal with
     // exported symbol visibility.
     // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
-    llvm::Triple targetTriple(llvm::Twine(llvmModule->getTargetTriple()));
+    const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
     if (targetTriple.isOSBinFormatCOFF()) {
       objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
       objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
@@ -395,7 +402,6 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     return symbolMap;
   };
   engine->registerSymbols(runtimeSymbolMap);
-
   return std::move(engine);
 }
 
@@ -421,7 +427,7 @@ Expected<void *> ExecutionEngine::lookup(StringRef name) const {
     llvm::raw_string_ostream os(errorMessage);
     llvm::handleAllErrors(expectedSymbol.takeError(),
                           [&os](llvm::ErrorInfoBase &ei) { ei.log(os); });
-    return makeStringError(os.str());
+    return makeStringError(errorMessage);
   }
 
   if (void *fptr = expectedSymbol->toPtr<void *>())
@@ -431,6 +437,7 @@ Expected<void *> ExecutionEngine::lookup(StringRef name) const {
 
 Error ExecutionEngine::invokePacked(StringRef name,
                                     MutableArrayRef<void *> args) {
+  initialize();
   auto expectedFPtr = lookupPacked(name);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
@@ -439,4 +446,11 @@ Error ExecutionEngine::invokePacked(StringRef name,
   (*fptr)(args.data());
 
   return Error::success();
+}
+
+void ExecutionEngine::initialize() {
+  if (isInitialized)
+    return;
+  cantFail(jit->initialize(jit->getMainJITDylib()));
+  isInitialized = true;
 }

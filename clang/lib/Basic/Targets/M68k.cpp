@@ -13,8 +13,6 @@
 #include "M68k.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -29,35 +27,12 @@ namespace targets {
 M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
                                const TargetOptions &Opts)
     : TargetInfo(Triple), TargetOpts(Opts) {
-
-  std::string Layout;
-
-  // M68k is Big Endian
-  Layout += "E";
-
-  // FIXME how to wire it with the used object format?
-  Layout += "-m:e";
-
-  // M68k pointers are always 32 bit wide even for 16-bit CPUs
-  Layout += "-p:32:16:32";
-
-  // M68k integer data types
-  Layout += "-i8:8:8-i16:16:16-i32:16:32";
-
-  // FIXME no floats at the moment
-
-  // The registers can hold 8, 16, 32 bits
-  Layout += "-n8:16:32";
-
-  // 16 bit alignment for both stack and aggregate
-  // in order to conform to ABI used by GCC
-  Layout += "-a:0:16-S16";
-
-  resetDataLayout(Layout);
+  resetDataLayout();
 
   SizeType = UnsignedInt;
   PtrDiffType = SignedInt;
   IntPtrType = SignedInt;
+  IntAlign = LongAlign = PointerAlign = 16;
 }
 
 bool M68kTargetInfo::setCPU(const std::string &Name) {
@@ -115,9 +90,10 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HAVE_68881__");
 }
 
-ArrayRef<Builtin::Info> M68kTargetInfo::getTargetBuiltins() const {
+llvm::SmallVector<Builtin::InfosShard>
+M68kTargetInfo::getTargetBuiltins() const {
   // FIXME: Implement.
-  return std::nullopt;
+  return {};
 }
 
 bool M68kTargetInfo::hasFeature(StringRef Feature) const {
@@ -127,16 +103,21 @@ bool M68kTargetInfo::hasFeature(StringRef Feature) const {
 
 const char *const M68kTargetInfo::GCCRegNames[] = {
     "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7",
-    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "sp",
     "pc"};
 
 ArrayRef<const char *> M68kTargetInfo::getGCCRegNames() const {
   return llvm::ArrayRef(GCCRegNames);
 }
 
+const TargetInfo::GCCRegAlias M68kTargetInfo::GCCRegAliases[] = {
+    {{"bp"}, "a5"},
+    {{"fp"}, "a6"},
+    {{"usp", "ssp", "isp", "a7"}, "sp"},
+};
+
 ArrayRef<TargetInfo::GCCRegAlias> M68kTargetInfo::getGCCRegAliases() const {
-  // No aliases.
-  return std::nullopt;
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool M68kTargetInfo::validateAsmConstraint(

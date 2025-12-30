@@ -12,8 +12,8 @@
 
 ; Vector cost is 5, Scalar cost is 7
 ; AVX: Adding cost -2 for reduction of n=8 [  %0 = load i32, ptr %p, align 4, ..] (It is a splitting reduction)
-; Vector cost is 6, Scalar cost is 7
-; SSE: Adding cost -1 for reduction of n=8 [  %0 = load i32, ptr %p, align 4, ..] (It is a splitting reduction)
+; Vector cost is 4, Scalar cost is 7
+; SSE: Adding cost -3 for reduction of n=8 [  %0 = load i32, ptr %p, align 4, ..] (It is a splitting reduction)
 define i32 @test_add(ptr nocapture readonly %p) {
 ; CHECK-LABEL: @test_add(
 ; CHECK-NEXT:  entry:
@@ -25,7 +25,7 @@ entry:
   %0 = load i32, ptr %p, align 4
   %arrayidx.1 = getelementptr inbounds i32, ptr %p, i64 1
   %1 = load i32, ptr %arrayidx.1, align 4
-  %mul.18 = add i32 %1, %0
+  %mul.18 = add i32 %0, %1
   %arrayidx.2 = getelementptr inbounds i32, ptr %p, i64 2
   %2 = load i32, ptr %arrayidx.2, align 4
   %mul.29 = add i32 %2, %mul.18

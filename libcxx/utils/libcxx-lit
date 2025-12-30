@@ -30,7 +30,7 @@ fi
 
 if [[ "${1}" == "-b" || "${1}" == "--bootstrap" ]]; then
     type="runtimes"
-		shift
+    shift
 fi
 
 if [[ $# -lt 1 ]]; then

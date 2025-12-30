@@ -24,10 +24,10 @@ body:             |
     ; ALL-LABEL: name: test_merge_v128
     ; ALL: [[DEF:%[0-9]+]]:vr128x = IMPLICIT_DEF
     ; ALL: undef %2.sub_xmm:vr512 = COPY [[DEF]]
-    ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr %2, [[DEF]], 1
-    ; ALL: [[VINSERTF32x4Zrr1:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[VINSERTF32x4Zrr]], [[DEF]], 2
-    ; ALL: [[VINSERTF32x4Zrr2:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[VINSERTF32x4Zrr1]], [[DEF]], 3
-    ; ALL: $zmm0 = COPY [[VINSERTF32x4Zrr2]]
+    ; ALL: [[VINSERTF32X4Zrri:%[0-9]+]]:vr512 = VINSERTF32X4Zrri %2, [[DEF]], 1
+    ; ALL: [[VINSERTF32X4Zrri1:%[0-9]+]]:vr512 = VINSERTF32X4Zrri [[VINSERTF32X4Zrri]], [[DEF]], 2
+    ; ALL: [[VINSERTF32X4Zrri2:%[0-9]+]]:vr512 = VINSERTF32X4Zrri [[VINSERTF32X4Zrri1]], [[DEF]], 3
+    ; ALL: $zmm0 = COPY [[VINSERTF32X4Zrri2]]
     ; ALL: RET 0, implicit $zmm0
     %0(<4 x s32>) = IMPLICIT_DEF
     %1(<16 x s32>) = G_CONCAT_VECTORS %0(<4 x s32>), %0(<4 x s32>), %0(<4 x s32>), %0(<4 x s32>)
@@ -49,8 +49,8 @@ body:             |
     ; ALL-LABEL: name: test_merge_v256
     ; ALL: [[DEF:%[0-9]+]]:vr256x = IMPLICIT_DEF
     ; ALL: undef %2.sub_ymm:vr512 = COPY [[DEF]]
-    ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr %2, [[DEF]], 1
-    ; ALL: $zmm0 = COPY [[VINSERTF64x4Zrr]]
+    ; ALL: [[VINSERTF64X4Zrri:%[0-9]+]]:vr512 = VINSERTF64X4Zrri %2, [[DEF]], 1
+    ; ALL: $zmm0 = COPY [[VINSERTF64X4Zrri]]
     ; ALL: RET 0, implicit $zmm0
     %0(<8 x s32>) = IMPLICIT_DEF
     %1(<16 x s32>) = G_CONCAT_VECTORS %0(<8 x s32>), %0(<8 x s32>)

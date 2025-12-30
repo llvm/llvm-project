@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -42,7 +43,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -66,12 +66,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -81,7 +82,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class NmOptTable : public opt::GenericOptTable {
 public:
-  NmOptTable() : opt::GenericOptTable(InfoTable) {
+  NmOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -1614,15 +1616,18 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     }
     // See if these addresses are already in the symbol table.
     unsigned FunctionStartsAdded = 0;
+    // The addresses from FoundFns come from LC_FUNCTION_STARTS. Its contents
+    // are delta encoded addresses from the start of __TEXT, ending when zero
+    // is found. Because of this, the addresses should be unique, and even if
+    // we create fake entries on SymbolList in the second loop, SymbolAddresses
+    // should not need to be updated there.
+    SmallSet<uint64_t, 32> SymbolAddresses;
+    for (const auto &S : SymbolList)
+      SymbolAddresses.insert(S.Address);
     for (uint64_t f = 0; f < FoundFns.size(); f++) {
-      bool found = false;
-      for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
-        if (SymbolList[J].Address == FoundFns[f] + BaseSegmentAddress)
-          found = true;
-      }
-      // See this address is not already in the symbol table fake up an
-      // nlist for it.
-      if (!found) {
+      // See if this address is already in the symbol table, otherwise fake up
+      // an nlist for it.
+      if (!SymbolAddresses.contains(FoundFns[f] + BaseSegmentAddress)) {
         NMSymbol F = {};
         F.Name = "<redacted function X>";
         F.Address = FoundFns[f] + BaseSegmentAddress;
@@ -1855,11 +1860,8 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
               dyn_cast<const XCOFFObjectFile>(&Obj))
         S.Size = XCOFFObj->getSymbolSize(Sym.getRawDataRefImpl());
 
-      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj)) {
-        const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym);
-        if (WasmSym.isTypeData() && !WasmSym.isUndefined())
-          S.Size = WasmSym.Info.DataRef.Size;
-      }
+      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj))
+        S.Size = WasmObj->getSymbolSize(Sym);
 
       if (PrintAddress && isa<ObjectFile>(Obj)) {
         SymbolRef SymRef(Sym);
@@ -2392,20 +2394,18 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   std::vector<NMSymbol> SymbolList;
   for (const auto &FileName : InputFilenames) {
     std::vector<NMSymbol> FileSymList = dumpSymbolNamesFromFile(FileName);
-    SymbolList.insert(SymbolList.end(), FileSymList.begin(), FileSymList.end());
+    llvm::append_range(SymbolList, FileSymList);
   }
 
   // Delete symbols which should not be printed from SymolList.
   llvm::erase_if(SymbolList,
                  [](const NMSymbol &s) { return !s.shouldPrint(); });
   sortSymbolList(SymbolList);
-  SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
-                   SymbolList.end());
+  SymbolList.erase(llvm::unique(SymbolList), SymbolList.end());
   printExportSymbolList(SymbolList);
 }
 
 int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   NmOptTable Tbl;

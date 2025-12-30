@@ -16,8 +16,8 @@ define i1 @set_low_bit_mask_eq(i8 %x) {
 
 define <2 x i1> @set_low_bit_mask_ne(<2 x i8> %x) {
 ; CHECK-LABEL: @set_low_bit_mask_ne(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -4, i8 -4>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[TMP1]], <i8 16, i8 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -4)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[TMP1]], splat (i8 16)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = or <2 x i8> %x, <i8 3, i8 3>
@@ -172,7 +172,7 @@ define i1 @eq_const_mask_not_same(i8 %x, i8 %y) {
 define i1 @eq_const_mask_wrong_opcode(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_const_mask_wrong_opcode(
 ; CHECK-NEXT:    [[B0:%.*]] = or i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[B0]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[B0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 5
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -220,7 +220,7 @@ define i1 @eq_const_mask_use2(i8 %x, i8 %y) {
 
 define <2 x i1> @decrement_slt_0(<2 x i8> %x) {
 ; CHECK-LABEL: @decrement_slt_0(
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
@@ -428,13 +428,17 @@ define i1 @icmp_or_xor_2_ne_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 
 ; negative test - xor multiuse
 
-define i1 @icmp_or_xor_2_3_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
+; NB: This requires more than 1 iteration to simplify. After we
+; simplify `%cmp_1 = icmp eq i64 %xor, 0`, `%xor = xor i64 %x1, %y1`
+; has one use which allows for complete simplification (rooted on
+; `%or1 = or i1 %cmp, %cmp_1` so we don't end up adding it back).
+define i1 @icmp_or_xor_2_3_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) "instcombine-no-verify-fixpoint" {
 ; CHECK-LABEL: @icmp_or_xor_2_3_fail(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[XOR]], 0
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[X1]], [[Y1]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[CMP]], [[CMP_1]]
 ; CHECK-NEXT:    ret i1 [[OR1]]
 ;
@@ -449,13 +453,13 @@ define i1 @icmp_or_xor_2_3_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 
 ; negative test - xor multiuse
 
-define i1 @icmp_or_xor_2_4_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
+define i1 @icmp_or_xor_2_4_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) "instcombine-no-verify-fixpoint" {
 ; CHECK-LABEL: @icmp_or_xor_2_4_fail(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[XOR1]], 0
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[X2]], [[Y2]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[CMP]], [[CMP_1]]
 ; CHECK-NEXT:    ret i1 [[OR1]]
 ;
@@ -951,3 +955,52 @@ define i1 @icmp_or_xor_with_sub_3_6(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3,
   %cmp = icmp eq i64 %or1, 0
   ret i1 %cmp
 }
+
+
+define i1 @or_disjoint_with_constants(i8 %x) {
+; CHECK-LABEL: @or_disjoint_with_constants(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 18
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %x, 1
+  %cmp = icmp eq i8 %or, 19
+  ret i1 %cmp
+}
+
+
+define i1 @or_disjoint_with_constants2(i8 %x) {
+; CHECK-LABEL: @or_disjoint_with_constants2(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], 66
+; CHECK-NEXT:    call void @use(i8 [[OR]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %x, 5
+  %cmp = icmp ne i8 %or, 71
+  call void @use(i8 %or)
+  ret i1 %cmp
+}
+
+
+define i1 @or_disjoint_with_constants_fail_missing_const1(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_disjoint_with_constants_fail_missing_const1(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 19
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %x, %y
+  %cmp = icmp eq i8 %or, 19
+  ret i1 %cmp
+}
+
+define i1 @or_disjoint_with_constants_fail_missing_const2(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_disjoint_with_constants_fail_missing_const2(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 19
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %x, 19
+  %cmp = icmp eq i8 %or, %y
+  ret i1 %cmp
+}
+

@@ -1,10 +1,14 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 class FunctionOpInterface;
+class MemRefType;
 class ModuleOp;
 class RewritePatternSet;
 class OpBuilder;
@@ -17,6 +21,9 @@ class FuncOp;
 namespace bufferization {
 struct OneShotBufferizationOptions;
 
+/// Maps from symbol table to its corresponding dealloc helper function.
+using DeallocHelperMap = llvm::DenseMap<Operation *, func::FuncOp>;
+
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
@@ -24,28 +31,10 @@ struct OneShotBufferizationOptions;
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 
-/// Creates an instance of the BufferDeallocation pass to free all allocated
-/// buffers.
-std::unique_ptr<Pass> createBufferDeallocationPass();
-
-/// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
-/// allocated buffers.
-std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
-    bool privateFuncDynamicOwnership = false);
-
-/// Creates a pass that optimizes `bufferization.dealloc` operations. For
-/// example, it reduces the number of alias checks needed at runtime using
-/// static alias analysis.
-std::unique_ptr<Pass> createBufferDeallocationSimplificationPass();
-
-/// Creates an instance of the LowerDeallocations pass to lower
-/// `bufferization.dealloc` operations to the `memref` dialect.
-std::unique_ptr<Pass> createLowerDeallocationsPass();
-
 /// Adds the conversion pattern of the `bufferization.dealloc` operation to the
 /// given pattern set for use in other transformation passes.
 void populateBufferizationDeallocLoweringPattern(
-    RewritePatternSet &patterns, func::FuncOp deallocLibraryFunc);
+    RewritePatternSet &patterns, const DeallocHelperMap &deallocHelperFuncMap);
 
 /// Construct the library function needed for the fully generic
 /// `bufferization.dealloc` lowering implemented in the LowerDeallocations pass.
@@ -130,82 +119,76 @@ void populateBufferizationDeallocLoweringPattern(
 func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
-/// Run buffer deallocation.
-LogicalResult deallocateBuffers(Operation *op);
-
-/// Run ownership basedbuffer deallocation.
-LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
-                                              bool privateFuncDynamicOwnership);
-
-/// Creates a pass that moves allocations upwards to reduce the number of
-/// required copies that are inserted during the BufferDeallocation pass.
-std::unique_ptr<Pass> createBufferHoistingPass();
-
-/// Creates a pass that moves allocations upwards out of loops. This avoids
-/// reallocations inside of loops.
-std::unique_ptr<Pass> createBufferLoopHoistingPass();
+/// Run the ownership-based buffer deallocation.
+LogicalResult
+deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                DeallocationOptions options,
+                                SymbolTableCollection &symbolTables);
 
 // Options struct for BufferResultsToOutParams pass.
 // Note: defined only here, not in tablegen.
-struct BufferResultsToOutParamsOptions {
+struct BufferResultsToOutParamsOpts {
+  /// Allocator function: Generate a memref allocation with the given type.
+  /// Since `promoteBufferResultsToOutParams` doesn't allow dynamically shaped
+  /// results, we don't allow passing a range of values for dynamic dims.
+  using AllocationFn = std::function<FailureOr<Value>(OpBuilder &, Location,
+                                                      MemRefType, ValueRange)>;
+
+  /// Memcpy function: Generate a memcpy between two memrefs.
+  using MemCpyFn =
+      std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
+
   // Filter function; returns true if the function should be converted.
   // Defaults to true, i.e. all functions are converted.
-  llvm::function_ref<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
+  std::function<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
     return true;
   };
-};
 
-/// Creates a pass that converts memref function results to out-params.
-std::unique_ptr<Pass> createBufferResultsToOutParamsPass(
-    const BufferResultsToOutParamsOptions &options = {});
+  /// Allocation function; used to allocate a memref.
+  /// Default memref.alloc is used
+  AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
+                                 MemRefType type, ValueRange dynamicSizes) {
+    return memref::AllocOp::create(builder, loc, type, dynamicSizes)
+        .getResult();
+  };
+
+  /// Memcpy function; used to create a copy between two memrefs.
+  /// Default memref.copy is used.
+  MemCpyFn memCpyFn = [](OpBuilder &builder, Location loc, Value from,
+                         Value to) {
+    memref::CopyOp::create(builder, loc, from, to);
+    return success();
+  };
+
+  /// If true, the pass adds a "bufferize.result" attribute to each output
+  /// parameter.
+  bool addResultAttribute = false;
+
+  /// If true, the pass eliminates the memref.alloc and memcpy if the returned
+  /// memref is allocated in the current function.
+  bool hoistStaticAllocs = false;
+
+  /// If true, the pass eliminates the memref.alloc and memcpy if the returned
+  /// memref is allocated in the current function and has dynamic shape.
+  bool hoistDynamicAllocs = false;
+
+  /// If true, the pass modifies the function signatures of public functions.
+  bool modifyPublicFunctions = false;
+};
 
 /// Replace buffers that are returned from a function with an out parameter.
 /// Also update all call sites.
 LogicalResult
 promoteBufferResultsToOutParams(ModuleOp module,
-                                const BufferResultsToOutParamsOptions &options);
-
-/// Creates a pass that drops memref function results that are equivalent to a
-/// function argument.
-std::unique_ptr<Pass> createDropEquivalentBufferResultsPass();
-
-/// Create a pass that rewrites tensor.empty to bufferization.alloc_tensor.
-std::unique_ptr<Pass> createEmptyTensorToAllocTensorPass();
+                                const BufferResultsToOutParamsOpts &options);
 
 /// Drop all memref function results that are equivalent to a function argument.
 LogicalResult dropEquivalentBufferResults(ModuleOp module);
-
-/// Creates a pass that finalizes a partial bufferization by removing remaining
-/// bufferization.to_tensor and bufferization.to_memref operations.
-std::unique_ptr<OperationPass<func::FuncOp>> createFinalizingBufferizePass();
-
-/// Create a pass that bufferizes all ops that implement BufferizableOpInterface
-/// with One-Shot Bufferize.
-std::unique_ptr<Pass> createOneShotBufferizePass();
-
-/// Create a pass that bufferizes all ops that implement BufferizableOpInterface
-/// with One-Shot Bufferize and the specified bufferization options.
-std::unique_ptr<Pass>
-createOneShotBufferizePass(const OneShotBufferizationOptions &options);
-
-/// Creates a pass that promotes heap-based allocations to stack-based ones.
-/// Only buffers smaller than the provided size are promoted.
-/// Dynamic shaped buffers are promoted up to the given rank.
-std::unique_ptr<Pass>
-createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
-                                unsigned maxRankOfAllocatedMemRef = 1);
 
 /// Creates a pass that promotes heap-based allocations to stack-based ones.
 /// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.
 std::unique_ptr<Pass>
 createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
-
-/// Create a pass that tries to eliminate tensor.empty ops that are anchored on
-/// insert_slice ops.
-std::unique_ptr<Pass> createEmptyTensorEliminationPass();
-
-/// Create a pass that bufferizes ops from the bufferization dialect.
-std::unique_ptr<Pass> createBufferizationBufferizePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

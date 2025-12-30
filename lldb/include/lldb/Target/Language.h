@@ -15,6 +15,7 @@
 #include <set>
 #include <vector>
 
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
@@ -25,6 +26,15 @@
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
+
+class LanguageProperties : public Properties {
+public:
+  LanguageProperties();
+
+  static llvm::StringRef GetSettingName();
+
+  bool GetEnableFilterForLineBreakpoints() const;
+};
 
 class Language : public PluginInterface {
 public:
@@ -155,8 +165,10 @@ public:
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
 
+  static llvm::Expected<lldb::LanguageType>
+  GetExceptionLanguageForLanguage(llvm::StringRef lang_name);
   // return false from callback to stop iterating
-  static void ForEach(std::function<bool(Language *)> callback);
+  static void ForEach(llvm::function_ref<IterationAction(Language *)> callback);
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
@@ -205,12 +217,112 @@ public:
     return std::vector<Language::MethodNameVariant>();
   };
 
+  class MethodName {
+  public:
+    MethodName() {}
+
+    MethodName(ConstString full)
+        : m_full(full), m_basename(), m_context(), m_arguments(),
+          m_qualifiers(), m_return_type(), m_scope_qualified(), m_parsed(false),
+          m_parse_error(false) {}
+
+    virtual ~MethodName() {};
+
+    void Clear() {
+      m_full.Clear();
+      m_basename = llvm::StringRef();
+      m_context = llvm::StringRef();
+      m_arguments = llvm::StringRef();
+      m_qualifiers = llvm::StringRef();
+      m_return_type = llvm::StringRef();
+      m_scope_qualified.clear();
+      m_parsed = false;
+      m_parse_error = false;
+    }
+
+    bool IsValid() {
+      if (!m_parsed)
+        Parse();
+      if (m_parse_error)
+        return false;
+      return (bool)m_full;
+    }
+
+    ConstString GetFullName() const { return m_full; }
+
+    llvm::StringRef GetBasename() {
+      if (!m_parsed)
+        Parse();
+      return m_basename;
+    }
+
+    llvm::StringRef GetContext() {
+      if (!m_parsed)
+        Parse();
+      return m_context;
+    }
+
+    llvm::StringRef GetArguments() {
+      if (!m_parsed)
+        Parse();
+      return m_arguments;
+    }
+
+    llvm::StringRef GetQualifiers() {
+      if (!m_parsed)
+        Parse();
+      return m_qualifiers;
+    }
+
+    llvm::StringRef GetReturnType() {
+      if (!m_parsed)
+        Parse();
+      return m_return_type;
+    }
+
+    std::string GetScopeQualifiedName() {
+      if (!m_parsed)
+        Parse();
+      return m_scope_qualified;
+    }
+
+  protected:
+    virtual void Parse() {
+      m_parsed = true;
+      m_parse_error = true;
+    }
+
+    ConstString m_full; // Full name:
+                        // "size_t lldb::SBTarget::GetBreakpointAtIndex(unsigned
+                        // int) const"
+    llvm::StringRef m_basename;    // Basename:     "GetBreakpointAtIndex"
+    llvm::StringRef m_context;     // Decl context: "lldb::SBTarget"
+    llvm::StringRef m_arguments;   // Arguments:    "(unsigned int)"
+    llvm::StringRef m_qualifiers;  // Qualifiers:   "const"
+    llvm::StringRef m_return_type; // Return type:  "size_t"
+    std::string m_scope_qualified;
+    bool m_parsed = false;
+    bool m_parse_error = false;
+  };
+
+  virtual std::unique_ptr<Language::MethodName>
+  GetMethodName(ConstString name) const {
+    return std::make_unique<Language::MethodName>(name);
+  };
+
+  virtual std::pair<lldb::FunctionNameType, std::optional<ConstString>>
+  GetFunctionNameInfo(ConstString name) const {
+    return std::pair{lldb::eFunctionNameTypeNone, std::nullopt};
+  };
+
   /// Returns true iff the given symbol name is compatible with the mangling
   /// scheme of this language.
   ///
   /// This function should only return true if there is a high confidence
   /// that the name actually belongs to this language.
-  virtual bool SymbolNameFitsToLanguage(Mangled name) const { return false; }
+  virtual bool SymbolNameFitsToLanguage(const Mangled &name) const {
+    return false;
+  }
 
   /// An individual data formatter may apply to several types and cross language
   /// boundaries. Each of those languages may want to customize the display of
@@ -236,7 +348,7 @@ public:
   // a match.  But we wouldn't want this to match AnotherA::my_function.  The
   // user is specifying a truncated path, not a truncated set of characters.
   // This function does a language-aware comparison for those purposes.
-  virtual bool DemangledNameContainsPath(llvm::StringRef path, 
+  virtual bool DemangledNameContainsPath(llvm::StringRef path,
                                          ConstString demangled) const;
 
   // if a language has a custom format for printing variable declarations that
@@ -259,10 +371,17 @@ public:
   // the reference has never been assigned
   virtual bool IsUninitializedReference(ValueObject &valobj);
 
-  virtual bool GetFunctionDisplayName(const SymbolContext *sc,
+  virtual bool GetFunctionDisplayName(const SymbolContext &sc,
                                       const ExecutionContext *exe_ctx,
                                       FunctionNameRepresentation representation,
                                       Stream &s);
+
+  virtual bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                         const ExecutionContext *exe_ctx,
+                                         FormatEntity::Entry::Type type,
+                                         Stream &s) {
+    return false;
+  }
 
   virtual ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
@@ -270,6 +389,10 @@ public:
       return demangled;
 
     return mangled.GetMangledName();
+  }
+
+  virtual ConstString GetDisplayDemangledName(Mangled mangled) const {
+    return mangled.GetDemangledName();
   }
 
   virtual void GetExceptionResolverDescription(bool catch_on, bool throw_on,
@@ -285,7 +408,14 @@ public:
   GetLanguageTypeFromString(const char *string) = delete;
   static lldb::LanguageType GetLanguageTypeFromString(llvm::StringRef string);
 
+  /// Returns the internal LLDB name for the specified language. When presenting
+  /// the language name to users, use \ref GetDisplayNameForLanguageType
+  /// instead.
   static const char *GetNameForLanguageType(lldb::LanguageType language);
+
+  /// Returns a user-friendly name for the specified language.
+  static llvm::StringRef
+  GetDisplayNameForLanguageType(lldb::LanguageType language);
 
   static void PrintAllLanguages(Stream &s, const char *prefix,
                                 const char *suffix);
@@ -301,7 +431,8 @@ public:
                                                     llvm::StringRef suffix);
 
   // return false from callback to stop iterating
-  static void ForAllLanguages(std::function<bool(lldb::LanguageType)> callback);
+  static void ForAllLanguages(
+      llvm::function_ref<IterationAction(lldb::LanguageType)> callback);
 
   static bool LanguageIsCPlusPlus(lldb::LanguageType language);
 
@@ -324,6 +455,8 @@ public:
   static LanguageSet GetLanguagesSupportingTypeSystemsForExpressions();
   static LanguageSet GetLanguagesSupportingREPLs();
 
+  static LanguageProperties &GetGlobalLanguageProperties();
+
   // Given a mangled function name, calculates some alternative manglings since
   // the compiler mangling may not line up with the symbol we are expecting.
   virtual std::vector<ConstString>
@@ -338,6 +471,43 @@ public:
   }
 
   virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+
+  /// Given a symbol context list of matches which supposedly represent the
+  /// same file and line number in a CU, erases those that should be ignored
+  /// when setting breakpoints by line (number or regex). Helpful for languages
+  /// that create split a single source-line into many functions (e.g. call
+  /// sites transformed by CoroSplitter).
+  virtual void
+  FilterForLineBreakpoints(llvm::SmallVectorImpl<SymbolContext> &) const {}
+
+  /// Returns a boolean indicating whether two symbol contexts are equal for the
+  /// purposes of frame comparison. If the plugin has no opinion, it should
+  /// return nullopt.
+  virtual std::optional<bool>
+  AreEqualForFrameComparison(const SymbolContext &sc1,
+                             const SymbolContext &sc2) const {
+    return {};
+  }
+
+  virtual std::optional<bool> GetBooleanFromString(llvm::StringRef str) const;
+
+  /// Returns true if this Language supports exception breakpoints on throw via
+  /// a corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpointsOnThrow() const { return false; }
+
+  /// Returns true if this Language supports exception breakpoints on catch via
+  /// a corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpointsOnCatch() const { return false; }
+
+  /// Returns the keyword used for throw statements in this language, e.g.
+  /// Python uses \b raise. Defaults to \b throw.
+  virtual llvm::StringRef GetThrowKeyword() const { return "throw"; }
+
+  /// Returns the keyword used for catch statements in this language, e.g.
+  /// Python uses \b except. Defaults to \b catch.
+  virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
+
+  virtual FormatEntity::Entry GetFunctionNameFormat() const { return {}; }
 
 protected:
   // Classes that inherit from Language can see and modify these

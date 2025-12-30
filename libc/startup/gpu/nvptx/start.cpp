@@ -6,14 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "config/gpu/app.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 
 extern "C" int main(int argc, char **argv, char **envp);
+extern "C" void __cxa_finalize(void *dso);
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+
+DataEnvironment app;
+
+// FIXME: Factor this out into common logic so we don't need to stub it here.
+void teardown_main_tls() {}
+
+// FIXME: Touch this symbol to force this to be linked in statically.
+volatile void *dummy = &LIBC_NAMESPACE::rpc::client;
 
 extern "C" {
 // Nvidia's 'nvlink' linker does not provide these symbols. We instead need
@@ -41,10 +52,13 @@ static void call_fini_array_callbacks() {
     reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
 _begin(int argc, char **argv, char **env) {
+  __atomic_store_n(&LIBC_NAMESPACE::app.env_ptr,
+                   reinterpret_cast<uintptr_t *>(env), __ATOMIC_RELAXED);
+
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
@@ -60,9 +74,8 @@ _start(int argc, char **argv, char **envp, int *ret) {
   __atomic_fetch_or(ret, main(argc, argv, envp), __ATOMIC_RELAXED);
 }
 
-extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
-_end(int retval) {
-  // To finis the execution we invoke all the callbacks registered via 'atexit'
-  // and then exit with the appropriate return value.
-  LIBC_NAMESPACE::exit(retval);
+extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void _end() {
+  // Only a single thread should call the destructors registred with 'atexit'.
+  // The loader utility will handle the actual exit and return code cleanly.
+  __cxa_finalize(nullptr);
 }

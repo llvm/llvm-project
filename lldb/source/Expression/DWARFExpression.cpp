@@ -15,7 +15,6 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -37,15 +36,13 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
-
-#include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 // DWARFExpression constructor
 DWARFExpression::DWARFExpression() : m_data() {}
@@ -70,7 +67,8 @@ void DWARFExpression::UpdateValue(uint64_t const_value,
 }
 
 void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
-                                   ABI *abi) const {
+                                   ABI *abi,
+                                   llvm::DIDumpOptions options) const {
   auto *MCRegInfo = abi ? &abi->GetMCRegisterInfo() : nullptr;
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum,
                                  bool IsEH) -> llvm::StringRef {
@@ -82,10 +80,9 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
         return llvm::StringRef(RegName);
     return {};
   };
-  llvm::DIDumpOptions DumpOpts;
-  DumpOpts.GetNameForDWARFReg = GetRegName;
-  llvm::DWARFExpression(m_data.GetAsLLVM(), m_data.GetAddressByteSize())
-      .print(s->AsRawOstream(), DumpOpts, nullptr);
+  options.GetNameForDWARFReg = GetRegName;
+  llvm::DWARFExpression E(m_data.GetAsLLVM(), m_data.GetAddressByteSize());
+  llvm::printDwarfExpression(&E, s->AsRawOstream(), options, nullptr);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }
@@ -94,60 +91,75 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
   m_reg_kind = reg_kind;
 }
 
+llvm::Error
+DWARFExpression::ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                           lldb::RegisterKind reg_kind,
+                                           uint32_t reg_num, Value &value) {
+  if (reg_ctx == nullptr)
+    return llvm::createStringError("no register context in frame");
 
-static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
-                                      lldb::RegisterKind reg_kind,
-                                      uint32_t reg_num, Status *error_ptr,
-                                      Value &value) {
-  if (reg_ctx == nullptr) {
-    if (error_ptr)
-      error_ptr->SetErrorString("No register context in frame.\n");
-  } else {
-    uint32_t native_reg =
-        reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
-    if (native_reg == LLDB_INVALID_REGNUM) {
-      if (error_ptr)
-        error_ptr->SetErrorStringWithFormat("Unable to convert register "
-                                            "kind=%u reg_num=%u to a native "
-                                            "register number.\n",
-                                            reg_kind, reg_num);
-    } else {
-      const RegisterInfo *reg_info =
-          reg_ctx->GetRegisterInfoAtIndex(native_reg);
-      RegisterValue reg_value;
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        if (reg_value.GetScalarValue(value.GetScalar())) {
-          value.SetValueType(Value::ValueType::Scalar);
-          value.SetContext(Value::ContextType::RegisterInfo,
-                           const_cast<RegisterInfo *>(reg_info));
-          if (error_ptr)
-            error_ptr->Clear();
-          return true;
-        } else {
-          // If we get this error, then we need to implement a value buffer in
-          // the dwarf expression evaluation function...
-          if (error_ptr)
-            error_ptr->SetErrorStringWithFormat(
-                "register %s can't be converted to a scalar value",
-                reg_info->name);
-        }
-      } else {
-        if (error_ptr)
-          error_ptr->SetErrorStringWithFormat("register %s is not available",
-                                              reg_info->name);
-      }
+  const uint32_t native_reg =
+      reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
+  if (native_reg == LLDB_INVALID_REGNUM)
+    return llvm::createStringError(
+        "unable to convert register kind=%u reg_num=%u to a native "
+        "register number",
+        reg_kind, reg_num);
+
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(native_reg);
+  RegisterValue reg_value;
+  if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    if (reg_value.GetScalarValue(value.GetScalar())) {
+      value.SetValueType(Value::ValueType::Scalar);
+      value.SetContext(Value::ContextType::RegisterInfo,
+                       const_cast<RegisterInfo *>(reg_info));
+      return llvm::Error::success();
     }
+
+    // If we get this error, then we need to implement a value buffer in
+    // the dwarf expression evaluation function...
+    return llvm::createStringError(
+        "register %s can't be converted to a scalar value", reg_info->name);
   }
-  return false;
+
+  return llvm::createStringError("register %s is not available",
+                                 reg_info->name);
 }
 
 /// Return the length in bytes of the set of operands for \p op. No guarantees
 /// are made on the state of \p data after this call.
-static offset_t GetOpcodeDataSize(const DataExtractor &data,
-                                  const lldb::offset_t data_offset,
-                                  const uint8_t op, const DWARFUnit *dwarf_cu) {
+static lldb::offset_t
+GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
+                  const LocationAtom op,
+                  const DWARFExpression::Delegate *dwarf_cu) {
   lldb::offset_t offset = data_offset;
   switch (op) {
+  // Only used in LLVM metadata.
+  case DW_OP_LLVM_fragment:
+  case DW_OP_LLVM_convert:
+  case DW_OP_LLVM_tag_offset:
+  case DW_OP_LLVM_entry_value:
+  case DW_OP_LLVM_implicit_pointer:
+  case DW_OP_LLVM_arg:
+  case DW_OP_LLVM_extract_bits_sext:
+  case DW_OP_LLVM_extract_bits_zext:
+    break;
+  // Vendor extensions:
+  case DW_OP_HP_is_value:
+  case DW_OP_HP_fltconst4:
+  case DW_OP_HP_fltconst8:
+  case DW_OP_HP_mod_range:
+  case DW_OP_HP_unmod_range:
+  case DW_OP_HP_tls:
+  case DW_OP_INTEL_bit_piece:
+  case DW_OP_WASM_location:
+  case DW_OP_WASM_location_int:
+  case DW_OP_APPLE_uninit:
+  case DW_OP_PGI_omp_thread_num:
+  case DW_OP_hi_user:
+  case DW_OP_GNU_implicit_pointer:
+    break;
+
   case DW_OP_addr:
   case DW_OP_call_ref: // 0x9a 1 address sized offset of DIE (DWARF3)
     return data.GetAddressByteSize();
@@ -258,6 +270,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   case DW_OP_pick:        // 0x15 1 1-byte stack index
   case DW_OP_deref_size:  // 0x94 1 1-byte size of data retrieved
   case DW_OP_xderef_size: // 0x95 1 1-byte size of data retrieved
+  case DW_OP_deref_type:  // 0xa6 1 1-byte constant
     return 1;
 
   // Opcodes with a single 2 byte arguments
@@ -280,7 +293,6 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     return 8;
 
   // All opcodes that have a single ULEB (signed or unsigned) argument
-  case DW_OP_addrx:           // 0xa1 1 ULEB128 index
   case DW_OP_constu:          // 0x10 1 ULEB128 constant
   case DW_OP_consts:          // 0x11 1 SLEB128 constant
   case DW_OP_plus_uconst:     // 0x23 1 ULEB128 addend
@@ -319,14 +331,20 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   case DW_OP_regx:            // 0x90 1 ULEB128 register
   case DW_OP_fbreg:           // 0x91 1 SLEB128 offset
   case DW_OP_piece:           // 0x93 1 ULEB128 size of piece addressed
+  case DW_OP_convert:         // 0xa8 1 ULEB128 offset
+  case DW_OP_reinterpret:     // 0xa9 1 ULEB128 offset
+  case DW_OP_addrx:           // 0xa1 1 ULEB128 index
+  case DW_OP_constx:          // 0xa2 1 ULEB128 index
+  case DW_OP_xderef_type:     // 0xa7 1 ULEB128 index
   case DW_OP_GNU_addr_index:  // 0xfb 1 ULEB128 index
   case DW_OP_GNU_const_index: // 0xfc 1 ULEB128 index
     data.Skip_LEB128(&offset);
     return offset - data_offset;
 
   // All opcodes that have a 2 ULEB (signed or unsigned) arguments
-  case DW_OP_bregx:     // 0x92 2 ULEB128 register followed by SLEB128 offset
-  case DW_OP_bit_piece: // 0x9d ULEB128 bit size, ULEB128 bit offset (DWARF3);
+  case DW_OP_bregx:       // 0x92 2 ULEB128 register followed by SLEB128 offset
+  case DW_OP_bit_piece:   // 0x9d ULEB128 bit size, ULEB128 bit offset (DWARF3);
+  case DW_OP_regval_type: // 0xa5 ULEB128 + ULEB128
     data.Skip_LEB128(&offset);
     data.Skip_LEB128(&offset);
     return offset - data_offset;
@@ -339,6 +357,14 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     return offset - data_offset;
   }
 
+  case DW_OP_implicit_pointer: // 0xa0 4-byte (or 8-byte for DWARF 64) constant
+                               // + LEB128
+  {
+    data.Skip_LEB128(&offset);
+    return (dwarf_cu ? dwarf_cu->GetAddressByteSize() : 4) + offset -
+           data_offset;
+  }
+
   case DW_OP_GNU_entry_value:
   case DW_OP_entry_value: // 0xa3 ULEB128 size + variable-length block
   {
@@ -346,47 +372,70 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     return (offset - data_offset) + subexpr_len;
   }
 
-  default:
-    if (!dwarf_cu) {
-      return LLDB_INVALID_OFFSET;
-    }
-    return dwarf_cu->GetSymbolFileDWARF().GetVendorDWARFOpcodeSize(
-        data, data_offset, op);
+  case DW_OP_const_type: // 0xa4 ULEB128 + size + variable-length block
+  {
+    data.Skip_LEB128(&offset);
+    uint8_t length = data.GetU8(&offset);
+    return (offset - data_offset) + length;
   }
+
+  case DW_OP_LLVM_user: // 0xe9: ULEB128 + variable length constant
+  {
+    uint64_t constants = data.GetULEB128(&offset);
+    return (offset - data_offset) + constants;
+  }
+  }
+
+  if (dwarf_cu)
+    return dwarf_cu->GetVendorDWARFOpcodeSize(data, data_offset, op);
+
+  return LLDB_INVALID_OFFSET;
 }
 
-lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
-                                                     bool &error) const {
-  error = false;
+static const char *DW_OP_value_to_name(uint32_t val) {
+  static char invalid[100];
+  llvm::StringRef llvmstr = llvm::dwarf::OperationEncodingString(val);
+  if (llvmstr.empty()) {
+    snprintf(invalid, sizeof(invalid), "Unknown DW_OP constant: 0x%x", val);
+    return invalid;
+  }
+  return llvmstr.data();
+}
+
+llvm::Expected<lldb::addr_t> DWARFExpression::GetLocation_DW_OP_addr(
+    const DWARFExpression::Delegate *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
-    const uint8_t op = m_data.GetU8(&offset);
+    const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
 
     if (op == DW_OP_addr)
       return m_data.GetAddress(&offset);
+
     if (op == DW_OP_GNU_addr_index || op == DW_OP_addrx) {
-      uint64_t index = m_data.GetULEB128(&offset);
+      const uint64_t index = m_data.GetULEB128(&offset);
       if (dwarf_cu)
         return dwarf_cu->ReadAddressFromDebugAddrSection(index);
-      error = true;
-      break;
+      return llvm::createStringError("cannot evaluate %s without a DWARF unit",
+                                     DW_OP_value_to_name(op));
     }
-    const offset_t op_arg_size =
+
+    const lldb::offset_t op_arg_size =
         GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
-    if (op_arg_size == LLDB_INVALID_OFFSET) {
-      error = true;
-      break;
-    }
+    if (op_arg_size == LLDB_INVALID_OFFSET)
+      return llvm::createStringError("cannot get opcode data size for %s",
+                                     DW_OP_value_to_name(op));
+
     offset += op_arg_size;
   }
+
   return LLDB_INVALID_ADDRESS;
 }
 
-bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
-                                        lldb::addr_t file_addr) {
+bool DWARFExpression::Update_DW_OP_addr(
+    const DWARFExpression::Delegate *dwarf_cu, lldb::addr_t file_addr) {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
-    const uint8_t op = m_data.GetU8(&offset);
+    const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
 
     if (op == DW_OP_addr) {
       const uint32_t addr_byte_size = m_data.GetAddressByteSize();
@@ -431,7 +480,7 @@ bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
       m_data.SetData(encoder.GetDataBuffer());
       return true;
     }
-    const offset_t op_arg_size =
+    const lldb::offset_t op_arg_size =
         GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
     if (op_arg_size == LLDB_INVALID_OFFSET)
       break;
@@ -441,14 +490,14 @@ bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
 }
 
 bool DWARFExpression::ContainsThreadLocalStorage(
-    const DWARFUnit *dwarf_cu) const {
+    const DWARFExpression::Delegate *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
-    const uint8_t op = m_data.GetU8(&offset);
+    const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
 
     if (op == DW_OP_form_tls_address || op == DW_OP_GNU_push_tls_address)
       return true;
-    const offset_t op_arg_size =
+    const lldb::offset_t op_arg_size =
         GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
     if (op_arg_size == LLDB_INVALID_OFFSET)
       return false;
@@ -457,7 +506,7 @@ bool DWARFExpression::ContainsThreadLocalStorage(
   return false;
 }
 bool DWARFExpression::LinkThreadLocalStorage(
-    const DWARFUnit *dwarf_cu,
+    const DWARFExpression::Delegate *dwarf_cu,
     std::function<lldb::addr_t(lldb::addr_t file_addr)> const
         &link_address_callback) {
   const uint32_t addr_byte_size = m_data.GetAddressByteSize();
@@ -475,7 +524,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
   lldb::addr_t const_value = 0;
   size_t const_byte_size = 0;
   while (m_data.ValidOffset(offset)) {
-    const uint8_t op = m_data.GetU8(&offset);
+    const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
 
     bool decoded_data = false;
     switch (op) {
@@ -528,7 +577,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
     }
 
     if (!decoded_data) {
-      const offset_t op_arg_size =
+      const lldb::offset_t op_arg_size =
           GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
       if (op_arg_size == LLDB_INVALID_OFFSET)
         return false;
@@ -541,12 +590,12 @@ bool DWARFExpression::LinkThreadLocalStorage(
   return true;
 }
 
-static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
-                                       ExecutionContext *exe_ctx,
-                                       RegisterContext *reg_ctx,
-                                       const DataExtractor &opcodes,
-                                       lldb::offset_t &opcode_offset,
-                                       Status *error_ptr, Log *log) {
+static llvm::Error Evaluate_DW_OP_entry_value(DWARFExpression::Stack &stack,
+                                              ExecutionContext *exe_ctx,
+                                              RegisterContext *reg_ctx,
+                                              const DataExtractor &opcodes,
+                                              lldb::offset_t &opcode_offset,
+                                              Log *log) {
   // DW_OP_entry_value(sub-expr) describes the location a variable had upon
   // function entry: this variable location is presumed to be optimized out at
   // the current PC value.  The caller of the function may have call site
@@ -593,26 +642,22 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
 
   // 1. Find the function which pushed the current frame onto the stack.
   if ((!exe_ctx || !exe_ctx->HasTargetScope()) || !reg_ctx) {
-    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no exe/reg context");
-    return false;
+    return llvm::createStringError("no exe/reg context");
   }
 
   StackFrame *current_frame = exe_ctx->GetFramePtr();
   Thread *thread = exe_ctx->GetThreadPtr();
-  if (!current_frame || !thread) {
-    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no current frame/thread");
-    return false;
-  }
+  if (!current_frame || !thread)
+    return llvm::createStringError("no current frame/thread");
 
   Target &target = exe_ctx->GetTargetRef();
   StackFrameSP parent_frame = nullptr;
   addr_t return_pc = LLDB_INVALID_ADDRESS;
   uint32_t current_frame_idx = current_frame->GetFrameIndex();
-  uint32_t num_frames = thread->GetStackFrameCount();
-  for (uint32_t parent_frame_idx = current_frame_idx + 1;
-       parent_frame_idx < num_frames; ++parent_frame_idx) {
+
+  for (uint32_t parent_frame_idx = current_frame_idx + 1;; parent_frame_idx++) {
     parent_frame = thread->GetStackFrameAtIndex(parent_frame_idx);
-    // Require a valid sequence of frames.
+    // If this is null, we're at the end of the stack.
     if (!parent_frame)
       break;
 
@@ -621,9 +666,7 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     // parent frame.
     if (return_pc == LLDB_INVALID_ADDRESS) {
       return_pc = parent_frame->GetFrameCodeAddress().GetLoadAddress(&target);
-      LLDB_LOG(log,
-               "Evaluate_DW_OP_entry_value: immediate ancestor with pc = {0:x}",
-               return_pc);
+      LLDB_LOG(log, "immediate ancestor with pc = {0:x}", return_pc);
     }
 
     // If we've found an inlined frame, skip it (these have no call site
@@ -635,25 +678,20 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     break;
   }
   if (!parent_frame || !parent_frame->GetRegisterContext()) {
-    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no parent frame with reg ctx");
-    return false;
+    return llvm::createStringError("no parent frame with reg ctx");
   }
 
   Function *parent_func =
       parent_frame->GetSymbolContext(eSymbolContextFunction).function;
-  if (!parent_func) {
-    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no parent function");
-    return false;
-  }
+  if (!parent_func)
+    return llvm::createStringError("no parent function");
 
   // 2. Find the call edge in the parent function responsible for creating the
   //    current activation.
   Function *current_func =
       current_frame->GetSymbolContext(eSymbolContextFunction).function;
-  if (!current_func) {
-    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no current function");
-    return false;
-  }
+  if (!current_func)
+    return llvm::createStringError("no current function");
 
   CallEdge *call_edge = nullptr;
   ModuleList &modlist = target.GetImages();
@@ -664,17 +702,14 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
     // produced by an ambiguous tail call. In this case, refuse to proceed.
     call_edge = parent_func->GetCallEdgeForReturnAddress(return_pc, target);
     if (!call_edge) {
-      LLDB_LOG(log,
-               "Evaluate_DW_OP_entry_value: no call edge for retn-pc = {0:x} "
-               "in parent frame {1}",
-               return_pc, parent_func->GetName());
-      return false;
+      return llvm::createStringError(
+          llvm::formatv("no call edge for retn-pc = {0:x} in parent frame {1}",
+                        return_pc, parent_func->GetName()));
     }
     Function *callee_func = call_edge->GetCallee(modlist, parent_exe_ctx);
     if (callee_func != current_func) {
-      LLDB_LOG(log, "Evaluate_DW_OP_entry_value: ambiguous call sequence, "
-                    "can't find real parent frame");
-      return false;
+      return llvm::createStringError(
+          "ambiguous call sequence, can't find real parent frame");
     }
   } else {
     // The StackFrameList solver machinery has deduced that an unambiguous tail
@@ -687,21 +722,17 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
       }
     }
   }
-  if (!call_edge) {
-    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: no unambiguous edge from parent "
-                  "to current function");
-    return false;
-  }
+  if (!call_edge)
+    return llvm::createStringError("no unambiguous edge from parent "
+                                   "to current function");
 
   // 3. Attempt to locate the DW_OP_entry_value expression in the set of
   //    available call site parameters. If found, evaluate the corresponding
   //    parameter in the context of the parent frame.
   const uint32_t subexpr_len = opcodes.GetULEB128(&opcode_offset);
   const void *subexpr_data = opcodes.GetData(&opcode_offset, subexpr_len);
-  if (!subexpr_data) {
-    LLDB_LOG(log, "Evaluate_DW_OP_entry_value: subexpr could not be read");
-    return false;
-  }
+  if (!subexpr_data)
+    return llvm::createStringError("subexpr could not be read");
 
   const CallSiteParameter *matched_param = nullptr;
   for (const CallSiteParameter &param : call_edge->GetCallSiteParameters()) {
@@ -727,28 +758,26 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
       break;
     }
   }
-  if (!matched_param) {
-    LLDB_LOG(log,
-             "Evaluate_DW_OP_entry_value: no matching call site param found");
-    return false;
-  }
+  if (!matched_param)
+    return llvm::createStringError("no matching call site param found");
 
   // TODO: Add support for DW_OP_push_object_address within a DW_OP_entry_value
   // subexpresion whenever llvm does.
-  Value result;
   const DWARFExpressionList &param_expr = matched_param->LocationInCaller;
-  if (!param_expr.Evaluate(&parent_exe_ctx,
-                           parent_frame->GetRegisterContext().get(),
-                           LLDB_INVALID_ADDRESS,
-                           /*initial_value_ptr=*/nullptr,
-                           /*object_address_ptr=*/nullptr, result, error_ptr)) {
+
+  llvm::Expected<Value> maybe_result = param_expr.Evaluate(
+      &parent_exe_ctx, parent_frame->GetRegisterContext().get(),
+      LLDB_INVALID_ADDRESS,
+      /*initial_value_ptr=*/nullptr,
+      /*object_address_ptr=*/nullptr);
+  if (!maybe_result) {
     LLDB_LOG(log,
              "Evaluate_DW_OP_entry_value: call site param evaluation failed");
-    return false;
+    return maybe_result.takeError();
   }
 
-  stack.push_back(result);
-  return true;
+  stack.push_back(*maybe_result);
+  return llvm::Error::success();
 }
 
 namespace {
@@ -763,9 +792,9 @@ enum LocationDescriptionKind {
   /* Composite*/
 };
 /// Adjust value's ValueType according to the kind of location description.
-void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
-                                            LocationDescriptionKind kind,
-                                            Value *value = nullptr) {
+void UpdateValueTypeFromLocationDescription(
+    Log *log, const DWARFExpression::Delegate *dwarf_cu,
+    LocationDescriptionKind kind, Value *value = nullptr) {
   // Note that this function is conflating DWARF expressions with
   // DWARF location descriptions. Perhaps it would be better to define
   // a wrapper for DWARFExpression::Eval() that deals with DWARF
@@ -802,7 +831,6 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///
 /// \param exe_ctx Pointer to the execution context
 /// \param module_sp shared_ptr contains the module if we have one
-/// \param error_ptr pointer to Status object if we have one
 /// \param dw_op_type C-style string used to vary the error output
 /// \param file_addr the file address we are trying to resolve and turn into a
 ///                  load address
@@ -813,44 +841,33 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///          the load address succeed or an empty Optinal otherwise. If
 ///          check_sectionoffset is true we consider LLDB_INVALID_ADDRESS a
 ///          success if so_addr.IsSectionOffset() is true.
-static std::optional<lldb::addr_t>
+static llvm::Expected<lldb::addr_t>
 ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
-                   Status *error_ptr, const char *dw_op_type,
-                   lldb::addr_t file_addr, Address &so_addr,
-                   bool check_sectionoffset = false) {
-  if (!module_sp) {
-    if (error_ptr)
-      error_ptr->SetErrorStringWithFormat(
-          "need module to resolve file address for %s", dw_op_type);
-    return {};
-  }
+                   const char *dw_op_type, lldb::addr_t file_addr,
+                   Address &so_addr, bool check_sectionoffset = false) {
+  if (!module_sp)
+    return llvm::createStringError("need module to resolve file address for %s",
+                                   dw_op_type);
 
-  if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
-    if (error_ptr)
-      error_ptr->SetErrorString("failed to resolve file address in module");
-    return {};
-  }
+  if (!module_sp->ResolveFileAddress(file_addr, so_addr))
+    return llvm::createStringError("failed to resolve file address in module");
 
-  addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
+  const addr_t load_addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
 
   if (load_addr == LLDB_INVALID_ADDRESS &&
-      (check_sectionoffset && !so_addr.IsSectionOffset())) {
-    if (error_ptr)
-      error_ptr->SetErrorString("failed to resolve load address");
-    return {};
-  }
+      (check_sectionoffset && !so_addr.IsSectionOffset()))
+    return llvm::createStringError("failed to resolve load address");
 
   return load_addr;
 }
 
-/// Helper function to move common code used to load sized data from a uint8_t
-/// buffer.
+/// @brief Helper function to load sized data from a uint8_t buffer.
 ///
-/// \param addr_bytes uint8_t buffer containg raw data
-/// \param size_addr_bytes how large is the underlying raw data
-/// \param byte_order what is the byter order of the underlyig data
-/// \param size How much of the underlying data we want to use
-/// \return The underlying data converted into a Scalar
+/// @param addr_bytes The buffer containing raw data.
+/// @param size_addr_bytes How large is the underlying raw data.
+/// @param byte_order What is the byte order of the underlying data.
+/// @param size How much of the underlying data we want to use.
+/// @return The underlying data converted into a Scalar.
 static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
                                          size_t size_addr_bytes,
                                          ByteOrder byte_order, size_t size) {
@@ -859,24 +876,162 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
   lldb::offset_t addr_data_offset = 0;
   if (size <= 8)
     return addr_data.GetMaxU64(&addr_data_offset, size);
-  else
-    return addr_data.GetAddress(&addr_data_offset);
+  return addr_data.GetAddress(&addr_data_offset);
 }
 
-bool DWARFExpression::Evaluate(
+static llvm::Error Evaluate_DW_OP_deref_size(
+    DWARFExpression::Stack &stack, ExecutionContext *exe_ctx,
+    lldb::ModuleSP module_sp, Process *process, Target *target, uint8_t size,
+    size_t size_addr_bytes,
+    LocationDescriptionKind &dwarf4_location_description_kind) {
+  if (stack.empty())
+    return llvm::createStringError(
+        "expression stack empty for DW_OP_deref_size");
+
+  if (size > 8)
+    return llvm::createStringError(
+        "Invalid address size for DW_OP_deref_size: %d\n", size);
+
+  // Deref a register or implicit location and truncate the value to `size`
+  // bytes. See the corresponding comment in DW_OP_deref for more details on
+  // why we deref these locations this way.
+  if (dwarf4_location_description_kind == Register ||
+      dwarf4_location_description_kind == Implicit) {
+    // Reset context to default values.
+    dwarf4_location_description_kind = Memory;
+    stack.back().ClearContext();
+
+    // Truncate the value on top of the stack to *size* bytes then
+    // extend to the size of an address (e.g. generic type).
+    Scalar scalar = stack.back().GetScalar();
+    scalar.TruncOrExtendTo(size * 8, /*sign=*/false);
+    scalar.TruncOrExtendTo(size_addr_bytes * 8,
+                           /*sign=*/false);
+    stack.back().GetScalar() = scalar;
+    return llvm::Error::success();
+  }
+
+  Value::ValueType value_type = stack.back().GetValueType();
+  switch (value_type) {
+  case Value::ValueType::HostAddress: {
+    void *src = (void *)stack.back().GetScalar().ULongLong();
+    intptr_t ptr;
+    ::memcpy(&ptr, src, sizeof(void *));
+    // I can't decide whether the size operand should apply to the bytes in
+    // their lldb-host endianness or the target endianness.. I doubt this'll
+    // ever come up but I'll opt for assuming big endian regardless.
+    switch (size) {
+    case 1:
+      ptr = ptr & 0xff;
+      break;
+    case 2:
+      ptr = ptr & 0xffff;
+      break;
+    case 3:
+      ptr = ptr & 0xffffff;
+      break;
+    case 4:
+      ptr = ptr & 0xffffffff;
+      break;
+    // The casts are added to work around the case where intptr_t is a 32-bit
+    // quantity. Presumably we won't hit the 5..7 cases if (void*) is 32-bits in
+    // this program.
+    case 5:
+      ptr = (intptr_t)ptr & 0xffffffffffULL;
+      break;
+    case 6:
+      ptr = (intptr_t)ptr & 0xffffffffffffULL;
+      break;
+    case 7:
+      ptr = (intptr_t)ptr & 0xffffffffffffffULL;
+      break;
+    default:
+      break;
+    }
+    stack.back().GetScalar() = ptr;
+    stack.back().ClearContext();
+  } break;
+  case Value::ValueType::FileAddress: {
+    auto file_addr = stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+    Address so_addr;
+    auto maybe_load_addr = ResolveLoadAddress(
+        exe_ctx, module_sp, "DW_OP_deref_size", file_addr, so_addr,
+        /*check_sectionoffset=*/true);
+
+    if (!maybe_load_addr)
+      return maybe_load_addr.takeError();
+
+    addr_t load_addr = *maybe_load_addr;
+
+    if (load_addr == LLDB_INVALID_ADDRESS && so_addr.IsSectionOffset()) {
+      uint8_t addr_bytes[8];
+      Status error;
+
+      if (!target || target->ReadMemory(so_addr, &addr_bytes, size, error,
+                                        /*force_live_memory=*/false) != size)
+        return llvm::createStringError(
+            "failed to dereference pointer for DW_OP_deref_size: "
+            "%s\n",
+            error.AsCString());
+
+      ObjectFile *objfile = module_sp->GetObjectFile();
+
+      stack.back().GetScalar() = DerefSizeExtractDataHelper(
+          addr_bytes, size, objfile->GetByteOrder(), size);
+      stack.back().ClearContext();
+      break;
+    }
+    stack.back().GetScalar() = load_addr;
+    // Fall through to load address promotion code below.
+  }
+
+    [[fallthrough]];
+  case Value::ValueType::Scalar:
+    // Promote Scalar to LoadAddress and fall through.
+    stack.back().SetValueType(Value::ValueType::LoadAddress);
+    [[fallthrough]];
+  case Value::ValueType::LoadAddress: {
+    if (!exe_ctx)
+      return llvm::createStringError(
+          "no execution context for DW_OP_deref_size");
+    if (!process)
+      return llvm::createStringError("no process for DW_OP_deref_size");
+
+    lldb::addr_t pointer_addr =
+        stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+    uint8_t addr_bytes[sizeof(lldb::addr_t)];
+    Status error;
+
+    if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) != size)
+      return llvm::createStringError(
+          "failed to dereference pointer from 0x%" PRIx64
+          " for DW_OP_deref_size: %s\n",
+          pointer_addr, error.AsCString());
+
+    stack.back().GetScalar() = DerefSizeExtractDataHelper(
+        addr_bytes, sizeof(addr_bytes), process->GetByteOrder(), size);
+    stack.back().ClearContext();
+  } break;
+
+  case Value::ValueType::Invalid:
+    return llvm::createStringError("invalid value for DW_OP_deref_size");
+  }
+
+  return llvm::Error::success();
+}
+
+llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind,
-    const Value *initial_value_ptr, const Value *object_address_ptr,
-    Value &result, Status *error_ptr) {
+    const DWARFExpression::Delegate *dwarf_cu,
+    const lldb::RegisterKind reg_kind, const Value *initial_value_ptr,
+    const Value *object_address_ptr) {
 
-  if (opcodes.GetByteSize() == 0) {
-    if (error_ptr)
-      error_ptr->SetErrorString(
-          "no location, value may have been optimized out");
-    return false;
-  }
-  std::vector<Value> stack;
+  if (opcodes.GetByteSize() == 0)
+    return llvm::createStringError(
+        "no location, value may have been optimized out");
+
+  Stack stack;
 
   Process *process = nullptr;
   StackFrame *frame = nullptr;
@@ -907,10 +1062,12 @@ bool DWARFExpression::Evaluate(
   // TODO: Implement a real typed stack, and store the genericness of the value
   // there.
   auto to_generic = [&](auto v) {
+    // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
     bool is_signed = std::is_signed<decltype(v)>::value;
-    return Scalar(llvm::APSInt(
-        llvm::APInt(8 * opcodes.GetAddressByteSize(), v, is_signed),
-        !is_signed));
+    return Scalar(llvm::APSInt(llvm::APInt(8 * opcodes.GetAddressByteSize(), v,
+                                           is_signed, /*implicitTrunc=*/true),
+                               !is_signed));
   };
 
   // The default kind is a memory location. This is updated by any
@@ -934,6 +1091,14 @@ bool DWARFExpression::Evaluate(
       }
       LLDB_LOGF(log, "0x%8.8" PRIx64 ": %s", op_offset,
                 DW_OP_value_to_name(op));
+    }
+
+    if (std::optional<unsigned> arity =
+            llvm::dwarf::OperationArity(static_cast<LocationAtom>(op))) {
+      if (stack.size() < *arity)
+        return llvm::createStringError(
+            "%s needs at least %d stack entries (stack has %d entries)",
+            DW_OP_value_to_name(op), *arity, stack.size());
     }
 
     switch (op) {
@@ -995,79 +1160,11 @@ bool DWARFExpression::Evaluate(
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
     case DW_OP_deref: {
-      if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString("Expression stack empty for DW_OP_deref.");
-        return false;
-      }
-      Value::ValueType value_type = stack.back().GetValueType();
-      switch (value_type) {
-      case Value::ValueType::HostAddress: {
-        void *src = (void *)stack.back().GetScalar().ULongLong();
-        intptr_t ptr;
-        ::memcpy(&ptr, src, sizeof(void *));
-        stack.back().GetScalar() = ptr;
-        stack.back().ClearContext();
-      } break;
-      case Value::ValueType::FileAddress: {
-        auto file_addr = stack.back().GetScalar().ULongLong(
-            LLDB_INVALID_ADDRESS);
-
-        Address so_addr;
-        auto maybe_load_addr = ResolveLoadAddress(
-            exe_ctx, module_sp, error_ptr, "DW_OP_deref", file_addr, so_addr);
-
-        if (!maybe_load_addr)
-          return false;
-
-        stack.back().GetScalar() = *maybe_load_addr;
-        // Fall through to load address promotion code below.
-      }
-        [[fallthrough]];
-      case Value::ValueType::Scalar:
-        // Promote Scalar to LoadAddress and fall through.
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-        [[fallthrough]];
-      case Value::ValueType::LoadAddress:
-        if (exe_ctx) {
-          if (process) {
-            lldb::addr_t pointer_addr =
-                stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-            Status error;
-            lldb::addr_t pointer_value =
-                process->ReadPointerFromMemory(pointer_addr, error);
-            if (pointer_value != LLDB_INVALID_ADDRESS) {
-              if (ABISP abi_sp = process->GetABI())
-                pointer_value = abi_sp->FixCodeAddress(pointer_value);
-              stack.back().GetScalar() = pointer_value;
-              stack.back().ClearContext();
-            } else {
-              if (error_ptr)
-                error_ptr->SetErrorStringWithFormat(
-                    "Failed to dereference pointer from 0x%" PRIx64
-                    " for DW_OP_deref: %s\n",
-                    pointer_addr, error.AsCString());
-              return false;
-            }
-          } else {
-            if (error_ptr)
-              error_ptr->SetErrorString("NULL process for DW_OP_deref.\n");
-            return false;
-          }
-        } else {
-          if (error_ptr)
-            error_ptr->SetErrorString(
-                "NULL execution context for DW_OP_deref.\n");
-          return false;
-        }
-        break;
-
-      case Value::ValueType::Invalid:
-        if (error_ptr)
-          error_ptr->SetErrorString("Invalid value type for DW_OP_deref.\n");
-        return false;
-      }
-
+      size_t size = opcodes.GetAddressByteSize();
+      if (llvm::Error err = Evaluate_DW_OP_deref_size(
+              stack, exe_ctx, module_sp, process, target, size, size,
+              dwarf4_location_description_kind))
+        return err;
     } break;
 
     // OPCODE: DW_OP_deref_size
@@ -1083,145 +1180,11 @@ bool DWARFExpression::Evaluate(
     // the size of an address on the target machine before being pushed on the
     // expression stack.
     case DW_OP_deref_size: {
-      if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack empty for DW_OP_deref_size.");
-        return false;
-      }
-      uint8_t size = opcodes.GetU8(&offset);
-      if (size > 8) {
-        if (error_ptr)
-              error_ptr->SetErrorStringWithFormat(
-                  "Invalid address size for DW_OP_deref_size: %d\n",
-                  size);
-        return false;
-      }
-      Value::ValueType value_type = stack.back().GetValueType();
-      switch (value_type) {
-      case Value::ValueType::HostAddress: {
-        void *src = (void *)stack.back().GetScalar().ULongLong();
-        intptr_t ptr;
-        ::memcpy(&ptr, src, sizeof(void *));
-        // I can't decide whether the size operand should apply to the bytes in
-        // their
-        // lldb-host endianness or the target endianness.. I doubt this'll ever
-        // come up but I'll opt for assuming big endian regardless.
-        switch (size) {
-        case 1:
-          ptr = ptr & 0xff;
-          break;
-        case 2:
-          ptr = ptr & 0xffff;
-          break;
-        case 3:
-          ptr = ptr & 0xffffff;
-          break;
-        case 4:
-          ptr = ptr & 0xffffffff;
-          break;
-        // the casts are added to work around the case where intptr_t is a 32
-        // bit quantity;
-        // presumably we won't hit the 5..7 cases if (void*) is 32-bits in this
-        // program.
-        case 5:
-          ptr = (intptr_t)ptr & 0xffffffffffULL;
-          break;
-        case 6:
-          ptr = (intptr_t)ptr & 0xffffffffffffULL;
-          break;
-        case 7:
-          ptr = (intptr_t)ptr & 0xffffffffffffffULL;
-          break;
-        default:
-          break;
-        }
-        stack.back().GetScalar() = ptr;
-        stack.back().ClearContext();
-      } break;
-      case Value::ValueType::FileAddress: {
-        auto file_addr =
-            stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-        Address so_addr;
-        auto maybe_load_addr =
-            ResolveLoadAddress(exe_ctx, module_sp, error_ptr,
-                                      "DW_OP_deref_size", file_addr, so_addr,
-                                      /*check_sectionoffset=*/true);
-
-        if (!maybe_load_addr)
-          return false;
-
-        addr_t load_addr = *maybe_load_addr;
-
-        if (load_addr == LLDB_INVALID_ADDRESS && so_addr.IsSectionOffset()) {
-          uint8_t addr_bytes[8];
-          Status error;
-
-          if (target &&
-              target->ReadMemory(so_addr, &addr_bytes, size, error,
-                                 /*force_live_memory=*/false) == size) {
-            ObjectFile *objfile = module_sp->GetObjectFile();
-
-            stack.back().GetScalar() = DerefSizeExtractDataHelper(
-                addr_bytes, size, objfile->GetByteOrder(), size);
-            stack.back().ClearContext();
-            break;
-          } else {
-            if (error_ptr)
-              error_ptr->SetErrorStringWithFormat(
-                  "Failed to dereference pointer for DW_OP_deref_size: "
-                  "%s\n",
-                  error.AsCString());
-            return false;
-          }
-        }
-        stack.back().GetScalar() = load_addr;
-        // Fall through to load address promotion code below.
-      }
-
-        [[fallthrough]];
-      case Value::ValueType::Scalar:
-      case Value::ValueType::LoadAddress:
-        if (exe_ctx) {
-          if (process) {
-            lldb::addr_t pointer_addr =
-                stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-            uint8_t addr_bytes[sizeof(lldb::addr_t)];
-            Status error;
-            if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) ==
-                size) {
-
-              stack.back().GetScalar() =
-                  DerefSizeExtractDataHelper(addr_bytes, sizeof(addr_bytes),
-                                             process->GetByteOrder(), size);
-              stack.back().ClearContext();
-            } else {
-              if (error_ptr)
-                error_ptr->SetErrorStringWithFormat(
-                    "Failed to dereference pointer from 0x%" PRIx64
-                    " for DW_OP_deref: %s\n",
-                    pointer_addr, error.AsCString());
-              return false;
-            }
-          } else {
-            if (error_ptr)
-              error_ptr->SetErrorString("NULL process for DW_OP_deref_size.\n");
-            return false;
-          }
-        } else {
-          if (error_ptr)
-            error_ptr->SetErrorString(
-                "NULL execution context for DW_OP_deref_size.\n");
-          return false;
-        }
-        break;
-
-      case Value::ValueType::Invalid:
-        if (error_ptr)
-          error_ptr->SetErrorString("Invalid value for DW_OP_deref_size.\n");
-        return false;
-      }
-
+      size_t size = opcodes.GetU8(&offset);
+      if (llvm::Error err = Evaluate_DW_OP_deref_size(
+              stack, exe_ctx, module_sp, process, target, size,
+              opcodes.GetAddressByteSize(), dwarf4_location_description_kind))
+        return err;
     } break;
 
     // OPCODE: DW_OP_xderef_size
@@ -1240,9 +1203,7 @@ bool DWARFExpression::Evaluate(
     // extended to the size of an address on the target machine before being
     // pushed on the expression stack.
     case DW_OP_xderef_size:
-      if (error_ptr)
-        error_ptr->SetErrorString("Unimplemented opcode: DW_OP_xderef_size.");
-      return false;
+      return llvm::createStringError("unimplemented opcode: DW_OP_xderef_size");
     // OPCODE: DW_OP_xderef
     // OPERANDS: none
     // DESCRIPTION: Provides an extended dereference mechanism. The entry at
@@ -1254,9 +1215,7 @@ bool DWARFExpression::Evaluate(
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
     case DW_OP_xderef:
-      if (error_ptr)
-        error_ptr->SetErrorString("Unimplemented opcode: DW_OP_xderef.");
-      return false;
+      return llvm::createStringError("unimplemented opcode: DW_OP_xderef");
 
     // All DW_OP_constXXX opcodes have a single operand as noted below:
     //
@@ -1309,9 +1268,7 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: duplicates the value at the top of the stack
     case DW_OP_dup:
       if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString("Expression stack empty for DW_OP_dup.");
-        return false;
+        return llvm::createStringError("expression stack empty for DW_OP_dup");
       } else
         stack.push_back(stack.back());
       break;
@@ -1321,9 +1278,7 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the value at the top of the stack
     case DW_OP_drop:
       if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString("Expression stack empty for DW_OP_drop.");
-        return false;
+        return llvm::createStringError("expression stack empty for DW_OP_drop");
       } else
         stack.pop_back();
       break;
@@ -1333,13 +1288,7 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: Duplicates the entry currently second in the stack at
     // the top of the stack.
     case DW_OP_over:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_over.");
-        return false;
-      } else
-        stack.push_back(stack[stack.size() - 2]);
+      stack.push_back(stack[stack.size() - 2]);
       break;
 
     // OPCODE: DW_OP_pick
@@ -1351,10 +1300,8 @@ bool DWARFExpression::Evaluate(
       if (pick_idx < stack.size())
         stack.push_back(stack[stack.size() - 1 - pick_idx]);
       else {
-        if (error_ptr)
-          error_ptr->SetErrorStringWithFormat(
-              "Index %u out of range for DW_OP_pick.\n", pick_idx);
-        return false;
+        return llvm::createStringError(
+            "Index %u out of range for DW_OP_pick.\n", pick_idx);
       }
     } break;
 
@@ -1364,16 +1311,9 @@ bool DWARFExpression::Evaluate(
     // of the stack becomes the second stack entry, and the second entry
     // becomes the top of the stack
     case DW_OP_swap:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_swap.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.back() = stack[stack.size() - 2];
-        stack[stack.size() - 2] = tmp;
-      }
+      tmp = stack.back();
+      stack.back() = stack[stack.size() - 2];
+      stack[stack.size() - 2] = tmp;
       break;
 
     // OPCODE: DW_OP_rot
@@ -1382,20 +1322,13 @@ bool DWARFExpression::Evaluate(
     // the top of the stack becomes the third stack entry, the second entry
     // becomes the top of the stack, and the third entry becomes the second
     // entry.
-    case DW_OP_rot:
-      if (stack.size() < 3) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 3 items for DW_OP_rot.");
-        return false;
-      } else {
-        size_t last_idx = stack.size() - 1;
-        Value old_top = stack[last_idx];
-        stack[last_idx] = stack[last_idx - 1];
-        stack[last_idx - 1] = stack[last_idx - 2];
-        stack[last_idx - 2] = old_top;
-      }
-      break;
+    case DW_OP_rot: {
+      size_t last_idx = stack.size() - 1;
+      Value old_top = stack[last_idx];
+      stack[last_idx] = stack[last_idx - 1];
+      stack[last_idx - 1] = stack[last_idx - 2];
+      stack[last_idx - 2] = old_top;
+    } break;
 
     // OPCODE: DW_OP_abs
     // OPERANDS: none
@@ -1403,16 +1336,9 @@ bool DWARFExpression::Evaluate(
     // value and pushes its absolute value. If the absolute value can not be
     // represented, the result is undefined.
     case DW_OP_abs:
-      if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_abs.");
-        return false;
-      } else if (!stack.back().ResolveValue(exe_ctx).AbsoluteValue()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Failed to take the absolute value of the first stack item.");
-        return false;
+      if (!stack.back().ResolveValue(exe_ctx).AbsoluteValue()) {
+        return llvm::createStringError(
+            "failed to take the absolute value of the first stack item");
       }
       break;
 
@@ -1421,17 +1347,10 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack values, performs a bitwise and
     // operation on the two, and pushes the result.
     case DW_OP_and:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_and.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) & tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) & tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_div
@@ -1439,51 +1358,32 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack values, divides the former second
     // entry by the former top of the stack using signed division, and pushes
     // the result.
-    case DW_OP_div:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_div.");
-        return false;
-      } else {
-        tmp = stack.back();
-        if (tmp.ResolveValue(exe_ctx).IsZero()) {
-          if (error_ptr)
-            error_ptr->SetErrorString("Divide by zero.");
-          return false;
-        } else {
-          stack.pop_back();
-          Scalar divisor, dividend;
-          divisor = tmp.ResolveValue(exe_ctx);
-          dividend = stack.back().ResolveValue(exe_ctx);
-          divisor.MakeSigned();
-          dividend.MakeSigned();
-          stack.back() = dividend / divisor;
-          if (!stack.back().ResolveValue(exe_ctx).IsValid()) {
-            if (error_ptr)
-              error_ptr->SetErrorString("Divide failed.");
-            return false;
-          }
-        }
-      }
-      break;
+    case DW_OP_div: {
+      tmp = stack.back();
+      if (tmp.ResolveValue(exe_ctx).IsZero())
+        return llvm::createStringError("divide by zero");
+
+      stack.pop_back();
+      Scalar divisor, dividend;
+      divisor = tmp.ResolveValue(exe_ctx);
+      dividend = stack.back().ResolveValue(exe_ctx);
+      divisor.MakeSigned();
+      dividend.MakeSigned();
+      stack.back() = dividend / divisor;
+
+      if (!stack.back().ResolveValue(exe_ctx).IsValid())
+        return llvm::createStringError("divide failed");
+    } break;
 
     // OPCODE: DW_OP_minus
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, subtracts the former top
     // of the stack from the former second entry, and pushes the result.
     case DW_OP_minus:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_minus.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) - tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) - tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_mod
@@ -1492,17 +1392,10 @@ bool DWARFExpression::Evaluate(
     // the calculation: former second stack entry modulo the former top of the
     // stack.
     case DW_OP_mod:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_mod.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) % tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) % tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_mul
@@ -1510,35 +1403,18 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack entries, multiplies them
     // together, and pushes the result.
     case DW_OP_mul:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_mul.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) * tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) * tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_neg
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, and pushes its negation.
     case DW_OP_neg:
-      if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_neg.");
-        return false;
-      } else {
-        if (!stack.back().ResolveValue(exe_ctx).UnaryNegate()) {
-          if (error_ptr)
-            error_ptr->SetErrorString("Unary negate failed.");
-          return false;
-        }
-      }
+      if (!stack.back().ResolveValue(exe_ctx).UnaryNegate())
+        return llvm::createStringError("unary negate failed");
       break;
 
     // OPCODE: DW_OP_not
@@ -1546,18 +1422,8 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top stack entry, and pushes its bitwise
     // complement
     case DW_OP_not:
-      if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_not.");
-        return false;
-      } else {
-        if (!stack.back().ResolveValue(exe_ctx).OnesComplement()) {
-          if (error_ptr)
-            error_ptr->SetErrorString("Logical NOT failed.");
-          return false;
-        }
-      }
+      if (!stack.back().ResolveValue(exe_ctx).OnesComplement())
+        return llvm::createStringError("logical NOT failed");
       break;
 
     // OPCODE: DW_OP_or
@@ -1565,17 +1431,10 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack entries, performs a bitwise or
     // operation on the two, and pushes the result.
     case DW_OP_or:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_or.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) | tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) | tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_plus
@@ -1583,39 +1442,22 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack entries, adds them together, and
     // pushes the result.
     case DW_OP_plus:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_plus.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().GetScalar() += tmp.GetScalar();
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().GetScalar() += tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_plus_uconst
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, adds it to the unsigned LEB128
     // constant operand and pushes the result.
-    case DW_OP_plus_uconst:
-      if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_plus_uconst.");
-        return false;
-      } else {
-        const uint64_t uconst_value = opcodes.GetULEB128(&offset);
-        // Implicit conversion from a UINT to a Scalar...
-        stack.back().GetScalar() += uconst_value;
-        if (!stack.back().GetScalar().IsValid()) {
-          if (error_ptr)
-            error_ptr->SetErrorString("DW_OP_plus_uconst failed.");
-          return false;
-        }
-      }
-      break;
+    case DW_OP_plus_uconst: {
+      const uint64_t uconst_value = opcodes.GetULEB128(&offset);
+      // Implicit conversion from a UINT to a Scalar...
+      stack.back().GetScalar() += uconst_value;
+      if (!stack.back().GetScalar().IsValid())
+        return llvm::createStringError("DW_OP_plus_uconst failed");
+    } break;
 
     // OPCODE: DW_OP_shl
     // OPERANDS: none
@@ -1623,16 +1465,9 @@ bool DWARFExpression::Evaluate(
     // second entry left by the number of bits specified by the former top of
     // the stack, and pushes the result.
     case DW_OP_shl:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_shl.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) <<= tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) <<= tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_shr
@@ -1641,21 +1476,11 @@ bool DWARFExpression::Evaluate(
     // entry right logically (filling with zero bits) by the number of bits
     // specified by the former top of the stack, and pushes the result.
     case DW_OP_shr:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_shr.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        if (!stack.back().ResolveValue(exe_ctx).ShiftRightLogical(
-                tmp.ResolveValue(exe_ctx))) {
-          if (error_ptr)
-            error_ptr->SetErrorString("DW_OP_shr failed.");
-          return false;
-        }
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      if (!stack.back().ResolveValue(exe_ctx).ShiftRightLogical(
+              tmp.ResolveValue(exe_ctx)))
+        return llvm::createStringError("DW_OP_shr failed");
       break;
 
     // OPCODE: DW_OP_shra
@@ -1665,16 +1490,9 @@ bool DWARFExpression::Evaluate(
     // sign for the result) by the number of bits specified by the former top
     // of the stack, and pushes the result.
     case DW_OP_shra:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_shra.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) >>= tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) >>= tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_xor
@@ -1682,17 +1500,10 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack entries, performs the bitwise
     // exclusive-or operation on the two, and pushes the result.
     case DW_OP_xor:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_xor.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) ^ tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) ^ tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_skip
@@ -1710,11 +1521,9 @@ bool DWARFExpression::Evaluate(
       if (new_offset <= opcodes.GetByteSize())
         offset = new_offset;
       else {
-        if (error_ptr)
-          error_ptr->SetErrorStringWithFormatv(
-              "Invalid opcode offset in DW_OP_skip: {0}+({1}) > {2}", offset,
-              skip_offset, opcodes.GetByteSize());
-        return false;
+        return llvm::createStringError(llvm::formatv(
+            "Invalid opcode offset in DW_OP_skip: {0}+({1}) > {2}", offset,
+            skip_offset, opcodes.GetByteSize()));
       }
     } break;
 
@@ -1725,34 +1534,25 @@ bool DWARFExpression::Evaluate(
     // value popped is not the constant 0, the 2-byte constant operand is the
     // number of bytes of the DWARF expression to skip forward or backward from
     // the current operation, beginning after the 2-byte constant.
-    case DW_OP_bra:
-      if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_bra.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        int16_t bra_offset = (int16_t)opcodes.GetU16(&offset);
-        Scalar zero(0);
-        if (tmp.ResolveValue(exe_ctx) != zero) {
-          lldb::offset_t new_offset = offset + bra_offset;
-          // New offset can point at the end of the data, in this case we should
-          // terminate the DWARF expression evaluation (will happen in the loop
-          // condition).
-          if (new_offset <= opcodes.GetByteSize())
-            offset = new_offset;
-          else {
-            if (error_ptr)
-              error_ptr->SetErrorStringWithFormatv(
-                  "Invalid opcode offset in DW_OP_bra: {0}+({1}) > {2}", offset,
-                  bra_offset, opcodes.GetByteSize());
-            return false;
-          }
+    case DW_OP_bra: {
+      tmp = stack.back();
+      stack.pop_back();
+      int16_t bra_offset = (int16_t)opcodes.GetU16(&offset);
+      Scalar zero(0);
+      if (tmp.ResolveValue(exe_ctx) != zero) {
+        lldb::offset_t new_offset = offset + bra_offset;
+        // New offset can point at the end of the data, in this case we should
+        // terminate the DWARF expression evaluation (will happen in the loop
+        // condition).
+        if (new_offset <= opcodes.GetByteSize())
+          offset = new_offset;
+        else {
+          return llvm::createStringError(llvm::formatv(
+              "Invalid opcode offset in DW_OP_bra: {0}+({1}) > {2}", offset,
+              bra_offset, opcodes.GetByteSize()));
         }
       }
-      break;
+    } break;
 
     // OPCODE: DW_OP_eq
     // OPERANDS: none
@@ -1762,17 +1562,10 @@ bool DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_eq:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_eq.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) == tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) == tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_ge
@@ -1783,17 +1576,10 @@ bool DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_ge:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_ge.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) >= tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) >= tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_gt
@@ -1804,17 +1590,10 @@ bool DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_gt:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_gt.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) > tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) > tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_le
@@ -1825,17 +1604,10 @@ bool DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_le:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_le.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) <= tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) <= tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_lt
@@ -1846,17 +1618,10 @@ bool DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_lt:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_lt.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) < tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) < tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_ne
@@ -1867,17 +1632,10 @@ bool DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_ne:
-      if (stack.size() < 2) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 2 items for DW_OP_ne.");
-        return false;
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) != tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) != tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_litn
@@ -1958,10 +1716,10 @@ bool DWARFExpression::Evaluate(
       dwarf4_location_description_kind = Register;
       reg_num = op - DW_OP_reg0;
 
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, error_ptr, tmp))
-        stack.push_back(tmp);
-      else
-        return false;
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
+      stack.push_back(tmp);
     } break;
     // OPCODE: DW_OP_regx
     // OPERANDS:
@@ -1970,10 +1728,11 @@ bool DWARFExpression::Evaluate(
     case DW_OP_regx: {
       dwarf4_location_description_kind = Register;
       reg_num = opcodes.GetULEB128(&offset);
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, error_ptr, tmp))
-        stack.push_back(tmp);
-      else
-        return false;
+      Status read_err;
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
+      stack.push_back(tmp);
     } break;
 
     // OPCODE: DW_OP_bregN
@@ -2014,16 +1773,15 @@ bool DWARFExpression::Evaluate(
     case DW_OP_breg30:
     case DW_OP_breg31: {
       reg_num = op - DW_OP_breg0;
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
 
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, error_ptr,
-                                    tmp)) {
-        int64_t breg_offset = opcodes.GetSLEB128(&offset);
-        tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
-        tmp.ClearContext();
-        stack.push_back(tmp);
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else
-        return false;
+      int64_t breg_offset = opcodes.GetSLEB128(&offset);
+      tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
+      tmp.ClearContext();
+      stack.push_back(tmp);
+      stack.back().SetValueType(Value::ValueType::LoadAddress);
     } break;
     // OPCODE: DW_OP_bregx
     // OPERANDS: 2
@@ -2033,40 +1791,34 @@ bool DWARFExpression::Evaluate(
     // N plus an offset.
     case DW_OP_bregx: {
       reg_num = opcodes.GetULEB128(&offset);
+      if (llvm::Error err =
+              ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, tmp))
+        return err;
 
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, error_ptr,
-                                    tmp)) {
-        int64_t breg_offset = opcodes.GetSLEB128(&offset);
-        tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
-        tmp.ClearContext();
-        stack.push_back(tmp);
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else
-        return false;
+      int64_t breg_offset = opcodes.GetSLEB128(&offset);
+      tmp.ResolveValue(exe_ctx) += (uint64_t)breg_offset;
+      tmp.ClearContext();
+      stack.push_back(tmp);
+      stack.back().SetValueType(Value::ValueType::LoadAddress);
     } break;
 
     case DW_OP_fbreg:
       if (exe_ctx) {
         if (frame) {
           Scalar value;
-          if (frame->GetFrameBaseValue(value, error_ptr)) {
-            int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
-            value += fbreg_offset;
-            stack.push_back(value);
-            stack.back().SetValueType(Value::ValueType::LoadAddress);
-          } else
-            return false;
+          if (llvm::Error err = frame->GetFrameBaseValue(value))
+            return err;
+          int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
+          value += fbreg_offset;
+          stack.push_back(value);
+          stack.back().SetValueType(Value::ValueType::LoadAddress);
         } else {
-          if (error_ptr)
-            error_ptr->SetErrorString(
-                "Invalid stack frame in context for DW_OP_fbreg opcode.");
-          return false;
+          return llvm::createStringError(
+              "invalid stack frame in context for DW_OP_fbreg opcode");
         }
       } else {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "NULL execution context for DW_OP_fbreg.\n");
-        return false;
+        return llvm::createStringError(
+            "NULL execution context for DW_OP_fbreg");
       }
 
       break;
@@ -2124,75 +1876,73 @@ bool DWARFExpression::Evaluate(
 
           const Value::ValueType curr_piece_source_value_type =
               curr_piece_source_value.GetValueType();
+          Scalar &scalar = curr_piece_source_value.GetScalar();
+          lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
           switch (curr_piece_source_value_type) {
           case Value::ValueType::Invalid:
-            return false;
-          case Value::ValueType::LoadAddress:
-            if (process) {
+            return llvm::createStringError("invalid value type");
+          case Value::ValueType::FileAddress:
+            if (target) {
+              curr_piece_source_value.ConvertToLoadAddress(module_sp.get(),
+                                                           target);
+              addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
+            } else {
+              return llvm::createStringError(
+                  "unable to convert file address 0x%" PRIx64
+                  " to load address "
+                  "for DW_OP_piece(%" PRIu64 "): "
+                  "no target available",
+                  addr, piece_byte_size);
+            }
+            [[fallthrough]];
+          case Value::ValueType::LoadAddress: {
+            if (target) {
               if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
-                lldb::addr_t load_addr =
-                    curr_piece_source_value.GetScalar().ULongLong(
-                        LLDB_INVALID_ADDRESS);
-                if (process->ReadMemory(
-                        load_addr, curr_piece.GetBuffer().GetBytes(),
-                        piece_byte_size, error) != piece_byte_size) {
-                  if (error_ptr)
-                    error_ptr->SetErrorStringWithFormat(
-                        "failed to read memory DW_OP_piece(%" PRIu64
-                        ") from 0x%" PRIx64,
-                        piece_byte_size, load_addr);
-                  return false;
+                if (target->ReadMemory(addr, curr_piece.GetBuffer().GetBytes(),
+                                       piece_byte_size, error,
+                                       /*force_live_memory=*/false) !=
+                    piece_byte_size) {
+                  const char *addr_type = (curr_piece_source_value_type ==
+                                           Value::ValueType::LoadAddress)
+                                              ? "load"
+                                              : "file";
+                  return llvm::createStringError(
+                      "failed to read memory DW_OP_piece(%" PRIu64
+                      ") from %s address 0x%" PRIx64,
+                      piece_byte_size, addr_type, addr);
                 }
               } else {
-                if (error_ptr)
-                  error_ptr->SetErrorStringWithFormat(
-                      "failed to resize the piece memory buffer for "
-                      "DW_OP_piece(%" PRIu64 ")",
-                      piece_byte_size);
-                return false;
+                return llvm::createStringError(
+                    "failed to resize the piece memory buffer for "
+                    "DW_OP_piece(%" PRIu64 ")",
+                    piece_byte_size);
               }
             }
-            break;
-
-          case Value::ValueType::FileAddress:
-          case Value::ValueType::HostAddress:
-            if (error_ptr) {
-              lldb::addr_t addr = curr_piece_source_value.GetScalar().ULongLong(
-                  LLDB_INVALID_ADDRESS);
-              error_ptr->SetErrorStringWithFormat(
-                  "failed to read memory DW_OP_piece(%" PRIu64
-                  ") from %s address 0x%" PRIx64,
-                  piece_byte_size, curr_piece_source_value.GetValueType() ==
-                                           Value::ValueType::FileAddress
-                                       ? "file"
-                                       : "host",
-                  addr);
-            }
-            return false;
+          } break;
+          case Value::ValueType::HostAddress: {
+            return llvm::createStringError(
+                "failed to read memory DW_OP_piece(%" PRIu64
+                ") from host address 0x%" PRIx64,
+                piece_byte_size, addr);
+          } break;
 
           case Value::ValueType::Scalar: {
             uint32_t bit_size = piece_byte_size * 8;
             uint32_t bit_offset = 0;
-            Scalar &scalar = curr_piece_source_value.GetScalar();
-            if (!scalar.ExtractBitfield(
-                    bit_size, bit_offset)) {
-              if (error_ptr)
-                error_ptr->SetErrorStringWithFormat(
-                    "unable to extract %" PRIu64 " bytes from a %" PRIu64
-                    " byte scalar value.",
-                    piece_byte_size,
-                    (uint64_t)curr_piece_source_value.GetScalar()
-                        .GetByteSize());
-              return false;
+            if (!scalar.ExtractBitfield(bit_size, bit_offset)) {
+              return llvm::createStringError(
+                  "unable to extract %" PRIu64 " bytes from a %" PRIu64
+                  " byte scalar value.",
+                  piece_byte_size,
+                  (uint64_t)curr_piece_source_value.GetScalar().GetByteSize());
             }
-            // Create curr_piece with bit_size. By default Scalar
-            // grows to the nearest host integer type.
-            llvm::APInt fail_value(1, 0, false);
-            llvm::APInt ap_int = scalar.UInt128(fail_value);
-            assert(ap_int.getBitWidth() >= bit_size);
-            llvm::ArrayRef<uint64_t> buf{ap_int.getRawData(),
-                                         ap_int.getNumWords()};
-            curr_piece.GetScalar() = Scalar(llvm::APInt(bit_size, buf));
+
+            // We have seen a case where we have expression like:
+            //      DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x28
+            // here we are assuming the compiler was trying to zero
+            // extend the value that we should append to the buffer.
+            scalar.TruncOrExtendTo(bit_size, /*sign=*/false);
+            curr_piece.GetScalar() = scalar;
           } break;
           }
 
@@ -2202,27 +1952,20 @@ bool DWARFExpression::Evaluate(
             // so subsequent pieces will be able to access this piece and add
             // to it.
             if (pieces.AppendDataToHostBuffer(curr_piece) == 0) {
-              if (error_ptr)
-                error_ptr->SetErrorString("failed to append piece data");
-              return false;
+              return llvm::createStringError("failed to append piece data");
             }
           } else {
             // If this is the second or later piece there should be a value on
             // the stack.
             if (pieces.GetBuffer().GetByteSize() != op_piece_offset) {
-              if (error_ptr)
-                error_ptr->SetErrorStringWithFormat(
-                    "DW_OP_piece for offset %" PRIu64
-                    " but top of stack is of size %" PRIu64,
-                    op_piece_offset, pieces.GetBuffer().GetByteSize());
-              return false;
+              return llvm::createStringError(
+                  "DW_OP_piece for offset %" PRIu64
+                  " but top of stack is of size %" PRIu64,
+                  op_piece_offset, pieces.GetBuffer().GetByteSize());
             }
 
-            if (pieces.AppendDataToHostBuffer(curr_piece) == 0) {
-              if (error_ptr)
-                error_ptr->SetErrorString("failed to append piece data");
-              return false;
-            }
+            if (pieces.AppendDataToHostBuffer(curr_piece) == 0)
+              return llvm::createStringError("failed to append piece data");
           }
         }
         op_piece_offset += piece_byte_size;
@@ -2235,10 +1978,8 @@ bool DWARFExpression::Evaluate(
                                                LocationDescriptionKind::Empty);
         // Reset for the next piece.
         dwarf4_location_description_kind = Memory;
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_bit_piece.");
-        return false;
+        return llvm::createStringError(
+            "expression stack needs at least 1 item for DW_OP_bit_piece");
       } else {
         UpdateValueTypeFromLocationDescription(
             log, dwarf_cu, dwarf4_location_description_kind, &stack.back());
@@ -2248,30 +1989,26 @@ bool DWARFExpression::Evaluate(
         const uint64_t piece_bit_offset = opcodes.GetULEB128(&offset);
         switch (stack.back().GetValueType()) {
         case Value::ValueType::Invalid:
-          return false;
+          return llvm::createStringError(
+              "unable to extract bit value from invalid value");
         case Value::ValueType::Scalar: {
           if (!stack.back().GetScalar().ExtractBitfield(piece_bit_size,
                                                         piece_bit_offset)) {
-            if (error_ptr)
-              error_ptr->SetErrorStringWithFormat(
-                  "unable to extract %" PRIu64 " bit value with %" PRIu64
-                  " bit offset from a %" PRIu64 " bit scalar value.",
-                  piece_bit_size, piece_bit_offset,
-                  (uint64_t)(stack.back().GetScalar().GetByteSize() * 8));
-            return false;
+            return llvm::createStringError(
+                "unable to extract %" PRIu64 " bit value with %" PRIu64
+                " bit offset from a %" PRIu64 " bit scalar value.",
+                piece_bit_size, piece_bit_offset,
+                (uint64_t)(stack.back().GetScalar().GetByteSize() * 8));
           }
         } break;
 
         case Value::ValueType::FileAddress:
         case Value::ValueType::LoadAddress:
         case Value::ValueType::HostAddress:
-          if (error_ptr) {
-            error_ptr->SetErrorStringWithFormat(
-                "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
-                ", bit_offset = %" PRIu64 ") from an address value.",
-                piece_bit_size, piece_bit_offset);
-          }
-          return false;
+          return llvm::createStringError(
+              "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
+              ", bit_offset = %" PRIu64 ") from an address value.",
+              piece_bit_size, piece_bit_offset);
         }
       }
       break;
@@ -2291,9 +2028,8 @@ bool DWARFExpression::Evaluate(
 
       if (!data) {
         LLDB_LOG(log, "Evaluate_DW_OP_implicit_value: could not be read data");
-        LLDB_ERRORF(error_ptr, "Could not evaluate %s.",
-                    DW_OP_value_to_name(op));
-        return false;
+        return llvm::createStringError("could not evaluate %s",
+                                       DW_OP_value_to_name(op));
       }
 
       Value result(data, len);
@@ -2303,8 +2039,8 @@ bool DWARFExpression::Evaluate(
 
     case DW_OP_implicit_pointer: {
       dwarf4_location_description_kind = Implicit;
-      LLDB_ERRORF(error_ptr, "Could not evaluate %s.", DW_OP_value_to_name(op));
-      return false;
+      return llvm::createStringError("could not evaluate %s",
+                                     DW_OP_value_to_name(op));
     }
 
     // OPCODE: DW_OP_push_object_address
@@ -2319,10 +2055,8 @@ bool DWARFExpression::Evaluate(
       if (object_address_ptr)
         stack.push_back(*object_address_ptr);
       else {
-        if (error_ptr)
-          error_ptr->SetErrorString("DW_OP_push_object_address used without "
-                                    "specifying an object address");
-        return false;
+        return llvm::createStringError("DW_OP_push_object_address used without "
+                                       "specifying an object address");
       }
       break;
 
@@ -2345,9 +2079,7 @@ bool DWARFExpression::Evaluate(
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
     case DW_OP_call2:
-      if (error_ptr)
-        error_ptr->SetErrorString("Unimplemented opcode DW_OP_call2.");
-      return false;
+      return llvm::createStringError("unimplemented opcode DW_OP_call2");
     // OPCODE: DW_OP_call4
     // OPERANDS: 1
     //      uint32_t compile unit relative offset of a DIE
@@ -2368,9 +2100,7 @@ bool DWARFExpression::Evaluate(
     // the stack by the called expression may be used as return values by prior
     // agreement between the calling and called expressions.
     case DW_OP_call4:
-      if (error_ptr)
-        error_ptr->SetErrorString("Unimplemented opcode DW_OP_call4.");
-      return false;
+      return llvm::createStringError("unimplemented opcode DW_OP_call4");
 
     // OPCODE: DW_OP_stack_value
     // OPERANDS: None
@@ -2379,12 +2109,6 @@ bool DWARFExpression::Evaluate(
     // value to be used.  This is the actual object value and not the location.
     case DW_OP_stack_value:
       dwarf4_location_description_kind = Implicit;
-      if (stack.empty()) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_stack_value.");
-        return false;
-      }
       stack.back().SetValueType(Value::ValueType::Scalar);
       break;
 
@@ -2396,66 +2120,26 @@ bool DWARFExpression::Evaluate(
     // DESCRIPTION: Pop the top stack element, convert it to a
     // different type, and push the result.
     case DW_OP_convert: {
-      if (stack.size() < 1) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "Expression stack needs at least 1 item for DW_OP_convert.");
-        return false;
-      }
-      const uint64_t die_offset = opcodes.GetULEB128(&offset);
+      const uint64_t relative_die_offset = opcodes.GetULEB128(&offset);
       uint64_t bit_size;
       bool sign;
-      if (die_offset == 0) {
+      if (relative_die_offset == 0) {
         // The generic type has the size of an address on the target
         // machine and an unspecified signedness. Scalar has no
         // "unspecified signedness", so we use unsigned types.
-        if (!module_sp) {
-          if (error_ptr)
-            error_ptr->SetErrorString("No module");
-          return false;
-        }
+        if (!module_sp)
+          return llvm::createStringError("no module");
         sign = false;
         bit_size = module_sp->GetArchitecture().GetAddressByteSize() * 8;
-        if (!bit_size) {
-          if (error_ptr)
-            error_ptr->SetErrorString("unspecified architecture");
-          return false;
-        }
-      } else {
-        // Retrieve the type DIE that the value is being converted to. This
-        // offset is compile unit relative so we need to fix it up.
-        const uint64_t abs_die_offset = die_offset +  dwarf_cu->GetOffset();
-        // FIXME: the constness has annoying ripple effects.
-        DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(abs_die_offset);
-        if (!die) {
-          if (error_ptr)
-            error_ptr->SetErrorString("Cannot resolve DW_OP_convert type DIE");
-          return false;
-        }
-        uint64_t encoding =
-            die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
-        bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
         if (!bit_size)
-          bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
-        if (!bit_size) {
-          if (error_ptr)
-            error_ptr->SetErrorString("Unsupported type size in DW_OP_convert");
-          return false;
-        }
-        switch (encoding) {
-        case DW_ATE_signed:
-        case DW_ATE_signed_char:
-          sign = true;
-          break;
-        case DW_ATE_unsigned:
-        case DW_ATE_unsigned_char:
-          sign = false;
-          break;
-        default:
-          if (error_ptr)
-            error_ptr->SetErrorString("Unsupported encoding in DW_OP_convert");
-          return false;
-        }
+          return llvm::createStringError("unspecified architecture");
+      } else {
+        auto bit_size_sign_or_err =
+            dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
+        if (!bit_size_sign_or_err)
+          return bit_size_sign_or_err.takeError();
+        bit_size = bit_size_sign_or_err->first;
+        sign = bit_size_sign_or_err->second;
       }
       Scalar &top = stack.back().ResolveValue(exe_ctx);
       top.TruncOrExtendTo(bit_size, sign);
@@ -2472,19 +2156,19 @@ bool DWARFExpression::Evaluate(
         // Note that we don't have to parse FDEs because this DWARF expression
         // is commonly evaluated with a valid stack frame.
         StackID id = frame->GetStackID();
-        addr_t cfa = id.GetCallFrameAddress();
+        addr_t cfa = id.GetCallFrameAddressWithMetadata();
         if (cfa != LLDB_INVALID_ADDRESS) {
           stack.push_back(Scalar(cfa));
           stack.back().SetValueType(Value::ValueType::LoadAddress);
-        } else if (error_ptr)
-          error_ptr->SetErrorString("Stack frame does not include a canonical "
-                                    "frame address for DW_OP_call_frame_cfa "
-                                    "opcode.");
+        } else {
+          return llvm::createStringError(
+              "stack frame does not include a canonical "
+              "frame address for DW_OP_call_frame_cfa "
+              "opcode");
+        }
       } else {
-        if (error_ptr)
-          error_ptr->SetErrorString("Invalid stack frame in context for "
-                                    "DW_OP_call_frame_cfa opcode.");
-        return false;
+        return llvm::createStringError("unvalid stack frame in context for "
+                                       "DW_OP_call_frame_cfa opcode");
       }
       break;
 
@@ -2497,29 +2181,20 @@ bool DWARFExpression::Evaluate(
     case DW_OP_form_tls_address:
     case DW_OP_GNU_push_tls_address: {
       if (stack.size() < 1) {
-        if (error_ptr) {
-          if (op == DW_OP_form_tls_address)
-            error_ptr->SetErrorString(
-                "DW_OP_form_tls_address needs an argument.");
-          else
-            error_ptr->SetErrorString(
-                "DW_OP_GNU_push_tls_address needs an argument.");
-        }
-        return false;
+        if (op == DW_OP_form_tls_address)
+          return llvm::createStringError(
+              "DW_OP_form_tls_address needs an argument");
+        else
+          return llvm::createStringError(
+              "DW_OP_GNU_push_tls_address needs an argument");
       }
 
-      if (!exe_ctx || !module_sp) {
-        if (error_ptr)
-          error_ptr->SetErrorString("No context to evaluate TLS within.");
-        return false;
-      }
+      if (!exe_ctx || !module_sp)
+        return llvm::createStringError("no context to evaluate TLS within");
 
       Thread *thread = exe_ctx->GetThreadPtr();
-      if (!thread) {
-        if (error_ptr)
-          error_ptr->SetErrorString("No thread to evaluate TLS within.");
-        return false;
-      }
+      if (!thread)
+        return llvm::createStringError("no thread to evaluate TLS within");
 
       // Lookup the TLS block address for this thread and module.
       const addr_t tls_file_addr =
@@ -2527,12 +2202,9 @@ bool DWARFExpression::Evaluate(
       const addr_t tls_load_addr =
           thread->GetThreadLocalData(module_sp, tls_file_addr);
 
-      if (tls_load_addr == LLDB_INVALID_ADDRESS) {
-        if (error_ptr)
-          error_ptr->SetErrorString(
-              "No TLS data currently exists for this thread.");
-        return false;
-      }
+      if (tls_load_addr == LLDB_INVALID_ADDRESS)
+        return llvm::createStringError(
+            "no TLS data currently exists for this thread");
 
       stack.back().GetScalar() = tls_load_addr;
       stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -2546,12 +2218,9 @@ bool DWARFExpression::Evaluate(
     // and the 0 based index is the ULEB128 encoded index.
     case DW_OP_addrx:
     case DW_OP_GNU_addr_index: {
-      if (!dwarf_cu) {
-        if (error_ptr)
-          error_ptr->SetErrorString("DW_OP_GNU_addr_index found without a "
-                                    "compile unit being specified");
-        return false;
-      }
+      if (!dwarf_cu)
+        return llvm::createStringError("DW_OP_GNU_addr_index found without a "
+                                       "compile unit being specified");
       uint64_t index = opcodes.GetULEB128(&offset);
       lldb::addr_t value = dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
@@ -2574,10 +2243,8 @@ bool DWARFExpression::Evaluate(
     // encoded index.
     case DW_OP_GNU_const_index: {
       if (!dwarf_cu) {
-        if (error_ptr)
-          error_ptr->SetErrorString("DW_OP_GNU_const_index found without a "
-                                    "compile unit being specified");
-        return false;
+        return llvm::createStringError("DW_OP_GNU_const_index found without a "
+                                       "compile unit being specified");
       }
       uint64_t index = opcodes.GetULEB128(&offset);
       lldb::addr_t value = dwarf_cu->ReadAddressFromDebugAddrSection(index);
@@ -2586,39 +2253,33 @@ bool DWARFExpression::Evaluate(
 
     case DW_OP_GNU_entry_value:
     case DW_OP_entry_value: {
-      if (!Evaluate_DW_OP_entry_value(stack, exe_ctx, reg_ctx, opcodes, offset,
-                                      error_ptr, log)) {
-        LLDB_ERRORF(error_ptr, "Could not evaluate %s.",
-                    DW_OP_value_to_name(op));
-        return false;
-      }
+      if (llvm::Error err = Evaluate_DW_OP_entry_value(stack, exe_ctx, reg_ctx,
+                                                       opcodes, offset, log))
+        return llvm::createStringError(
+            "could not evaluate DW_OP_entry_value: %s",
+            llvm::toString(std::move(err)).c_str());
       break;
     }
 
     default:
       if (dwarf_cu) {
-        if (dwarf_cu->GetSymbolFileDWARF().ParseVendorDWARFOpcode(
-                op, opcodes, offset, stack)) {
+        if (dwarf_cu->ParseVendorDWARFOpcode(op, opcodes, offset, reg_ctx,
+                                             reg_kind, stack)) {
           break;
         }
       }
-      if (error_ptr)
-        error_ptr->SetErrorStringWithFormatv(
-            "Unhandled opcode {0} in DWARFExpression", LocationAtom(op));
-      return false;
+      return llvm::createStringError(llvm::formatv(
+          "Unhandled opcode {0} in DWARFExpression", LocationAtom(op)));
     }
   }
 
   if (stack.empty()) {
     // Nothing on the stack, check if we created a piece value from DW_OP_piece
     // or DW_OP_bit_piece opcodes
-    if (pieces.GetBuffer().GetByteSize()) {
-      result = pieces;
-      return true;
-    }
-    if (error_ptr)
-      error_ptr->SetErrorString("Stack empty after evaluation.");
-    return false;
+    if (pieces.GetBuffer().GetByteSize())
+      return pieces;
+
+    return llvm::createStringError("stack empty after evaluation");
   }
 
   UpdateValueTypeFromLocationDescription(
@@ -2635,45 +2296,7 @@ bool DWARFExpression::Evaluate(
       LLDB_LOGF(log, "  %s", new_value.GetData());
     }
   }
-  result = stack.back();
-  return true; // Return true on success
-}
-
-bool DWARFExpression::ParseDWARFLocationList(
-    const DWARFUnit *dwarf_cu, const DataExtractor &data,
-    DWARFExpressionList *location_list) {
-  location_list->Clear();
-  std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
-      dwarf_cu->GetLocationTable(data);
-  Log *log = GetLog(LLDBLog::Expressions);
-  auto lookup_addr =
-      [&](uint32_t index) -> std::optional<llvm::object::SectionedAddress> {
-    addr_t address = dwarf_cu->ReadAddressFromDebugAddrSection(index);
-    if (address == LLDB_INVALID_ADDRESS)
-      return std::nullopt;
-    return llvm::object::SectionedAddress{address};
-  };
-  auto process_list = [&](llvm::Expected<llvm::DWARFLocationExpression> loc) {
-    if (!loc) {
-      LLDB_LOG_ERROR(log, loc.takeError(), "{0}");
-      return true;
-    }
-    auto buffer_sp =
-        std::make_shared<DataBufferHeap>(loc->Expr.data(), loc->Expr.size());
-    DWARFExpression expr = DWARFExpression(DataExtractor(
-        buffer_sp, data.GetByteOrder(), data.GetAddressByteSize()));
-    location_list->AddExpression(loc->Range->LowPC, loc->Range->HighPC, expr);
-    return true;
-  };
-  llvm::Error error = loctable_up->visitAbsoluteLocationList(
-      0, llvm::object::SectionedAddress{dwarf_cu->GetBaseAddress()},
-      lookup_addr, process_list);
-  location_list->Sort();
-  if (error) {
-    LLDB_LOG_ERROR(log, std::move(error), "{0}");
-    return false;
-  }
-  return true;
+  return stack.back();
 }
 
 bool DWARFExpression::MatchesOperand(
@@ -2748,8 +2371,7 @@ bool DWARFExpression::MatchesOperand(
     return MatchUnaryOp(
         MatchOpType(Instruction::Operand::Type::Dereference),
         MatchBinaryOp(MatchOpType(Instruction::Operand::Type::Sum),
-                      MatchRegOp(*reg),
-                      MatchImmOp(offset)))(operand);
+                      MatchRegOp(*reg), MatchImmOp(offset)))(operand);
   } else {
     return MatchRegOp(*reg)(operand);
   }

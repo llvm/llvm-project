@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   JITLink
   OrcJIT
+  OrcShared
   Support
   nativecodegen
   )
@@ -10,5 +11,3 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(LLJITWithObjectLinkingLayerPlugin
   LLJITWithObjectLinkingLayerPlugin.cpp
   )
-
-export_executable_symbols(LLJITWithObjectLinkingLayerPlugin)

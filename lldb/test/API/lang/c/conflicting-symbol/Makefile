@@ -7,4 +7,4 @@ include Makefile.rules
 a.out: lib_One lib_Two
 
 lib_%:
-	$(MAKE) VPATH=$(SRCDIR)/$* -I $(SRCDIR) -f $(SRCDIR)/$*.mk
+	"$(MAKE)" VPATH=$(SRCDIR)/$* -I $(SRCDIR) -f $(SRCDIR)/$*.mk

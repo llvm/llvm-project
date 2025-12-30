@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4  | FileCheck %s --check-prefixes=CHECK,CHECK-V4
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl,+avx512bw,+avx512dq  | FileCheck %s --check-prefixes=CHECK,CHECK-AVX512
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=znver4  | FileCheck %s --check-prefixes=CHECK,CHECK-ZNVER4
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=znver5  | FileCheck %s --check-prefixes=CHECK,CHECK-ZNVER4
 
 define <16 x float> @transform_VUNPCKLPSZrr(<16 x float> %a, <16 x float> %b) nounwind {
 ; CHECK-LABEL: transform_VUNPCKLPSZrr:

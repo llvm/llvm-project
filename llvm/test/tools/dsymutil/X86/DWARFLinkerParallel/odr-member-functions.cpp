@@ -4,7 +4,7 @@
    odr-member-functions/$FILE.o done
  */
 
-// RUN: dsymutil --linker=llvm -f \
+// RUN: dsymutil --linker=parallel -f \
 // RUN: -oso-prepend-path=%p/../../Inputs/odr-member-functions \
 // RUN: -y %p/../dummy-debug-map.map -o %t1.out
 // RUN: llvm-dwarfdump -debug-info %t1.out | FileCheck %s

@@ -24,16 +24,6 @@
 
 namespace llvm {
 
-template <typename From, typename To, typename = void>
-struct explicitly_convertible : std::false_type {};
-
-template <typename From, typename To>
-struct explicitly_convertible<
-    From, To,
-    std::void_t<decltype(static_cast<To>(
-        std::declval<std::add_rvalue_reference_t<From>>()))>> : std::true_type {
-};
-
 /// A range adaptor for a pair of iterators.
 ///
 /// This just wraps two iterators into a range-compatible interface. Nothing
@@ -42,15 +32,20 @@ template <typename IteratorT>
 class iterator_range {
   IteratorT begin_iterator, end_iterator;
 
+  template <typename From, typename To>
+  using explicitly_converted_t = decltype(static_cast<To>(
+      std::declval<std::add_rvalue_reference_t<From>>()));
+
 public:
-#if __GNUC__ == 7
-  // Be careful no to break gcc-7 on the mlir target.
+#if defined(__GNUC__) &&                                                       \
+    (__GNUC__ == 7 || (__GNUC__ == 8 && __GNUC_MINOR__ < 4))
+  // Be careful no to break gcc-7 and gcc-8 < 8.4 on the mlir target.
   // See https://github.com/llvm/llvm-project/issues/63843
   template <typename Container>
 #else
   template <typename Container,
-            std::enable_if_t<explicitly_convertible<
-                detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
+            std::void_t<explicitly_converted_t<
+                llvm::detail::IterOfRange<Container>, IteratorT>> * = nullptr>
 #endif
   iterator_range(Container &&c)
       : begin_iterator(adl_begin(c)), end_iterator(adl_end(c)) {
@@ -65,7 +60,8 @@ public:
 };
 
 template <typename Container>
-iterator_range(Container &&) -> iterator_range<detail::IterOfRange<Container>>;
+iterator_range(Container &&)
+    -> iterator_range<llvm::detail::IterOfRange<Container>>;
 
 /// Convenience function for iterating over sub-ranges.
 ///

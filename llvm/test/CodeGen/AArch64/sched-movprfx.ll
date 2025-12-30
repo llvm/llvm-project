@@ -7,23 +7,24 @@
 
 
 ; NOTE: The unused paramter ensures z0/z1 is free, avoiding the antidependence for schedule.
-define <vscale x 2 x i64> @and_i64_zero(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i64>* %base) {
+define <vscale x 2 x i64> @and_i64_zero(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, ptr %base) {
 ; CHECK-LABEL: and_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    movprfx z0, z2
 ; CHECK-NEXT:    abs z0.d, p1/m, z2.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %data0 = tail call <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64> %c, i1 0)
-  %data1 = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64(<vscale x 2 x i64>* %base,
+  %data1 = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr %base,
                                                             i32 1,
                                                             <vscale x 2 x i1> %pg,
-                                                            <vscale x 2 x i64> undef)
+                                                            <vscale x 2 x i64> %c)
   %out = add <vscale x 2 x i64> %data0, %data1
   ret <vscale x 2 x i64> %out
 }
 
 declare <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64>, i1)
-declare <vscale x 2 x i64> @llvm.masked.load.nxv2i64(<vscale x 2 x i64>*, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
+declare <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)

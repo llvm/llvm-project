@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This file a TargetTransformInfo::Concept conforming object specific to the
+/// This file a TargetTransformInfoImplBase conforming object specific to the
 /// LoongArch target machine. It uses the target's detailed information to
 /// provide more precise answers to certain TTI queries, while letting the
 /// target independent and default TTI implementations handle the rest.
@@ -28,6 +28,7 @@ class LoongArchTTIImpl : public BasicTTIImplBase<LoongArchTTIImpl> {
   typedef TargetTransformInfo TTI;
   friend BaseT;
 
+  enum LoongArchRegisterClass { GPRRC, FPRRC, VRRC };
   const LoongArchSubtarget *ST;
   const LoongArchTargetLowering *TLI;
 
@@ -36,10 +37,26 @@ class LoongArchTTIImpl : public BasicTTIImplBase<LoongArchTTIImpl> {
 
 public:
   explicit LoongArchTTIImpl(const LoongArchTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  // TODO: Implement more hooks to provide TTI machinery for LoongArch.
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
+  unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getRegisterClassForType(bool Vector,
+                                   Type *Ty = nullptr) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  const char *getRegisterClassName(unsigned ClassID) const override;
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
+
+  unsigned getCacheLineSize() const override;
+  unsigned getPrefetchDistance() const override;
+  bool enableWritePrefetching() const override;
+
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
+
+  TTI::MemCmpExpansionOptions
+  enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
 };
 
 } // end namespace llvm

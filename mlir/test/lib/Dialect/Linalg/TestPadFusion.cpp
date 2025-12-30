@@ -36,8 +36,7 @@ struct TestPadFusionPass
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
     linalg::populateFuseTensorPadWithProducerLinalgOpPatterns(patterns);
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

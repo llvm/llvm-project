@@ -1,4 +1,4 @@
-//===--- UnconventionalAssignOperatorCheck.cpp - clang-tidy -----*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,22 +14,34 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
+namespace {
+
+AST_MATCHER_P(CXXMethodDecl, firstParameter,
+              ast_matchers::internal::Matcher<ParmVarDecl>, InnerMatcher) {
+  const unsigned N = Node.isExplicitObjectMemberFunction() ? 1 : 0;
+  return (N < Node.parameters().size() &&
+          InnerMatcher.matches(*Node.parameters()[N], Finder, Builder));
+}
+} // namespace
+
 void UnconventionalAssignOperatorCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
   const auto HasGoodReturnType =
       cxxMethodDecl(returns(hasCanonicalType(lValueReferenceType(pointee(
           unless(isConstQualified()),
-          anyOf(autoType(), hasDeclaration(equalsBoundNode("class"))))))));
+          anyOf(autoType(),
+                hasDeclaration(declaresSameEntityAsBoundNode("class"))))))));
 
   const auto IsSelf = qualType(hasCanonicalType(
-      anyOf(hasDeclaration(equalsBoundNode("class")),
-            referenceType(pointee(hasDeclaration(equalsBoundNode("class")))))));
+      anyOf(hasDeclaration(declaresSameEntityAsBoundNode("class")),
+            referenceType(pointee(
+                hasDeclaration(declaresSameEntityAsBoundNode("class")))))));
   const auto IsAssign =
       cxxMethodDecl(unless(anyOf(isDeleted(), isPrivate(), isImplicit())),
                     hasName("operator="), ofClass(recordDecl().bind("class")))
           .bind("method");
   const auto IsSelfAssign =
-      cxxMethodDecl(IsAssign, hasParameter(0, parmVarDecl(hasType(IsSelf))))
+      cxxMethodDecl(IsAssign, firstParameter(parmVarDecl(hasType(IsSelf))))
           .bind("method");
 
   Finder->addMatcher(
@@ -41,8 +53,7 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
             rValueReferenceType(pointee(isConstQualified()))))));
 
   Finder->addMatcher(
-      cxxMethodDecl(IsSelfAssign,
-                    hasParameter(0, parmVarDecl(hasType(BadSelf))))
+      cxxMethodDecl(IsSelfAssign, firstParameter(parmVarDecl(hasType(BadSelf))))
           .bind("ArgumentType"),
       this);
 
@@ -57,8 +68,11 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
                                 hasArgument(0, cxxThisExpr())),
             cxxOperatorCallExpr(
                 hasOverloadedOperatorName("="),
-                hasArgument(
-                    0, unaryOperator(hasOperatorName("*"),
+                hasArgument(0, unaryOperator(hasOperatorName("*"),
+                                             hasUnaryOperand(cxxThisExpr())))),
+            binaryOperator(
+                hasOperatorName("="),
+                hasLHS(unaryOperator(hasOperatorName("*"),
                                      hasUnaryOperand(cxxThisExpr())))))))));
   const auto IsGoodAssign = cxxMethodDecl(IsAssign, HasGoodReturnType);
 

@@ -1,4 +1,4 @@
-//===--- GlobalNamesInHeadersCheck.cpp - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalNamesInHeadersCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
@@ -18,26 +17,8 @@ namespace clang::tidy::google::readability {
 
 GlobalNamesInHeadersCheck::GlobalNamesInHeadersCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {
-  std::optional<StringRef> HeaderFileExtensionsOption =
-      Options.get("HeaderFileExtensions");
-  RawStringHeaderFileExtensions =
-      HeaderFileExtensionsOption.value_or(utils::defaultHeaderFileExtensions());
-  if (HeaderFileExtensionsOption) {
-    if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                    HeaderFileExtensions,
-                                    utils::defaultFileExtensionDelimiters())) {
-      this->configurationDiag("Invalid header file extension: '%0'")
-          << RawStringHeaderFileExtensions;
-    }
-  } else
-    HeaderFileExtensions = Context->getHeaderFileExtensions();
-}
-
-void GlobalNamesInHeadersCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
+    : ClangTidyCheck(Name, Context),
+      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void GlobalNamesInHeadersCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {

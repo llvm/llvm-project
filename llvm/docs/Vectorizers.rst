@@ -345,6 +345,16 @@ instruction is available.
       f[i] = floorf(f[i]);
   }
 
+Many of these math functions are only vectorizable if the file has been built
+with a specified target vector library that provides a vector implementation
+of that math function. Using clang, this is handled by the "-fveclib" command
+line option with one of the following vector libraries:
+"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM"
+
+.. code-block:: console
+
+   $ clang ... -fno-math-errno -fveclib=libmvec file.c
+
 Partial unrolling during vectorization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -388,6 +398,27 @@ runtime pointer checks and optimizes the path length for loops that have very
 small trip counts.
 
 .. image:: epilogue-vectorization-cfg.png
+
+Early Exit Vectorization
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+When vectorizing a loop with a single early exit, the loop blocks following the
+early exit are predicated and the vector loop will always exit via the latch.
+The loop terminates with a single BranchOnTwoConds VPInstruction, which takes
+both the early and latch exiting conditions. If the early exiting condition is
+true, BranchOnTwoConds exits to an intermediate block (``vector.early.exit``
+below). This intermediate block is responsible for calculating any exit values
+of loop-defined variables that are used in the early exit block. If the latch
+exiting condition is true, BranchOnTwoConds exits to the ``middle.block`` which
+selects between the exit block and the scalar remainder loop. Otherwise
+BranchOnTwoConds continues executing the loop by jumping back to the region
+header.
+
+.. image:: vplan-early-exit.png
+
+BranchOnTwoConds is lowered to a chain of conditional branches after dissolving loop regions:
+
+.. image:: vplan-early-exit-lowered.png
 
 Performance
 -----------
@@ -454,3 +485,12 @@ through clang using the command line flag:
 .. code-block:: console
 
    $ clang -fno-slp-vectorize file.c
+
+The Sandbox Vectorizer
+======================
+.. toctree::
+   :hidden:
+
+   SandboxVectorizer
+
+The :doc:`Sandbox Vectorizer <SandboxVectorizer>` is an experimental framework for building modular vectorization pipelines on top of :doc:`Sandbox IR <SandboxIR>`, with a focus on ease of testing and ease of development.

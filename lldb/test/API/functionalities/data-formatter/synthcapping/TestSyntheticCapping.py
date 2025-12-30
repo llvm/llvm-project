@@ -43,7 +43,7 @@ class SyntheticCappingTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
+            self.runCmd("settings set target.max-children-count 24", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -68,6 +68,11 @@ class SyntheticCappingTestCase(TestBase):
                 "r = 34",
             ],
         )
+        # num_children() should be called with at most max_num_children=25
+        # (target.max-children-count + 1)
+        self.expect(
+            "script fooSynthProvider.reset_max_num_children_max()", substrs=["25"]
+        )
 
         # check that capping works
         self.runCmd("settings set target.max-children-count 2", check=False)
@@ -80,9 +85,15 @@ class SyntheticCappingTestCase(TestBase):
                 "...",
             ],
         )
+        self.expect(
+            "script fooSynthProvider.reset_max_num_children_max()", substrs=["3"]
+        )
 
         self.expect("frame variable f00_1", matching=False, substrs=["r = 34"])
 
         self.runCmd("settings set target.max-children-count 256", check=False)
 
         self.expect("frame variable f00_1", matching=True, substrs=["r = 34"])
+        self.expect(
+            "script fooSynthProvider.reset_max_num_children_max()", substrs=["257"]
+        )

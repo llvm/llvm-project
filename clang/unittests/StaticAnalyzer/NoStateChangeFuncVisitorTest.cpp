@@ -86,17 +86,17 @@ class StatefulChecker : public Checker<check::PreCall> {
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
-    if (CallDescription{{"preventError"}, 0}.matches(Call)) {
+    if (CallDescription{CDM::SimpleFunc, {"preventError"}, 0}.matches(Call)) {
       C.addTransition(C.getState()->set<ErrorPrevented>(true));
       return;
     }
 
-    if (CallDescription{{"allowError"}, 0}.matches(Call)) {
+    if (CallDescription{CDM::SimpleFunc, {"allowError"}, 0}.matches(Call)) {
       C.addTransition(C.getState()->set<ErrorPrevented>(false));
       return;
     }
 
-    if (CallDescription{{"error"}, 0}.matches(Call)) {
+    if (CallDescription{CDM::SimpleFunc, {"error"}, 0}.matches(Call)) {
       if (C.getState()->get<ErrorPrevented>())
         return;
       const ExplodedNode *N = C.generateErrorNode();
@@ -140,7 +140,7 @@ void addNonThoroughStatefulChecker(AnalysisASTConsumer &AnalysisConsumer,
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry
         .addChecker<StatefulChecker<NonThoroughErrorNotPreventedFuncVisitor>>(
-            "test.StatefulChecker", "Description", "");
+            "test.StatefulChecker", "MockDescription");
   });
 }
 
@@ -233,7 +233,7 @@ void addThoroughStatefulChecker(AnalysisASTConsumer &AnalysisConsumer,
   AnOpts.CheckersAndPackages = {{"test.StatefulChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker<StatefulChecker<ThoroughErrorNotPreventedFuncVisitor>>(
-        "test.StatefulChecker", "Description", "");
+        "test.StatefulChecker", "MockDescription");
   });
 }
 

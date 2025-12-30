@@ -13,23 +13,23 @@ declare i32 @strncmp(ptr, ptr, i64)
 define void @fold_strncmp_Aa_b(ptr %pcmp) {
 ; CHECK-LABEL: @fold_strncmp_Aa_b(
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PCMP1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[PCMP1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP1]], align 4
-; CHECK-NEXT:    [[PCMP2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[PCMP2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP2]], align 4
-; CHECK-NEXT:    [[PCMP3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[PCMP3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP3]], align 4
-; CHECK-NEXT:    [[PCMP4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    [[PCMP4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP4]], align 4
-; CHECK-NEXT:    [[PCMP5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    [[PCMP5:%.*]] = getelementptr i8, ptr [[PCMP]], i64 20
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP5]], align 4
-; CHECK-NEXT:    [[PCMP6:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    [[PCMP6:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP6]], align 4
-; CHECK-NEXT:    [[PCMP7:%.*]] = getelementptr i32, ptr [[PCMP]], i64 7
+; CHECK-NEXT:    [[PCMP7:%.*]] = getelementptr i8, ptr [[PCMP]], i64 28
 ; CHECK-NEXT:    store i32 -1, ptr [[PCMP7]], align 4
-; CHECK-NEXT:    [[PCMP8:%.*]] = getelementptr i32, ptr [[PCMP]], i64 8
+; CHECK-NEXT:    [[PCMP8:%.*]] = getelementptr i8, ptr [[PCMP]], i64 32
 ; CHECK-NEXT:    store i32 -1, ptr [[PCMP8]], align 4
-; CHECK-NEXT:    [[PCMP9:%.*]] = getelementptr i32, ptr [[PCMP]], i64 9
+; CHECK-NEXT:    [[PCMP9:%.*]] = getelementptr i8, ptr [[PCMP]], i64 36
 ; CHECK-NEXT:    store i32 -1, ptr [[PCMP9]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -98,15 +98,15 @@ define void @fold_strncmp_Aa_b(ptr %pcmp) {
 define void @fold_strncmp_Ab_a(ptr %pcmp) {
 ; CHECK-LABEL: @fold_strncmp_Ab_a(
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PCMP1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[PCMP1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP1]], align 4
-; CHECK-NEXT:    [[PCMP2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    [[PCMP2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP2]], align 4
-; CHECK-NEXT:    [[PCMP3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    [[PCMP3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 12
 ; CHECK-NEXT:    store i32 0, ptr [[PCMP3]], align 4
-; CHECK-NEXT:    [[PCMP4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    [[PCMP4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; CHECK-NEXT:    store i32 1, ptr [[PCMP4]], align 4
-; CHECK-NEXT:    [[PCMP5:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    [[PCMP5:%.*]] = getelementptr i8, ptr [[PCMP]], i64 20
 ; CHECK-NEXT:    store i32 1, ptr [[PCMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;

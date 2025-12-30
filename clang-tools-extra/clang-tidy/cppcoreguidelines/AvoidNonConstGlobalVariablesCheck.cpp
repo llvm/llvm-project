@@ -1,4 +1,4 @@
-//===--- AvoidNonConstGlobalVariablesCheck.cpp - clang-tidy ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidNonConstGlobalVariablesCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -15,13 +14,26 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
+AvoidNonConstGlobalVariablesCheck::AvoidNonConstGlobalVariablesCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowInternalLinkage(Options.get("AllowInternalLinkage", false)),
+      AllowThreadLocal(Options.get("AllowThreadLocal", false)) {}
+
 void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
+  auto NamespaceMatcher = AllowInternalLinkage
+                              ? namespaceDecl(unless(isAnonymous()))
+                              : namespaceDecl();
   auto GlobalContext =
       varDecl(hasGlobalStorage(),
-              hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())));
+              hasDeclContext(anyOf(NamespaceMatcher, translationUnitDecl())));
 
   auto GlobalVariable = varDecl(
       GlobalContext,
+      AllowInternalLinkage ? varDecl(unless(isStaticStorageClass()))
+                           : varDecl(),
+      AllowThreadLocal ? varDecl(unless(hasThreadStorageDuration()))
+                       : varDecl(),
       unless(anyOf(
           isConstexpr(), hasType(isConstQualified()),
           hasType(referenceType())))); // References can't be changed, only the
@@ -43,7 +55,6 @@ void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
 
 void AvoidNonConstGlobalVariablesCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   if (const auto *Variable =
           Result.Nodes.getNodeAs<VarDecl>("non-const_variable")) {
     diag(Variable->getLocation(), "variable %0 is non-const and globally "
@@ -61,6 +72,11 @@ void AvoidNonConstGlobalVariablesCheck::check(
         << VD
         << VD->getType()->isPointerType(); // FIXME: Add fix-it hint to Variable
   }
+}
+
+void AvoidNonConstGlobalVariablesCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowInternalLinkage", AllowInternalLinkage);
 }
 
 } // namespace clang::tidy::cppcoreguidelines

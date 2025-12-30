@@ -9,7 +9,7 @@ target triple = "thumbv7m-none--eabi"
 define void @f(i1 %c) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entr:
-; CHECK-NEXT:    br i1 %c, label [[NEXT:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[PAT:%.*]] = getelementptr [16 x i8], ptr @glob
 ; CHECK-NEXT:    br label [[EXIT]]

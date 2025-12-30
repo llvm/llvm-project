@@ -22,6 +22,7 @@
 namespace lldb_private {
 
 class RegisterContextUnwind;
+class ArchitectureArm;
 
 class UnwindLLDB : public lldb_private::Unwind {
 public:
@@ -37,8 +38,12 @@ public:
 
 protected:
   friend class lldb_private::RegisterContextUnwind;
+  friend class lldb_private::ArchitectureArm;
 
-  struct RegisterLocation {
+  /// An UnwindPlan::Row::AbstractRegisterLocation, combined with the register
+  /// context and memory for a specific stop point, is used to create a
+  /// ConcreteRegisterLocation.
+  struct ConcreteRegisterLocation {
     enum RegisterLocationTypes {
       eRegisterNotSaved = 0, // register was not preserved by callee.  If
                              // volatile reg, is unavailable
@@ -46,6 +51,9 @@ protected:
                                       // target mem (target_memory_location)
       eRegisterInRegister, // register is available in a (possible other)
                            // register (register_number)
+      eRegisterIsRegisterPlusOffset, // register is available in a (possible
+                                     // other) register (register_number) with
+                                     // an offset applied
       eRegisterSavedAtHostMemoryLocation, // register is saved at a word in
                                           // lldb's address space
       eRegisterValueInferred,        // register val was computed (and is in
@@ -61,6 +69,11 @@ protected:
       void *host_memory_location;
       uint64_t inferred_value; // eRegisterValueInferred - e.g. stack pointer ==
                                // cfa + offset
+      struct {
+        uint32_t
+            register_number; // in eRegisterKindLLDB register numbering system
+        uint64_t offset;
+      } reg_plus_offset;
     } location;
   };
 
@@ -90,7 +103,8 @@ protected:
   // Iterate over the RegisterContextUnwind's in our m_frames vector, look for
   // the first one that has a saved location for this reg.
   bool SearchForSavedLocationForRegister(
-      uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc,
+      uint32_t lldb_regnum,
+      lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc,
       uint32_t starting_frame_num, bool pc_register);
 
   /// Provide the list of user-specified trap handler functions

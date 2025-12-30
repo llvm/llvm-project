@@ -16,7 +16,7 @@ entry:
 ; DARWIN-THUMB2: mov r0, r7
 
 ; LINUX-ARM-LABEL: frameaddr_index0:
-; LINUX-ARM: push {r11, lr}
+; LINUX-ARM: push {r11}
 ; LINUX-ARM: mov r11, sp
 ; LINUX-ARM: mov r0, r11
 
@@ -42,7 +42,7 @@ entry:
 ; DARWIN-THUMB2: ldr r0, [r7]
 
 ; LINUX-ARM-LABEL: frameaddr_index1:
-; LINUX-ARM: push {r11, lr}
+; LINUX-ARM: push {r11}
 ; LINUX-ARM: mov r11, sp
 ; LINUX-ARM: ldr r0, [r11]
 
@@ -73,7 +73,7 @@ entry:
 ; DARWIN-THUMB2: ldr r0, [r0]
 
 ; LINUX-ARM-LABEL: frameaddr_index3:
-; LINUX-ARM: push {r11, lr}
+; LINUX-ARM: push {r11}
 ; LINUX-ARM: mov r11, sp
 ; LINUX-ARM: ldr r0, [r11]
 ; LINUX-ARM: ldr r0, [r0]

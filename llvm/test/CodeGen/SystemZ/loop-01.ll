@@ -312,3 +312,26 @@ for.inc.i:                                        ; preds = %for.body.i63
   %indvars.iv.next156.i.3 = add nsw i64 %indvars.iv155.i, 4
   br label %for.body.i63
 }
+
+; Test that offsets are in range for i128 memory accesses.
+define void @fun10() {
+; CHECK-Z13-LABEL: fun10:
+; CHECK-Z13: # =>This Inner Loop Header: Depth=1
+; CHECK-Z13-NOT: lay
+entry:
+  %A1 = alloca [3 x [7 x [10 x i128]]], align 8
+  br label %for.body
+
+for.body:                        ; preds = %for.body, %entry
+  %IV = phi i64 [ 0, %entry ], [ %IV.next, %for.body ]
+  %Addr1 = getelementptr inbounds [3 x [7 x [10 x i128]]], ptr %A1, i64 0, i64 %IV, i64 6, i64 6
+  store i128 17174966165894859678, ptr %Addr1, align 8
+  %Addr2 = getelementptr inbounds [3 x [7 x [10 x i128]]], ptr %A1, i64 0, i64 %IV, i64 6, i64 8
+  store i128 17174966165894859678, ptr %Addr2, align 8
+  %IV.next = add nuw nsw i64 %IV, 1
+  %exitcond.not.i.i = icmp eq i64 %IV.next, 3
+  br i1 %exitcond.not.i.i, label %exit, label %for.body
+
+exit:                        ; preds = %for.body
+  unreachable
+}

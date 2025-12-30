@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -38,8 +38,8 @@ struct TestTraitFolder
   StringRef getArgument() const final { return "test-trait-folder"; }
   StringRef getDescription() const final { return "Run trait folding"; }
   void runOnOperation() override {
-    (void)applyPatternsAndFoldGreedily(getOperation(),
-                                       RewritePatternSet(&getContext()));
+    (void)applyPatternsGreedily(getOperation(),
+                                RewritePatternSet(&getContext()));
   }
 };
 } // namespace

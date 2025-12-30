@@ -28,17 +28,17 @@ void pass_vec_128() {
   receive_vec_128(NonTrivial(), z, z, z, z, z);
 }
 // CHECK-LABEL: define dso_local void @"?pass_vec_128@@YAXXZ"()
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 0
 // CHECK: call x86_thiscallcc noundef ptr @"??0NonTrivial@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
 
 // Store q, store temp alloca.
 // CHECK: store <4 x float> %{{[^,]*}}, ptr %{{[^,]*}}, align 16
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 1
 // CHECK: store ptr %{{[^,]*}}, ptr %{{[^,]*}}, align 4
 
 // Store w, store temp alloca.
 // CHECK: store <4 x float> %{{[^,]*}}, ptr %{{[^,]*}}, align 16
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 2
+// CHECK: getelementptr inbounds nuw <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 2
 // CHECK: store ptr %{{[^,]*}}, ptr %{{[^,]*}}, align 4
 
 // CHECK: call void @"?receive_vec_128@@YAXUNonTrivial@@T__m128@@1111@Z"
@@ -56,7 +56,7 @@ void __fastcall fastcall_receive_vec(__m128 x, __m128 y, __m128 z, __m128 w, int
 // CHECK-SAME: (<4 x float> inreg noundef %x,
 // CHECK-SAME: <4 x float> inreg noundef %y,
 // CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: ptr inreg noundef %0,
+// CHECK-SAME: ptr dead_on_return inreg noundef %0,
 // CHECK-SAME: i32 inreg noundef %edx,
 // CHECK-SAME: ptr inalloca(<{ ptr, %struct.NonTrivial }>) %1)
 
@@ -73,6 +73,6 @@ void __vectorcall vectorcall_receive_vec(double xmm0, double xmm1, double xmm2,
 // CHECK-SAME: <4 x float> inreg noundef %x,
 // CHECK-SAME: <4 x float> inreg noundef %y,
 // CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: ptr inreg noundef %0,
+// CHECK-SAME: ptr dead_on_return inreg noundef %0,
 // CHECK-SAME: i32 inreg noundef %edx,
 // CHECK-SAME: ptr inalloca(<{ ptr, %struct.NonTrivial }>) %1)

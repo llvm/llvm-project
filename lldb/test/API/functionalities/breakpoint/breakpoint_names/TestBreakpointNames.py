@@ -130,12 +130,12 @@ class BreakpointNames(TestBase):
         name_list = lldb.SBStringList()
         bkpt.GetNames(name_list)
         num_names = name_list.GetSize()
-        self.assertEquals(
+        self.assertEqual(
             num_names, 1, "Name list has %d items, expected 1." % (num_names)
         )
 
         name = name_list.GetStringAtIndex(0)
-        self.assertEquals(
+        self.assertEqual(
             name,
             other_bkpt_name,
             "Remaining name was: %s expected %s." % (name, other_bkpt_name),
@@ -190,10 +190,10 @@ class BreakpointNames(TestBase):
         bkpts = lldb.SBBreakpointList(self.target)
         self.target.FindBreakpointsByName(bkpt_name, bkpts)
 
-        self.assertEquals(bkpts.GetSize(), 1, "One breakpoint matched.")
+        self.assertEqual(bkpts.GetSize(), 1, "One breakpoint matched.")
         found_bkpt = bkpts.GetBreakpointAtIndex(0)
-        self.assertEquals(bkpt.GetID(), found_bkpt.GetID(), "The right breakpoint.")
-        self.assertEquals(bkpt.GetID(), bkpt_id, "With the same ID as before.")
+        self.assertEqual(bkpt.GetID(), found_bkpt.GetID(), "The right breakpoint.")
+        self.assertEqual(bkpt.GetID(), bkpt_id, "With the same ID as before.")
 
         retval = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand(
@@ -216,16 +216,14 @@ class BreakpointNames(TestBase):
         )
 
     def check_option_values(self, bp_object):
-        self.assertEqual(bp_object.IsOneShot(), self.is_one_shot, "IsOneShot")
-        self.assertEqual(bp_object.GetIgnoreCount(), self.ignore_count, "IgnoreCount")
-        self.assertEqual(bp_object.GetCondition(), self.condition, "Condition")
-        self.assertEqual(
-            bp_object.GetAutoContinue(), self.auto_continue, "AutoContinue"
-        )
-        self.assertEqual(bp_object.GetThreadID(), self.tid, "Thread ID")
-        self.assertEqual(bp_object.GetThreadIndex(), self.tidx, "Thread Index")
-        self.assertEqual(bp_object.GetThreadName(), self.thread_name, "Thread Name")
-        self.assertEqual(bp_object.GetQueueName(), self.queue_name, "Queue Name")
+        self.assertEqual(bp_object.one_shot, self.is_one_shot, "IsOneShot")
+        self.assertEqual(bp_object.ignore_count, self.ignore_count, "IgnoreCount")
+        self.assertEqual(bp_object.condition, self.condition, "Condition")
+        self.assertEqual(bp_object.auto_continue, self.auto_continue, "AutoContinue")
+        self.assertEqual(bp_object.thread_id, self.tid, "Thread ID")
+        self.assertEqual(bp_object.thread_index, self.tidx, "Thread Index")
+        self.assertEqual(bp_object.thread_name, self.thread_name, "Thread Name")
+        self.assertEqual(bp_object.queue_name, self.queue_name, "Queue Name")
         set_cmds = lldb.SBStringList()
         bp_object.GetCommandLineCommands(set_cmds)
         self.assertEqual(
@@ -389,7 +387,7 @@ class BreakpointNames(TestBase):
         )
 
     def check_permission_results(self, bp_name):
-        self.assertEqual(bp_name.GetAllowDelete(), False, "Didn't set allow delete.")
+        self.assertFalse(bp_name.GetAllowDelete(), "Didn't set allow delete.")
         protected_bkpt = self.target.BreakpointCreateByLocation(self.main_file_spec, 10)
         protected_id = protected_bkpt.GetID()
 
@@ -402,14 +400,11 @@ class BreakpointNames(TestBase):
         self.assertSuccess(success, "Couldn't add this name to the breakpoint")
 
         self.target.DisableAllBreakpoints()
-        self.assertEqual(
-            protected_bkpt.IsEnabled(),
-            True,
-            "Didnt' keep breakpoint from being disabled",
+        self.assertTrue(
+            protected_bkpt.IsEnabled(), "Didnt' keep breakpoint from being disabled"
         )
-        self.assertEqual(
+        self.assertFalse(
             unprotected_bkpt.IsEnabled(),
-            False,
             "Protected too many breakpoints from disabling.",
         )
 
@@ -418,14 +413,11 @@ class BreakpointNames(TestBase):
         result = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand("break disable", result)
         self.assertTrue(result.Succeeded())
-        self.assertEqual(
-            protected_bkpt.IsEnabled(),
-            True,
-            "Didnt' keep breakpoint from being disabled",
+        self.assertTrue(
+            protected_bkpt.IsEnabled(), "Didnt' keep breakpoint from being disabled"
         )
-        self.assertEqual(
+        self.assertFalse(
             unprotected_bkpt.IsEnabled(),
-            False,
             "Protected too many breakpoints from disabling.",
         )
 

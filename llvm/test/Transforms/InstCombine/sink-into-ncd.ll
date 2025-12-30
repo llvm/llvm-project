@@ -60,12 +60,12 @@ define i32 @test2(ptr %addr, i1 %c) {
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       right:
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @use(ptr [[PTR]])
-; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[RIGHT_2:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[RIGHT_2:%.*]]
 ; CHECK:       right.2:
 ; CHECK-NEXT:    [[Z:%.*]] = call i32 @use(ptr [[PTR]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[X]], [[LEFT]] ], [ [[Y]], [[RIGHT]] ], [ [[Z]], [[RIGHT_2]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[X]], [[LEFT]] ], [ poison, [[RIGHT]] ], [ [[Z]], [[RIGHT_2]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:

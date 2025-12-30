@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
   integer :: foo
   !Note: PGI, Intel, and GNU allow this; NAG and Sun do not
@@ -11,7 +11,7 @@ module m2
   interface s
   end interface
 contains
-  !WARNING: 's' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic
+  !WARNING: 's' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic [-Whomonymous-specific]
   subroutine s
   end subroutine
 end module
@@ -176,28 +176,13 @@ module m9b
     module procedure g
   end interface
 contains
-  subroutine g(x)
-    real :: x
-  end
-end module
-module m9c
-  interface g
-    module procedure g
-  end interface
-contains
   subroutine g()
   end
 end module
-subroutine s9a
+subroutine s9
+  !PORTABILITY: USE-associated generic 'g' should not have specific procedures 'g' and 'g' as their interfaces are not distinguishable
   use m9a
-  !ERROR: Cannot use-associate generic interface 'g' with specific procedure of the same name when another such interface and procedure are in scope
   use m9b
-end
-subroutine s9b
-  !ERROR: USE-associated generic 'g' may not have specific procedures 'g' and 'g' as their interfaces are not distinguishable
-  use m9a
-  !ERROR: Cannot use-associate generic interface 'g' with specific procedure of the same name when another such interface and procedure are in scope
-  use m9c
 end
 
 module m10a
@@ -222,24 +207,6 @@ contains
     integer :: x
   end
 end
-
-module m11a
-  interface g
-  end interface
-  type g
-  end type
-end module
-module m11b
-  interface g
-  end interface
-  type g
-  end type
-end module
-module m11c
-  use m11a
-  !ERROR: Generic interface 'g' has ambiguous derived types from modules 'm11a' and 'm11b'
-  use m11b
-end module
 
 module m12a
   interface ga
@@ -323,6 +290,7 @@ module m14d
  contains
   subroutine test
     real :: y
+    !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'bar') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
     y = foo(1.0)
     x = foo(2)
   end subroutine
@@ -334,6 +302,7 @@ module m14e
  contains
   subroutine test
     real :: y
+    !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'bar') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
     y = foo(1.0)
     x = foo(2)
   end subroutine

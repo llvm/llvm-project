@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=5 -stop-after=branch-relaxation  %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=5 -stop-after=branch-relaxation  %s -o - | FileCheck %s
 
 ; Test long branch reserved register pass when all
 ; SGPRs are used
@@ -17,6 +17,8 @@
 ; CHECK-NEXT:   waveLimiter:     false
 ; CHECK-NEXT:   hasSpilledSGPRs: false
 ; CHECK-NEXT:   hasSpilledVGPRs: false
+; CHECK-NEXT:   numWaveDispatchSGPRs: 0
+; CHECK-NEXT:   numWaveDispatchVGPRs: 0
 ; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT:   frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT:   stackPtrOffsetReg: '$sgpr32'
@@ -29,6 +31,7 @@
 ; CHECK-NEXT:     workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT:   psInputAddr:     0
 ; CHECK-NEXT:   psInputEnable:   0
+; CHECK-NEXT:   maxMemoryClusterDWords: 8
 ; CHECK-NEXT:   mode:
 ; CHECK-NEXT:     ieee:            true
 ; CHECK-NEXT:     dx10-clamp:      true
@@ -38,10 +41,15 @@
 ; CHECK-NEXT:     fp64-fp16-output-denormals: true
 ; CHECK-NEXT:   highBitsOf32BitAddress: 0
 ; CHECK-NEXT:   occupancy:       5
-; CHECK-NEXT:   scavengeFI:      '%fixed-stack.0'
+; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
+; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
+; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT:   numKernargPreloadSGPRs: 0
+; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_used_all_sgprs(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
@@ -282,6 +290,8 @@
 ; CHECK-NEXT:   waveLimiter:     false
 ; CHECK-NEXT:   hasSpilledSGPRs: false
 ; CHECK-NEXT:   hasSpilledVGPRs: false
+; CHECK-NEXT:   numWaveDispatchSGPRs: 0
+; CHECK-NEXT:   numWaveDispatchVGPRs: 0
 ; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
 ; CHECK-NEXT:   frameOffsetReg:  '$fp_reg'
 ; CHECK-NEXT:   stackPtrOffsetReg: '$sgpr32'
@@ -294,6 +304,7 @@
 ; CHECK-NEXT:     workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT:   psInputAddr:     0
 ; CHECK-NEXT:   psInputEnable:   0
+; CHECK-NEXT:   maxMemoryClusterDWords: 8
 ; CHECK-NEXT:   mode:
 ; CHECK-NEXT:     ieee:            true
 ; CHECK-NEXT:     dx10-clamp:      true
@@ -303,10 +314,15 @@
 ; CHECK-NEXT:     fp64-fp16-output-denormals: true
 ; CHECK-NEXT:   highBitsOf32BitAddress: 0
 ; CHECK-NEXT:   occupancy:       5
-; CHECK-NEXT:   scavengeFI:      '%fixed-stack.0'
+; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT:   longBranchReservedReg: ''
+; CHECK-NEXT:   hasInitWholeWave: false
+; CHECK-NEXT:   dynamicVGPRBlockSize: 0
+; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT:   numKernargPreloadSGPRs: 0
+; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @long_branch_high_num_sgprs_used(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
@@ -525,6 +541,8 @@
   }
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 !0 = !{}

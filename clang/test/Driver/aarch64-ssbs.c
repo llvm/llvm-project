@@ -6,7 +6,7 @@
 
 // RUN: %clang -### --target=aarch64-none-elf -march=armv8a+nossbs %s 2>&1 | FileCheck %s --check-prefix=NOSSBS
 // RUN: %clang -### --target=aarch64-none-elf -mcpu=cortex-x1c+nossbs %s 2>&1 | FileCheck %s --check-prefix=NOSSBS
-// NOSSBS: "-target-feature" "-ssbs"
+// NOSSBS-NOT: "-target-feature" "+ssbs"
 
 // RUN: %clang -### --target=aarch64-none-elf                      %s 2>&1 | FileCheck %s --check-prefix=ABSENTSSBS
 // ABSENTSSBS-NOT: "-target-feature" "+ssbs"

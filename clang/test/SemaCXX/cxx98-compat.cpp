@@ -1,17 +1,28 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -verify %s -DCXX14COMPAT
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -verify %s -DCXX14COMPAT -DCXX17COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -verify=expected,not-cpp20 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -verify=expected,not-cpp20 %s -DCXX14COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -verify=expected,not-cpp20 %s -DCXX14COMPAT -DCXX17COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wc++98-compat -verify=expected,cpp20 %s -DCXX14COMPAT -DCXX17COMPAT
 
 namespace std {
   struct type_info;
   using size_t = decltype(sizeof(0)); // expected-warning {{decltype}} expected-warning {{alias}}
   template<typename T> struct initializer_list {
-    initializer_list(T*, size_t);
-    T *p;
+    initializer_list(const T*, size_t);
+    const T *p;
     size_t n;
-    T *begin();
-    T *end();
+    const T *begin();
+    const T *end();
   };
+}
+
+void test_other_auto_spellings() {
+  __auto_type x = 0; // Ok
+  decltype(auto) y = 0; // expected-warning {{'decltype' type specifier is incompatible with C++98}}
+#ifndef CXX14COMPAT
+  // expected-warning@-2 {{'decltype(auto)' type specifier is a C++14 extension}}
+#else
+  // expected-warning@-4 {{'decltype(auto)' type specifier is incompatible with C++ standards before C++14}}
+#endif
 }
 
 template<typename ...T>  // expected-warning {{variadic templates are incompatible with C++98}}
@@ -84,7 +95,7 @@ struct DelayedDefaultArgumentParseInitList {
   }
 };
 
-int operator"" _hello(const char *); // expected-warning {{literal operators are incompatible with C++98}}
+int operator""_hello(const char *); // expected-warning {{literal operators are incompatible with C++98}}
 
 enum EnumFixed : int { // expected-warning {{enumeration types with a fixed underlying type are incompatible with C++98}}
 };
@@ -177,9 +188,11 @@ template<typename T> int TemplateFn(T) { return 0; }
 void LocalTemplateArg() {
   struct S {};
   TemplateFn(S()); // expected-warning {{local type 'S' as template argument is incompatible with C++98}}
+                   // expected-note@-1 {{while substituting deduced template arguments}}
 }
 struct {} obj_of_unnamed_type; // expected-note {{here}}
 int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // expected-warning {{unnamed type as template argument is incompatible with C++98}}
+                                                          // expected-note@-1 {{while substituting deduced template arguments}}
 
 // FIXME: We do not implement C++98 compatibility warnings for the C++17
 // template argument evaluation rules.
@@ -187,8 +200,8 @@ int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // expected-warning {{
 namespace RedundantParensInAddressTemplateParam {
   int n;
   template<int*p> struct S {};
-  S<(&n)> s; // expected-warning {{redundant parentheses surrounding address non-type template argument are incompatible with C++98}}
-  S<(((&n)))> t; // expected-warning {{redundant parentheses surrounding address non-type template argument are incompatible with C++98}}
+  S<(&n)> s; // expected-warning {{parentheses around address non-type template argument are incompatible with C++98}}
+  S<(((&n)))> t; // expected-warning {{parentheses around address non-type template argument are incompatible with C++98}}
 }
 #endif
 
@@ -200,7 +213,7 @@ template<> struct TemplateSpecOutOfScopeNs::S<char> {};
 struct Typename {
   template<typename T> struct Inner {};
 };
-typename ::Typename TypenameOutsideTemplate(); // expected-warning {{use of 'typename' outside of a template is incompatible with C++98}}
+typename ::Typename TypenameOutsideTemplate(); // expected-warning {{'typename' outside of a template is incompatible with C++98}}
 Typename::template Inner<int> TemplateOutsideTemplate(); // expected-warning {{use of 'template' keyword outside of a template is incompatible with C++98}}
 
 struct TrivialButNonPOD {
@@ -214,13 +227,15 @@ void TrivialButNonPODThroughEllipsis() {
 }
 
 struct HasExplicitConversion {
-  explicit operator bool(); // expected-warning {{explicit conversion functions are incompatible with C++98}}
+  // FIXME I think we should generate this diagnostic in C++20
+  explicit operator bool(); // not-cpp20-warning {{explicit conversion functions are incompatible with C++98}}
 };
 
 struct Struct {};
 enum Enum { enum_val = 0 };
 struct BadFriends {
-  friend enum ::Enum; // expected-warning {{befriending enumeration type 'enum ::Enum' is incompatible with C++98}}
+  friend enum ::Enum; // expected-warning {{elaborated enum specifier cannot be declared as a friend}}
+                      // expected-note@-1 {{remove 'enum' to befriend an enum}}
   friend int; // expected-warning {{non-class friend type 'int' is incompatible with C++98}}
   friend Struct; // expected-warning {{befriending 'Struct' without 'struct' keyword is incompatible with C++98}}
 };
@@ -417,3 +432,12 @@ void ctad_test() {
   CTAD t = s; // expected-warning {{class template argument deduction is incompatible with C++ standards before C++17}}
 }
 #endif
+
+namespace GH161702 {
+struct S {
+  enum E { A };
+  using E::A; // expected-warning {{enumeration type in nested name specifier is incompatible with C++98}}
+              // not-cpp20-error@-1 {{using declaration refers to its own class}}
+             // cpp20-warning@-2 {{member using declaration naming non-class ''E'' enumerator is incompatible with C++ standards before C++20}}
+};
+}

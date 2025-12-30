@@ -157,7 +157,7 @@ class ShufInstr(Instruction):
         )
 
     def calc_value(self):
-        if self.value != None:
+        if self.value is not None:
             print("Trying to calculate the value of a shuffle instruction twice")
             exit(1)
 
@@ -199,7 +199,7 @@ class SelectInstr(Instruction):
         )
 
     def calc_value(self):
-        if self.value != None:
+        if self.value is not None:
             print("Trying to calculate the value of a select instruction twice")
             exit(1)
 
@@ -237,7 +237,7 @@ def gen_inputs(ty, num):
 # In case one of the dimensions (scalar type/number of elements) is provided,
 # fill the blank dimension and return appropriate Type object.
 def get_random_type(ty, num_elts):
-    if ty != None:
+    if ty is not None:
         if ty == "i8":
             is_float = False
             width = 8
@@ -260,10 +260,10 @@ def get_random_type(ty, num_elts):
     int_elt_widths = [8, 16, 32, 64]
     float_elt_widths = [32, 64]
 
-    if num_elts == None:
+    if num_elts is None:
         num_elts = random.choice(range(2, 65))
 
-    if ty == None:
+    if ty is None:
         # 1 for integer type, 0 for floating-point
         if random.randint(0, 1):
             is_float = False
@@ -388,7 +388,7 @@ def main():
     ), "Minimum value greater than maximum."
     assert args.type in [None, "i8", "i16", "i32", "i64", "f32", "f64"], "Illegal type."
     assert (
-        args.num_elts == None or args.num_elts > 0
+        args.num_elts is None or args.num_elts > 0
     ), "num_elts must be a positive integer."
 
     random.seed(args.seed)

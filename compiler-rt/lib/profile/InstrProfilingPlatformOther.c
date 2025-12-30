@@ -6,9 +6,18 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+// This file defines a fallback implementation to compute the locations of
+// profile data sections, for targets that don't have linker support.  No
+// commonly used targets use this codepath.
+//
+// This implementation expects the compiler instrumentation pass to define a
+// constructor in each file which calls into this file.
+
 #if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&     \
     !defined(__Fuchsia__) && !(defined(__sun__) && defined(__svr4__)) &&       \
-    !defined(__NetBSD__) && !defined(_WIN32) && !defined(_AIX)
+    !defined(__NetBSD__) && !defined(_WIN32) && !defined(_AIX) &&              \
+    !defined(__wasm__) && !defined(__HAIKU__) &&                               \
+    !defined(COMPILER_RT_PROFILE_BAREMETAL)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,11 +27,14 @@
 
 static const __llvm_profile_data *DataFirst = NULL;
 static const __llvm_profile_data *DataLast = NULL;
+static const VTableProfData *VTableProfDataFirst = NULL;
+static const VTableProfData *VTableProfDataLast = NULL;
 static const char *NamesFirst = NULL;
 static const char *NamesLast = NULL;
+static const char *VNamesFirst = NULL;
+static const char *VNamesLast = NULL;
 static char *CountersFirst = NULL;
 static char *CountersLast = NULL;
-static uint32_t *OrderFileFirst = NULL;
 
 static const void *getMinAddr(const void *A1, const void *A2) {
   return A1 < A2 ? A1 : A2;
@@ -80,10 +92,21 @@ COMPILER_RT_VISIBILITY
 const __llvm_profile_data *__llvm_profile_begin_data(void) { return DataFirst; }
 COMPILER_RT_VISIBILITY
 const __llvm_profile_data *__llvm_profile_end_data(void) { return DataLast; }
+COMPILER_RT_VISIBILITY const VTableProfData *
+__llvm_profile_begin_vtables(void) {
+  return VTableProfDataFirst;
+}
+COMPILER_RT_VISIBILITY const VTableProfData *__llvm_profile_end_vtables(void) {
+  return VTableProfDataLast;
+}
 COMPILER_RT_VISIBILITY
 const char *__llvm_profile_begin_names(void) { return NamesFirst; }
 COMPILER_RT_VISIBILITY
 const char *__llvm_profile_end_names(void) { return NamesLast; }
+COMPILER_RT_VISIBILITY
+const char *__llvm_profile_begin_vtabnames(void) { return VNamesFirst; }
+COMPILER_RT_VISIBILITY
+const char *__llvm_profile_end_vtabnames(void) { return VNamesLast; }
 COMPILER_RT_VISIBILITY
 char *__llvm_profile_begin_counters(void) { return CountersFirst; }
 COMPILER_RT_VISIBILITY
@@ -92,9 +115,6 @@ COMPILER_RT_VISIBILITY
 char *__llvm_profile_begin_bitmap(void) { return BitmapFirst; }
 COMPILER_RT_VISIBILITY
 char *__llvm_profile_end_bitmap(void) { return BitmapLast; }
-/* TODO: correctly set up OrderFileFirst. */
-COMPILER_RT_VISIBILITY
-uint32_t *__llvm_profile_begin_orderfile(void) { return OrderFileFirst; }
 
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_begin_vnodes(void) {

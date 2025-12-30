@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
 #include <future>
 #include <thread>
@@ -110,4 +111,42 @@ TEST(ListenerTest, GetEventWait) {
   EXPECT_TRUE(listener_sp->GetEventForBroadcasterWithType(
       &broadcaster, event_mask, event_sp, std::nullopt));
   async_broadcast.get();
+}
+
+TEST(ListenerTest, StartStopListeningForEventSpec) {
+  constexpr uint32_t event_mask = 1;
+  static constexpr llvm::StringLiteral broadcaster_class = "broadcaster-class";
+
+  class TestBroadcaster : public Broadcaster {
+    using Broadcaster::Broadcaster;
+    llvm::StringRef GetBroadcasterClass() const override {
+      return broadcaster_class;
+    }
+  };
+
+  BroadcasterManagerSP manager_sp =
+      BroadcasterManager::MakeBroadcasterManager();
+  ListenerSP listener_sp = Listener::MakeListener("test-listener");
+
+  // Create two broadcasters, one while we're waiting for new broadcasters, and
+  // one when we're not.
+  ASSERT_EQ(listener_sp->StartListeningForEventSpec(
+                manager_sp, BroadcastEventSpec(broadcaster_class, event_mask)),
+            event_mask);
+  TestBroadcaster broadcaster1(manager_sp, "test-broadcaster-1");
+  broadcaster1.CheckInWithManager();
+  ASSERT_TRUE(listener_sp->StopListeningForEventSpec(
+      manager_sp, BroadcastEventSpec(broadcaster_class, event_mask)));
+  TestBroadcaster broadcaster2(manager_sp, "test-broadcaster-2");
+  broadcaster2.CheckInWithManager();
+
+  // Use both broadcasters to send an event.
+  for (auto *b : {&broadcaster1, &broadcaster2})
+    b->BroadcastEvent(event_mask, nullptr);
+
+  // Use should only get the event from the first one.
+  EventSP event_sp;
+  ASSERT_TRUE(listener_sp->GetEvent(event_sp, std::chrono::seconds(0)));
+  ASSERT_EQ(event_sp->GetBroadcaster(), &broadcaster1);
+  ASSERT_FALSE(listener_sp->GetEvent(event_sp, std::chrono::seconds(0)));
 }

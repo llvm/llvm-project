@@ -10,9 +10,9 @@
 #define LLVM_LIB_DWARFLINKER_PARALLEL_DWARFLINKERUNIT_H
 
 #include "DWARFLinkerGlobalData.h"
-#include "IndexedValuesMap.h"
 #include "OutputSections.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/DWARFLinker/IndexedValuesMap.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DWARFLinker/StringPool.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -28,7 +28,7 @@ using MacroOffset2UnitMapTy = DenseMap<uint64_t, DwarfUnit *>;
 /// Base class for all Dwarf units(Compile unit/Type table unit).
 class DwarfUnit : public OutputSections {
 public:
-  virtual ~DwarfUnit() {}
+  virtual ~DwarfUnit() = default;
   DwarfUnit(LinkingGlobalData &GlobalData, unsigned ID,
             StringRef ClangModuleName)
       : OutputSections(GlobalData), ID(ID), ClangModuleName(ClangModuleName),
@@ -77,9 +77,14 @@ public:
   void setOutUnitDIE(DIE *UnitDie) {
     OutUnitDIE = UnitDie;
 
-    if (OutUnitDIE != nullptr)
+    if (OutUnitDIE != nullptr) {
       UnitSize = getDebugInfoHeaderSize() + OutUnitDIE->getSize();
+      UnitTag = OutUnitDIE->getTag();
+    }
   }
+
+  /// Returns unit DWARF tag.
+  dwarf::Tag getTag() const { return UnitTag; }
 
   /// \defgroup Methods used to emit unit's debug info:
   ///
@@ -179,6 +184,9 @@ protected:
   std::string ClangModuleName;
 
   uint64_t UnitSize = 0;
+
+  /// DWARF unit tag.
+  dwarf::Tag UnitTag = dwarf::DW_TAG_null;
 
   /// true if current unit references_to/is_referenced by other unit.
   std::atomic<bool> IsInterconnectedCU = {false};

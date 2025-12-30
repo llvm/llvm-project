@@ -43,7 +43,7 @@ StringRef MCInstPrinter::getOpcodeName(unsigned Opcode) const {
   return MII.getName(Opcode);
 }
 
-void MCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void MCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   llvm_unreachable("Target should implement this");
 }
 
@@ -61,6 +61,7 @@ void MCInstPrinter::printAnnotation(raw_ostream &OS, StringRef Annot) {
 }
 
 static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
+                                const MCInstrInfo &MII,
                                 const MCRegisterInfo &MRI, unsigned &OpIdx,
                                 const AliasMatchingData &M,
                                 const AliasPatternCond &C,
@@ -102,6 +103,12 @@ static bool matchAliasCondition(const MCInst &MI, const MCSubtargetInfo *STI,
   case AliasPatternCond::K_TiedReg:
     // Operand must match the register of another operand.
     return Opnd.isReg() && Opnd.getReg() == MI.getOperand(C.Value).getReg();
+  case AliasPatternCond::K_RegClassByHwMode: {
+    // Operand must be RegisterByHwMode. Value is RegClassByHwMode index.
+    unsigned HwModeId = STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo);
+    int16_t RCID = MII.getRegClassByHwModeTable(HwModeId)[C.Value];
+    return Opnd.isReg() && MRI.getRegClass(RCID).contains(Opnd.getReg());
+  }
   case AliasPatternCond::K_RegClass:
     // Operand must be a register in this class. Value is a register class id.
     return Opnd.isReg() && MRI.getRegClass(C.Value).contains(Opnd.getReg());
@@ -148,7 +155,7 @@ const char *MCInstPrinter::matchAliasPatterns(const MCInst *MI,
     unsigned OpIdx = 0;
     bool OrPredicateResult = false;
     if (llvm::all_of(Conds, [&](const AliasPatternCond &C) {
-          return matchAliasCondition(*MI, STI, MRI, OpIdx, M, C,
+          return matchAliasCondition(*MI, STI, MII, MRI, OpIdx, M, C,
                                      OrPredicateResult);
         })) {
       // If all conditions matched, use this asm string.
@@ -224,29 +231,32 @@ format_object<uint64_t> MCInstPrinter::formatHex(uint64_t Value) const {
   llvm_unreachable("unsupported print style");
 }
 
-MCInstPrinter::WithMarkup MCInstPrinter::markup(raw_ostream &OS,
-                                                Markup S) const {
-  return WithMarkup(OS, S, getUseMarkup(), getUseColor());
+MCInstPrinter::WithMarkup MCInstPrinter::markup(raw_ostream &OS, Markup S) {
+  return WithMarkup(*this, OS, S, getUseMarkup(), getUseColor());
 }
 
-MCInstPrinter::WithMarkup::WithMarkup(raw_ostream &OS, Markup M,
-                                      bool EnableMarkup, bool EnableColor)
-    : OS(OS), EnableMarkup(EnableMarkup), EnableColor(EnableColor) {
+MCInstPrinter::WithMarkup::WithMarkup(MCInstPrinter &IP, raw_ostream &OS,
+                                      Markup M, bool EnableMarkup,
+                                      bool EnableColor)
+    : IP(IP), OS(OS), EnableMarkup(EnableMarkup), EnableColor(EnableColor) {
   if (EnableColor) {
+    raw_ostream::Colors Color = raw_ostream::Colors::RESET;
     switch (M) {
     case Markup::Immediate:
-      OS.changeColor(raw_ostream::RED);
+      Color = raw_ostream::RED;
       break;
     case Markup::Register:
-      OS.changeColor(raw_ostream::CYAN);
+      Color = raw_ostream::CYAN;
       break;
     case Markup::Target:
-      OS.changeColor(raw_ostream::YELLOW);
+      Color = raw_ostream::YELLOW;
       break;
     case Markup::Memory:
-      OS.changeColor(raw_ostream::GREEN);
+      Color = raw_ostream::GREEN;
       break;
     }
+    IP.ColorStack.push_back(Color);
+    OS.changeColor(Color);
   }
 
   if (EnableMarkup) {
@@ -270,6 +280,8 @@ MCInstPrinter::WithMarkup::WithMarkup(raw_ostream &OS, Markup M,
 MCInstPrinter::WithMarkup::~WithMarkup() {
   if (EnableMarkup)
     OS << '>';
-  if (EnableColor)
-    OS.resetColor();
+  if (!EnableColor)
+    return;
+  IP.ColorStack.pop_back();
+  OS << IP.ColorStack.back();
 }

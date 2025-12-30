@@ -129,16 +129,47 @@ define void @test5_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 define void @test6_memcpy(ptr %src, ptr %dest) nounwind {
 ; CHECK-LABEL: @test6_memcpy(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[DEST:%.*]], i32 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[TMP]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[SRC:%.*]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST:%.*]], ptr align 1 [[TMP]], i32 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [16 x i8], align 1
-  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %dest, i32 16, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %src, i32 16, i1 false)
   call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %dest, ptr align 1 %tmp, i32 16, i1 false)
   ret void
 }
 
+; When forwarding to memcpy(arg+1, arg+1), we don't need to create this memcpy.
+define void @test6_memcpy_forward_back(ptr %arg) nounwind {
+; CHECK-LABEL: @test6_memcpy_forward_back(
+; CHECK-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 1
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [16 x i8], align 1
+  %src = getelementptr inbounds i8, ptr %arg, i64 1
+  %dest = getelementptr inbounds i8, ptr %arg, i64 1
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %src, i32 16, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %dest, ptr align 1 %tmp, i32 16, i1 false)
+  ret void
+}
+
+; We have to retain this `memcpy(arg+2, arg+1)` forwarding.
+define void @test6_memcpy_forward_not_back(ptr %arg) nounwind {
+; CHECK-LABEL: @test6_memcpy_forward_not_back(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 1
+; CHECK-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 2
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[SRC]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[TMP]], i32 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [16 x i8], align 1
+  %src = getelementptr inbounds i8, ptr %arg, i64 1
+  %dest = getelementptr inbounds i8, ptr %arg, i64 2
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %src, i32 16, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %dest, ptr align 1 %tmp, i32 16, i1 false)
+  ret void
+}
 
 @x = external global %0
 
@@ -364,7 +395,7 @@ define void @test10(ptr noalias nocapture sret(%opaque) %x, i32 %y) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[A]], align 4
-; CHECK-NEXT:    call void @foo(ptr noalias nocapture [[A]])
+; CHECK-NEXT:    call void @foo(ptr noalias captures(none) [[A]])
 ; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    store i32 [[C]], ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -398,7 +429,7 @@ declare void @f_full_readonly(ptr nocapture noalias readonly)
 
 define void @immut_param(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param(
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL:%.*]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -425,8 +456,23 @@ define void @immut_param_maycapture(ptr align 4 noalias %val) {
 define void @immut_param_mayalias(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_mayalias(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    call void @f(ptr [[VAL1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr readonly align 4 captures(none) [[VAL1]])
+; CHECK-NEXT:    ret void
+;
+  %val1 = alloca i8, align 4
+  call void @f(ptr %val1) ; escape
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val1, ptr align 4 %val, i64 1, i1 false)
+  call void @f(ptr align 4 nocapture readonly %val1)
+  ret void
+}
+
+; Can remove memcpy because alloca does not escape, so lack of noalias on the
+; argument doesn't matter.
+define void @immut_param_unescaped_alloca(ptr align 4 noalias %val) {
+; CHECK-LABEL: @immut_param_unescaped_alloca(
+; CHECK-NEXT:    call void @f(ptr readonly align 4 captures(none) [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -435,12 +481,46 @@ define void @immut_param_mayalias(ptr align 4 noalias %val) {
   ret void
 }
 
+; Can remove memcpy because the function is argmem: read, so there cannot be
+; a write to the escaped pointer.
+define void @immut_param_memory_argmem_read(ptr align 4 noalias %val) {
+; CHECK-LABEL: @immut_param_memory_argmem_read(
+; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    call void @f(ptr [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr readonly align 4 captures(none) [[VAL:%.*]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %val1 = alloca i8, align 4
+  call void @f(ptr %val1) ; escape
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val1, ptr align 4 %val, i64 1, i1 false)
+  call void @f(ptr align 4 nocapture readonly %val1) memory(argmem: read)
+  ret void
+}
+
+; Can remove memcpy because the function is argmem: read, so there cannot be
+; a write to the escaped pointer. The readonly on the argument is redundant in
+; this case.
+define void @immut_param_memory_argmem_read_no_readonly(ptr align 4 noalias %val) {
+; CHECK-LABEL: @immut_param_memory_argmem_read_no_readonly(
+; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    call void @f(ptr [[VAL1]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
+; CHECK-NEXT:    call void @f(ptr align 4 captures(none) [[VAL1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret void
+;
+  %val1 = alloca i8, align 4
+  call void @f(ptr %val1) ; escape
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val1, ptr align 4 %val, i64 1, i1 false)
+  call void @f(ptr align 4 nocapture %val1) memory(argmem: read)
+  ret void
+}
+
 ; Can't remove memcpy because dest may be written.
 define void @immut_param_maywrite(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_maywrite(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias align 4 captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -462,7 +542,7 @@ define void @immut_param_readonly(ptr align 4 noalias %val) {
 
 define void @immut_param_no_align(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_no_align(
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL:%.*]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly captures(none) [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -476,7 +556,7 @@ define void @immut_param_no_align(ptr align 4 noalias %val) {
 define void @immut_param_global(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_global(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 @gp, ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 @gp)
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) @gp)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 @gp, ptr align 4 %val, i64 1, i1 false)
@@ -489,7 +569,7 @@ define void @immut_param_vla(ptr align 4 noalias %val, i64 %n) {
 ; CHECK-LABEL: @immut_param_vla(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca ptr, i64 [[N:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca ptr, i64 %n
@@ -503,7 +583,7 @@ define void @immut_param_scalable_vector(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_scalable_vector(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca <vscale x 2 x i32>, align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 2, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca <vscale x 2 x i32>
@@ -517,7 +597,7 @@ define void @immut_param_modified_dst(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_modified_dst(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    store i32 13, ptr [[VAL1]], align 4
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -533,7 +613,7 @@ define void @immut_param_modified_src(ptr align 4 noalias %val) {
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
 ; CHECK-NEXT:    store i32 13, ptr [[VAL]], align 4
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -548,7 +628,7 @@ define void @immut_param_volatile(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_volatile(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 true)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -562,7 +642,7 @@ define void @immut_param_different_addrespace(ptr addrspace(1) align 4 noalias %
 ; CHECK-LABEL: @immut_param_different_addrespace(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[VAL1]], ptr addrspace(1) align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly align 4 [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -573,7 +653,7 @@ define void @immut_param_different_addrespace(ptr addrspace(1) align 4 noalias %
 
 define void @immut_param_bigger_align(ptr align 16 noalias %val) {
 ; CHECK-LABEL: @immut_param_bigger_align(
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL:%.*]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly captures(none) [[VAL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -587,7 +667,7 @@ define void @immut_param_smaller_align(ptr align 4 noalias %val) {
 ; CHECK-LABEL: @immut_param_smaller_align(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[VAL1]], ptr [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 16
@@ -600,7 +680,7 @@ define void @immut_param_enforced_alignment() {
 ; CHECK-LABEL: @immut_param_enforced_alignment(
 ; CHECK-NEXT:    [[VAL:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    store i32 42, ptr [[VAL]], align 4
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly captures(none) [[VAL]])
 ; CHECK-NEXT:    ret void
 ;
   %val = alloca i8, align 1
@@ -619,7 +699,7 @@ define void @immut_invalid_align_branched(i1 %c, ptr noalias %val) {
 ; CHECK-NEXT:    [[VAL2:%.*]] = alloca [16 x i8], align 16
 ; CHECK-NEXT:    [[VAL3:%.*]] = select i1 [[C:%.*]], ptr [[VAL1]], ptr [[VAL2]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL3]], ptr align 4 [[VAL:%.*]], i64 4, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL3]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly captures(none) [[VAL3]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca [4 x i8], align 4
@@ -635,7 +715,7 @@ define void @immut_but_alias_src(ptr %val) {
 ; CHECK-LABEL: @immut_but_alias_src(
 ; CHECK-NEXT:    [[VAL1:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL1]], ptr align 4 [[VAL:%.*]], i64 1, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL1]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly captures(none) [[VAL1]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca i8, align 4
@@ -685,7 +765,7 @@ define void @immut_valid_align_branched(i1 %c, ptr noalias align 4 %val) {
 ; CHECK-NEXT:    [[VAL2:%.*]] = alloca [16 x i8], align 4
 ; CHECK-NEXT:    [[VAL3:%.*]] = select i1 [[C:%.*]], ptr [[VAL1]], ptr [[VAL2]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VAL3]], ptr align 4 [[VAL:%.*]], i64 4, i1 false)
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[VAL3]])
+; CHECK-NEXT:    call void @f(ptr noalias readonly captures(none) [[VAL3]])
 ; CHECK-NEXT:    ret void
 ;
   %val1 = alloca [4 x i8], align 4
@@ -699,8 +779,8 @@ define void @immut_valid_align_branched(i1 %c, ptr noalias align 4 %val) {
 ; Merge/drop noalias metadata when replacing parameter.
 define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @immut_param_noalias_metadata(
-; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
-; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[PTR]])
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias [[META0:![0-9]+]]
+; CHECK-NEXT:    call void @f(ptr noalias readonly captures(none) [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca i32, align 4
@@ -712,7 +792,7 @@ define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 
 define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @byval_param_noalias_metadata(
-; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
@@ -723,15 +803,132 @@ define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
   ret void
 }
 
+define void @byval_param_profile_metadata(ptr align 4 byval(i32) %ptr) {
+; CHECK-LABEL: @byval_param_profile_metadata(
+; CHECK-NEXT:    store i32 1, ptr [[PTR2:%.*]], align 4
+; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR2]]), !prof [[PROF3:![0-9]+]], !memprof [[META4:![0-9]+]], !callsite [[META7:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca i32, align 4
+  store i32 1, ptr %ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp, ptr align 4 %ptr, i64 4, i1 false)
+  call void @f_byval(ptr align 4 byval(i32) %tmp), !memprof !3, !callsite !6, !prof !7
+  ret void
+}
+
 define void @memcpy_memory_none(ptr %p, ptr %p2, i64 %size) {
 ; CHECK-LABEL: @memcpy_memory_none(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[SIZE:%.*]], i1 false) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[SIZE:%.*]], i1 false) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %p2, i64 %size, i1 false) memory(none)
   ret void
 }
 
+declare void @do_something()
+declare void @capture(ptr)
+
+define void @memcpy_memcpy_escape_before(ptr noalias %P, ptr noalias %Q) {
+; CHECK-LABEL: @memcpy_memcpy_escape_before(
+; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [32 x i8], align 16
+; CHECK-NEXT:    call void @capture(ptr [[MEMTMP]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[MEMTMP]], ptr align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    call void @do_something()
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[MEMTMP]], i32 32, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %memtmp = alloca [32 x i8], align 16
+  call void @capture(ptr %memtmp)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 16 %memtmp, ptr align 16 %P, i32 32, i1 false)
+  call void @do_something()
+  call void @llvm.memcpy.p0.p0.i32(ptr align 16 %Q, ptr align 16 %memtmp, i32 32, i1 false)
+  ret void
+}
+
+define void @memcpy_memcpy_escape_after1(ptr noalias %P, ptr noalias %Q) {
+; CHECK-LABEL: @memcpy_memcpy_escape_after1(
+; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [32 x i8], align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[MEMTMP]], ptr align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    call void @do_something()
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P]], i32 32, i1 false)
+; CHECK-NEXT:    call void @capture(ptr [[MEMTMP]])
+; CHECK-NEXT:    ret void
+;
+  %memtmp = alloca [32 x i8], align 16
+  call void @llvm.memcpy.p0.p0.i32(ptr align 16 %memtmp, ptr align 16 %P, i32 32, i1 false)
+  call void @do_something()
+  call void @llvm.memcpy.p0.p0.i32(ptr align 16 %Q, ptr align 16 %memtmp, i32 32, i1 false)
+  call void @capture(ptr %memtmp)
+  ret void
+}
+
+define void @memcpy_memcpy_escape_after2(ptr noalias %P, ptr noalias %Q) {
+; CHECK-LABEL: @memcpy_memcpy_escape_after2(
+; CHECK-NEXT:    call void @do_something()
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    call void @capture(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  %memtmp = alloca [32 x i8], align 16
+  call void @llvm.memcpy.p0.p0.i32(ptr align 16 %memtmp, ptr align 16 %P, i32 32, i1 false)
+  call void @do_something()
+  call void @llvm.memcpy.p0.p0.i32(ptr align 16 %Q, ptr align 16 %memtmp, i32 32, i1 false)
+  call void @capture(ptr %P)
+  ret void
+}
+
+define void @memcpy_byval_escape_after(ptr noalias %P) {
+; CHECK-LABEL: @memcpy_byval_escape_after(
+; CHECK-NEXT:    call void @do_something()
+; CHECK-NEXT:    call void @test4a(ptr byval(i8) align 1 [[P:%.*]])
+; CHECK-NEXT:    call void @capture(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  %A = alloca [8 x i8]
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 %P, i64 8, i1 false)
+  call void @do_something()
+  call void @test4a(ptr align 1 byval(i8) %A)
+  call void @capture(ptr %P)
+  ret void
+}
+
+define void @memcpy_immut_escape_after(ptr align 4 noalias %val) {
+; CHECK-LABEL: @memcpy_immut_escape_after(
+; CHECK-NEXT:    call void @do_something()
+; CHECK-NEXT:    call void @f(ptr noalias readonly align 4 captures(none) [[VAL:%.*]])
+; CHECK-NEXT:    call void @capture(ptr [[VAL]])
+; CHECK-NEXT:    ret void
+;
+  %val1 = alloca i8, align 4
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %val1, ptr align 4 %val, i64 1, i1 false)
+  call void @do_something()
+  call void @f(ptr align 4 nocapture noalias readonly %val1)
+  call void @capture(ptr %val)
+  ret void
+}
+
+declare void @two_args(ptr, ptr)
+
+; Should not perform call slot optimization: The function accepts the
+; destination as an argument and may read/write it.
+define void @test(ptr noalias writable dereferenceable(4) %p) {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @two_args(ptr [[A]], ptr captures(ret: address, provenance) [[P:%.*]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P]], ptr [[A]], i64 4, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32
+  %ret = call ptr @two_args(ptr %a, ptr captures(ret: address, provenance) %p) nounwind
+  call void @llvm.memcpy(ptr align 4 %p, ptr %a, i64 4, i1 false)
+  ret void
+}
+
 !0 = !{!0}
 !1 = !{!1, !0}
 !2 = !{!1}
+!3 = !{!4}
+!4 = !{!5, !"cold"}
+!5 = !{i64 123, i64 456}
+!6 = !{i64 123}
+!7 = !{!"branch_weights", i32 10}

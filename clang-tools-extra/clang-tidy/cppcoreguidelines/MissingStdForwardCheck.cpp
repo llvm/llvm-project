@@ -1,4 +1,4 @@
-//===--- MissingStdForwardCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 #include "MissingStdForwardCheck.h"
 #include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/IdentifierTable.h"
 
 using namespace clang::ast_matchers;
 
@@ -26,11 +26,12 @@ AST_MATCHER_P(QualType, possiblyPackExpansionOf,
 }
 
 AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
-  ast_matchers::internal::Matcher<QualType> Inner = possiblyPackExpansionOf(
-      qualType(rValueReferenceType(),
-               references(templateTypeParmType(
-                   hasDeclaration(templateTypeParmDecl()))),
-               unless(references(qualType(isConstQualified())))));
+  const ast_matchers::internal::Matcher<QualType> Inner =
+      possiblyPackExpansionOf(
+          qualType(rValueReferenceType(),
+                   references(templateTypeParmType(
+                       hasDeclaration(templateTypeParmDecl()))),
+                   unless(references(qualType(isConstQualified())))));
   if (!Inner.matches(Node.getType(), Finder, Builder))
     return false;
 
@@ -43,9 +44,9 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
   if (!FuncTemplate)
     return false;
 
-  QualType ParamType =
+  const QualType ParamType =
       Node.getType().getNonPackExpansionType()->getPointeeType();
-  const auto *TemplateType = ParamType->getAs<TemplateTypeParmType>();
+  const auto *TemplateType = ParamType->getAsCanonical<TemplateTypeParmType>();
   if (!TemplateType)
     return false;
 
@@ -54,10 +55,10 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
 }
 
 AST_MATCHER_P(NamedDecl, hasSameNameAsBoundNode, std::string, BindingID) {
-  IdentifierInfo *II = Node.getIdentifier();
+  const IdentifierInfo *II = Node.getIdentifier();
   if (nullptr == II)
     return false;
-  StringRef Name = II->getName();
+  const StringRef Name = II->getName();
 
   return Builder->removeBindings(
       [this, Name](const ast_matchers::internal::BoundNodesMap &Nodes) {
@@ -79,6 +80,11 @@ AST_MATCHER_P(LambdaExpr, hasCaptureDefaultKind, LambdaCaptureDefault, Kind) {
   return Node.getCaptureDefault() == Kind;
 }
 
+AST_MATCHER(VarDecl, hasIdentifier) {
+  const IdentifierInfo *ID = Node.getIdentifier();
+  return ID != nullptr && !ID->isPlaceholder();
+}
+
 } // namespace
 
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
@@ -87,19 +93,15 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                                   declRefExpr(to(equalsBoundNode("param"))))));
   auto RefToParm = capturesVar(
       varDecl(anyOf(hasSameNameAsBoundNode("param"), RefToParmImplicit)));
-  auto HasRefToParm = hasAnyCapture(RefToParm);
 
   auto CaptureInRef =
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
             unless(hasAnyCapture(
                 capturesVar(varDecl(hasSameNameAsBoundNode("param"))))));
-  auto CaptureInCopy = allOf(
-      hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByCopy), HasRefToParm);
   auto CaptureByRefExplicit = hasAnyCapture(
       allOf(hasCaptureKind(LambdaCaptureKind::LCK_ByRef), RefToParm));
 
-  auto CapturedInBody =
-      lambdaExpr(anyOf(CaptureInRef, CaptureInCopy, CaptureByRefExplicit));
+  auto CapturedInBody = lambdaExpr(anyOf(CaptureInRef, CaptureByRefExplicit));
   auto CapturedInCaptureList = hasAnyCapture(capturesVar(
       varDecl(hasInitializer(ignoringParenImpCasts(equalsBoundNode("call"))))));
 
@@ -112,22 +114,26 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
 
   auto ForwardCallMatcher = callExpr(
       callExpr().bind("call"), argumentCountIs(1),
-      hasArgument(
-          0, declRefExpr(to(
-                 varDecl(optionally(equalsBoundNode("param"))).bind("var")))),
-      forCallable(anyOf(equalsBoundNode("func"), CapturedInLambda)),
+      hasArgument(0, declRefExpr(to(varDecl().bind("var")))),
+      forCallable(
+          anyOf(allOf(equalsBoundNode("func"),
+                      functionDecl(hasAnyParameter(parmVarDecl(allOf(
+                          equalsBoundNode("param"), equalsBoundNode("var")))))),
+                CapturedInLambda)),
       callee(unresolvedLookupExpr(hasAnyDeclaration(
-          namedDecl(hasUnderlyingDecl(hasName("::std::forward")))))),
+          namedDecl(hasUnderlyingDecl(hasName(ForwardFunction)))))),
 
       unless(anyOf(hasAncestor(typeLoc()),
                    hasAncestor(expr(hasUnevaluatedContext())))));
 
   Finder->addMatcher(
-      parmVarDecl(parmVarDecl().bind("param"), isTemplateTypeParameter(),
-                  hasAncestor(functionDecl().bind("func")),
-                  hasAncestor(functionDecl(
-                      isDefinition(), equalsBoundNode("func"), ToParam,
-                      unless(hasDescendant(std::move(ForwardCallMatcher)))))),
+      parmVarDecl(
+          parmVarDecl().bind("param"), hasIdentifier(),
+          unless(hasAttr(attr::Kind::Unused)), isTemplateTypeParameter(),
+          hasAncestor(functionDecl().bind("func")),
+          hasAncestor(functionDecl(
+              isDefinition(), equalsBoundNode("func"), ToParam,
+              unless(anyOf(isDeleted(), hasDescendant(ForwardCallMatcher)))))),
       this);
 }
 
@@ -141,6 +147,15 @@ void MissingStdForwardCheck::check(const MatchFinder::MatchResult &Result) {
        "forwarding reference parameter %0 is never forwarded "
        "inside the function body")
       << Param;
+}
+
+MissingStdForwardCheck::MissingStdForwardCheck(StringRef Name,
+                                               ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      ForwardFunction(Options.get("ForwardFunction", "::std::forward")) {}
+
+void MissingStdForwardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ForwardFunction", ForwardFunction);
 }
 
 } // namespace clang::tidy::cppcoreguidelines

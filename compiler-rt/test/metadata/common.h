@@ -46,7 +46,7 @@ const char *meta_start;
 const char *meta_end;
 const char *atomics_start;
 const char *atomics_end;
-}; // namespace
+}  // namespace
 
 extern "C" {
 void __sanitizer_metadata_covered_add(uint32_t version, const char *start,

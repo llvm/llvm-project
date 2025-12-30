@@ -75,7 +75,33 @@ void errno_mkdtemp(char *template) {
   }
 }
 
-void errno_getcwd(char *Buf, size_t Sz) {
+typedef char* CHAR_PTR;
+void errno_mkdtemp2(CHAR_PTR template) {
+  CHAR_PTR Dir = mkdtemp(template);
+  if (Dir == NULL) {
+    clang_analyzer_eval(errno != 0);      // expected-warning{{TRUE}}
+    if (errno) {}                         // no warning
+  } else {
+    clang_analyzer_eval(Dir == template); // expected-warning{{TRUE}}
+    if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+typedef char const* CONST_CHAR_PTR;
+void errno_mkdtemp3(CHAR_PTR template) {
+  CONST_CHAR_PTR Dir = mkdtemp(template);
+  if (Dir == NULL) {
+    clang_analyzer_eval(errno != 0);      // expected-warning{{TRUE}}
+    if (errno) {}                         // no warning
+  } else {
+    clang_analyzer_eval(Dir == template); // expected-warning{{TRUE}}
+    if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+void errno_getcwd_buf_nonnull(char *Buf, size_t Sz) {
+  if (Buf == NULL)
+    return;
   char *Path = getcwd(Buf, Sz);
   if (Sz == 0) {
     clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
@@ -87,5 +113,65 @@ void errno_getcwd(char *Buf, size_t Sz) {
   } else {
     clang_analyzer_eval(Path == Buf);  // expected-warning{{TRUE}}
     if (errno) {}                      // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+void errno_getcwd_buf_null() {
+  // POSIX does not mention this case but many implementations (Linux, FreeBSD) work this way.
+  char *Path = getcwd(NULL, 1);
+  if (Path == NULL) {
+    clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
+    if (errno) {}                      // no warning
+  } else {
+    if (errno) {}                      // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+void errno_execv(char *Path, char * Argv[]) {
+  int Ret = execv(Path, Argv);
+  clang_analyzer_eval(Ret == -1);  // expected-warning{{TRUE}}
+  clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+  if (errno) {}                    // no warning
+}
+
+void errno_execvp(char *File, char * Argv[]) {
+  int Ret = execvp(File, Argv);
+  clang_analyzer_eval(Ret == -1);  // expected-warning{{TRUE}}
+  clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+  if (errno) {}                    // no warning
+}
+
+void errno_popen(void) {
+  FILE *F = popen("xxx", "r");
+  if (!F) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  } else {
+    if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
+    pclose(F);
+  }
+}
+
+void errno_pclose(void) {
+  FILE *F = popen("xx", "w");
+  if (!F)
+    return;
+  int Ret = pclose(F);
+  if (Ret == -1) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  } else {
+    clang_analyzer_eval(Ret >= 0);   // expected-warning{{TRUE}}
+    if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+void errno_realpath(char *Path, char *Buf) {
+  char *Ret = realpath(Path, Buf);
+  if (!Ret) {
+    clang_analyzer_eval(errno != 0);  // expected-warning{{TRUE}}
+    if (errno) {}                     // no-warning
+  } else {
+    if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   }
 }

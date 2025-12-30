@@ -7,19 +7,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Value.h"
+#include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
+
+TEST(ValueTest, setNameShrink) {
+  LLVMContext C;
+
+  const char *ModuleString = "define void @f1() {\n"
+                             "bb0:\n"
+                             "  ret void\n"
+                             "}\n";
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(ModuleString, Err, C);
+
+  Function *F = M->getFunction("f1");
+  StringRef FName = F->getName();
+  FName = FName.drop_back();
+  F->setName(FName);
+  EXPECT_EQ(F->getName(), "f");
+}
 
 TEST(ValueTest, UsedInBasicBlock) {
   LLVMContext C;
@@ -155,13 +173,13 @@ TEST(ValueTest, printSlots) {
       std::string S;                                                           \
       raw_string_ostream OS(S);                                                \
       INST->print(OS);                                                         \
-      EXPECT_EQ(STR, OS.str());                                                \
+      EXPECT_EQ(STR, S);                                                       \
     }                                                                          \
     {                                                                          \
       std::string S;                                                           \
       raw_string_ostream OS(S);                                                \
       INST->print(OS, MST);                                                    \
-      EXPECT_EQ(STR, OS.str());                                                \
+      EXPECT_EQ(STR, S);                                                       \
     }                                                                          \
   } while (false)
   CHECK_PRINT(I0, "  %0 = add i32 %y, 1");
@@ -174,13 +192,13 @@ TEST(ValueTest, printSlots) {
       std::string S;                                                           \
       raw_string_ostream OS(S);                                                \
       INST->printAsOperand(OS, TYPE);                                          \
-      EXPECT_EQ(StringRef(STR), StringRef(OS.str()));                          \
+      EXPECT_EQ(StringRef(STR), StringRef(S));                                 \
     }                                                                          \
     {                                                                          \
       std::string S;                                                           \
       raw_string_ostream OS(S);                                                \
       INST->printAsOperand(OS, TYPE, MST);                                     \
-      EXPECT_EQ(StringRef(STR), StringRef(OS.str()));                          \
+      EXPECT_EQ(StringRef(STR), StringRef(S));                                 \
     }                                                                          \
   } while (false)
   CHECK_PRINT_AS_OPERAND(I0, false, "%0");
@@ -254,7 +272,7 @@ TEST(ValueTest, getLocalSlotDeath) {
 
 TEST(ValueTest, replaceUsesOutsideBlock) {
   // Check that Value::replaceUsesOutsideBlock(New, BB) replaces uses outside
-  // BB, including dbg.* uses of MetadataAsValue(ValueAsMetadata(this)).
+  // BB, including DbgVariableRecords.
   const auto *IR = R"(
     define i32 @f() !dbg !6 {
     entry:
@@ -293,75 +311,6 @@ TEST(ValueTest, replaceUsesOutsideBlock) {
   std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
   if (!M)
     Err.print("ValueTest", errs());
-
-  auto GetNext = [](auto *I) { return &*++I->getIterator(); };
-
-  Function *F = M->getFunction("f");
-  // Entry.
-  BasicBlock *Entry = &F->front();
-  Instruction *A = &Entry->front();
-  Instruction *B = GetNext(A);
-  Instruction *C = GetNext(B);
-  auto *EntryDbg = cast<DbgValueInst>(GetNext(C));
-  // Exit.
-  BasicBlock *Exit = GetNext(Entry);
-  auto *ExitDbg = cast<DbgValueInst>(&Exit->front());
-  Instruction *Ret = GetNext(ExitDbg);
-
-  A->replaceUsesOutsideBlock(B, Entry);
-  // These users are in Entry so shouldn't be changed.
-  ASSERT_TRUE(C->getOperand(0) == cast<Value>(A));
-  ASSERT_TRUE(EntryDbg->getValue(0) == cast<Value>(A));
-  // These users are outside Entry so should be changed.
-  ASSERT_TRUE(ExitDbg->getValue(0) == cast<Value>(B));
-  ASSERT_TRUE(Ret->getOperand(0) == cast<Value>(B));
-}
-
-TEST(ValueTest, replaceUsesOutsideBlockDPValue) {
-  // Check that Value::replaceUsesOutsideBlock(New, BB) replaces uses outside
-  // BB, including DPValues.
-  const auto *IR = R"(
-    define i32 @f() !dbg !6 {
-    entry:
-      %a = add i32 0, 1, !dbg !15
-      %b = add i32 0, 2, !dbg !15
-      %c = add i32 %a, 2, !dbg !15
-      call void @llvm.dbg.value(metadata i32 %a, metadata !9, metadata !DIExpression()), !dbg !15
-      br label %exit, !dbg !15
-
-    exit:
-      call void @llvm.dbg.value(metadata i32 %a, metadata !11, metadata !DIExpression()), !dbg !16
-      ret i32 %a, !dbg !16
-    }
-
-    declare void @llvm.dbg.value(metadata, metadata, metadata)
-
-    !llvm.dbg.cu = !{!0}
-    !llvm.module.flags = !{!5}
-
-    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-    !1 = !DIFile(filename: "test.ll", directory: "/")
-    !2 = !{}
-    !5 = !{i32 2, !"Debug Info Version", i32 3}
-    !6 = distinct !DISubprogram(name: "f", linkageName: "f", scope: null, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !8)
-    !7 = !DISubroutineType(types: !2)
-    !8 = !{!9, !11}
-    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
-    !10 = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_signed)
-    !11 = !DILocalVariable(name: "2", scope: !6, file: !1, line: 2, type: !12)
-    !12 = !DIBasicType(name: "ty64", size: 64, encoding: DW_ATE_signed)
-    !15 = !DILocation(line: 1, column: 1, scope: !6)
-    !16 = !DILocation(line: 5, column: 1, scope: !6)
-  )";
-  LLVMContext Ctx;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
-  if (!M)
-    Err.print("ValueTest", errs());
-
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = true;
-  M->convertToNewDbgValues();
 
   auto GetNext = [](auto *I) { return &*++I->getIterator(); };
 
@@ -376,18 +325,42 @@ TEST(ValueTest, replaceUsesOutsideBlockDPValue) {
   BasicBlock *Exit = GetNext(Entry);
   Instruction *Ret = &Exit->front();
 
-  EXPECT_TRUE(Branch->hasDbgValues());
-  EXPECT_TRUE(Ret->hasDbgValues());
+  EXPECT_TRUE(Branch->hasDbgRecords());
+  EXPECT_TRUE(Ret->hasDbgRecords());
 
-  DPValue *DPV1 = &*Branch->getDbgValueRange().begin();
-  DPValue *DPV2 = &*Ret->getDbgValueRange().begin();
+  DbgVariableRecord *DVR1 =
+      cast<DbgVariableRecord>(&*Branch->getDbgRecordRange().begin());
+  DbgVariableRecord *DVR2 =
+      cast<DbgVariableRecord>(&*Ret->getDbgRecordRange().begin());
 
   A->replaceUsesOutsideBlock(B, Entry);
   // These users are in Entry so shouldn't be changed.
-  EXPECT_TRUE(DPV1->getVariableLocationOp(0) == cast<Value>(A));
+  EXPECT_TRUE(DVR1->getVariableLocationOp(0) == cast<Value>(A));
   // These users are outside Entry so should be changed.
-  EXPECT_TRUE(DPV2->getVariableLocationOp(0) == cast<Value>(B));
-  UseNewDbgInfoFormat = OldDbgValueMode;
+  EXPECT_TRUE(DVR2->getVariableLocationOp(0) == cast<Value>(B));
+}
+
+TEST(GlobalTest, Initializer) {
+  LLVMContext Ctx;
+  Module M("test", Ctx);
+  Type *Int8Ty = Type::getInt8Ty(Ctx);
+  Constant *Int8Null = Constant::getNullValue(Int8Ty);
+
+  GlobalVariable *GV = new GlobalVariable(
+      M, Int8Ty, false, GlobalValue::ExternalLinkage, nullptr, "GV");
+
+  EXPECT_FALSE(GV->hasInitializer());
+  GV->setInitializer(Int8Null);
+  EXPECT_TRUE(GV->hasInitializer());
+  EXPECT_EQ(GV->getInitializer(), Int8Null);
+  GV->setInitializer(nullptr);
+  EXPECT_FALSE(GV->hasInitializer());
+
+  EXPECT_EQ(LLVMGetInitializer(wrap(GV)), nullptr);
+  LLVMSetInitializer(wrap(GV), wrap(Int8Null));
+  EXPECT_EQ(LLVMGetInitializer(wrap(GV)), wrap(Int8Null));
+  LLVMSetInitializer(wrap(GV), nullptr);
+  EXPECT_EQ(LLVMGetInitializer(wrap(GV)), nullptr);
 }
 
 } // end anonymous namespace

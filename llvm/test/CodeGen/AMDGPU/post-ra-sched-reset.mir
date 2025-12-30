@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=post-RA-sched -verify-machineinstrs -debug-only=post-RA-sched -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=post-RA-sched -verify-machineinstrs -debug-only=post-RA-sched -o - %s 2>&1 | FileCheck %s
 
 # REQUIRES: asserts
 

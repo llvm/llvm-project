@@ -21,9 +21,9 @@
 #include "llvm/Demangle/StringViewExtras.h"
 #include "llvm/Demangle/Utility.h"
 
-#include <array>
 #include <cctype>
 #include <cstdio>
+#include <optional>
 #include <string_view>
 #include <tuple>
 
@@ -53,7 +53,19 @@ static bool consumeFront(std::string_view &S, std::string_view C) {
   return true;
 }
 
-static bool isMemberPointer(std::string_view MangledName, bool &Error) {
+static bool consumeFront(std::string_view &S, std::string_view PrefixA,
+                         std::string_view PrefixB, bool A) {
+  const std::string_view &Prefix = A ? PrefixA : PrefixB;
+  return consumeFront(S, Prefix);
+}
+
+static bool startsWith(std::string_view S, std::string_view PrefixA,
+                       std::string_view PrefixB, bool A) {
+  const std::string_view &Prefix = A ? PrefixA : PrefixB;
+  return llvm::itanium_demangle::starts_with(S, Prefix);
+}
+
+bool Demangler::isMemberPointer(std::string_view MangledName, bool &Error) {
   Error = false;
   const char F = MangledName.front();
   MangledName.remove_prefix(1);
@@ -94,6 +106,7 @@ static bool isMemberPointer(std::string_view MangledName, bool &Error) {
   consumeFront(MangledName, 'E'); // 64-bit
   consumeFront(MangledName, 'I'); // restrict
   consumeFront(MangledName, 'F'); // unaligned
+  demanglePointerAuthQualifier(MangledName);
 
   if (MangledName.empty()) {
     Error = true;
@@ -263,6 +276,18 @@ demanglePointerCVQualifiers(std::string_view &MangledName) {
   DEMANGLE_UNREACHABLE;
 }
 
+static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
+                                          size_t Count) {
+  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
+  N->Count = Count;
+  N->Nodes = Arena.allocArray<Node *>(Count);
+  for (size_t I = 0; I < Count; ++I) {
+    N->Nodes[I] = Head->N;
+    Head = Head->Next;
+  }
+  return N;
+}
+
 std::string_view Demangler::copyString(std::string_view Borrowed) {
   char *Stable = Arena.allocUnalignedBuffer(Borrowed.size());
   // This is not a micro-optimization, it avoids UB, should Borrowed be an null
@@ -309,8 +334,30 @@ Demangler::demangleSpecialTableSymbolNode(std::string_view &MangledName,
   }
 
   std::tie(STSN->Quals, IsMember) = demangleQualifiers(MangledName);
-  if (!consumeFront(MangledName, '@'))
-    STSN->TargetName = demangleFullyQualifiedTypeName(MangledName);
+
+  NodeList *TargetCurrent = nullptr;
+  NodeList *TargetHead = nullptr;
+  size_t Count = 0;
+  while (!consumeFront(MangledName, '@')) {
+    ++Count;
+
+    NodeList *Next = Arena.alloc<NodeList>();
+    if (TargetCurrent)
+      TargetCurrent->Next = Next;
+    else
+      TargetHead = Next;
+
+    TargetCurrent = Next;
+    QualifiedNameNode *QN = demangleFullyQualifiedTypeName(MangledName);
+    if (Error)
+      return nullptr;
+    assert(QN);
+    TargetCurrent->N = QN;
+  }
+
+  if (Count > 0)
+    STSN->TargetNames = nodeListToNodeArray(Arena, TargetHead, Count);
+
   return STSN;
 }
 
@@ -1361,6 +1408,11 @@ Demangler::demangleStringLiteral(std::string_view &MangledName) {
       Result->IsTruncated = true;
 
     while (!consumeFront(MangledName, '@')) {
+      // For a wide string StringByteSize has to have an even length.
+      if (StringByteSize % 2 != 0)
+        goto StringLiteralError;
+      if (StringByteSize == 0)
+        goto StringLiteralError;
       if (MangledName.size() < 2)
         goto StringLiteralError;
       wchar_t W = demangleWcharLiteral(MangledName);
@@ -1584,18 +1636,6 @@ Demangler::demangleNameScopePiece(std::string_view &MangledName) {
     return demangleLocallyScopedNamePiece(MangledName);
 
   return demangleSimpleName(MangledName, /*Memorize=*/true);
-}
-
-static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
-                                          size_t Count) {
-  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
-  N->Count = Count;
-  N->Nodes = Arena.allocArray<Node *>(Count);
-  for (size_t I = 0; I < Count; ++I) {
-    N->Nodes[I] = Head->N;
-    Head = Head->Next;
-  }
-  return N;
 }
 
 QualifiedNameNode *
@@ -2023,6 +2063,10 @@ Demangler::demanglePrimitiveType(std::string_view &MangledName) {
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char16);
     case 'U':
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char32);
+    case 'P':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Auto);
+    case 'T':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::DecltypeAuto);
     }
     break;
   }
@@ -2077,6 +2121,8 @@ PointerTypeNode *Demangler::demanglePointerType(std::string_view &MangledName) {
   Qualifiers ExtQuals = demanglePointerExtQualifiers(MangledName);
   Pointer->Quals = Qualifiers(Pointer->Quals | ExtQuals);
 
+  Pointer->PointerAuthQualifier = createPointerAuthQualifier(MangledName);
+
   Pointer->Pointee = demangleType(MangledName, QualifierMangleMode::Mangle);
   return Pointer;
 }
@@ -2123,6 +2169,49 @@ Demangler::demanglePointerExtQualifiers(std::string_view &MangledName) {
     Quals = Qualifiers(Quals | Q_Unaligned);
 
   return Quals;
+}
+
+std::optional<PointerAuthQualifierNode::ArgArray>
+Demangler::demanglePointerAuthQualifier(std::string_view &MangledName) {
+  if (!consumeFront(MangledName, "__ptrauth"))
+    return std::nullopt;
+
+  constexpr unsigned NumArgs = PointerAuthQualifierNode::NumArgs;
+  PointerAuthQualifierNode::ArgArray Array;
+
+  for (unsigned I = 0; I < NumArgs; ++I) {
+    bool IsNegative = false;
+    uint64_t Value = 0;
+    std::tie(Value, IsNegative) = demangleNumber(MangledName);
+    if (IsNegative)
+      return std::nullopt;
+
+    Array[I] = Value;
+  }
+
+  return Array;
+}
+
+PointerAuthQualifierNode *
+Demangler::createPointerAuthQualifier(std::string_view &MangledName) {
+  constexpr unsigned NumArgs = PointerAuthQualifierNode::NumArgs;
+  std::optional<PointerAuthQualifierNode::ArgArray> Vals =
+      demanglePointerAuthQualifier(MangledName);
+
+  if (!Vals)
+    return nullptr;
+
+  PointerAuthQualifierNode *PtrAuthQual =
+      Arena.alloc<PointerAuthQualifierNode>();
+  NodeArrayNode *Array = Arena.alloc<NodeArrayNode>();
+  PtrAuthQual->Components = Array;
+  Array->Count = NumArgs;
+  Array->Nodes = Arena.allocArray<Node *>(NumArgs);
+
+  for (unsigned I = 0; I < NumArgs; ++I)
+    Array->Nodes[I] = Arena.alloc<IntegerLiteralNode>((*Vals)[I], false);
+
+  return PtrAuthQual;
 }
 
 ArrayTypeNode *Demangler::demangleArrayType(std::string_view &MangledName) {
@@ -2256,6 +2345,18 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
 
     NodeList &TP = **Current;
 
+    // <auto-nttp> ::= $ M <type> <nttp>
+    const bool IsAutoNTTP = consumeFront(MangledName, "$M");
+    if (IsAutoNTTP) {
+      // The deduced type of the auto NTTP parameter isn't printed so
+      // we want to ignore the AST created from demangling the type.
+      //
+      // TODO: Avoid the extra allocations to the bump allocator in this case.
+      (void)demangleType(MangledName, QualifierMangleMode::Drop);
+      if (Error)
+        return nullptr;
+    }
+
     TemplateParameterReferenceNode *TPRN = nullptr;
     if (consumeFront(MangledName, "$$Y")) {
       // Template alias
@@ -2266,15 +2367,17 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
     } else if (consumeFront(MangledName, "$$C")) {
       // Type has qualifiers.
       TP.N = demangleType(MangledName, QualifierMangleMode::Mangle);
-    } else if (llvm::itanium_demangle::starts_with(MangledName, "$1") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$H") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$I") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$J")) {
+    } else if (startsWith(MangledName, "$1", "1", !IsAutoNTTP) ||
+               startsWith(MangledName, "$H", "H", !IsAutoNTTP) ||
+               startsWith(MangledName, "$I", "I", !IsAutoNTTP) ||
+               startsWith(MangledName, "$J", "J", !IsAutoNTTP)) {
       // Pointer to member
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->IsMemberPointer = true;
 
-      MangledName.remove_prefix(1);
+      if (!IsAutoNTTP)
+        MangledName.remove_prefix(1); // Remove leading '$'
+
       // 1 - single inheritance       <name>
       // H - multiple inheritance     <name> <number>
       // I - virtual inheritance      <name> <number> <number>
@@ -2317,12 +2420,13 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->Symbol = parse(MangledName);
       TPRN->Affinity = PointerAffinity::Reference;
-    } else if (llvm::itanium_demangle::starts_with(MangledName, "$F") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$G")) {
+    } else if (startsWith(MangledName, "$F", "F", !IsAutoNTTP) ||
+               startsWith(MangledName, "$G", "G", !IsAutoNTTP)) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
 
       // Data member pointer.
-      MangledName.remove_prefix(1);
+      if (!IsAutoNTTP)
+        MangledName.remove_prefix(1); // Remove leading '$'
       char InheritanceSpecifier = MangledName.front();
       MangledName.remove_prefix(1);
 
@@ -2342,7 +2446,7 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       }
       TPRN->IsMemberPointer = true;
 
-    } else if (consumeFront(MangledName, "$0")) {
+    } else if (consumeFront(MangledName, "$0", "0", !IsAutoNTTP)) {
       // Integral non-type template parameter
       bool IsNegative = false;
       uint64_t Value = 0;
@@ -2395,6 +2499,24 @@ void Demangler::dumpBackReferences() {
   }
   if (Backrefs.NamesCount > 0)
     std::printf("\n");
+}
+
+std::optional<size_t>
+llvm::getArm64ECInsertionPointInMangledName(std::string_view MangledName) {
+  std::string_view ProcessedName{MangledName};
+
+  // We only support this for MSVC-style C++ symbols.
+  if (!consumeFront(ProcessedName, '?'))
+    return std::nullopt;
+
+  // The insertion point is just after the name of the symbol, so parse that to
+  // remove it from the processed name.
+  Demangler D;
+  D.demangleFullyQualifiedSymbolName(ProcessedName);
+  if (D.Error)
+    return std::nullopt;
+
+  return MangledName.length() - ProcessedName.length();
 }
 
 char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,

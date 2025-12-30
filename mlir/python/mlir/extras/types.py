@@ -12,9 +12,16 @@ from ..ir import (
     F16Type,
     F32Type,
     F64Type,
+    Float4E2M1FNType,
+    Float6E2M3FNType,
+    Float6E3M2FNType,
+    Float8E3M4Type,
     Float8E4M3B11FNUZType,
     Float8E4M3FNType,
+    Float8E4M3Type,
     Float8E5M2Type,
+    Float8E8M0FNUType,
+    FloatTF32Type,
     FunctionType,
     IndexType,
     IntegerType,
@@ -64,12 +71,19 @@ ui64 = lambda: ui(64)
 
 f16 = lambda: F16Type.get()
 f32 = lambda: F32Type.get()
+tf32 = lambda: FloatTF32Type.get()
 f64 = lambda: F64Type.get()
 bf16 = lambda: BF16Type.get()
 
 f8E5M2 = lambda: Float8E5M2Type.get()
-f8E4M3 = lambda: Float8E4M3FNType.get()
+f8E4M3 = lambda: Float8E4M3Type.get()
+f8E4M3FN = lambda: Float8E4M3FNType.get()
 f8E4M3B11FNUZ = lambda: Float8E4M3B11FNUZType.get()
+f8E3M4 = lambda: Float8E3M4Type.get()
+f4E2M1FN = lambda: Float4E2M1FNType.get()
+f6E2M3FN = lambda: Float6E2M3FNType.get()
+f6E3M2FN = lambda: Float6E3M2FNType.get()
+f8E8M0FNU = lambda: Float8E8M0FNUType.get()
 
 none = lambda: NoneType.get()
 

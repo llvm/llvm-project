@@ -9,6 +9,10 @@
 # traversing each directory.
 create_llvm_tool_options()
 
+if(NOT LLVM_COMPILER_IS_GCC_COMPATIBLE OR NOT LLVM_LIBC_GPU_BUILD)
+  set(LLVM_TOOL_LLVM_GPU_LOADER_BUILD OFF)
+endif()
+
 if(NOT LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_BUILD_LLVM_C_DYLIB)
   set(LLVM_TOOL_LLVM_SHLIB_BUILD Off)
 endif()
@@ -32,17 +36,19 @@ add_llvm_tool_subdirectory(lto)
 add_llvm_tool_subdirectory(gold)
 add_llvm_tool_subdirectory(llvm-ar)
 add_llvm_tool_subdirectory(llvm-config)
+add_llvm_tool_subdirectory(llvm-ctxprof-util)
 add_llvm_tool_subdirectory(llvm-lto)
 add_llvm_tool_subdirectory(llvm-profdata)
 
 # Projects supported via LLVM_EXTERNAL_*_SOURCE_DIR need to be explicitly
 # specified.
-add_llvm_external_project(clang)
 add_llvm_external_project(lld)
-add_llvm_external_project(lldb)
 add_llvm_external_project(mlir)
-# Flang depends on mlir, so place it afterward
+# ClangIR and Flang depend on mlir, lldb and Flang depend on clang, sort them
+# accordingly so place them afterwards
+add_llvm_external_project(clang)
 add_llvm_external_project(flang)
+add_llvm_external_project(lldb)
 add_llvm_external_project(bolt)
 
 # Automatically add remaining sub-directories containing a 'CMakeLists.txt'
@@ -50,6 +56,9 @@ add_llvm_external_project(bolt)
 add_llvm_implicit_projects()
 
 add_llvm_external_project(polly)
+
+# libclc depends on clang
+add_llvm_external_project(libclc)
 
 # Add subprojects specified using LLVM_EXTERNAL_PROJECTS
 foreach(p ${LLVM_EXTERNAL_PROJECTS})

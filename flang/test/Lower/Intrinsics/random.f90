@@ -8,14 +8,14 @@ subroutine random_test_1
   ! CHECK-DAG: [[rr:%[0-9]+]] = fir.alloca {{.*}}random_test_1Err
   ! CHECK-DAG: [[aa:%[0-9]+]] = fir.alloca {{.*}}random_test_1Eaa
   real rr, aa(5)
-  ! CHECK: fir.call @_FortranARandomInit(%true{{.*}}, %false{{.*}}) {{.*}}: (i1, i1) -> none
+  ! CHECK: fir.call @_FortranARandomInit(%true{{.*}}, %false{{.*}}) {{.*}}: (i1, i1) -> ()
   call random_init(.true., .false.)
   ! CHECK: [[box:%[0-9]+]] = fir.embox [[ss]]
   ! CHECK: [[argbox:%[0-9]+]] = fir.convert [[box]]
   ! CHECK: fir.call @_FortranARandomSeedSize([[argbox]]
   call random_seed(size=ss)
   print*, 'size: ', ss
-  ! CHECK: fir.call @_FortranARandomSeedDefaultPut() {{.*}}: () -> none
+  ! CHECK: fir.call @_FortranARandomSeedDefaultPut() {{.*}}: () -> ()
   call random_seed()
   ! CHECK: [[box:%[0-9]+]] = fir.embox [[rr]]
   ! CHECK: [[argbox:%[0-9]+]] = fir.convert [[box]]
@@ -45,7 +45,7 @@ subroutine random_test_2
   call foo(size)
   call bar(size, get)
 contains
-  ! CHECK-LABEL: func @_QFrandom_test_2Pfoo
+  ! CHECK-LABEL: func private @_QFrandom_test_2Pfoo
   subroutine foo(size, put, get)
     ! CHECK: [[s1:%[0-9]+]] = fir.is_present %arg0
     ! CHECK: [[s2:%[0-9]+]] = fir.embox %arg0
@@ -70,7 +70,7 @@ contains
     print*, size
   end subroutine
 
-  ! CHECK-LABEL: func @_QFrandom_test_2Pbar
+  ! CHECK-LABEL: func private @_QFrandom_test_2Pbar
   subroutine bar(size, get, put)
     integer, optional :: size
     ! CHECK: [[p1:%[0-9]+]] = fir.is_present %arg2

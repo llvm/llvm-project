@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_TM_H__
-#define __LLVM_LIBC_TYPES_TM_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_TM_H
+#define LLVM_LIBC_TYPES_STRUCT_TM_H
 
 struct tm {
   int tm_sec;   // seconds after the minute
@@ -19,6 +19,7 @@ struct tm {
   int tm_wday;  // days since Sunday
   int tm_yday;  // days since January
   int tm_isdst; // Daylight Saving Time flag
+  // TODO: add tm_gmtoff and tm_zone? (posix extensions)
 };
 
-#endif // __LLVM_LIBC_TYPES_TM_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_TM_H

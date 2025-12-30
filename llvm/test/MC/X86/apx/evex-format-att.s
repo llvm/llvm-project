@@ -1,4 +1,3 @@
-## NOTE: This file needs to be updated after promoted instruction is supported
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 
 ## MRMDestMem
@@ -11,6 +10,12 @@
 # CHECK: encoding: [0x62,0xec,0xec,0x10,0x01,0x41,0x7b]
          addq	%r16, 123(%r17), %r18
 
+## MRMDestMemCC
+
+# CHECK: cfcmovbq %r16, 123(%r17,%r18,4)
+# CHECK: encoding: [0x62,0xec,0xf8,0x0c,0x42,0x44,0x91,0x7b]
+         cfcmovbq %r16, 123(%r17,%r18,4)
+
 ## MRMSrcMem
 
 # CHECK: vbroadcasti32x4	(%r16,%r17), %zmm0
@@ -20,6 +25,16 @@
 # CHECK: subq	123(%r16), %r17, %r18
 # CHECK: encoding: [0x62,0xec,0xec,0x10,0x2b,0x48,0x7b]
          subq	123(%r16), %r17, %r18
+
+## MRMSrcMemCC
+
+# CHECK: cfcmovbq	123(%r16,%r17,4), %r18
+# CHECK: encoding: [0x62,0xec,0xf8,0x08,0x42,0x54,0x88,0x7b]
+         cfcmovbq	123(%r16,%r17,4), %r18
+
+# CHECK: cfcmovbq	123(%r16,%r17,4), %r18, %r19
+# CHECK: encoding: [0x62,0xec,0xe0,0x14,0x42,0x54,0x88,0x7b]
+         cfcmovbq	123(%r16,%r17,4), %r18, %r19
 
 ## MRM0m
 
@@ -97,6 +112,10 @@
 # CHECK: encoding: [0x62,0xf9,0x79,0x48,0x73,0x3c,0x08,0x00]
          vpslldq	$0, (%r16,%r17), %zmm0
 
+# CHECK: sarq	$123, 291(%r16,%r17), %r18
+# CHECK: encoding: [0x62,0xfc,0xe8,0x10,0xc1,0xbc,0x08,0x23,0x01,0x00,0x00,0x7b]
+         sarq	$123, 291(%r16,%r17), %r18
+
 ## MRMDestMem4VOp3CC
 
 # CHECK: cmpbexadd	%r18d, %r22d, 291(%r28,%r29,4)
@@ -119,11 +138,23 @@
 # CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x01,0xc1]
          {nf}	addq	%r16, %r17
 
+## MRMDestRegCC
+
+# CHECK: cfcmovbq	%r16, %r17
+# CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x42,0xc1]
+         cfcmovbq	%r16, %r17
+
 ## MRMSrcReg
 
 # CHECK: mulxq	%r16, %r17, %r18
 # CHECK: encoding: [0x62,0xea,0xf7,0x00,0xf6,0xd0]
          mulxq	%r16, %r17, %r18
+
+## MRMSrcRegCC
+
+# CHECK: cfcmovbq	%r16, %r17, %r18
+# CHECK: encoding: [0x62,0xec,0xec,0x14,0x42,0xc8]
+         cfcmovbq	%r16, %r17, %r18
 
 ## MRMSrcReg4VOp3
 
@@ -172,6 +203,22 @@
 # CHECK: xorq	$127, %r16, %r17
 # CHECK: encoding: [0x62,0xfc,0xf4,0x10,0x83,0xf0,0x7f]
          xorq	$127, %r16, %r17
+
+## MRM7r
+
+# CHECK: sarq	$123, %r16, %r17
+# CHECK: encoding: [0x62,0xfc,0xf4,0x10,0xc1,0xf8,0x7b]
+         sarq	$123, %r16, %r17
+
+## MRMXrCC
+# CHECK: setzuo	%r16b
+# CHECK: encoding: [0x62,0xfc,0x7f,0x18,0x40,0xc0]
+         setzuo	%r16b
+
+## MRMXmCC
+# CHECK: setzuo	(%r16,%r17)
+# CHECK: encoding: [0x62,0xfc,0x7b,0x18,0x40,0x04,0x08]
+         setzuo	(%r16,%r17)
 
 ## NoCD8
 

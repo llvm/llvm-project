@@ -14,10 +14,10 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -29,6 +29,17 @@
 using namespace llvm;
 using namespace dwarf_linker;
 using namespace dwarf_linker::classic;
+
+Expected<std::unique_ptr<DwarfStreamer>> DwarfStreamer::createStreamer(
+    const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,
+    raw_pwrite_stream &OutFile, DWARFLinkerBase::MessageHandlerTy Warning) {
+  std::unique_ptr<DwarfStreamer> Streamer =
+      std::make_unique<DwarfStreamer>(FileType, OutFile, Warning);
+  if (Error Err = Streamer->init(TheTriple, "__DWARF"))
+    return std::move(Err);
+
+  return std::move(Streamer);
+}
 
 Error DwarfStreamer::init(Triple TheTriple,
                           StringRef Swift5ReflectionSegmentName) {
@@ -44,19 +55,21 @@ Error DwarfStreamer::init(Triple TheTriple,
   TripleName = TheTriple.getTriple();
 
   // Create all the MC Objects.
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return createStringError(std::errc::invalid_argument,
                              "no register info for target %s",
                              TripleName.c_str());
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return createStringError(std::errc::invalid_argument,
                              "no asm info for target %s", TripleName.c_str());
 
-  MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+  MSTI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   if (!MSTI)
     return createStringError(std::errc::invalid_argument,
                              "no subtarget info for target %s",
@@ -87,20 +100,19 @@ Error DwarfStreamer::init(Triple TheTriple,
 
   switch (OutFileType) {
   case DWARFLinker::OutputFileType::Assembly: {
-    MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
-                                         *MAI, *MII, *MRI);
+    std::unique_ptr<MCInstPrinter> MIP(TheTarget->createMCInstPrinter(
+        TheTriple, MAI->getAssemblerDialect(), *MAI, *MII, *MRI));
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), true, true, MIP,
-        std::unique_ptr<MCCodeEmitter>(MCE), std::unique_ptr<MCAsmBackend>(MAB),
-        true);
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), std::move(MIP),
+        std::unique_ptr<MCCodeEmitter>(MCE),
+        std::unique_ptr<MCAsmBackend>(MAB));
     break;
   }
   case DWARFLinker::OutputFileType::Object: {
     MS = TheTarget->createMCObjectStreamer(
         TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
         MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
-        *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false);
+        *MSTI);
     break;
   }
   }
@@ -111,7 +123,7 @@ Error DwarfStreamer::init(Triple TheTriple,
                              TripleName.c_str());
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return createStringError(std::errc::invalid_argument,
@@ -212,28 +224,70 @@ void DwarfStreamer::emitDIE(DIE &Die) {
 }
 
 /// Emit contents of section SecName From Obj.
-void DwarfStreamer::emitSectionContents(StringRef SecData, StringRef SecName) {
-  MCSection *Section =
-      StringSwitch<MCSection *>(SecName)
-          .Case("debug_line", MC->getObjectFileInfo()->getDwarfLineSection())
-          .Case("debug_loc", MC->getObjectFileInfo()->getDwarfLocSection())
-          .Case("debug_ranges",
-                MC->getObjectFileInfo()->getDwarfRangesSection())
-          .Case("debug_frame", MC->getObjectFileInfo()->getDwarfFrameSection())
-          .Case("debug_aranges",
-                MC->getObjectFileInfo()->getDwarfARangesSection())
-          .Case("debug_addr", MC->getObjectFileInfo()->getDwarfAddrSection())
-          .Case("debug_rnglists",
-                MC->getObjectFileInfo()->getDwarfRnglistsSection())
-          .Case("debug_loclists",
-                MC->getObjectFileInfo()->getDwarfLoclistsSection())
-          .Default(nullptr);
+void DwarfStreamer::emitSectionContents(StringRef SecData,
+                                        DebugSectionKind SecKind) {
+  if (SecData.empty())
+    return;
 
-  if (Section) {
+  if (MCSection *Section = getMCSection(SecKind)) {
     MS->switchSection(Section);
 
     MS->emitBytes(SecData);
   }
+}
+
+MCSection *DwarfStreamer::getMCSection(DebugSectionKind SecKind) {
+  switch (SecKind) {
+  case DebugSectionKind::DebugInfo:
+    return MC->getObjectFileInfo()->getDwarfInfoSection();
+  case DebugSectionKind::DebugLine:
+    return MC->getObjectFileInfo()->getDwarfLineSection();
+  case DebugSectionKind::DebugFrame:
+    return MC->getObjectFileInfo()->getDwarfFrameSection();
+  case DebugSectionKind::DebugRange:
+    return MC->getObjectFileInfo()->getDwarfRangesSection();
+  case DebugSectionKind::DebugRngLists:
+    return MC->getObjectFileInfo()->getDwarfRnglistsSection();
+  case DebugSectionKind::DebugLoc:
+    return MC->getObjectFileInfo()->getDwarfLocSection();
+  case DebugSectionKind::DebugLocLists:
+    return MC->getObjectFileInfo()->getDwarfLoclistsSection();
+  case DebugSectionKind::DebugARanges:
+    return MC->getObjectFileInfo()->getDwarfARangesSection();
+  case DebugSectionKind::DebugAbbrev:
+    return MC->getObjectFileInfo()->getDwarfAbbrevSection();
+  case DebugSectionKind::DebugMacinfo:
+    return MC->getObjectFileInfo()->getDwarfMacinfoSection();
+  case DebugSectionKind::DebugMacro:
+    return MC->getObjectFileInfo()->getDwarfMacroSection();
+  case DebugSectionKind::DebugAddr:
+    return MC->getObjectFileInfo()->getDwarfAddrSection();
+  case DebugSectionKind::DebugStr:
+    return MC->getObjectFileInfo()->getDwarfStrSection();
+  case DebugSectionKind::DebugLineStr:
+    return MC->getObjectFileInfo()->getDwarfLineStrSection();
+  case DebugSectionKind::DebugStrOffsets:
+    return MC->getObjectFileInfo()->getDwarfStrOffSection();
+  case DebugSectionKind::DebugPubNames:
+    return MC->getObjectFileInfo()->getDwarfPubNamesSection();
+  case DebugSectionKind::DebugPubTypes:
+    return MC->getObjectFileInfo()->getDwarfPubTypesSection();
+  case DebugSectionKind::DebugNames:
+    return MC->getObjectFileInfo()->getDwarfDebugNamesSection();
+  case DebugSectionKind::AppleNames:
+    return MC->getObjectFileInfo()->getDwarfAccelNamesSection();
+  case DebugSectionKind::AppleNamespaces:
+    return MC->getObjectFileInfo()->getDwarfAccelNamespaceSection();
+  case DebugSectionKind::AppleObjC:
+    return MC->getObjectFileInfo()->getDwarfAccelObjCSection();
+  case DebugSectionKind::AppleTypes:
+    return MC->getObjectFileInfo()->getDwarfAccelTypesSection();
+  case DebugSectionKind::NumberOfEnumEntries:
+    llvm_unreachable("Unknown DebugSectionKind value");
+    break;
+  }
+
+  return nullptr;
 }
 
 /// Emit the debug_str section stored in \p Pool.
@@ -755,7 +809,8 @@ void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
 
 void DwarfStreamer::emitLineTableForUnit(
     const DWARFDebugLine::LineTable &LineTable, const CompileUnit &Unit,
-    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool) {
+    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool,
+    std::vector<uint64_t> *RowOffsets) {
   // Switch to the section where the table will be emitted into.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfLineSection());
 
@@ -776,7 +831,7 @@ void DwarfStreamer::emitLineTableForUnit(
 
   // Emit rows.
   emitLineTableRows(LineTable, LineEndSym,
-                    Unit.getOrigUnit().getAddressByteSize());
+                    Unit.getOrigUnit().getAddressByteSize(), RowOffsets);
 }
 
 void DwarfStreamer::emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
@@ -879,7 +934,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
     LineSectionSize += MS->emitULEB128IntValue(StrForm);
 
     LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_directory_index);
-    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_data1);
+    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_udata);
 
     if (HasChecksums) {
       LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_MD5);
@@ -898,8 +953,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
   // file_names (sequence of file name entries).
   for (auto File : P.FileNames) {
     emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
-    MS->emitInt8(File.DirIdx);
-    LineSectionSize += 1;
+    LineSectionSize += MS->emitULEB128IntValue(File.DirIdx);
     if (HasChecksums) {
       MS->emitBinaryData(
           StringRef(reinterpret_cast<const char *>(File.Checksum.data()),
@@ -923,11 +977,10 @@ void DwarfStreamer::emitLineTableString(const DWARFDebugLine::Prologue &P,
 
   switch (String.getForm()) {
   case dwarf::DW_FORM_string: {
-    StringRef TranslatedString =
-        (Translator) ? Translator(*StringVal) : *StringVal;
-    Asm->OutStreamer->emitBytes(TranslatedString.data());
+    StringRef Str = *StringVal;
+    Asm->OutStreamer->emitBytes(Str.data());
     Asm->emitInt8(0);
-    LineSectionSize += TranslatedString.size() + 1;
+    LineSectionSize += Str.size() + 1;
   } break;
   case dwarf::DW_FORM_strp:
   case dwarf::DW_FORM_line_strp: {
@@ -984,7 +1037,7 @@ void DwarfStreamer::emitLineTableProloguePayload(
 
 void DwarfStreamer::emitLineTableRows(
     const DWARFDebugLine::LineTable &LineTable, MCSymbol *LineEndSym,
-    unsigned AddressByteSize) {
+    unsigned AddressByteSize, std::vector<uint64_t> *RowOffsets) {
 
   MCDwarfLineTableParams Params;
   Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
@@ -1008,6 +1061,7 @@ void DwarfStreamer::emitLineTableRows(
   unsigned FileNum = 1;
   unsigned LastLine = 1;
   unsigned Column = 0;
+  unsigned Discriminator = 0;
   unsigned IsStatement = 1;
   unsigned Isa = 0;
   uint64_t Address = -1ULL;
@@ -1015,6 +1069,11 @@ void DwarfStreamer::emitLineTableRows(
   unsigned RowsSinceLastSequence = 0;
 
   for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
+    // If we're tracking row offsets, record the current section size as the
+    // offset of this row.
+    if (RowOffsets)
+      RowOffsets->push_back(LineSectionSize);
+
     int64_t AddressDelta;
     if (Address == -1ULL) {
       MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);
@@ -1046,9 +1105,18 @@ void DwarfStreamer::emitLineTableRows(
       MS->emitULEB128IntValue(Column);
       LineSectionSize += 1 + getULEB128Size(Column);
     }
-
-    // FIXME: We should handle the discriminator here, but dsymutil doesn't
-    // consider it, thus ignore it for now.
+    if (Discriminator != Row.Discriminator &&
+        MS->getContext().getDwarfVersion() >= 4) {
+      Discriminator = Row.Discriminator;
+      unsigned Size = getULEB128Size(Discriminator);
+      MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);
+      MS->emitULEB128IntValue(Size + 1);
+      MS->emitIntValue(dwarf::DW_LNE_set_discriminator, 1);
+      MS->emitULEB128IntValue(Discriminator);
+      LineSectionSize += /* extended op */ 1 + getULEB128Size(Size + 1) +
+                         /* discriminator */ 1 + Size;
+    }
+    Discriminator = 0;
 
     if (Isa != Row.Isa) {
       Isa = Row.Isa;
@@ -1104,7 +1172,7 @@ void DwarfStreamer::emitLineTableRows(
       EncodingBuffer.resize(0);
       Address = -1ULL;
       LastLine = FileNum = IsStatement = 1;
-      RowsSinceLastSequence = Column = Isa = 0;
+      RowsSinceLastSequence = Column = Discriminator = Isa = 0;
     }
   }
 

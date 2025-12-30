@@ -25,37 +25,16 @@
 #include "AMDGPU.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Target/CGPassBuilderOption.h"
 
 #define DEBUG_TYPE "si-i1-copies"
 
 using namespace llvm;
 
-static Register insertUndefLaneMask(MachineBasicBlock *MBB,
-                                    MachineRegisterInfo *MRI,
-                                    Register LaneMaskRegAttrs);
+static Register
+insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
+                    MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs);
 
 namespace {
-
-class SILowerI1Copies : public MachineFunctionPass {
-public:
-  static char ID;
-
-  SILowerI1Copies() : MachineFunctionPass(ID) {
-    initializeSILowerI1CopiesPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override { return "SI Lower i1 Copies"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
 
 class Vreg1LoweringHelper : public PhiLoweringHelper {
 public:
@@ -78,7 +57,7 @@ public:
                            MachineBasicBlock::iterator I, const DebugLoc &DL,
                            Register DstReg, Register PrevReg,
                            Register CurReg) override;
-  void constrainIncomingRegisterTakenAsIs(Incoming &In) override;
+  void constrainAsLaneMask(Incoming &In) override;
 
   bool lowerCopiesFromI1();
   bool lowerCopiesToI1();
@@ -96,7 +75,7 @@ Vreg1LoweringHelper::Vreg1LoweringHelper(MachineFunction *MF,
 bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
   assert(Changed || ConstrainRegs.empty());
   for (Register Reg : ConstrainRegs)
-    MRI->constrainRegClass(Reg, &AMDGPU::SReg_1_XEXECRegClass);
+    MRI->constrainRegClass(Reg, TII->getRegisterInfo().getWaveMaskRegClass());
   ConstrainRegs.clear();
 
   return Changed;
@@ -130,8 +109,7 @@ class PhiIncomingAnalysis {
 
   // For each reachable basic block, whether it is a source in the induced
   // subgraph of the CFG.
-  DenseMap<MachineBasicBlock *, bool> ReachableMap;
-  SmallVector<MachineBasicBlock *, 4> ReachableOrdered;
+  MapVector<MachineBasicBlock *, bool> ReachableMap;
   SmallVector<MachineBasicBlock *, 4> Stack;
   SmallVector<MachineBasicBlock *, 4> Predecessors;
 
@@ -150,13 +128,11 @@ public:
   void analyze(MachineBasicBlock &DefBlock, ArrayRef<Incoming> Incomings) {
     assert(Stack.empty());
     ReachableMap.clear();
-    ReachableOrdered.clear();
     Predecessors.clear();
 
     // Insert the def block first, so that it acts as an end point for the
     // traversal.
     ReachableMap.try_emplace(&DefBlock, false);
-    ReachableOrdered.push_back(&DefBlock);
 
     for (auto Incoming : Incomings) {
       MachineBasicBlock *MBB = Incoming.Block;
@@ -166,7 +142,6 @@ public:
       }
 
       ReachableMap.try_emplace(MBB, false);
-      ReachableOrdered.push_back(MBB);
 
       // If this block has a divergent terminator and the def block is its
       // post-dominator, the wave may first visit the other successors.
@@ -176,14 +151,11 @@ public:
 
     while (!Stack.empty()) {
       MachineBasicBlock *MBB = Stack.pop_back_val();
-      if (!ReachableMap.try_emplace(MBB, false).second)
-        continue;
-      ReachableOrdered.push_back(MBB);
-
-      append_range(Stack, MBB->successors());
+      if (ReachableMap.try_emplace(MBB, false).second)
+        append_range(Stack, MBB->successors());
     }
 
-    for (MachineBasicBlock *MBB : ReachableOrdered) {
+    for (auto &[MBB, Reachable] : ReachableMap) {
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
         if (ReachableMap.count(Pred)) {
@@ -193,7 +165,7 @@ public:
         }
       }
       if (!HaveReachablePred)
-        ReachableMap[MBB] = true;
+        Reachable = true;
       if (HaveReachablePred) {
         for (MachineBasicBlock *UnreachablePred : Stack) {
           if (!llvm::is_contained(Predecessors, UnreachablePred))
@@ -304,7 +276,8 @@ public:
   /// blocks, so that the SSA updater doesn't have to search all the way to the
   /// function entry.
   void addLoopEntries(unsigned LoopLevel, MachineSSAUpdater &SSAUpdater,
-                      MachineRegisterInfo &MRI, Register LaneMaskRegAttrs,
+                      MachineRegisterInfo &MRI,
+                      MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs,
                       ArrayRef<Incoming> Incomings = {}) {
     assert(LoopLevel < CommonDominators.size());
 
@@ -396,29 +369,15 @@ private:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SILowerI1Copies, DEBUG_TYPE, "SI Lower i1 Copies", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_END(SILowerI1Copies, DEBUG_TYPE, "SI Lower i1 Copies", false,
-                    false)
-
-char SILowerI1Copies::ID = 0;
-
-char &llvm::SILowerI1CopiesID = SILowerI1Copies::ID;
-
-FunctionPass *llvm::createSILowerI1CopiesPass() {
-  return new SILowerI1Copies();
+Register
+llvm::createLaneMaskReg(MachineRegisterInfo *MRI,
+                        MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
+  return MRI->createVirtualRegister(LaneMaskRegAttrs);
 }
 
-Register llvm::createLaneMaskReg(MachineRegisterInfo *MRI,
-                                 Register LaneMaskRegAttrs) {
-  return MRI->cloneVirtualRegister(LaneMaskRegAttrs);
-}
-
-static Register insertUndefLaneMask(MachineBasicBlock *MBB,
-                                    MachineRegisterInfo *MRI,
-                                    Register LaneMaskRegAttrs) {
+static Register
+insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
+                    MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
   MachineFunction &MF = *MBB->getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -426,31 +385,6 @@ static Register insertUndefLaneMask(MachineBasicBlock *MBB,
   BuildMI(*MBB, MBB->getFirstTerminator(), {}, TII->get(AMDGPU::IMPLICIT_DEF),
           UndefReg);
   return UndefReg;
-}
-
-/// Lower all instructions that def or use vreg_1 registers.
-///
-/// In a first pass, we lower COPYs from vreg_1 to vector registers, as can
-/// occur around inline assembly. We do this first, before vreg_1 registers
-/// are changed to scalar mask registers.
-///
-/// Then we lower all defs of vreg_1 registers. Phi nodes are lowered before
-/// all others, because phi lowering looks through copies and can therefore
-/// often make copy lowering unnecessary.
-bool SILowerI1Copies::runOnMachineFunction(MachineFunction &TheMF) {
-  // Only need to run this in SelectionDAG path.
-  if (TheMF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
-    return false;
-
-  Vreg1LoweringHelper Helper(&TheMF, &getAnalysis<MachineDominatorTree>(),
-                             &getAnalysis<MachinePostDominatorTree>());
-
-  bool Changed = false;
-  Changed |= Helper.lowerCopiesFromI1();
-  Changed |= Helper.lowerPhis();
-  Changed |= Helper.lowerCopiesToI1();
-  return Helper.cleanConstrainRegs(Changed);
 }
 
 #ifndef NDEBUG
@@ -545,7 +479,7 @@ bool PhiLoweringHelper::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
-  DT->getBase().updateDFSNumbers();
+  DT->updateDFSNumbers();
   MachineBasicBlock *PrevMBB = nullptr;
   for (MachineInstr *MI : Vreg1Phis) {
     MachineBasicBlock &MBB = *MI->getParent();
@@ -619,7 +553,7 @@ bool PhiLoweringHelper::lowerPhis() {
       for (auto &Incoming : Incomings) {
         MachineBasicBlock &IMBB = *Incoming.Block;
         if (PIA.isSource(IMBB)) {
-          constrainIncomingRegisterTakenAsIs(Incoming);
+          constrainAsLaneMask(Incoming);
           SSAUpdater.AddAvailableValue(&IMBB, Incoming.Reg);
         } else {
           Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
@@ -911,6 +845,84 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
   }
 }
 
-void Vreg1LoweringHelper::constrainIncomingRegisterTakenAsIs(Incoming &In) {
-  return;
+void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) {}
+
+/// Lower all instructions that def or use vreg_1 registers.
+///
+/// In a first pass, we lower COPYs from vreg_1 to vector registers, as can
+/// occur around inline assembly. We do this first, before vreg_1 registers
+/// are changed to scalar mask registers.
+///
+/// Then we lower all defs of vreg_1 registers. Phi nodes are lowered before
+/// all others, because phi lowering looks through copies and can therefore
+/// often make copy lowering unnecessary.
+static bool runFixI1Copies(MachineFunction &MF, MachineDominatorTree &MDT,
+                           MachinePostDominatorTree &MPDT) {
+  // Only need to run this in SelectionDAG path.
+  if (MF.getProperties().hasSelected())
+    return false;
+
+  Vreg1LoweringHelper Helper(&MF, &MDT, &MPDT);
+  bool Changed = false;
+  Changed |= Helper.lowerCopiesFromI1();
+  Changed |= Helper.lowerPhis();
+  Changed |= Helper.lowerCopiesToI1();
+  return Helper.cleanConstrainRegs(Changed);
+}
+
+PreservedAnalyses
+SILowerI1CopiesPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachinePostDominatorTree &MPDT =
+      MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
+  bool Changed = runFixI1Copies(MF, MDT, MPDT);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  // TODO: Probably preserves most.
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+}
+
+class SILowerI1CopiesLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  SILowerI1CopiesLegacy() : MachineFunctionPass(ID) {
+    initializeSILowerI1CopiesLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override { return "SI Lower i1 Copies"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+bool SILowerI1CopiesLegacy::runOnMachineFunction(MachineFunction &MF) {
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachinePostDominatorTree &MPDT =
+      getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  return runFixI1Copies(MF, MDT, MPDT);
+}
+
+INITIALIZE_PASS_BEGIN(SILowerI1CopiesLegacy, DEBUG_TYPE, "SI Lower i1 Copies",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_END(SILowerI1CopiesLegacy, DEBUG_TYPE, "SI Lower i1 Copies",
+                    false, false)
+
+char SILowerI1CopiesLegacy::ID = 0;
+
+char &llvm::SILowerI1CopiesLegacyID = SILowerI1CopiesLegacy::ID;
+
+FunctionPass *llvm::createSILowerI1CopiesLegacyPass() {
+  return new SILowerI1CopiesLegacy();
 }

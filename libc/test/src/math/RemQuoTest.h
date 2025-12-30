@@ -9,25 +9,34 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::Sign;
 
 template <typename T>
-class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T nan = T(FPBits::build_quiet_nan(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
+
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);
@@ -96,12 +105,10 @@ public:
 
   void testSubnormalRange(RemQuoFunc func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
-    for (StorageType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
-         v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
+         v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
       result.f = func(x, y, &result.i);
@@ -111,19 +118,17 @@ public:
 
   void testNormalRange(RemQuoFunc func) {
     constexpr StorageType COUNT = 1'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
-    for (StorageType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
-         v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
-         v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
+         v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
       mpfr::BinaryOutput<T> result;
       mpfr::BinaryInput<T> input{x, y};
       result.f = func(x, y, &result.i);
 
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. Hence we test for them separately.
-      if (isnan(x) || isnan(y)) {
+      if (FPBits(v).is_nan() || FPBits(w).is_nan()) {
         ASSERT_FP_EQ(result.f, nan);
         continue;
       }

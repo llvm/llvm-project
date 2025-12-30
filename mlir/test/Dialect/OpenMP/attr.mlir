@@ -54,6 +54,12 @@ module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, 
 // CHECK: module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true, openmp_device_version = 51>} {
 module attributes {omp.flags = #omp.flags<assume_no_thread_state = true, assume_teams_oversubscription = true, openmp_device_version = 51>} {}
 
+// CHECK: module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true, no_gpu_lib = true, openmp_device_version = 51>} {
+module attributes {omp.flags = #omp.flags<assume_no_thread_state = true, assume_teams_oversubscription = true, no_gpu_lib = true, openmp_device_version = 51>} {}
+
+// CHECK: module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, openmp_device_version = 51>} {
+module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, no_gpu_lib = false, openmp_device_version = 51>} {}
+
 // CHECK: module attributes {omp.version = #omp.version<version = 51>} {
 module attributes {omp.version = #omp.version<version = 51>} {}
 
@@ -174,12 +180,4 @@ llvm.mlir.global external @omp_decl_tar_data_any_link() {omp.declare_target = #o
 llvm.mlir.global external @omp_decl_tar_data_any_enter() {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   llvm.return %0 : i32
-}
-
-// ----
-
-// CHECK-LABEL: func @_QPwriteindex_omp_outline_0
-// CHECK-SAME: {{.*}} attributes {omp.outline_parent_name = "QPwriteindex"} {
-func.func @_QPwriteindex_omp_outline_0() attributes {omp.outline_parent_name = "QPwriteindex"} {
-   return
 }

@@ -80,26 +80,27 @@ func.func @dense_template_argument(%arg : i32) {
 
 // -----
 
-func.func @empty_operator(%arg : i32) {
+func.func @array_result() {
+    // expected-error @+1 {{'emitc.call_opaque' op cannot return array type}}
+    emitc.call_opaque "array_result"() : () -> !emitc.array<4xi32>
+    return
+}
+
+// -----
+
+func.func @empty_operator() {
+    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
     // expected-error @+1 {{'emitc.apply' op applicable operator must not be empty}}
-    %2 = emitc.apply ""(%arg) : (i32) -> !emitc.ptr<i32>
+    %1 = emitc.apply ""(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
     return
 }
 
 // -----
 
-func.func @illegal_operator(%arg : i32) {
+func.func @illegal_operator() {
+    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
     // expected-error @+1 {{'emitc.apply' op applicable operator is illegal}}
-    %2 = emitc.apply "+"(%arg) : (i32) -> !emitc.ptr<i32>
-    return
-}
-
-// -----
-
-func.func @illegal_operand() {
-    %1 = "emitc.constant"(){value = 42: i32} : () -> i32
-    // expected-error @+1 {{'emitc.apply' op cannot apply to constant}}
-    %2 = emitc.apply "&"(%1) : (i32) -> !emitc.ptr<i32>
+    %1 = emitc.apply "+"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
     return
 }
 
@@ -107,7 +108,7 @@ func.func @illegal_operand() {
 
 func.func @var_attribute_return_type_1() {
     // expected-error @+1 {{'emitc.variable' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
-    %c0 = "emitc.variable"(){value = 42: i64} : () -> i32
+    %c0 = "emitc.variable"(){value = 42: i64} : () -> !emitc.lvalue<i32>
     return
 }
 
@@ -115,7 +116,7 @@ func.func @var_attribute_return_type_1() {
 
 func.func @var_attribute_return_type_2() {
     // expected-error @+1 {{'emitc.variable' op attribute 'value' failed to satisfy constraint: An opaque attribute or TypedAttr instance}}
-    %c0 = "emitc.variable"(){value = unit} : () -> i32
+    %c0 = "emitc.variable"(){value = unit} : () -> !emitc.lvalue<i32>
     return
 }
 
@@ -124,6 +125,46 @@ func.func @var_attribute_return_type_2() {
 func.func @cast_tensor(%arg : tensor<f32>) {
     // expected-error @+1 {{'emitc.cast' op operand type 'tensor<f32>' and result type 'tensor<f32>' are cast incompatible}}
     %1 = emitc.cast %arg: tensor<f32> to tensor<f32>
+    return
+}
+
+// -----
+
+func.func @cast_to_array(%arg : f32) {
+    // expected-error @+1 {{'emitc.cast' op operand type 'f32' and result type '!emitc.array<4xf32>' are cast incompatible}}
+    %1 = emitc.cast %arg: f32 to !emitc.array<4xf32>
+    return
+}
+
+// -----
+
+func.func @cast_multidimensional_array(%arg : !emitc.array<1x2xi32>) {
+    // expected-error @+1 {{'emitc.cast' op operand type '!emitc.array<1x2xi32>' and result type '!emitc.ptr<i32>' are cast incompatible}}
+    %1 = emitc.cast %arg: !emitc.array<1x2xi32> to !emitc.ptr<i32>
+    return
+}
+
+// -----
+
+func.func @cast_array_zero_rank(%arg : !emitc.array<0xi32>) {
+    // expected-error @+1 {{'emitc.cast' op operand type '!emitc.array<0xi32>' and result type '!emitc.ptr<i32>' are cast incompatible}}
+    %1 = emitc.cast %arg: !emitc.array<0xi32> to !emitc.ptr<i32>
+    return
+}
+
+// -----
+
+func.func @cast_array_to_pointer_types_mismatch(%arg : !emitc.array<3xi32>) {
+    // expected-error @+1 {{'emitc.cast' op operand type '!emitc.array<3xi32>' and result type '!emitc.ptr<f16>' are cast incompatible}}
+    %1 = emitc.cast %arg: !emitc.array<3xi32> to !emitc.ptr<f16>
+    return
+}
+
+// -----
+
+func.func @cast_pointer_to_array(%arg : !emitc.ptr<i32>) {
+    // expected-error @+1 {{'emitc.cast' op operand type '!emitc.ptr<i32>' and result type '!emitc.array<3xi32>' are cast incompatible}}
+    %1 = emitc.cast %arg: !emitc.ptr<i32> to !emitc.array<3xi32>
     return
 }
 
@@ -154,7 +195,7 @@ func.func @add_float_pointer(%arg0: f32, %arg1: !emitc.ptr<f32>) {
 // -----
 
 func.func @div_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
-    // expected-error @+1 {{'emitc.div' op operand #0 must be floating-point or integer or index or EmitC opaque type, but got 'tensor<i32>'}}
+    // expected-error @+1 {{'emitc.div' op operand #0 must be floating-point type supported by EmitC or integer, index or opaque type supported by EmitC, but got 'tensor<i32>'}}
     %1 = "emitc.div" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     return
 }
@@ -162,7 +203,7 @@ func.func @div_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
 // -----
 
 func.func @mul_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
-    // expected-error @+1 {{'emitc.mul' op operand #0 must be floating-point or integer or index or EmitC opaque type, but got 'tensor<i32>'}}
+    // expected-error @+1 {{'emitc.mul' op operand #0 must be floating-point type supported by EmitC or integer, index or opaque type supported by EmitC, but got 'tensor<i32>'}}
     %1 = "emitc.mul" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     return
 }
@@ -170,7 +211,7 @@ func.func @mul_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
 // -----
 
 func.func @rem_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
-    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer or index or EmitC opaque type, but got 'tensor<i32>'}}
+    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer, index or opaque type supported by EmitC, but got 'tensor<i32>'}}
     %1 = "emitc.rem" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     return
 }
@@ -178,7 +219,7 @@ func.func @rem_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
 // -----
 
 func.func @rem_float(%arg0: f32, %arg1: f32) {
-    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer or index or EmitC opaque type, but got 'f32'}}
+    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer, index or opaque type supported by EmitC, but got 'f32'}}
     %1 = "emitc.rem" (%arg0, %arg1) : (f32, f32) -> f32
     return
 }
@@ -203,7 +244,7 @@ func.func @sub_pointer_float(%arg0: !emitc.ptr<f32>, %arg1: f32) {
 // -----
 
 func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
-    // expected-error @+1 {{'emitc.sub' op requires that the result is an integer or of opaque type if lhs and rhs are pointers}}
+    // expected-error @+1 {{'emitc.sub' op requires that the result is an integer, ptrdiff_t or of opaque type if lhs and rhs are pointers}}
     %1 = "emitc.sub" (%arg0, %arg1) : (!emitc.ptr<f32>, !emitc.ptr<f32>) -> !emitc.ptr<f32>
     return
 }
@@ -211,25 +252,37 @@ func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
 // -----
 
 func.func @test_misplaced_yield() {
-  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.expression, emitc.if, emitc.for'}}
+  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.do, emitc.expression, emitc.for, emitc.if, emitc.switch'}}
   emitc.yield
   return
 }
 
 // -----
 
-func.func @test_assign_to_non_variable(%arg1: f32, %arg2: f32) {
-  // expected-error @+1 {{'emitc.assign' op requires first operand (<block argument> of type 'f32' at index: 1) to be a Variable}}
-  emitc.assign %arg1 : f32 to %arg2 : f32
-  return
+func.func @test_assign_to_block_argument(%arg0: f32) {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
+  cf.br ^bb1(%0 : !emitc.lvalue<f32>)
+^bb1(%a : !emitc.lvalue<f32>):
+  // expected-error @+1 {{'emitc.assign' op cannot assign to block argument}}
+  emitc.assign %arg0 : f32 to %a : !emitc.lvalue<f32>
+  func.return
 }
 
 // -----
 
 func.func @test_assign_type_mismatch(%arg1: f32) {
-  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   // expected-error @+1 {{'emitc.assign' op requires value's type ('f32') to match variable's type ('i32')}}
-  emitc.assign %arg1 : f32 to %v : i32
+  emitc.assign %arg1 : f32 to %v : !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @test_assign_to_array(%arg1: !emitc.array<4xi32>) {
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4xi32>
+  // expected-error @+1 {{invalid kind of type specified: expected emitc.lvalue, but found '!emitc.array<4xi32>'}}
+  emitc.assign %arg1 : !emitc.array<4xi32> to %v : !emitc.array<4xi32>
   return
 }
 
@@ -237,7 +290,7 @@ func.func @test_assign_type_mismatch(%arg1: f32) {
 
 func.func @test_expression_no_yield() -> i32 {
   // expected-error @+1 {{'emitc.expression' op must yield a value at termination}}
-  %r = emitc.expression : i32 {
+  %r = emitc.expression : () -> i32 {
     %c7 = "emitc.constant"(){value = 7 : i32} : () -> i32
   }
   return %r : i32
@@ -247,9 +300,10 @@ func.func @test_expression_no_yield() -> i32 {
 
 func.func @test_expression_illegal_op(%arg0 : i1) -> i32 {
   // expected-error @+1 {{'emitc.expression' op contains an unsupported operation}}
-  %r = emitc.expression : i32 {
-    %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
-    emitc.yield %x : i32
+  %r = emitc.expression : () -> i32 {
+    %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+    %y = emitc.load %x : <i32>
+    emitc.yield %y : i32
   }
   return %r : i32
 }
@@ -257,8 +311,8 @@ func.func @test_expression_illegal_op(%arg0 : i1) -> i32 {
 // -----
 
 func.func @test_expression_no_use(%arg0: i32, %arg1: i32) -> i32 {
-  // expected-error @+1 {{'emitc.expression' op requires exactly one use for each operation}}
-  %r = emitc.expression : i32 {
+  // expected-error @+1 {{'emitc.expression' op contains an unused operation}}
+  %r = emitc.expression %arg0, %arg1 : (i32, i32) -> i32 {
     %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
     %b = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
     emitc.yield %a : i32
@@ -269,12 +323,12 @@ func.func @test_expression_no_use(%arg0: i32, %arg1: i32) -> i32 {
 // -----
 
 func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
-  // expected-error @+1 {{'emitc.expression' op requires exactly one use for each operation}}
-  %r = emitc.expression : i32 {
-    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+  // expected-error @+1 {{'emitc.expression' op requires exactly one use for operations with side effects}}
+  %r = emitc.expression %arg0, %arg1 : (i32, i32) -> i32 {
+    %a = emitc.call_opaque "foo"(%arg0, %arg1) : (i32, i32) -> i32
     %b = emitc.add %a, %arg0 : (i32, i32) -> i32
-    %c = emitc.mul %arg1, %a : (i32, i32) -> i32
-    emitc.yield %a : i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
   }
   return %r : i32
 }
@@ -283,9 +337,596 @@ func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
 
 func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
   // expected-error @+1 {{'emitc.expression' op requires exactly one result for each operation}}
-  %r = emitc.expression : i32 {
+  %r = emitc.expression %arg0 : (i32) -> i32 {
     %a:2 = emitc.call_opaque "bar" (%arg0) : (i32) -> (i32, i32)
     emitc.yield %a : i32
   }
   return %r : i32
+}
+
+// -----
+
+emitc.func @test_expression_no_defining_op(%a : i32) {
+  // expected-error @+1 {{'emitc.expression' op yielded value has no defining op}}
+  %res = emitc.expression %a : (i32) -> i32 {
+    emitc.yield %a : i32
+  }
+
+  return
+}
+
+// -----
+
+emitc.func @test_expression_no_defining_op() {
+  %cond = literal "true" : i1
+  // expected-error @+1 {{'emitc.expression' op yielded value has no defining op}}
+  %res = emitc.expression %cond : (i1) -> i1 {
+    emitc.yield %cond : i1
+  }
+  return
+}
+
+// -----
+
+emitc.func @test_expression_op_outside_expression() {
+  %cond = literal "true" : i1
+  %res = emitc.expression : () -> i1 {
+    // expected-error @+1 {{use of undeclared SSA value name}}
+    emitc.yield %cond : i1
+  }
+  return
+}
+
+// -----
+
+// expected-error @+1 {{'emitc.func' op requires zero or exactly one result, but has 2}}
+emitc.func @multiple_results(%0: i32) -> (i32, i32) {
+  emitc.return %0 : i32
+}
+
+// -----
+
+emitc.func @resulterror() -> i32 {
+^bb42:
+  emitc.return    // expected-error {{'emitc.return' op has 0 operands, but enclosing function (@resulterror) returns 1}}
+}
+
+// -----
+
+emitc.func @return_type_mismatch() -> i32 {
+  %0 = emitc.call_opaque "foo()"(): () -> f32
+  emitc.return %0 : f32  // expected-error {{type of the return operand ('f32') doesn't match function result type ('i32') in function @return_type_mismatch}}
+}
+
+// -----
+
+// expected-error@+1 {{'emitc.func' op cannot have lvalue type as argument}}
+emitc.func @argument_type_lvalue(%arg : !emitc.lvalue<i32>) {
+  emitc.return
+}
+
+// -----
+
+// expected-error@+1 {{'emitc.func' op cannot return array type}}
+emitc.func @return_type_array(%arg : !emitc.array<4xi32>) -> !emitc.array<4xi32> {
+  emitc.return %arg : !emitc.array<4xi32>
+}
+
+// -----
+
+func.func @return_inside_func.func(%0: i32) -> (i32) {
+  // expected-error@+1 {{'emitc.return' op expects parent op 'emitc.func'}}
+  emitc.return %0 : i32
+}
+// -----
+
+// expected-error@+1 {{expected non-function type}}
+emitc.func @func_variadic(...)
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op 'bar' does not reference a valid function}}
+emitc.declare_func @bar
+
+// -----
+
+// expected-error@+1 {{'emitc.declare_func' op requires attribute 'sym_name'}}
+"emitc.declare_func"()  : () -> ()
+
+// -----
+
+func.func @logical_and_resulterror(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'emitc.logical_and' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_and"(%arg0, %arg1) : (i32, i32) -> i32
+  return
+}
+
+// -----
+
+func.func @logical_not_resulterror(%arg0: i32) {
+  // expected-error @+1 {{'emitc.logical_not' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_not"(%arg0) : (i32) -> i32
+  return
+}
+
+// -----
+
+func.func @logical_or_resulterror(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'emitc.logical_or' op result #0 must be 1-bit signless integer, but got 'i32'}}
+  %0 = "emitc.logical_or"(%arg0, %arg1) : (i32, i32) -> i32
+  return
+}
+
+// -----
+
+func.func @test_subscript_array_indices_mismatch(%arg0: !emitc.array<4x8xf32>, %arg1: index) {
+  // expected-error @+1 {{'emitc.subscript' op on array operand requires number of indices (1) to match the rank of the array type (2)}}
+  %0 = emitc.subscript %arg0[%arg1] : (!emitc.array<4x8xf32>, index) -> !emitc.lvalue<f32>
+  return
+}
+
+// -----
+
+func.func @test_subscript_array_index_type_mismatch(%arg0: !emitc.array<4x8xf32>, %arg1: index, %arg2: f32) {
+  // expected-error @+1 {{'emitc.subscript' op on array operand requires index operand 1 to be integer-like, but got 'f32'}}
+  %0 = emitc.subscript %arg0[%arg1, %arg2] : (!emitc.array<4x8xf32>, index, f32) -> !emitc.lvalue<f32>
+  return
+}
+
+// -----
+
+func.func @test_subscript_array_type_mismatch(%arg0: !emitc.array<4x8xf32>, %arg1: index, %arg2: index) {
+  // expected-error @+1 {{'emitc.subscript' op on array operand requires element type ('f32') and result type ('i32') to match}}
+  %0 = emitc.subscript %arg0[%arg1, %arg2] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @test_subscript_ptr_indices_mismatch(%arg0: !emitc.ptr<f32>, %arg1: index) {
+  // expected-error @+1 {{'emitc.subscript' op on pointer operand requires one index operand, but got 2}}
+  %0 = emitc.subscript %arg0[%arg1, %arg1] : (!emitc.ptr<f32>, index, index) -> !emitc.lvalue<f32>
+  return
+}
+
+// -----
+
+func.func @test_subscript_ptr_index_type_mismatch(%arg0: !emitc.ptr<f32>, %arg1: f64) {
+  // expected-error @+1 {{'emitc.subscript' op on pointer operand requires index operand to be integer-like, but got 'f64'}}
+  %0 = emitc.subscript %arg0[%arg1] : (!emitc.ptr<f32>, f64) -> !emitc.lvalue<f32>
+  return
+}
+
+// -----
+
+func.func @test_subscript_ptr_type_mismatch(%arg0: !emitc.ptr<f32>, %arg1: index) {
+  // expected-error @+1 {{'emitc.subscript' op on pointer operand requires pointee type ('f32') and result type ('f64') to match}}
+  %0 = emitc.subscript %arg0[%arg1] : (!emitc.ptr<f32>, index) -> !emitc.lvalue<f64>
+  return
+}
+
+// -----
+
+// expected-error @+1 {{'emitc.global' op cannot have both static and extern specifiers}}
+emitc.global extern static @uninit : i32
+
+// -----
+
+emitc.global @myglobal_array : !emitc.array<2xf32>
+
+func.func @use_global() {
+  // expected-error @+1 {{'emitc.get_global' op on array type expects result type '!emitc.array<3xf32>' to match type '!emitc.array<2xf32>' of the global @myglobal_array}}
+  %0 = emitc.get_global @myglobal_array : !emitc.array<3xf32>
+  return
+}
+
+// -----
+
+emitc.global @myglobal_scalar : f32
+
+func.func @use_global() {
+  // expected-error @+1 {{'emitc.get_global' op on non-array type expects result inner type 'i32' to match type 'f32' of the global @myglobal_scalar}}
+  %0 = emitc.get_global @myglobal_scalar : !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+emitc.global @myglobal_value : f32
+
+func.func @use_global() {
+  // expected-error @+1 {{'emitc.get_global' op on non-array type expects result type to be an lvalue type for the global @myglobal_value}}
+  %0 = emitc.get_global @myglobal_value : !emitc.array<2xf32>
+  return
+}
+
+// -----
+
+func.func @member(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{'emitc.member' op operand #0 must be emitc.lvalue of EmitC opaque type values, but got '!emitc.lvalue<i32>'}}
+  %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @member_of_ptr(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{'emitc.member_of_ptr' op operand #0 must be emitc.lvalue of EmitC opaque type or EmitC pointer type values, but got '!emitc.lvalue<i32>'}}
+  %0 = "emitc.member_of_ptr" (%arg0) {member = "a"} : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.constant"(){value = 1 : i16} : () -> i16
+
+  // expected-error@+1 {{'emitc.switch' op expected region to end with emitc.yield, but got emitc.call_opaque}}
+  emitc.switch %0 : i16
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+  }
+  case 5 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.constant"(){value = 1 : i32} : () -> i32
+
+  emitc.switch %0 : i32
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  // expected-error@+1 {{custom op 'emitc.switch' expected integer value}}
+  case {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.constant"(){value = 1 : i8} : () -> i8
+
+  emitc.switch %0 : i8
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 3 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  // expected-error@+1 {{custom op 'emitc.switch' expected 'default'}}
+  return
+}
+
+// -----
+
+func.func @emitc_switch() {
+  %0 = "emitc.constant"(){value = 1 : i64} : () -> i64
+
+  // expected-error@+1 {{'emitc.switch' op has duplicate case value: 2}}
+  emitc.switch %0 : i64
+  case 2 {
+    %1 = emitc.call_opaque "func_b" () : () -> i32
+    emitc.yield
+  }
+  case 2 {
+    %2 = emitc.call_opaque "func_a" () : () -> i32
+    emitc.yield
+  }
+  default {
+    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    emitc.call_opaque "func2" (%3) : (f32) -> ()
+    emitc.yield
+  }
+  return
+}
+
+// -----
+
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+  // expected-error @+1 {{'emitc.verbatim' op requires operands for each placeholder in the format string}}
+  emitc.verbatim "" args %arg0, %arg1 : !emitc.ptr<i32>, i32
+  return
+}
+
+// -----
+
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+  // expected-error @+1 {{'emitc.verbatim' op expected '}' after unescaped '{' at end of string}}
+  emitc.verbatim "{} + {} {" args %arg0, %arg1 : !emitc.ptr<i32>, i32
+  return
+}
+
+// -----
+
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+  // expected-error @+1 {{'emitc.verbatim' op requires operands for each placeholder in the format string}}
+  emitc.verbatim "abc" args %arg0, %arg1 : !emitc.ptr<i32>, i32
+  return
+}
+
+// -----
+
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+  // expected-error @+1 {{'emitc.verbatim' op requires operands for each placeholder in the format string}}
+  emitc.verbatim "{}" args %arg0, %arg1 : !emitc.ptr<i32>, i32
+  return
+}
+
+// -----
+
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+  // expected-error @+1 {{'emitc.verbatim' op requires operands for each placeholder in the format string}}
+  emitc.verbatim "{} {} {}" args %arg0, %arg1 : !emitc.ptr<i32>, i32
+  return
+}
+
+// -----
+
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+  // expected-error @+1 {{'emitc.verbatim' op expected '}' after unescaped '{'}}
+  emitc.verbatim "{ " args %arg0, %arg1 : !emitc.ptr<i32>, i32
+  return
+}
+
+// -----
+
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+  // expected-error @+1 {{'emitc.verbatim' op expected '}' after unescaped '{'}}
+  emitc.verbatim "{a} " args %arg0, %arg1 : !emitc.ptr<i32>, i32
+  return
+}
+
+// -----
+
+// expected-error @+1 {{'emitc.field' op field must be nested within an emitc.class operation}}
+emitc.field @testField : !emitc.array<1xf32>
+
+// -----
+
+// expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+%1 = emitc.get_field @testField : !emitc.array<1xf32>
+
+// -----
+
+emitc.func @testMethod() {
+  %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+  // expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+  %1 = get_field @testField : !emitc.array<1xf32>
+  %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+  return
+}
+
+// -----
+
+emitc.class @testClass {
+  emitc.func @testMethod() {
+    %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+    // expected-error @+1 {{'emitc.get_field' op field '@testField' not found in the class}}
+    %1 = get_field @testField : !emitc.array<1xf32>
+    %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+    return
+  }
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op condition region must contain exactly two operations: 'emitc.expression' followed by 'emitc.yield', but found 3 operations}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    %3 = emitc.literal "3" : i32
+    emitc.yield %r : i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  // expected-error @+1 {{'emitc.do' op expected first op in condition region to be 'emitc.expression', but got emitc.literal}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %true = emitc.literal "true" : i1
+    emitc.yield %true : i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op emitc.expression in condition region must return 'i1', but returns 'i32'}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i32 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      emitc.yield %add : i32
+    }
+
+    emitc.yield %r : i32
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op expected last op in condition region to be 'emitc.yield', but got emitc.expression}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r1 = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    %r2 = emitc.expression %1, %2 : (i32, i32) -> i32 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      emitc.yield %add : i32
+    }
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op expected condition region to return 1 value, but it returns 0 values}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  %true = emitc.literal "true" : i1
+
+  // expected-error @+1 {{'emitc.yield' must return result of 'emitc.expression' from this condition region}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %true: i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op body region must not contain terminator}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+    emitc.yield
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %r: i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_for_none_block_argument(%arg0: index) {
+  // expected-error@+1 {{expected body to have a single block argument for the induction variable}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @test_for_more_than_one_block_argument(%arg0: index) {
+  // expected-error@+1 {{expected body to have a single block argument for the induction variable}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+    ^bb0(%i0 : index, %i1 : index):
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @test_for_unmatch_type(%arg0: index) {
+  // expected-error@+1 {{expected induction variable to be same type as bounds}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+    ^bb0(%i0 : f32):
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @address_of(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.address_of"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i8>
+  return
+}
+
+// -----
+
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.dereference"(%arg0) : (!emitc.ptr<i32>) -> !emitc.lvalue<i8>
+  return
 }

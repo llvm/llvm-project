@@ -19,31 +19,31 @@ void test() {
 // CHECK: define internal x86_thiscallcc noundef i32
 // CHECK-SAME: @"??R<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
 // CHECK-SAME: (ptr noundef %this, ptr inalloca(<{ %struct.A }>) %[[ARG:.*]])
-// CHECK: %[[V:.*]] = getelementptr inbounds <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
+// CHECK: %[[V:.*]] = getelementptr inbounds nuw <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %call = call x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
-// CHECK-SAME: (ptr noundef %this, ptr noundef %[[V]])
+// CHECK-SAME: (ptr noundef %this, ptr dead_on_return noundef %[[V]])
 
 // CHECK: define internal noundef i32
 // CHECK-SAME: @"?__invoke@<lambda_0>@?0??test@@YAXXZ@CA?A?<auto>@@UA@@@Z"
 // CHECK-SAME: (ptr inalloca(<{ %struct.A }>) %[[ARG:.*]])
 // CHECK: %unused.capture = alloca %class.anon, align 1
-// CHECK: %[[VAR:.*]] = getelementptr inbounds <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
+// CHECK: %[[VAR:.*]] = getelementptr inbounds nuw <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %call = call x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
-// CHECK-SAME: (ptr noundef %unused.capture, ptr noundef %[[VAR]])
+// CHECK-SAME: (ptr noundef %unused.capture, ptr dead_on_return noundef %[[VAR]])
 // CHECK: ret i32 %call
 
 // CHECK: define internal x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
-// CHECK-SAME: (ptr noundef %this, ptr noundef %[[ARG:.*]])
+// CHECK-SAME: (ptr noundef %this, ptr dead_on_return noundef %[[ARG:.*]])
 // CHECK: %this.addr = alloca ptr, align 4
 // CHECK: store ptr %this, ptr %this.addr, align 4
 // CHECK: %this1 = load ptr, ptr %this.addr, align 4
 // CHECK: %{{.*}} = load i32, ptr @"?calls@?1???R<lambda_0>
 // CHECK: %inc = add nsw i32 %{{.*}}, 1
 // CHECK: store i32 %inc, ptr @"?calls@?1???R<lambda_0>
-// CHECK: %{{.*}} = getelementptr inbounds %struct.A, ptr %{{.*}}, i32 0, i32 0
+// CHECK: %{{.*}} = getelementptr inbounds nuw %struct.A, ptr %{{.*}}, i32 0, i32 0
 // CHECK: %{{.*}} = load i32, ptr %{{.*}}, align 4
 // CHECK: %{{.*}} = load i32, ptr @"?calls@?1???R<lambda_0>
 // CHECK: %add = add nsw i32 %{{.*}}, %{{.*}}

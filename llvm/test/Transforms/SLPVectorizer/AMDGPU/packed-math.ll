@@ -7,10 +7,10 @@
 ; Simple 3-pair chain with loads and stores
 define amdgpu_kernel void @test1_as_3_3_3_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c) {
 ; GCN-LABEL: @test1_as_3_3_3_v2f16(
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
-; GCN-NEXT:    [[TMP5:%.*]] = fmul <2 x half> [[TMP2]], [[TMP4]]
-; GCN-NEXT:    store <2 x half> [[TMP5]], ptr addrspace(3) [[C:%.*]], align 2
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
+; GCN-NEXT:    [[TMP3:%.*]] = fmul <2 x half> [[TMP1]], [[TMP2]]
+; GCN-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
   %i0 = load half, ptr addrspace(3) %a, align 2
@@ -29,10 +29,10 @@ define amdgpu_kernel void @test1_as_3_3_3_v2f16(ptr addrspace(3) %a, ptr addrspa
 
 define amdgpu_kernel void @test1_as_3_0_0(ptr addrspace(3) %a, ptr %b, ptr %c) {
 ; GCN-LABEL: @test1_as_3_0_0(
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr [[B:%.*]], align 2
-; GCN-NEXT:    [[TMP5:%.*]] = fmul <2 x half> [[TMP2]], [[TMP4]]
-; GCN-NEXT:    store <2 x half> [[TMP5]], ptr [[C:%.*]], align 2
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[B:%.*]], align 2
+; GCN-NEXT:    [[TMP3:%.*]] = fmul <2 x half> [[TMP1]], [[TMP2]]
+; GCN-NEXT:    store <2 x half> [[TMP3]], ptr [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
   %i0 = load half, ptr addrspace(3) %a, align 2
@@ -51,10 +51,10 @@ define amdgpu_kernel void @test1_as_3_0_0(ptr addrspace(3) %a, ptr %b, ptr %c) {
 
 define amdgpu_kernel void @test1_as_0_0_3_v2f16(ptr %a, ptr %b, ptr addrspace(3) %c) {
 ; GCN-LABEL: @test1_as_0_0_3_v2f16(
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr [[B:%.*]], align 2
-; GCN-NEXT:    [[TMP5:%.*]] = fmul <2 x half> [[TMP2]], [[TMP4]]
-; GCN-NEXT:    store <2 x half> [[TMP5]], ptr addrspace(3) [[C:%.*]], align 2
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[B:%.*]], align 2
+; GCN-NEXT:    [[TMP3:%.*]] = fmul <2 x half> [[TMP1]], [[TMP2]]
+; GCN-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
   %i0 = load half, ptr %a, align 2
@@ -73,11 +73,11 @@ define amdgpu_kernel void @test1_as_0_0_3_v2f16(ptr %a, ptr %b, ptr addrspace(3)
 
 define amdgpu_kernel void @test1_fma_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) {
 ; GCN-LABEL: @test1_fma_v2f16(
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
-; GCN-NEXT:    [[TMP6:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
-; GCN-NEXT:    [[TMP7:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP2]], <2 x half> [[TMP4]], <2 x half> [[TMP6]])
-; GCN-NEXT:    store <2 x half> [[TMP7]], ptr addrspace(3) [[D:%.*]], align 2
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
+; GCN-NEXT:    [[TMP3:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP1]], <2 x half> [[TMP2]], <2 x half> [[TMP3]])
+; GCN-NEXT:    store <2 x half> [[TMP4]], ptr addrspace(3) [[D:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
   %i0 = load half, ptr addrspace(3) %a, align 2
@@ -99,10 +99,10 @@ define amdgpu_kernel void @test1_fma_v2f16(ptr addrspace(3) %a, ptr addrspace(3)
 
 define amdgpu_kernel void @mul_scalar_v2f16(ptr addrspace(3) %a, half %scalar, ptr addrspace(3) %c) {
 ; GCN-LABEL: @mul_scalar_v2f16(
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> poison, half [[SCALAR:%.*]], i32 0
-; GCN-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x half> [[TMP3]], <2 x half> poison, <2 x i32> zeroinitializer
-; GCN-NEXT:    [[TMP4:%.*]] = fmul <2 x half> [[TMP2]], [[SHUFFLE]]
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> poison, half [[SCALAR:%.*]], i32 0
+; GCN-NEXT:    [[TMP3:%.*]] = shufflevector <2 x half> [[TMP2]], <2 x half> poison, <2 x i32> zeroinitializer
+; GCN-NEXT:    [[TMP4:%.*]] = fmul <2 x half> [[TMP1]], [[TMP3]]
 ; GCN-NEXT:    store <2 x half> [[TMP4]], ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
@@ -119,9 +119,9 @@ define amdgpu_kernel void @mul_scalar_v2f16(ptr addrspace(3) %a, half %scalar, p
 
 define amdgpu_kernel void @fabs_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %c) {
 ; GCN-LABEL: @fabs_v2f16(
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[TMP2]])
-; GCN-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(3) [[C:%.*]], align 2
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[TMP1]])
+; GCN-NEXT:    store <2 x half> [[TMP2]], ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
   %i0 = load half, ptr addrspace(3) %a, align 2
@@ -137,12 +137,12 @@ define amdgpu_kernel void @fabs_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %c) 
 
 define amdgpu_kernel void @test1_fabs_fma_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) {
 ; GCN-LABEL: @test1_fabs_fma_v2f16(
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
-; GCN-NEXT:    [[TMP6:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
-; GCN-NEXT:    [[TMP7:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[TMP2]])
-; GCN-NEXT:    [[TMP8:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP7]], <2 x half> [[TMP4]], <2 x half> [[TMP6]])
-; GCN-NEXT:    store <2 x half> [[TMP8]], ptr addrspace(3) [[D:%.*]], align 2
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
+; GCN-NEXT:    [[TMP3:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[TMP1]])
+; GCN-NEXT:    [[TMP5:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP4]], <2 x half> [[TMP2]], <2 x half> [[TMP3]])
+; GCN-NEXT:    store <2 x half> [[TMP5]], ptr addrspace(3) [[D:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
   %i0 = load half, ptr addrspace(3) %a, align 2
@@ -172,12 +172,12 @@ define amdgpu_kernel void @test1_fabs_scalar_fma_v2f16(ptr addrspace(3) %a, ptr 
 ; GCN-NEXT:    [[I1_FABS:%.*]] = call half @llvm.fabs.f16(half [[I1]])
 ; GCN-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds half, ptr addrspace(3) [[B]], i64 1
 ; GCN-NEXT:    [[I4:%.*]] = load half, ptr addrspace(3) [[ARRAYIDX4]], align 2
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
-; GCN-NEXT:    [[TMP5:%.*]] = insertelement <2 x half> poison, half [[I1_FABS]], i32 0
-; GCN-NEXT:    [[TMP6:%.*]] = insertelement <2 x half> [[TMP5]], half [[I4]], i32 1
-; GCN-NEXT:    [[TMP7:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP2]], <2 x half> [[TMP6]], <2 x half> [[TMP4]])
-; GCN-NEXT:    store <2 x half> [[TMP7]], ptr addrspace(3) [[D:%.*]], align 2
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
+; GCN-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> poison, half [[I1_FABS]], i32 0
+; GCN-NEXT:    [[TMP4:%.*]] = insertelement <2 x half> [[TMP3]], half [[I4]], i32 1
+; GCN-NEXT:    [[TMP5:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP1]], <2 x half> [[TMP4]], <2 x half> [[TMP2]])
+; GCN-NEXT:    store <2 x half> [[TMP5]], ptr addrspace(3) [[D:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
   %i0 = load half, ptr addrspace(3) %a, align 2
@@ -200,22 +200,11 @@ define amdgpu_kernel void @test1_fabs_scalar_fma_v2f16(ptr addrspace(3) %a, ptr 
 }
 
 define amdgpu_kernel void @canonicalize_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %c) {
-; GFX9-LABEL: @canonicalize_v2f16(
-; GFX9-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GFX9-NEXT:    [[TMP3:%.*]] = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> [[TMP2]])
-; GFX9-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(3) [[C:%.*]], align 2
-; GFX9-NEXT:    ret void
-;
-; VI-LABEL: @canonicalize_v2f16(
-; VI-NEXT:    [[I0:%.*]] = load half, ptr addrspace(3) [[A:%.*]], align 2
-; VI-NEXT:    [[CANONICALIZE0:%.*]] = call half @llvm.canonicalize.f16(half [[I0]])
-; VI-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds half, ptr addrspace(3) [[A]], i64 1
-; VI-NEXT:    [[I3:%.*]] = load half, ptr addrspace(3) [[ARRAYIDX3]], align 2
-; VI-NEXT:    [[CANONICALIZE1:%.*]] = call half @llvm.canonicalize.f16(half [[I3]])
-; VI-NEXT:    store half [[CANONICALIZE0]], ptr addrspace(3) [[C:%.*]], align 2
-; VI-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds half, ptr addrspace(3) [[C]], i64 1
-; VI-NEXT:    store half [[CANONICALIZE1]], ptr addrspace(3) [[ARRAYIDX5]], align 2
-; VI-NEXT:    ret void
+; GCN-LABEL: @canonicalize_v2f16(
+; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> [[TMP1]])
+; GCN-NEXT:    store <2 x half> [[TMP2]], ptr addrspace(3) [[C:%.*]], align 2
+; GCN-NEXT:    ret void
 ;
   %i0 = load half, ptr addrspace(3) %a, align 2
   %canonicalize0 = call half @llvm.canonicalize.f16(half %i0)
@@ -234,3 +223,6 @@ declare half @llvm.canonicalize.f16(half) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX9: {{.*}}
+; VI: {{.*}}

@@ -23,7 +23,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/BuryPointer.h"
@@ -59,6 +59,8 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<DebugUnparseNoSemaAction>();
   case DebugUnparseWithSymbols:
     return std::make_unique<DebugUnparseWithSymbolsAction>();
+  case DebugUnparseWithModules:
+    return std::make_unique<DebugUnparseWithModulesAction>();
   case DebugDumpSymbols:
     return std::make_unique<DebugDumpSymbolsAction>();
   case DebugDumpParseTree:
@@ -151,11 +153,10 @@ updateDiagEngineForOptRemarks(clang::DiagnosticsEngine &diagsEng,
 bool executeCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->getFrontendOpts().showHelp) {
-    clang::driver::getDriverOptTable().printHelp(
-        llvm::outs(), "flang-new -fc1 [options] file...",
-        "LLVM 'Flang' Compiler",
+    clang::getDriverOptTable().printHelp(
+        llvm::outs(), "flang -fc1 [options] file...", "LLVM 'Flang' Compiler",
         /*ShowHidden=*/false, /*ShowAllAliases=*/false,
-        llvm::opt::Visibility(clang::driver::options::FC1Option));
+        llvm::opt::Visibility(clang::options::FC1Option));
     return true;
   }
 

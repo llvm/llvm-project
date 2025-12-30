@@ -23,8 +23,8 @@ define void @test_no_msan() {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[WHILE_BODY]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C]], label [[RETURN:%.*]] [
-; CHECK-NEXT:    i8 13, label [[WHILE_BODY]]
-; CHECK-NEXT:    i8 10, label [[WHILE_BODY]]
+; CHECK-NEXT:      i8 13, label [[WHILE_BODY]]
+; CHECK-NEXT:      i8 10, label [[WHILE_BODY]]
 ; CHECK-NEXT:    ]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -76,8 +76,8 @@ define void @test_msan() sanitize_memory {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[WHILE_BODY]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C]], label [[RETURN:%.*]] [
-; CHECK-NEXT:    i8 13, label [[WHILE_BODY]]
-; CHECK-NEXT:    i8 10, label [[WHILE_BODY]]
+; CHECK-NEXT:      i8 13, label [[WHILE_BODY]]
+; CHECK-NEXT:      i8 10, label [[WHILE_BODY]]
 ; CHECK-NEXT:    ]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void

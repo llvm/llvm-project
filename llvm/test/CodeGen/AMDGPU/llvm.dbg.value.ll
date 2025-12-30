@@ -1,9 +1,10 @@
-; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOOPT %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,OPT %s
+; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,NOOPT %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,OPT %s
+
 
 ; GCN-LABEL: {{^}}test_debug_value:
 ; NOOPT: .loc	1 1 42 prologue_end     ; /tmp/test_debug_value.cl:1:42
-; NOOPT-NEXT: s_load_dwordx2 s[4:5], s[6:7], 0x0
+; NOOPT-NEXT: s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; NOOPT-NEXT: .Ltmp
 ; NOOPT-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- $sgpr4_sgpr5
 
@@ -26,7 +27,7 @@ entry:
 ; OPT: s_endpgm
 define amdgpu_kernel void @only_undef_dbg_value() #1 {
 bb:
-  call void @llvm.dbg.value(metadata <4 x float> undef, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
+  call void @llvm.dbg.value(metadata <4 x float> poison, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
   ret void, !dbg !14
 }
 
@@ -52,4 +53,4 @@ attributes #1 = { nounwind readnone }
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !DIExpression()
 !14 = !DILocation(line: 1, column: 42, scope: !4)
-!15 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!15 = !{i32 1, !"amdhsa_code_object_version", i32 500}

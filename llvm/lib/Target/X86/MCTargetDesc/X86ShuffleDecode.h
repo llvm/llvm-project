@@ -28,7 +28,8 @@ template <typename T> class SmallVectorImpl;
 enum { SM_SentinelUndef = -1, SM_SentinelZero = -2 };
 
 /// Decode a 128-bit INSERTPS instruction as a v4f32 shuffle mask.
-void DecodeINSERTPSMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
+void DecodeINSERTPSMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask,
+                        bool SrcIsMem);
 
 // Insert the bottom Len elements from a second source into a vector starting at
 // element Idx.

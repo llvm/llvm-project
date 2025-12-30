@@ -41,8 +41,7 @@ PressureTracker::PressureTracker(const MCSchedModel &Model)
   }
 
   ResourceUsers.resize(NextResourceUsersIdx);
-  std::fill(ResourceUsers.begin(), ResourceUsers.end(),
-            std::make_pair<unsigned, unsigned>(~0U, 0U));
+  llvm::fill(ResourceUsers, std::make_pair<unsigned, unsigned>(~0U, 0U));
 }
 
 void PressureTracker::getResourceUsers(uint64_t ResourceMask,
@@ -58,7 +57,7 @@ void PressureTracker::getResourceUsers(uint64_t ResourceMask,
 }
 
 void PressureTracker::onInstructionDispatched(unsigned IID) {
-  IPI.insert(std::make_pair(IID, InstructionPressureInfo()));
+  IPI.try_emplace(IID);
 }
 
 void PressureTracker::onInstructionExecuted(unsigned IID) { IPI.erase(IID); }
@@ -270,9 +269,10 @@ void DependencyGraph::getCriticalSequence(
   // To obtain the sequence of critical edges, we simply follow the chain of
   // critical predecessors starting from node N (field
   // DGNode::CriticalPredecessor).
-  const auto It = std::max_element(
-      Nodes.begin(), Nodes.end(),
-      [](const DGNode &Lhs, const DGNode &Rhs) { return Lhs.Cost < Rhs.Cost; });
+  const auto It =
+      llvm::max_element(Nodes, [](const DGNode &Lhs, const DGNode &Rhs) {
+        return Lhs.Cost < Rhs.Cost;
+      });
   unsigned IID = std::distance(Nodes.begin(), It);
   Seq.resize(Nodes[IID].Depth);
   for (const DependencyEdge *&DE : llvm::reverse(Seq)) {
@@ -638,6 +638,52 @@ void BottleneckAnalysis::printView(raw_ostream &OS) const {
   TempStream.flush();
   OS << Buffer;
   printCriticalSequence(OS);
+}
+
+json::Value BottleneckAnalysis::toJSON() const {
+  if (!SeenStallCycles || !BPI.PressureIncreaseCycles) {
+    json::Object JO({{"PressureIncreaseCycles", 0}});
+    return JO;
+  }
+
+  json::Array CriticalSequence;
+  // get critical sequence
+  SmallVector<const DependencyEdge *, 16> Seq;
+  DG.getCriticalSequence(Seq);
+  if (!Seq.empty()) {
+    for (const DependencyEdge *&DE : Seq) {
+      json::Object DEJO({{"FromID", DE->FromIID},
+                         {"ToID", DE->ToIID},
+                         {"Type", static_cast<unsigned>(DE->Dep.Type)},
+                         {"ResourceOrRegID", DE->Dep.ResourceOrRegID}});
+      CriticalSequence.push_back(std::move(DEJO));
+    }
+  }
+
+  json::Array ResourcePressure;
+  if (BPI.PressureIncreaseCycles) {
+    ArrayRef<unsigned> Distribution = Tracker.getResourcePressureDistribution();
+    const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
+    for (unsigned I = 0, E = Distribution.size(); I < E; ++I) {
+      unsigned ReleaseAtCycles = Distribution[I];
+      if (ReleaseAtCycles) {
+        const MCProcResourceDesc &PRDesc = *SM.getProcResource(I);
+        json::Object RPJO({{PRDesc.Name, ReleaseAtCycles}});
+        ResourcePressure.push_back(std::move(RPJO));
+      }
+    }
+  }
+
+  json::Object JO({{"PressureIncreaseCycles", BPI.PressureIncreaseCycles},
+                   {"ResourcePressureCycles", BPI.ResourcePressureCycles},
+                   {"DataDependencyCycles", BPI.DataDependencyCycles},
+                   {"RegisterDependencyCycles", BPI.RegisterDependencyCycles},
+                   {"MemoryDependencyCycles", BPI.MemoryDependencyCycles},
+                   {"TotalCycles", TotalCycles},
+                   {"DependencyEdge", std::move(CriticalSequence)},
+                   {"ResourcePressure", std::move(ResourcePressure)}});
+
+  return JO;
 }
 
 } // namespace mca.

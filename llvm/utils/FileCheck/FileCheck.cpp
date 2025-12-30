@@ -193,7 +193,7 @@ struct MarkerStyle {
   std::string Note;
   /// Does this marker indicate inclusion by -dump-input-filter=error?
   bool FiltersAsError;
-  MarkerStyle() {}
+  MarkerStyle() = default;
   MarkerStyle(char Lead, raw_ostream::Colors Color,
               const std::string &Note = "", bool FiltersAsError = false)
       : Lead(Lead), Color(Color), Note(Note), FiltersAsError(FiltersAsError) {
@@ -384,7 +384,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidth) {
   struct CompareSMLoc {
-    bool operator()(const SMLoc &LHS, const SMLoc &RHS) const {
+    bool operator()(SMLoc LHS, SMLoc RHS) const {
       return LHS.getPointer() < RHS.getPointer();
     }
   };
@@ -641,7 +641,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       LineOS = &ElidedLinesOS;
     else {
       LineOS = &OS;
-      DumpEllipsisOrElidedLines(OS, ElidedLinesOS.str(), LabelWidth);
+      DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidth);
     }
 
     // Print right-aligned line number.
@@ -723,7 +723,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       ++AnnotationItr;
     }
   }
-  DumpEllipsisOrElidedLines(OS, ElidedLinesOS.str(), LabelWidth);
+  DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidth);
 
   OS << ">>>>>>\n";
 }
@@ -735,27 +735,22 @@ int main(int argc, char **argv) {
 
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv, /*Overview*/ "", /*Errs*/ nullptr,
-                              "FILECHECK_OPTS");
+                              /*VFS*/ nullptr, "FILECHECK_OPTS");
 
   // Select -dump-input* values.  The -help documentation specifies the default
   // value and which value to choose if an option is specified multiple times.
   // In the latter case, the general rule of thumb is to choose the value that
   // provides the most information.
   DumpInputValue DumpInput =
-      DumpInputs.empty()
-          ? DumpInputFail
-          : *std::max_element(DumpInputs.begin(), DumpInputs.end());
+      DumpInputs.empty() ? DumpInputFail : *llvm::max_element(DumpInputs);
   DumpInputFilterValue DumpInputFilter;
   if (DumpInputFilters.empty())
     DumpInputFilter = DumpInput == DumpInputAlways ? DumpInputFilterAll
                                                    : DumpInputFilterError;
   else
-    DumpInputFilter =
-        *std::max_element(DumpInputFilters.begin(), DumpInputFilters.end());
-  unsigned DumpInputContext = DumpInputContexts.empty()
-                                  ? 5
-                                  : *std::max_element(DumpInputContexts.begin(),
-                                                      DumpInputContexts.end());
+    DumpInputFilter = *llvm::max_element(DumpInputFilters);
+  unsigned DumpInputContext =
+      DumpInputContexts.empty() ? 5 : *llvm::max_element(DumpInputContexts);
 
   if (DumpInput == DumpInputHelp) {
     DumpInputAnnotationHelp(outs());

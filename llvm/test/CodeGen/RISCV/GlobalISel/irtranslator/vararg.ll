@@ -25,9 +25,6 @@
 ; The nounwind attribute is omitted for some of the tests, to check that CFI
 ; directives are correctly generated.
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-
 declare void @notdead(ptr)
 
 ; Although frontends are recommended to not generate va_arg due to the lack of
@@ -67,8 +64,8 @@ define i32 @va1(ptr %fmt, ...) {
   ; RV32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
   ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (p0) from %ir.va)
   ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; RV32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C1]](s32)
-  ; RV32-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
+  ; RV32-NEXT:   %20:_(p0) = nuw nusw inbounds G_PTR_ADD [[LOAD]], [[C1]](s32)
+  ; RV32-NEXT:   G_STORE %20(p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
   ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.argp.cur)
   ; RV32-NEXT:   $x10 = COPY [[LOAD1]](s32)
   ; RV32-NEXT:   PseudoRET implicit $x10
@@ -105,8 +102,8 @@ define i32 @va1(ptr %fmt, ...) {
   ; RV64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
   ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (p0) from %ir.va, align 4)
   ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; RV64-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C1]](s64)
-  ; RV64-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
+  ; RV64-NEXT:   %20:_(p0) = nuw nusw inbounds G_PTR_ADD [[LOAD]], [[C1]](s64)
+  ; RV64-NEXT:   G_STORE %20(p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
   ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.argp.cur)
   ; RV64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD1]](s32)
   ; RV64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
@@ -453,7 +450,6 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ret i32 %1
 }
 
-
 define i32 @va1_va_arg(ptr %fmt, ...) nounwind {
   ; RV32-LABEL: name: va1_va_arg
   ; RV32: bb.1 (%ir-block.0):
@@ -642,7 +638,7 @@ define void @va1_caller() nounwind {
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; LP64D-NEXT:   PseudoRET
-  %1 = call i32 (ptr, ...) @va1(ptr undef, double 1.0, i32 2)
+  %1 = call i32 (ptr, ...) @va1(ptr poison, double 1.0, i32 2)
   ret void
 }
 
@@ -687,8 +683,8 @@ define i64 @va2(ptr %fmt, ...) nounwind {
   ; RV32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
   ; RV32-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ADD]](s32)
   ; RV32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; RV32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C3]](s32)
-  ; RV32-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
+  ; RV32-NEXT:   %25:_(p0) = nuw nusw inbounds G_PTR_ADD [[INTTOPTR]], [[C3]](s32)
+  ; RV32-NEXT:   G_STORE %25(p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
   ; RV32-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
   ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[INTTOPTR1]](p0) :: (load (s64) from %ir.3)
   ; RV32-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](s64)
@@ -733,8 +729,8 @@ define i64 @va2(ptr %fmt, ...) nounwind {
   ; RV64-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
   ; RV64-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ADD]](s32)
   ; RV64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; RV64-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C3]](s64)
-  ; RV64-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
+  ; RV64-NEXT:   %25:_(p0) = nuw nusw inbounds G_PTR_ADD [[INTTOPTR]], [[C3]](s64)
+  ; RV64-NEXT:   G_STORE %25(p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
   ; RV64-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
   ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[INTTOPTR1]](p0) :: (load (s64) from %ir.3)
   ; RV64-NEXT:   $x10 = COPY [[LOAD1]](s64)
@@ -932,7 +928,7 @@ define void @va2_caller() nounwind {
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   PseudoRET
- %1 = call i64 (ptr, ...) @va2(ptr undef, double 1.000000e+00)
+ %1 = call i64 (ptr, ...) @va2(ptr poison, double 1.000000e+00)
  ret void
 }
 
@@ -974,8 +970,8 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
   ; RV32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
   ; RV32-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ADD]](s32)
   ; RV32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C3]](s32)
-  ; RV32-NEXT:   G_STORE [[PTR_ADD5]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
+  ; RV32-NEXT:   %24:_(p0) = nuw nusw inbounds G_PTR_ADD [[INTTOPTR]], [[C3]](s32)
+  ; RV32-NEXT:   G_STORE %24(p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
   ; RV32-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
   ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[INTTOPTR1]](p0) :: (load (s64) from %ir.3)
   ; RV32-NEXT:   [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[MV]], [[LOAD1]]
@@ -1020,8 +1016,8 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
   ; RV64-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
   ; RV64-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ADD]](s32)
   ; RV64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C3]](s64)
-  ; RV64-NEXT:   G_STORE [[PTR_ADD6]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
+  ; RV64-NEXT:   %25:_(p0) = nuw nusw inbounds G_PTR_ADD [[INTTOPTR]], [[C3]](s64)
+  ; RV64-NEXT:   G_STORE %25(p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
   ; RV64-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
   ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[INTTOPTR1]](p0) :: (load (s64) from %ir.3)
   ; RV64-NEXT:   [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[COPY1]], [[LOAD1]]
@@ -1248,8 +1244,6 @@ define void @va3_caller() nounwind {
  %1 = call i64 (i32, i64, ...) @va3(i32 2, i64 1111, double 2.000000e+00)
  ret void
 }
-
-declare void @llvm.va_copy(ptr, ptr)
 
 define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; ILP32-LABEL: name: va4_va_copy
@@ -1724,8 +1718,8 @@ define i32 @va_large_stack(ptr %fmt, ...) {
   ; RV32-NEXT:   G_VASTART [[FRAME_INDEX2]](p0) :: (store (s32) into %ir.va)
   ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.va)
   ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; RV32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C1]](s32)
-  ; RV32-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX2]](p0) :: (store (p0) into %ir.va)
+  ; RV32-NEXT:   %21:_(p0) = nuw nusw inbounds G_PTR_ADD [[LOAD]], [[C1]](s32)
+  ; RV32-NEXT:   G_STORE %21(p0), [[FRAME_INDEX2]](p0) :: (store (p0) into %ir.va)
   ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.argp.cur)
   ; RV32-NEXT:   $x10 = COPY [[LOAD1]](s32)
   ; RV32-NEXT:   PseudoRET implicit $x10
@@ -1763,8 +1757,8 @@ define i32 @va_large_stack(ptr %fmt, ...) {
   ; RV64-NEXT:   G_VASTART [[FRAME_INDEX2]](p0) :: (store (s64) into %ir.va)
   ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.va, align 4)
   ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; RV64-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C1]](s64)
-  ; RV64-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX2]](p0) :: (store (p0) into %ir.va, align 4)
+  ; RV64-NEXT:   %21:_(p0) = nuw nusw inbounds G_PTR_ADD [[LOAD]], [[C1]](s64)
+  ; RV64-NEXT:   G_STORE %21(p0), [[FRAME_INDEX2]](p0) :: (store (p0) into %ir.va, align 4)
   ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.argp.cur)
   ; RV64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD1]](s32)
   ; RV64-NEXT:   $x10 = COPY [[ANYEXT]](s64)

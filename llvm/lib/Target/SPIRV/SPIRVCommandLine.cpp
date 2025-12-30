@@ -1,0 +1,278 @@
+//===--- SPIRVCommandLine.cpp ---- Command Line Options ---------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains definitions of classes and functions needed for
+// processing, parsing, and using CLI options for the SPIR-V backend.
+//
+//===----------------------------------------------------------------------===//
+
+#include "SPIRVCommandLine.h"
+#include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/TargetParser/Triple.h"
+
+#include <functional>
+#include <iterator>
+#include <map>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#define DEBUG_TYPE "spirv-commandline"
+
+using namespace llvm;
+
+static const std::map<StringRef, SPIRV::Extension::Extension>
+    SPIRVExtensionMap = {
+        {"SPV_EXT_shader_atomic_float_add",
+         SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_add},
+        {"SPV_EXT_shader_atomic_float16_add",
+         SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float16_add},
+        {"SPV_EXT_shader_atomic_float_min_max",
+         SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
+        {"SPV_INTEL_16bit_atomics",
+         SPIRV::Extension::Extension::SPV_INTEL_16bit_atomics},
+        {"SPV_NV_shader_atomic_fp16_vector",
+         SPIRV::Extension::Extension::SPV_NV_shader_atomic_fp16_vector},
+        {"SPV_EXT_arithmetic_fence",
+         SPIRV::Extension::Extension::SPV_EXT_arithmetic_fence},
+        {"SPV_EXT_demote_to_helper_invocation",
+         SPIRV::Extension::Extension::SPV_EXT_demote_to_helper_invocation},
+        {"SPV_EXT_descriptor_indexing",
+         SPIRV::Extension::Extension::SPV_EXT_descriptor_indexing},
+        {"SPV_EXT_fragment_fully_covered",
+         SPIRV::Extension::Extension::SPV_EXT_fragment_fully_covered},
+        {"SPV_EXT_fragment_invocation_density",
+         SPIRV::Extension::Extension::SPV_EXT_fragment_invocation_density},
+        {"SPV_EXT_fragment_shader_interlock",
+         SPIRV::Extension::Extension::SPV_EXT_fragment_shader_interlock},
+        {"SPV_EXT_mesh_shader",
+         SPIRV::Extension::Extension::SPV_EXT_mesh_shader},
+        {"SPV_EXT_shader_stencil_export",
+         SPIRV::Extension::Extension::SPV_EXT_shader_stencil_export},
+        {"SPV_EXT_shader_viewport_index_layer",
+         SPIRV::Extension::Extension::SPV_EXT_shader_viewport_index_layer},
+        {"SPV_GOOGLE_hlsl_functionality1",
+         SPIRV::Extension::Extension::SPV_GOOGLE_hlsl_functionality1},
+        {"SPV_GOOGLE_user_type",
+         SPIRV::Extension::Extension::SPV_GOOGLE_user_type},
+        {"SPV_ALTERA_arbitrary_precision_integers",
+         SPIRV::Extension::Extension::SPV_ALTERA_arbitrary_precision_integers},
+        {"SPV_INTEL_cache_controls",
+         SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
+        {"SPV_INTEL_float_controls2",
+         SPIRV::Extension::Extension::SPV_INTEL_float_controls2},
+        {"SPV_INTEL_global_variable_fpga_decorations",
+         SPIRV::Extension::Extension::
+             SPV_INTEL_global_variable_fpga_decorations},
+        {"SPV_INTEL_global_variable_host_access",
+         SPIRV::Extension::Extension::SPV_INTEL_global_variable_host_access},
+        {"SPV_INTEL_optnone", SPIRV::Extension::Extension::SPV_INTEL_optnone},
+        {"SPV_EXT_optnone", SPIRV::Extension::Extension::SPV_EXT_optnone},
+        {"SPV_INTEL_usm_storage_classes",
+         SPIRV::Extension::Extension::SPV_INTEL_usm_storage_classes},
+        {"SPV_INTEL_split_barrier",
+         SPIRV::Extension::Extension::SPV_INTEL_split_barrier},
+        {"SPV_INTEL_subgroups",
+         SPIRV::Extension::Extension::SPV_INTEL_subgroups},
+        {"SPV_INTEL_media_block_io",
+         SPIRV::Extension::Extension::SPV_INTEL_media_block_io},
+        {"SPV_INTEL_memory_access_aliasing",
+         SPIRV::Extension::Extension::SPV_INTEL_memory_access_aliasing},
+        {"SPV_INTEL_joint_matrix",
+         SPIRV::Extension::Extension::SPV_INTEL_joint_matrix},
+        {"SPV_KHR_16bit_storage",
+         SPIRV::Extension::Extension::SPV_KHR_16bit_storage},
+        {"SPV_KHR_device_group",
+         SPIRV::Extension::Extension::SPV_KHR_device_group},
+        {"SPV_KHR_fragment_shading_rate",
+         SPIRV::Extension::Extension::SPV_KHR_fragment_shading_rate},
+        {"SPV_KHR_multiview", SPIRV::Extension::Extension::SPV_KHR_multiview},
+        {"SPV_KHR_post_depth_coverage",
+         SPIRV::Extension::Extension::SPV_KHR_post_depth_coverage},
+        {"SPV_KHR_shader_draw_parameters",
+         SPIRV::Extension::Extension::SPV_KHR_shader_draw_parameters},
+        {"SPV_KHR_ray_tracing",
+         SPIRV::Extension::Extension::SPV_KHR_ray_tracing},
+        {"SPV_KHR_uniform_group_instructions",
+         SPIRV::Extension::Extension::SPV_KHR_uniform_group_instructions},
+        {"SPV_KHR_no_integer_wrap_decoration",
+         SPIRV::Extension::Extension::SPV_KHR_no_integer_wrap_decoration},
+        {"SPV_KHR_float_controls",
+         SPIRV::Extension::Extension::SPV_KHR_float_controls},
+        {"SPV_KHR_expect_assume",
+         SPIRV::Extension::Extension::SPV_KHR_expect_assume},
+        {"SPV_KHR_bit_instructions",
+         SPIRV::Extension::Extension::SPV_KHR_bit_instructions},
+        {"SPV_KHR_integer_dot_product",
+         SPIRV::Extension::Extension::SPV_KHR_integer_dot_product},
+        {"SPV_KHR_linkonce_odr",
+         SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
+        {"SPV_INTEL_inline_assembly",
+         SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
+        {"SPV_INTEL_bindless_images",
+         SPIRV::Extension::Extension::SPV_INTEL_bindless_images},
+        {"SPV_INTEL_bfloat16_arithmetic",
+         SPIRV::Extension::Extension::SPV_INTEL_bfloat16_arithmetic},
+        {"SPV_INTEL_bfloat16_conversion",
+         SPIRV::Extension::Extension::SPV_INTEL_bfloat16_conversion},
+        {"SPV_KHR_subgroup_rotate",
+         SPIRV::Extension::Extension::SPV_KHR_subgroup_rotate},
+        {"SPV_INTEL_variable_length_array",
+         SPIRV::Extension::Extension::SPV_INTEL_variable_length_array},
+        {"SPV_INTEL_function_pointers",
+         SPIRV::Extension::Extension::SPV_INTEL_function_pointers},
+        {"SPV_KHR_shader_clock",
+         SPIRV::Extension::Extension::SPV_KHR_shader_clock},
+        {"SPV_KHR_cooperative_matrix",
+         SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
+        {"SPV_KHR_non_semantic_info",
+         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+        {"SPV_KHR_ray_query", SPIRV::Extension::Extension::SPV_KHR_ray_query},
+        {"SPV_EXT_shader_image_int64",
+         SPIRV::Extension::Extension::SPV_EXT_shader_image_int64},
+        {"SPV_KHR_fragment_shader_barycentric",
+         SPIRV::Extension::Extension::SPV_KHR_fragment_shader_barycentric},
+        {"SPV_KHR_physical_storage_buffer",
+         SPIRV::Extension::Extension::SPV_KHR_physical_storage_buffer},
+        {"SPV_KHR_vulkan_memory_model",
+         SPIRV::Extension::Extension::SPV_KHR_vulkan_memory_model},
+        {"SPV_NV_shader_subgroup_partitioned",
+         SPIRV::Extension::Extension::SPV_NV_shader_subgroup_partitioned},
+        {"SPV_INTEL_long_composites",
+         SPIRV::Extension::Extension::SPV_INTEL_long_composites},
+        {"SPV_INTEL_fp_max_error",
+         SPIRV::Extension::Extension::SPV_INTEL_fp_max_error},
+        {"SPV_INTEL_subgroup_matrix_multiply_accumulate",
+         SPIRV::Extension::Extension::
+             SPV_INTEL_subgroup_matrix_multiply_accumulate},
+        {"SPV_INTEL_ternary_bitwise_function",
+         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function},
+        {"SPV_INTEL_2d_block_io",
+         SPIRV::Extension::Extension::SPV_INTEL_2d_block_io},
+        {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
+        {"SPV_KHR_float_controls2",
+         SPIRV::Extension::Extension::SPV_KHR_float_controls2},
+        {"SPV_INTEL_tensor_float32_conversion",
+         SPIRV::Extension::Extension::SPV_INTEL_tensor_float32_conversion},
+        {"SPV_KHR_bfloat16", SPIRV::Extension::Extension::SPV_KHR_bfloat16},
+        {"SPV_EXT_relaxed_printf_string_address_space",
+         SPIRV::Extension::Extension::
+             SPV_EXT_relaxed_printf_string_address_space},
+        {"SPV_INTEL_predicated_io",
+         SPIRV::Extension::Extension::SPV_INTEL_predicated_io},
+        {"SPV_KHR_maximal_reconvergence",
+         SPIRV::Extension::Extension::SPV_KHR_maximal_reconvergence},
+        {"SPV_INTEL_kernel_attributes",
+         SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes},
+        {"SPV_ALTERA_blocking_pipes",
+         SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes},
+        {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
+        {"SPV_ALTERA_arbitrary_precision_fixed_point",
+         SPIRV::Extension::Extension::
+             SPV_ALTERA_arbitrary_precision_fixed_point},
+        {"SPV_EXT_image_raw10_raw12",
+         SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12}};
+
+bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
+                                  StringRef ArgValue,
+                                  std::set<SPIRV::Extension::Extension> &Vals) {
+  SmallVector<StringRef, 10> Tokens;
+  ArgValue.split(Tokens, ",", -1, false);
+
+  std::set<SPIRV::Extension::Extension> EnabledExtensions;
+
+  auto M = partition(Tokens, [](auto &&T) { return T.starts_with('+'); });
+
+  if (std::any_of(M, Tokens.end(), [](auto &&T) { return T == "all"; }))
+    copy(make_second_range(SPIRVExtensionMap), std::inserter(Vals, Vals.end()));
+
+  for (auto &&Token : make_range(Tokens.begin(), M)) {
+    StringRef ExtensionName = Token.substr(1);
+    auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
+
+    if (NameValuePair == SPIRVExtensionMap.end())
+      return O.error("Unknown SPIR-V extension: " + Token.str());
+
+    EnabledExtensions.insert(NameValuePair->second);
+  }
+
+  for (auto &&Token : make_range(M, Tokens.end())) {
+    if (Token == "all")
+      continue;
+
+    if (Token.size() == 3 && Token.upper() == "KHR") {
+      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
+        if (StringRef(ExtensionName).starts_with("SPV_KHR_"))
+          Vals.insert(ExtensionEnum);
+      continue;
+    }
+
+    if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
+      return O.error("Invalid extension list format: " + Token);
+
+    auto NameValuePair = SPIRVExtensionMap.find(Token.substr(1));
+
+    if (NameValuePair == SPIRVExtensionMap.cend())
+      return O.error("Unknown SPIR-V extension: " + Token.str());
+    if (EnabledExtensions.count(NameValuePair->second))
+      return O.error(
+          "Extension cannot be allowed and disallowed at the same time: " +
+          NameValuePair->first);
+
+    Vals.erase(NameValuePair->second);
+  }
+
+  Vals.insert(EnabledExtensions.cbegin(), EnabledExtensions.cend());
+
+  return false;
+}
+
+StringRef SPIRVExtensionsParser::checkExtensions(
+    const std::vector<std::string> &ExtNames,
+    std::set<SPIRV::Extension::Extension> &AllowedExtensions) {
+  for (const auto &Ext : ExtNames) {
+    if (Ext == "all") {
+      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
+        AllowedExtensions.insert(ExtensionEnum);
+      break;
+    }
+    auto It = SPIRVExtensionMap.find(Ext);
+    if (It == SPIRVExtensionMap.end())
+      return Ext;
+    AllowedExtensions.insert(It->second);
+  }
+  return StringRef();
+}
+
+std::set<SPIRV::Extension::Extension>
+SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
+  std::set<SPIRV::Extension::Extension> R;
+  SPIRV::Environment::Environment CurrentEnvironment =
+      SPIRV::Environment::Environment::EnvOpenCL;
+  if (TT.getOS() == Triple::Vulkan)
+    CurrentEnvironment = SPIRV::Environment::Environment::EnvVulkan;
+
+  for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap) {
+    EnvironmentList AllowedEnv = getSymbolicOperandAllowedEnvironments(
+        SPIRV::OperandCategory::OperandCategory::ExtensionOperand,
+        ExtensionEnum);
+
+    if (llvm::is_contained(AllowedEnv, CurrentEnvironment))
+      R.insert(ExtensionEnum);
+  }
+
+  if (TT.getVendor() == Triple::AMD) {
+    // AMD uses the translator to recover LLVM-IR from SPIRV. Currently, the
+    // translator doesn't implement the SPV_KHR_float_controls2 extension.
+    R.erase(SPIRV::Extension::SPV_KHR_float_controls2);
+  }
+
+  return R;
+}

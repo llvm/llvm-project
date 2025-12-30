@@ -105,6 +105,9 @@ nub_bool_t DNBProcessMemoryDeallocate(nub_process_t pid,
                                       nub_addr_t addr) DNB_EXPORT;
 int DNBProcessMemoryRegionInfo(nub_process_t pid, nub_addr_t addr,
                                DNBRegionInfo *region_info) DNB_EXPORT;
+nub_bool_t DNBProcessGetMemoryTags(nub_process_t pid, nub_addr_t addr,
+                                   nub_size_t size,
+                                   std::vector<uint8_t> &tags) DNB_EXPORT;
 std::string
 DNBProcessGetProfileData(nub_process_t pid,
                          DNBProfileDataScanType scanType) DNB_EXPORT;
@@ -210,6 +213,8 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
                           uint64_t plo_pthread_tsd_base_address_offset,
                           uint64_t plo_pthread_tsd_base_offset,
                           uint64_t plo_pthread_tsd_entry_size);
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+DNBGetMainBinaryCPUTypes(nub_process_t pid);
 JSONGenerator::ObjectSP
 DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands);
 JSONGenerator::ObjectSP

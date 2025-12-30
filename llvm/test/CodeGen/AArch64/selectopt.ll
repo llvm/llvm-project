@@ -6,6 +6,7 @@
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=neoverse-n1 -S < %s | FileCheck %s --check-prefix=CHECKOO
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=cortex-a710 -S < %s | FileCheck %s --check-prefix=CHECKOO
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -debugify-and-strip-all-safe -select-optimize -mtriple=aarch64-linux-gnu -mcpu=generic -S < %s | FileCheck %s --check-prefix=CHECKOO
 ; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=generic -S < %s | FileCheck %s --check-prefix=CHECKOO
 ; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a55 -S < %s | FileCheck %s --check-prefix=CHECKII
 ; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a510 -S < %s | FileCheck %s --check-prefix=CHECKII
@@ -341,10 +342,16 @@ define void @replace_or(ptr nocapture noundef %newst, ptr noundef %t, ptr nounde
 ; CHECKOO-NEXT:    [[TMP8:%.*]] = load i64, ptr [[FLOW83]], align 8
 ; CHECKOO-NEXT:    [[CMP84:%.*]] = icmp slt i64 [[TMP7]], [[TMP8]]
 ; CHECKOO-NEXT:    [[ADD:%.*]] = zext i1 [[CMP84]] to i64
-; CHECKOO-NEXT:    [[SPEC_SELECT:%.*]] = or disjoint i64 [[MUL]], [[ADD]]
+; CHECKOO-NEXT:    [[CMP84_FROZEN:%.*]] = freeze i1 [[CMP84]]
+; CHECKOO-NEXT:    br i1 [[CMP84_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
+; CHECKOO:       select.true.sink:
+; CHECKOO-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[MUL]], 1
+; CHECKOO-NEXT:    br label [[SELECT_FALSE]]
+; CHECKOO:       select.end:
+; CHECKOO-NEXT:    [[SPEC_SELECT:%.*]] = phi i64 [ [[TMP9]], [[SELECT_END]] ], [ [[MUL]], [[IF_THEN]] ]
 ; CHECKOO-NEXT:    br label [[IF_END87]]
 ; CHECKOO:       if.end87:
-; CHECKOO-NEXT:    [[CMP_1]] = phi i64 [ [[MUL]], [[WHILE_BODY]] ], [ [[SPEC_SELECT]], [[IF_THEN]] ]
+; CHECKOO-NEXT:    [[CMP_1]] = phi i64 [ [[MUL]], [[WHILE_BODY]] ], [ [[SPEC_SELECT]], [[SELECT_FALSE]] ]
 ; CHECKOO-NEXT:    [[CMP16_NOT:%.*]] = icmp sgt i64 [[CMP_1]], [[MA]]
 ; CHECKOO-NEXT:    br i1 [[CMP16_NOT]], label [[WHILE_END]], label [[LAND_RHS]]
 ; CHECKOO:       while.end:
@@ -659,14 +666,15 @@ define i32 @or_samegroup(ptr nocapture noundef %x, i32 noundef %n, ptr nocapture
 ; CHECKOO-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
 ; CHECKOO-NEXT:    [[SEL_FROZEN:%.*]] = freeze i1 [[CMP5]]
 ; CHECKOO-NEXT:    br i1 [[SEL_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
-; CHECKOO:       select.false:
-; CHECKOO-NEXT:    br label [[SELECT_END]]
+; CHECKOO:       select.true.sink:
+; CHECKOO-NEXT:    [[TMP2:%.*]] = or i32 1, [[ADD]]
+; CHECKOO-NEXT:    br label [[SELECT_FALSE]]
 ; CHECKOO:       select.end:
-; CHECKOO-NEXT:    [[SEL:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ 1, [[SELECT_FALSE]] ]
-; CHECKOO-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[SEL]]
+; CHECKOO-NEXT:    [[SEL:%.*]] = phi i32 [ [[ADD]], [[SELECT_END]] ], [ 1, [[IF_THEN]] ]
+; CHECKOO-NEXT:    [[OR:%.*]] = phi i32 [ [[TMP2]], [[SELECT_END]] ], [ 1, [[IF_THEN]] ]
 ; CHECKOO-NEXT:    br label [[IF_END]]
 ; CHECKOO:       if.end:
-; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[SEL]], [[SELECT_END]] ], [ 0, [[FOR_BODY]] ]
+; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[SEL]], [[SELECT_FALSE]] ], [ 0, [[FOR_BODY]] ]
 ; CHECKOO-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
 ; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -776,10 +784,16 @@ define i32 @or_oneusevalues(ptr nocapture noundef %x, i32 noundef %n, ptr nocapt
 ; CHECKOO-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
 ; CHECKOO-NEXT:    [[ADD1:%.*]] = add i32 [[ADD]], 1
 ; CHECKOO-NEXT:    [[ADD2:%.*]] = or i32 [[ADD1]], 1
-; CHECKOO-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[ADD2]]
+; CHECKOO-NEXT:    [[CMP5_FROZEN:%.*]] = freeze i1 [[CMP5]]
+; CHECKOO-NEXT:    br i1 [[CMP5_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
+; CHECKOO:       select.true.sink:
+; CHECKOO-NEXT:    [[TMP2:%.*]] = or i32 1, [[ADD2]]
+; CHECKOO-NEXT:    br label [[SELECT_FALSE]]
+; CHECKOO:       select.end:
+; CHECKOO-NEXT:    [[OR:%.*]] = phi i32 [ [[TMP2]], [[SELECT_END]] ], [ [[ADD2]], [[IF_THEN]] ]
 ; CHECKOO-NEXT:    br label [[IF_END]]
 ; CHECKOO:       if.end:
-; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[OR]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
+; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[OR]], [[SELECT_FALSE]] ], [ 0, [[FOR_BODY]] ]
 ; CHECKOO-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
 ; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -860,4 +874,125 @@ if.end:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+declare i64 @payload(i64, ptr, ptr, i64)
+
+define void @outer_latch_heuristic(ptr %dst, ptr %src, i64 %p, i64 %dim) {
+; CHECKOO-LABEL: @outer_latch_heuristic(
+; CHECKOO-NEXT:  entry:
+; CHECKOO-NEXT:    br label [[OUTER_LOOP:%.*]]
+; CHECKOO:       outer.loop:
+; CHECKOO-NEXT:    [[K_020_US:%.*]] = phi i64 [ [[INC7_US:%.*]], [[SELECT_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECKOO-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[SELECT_END]] ], [ 0, [[ENTRY]] ]
+; CHECKOO-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[SELECT_END]] ], [ 0, [[ENTRY]] ]
+; CHECKOO-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
+; CHECKOO-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX_US]], align 8
+; CHECKOO-NEXT:    [[ARRAYIDX1_US:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
+; CHECKOO-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARRAYIDX1_US]], align 8
+; CHECKOO-NEXT:    br label [[INNER_LOOP:%.*]]
+; CHECKOO:       inner.loop:
+; CHECKOO-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[DIM:%.*]], [[OUTER_LOOP]] ], [ [[LSR_IV_NEXT:%.*]], [[INNER_LOOP]] ]
+; CHECKOO-NEXT:    [[DIFF_04_I_US:%.*]] = phi i64 [ [[CALL_I_US:%.*]], [[INNER_LOOP]] ], [ 0, [[OUTER_LOOP]] ]
+; CHECKOO-NEXT:    [[CALL_I_US]] = tail call i64 @payload(i64 [[DIFF_04_I_US]], ptr [[TMP0]], ptr [[TMP1]], i64 [[P:%.*]])
+; CHECKOO-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
+; CHECKOO-NEXT:    [[EXITCOND_NOT_I_US:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
+; CHECKOO-NEXT:    br i1 [[EXITCOND_NOT_I_US]], label [[LATCH:%.*]], label [[INNER_LOOP]]
+; CHECKOO:       latch:
+; CHECKOO-NEXT:    [[CMP2_US:%.*]] = icmp sgt i64 [[CALL_I_US]], -1
+; CHECKOO-NEXT:    [[DIFF_0_LCSSA_I_LOBIT_US:%.*]] = lshr i64 [[CALL_I_US]], 63
+; CHECKOO-NEXT:    [[CMP2_US_FROZEN:%.*]] = freeze i1 [[CMP2_US]]
+; CHECKOO-NEXT:    br i1 [[CMP2_US_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]]
+; CHECKOO:       select.true.sink:
+; CHECKOO-NEXT:    [[TMP2:%.*]] = add nsw i64 [[J]], 1
+; CHECKOO-NEXT:    br label [[SELECT_END]]
+; CHECKOO:       select.false.sink:
+; CHECKOO-NEXT:    [[TMP3:%.*]] = add nsw i64 1, [[I]]
+; CHECKOO-NEXT:    br label [[SELECT_END]]
+; CHECKOO:       select.end:
+; CHECKOO-NEXT:    [[I_NEXT]] = phi i64 [ [[I]], [[SELECT_TRUE_SINK]] ], [ [[TMP3]], [[SELECT_FALSE_SINK]] ]
+; CHECKOO-NEXT:    [[J_NEXT]] = phi i64 [ [[TMP2]], [[SELECT_TRUE_SINK]] ], [ [[J]], [[SELECT_FALSE_SINK]] ]
+; CHECKOO-NEXT:    [[COND_IN_US:%.*]] = phi ptr [ [[ARRAYIDX1_US]], [[SELECT_TRUE_SINK]] ], [ [[ARRAYIDX_US]], [[SELECT_FALSE_SINK]] ]
+; CHECKOO-NEXT:    [[INC4_US:%.*]] = zext i1 [[CMP2_US]] to i64
+; CHECKOO-NEXT:    [[COND_US:%.*]] = load ptr, ptr [[COND_IN_US]], align 8
+; CHECKOO-NEXT:    [[ARRAYIDX6_US:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[K_020_US]]
+; CHECKOO-NEXT:    store ptr [[COND_US]], ptr [[ARRAYIDX6_US]], align 8
+; CHECKOO-NEXT:    [[INC7_US]] = add i64 [[K_020_US]], 1
+; CHECKOO-NEXT:    [[EXITCOND23_NOT:%.*]] = icmp eq i64 [[K_020_US]], 1000
+; CHECKOO-NEXT:    br i1 [[EXITCOND23_NOT]], label [[EXIT:%.*]], label [[OUTER_LOOP]]
+; CHECKOO:       exit:
+; CHECKOO-NEXT:    ret void
+;
+; CHECKII-LABEL: @outer_latch_heuristic(
+; CHECKII-NEXT:  entry:
+; CHECKII-NEXT:    br label [[OUTER_LOOP:%.*]]
+; CHECKII:       outer.loop:
+; CHECKII-NEXT:    [[K_020_US:%.*]] = phi i64 [ [[INC7_US:%.*]], [[LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECKII-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[LATCH]] ], [ 0, [[ENTRY]] ]
+; CHECKII-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH]] ], [ 0, [[ENTRY]] ]
+; CHECKII-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds ptr, ptr [[SRC:%.*]], i64 [[I]]
+; CHECKII-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX_US]], align 8
+; CHECKII-NEXT:    [[ARRAYIDX1_US:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[J]]
+; CHECKII-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARRAYIDX1_US]], align 8
+; CHECKII-NEXT:    br label [[INNER_LOOP:%.*]]
+; CHECKII:       inner.loop:
+; CHECKII-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[DIM:%.*]], [[OUTER_LOOP]] ], [ [[LSR_IV_NEXT:%.*]], [[INNER_LOOP]] ]
+; CHECKII-NEXT:    [[DIFF_04_I_US:%.*]] = phi i64 [ [[CALL_I_US:%.*]], [[INNER_LOOP]] ], [ 0, [[OUTER_LOOP]] ]
+; CHECKII-NEXT:    [[CALL_I_US]] = tail call i64 @payload(i64 [[DIFF_04_I_US]], ptr [[TMP0]], ptr [[TMP1]], i64 [[P:%.*]])
+; CHECKII-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
+; CHECKII-NEXT:    [[EXITCOND_NOT_I_US:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
+; CHECKII-NEXT:    br i1 [[EXITCOND_NOT_I_US]], label [[LATCH]], label [[INNER_LOOP]]
+; CHECKII:       latch:
+; CHECKII-NEXT:    [[CMP2_US:%.*]] = icmp sgt i64 [[CALL_I_US]], -1
+; CHECKII-NEXT:    [[DIFF_0_LCSSA_I_LOBIT_US:%.*]] = lshr i64 [[CALL_I_US]], 63
+; CHECKII-NEXT:    [[I_NEXT]] = add nsw i64 [[DIFF_0_LCSSA_I_LOBIT_US]], [[I]]
+; CHECKII-NEXT:    [[INC4_US:%.*]] = zext i1 [[CMP2_US]] to i64
+; CHECKII-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], [[INC4_US]]
+; CHECKII-NEXT:    [[COND_IN_US:%.*]] = select i1 [[CMP2_US]], ptr [[ARRAYIDX1_US]], ptr [[ARRAYIDX_US]]
+; CHECKII-NEXT:    [[COND_US:%.*]] = load ptr, ptr [[COND_IN_US]], align 8
+; CHECKII-NEXT:    [[ARRAYIDX6_US:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[K_020_US]]
+; CHECKII-NEXT:    store ptr [[COND_US]], ptr [[ARRAYIDX6_US]], align 8
+; CHECKII-NEXT:    [[INC7_US]] = add i64 [[K_020_US]], 1
+; CHECKII-NEXT:    [[EXITCOND23_NOT:%.*]] = icmp eq i64 [[K_020_US]], 1000
+; CHECKII-NEXT:    br i1 [[EXITCOND23_NOT]], label [[EXIT:%.*]], label [[OUTER_LOOP]]
+; CHECKII:       exit:
+; CHECKII-NEXT:    ret void
+;
+entry:
+  br label %outer.loop
+
+outer.loop:
+  %k.020.us = phi i64 [ %inc7.us, %latch ], [ 0, %entry ]
+  %j = phi i64 [ %j.next, %latch ], [ 0, %entry ]
+  %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
+  %arrayidx.us = getelementptr inbounds ptr, ptr %src, i64 %i
+  %4 = load ptr, ptr %arrayidx.us, align 8
+  %arrayidx1.us = getelementptr inbounds ptr, ptr %src, i64 %j
+  %5 = load ptr, ptr %arrayidx1.us, align 8
+  br label %inner.loop
+
+inner.loop:
+  %lsr.iv = phi i64 [ %dim, %outer.loop ], [ %lsr.iv.next, %inner.loop ]
+  %diff.04.i.us = phi i64 [ %call.i.us, %inner.loop ], [ 0, %outer.loop ]
+  %call.i.us = tail call i64 @payload(i64 %diff.04.i.us, ptr %4, ptr %5, i64 %p)
+  %lsr.iv.next = add i64 %lsr.iv, -1
+  %exitcond.not.i.us = icmp eq i64 %lsr.iv.next, 0
+  br i1 %exitcond.not.i.us, label %latch, label %inner.loop
+
+latch:
+  %cmp2.us = icmp sgt i64 %call.i.us, -1
+  %diff.0.lcssa.i.lobit.us = lshr i64 %call.i.us, 63
+  %i.next = add nsw i64 %diff.0.lcssa.i.lobit.us, %i
+  %inc4.us = zext i1 %cmp2.us to i64
+  %j.next = add nsw i64 %j, %inc4.us
+  %cond.in.us = select i1 %cmp2.us, ptr %arrayidx1.us, ptr %arrayidx.us
+  %cond.us = load ptr, ptr %cond.in.us, align 8
+  %arrayidx6.us = getelementptr inbounds ptr, ptr %dst, i64 %k.020.us
+  store ptr %cond.us, ptr %arrayidx6.us, align 8
+  %inc7.us = add i64 %k.020.us, 1
+  %exitcond23.not = icmp eq i64 %k.020.us, 1000
+  br i1 %exitcond23.not, label %exit, label %outer.loop
+
+exit:
+  ret void
 }

@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -32,7 +31,6 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
@@ -59,12 +57,10 @@ class ARMDAGToDAGISel : public SelectionDAGISel {
   const ARMSubtarget *Subtarget;
 
 public:
-  static char ID;
-
   ARMDAGToDAGISel() = delete;
 
   explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, tm, OptLevel) {}
+      : SelectionDAGISel(tm, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -114,13 +110,6 @@ public:
 
   bool SelectAddrModeImm12(SDValue N, SDValue &Base, SDValue &OffImm);
   bool SelectLdStSOReg(SDValue N, SDValue &Base, SDValue &Offset, SDValue &Opc);
-
-  bool SelectCMOVPred(SDValue N, SDValue &Pred, SDValue &Reg) {
-    const ConstantSDNode *CN = cast<ConstantSDNode>(N);
-    Pred = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(N), MVT::i32);
-    Reg = CurDAG->getRegister(ARM::CPSR, MVT::i32);
-    return true;
-  }
 
   bool SelectAddrMode2OffsetReg(SDNode *Op, SDValue N,
                              SDValue &Offset, SDValue &Opc);
@@ -317,9 +306,6 @@ private:
 
   bool tryInsertVectorElt(SDNode *N);
 
-  // Select special operations if node forms integer ABS pattern
-  bool tryABSOp(SDNode *N);
-
   bool tryReadRegister(SDNode *N);
   bool tryWriteRegister(SDNode *N);
 
@@ -362,11 +348,19 @@ private:
   /// selected when N would have been selected.
   void replaceDAGValue(const SDValue &N, SDValue M);
 };
+
+class ARMDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  ARMDAGToDAGISelLegacy(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<ARMDAGToDAGISel>(tm, OptLevel)) {}
+};
 }
 
-char ARMDAGToDAGISel::ID = 0;
+char ARMDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(ARMDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(ARMDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -508,14 +502,14 @@ bool ARMDAGToDAGISel::hasNoVMLxHazardUse(SDNode *N) const {
   if (!N->hasOneUse())
     return false;
 
-  SDNode *Use = *N->use_begin();
-  if (Use->getOpcode() == ISD::CopyToReg)
+  SDNode *User = *N->user_begin();
+  if (User->getOpcode() == ISD::CopyToReg)
     return true;
-  if (Use->isMachineOpcode()) {
+  if (User->isMachineOpcode()) {
     const ARMBaseInstrInfo *TII = static_cast<const ARMBaseInstrInfo *>(
         CurDAG->getSubtarget().getInstrInfo());
 
-    const MCInstrDesc &MCID = TII->get(Use->getMachineOpcode());
+    const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
     if (MCID.mayStore())
       return true;
     unsigned Opcode = MCID.getOpcode();
@@ -706,7 +700,7 @@ bool ARMDAGToDAGISel::SelectAddrModeImm12(SDValue N,
         Base = CurDAG->getTargetFrameIndex(
             FI, TLI->getPointerTy(CurDAG->getDataLayout()));
       }
-      OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedTargetConstant(RHSC, SDLoc(N), MVT::i32);
       return true;
     }
   }
@@ -875,7 +869,7 @@ bool ARMDAGToDAGISel::SelectAddrMode2OffsetImmPre(SDNode *Op, SDValue N,
   if (isScaledConstantInRange(N, /*Scale=*/1, 0, 0x1000, Val)) { // 12 bits.
     if (AddSub == ARM_AM::sub) Val *= -1;
     Offset = CurDAG->getRegister(0, MVT::i32);
-    Opc = CurDAG->getTargetConstant(Val, SDLoc(Op), MVT::i32);
+    Opc = CurDAG->getSignedTargetConstant(Val, SDLoc(Op), MVT::i32);
     return true;
   }
 
@@ -1179,7 +1173,7 @@ ARMDAGToDAGISel::SelectThumbAddrModeImm5S(SDValue N, unsigned Scale,
   int RHSC;
   if (isScaledConstantInRange(N.getOperand(1), Scale, 0, 32, RHSC)) {
     Base = N.getOperand(0);
-    OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+    OffImm = CurDAG->getSignedTargetConstant(RHSC, SDLoc(N), MVT::i32);
     return true;
   }
 
@@ -1241,7 +1235,7 @@ bool ARMDAGToDAGISel::SelectThumbAddrModeSP(SDValue N,
         if (MFI.getObjectAlign(FI) >= Align(4)) {
           Base = CurDAG->getTargetFrameIndex(
               FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-          OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+          OffImm = CurDAG->getSignedTargetConstant(RHSC, SDLoc(N), MVT::i32);
           return true;
         }
       }
@@ -1261,8 +1255,8 @@ bool ARMDAGToDAGISel::SelectTAddrModeImm7(SDValue N, SDValue &Base,
       Base = N.getOperand(0);
       if (N.getOpcode() == ISD::SUB)
         RHSC = -RHSC;
-      OffImm =
-          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedTargetConstant(RHSC * (1 << Shift), SDLoc(N),
+                                               MVT::i32);
       return true;
     }
   }
@@ -1324,7 +1318,7 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm12(SDValue N,
         Base = CurDAG->getTargetFrameIndex(
             FI, TLI->getPointerTy(CurDAG->getDataLayout()));
       }
-      OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedTargetConstant(RHSC, SDLoc(N), MVT::i32);
       return true;
     }
   }
@@ -1350,8 +1344,8 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm8(SDValue N, SDValue &Base,
 
       if (N.getOpcode() == ISD::SUB)
         RHSC = -RHSC;
-      OffImm =
-          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedTargetConstant(RHSC * (1 << Shift), SDLoc(N),
+                                               MVT::i32);
       return true;
     }
   }
@@ -1381,7 +1375,7 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm8(SDValue N,
         Base = CurDAG->getTargetFrameIndex(
             FI, TLI->getPointerTy(CurDAG->getDataLayout()));
       }
-      OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedTargetConstant(RHSC, SDLoc(N), MVT::i32);
       return true;
     }
   }
@@ -1398,8 +1392,8 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm8Offset(SDNode *Op, SDValue N,
   int RHSC;
   if (isScaledConstantInRange(N, /*Scale=*/1, 0, 0x100, RHSC)) { // 8 bits.
     OffImm = ((AM == ISD::PRE_INC) || (AM == ISD::POST_INC))
-      ? CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32)
-      : CurDAG->getTargetConstant(-RHSC, SDLoc(N), MVT::i32);
+                 ? CurDAG->getSignedTargetConstant(RHSC, SDLoc(N), MVT::i32)
+                 : CurDAG->getSignedTargetConstant(-RHSC, SDLoc(N), MVT::i32);
     return true;
   }
 
@@ -1422,8 +1416,8 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm7(SDValue N, SDValue &Base,
 
       if (N.getOpcode() == ISD::SUB)
         RHSC = -RHSC;
-      OffImm =
-          CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32);
+      OffImm = CurDAG->getSignedTargetConstant(RHSC * (1 << Shift), SDLoc(N),
+                                               MVT::i32);
       return true;
     }
   }
@@ -1465,11 +1459,11 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm7Offset(SDNode *Op, SDValue N,
   int RHSC;
   // 7 bit constant, shifted by Shift.
   if (isScaledConstantInRange(N, 1 << Shift, 0, 0x80, RHSC)) {
-    OffImm =
-        ((AM == ISD::PRE_INC) || (AM == ISD::POST_INC))
-            ? CurDAG->getTargetConstant(RHSC * (1 << Shift), SDLoc(N), MVT::i32)
-            : CurDAG->getTargetConstant(-RHSC * (1 << Shift), SDLoc(N),
-                                        MVT::i32);
+    OffImm = ((AM == ISD::PRE_INC) || (AM == ISD::POST_INC))
+                 ? CurDAG->getSignedTargetConstant(RHSC * (1 << Shift),
+                                                   SDLoc(N), MVT::i32)
+                 : CurDAG->getSignedTargetConstant(-RHSC * (1 << Shift),
+                                                   SDLoc(N), MVT::i32);
     return true;
   }
   return false;
@@ -1479,7 +1473,7 @@ template <int Min, int Max>
 bool ARMDAGToDAGISel::SelectImmediateInRange(SDValue N, SDValue &OffImm) {
   int Val;
   if (isScaledConstantInRange(N, 1, Min, Max, Val)) {
-    OffImm = CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
+    OffImm = CurDAG->getSignedTargetConstant(Val, SDLoc(N), MVT::i32);
     return true;
   }
   return false;
@@ -3032,11 +3026,6 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
   }
   if (is64BitVector || NumVecs == 1) {
     // Double registers and VLD1 quad registers are directly supported.
-  } else if (NumVecs == 2) {
-    const SDValue OpsA[] = {MemAddr, Align, Pred, Reg0, Chain};
-    SDNode *VLdA = CurDAG->getMachineNode(QOpcodes0[OpcodeIndex], dl, ResTy,
-                                          MVT::Other, OpsA);
-    Chain = SDValue(VLdA, 1);
   } else {
     SDValue ImplDef = SDValue(
         CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, dl, ResTy), 0);
@@ -3467,45 +3456,6 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
   return false;
 }
 
-/// Target-specific DAG combining for ISD::SUB.
-/// Target-independent combining lowers SELECT_CC nodes of the form
-/// select_cc setg[ge] X,  0,  X, -X
-/// select_cc setgt    X, -1,  X, -X
-/// select_cc setl[te] X,  0, -X,  X
-/// select_cc setlt    X,  1, -X,  X
-/// which represent Integer ABS into:
-/// Y = sra (X, size(X)-1); sub (xor (X, Y), Y)
-/// ARM instruction selection detects the latter and matches it to
-/// ARM::ABS or ARM::t2ABS machine node.
-bool ARMDAGToDAGISel::tryABSOp(SDNode *N){
-  SDValue SUBSrc0 = N->getOperand(0);
-  SDValue SUBSrc1 = N->getOperand(1);
-  EVT VT = N->getValueType(0);
-
-  if (Subtarget->isThumb1Only())
-    return false;
-
-  if (SUBSrc0.getOpcode() != ISD::XOR || SUBSrc1.getOpcode() != ISD::SRA)
-    return false;
-
-  SDValue XORSrc0 = SUBSrc0.getOperand(0);
-  SDValue XORSrc1 = SUBSrc0.getOperand(1);
-  SDValue SRASrc0 = SUBSrc1.getOperand(0);
-  SDValue SRASrc1 = SUBSrc1.getOperand(1);
-  ConstantSDNode *SRAConstant =  dyn_cast<ConstantSDNode>(SRASrc1);
-  EVT XType = SRASrc0.getValueType();
-  unsigned Size = XType.getSizeInBits() - 1;
-
-  if (XORSrc1 == SUBSrc1 && XORSrc0 == SRASrc0 && XType.isInteger() &&
-      SRAConstant != nullptr && Size == SRAConstant->getZExtValue()) {
-    unsigned Opcode = Subtarget->isThumb2() ? ARM::t2ABS : ARM::ABS;
-    CurDAG->SelectNodeTo(N, Opcode, VT, XORSrc0);
-    return true;
-  }
-
-  return false;
-}
-
 /// We've got special pseudo-instructions for these
 void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   unsigned Opcode;
@@ -3597,7 +3547,11 @@ void ARMDAGToDAGISel::SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI) {
     ReplaceNode(And.getNode(), NewN);
   } else if (Range->first == Range->second) {
     //  3. Only one bit is set. We can shift this into the sign bit and use a
-    //     PL/MI comparison.
+    //     PL/MI comparison. This is not safe if CMPZ has multiple uses because
+    //     only one of them (the one currently being selected) will be switched
+    //     to use the new condition code.
+    if (!N->hasOneUse())
+      return;
     NewN = EmitShift(ARM::tLSLri, X, 31 - Range->first);
     ReplaceNode(And.getNode(), NewN);
 
@@ -3688,12 +3642,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   case ISD::INLINEASM_BR:
     if (tryInlineAsm(N))
       return;
-    break;
-  case ISD::SUB:
-    // Select special operations if SUB node forms integer ABS pattern
-    if (tryABSOp(N))
-      return;
-    // Other cases are autogenerated.
     break;
   case ISD::Constant: {
     unsigned Val = N->getAsZExtVal();
@@ -3860,8 +3808,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
               ConstantMaterializationCost(~Imm, Subtarget)) {
         // The current immediate costs more to materialize than a negated
         // immediate, so negate the immediate and use a BIC.
-        SDValue NewImm =
-          CurDAG->getConstant(~N1C->getZExtValue(), dl, MVT::i32);
+        SDValue NewImm = CurDAG->getConstant(~Imm, dl, MVT::i32);
         // If the new constant didn't exist before, reposition it in the topological
         // ordering so it is just before N. Otherwise, don't touch its location.
         if (NewImm->getNodeId() == -1)
@@ -4018,31 +3965,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       return;
     // Other cases are autogenerated.
     break;
-  case ARMISD::WLSSETUP: {
-    SDNode *New = CurDAG->getMachineNode(ARM::t2WhileLoopSetup, dl, MVT::i32,
-                                         N->getOperand(0));
-    ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
-  case ARMISD::WLS: {
-    SDNode *New = CurDAG->getMachineNode(ARM::t2WhileLoopStart, dl, MVT::Other,
-                                         N->getOperand(1), N->getOperand(2),
-                                         N->getOperand(0));
-    ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
-  case ARMISD::LE: {
-    SDValue Ops[] = { N->getOperand(1),
-                      N->getOperand(2),
-                      N->getOperand(0) };
-    unsigned Opc = ARM::t2LoopEnd;
-    SDNode *New = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
-    ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
   case ARMISD::LDRD: {
     if (Subtarget->isThumb2())
       break; // TableGen handles isel in this case.
@@ -4096,17 +4018,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     CurDAG->RemoveDeadNode(N);
     return;
   }
-  case ARMISD::LOOP_DEC: {
-    SDValue Ops[] = { N->getOperand(1),
-                      N->getOperand(2),
-                      N->getOperand(0) };
-    SDNode *Dec =
-      CurDAG->getMachineNode(ARM::t2LoopDec, dl,
-                             CurDAG->getVTList(MVT::i32, MVT::Other), Ops);
-    ReplaceUses(N, Dec);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
   case ARMISD::BRCOND: {
     // Pattern: (ARMbrcond:void (bb:Other):$dst, (imm:i32):$cc)
     // Emits: (Bcc:void (bb:Other):$dst, (imm:i32):$cc)
@@ -4125,17 +4036,15 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     SDValue Chain = N->getOperand(0);
     SDValue N1 = N->getOperand(1);
     SDValue N2 = N->getOperand(2);
-    SDValue N3 = N->getOperand(3);
-    SDValue InGlue = N->getOperand(4);
+    SDValue Flags = N->getOperand(3);
     assert(N1.getOpcode() == ISD::BasicBlock);
     assert(N2.getOpcode() == ISD::Constant);
-    assert(N3.getOpcode() == ISD::Register);
 
     unsigned CC = (unsigned)N2->getAsZExtVal();
 
-    if (InGlue.getOpcode() == ARMISD::CMPZ) {
-      if (InGlue.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
-        SDValue Int = InGlue.getOperand(0);
+    if (Flags.getOpcode() == ARMISD::CMPZ) {
+      if (Flags.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+        SDValue Int = Flags.getOperand(0);
         uint64_t ID = Int->getConstantOperandVal(1);
 
         // Handle low-overhead loops.
@@ -4157,15 +4066,15 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
           ReplaceUses(N, LoopEnd);
           CurDAG->RemoveDeadNode(N);
-          CurDAG->RemoveDeadNode(InGlue.getNode());
+          CurDAG->RemoveDeadNode(Flags.getNode());
           CurDAG->RemoveDeadNode(Int.getNode());
           return;
         }
       }
 
       bool SwitchEQNEToPLMI;
-      SelectCMPZ(InGlue.getNode(), SwitchEQNEToPLMI);
-      InGlue = N->getOperand(4);
+      SelectCMPZ(Flags.getNode(), SwitchEQNEToPLMI);
+      Flags = N->getOperand(3);
 
       if (SwitchEQNEToPLMI) {
         switch ((ARMCC::CondCodes)CC) {
@@ -4181,25 +4090,18 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     }
 
     SDValue Tmp2 = CurDAG->getTargetConstant(CC, dl, MVT::i32);
-    SDValue Ops[] = { N1, Tmp2, N3, Chain, InGlue };
-    SDNode *ResNode = CurDAG->getMachineNode(Opc, dl, MVT::Other,
-                                             MVT::Glue, Ops);
-    Chain = SDValue(ResNode, 0);
-    if (N->getNumValues() == 2) {
-      InGlue = SDValue(ResNode, 1);
-      ReplaceUses(SDValue(N, 1), InGlue);
-    }
-    ReplaceUses(SDValue(N, 0),
-                SDValue(Chain.getNode(), Chain.getResNo()));
-    CurDAG->RemoveDeadNode(N);
+    Chain = CurDAG->getCopyToReg(Chain, dl, ARM::CPSR, Flags, SDValue());
+    SDValue Ops[] = {N1, Tmp2, CurDAG->getRegister(ARM::CPSR, MVT::i32), Chain,
+                     Chain.getValue(1)};
+    CurDAG->SelectNodeTo(N, Opc, MVT::Other, Ops);
     return;
   }
 
   case ARMISD::CMPZ: {
     // select (CMPZ X, #-C) -> (CMPZ (ADDS X, #C), #0)
     //   This allows us to avoid materializing the expensive negative constant.
-    //   The CMPZ #0 is useless and will be peepholed away but we need to keep it
-    //   for its glue output.
+    //   The CMPZ #0 is useless and will be peepholed away but we need to keep
+    //   it for its flags output.
     SDValue X = N->getOperand(0);
     auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1).getNode());
     if (C && C->getSExtValue() < 0 && Subtarget->isThumb()) {
@@ -4226,7 +4128,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       }
       if (Add) {
         SDValue Ops2[] = {SDValue(Add, 0), CurDAG->getConstant(0, dl, MVT::i32)};
-        CurDAG->MorphNodeTo(N, ARMISD::CMPZ, CurDAG->getVTList(MVT::Glue), Ops2);
+        CurDAG->MorphNodeTo(N, ARMISD::CMPZ, N->getVTList(), Ops2);
       }
     }
     // Other cases are autogenerated.
@@ -4234,11 +4136,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   }
 
   case ARMISD::CMOV: {
-    SDValue InGlue = N->getOperand(4);
+    SDValue Flags = N->getOperand(3);
 
-    if (InGlue.getOpcode() == ARMISD::CMPZ) {
+    if (Flags.getOpcode() == ARMISD::CMPZ) {
       bool SwitchEQNEToPLMI;
-      SelectCMPZ(InGlue.getNode(), SwitchEQNEToPLMI);
+      SelectCMPZ(Flags.getNode(), SwitchEQNEToPLMI);
 
       if (SwitchEQNEToPLMI) {
         SDValue ARMcc = N->getOperand(2);
@@ -4255,10 +4157,9 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
         }
         SDValue NewARMcc = CurDAG->getConstant((unsigned)CC, dl, MVT::i32);
         SDValue Ops[] = {N->getOperand(0), N->getOperand(1), NewARMcc,
-                         N->getOperand(3), N->getOperand(4)};
+                         N->getOperand(3)};
         CurDAG->MorphNodeTo(N, ARMISD::CMOV, N->getVTList(), Ops);
       }
-
     }
     // Other cases are autogenerated.
     break;
@@ -5231,7 +5132,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       return;
     case Intrinsic::arm_mve_vsbc:
     case Intrinsic::arm_mve_vsbc_predicated:
-      SelectMVE_VADCSBC(N, ARM::MVE_VSBC, ARM::MVE_VSBCI, true,
+      SelectMVE_VADCSBC(N, ARM::MVE_VSBC, ARM::MVE_VSBCI, false,
                         IntNo == Intrinsic::arm_mve_vsbc_predicated);
       return;
     case Intrinsic::arm_mve_vshlc:
@@ -5891,5 +5792,5 @@ bool ARMDAGToDAGISel::SelectInlineAsmMemoryOperand(
 ///
 FunctionPass *llvm::createARMISelDag(ARMBaseTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new ARMDAGToDAGISel(TM, OptLevel);
+  return new ARMDAGToDAGISelLegacy(TM, OptLevel);
 }

@@ -137,10 +137,10 @@ define <4 x float> @test_select(float %f, float %g) {
 
 define <2 x i64> @PR24922(<2 x i64> %v) {
 ; CHECK-LABEL: @PR24922(
-; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <2 x i64> [[V:%.*]], i64 0, i64 0
-; CHECK-NEXT:    ret <2 x i64> [[RESULT1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> <i1 ptrtoint (ptr @PR24922 to i1), i1 true>, <2 x i64> [[V:%.*]], <2 x i64> <i64 0, i64 poison>
+; CHECK-NEXT:    ret <2 x i64> [[RESULT]]
 ;
-  %result = select <2 x i1> <i1 icmp eq (i64 extractelement (<2 x i64> bitcast (<4 x i32> <i32 15, i32 15, i32 15, i32 15> to <2 x i64>), i64 0), i64 0), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer
+  %result = select <2 x i1> <i1 ptrtoint (ptr @PR24922 to i1), i1 true>, <2 x i64> %v, <2 x i64> zeroinitializer
   ret <2 x i64> %result
 }
 
@@ -515,7 +515,7 @@ define ptr @gep_vbase_w_s_idx(<2 x ptr> %base, i64 %index) {
 
 define ptr @gep_splat_base_w_s_idx(ptr %base) {
 ; CHECK-LABEL: @gep_splat_base_w_s_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> undef, ptr %base, i32 0
@@ -528,9 +528,7 @@ define ptr @gep_splat_base_w_s_idx(ptr %base) {
 
 define ptr @gep_splat_base_w_cv_idx(ptr %base) {
 ; CHECK-LABEL: @gep_splat_base_w_cv_idx(
-; CHECK-NEXT:    [[BASEVEC2:%.*]] = insertelement <2 x ptr> poison, ptr [[BASE:%.*]], i64 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x ptr> [[BASEVEC2]], <2 x i64> <i64 poison, i64 1>
-; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x ptr> [[GEP]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> undef, ptr %base, i32 0
@@ -542,9 +540,8 @@ define ptr @gep_splat_base_w_cv_idx(ptr %base) {
 
 define ptr @gep_splat_base_w_vidx(ptr %base, <2 x i64> %idxvec) {
 ; CHECK-LABEL: @gep_splat_base_w_vidx(
-; CHECK-NEXT:    [[BASEVEC2:%.*]] = insertelement <2 x ptr> poison, ptr [[BASE:%.*]], i64 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x ptr> [[BASEVEC2]], <2 x i64> [[IDXVEC:%.*]]
-; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x ptr> [[GEP]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[IDXVEC:%.*]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> undef, ptr %base, i32 0
@@ -569,7 +566,7 @@ define ptr @gep_cvbase_w_s_idx(<2 x ptr> %base, i64 %raw_addr) {
 
 define ptr @gep_cvbase_w_cv_idx(<2 x ptr> %base, i64 %raw_addr) {
 ; CHECK-LABEL: @gep_cvbase_w_cv_idx(
-; CHECK-NEXT:    ret ptr getelementptr inbounds (i32, ptr @GLOBAL, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @GLOBAL, i64 4)
 ;
   %gep = getelementptr i32, <2 x ptr> <ptr @GLOBAL, ptr @GLOBAL>, <2 x i64> <i64 0, i64 1>
   %ee = extractelement <2 x ptr> %gep, i32 1
@@ -579,7 +576,7 @@ define ptr @gep_cvbase_w_cv_idx(<2 x ptr> %base, i64 %raw_addr) {
 
 define ptr @gep_sbase_w_cv_idx(ptr %base) {
 ; CHECK-LABEL: @gep_sbase_w_cv_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %gep = getelementptr i32, ptr %base, <2 x i64> <i64 0, i64 1>
@@ -600,10 +597,7 @@ define ptr @gep_sbase_w_splat_idx(ptr %base, i64 %idx) {
 }
 define ptr @gep_splat_both(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @gep_splat_both(
-; CHECK-NEXT:    [[BASEVEC2:%.*]] = insertelement <2 x ptr> poison, ptr [[BASE:%.*]], i64 1
-; CHECK-NEXT:    [[IDXVEC2:%.*]] = insertelement <2 x i64> poison, i64 [[IDX:%.*]], i64 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x ptr> [[BASEVEC2]], <2 x i64> [[IDXVEC2]]
-; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x ptr> [[GEP]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> undef, ptr %base, i32 0
@@ -644,9 +638,9 @@ define ptr @gep_demanded_lane_undef(ptr %base, i64 %idx) {
 ;; indices.
 define ptr @PR41624(<2 x ptr> %a) {
 ; CHECK-LABEL: @PR41624(
-; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> <i64 5, i64 5>, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[W]], i64 0
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[W:%.*]], i64 0
+; CHECK-NEXT:    [[R1:%.*]] = getelementptr i8, ptr [[R]], i64 40
+; CHECK-NEXT:    ret ptr [[R1]]
 ;
   %w = getelementptr { i32, i32 }, <2 x ptr> %a, <2 x i64> <i64 5, i64 5>, <2 x i32> zeroinitializer
   %r = extractelement <2 x ptr> %w, i32 0
@@ -660,8 +654,8 @@ define ptr @PR41624(<2 x ptr> %a) {
 define ptr @zero_sized_type_extract(<4 x i64> %arg, i64 %arg1) {
 ; CHECK-LABEL: @zero_sized_type_extract(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[T:%.*]] = getelementptr inbounds [0 x i32], <4 x ptr> <ptr @global, ptr poison, ptr poison, ptr poison>, <4 x i64> <i64 0, i64 poison, i64 poison, i64 poison>, <4 x i64> [[ARG:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = extractelement <4 x ptr> [[T]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i64> [[ARG:%.*]], i64 0
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds i32, ptr @global, i64 [[TMP0]]
 ; CHECK-NEXT:    ret ptr [[T2]]
 ;
 bb:
@@ -1158,4 +1152,54 @@ define i4 @common_binop_demand_via_extelt_op0_mismatch_elt1(<2 x i4> %x, <2 x i4
   %b_xy0 = extractelement <2 x i4> %b_xy, i32 1
   call void @use(<2 x i4> %b_xshuf_y)
   ret i4 %b_xy0
+}
+
+define <2 x i8> @common_binop_demand_via_splat_mask_poison(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @common_binop_demand_via_splat_mask_poison(
+; CHECK-NEXT:    [[YSPLAT:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> poison, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[X:%.*]], [[YSPLAT]]
+; CHECK-NEXT:    [[MSPLAT:%.*]] = shufflevector <2 x i8> [[VV]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[VV]], [[MSPLAT]]
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %ysplat = shufflevector <2 x i8> %y, <2 x i8> poison, <2 x i32> <i32 0, i32 poison>                       ; <y0, poison>
+  %vv = add <2 x i8> %x, %ysplat                                                                            ; <x0+y0, poison>
+  %m = add <2 x i8> %x, %y                                                                                  ; <x0+y0, x1+y1>
+  %msplat = shufflevector <2 x i8> %m, <2 x i8> poison, <2 x i32> <i32 0, i32 0>      ; LeftDemanded = 1    ; <x0+y0, x0+y0>
+  %res = add <2 x i8> %vv, %msplat                                                                          ; <x0+y0+x0+y0, poison>
+  ret <2 x i8> %res
+}
+
+define <2 x i8> @common_binop_demand_via_splat_mask_poison_2(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @common_binop_demand_via_splat_mask_poison_2(
+; CHECK-NEXT:    [[YSPLAT:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[X:%.*]], [[YSPLAT]]
+; CHECK-NEXT:    [[M:%.*]] = add <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[MSPLAT:%.*]] = shufflevector <2 x i8> [[M]], <2 x i8> [[Y]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[VV]], [[MSPLAT]]
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %ysplat = shufflevector <2 x i8> %y, <2 x i8> poison, <2 x i32> <i32 poison, i32 0>
+  %vv = add <2 x i8> %x, %ysplat
+  %m = add <2 x i8> %x, %y
+  %msplat = shufflevector <2 x i8> %m, <2 x i8> %y, <2 x i32> <i32 0, i32 2>           ; LeftDemanded = 1, RightDemanded = 1
+  %res = add <2 x i8> %vv, %msplat
+  ret <2 x i8> %res
+}
+
+define <2 x i8> @common_binop_demand_via_splat_mask_poison_3(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @common_binop_demand_via_splat_mask_poison_3(
+; CHECK-NEXT:    [[YSPLAT:%.*]] = shufflevector <2 x i8> [[Y:%.*]], <2 x i8> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[VV:%.*]] = add <2 x i8> [[X:%.*]], [[YSPLAT]]
+; CHECK-NEXT:    [[M:%.*]] = add <2 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    [[MSPLAT:%.*]] = shufflevector <2 x i8> [[M]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[VV]], [[MSPLAT]]
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %ysplat = shufflevector <2 x i8> %y, <2 x i8> poison, <2 x i32> <i32 poison, i32 0>
+  %vv = add <2 x i8> %x, %ysplat
+  %m = add <2 x i8> %x, %y
+  %msplat = shufflevector <2 x i8> %m, <2 x i8> poison, <2 x i32> <i32 0, i32 0>       ; LeftDemanded = 1
+  %res = add <2 x i8> %vv, %msplat
+  ret <2 x i8> %res
 }

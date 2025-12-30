@@ -28,15 +28,22 @@ endif()
 string(REPLACE ";" "" libomp_suffix "${libomp_suffix}")
 
 # Set exports locations
+if(WIN32)
+  set(LIBOMP_SHORT_OS win)
+elseif(APPLE)
+  set(LIBOMP_SHORT_OS mac)
+else()
+  set(LIBOMP_SHORT_OS lin)
+endif()
 if(${MIC})
-  set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_${LIBOMP_MIC_ARCH}") # e.g., lin_knf, lin_knc
+  set(libomp_platform "${LIBOMP_SHORT_OS}_${LIBOMP_MIC_ARCH}") # e.g., lin_knf, lin_knc
 else()
   if(${IA32})
-    set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_32")
+    set(libomp_platform "${LIBOMP_SHORT_OS}_32")
   elseif(${INTEL64})
-    set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_32e")
+    set(libomp_platform "${LIBOMP_SHORT_OS}_32e")
   else()
-    set(libomp_platform "${LIBOMP_PERL_SCRIPT_OS}_${LIBOMP_ARCH}") # e.g., lin_arm, lin_ppc64
+    set(libomp_platform "${LIBOMP_SHORT_OS}_${LIBOMP_ARCH}") # e.g., lin_arm, lin_ppc64
   endif()
 endif()
 set(LIBOMP_EXPORTS_DIR "${LIBOMP_BASE_DIR}/exports")
@@ -58,11 +65,14 @@ if(${LIBOMP_OMPT_SUPPORT})
   )
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
-  add_custom_command(TARGET libomp-mod POST_BUILD
+  # We cannot attach a POST_BUILD command to libomp-mod, so instead attach it
+  # to omp and ensure that libomp-mod is built before by adding a dependency
+  add_custom_command(TARGET omp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_MOD_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy omp_lib.mod ${LIBOMP_EXPORTS_MOD_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy omp_lib_kinds.mod ${LIBOMP_EXPORTS_MOD_DIR}
   )
+  add_dependencies(omp libomp-mod)
   add_custom_command(TARGET omp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
   )

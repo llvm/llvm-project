@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Block.h"
+
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/BitVector.h"
+
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -52,8 +53,13 @@ void Block::insertAfter(Block *block) {
 /// specific block.
 void Block::moveBefore(Block *block) {
   assert(block->getParent() && "cannot insert before a block without a parent");
-  block->getParent()->getBlocks().splice(
-      block->getIterator(), getParent()->getBlocks(), getIterator());
+  moveBefore(block->getParent(), block->getIterator());
+}
+
+/// Unlink this block from its current region and insert it right before the
+/// block that the given iterator points to in the region region.
+void Block::moveBefore(Region *region, llvm::iplist<Block>::iterator iterator) {
+  region->getBlocks().splice(iterator, getParent()->getBlocks(), getIterator());
 }
 
 /// Unlink this Block from its parent Region and delete it.
@@ -111,7 +117,7 @@ bool Block::verifyOpOrder() {
   if (!isOpOrderValid())
     return false;
   // The order is valid if there are less than 2 operations.
-  if (operations.empty() || std::next(operations.begin()) == operations.end())
+  if (operations.empty() || llvm::hasSingleElement(operations))
     return false;
 
   Operation *prev = nullptr;
@@ -245,6 +251,16 @@ bool Block::mightHaveTerminator() {
   return !empty() && back().mightHaveTrait<OpTrait::IsTerminator>();
 }
 
+iterator_range<Block::iterator> Block::without_terminator_impl() {
+  // Note: When the op is unregistered, we do not know for sure if the last
+  // op is a terminator. In that case, we include it in `without_terminator`,
+  // but that decision is somewhat arbitrary.
+  if (!back().hasTrait<OpTrait::IsTerminator>())
+    return {begin(), end()};
+  auto endIt = --end();
+  return {begin(), endIt};
+}
+
 // Indexed successor access.
 unsigned Block::getNumSuccessors() {
   return empty() ? 0 : back().getNumSuccessors();
@@ -326,7 +342,7 @@ unsigned PredecessorIterator::getSuccessorIndex() const {
 }
 
 //===----------------------------------------------------------------------===//
-// SuccessorRange
+// Successors
 //===----------------------------------------------------------------------===//
 
 SuccessorRange::SuccessorRange() : SuccessorRange(nullptr, 0) {}
@@ -342,6 +358,26 @@ SuccessorRange::SuccessorRange(Block *block) : SuccessorRange() {
 SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange() {
   if ((count = term->getNumSuccessors()))
     base = term->getBlockOperands().data();
+}
+
+bool Block::isReachable(Block *other, SmallPtrSet<Block *, 16> &&except) {
+  assert(getParent() == other->getParent() && "expected same region");
+  if (except.contains(other)) {
+    // Fast path: If `other` is in the `except` set, there can be no path from
+    // "this" to `other` (that does not pass through an excluded block).
+    return false;
+  }
+  SmallVector<Block *> worklist(succ_begin(), succ_end());
+  while (!worklist.empty()) {
+    Block *next = worklist.pop_back_val();
+    if (next == other)
+      return true;
+    // Note: `except` keeps track of already visited blocks.
+    if (!except.insert(next).second)
+      continue;
+    worklist.append(next->succ_begin(), next->succ_end());
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

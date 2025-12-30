@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.def"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/Utils.h"
@@ -132,11 +133,11 @@ public:
     CI->getFrontendOpts().DisableFree = false;
     CI->getPreprocessorOpts().addRemappedFile(
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
-    CompilerInstance Compiler;
-    Compiler.setInvocation(std::move(CI));
-    Compiler.setDiagnostics(Diags.get());
-    Compiler.setFileManager(FileMgr.get());
-    Compiler.setSourceManager(SourceMgr.get());
+    CompilerInstance Compiler(std::move(CI));
+    Compiler.setDiagnostics(Diags);
+    Compiler.setVirtualFileSystem(FS);
+    Compiler.setFileManager(FileMgr);
+    Compiler.setSourceManager(SourceMgr);
 
     this->Buffer = TokenBuffer(*SourceMgr);
     RecordTokens Recorder(this->Buffer);
@@ -249,14 +250,16 @@ public:
   }
 
   // Data fields.
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(new DiagnosticIDs, new DiagnosticOptions);
+      llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagnosticIDs::create(),
+                                                   DiagOpts);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
-      new llvm::vfs::InMemoryFileSystem;
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   llvm::IntrusiveRefCntPtr<FileManager> FileMgr =
-      new FileManager(FileSystemOptions(), FS);
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), FS);
   llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr =
-      new SourceManager(*Diags, *FileMgr);
+      llvm::makeIntrusiveRefCnt<SourceManager>(*Diags, *FileMgr);
   /// Contains last result of calling recordTokens().
   TokenBuffer Buffer = TokenBuffer(*SourceMgr);
 };
@@ -374,9 +377,22 @@ TEST_F(TokenCollectorTest, Locations) {
 
   auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
   for (auto &R : Code.ranges()) {
-    EXPECT_THAT(Buffer.spelledTokenAt(StartLoc.getLocWithOffset(R.Begin)),
-                Pointee(RangeIs(R)));
+    EXPECT_THAT(
+        Buffer.spelledTokenContaining(StartLoc.getLocWithOffset(R.Begin)),
+        Pointee(RangeIs(R)));
   }
+}
+
+TEST_F(TokenCollectorTest, LocationInMiddleOfSpelledToken) {
+  llvm::Annotations Code(R"cpp(
+    int foo = [[baa^aar]];
+  )cpp");
+  recordTokens(Code.code());
+  // Check spelled tokens.
+  auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
+  EXPECT_THAT(
+      Buffer.spelledTokenContaining(StartLoc.getLocWithOffset(Code.point())),
+      Pointee(RangeIs(Code.range())));
 }
 
 TEST_F(TokenCollectorTest, MacroDirectives) {
@@ -814,6 +830,18 @@ TEST_F(TokenBufferTest, SpelledByExpanded) {
   EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("good")),
               ValueIs(SameRange(findSpelled("good"))));
   EXPECT_EQ(Buffer.spelledForExpanded(findExpanded("prev good")), std::nullopt);
+}
+
+TEST_F(TokenBufferTest, NoCrashForEofToken) {
+  recordTokens(R"cpp(
+    int main() {
+  )cpp");
+  ASSERT_TRUE(!Buffer.expandedTokens().empty());
+  ASSERT_EQ(Buffer.expandedTokens().back().kind(), tok::eof);
+  // Expanded range including `eof` is handled gracefully (`eof` is ignored).
+  EXPECT_THAT(
+      Buffer.spelledForExpanded(Buffer.expandedTokens()),
+      ValueIs(SameRange(Buffer.spelledTokens(SourceMgr->getMainFileID()))));
 }
 
 TEST_F(TokenBufferTest, ExpandedTokensForRange) {

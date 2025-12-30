@@ -1,4 +1,4 @@
-//===--- AvoidNonConstGlobalVariablesCheck.h - clang-tidy -------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,13 +17,17 @@ namespace clang::tidy::cppcoreguidelines {
 /// subject to unpredictable changes.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables.html
 class AvoidNonConstGlobalVariablesCheck : public ClangTidyCheck {
 public:
-  AvoidNonConstGlobalVariablesCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  AvoidNonConstGlobalVariablesCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  const bool AllowInternalLinkage;
+  const bool AllowThreadLocal;
 };
 
 } // namespace clang::tidy::cppcoreguidelines

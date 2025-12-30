@@ -8,7 +8,8 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class JobControlTest(PExpectTest):
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(macos_version=["<", "14.0"], asan=True)
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_job_control(self):
         def post_spawn():
             self.child.expect("PID=([0-9]+)")
@@ -22,7 +23,7 @@ class JobControlTest(PExpectTest):
         status = int(self.child.match[1])
 
         self.assertTrue(os.WIFSTOPPED(status))
-        self.assertEquals(os.WSTOPSIG(status), signal.SIGTSTP)
+        self.assertEqual(os.WSTOPSIG(status), signal.SIGTSTP)
 
         os.kill(self.lldb_pid, signal.SIGCONT)
 

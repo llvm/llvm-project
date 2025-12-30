@@ -186,7 +186,8 @@ define void @switch_lookup_with_nonconst_range(i32 %x, i1 %cond) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[ADD]], 6
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], ptr @switch.table.switch_lookup_with_nonconst_range, i32 0, i32 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[ADD]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], ptr @switch.table.switch_lookup_with_nonconst_range, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
@@ -214,3 +215,29 @@ lor.end:                                          ; preds = %default, %for.end, 
   %retval.0.i.i = phi i32 [ 1, %default ], [ 0, %for.end ], [ 0, %for.end ], [ 0, %for.end ]
   ret void
 }
+
+define i1 @pr88607() {
+; CHECK-LABEL: @pr88607(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = select i1 false, i32 4, i32 1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 false, i32 2, i32 [[COND]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[SPEC_SELECT]], 1
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond = select i1 false, i32 4, i32 1
+  %spec.select = select i1 false, i32 2, i32 %cond
+  switch i32 %spec.select, label %lor.rhs [
+  i32 0, label %exit
+  i32 5, label %exit ; unreachable large case index
+  i32 1, label %exit
+  ]
+
+lor.rhs:                                        ; preds = %entry
+  br label %exit
+
+exit: ; preds = %lor.rhs, %entry, %entry, %entry, %entry
+  %res.ph = phi i1 [ false, %entry ], [ false, %lor.rhs ], [ false, %entry ], [ false, %entry ]
+  ret i1 %res.ph
+}
+

@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETROBUST_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETROBUST_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_mutexattr_setrobust(pthread_mutexattr_t *__restrict attr,
                                 int robust);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETROBUST_H

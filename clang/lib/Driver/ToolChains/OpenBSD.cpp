@@ -10,11 +10,11 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/Sparc.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -111,6 +111,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const char *LinkingOutput) const {
   const auto &ToolChain = static_cast<const OpenBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
+  const llvm::Triple &Triple = ToolChain.getTriple();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool Static = Args.hasArg(options::OPT_static);
   const bool Shared = Args.hasArg(options::OPT_shared);
@@ -160,8 +161,11 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Nopie || Profiling)
     CmdArgs.push_back("-nopie");
 
-  if (Arch == llvm::Triple::riscv64)
+  if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -192,22 +196,12 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
-  Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
-                            options::OPT_t, options::OPT_r});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_T_Group, options::OPT_s, options::OPT_t});
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
@@ -217,7 +211,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
@@ -235,9 +229,10 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
       if (Profiling)
         CmdArgs.push_back("-lm_p");
       else
@@ -320,7 +315,7 @@ void OpenBSD::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
@@ -367,20 +362,21 @@ void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
-                                   FileType Type) const {
+                                   FileType Type, bool IsFortran) const {
   if (Component == "builtins") {
     SmallString<128> Path(getDriver().SysRoot);
     llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
-    return std::string(Path.str());
+    if (getVFS().exists(Path))
+      return std::string(Path);
   }
   SmallString<128> P(getDriver().ResourceDir);
-  std::string CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  std::string CRTBasename = buildCompilerRTBasename(
+      Args, Component, Type, /*AddArch=*/false, IsFortran);
   llvm::sys::path::append(P, "lib", CRTBasename);
   // Checks if this is the base system case which uses a different location.
   if (getVFS().exists(P))
-    return std::string(P.str());
-  return ToolChain::getCompilerRT(Args, Component, Type);
+    return std::string(P);
+  return ToolChain::getCompilerRT(Args, Component, Type, IsFortran);
 }
 
 Tool *OpenBSD::buildAssembler() const {

@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include <vector>
 
@@ -26,47 +27,55 @@ class Triple;
 
 namespace ARM {
 
+enum ARMABI {
+  ARM_ABI_UNKNOWN,
+  ARM_ABI_APCS,
+  ARM_ABI_AAPCS, // ARM EABI
+  ARM_ABI_AAPCS16
+};
+
 // Arch extension modifiers for CPUs.
 // Note that this is not the same as the AArch64 list
 enum ArchExtKind : uint64_t {
-  AEK_INVALID =     0,
-  AEK_NONE =        1,
-  AEK_CRC =         1 << 1,
-  AEK_CRYPTO =      1 << 2,
-  AEK_FP =          1 << 3,
-  AEK_HWDIVTHUMB =  1 << 4,
-  AEK_HWDIVARM =    1 << 5,
-  AEK_MP =          1 << 6,
-  AEK_SIMD =        1 << 7,
-  AEK_SEC =         1 << 8,
-  AEK_VIRT =        1 << 9,
-  AEK_DSP =         1 << 10,
-  AEK_FP16 =        1 << 11,
-  AEK_RAS =         1 << 12,
-  AEK_DOTPROD =     1 << 13,
-  AEK_SHA2    =     1 << 14,
-  AEK_AES     =     1 << 15,
-  AEK_FP16FML =     1 << 16,
-  AEK_SB      =     1 << 17,
-  AEK_FP_DP   =     1 << 18,
-  AEK_LOB     =     1 << 19,
-  AEK_BF16    =     1 << 20,
-  AEK_I8MM    =     1 << 21,
-  AEK_CDECP0 =      1 << 22,
-  AEK_CDECP1 =      1 << 23,
-  AEK_CDECP2 =      1 << 24,
-  AEK_CDECP3 =      1 << 25,
-  AEK_CDECP4 =      1 << 26,
-  AEK_CDECP5 =      1 << 27,
-  AEK_CDECP6 =      1 << 28,
-  AEK_CDECP7 =      1 << 29,
-  AEK_PACBTI =      1 << 30,
+  AEK_INVALID = 0,
+  AEK_NONE = 1,
+  AEK_CRC = 1 << 1,
+  AEK_CRYPTO = 1 << 2,
+  AEK_FP = 1 << 3,
+  AEK_HWDIVTHUMB = 1 << 4,
+  AEK_HWDIVARM = 1 << 5,
+  AEK_MP = 1 << 6,
+  AEK_SIMD = 1 << 7,
+  AEK_SEC = 1 << 8,
+  AEK_VIRT = 1 << 9,
+  AEK_DSP = 1 << 10,
+  AEK_FP16 = 1 << 11,
+  AEK_RAS = 1 << 12,
+  AEK_DOTPROD = 1 << 13,
+  AEK_SHA2 = 1 << 14,
+  AEK_AES = 1 << 15,
+  AEK_FP16FML = 1 << 16,
+  AEK_SB = 1 << 17,
+  AEK_FP_DP = 1 << 18,
+  AEK_LOB = 1 << 19,
+  AEK_BF16 = 1 << 20,
+  AEK_I8MM = 1 << 21,
+  AEK_CDECP0 = 1 << 22,
+  AEK_CDECP1 = 1 << 23,
+  AEK_CDECP2 = 1 << 24,
+  AEK_CDECP3 = 1 << 25,
+  AEK_CDECP4 = 1 << 26,
+  AEK_CDECP5 = 1 << 27,
+  AEK_CDECP6 = 1 << 28,
+  AEK_CDECP7 = 1 << 29,
+  AEK_PACBTI = 1 << 30,
+  AEK_MVE = 1ULL << 31,
   // Unsupported extensions.
-  AEK_OS       =    1ULL << 59,
-  AEK_IWMMXT   =    1ULL << 60,
-  AEK_IWMMXT2  =    1ULL << 61,
-  AEK_MAVERICK =    1ULL << 62,
-  AEK_XSCALE   =    1ULL << 63,
+  AEK_OS = 1ULL << 59,
+  AEK_IWMMXT = 1ULL << 60,
+  AEK_IWMMXT2 = 1ULL << 61,
+  AEK_MAVERICK = 1ULL << 62,
+  AEK_XSCALE = 1ULL << 63,
 };
 
 // List of Arch Extension names.
@@ -77,7 +86,7 @@ struct ExtName {
   StringRef NegFeature;
 };
 
-const ExtName ARCHExtNames[] = {
+constexpr ExtName ARCHExtNames[] = {
 #define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                       \
   {NAME, ID, FEATURE, NEGFEATURE},
 #include "ARMTargetParser.def"
@@ -85,7 +94,7 @@ const ExtName ARCHExtNames[] = {
 
 // List of HWDiv names (use getHWDivSynonym) and which architectural
 // features they correspond to (use getHWDivFeatures).
-const struct {
+constexpr struct {
   StringRef Name;
   uint64_t ID;
 } HWDivNames[] = {
@@ -112,7 +121,7 @@ struct CpuNames {
   uint64_t DefaultExtensions;
 };
 
-const CpuNames CPUNames[] = {
+constexpr CpuNames CPUNames[] = {
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   {NAME, ARM::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
 #include "ARMTargetParser.def"
@@ -173,7 +182,7 @@ struct FPUName {
   FPURestriction Restriction;
 };
 
-static const FPUName FPUNames[] = {
+static constexpr FPUName FPUNames[] = {
 #define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION)                \
   {NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION},
 #include "llvm/TargetParser/ARMTargetParser.def"
@@ -199,7 +208,7 @@ struct ArchNames {
   StringRef getSubArch() const { return ArchFeature.substr(1); }
 };
 
-static const ArchNames ARMArchNames[] = {
+static constexpr ArchNames ARMArchNames[] = {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, ARCH_FEATURE, ARCH_ATTR, ARCH_FPU,        \
                  ARCH_BASE_EXT)                                                \
   {NAME,          CPU_ATTR,     ARCH_FEATURE, ARCH_FPU,                        \
@@ -222,53 +231,57 @@ inline ArchKind &operator--(ArchKind &Kind) {
 }
 
 // Information by ID
-StringRef getFPUName(FPUKind FPUKind);
-FPUVersion getFPUVersion(FPUKind FPUKind);
-NeonSupportLevel getFPUNeonSupportLevel(FPUKind FPUKind);
-FPURestriction getFPURestriction(FPUKind FPUKind);
+LLVM_ABI StringRef getFPUName(FPUKind FPUKind);
+LLVM_ABI FPUVersion getFPUVersion(FPUKind FPUKind);
+LLVM_ABI NeonSupportLevel getFPUNeonSupportLevel(FPUKind FPUKind);
+LLVM_ABI FPURestriction getFPURestriction(FPUKind FPUKind);
 
-bool getFPUFeatures(FPUKind FPUKind, std::vector<StringRef> &Features);
-bool getHWDivFeatures(uint64_t HWDivKind, std::vector<StringRef> &Features);
-bool getExtensionFeatures(uint64_t Extensions,
-                          std::vector<StringRef> &Features);
+LLVM_ABI bool getFPUFeatures(FPUKind FPUKind, std::vector<StringRef> &Features);
+LLVM_ABI bool getHWDivFeatures(uint64_t HWDivKind,
+                               std::vector<StringRef> &Features);
+LLVM_ABI bool getExtensionFeatures(uint64_t Extensions,
+                                   std::vector<StringRef> &Features);
 
-StringRef getArchName(ArchKind AK);
-unsigned getArchAttr(ArchKind AK);
-StringRef getCPUAttr(ArchKind AK);
-StringRef getSubArch(ArchKind AK);
-StringRef getArchExtName(uint64_t ArchExtKind);
-StringRef getArchExtFeature(StringRef ArchExt);
-bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK, StringRef ArchExt,
-                           std::vector<StringRef> &Features,
-                           FPUKind &ArgFPUKind);
-ArchKind convertV9toV8(ArchKind AK);
+LLVM_ABI StringRef getArchName(ArchKind AK);
+LLVM_ABI unsigned getArchAttr(ArchKind AK);
+LLVM_ABI StringRef getCPUAttr(ArchKind AK);
+LLVM_ABI StringRef getSubArch(ArchKind AK);
+LLVM_ABI StringRef getArchExtName(uint64_t ArchExtKind);
+LLVM_ABI StringRef getArchExtFeature(StringRef ArchExt);
+LLVM_ABI bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK,
+                                    StringRef ArchExt,
+                                    std::vector<StringRef> &Features,
+                                    FPUKind &ArgFPUKind);
+LLVM_ABI ArchKind convertV9toV8(ArchKind AK);
 
 // Information by Name
-FPUKind getDefaultFPU(StringRef CPU, ArchKind AK);
-uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
-StringRef getDefaultCPU(StringRef Arch);
-StringRef getCanonicalArchName(StringRef Arch);
-StringRef getFPUSynonym(StringRef FPU);
+LLVM_ABI FPUKind getDefaultFPU(StringRef CPU, ArchKind AK);
+LLVM_ABI uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
+LLVM_ABI StringRef getDefaultCPU(StringRef Arch);
+LLVM_ABI StringRef getFPUSynonym(StringRef FPU);
 
 // Parser
-uint64_t parseHWDiv(StringRef HWDiv);
-FPUKind parseFPU(StringRef FPU);
-ArchKind parseArch(StringRef Arch);
-uint64_t parseArchExt(StringRef ArchExt);
-ArchKind parseCPUArch(StringRef CPU);
-ProfileKind parseArchProfile(StringRef Arch);
-unsigned parseArchVersion(StringRef Arch);
+LLVM_ABI uint64_t parseHWDiv(StringRef HWDiv);
+LLVM_ABI FPUKind parseFPU(StringRef FPU);
+LLVM_ABI ArchKind parseArch(StringRef Arch);
+LLVM_ABI uint64_t parseArchExt(StringRef ArchExt);
+LLVM_ABI ArchKind parseCPUArch(StringRef CPU);
+LLVM_ABI ProfileKind parseArchProfile(StringRef Arch);
+LLVM_ABI unsigned parseArchVersion(StringRef Arch);
 
-void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
-StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
+LLVM_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI LLVM_READONLY StringRef computeDefaultTargetABI(const Triple &TT);
+LLVM_ABI LLVM_READONLY ARMABI computeTargetABI(const Triple &TT,
+                                               StringRef ABIName = "");
 
 /// Get the (LLVM) name of the minimum ARM CPU for the arch we are targeting.
 ///
 /// \param Arch the architecture name (e.g., "armv7s"). If it is an empty
 /// string then the triple's arch name is used.
-StringRef getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch = {});
+LLVM_ABI StringRef getARMCPUForArch(const llvm::Triple &Triple,
+                                    StringRef MArch = {});
 
-void PrintSupportedExtensions(StringMap<StringRef> DescMap);
+LLVM_ABI void PrintSupportedExtensions(StringMap<StringRef> DescMap);
 
 } // namespace ARM
 } // namespace llvm

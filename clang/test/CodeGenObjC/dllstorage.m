@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fdeclspec -fobjc-runtime=ios -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-IR %s
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fdeclspec -fobjc-runtime=gnustep-2.0 -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-NF %s
-// RUN: %clang_cc1 -triple i686-windows-itanium -fms-extensions -fobjc-runtime=macosx -fdeclspec -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-IR %s
-// RUN: %clang_cc1 -triple i686-windows-itanium -fms-extensions -fobjc-runtime=objfw -fdeclspec -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-FW %s
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fdeclspec -fobjc-runtime=ios -fobjc-exceptions -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-IR %s
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fdeclspec -fobjc-runtime=gnustep-2.0 -fobjc-exceptions -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-NF %s
+// RUN: %clang_cc1 -triple i686-windows-itanium -fms-extensions -fobjc-runtime=macosx -fdeclspec -fobjc-exceptions -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-IR %s
+// RUN: %clang_cc1 -triple i686-windows-itanium -fms-extensions -fobjc-runtime=objfw -fdeclspec -fobjc-exceptions -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-FW %s
 
 // CHECK-IR-DAG: @_objc_empty_cache = external dllimport global %struct._objc_cache
 
@@ -35,7 +35,7 @@ __declspec(dllexport)
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_J._ivar" = global i32
 
-// CHECK-NF-DAG: @"__objc_ivar_offset_J._ivar.\01" = hidden global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_J._ivar.@" = hidden global i32
 
 @interface K : J
 @end
@@ -56,7 +56,7 @@ __declspec(dllexport)
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_K._ivar" = global i32
 
-// CHECK-NF-DAG: @"__objc_ivar_offset_K._ivar.\01" = hidden global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_K._ivar.@" = hidden global i32
 
 __declspec(dllexport)
 @interface L : K
@@ -94,11 +94,11 @@ __declspec(dllexport)
 // CHECK-IR-DAG: @"OBJC_IVAR_$_L._package" = global i32
 // CHECK-IR-DAG: @"OBJC_IVAR_$_L._private" = global i32
 
-// CHECK-NF-DAG: @"__objc_ivar_offset_L._none.\01" = hidden global i32
-// CHECK-NF-DAG: @"__objc_ivar_offset_L._public.\01" = dso_local dllexport global i32
-// CHECK-NF-DAG: @"__objc_ivar_offset_L._protected.\01" = dso_local dllexport global i32
-// CHECK-NF-DAG: @"__objc_ivar_offset_L._package.\01" = hidden global i32
-// CHECK-NF-DAG: @"__objc_ivar_offset_L._private.\01" = hidden global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._none.@" = hidden global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._public.@" = dso_local dllexport global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._protected.@" = dso_local dllexport global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._package.@" = hidden global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._private.@" = hidden global i32
 
 __declspec(dllimport)
 @interface M : I {
@@ -112,7 +112,7 @@ __declspec(dllimport)
 // CHECK-IR-DAG: @"OBJC_IVAR_$_M._ivar" = external dllimport global i32
 
 // CHECK-NF-DAG: @"$_OBJC_REF_CLASS_M" = external dllimport global ptr
-// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.\01" = external global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.@" = external dllimport global i32
 
 __declspec(dllexport)
 __attribute__((__objc_exception__))
@@ -151,7 +151,7 @@ id f(Q *q) {
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_M._ivar" = external dllimport global i32
 
-// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.\01" = external global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.@" = external dllimport global i32
 
 int g(void) {
   @autoreleasepool {

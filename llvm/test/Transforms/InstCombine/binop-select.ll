@@ -113,7 +113,7 @@ define i32 @test_sub_deduce_false(i32 %x, i32 %y) {
 define <2 x i8> @test_sub_dont_deduce_with_undef_cond_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @test_sub_dont_deduce_with_undef_cond_vec(
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 9, i8 undef>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 7, i8 7>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> splat (i8 7), <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[COND]])
 ; CHECK-NEXT:    ret <2 x i8> [[SUB]]
 ;
@@ -126,7 +126,7 @@ define <2 x i8> @test_sub_dont_deduce_with_undef_cond_vec(<2 x i8> %x, <2 x i8> 
 define <2 x i8> @test_sub_dont_deduce_with_poison_cond_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @test_sub_dont_deduce_with_poison_cond_vec(
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 poison, i8 9>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 7, i8 7>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> splat (i8 7), <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[COND]])
 ; CHECK-NEXT:    ret <2 x i8> [[SUB]]
 ;
@@ -335,7 +335,7 @@ define i32 @sub_sel_op1_use(i1 %b) {
 
 define float @fadd_sel_op0(i1 %b, float %x) {
 ; CHECK-LABEL: @fadd_sel_op0(
-; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[B:%.*]], float 0xFFF0000000000000, float 0x7FF0000000000000
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], float 0xFFF0000000000000, float 0x7FF0000000000000
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = select i1 %b, float 0xFFF0000000000000, float 0x7FF0000000000000
@@ -369,7 +369,7 @@ define <2 x half> @fmul_sel_op1(i1 %b, <2 x half> %p) {
 define <2 x half> @fmul_sel_op1_use(i1 %b, <2 x half> %p) {
 ; CHECK-LABEL: @fmul_sel_op1_use(
 ; CHECK-NEXT:    [[X:%.*]] = fadd <2 x half> [[P:%.*]], <half 0xH3C00, half 0xH4000>
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x half> zeroinitializer, <2 x half> <half 0xHFFFF, half 0xHFFFF>
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x half> zeroinitializer, <2 x half> splat (half 0xHFFFF)
 ; CHECK-NEXT:    call void @use_v2f16(<2 x half> [[S]])
 ; CHECK-NEXT:    [[R:%.*]] = fmul nnan nsz <2 x half> [[X]], [[S]]
 ; CHECK-NEXT:    ret <2 x half> [[R]]
@@ -402,4 +402,172 @@ define i32 @ashr_sel_op1_use(i1 %b) {
   call void @use(i32 %s)
   %r = ashr i32 -2, %s
   ret i32 %r
+}
+
+define i8 @commonArgWithOr0(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithOr0(
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 17, i8 24
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 0, i8 8
+  %v2 = or i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithOr1(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithOr1(
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 17, i8 23
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 1, i8 7
+  %v2 = or i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithOr2(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithOr2(
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 21, i8 58
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 21, i8 42
+  %v2 = or i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithAnd0(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithAnd0(
+; CHECK-NEXT:    ret i8 16
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 0, i8 8
+  %v2 = and i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithAnd1(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithAnd1(
+; CHECK-NEXT:    ret i8 16
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 8, i8 1
+  %v2 = and i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithAnd2(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithAnd2(
+; CHECK-NEXT:    [[V2:%.*]] = zext i1 [[ARG0:%.*]] to i8
+; CHECK-NEXT:    [[V3:%.*]] = or disjoint i8 [[V2]], 16
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 1, i8 7
+  %v2 = and i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithAnd3(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithAnd3(
+; CHECK-NEXT:    [[V2:%.*]] = zext i1 [[ARG0:%.*]] to i8
+; CHECK-NEXT:    [[V3:%.*]] = or disjoint i8 [[V2]], 16
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 21, i8 42
+  %v2 = and i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithXor0(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithXor0(
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 17, i8 24
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 0, i8 8
+  %v2 = xor i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithXor1(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithXor1(
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[ARG0:%.*]], i8 8, i8 1
+; CHECK-NEXT:    ret i8 [[V2]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 9, i8 1
+  %v2 = xor i8 %v1, %v0
+  ret i8 %v2
+}
+
+define i8 @commonArgWithXor2(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithXor2(
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 16, i8 23
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 1, i8 7
+  %v2 = xor i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithXor3(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithXor3(
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 20, i8 61
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 21, i8 45
+  %v2 = xor i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i8 @commonArgWithAdd0(i1 %arg0) {
+; CHECK-LABEL: @commonArgWithAdd0(
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[ARG0:%.*]], i8 22, i8 61
+; CHECK-NEXT:    ret i8 [[V3]]
+;
+  %v0 = zext i1 %arg0 to i8
+  %v1 = select i1 %arg0, i8 21, i8 45
+  %v2 = add i8 %v1, %v0
+  %v3 = or i8 %v2, 16
+  ret i8 %v3
+}
+
+define i32 @OrSelectIcmpZero(i32 %a, i32 %b) {
+; CHECK-LABEL: @OrSelectIcmpZero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP]], i32 [[B:%.*]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %sel = select i1 %cmp, i32 %b, i32 0
+  %or = or i32 %sel, %a
+  ret i32 %or
+}
+
+define i32 @OrSelectIcmpNonZero(i32 %a, i32 %b) {
+; CHECK-LABEL: @OrSelectIcmpNonZero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[B:%.*]], i32 42
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL]], [[A]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %sel = select i1 %cmp, i32 %b, i32 42
+  %or = or i32 %sel, %a
+  ret i32 %or
 }

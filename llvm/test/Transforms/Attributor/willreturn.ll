@@ -212,7 +212,6 @@ define void @mutual_recursion2(i1 %c) #0 {
 ; TEST 5 (negative case)
 ; call exit/abort (has noreturn attribute)
 ; CHECK: Function Attrs: noreturn
-; CHECK-NEXT: declare void @exit(i32) local_unnamed_add
 declare void @exit(i32 %0) local_unnamed_addr noreturn
 
 define void @only_exit() local_unnamed_addr #0 {
@@ -239,7 +238,7 @@ define void @only_exit() local_unnamed_addr #0 {
 define void @conditional_exit(i32 %0, ptr nocapture readonly %1) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@conditional_exit
-; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nofree readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; CHECK:       4:
@@ -277,8 +276,7 @@ define void @conditional_exit(i32 %0, ptr nocapture readonly %1) local_unnamed_a
 
 ; TEST 6 (positive case)
 ; Call intrinsic function
-; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-; CHECK-NEXT: declare float @llvm.floor.f32(float)
+; CHECK: Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
@@ -294,8 +292,8 @@ define void @call_floor(float %a) #0 {
 define float @call_floor2(float %a) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_floor2
-; CHECK-SAME: (float nofpclass(sub) [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float nofpclass(sub) [[A]]) #[[ATTR30:[0-9]+]]
+; CHECK-SAME: (float [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR30:[0-9]+]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
@@ -308,7 +306,6 @@ define float @call_floor2(float %a) #0 {
 
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-NOT: willreturn
-; CHECK-NEXT: declare void @maybe_noreturn()
 declare void @maybe_noreturn() #0
 
 define void @call_maybe_noreturn() #0 {
@@ -327,7 +324,6 @@ define void @call_maybe_noreturn() #0 {
 ; Check propagation.
 
 ; CHECK: Function Attrs: norecurse willreturn
-; CHECK-NEXT: declare void @will_return()
 declare void @will_return() willreturn norecurse
 
 define void @f1() #0 {
@@ -380,7 +376,6 @@ label2:
 ; invoke a function with willreturn
 
 ; CHECK: Function Attrs: noinline willreturn uwtable
-; CHECK-NEXT: declare i1 @maybe_raise_exception()
 declare i1 @maybe_raise_exception() #1 willreturn
 
 define void @invoke_test() personality ptr @__gxx_personality_v0 {
@@ -388,12 +383,12 @@ define void @invoke_test() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define {{[^@]+}}@invoke_test
 ; CHECK-SAME: () #[[ATTR12:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR32]]
-; CHECK-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
+; CHECK-NEXT:            to label [[N:%.*]] unwind label [[F:%.*]]
 ; CHECK:       N:
 ; CHECK-NEXT:    ret void
 ; CHECK:       F:
 ; CHECK-NEXT:    [[VAL:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    ret void
 ;
   invoke i1 @maybe_raise_exception()
@@ -422,7 +417,7 @@ declare i32 @__gxx_personality_v0(...)
 define i32 @loop_constant_trip_count(ptr nocapture readonly %0) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; CHECK-SAME: (ptr nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) #[[ATTR13:[0-9]+]] {
+; CHECK-SAME: (ptr nofree nonnull readonly captures(none) dereferenceable(4) [[TMP0:%.*]]) #[[ATTR13:[0-9]+]] {
 ; CHECK-NEXT:    br label [[TMP3:%.*]]
 ; CHECK:       2:
 ; CHECK-NEXT:    ret i32 [[TMP8:%.*]]
@@ -430,7 +425,7 @@ define i32 @loop_constant_trip_count(ptr nocapture readonly %0) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP1:%.*]] ], [ [[TMP9:%.*]], [[TMP3]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ 0, [[TMP1]] ], [ [[TMP8]], [[TMP3]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 10
@@ -466,7 +461,7 @@ define i32 @loop_constant_trip_count(ptr nocapture readonly %0) #0 {
 define i32 @loop_trip_count_unbound(i32 %0, i32 %1, ptr nocapture readonly %2, i32 %3) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind memory(argmem: read) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], ptr nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR14:[0-9]+]] {
+; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], ptr nofree readonly captures(none) [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
 ; CHECK:       6:
@@ -477,7 +472,7 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, ptr nocapture readonly %2, i
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP14]], [[TMP8]] ], [ 0, [[TMP4]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP14]] = add nsw i32 [[TMP13]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP15]] = add i32 [[TMP9]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], [[TMP1]]
@@ -517,7 +512,7 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, ptr nocapture readonly %2, i
 define i32 @loop_trip_dec(i32 %0, ptr nocapture readonly %1) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@loop_trip_dec
-; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR13]] {
+; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nofree readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR13]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
 ; CHECK:       4:
@@ -527,7 +522,7 @@ define i32 @loop_trip_dec(i32 %0, ptr nocapture readonly %1) local_unnamed_addr 
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP5]], [[TMP4]] ], [ [[TMP12:%.*]], [[TMP6]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ 0, [[TMP4]] ], [ [[TMP11:%.*]], [[TMP6]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP11]] = add nsw i32 [[TMP10]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP12]] = add nsw i64 [[TMP7]], -1
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp sgt i64 [[TMP7]], 0
@@ -685,13 +680,12 @@ unreachable_label:
 }
 
 ; CHECK: Function Attrs: noreturn nounwind
-; CHECK-NEXT: declare void @llvm.eh.sjlj.longjmp(ptr)
 declare void @llvm.eh.sjlj.longjmp(ptr)
 
 define void @call_longjmp(ptr nocapture readnone %0) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_longjmp
-; CHECK-SAME: (ptr nocapture nofree readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 ; CHECK-NEXT:    tail call void @llvm.eh.sjlj.longjmp(ptr noalias nofree readnone [[TMP0]]) #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ;
@@ -1300,7 +1294,7 @@ attributes #1 = { uwtable noinline }
 ; TUNIT: attributes #[[ATTR5]] = { noreturn }
 ; TUNIT: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
 ; TUNIT: attributes #[[ATTR7]] = { noinline nounwind uwtable }
-; TUNIT: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; TUNIT: attributes #[[ATTR8:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR9:[0-9]+]] = { norecurse willreturn }
 ; TUNIT: attributes #[[ATTR10]] = { mustprogress noinline nounwind willreturn uwtable }
 ; TUNIT: attributes #[[ATTR11:[0-9]+]] = { noinline willreturn uwtable }
@@ -1338,7 +1332,7 @@ attributes #1 = { uwtable noinline }
 ; CGSCC: attributes #[[ATTR5]] = { noreturn }
 ; CGSCC: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
 ; CGSCC: attributes #[[ATTR7]] = { noinline nounwind uwtable }
-; CGSCC: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CGSCC: attributes #[[ATTR8:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR9:[0-9]+]] = { norecurse willreturn }
 ; CGSCC: attributes #[[ATTR10]] = { mustprogress noinline nounwind willreturn uwtable }
 ; CGSCC: attributes #[[ATTR11:[0-9]+]] = { noinline willreturn uwtable }
@@ -1369,4 +1363,8 @@ attributes #1 = { uwtable noinline }
 ; CGSCC: attributes #[[ATTR36]] = { nosync }
 ; CGSCC: attributes #[[ATTR37]] = { nosync willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR38]] = { willreturn memory(read) }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

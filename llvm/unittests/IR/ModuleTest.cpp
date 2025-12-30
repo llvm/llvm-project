@@ -8,11 +8,13 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 #include <random>
@@ -84,6 +86,51 @@ TEST(ModuleTest, setModuleFlag) {
   EXPECT_EQ(Val1, M.getModuleFlag(Key));
   M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
   EXPECT_EQ(Val2, M.getModuleFlag(Key));
+}
+
+TEST(ModuleTest, setModuleFlagInt) {
+  LLVMContext Context;
+  Module M("M", Context);
+  StringRef Key = "Key";
+  uint32_t Val1 = 1;
+  uint32_t Val2 = 2;
+  EXPECT_EQ(nullptr, M.getModuleFlag(Key));
+  M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  auto A1 = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
+  EXPECT_EQ(Val1, A1->getZExtValue());
+  M.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
+  auto A2 = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
+  EXPECT_EQ(Val2, A2->getZExtValue());
+}
+
+TEST(ModuleTest, setModuleFlagTwoMod) {
+  LLVMContext Context;
+  Module MA("MA", Context);
+  Module MB("MB", Context);
+  StringRef Key = "Key";
+  uint32_t Val1 = 1;
+  uint32_t Val2 = 2;
+
+  // Set a flag to MA
+  EXPECT_EQ(nullptr, MA.getModuleFlag(Key));
+  MA.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  auto A1 = mdconst::extract_or_null<ConstantInt>(MA.getModuleFlag(Key));
+  EXPECT_EQ(Val1, A1->getZExtValue());
+
+  // Set a flag to MB
+  EXPECT_EQ(nullptr, MB.getModuleFlag(Key));
+  MB.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  auto B1 = mdconst::extract_or_null<ConstantInt>(MB.getModuleFlag(Key));
+  EXPECT_EQ(Val1, B1->getZExtValue());
+
+  // Change the flag of MA
+  MA.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
+  auto A2 = mdconst::extract_or_null<ConstantInt>(MA.getModuleFlag(Key));
+  EXPECT_EQ(Val2, A2->getZExtValue());
+
+  // MB should keep the original flag value
+  auto B2 = mdconst::extract_or_null<ConstantInt>(MB.getModuleFlag(Key));
+  EXPECT_EQ(Val1, B2->getZExtValue());
 }
 
 const char *IRString = R"IR(
@@ -308,6 +355,160 @@ TEST(ModuleTest, GlobalList) {
   M->insertGlobalVariable(NewGV);
   M->eraseGlobalVariable(NewGV);
   EXPECT_EQ(M->global_size(), 1u);
+}
+
+TEST(ModuleTest, MoveAssign) {
+  // This tests that we can move-assign modules, we parse two modules and
+  // move assign the second one to the first one, and check that the print
+  // is equal to what we loaded.
+  LLVMContext C;
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M1 = parseAssemblyString(R"(
+; ModuleID = '<string>'
+source_filename = "<string1>"
+
+@GV1 = external global i32
+
+@GA1 = alias void (), ptr @Foo1
+
+define void @Foo1() {
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+!foo1 = !{!3}
+!bar1 = !{!4}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang1", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
+!2 = !DIFile(filename: "path/to/file1", directory: "/path/to/dir1")
+!3 = !DILocation(line: 12, column: 34, scope: !4)
+!4 = distinct !DISubprogram(name: "foo1", scope: null, spFlags: DISPFlagDefinition, unit: !1)
+)",
+                                                   Err, Context);
+  ASSERT_TRUE(M1.get());
+
+  StringLiteral M2Str = R"(
+; ModuleID = '<string>'
+source_filename = "<string2>"
+
+@GV2 = external global i32
+
+@GA2 = alias void (), ptr @Foo2
+
+define void @Foo2() {
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+!foo2 = !{!3}
+!bar2 = !{!4}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang2", isOptimized: true, flags: "-O2", runtimeVersion: 0, splitDebugFilename: "abc.debug", emissionKind: LineTablesOnly)
+!2 = !DIFile(filename: "path/to/file2", directory: "/path/to/dir2")
+!3 = !DILocation(line: 1234, column: 56, scope: !4)
+!4 = distinct !DISubprogram(name: "foo2", scope: null, spFlags: DISPFlagDefinition, unit: !1)
+)";
+  {
+    std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, Context);
+    ASSERT_TRUE(M2.get());
+    auto *GV1 = M1->getNamedValue("GV1");
+    ASSERT_TRUE(GV1);
+    auto *GV2 = M2->getNamedValue("GV2");
+    ASSERT_TRUE(GV2);
+    ASSERT_EQ(GV2->getParent(), &*M2);
+    *M1 = std::move(*M2);
+    ASSERT_EQ(GV2->getParent(), &*M1);
+  }
+
+  std::string M1Print;
+  {
+    llvm::raw_string_ostream Os(M1Print);
+    Os << "\n" << *M1;
+  }
+  ASSERT_EQ(M2Str, M1Print);
+}
+
+TEST(ModuleTest, FunctionDefinitions) {
+  // Test getFunctionDefs() method which returns only functions with bodies
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Decl1()
+declare void @Decl2()
+
+define void @Def1() {
+  ret void
+}
+
+define void @Def2() {
+  ret void
+}
+
+declare void @Decl3()
+
+define void @Def3() {
+  ret void
+}
+)",
+                                                  Err, Context);
+  ASSERT_TRUE(M);
+
+  // Count total functions (should be 6: 3 declarations + 3 definitions)
+  size_t TotalFunctions = 0;
+  for (Function &F : *M) {
+    (void)F;
+    ++TotalFunctions;
+  }
+  EXPECT_EQ(TotalFunctions, 6u);
+
+  // Count function definitions only (should be 3)
+  size_t DefinitionCount = 0;
+  for (Function &F : M->getFunctionDefs()) {
+    EXPECT_FALSE(F.isDeclaration());
+    ++DefinitionCount;
+  }
+  EXPECT_EQ(DefinitionCount, 3u);
+
+  // Verify the names of the definitions
+  auto DefRange = M->getFunctionDefs();
+  auto It = DefRange.begin();
+  EXPECT_EQ(It->getName(), "Def1");
+  ++It;
+  EXPECT_EQ(It->getName(), "Def2");
+  ++It;
+  EXPECT_EQ(It->getName(), "Def3");
+  ++It;
+  EXPECT_EQ(It, DefRange.end());
+}
+
+TEST(ModuleTest, FunctionDefinitionsEmpty) {
+  // Test getFunctionDefs() with no definitions (only declarations)
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Decl1()
+declare void @Decl2()
+declare void @Decl3()
+)",
+                                                  Err, Context);
+  ASSERT_TRUE(M);
+
+  // Should have functions
+  EXPECT_FALSE(M->empty());
+  EXPECT_EQ(M->size(), 3u);
+
+  // But no definitions
+  size_t DefinitionCount = 0;
+  for (Function &F : M->getFunctionDefs()) {
+    (void)F;
+    ++DefinitionCount;
+  }
+  EXPECT_EQ(DefinitionCount, 0u);
 }
 
 } // end namespace

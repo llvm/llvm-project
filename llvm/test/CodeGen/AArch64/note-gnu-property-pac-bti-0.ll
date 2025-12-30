@@ -4,7 +4,7 @@
 ; RUN:   llvm-readelf --notes - | FileCheck %s --check-prefix=OBJ
 @x = common dso_local global i32 0, align 4
 
-attributes #0 = { "branch-target-enforcement"="true" }
+attributes #0 = { "branch-target-enforcement" }
 
 !llvm.module.flags = !{!0, !1, !2, !3}
 

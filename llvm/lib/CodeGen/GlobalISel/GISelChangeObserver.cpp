@@ -46,3 +46,13 @@ RAIIMFObserverInstaller::RAIIMFObserverInstaller(MachineFunction &MF,
 }
 
 RAIIMFObserverInstaller::~RAIIMFObserverInstaller() { MF.setObserver(nullptr); }
+
+RAIITemporaryObserverInstaller::RAIITemporaryObserverInstaller(
+    GISelObserverWrapper &Observers, GISelChangeObserver &TemporaryObserver)
+    : Observers(Observers), TemporaryObserver(TemporaryObserver) {
+  Observers.addObserver(&TemporaryObserver);
+}
+
+RAIITemporaryObserverInstaller::~RAIITemporaryObserverInstaller() {
+  Observers.removeObserver(&TemporaryObserver);
+}

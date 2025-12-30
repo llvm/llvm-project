@@ -7,7 +7,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-I386 %s
 //
 // CHECK-LINUX-I386: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-LINUX-I386: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-i386.a" {{.*}} "-lc"
+// CHECK-LINUX-I386: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}i386-unknown-linux{{/|\\\\}}libclang_rt.profile.a" {{.*}} "-lc"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fprofile-instr-generate -fuse-ld=ld \
@@ -16,7 +16,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-X86-64 %s
 //
 // CHECK-LINUX-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-LINUX-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-x86_64.a" {{.*}} "-lc"
+// CHECK-LINUX-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{.*}}linux{{.*}}libclang_rt.profile.a" {{.*}} "-lc"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fprofile-instr-generate -nostdlib -fuse-ld=ld \
@@ -25,7 +25,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-NOSTDLIB-X86-64 %s
 //
 // CHECK-LINUX-NOSTDLIB-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-LINUX-NOSTDLIB-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-x86_64.a"
+// CHECK-LINUX-NOSTDLIB-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{.*}}linux{{.*}}libclang_rt.profile.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-freebsd -fprofile-instr-generate -fuse-ld=ld \
@@ -34,7 +34,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-FREEBSD-X86-64 %s
 //
 // CHECK-FREEBSD-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-FREEBSD-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}freebsd{{/|\\\\}}libclang_rt.profile-x86_64.a"
+// CHECK-FREEBSD-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-freebsd{{/|\\\\}}libclang_rt.profile.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-netbsd -fprofile-instr-generate -fuse-ld=ld \
@@ -43,7 +43,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NETBSD-X86-64 %s
 
 // CHECK-NETBSD-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-NETBSD-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}netbsd{{/|\\\\}}libclang_rt.profile-x86_64.a"
+// CHECK-NETBSD-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-netbsd{{/|\\\\}}libclang_rt.profile.a"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-openbsd -fprofile-instr-generate -fuse-ld=ld \
@@ -52,7 +52,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-OPENBSD-X86-64 %s
 
 // CHECK-OPENBSD-X86-64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-OPENBSD-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}openbsd{{/|\\\\}}libclang_rt.profile-x86_64.a"
+// CHECK-OPENBSD-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-openbsd{{/|\\\\}}libclang_rt.profile.a"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     -shared \
@@ -62,7 +62,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-I386-SHARED %s
 //
 // CHECK-LINUX-I386-SHARED: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-LINUX-I386-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-i386.a" {{.*}} "-lc"
+// CHECK-LINUX-I386-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{.*}}i386-unknown-linux{{.*}}libclang_rt.profile.a" {{.*}} "-lc"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     -shared \
@@ -72,7 +72,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-X86-64-SHARED %s
 //
 // CHECK-LINUX-X86-64-SHARED: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-LINUX-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-x86_64.a" {{.*}} "-lc"
+// CHECK-LINUX-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{.*}}x86_64-unknown-linux{{.*}}libclang_rt.profile.a" {{.*}} "-lc"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     -shared \
@@ -82,7 +82,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-FREEBSD-X86-64-SHARED %s
 //
 // CHECK-FREEBSD-X86-64-SHARED: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-FREEBSD-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}freebsd{{/|\\\\}}libclang_rt.profile-x86_64.a"
+// CHECK-FREEBSD-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-freebsd{{/|\\\\}}libclang_rt.profile.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     -shared \
@@ -92,7 +92,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NETBSD-X86-64-SHARED %s
 
 // CHECK-NETBSD-X86-64-SHARED: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-NETBSD-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}netbsd{{/|\\\\}}libclang_rt.profile-x86_64.a"
+// CHECK-NETBSD-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-netbsd{{/|\\\\}}libclang_rt.profile.a"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     -shared \
@@ -102,7 +102,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-OPENBSD-X86-64-SHARED %s
 
 // CHECK-OPENBSD-X86-64-SHARED: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-OPENBSD-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}openbsd{{/|\\\\}}libclang_rt.profile-x86_64.a"
+// CHECK-OPENBSD-X86-64-SHARED: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-openbsd{{/|\\\\}}libclang_rt.profile.a"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-apple-darwin14 -fprofile-instr-generate -fuse-ld=ld \
@@ -174,7 +174,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MINGW-X86-64 %s
 //
 // CHECK-MINGW-X86-64: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-MINGW-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}windows{{/|\\\\}}libclang_rt.profile-x86_64.a"
+// CHECK-MINGW-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-windows-gnu{{/|\\\\}}libclang_rt.profile.a"
 
 // Test instrumented profiling dependent-lib flags
 //

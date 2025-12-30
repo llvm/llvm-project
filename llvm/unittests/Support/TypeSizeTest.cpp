@@ -58,6 +58,7 @@ static_assert(ElementCount::getFixed(8).divideCoefficientBy(2) ==
 static_assert(ElementCount::getFixed(8).multiplyCoefficientBy(3) ==
               ElementCount::getFixed(24));
 static_assert(ElementCount::getFixed(8).isKnownMultipleOf(2));
+static_assert(!ElementCount::getFixed(8).isKnownMultipleOf(0));
 
 constexpr TypeSize TSFixed0 = TypeSize::getFixed(0);
 constexpr TypeSize TSFixed1 = TypeSize::getFixed(1);
@@ -81,10 +82,12 @@ static_assert(INT64_C(2) * TSFixed32 == TypeSize::getFixed(64));
 static_assert(UINT64_C(2) * TSFixed32 == TypeSize::getFixed(64));
 static_assert(alignTo(TypeSize::getFixed(7), 8) == TypeSize::getFixed(8));
 
-static_assert(TypeSize() == TypeSize::getFixed(0));
+static_assert(TypeSize::getZero() == TypeSize::getFixed(0));
+static_assert(TypeSize::getZero() != TypeSize::getScalable(0));
 static_assert(TypeSize::getFixed(0) != TypeSize::getScalable(0));
 static_assert(TypeSize::getFixed(0).isZero());
 static_assert(TypeSize::getScalable(0).isZero());
+static_assert(TypeSize::getZero().isZero());
 static_assert(TypeSize::getFixed(0) ==
               (TypeSize::getFixed(4) - TypeSize::getFixed(4)));
 static_assert(TypeSize::getScalable(0) ==

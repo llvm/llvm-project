@@ -36,6 +36,9 @@ type lltype
     This type covers a wide range of subclasses. *)
 type llvalue
 
+(** Non-instruction debug info record. See the [llvm::DbgRecord] class.*)
+type lldbgrecord
+
 (** Used to store users and usees of values. See the [llvm::Use] class. *)
 type lluse
 
@@ -328,6 +331,14 @@ module AtomicRMWBinOp : sig
   | UMin
   | FAdd
   | FSub
+  | FMax
+  | FMin
+  | UInc_Wrap
+  | UDec_Wrap
+  | USub_Cond
+  | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].
@@ -687,7 +698,7 @@ val named_struct_type : llcontext -> string -> lltype
 
 (** [struct_set_body ty elts ispacked] sets the body of the named struct [ty]
     to the [elts] elements.
-    See the moethd [llvm::StructType::setBody]. *)
+    See the method [llvm::StructType::setBody]. *)
 val struct_set_body : lltype -> lltype array -> bool -> unit
 
 (** [struct_element_types sty] returns the constituent types of the struct type
@@ -757,9 +768,17 @@ val void_type : llcontext -> lltype
     [llvm::Type::LabelTy]. *)
 val label_type : llcontext -> lltype
 
-(** [x86_mmx_type c] returns the x86 64-bit MMX register type in the
-    context [c]. See [llvm::Type::X86_MMXTy]. *)
-val x86_mmx_type : llcontext -> lltype
+(** [x86_amx_type c] creates an X86 AMX type in the context [c]. See
+    [llvm::Type::getX86_AMXTy]. *)
+val x86_amx_type : llcontext -> lltype
+
+(** [token_type c] creates a token type in the context [c]. See
+    [llvm::Type::getTokenTy]. *)
+val token_type : llcontext -> lltype
+
+(** [metadata_type c] creates a metadata type in the context [c]. See
+    [llvm::Type::getMetadataTy]. *)
+val metadata_type : llcontext -> lltype
 
 (** [type_by_name m name] returns the specified type from the current module
     if it exists.
@@ -792,6 +811,9 @@ val dump_value : llvalue -> unit
 
 (** [string_of_llvalue v] returns a string describing the value [v]. *)
 val string_of_llvalue : llvalue -> string
+
+(** [string_of_lldbgrecord r] returns a string describing the DbgRecord [r]. *)
+val string_of_lldbgrecord : lldbgrecord -> string
 
 (** [replace_all_uses_with old new] replaces all uses of the value [old]
     with the value [new]. See the method [llvm::Value::replaceAllUsesWith]. *)
@@ -1074,11 +1096,6 @@ val const_neg : llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWNeg]. *)
 val const_nsw_neg : llvalue -> llvalue
 
-(** [const_nuw_neg c] returns the arithmetic negation of the constant [c] with
-    no unsigned wrapping. The result is undefined if the negation overflows.
-    See the method [llvm::ConstantExpr::getNUWNeg]. *)
-val const_nuw_neg : llvalue -> llvalue
-
 (** [const_not c] returns the bitwise inverse of the constant [c].
     See the method [llvm::ConstantExpr::getNot]. *)
 val const_not : llvalue -> llvalue
@@ -1111,39 +1128,10 @@ val const_nsw_sub : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWSub]. *)
 val const_nuw_sub : llvalue -> llvalue -> llvalue
 
-(** [const_mul c1 c2] returns the constant product of two constants.
-    See the method [llvm::ConstantExpr::getMul]. *)
-val const_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nsw_mul c1 c2] returns the constant product of two constants with
-    no signed wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nsw_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nuw_mul c1 c2] returns the constant product of two constants with
-    no unsigned wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nuw_mul : llvalue -> llvalue -> llvalue
-
 (** [const_xor c1 c2] returns the constant bitwise [XOR] of two integer
     constants.
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
-
-(** [const_icmp pred c1 c2] returns the constant comparison of two integer
-    constants, [c1 pred c2].
-    See the method [llvm::ConstantExpr::getICmp]. *)
-val const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
-
-(** [const_fcmp pred c1 c2] returns the constant comparison of two floating
-    point constants, [c1 pred c2].
-    See the method [llvm::ConstantExpr::getFCmp]. *)
-val const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
-
-(** [const_shl c1 c2] returns the constant integer [c1] left-shifted by the
-    constant integer [c2].
-    See the method [llvm::ConstantExpr::getShl]. *)
-val const_shl : llvalue -> llvalue -> llvalue
 
 (** [const_gep srcty pc indices] returns the constant [getElementPtr] of [pc]
     with source element type [srcty] and the constant integers indices from the
@@ -1367,6 +1355,12 @@ val is_global_constant : llvalue -> bool
     See the method [llvm::GlobalVariable::setConstant]. *)
 val set_global_constant : bool -> llvalue -> unit
 
+(** [global_set_metadata g k md] sets the metadata attachment of the global
+    value [g] to the metadata [md] for the given kind [k], erasing the existing
+    metadata attachment if it already exists for the given kind.
+    See the method [llvm::GlobalObject::setMetadata]. *)
+val global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
+
 (** [global_initializer gv] If global variable [gv] has an initializer it is returned,
     otherwise returns [None]. See the method [llvm::GlobalVariable::getInitializer]. *)
 val global_initializer : llvalue -> llvalue option
@@ -1479,9 +1473,42 @@ val rev_iter_functions : (llvalue -> unit) -> llmodule -> unit
     [f1,...,fN] are the functions of module [m]. Tail recursive. *)
 val fold_right_functions : (llvalue -> 'a -> 'a) -> llmodule -> 'a -> 'a
 
+(** [lookup_intrinsic_id name] obtains the intrinsic ID number for the given
+    function name. See the method [llvm::Intrinsic::lookupIntrinsicID].*)
+val lookup_intrinsic_id : string -> int
+
+(** [intrinsic_id] returns the ID of intrinsic function [f]. If [f] is not
+    an intrinsic, returns [0]. See the method
+    [llvm::Function::getIntrinsicID]. *)
+val intrinsic_id : llvalue -> int
+
 (** [is_intrinsic f] returns true if the function [f] is an intrinsic.
     See the method [llvm::Function::isIntrinsic]. *)
 val is_intrinsic : llvalue -> bool
+
+(** [intrinsic_declaration m id overload_types] gets or inserts the
+    declaration of an intrinsic. For overloaded intrinsics, types must be
+    provided to uniquely identify an overload. See the method
+    [llvm::Intrinsic::getOrInsertDeclaration]. *)
+val intrinsic_declaration : llmodule -> int -> lltype array -> llvalue
+
+(** [intrinsic_type c id overload_types] returns the type of intrinsic [id] in
+    context [c]. For overloaded intrinsics, types must be provided to uniquely
+    identify an overload. See the method [llvm::Intrinsic::getType]. *)
+val intrinsic_type : llcontext -> int -> lltype array -> lltype
+
+(** [intrinsic_name id] returns the name of intrinsic [id]. See the method
+    [llvm::Intrinsic::getName()]. *)
+val intrinsic_name : int -> string
+
+(** [intrinsic_overloaded_name m id overload_types] returns the name of an
+    overloaded intrinsic [id] identified by the overload types
+    [overload_types]. See the method [llvm::Intrinsic::getName]. *)
+val intrinsic_overloaded_name : llmodule -> int -> lltype array -> string
+
+(** [intrinsic_is_overloaded id] returns if intrinsic [id] is overloaded. See
+    the method [llvm::Intrinsic::isOverloaded]. *)
+val intrinsic_is_overloaded : int -> bool
 
 (** [function_call_conv f] returns the calling convention of the function [f].
     See the method [llvm::Function::getCallingConv]. *)
@@ -1878,9 +1905,21 @@ val builder_at_end : llcontext -> llbasicblock -> llbuilder
     See the constructor for [llvm::LLVMBuilder]. *)
 val position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
 
+(** [position_builder_before_dbg_records ip bb before_dbg_records] moves the
+    instruction builder [bb] to the position [ip], before any debug records
+    there.
+    See the constructor for [llvm::LLVMBuilder]. *)
+val position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
+                                          llbuilder -> unit
+
 (** [position_before ins b] moves the instruction builder [b] to before the
     instruction [isn]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
 val position_before : llvalue -> llbuilder -> unit
+
+(** [position_before_dbg_records ins b] moves the instruction builder [b]
+    to before the instruction [isn] and any debug records attached to it.
+    See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
+val position_before_dbg_records : llvalue -> llbuilder -> unit
 
 (** [position_at_end bb b] moves the instruction builder [b] to the end of the
     basic block [bb]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
@@ -2200,13 +2239,6 @@ val build_neg : llvalue -> string -> llbuilder -> llvalue
     [-0.0] is used for floating point types to compute the correct sign.
     See the method [llvm::LLVMBuilder::CreateNeg]. *)
 val build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
-
-(** [build_nuw_neg x name b] creates a
-    [%name = nuw sub 0, %x]
-    instruction at the position specified by the instruction builder [b].
-    [-0.0] is used for floating point types to compute the correct sign.
-    See the method [llvm::LLVMBuilder::CreateNeg]. *)
-val build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
 
 (** [build_fneg x name b] creates a
     [%name = fsub 0, %x]

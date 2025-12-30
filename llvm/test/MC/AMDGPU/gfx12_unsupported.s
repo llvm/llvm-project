@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Unsupported instructions.
@@ -32,6 +32,18 @@ s_cbranch_cdbgsys_or_user 0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cbranch_cdbgsys_and_user 0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_fmac_legacy_f32 v0, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2c_f32_f16 v0, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dual_max_f32 v0, v1, v2 :: v_dual_max_f32 v3, v4, v5
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dual_min_f32 v0, v1, v2 :: v_dual_min_f32 v3, v4, v5
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_cmpstore_f32 v0, v1, v2
@@ -89,6 +101,21 @@ s_cmpk_lt_u32 s0, 0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cmpk_le_u32 s0, 0
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_inst_prefetch 1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_barrier
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_atomic_cmpswap_f32 v[5:6], off, s[96:99], s3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_atomic_cmpswap_f32 v[5:6], off, s[96:99], s3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_atomic_cmpswap_f32 v[5:6], off, s[96:99], s3
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_gws_sema_release_all gds
@@ -196,6 +223,18 @@ v_cmpx_f_u64 v[0:1], v[2:3]
 v_cmpx_t_u64 v[0:1], v[2:3]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+v_mfma_f32_16x16x8_xf32 a[0:3], v[2:3], v[4:5], a[2:5]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x8xf32 a[0:3], v[2:3], v[4:5], a[2:5]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x4_xf32 a[0:15], v[2:3], v[4:5], a[18:33]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x4xf32 a[0:15], v[2:3], v[4:5], a[18:33]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 buffer_atomic_cmpswap_f32 v[5:6], off, s[96:99], s3
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -205,23 +244,17 @@ buffer_gl0_inv
 buffer_gl1_inv
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+buffer_store_lds_dword s[4:7], -1 offset:4095 lds
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 buffer_wbinvl1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-buffer_load_lds_b32 off, s[8:11], s3
+buffer_wbinvl1_vol
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-buffer_load_lds_format_x off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+flat_atomic_csub v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid instruction
 
-buffer_load_lds_i8 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_i16 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_u8 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_u16 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+ds_add_f32 v255, v255 offset:4 gds
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: gds modifier is not supported on this GPU

@@ -13,18 +13,17 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_LINUX
 
-#include "sanitizer_common/sanitizer_linux.h"
+#  include <pthread.h>
+#  include <sched.h>
+#  include <stdlib.h>
 
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_file.h"
-#include "gtest/gtest.h"
+#  include <algorithm>
+#  include <vector>
 
-#include <pthread.h>
-#include <sched.h>
-#include <stdlib.h>
-
-#include <algorithm>
-#include <vector>
+#  include "gtest/gtest.h"
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_file.h"
+#  include "sanitizer_common/sanitizer_linux.h"
 
 namespace __sanitizer {
 
@@ -44,7 +43,7 @@ struct TidReporterArgument {
     pthread_cond_destroy(&tid_reported_cond);
   }
 
-  tid_t reported_tid;
+  ThreadID reported_tid;
   // For signaling to spawned threads that they should terminate.
   pthread_cond_t terminate_thread_cond;
   pthread_mutex_t terminate_thread_mutex;
@@ -63,7 +62,7 @@ class ThreadListerTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
     pthread_t pthread_id;
-    tid_t tid;
+    ThreadID tid;
     for (uptr i = 0; i < kThreadCount; i++) {
       SpawnTidReporter(&pthread_id, &tid);
       pthread_ids_.push_back(pthread_id);
@@ -80,12 +79,12 @@ class ThreadListerTest : public ::testing::Test {
       pthread_join(pthread_ids_[i], NULL);
   }
 
-  void SpawnTidReporter(pthread_t *pthread_id, tid_t *tid);
+  void SpawnTidReporter(pthread_t *pthread_id, ThreadID *tid);
 
   static const uptr kThreadCount = 20;
 
   std::vector<pthread_t> pthread_ids_;
-  std::vector<tid_t> tids_;
+  std::vector<ThreadID> tids_;
 
   TidReporterArgument thread_arg;
 };
@@ -106,45 +105,48 @@ void *TidReporterThread(void *argument) {
   return NULL;
 }
 
-void ThreadListerTest::SpawnTidReporter(pthread_t *pthread_id, tid_t *tid) {
+void ThreadListerTest::SpawnTidReporter(pthread_t *pthread_id, ThreadID *tid) {
   pthread_mutex_lock(&thread_arg.tid_reported_mutex);
   thread_arg.reported_tid = -1;
-  ASSERT_EQ(0, pthread_create(pthread_id, NULL,
-                              TidReporterThread,
-                              &thread_arg));
-  while (thread_arg.reported_tid == (tid_t)(-1))
+  ASSERT_EQ(0,
+            pthread_create(pthread_id, NULL, TidReporterThread, &thread_arg));
+  while (thread_arg.reported_tid == (ThreadID)(-1))
     pthread_cond_wait(&thread_arg.tid_reported_cond,
                       &thread_arg.tid_reported_mutex);
   pthread_mutex_unlock(&thread_arg.tid_reported_mutex);
   *tid = thread_arg.reported_tid;
 }
 
-static std::vector<tid_t> ReadTidsToVector(ThreadLister *thread_lister) {
-  std::vector<tid_t> listed_tids;
-  InternalMmapVector<tid_t> threads(128);
+static std::vector<ThreadID> ReadTidsToVector(ThreadLister *thread_lister) {
+  std::vector<ThreadID> listed_tids;
+  InternalMmapVector<ThreadID> threads(128);
   EXPECT_TRUE(thread_lister->ListThreads(&threads));
-  return std::vector<tid_t>(threads.begin(), threads.end());
+  return std::vector<ThreadID>(threads.begin(), threads.end());
 }
 
-static bool Includes(std::vector<tid_t> first, std::vector<tid_t> second) {
+static bool Includes(std::vector<ThreadID> first,
+                     std::vector<ThreadID> second) {
   std::sort(first.begin(), first.end());
   std::sort(second.begin(), second.end());
-  return std::includes(first.begin(), first.end(),
-                       second.begin(), second.end());
+  return std::includes(first.begin(), first.end(), second.begin(),
+                       second.end());
 }
 
-static bool HasElement(const std::vector<tid_t> &vector, tid_t element) {
+static bool HasElement(const std::vector<ThreadID> &vector, ThreadID element) {
   return std::find(vector.begin(), vector.end(), element) != vector.end();
 }
 
 // ThreadLister's output should include the current thread's TID and the TID of
 // every thread we spawned.
 TEST_F(ThreadListerTest, ThreadListerSeesAllSpawnedThreads) {
-  tid_t self_tid = GetTid();
+  ThreadID self_tid = GetTid();
   ThreadLister thread_lister(getpid());
-  std::vector<tid_t> listed_tids = ReadTidsToVector(&thread_lister);
+  std::vector<ThreadID> listed_tids = ReadTidsToVector(&thread_lister);
   ASSERT_TRUE(HasElement(listed_tids, self_tid));
   ASSERT_TRUE(Includes(listed_tids, tids_));
+
+  ASSERT_NE(nullptr, thread_lister.LoadStatus(self_tid));
+  for (auto tid : tids_) ASSERT_NE(nullptr, thread_lister.LoadStatus(tid));
 }
 
 TEST_F(ThreadListerTest, DoNotForgetThreads) {
@@ -153,7 +155,7 @@ TEST_F(ThreadListerTest, DoNotForgetThreads) {
   // Run the loop body twice, because ThreadLister might behave differently if
   // called on a freshly created object.
   for (uptr i = 0; i < 2; i++) {
-    std::vector<tid_t> listed_tids = ReadTidsToVector(&thread_lister);
+    std::vector<ThreadID> listed_tids = ReadTidsToVector(&thread_lister);
     ASSERT_TRUE(Includes(listed_tids, tids_));
   }
 }
@@ -162,10 +164,10 @@ TEST_F(ThreadListerTest, DoNotForgetThreads) {
 // relisting should cause ThreadLister to recognize their existence.
 TEST_F(ThreadListerTest, NewThreads) {
   ThreadLister thread_lister(getpid());
-  std::vector<tid_t> threads_before_extra = ReadTidsToVector(&thread_lister);
+  std::vector<ThreadID> threads_before_extra = ReadTidsToVector(&thread_lister);
 
   pthread_t extra_pthread_id;
-  tid_t extra_tid;
+  ThreadID extra_tid;
   SpawnTidReporter(&extra_pthread_id, &extra_tid);
   // Register the new thread so it gets terminated in TearDown().
   pthread_ids_.push_back(extra_pthread_id);
@@ -175,7 +177,7 @@ TEST_F(ThreadListerTest, NewThreads) {
   // so better check for that.
   ASSERT_FALSE(HasElement(threads_before_extra, extra_tid));
 
-  std::vector<tid_t> threads_after_extra = ReadTidsToVector(&thread_lister);
+  std::vector<ThreadID> threads_after_extra = ReadTidsToVector(&thread_lister);
   ASSERT_TRUE(HasElement(threads_after_extra, extra_tid));
 }
 
@@ -187,7 +189,7 @@ TEST(SanitizerCommon, SetEnvTest) {
   EXPECT_EQ(0, getenv(kEnvName));
 }
 
-#if (defined(__x86_64__) || defined(__i386__)) && !SANITIZER_ANDROID
+#  if (defined(__x86_64__) || defined(__i386__)) && !SANITIZER_ANDROID
 // libpthread puts the thread descriptor at the end of stack space.
 void *thread_descriptor_size_test_func(void *arg) {
   uptr descr_addr = (uptr)pthread_self();
@@ -204,50 +206,51 @@ TEST(SanitizerLinux, ThreadDescriptorSize) {
   void *result;
   ASSERT_EQ(0, pthread_create(&tid, 0, thread_descriptor_size_test_func, 0));
   ASSERT_EQ(0, pthread_join(tid, &result));
+  InitTlsSize();
   EXPECT_EQ((uptr)result, ThreadDescriptorSize());
 }
-#endif
+#  endif
 
 TEST(SanitizerCommon, LibraryNameIs) {
   EXPECT_FALSE(LibraryNameIs("", ""));
 
   char full_name[256];
-  const char *paths[] = { "", "/", "/path/to/" };
-  const char *suffixes[] = { "", "-linux", ".1.2", "-linux.1.2" };
-  const char *base_names[] = { "lib", "lib.0", "lib-i386" };
-  const char *wrong_names[] = { "", "lib.9", "lib-x86_64" };
+  const char *paths[] = {"", "/", "/path/to/"};
+  const char *suffixes[] = {"", "-linux", ".1.2", "-linux.1.2"};
+  const char *base_names[] = {"lib", "lib.0", "lib-i386"};
+  const char *wrong_names[] = {"", "lib.9", "lib-x86_64"};
   for (uptr i = 0; i < ARRAY_SIZE(paths); i++)
     for (uptr j = 0; j < ARRAY_SIZE(suffixes); j++) {
       for (uptr k = 0; k < ARRAY_SIZE(base_names); k++) {
         internal_snprintf(full_name, ARRAY_SIZE(full_name), "%s%s%s.so",
                           paths[i], base_names[k], suffixes[j]);
         EXPECT_TRUE(LibraryNameIs(full_name, base_names[k]))
-            << "Full name " << full_name
-            << " doesn't match base name " << base_names[k];
+            << "Full name " << full_name << " doesn't match base name "
+            << base_names[k];
         for (uptr m = 0; m < ARRAY_SIZE(wrong_names); m++)
           EXPECT_FALSE(LibraryNameIs(full_name, wrong_names[m]))
-            << "Full name " << full_name
-            << " matches base name " << wrong_names[m];
+              << "Full name " << full_name << " matches base name "
+              << wrong_names[m];
       }
     }
 }
 
-#if defined(__mips64)
+#  if defined(__mips64)
 // Effectively, this is a test for ThreadDescriptorSize() which is used to
 // compute ThreadSelf().
 TEST(SanitizerLinux, ThreadSelfTest) {
   ASSERT_EQ(pthread_self(), ThreadSelf());
 }
-#endif
+#  endif
 
 TEST(SanitizerCommon, StartSubprocessTest) {
   int pipe_fds[2];
   ASSERT_EQ(0, pipe(pipe_fds));
-#if SANITIZER_ANDROID
+#  if SANITIZER_ANDROID
   const char *shell = "/system/bin/sh";
-#else
+#  else
   const char *shell = "/bin/sh";
-#endif
+#  endif
   const char *argv[] = {shell, "-c", "echo -n 'hello'", (char *)NULL};
   int pid = StartSubprocess(shell, argv, GetEnviron(),
                             /* stdin */ kInvalidFd, /* stdout */ pipe_fds[1]);

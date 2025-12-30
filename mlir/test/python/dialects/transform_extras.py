@@ -14,6 +14,7 @@ from mlir.dialects.transform import FailurePropagationMode
 from mlir.dialects.transform.structured import structured_match
 from mlir.dialects.transform.loop import loop_unroll
 from mlir.dialects.transform.extras import (
+    constant_param,
     OpHandle,
     insert_transform_script,
     sequence,
@@ -61,6 +62,60 @@ def test_build_script_at_insertion_point(op: OpHandle):
     # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
     # CHECK-NEXT: transform.yield
     # CHECK-NEXT: }
+
+
+# CHECK-LABEL: TEST: test_constant_param_int
+@build_transform_script
+def test_constant_param_int(_: OpHandle):
+    constant_param(ir.IntegerAttr.get(T.i32(), 42))
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.param.constant 42 : i32
+    # CHECK-SAME:   !transform.param<i32>
+
+
+# CHECK-LABEL: TEST: test_constant_param_py_int
+@build_transform_script
+def test_constant_param_py_int(_: OpHandle):
+    constant_param(42)
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.param.constant 42 : i64
+    # CHECK-SAME:   !transform.param<i64>
+
+
+# CHECK-LABEL: TEST: test_constant_param_symbol_attr
+@build_transform_script
+def test_constant_param_symbol_attr(_: OpHandle):
+    constant_param(ir.SymbolRefAttr.get(["symbol"]))
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.param.constant @symbol
+    # CHECK-SAME:   !transform.any_param
+
+
+# CHECK-LABEL: TEST: test_constant_param_type
+@build_transform_script
+def test_constant_param_type(_: OpHandle):
+    constant_param(ir.TypeAttr.get(T.i32()))
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.param.constant i32
+    # CHECK-SAME:   !transform.any_param
+
+
+# CHECK-LABEL: TEST: test_get_defining_op
+@build_transform_script
+def test_get_defining_op(op: OpHandle):
+    op.get_result().get_defining_op()
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.get_result %[[VAL_0]][0]
+    # CHECK-SAME:   !transform.any_value
+    # CHECK-NEXT: %[[VAL_2:.*]] = transform.get_defining_op %[[VAL_1]]
+
+
+# CHECK-LABEL: TEST: test_get_result
+@build_transform_script
+def test_get_result(op: OpHandle):
+    op.get_result()
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.get_result %[[VAL_0]][0]
 
 
 # CHECK-LABEL: TEST: test_match_ops_single
@@ -118,6 +173,22 @@ def test_match_ops_mixed(op: OpHandle):
     # CHECK-NEXT: %[[VAL_1:.*]] = transform.structured.match
     # CHECK-SAME:   ops{["scf.for", "linalg.matmul", "scf.forall"]} in %[[VAL_0]]
     # CHECK-SAME:     -> !transform.any_op
+
+
+# CHECK-LABEL: TEST: test_print_message
+@build_transform_script
+def test_print_message(op: OpHandle):
+    op.print("message")
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: transform.print %[[VAL_0]] {name = "message"}
+
+
+# CHECK-LABEL: TEST: test_print_plain
+@build_transform_script
+def test_print_plain(op: OpHandle):
+    op.print()
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: transform.print %[[VAL_0]]
 
 
 # CHECK-LABEL: TEST: test_sequence_region

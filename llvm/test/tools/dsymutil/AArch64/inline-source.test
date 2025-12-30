@@ -1,0 +1,21 @@
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: llc -filetype=obj -mtriple arm64-apple-darwin %p/../Inputs/inline.ll -o %t/inline.o
+# RUN: dsymutil -f -oso-prepend-path=%t -y %s -o - | llvm-dwarfdump -debug-line - | FileCheck %s
+# RUN: dsymutil --linker=parallel -f -oso-prepend-path=%t -y %s -o - | llvm-dwarfdump -debug-line - | FileCheck %s
+
+# Test inline source files.
+
+---
+triple:          'arm64-apple-darwin'
+objects:
+  - filename: inline.o
+    symbols:
+      - { sym: _f, objAddr: 0x0, binAddr: 0x1000, size: 0x12 }
+...
+
+# CHECK: .debug_line contents:
+# CHECK: file_names[  1]:
+# CHECK-NEXT: name: "inlined.c"
+# CHECK-NEXT: dir_index: 1
+# CHECK-NEXT: source: "{{.*}}This is inline source code.

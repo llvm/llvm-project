@@ -15,8 +15,8 @@
 // TODO Verify C convention follows SysV M68K ABI
 
 class CCIfSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("static_cast<const M68kSubtarget &>"
-                      "(State.getMachineFunction().getSubtarget()).", F), A>;
+    : CCIf<!strconcat("State.getMachineFunction()."
+                      "getSubtarget<M68kSubtarget>().", F), A>;
 
 //===----------------------------------------------------------------------===//
 // Return Value Calling Conventions

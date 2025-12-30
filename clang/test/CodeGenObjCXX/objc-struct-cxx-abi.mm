@@ -75,7 +75,7 @@ struct ContainsNonTrivial {
 - (void)passNonTrivial:(NonTrivial)a;
 @end
 
-// CHECK: define{{.*}} void @_Z19testParamStrongWeak10StrongWeak(ptr noundef %{{.*}})
+// CHECK: define{{.*}} void @_Z19testParamStrongWeak10StrongWeak(ptr dead_on_return noundef %{{.*}})
 // CHECK: call noundef ptr @_ZN10StrongWeakD1Ev(
 // CHECK-NEXT: ret void
 
@@ -88,7 +88,7 @@ void testParamStrongWeak(StrongWeak a) {
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN10StrongWeakC1ERKS_(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef nonnull align 8 dereferenceable(16) %[[V0]])
-// CHECK: call void @_Z19testParamStrongWeak10StrongWeak(ptr noundef %[[AGG_TMP]])
+// CHECK: call void @_Z19testParamStrongWeak10StrongWeak(ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK-NOT: call
 // CHECK: ret void
 
@@ -96,7 +96,7 @@ void testCallStrongWeak(StrongWeak *a) {
   testParamStrongWeak(*a);
 }
 
-// CHECK: define{{.*}} void @_Z20testReturnStrongWeakP10StrongWeak(ptr noalias sret(%[[STRUCT_STRONGWEAK:.*]]) align 8 %[[AGG_RESULT:.*]], ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z20testReturnStrongWeakP10StrongWeak(ptr dead_on_unwind noalias writable sret(%[[STRUCT_STRONGWEAK:.*]]) align 8 %[[AGG_RESULT:.*]], ptr noundef %[[A:.*]])
 // CHECK: %[[A_ADDR:a.addr]] = alloca ptr, align 8
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
@@ -107,13 +107,13 @@ StrongWeak testReturnStrongWeak(StrongWeak *a) {
   return *a;
 }
 
-// CHECK: define{{.*}} void @_Z27testParamContainsStrongWeak18ContainsStrongWeak(ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z27testParamContainsStrongWeak18ContainsStrongWeak(ptr dead_on_return noundef %[[A:.*]])
 // CHECK: call noundef ptr @_ZN18ContainsStrongWeakD1Ev(ptr {{[^,]*}} %[[A]])
 
 void testParamContainsStrongWeak(ContainsStrongWeak a) {
 }
 
-// CHECK: define{{.*}} void @_Z26testParamDerivedStrongWeak17DerivedStrongWeak(ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z26testParamDerivedStrongWeak17DerivedStrongWeak(ptr dead_on_return noundef %[[A:.*]])
 // CHECK: call noundef ptr @_ZN17DerivedStrongWeakD1Ev(ptr {{[^,]*}} %[[A]])
 
 void testParamDerivedStrongWeak(DerivedStrongWeak a) {
@@ -121,7 +121,7 @@ void testParamDerivedStrongWeak(DerivedStrongWeak a) {
 
 // CHECK: define{{.*}} void @_Z15testParamStrong6Strong(i64 %[[A_COERCE:.*]])
 // CHECK: %[[A:.*]] = alloca %[[STRUCT_STRONG]], align 8
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[A]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[A]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[A_COERCE]] to ptr
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN6StrongD1Ev(ptr {{[^,]*}} %[[A]])
@@ -138,7 +138,7 @@ void testParamStrong(Strong a) {
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN6StrongC1ERKS_(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef nonnull align 8 dereferenceable(8) %[[V0]])
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V1]] to i64
 // CHECK: call void @_Z15testParamStrong6Strong(i64 %[[COERCE_VAL_PI]])
@@ -154,7 +154,7 @@ void testCallStrong(Strong *a) {
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN6StrongC1ERKS_(ptr {{[^,]*}} %[[RETVAL]], ptr noundef nonnull align 8 dereferenceable(8) %[[V0]])
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V1]] to i64
 // CHECK: ret i64 %[[COERCE_VAL_PI]]
@@ -163,7 +163,7 @@ Strong testReturnStrong(Strong *a) {
   return *a;
 }
 
-// CHECK: define{{.*}} void @_Z21testParamWeakTemplate1SIU6__weakP11objc_objectE(ptr noundef %{{.*}})
+// CHECK: define{{.*}} void @_Z21testParamWeakTemplate1SIU6__weakP11objc_objectE(ptr dead_on_return noundef %{{.*}})
 // CHECK: call noundef ptr @_ZN1SIU6__weakP11objc_objectED1Ev(
 // CHECK-NEXT: ret void
 
@@ -190,10 +190,10 @@ namespace testThunk {
 // CHECK-LABEL: define{{.*}} i64 @_ZThn8_N9testThunk2D02m0Ev(
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[CALL:.*]] = tail call i64 @_ZN9testThunk2D02m0Ev(
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[CALL]] to ptr
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
-// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V3:.*]] = load ptr, ptr %[[COERCE_DIVE2]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V3]] to i64
 // CHECK: ret i64 %[[COERCE_VAL_PI]]
@@ -220,7 +220,7 @@ namespace testNullReceiver {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: br i1
 
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V7:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V7]] to i64
 // CHECK: call void @objc_msgSend({{.*}}, i64 %[[COERCE_VAL_PI]])
@@ -237,7 +237,7 @@ void test0(C *c) {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONGWEAK]], align 8
 // CHECK: br i1
 
-// CHECK: call void @objc_msgSend({{.*}}, ptr noundef %[[AGG_TMP]])
+// CHECK: call void @objc_msgSend({{.*}}, ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK: br
 
 // CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN10StrongWeakD1Ev(ptr noundef nonnull align 8 dereferenceable(16) %[[AGG_TMP]])

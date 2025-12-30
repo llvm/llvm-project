@@ -20,6 +20,7 @@ namespace lldb_private {
 class StopInfo : public std::enable_shared_from_this<StopInfo> {
   friend class Process::ProcessEventData;
   friend class ThreadPlanBase;
+  friend class ThreadPlanReverseContinue;
 
 public:
   // Constructors and Destructors
@@ -77,7 +78,30 @@ public:
       m_description.clear();
   }
 
+  /// This gives the StopInfo a chance to suggest a stack frame to select.
+  /// Passing true for inlined_stack will request changes to the inlined
+  /// call stack.  Passing false will request changes to the real stack
+  /// frame.  The inlined stack gets adjusted before we call into the thread
+  /// plans so they can reason based on the correct values.  The real stack
+  /// adjustment is handled after the frame recognizers get a chance to adjust
+  /// the frame.
+  virtual std::optional<uint32_t>
+  GetSuggestedStackFrameIndex(bool inlined_stack) {
+    return {};
+  }
+
   virtual bool IsValidForOperatingSystemThread(Thread &thread) { return true; }
+
+  /// A Continue operation can result in a false stop event
+  /// before any execution has happened. We need to detect this
+  /// and silently continue again one more time.
+  virtual bool WasContinueInterrupted(Thread &thread) { return false; }
+
+  virtual uint32_t GetStopReasonDataCount() const { return 0; }
+  virtual uint64_t GetStopReasonDataAtIndex(uint32_t idx) {
+    // Handle all the common cases that have no data.
+    return 0;
+  }
 
   // Sometimes the thread plan logic will know that it wants a given stop to
   // stop or not, regardless of what the ordinary logic for that StopInfo would
@@ -100,6 +124,19 @@ public:
 
   StructuredData::ObjectSP GetExtendedInfo() { return m_extended_info; }
 
+  /// Returns true if this is a stop reason that should be shown to a user when
+  /// viewing the thread with this stop info.
+  virtual bool ShouldShow() const { return IsValid(); }
+
+  /// Returns true if this is a stop reason that should cause a thread to be
+  /// selected when stopping.
+  virtual bool ShouldSelect() const {
+    lldb::StopReason reason = GetStopReason();
+    return reason != lldb::eStopReasonNone &&
+           reason != lldb::eStopReasonHistoryBoundary &&
+           reason != lldb::eStopReasonInvalid;
+  }
+
   static lldb::StopInfoSP
   CreateStopReasonWithBreakpointSiteID(Thread &thread,
                                        lldb::break_id_t break_id);
@@ -118,6 +155,10 @@ public:
                              const char *description = nullptr,
                              std::optional<int> code = std::nullopt);
 
+  static lldb::StopInfoSP
+  CreateStopReasonWithInterrupt(Thread &thread, int signo,
+                                const char *description);
+
   static lldb::StopInfoSP CreateStopReasonToTrace(Thread &thread);
 
   static lldb::StopInfoSP
@@ -132,6 +173,12 @@ public:
 
   static lldb::StopInfoSP
   CreateStopReasonProcessorTrace(Thread &thread, const char *description);
+
+  // This creates a StopInfo indicating that execution stopped because
+  // it was replaying some recorded execution history, and execution reached
+  // the end of that recorded history.
+  static lldb::StopInfoSP
+  CreateStopReasonHistoryBoundary(Thread &thread, const char *description);
 
   static lldb::StopInfoSP CreateStopReasonFork(Thread &thread,
                                                lldb::pid_t child_pid,

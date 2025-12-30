@@ -246,7 +246,7 @@ struct PreorderVisitor : public RecursiveASTVisitor<PreorderVisitor> {
     PostTraverse(SavedState);
     return true;
   }
-  bool TraverseType(QualType T) { return true; }
+  bool TraverseType(QualType T, bool TraverseQualifier = true) { return true; }
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
     if (isNodeExcluded(Tree.AST.getSourceManager(), Init))
       return true;
@@ -428,11 +428,12 @@ std::string SyntaxTree::Impl::getDeclValue(const Decl *D) const {
     Value += getRelativeName(N) + ";";
   if (auto *T = dyn_cast<TypedefNameDecl>(D))
     return Value + T->getUnderlyingType().getAsString(TypePP) + ";";
-  if (auto *T = dyn_cast<TypeDecl>(D))
-    if (T->getTypeForDecl())
-      Value +=
-          T->getTypeForDecl()->getCanonicalTypeInternal().getAsString(TypePP) +
-          ";";
+  if (auto *T = dyn_cast<TypeDecl>(D)) {
+    const ASTContext &Ctx = T->getASTContext();
+    Value +=
+        Ctx.getTypeDeclType(T)->getCanonicalTypeInternal().getAsString(TypePP) +
+        ";";
+  }
   if (auto *U = dyn_cast<UsingDirectiveDecl>(D))
     return std::string(U->getNominatedNamespace()->getName());
   if (auto *A = dyn_cast<AccessSpecDecl>(D)) {
@@ -453,12 +454,12 @@ std::string SyntaxTree::Impl::getStmtValue(const Stmt *S) const {
   if (auto *I = dyn_cast<IntegerLiteral>(S)) {
     SmallString<256> Str;
     I->getValue().toString(Str, /*Radix=*/10, /*Signed=*/false);
-    return std::string(Str.str());
+    return std::string(Str);
   }
   if (auto *F = dyn_cast<FloatingLiteral>(S)) {
     SmallString<256> Str;
     F->getValue().toString(Str);
-    return std::string(Str.str());
+    return std::string(Str);
   }
   if (auto *D = dyn_cast<DeclRefExpr>(S))
     return getRelativeName(D->getDecl(), getEnclosingDeclContext(AST, S));

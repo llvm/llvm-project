@@ -668,12 +668,11 @@ define i8 @sel_67_neg125(i32 %x) {
 define i32 @select_C1_C2(i1 %cond) {
 ; X86-LABEL: select_C1_C2:
 ; X86:       # %bb.0:
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $421, %eax # imm = 0x1A5
-; X86-NEXT:    jne .LBB32_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl $42, %eax
-; X86-NEXT:  .LBB32_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $399, %eax # imm = 0x18F
+; X86-NEXT:    xorl $42, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select_C1_C2:
@@ -712,12 +711,11 @@ define i32 @select_C1_C2_zeroext(i1 zeroext %cond) {
 define i32 @select_C1_C2_signext(i1 signext %cond) {
 ; X86-LABEL: select_C1_C2_signext:
 ; X86:       # %bb.0:
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $421, %eax # imm = 0x1A5
-; X86-NEXT:    jne .LBB34_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl $42, %eax
-; X86-NEXT:  .LBB34_2:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    andl $399, %eax # imm = 0x18F
+; X86-NEXT:    xorl $42, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select_C1_C2_signext:
@@ -800,44 +798,34 @@ define i64 @select_2_or_inc(i64 %x) {
 define <4 x i32> @sel_constants_add_constant_vec(i1 %cond) {
 ; X86-LABEL: sel_constants_add_constant_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $-3, %ecx
-; X86-NEXT:    jne .LBB37_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl $12, %ecx
-; X86-NEXT:  .LBB37_2:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $4, %esi
-; X86-NEXT:    movl $4, %edx
-; X86-NEXT:    jne .LBB37_4
-; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl $14, %edx
-; X86-NEXT:  .LBB37_4:
-; X86-NEXT:    jne .LBB37_6
-; X86-NEXT:  # %bb.5:
-; X86-NEXT:    movl $15, %esi
-; X86-NEXT:  .LBB37_6:
-; X86-NEXT:    setne %bl
-; X86-NEXT:    movzbl %bl, %edi
-; X86-NEXT:    addl $13, %edi
-; X86-NEXT:    movl %esi, 12(%eax)
-; X86-NEXT:    movl %edx, 8(%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %edi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    negl %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    andl $-15, %edx
+; X86-NEXT:    orl $12, %edx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    andl $3, %esi
+; X86-NEXT:    xorl $13, %esi
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    andl $10, %edi
+; X86-NEXT:    xorl $14, %edi
+; X86-NEXT:    andl $11, %ecx
+; X86-NEXT:    xorl $15, %ecx
+; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %edi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl $4
 ;
@@ -907,14 +895,12 @@ define i64 @opaque_constant(i1 %cond, i64 %x) {
 ; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $-4, %eax
-; X86-NEXT:    jne .LBB39_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl $23, %eax
-; X86-NEXT:  .LBB39_2:
-; X86-NEXT:    setne %dl
-; X86-NEXT:    movzbl %dl, %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    andl $1, %edx
+; X86-NEXT:    negl %edx
+; X86-NEXT:    andl $1, %edx
+; X86-NEXT:    decl %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    xorl $1, %esi
 ; X86-NEXT:    xorl $1, %ecx
@@ -958,7 +944,7 @@ define float @select_undef_fp(float %x) {
 ;
 ; X64-LABEL: select_undef_fp:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm0 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    retq
   %f = select i1 undef, float 4.0, float %x
   ret float %f

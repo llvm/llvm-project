@@ -108,7 +108,7 @@ define i8 @test6f() {
 ; CHECK-NEXT:    [[R:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[TMP:%.*]] = call i8 @test6g(ptr [[R]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[R]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[R]], align 1, !range [[RNG5:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], 1
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[OR_COND]], i8 0, i8 1

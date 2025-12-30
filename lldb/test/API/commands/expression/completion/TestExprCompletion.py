@@ -246,6 +246,11 @@ class CommandLineExprCompletionTestCase(TestBase):
             "expr some_expr.Self(). FooNoArgs", "expr some_expr.Self(). FooNoArgsBar()"
         )
 
+        self.complete_from_to("expr myVec.__f", "expr myVec.__func()")
+        self.complete_from_to("expr myVec._F", "expr myVec._Func()")
+        self.complete_from_to("expr myVec.__m", "expr myVec.__mem")
+        self.complete_from_to("expr myVec._M", "expr myVec._Mem")
+
     def test_expr_completion_with_descriptions(self):
         self.build()
         self.main_source = "main.cpp"
@@ -292,6 +297,37 @@ class CommandLineExprCompletionTestCase(TestBase):
             enforce_order=True,
         )
 
+    def test_expr_completion_max_results(self):
+        self.build()
+        self.main_source = "main.cpp"
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        self.createTestTarget()
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// Break here", self.main_source_spec
+        )
+
+        expected_completions = [
+            "some_expr.~Expr()",
+            "some_expr.operator=(",  # Copy operator
+            "some_expr.operator=(",  # Move operator
+            "some_expr.MemberVariableBar",
+            "some_expr.StaticMemberMethodBar()",
+            "some_expr.Self()",
+            "some_expr.FooNoArgsBar()",
+            "some_expr.FooWithArgsBar(",
+            "some_expr.FooNumbersBar1()",
+            "some_expr.FooUnderscoreBar_()",
+            "some_expr.FooWithMultipleArgsBar(",
+        ]
+
+        for i in range(1, len(expected_completions)):
+            self.completions_match(
+                "expr some_expr.",
+                expected_completions[:i],
+                max_completions=i,
+            )
+
     def assume_no_completions(self, str_input, cursor_pos=None):
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
@@ -305,7 +341,7 @@ class CommandLineExprCompletionTestCase(TestBase):
         for m in match_strings:
             available_completions.append(m)
 
-        self.assertEquals(
+        self.assertEqual(
             num_matches,
             0,
             "Got matches, but didn't expect any: " + str(available_completions),

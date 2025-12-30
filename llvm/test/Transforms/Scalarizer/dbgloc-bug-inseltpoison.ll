@@ -7,7 +7,7 @@ define i16 @f1() !dbg !5 {
   ret i16 undef, !dbg !9
 }
 
-define void @f2() !dbg !10 {
+define void @f2(i1 %arg) !dbg !10 {
 bb1:
   %_tmp7 = tail call i16 @f1(), !dbg !13
 ; CHECK: call i16 @f1(), !dbg !13
@@ -16,7 +16,7 @@ bb1:
   br label %vector.body
 
 vector.body:
-  br i1 undef, label %middle.block, label %vector.body
+  br i1 %arg, label %middle.block, label %vector.body
 
 middle.block:
   ret void, !dbg !15

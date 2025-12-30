@@ -36,15 +36,20 @@ decltype(__hwasan_shadow)* __hwasan_premap_shadow();
 
 namespace __hwasan {
 
+// We cannot call anything in libc here (see comment above), so we need to
+// assume the biggest allowed page size.
+// Android max page size is defined as 16k here:
+// https://android.googlesource.com/platform/bionic/+/main/libc/platform/bionic/page.h#41
+static constexpr uptr kMaxGranularity = 16384;
+
 // Conservative upper limit.
 static uptr PremapShadowSize() {
-  return RoundUpTo(GetMaxVirtualAddress() >> kShadowScale,
-                   GetMmapGranularity());
+  return RoundUpTo(GetMaxVirtualAddress() >> kShadowScale, kMaxGranularity);
 }
 
 static uptr PremapShadow() {
   return MapDynamicShadow(PremapShadowSize(), kShadowScale,
-                          kShadowBaseAlignment, kHighMemEnd);
+                          kShadowBaseAlignment, kHighMemEnd, kMaxGranularity);
 }
 
 static bool IsPremapShadowAvailable() {
@@ -56,7 +61,7 @@ static bool IsPremapShadowAvailable() {
 }
 
 static uptr FindPremappedShadowStart(uptr shadow_size_bytes) {
-  const uptr granularity = GetMmapGranularity();
+  const uptr granularity = kMaxGranularity;
   const uptr shadow_start = reinterpret_cast<uptr>(&__hwasan_shadow);
   const uptr premap_shadow_size = PremapShadowSize();
   const uptr shadow_size = RoundUpTo(shadow_size_bytes, granularity);
@@ -109,7 +114,7 @@ uptr FindDynamicShadowStart(uptr shadow_size_bytes) {
   if (IsPremapShadowAvailable())
     return FindPremappedShadowStart(shadow_size_bytes);
   return MapDynamicShadow(shadow_size_bytes, kShadowScale, kShadowBaseAlignment,
-                          kHighMemEnd);
+                          kHighMemEnd, kMaxGranularity);
 }
 
 }  // namespace __hwasan
@@ -135,7 +140,7 @@ uptr FindDynamicShadowStart(uptr shadow_size_bytes) {
                                     RingBufferSize());
 #  endif
   return MapDynamicShadow(shadow_size_bytes, kShadowScale, kShadowBaseAlignment,
-                          kHighMemEnd);
+                          kHighMemEnd, GetMmapGranularity());
 }
 
 }  // namespace __hwasan

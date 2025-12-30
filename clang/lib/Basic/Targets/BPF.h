@@ -34,11 +34,7 @@ public:
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
     RegParmMax = 5;
-    if (Triple.getArch() == llvm::Triple::bpfeb) {
-      resetDataLayout("E-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
-    } else {
-      resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
-    }
+    resetDataLayout();
     MaxAtomicPromoteWidth = 64;
     MaxAtomicInlineWidth = 64;
     TLSSupported = false;
@@ -58,7 +54,7 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   std::string_view getClobbers() const override { return ""; }
 
@@ -67,9 +63,7 @@ public:
   }
 
   bool isValidGCCRegisterName(StringRef Name) const override { return true; }
-  ArrayRef<const char *> getGCCRegNames() const override {
-    return std::nullopt;
-  }
+  ArrayRef<const char *> getGCCRegNames() const override { return {}; }
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
@@ -86,7 +80,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool allowDebugInfoForExternalRef() const override { return true; }
@@ -96,7 +90,7 @@ public:
     default:
       return CCCR_Warning;
     case CC_C:
-    case CC_OpenCLKernel:
+    case CC_DeviceKernel:
       return CCCR_OK;
     }
   }
@@ -112,6 +106,10 @@ public:
 
     StringRef CPUName(Name);
     return isValidCPUName(CPUName);
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
   }
 };
 } // namespace targets

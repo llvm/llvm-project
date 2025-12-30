@@ -24,9 +24,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
+class Comdat;
+class GlobalValue;
 class Module;
 
 /// A pass that internalizes all functions and variables other than those that
@@ -59,15 +62,15 @@ class InternalizePass : public PassInfoMixin<InternalizePass> {
                    DenseMap<const Comdat *, ComdatInfo> &ComdatMap);
 
 public:
-  InternalizePass();
+  LLVM_ABI InternalizePass();
   InternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV)
       : MustPreserveGV(std::move(MustPreserveGV)) {}
 
   /// Run the internalizer on \p TheModule, returns true if any changes was
   /// made.
-  bool internalizeModule(Module &TheModule);
+  LLVM_ABI bool internalizeModule(Module &TheModule);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Helper function to internalize functions and variables in a Module.

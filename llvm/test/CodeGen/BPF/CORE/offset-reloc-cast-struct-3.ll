@@ -22,14 +22,14 @@ target triple = "bpf"
 %struct.v1 = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(%struct.v3* %arg) local_unnamed_addr #0 !dbg !19 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !19 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.v3* %arg, metadata !30, metadata !DIExpression()), !dbg !31
-  %0 = tail call [40 x i32]* @llvm.preserve.struct.access.index.p0a40i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %arg, i32 1, i32 1), !dbg !32, !llvm.preserve.access.index !24
-  %1 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a40i32([40 x i32]* elementtype([40 x i32]) %0, i32 1, i32 4), !dbg !32, !llvm.preserve.access.index !11
-  %2 = bitcast i32* %1 to %struct.v1*, !dbg !32
-  %3 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v1s(%struct.v1* elementtype(%struct.v1) %2, i32 1, i32 1), !dbg !32, !llvm.preserve.access.index !6
-  %call = tail call i32 @get_value(i32* %3) #4, !dbg !33
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !30, metadata !DIExpression()), !dbg !31
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.v3) %arg, i32 1, i32 1), !dbg !32, !llvm.preserve.access.index !24
+  %1 = tail call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([40 x i32]) %0, i32 1, i32 4), !dbg !32, !llvm.preserve.access.index !11
+  %2 = bitcast ptr %1 to ptr, !dbg !32
+  %3 = tail call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.v1) %2, i32 1, i32 1), !dbg !32, !llvm.preserve.access.index !6
+  %call = tail call i32 @get_value(ptr %3), !dbg !33
   ret i32 %call, !dbg !34
 }
 
@@ -60,25 +60,18 @@ entry:
 ; CHECK-NEXT:        .long   118
 ; CHECK-NEXT:        .long   0
 
-declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
-declare [40 x i32]* @llvm.preserve.struct.access.index.p0a40i32.p0s_struct.v3s(%struct.v3*, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0(ptr, i32, i32)
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.array.access.index.p0i32.p0a40i32([40 x i32]*, i32, i32) #2
+declare ptr @llvm.preserve.array.access.index.p0.p0(ptr, i32, i32)
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v1s(%struct.v1*, i32, i32) #2
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #3
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind readnone }
-attributes #3 = { nounwind readnone speculatable willreturn }
-attributes #4 = { nounwind }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!15, !16, !17}

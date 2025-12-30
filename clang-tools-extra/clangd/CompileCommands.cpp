@@ -11,8 +11,8 @@
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Options/Options.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -82,7 +82,7 @@ std::string resolve(std::string Path) {
     log("Failed to resolve possible symlink {0}", Path);
     return Path;
   }
-  return std::string(Resolved.str());
+  return std::string(Resolved);
 }
 
 // Get a plausible full `clang` path.
@@ -114,7 +114,7 @@ std::string detectClangPath() {
   SmallString<128> ClangPath;
   ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
   llvm::sys::path::append(ClangPath, "clang");
-  return std::string(ClangPath.str());
+  return std::string(ClangPath);
 }
 
 // On mac, /usr/bin/clang sets SDKROOT and then invokes the real clang.
@@ -132,8 +132,7 @@ std::optional<std::string> detectSysroot() {
 
 std::string detectStandardResourceDir() {
   static int StaticForMainAddr; // Just an address in this process.
-  return CompilerInvocation::GetResourcesPath("clangd",
-                                              (void *)&StaticForMainAddr);
+  return GetResourcesPath("clangd", (void *)&StaticForMainAddr);
 }
 
 // The path passed to argv[0] is important:
@@ -206,7 +205,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   if (Cmd.empty())
     return;
 
-  auto &OptTable = clang::driver::getDriverOptTable();
+  auto &OptTable = getDriverOptTable();
   // OriginalArgs needs to outlive ArgList.
   llvm::SmallVector<const char *, 16> OriginalArgs;
   OriginalArgs.reserve(Cmd.size());
@@ -222,8 +221,8 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   llvm::opt::InputArgList ArgList;
   ArgList = OptTable.ParseArgs(
       llvm::ArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
-      llvm::opt::Visibility(IsCLMode ? driver::options::CLOption
-                                     : driver::options::ClangOption));
+      llvm::opt::Visibility(IsCLMode ? options::CLOption
+                                     : options::ClangOption));
 
   llvm::SmallVector<unsigned, 1> IndicesToDrop;
   // Having multiple architecture options (e.g. when building fat binaries)
@@ -232,7 +231,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // As there are no signals to figure out which one user actually wants. They
   // can explicitly specify one through `CompileFlags.Add` if need be.
   unsigned ArchOptCount = 0;
-  for (auto *Input : ArgList.filtered(driver::options::OPT_arch)) {
+  for (auto *Input : ArgList.filtered(options::OPT_arch)) {
     ++ArchOptCount;
     for (auto I = 0U; I <= Input->getNumValues(); ++I)
       IndicesToDrop.push_back(Input->getIndex() + I);
@@ -262,15 +261,15 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // explicitly at the end of the flags. This ensures modifications done in the
   // following steps apply in more cases (like setting -x, which only affects
   // inputs that come after it).
-  for (auto *Input : ArgList.filtered(driver::options::OPT_INPUT)) {
+  for (auto *Input : ArgList.filtered(options::OPT_INPUT)) {
     SawInput(Input->getValue(0));
     IndicesToDrop.push_back(Input->getIndex());
   }
   // Anything after `--` is also treated as input, drop them as well.
-  if (auto *DashDash =
-          ArgList.getLastArgNoClaim(driver::options::OPT__DASH_DASH)) {
+  if (auto *DashDash = ArgList.getLastArgNoClaim(options::OPT__DASH_DASH)) {
     auto DashDashIndex = DashDash->getIndex() + 1; // +1 accounts for Cmd[0]
-    for (unsigned I = DashDashIndex; I < Cmd.size(); ++I)
+    // Another +1 so we don't treat the `--` itself as an input.
+    for (unsigned I = DashDashIndex + 1; I < Cmd.size(); ++I)
       SawInput(Cmd[I]);
     Cmd.resize(DashDashIndex);
   }
@@ -313,13 +312,15 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
 
   tooling::addTargetAndModeForProgramName(Cmd, Cmd.front());
 
-  // Check whether the flag exists, either as -flag or -flag=*
-  auto Has = [&](llvm::StringRef Flag) {
-    for (llvm::StringRef Arg : Cmd) {
-      if (Arg.consume_front(Flag) && (Arg.empty() || Arg[0] == '='))
-        return true;
-    }
-    return false;
+  // Check whether the flag exists in the command.
+  auto HasExact = [&](llvm::StringRef Flag) {
+    return llvm::is_contained(Cmd, Flag);
+  };
+
+  // Check whether the flag appears in the command as a prefix.
+  auto HasPrefix = [&](llvm::StringRef Flag) {
+    return llvm::any_of(
+        Cmd, [&](llvm::StringRef Arg) { return Arg.starts_with(Flag); });
   };
 
   llvm::erase_if(Cmd, [](llvm::StringRef Elem) {
@@ -327,12 +328,13 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   });
 
   std::vector<std::string> ToAppend;
-  if (ResourceDir && !Has("-resource-dir"))
+  if (ResourceDir && !HasExact("-resource-dir") && !HasPrefix("-resource-dir="))
     ToAppend.push_back(("-resource-dir=" + *ResourceDir));
 
   // Don't set `-isysroot` if it is already set or if `--sysroot` is set.
   // `--sysroot` is a superset of the `-isysroot` argument.
-  if (Sysroot && !Has("-isysroot") && !Has("--sysroot")) {
+  if (Sysroot && !HasPrefix("-isysroot") && !HasExact("--sysroot") &&
+      !HasPrefix("--sysroot=")) {
     ToAppend.push_back("-isysroot");
     ToAppend.push_back(*Sysroot);
   }
@@ -343,7 +345,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   }
 
   if (!Cmd.empty()) {
-    bool FollowSymlink = !Has("-no-canonical-prefixes");
+    bool FollowSymlink = !HasExact("-no-canonical-prefixes");
     Cmd.front() =
         (FollowSymlink ? ResolvedDrivers : ResolvedDriversNoFollow)
             .get(Cmd.front(), [&, this] {
@@ -401,8 +403,7 @@ enum DriverMode : unsigned char {
 DriverMode getDriverMode(const std::vector<std::string> &Args) {
   DriverMode Mode = DM_GCC;
   llvm::StringRef Argv0 = Args.front();
-  if (Argv0.ends_with_insensitive(".exe"))
-    Argv0 = Argv0.drop_back(strlen(".exe"));
+  Argv0.consume_back_insensitive(".exe");
   if (Argv0.ends_with_insensitive("cl"))
     Mode = DM_CL;
   for (const llvm::StringRef Arg : Args) {
@@ -421,11 +422,11 @@ DriverMode getDriverMode(const std::vector<std::string> &Args) {
 // Returns the set of DriverModes where an option may be used.
 unsigned char getModes(const llvm::opt::Option &Opt) {
   unsigned char Result = DM_None;
-  if (Opt.hasVisibilityFlag(driver::options::ClangOption))
+  if (Opt.hasVisibilityFlag(options::ClangOption))
     Result |= DM_GCC;
-  if (Opt.hasVisibilityFlag(driver::options::CC1Option))
+  if (Opt.hasVisibilityFlag(options::CC1Option))
     Result |= DM_CC1;
-  if (Opt.hasVisibilityFlag(driver::options::CLOption))
+  if (Opt.hasVisibilityFlag(options::CLOption))
     Result |= DM_CL;
   return Result;
 }
@@ -439,8 +440,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
   using TableTy =
       llvm::StringMap<llvm::SmallVector<Rule, 4>, llvm::BumpPtrAllocator>;
   static TableTy *Table = [] {
-    auto &DriverTable = driver::getDriverOptTable();
-    using DriverID = clang::driver::options::ID;
+    auto &DriverTable = getDriverOptTable();
+    using DriverID = clang::options::ID;
 
     // Collect sets of aliases, so we can treat -foo and -foo= as synonyms.
     // Conceptually a double-linked list: PrevAlias[I] -> I -> NextAlias[I].
@@ -455,19 +456,6 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       PrevAlias[Self] = T;
       NextAlias[T] = Self;
     };
-    // Also grab prefixes for each option, these are not fully exposed.
-    llvm::ArrayRef<llvm::StringLiteral> Prefixes[DriverID::LastOption];
-
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
-#define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
-  Prefixes[DriverID::OPT_##ID] = PREFIX;
-#include "clang/Driver/Options.inc"
-#undef OPTION
-#undef PREFIX
 
     struct {
       DriverID ID;
@@ -475,9 +463,10 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       const void *AliasArgs;
     } AliasTable[] = {
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
+               FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
+               METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)                          \
   {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTION
     };
     for (auto &E : AliasTable)
@@ -493,7 +482,9 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       llvm::SmallVector<Rule> Rules;
       // Iterate over each alias, to add rules for parsing it.
       for (unsigned A = ID; A != DriverID::OPT_INVALID; A = NextAlias[A]) {
-        if (!Prefixes[A].size()) // option groups.
+        llvm::SmallVector<llvm::StringRef, 4> Prefixes;
+        DriverTable.appendOptionPrefixes(A, Prefixes);
+        if (Prefixes.empty()) // option groups.
           continue;
         auto Opt = DriverTable.getOption(A);
         // Exclude - and -foo pseudo-options.
@@ -502,7 +493,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
         auto Modes = getModes(Opt);
         std::pair<unsigned, unsigned> ArgCount = getArgCount(Opt);
         // Iterate over each spelling of the alias, e.g. -foo vs --foo.
-        for (StringRef Prefix : Prefixes[A]) {
+        for (StringRef Prefix : Prefixes) {
           llvm::SmallString<64> Buf(Prefix);
           Buf.append(Opt.getName());
           llvm::StringRef Spelling = Result->try_emplace(Buf).first->getKey();

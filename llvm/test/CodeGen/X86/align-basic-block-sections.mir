@@ -1,5 +1,5 @@
 # Check if the alignment directive is put on the correct place when the basic block section option is used.
-# RUN: llc -mtriple x86_64-unknown-linux-gnu -start-after=bbsections-prepare  %s -o - | FileCheck %s -check-prefix=CHECK
+# RUN: llc -mtriple x86_64-unknown-linux-gnu -start-before=x86-asm-printer %s -o - | FileCheck %s -check-prefix=CHECK
 
 # How to generate the input:
 # foo.c
@@ -56,7 +56,7 @@ tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 failsVerification: false
@@ -83,8 +83,8 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   hasTailCall:     false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []
@@ -132,5 +132,5 @@ body:             |
 ...
 
 # CHECK: .section	.text.test,"ax",@progbits,unique,2
-# CHECK-NEXT: .p2align	8, 0x90
+# CHECK-NEXT: .p2align	8
 # CHECK-NEXT: test.__part.2: # %entry

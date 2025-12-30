@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: not wasm-ld -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=UNDEF
 # RUN: wasm-ld --allow-undefined -o %t.wasm %t.o
-# RUN: not wasm-ld --shared -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=SHARED
+# RUN: not wasm-ld --experimental-pic -shared --unresolved-symbols=import-dynamic -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=SHARED
 
 .globl  _start
 _start:

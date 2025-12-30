@@ -12,7 +12,7 @@
 
 class InstSI <dag outs, dag ins, string asm = "",
               list<dag> pattern = []> :
-  AMDGPUInst<outs, ins, asm, pattern>, GCNPredicateControl {
+  AMDGPUInst<outs, ins, asm, pattern>, PredicateControl {
   // Low bits - basic encoding information.
   field bit SALU = 0;
   field bit VALU = 0;
@@ -46,15 +46,16 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit FLAT = 0;
   field bit DS = 0;
 
-  // Pseudo instruction formats.
-  field bit VGPRSpill = 0;
-  field bit SGPRSpill = 0;
+  // Combined SGPR/VGPR spill bit
+  field bit Spill = 0;
 
   // LDSDIR instruction format.
   field bit LDSDIR = 0;
 
   // VINTERP instruction format.
   field bit VINTERP = 0;
+
+  field bit VOPD3 = 0;
 
   // High bits - other information.
   field bit VM_CNT = 0;
@@ -69,9 +70,8 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit Gather4 = 0;
 
-  // Most sopk treat the immediate as a signed 16-bit, however some
-  // use it as unsigned.
-  field bit SOPKZext = 0;
+  // wait count to manage tensor loads/stores.
+  field bit TENSOR_CNT = 0;
 
   // This is an s_store_dword* instruction that requires a cache flush
   // on wave termination. It is necessary to distinguish from mayStore
@@ -82,9 +82,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   // instruction size.
   field bit FixedSize = 0;
 
-  // This bit tells the assembler to use the 32-bit encoding in case it
-  // is unable to infer the encoding from the operands.
-  field bit VOPAsmPrefer32Bit = 0;
+  // wait count to manage asynchronous loads/stores.
+  field bit ASYNC_CNT = 0;
 
   // This bit indicates that this is a VOP3 opcode which supports op_sel
   // modifier.
@@ -92,10 +91,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   // Is it possible for this instruction to be atomic?
   field bit maybeAtomic = 1;
-
-  // This bit indicates that this is a VI instruction which is renamed
-  // in GFX9. Required for correct mapping from pseudo to MC.
-  field bit renamedInGFX9 = 0;
 
   // This bit indicates that this has a floating point result type, so
   // the clamp modifier has floating point semantics.
@@ -161,6 +156,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // ds_gws_* instructions.
   field bit GWS = 0;
 
+  // This bit indicates that this is one of SWMMAC instructions.
+  field bit IsSWMMAC = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -192,11 +190,14 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{24} = FLAT;
   let TSFlags{25} = DS;
 
-  let TSFlags{26} = VGPRSpill;
-  let TSFlags{27} = SGPRSpill;
+  let TSFlags{26} = Spill;
+
+  // Reserved, must be 0
+  let TSFlags{27} = 0;
 
   let TSFlags{28} = LDSDIR;
   let TSFlags{29} = VINTERP;
+  let TSFlags{30} = VOPD3;
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
@@ -206,14 +207,19 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{36} = DisableWQM;
   let TSFlags{37} = Gather4;
 
-  let TSFlags{38} = SOPKZext;
+  let TSFlags{38} = TENSOR_CNT;
+
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
-  let TSFlags{41} = VOPAsmPrefer32Bit;
+
+  let TSFlags{41} = ASYNC_CNT;
+
   let TSFlags{42} = VOP3_OPSEL;
 
   let TSFlags{43} = maybeAtomic;
-  let TSFlags{44} = renamedInGFX9;
+
+  // Reserved, must be 0.
+  let TSFlags{44} = 0;
 
   let TSFlags{45} = FPClamp;
   let TSFlags{46} = IntClamp;
@@ -247,6 +253,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{61} = IsNeverUniform;
   
   let TSFlags{62} = GWS;
+
+  let TSFlags{63} = IsSWMMAC;
 
   let SchedRW = [Write32Bit];
 
@@ -299,14 +307,21 @@ class Enc96 {
   int Size = 12;
 }
 
+class Enc128 {
+  field bits<128> Inst;
+  int Size = 16;
+}
+
 def CPolBit {
   int GLC = 0;
   int SLC = 1;
   int DLC = 2;
   int SCC = 4;
+  int NV = 5;
+  int SCAL = 11;
 }
 
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
+class VOPDstOperand<RegisterClassLike rc> : RegisterOperand<rc, "printVOPDst">;
 
 def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";
@@ -316,6 +331,12 @@ def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
 def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
+}
+
+// Source-encoded destination operand for instructions like v_swap_b16.
+def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+  let EncoderMethod = VSrcT_b16_Lo128.EncoderMethod;
+  let DecoderMethod = VSrcT_b16_Lo128.DecoderMethod;
 }
 
 class VINTRPe <bits<2> op> : Enc32 {
@@ -452,6 +473,7 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   let Inst{4} = r128;
   let Inst{5} = d16;
   let Inst{6} = a16;
+  let Inst{7} = cpol{5}; // nv
   let Inst{21-14} = op;
   let Inst{25-22} = dmask;
   let Inst{39-32} = vdata;

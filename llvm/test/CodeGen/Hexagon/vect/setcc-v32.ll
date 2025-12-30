@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: test_00
 ; CHECK: [[L00:r[0-9:]+]] = vsxtbh(r0)

@@ -42,6 +42,15 @@ define float @cos_f(float %a) {
   ret float %1
 }
 
+declare float     @llvm.tan.f32(float %Val)
+define float @tan_f(float %a) {
+; CHECK-LABEL: tan_f:
+; SOFT: bl tanf
+; HARD: b tanf
+  %1 = call float @llvm.tan.f32(float %a)
+  ret float %1
+}
+
 declare float     @llvm.pow.f32(float %Val, float %power)
 define float @pow_f(float %a, float %b) {
 ; CHECK-LABEL: pow_f:
@@ -198,6 +207,16 @@ define float @round_f(float %a) {
 ; VFP4: b roundf
 ; FP-ARMv8: vrinta.f32
   %1 = call float @llvm.round.f32(float %a)
+  ret float %1
+}
+
+declare float     @llvm.roundeven.f32(float %Val)
+define float @roundeven_f(float %a) {
+; CHECK-LABEL: roundeven_f:
+; SOFT: bl roundevenf
+; VFP4: b roundevenf
+; FP-ARMv8: vrintn.f32
+  %1 = call float @llvm.roundeven.f32(float %a)
   ret float %1
 }
 

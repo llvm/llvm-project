@@ -10,7 +10,7 @@
 // RUN: %clangxx_msan %s -fsanitize=memory -fno-sanitize-memory-use-after-dtor -o %t &&  %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-NO-FLAG < %t.out
 
-// RUN: %clangxx_msan -fsanitize=memory -fsanitize-memory-use-after-dtor %s -o %t && MSAN_OPTIONS=poison_in_dtor=0 %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize=memory -fsanitize-memory-use-after-dtor %s -o %t && env MSAN_OPTIONS=poison_in_dtor=0 %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-NO-FLAG < %t.out
 
 #include <sanitizer/msan_interface.h>

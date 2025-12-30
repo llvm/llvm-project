@@ -7,7 +7,6 @@ module m
 end module
 program main
   use m
-  !PORTABILITY: Name 'main' declared in a main program should not have the same name as the main program
   pointer main
   !ERROR: Cannot change POINTER attribute on use-associated 'mobj'
   pointer mobj
@@ -16,7 +15,6 @@ program main
   !ERROR: 'inner' cannot have the POINTER attribute
   pointer inner
   real obj
-  !ERROR: 'ip' is a pointer but is not initialized like one
   !ERROR: 'ip' may not have both the POINTER and PARAMETER attributes
   integer, parameter :: ip = 123
   pointer ip

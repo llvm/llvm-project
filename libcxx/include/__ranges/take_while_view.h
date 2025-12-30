@@ -35,6 +35,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -43,8 +46,7 @@ namespace ranges {
 
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG take_while_view
-    : public view_interface<take_while_view<_View, _Pred>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS take_while_view : public view_interface<take_while_view<_View, _Pred>> {
   template <bool>
   class __sentinel;
 
@@ -101,7 +103,7 @@ template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
 template <bool _Const>
 class take_while_view<_View, _Pred>::__sentinel {
-  using _Base = __maybe_const<_Const, _View>;
+  using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
 
   sentinel_t<_Base> __end_ = sentinel_t<_Base>();
   const _Pred* __pred_     = nullptr;
@@ -147,7 +149,7 @@ struct __fn {
     requires constructible_from<decay_t<_Pred>, _Pred>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pred&& __pred) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Pred>(__pred)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Pred>(__pred)));
   }
 };
 
@@ -162,5 +164,7 @@ inline constexpr auto take_while = __take_while::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_TAKE_WHILE_VIEW_H

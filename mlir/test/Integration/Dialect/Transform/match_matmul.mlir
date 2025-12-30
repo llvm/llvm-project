@@ -31,12 +31,12 @@ module attributes { transform.with_named_sequence } {
       %lhs_type: !transform.type {transform.readonly},
       %rhs_type: !transform.type {transform.readonly},
       %res_type: !transform.type {transform.readonly}) {
-    transform.test_print_remark_at_operand %fill, "fill" : !transform.any_op
-    transform.test_print_remark_at_operand %matmul, "matmul" : !transform.any_op
-    transform.test_print_param %dims, "dimensions" at %matmul : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %lhs_type, "LHS type" at %matmul : !transform.type, !transform.any_op
-    transform.test_print_param %rhs_type, "RHS type" at %matmul : !transform.type, !transform.any_op
-    transform.test_print_param %res_type, "result type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_remark_at %fill, "fill" : !transform.any_op
+    transform.debug.emit_remark_at %matmul, "matmul" : !transform.any_op
+    transform.debug.emit_param_as_remark %dims, "dimensions" at %matmul : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %lhs_type, "LHS type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_param_as_remark %rhs_type, "RHS type" at %matmul : !transform.type, !transform.any_op
+    transform.debug.emit_param_as_remark %res_type, "result type" at %matmul : !transform.type, !transform.any_op
     transform.yield
   }
 
@@ -63,13 +63,13 @@ func.func @matmul_simple(%lhs: tensor<10x20xf16>, %rhs: tensor<20x15xf32>) -> te
 }
 
 func.func @matmul_with_extra_ops_in_func(%lhs: tensor<10x20xf32>, %rhs: tensor<20x15xf32>) -> tensor<10x15xf32> {
-  %cst = arith.constant 0.0 : f64
+  %cst = arith.constant 0.0 : f32
   %empty = tensor.empty() : tensor<10x15xf32>
 
   // expected-remark @below {{fill}}
-  %fill = linalg.fill ins(%cst : f64) outs(%empty : tensor<10x15xf32>) -> tensor<10x15xf32>
+  %fill = linalg.fill ins(%cst : f32) outs(%empty : tensor<10x15xf32>) -> tensor<10x15xf32>
 
-  %real_lhs = linalg.elemwise_binary { fun = #linalg.binary_fn<mul> } 
+  %real_lhs = linalg.mul
     ins(%lhs, %lhs : tensor<10x20xf32>, tensor<10x20xf32>) outs(%lhs : tensor<10x20xf32>) -> tensor<10x20xf32>
 
   // expected-remark @below {{matmul}}

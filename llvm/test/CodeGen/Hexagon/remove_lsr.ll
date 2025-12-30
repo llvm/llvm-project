@@ -1,5 +1,5 @@
 ; Test fix for PR-13709.
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: f0
 ; CHECK-NOT: lsr(r{{[0-9]+}}:{{[0-9]+}}, #32)
 ; CHECK-NOT: lsr(r{{[0-9]+}}:{{[0-9]+}}, #32)

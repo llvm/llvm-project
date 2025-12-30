@@ -27,8 +27,6 @@ The groups that have contributed papers:
 
 .. note:: "Nothing to do" means that no library changes were needed to implement this change.
 
-.. _paper-status-cxx2c:
-
 Paper Status
 ====================================
 
@@ -36,12 +34,6 @@ Paper Status
    :file: Cxx2cPapers.csv
    :header-rows: 1
    :widths: auto
-
-.. note::
-
-   .. [#note-P2510R3] This paper is applied as DR against C++20. (MSVC STL and libstdc++ will do the same.)
-
-.. _issues-status-cxx2c:
 
 Library Working Group Issues Status
 ====================================

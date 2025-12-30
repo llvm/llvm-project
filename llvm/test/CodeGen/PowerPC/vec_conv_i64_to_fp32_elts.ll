@@ -35,12 +35,12 @@ define i64 @test2elt(<2 x i64> %a) local_unnamed_addr #0 {
 ;
 ; CHECK-BE-LABEL: test2elt:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxswapd vs0, v2
-; CHECK-BE-NEXT:    xscvuxdsp f1, v2
-; CHECK-BE-NEXT:    xscvuxdsp f0, f0
-; CHECK-BE-NEXT:    xscvdpspn v2, f1
+; CHECK-BE-NEXT:    xscvuxdsp f0, v2
 ; CHECK-BE-NEXT:    xscvdpspn v3, f0
-; CHECK-BE-NEXT:    vmrgow v2, v2, v3
+; CHECK-BE-NEXT:    xxswapd vs0, v2
+; CHECK-BE-NEXT:    xscvuxdsp f0, f0
+; CHECK-BE-NEXT:    xscvdpspn v2, f0
+; CHECK-BE-NEXT:    vmrgow v2, v3, v2
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -211,13 +211,13 @@ define void @test16elt(ptr noalias nocapture sret(<16 x float>) %agg.result, ptr
 ; CHECK-P8-NEXT:    vpkudum v4, v1, v0
 ; CHECK-P8-NEXT:    xxswapd vs1, v3
 ; CHECK-P8-NEXT:    xxswapd vs2, v2
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r5
 ; CHECK-P8-NEXT:    xxsldwi v6, vs0, vs0, 3
 ; CHECK-P8-NEXT:    xvcvuxdsp vs0, v7
 ; CHECK-P8-NEXT:    xxsldwi v7, vs0, vs0, 3
 ; CHECK-P8-NEXT:    xxswapd vs0, v4
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r6
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs2, r3, r5
 ; CHECK-P8-NEXT:    vpkudum v5, v6, v7
 ; CHECK-P8-NEXT:    xxswapd vs3, v5
 ; CHECK-P8-NEXT:    stxvd2x vs3, 0, r3
@@ -327,12 +327,12 @@ define i64 @test2elt_signed(<2 x i64> %a) local_unnamed_addr #0 {
 ;
 ; CHECK-BE-LABEL: test2elt_signed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xxswapd vs0, v2
-; CHECK-BE-NEXT:    xscvsxdsp f1, v2
-; CHECK-BE-NEXT:    xscvsxdsp f0, f0
-; CHECK-BE-NEXT:    xscvdpspn v2, f1
+; CHECK-BE-NEXT:    xscvsxdsp f0, v2
 ; CHECK-BE-NEXT:    xscvdpspn v3, f0
-; CHECK-BE-NEXT:    vmrgow v2, v2, v3
+; CHECK-BE-NEXT:    xxswapd vs0, v2
+; CHECK-BE-NEXT:    xscvsxdsp f0, f0
+; CHECK-BE-NEXT:    xscvdpspn v2, f0
+; CHECK-BE-NEXT:    vmrgow v2, v3, v2
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -503,13 +503,13 @@ define void @test16elt_signed(ptr noalias nocapture sret(<16 x float>) %agg.resu
 ; CHECK-P8-NEXT:    vpkudum v4, v1, v0
 ; CHECK-P8-NEXT:    xxswapd vs1, v3
 ; CHECK-P8-NEXT:    xxswapd vs2, v2
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r5
 ; CHECK-P8-NEXT:    xxsldwi v6, vs0, vs0, 3
 ; CHECK-P8-NEXT:    xvcvsxdsp vs0, v7
 ; CHECK-P8-NEXT:    xxsldwi v7, vs0, vs0, 3
 ; CHECK-P8-NEXT:    xxswapd vs0, v4
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r6
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs2, r3, r5
 ; CHECK-P8-NEXT:    vpkudum v5, v6, v7
 ; CHECK-P8-NEXT:    xxswapd vs3, v5
 ; CHECK-P8-NEXT:    stxvd2x vs3, 0, r3

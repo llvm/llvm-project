@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
+// UNSUPPORTED: c++03
 // UNSUPPORTED: no-threads
-// ALLOW_RETRIES: 2
 
 // <mutex>
 
@@ -15,40 +15,67 @@
 
 // void lock();
 
-#include <cassert>
-#include <chrono>
-#include <cstdlib>
 #include <mutex>
+#include <atomic>
+#include <cassert>
 #include <thread>
+#include <vector>
 
 #include "make_test_thread.h"
-#include "test_macros.h"
 
-std::mutex m;
-
-typedef std::chrono::system_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
-
-void f()
-{
-    time_point t0 = Clock::now();
+int main(int, char**) {
+  // Lock a mutex that is not locked yet. This should succeed.
+  {
+    std::mutex m;
     m.lock();
-    time_point t1 = Clock::now();
     m.unlock();
-    ns d = t1 - t0 - ms(250);
-    assert(d < ms(50));  // within 50ms
-}
+  }
 
-int main(int, char**)
-{
+  // Lock a mutex that is already locked. This should block until it is unlocked.
+  {
+    std::atomic<bool> ready(false);
+    std::mutex m;
     m.lock();
-    std::thread t = support::make_test_thread(f);
-    std::this_thread::sleep_for(ms(250));
+    std::atomic<bool> is_locked_from_main(true);
+
+    std::thread t = support::make_test_thread([&] {
+      ready = true;
+      m.lock();
+      assert(!is_locked_from_main);
+      m.unlock();
+    });
+
+    while (!ready)
+      /* spin */;
+
+    // We would rather signal this after we unlock, but that would create a race condition.
+    // We instead signal it before we unlock, which means that it's technically possible for
+    // the thread to take the lock while main is still holding it yet for the test to still pass.
+    is_locked_from_main = false;
     m.unlock();
+
     t.join();
+  }
+
+  // Make sure that at most one thread can acquire the mutex concurrently.
+  {
+    std::atomic<int> counter(0);
+    std::mutex mutex;
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i != 10; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        mutex.lock();
+        counter++;
+        assert(counter == 1);
+        counter--;
+        mutex.unlock();
+      }));
+    }
+
+    for (auto& t : threads)
+      t.join();
+  }
 
   return 0;
 }

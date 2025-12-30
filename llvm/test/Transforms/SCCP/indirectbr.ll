@@ -104,7 +104,7 @@ define internal i32 @indbrtest5(i1 %c) {
 ; CHECK:       target1:
 ; CHECK-NEXT:    br label [[TARGET2]]
 ; CHECK:       target2:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   br i1 %c, label %bb1, label %bb2

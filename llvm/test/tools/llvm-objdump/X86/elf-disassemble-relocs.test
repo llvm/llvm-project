@@ -6,6 +6,10 @@
 # RUN: llvm-objdump 1.o -d -r | FileCheck %s --implicit-check-not="RELOCATION RECORDS"
 # RUN: llvm-objdump 1.o -r --disassemble-symbols=x2,x4 | FileCheck %s --check-prefix=CHECK2
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64 -crel 1.s -o 1leb.o
+# RUN: llvm-objdump 1leb.o -d -r | FileCheck %s --implicit-check-not="RELOCATION RECORDS"
+# RUN: llvm-objdump 1leb.o -r --disassemble-symbols=x2,x4 | FileCheck %s --check-prefix=CHECK2
+
 #--- 1.s
 # CHECK:       0000000000000000 <x1>:
 # CHECK-NEXT:    0: e8 00 00 00 00                callq   0x5 <x1+0x5>

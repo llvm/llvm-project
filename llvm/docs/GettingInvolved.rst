@@ -42,7 +42,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    in the LLVM system.
 
 :doc:`BugLifeCycle`
-   Describes how bugs are reported, triaged and closed.
+   Describes how bugs are reported, triaged, and closed.
 
 :doc:`CodingStandards`
   Details the LLVM coding standards and provides useful information on writing
@@ -69,7 +69,6 @@ Information about LLVM's development process.
 
    Projects
    HowToReleaseLLVM
-   Packaging
    ReleaseProcess
    HowToAddABuilder
    ReleaseNotes
@@ -88,9 +87,6 @@ Information about LLVM's development process.
 
 :doc:`HowToAddABuilder`
    Instructions for adding new builder to LLVM buildbot master.
-
-:doc:`Packaging`
-   Advice on packaging LLVM into a distribution.
 
 :doc:`Release notes for the current release <ReleaseNotes>`
    This describes new features, known bugs, and other limitations.
@@ -112,7 +108,7 @@ The :doc:`CodeOfConduct` applies to all these forums and mailing lists.
 `Commits Archive (llvm-commits)`__
   This list contains all commit messages that are made when LLVM developers
   commit code changes to the repository. It also serves as a forum for
-  patch review (i.e. send patches here). It is useful for those who want to
+  patch review (i.e., send patches here). It is useful for those who want to
   stay on the bleeding edge of LLVM development. This list is very high
   volume.
 
@@ -125,7 +121,7 @@ The :doc:`CodeOfConduct` applies to all these forums and mailing lists.
   .. __: http://lists.llvm.org/pipermail/llvm-bugs/
 
 `LLVM Announcements`__
-  If you just want project wide announcements such as releases, developers meetings, or blog posts, then you should check out the Announcement category on LLVM Discourse.
+  If you just want project-wide announcements such as releases, developers meetings, or blog posts, then you should check out the Announcement category on LLVM Discourse.
 
   .. __: https://discourse.llvm.org/c/announce/46
 
@@ -154,7 +150,7 @@ what to add to your calendar invite.
      - Calendar link
      - Minutes/docs link
    * - Loop Optimization Working Group
-     - Every 2 weeks on Wednesday
+     - Every first Wednesday of the month
      - `ics <./_static/LoopOptWG_invite.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/1sdzoyB11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit>`__
    * - RISC-V
@@ -162,11 +158,6 @@ what to add to your calendar invite.
      - `ics <https://calendar.google.com/calendar/ical/lowrisc.org_0n5pkesfjcnp0bh5hps1p0bd80%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/b/1?cid=bG93cmlzYy5vcmdfMG41cGtlc2ZqY25wMGJoNWhwczFwMGJkODBAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
      - `Minutes/docs <https://docs.google.com/document/d/1G3ocHm2zE6AYTS2N3_3w2UxFnSEyKkcF57siLWe-NVs>`__
-   * - Scalable Vectors and Arm SVE
-     - Monthly, every 3rd Tuesday
-     - `ics <https://calendar.google.com/calendar/ical/bjms39pe6k6bo5egtsp7don414%40group.calendar.google.com/public/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/u/0/embed?src=bjms39pe6k6bo5egtsp7don414@group.calendar.google.com>`__
-     - `Minutes/docs <https://docs.google.com/document/d/1UPH2Hzou5RgGT8XfO39OmVXKEibWPfdYLELSaHr3xzo/edit>`__
    * - ML Guided Compiler Optimizations
      - Monthly
      -
@@ -180,10 +171,6 @@ what to add to your calendar invite.
      - Weekly, on Wednesday
      -
      - `Minutes/docs <https://docs.google.com/document/d/1fOSRdyZR2w75D87yU2Ma9h2-_lEPL4NxvhJGJd-s5pk/edit#heading=h.mulvhjtr8dk9>`__
-   * - `MLIR <https://mlir.llvm.org>`__ design meetings
-     - Weekly, on Thursdays
-     -
-     - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
    * - flang
      - Multiple meeting series, `documented here <https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md#calls>`__
      -
@@ -196,19 +183,10 @@ what to add to your calendar invite.
      - Every 4 weeks on Tuesdays
      - `ics <http://lists.llvm.org/pipermail/llvm-dev/attachments/20201103/a3499a67/attachment-0001.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw>`__
-   * - Vector Predication
-     - Every 2 weeks on Tuesdays, 3pm UTC
-     -
-     - `Minutes/docs <https://docs.google.com/document/d/1q26ToudQjnqN5x31zk8zgq_s0lem1-BF8pQmciLa4k8/edit?usp=sharing>`__
    * - LLVM Pointer Authentication
      - Every month on Mondays
      - `ics <https://calendar.google.com/calendar/ical/fr1qtmrmt2s9odufjvurkb6j70%40group.calendar.google.com/public/basic.ics>`__
      - `Minutes/docs <https://discourse.llvm.org/t/llvm-pointer-authentication-sync-ups/62661>`__
-   * - MemorySSA in LLVM
-     - Every 8 weeks on Mondays
-     - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
-     - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
    * - LLVM Embedded Toolchains
      - Every 4 weeks on Thursdays
      - `ics <https://drive.google.com/file/d/1uNa-PFYkhAfT83kR2Nc4Fi706TAQFBEL/view?usp=sharing>`__
@@ -219,17 +197,75 @@ what to add to your calendar invite.
      - `gcal <https://calendar.google.com/calendar/u/0?cid=cW1lZGg0ZXNpMnIyZDN2aTVydGVrdWF1YzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
      - `Minutes/docs <https://docs.google.com/document/d/1x5-RbOC6-jnI_NcJ9Dp4pSmGhhNe7lUevuWUIB46TeM/edit?usp=sharing>`__
    * - LLVM SPIR-V Backend Working Group
-     - Every week on Thursday
+     - Every week on Monday
      -
      - `Meeting details/agenda <https://docs.google.com/document/d/1UjX-LAwPjJ75Nmb8a5jz-Qrm-pPtKtQw0k1S1Lop9jU/edit?usp=sharing>`__
    * - SYCL Upstream Working Group
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
+   * - Vectorizer Improvement Working Group
+     - 3rd Tuesday of the month
+     - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
+     - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
+   * - `LLVM Qualification Working Group <https://llvm.org/docs/QualGroup.html>`__
+     - 1st Tuesday of the month
+     - `ics <https://calendar.google.com/calendar/ical/c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com&ctz=Asia%2FTokyo>`__
+     - `Minutes/docs <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`__
+   * - MLIR C/C++ Frontend Working Group
+     - Monthly, usually 1st Monday of the month
+     - `ics <https://calendar.google.com/calendar/ical/jvceakm3kbpku3f4jrsv1lkigo%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=jvceakm3kbpku3f4jrsv1lkigo%40group.calendar.google.com&ctz=America%2FLos_Angeles>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1-flHK3TjQUrkSO2Fdt4webZ2zCyeXxpTLMiRQbMW7hE>`__
+   * - ClangIR Upstreaming Coordination Meeting
+     - Every 2 weeks on Mondays
+     - `ics <https://calendar.google.com/calendar/ical/c_673c6cd64474c0aff173bf8fa609559f93d654e0984d9d91d71abd32d28c0486%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=c_673c6cd64474c0aff173bf8fa609559f93d654e0984d9d91d71abd32d28c0486%40group.calendar.google.com&ctz=America%2FLos_Angeles>`__
+     -
    * - GlobalISel
      - Every 2nd Tuesday of the month
-     - `gcal <https://calendar.google.com/calendar/u/0?cid=ZDcyMjc0ZjZiZjNhMzFlYmE3NTNkMWM2MGM2NjM5ZWU3ZDE2MjM4MGFlZDc2ZjViY2UyYzMwNzVhZjk4MzQ4ZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=YWZjNzhmMzE4MDNlNTAyNGY1NmE1MDIyODY0YTYwZmJmYzRjYTEwNTE1NmUxODA2NzBkYTliY2ZhYTVkNjk0NUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
+
+
+For event owners, our Discord bot also supports sending automated announcements
+of upcoming sync-ups. Please see the :ref:`discord-bot-event-pings` section for
+info.
+
+Past online sync-ups
+^^^^^^^^^^^^^^^^^^^^
+
+Some online sync-ups are no longer happening. We keep pointing to them here to
+keep track of the meeting notes and in case anyone would want to revive them in
+the future.
+
+.. list-table:: LLVM no-longer-happening sync-up calls
+   :widths: 25 25 25 25
+   :header-rows: 1
+
+   * - Topic
+     - Frequency
+     - Calendar link
+     - Minutes/docs link
+   * - Scalable Vectors and Arm SVE
+     - Monthly, every 3rd Tuesday
+     - `ics <https://calendar.google.com/calendar/ical/bjms39pe6k6bo5egtsp7don414%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0/embed?src=bjms39pe6k6bo5egtsp7don414@group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1UPH2Hzou5RgGT8XfO39OmVXKEibWPfdYLELSaHr3xzo/edit>`__
+   * - MemorySSA in LLVM
+     - Every 8 weeks on Mondays
+     - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
+   * - Vector Predication
+     - Every 2 weeks on Tuesdays, 3pm UTC
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1q26ToudQjnqN5x31zk8zgq_s0lem1-BF8pQmciLa4k8/edit?usp=sharing>`__
+   * - `MLIR <https://mlir.llvm.org>`__ design meetings
+     - Weekly, on Thursdays
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
 
 .. _office-hours:
 
@@ -241,10 +277,11 @@ on a regular schedule, to anyone who is looking for some guidance. Please find
 the list of who is available when, through which medium, and what their area of
 expertise is. Don't be too shy to dial in!
 
-The :doc:`CodeOfConduct` applies to all office hours.
+Office hours are also listed on the :ref:`llvm-community-calendar`. Of course,
+people take time off from time to time, so if you dial in and you don't find
+anyone present, chances are they happen to be off that day.
 
-Of course, people take time off from time to time, so if you dial in and you
-don't find anyone present, chances are they happen to be off that day.
+The :doc:`CodeOfConduct` applies to all office hours.
 
 .. list-table:: LLVM office hours
   :widths: 15 40 15 15 15
@@ -289,11 +326,6 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.
     - `Video Call <https://meet.grosser.science/LLVMOfficeHours>`__
     - English, German, Spanish, French
-  * - Anastasia Stulova
-    - Clang internals for C/C++ language extensions and dialects, OpenCL, GPU, SPIR-V, how to contribute, women in compilers.
-    - Monthly, 1st Tuesday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 30 mins slot.
-    - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
-    - English, Russian, German (not fluently)
   * - Alexey Bader
     - SYCL compiler, offload tools, OpenCL and SPIR-V, how to contribute.
     - Monthly, 2nd Monday of the month at 9:30am PT, for 30 minutes.
@@ -304,11 +336,6 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
     - `Zoom <https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09>`__
     - English, Russian
-  * - Michal Paszkowski
-    - SPIR-V backend, IGC, OpenCL, and IR transformations
-    - Monthly, 3rd Thursday of the month at 21:00 Warsaw/Poland time, 1 hour slot.
-    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_ODRmN2UwYTgtODdiOS00N2VkLTgxZjgtNDUxYjI3YmNkM2Ri%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%220c2b140d-8412-4963-a118-0f7534426b65%22%7d>`__
-    - English, Polish
   * - Quentin Colombet (he/him)
     - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
       Register allocation, etc.); Optimizations; MCA
@@ -327,7 +354,20 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
     - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
     - English
+  * - Maksim Levental and Jeremy Kun
+    - MLIR newcomers and general discussion (`livestreamed <https://www.youtube.com/playlist?list=PLhxO86S3jsX2k7kOhZaV-qKWm8tNsUdAE>`__)
+    - Every two weeks, Wednesdays at 2:00pm US Pacific, for 90 minutes.
+    - Livestream chat or `Google meet <https://meet.google.com/wit-tvzc-dwc>`__
+    - English
+  * - Renato Golin
+    - General LLVM, MLIR & Linalg, distributed computing, research, socials.
+    - Every first Friday of the month, 14:00 UK time, for 60 minutes.
+    - `Google meet <https://meet.google.com/jps-twgq-ivz>`__
+    - English, Portuguese
 
+For event owners, our Discord bot also supports sending automated announcements
+of upcoming office hours. Please see the :ref:`discord-bot-event-pings` section
+for info.
 
 Guidance for office hours hosts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -338,14 +378,11 @@ Guidance for office hours hosts
   :ref:`llvm-community-calendar`.
   Please see :ref:`llvm-community-calendar-host-guidance` for more guidance on
   what to add to your calendar invite.
-* When starting an office hours session, consider typing something like "*Hi,
-  I'm available for chats in the next half hour at* video chat URL. *I'm
-  looking forward to having conversations on the video chat or here.*" on the
-  LLVM chat channels that you are already on. These could include:
-
-    * the `#office-hours Discord channel
-      <https://discord.com/channels/636084430946959380/976196303681896538>`__.
-    * :ref:`IRC`
+* When starting an office hours session, if you haven't set up the Discord bot
+  integration, consider typing something like "*Hi, I'm available for chats in
+  the next half hour at* video chat URL. *I'm looking forward to having
+  conversations on the video chat or here.*" on the
+  `#office-hours Discord channel <https://discord.com/channels/636084430946959380/976196303681896538>`__.
 
   Doing this can help:
     * overcome potential anxiety to call in for a first time,
@@ -356,28 +393,73 @@ Guidance for office hours hosts
   from the list above.
 
 
-.. _IRC:
-
-IRC
----
+Discord
+-------
 
 Users and developers of the LLVM project (including subprojects such as Clang)
-can be found in #llvm on `irc.oftc.net <irc://irc.oftc.net/llvm>`_. The channel
-is actively moderated.
+can be found on the community's `Discord <https://discord.gg/xS7Z362>`_
+chat server. The server is actively moderated.
 
-The #llvm-build channel has a bot for
+The #buildbot-status channel has a bot for
 `LLVM buildbot <http://lab.llvm.org/buildbot/#/console>`_ status changes. The
-bot will post a message with a link to a build bot and a blamelist when a build
-goes from passing to failing and again (without the blamelist) when the build
-goes from failing back to passing. It is a good channel for actively monitoring
-build statuses, but it is a noisy channel due to the automated messages. The
-channel is not actively moderated.
+bot will update the channel with a link to a build bot when a build goes from
+passing to failing and again when the build goes from failing back to passing.
+It is a great way to actively monitor the status of the build.
 
-In addition to the traditional IRC there is a
-`Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_
-chat server available. To sign up, please use this
-`invitation link <https://discord.com/invite/xS7Z362>`_.
+The bot also supports @mention-ing you when your email appears on a blamelist.
+For more details, DM ``help`` to the bot.
 
+.. _discord-bot-event-pings:
+
+Discord bot event pings
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Our Discord bot supports automatically sending messages about upcoming events
+on `the LLVM community calendar <https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org>`_
+to Discord. This behavior is controlled on a per-event basis, by metadata in the
+event's description. Each piece of metadata should be on its own line in the
+event description.
+
+The currently supported metadata is:
+
+- ``discord-bot-event-type`` - **Required**. Specifies the event type. Valid
+  values are ``office-hours`` and ``sync-up``.
+- ``discord-bot-channels-to-mention`` - **Sometimes required**. A
+  comma-separated list of Discord channels to post notifications in. If your
+  ``discord-bot-event-type`` is ``office-hours``, the ``#office-hours`` channel
+  will be implicitly appended to this list (ergo, you don't need to specify this
+  item). Otherwise, you must specify a value here.
+- ``discord-bot-mention`` - **Optional**. A comma-separated list of people to
+  ping on each event notification. All names mentioned must be Discord
+  usernames, and must have a leading ``@``. e.g., ``@foo, @bar``.
+- ``discord-bot-reminder-time-before-start`` - **Optional**. The number of
+  minutes before the beginning of an event to send a ping. This should be
+  formatted as an integer. Defaults to 30.
+- ``discord-bot-message`` - **Optional**. Text to append to all event pings.
+
+An example of an event description with valid metadata is::
+
+  Regular office hours to chat with people about LLVM! We can help with
+  questions, troubleshooting bugs, etc.
+
+  discord-bot-channels-to-mention: #beginners, #foo
+  discord-bot-event-type: office-hours
+  discord-bot-mention: @gburgessiv, @bar
+  discord-bot-message: Come join us for office hours!
+  discord-bot-reminder-time-before-start: 5
+
+This metadata will prompt the Discord bot to:
+
+* send pings 5 minutes before the given event starts, mentioning ``@gburgessiv``
+  and ``@bar`` in the ping
+* send the pings to the ``#beginners``, ``#foo``, and ``#office-hours`` channels
+* include the text "Come join us for office hours!" in the ping
+
+A few minutes before sending a ping, the bot will double-check that the event
+hasn't been cancelled.
+
+If you need help troubleshooting, or have feature requests/questions, please
+feel free to ping @gburgessiv!
 
 .. _meetups-social-events:
 
@@ -401,7 +483,7 @@ join one in your city. Or start a new one if there is none:
 Community wide proposals
 ------------------------
 
-Proposals for massive changes in how the community behaves and how the work flow
+Proposals for large-scale changes in how the community behaves and how the work flow
 can be better.
 
 .. toctree::
@@ -443,6 +525,11 @@ also be seen inline below:
 
     <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=UTC&showCalendars=0&showDate=1&showNav=1&src=Y2FsZW5kYXJAbGx2bS5vcmc&color=%23039BE5" style="border:solid 1px #777" width="800" height="600" frameborder="0" scrolling="no"></iframe>
 
+Note that the web view of the LLVM community calendar shows events in
+Coordinated Universal Time (UTC). If you use Google Calendar, consider
+subscribing to it with the + button in the bottom-right corner to view all
+events in your local time zone alongside your other calendars.
+
 .. _llvm-community-calendar-host-guidance:
 
 Guidance on what to put into LLVM community calendar invites
@@ -466,18 +553,27 @@ Please put the following pieces of information in your calendar invite:
 * If you have meeting minutes for your event, add a pointer to where those live.
   A good place for meeting minutes could be as a post on LLVM Discourse.
 
+* If you're hosting a sync-up or office hours event and would like it to be
+  announced by the Discord bot, add the relevant metadata (full descriptions
+  available in the :ref:`discord-bot-event-pings` section).
+
 An example invite looks as follows
 
 .. code-block:: none
 
   This event is a meetup for all developers of LLDB. Meeting agendas are posted
-  on discourse before the event.
+  on Discourse before the event.
 
-  Attendees are required to adhere to the LLVM Code of Conduct
+  Attendees must adhere to the LLVM Code of Conduct
   (https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,
-  please contact the organizers, and also email conduct@llvm.org.
+  please contact the organizers and also email conduct@llvm.org.
 
   Agenda/Meeting Minutes: Link to minutes
 
   Organizer(s): First Surname (name@email.com)
 
+  discord-bot-channels-to-mention: #lldb
+  discord-bot-event-type: sync-up
+  discord-bot-mention: @host-username, @another-host
+  discord-bot-message: Come join us to chat about LLDB!
+  discord-bot-reminder-time-before-start: 30

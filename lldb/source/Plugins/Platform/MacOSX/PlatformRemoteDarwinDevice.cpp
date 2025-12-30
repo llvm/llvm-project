@@ -53,7 +53,7 @@ void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {
   if (sdk_directory)
     strm.Printf("  SDK Path: \"%s\"\n", sdk_directory);
   else
-    strm.PutCString("  SDK Path: error: unable to locate SDK\n");
+    strm.PutCString("  SDK Path: <unable to locate SDK>\n");
 
   const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
   for (uint32_t i = 0; i < num_sdk_infos; ++i) {
@@ -61,71 +61,6 @@ void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {
     strm.Printf(" SDK Roots: [%2u] \"%s\"\n", i,
                 sdk_dir_info.directory.GetPath().c_str());
   }
-}
-
-Status PlatformRemoteDarwinDevice::ResolveExecutable(
-    const ModuleSpec &ms, lldb::ModuleSP &exe_module_sp,
-    const FileSpecList *module_search_paths_ptr) {
-  Status error;
-  // Nothing special to do here, just use the actual file and architecture
-
-  ModuleSpec resolved_module_spec(ms);
-
-  // Resolve any executable within a bundle on MacOSX
-  // TODO: verify that this handles shallow bundles, if not then implement one
-  // ourselves
-  Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
-
-  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
-    if (resolved_module_spec.GetArchitecture().IsValid() ||
-        resolved_module_spec.GetUUID().IsValid()) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          nullptr, nullptr, nullptr);
-
-      if (exe_module_sp && exe_module_sp->GetObjectFile())
-        return error;
-      exe_module_sp.reset();
-    }
-    // No valid architecture was specified or the exact ARM slice wasn't found
-    // so ask the platform for the architectures that we should be using (in
-    // the correct order) and see if we can find a match that way
-    StreamString arch_names;
-    llvm::ListSeparator LS;
-    ArchSpec process_host_arch;
-    for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
-      resolved_module_spec.GetArchitecture() = arch;
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          nullptr, nullptr, nullptr);
-      // Did we find an executable using one of the
-      if (error.Success()) {
-        if (exe_module_sp && exe_module_sp->GetObjectFile())
-          break;
-        else
-          error.SetErrorToGenericError();
-      }
-
-      arch_names << LS << arch.GetArchitectureName();
-    }
-
-    if (error.Fail() || !exe_module_sp) {
-      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
-        error.SetErrorStringWithFormatv(
-            "'{0}' doesn't contain any '{1}' platform architectures: {2}",
-            resolved_module_spec.GetFileSpec(), GetPluginName(),
-            arch_names.GetData());
-      } else {
-        error.SetErrorStringWithFormat(
-            "'%s' is not readable",
-            resolved_module_spec.GetFileSpec().GetPath().c_str());
-      }
-    }
-  } else {
-    error.SetErrorStringWithFormat(
-        "'%s' does not exist",
-        resolved_module_spec.GetFileSpec().GetPath().c_str());
-  }
-
-  return error;
 }
 
 bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
@@ -212,18 +147,17 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
     if (FileSystem::Instance().Exists(local_file))
       return error;
 
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "unable to locate a platform file for '{0}' in platform '{1}'",
         platform_file_path, GetPluginName());
   } else {
-    error.SetErrorString("invalid platform file argument");
+    error = Status::FromErrorString("invalid platform file argument");
   }
   return error;
 }
 
 Status PlatformRemoteDarwinDevice::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   // For iOS, the SDK files are all cached locally on the host system. So first
   // we ask for the file in the cached SDK, then we attempt to get a shared
@@ -250,7 +184,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       if (GetFileInSDK(platform_file_path, connected_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
+        error = ResolveExecutable(platform_module_spec, module_sp);
         if (module_sp) {
           m_last_module_sdk_idx = connected_sdk_idx;
           error.Clear();
@@ -267,7 +201,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       if (GetFileInSDK(platform_file_path, m_last_module_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
+        error = ResolveExecutable(platform_module_spec, module_sp);
         if (module_sp) {
           error.Clear();
           return error;
@@ -289,7 +223,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
       if (GetFileInSDK(platform_file_path, current_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
-        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
+        error = ResolveExecutable(platform_module_spec, module_sp);
         if (module_sp) {
           m_last_module_sdk_idx = current_sdk_idx;
           error.Clear();
@@ -310,7 +244,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
                        platform_module_spec.GetFileSpec())) {
         // printf ("sdk[%u]: '%s'\n", sdk_idx, local_file.GetPath().c_str());
 
-        error = ResolveExecutable(platform_module_spec, module_sp, nullptr);
+        error = ResolveExecutable(platform_module_spec, module_sp);
         if (module_sp) {
           // Remember the index of the last SDK that we found a file in in case
           // the wrong SDK was selected.
@@ -326,8 +260,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
 
   // This may not be an SDK-related module.  Try whether we can bring in the
   // thing to our local cache.
-  error = GetSharedModuleWithLocalCache(module_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
+  error = GetSharedModuleWithLocalCache(module_spec, module_sp, old_modules,
                                         did_create_ptr);
   if (error.Success())
     return error;
@@ -336,15 +269,13 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   // directories.
   if (!module_sp)
     error = PlatformDarwin::FindBundleBinaryInExecSearchPaths(
-        module_spec, process, module_sp, module_search_paths_ptr, old_modules,
-        did_create_ptr);
+        module_spec, process, module_sp, old_modules, did_create_ptr);
 
   if (error.Success())
     return error;
 
   const bool always_create = false;
-  error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                      module_search_paths_ptr, old_modules,
+  error = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
                                       did_create_ptr, always_create);
 
   if (module_sp)

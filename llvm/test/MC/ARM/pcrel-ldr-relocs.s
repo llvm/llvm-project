@@ -34,10 +34,10 @@
     .global bar
     .type bar, %function
 bar:
-    ldr r0, foo1
-    ldrb r0, foo1
-    ldr r0, foo2-8
-    ldrb r0, foo1+8
+    ldr r0, foo1      @ arm_ldst_pcrel_12 / t2_ldst_pcrel_12
+    ldrb r0, foo1     @ arm_ldst_pcrel_12 / t2_ldst_pcrel_12
+    ldr r0, foo2-8    @ arm_ldst_pcrel_12 / t2_ldst_pcrel_12
+    ldrb r0, foo1+8   @ arm_ldst_pcrel_12 / t2_ldst_pcrel_12
     bx lr
 
     .section .data.foo, "a", %progbits

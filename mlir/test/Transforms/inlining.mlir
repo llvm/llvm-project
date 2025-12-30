@@ -5,17 +5,44 @@
 // RUN: mlir-opt %s -inline='op-pipelines=func.func(canonicalize,cse)' | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
 // Inline a function that takes an argument.
-func.func @func_with_arg(%c : i32) -> i32 {
-  %b = arith.addi %c, %c : i32
-  return %b : i32
+func.func @func_with_arg(%arg0 : i32) -> i32 {
+  %b = arith.addi %arg0, %arg0 : i32
+  %c = builtin.unrealized_conversion_cast %b : i32 to i64
+  %d = builtin.unrealized_conversion_cast %c : i64 to i32
+  return %d : i32
 }
 
 // CHECK-LABEL: func @inline_with_arg
 func.func @inline_with_arg(%arg0 : i32) -> i32 {
   // CHECK-NEXT: arith.addi
+  // CHECK-NEXT: unrealized_conversion_cast
+  // CHECK-NEXT: unrealized_conversion_cast
   // CHECK-NEXT: return
 
   %0 = call @func_with_arg(%arg0) : (i32) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @noinline_with_arg
+func.func @noinline_with_arg(%arg0 : i32) -> i32 {
+  // CHECK-NEXT: func_with_arg
+  // CHECK-NEXT: return
+
+  %0 = call @func_with_arg(%arg0) {no_inline} : (i32) -> i32
+  return %0 : i32
+}
+
+func.func @non_inlinable_func_with_arg(%c : i32) -> i32 attributes {no_inline} {
+  %b = arith.addi %c, %c : i32
+  return %b : i32
+}
+
+// CHECK-LABEL: func @noinline_with_func_arg
+func.func @noinline_with_func_arg(%arg0 : i32) -> i32 {
+  // CHECK-NEXT: non_inlinable_func_with_arg
+  // CHECK-NEXT: return
+
+  %0 = call @non_inlinable_func_with_arg(%arg0) : (i32) -> i32
   return %0 : i32
 }
 
@@ -51,20 +78,51 @@ func.func @inline_with_multi_return() -> i32 {
 }
 
 // Check that location information is updated for inlined instructions.
-func.func @func_with_locations(%c : i32) -> i32 {
+
+#inline_stack1 = loc(callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6 at "mysource3.cc":16:2)))
+#inline_stack2 = loc(callsite("mysource4.cc":55:4 at callsite("mysource5.cc":25:8 at "mysource6.cc":32:4)))
+
+// INLINE-LOC-LABEL: func @func_with_file_locations
+func.func @func_with_file_locations(%c : i32) -> i32 {
   %b = arith.addi %c, %c : i32 loc("mysource.cc":10:8)
   return %b : i32 loc("mysource.cc":11:2)
 }
 
-// INLINE-LOC-LABEL: func @inline_with_locations
-func.func @inline_with_locations(%arg0 : i32) -> i32 {
-  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32 loc(callsite("mysource.cc":10:8 at "mysource.cc":55:14))
-  // INLINE-LOC-NEXT: return
-
-  %0 = call @func_with_locations(%arg0) : (i32) -> i32 loc("mysource.cc":55:14)
-  return %0 : i32
+// INLINE-LOC-LABEL: func @func_with_callsite_locations
+func.func @func_with_callsite_locations(%c : i32) -> i32 {
+  %b = arith.addi %c, %c : i32 loc(#inline_stack1)
+  return %b : i32 loc(#inline_stack1)
 }
 
+// INLINE-LOC-LABEL: func @inline_func_with_file_locations
+func.func @inline_func_with_file_locations(%arg0 : i32) -> i32 {
+  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32 loc(callsite("mysource.cc":10:8 at "mysource.cc":55:14))
+  %0 = call @func_with_file_locations(%arg0) : (i32) -> i32 loc("mysource.cc":55:14)
+
+  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32
+  // INLINE-LOC-SAME: loc(callsite("mysource.cc":10:8 at callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6
+  // INLINE-LOC-SAME: at "mysource3.cc":16:2))))
+  %1 = call @func_with_file_locations(%0) : (i32) -> i32 loc(#inline_stack1)
+
+  // INLINE-LOC-NEXT: return
+  return %1 : i32
+}
+
+// INLINE-LOC-LABEL: func @inline_func_with_callsite_locations
+func.func @inline_func_with_callsite_locations(%arg0 : i32) -> i32 {
+  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32
+  // INLINE-LOC-SAME: loc(callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6 at callsite("mysource3.cc":16:2
+  // INLINE-LOC-SAME: at "mysource.cc":10:8))))
+  %0 = call @func_with_callsite_locations(%arg0) : (i32) -> i32 loc("mysource.cc":10:8)
+
+  // INLINE-LOC-NEXT: arith.addi %{{.*}}, %{{.*}} : i32
+  // INLINE-LOC-SAME: loc(callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6 at callsite("mysource3.cc":16:2
+  // INLINE-LOC-SAME: at callsite("mysource4.cc":55:4 at callsite("mysource5.cc":25:8 at "mysource6.cc":32:4))))))
+  %1 = call @func_with_callsite_locations(%0) : (i32) -> i32 loc(#inline_stack2)
+
+  // INLINE-LOC-NEXT: return
+  return %1 : i32
+}
 
 // Check that external function declarations are not inlined.
 func.func private @func_external()
@@ -215,9 +273,9 @@ func.func @func_with_block_args_location(%arg0 : i32) {
 
 // INLINE-LOC-LABEL: func @func_with_block_args_location_callee1
 // INLINE-LOC: cf.br
-// INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc("foo")
+// INLINE-LOC: ^bb{{[0-9]+}}(%{{.*}}: i32 loc(callsite("foo" at "bar"))
 func.func @func_with_block_args_location_callee1(%arg0 : i32) {
-  call @func_with_block_args_location(%arg0) : (i32) -> ()
+  call @func_with_block_args_location(%arg0) : (i32) -> () loc("bar")
   return
 }
 
@@ -296,4 +354,24 @@ func.func @inline_convert_and_handle_attr_call(%arg0 : i16) -> (i16) {
   // CHECK: return %[[CAST_RESULT]]
   %res = "test.conversion_call_op"(%arg0) { callee=@handle_attr_callee_fn } : (i16) -> (i16)
   return %res : i16
+}
+
+// Check a function with complex ops is inlined.
+func.func @double_square_complex(%cplx: complex<f32>) -> complex<f32> {
+  %double = complex.add %cplx, %cplx : complex<f32>
+  %square = complex.mul %double, %double : complex<f32>
+  return %square : complex<f32>
+}
+
+// CHECK-LABEL: func @inline_with_complex_ops
+func.func @inline_with_complex_ops() -> complex<f32> {
+  %c1 = arith.constant 1.0 : f32
+  %c2 = arith.constant 2.0 : f32
+  %c = complex.create %c1, %c2 : complex<f32>
+
+  // CHECK: complex.add
+  // CHECK: complex.mul
+  // CHECK-NOT: call
+  %r = call @double_square_complex(%c) : (complex<f32>) -> (complex<f32>)
+  return %r : complex<f32>
 }

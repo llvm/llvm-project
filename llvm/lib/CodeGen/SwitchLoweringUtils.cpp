@@ -104,7 +104,8 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
   // for the Case Statement'" (1994), but builds the MinPartitions array in
   // reverse order to make it easier to reconstruct the partitions in ascending
   // order. In the choice between two optimal partitionings, it picks the one
-  // which yields more jump tables.
+  // which yields more jump tables. The algorithm is described in
+  // https://arxiv.org/pdf/1910.02351v2
 
   // MinPartitions[i] is the minimum nbr of partitions of Clusters[i..N-1].
   SmallVector<unsigned, 8> MinPartitions(N);
@@ -197,7 +198,6 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
   assert(First <= Last);
 
   auto Prob = BranchProbability::getZero();
-  unsigned NumCmps = 0;
   std::vector<MachineBasicBlock*> Table;
   DenseMap<MachineBasicBlock*, BranchProbability> JTProbs;
 
@@ -205,12 +205,16 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
   for (unsigned I = First; I <= Last; ++I)
     JTProbs[Clusters[I].MBB] = BranchProbability::getZero();
 
+  DenseMap<const BasicBlock *, unsigned int> DestMap;
   for (unsigned I = First; I <= Last; ++I) {
     assert(Clusters[I].Kind == CC_Range);
     Prob += Clusters[I].Prob;
     const APInt &Low = Clusters[I].Low->getValue();
     const APInt &High = Clusters[I].High->getValue();
-    NumCmps += (Low == High) ? 1 : 2;
+    unsigned int NumCmp = (Low == High) ? 1 : 2;
+    const BasicBlock *BB = Clusters[I].MBB->getBasicBlock();
+    DestMap[BB] += NumCmp;
+
     if (I != First) {
       // Fill the gap between this and the previous cluster.
       const APInt &PreviousHigh = Clusters[I - 1].High->getValue();
@@ -225,9 +229,7 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
     JTProbs[Clusters[I].MBB] += Clusters[I].Prob;
   }
 
-  unsigned NumDests = JTProbs.size();
-  if (TLI->isSuitableForBitTests(NumDests, NumCmps,
-                                 Clusters[First].Low->getValue(),
+  if (TLI->isSuitableForBitTests(DestMap, Clusters[First].Low->getValue(),
                                  Clusters[Last].High->getValue(), *DL)) {
     // Clusters[First..Last] should be lowered as bit tests instead.
     return false;
@@ -253,7 +255,7 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
                      ->createJumpTableIndex(Table);
 
   // Set up the jump table info.
-  JumpTable JT(-1U, JTI, JumpTableMBB, nullptr, SL);
+  JumpTable JT(Register(), JTI, JumpTableMBB, nullptr, SL);
   JumpTableHeader JTH(Clusters[First].Low->getValue(),
                       Clusters[Last].High->getValue(), SI->getCondition(),
                       nullptr, false);
@@ -371,20 +373,19 @@ bool SwitchCG::SwitchLowering::buildBitTests(CaseClusterVector &Clusters,
   if (First == Last)
     return false;
 
-  BitVector Dests(FuncInfo.MF->getNumBlockIDs());
-  unsigned NumCmps = 0;
+  DenseMap<const BasicBlock *, unsigned int> DestMap;
   for (int64_t I = First; I <= Last; ++I) {
     assert(Clusters[I].Kind == CC_Range);
-    Dests.set(Clusters[I].MBB->getNumber());
-    NumCmps += (Clusters[I].Low == Clusters[I].High) ? 1 : 2;
+    unsigned NumCmp = (Clusters[I].Low == Clusters[I].High) ? 1 : 2;
+    const BasicBlock *BB = Clusters[I].MBB->getBasicBlock();
+    DestMap[BB] += NumCmp;
   }
-  unsigned NumDests = Dests.count();
 
   APInt Low = Clusters[First].Low->getValue();
   APInt High = Clusters[Last].High->getValue();
   assert(Low.slt(High));
 
-  if (!TLI->isSuitableForBitTests(NumDests, NumCmps, Low, High, *DL))
+  if (!TLI->isSuitableForBitTests(DestMap, Low, High, *DL))
     return false;
 
   APInt LowBound;
@@ -454,7 +455,7 @@ bool SwitchCG::SwitchLowering::buildBitTests(CaseClusterVector &Clusters,
     BTI.push_back(BitTestCase(CB.Mask, BitTestBB, CB.BB, CB.ExtraProb));
   }
   BitTestCases.emplace_back(std::move(LowBound), std::move(CmpRange),
-                            SI->getCondition(), -1U, MVT::Other, false,
+                            SI->getCondition(), Register(), MVT::Other, false,
                             ContiguousRange, nullptr, nullptr, std::move(BTI),
                             TotalProb);
 

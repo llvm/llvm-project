@@ -24,8 +24,10 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "CSKYGenInstrInfo.inc"
 
-CSKYInstrInfo::CSKYInstrInfo(CSKYSubtarget &STI)
-    : CSKYGenInstrInfo(CSKY::ADJCALLSTACKDOWN, CSKY::ADJCALLSTACKUP), STI(STI) {
+CSKYInstrInfo::CSKYInstrInfo(const CSKYSubtarget &STI,
+                             const CSKYRegisterInfo &TRI)
+    : CSKYGenInstrInfo(STI, TRI, CSKY::ADJCALLSTACKDOWN, CSKY::ADJCALLSTACKUP),
+      STI(STI) {
   v2sf = STI.hasFPUv2SingleFloat();
   v2df = STI.hasFPUv2DoubleFloat();
   v3sf = STI.hasFPUv3SingleFloat();
@@ -330,7 +332,7 @@ Register CSKYInstrInfo::movImm(MachineBasicBlock &MBB,
   return DstReg;
 }
 
-unsigned CSKYInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register CSKYInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:
@@ -360,7 +362,7 @@ unsigned CSKYInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned CSKYInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register CSKYInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:
@@ -392,8 +394,8 @@ void CSKYInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
                                         Register SrcReg, bool IsKill, int FI,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -436,8 +438,8 @@ void CSKYInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
                                          Register DestReg, int FI,
                                          const TargetRegisterClass *RC,
-                                         const TargetRegisterInfo *TRI,
-                                         Register VReg) const {
+                                         Register VReg,
+                                         MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -477,8 +479,9 @@ void CSKYInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
 void CSKYInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I,
-                                const DebugLoc &DL, MCRegister DestReg,
-                                MCRegister SrcReg, bool KillSrc) const {
+                                const DebugLoc &DL, Register DestReg,
+                                Register SrcReg, bool KillSrc,
+                                bool RenamableDest, bool RenamableSrc) const {
   if (CSKY::GPRRegClass.contains(SrcReg) &&
       CSKY::CARRYRegClass.contains(DestReg)) {
     if (STI.hasE2()) {

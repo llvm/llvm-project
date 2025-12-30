@@ -1,6 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s \
-; RUN:  -polly-invariant-load-hoisting \
-; RUN:  | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output -polly-invariant-load-hoisting < %s 2>&1 | FileCheck %s
 
 ; Verify that nested arrays with invariant base pointers are handled correctly.
 ; Specifically, we currently do not canonicalize arrays where some accesses are

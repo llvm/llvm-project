@@ -507,6 +507,9 @@ bool index::printSymbolName(const Decl *D, const LangOptions &LO,
 
 StringRef index::getSymbolKindString(SymbolKind K) {
   switch (K) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case SymbolKind::IncludeDirective:
   case SymbolKind::Unknown: return "<unknown>";
   case SymbolKind::Module: return "module";
   case SymbolKind::Namespace: return "namespace";
@@ -552,8 +555,7 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::AccessorSetter: return "acc-set";
   case SymbolSubKind::UsingTypename: return "using-typename";
   case SymbolSubKind::UsingValue: return "using-value";
-  case SymbolSubKind::UsingEnum:
-    return "using-enum";
+  case SymbolSubKind::UsingEnum: return "using-enum";
   }
   llvm_unreachable("invalid symbol subkind");
 }
