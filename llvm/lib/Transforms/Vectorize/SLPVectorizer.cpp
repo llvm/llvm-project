@@ -6540,7 +6540,8 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
                                      const DataLayout &DL, ScalarEvolution &SE,
                                      SmallVectorImpl<unsigned> &SortedIndices,
                                      SmallVectorImpl<int64_t> &Coeffs) {
-  assert(Coeffs.size() == PointerOps.size() && "Coeffs vector needs to be of correct size");
+  assert(Coeffs.size() == PointerOps.size() &&
+         "Coeffs vector needs to be of correct size");
   SmallVector<const SCEV *> SCEVs;
   const SCEV *PtrSCEVLowest = nullptr;
   const SCEV *PtrSCEVHighest = nullptr;
@@ -6605,7 +6606,7 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
   int Cnt = 0;
   bool IsConsecutive = true;
-  for (const auto [Idx, PtrSCEV] : SCEVs) {
+  for (const auto [Idx, PtrSCEV] : enumerate(SCEVs)) {
     unsigned Dist = 0;
     if (PtrSCEV != PtrSCEVLowest) {
       const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVLowest);
@@ -7167,8 +7168,8 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   // Check if the offsets are contiguous.
   SmallVector<int64_t> SortedOffsetsV(NumOffsets);
-  for (auto [Idx, MapPair] : OffsetToPointerOpIdxMap)
-    SortedOffsetsV.push_back(MapPair.first);
+  for (auto [Idx, MapPair] : enumerate(OffsetToPointerOpIdxMap))
+    SortedOffsetsV[Idx] = MapPair.first;
   sort(SortedOffsetsV);
 
   if (NumOffsets > 1) {
@@ -7248,8 +7249,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // \param `SortedIndicesForOffset = SortedIndices_OffsetNum`
   auto UpdateSortedIndices =
       [&](SmallVectorImpl<unsigned> &SortedIndicesForOffset,
-          ArrayRef<unsigned> IndicesInAllPointerOps,
-          const int64_t OffsetNum) {
+          ArrayRef<unsigned> IndicesInAllPointerOps, const int64_t OffsetNum) {
         if (SortedIndicesForOffset.empty()) {
           SortedIndicesForOffset.resize(IndicesInAllPointerOps.size());
           std::iota(SortedIndicesForOffset.begin(),
