@@ -329,3 +329,25 @@ KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
 
   return Known;
 }
+
+KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
+                                 const fltSemantics &DstTy,
+                                 const fltSemantics &SrcTy) {
+  // Infinity, nan and zero propagate from source.
+  KnownFPClass Known = KnownSrc;
+
+  // All subnormal inputs should be in the normal range in the result type.
+  if (APFloat::isRepresentableAsNormalIn(SrcTy, DstTy)) {
+    if (Known.KnownFPClasses & fcPosSubnormal)
+      Known.KnownFPClasses |= fcPosNormal;
+    if (Known.KnownFPClasses & fcNegSubnormal)
+      Known.KnownFPClasses |= fcNegNormal;
+    Known.knownNot(fcSubnormal);
+  }
+
+  // Sign bit of a nan isn't guaranteed.
+  if (!Known.isKnownNeverNaN())
+    Known.SignBit = std::nullopt;
+
+  return Known;
+}
