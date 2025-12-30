@@ -11,11 +11,11 @@
 ; CHECK-DAG: 8 func-properties-stats - Number of branch instructions
 ; CHECK-DAG: 10 func-properties-stats - Number of branch successors
 ; CHECK-DAG: 2 func-properties-stats - Number of conditional branch instructions
+; CHECK-DAG: 6 func-properties-stats - Number of unconditional branch instructions
 ; CHECK-DAG: 18 func-properties-stats - Number of instructions (of all types)
 ; CHECK-DAG: 14 func-properties-stats - Number of basic block successors
 ; CHECK-DAG: 1 func-properties-stats - Number of switch instructions
 ; CHECK-DAG: 4 func-properties-stats - Number of switch successors
-; CHECK-DAG: 6 func-properties-stats - Number of unconditional branch instructions
 
 
 define void @foo(i32 %i, i32 %j, i32 %n) {

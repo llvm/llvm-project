@@ -29,8 +29,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "func-properties-stats"
 
-#define FUNCTION_PROPERTY(Name, Description) \
-    STATISTIC(Total##Name, Description);
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  STATISTIC(Total##Name, Description);
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  STATISTIC(Total##Name, Description);
 #include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
@@ -342,62 +344,17 @@ bool FunctionPropertiesInfo::operator==(
 }
 
 void FunctionPropertiesInfo::print(raw_ostream &OS) const {
-#define PRINT_PROPERTY(PROP_NAME) OS << #PROP_NAME ": " << PROP_NAME << "\n";
+#define FUNCTION_PROPERTY(Name, Description) OS << #Name ": " << Name << "\n";
 
-  PRINT_PROPERTY(BasicBlockCount)
-  PRINT_PROPERTY(BlocksReachedFromConditionalInstruction)
-  PRINT_PROPERTY(Uses)
-  PRINT_PROPERTY(DirectCallsToDefinedFunctions)
-  PRINT_PROPERTY(LoadInstCount)
-  PRINT_PROPERTY(StoreInstCount)
-  PRINT_PROPERTY(MaxLoopDepth)
-  PRINT_PROPERTY(TopLevelLoopCount)
-  PRINT_PROPERTY(TotalInstructionCount)
-
-  if (EnableDetailedFunctionProperties) {
-    PRINT_PROPERTY(BasicBlocksWithSingleSuccessor)
-    PRINT_PROPERTY(BasicBlocksWithTwoSuccessors)
-    PRINT_PROPERTY(BasicBlocksWithMoreThanTwoSuccessors)
-    PRINT_PROPERTY(BasicBlocksWithSinglePredecessor)
-    PRINT_PROPERTY(BasicBlocksWithTwoPredecessors)
-    PRINT_PROPERTY(BasicBlocksWithMoreThanTwoPredecessors)
-    PRINT_PROPERTY(BigBasicBlocks)
-    PRINT_PROPERTY(MediumBasicBlocks)
-    PRINT_PROPERTY(SmallBasicBlocks)
-    PRINT_PROPERTY(CastInstructionCount)
-    PRINT_PROPERTY(FloatingPointInstructionCount)
-    PRINT_PROPERTY(IntegerInstructionCount)
-    PRINT_PROPERTY(ConstantIntOperandCount)
-    PRINT_PROPERTY(ConstantFPOperandCount)
-    PRINT_PROPERTY(ConstantOperandCount)
-    PRINT_PROPERTY(InstructionOperandCount)
-    PRINT_PROPERTY(BasicBlockOperandCount)
-    PRINT_PROPERTY(GlobalValueOperandCount)
-    PRINT_PROPERTY(InlineAsmOperandCount)
-    PRINT_PROPERTY(ArgumentOperandCount)
-    PRINT_PROPERTY(UnknownOperandCount)
-    PRINT_PROPERTY(CriticalEdgeCount)
-    PRINT_PROPERTY(ControlFlowEdgeCount)
-    PRINT_PROPERTY(UnconditionalBranchCount)
-    PRINT_PROPERTY(ConditionalBranchCount)
-    PRINT_PROPERTY(BranchInstructionCount)
-    PRINT_PROPERTY(BranchSuccessorCount)
-    PRINT_PROPERTY(SwitchInstructionCount)
-    PRINT_PROPERTY(SwitchSuccessorCount)
-    PRINT_PROPERTY(IntrinsicCount)
-    PRINT_PROPERTY(DirectCallCount)
-    PRINT_PROPERTY(IndirectCallCount)
-    PRINT_PROPERTY(CallReturnsIntegerCount)
-    PRINT_PROPERTY(CallReturnsFloatCount)
-    PRINT_PROPERTY(CallReturnsPointerCount)
-    PRINT_PROPERTY(CallReturnsVectorIntCount)
-    PRINT_PROPERTY(CallReturnsVectorFloatCount)
-    PRINT_PROPERTY(CallReturnsVectorPointerCount)
-    PRINT_PROPERTY(CallWithManyArgumentsCount)
-    PRINT_PROPERTY(CallWithPointerArgumentCount)
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  if (EnableDetailedFunctionProperties) {                                      \
+    OS << #Name ": " << Name << "\n";                                          \
   }
 
-#undef PRINT_PROPERTY
+#include "llvm/IR/FunctionProperties.def"
+
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY
 
   OS << "\n";
 }
@@ -419,14 +376,17 @@ FunctionPropertiesPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 PreservedAnalyses
-FunctionPropertiesStatisticsPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName() << "\n");
+FunctionPropertiesStatisticsPass::run(Function &F,
+                                      FunctionAnalysisManager &FAM) {
+  LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
+                    << "\n");
   auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
 
-  // Use the macro to generate the summation lines
-  #define FUNCTION_PROPERTY(Name, Description) \
-      Total##Name += AnalysisResults.Name;
-  #include "llvm/IR/FunctionProperties.def"
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  Total##Name += AnalysisResults.Name;
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  Total##Name += AnalysisResults.Name;
+#include "llvm/IR/FunctionProperties.def"
 
   return PreservedAnalyses::all();
 }
