@@ -506,3 +506,23 @@ entry:
   %or.cond = or i1 %and, %cmp1
   ret i1 %or.cond
 }
+
+define <4 x i1> @or_icmp_vector(<4 x i32> noundef %type) {
+; CHECK-LABEL: define <4 x i1> @or_icmp_vector(
+; CHECK-SAME: <4 x i32> noundef [[TYPE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[TYPE]], splat (i32 6)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <4 x i32> [[TYPE]], zeroinitializer
+; CHECK-NEXT:    [[OR_COND:%.*]] = or <4 x i1> [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <4 x i32> [[TYPE]], splat (i32 15)
+; CHECK-NEXT:    [[OR_COND1:%.*]] = or <4 x i1> [[CMP2]], [[OR_COND]]
+; CHECK-NEXT:    ret <4 x i1> [[OR_COND1]]
+;
+entry:
+  %cmp = icmp eq <4 x i32> %type, <i32 6, i32 6, i32 6, i32 6>
+  %cmp1 = icmp eq <4 x i32> %type, <i32 0, i32 0, i32 0, i32 0>
+  %or.cond = or <4 x i1> %cmp, %cmp1
+  %cmp2 = icmp eq <4 x i32> %type, <i32 15, i32 15, i32 15, i32 15>
+  %or.cond1 = or <4 x i1> %cmp2, %or.cond
+  ret <4 x i1> %or.cond1
+}
