@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++17
+// REQUIRES: std-at-least-c++20
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 #include <algorithm>
@@ -41,10 +41,7 @@ struct MinLast {
   static size_t pos(size_t size) { return size - 1; }
 };
 
-template <class Benchmark>
-void run_sizes(Benchmark benchmark) {
-  benchmark->Arg(64)->Arg(512)->Arg(1024)->Arg(4096)->Arg(65536)->Arg(262144);
-}
+void run_sizes(auto benchmark) { benchmark->Arg(64)->Arg(512)->Arg(1024)->Arg(4096)->Arg(65536)->Arg(262144); }
 
 template <class T, class Policy, class Position>
 void BM_min_element(benchmark::State& state) {
