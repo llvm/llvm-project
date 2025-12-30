@@ -681,17 +681,15 @@ struct __is_std_optional<optional<_Tp>> : true_type {};
 template <class _Tp, class = void>
 struct __optional_iterator {};
 
+#    if _LIBCPP_STD_VER >= 26
+
 template <class _Tp>
-struct __optional_iterator<
-    _Tp,
-    enable_if_t<!is_lvalue_reference_v<_Tp> || (is_object_v<__libcpp_remove_reference_t<_Tp>> &&
-                                                !__is_unbounded_array_v<__libcpp_remove_reference_t<_Tp>>)>> {
+struct __optional_iterator<_Tp, enable_if_t<!is_lvalue_reference_v<_Tp>>> {
 private:
-  using __pointer _LIBCPP_NODEBUG       = add_pointer_t<remove_reference_t<_Tp>>;
-  using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const remove_reference_t<_Tp>>;
+  using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
+  using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
 
 public:
-#    if _LIBCPP_STD_VER >= 26
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator       = __bounded_iter<__wrap_iter<__pointer>>;
   using const_iterator = __bounded_iter<__wrap_iter<__const_pointer>>;
@@ -703,12 +701,7 @@ public:
   // [optional.iterators], iterator support
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
     auto& __derived_self = static_cast<optional<_Tp>&>(*this);
-    auto __ptr           = [&__derived_self]() {
-      if constexpr (is_lvalue_reference_v<_Tp>) {
-        return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
-      }
-      return std::addressof(__derived_self.__get());
-    }();
+    auto* __ptr          = std::addressof(__derived_self.__get());
 
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(
@@ -722,12 +715,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
     auto& __derived_self = static_cast<const optional<_Tp>&>(*this);
-    auto* __ptr          = [&__derived_self]() {
-      if constexpr (is_lvalue_reference_v<_Tp>) {
-        return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
-      }
-      return std::addressof(__derived_self.__get());
-    }();
+    auto* __ptr          = std::addressof(__derived_self.__get());
 
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(
@@ -745,8 +733,44 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept {
     return begin() + (static_cast<const optional<_Tp>&>(*this).has_value() ? 1 : 0);
   }
-#    endif
 };
+
+template <class _Tp>
+struct __optional_iterator<_Tp&,
+                           enable_if_t<is_object_v<__libcpp_remove_reference_t<_Tp>> &&
+                                       !__is_unbounded_array_v<__libcpp_remove_reference_t<_Tp>> >> {
+private:
+  using __pointer _LIBCPP_NODEBUG = add_pointer_t<remove_reference_t<_Tp>>;
+
+public:
+#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+  using iterator = __bounded_iter<__wrap_iter<__pointer>>;
+#      else
+  using iterator = __wrap_iter<__pointer>;
+#      endif
+
+  // [optional.ref.iterators], iterator support
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const noexcept {
+    auto& __derived_self = static_cast<const optional<_Tp&>&>(*this);
+    auto* __ptr          = __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
+
+#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    return std::__make_bounded_iter(
+        __wrap_iter<__pointer>(__ptr),
+        __wrap_iter<__pointer>(__ptr),
+        __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
+#      else
+    return iterator(__ptr);
+#      endif
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const noexcept {
+    return begin() + (static_cast<const optional<_Tp&>&>(*this).has_value() ? 1 : 0);
+  }
+};
+
+#    endif // _LIBCPP_STD_VER >= 26
 
 template <class _Tp>
 class _LIBCPP_DECLSPEC_EMPTY_BASES optional
