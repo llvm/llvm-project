@@ -61,6 +61,7 @@ body:             |
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_14:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY14]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_15:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY15]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_16:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY16]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_17:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY17]], implicit $mode, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -84,8 +85,7 @@ body:             |
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_14]], implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_15]], implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_16]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_17:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY17]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_17]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_17]], implicit $exec
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
@@ -205,6 +205,7 @@ body:             |
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_14:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY14]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_15:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY15]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_16:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY16]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_17:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY17]], implicit $mode, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -228,8 +229,7 @@ body:             |
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_14]], implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_15]], implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_16]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_17:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY17]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_17]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_17]], implicit $exec
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
@@ -349,6 +349,7 @@ body:             |
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_14:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY14]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_15:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY15]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_16:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY16]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_17:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY17]], implicit $mode, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -372,8 +373,7 @@ body:             |
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_14]], implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_15]], implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_16]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_17:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY17]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_17]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_17]], implicit $exec
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
