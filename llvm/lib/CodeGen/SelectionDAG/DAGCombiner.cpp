@@ -13383,11 +13383,9 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   if (!IsTAllZero && !IsTAllOne && !IsFAllZero && !IsFAllOne)
     return SDValue();
 
-  // select Cond, 0, 0 → 0
-  if (IsTAllZero && IsFAllZero) {
-    return VT.isFloatingPoint() ? DAG.getConstantFP(0.0, DL, VT)
-                                : DAG.getConstant(0, DL, VT);
-  }
+  // select Cond, X, X → X
+  if (TVal == FVal)
+    return TVal;
 
   // check select(setgt lhs, -1), 1, -1 --> or (sra lhs, bitwidth - 1), 1
   APInt TValAPInt;
