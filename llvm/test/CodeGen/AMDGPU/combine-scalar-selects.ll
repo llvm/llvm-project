@@ -564,6 +564,137 @@ entry:
   ret void
 }
 
+; Test: extracts have additional unrelated uses (extracts can't be removed)
+; The transformation should still be profitable as we reduce v_cndmask count
+define amdgpu_kernel void @combine_with_extract_other_uses(
+; CHECK-OPT-LABEL: define amdgpu_kernel void @combine_with_extract_other_uses(
+; CHECK-OPT-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT2:%.*]], <2 x i32> [[SRC:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
+; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
+; CHECK-OPT-NEXT:    [[BYTES:%.*]] = bitcast <2 x i32> [[SRC]] to <8 x i8>
+; CHECK-OPT-NEXT:    [[E0:%.*]] = extractelement <8 x i8> [[BYTES]], i64 0
+; CHECK-OPT-NEXT:    [[E1:%.*]] = extractelement <8 x i8> [[BYTES]], i64 1
+; CHECK-OPT-NEXT:    [[E2:%.*]] = extractelement <8 x i8> [[BYTES]], i64 2
+; CHECK-OPT-NEXT:    [[E3:%.*]] = extractelement <8 x i8> [[BYTES]], i64 3
+; CHECK-OPT-NEXT:    [[COMBINED_SEL:%.*]] = select i1 [[COND]], <2 x i32> [[SRC]], <2 x i32> zeroinitializer
+; CHECK-OPT-NEXT:    [[COMBINED_BC:%.*]] = bitcast <2 x i32> [[COMBINED_SEL]] to <8 x i8>
+; CHECK-OPT-NEXT:    [[TMP0:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 0
+; CHECK-OPT-NEXT:    [[TMP1:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 7
+; CHECK-OPT-NEXT:    [[TMP2:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 4
+; CHECK-OPT-NEXT:    [[TMP3:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 1
+; CHECK-OPT-NEXT:    [[TMP4:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 5
+; CHECK-OPT-NEXT:    [[TMP5:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 2
+; CHECK-OPT-NEXT:    [[TMP6:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 6
+; CHECK-OPT-NEXT:    [[TMP7:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 3
+; CHECK-OPT-NEXT:    store i8 [[TMP0]], ptr addrspace(1) [[OUT]], align 1
+; CHECK-OPT-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 1
+; CHECK-OPT-NEXT:    store i8 [[TMP3]], ptr addrspace(1) [[PTR1]], align 1
+; CHECK-OPT-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 2
+; CHECK-OPT-NEXT:    store i8 [[TMP5]], ptr addrspace(1) [[PTR2]], align 1
+; CHECK-OPT-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 3
+; CHECK-OPT-NEXT:    store i8 [[TMP7]], ptr addrspace(1) [[PTR3]], align 1
+; CHECK-OPT-NEXT:    [[PTR4:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 4
+; CHECK-OPT-NEXT:    store i8 [[TMP2]], ptr addrspace(1) [[PTR4]], align 1
+; CHECK-OPT-NEXT:    [[PTR5:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 5
+; CHECK-OPT-NEXT:    store i8 [[TMP4]], ptr addrspace(1) [[PTR5]], align 1
+; CHECK-OPT-NEXT:    [[PTR6:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 6
+; CHECK-OPT-NEXT:    store i8 [[TMP6]], ptr addrspace(1) [[PTR6]], align 1
+; CHECK-OPT-NEXT:    [[PTR7:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 7
+; CHECK-OPT-NEXT:    store i8 [[TMP1]], ptr addrspace(1) [[PTR7]], align 1
+; CHECK-OPT-NEXT:    [[SUM:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-OPT-NEXT:    [[SUM2:%.*]] = add i8 [[SUM]], [[E2]]
+; CHECK-OPT-NEXT:    [[SUM3:%.*]] = add i8 [[SUM2]], [[E3]]
+; CHECK-OPT-NEXT:    store i8 [[SUM3]], ptr addrspace(1) [[OUT2]], align 1
+; CHECK-OPT-NEXT:    ret void
+;
+; CHECK-NOOPT-LABEL: define amdgpu_kernel void @combine_with_extract_other_uses(
+; CHECK-NOOPT-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT2:%.*]], <2 x i32> [[SRC:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
+; CHECK-NOOPT-NEXT:  [[ENTRY:.*:]]
+; CHECK-NOOPT-NEXT:    [[BYTES:%.*]] = bitcast <2 x i32> [[SRC]] to <8 x i8>
+; CHECK-NOOPT-NEXT:    [[E0:%.*]] = extractelement <8 x i8> [[BYTES]], i64 0
+; CHECK-NOOPT-NEXT:    [[E1:%.*]] = extractelement <8 x i8> [[BYTES]], i64 1
+; CHECK-NOOPT-NEXT:    [[E2:%.*]] = extractelement <8 x i8> [[BYTES]], i64 2
+; CHECK-NOOPT-NEXT:    [[E3:%.*]] = extractelement <8 x i8> [[BYTES]], i64 3
+; CHECK-NOOPT-NEXT:    [[E4:%.*]] = extractelement <8 x i8> [[BYTES]], i64 4
+; CHECK-NOOPT-NEXT:    [[E5:%.*]] = extractelement <8 x i8> [[BYTES]], i64 5
+; CHECK-NOOPT-NEXT:    [[E6:%.*]] = extractelement <8 x i8> [[BYTES]], i64 6
+; CHECK-NOOPT-NEXT:    [[E7:%.*]] = extractelement <8 x i8> [[BYTES]], i64 7
+; CHECK-NOOPT-NEXT:    [[S0:%.*]] = select i1 [[COND]], i8 [[E0]], i8 0
+; CHECK-NOOPT-NEXT:    [[S1:%.*]] = select i1 [[COND]], i8 [[E1]], i8 0
+; CHECK-NOOPT-NEXT:    [[S2:%.*]] = select i1 [[COND]], i8 [[E2]], i8 0
+; CHECK-NOOPT-NEXT:    [[S3:%.*]] = select i1 [[COND]], i8 [[E3]], i8 0
+; CHECK-NOOPT-NEXT:    [[S4:%.*]] = select i1 [[COND]], i8 [[E4]], i8 0
+; CHECK-NOOPT-NEXT:    [[S5:%.*]] = select i1 [[COND]], i8 [[E5]], i8 0
+; CHECK-NOOPT-NEXT:    [[S6:%.*]] = select i1 [[COND]], i8 [[E6]], i8 0
+; CHECK-NOOPT-NEXT:    [[S7:%.*]] = select i1 [[COND]], i8 [[E7]], i8 0
+; CHECK-NOOPT-NEXT:    store i8 [[S0]], ptr addrspace(1) [[OUT]], align 1
+; CHECK-NOOPT-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 1
+; CHECK-NOOPT-NEXT:    store i8 [[S1]], ptr addrspace(1) [[PTR1]], align 1
+; CHECK-NOOPT-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 2
+; CHECK-NOOPT-NEXT:    store i8 [[S2]], ptr addrspace(1) [[PTR2]], align 1
+; CHECK-NOOPT-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 3
+; CHECK-NOOPT-NEXT:    store i8 [[S3]], ptr addrspace(1) [[PTR3]], align 1
+; CHECK-NOOPT-NEXT:    [[PTR4:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 4
+; CHECK-NOOPT-NEXT:    store i8 [[S4]], ptr addrspace(1) [[PTR4]], align 1
+; CHECK-NOOPT-NEXT:    [[PTR5:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 5
+; CHECK-NOOPT-NEXT:    store i8 [[S5]], ptr addrspace(1) [[PTR5]], align 1
+; CHECK-NOOPT-NEXT:    [[PTR6:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 6
+; CHECK-NOOPT-NEXT:    store i8 [[S6]], ptr addrspace(1) [[PTR6]], align 1
+; CHECK-NOOPT-NEXT:    [[PTR7:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 7
+; CHECK-NOOPT-NEXT:    store i8 [[S7]], ptr addrspace(1) [[PTR7]], align 1
+; CHECK-NOOPT-NEXT:    [[SUM:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NOOPT-NEXT:    [[SUM2:%.*]] = add i8 [[SUM]], [[E2]]
+; CHECK-NOOPT-NEXT:    [[SUM3:%.*]] = add i8 [[SUM2]], [[E3]]
+; CHECK-NOOPT-NEXT:    store i8 [[SUM3]], ptr addrspace(1) [[OUT2]], align 1
+; CHECK-NOOPT-NEXT:    ret void
+;
+  ptr addrspace(1) %out,
+  ptr addrspace(1) %out2,
+  <2 x i32> %src,
+  i1 %cond
+) {
+entry:
+  %bytes = bitcast <2 x i32> %src to <8 x i8>
+  %e0 = extractelement <8 x i8> %bytes, i64 0
+  %e1 = extractelement <8 x i8> %bytes, i64 1
+  %e2 = extractelement <8 x i8> %bytes, i64 2
+  %e3 = extractelement <8 x i8> %bytes, i64 3
+  %e4 = extractelement <8 x i8> %bytes, i64 4
+  %e5 = extractelement <8 x i8> %bytes, i64 5
+  %e6 = extractelement <8 x i8> %bytes, i64 6
+  %e7 = extractelement <8 x i8> %bytes, i64 7
+  ; Selects that will be combined
+  %s0 = select i1 %cond, i8 %e0, i8 0
+  %s1 = select i1 %cond, i8 %e1, i8 0
+  %s2 = select i1 %cond, i8 %e2, i8 0
+  %s3 = select i1 %cond, i8 %e3, i8 0
+  %s4 = select i1 %cond, i8 %e4, i8 0
+  %s5 = select i1 %cond, i8 %e5, i8 0
+  %s6 = select i1 %cond, i8 %e6, i8 0
+  %s7 = select i1 %cond, i8 %e7, i8 0
+  ; Store select results
+  store i8 %s0, ptr addrspace(1) %out, align 1
+  %ptr1 = getelementptr i8, ptr addrspace(1) %out, i64 1
+  store i8 %s1, ptr addrspace(1) %ptr1, align 1
+  %ptr2 = getelementptr i8, ptr addrspace(1) %out, i64 2
+  store i8 %s2, ptr addrspace(1) %ptr2, align 1
+  %ptr3 = getelementptr i8, ptr addrspace(1) %out, i64 3
+  store i8 %s3, ptr addrspace(1) %ptr3, align 1
+  %ptr4 = getelementptr i8, ptr addrspace(1) %out, i64 4
+  store i8 %s4, ptr addrspace(1) %ptr4, align 1
+  %ptr5 = getelementptr i8, ptr addrspace(1) %out, i64 5
+  store i8 %s5, ptr addrspace(1) %ptr5, align 1
+  %ptr6 = getelementptr i8, ptr addrspace(1) %out, i64 6
+  store i8 %s6, ptr addrspace(1) %ptr6, align 1
+  %ptr7 = getelementptr i8, ptr addrspace(1) %out, i64 7
+  store i8 %s7, ptr addrspace(1) %ptr7, align 1
+  ; Additional unrelated uses of the extracts - these prevent extract removal
+  %sum = add i8 %e0, %e1
+  %sum2 = add i8 %sum, %e2
+  %sum3 = add i8 %sum2, %e3
+  store i8 %sum3, ptr addrspace(1) %out2, align 1
+  ret void
+}
+
 ; Negative test: select with extract as false value (wrong operand position)
 define amdgpu_kernel void @no_combine_wrong_operand_order(
 ;
