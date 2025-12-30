@@ -4419,8 +4419,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // formed.
       MatchScope &LastScope = MatchScopes.back();
       RecordedNodes.resize(LastScope.NumRecordedNodes);
-      NodeStack.clear();
-      NodeStack.append(LastScope.NodeStack.begin(), LastScope.NodeStack.end());
+      NodeStack.assign(LastScope.NodeStack.begin(), LastScope.NodeStack.end());
       N = NodeStack.back();
 
       if (LastScope.NumMatchedMemRefs != MatchedMemRefs.size())
