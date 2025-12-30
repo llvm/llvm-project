@@ -813,9 +813,6 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       SmallPtrSet<BasicBlock *, 4> NewBBPreds(llvm::from_range,
                                               predecessors(NewBB));
 
-      // At this point, the excess predecessor entries are positive in the
-      // map.  Loop over all of the PHIs and remove excess predecessor
-      // entries.
       BasicBlock::iterator I = NewBB->begin();
       for (; (PN = dyn_cast<PHINode>(I)); ++I) {
         PN->removeIncomingValueIf(
