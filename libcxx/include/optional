@@ -499,7 +499,7 @@ struct __optional_storage_base<_Tp, true> {
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_storage_base(in_place_t, _UArg&& __uarg)
       : __value_(std::addressof(__uarg)) {
     static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
-                  "Attempted to construct a reference element in tuple from a "
+                  "Attempted to construct a reference element in optional from a "
                   "possible temporary");
   }
 
