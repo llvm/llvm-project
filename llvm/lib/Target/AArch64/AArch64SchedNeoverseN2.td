@@ -669,6 +669,10 @@ def N2Write_0or3c_1M0 : SchedWriteVariant<[
                       SchedVar<NeoverseZeroMove, [N2Write_0c]>,
                       SchedVar<NoSchedPred,      [N2Write_3c_1M0]>]>;
 
+def N2Write_Extr : SchedWriteVariant<[
+                      SchedVar<IsRORImmIdiomPred, [N2Write_1c_1I]>,
+                      SchedVar<NoSchedPred,       [N2Write_3c_1I_1M]>]>;
+
 //===----------------------------------------------------------------------===//
 // Define types for arithmetic and logical ops with short shifts
 def N2Write_Arith : SchedWriteVariant<[
@@ -784,10 +788,7 @@ def : InstRW<[N2Write_2c_1M0], (instrs XPACD, XPACI, XPACLRI)>;
 
 // Bitfield extract, one reg
 // Bitfield extract, two regs
-// NOTE: We don't model the difference between EXTR where both operands are the
-// same (one reg).
-def : SchedAlias<WriteExtr, N2Write_3c_1I_1M>;
-def : InstRW<[N2Write_3c_1I_1M], (instrs EXTRWrri, EXTRXrri)>;
+def : SchedAlias<WriteExtr, N2Write_Extr>;
 
 // Bitfield move, basic
 def : SchedAlias<WriteIS, N2Write_1c_1I>;
