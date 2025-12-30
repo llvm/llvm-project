@@ -3052,52 +3052,31 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::cos:
-  case Intrinsic::amdgcn_cos: {
+  case Intrinsic::amdgcn_cos:
+  case Intrinsic::cosh: {
     Value *X, *Sign;
     Value *Src = II->getArgOperand(0);
     if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
         match(Src, m_CopySign(m_Value(X), m_Value(Sign)))) {
-      // cos(-x) --> cos(x)
-      // cos(fabs(x)) --> cos(x)
-      // cos(copysign(x, y)) --> cos(x)
+      // f(-x) --> f(x)
+      // f(fabs(x)) --> f(x)
+      // f(copysign(x, y)) --> f(x)
+      // for f in {cos, cosh}
       return replaceOperand(*II, 0, X);
     }
     break;
   }
   case Intrinsic::sin:
-  case Intrinsic::amdgcn_sin: {
-    Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
-      // sin(-x) --> -sin(x)
-      Value *NewSin = Builder.CreateUnaryIntrinsic(IID, X, II);
-      return UnaryOperator::CreateFNegFMF(NewSin, II);
-    }
-    break;
-  }
-  case Intrinsic::cosh: {
-    Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
-      // cosh(-x) --> cosh(x)
-      Value *NewCosh = Builder.CreateUnaryIntrinsic(IID, X, II);
-      return replaceInstUsesWith(*II, NewCosh);
-    }
-    break;
-  }
-  case Intrinsic::sinh: {
-    Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
-      // sinh(-x) --> -sinh(x)
-      Value *NewSinh = Builder.CreateUnaryIntrinsic(IID, X, II);
-      return UnaryOperator::CreateFNegFMF(NewSinh, II);
-    }
-    break;
-  }
+  case Intrinsic::amdgcn_sin:
+  case Intrinsic::sinh:
+  case Intrinsic::tan:
   case Intrinsic::tanh: {
     Value *X;
     if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
-      // tanh(-x) --> -tanh(x)
-      Value *NewTanh = Builder.CreateUnaryIntrinsic(IID, X, II);
-      return UnaryOperator::CreateFNegFMF(NewTanh, II);
+      // f(-x) --> -f(x)
+      // for f in {sin, sinh, tan, tanh}
+      Value *NewFunc = Builder.CreateUnaryIntrinsic(IID, X, II);
+      return UnaryOperator::CreateFNegFMF(NewFunc, II);
     }
     break;
   }
