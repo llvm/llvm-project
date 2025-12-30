@@ -681,7 +681,6 @@ struct __is_std_optional<optional<_Tp>> : true_type {};
 template <class _Tp, class = void>
 struct __optional_iterator {};
 
-// LWG4308 optional<T&>: Constraint: T is an object type other than an array of unknown bound.
 template <class _Tp>
 struct __optional_iterator<
     _Tp,
