@@ -352,13 +352,27 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
 
   // Set layout attribute
   if (resultTarget) {
-    // for the op result
+    // op result
     xegpu::setDistributeLayoutAttr(target->getResult(index), layout);
   } else if (operandTarget) {
-    // or operand
+    // op operand
     xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layout);
+  } else if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
+    // dpas op is a special case where layout needs to be set for A, B, and C
+    if (index == 0)
+      dpasOp.getProperties().layout_a = layout;
+    else if (index == 1)
+      dpasOp.getProperties().layout_b = layout;
+    else if (index == 2)
+      dpasOp.getProperties().layout_cd = layout;
+    else {
+      auto diag = emitSilenceableFailure(getLoc())
+                  << "Invalid index for setting dpas op layout: " << index;
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
   } else {
-    // or anchor layout.
+    // op's anchor layout.
     auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(target);
     if (!anchorOp) {
       auto diag = emitSilenceableFailure(getLoc())
