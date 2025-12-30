@@ -2967,11 +2967,11 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     SmallVector<OpFoldResult> mixedGlobalStrides =
         getMixedValues(globalStaticStrides, globalDynamicStrides, rewriter);
 
-    if (mixedGlobalStrides.size() <= dimX)
+    if (mixedGlobalStrides.size() <= (dimX + 1))
       return {sgprY, sgprZ};
 
     OpFoldResult tensorDimXStrideOpFoldResult =
-        *(mixedGlobalStrides.rbegin() + dimX);
+        *(mixedGlobalStrides.rbegin() + dimX + 1);
     // pre-condition: tensorDimXStride is less than 2^48-1
     // TODO: Validation if the value breaks the pre-condition.
     // In a following PR implement RuntimeVerifiableOpInterface that instruments

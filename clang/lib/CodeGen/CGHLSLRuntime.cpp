@@ -483,7 +483,9 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
   if (CodeGenOpts.ResMayAlias)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.resmayalias", 1);
-
+  if (CodeGenOpts.AllResourcesBound)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error,
+                    "dx.allresourcesbound", 1);
   // NativeHalfType corresponds to the -fnative-half-type clang option which is
   // aliased by clang-dxc's -enable-16bit-types option. This option is used to
   // set the UseNativeLowPrecision DXIL module flag in the DirectX backend

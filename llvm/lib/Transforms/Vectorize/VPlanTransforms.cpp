@@ -2071,6 +2071,13 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
+
+    // For BranchOnTwoConds, set the latch exit condition to true directly.
+    if (match(Term, m_BranchOnTwoConds())) {
+      Term->setOperand(1, Plan.getTrue());
+      return true;
+    }
+
     auto *BOC = new VPInstruction(VPInstruction::BranchOnCond, {Plan.getTrue()},
                                   {}, {}, Term->getDebugLoc());
     ExitingVPBB->appendRecipe(BOC);
