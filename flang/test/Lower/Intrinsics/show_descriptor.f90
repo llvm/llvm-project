@@ -226,4 +226,21 @@ subroutine test_derived
 ! CHECK:           fir.call @_FortranAShowDescriptor(%[[DECLARE_CU]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.heap<none>>>) -> ()
 ! CHECK:           return
 end subroutine test_derived
+
+subroutine test_derived_member
+! CHECK-LABEL:   func.func @_QMtest_show_descriptorPtest_derived_member() {
+  implicit none
+  type :: t3
+     integer, allocatable :: a(:)
+  end type t3
+  type(t3) :: vt3
+! CHECK:           %[[VT3:.*]] = fir.alloca !fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
+! CHECK:           %[[VT3_DECL:.*]] = fir.declare %[[VT3]] {uniq_name = "_QMtest_show_descriptorFtest_derived_memberEvt3"} : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+  allocate(vt3%a(5))
+! CHECK:           %[[A_FIELD:.*]] = fir.field_index a, !fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
+! CHECK:           %[[A_COORD:.*]] = fir.coordinate_of %[[VT3_DECL]], a : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  call show_descriptor(vt3%a)
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[A_COORD]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> ()
+  deallocate(vt3%a)
+end subroutine test_derived_member
 end module test_show_descriptor
