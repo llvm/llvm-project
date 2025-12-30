@@ -11814,6 +11814,7 @@ SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
 }
 
 // Fold (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1).
+// Fold (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
 SDValue DAGCombiner::foldCTLZToCTLS(SDValue Src, const SDLoc &DL) {
   EVT VT = Src.getValueType();
 
@@ -11825,7 +11826,15 @@ SDValue DAGCombiner::foldCTLZToCTLS(SDValue Src, const SDLoc &DL) {
 
   unsigned BitWidth = VT.getScalarSizeInBits();
 
+  bool NeedAdd = true;
+
   SDValue X;
+  if (sd_match(Src, m_OneUse(m_Or(m_OneUse(m_Shl(m_Value(X), m_SpecificInt(1))),
+                                  m_SpecificInt(1))))) {
+    NeedAdd = false;
+    Src = X;
+  }
+
   if (!sd_match(Src,
                 m_OneUse(m_Xor(m_Value(X),
                                m_OneUse(m_Sra(m_Deferred(X),
@@ -11833,6 +11842,9 @@ SDValue DAGCombiner::foldCTLZToCTLS(SDValue Src, const SDLoc &DL) {
     return SDValue();
 
   SDValue Res = DAG.getNode(ISD::CTLS, DL, VT, X);
+  if (!NeedAdd)
+    return Res;
+
   return DAG.getNode(ISD::ADD, DL, VT, Res, DAG.getConstant(1, DL, VT));
 }
 
@@ -11865,6 +11877,10 @@ SDValue DAGCombiner::visitCTLZ_ZERO_UNDEF(SDNode *N) {
   if (SDValue C =
           DAG.FoldConstantArithmetic(ISD::CTLZ_ZERO_UNDEF, DL, VT, {N0}))
     return C;
+
+  if (SDValue V = foldCTLZToCTLS(N0, DL))
+    return V;
+
   return SDValue();
 }
 

@@ -156,13 +156,9 @@ define i8 @cls_i8(i8 %x) {
 define i8 @cls_i8_2(i8 %x) {
 ; CHECK-LABEL: cls_i8_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.b a1, a0
-; CHECK-NEXT:    srli a1, a1, 7
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    slli a0, a0, 56
-; CHECK-NEXT:    clz a0, a0
+; CHECK-NEXT:    sext.b a0, a0
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    addi a0, a0, -56
 ; CHECK-NEXT:    ret
   %a = ashr i8 %x, 7
   %b = xor i8 %x, %a
@@ -189,13 +185,9 @@ define i16 @cls_i16(i16 %x) {
 define i16 @cls_i16_2(i16 %x) {
 ; CHECK-LABEL: cls_i16_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.h a1, a0
-; CHECK-NEXT:    srli a1, a1, 15
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    slli a0, a0, 48
-; CHECK-NEXT:    clz a0, a0
+; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    addi a0, a0, -48
 ; CHECK-NEXT:    ret
   %a = ashr i16 %x, 15
   %b = xor i16 %x, %a
@@ -220,12 +212,7 @@ define i32 @cls_i32(i32 %x) {
 define i32 @cls_i32_2(i32 %x) {
 ; CHECK-LABEL: cls_i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a1, a0
-; CHECK-NEXT:    srli a1, a1, 31
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    clzw a0, a0
+; CHECK-NEXT:    clsw a0, a0
 ; CHECK-NEXT:    ret
   %a = ashr i32 %x, 31
   %b = xor i32 %x, %a
@@ -250,11 +237,7 @@ define i64 @cls_i64(i64 %x) {
 define i64 @cls_i64_2(i64 %x) {
 ; CHECK-LABEL: cls_i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a1, a0, 63
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    clz a0, a0
+; CHECK-NEXT:    cls a0, a0
 ; CHECK-NEXT:    ret
   %a = ashr i64 %x, 63
   %b = xor i64 %x, %a
