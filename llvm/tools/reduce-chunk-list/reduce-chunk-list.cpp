@@ -85,14 +85,16 @@ bool increaseGranularity(IntegerInclusiveIntervalUtils::IntervalList &Chunks) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  auto ExpectedChunks = IntegerInclusiveIntervalUtils::parseIntervals(StartChunks, ',');
+  auto ExpectedChunks =
+      IntegerInclusiveIntervalUtils::parseIntervals(StartChunks, ',');
   if (!ExpectedChunks) {
     handleAllErrors(ExpectedChunks.takeError(), [](const StringError &E) {
       errs() << "Error parsing chunks: " << E.getMessage() << "\n";
     });
     return 1;
   }
-  IntegerInclusiveIntervalUtils::IntervalList CurrChunks = std::move(*ExpectedChunks);
+  IntegerInclusiveIntervalUtils::IntervalList CurrChunks =
+      std::move(*ExpectedChunks);
 
   auto Program = sys::findProgramByName(ReproductionCmd);
   if (!Program) {
@@ -133,6 +135,7 @@ int main(int argc, char **argv) {
 
   errs() << "Minimal Chunks = ";
   IntegerInclusiveIntervalUtils::printIntervals(
-      llvm::errs(), IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(CurrChunks));
+      llvm::errs(),
+      IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(CurrChunks));
   errs() << "\n";
 }

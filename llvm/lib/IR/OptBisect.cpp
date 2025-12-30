@@ -62,7 +62,8 @@ static cl::opt<std::string> OptBisectIntervals(
         return;
       }
 
-      auto Intervals = IntegerInclusiveIntervalUtils::parseIntervals(IntervalStr);
+      auto Intervals =
+          IntegerInclusiveIntervalUtils::parseIntervals(IntervalStr);
       if (!Intervals) {
         handleAllErrors(Intervals.takeError(), [&](const StringError &E) {
           errs() << "Error: Invalid interval specification for -opt-bisect: "

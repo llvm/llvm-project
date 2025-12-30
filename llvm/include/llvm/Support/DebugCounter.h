@@ -85,8 +85,8 @@ public:
 
   /// Return true on parsing error and print the error message on the
   /// llvm::errs()
-  LLVM_ABI static bool parseChunks(StringRef Str,
-                                   IntegerInclusiveIntervalUtils::IntervalList &Res);
+  LLVM_ABI static bool
+  parseChunks(StringRef Str, IntegerInclusiveIntervalUtils::IntervalList &Res);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();
