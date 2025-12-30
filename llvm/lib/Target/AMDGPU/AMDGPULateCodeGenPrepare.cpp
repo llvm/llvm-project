@@ -78,6 +78,7 @@ public:
 
   bool canWidenScalarExtLoad(LoadInst &LI) const;
   bool visitLoadInst(LoadInst &LI);
+  bool visitBitCastInst(BitCastInst &BC);
 
   /// Combine scalarized selects from a bitcast back into a vector select.
   ///
@@ -245,27 +246,11 @@ bool AMDGPULateCodeGenPrepare::run() {
 
   bool Changed = false;
 
-  bool HasScalarSubwordLoads = ST.hasScalarSubwordLoads();
-
   for (auto &BB : reverse(F))
     for (Instruction &I : make_early_inc_range(reverse(BB))) {
-      Changed |= !HasScalarSubwordLoads && visit(I);
+      Changed |= visit(I);
       Changed |= LRO.optimizeLiveType(&I, DeadInsts);
     }
-
-  // Combine scalarized selects back into vector selects.
-  // This uses a top-down approach: iterate over bitcasts (i32 vec -> i8 vec)
-  // and collect all select instructions that use extracted elements with a
-  // zero false value. By starting from the bitcast, we process each source
-  // exactly once, avoiding redundant work when multiple selects share a source.
-  if (CombineScalarSelects) {
-    for (auto &BB : F) {
-      for (Instruction &I : make_early_inc_range(BB)) {
-        if (auto *BC = dyn_cast<BitCastInst>(&I))
-          Changed |= tryCombineSelectsFromBitcast(*BC);
-      }
-    }
-  }
 
   RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts);
   return Changed;
@@ -539,7 +524,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
-  if (!WidenLoads)
+  if (!WidenLoads || ST.hasScalarSubwordLoads())
     return false;
 
   // Skip if that load is already aligned on DWORD at least as it's handled in
@@ -591,6 +576,12 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   DeadInsts.emplace_back(&LI);
 
   return true;
+}
+
+bool AMDGPULateCodeGenPrepare::visitBitCastInst(BitCastInst &BC) {
+  if (CombineScalarSelects)
+    return tryCombineSelectsFromBitcast(BC);
+  return false;
 }
 
 bool AMDGPULateCodeGenPrepare::tryCombineSelectsFromBitcast(BitCastInst &BC) {
