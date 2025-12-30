@@ -412,6 +412,10 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   const OptTable &Opts = getDriver().getOpts();
 
+  if (Args.hasArg(options::OPT_dxc_col_major) &&
+      Args.hasArg(options::OPT_dxc_row_major))
+    getDriver().Diag(diag::err_drv_dxc_invalid_matrix_layout);
+
   for (Arg *A : Args) {
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
@@ -506,6 +510,20 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_col_major) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "column-major");
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_row_major) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "row-major");
+      A->claim();
+      continue;
+    }
 
     DAL->append(A);
   }
@@ -566,4 +584,8 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
   // No translation, validation, or objcopy are required, so this action must
   // output to the result file.
   return true;
+}
+
+void HLSLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wconversion");
 }

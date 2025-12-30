@@ -27,7 +27,8 @@ using namespace llvm;
 #include "LanaiGenInstrInfo.inc"
 
 LanaiInstrInfo::LanaiInstrInfo(const LanaiSubtarget &STI)
-    : LanaiGenInstrInfo(STI, Lanai::ADJCALLSTACKDOWN, Lanai::ADJCALLSTACKUP),
+    : LanaiGenInstrInfo(STI, RegisterInfo, Lanai::ADJCALLSTACKDOWN,
+                        Lanai::ADJCALLSTACKUP),
       RegisterInfo() {}
 
 void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -48,8 +49,7 @@ void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register SourceRegister, bool IsKill, int FrameIndex,
-    const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/,
+    const TargetRegisterClass *RegisterClass, Register /*VReg*/,
     MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
@@ -69,8 +69,7 @@ void LanaiInstrInfo::storeRegToStackSlot(
 void LanaiInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register DestinationRegister, int FrameIndex,
-    const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/,
+    const TargetRegisterClass *RegisterClass, Register /*VReg*/,
     MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {

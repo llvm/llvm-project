@@ -8,5 +8,12 @@
   "minimumReleaseAge": "3 days",
   "assignees": ["boomanaiden154"],
   "ignorePaths": [".github/workflows/containers/**"],
-  "groupName": "[Github] Update GHA Dependencies"
+  "groupName": "[Github] Update GHA Dependencies",
+  "packageRules": [
+    {
+      "matchPackageNames": ["windows", "macos"],
+      "matchManagers": ["github-actions"],
+      "enabled": false
+    }
+  ]
 }

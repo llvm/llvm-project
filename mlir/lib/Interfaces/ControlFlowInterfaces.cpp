@@ -328,7 +328,6 @@ static bool traverseRegionGraph(Region *begin,
              << nextRegion->getRegionNumber() << ", returning true";
       return true;
     }
-    llvm::dbgs() << "Region: " << nextRegion << "\n";
     if (!nextRegion->getParentOp()) {
       llvm::errs() << "Region " << *nextRegion << " has no parent op\n";
       return false;
@@ -478,6 +477,16 @@ bool RegionBranchOpInterface::hasLoop() {
 
   LDBG() << "No loops found in operation";
   return false;
+}
+
+OperandRange
+RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
+                                              RegionSuccessor dest) {
+  if (src.isParent())
+    return getEntrySuccessorOperands(dest);
+  auto terminator = cast<RegionBranchTerminatorOpInterface>(
+      src.getTerminatorPredecessorOrNull());
+  return terminator.getSuccessorOperands(dest);
 }
 
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {

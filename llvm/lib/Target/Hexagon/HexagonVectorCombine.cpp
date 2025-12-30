@@ -120,10 +120,6 @@ public:
   size_t length(Value *Val) const;
   size_t length(Type *Ty) const;
 
-  Constant *getNullValue(Type *Ty) const;
-  Constant *getFullValue(Type *Ty) const;
-  Constant *getConstSplat(Type *Ty, int Val) const;
-
   Value *simplify(Value *Val) const;
 
   Value *insertb(IRBuilderBase &Builder, Value *Dest, Value *Src, int Start,
@@ -368,8 +364,8 @@ private:
   const HexagonVectorCombine &HVC;
 };
 
-[[maybe_unused]]
-raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                         const AlignVectors::AddrInfo &AI) {
   OS << "Inst: " << AI.Inst << "  " << *AI.Inst << '\n';
   OS << "Addr: " << *AI.Addr << '\n';
   OS << "Type: " << *AI.ValTy << '\n';
@@ -379,8 +375,8 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   return OS;
 }
 
-[[maybe_unused]]
-raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                         const AlignVectors::MoveGroup &MG) {
   OS << "IsLoad:" << (MG.IsLoad ? "yes" : "no");
   OS << ", IsHvx:" << (MG.IsHvx ? "yes" : "no") << '\n';
   OS << "Main\n";
@@ -398,9 +394,8 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   return OS;
 }
 
-[[maybe_unused]]
-raw_ostream &operator<<(raw_ostream &OS,
-                        const AlignVectors::ByteSpan::Block &B) {
+[[maybe_unused]] raw_ostream &
+operator<<(raw_ostream &OS, const AlignVectors::ByteSpan::Block &B) {
   OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] ";
   if (B.Seg.Val == reinterpret_cast<const Value *>(&B)) {
     OS << "(self:" << B.Seg.Val << ')';
@@ -412,8 +407,8 @@ raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-[[maybe_unused]]
-raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                         const AlignVectors::ByteSpan &BS) {
   OS << "ByteSpan[size=" << BS.size() << ", extent=" << BS.extent() << '\n';
   for (const AlignVectors::ByteSpan::Block &B : BS)
     OS << B << '\n';
@@ -683,8 +678,8 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
 
   Type *ValTy = getPayload(Val)->getType();
   if (auto *VecTy = dyn_cast<VectorType>(ValTy))
-    return HVC.getFullValue(HVC.getBoolTy(HVC.length(VecTy)));
-  return HVC.getFullValue(HVC.getBoolTy());
+    return Constant::getAllOnesValue(HVC.getBoolTy(HVC.length(VecTy)));
+  return Constant::getAllOnesValue(HVC.getBoolTy());
 }
 
 auto AlignVectors::getPassThrough(Value *Val) const -> Value * {
@@ -1123,7 +1118,7 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   BasicBlock *BaseBlock = Builder.GetInsertBlock();
 
   ByteSpan ASpan;
-  auto *True = HVC.getFullValue(HVC.getBoolTy(ScLen));
+  auto *True = Constant::getAllOnesValue(HVC.getBoolTy(ScLen));
   auto *Undef = UndefValue::get(SecTy);
 
   // Created load does not have to be "Instruction" (e.g. "undef").
@@ -1350,7 +1345,7 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
     ByteSpan VSection =
         VSpan.section(Index * ScLen, ScLen).shift(-Index * ScLen);
     Value *Undef = UndefValue::get(SecTy);
-    Value *Zero = HVC.getNullValue(SecTy);
+    Value *Zero = Constant::getNullValue(SecTy);
     Value *AccumV = Undef;
     Value *AccumM = Zero;
     for (ByteSpan::Block &S : VSection) {
@@ -2700,11 +2695,12 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
     // Do full-precision multiply and shift.
     Value *Prod32 = createMul16(Builder, Op.X, Op.Y);
     if (Rounding) {
-      Value *RoundVal = HVC.getConstSplat(Prod32->getType(), 1 << *Op.RoundAt);
+      Value *RoundVal =
+          ConstantInt::get(Prod32->getType(), 1ull << *Op.RoundAt);
       Prod32 = Builder.CreateAdd(Prod32, RoundVal, "add");
     }
 
-    Value *ShiftAmt = HVC.getConstSplat(Prod32->getType(), Op.Frac);
+    Value *ShiftAmt = ConstantInt::get(Prod32->getType(), Op.Frac);
     Value *Shifted = Op.X.Sgn == Signed || Op.Y.Sgn == Signed
                          ? Builder.CreateAShr(Prod32, ShiftAmt, "asr")
                          : Builder.CreateLShr(Prod32, ShiftAmt, "lsr");
@@ -2723,10 +2719,10 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
 
   // Add the optional rounding to the proper word.
   if (Op.RoundAt.has_value()) {
-    Value *Zero = HVC.getNullValue(WordX[0]->getType());
+    Value *Zero = Constant::getNullValue(WordX[0]->getType());
     SmallVector<Value *> RoundV(WordP.size(), Zero);
     RoundV[*Op.RoundAt / 32] =
-        HVC.getConstSplat(HvxWordTy, 1 << (*Op.RoundAt % 32));
+        ConstantInt::get(HvxWordTy, 1ull << (*Op.RoundAt % 32));
     WordP = createAddLong(Builder, WordP, RoundV);
   }
 
@@ -2734,7 +2730,7 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
 
   // Shift all products right by Op.Frac.
   unsigned SkipWords = Op.Frac / 32;
-  Constant *ShiftAmt = HVC.getConstSplat(HvxWordTy, Op.Frac % 32);
+  Constant *ShiftAmt = ConstantInt::get(HvxWordTy, Op.Frac % 32);
 
   for (int Dst = 0, End = WordP.size() - SkipWords; Dst != End; ++Dst) {
     int Src = Dst + SkipWords;
@@ -2803,7 +2799,7 @@ auto HvxIdioms::createAddCarry(IRBuilderBase &Builder, Value *X, Value *Y,
     } else {
       AddCarry = HVC.HST.getIntrinsicId(Hexagon::V6_vaddcarry);
       if (CarryIn == nullptr)
-        CarryIn = HVC.getNullValue(HVC.getBoolTy(HVC.length(VecTy)));
+        CarryIn = Constant::getNullValue(HVC.getBoolTy(HVC.length(VecTy)));
       Args.push_back(CarryIn);
     }
     Value *Ret = HVC.createHvxIntrinsic(Builder, AddCarry,
@@ -2951,7 +2947,7 @@ auto HvxIdioms::createMulLong(IRBuilderBase &Builder, ArrayRef<Value *> WordX,
     }
   }
 
-  Value *Zero = HVC.getNullValue(WordX[0]->getType());
+  Value *Zero = Constant::getNullValue(WordX[0]->getType());
 
   auto pop_back_or_zero = [Zero](auto &Vector) -> Value * {
     if (Vector.empty())
@@ -3145,33 +3141,6 @@ auto HexagonVectorCombine::length(Type *Ty) const -> size_t {
   auto *VecTy = dyn_cast<VectorType>(Ty);
   assert(VecTy && "Must be a vector type");
   return VecTy->getElementCount().getFixedValue();
-}
-
-auto HexagonVectorCombine::getNullValue(Type *Ty) const -> Constant * {
-  assert(Ty->isIntOrIntVectorTy());
-  auto Zero = ConstantInt::get(Ty->getScalarType(), 0);
-  if (auto *VecTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VecTy->getElementCount(), Zero);
-  return Zero;
-}
-
-auto HexagonVectorCombine::getFullValue(Type *Ty) const -> Constant * {
-  assert(Ty->isIntOrIntVectorTy());
-  auto Minus1 = ConstantInt::get(Ty->getScalarType(), -1);
-  if (auto *VecTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VecTy->getElementCount(), Minus1);
-  return Minus1;
-}
-
-auto HexagonVectorCombine::getConstSplat(Type *Ty, int Val) const
-    -> Constant * {
-  assert(Ty->isVectorTy());
-  auto VecTy = cast<VectorType>(Ty);
-  Type *ElemTy = VecTy->getElementType();
-  // Add support for floats if needed.
-  auto *Splat = ConstantVector::getSplat(VecTy->getElementCount(),
-                                         ConstantInt::get(ElemTy, Val));
-  return Splat;
 }
 
 auto HexagonVectorCombine::simplify(Value *V) const -> Value * {
@@ -3581,7 +3550,7 @@ auto HexagonVectorCombine::joinVectorElements(IRBuilderBase &Builder,
     // If there are too few, fill them with the sign bit.
     Value *Last = Inputs.back();
     Value *Sign = Builder.CreateAShr(
-        Last, getConstSplat(Last->getType(), Width - 1), "asr");
+        Last, ConstantInt::get(Last->getType(), Width - 1), "asr");
     Inputs.resize(NeedInputs, Sign);
   }
 

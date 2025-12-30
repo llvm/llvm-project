@@ -46,6 +46,7 @@ class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
+  const RTLIB::RuntimeLibcallsInfo *RuntimeLibCallInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
@@ -57,9 +58,7 @@ public:
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
-  TargetTransformInfo *TTI = nullptr;
-#endif
+  const TargetTransformInfo *TTI = nullptr;
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -152,6 +151,7 @@ public:
     OPC_RecordChild7,
     OPC_RecordMemRef,
     OPC_CaptureGlueInput,
+    OPC_CaptureDeactivationSymbol,
     OPC_MoveChild,
     OPC_MoveChild0,
     OPC_MoveChild1,
@@ -257,13 +257,13 @@ public:
 
     OPC_EmitInteger,
     // Space-optimized forms that implicitly encode integer VT.
-    OPC_EmitInteger8,
-    OPC_EmitInteger16,
-    OPC_EmitInteger32,
-    OPC_EmitInteger64,
+    OPC_EmitIntegerI8,
+    OPC_EmitIntegerI16,
+    OPC_EmitIntegerI32,
+    OPC_EmitIntegerI64,
     OPC_EmitStringInteger,
     // Space-optimized forms that implicitly encode integer VT.
-    OPC_EmitStringInteger32,
+    OPC_EmitStringIntegerI32,
     OPC_EmitRegister,
     OPC_EmitRegisterI32,
     OPC_EmitRegisterI64,
@@ -473,6 +473,7 @@ private:
   void Select_WRITE_REGISTER(SDNode *Op);
   void Select_UNDEF(SDNode *N);
   void Select_FAKE_USE(SDNode *N);
+  void Select_RELOC_NONE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);

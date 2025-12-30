@@ -59,6 +59,35 @@ Start with cloning LLVM repo:
 `llvm-bolt` will be available under `bin/`. Add this directory to your path to
 ensure the rest of the commands in this tutorial work.
 
+### Testing changes during development
+
+During development, it is recommended to run both the in-tree tests (under
+[bolt/test](./test)) and the out-of-tree tests, which use binaries hosted in an
+[external](https://github.com/rafaelauler/bolt-tests) repository.
+
+Below are sample instructions to run both test suites. You may need to define
+additional CMake variables. The [docker-tests/Dockerfile ](./utils/docker-tests/Dockerfile)
+is provided which is another route to get a known good testing environment.
+
+```bash
+git clone https://github.com/llvm/llvm-project.git
+git clone https://github.com/rafaelauler/bolt-tests
+mkdir build
+cmake -G Ninja -S llvm-project/llvm -B build \
+       -DLLVM_TARGETS_TO_BUILD="AArch64;X86" \
+       -DCMAKE_BUILD_TYPE=Release \
+       -DBUILD_SHARED_LIBS=ON \
+       -DLLVM_BUILD_TOOLS=ON \
+       -DLLVM_ENABLE_ASSERTIONS=ON \
+       -DLLVM_ENABLE_PROJECTS="clang;bolt;lld" \
+       -DLLVM_USE_LINKER=lld \
+       -DLLVM_CCACHE_BUILD=ON \
+       -DLLVM_EXTERNAL_PROJECTS="bolttests" \
+       -DLLVM_EXTERNAL_BOLTTESTS_SOURCE_DIR="$(pwd)/bolt-tests"
+
+ninja -C build check-bolt check-large-bolt
+```
+
 ## Optimizing BOLT's Performance
 
 BOLT runs many internal passes in parallel. If you foresee heavy usage of
@@ -173,7 +202,7 @@ Once you have `perf.fdata` ready, you can use it for optimizations with
 BOLT. Assuming your environment is setup to include the right path, execute
 `llvm-bolt`:
 ```
-$ llvm-bolt <executable> -o <executable>.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
+$ llvm-bolt <executable> -o <executable>.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=cdsort -split-functions -split-all-cold -split-eh -dyno-stats
 ```
 
 If you do need an updated debug info, then add `-update-debug-sections` option
@@ -201,6 +230,26 @@ $ merge-fdata *.fdata > combined.fdata
 ```
 Use `combined.fdata` for **Step 3** above to generate a universally optimized
 binary.
+
+## Identifying a Binary Modified By BOLT
+
+A binary that has been modified by BOLT will include a `bolt_info` note and may
+have extra sections with `bolt` in their name.
+
+You can use `readelf` to find these:
+```
+$ readelf -S <your-binary> | grep bolt
+  [11] .bolt.org.eh_frame PROGBITS <...>
+<...>
+  [39] .note.bolt_info   NOTE <...>
+```
+The note can be displayed with:
+```
+$ readelf -p .note.bolt_info <your-binary>
+String dump of section '.note.bolt_info':
+  <...>
+  [    10]  BOLT revision: <...>
+```
 
 ## License
 

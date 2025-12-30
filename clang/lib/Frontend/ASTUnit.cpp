@@ -26,6 +26,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -40,10 +41,10 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Frontend/StandaloneDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -209,15 +210,6 @@ getBufferForFileHandlingRemapping(const CompilerInvocation &Invocation,
     return nullptr;
   return llvm::MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(), FilePath);
 }
-
-struct ASTUnit::ASTWriterData {
-  SmallString<128> Buffer;
-  llvm::BitstreamWriter Stream;
-  ASTWriter Writer;
-
-  ASTWriterData(ModuleCache &ModCache, const CodeGenOptions &CGOpts)
-      : Stream(Buffer), Writer(Stream, Buffer, ModCache, CGOpts, {}) {}
-};
 
 void ASTUnit::clearFileLevelDecls() {
   FileDecls.clear();
@@ -518,14 +510,14 @@ class ASTInfoCollector : public ASTReaderListener {
   LangOptions &LangOpts;
   CodeGenOptions &CodeGenOpts;
   TargetOptions &TargetOpts;
-  unsigned &Counter;
+  uint32_t &Counter;
 
 public:
   ASTInfoCollector(HeaderSearchOptions &HSOpts,
                    std::string &SpecificModuleCachePath,
                    PreprocessorOptions &PPOpts, LangOptions &LangOpts,
                    CodeGenOptions &CodeGenOpts, TargetOptions &TargetOpts,
-                   unsigned &Counter)
+                   uint32_t &Counter)
       : HSOpts(HSOpts), SpecificModuleCachePath(SpecificModuleCachePath),
         PPOpts(PPOpts), LangOpts(LangOpts), CodeGenOpts(CodeGenOpts),
         TargetOpts(TargetOpts), Counter(Counter) {}
@@ -577,77 +569,28 @@ public:
   }
 
   void ReadCounter(const serialization::ModuleFile &M,
-                   unsigned NewCounter) override {
+                   uint32_t NewCounter) override {
     Counter = NewCounter;
   }
 };
+} // anonymous namespace
 
-/// Diagnostic consumer that saves each diagnostic it is given.
-class FilterAndStoreDiagnosticConsumer : public DiagnosticConsumer {
-  SmallVectorImpl<StoredDiagnostic> *StoredDiags;
-  SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags;
-  bool CaptureNonErrorsFromIncludes = true;
-  const LangOptions *LangOpts = nullptr;
-  SourceManager *SourceMgr = nullptr;
+FilterAndStoreDiagnosticConsumer::FilterAndStoreDiagnosticConsumer(
+    SmallVectorImpl<StoredDiagnostic> *StoredDiags,
+    SmallVectorImpl<StandaloneDiagnostic> *StandaloneDiags,
+    bool CaptureNonErrorsFromIncludes)
+    : StoredDiags(StoredDiags), StandaloneDiags(StandaloneDiags),
+      CaptureNonErrorsFromIncludes(CaptureNonErrorsFromIncludes) {
+  assert((StoredDiags || StandaloneDiags) &&
+         "No output collections were passed to StoredDiagnosticConsumer.");
+}
 
-public:
-  FilterAndStoreDiagnosticConsumer(
-      SmallVectorImpl<StoredDiagnostic> *StoredDiags,
-      SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags,
-      bool CaptureNonErrorsFromIncludes)
-      : StoredDiags(StoredDiags), StandaloneDiags(StandaloneDiags),
-        CaptureNonErrorsFromIncludes(CaptureNonErrorsFromIncludes) {
-    assert((StoredDiags || StandaloneDiags) &&
-           "No output collections were passed to StoredDiagnosticConsumer.");
-  }
-
-  void BeginSourceFile(const LangOptions &LangOpts,
-                       const Preprocessor *PP = nullptr) override {
-    this->LangOpts = &LangOpts;
-    if (PP)
-      SourceMgr = &PP->getSourceManager();
-  }
-
-  void HandleDiagnostic(DiagnosticsEngine::Level Level,
-                        const Diagnostic &Info) override;
-};
-
-/// RAII object that optionally captures and filters diagnostics, if
-/// there is no diagnostic client to capture them already.
-class CaptureDroppedDiagnostics {
-  DiagnosticsEngine &Diags;
-  FilterAndStoreDiagnosticConsumer Client;
-  DiagnosticConsumer *PreviousClient = nullptr;
-  std::unique_ptr<DiagnosticConsumer> OwningPreviousClient;
-
-public:
-  CaptureDroppedDiagnostics(
-      CaptureDiagsKind CaptureDiagnostics, DiagnosticsEngine &Diags,
-      SmallVectorImpl<StoredDiagnostic> *StoredDiags,
-      SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags)
-      : Diags(Diags),
-        Client(StoredDiags, StandaloneDiags,
-               CaptureDiagnostics !=
-                   CaptureDiagsKind::AllWithoutNonErrorsFromIncludes) {
-    if (CaptureDiagnostics != CaptureDiagsKind::None ||
-        Diags.getClient() == nullptr) {
-      OwningPreviousClient = Diags.takeClient();
-      PreviousClient = Diags.getClient();
-      Diags.setClient(&Client, false);
-    }
-  }
-
-  ~CaptureDroppedDiagnostics() {
-    if (Diags.getClient() == &Client)
-      Diags.setClient(PreviousClient, !!OwningPreviousClient.release());
-  }
-};
-
-} // namespace
-
-static ASTUnit::StandaloneDiagnostic
-makeStandaloneDiagnostic(const LangOptions &LangOpts,
-                         const StoredDiagnostic &InDiag);
+void FilterAndStoreDiagnosticConsumer::BeginSourceFile(
+    const LangOptions &LangOpts, const Preprocessor *PP) {
+  this->LangOpts = &LangOpts;
+  if (PP)
+    SourceMgr = &PP->getSourceManager();
+}
 
 static bool isInMainFile(const clang::Diagnostic &D) {
   if (!D.hasSourceManager() || !D.getLocation().isValid())
@@ -683,10 +626,30 @@ void FilterAndStoreDiagnosticConsumer::HandleDiagnostic(
         StoredDiag.emplace(Level, Info);
         ResultDiag = &*StoredDiag;
       }
-      StandaloneDiags->push_back(
-          makeStandaloneDiagnostic(*LangOpts, *ResultDiag));
+      StandaloneDiags->emplace_back(*LangOpts, *ResultDiag);
     }
   }
+}
+
+CaptureDroppedDiagnostics::CaptureDroppedDiagnostics(
+    CaptureDiagsKind CaptureDiagnostics, DiagnosticsEngine &Diags,
+    SmallVectorImpl<StoredDiagnostic> *StoredDiags,
+    SmallVectorImpl<StandaloneDiagnostic> *StandaloneDiags)
+    : Diags(Diags),
+      Client(StoredDiags, StandaloneDiags,
+             CaptureDiagnostics !=
+                 CaptureDiagsKind::AllWithoutNonErrorsFromIncludes) {
+  if (CaptureDiagnostics != CaptureDiagsKind::None ||
+      Diags.getClient() == nullptr) {
+    OwningPreviousClient = Diags.takeClient();
+    PreviousClient = Diags.getClient();
+    Diags.setClient(&Client, false);
+  }
+}
+
+CaptureDroppedDiagnostics::~CaptureDroppedDiagnostics() {
+  if (Diags.getClient() == &Client)
+    Diags.setClient(PreviousClient, !!OwningPreviousClient.release());
 }
 
 IntrusiveRefCntPtr<ASTReader> ASTUnit::getASTReader() const {
@@ -782,7 +745,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
           Filename, TmpFileMgr, *AST->ModCache, PCHContainerRdr,
           /*FindModuleFileExtensions=*/true, Collector,
           /*ValidateDiagnosticOptions=*/true, ASTReader::ARR_None)) {
-    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);
     return nullptr;
   }
 
@@ -884,7 +847,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   case ASTReader::VersionMismatch:
   case ASTReader::ConfigurationMismatch:
   case ASTReader::HadErrors:
-    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);
     return nullptr;
   }
 
@@ -1110,7 +1073,7 @@ private:
   unsigned Hash = 0;
   std::vector<Decl *> TopLevelDecls;
   std::vector<LocalDeclID> TopLevelDeclIDs;
-  llvm::SmallVector<ASTUnit::StandaloneDiagnostic, 4> PreambleDiags;
+  llvm::SmallVector<StandaloneDiagnostic, 4> PreambleDiags;
 };
 
 } // namespace
@@ -1259,10 +1222,17 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   if (!Act->BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return true;
 
-  if (SavedMainFileBuffer)
-    TranslateStoredDiagnostics(getFileManager(), getSourceManager(),
-                               PreambleDiagnostics, StoredDiagnostics);
-  else
+  if (SavedMainFileBuffer) {
+    StoredDiagnostics.clear();
+    StoredDiagnostics.reserve(PreambleDiagnostics.size());
+    llvm::transform(std::move(PreambleDiagnostics),
+                    std::back_inserter(StoredDiagnostics),
+                    [&](auto &&StandaloneDiag) {
+                      return translateStandaloneDiag(
+                          getFileManager(), getSourceManager(),
+                          std::move(StandaloneDiag), PreambleSrcLocCache);
+                    });
+  } else
     PreambleSrcLocCache.clear();
 
   if (llvm::Error Err = Act->Execute()) {
@@ -1279,51 +1249,6 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   CleanOnError.release();
 
   return false;
-}
-
-static std::pair<unsigned, unsigned>
-makeStandaloneRange(CharSourceRange Range, const SourceManager &SM,
-                    const LangOptions &LangOpts) {
-  CharSourceRange FileRange = Lexer::makeFileCharRange(Range, SM, LangOpts);
-  unsigned Offset = SM.getFileOffset(FileRange.getBegin());
-  unsigned EndOffset = SM.getFileOffset(FileRange.getEnd());
-  return std::make_pair(Offset, EndOffset);
-}
-
-static ASTUnit::StandaloneFixIt makeStandaloneFixIt(const SourceManager &SM,
-                                                    const LangOptions &LangOpts,
-                                                    const FixItHint &InFix) {
-  ASTUnit::StandaloneFixIt OutFix;
-  OutFix.RemoveRange = makeStandaloneRange(InFix.RemoveRange, SM, LangOpts);
-  OutFix.InsertFromRange = makeStandaloneRange(InFix.InsertFromRange, SM,
-                                               LangOpts);
-  OutFix.CodeToInsert = InFix.CodeToInsert;
-  OutFix.BeforePreviousInsertions = InFix.BeforePreviousInsertions;
-  return OutFix;
-}
-
-static ASTUnit::StandaloneDiagnostic
-makeStandaloneDiagnostic(const LangOptions &LangOpts,
-                         const StoredDiagnostic &InDiag) {
-  ASTUnit::StandaloneDiagnostic OutDiag;
-  OutDiag.ID = InDiag.getID();
-  OutDiag.Level = InDiag.getLevel();
-  OutDiag.Message = std::string(InDiag.getMessage());
-  OutDiag.LocOffset = 0;
-  if (InDiag.getLocation().isInvalid())
-    return OutDiag;
-  const SourceManager &SM = InDiag.getLocation().getManager();
-  SourceLocation FileLoc = SM.getFileLoc(InDiag.getLocation());
-  OutDiag.Filename = std::string(SM.getFilename(FileLoc));
-  if (OutDiag.Filename.empty())
-    return OutDiag;
-  OutDiag.LocOffset = SM.getFileOffset(FileLoc);
-  for (const auto &Range : InDiag.getRanges())
-    OutDiag.Ranges.push_back(makeStandaloneRange(Range, SM, LangOpts));
-  for (const auto &FixIt : InDiag.getFixIts())
-    OutDiag.FixIts.push_back(makeStandaloneFixIt(SM, LangOpts, FixIt));
-
-  return OutDiag;
 }
 
 /// Attempt to build or re-use a precompiled preamble when (re-)parsing
@@ -1777,116 +1702,6 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
                                       PrecompilePreambleAfterNParses,
                                       AST->FileMgr->getVirtualFileSystemPtr()))
     return nullptr;
-  return AST;
-}
-
-std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
-    const char **ArgBegin, const char **ArgEnd,
-    std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    std::shared_ptr<DiagnosticOptions> DiagOpts,
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
-    bool StorePreamblesInMemory, StringRef PreambleStoragePath,
-    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
-    ArrayRef<RemappedFile> RemappedFiles, bool RemappedFilesKeepOriginalName,
-    unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
-    bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
-    bool AllowPCHWithCompilerErrors, SkipFunctionBodiesScope SkipFunctionBodies,
-    bool SingleFileParse, bool UserFilesAreVolatile, bool ForSerialization,
-    bool RetainExcludedConditionalBlocks, std::optional<StringRef> ModuleFormat,
-    std::unique_ptr<ASTUnit> *ErrAST,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
-  assert(Diags.get() && "no DiagnosticsEngine was provided");
-
-  // If no VFS was provided, create one that tracks the physical file system.
-  // If '-working-directory' was passed as an argument, 'createInvocation' will
-  // set this as the current working directory of the VFS.
-  if (!VFS)
-    VFS = llvm::vfs::createPhysicalFileSystem();
-
-  SmallVector<StoredDiagnostic, 4> StoredDiagnostics;
-
-  std::shared_ptr<CompilerInvocation> CI;
-
-  {
-    CaptureDroppedDiagnostics Capture(CaptureDiagnostics, *Diags,
-                                      &StoredDiagnostics, nullptr);
-
-    CreateInvocationOptions CIOpts;
-    CIOpts.VFS = VFS;
-    CIOpts.Diags = Diags;
-    CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
-    CI = createInvocation(llvm::ArrayRef(ArgBegin, ArgEnd), std::move(CIOpts));
-    if (!CI)
-      return nullptr;
-  }
-
-  // Override any files that need remapping
-  for (const auto &RemappedFile : RemappedFiles) {
-    CI->getPreprocessorOpts().addRemappedFile(RemappedFile.first,
-                                              RemappedFile.second);
-  }
-  PreprocessorOptions &PPOpts = CI->getPreprocessorOpts();
-  PPOpts.RemappedFilesKeepOriginalName = RemappedFilesKeepOriginalName;
-  PPOpts.AllowPCHWithCompilerErrors = AllowPCHWithCompilerErrors;
-  PPOpts.SingleFileParseMode = SingleFileParse;
-  PPOpts.RetainExcludedConditionalBlocks = RetainExcludedConditionalBlocks;
-
-  // Override the resources path.
-  CI->getHeaderSearchOpts().ResourceDir = std::string(ResourceFilesPath);
-
-  CI->getFrontendOpts().SkipFunctionBodies =
-      SkipFunctionBodies == SkipFunctionBodiesScope::PreambleAndMainFile;
-
-  if (ModuleFormat)
-    CI->getHeaderSearchOpts().ModuleFormat = std::string(*ModuleFormat);
-
-  // Create the AST unit.
-  std::unique_ptr<ASTUnit> AST;
-  AST.reset(new ASTUnit(false));
-  AST->NumStoredDiagnosticsFromDriver = StoredDiagnostics.size();
-  AST->StoredDiagnostics.swap(StoredDiagnostics);
-  ConfigureDiags(Diags, *AST, CaptureDiagnostics);
-  AST->DiagOpts = DiagOpts;
-  AST->Diagnostics = Diags;
-  AST->FileSystemOpts = CI->getFileSystemOpts();
-  AST->CodeGenOpts = std::make_unique<CodeGenOptions>(CI->getCodeGenOpts());
-  VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
-  AST->FileMgr =
-      llvm::makeIntrusiveRefCnt<FileManager>(AST->FileSystemOpts, VFS);
-  AST->StorePreamblesInMemory = StorePreamblesInMemory;
-  AST->PreambleStoragePath = PreambleStoragePath;
-  AST->ModCache = createCrossProcessModuleCache();
-  AST->OnlyLocalDecls = OnlyLocalDecls;
-  AST->CaptureDiagnostics = CaptureDiagnostics;
-  AST->TUKind = TUKind;
-  AST->ShouldCacheCodeCompletionResults = CacheCodeCompletionResults;
-  AST->IncludeBriefCommentsInCodeCompletion
-    = IncludeBriefCommentsInCodeCompletion;
-  AST->UserFilesAreVolatile = UserFilesAreVolatile;
-  AST->Invocation = CI;
-  AST->SkipFunctionBodies = SkipFunctionBodies;
-  if (ForSerialization)
-    AST->WriterData.reset(new ASTWriterData(*AST->ModCache, *AST->CodeGenOpts));
-  // Zero out now to ease cleanup during crash recovery.
-  CI = nullptr;
-  Diags = nullptr;
-
-  // Recover resources if we crash before exiting this method.
-  llvm::CrashRecoveryContextCleanupRegistrar<ASTUnit>
-    ASTUnitCleanup(AST.get());
-
-  if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
-                                      PrecompilePreambleAfterNParses,
-                                      VFS)) {
-    // Some error occurred, if caller wants to examine diagnostics, pass it the
-    // ASTUnit.
-    if (ErrAST) {
-      AST->StoredDiagnostics.swap(AST->FailedParseDiagnostics);
-      ErrAST->swap(AST);
-    }
-    return nullptr;
-  }
-
   return AST;
 }
 
@@ -2406,65 +2221,6 @@ bool ASTUnit::serialize(raw_ostream &OS) {
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   ASTWriter Writer(Stream, Buffer, *ModCache, *CodeGenOpts, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
-}
-
-void ASTUnit::TranslateStoredDiagnostics(
-                          FileManager &FileMgr,
-                          SourceManager &SrcMgr,
-                          const SmallVectorImpl<StandaloneDiagnostic> &Diags,
-                          SmallVectorImpl<StoredDiagnostic> &Out) {
-  // Map the standalone diagnostic into the new source manager. We also need to
-  // remap all the locations to the new view. This includes the diag location,
-  // any associated source ranges, and the source ranges of associated fix-its.
-  // FIXME: There should be a cleaner way to do this.
-  SmallVector<StoredDiagnostic, 4> Result;
-  Result.reserve(Diags.size());
-
-  for (const auto &SD : Diags) {
-    // Rebuild the StoredDiagnostic.
-    if (SD.Filename.empty())
-      continue;
-    auto FE = FileMgr.getOptionalFileRef(SD.Filename);
-    if (!FE)
-      continue;
-    SourceLocation FileLoc;
-    auto ItFileID = PreambleSrcLocCache.find(SD.Filename);
-    if (ItFileID == PreambleSrcLocCache.end()) {
-      FileID FID = SrcMgr.translateFile(*FE);
-      FileLoc = SrcMgr.getLocForStartOfFile(FID);
-      PreambleSrcLocCache[SD.Filename] = FileLoc;
-    } else {
-      FileLoc = ItFileID->getValue();
-    }
-
-    if (FileLoc.isInvalid())
-      continue;
-    SourceLocation L = FileLoc.getLocWithOffset(SD.LocOffset);
-    FullSourceLoc Loc(L, SrcMgr);
-
-    SmallVector<CharSourceRange, 4> Ranges;
-    Ranges.reserve(SD.Ranges.size());
-    for (const auto &Range : SD.Ranges) {
-      SourceLocation BL = FileLoc.getLocWithOffset(Range.first);
-      SourceLocation EL = FileLoc.getLocWithOffset(Range.second);
-      Ranges.push_back(CharSourceRange::getCharRange(BL, EL));
-    }
-
-    SmallVector<FixItHint, 2> FixIts;
-    FixIts.reserve(SD.FixIts.size());
-    for (const auto &FixIt : SD.FixIts) {
-      FixIts.push_back(FixItHint());
-      FixItHint &FH = FixIts.back();
-      FH.CodeToInsert = FixIt.CodeToInsert;
-      SourceLocation BL = FileLoc.getLocWithOffset(FixIt.RemoveRange.first);
-      SourceLocation EL = FileLoc.getLocWithOffset(FixIt.RemoveRange.second);
-      FH.RemoveRange = CharSourceRange::getCharRange(BL, EL);
-    }
-
-    Result.push_back(StoredDiagnostic(SD.Level, SD.ID,
-                                      SD.Message, Loc, Ranges, FixIts));
-  }
-  Result.swap(Out);
 }
 
 void ASTUnit::addFileLevelDecl(Decl *D) {

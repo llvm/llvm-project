@@ -21,6 +21,7 @@ enum class NodeKind {
   eArraySubscriptNode,
   eBitExtractionNode,
   eBooleanLiteralNode,
+  eCastNode,
   eErrorNode,
   eFloatLiteralNode,
   eIdentifierNode,
@@ -33,6 +34,16 @@ enum class NodeKind {
 enum class UnaryOpKind {
   AddrOf, // "&"
   Deref,  // "*"
+  Minus,  // "-"
+  Plus,   // "+"
+};
+
+/// The type casts allowed by DIL.
+enum class CastKind {
+  eEnumeration, ///< Casting from a scalar to an enumeration type
+  eNullptr,     ///< Casting to a nullptr type
+  eReference,   ///< Casting to a reference type
+  eNone,        ///< Type promotion casting
 };
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
@@ -72,8 +83,8 @@ public:
   ErrorNode() : ASTNode(0, NodeKind::eErrorNode) {}
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eErrorNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eErrorNode;
   }
 };
 
@@ -86,8 +97,8 @@ public:
 
   std::string GetName() const { return m_name; }
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eIdentifierNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eIdentifierNode;
   }
 
 private:
@@ -103,12 +114,12 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  ASTNode *GetBase() const { return m_base.get(); }
+  ASTNode &GetBase() const { return *m_base; }
   bool GetIsArrow() const { return m_is_arrow; }
   llvm::StringRef GetFieldName() const { return llvm::StringRef(m_field_name); }
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eMemberOfNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eMemberOfNode;
   }
 
 private:
@@ -126,10 +137,10 @@ public:
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   UnaryOpKind GetKind() const { return m_kind; }
-  ASTNode *GetOperand() const { return m_operand.get(); }
+  ASTNode &GetOperand() const { return *m_operand; }
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eUnaryOpNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eUnaryOpNode;
   }
 
 private:
@@ -139,46 +150,46 @@ private:
 
 class ArraySubscriptNode : public ASTNode {
 public:
-  ArraySubscriptNode(uint32_t location, ASTNodeUP base, int64_t index)
+  ArraySubscriptNode(uint32_t location, ASTNodeUP base, ASTNodeUP index)
       : ASTNode(location, NodeKind::eArraySubscriptNode),
-        m_base(std::move(base)), m_index(index) {}
+        m_base(std::move(base)), m_index(std::move(index)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  ASTNode *GetBase() const { return m_base.get(); }
-  int64_t GetIndex() const { return m_index; }
+  ASTNode &GetBase() const { return *m_base; }
+  ASTNode &GetIndex() const { return *m_index; }
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eArraySubscriptNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eArraySubscriptNode;
   }
 
 private:
   ASTNodeUP m_base;
-  int64_t m_index;
+  ASTNodeUP m_index;
 };
 
 class BitFieldExtractionNode : public ASTNode {
 public:
-  BitFieldExtractionNode(uint32_t location, ASTNodeUP base, int64_t first_index,
-                         int64_t last_index)
+  BitFieldExtractionNode(uint32_t location, ASTNodeUP base,
+                         ASTNodeUP first_index, ASTNodeUP last_index)
       : ASTNode(location, NodeKind::eBitExtractionNode),
-        m_base(std::move(base)), m_first_index(first_index),
-        m_last_index(last_index) {}
+        m_base(std::move(base)), m_first_index(std::move(first_index)),
+        m_last_index(std::move(last_index)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  ASTNode *GetBase() const { return m_base.get(); }
-  int64_t GetFirstIndex() const { return m_first_index; }
-  int64_t GetLastIndex() const { return m_last_index; }
+  ASTNode &GetBase() const { return *m_base; }
+  ASTNode &GetFirstIndex() const { return *m_first_index; }
+  ASTNode &GetLastIndex() const { return *m_last_index; }
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eBitExtractionNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eBitExtractionNode;
   }
 
 private:
   ASTNodeUP m_base;
-  int64_t m_first_index;
-  int64_t m_last_index;
+  ASTNodeUP m_first_index;
+  ASTNodeUP m_last_index;
 };
 
 enum class IntegerTypeSuffix { None, Long, LongLong };
@@ -198,8 +209,8 @@ public:
   bool IsUnsigned() const { return m_is_unsigned; }
   IntegerTypeSuffix GetTypeSuffix() const { return m_type; }
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eIntegerLiteralNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eIntegerLiteralNode;
   }
 
 private:
@@ -219,8 +230,8 @@ public:
 
   const llvm::APFloat &GetValue() const { return m_value; }
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eFloatLiteralNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eFloatLiteralNode;
   }
 
 private:
@@ -236,12 +247,35 @@ public:
 
   bool GetValue() const & { return m_value; }
 
-  static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eBooleanLiteralNode;
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eBooleanLiteralNode;
   }
 
 private:
   bool m_value;
+};
+
+class CastNode : public ASTNode {
+public:
+  CastNode(uint32_t location, CompilerType type, ASTNodeUP operand,
+           CastKind kind)
+      : ASTNode(location, NodeKind::eCastNode), m_type(type),
+        m_operand(std::move(operand)), m_cast_kind(kind) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  CompilerType GetType() const { return m_type; }
+  ASTNode &GetOperand() const { return *m_operand; }
+  CastKind GetCastKind() const { return m_cast_kind; }
+
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eCastNode;
+  }
+
+private:
+  CompilerType m_type;
+  ASTNodeUP m_operand;
+  CastKind m_cast_kind;
 };
 
 /// This class contains one Visit method for each specialized type of
@@ -252,21 +286,22 @@ class Visitor {
 public:
   virtual ~Visitor() = default;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const IdentifierNode *node) = 0;
+  Visit(const IdentifierNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const MemberOfNode *node) = 0;
+  Visit(const MemberOfNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const UnaryOpNode *node) = 0;
+  Visit(const UnaryOpNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const ArraySubscriptNode *node) = 0;
+  Visit(const ArraySubscriptNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const BitFieldExtractionNode *node) = 0;
+  Visit(const BitFieldExtractionNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const IntegerLiteralNode *node) = 0;
+  Visit(const IntegerLiteralNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const FloatLiteralNode *node) = 0;
+  Visit(const FloatLiteralNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const BooleanLiteralNode *node) = 0;
+  Visit(const BooleanLiteralNode &node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) = 0;
 };
 
 } // namespace lldb_private::dil

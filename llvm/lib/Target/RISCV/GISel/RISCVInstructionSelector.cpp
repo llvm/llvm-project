@@ -95,9 +95,11 @@ private:
   void addVectorLoadStoreOperands(MachineInstr &I,
                                   SmallVectorImpl<SrcOp> &SrcOps,
                                   unsigned &CurOp, bool IsMasked,
-                                  bool IsStrided) const;
+                                  bool IsStridedOrIndexed,
+                                  LLT *IndexVT = nullptr) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineIRBuilder &MIB) const;
+  bool selectExtractSubvector(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
                                      unsigned ShiftWidth) const;
@@ -722,15 +724,17 @@ static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
 
 void RISCVInstructionSelector::addVectorLoadStoreOperands(
     MachineInstr &I, SmallVectorImpl<SrcOp> &SrcOps, unsigned &CurOp,
-    bool IsMasked, bool IsStrided) const {
+    bool IsMasked, bool IsStridedOrIndexed, LLT *IndexVT) const {
   // Base Pointer
   auto PtrReg = I.getOperand(CurOp++).getReg();
   SrcOps.push_back(PtrReg);
 
-  // Stride
-  if (IsStrided) {
+  // Stride or Index
+  if (IsStridedOrIndexed) {
     auto StrideReg = I.getOperand(CurOp++).getReg();
     SrcOps.push_back(StrideReg);
+    if (IndexVT)
+      *IndexVT = MRI->getType(StrideReg);
   }
 
   // Mask
@@ -805,6 +809,70 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     I.eraseFromParent();
     return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
   }
+  case Intrinsic::riscv_vloxei:
+  case Intrinsic::riscv_vloxei_mask:
+  case Intrinsic::riscv_vluxei:
+  case Intrinsic::riscv_vluxei_mask: {
+    bool IsMasked = IntrinID == Intrinsic::riscv_vloxei_mask ||
+                    IntrinID == Intrinsic::riscv_vluxei_mask;
+    bool IsOrdered = IntrinID == Intrinsic::riscv_vloxei ||
+                     IntrinID == Intrinsic::riscv_vloxei_mask;
+    LLT VT = MRI->getType(I.getOperand(0).getReg());
+    unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
+
+    // Result vector
+    const Register DstReg = I.getOperand(0).getReg();
+
+    // Sources
+    bool HasPassthruOperand = IntrinID != Intrinsic::riscv_vlm;
+    unsigned CurOp = 2;
+    SmallVector<SrcOp, 4> SrcOps; // Source registers.
+
+    // Passthru
+    if (HasPassthruOperand) {
+      auto PassthruReg = I.getOperand(CurOp++).getReg();
+      SrcOps.push_back(PassthruReg);
+    } else {
+      // Use NoRegister if there is no specified passthru.
+      SrcOps.push_back(Register());
+    }
+    LLT IndexVT;
+    addVectorLoadStoreOperands(I, SrcOps, CurOp, IsMasked, true, &IndexVT);
+
+    RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(getMVTForLLT(VT));
+    RISCVVType::VLMUL IndexLMUL =
+        RISCVTargetLowering::getLMUL(getMVTForLLT(IndexVT));
+    unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
+    if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
+      reportFatalUsageError("The V extension does not support EEW=64 for index "
+                            "values when XLEN=32");
+    }
+    const RISCV::VLX_VSXPseudo *P = RISCV::getVLXPseudo(
+        IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
+        static_cast<unsigned>(IndexLMUL));
+
+    auto PseudoMI = MIB.buildInstr(P->Pseudo, {DstReg}, SrcOps);
+
+    // Select VL
+    auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
+    for (auto &RenderFn : *VLOpFn)
+      RenderFn(PseudoMI);
+
+    // SEW
+    PseudoMI.addImm(Log2SEW);
+
+    // Policy
+    uint64_t Policy = RISCVVType::MASK_AGNOSTIC;
+    if (IsMasked)
+      Policy = I.getOperand(CurOp++).getImm();
+    PseudoMI.addImm(Policy);
+
+    // Memref
+    PseudoMI.cloneMemRefs(I);
+
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+  }
   case Intrinsic::riscv_vsm:
   case Intrinsic::riscv_vse:
   case Intrinsic::riscv_vse_mask:
@@ -847,7 +915,96 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     I.eraseFromParent();
     return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
   }
+  case Intrinsic::riscv_vsoxei:
+  case Intrinsic::riscv_vsoxei_mask:
+  case Intrinsic::riscv_vsuxei:
+  case Intrinsic::riscv_vsuxei_mask: {
+    bool IsMasked = IntrinID == Intrinsic::riscv_vsoxei_mask ||
+                    IntrinID == Intrinsic::riscv_vsuxei_mask;
+    bool IsOrdered = IntrinID == Intrinsic::riscv_vsoxei ||
+                     IntrinID == Intrinsic::riscv_vsoxei_mask;
+    LLT VT = MRI->getType(I.getOperand(1).getReg());
+    unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
+
+    // Sources
+    unsigned CurOp = 1;
+    SmallVector<SrcOp, 4> SrcOps; // Source registers.
+
+    // Store value
+    auto PassthruReg = I.getOperand(CurOp++).getReg();
+    SrcOps.push_back(PassthruReg);
+
+    LLT IndexVT;
+    addVectorLoadStoreOperands(I, SrcOps, CurOp, IsMasked, true, &IndexVT);
+
+    RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(getMVTForLLT(VT));
+    RISCVVType::VLMUL IndexLMUL =
+        RISCVTargetLowering::getLMUL(getMVTForLLT(IndexVT));
+    unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
+    if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
+      reportFatalUsageError("The V extension does not support EEW=64 for index "
+                            "values when XLEN=32");
+    }
+    const RISCV::VLX_VSXPseudo *P = RISCV::getVSXPseudo(
+        IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
+        static_cast<unsigned>(IndexLMUL));
+
+    auto PseudoMI = MIB.buildInstr(P->Pseudo, {}, SrcOps);
+
+    // Select VL
+    auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
+    for (auto &RenderFn : *VLOpFn)
+      RenderFn(PseudoMI);
+
+    // SEW
+    PseudoMI.addImm(Log2SEW);
+
+    // Memref
+    PseudoMI.cloneMemRefs(I);
+
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
   }
+  }
+}
+
+bool RISCVInstructionSelector::selectExtractSubvector(
+    MachineInstr &MI, MachineIRBuilder &MIB) const {
+  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_SUBVECTOR);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+
+  LLT DstTy = MRI->getType(DstReg);
+  LLT SrcTy = MRI->getType(SrcReg);
+
+  unsigned Idx = static_cast<unsigned>(MI.getOperand(2).getImm());
+
+  MVT DstMVT = getMVTForLLT(DstTy);
+  MVT SrcMVT = getMVTForLLT(SrcTy);
+
+  unsigned SubRegIdx;
+  std::tie(SubRegIdx, Idx) =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          SrcMVT, DstMVT, Idx, &TRI);
+
+  if (Idx != 0)
+    return false;
+
+  unsigned DstRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(DstMVT);
+  const TargetRegisterClass *DstRC = TRI.getRegClass(DstRegClassID);
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+
+  unsigned SrcRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(SrcMVT);
+  const TargetRegisterClass *SrcRC = TRI.getRegClass(SrcRegClassID);
+  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
+    return false;
+
+  MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {}).addReg(SrcReg, 0, SubRegIdx);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
@@ -1122,6 +1279,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWithSideEffects(MI, MIB);
+  case TargetOpcode::G_EXTRACT_SUBVECTOR:
+    return selectExtractSubvector(MI, MIB);
   default:
     return false;
   }
@@ -1452,7 +1611,7 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
 
   switch (TM.getCodeModel()) {
   default: {
-    reportGISelFailure(*MF, *TPC, *MORE, getName(),
+    reportGISelFailure(*MF, *MORE, getName(),
                        "Unsupported code model for lowering", MI);
     return false;
   }
