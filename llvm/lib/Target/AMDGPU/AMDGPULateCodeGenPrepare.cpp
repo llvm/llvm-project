@@ -599,16 +599,24 @@ bool AMDGPULateCodeGenPrepare::tryCombineSelectsFromBitcast(BitCastInst &BC) {
   if (!SrcVecTy || !DstVecTy)
     return false;
 
-  // Must be: bitcast <N x i32> to <M x i8>
-  if (!SrcVecTy->getElementType()->isIntegerTy(32) ||
-      !DstVecTy->getElementType()->isIntegerTy(8))
+  // Source can be any 32-bit or 64-bit element type (i32, i64, float, double).
+  // Destination must be smaller integer elements (i8, i16, or i32 from i64).
+  // Zero in all these types is all-bits-zero, so the transformation is valid.
+  Type *SrcEltTy = SrcVecTy->getElementType();
+  Type *DstEltTy = DstVecTy->getElementType();
+  unsigned SrcEltBits = SrcEltTy->getPrimitiveSizeInBits();
+  unsigned DstEltBits = DstEltTy->getPrimitiveSizeInBits();
+
+  if (SrcEltBits != 32 && SrcEltBits != 64)
+    return false;
+
+  if (!DstEltTy->isIntegerTy() || DstEltBits >= SrcEltBits)
     return false;
 
   unsigned NumDstElts = DstVecTy->getNumElements();
   BasicBlock *BB = BC.getParent();
 
   // Require at least half the elements to have matching selects.
-  // For v16i8 (from v4i32), this means at least 8 selects must match.
   // This threshold ensures the transformation is profitable.
   unsigned MinRequired = NumDstElts / 2;
 
@@ -642,10 +650,11 @@ bool AMDGPULateCodeGenPrepare::tryCombineSelectsFromBitcast(BitCastInst &BC) {
     unsigned Idx = IdxC->getZExtValue();
 
     for (User *EU : Ext->users()) {
-      auto *Sel = dyn_cast<SelectInst>(EU);
       // Must be: select %cond, %extract, 0 (in same BB)
-      if (!Sel || Sel->getParent() != BB || Sel->getTrueValue() != Ext ||
-          !match(Sel->getFalseValue(), m_Zero()))
+      if (!match(EU, m_Select(m_Value(), m_Specific(Ext), m_Zero())))
+        continue;
+      SelectInst *Sel = cast<SelectInst>(EU);
+      if (Sel->getParent() != BB)
         continue;
 
       auto &Group = ConditionGroups[Sel->getCondition()];
