@@ -22746,6 +22746,7 @@ bool BoUpSLP::collectValuesToDemote(
 
 static RecurKind getRdxKind(Value *V);
 
+// TODO: Handle forest of trees
 void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
   bool IsStoreOrInsertElt =
