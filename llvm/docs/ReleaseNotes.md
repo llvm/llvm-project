@@ -165,6 +165,7 @@ Changes to the RISC-V Backend
   to be used together when building for the RISC-V platform.
 * The Xqci Qualcomm uC Vendor Extension is no longer marked as experimental.
 * The Xqccmp Qualcomm Vendor Extension is no longer marked as experimental.
+* `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
