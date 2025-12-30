@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the IntegerInclusiveInterval class and utilities for handling
-// lists of inclusive integer intervals, such as parsing interval strings like
-// "1-10,20-30,45", which are used in debugging and bisection tools.
+// This file defines the IntegerInclusiveInterval class and utilities for
+// handling lists of inclusive integer intervals, such as parsing interval
+// strings like "1-10,20-30,45", which are used in debugging and bisection
+// tools.
 //
 //===----------------------------------------------------------------------===//
 
