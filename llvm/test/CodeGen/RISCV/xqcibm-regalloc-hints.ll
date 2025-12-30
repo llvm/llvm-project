@@ -24,8 +24,8 @@ define signext i32 @bexti_hints(i32 %a, i32 signext %b, i32 %c) nounwind {
 ;
 ; RV32ZBSXQCIBM-LABEL: bexti_hints:
 ; RV32ZBSXQCIBM:       # %bb.0:
-; RV32ZBSXQCIBM-NEXT:    bexti a0, a1, 5
-; RV32ZBSXQCIBM-NEXT:    addi a0, a0, 2047
+; RV32ZBSXQCIBM-NEXT:    bexti a1, a1, 5
+; RV32ZBSXQCIBM-NEXT:    addi a0, a1, 2047
 ; RV32ZBSXQCIBM-NEXT:    addi a0, a0, 1286
 ; RV32ZBSXQCIBM-NEXT:    ret
   %and = and i32 %b, 32
@@ -54,8 +54,8 @@ define i32 @bseti_hints(i32 %a, i32 %b, i32 %c) nounwind {
 ;
 ; RV32ZBSXQCIBM-LABEL: bseti_hints:
 ; RV32ZBSXQCIBM:       # %bb.0:
-; RV32ZBSXQCIBM-NEXT:    bseti a0, a1, 11
-; RV32ZBSXQCIBM-NEXT:    addi a0, a0, 2047
+; RV32ZBSXQCIBM-NEXT:    bseti a1, a1, 11
+; RV32ZBSXQCIBM-NEXT:    addi a0, a1, 2047
 ; RV32ZBSXQCIBM-NEXT:    addi a0, a0, 1286
 ; RV32ZBSXQCIBM-NEXT:    ret
   %or = or i32 %b, 2048
