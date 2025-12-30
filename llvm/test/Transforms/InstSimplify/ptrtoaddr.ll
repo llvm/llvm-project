@@ -398,3 +398,133 @@ define i1 @icmp_relational_ptrtoint_ptrtoint_addrsize() {
   %cmp = icmp ult i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @g.as1, i64 1) to i64)
   ret i1 %cmp
 }
+
+define i1 @icmp_ptrtoaddr_ptrtoaddr_dyn(ptr %a) {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr_dyn(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, ptr %a, i64 1
+  %a.addr = ptrtoaddr ptr %a to i64
+  %gep.addr = ptrtoaddr ptr %gep to i64
+  %cmp = icmp ne i64 %a.addr, %gep.addr
+  ret i1 %cmp
+}
+
+define i1 @icmp_ptrtoaddr_ptrtoaddr_dyn_addrsize(ptr addrspace(1) %a) {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr_dyn_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[A:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, ptr addrspace(1) %a, i32 1
+  %a.addr = ptrtoaddr ptr addrspace(1) %a to i32
+  %gep.addr = ptrtoaddr ptr addrspace(1) %gep to i32
+  %cmp = icmp ne i32 %a.addr, %gep.addr
+  ret i1 %cmp
+}
+
+; This could still be folded, because the non-address bits being non-equal
+; implies that all bits taken together are also non-equal.
+define i1 @icmp_ptrtoint_ptrtoint_dyn_addrsize(ptr addrspace(1) %a) {
+; CHECK-LABEL: define i1 @icmp_ptrtoint_ptrtoint_dyn_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[A:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(1) [[A]], i32 1
+; CHECK-NEXT:    [[A_ADDR:%.*]] = ptrtoint ptr addrspace(1) [[A]] to i64
+; CHECK-NEXT:    [[GEP_ADDR:%.*]] = ptrtoint ptr addrspace(1) [[GEP]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[A_ADDR]], [[GEP_ADDR]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr i8, ptr addrspace(1) %a, i32 1
+  %a.addr = ptrtoint ptr addrspace(1) %a to i64
+  %gep.addr = ptrtoint ptr addrspace(1) %gep to i64
+  %cmp = icmp ne i64 %a.addr, %gep.addr
+  ret i1 %cmp
+}
+
+define i1 @icmp_ptrtoaddr_null_dyn(ptr nonnull %a) {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_null_dyn(
+; CHECK-SAME: ptr nonnull [[A:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a.addr = ptrtoaddr ptr %a to i64
+  %cmp = icmp ne i64 %a.addr, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_ptrtoaddr_null_dyn_addrsize(ptr addrspace(1) nonnull %a) {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_null_dyn_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[A:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a.addr = ptrtoaddr ptr addrspace(1) %a to i32
+  %cmp = icmp ne i32 %a.addr, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_ptrtoint_null_dyn_addrsize(ptr addrspace(1) nonnull %a) {
+; CHECK-LABEL: define i1 @icmp_ptrtoint_null_dyn_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[A:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a.addr = ptrtoint ptr addrspace(1) %a to i64
+  %cmp = icmp ne i64 %a.addr, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoaddr(ptr nonnull %p, i64 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoaddr(
+; CHECK-SAME: ptr nonnull [[P:%.*]], i64 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoaddr ptr %p to i64
+  %or = or i64 %p.addr, %unknown
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoaddr_addrsize(ptr addrspace(1) nonnull %p, i32 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoaddr_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i32 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %or = or i32 %p.addr, %unknown
+  %cmp = icmp ne i32 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_equal_addrsize(ptr addrspace(1) nonnull %p, i32 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_equal_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i32 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i32
+  %or = or i32 %p.addr, %unknown
+  %cmp = icmp ne i32 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_larger_addrsize(ptr addrspace(1) nonnull %p, i64 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_larger_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i64 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i64
+  %or = or i64 %p.addr, %unknown
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_smaller_addrsize(ptr addrspace(1) nonnull %p, i16 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_smaller_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i16 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoint ptr addrspace(1) [[P]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[P_ADDR]], [[UNKNOWN]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i16
+  %or = or i16 %p.addr, %unknown
+  %cmp = icmp ne i16 %or, 0
+  ret i1 %cmp
+}

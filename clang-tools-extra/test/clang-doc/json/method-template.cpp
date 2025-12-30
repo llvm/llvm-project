@@ -36,7 +36,10 @@ struct MyClass {
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "Template": {
 // CHECK-NEXT:            "Parameters": [
-// CHECK-NEXT:              "class T"
+// CHECK-NEXT:              {
+// CHECK-NEXT:                "End": true,
+// CHECK-NEXT:                "Param": "class T"
+// CHECK-NEXT:              }
 // CHECK-NEXT:            ]
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"

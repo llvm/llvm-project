@@ -93,6 +93,8 @@ public:
         llvm_unreachable("emitting dtor comdat as function?");
       case Dtor_Unified:
         llvm_unreachable("emitting unified dtor as function?");
+      case Dtor_VectorDeleting:
+        llvm_unreachable("unexpected dtor kind for this ABI");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -458,7 +460,8 @@ public:
        if (!IsInlined)
          continue;
 
-       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
+       StringRef Name = CGM.getMangledName(
+           VtableComponent.getGlobalDecl(/*HasVectorDeletingDtors=*/false));
        auto *Entry = CGM.GetGlobalValue(Name);
        // This checks if virtual inline function has already been emitted.
        // Note that it is possible that this inline function would be emitted
@@ -1624,7 +1627,7 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
     // Load the type info.
     Value = CGF.Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
-        {Value, llvm::ConstantInt::get(CGM.Int32Ty, -4)});
+        {Value, llvm::ConstantInt::getSigned(CGM.Int32Ty, -4)});
   } else {
     // Load the type info.
     Value =
@@ -4553,7 +4556,7 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
     if (Base.getAccessSpecifier() == AS_public)
       OffsetFlags |= BCTI_Public;
 
-    Fields.push_back(llvm::ConstantInt::get(OffsetFlagsLTy, OffsetFlags));
+    Fields.push_back(llvm::ConstantInt::getSigned(OffsetFlagsLTy, OffsetFlags));
   }
 }
 

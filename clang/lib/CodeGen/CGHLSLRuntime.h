@@ -171,6 +171,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxCoarse, ddx_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdxFine, ddx_fine)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdyFine, ddy_fine)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.

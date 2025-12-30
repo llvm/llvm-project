@@ -741,6 +741,7 @@ set(arm64_SOURCES ${aarch64_SOURCES})
 set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
 set(arm64ec_SOURCES ${aarch64_SOURCES})
+set(aarch64_lfi_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})
@@ -904,6 +905,9 @@ else ()
 
   append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
+
+  # Builtins use __COUNTER__
+  append_list_if(COMPILER_RT_HAS_WNO_C2Y_EXTENSIONS -Wno-c2y-extensions BUILTIN_CFLAGS)
 
   # Don't embed directives for picking any specific CRT
   if (MSVC)

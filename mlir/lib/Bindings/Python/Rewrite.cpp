@@ -277,15 +277,37 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           "add",
           [](PyRewritePatternSet &self, nb::handle root, const nb::callable &fn,
              unsigned benefit) {
-            std::string opName =
-                nb::cast<std::string>(root.attr("OPERATION_NAME"));
+            std::string opName;
+            if (root.is_type()) {
+              opName = nb::cast<std::string>(root.attr("OPERATION_NAME"));
+            } else if (nb::isinstance<nb::str>(root)) {
+              opName = nb::cast<std::string>(root);
+            } else {
+              throw nb::type_error(
+                  "the root argument must be a type or a string");
+            }
             self.add(mlirStringRefCreate(opName.data(), opName.size()), benefit,
                      fn);
           },
           "root"_a, "fn"_a, "benefit"_a = 1,
-          "Add a new rewrite pattern on the given root operation with the "
-          "callable as the matching and rewriting function and the given "
-          "benefit.")
+          // clang-format off
+          nb::sig("def add(self, root: type | str, fn: typing.Callable[[" MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", PatternRewriter], typing.Any], benefit: int = 1) -> None"),
+          // clang-format on
+          R"(
+            Add a new rewrite pattern on the specified root operation, using the provided callable
+            for matching and rewriting, and assign it the given benefit.
+
+            Args:
+              root: The root operation to which this pattern applies.
+                    This may be either an OpView subclass (e.g., ``arith.AddIOp``) or
+                    an operation name string (e.g., ``"arith.addi"``).
+              fn: The callable to use for matching and rewriting,
+                  which takes an operation and a pattern rewriter as arguments.
+                  The match is considered successful iff the callable returns
+                  a value where ``bool(value)`` is ``False`` (e.g. ``None``).
+                  If possible, the operation is cast to its corresponding OpView subclass
+                  before being passed to the callable.
+              benefit: The benefit of the pattern, defaulting to 1.)")
       .def("freeze", &PyRewritePatternSet::freeze,
            "Freeze the pattern set into a frozen one.");
 
@@ -437,5 +459,16 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
           // clang-format on
           "Applys the given patterns to the given op greedily while folding "
-          "results.");
+          "results.")
+      .def(
+          "walk_and_apply_patterns",
+          [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
+            mlirWalkAndApplyPatterns(op.getOperation(), set.get());
+          },
+          "op"_a, "set"_a,
+          // clang-format off
+          nb::sig("def walk_and_apply_patterns(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
+          // clang-format on
+          "Applies the given patterns to the given op by a fast walk-based "
+          "driver.");
 }

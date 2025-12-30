@@ -341,7 +341,7 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-n
   foreach(lang C;CXX;ASM)
     # TODO: The preprocessor defines workaround various issues in libc and libc++ integration.
     # These should be addressed and removed over time.
-    set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "--target=${target} -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dfputs(string, stream)=puts(string)\" -D_LIBCPP_PRINT=1")
+    set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "--target=${target} -Wno-atomic-alignment")
     if(NOT ${target} STREQUAL "aarch64-none-elf")
       set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "${RUNTIMES_${target}_CMAKE_${lang}_local_flags} -mthumb")
     endif()
@@ -372,6 +372,7 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-n
   set(RUNTIMES_${target}_LIBCXX_ENABLE_RTTI OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_THREADS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_MONOTONIC_CLOCK OFF CACHE BOOL "")
+  set(RUNTIMES_${target}_LIBCXX_HAS_TERMINAL_AVAILABLE OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
@@ -406,7 +407,7 @@ foreach(target riscv32-unknown-elf)
   foreach(lang C;CXX;ASM)
     # TODO: The preprocessor defines workaround various issues in libc and libc++ integration.
     # These should be addressed and removed over time.
-    set(RUNTIMES_${target}_CMAKE_${lang}_FLAGS "--target=${target} -march=rv32imafc -mabi=ilp32f -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dfputs(string, stream)=puts(string)\" -D_LIBCPP_PRINT=1" CACHE STRING "")
+    set(RUNTIMES_${target}_CMAKE_${lang}_FLAGS "--target=${target} -march=rv32imafc -mabi=ilp32f -Wno-atomic-alignment" CACHE STRING "")
   endforeach()
   foreach(type SHARED;MODULE;EXE)
     set(RUNTIMES_${target}_CMAKE_${type}_LINKER_FLAGS "-fuse-ld=lld" CACHE STRING "")
@@ -427,6 +428,7 @@ foreach(target riscv32-unknown-elf)
   set(RUNTIMES_${target}_LIBCXX_ENABLE_RTTI OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_THREADS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_MONOTONIC_CLOCK OFF CACHE BOOL "")
+  set(RUNTIMES_${target}_LIBCXX_HAS_TERMINAL_AVAILABLE OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")

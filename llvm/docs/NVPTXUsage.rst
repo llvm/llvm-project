@@ -264,6 +264,36 @@ map in the following way to CUDA builtins:
    ``gridDim``  ``@llvm.nvvm.read.ptx.sreg.nctaid.*``
    ============ =====================================
 
+'``llvm.nvvm.read.ptx.sreg.*_smem_size``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+    declare i32 @llvm.nvvm.read.ptx.sreg.aggr_smem_size()
+    declare i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.read.ptx.sreg.total_smem_size``' intrinsic reads the
+PTX special register that holds the total amount of shared memory
+allocated per CTA for the kernel at launch.
+
+The reported value includes both statically allocated and dynamically
+requested shared memory, but excludes any shared memory reserved for
+system use. The size is expressed in units of the architecture-specific
+shared memory allocation granularity. For targets sm_8x and newer,
+this granularity is 128 bytes.
+
+The '``aggr_smem_size``' variant returns the aggregate shared memory size,
+including the portion reserved for system software use.
+
+The '``dynamic_smem_size``' variant returns the amount of dynamic shared
+memory allocated per CTA for the kernel at launch time.
 
 Barriers
 --------
@@ -278,11 +308,24 @@ Syntax:
 
   declare void @llvm.nvvm.barrier.cta.sync.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.sync.all(i32 %id)
-  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
-
   declare void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %id)
+
+  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %id, i32 %n)
+
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 %id, i1 %pred)
 
 Overview:
 """""""""
@@ -305,14 +348,26 @@ the threads specified by the %n operand should participate in the barrier.
 All forms of the '``@llvm.nvvm.barrier.cta.*``' intrinsic cause the executing
 thread to wait for all non-exited threads from its warp and then marks the
 warp's arrival at the barrier. In addition to signaling its arrival at the 
-barrier, the '``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing
-thread to wait for non-exited threads of all other warps participating in the
-barrier to arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``'
-intrinsic does not cause the executing thread to wait for threads of other
-participating warps.
+barrier, the '``@llvm.nvvm.barrier.cta.red.*``' and
+'``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing thread to 
+wait for non-exited threads of all other warps participating in the barrier to
+arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``' intrinsic
+does not cause the executing thread to wait for threads of other participating
+warps.
 
 When a barrier completes, the waiting threads are restarted without delay,
 and the barrier is reinitialized so that it can be immediately reused.
+
+The '``@llvm.nvvm.barrier.cta.red.*``' intrinsics perform a reduction operation
+across threads. The %pred operands from all threads in the CTA are combined
+using the specified reduction operator. Once the barrier count is reached, the
+final value is returned in all threads waiting at the barrier.
+
+The reduction operations for '``@llvm.nvvm.barrier.cta.red.*``' are
+population-count ('``.popc``'), all-threads-true ('``.and``'), 
+and any-thread-true ('``.or``'). The result of '``.popc``' is the number of
+threads with a true predicate, while '``.and``' and '``.or``' indicate if all
+the threads had a true predicate or if any of the threads had a true predicate.
 
 The '``@llvm.nvvm.barrier.cta.*``' intrinsic has an optional '``.aligned``'
 modifier to indicate textual alignment of the barrier. When specified, it

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // UNSUPPORTED: no-threads
 
 // check that <mutex> functions are marked [[nodiscard]]
@@ -47,14 +45,14 @@ void test() {
     std::unique_lock<M> other;
 
     // clang-format off
-    std::unique_lock<M>{};                      // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    std::unique_lock<M>{m};                     // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    std::unique_lock<M>{m, std::defer_lock};    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    std::unique_lock<M>{m, std::try_to_lock};   // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    std::unique_lock<M>{m, std::adopt_lock};    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    std::unique_lock<M>{m, time_point};         // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    std::unique_lock<M>{m, duration};           // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    std::unique_lock<M>(std::move(other));      // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::unique_lock<M>();                        // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    (std::unique_lock<M>)(m);                     // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::unique_lock<M>(m, std::defer_lock_t());  // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::unique_lock<M>(m, std::try_to_lock_t()); // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::unique_lock<M>(m, std::adopt_lock_t());  // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::unique_lock<M>(m, time_point);           // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::unique_lock<M>(m, duration);             // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::unique_lock<M>(std::move(other));        // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
     // clang-format on
   }
 
@@ -62,8 +60,8 @@ void test() {
   {
     std::mutex m;
     // clang-format off
-    std::lock_guard<std::mutex>{m};                  // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
-    std::lock_guard<std::mutex>{m, std::adopt_lock}; // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    (std::lock_guard<std::mutex>)(m);                    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+    std::lock_guard<std::mutex>(m, std::adopt_lock_t()); // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
     // clang-format on
   }
 }
