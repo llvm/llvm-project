@@ -331,6 +331,17 @@ namespace llvm {
 MachineBasicBlock *
 TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::STATEPOINT:
+    // As an implementation detail, STATEPOINT shares the STACKMAP format at
+    // this point in the process.  We diverge later.
+  case TargetOpcode::STACKMAP:
+  case TargetOpcode::PATCHPOINT:
+    return emitPatchPoint(MI, MBB);
+  default:
+    break;
+  }
+
 #ifndef NDEBUG
   dbgs() << "If a target marks an instruction with "
           "'usesCustomInserter', it must implement "
@@ -3887,25 +3898,25 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
     case OPC_EmitInteger:
-    case OPC_EmitInteger8:
-    case OPC_EmitInteger16:
-    case OPC_EmitInteger32:
-    case OPC_EmitInteger64:
+    case OPC_EmitIntegerI8:
+    case OPC_EmitIntegerI16:
+    case OPC_EmitIntegerI32:
+    case OPC_EmitIntegerI64:
     case OPC_EmitStringInteger:
-    case OPC_EmitStringInteger32: {
+    case OPC_EmitStringIntegerI32: {
       MVT::SimpleValueType VT;
       switch (Opcode) {
-      case OPC_EmitInteger8:
+      case OPC_EmitIntegerI8:
         VT = MVT::i8;
         break;
-      case OPC_EmitInteger16:
+      case OPC_EmitIntegerI16:
         VT = MVT::i16;
         break;
-      case OPC_EmitInteger32:
-      case OPC_EmitStringInteger32:
+      case OPC_EmitIntegerI32:
+      case OPC_EmitStringIntegerI32:
         VT = MVT::i32;
         break;
-      case OPC_EmitInteger64:
+      case OPC_EmitIntegerI64:
         VT = MVT::i64;
         break;
       default:
@@ -3915,7 +3926,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       int64_t Val = MatcherTable[MatcherIndex++];
       if (Val & 128)
         Val = GetVBR(Val, MatcherTable, MatcherIndex);
-      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitInteger64)
+      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitIntegerI64)
         Val = decodeSignRotatedValue(Val);
       RecordedNodes.emplace_back(
           CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,

@@ -32,7 +32,7 @@ def testRewritePattern():
     with Context():
         patterns = RewritePatternSet()
         patterns.add(arith.AddIOp, to_muli)
-        patterns.add(arith.ConstantOp, constant_1_to_2)
+        patterns.add("arith.constant", constant_1_to_2)
         frozen = patterns.freeze()
 
         module = ModuleOp.parse(
