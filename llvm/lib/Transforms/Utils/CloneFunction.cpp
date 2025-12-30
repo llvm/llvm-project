@@ -810,15 +810,28 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     NumPreds = pred_size(NewBB);
     if (NumPreds != PN->getNumIncomingValues()) {
       assert(NumPreds < PN->getNumIncomingValues());
-      SmallPtrSet<BasicBlock *, 4> NewBBPreds(llvm::from_range,
-                                              predecessors(NewBB));
+      // Count how many times each predecessor comes to this block.
+      DenseMap<BasicBlock *, unsigned> PredCount;
+      for (BasicBlock *Pred : predecessors(NewBB))
+        ++PredCount[Pred];
 
       BasicBlock::iterator I = NewBB->begin();
+      DenseMap<BasicBlock *, unsigned> SeenPredCount;
+      SeenPredCount.reserve(PredCount.size());
       for (; (PN = dyn_cast<PHINode>(I)); ++I) {
+        SeenPredCount.clear();
         PN->removeIncomingValueIf(
             [&](unsigned Idx) {
               BasicBlock *IncomingBlock = PN->getIncomingBlock(Idx);
-              return !NewBBPreds.contains(IncomingBlock);
+              auto It = PredCount.find(IncomingBlock);
+              if (It == PredCount.end())
+                return true;
+              unsigned &SeenCount = SeenPredCount[IncomingBlock];
+              if (SeenCount < It->second) {
+                SeenCount++;
+                return false;
+              }
+              return true;
             },
             false);
       }
