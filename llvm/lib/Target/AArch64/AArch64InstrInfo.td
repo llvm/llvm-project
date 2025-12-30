@@ -2213,10 +2213,21 @@ let Predicates = [HasPAuth] in {
     let Uses = [X16];
   }
 
+  // AsmPrinter can clobber the $AddrDisc register as long as it is marked
+  // "killed", otherwise an assertion checks that $Scratch != $AddrDisc.
+  // The problem is that it is always correct to *omit* the "killed" flag,
+  // thus an instruction like this can be passed to AsmPrinter:
+  //
+  //     $x8, $x9 = AUTxMxN $x8, 0, 51756, $x9, implicit-def $nzcv
+  //
+  // While it is possible to check if "$Scratch == $AddrDisc OR $AddrDisc
+  // is killed" instead, it is easier and more straightforward to mark
+  // $Scratch as @earlyclobber. Furthermore, this would be mandatory for a
+  // (hypotetical at the time of writing this comment) AUTPACxMxN pseudo.
   def AUTxMxN : Pseudo<(outs GPR64:$AuthVal, GPR64common:$Scratch),
                        (ins GPR64:$Val, i32imm:$Key,
                             i64imm:$Disc, GPR64:$AddrDisc),
-                       [], "$AuthVal = $Val">, Sched<[WriteI, ReadI]> {
+                       [], "$AuthVal = $Val,@earlyclobber $Scratch">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
