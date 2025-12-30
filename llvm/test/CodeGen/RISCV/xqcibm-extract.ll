@@ -594,15 +594,15 @@ define i32 @c_extu_hints(i32 %x, i32 %y, i32 %z) {
 ;
 ; RV32XQCIBM-LABEL: c_extu_hints:
 ; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    qc.extu a0, a1, 6, 0
-; RV32XQCIBM-NEXT:    addi a0, a0, 2047
+; RV32XQCIBM-NEXT:    qc.extu a1, a1, 6, 0
+; RV32XQCIBM-NEXT:    addi a0, a1, 2047
 ; RV32XQCIBM-NEXT:    addi a0, a0, 1286
 ; RV32XQCIBM-NEXT:    ret
 ;
 ; RV32XQCIBMZBB-LABEL: c_extu_hints:
 ; RV32XQCIBMZBB:       # %bb.0:
-; RV32XQCIBMZBB-NEXT:    qc.extu a0, a1, 6, 0
-; RV32XQCIBMZBB-NEXT:    addi a0, a0, 2047
+; RV32XQCIBMZBB-NEXT:    qc.extu a1, a1, 6, 0
+; RV32XQCIBMZBB-NEXT:    addi a0, a1, 2047
 ; RV32XQCIBMZBB-NEXT:    addi a0, a0, 1286
 ; RV32XQCIBMZBB-NEXT:    ret
   %a = and i32 %y, 63
