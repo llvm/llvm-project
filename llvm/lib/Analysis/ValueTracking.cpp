@@ -10591,6 +10591,8 @@ ConstantComparesGatherer::ConstantComparesGatherer(Instruction *Cond,
                                                    const DataLayout &DL,
                                                    const bool InstCombine)
     : DL(DL) {
+  assert(!Cond->getType()->isVectorTy() &&
+         "ConstantComparesGatherer only supports scalars.");
   gather(Cond, InstCombine);
   if (CompValue || !MultipleMatches)
     return;
