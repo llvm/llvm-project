@@ -18,7 +18,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBVariableAnnotator::SBVariableAnnotator() : m_opaque_sp() {
+SBVariableAnnotator::SBVariableAnnotator()
+    : m_opaque_sp(std::make_shared<VariableAnnotator>()) {
   LLDB_INSTRUMENT_VA(this);
 }
 
@@ -65,7 +66,8 @@ SBVariableAnnotator::AnnotateStructured(SBInstruction inst) {
 
   if (lldb::VariableAnnotatorSP annotator_sp = GetSP())
     if (lldb::InstructionSP inst_sp = inst.GetOpaque()) {
-      auto array_sp = StructuredData::ArraySP();
+      StructuredData::ArraySP array_sp =
+          std::make_shared<StructuredData::Array>();
 
       const std::vector<lldb_private::VariableAnnotation>
           structured_annotations = annotator_sp->AnnotateStructured(*inst_sp);
