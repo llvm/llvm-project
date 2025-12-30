@@ -141,6 +141,11 @@ void Block::recomputeOpOrder() {
     op.orderIndex = (orderIndex += Operation::kOrderStride);
 }
 
+unsigned Block::computeBlockNumber() {
+  assert(getParent() && "cannot compute block number of detached block");
+  return std::distance(getParent()->begin(), getIterator());
+}
+
 //===----------------------------------------------------------------------===//
 // Argument list management.
 //===----------------------------------------------------------------------===//
