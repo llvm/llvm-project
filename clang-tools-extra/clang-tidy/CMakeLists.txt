@@ -1,13 +1,19 @@
 set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Support
+  TargetParser
   )
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/clang-tidy-config.h.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/clang-tidy-config.h)
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR}/misc)
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../include-cleaner/include")
 
+add_subdirectory(misc)
+
+# If you add a check module, also add it to ClangTidyForceLinker.h in this directory.
 add_clang_library(clangTidy STATIC
   ClangTidy.cpp
   ClangTidyCheck.cpp
@@ -19,10 +25,495 @@ add_clang_library(clangTidy STATIC
   GlobList.cpp
   NoLintDirectiveHandler.cpp
 
+  abseil/AbseilTidyModule.cpp
+  abseil/CleanupCtadCheck.cpp
+  abseil/DurationAdditionCheck.cpp
+  abseil/DurationComparisonCheck.cpp
+  abseil/DurationConversionCastCheck.cpp
+  abseil/DurationDivisionCheck.cpp
+  abseil/DurationFactoryFloatCheck.cpp
+  abseil/DurationFactoryScaleCheck.cpp
+  abseil/DurationRewriter.cpp
+  abseil/DurationSubtractionCheck.cpp
+  abseil/DurationUnnecessaryConversionCheck.cpp
+  abseil/FasterStrsplitDelimiterCheck.cpp
+  abseil/NoInternalDependenciesCheck.cpp
+  abseil/NoNamespaceCheck.cpp
+  abseil/RedundantStrcatCallsCheck.cpp
+  abseil/StrCatAppendCheck.cpp
+  abseil/StringFindStartswithCheck.cpp
+  abseil/StringFindStrContainsCheck.cpp
+  abseil/TimeComparisonCheck.cpp
+  abseil/TimeSubtractionCheck.cpp
+  abseil/UpgradeDurationConversionsCheck.cpp
+  abseil/UncheckedStatusOrAccessCheck.cpp
+
+  altera/AlteraTidyModule.cpp
+  altera/IdDependentBackwardBranchCheck.cpp
+  altera/KernelNameRestrictionCheck.cpp
+  altera/SingleWorkItemBarrierCheck.cpp
+  altera/StructPackAlignCheck.cpp
+  altera/UnrollLoopsCheck.cpp
+
+  android/AndroidTidyModule.cpp
+  android/CloexecAccept4Check.cpp
+  android/CloexecAcceptCheck.cpp
+  android/CloexecCheck.cpp
+  android/CloexecCreatCheck.cpp
+  android/CloexecDupCheck.cpp
+  android/CloexecEpollCreate1Check.cpp
+  android/CloexecEpollCreateCheck.cpp
+  android/CloexecFopenCheck.cpp
+  android/CloexecInotifyInit1Check.cpp
+  android/CloexecInotifyInitCheck.cpp
+  android/CloexecMemfdCreateCheck.cpp
+  android/CloexecOpenCheck.cpp
+  android/CloexecPipeCheck.cpp
+  android/CloexecPipe2Check.cpp
+  android/CloexecSocketCheck.cpp
+  android/ComparisonInTempFailureRetryCheck.cpp
+
+  boost/BoostTidyModule.cpp
+  boost/UseRangesCheck.cpp
+  boost/UseToStringCheck.cpp
+
+  bugprone/ArgumentCommentCheck.cpp
+  bugprone/AssertSideEffectCheck.cpp
+  bugprone/AssignmentInIfConditionCheck.cpp
+  bugprone/BadSignalToKillThreadCheck.cpp
+  bugprone/BitwisePointerCastCheck.cpp
+  bugprone/BoolPointerImplicitConversionCheck.cpp
+  bugprone/BranchCloneCheck.cpp
+  bugprone/BugproneTidyModule.cpp
+  bugprone/CapturingThisInMemberVariableCheck.cpp
+  bugprone/CastingThroughVoidCheck.cpp
+  bugprone/ChainedComparisonCheck.cpp
+  bugprone/CommandProcessorCheck.cpp
+  bugprone/ComparePointerToMemberVirtualFunctionCheck.cpp
+  bugprone/CopyConstructorInitCheck.cpp
+  bugprone/CopyConstructorMutatesArgumentCheck.cpp
+  bugprone/CrtpConstructorAccessibilityCheck.cpp
+  bugprone/DanglingHandleCheck.cpp
+  bugprone/DefaultOperatorNewOnOveralignedTypeCheck.cpp
+  bugprone/DerivedMethodShadowingBaseMethodCheck.cpp
+  bugprone/DynamicStaticInitializersCheck.cpp
+  bugprone/EasilySwappableParametersCheck.cpp
+  bugprone/EmptyCatchCheck.cpp
+  bugprone/ExceptionCopyConstructorThrowsCheck.cpp
+  bugprone/ExceptionEscapeCheck.cpp
+  bugprone/FloatLoopCounterCheck.cpp
+  bugprone/FoldInitTypeCheck.cpp
+  bugprone/ForwardDeclarationNamespaceCheck.cpp
+  bugprone/ForwardingReferenceOverloadCheck.cpp
+  bugprone/ImplicitWideningOfMultiplicationResultCheck.cpp
+  bugprone/InaccurateEraseCheck.cpp
+  bugprone/IncorrectEnableIfCheck.cpp
+  bugprone/IncorrectEnableSharedFromThisCheck.cpp
+  bugprone/InvalidEnumDefaultInitializationCheck.cpp
+  bugprone/UnintendedCharOstreamOutputCheck.cpp
+  bugprone/ReturnConstRefFromParameterCheck.cpp
+  bugprone/SuspiciousStringviewDataUsageCheck.cpp
+  bugprone/SwitchMissingDefaultCaseCheck.cpp
+  bugprone/IncDecInConditionsCheck.cpp
+  bugprone/IncorrectEnableIfCheck.cpp
+  bugprone/IncorrectRoundingsCheck.cpp
+  bugprone/InfiniteLoopCheck.cpp
+  bugprone/IntegerDivisionCheck.cpp
+  bugprone/LambdaFunctionNameCheck.cpp
+  bugprone/MacroParenthesesCheck.cpp
+  bugprone/MacroRepeatedSideEffectsCheck.cpp
+  bugprone/MisleadingSetterOfReferenceCheck.cpp
+  bugprone/MisplacedOperatorInStrlenInAllocCheck.cpp
+  bugprone/MisplacedPointerArithmeticInAllocCheck.cpp
+  bugprone/MisplacedWideningCastCheck.cpp
+  bugprone/MoveForwardingReferenceCheck.cpp
+  bugprone/MultiLevelImplicitPointerConversionCheck.cpp
+  bugprone/MultipleNewInOneExpressionCheck.cpp
+  bugprone/MultipleStatementMacroCheck.cpp
+  bugprone/NarrowingConversionsCheck.cpp
+  bugprone/NoEscapeCheck.cpp
+  bugprone/NonZeroEnumToBoolConversionCheck.cpp
+  bugprone/NondeterministicPointerIterationOrderCheck.cpp
+  bugprone/NotNullTerminatedResultCheck.cpp
+  bugprone/OptionalValueConversionCheck.cpp
+  bugprone/ParentVirtualCallCheck.cpp
+  bugprone/PointerArithmeticOnPolymorphicObjectCheck.cpp
+  bugprone/PosixReturnCheck.cpp
+  bugprone/RandomGeneratorSeedCheck.cpp
+  bugprone/RawMemoryCallOnNonTrivialTypeCheck.cpp
+  bugprone/RedundantBranchConditionCheck.cpp
+  bugprone/ReservedIdentifierCheck.cpp
+  bugprone/ReturnConstRefFromParameterCheck.cpp
+  bugprone/SharedPtrArrayMismatchCheck.cpp
+  bugprone/SignalHandlerCheck.cpp
+  bugprone/SignedCharMisuseCheck.cpp
+  bugprone/SizeofContainerCheck.cpp
+  bugprone/SizeofExpressionCheck.cpp
+  bugprone/SmartPtrArrayMismatchCheck.cpp
+  bugprone/SpuriouslyWakeUpFunctionsCheck.cpp
+  bugprone/StandaloneEmptyCheck.cpp
+  bugprone/StdNamespaceModificationCheck.cpp
+  bugprone/StringConstructorCheck.cpp
+  bugprone/StringIntegerAssignmentCheck.cpp
+  bugprone/StringLiteralWithEmbeddedNulCheck.cpp
+  bugprone/StringviewNullptrCheck.cpp
+  bugprone/SuspiciousEnumUsageCheck.cpp
+  bugprone/SuspiciousIncludeCheck.cpp
+  bugprone/SuspiciousMemoryComparisonCheck.cpp
+  bugprone/SuspiciousMemsetUsageCheck.cpp
+  bugprone/SuspiciousMissingCommaCheck.cpp
+  bugprone/SuspiciousReallocUsageCheck.cpp
+  bugprone/SuspiciousSemicolonCheck.cpp
+  bugprone/SuspiciousStringCompareCheck.cpp
+  bugprone/SuspiciousStringviewDataUsageCheck.cpp
+  bugprone/SwappedArgumentsCheck.cpp
+  bugprone/SwitchMissingDefaultCaseCheck.cpp
+  bugprone/TaggedUnionMemberCountCheck.cpp
+  bugprone/TerminatingContinueCheck.cpp
+  bugprone/ThrowKeywordMissingCheck.cpp
+  bugprone/ThrowingStaticInitializationCheck.cpp
+  bugprone/TooSmallLoopVariableCheck.cpp
+  bugprone/UncheckedOptionalAccessCheck.cpp
+  bugprone/UncheckedStringToNumberConversionCheck.cpp
+  bugprone/UndefinedMemoryManipulationCheck.cpp
+  bugprone/UndelegatedConstructorCheck.cpp
+  bugprone/UnhandledExceptionAtNewCheck.cpp
+  bugprone/UnhandledSelfAssignmentCheck.cpp
+  bugprone/UniquePtrArrayMismatchCheck.cpp
+  bugprone/UnsafeFunctionsCheck.cpp
+  bugprone/UnusedLocalNonTrivialVariableCheck.cpp
+  bugprone/UnusedRaiiCheck.cpp
+  bugprone/UnusedReturnValueCheck.cpp
+  bugprone/UseAfterMoveCheck.cpp
+  bugprone/VirtualNearMissCheck.cpp
+
+  cert/CERTTidyModule.cpp
+
+  concurrency/ConcurrencyTidyModule.cpp
+  concurrency/MtUnsafeCheck.cpp
+  concurrency/ThreadCanceltypeAsynchronousCheck.cpp
+
+  cppcoreguidelines/AvoidCapturingLambdaCoroutinesCheck.cpp
+  cppcoreguidelines/AvoidConstOrRefDataMembersCheck.cpp
+  cppcoreguidelines/AvoidDoWhileCheck.cpp
+  cppcoreguidelines/AvoidGotoCheck.cpp
+  cppcoreguidelines/AvoidNonConstGlobalVariablesCheck.cpp
+  cppcoreguidelines/AvoidReferenceCoroutineParametersCheck.cpp
+  cppcoreguidelines/CppCoreGuidelinesTidyModule.cpp
+  cppcoreguidelines/InitVariablesCheck.cpp
+  cppcoreguidelines/InterfacesGlobalInitCheck.cpp
+  cppcoreguidelines/MacroUsageCheck.cpp
+  cppcoreguidelines/MisleadingCaptureDefaultByValueCheck.cpp
+  cppcoreguidelines/MissingStdForwardCheck.cpp
+  cppcoreguidelines/NoMallocCheck.cpp
+  cppcoreguidelines/NoSuspendWithLockCheck.cpp
+  cppcoreguidelines/OwningMemoryCheck.cpp
+  cppcoreguidelines/PreferMemberInitializerCheck.cpp
+  cppcoreguidelines/ProBoundsArrayToPointerDecayCheck.cpp
+  cppcoreguidelines/ProBoundsAvoidUncheckedContainerAccessCheck.cpp
+  cppcoreguidelines/ProBoundsConstantArrayIndexCheck.cpp
+  cppcoreguidelines/ProBoundsPointerArithmeticCheck.cpp
+  cppcoreguidelines/ProTypeConstCastCheck.cpp
+  cppcoreguidelines/ProTypeCstyleCastCheck.cpp
+  cppcoreguidelines/ProTypeMemberInitCheck.cpp
+  cppcoreguidelines/ProTypeReinterpretCastCheck.cpp
+  cppcoreguidelines/ProTypeStaticCastDowncastCheck.cpp
+  cppcoreguidelines/ProTypeUnionAccessCheck.cpp
+  cppcoreguidelines/ProTypeVarargCheck.cpp
+  cppcoreguidelines/RvalueReferenceParamNotMovedCheck.cpp
+  cppcoreguidelines/SlicingCheck.cpp
+  cppcoreguidelines/SpecialMemberFunctionsCheck.cpp
+  cppcoreguidelines/UseEnumClassCheck.cpp
+  cppcoreguidelines/VirtualClassDestructorCheck.cpp
+
+  $<$<BOOL:${CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS}>:
+    custom/CustomTidyModule.cpp
+    custom/QueryCheck.cpp
+  >
+
+  darwin/AvoidSpinlockCheck.cpp
+  darwin/DarwinTidyModule.cpp
+  darwin/DispatchOnceNonstaticCheck.cpp
+
+  fuchsia/DefaultArgumentsCallsCheck.cpp
+  fuchsia/DefaultArgumentsDeclarationsCheck.cpp
+  fuchsia/FuchsiaTidyModule.cpp
+  fuchsia/OverloadedOperatorCheck.cpp
+  fuchsia/StaticallyConstructedObjectsCheck.cpp
+  fuchsia/TemporaryObjectsCheck.cpp
+  fuchsia/TrailingReturnCheck.cpp
+  fuchsia/VirtualInheritanceCheck.cpp
+
+  google/AvoidNSObjectNewCheck.cpp
+  google/AvoidThrowingObjCExceptionCheck.cpp
+  google/AvoidUnderscoreInGoogletestNameCheck.cpp
+  google/DefaultArgumentsCheck.cpp
+  google/ExplicitConstructorCheck.cpp
+  google/ExplicitMakePairCheck.cpp
+  google/FloatTypesCheck.cpp
+  google/FunctionNamingCheck.cpp
+  google/GlobalNamesInHeadersCheck.cpp
+  google/GlobalVariableDeclarationCheck.cpp
+  google/GoogleTidyModule.cpp
+  google/IntegerTypesCheck.cpp
+  google/OverloadedUnaryAndCheck.cpp
+  google/TodoCommentCheck.cpp
+  google/UnnamedNamespaceInHeaderCheck.cpp
+  google/UpgradeGoogletestCaseCheck.cpp
+  google/UsingNamespaceDirectiveCheck.cpp
+
+  hicpp/ExceptionBaseclassCheck.cpp
+  hicpp/HICPPTidyModule.cpp
+  hicpp/IgnoredRemoveResultCheck.cpp
+  hicpp/MultiwayPathsCoveredCheck.cpp
+  hicpp/NoAssemblerCheck.cpp
+  hicpp/SignedBitwiseCheck.cpp
+
+  linuxkernel/LinuxKernelTidyModule.cpp
+  linuxkernel/MustCheckErrsCheck.cpp
+
+  llvm/HeaderGuardCheck.cpp
+  llvm/IncludeOrderCheck.cpp
+  llvm/LLVMTidyModule.cpp
+  llvm/PreferIsaOrDynCastInConditionalsCheck.cpp
+  llvm/PreferRegisterOverUnsignedCheck.cpp
+  llvm/PreferStaticOverAnonymousNamespaceCheck.cpp
+  llvm/TwineLocalCheck.cpp
+  llvm/UseNewMLIROpBuilderCheck.cpp
+  llvm/UseRangesCheck.cpp
+
+  llvmlibc/CalleeNamespaceCheck.cpp
+  llvmlibc/ImplementationInNamespaceCheck.cpp
+  llvmlibc/InlineFunctionDeclCheck.cpp
+  llvmlibc/LLVMLibcTidyModule.cpp
+  llvmlibc/RestrictSystemLibcHeadersCheck.cpp
+
+  misc/ConstCorrectnessCheck.cpp
+  misc/CoroutineHostileRAIICheck.cpp
+  misc/DefinitionsInHeadersCheck.cpp
+  misc/ConfusableIdentifierCheck.cpp
+  misc/HeaderIncludeCycleCheck.cpp
+  misc/IncludeCleanerCheck.cpp
+  misc/MiscTidyModule.cpp
+  misc/MisleadingBidirectionalCheck.cpp
+  misc/MisleadingIdentifierCheck.cpp
+  misc/MisplacedConstCheck.cpp
+  misc/MultipleInheritanceCheck.cpp
+  misc/NewDeleteOverloadsCheck.cpp
+  misc/NoRecursionCheck.cpp
+  misc/NonCopyableObjectsCheck.cpp
+  misc/NonPrivateMemberVariablesInClassesCheck.cpp
+  misc/OverrideWithDifferentVisibilityCheck.cpp
+  misc/PredictableRandCheck.cpp
+  misc/RedundantExpressionCheck.cpp
+  misc/StaticAssertCheck.cpp
+  misc/ThrowByValueCatchByReferenceCheck.cpp
+  misc/UnconventionalAssignOperatorCheck.cpp
+  misc/UniqueptrResetReleaseCheck.cpp
+  misc/UnusedAliasDeclsCheck.cpp
+  misc/UnusedParametersCheck.cpp
+  misc/UnusedUsingDeclsCheck.cpp
+  misc/UseAnonymousNamespaceCheck.cpp
+  misc/UseInternalLinkageCheck.cpp
+
+  modernize/AvoidBindCheck.cpp
+  modernize/AvoidCArraysCheck.cpp
+  modernize/AvoidCStyleCastCheck.cpp
+  modernize/AvoidSetjmpLongjmpCheck.cpp
+  modernize/AvoidVariadicFunctionsCheck.cpp
+  modernize/ConcatNestedNamespacesCheck.cpp
+  modernize/DeprecatedHeadersCheck.cpp
+  modernize/DeprecatedIosBaseAliasesCheck.cpp
+  modernize/IntegralLiteralExpressionMatcher.cpp
+  modernize/LoopConvertCheck.cpp
+  modernize/LoopConvertUtils.cpp
+  modernize/MacroToEnumCheck.cpp
+  modernize/MakeSharedCheck.cpp
+  modernize/MakeSmartPtrCheck.cpp
+  modernize/MakeUniqueCheck.cpp
+  modernize/MinMaxUseInitializerListCheck.cpp
+  modernize/ModernizeTidyModule.cpp
+  modernize/PassByValueCheck.cpp
+  modernize/RawStringLiteralCheck.cpp
+  modernize/RedundantVoidArgCheck.cpp
+  modernize/ReplaceAutoPtrCheck.cpp
+  modernize/ReplaceDisallowCopyAndAssignMacroCheck.cpp
+  modernize/ReplaceRandomShuffleCheck.cpp
+  modernize/ReturnBracedInitListCheck.cpp
+  modernize/ShrinkToFitCheck.cpp
+  modernize/TypeTraitsCheck.cpp
+  modernize/UnaryStaticAssertCheck.cpp
+  modernize/UseAutoCheck.cpp
+  modernize/UseBoolLiteralsCheck.cpp
+  modernize/UseConstraintsCheck.cpp
+  modernize/UseDefaultMemberInitCheck.cpp
+  modernize/UseDesignatedInitializersCheck.cpp
+  modernize/UseEmplaceCheck.cpp
+  modernize/UseEqualsDefaultCheck.cpp
+  modernize/UseEqualsDeleteCheck.cpp
+  modernize/UseIntegerSignComparisonCheck.cpp
+  modernize/UseNodiscardCheck.cpp
+  modernize/UseNoexceptCheck.cpp
+  modernize/UseNullptrCheck.cpp
+  modernize/UseOverrideCheck.cpp
+  modernize/UseRangesCheck.cpp
+  modernize/UseScopedLockCheck.cpp
+  modernize/UseStartsEndsWithCheck.cpp
+  modernize/UseStdFormatCheck.cpp
+  modernize/UseStdNumbersCheck.cpp
+  modernize/UseStdPrintCheck.cpp
+  modernize/UseTrailingReturnTypeCheck.cpp
+  modernize/UseTransparentFunctorsCheck.cpp
+  modernize/UseUncaughtExceptionsCheck.cpp
+  modernize/UseUsingCheck.cpp
+
+  $<$<BOOL:${CLANG_TIDY_ENABLE_STATIC_ANALYZER}>:
+    mpi/BufferDerefCheck.cpp
+    mpi/MPITidyModule.cpp
+    mpi/TypeMismatchCheck.cpp
+  >
+
+  objc/AssertEqualsCheck.cpp
+  objc/AvoidNSErrorInitCheck.cpp
+  objc/DeallocInCategoryCheck.cpp
+  objc/ForbiddenSubclassingCheck.cpp
+  objc/MissingHashCheck.cpp
+  objc/NSInvocationArgumentLifetimeCheck.cpp
+  objc/NSDateFormatterCheck.cpp
+  objc/ObjCTidyModule.cpp
+  objc/PropertyDeclarationCheck.cpp
+  objc/SuperSelfCheck.cpp
+
+  openmp/ExceptionEscapeCheck.cpp
+  openmp/OpenMPTidyModule.cpp
+  openmp/UseDefaultNoneCheck.cpp
+
+  performance/AvoidEndlCheck.cpp
+  performance/EnumSizeCheck.cpp
+  performance/FasterStringFindCheck.cpp
+  performance/ForRangeCopyCheck.cpp
+  performance/ImplicitConversionInLoopCheck.cpp
+  performance/InefficientAlgorithmCheck.cpp
+  performance/InefficientStringConcatenationCheck.cpp
+  performance/InefficientVectorOperationCheck.cpp
+  performance/MoveConstArgCheck.cpp
+  performance/MoveConstructorInitCheck.cpp
+  performance/NoAutomaticMoveCheck.cpp
+  performance/NoIntToPtrCheck.cpp
+  performance/NoexceptDestructorCheck.cpp
+  performance/NoexceptFunctionBaseCheck.cpp
+  performance/NoexceptMoveConstructorCheck.cpp
+  performance/NoexceptSwapCheck.cpp
+  performance/PerformanceTidyModule.cpp
+  performance/TriviallyDestructibleCheck.cpp
+  performance/TypePromotionInMathFnCheck.cpp
+  performance/UnnecessaryCopyInitializationCheck.cpp
+  performance/UnnecessaryValueParamCheck.cpp
+
+  plugin/ClangTidyPlugin.cpp
+
+  portability/AvoidPragmaOnceCheck.cpp
+  portability/PortabilityTidyModule.cpp
+  portability/RestrictSystemIncludesCheck.cpp
+  portability/SIMDIntrinsicsCheck.cpp
+  portability/StdAllocatorConstCheck.cpp
+  portability/TemplateVirtualMemberFunctionCheck.cpp
+
+  readability/AmbiguousSmartptrResetCallCheck.cpp
+  readability/AvoidConstParamsInDeclsCheck.cpp
+  readability/AvoidNestedConditionalOperatorCheck.cpp
+  readability/AvoidReturnWithVoidValueCheck.cpp
+  readability/AvoidUnconditionalPreprocessorIfCheck.cpp
+  readability/BracesAroundStatementsCheck.cpp
+  readability/ConstReturnTypeCheck.cpp
+  readability/ContainerContainsCheck.cpp
+  readability/ContainerDataPointerCheck.cpp
+  readability/ContainerSizeEmptyCheck.cpp
+  readability/ConvertMemberFunctionsToStaticCheck.cpp
+  readability/DeleteNullPointerCheck.cpp
+  readability/DuplicateIncludeCheck.cpp
+  readability/ElseAfterReturnCheck.cpp
+  readability/EnumInitialValueCheck.cpp
+  readability/FunctionCognitiveComplexityCheck.cpp
+  readability/FunctionSizeCheck.cpp
+  readability/IdentifierLengthCheck.cpp
+  readability/IdentifierNamingCheck.cpp
+  readability/ImplicitBoolConversionCheck.cpp
+  readability/RedundantInlineSpecifierCheck.cpp
+  readability/InconsistentDeclarationParameterNameCheck.cpp
+  readability/IsolateDeclarationCheck.cpp
+  readability/MagicNumbersCheck.cpp
+  readability/MakeMemberFunctionConstCheck.cpp
+  readability/MathMissingParenthesesCheck.cpp
+  readability/MisleadingIndentationCheck.cpp
+  readability/MisplacedArrayIndexCheck.cpp
+  readability/NamedParameterCheck.cpp
+  readability/NamespaceCommentCheck.cpp
+  readability/NonConstParameterCheck.cpp
+  readability/OperatorsRepresentationCheck.cpp
+  readability/QualifiedAutoCheck.cpp
+  readability/ReadabilityTidyModule.cpp
+  readability/RedundantAccessSpecifiersCheck.cpp
+  readability/RedundantCastingCheck.cpp
+  readability/RedundantControlFlowCheck.cpp
+  readability/RedundantDeclarationCheck.cpp
+  readability/RedundantFunctionPtrDereferenceCheck.cpp
+  readability/RedundantMemberInitCheck.cpp
+  readability/RedundantParenthesesCheck.cpp
+  readability/RedundantPreprocessorCheck.cpp
+  readability/RedundantSmartptrGetCheck.cpp
+  readability/RedundantStringCStrCheck.cpp
+  readability/RedundantStringInitCheck.cpp
+  readability/RedundantTypenameCheck.cpp
+  readability/ReferenceToConstructedTemporaryCheck.cpp
+  readability/SimplifyBooleanExprCheck.cpp
+  readability/SimplifySubscriptExprCheck.cpp
+  readability/StaticAccessedThroughInstanceCheck.cpp
+  readability/StaticDefinitionInAnonymousNamespaceCheck.cpp
+  readability/StringCompareCheck.cpp
+  readability/SuspiciousCallArgumentCheck.cpp
+  readability/UniqueptrDeleteReleaseCheck.cpp
+  readability/UppercaseLiteralSuffixCheck.cpp
+  readability/UseAnyOfAllOfCheck.cpp
+  readability/UseConcisePreprocessorDirectivesCheck.cpp
+  readability/UseStdMinMaxCheck.cpp
+
+  utils/Aliasing.cpp
+  utils/ASTUtils.cpp
+  utils/BracesAroundStatement.cpp
+  utils/DeclRefExprUtils.cpp
+  utils/DesignatedInitializers.cpp
+  utils/ExceptionAnalyzer.cpp
+  utils/ExceptionSpecAnalyzer.cpp
+  utils/ExprSequence.cpp
+  utils/FileExtensionsUtils.cpp
+  utils/FormatStringConverter.cpp
+  utils/FixItHintUtils.cpp
+  utils/HeaderGuard.cpp
+  utils/IncludeInserter.cpp
+  utils/IncludeSorter.cpp
+  utils/LexerUtils.cpp
+  utils/Matchers.cpp
+  utils/NamespaceAliaser.cpp
+  utils/OptionsUtils.cpp
+  utils/RenamerClangTidyCheck.cpp
+  utils/TransformerClangTidyCheck.cpp
+  utils/TypeTraits.cpp
+  utils/UseRangesCheck.cpp
+  utils/UsingInserter.cpp
+
+  zircon/ZirconTidyModule.cpp
+
+  LINK_LIBS
+  $<$<BOOL:${CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS}>:
+    clangQuery
+  >
+
   DEPENDS
-  ClangSACheckers
+  genconfusable
   omp_gen
   ClangDriverOptions
+  ClangSACheckers
   )
 
 clang_target_link_libraries(clangTidy
@@ -30,92 +521,38 @@ clang_target_link_libraries(clangTidy
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisFlowSensitive
+  clangAnalysisFlowSensitiveModels
   clangBasic
   clangFormat
   clangFrontend
   clangLex
   clangRewrite
+  clangSema
   clangSerialization
   clangTooling
   clangToolingCore
-  )
+  clangToolingInclusions
+  clangToolingInclusionsStdlib
+  clangTransformer
 
-if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)
-  clang_target_link_libraries(clangTidy
-    PRIVATE
+  $<$<BOOL:${CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS}>:
+    clangDynamicASTMatchers
+  >
+
+  $<$<BOOL:${CLANG_TIDY_ENABLE_STATIC_ANALYZER}>:
+    clangStaticAnalyzerCheckers
     clangStaticAnalyzerCore
     clangStaticAnalyzerFrontend
-  )
-endif()
-
-# Checks.
-# If you add a check, also add it to ClangTidyForceLinker.h in this directory.
-add_subdirectory(android)
-add_subdirectory(abseil)
-add_subdirectory(altera)
-add_subdirectory(boost)
-add_subdirectory(bugprone)
-add_subdirectory(cert)
-add_subdirectory(concurrency)
-add_subdirectory(cppcoreguidelines)
-add_subdirectory(custom)
-add_subdirectory(darwin)
-add_subdirectory(fuchsia)
-add_subdirectory(google)
-add_subdirectory(hicpp)
-add_subdirectory(linuxkernel)
-add_subdirectory(llvm)
-add_subdirectory(llvmlibc)
-add_subdirectory(misc)
-add_subdirectory(modernize)
-if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)
-  add_subdirectory(mpi)
-endif()
-add_subdirectory(objc)
-add_subdirectory(openmp)
-add_subdirectory(performance)
-add_subdirectory(portability)
-add_subdirectory(readability)
-add_subdirectory(zircon)
-set(ALL_CLANG_TIDY_CHECKS
-  clangTidyAndroidModule
-  clangTidyAbseilModule
-  clangTidyAlteraModule
-  clangTidyBoostModule
-  clangTidyBugproneModule
-  clangTidyCERTModule
-  clangTidyConcurrencyModule
-  clangTidyCppCoreGuidelinesModule
-  clangTidyDarwinModule
-  clangTidyFuchsiaModule
-  clangTidyGoogleModule
-  clangTidyHICPPModule
-  clangTidyLinuxKernelModule
-  clangTidyLLVMModule
-  clangTidyLLVMLibcModule
-  clangTidyMiscModule
-  clangTidyModernizeModule
-  clangTidyObjCModule
-  clangTidyOpenMPModule
-  clangTidyPerformanceModule
-  clangTidyPortabilityModule
-  clangTidyReadabilityModule
-  clangTidyZirconModule
+  >
   )
 
-if(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS)
-  list(APPEND ALL_CLANG_TIDY_CHECKS clangTidyCustomModule)
-endif()
-if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)
-  list(APPEND ALL_CLANG_TIDY_CHECKS clangTidyMPIModule)
-endif()
-set(ALL_CLANG_TIDY_CHECKS ${ALL_CLANG_TIDY_CHECKS} PARENT_SCOPE)
+target_link_libraries(clangTidy
+  PRIVATE
+  clangIncludeCleaner
+  )
 
-# Other subtargets. These may reference ALL_CLANG_TIDY_CHECKS
-# and must be below its definition.
-add_subdirectory(plugin)
 add_subdirectory(tool)
-add_subdirectory(utils)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY .
@@ -132,3 +569,43 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
                              COMPONENT clang-tidy-headers)
   endif()
 endif()
+
+# TODO(LLVM 24): Remove these targets.
+foreach(deprecated_target IN ITEMS
+  clangTidyAndroidModule
+  clangTidyAbseilModule
+  clangTidyAlteraModule
+  clangTidyBoostModule
+  clangTidyBugproneModule
+  clangTidyCERTModule
+  clangTidyConcurrencyModule
+  clangTidyCppCoreGuidelinesModule
+  clangTidyCustomModule
+  clangTidyDarwinModule
+  clangTidyFuchsiaModule
+  clangTidyGoogleModule
+  clangTidyHICPPModule
+  clangTidyLinuxKernelModule
+  clangTidyLLVMModule
+  clangTidyLLVMLibcModule
+  clangTidyMiscModule
+  clangTidyMPIModule
+  clangTidyModernizeModule
+  clangTidyObjCModule
+  clangTidyOpenMPModule
+  clangTidyPerformanceModule
+  clangTidyPortabilityModule
+  clangTidyReadabilityModule
+  clangTidyZirconModule
+
+  clangTidyPlugin
+  clangTidyUtils
+)
+  add_library(${deprecated_target} INTERFACE)
+  target_link_libraries(${deprecated_target} INTERFACE clangTidy)
+  set_target_properties(${deprecated_target} PROPERTIES DEPRECATION 
+    "This target is deprecated and will be removed in LLVM 24. All of the \
+symbols it used to provide have been moved into the main 'clangTidy' \
+target, which you should link to instead."
+  )
+endforeach()

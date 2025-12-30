@@ -185,13 +185,12 @@ target_link_libraries(clangDaemon
 
   clangIncludeCleaner
   clangTidy
-  clangTidyUtils
 
   clangdSupport
   )
-if(CLANGD_TIDY_CHECKS)
-  target_link_libraries(clangDaemon PRIVATE ${ALL_CLANG_TIDY_CHECKS})
-endif()
+#if(CLANGD_TIDY_CHECKS)
+#  target_link_libraries(clangDaemon PRIVATE ${ALL_CLANG_TIDY_CHECKS})
+#endif()
 
 add_subdirectory(refactor/tweaks)
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")

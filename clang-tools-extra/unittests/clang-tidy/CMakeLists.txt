@@ -53,21 +53,6 @@ clang_target_link_libraries(ClangTidyTests
 target_link_libraries(ClangTidyTests
   PRIVATE
   clangTidy
-  clangTidyAndroidModule
-  clangTidyGoogleModule
-  clangTidyMiscModule
-  clangTidyLLVMModule
-  clangTidyModernizeModule
-  clangTidyObjCModule
-  clangTidyReadabilityModule
-  clangTidyUtils
   LLVMTestingAnnotations
   LLVMTestingSupport
   )
-
-if(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS)
-  target_link_libraries(ClangTidyTests
-    PRIVATE
-    clangTidyCustomModule
-    )
-endif()
