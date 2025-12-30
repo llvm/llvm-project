@@ -103,6 +103,7 @@ inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
          "Expected int induction");
   return VPIRFlags::WrapFlagsTy(false, false);
 }
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -254,7 +255,6 @@ public:
   /// Returns true if \p VPB is a loop latch, using isHeader().
   static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
 };
-
 } // namespace llvm
 
 #endif

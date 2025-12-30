@@ -348,6 +348,16 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
   case OperationType::Cmp:
     assert(CmpPredicate == Other.CmpPredicate && "Cannot drop CmpPredicate");
     break;
+  case OperationType::ReductionOp:
+    assert(ReductionFlags.Kind == Other.ReductionFlags.Kind &&
+           "Cannot change RecurKind");
+    assert(ReductionFlags.IsOrdered == Other.ReductionFlags.IsOrdered &&
+           "Cannot change IsOrdered");
+    assert(ReductionFlags.IsInLoop == Other.ReductionFlags.IsInLoop &&
+           "Cannot change IsInLoop");
+    getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
+    getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
+    break;
   case OperationType::Other:
     assert(AllFlags == Other.AllFlags && "Cannot drop other flags");
     break;
@@ -355,7 +365,8 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 }
 
 FastMathFlags VPIRFlags::getFastMathFlags() const {
-  assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp) &&
+  assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
+          OpType == OperationType::ReductionOp) &&
          "recipe doesn't have fast math flags");
   const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
@@ -455,7 +466,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
-  case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -475,6 +485,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::PHI:
   case Instruction::Switch:
   case VPInstruction::AnyOf:
+  case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::SLPLoad:
@@ -748,21 +759,16 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                      Sentinel);
   }
   case VPInstruction::ComputeReductionResult: {
-    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
-    // and will be removed by breaking up the recipe further.
-    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
-    // Get its reduction variable descriptor.
-
-    RecurKind RK = PhiR->getRecurrenceKind();
+    RecurKind RK = getRecurKind();
+    bool IsOrdered = isReductionOrdered();
+    bool IsInLoop = isReductionInLoop();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "should be handled by ComputeFindIVResult");
 
-    // The recipe's operands are the reduction phi, followed by one operand for
-    // each part of the reduction.
-    unsigned UF = getNumOperands() - 1;
+    unsigned UF = getNumOperands();
     VectorParts RdxParts(UF);
     for (unsigned Part = 0; Part < UF; ++Part)
-      RdxParts[Part] = State.get(getOperand(1 + Part), PhiR->isInLoop());
+      RdxParts[Part] = State.get(getOperand(Part), IsInLoop);
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
     if (hasFastMathFlags())
@@ -770,7 +776,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
-    if (PhiR->isOrdered()) {
+    if (IsOrdered) {
       ReducedPartRdx = RdxParts[UF - 1];
     } else {
       // Floating-point operations should have some FMF to enable the reduction.
@@ -793,7 +799,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
-    if (State.VF.isVector() && !PhiR->isInLoop()) {
+    if (State.VF.isVector() && !IsInLoop) {
       // TODO: Support in-order reductions based on the recurrence descriptor.
       // All ops in the reduction inherit fast-math-flags from the recurrence
       // descriptor.
@@ -2020,14 +2026,15 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
            Opcode == Instruction::FRem || Opcode == Instruction::FPExt ||
            Opcode == Instruction::FPTrunc || Opcode == Instruction::Select ||
            Opcode == VPInstruction::WideIVStep ||
-           Opcode == VPInstruction::ReductionStartVector ||
-           Opcode == VPInstruction::ComputeReductionResult;
+           Opcode == VPInstruction::ReductionStartVector;
   case OperationType::FCmp:
     return Opcode == Instruction::FCmp;
   case OperationType::NonNegOp:
     return Opcode == Instruction::ZExt || Opcode == Instruction::UIToFP;
   case OperationType::Cmp:
     return Opcode == Instruction::FCmp || Opcode == Instruction::ICmp;
+  case OperationType::ReductionOp:
+    return Opcode == VPInstruction::ComputeReductionResult;
   case OperationType::Other:
     return true;
   }
@@ -2080,6 +2087,18 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     if (NonNegFlags.NonNeg)
       O << " nneg";
     break;
+  case OperationType::ReductionOp: {
+    RecurKind RK = static_cast<RecurKind>(ReductionFlags.Kind);
+    O << " ("
+      << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(RK));
+    if (ReductionFlags.IsInLoop)
+      O << ", in-loop";
+    if (ReductionFlags.IsOrdered)
+      O << ", ordered";
+    O << ")";
+    getFastMathFlags().print(O);
+    break;
+  }
   case OperationType::Other:
     break;
   }

@@ -1228,12 +1228,23 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
+    VPValue *BackedgeVal = RedPhiR->getBackedgeValue();
     auto *RdxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(RedPhiR);
+        findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal);
+
+    // Look through selects inserted for tail folding.
+    if (!RdxResult) {
+      VPReductionPHIRecipe *PhiR = RedPhiR;
+      auto *SelR = cast<VPSingleDefRecipe>(*find_if(
+          BackedgeVal->users(), [PhiR](VPUser *U) { return U != PhiR; }));
+      RdxResult = findUserOf<VPInstruction::ComputeReductionResult>(SelR);
+      if (!RdxResult)
+        return false;
+    }
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
-                                              RdxResult->getOperand(1));
-    RdxResult->setOperand(1, NewSel);
+                                              RdxResult->getOperand(0));
+    RdxResult->setOperand(0, NewSel);
     assert(!RdxResults.contains(RdxResult) && "RdxResult already used");
     RdxResults.insert(RdxResult);
   }
@@ -1319,8 +1330,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     if (!match(MinMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
       return false;
 
-    // MinMaxOp must have 2 users: 1) MinMaxPhiR and 2) ComputeReductionResult
-    // (asserted below).
+    // MinMaxOp must have 2 users: 1) MinMaxPhiR and 2) ComputeReductionResult.
     assert(MinMaxOp->getNumUsers() == 2 &&
            "MinMaxOp must have exactly 2 users");
     VPValue *MinMaxOpValue = MinMaxOp->getOperand(0);
@@ -1339,20 +1349,17 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     if (MinMaxOpValue != CmpOpB)
       Pred = CmpInst::getSwappedPredicate(Pred);
 
-    // MinMaxPhiR must have exactly 3 users:
+    // MinMaxPhiR must have exactly 2 users:
     // * MinMaxOp,
-    // * Cmp (that's part of a FindLastIV chain),
-    // * ComputeReductionResult.
-    if (MinMaxPhiR->getNumUsers() != 3)
+    // * Cmp (that's part of a FindLastIV chain).
+    if (MinMaxPhiR->getNumUsers() != 2)
       return false;
 
     VPInstruction *MinMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinMaxPhiR);
+        findUserOf<VPInstruction::ComputeReductionResult>(MinMaxOp);
     assert(is_contained(MinMaxPhiR->users(), MinMaxOp) &&
            "one user must be MinMaxOp");
-    assert(MinMaxResult && "MinMaxResult must be a user of MinMaxPhiR");
-    assert(is_contained(MinMaxOp->users(), MinMaxResult) &&
-           "MinMaxResult must be a user of MinMaxOp (and of MinMaxPhiR");
+    assert(MinMaxResult && "MinMaxResult must be a user of MinMaxOp");
 
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
@@ -1429,7 +1436,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
                              FindIVResult->getIterator());
 
     VPBuilder B(FindIVResult);
-    VPValue *MinMaxExiting = MinMaxResult->getOperand(1);
+    VPValue *MinMaxExiting = MinMaxResult->getOperand(0);
     auto *FinalMinMaxCmp =
         B.createICmp(CmpInst::ICMP_EQ, MinMaxExiting, MinMaxResult);
     VPValue *Sentinel = FindIVResult->getOperand(2);

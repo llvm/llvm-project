@@ -7305,8 +7305,20 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
        EpiRedResult->getOpcode() != VPInstruction::ComputeFindIVResult))
     return;
 
-  auto *EpiRedHeaderPhi =
-      cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
+  VPReductionPHIRecipe *EpiRedHeaderPhi;
+  if (EpiRedResult->getOpcode() == VPInstruction::ComputeReductionResult) {
+    // Find the reduction phi by looking at the other user of operand 0.
+    VPValue *Op = EpiRedResult->getOperand(0);
+    auto *OtherUser = *find_if(
+        Op->users(), [EpiRedResult](VPUser *U) { return U != EpiRedResult; });
+    if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(OtherUser))
+      EpiRedHeaderPhi = Phi;
+    else // For truncated reductions, look through the cast.
+      EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
+          cast<VPWidenCastRecipe>(OtherUser)->getSingleUser());
+  } else {
+    EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
+  }
   RecurKind Kind = EpiRedHeaderPhi->getRecurrenceKind();
   Value *MainResumeValue;
   if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
@@ -8726,13 +8738,15 @@ void LoopVectorizationPlanner::addReductionResultComputation(
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
     } else {
-      VPIRFlags Flags =
+      FastMathFlags FMFs =
           RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
-              ? VPIRFlags(RdxDesc.getFastMathFlags())
-              : VPIRFlags();
+              ? RdxDesc.getFastMathFlags()
+              : FastMathFlags();
+      VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
+                      FMFs);
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
-                               {PhiR, NewExitingVPV}, Flags, ExitDL);
+                               {NewExitingVPV}, Flags, ExitDL);
     }
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
@@ -8760,8 +8774,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         PhiR->setOperand(1, Extnd->getVPSingleValue());
 
       // Update ComputeReductionResult with the truncated exiting value and
-      // extend its result.
-      FinalReductionResult->setOperand(1, Trunc);
+      // extend its result. Operand 0 is the first reduction part.
+      FinalReductionResult->setOperand(0, Trunc);
       FinalReductionResult =
           Builder.createScalarCast(ExtendOpc, FinalReductionResult, PhiTy, {});
     }
@@ -9378,14 +9392,28 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      auto *RdxResult =
-          cast<VPInstruction>(*find_if(ReductionPhi->users(), [](VPUser *U) {
-            auto *VPI = dyn_cast<VPInstruction>(U);
-            return VPI &&
-                   (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-                    VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
-                    VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
-          }));
+      // Find the reduction result by looking at users of the phi, its backedge
+      // value, or for truncated reductions, the trunc feeding the backedge.
+      auto FindReductionResult = [](VPValue *V) -> VPInstruction * {
+        for (VPUser *U : V->users())
+          if (auto *VPI = dyn_cast<VPInstruction>(U))
+            if (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+                VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+                VPI->getOpcode() == VPInstruction::ComputeFindIVResult)
+              return VPI;
+        return nullptr;
+      };
+      VPInstruction *RdxResult = FindReductionResult(ReductionPhi);
+      if (!RdxResult)
+        RdxResult = FindReductionResult(ReductionPhi->getBackedgeValue());
+      // For truncated reductions, look through the extension on the backedge.
+      VPValue *TruncVal;
+      if (!RdxResult &&
+          VPlanPatternMatch::match(ReductionPhi->getBackedgeValue(),
+                                   VPlanPatternMatch::m_ZExtOrSExt(
+                                       VPlanPatternMatch::m_VPValue(TruncVal))))
+        RdxResult = FindReductionResult(TruncVal);
+      assert(RdxResult && "expected to find reduction result");
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
       RecurKind RK = ReductionPhi->getRecurrenceKind();
