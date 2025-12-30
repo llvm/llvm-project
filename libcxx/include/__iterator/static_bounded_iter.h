@@ -291,7 +291,7 @@ private:
 };
 
 template <size_t _Size, class _It>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __static_bounded_iter<_It, _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __static_bounded_iter<_It, _Size>
 __make_static_bounded_iter(_It __it, _It __begin) {
   return __static_bounded_iter<_It, _Size>(std::move(__it), std::move(__begin));
 }
