@@ -332,6 +332,9 @@ struct KnownFPClass {
                                      const fltSemantics &DstTy,
                                      const fltSemantics &SrcTy);
 
+  /// Propagate known class for fptrunc.
+  static LLVM_ABI KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
+
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
   /// IsMultiUnitFPType if this is for a multi-unit floating-point type.

@@ -4938,15 +4938,7 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                       KnownSrc, Q, Depth + 1);
-
-  // Sign should be preserved
-  // TODO: Handle cannot be ordered greater than zero
-  if (KnownSrc.cannotBeOrderedLessThanZero())
-    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-
-  Known.propagateNaN(KnownSrc, true);
-
-  // Infinity needs a range check.
+  Known = KnownFPClass::fptrunc(KnownSrc);
 }
 
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
