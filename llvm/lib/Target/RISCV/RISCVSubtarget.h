@@ -97,6 +97,8 @@ private:
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
 
+  bool IsLittleEndian = true;
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
@@ -220,6 +222,7 @@ public:
   }
 
   bool is64Bit() const { return IsRV64; }
+  bool isLittleEndian() const { return IsLittleEndian; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
   }
@@ -328,7 +331,7 @@ public:
     }
   }
 
-  bool enablePExtCodeGen() const;
+  bool enablePExtSIMDCodeGen() const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.

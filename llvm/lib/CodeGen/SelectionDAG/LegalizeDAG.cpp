@@ -993,18 +993,18 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
   bool SimpleFinishLegalizing = true;
   switch (Node->getOpcode()) {
-  // TODO: Currently, POISON is being lowered to UNDEF here. However, there is
-  // an open concern that this transformation may not be ideal, as targets
-  // should ideally handle POISON directly. Changing this behavior would require
-  // adding support for POISON in TableGen, which is a large change.
-  // Additionally, many existing test cases rely on the current behavior (e.g.,
-  // llvm/test/CodeGen/PowerPC/vec_shuffle.ll). A broader discussion and
-  // incremental changes might be needed to properly
-  // support POISON without breaking existing targets and tests.
   case ISD::POISON: {
+    // TODO: Currently, POISON is being lowered to UNDEF here. However, there is
+    // an open concern that this transformation may not be ideal, as targets
+    // should ideally handle POISON directly. Changing this behavior would
+    // require adding support for POISON in TableGen, which is a large change.
+    // Additionally, many existing test cases rely on the current behavior
+    // (e.g., llvm/test/CodeGen/PowerPC/vec_shuffle.ll). A broader discussion
+    // and incremental changes might be needed to properly support POISON
+    // without breaking existing targets and tests.
     SDValue UndefNode = DAG.getUNDEF(Node->getValueType(0));
     ReplaceNode(Node, UndefNode.getNode());
-    break;
+    return;
   }
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_WO_CHAIN:
@@ -1291,7 +1291,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     case ISD::SRL:
     case ISD::SRA:
     case ISD::ROTL:
-    case ISD::ROTR: {
+    case ISD::ROTR:
+    case ISD::SSHLSAT:
+    case ISD::USHLSAT: {
       // Legalizing shifts/rotates requires adjusting the shift amount
       // to the appropriate width.
       SDValue Op0 = Node->getOperand(0);
@@ -1306,8 +1308,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
         if (SAO != Op1)
           NewNode = DAG.UpdateNodeOperands(Node, Op0, SAO);
       }
+      break;
     }
-    break;
     case ISD::FSHL:
     case ISD::FSHR:
     case ISD::SRL_PARTS:
@@ -2051,7 +2053,8 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
           // we don't want a v16i8 to become a v16i32 for example.
           const ConstantInt *CI = V->getConstantIntValue();
           CV.push_back(ConstantInt::get(EltVT.getTypeForEVT(*DAG.getContext()),
-                                        CI->getZExtValue()));
+                                        CI->getZExtValue(), /*IsSigned=*/false,
+                                        /*ImplicitTrunc=*/true));
         }
       } else {
         assert(Node->getOperand(i).isUndef());
@@ -2399,7 +2402,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
+      .setLibCallee(TLI.getLibcallImplCallingConv(LibcallImpl), RetTy, Callee,
                     std::move(Args))
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);
@@ -4030,7 +4033,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::SMUL_LOHI: {
     SDValue LHS = Node->getOperand(0);
     SDValue RHS = Node->getOperand(1);
-    MVT VT = LHS.getSimpleValueType();
+    EVT VT = LHS.getValueType();
     unsigned MULHOpcode =
         Node->getOpcode() == ISD::UMUL_LOHI ? ISD::MULHU : ISD::MULHS;
 
@@ -4041,7 +4044,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
 
     SmallVector<SDValue, 4> Halves;
-    EVT HalfType = EVT(VT).getHalfSizedIntegerVT(*DAG.getContext());
+    EVT HalfType = VT.getHalfSizedIntegerVT(*DAG.getContext());
     assert(TLI.isTypeLegal(HalfType));
     if (TLI.expandMUL_LOHI(Node->getOpcode(), VT, dl, LHS, RHS, Halves,
                            HalfType, DAG,

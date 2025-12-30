@@ -505,6 +505,10 @@ class TargetRegisterClass;
       return true;
     }
 
+    int getCPURegisterIndex(StringRef Name) const;
+
+    ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
     /// Emit a sign-extension using sll/sra, seb, or seh appropriately.
     MachineBasicBlock *emitSignExtendToI32InReg(MachineInstr &MI,
                                                 MachineBasicBlock *BB,
