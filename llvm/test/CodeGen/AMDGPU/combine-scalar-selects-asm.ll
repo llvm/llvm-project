@@ -265,6 +265,129 @@ entry:
   ret void
 }
 
+; Test: extracts have additional unrelated uses (extracts can't be removed)
+; The transformation should still be profitable as we reduce v_cndmask count
+define amdgpu_kernel void @combine_with_extract_other_uses_asm(
+; CHECK-OPT-LABEL: combine_with_extract_other_uses_asm:
+; CHECK-OPT:       ; %bb.0: ; %entry
+; CHECK-OPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-OPT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; CHECK-OPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-OPT-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; CHECK-OPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1]
+; CHECK-OPT-NEXT:    s_load_dword s0, s[4:5], 0x18
+; CHECK-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-OPT-NEXT:    s_bitcmp1_b32 s0, 0
+; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-OPT-NEXT:    v_lshrrev_b32_e32 v5, 8, v0
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
+; CHECK-OPT-NEXT:    v_add_u16_e32 v1, v0, v5
+; CHECK-OPT-NEXT:    v_add_u16_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
+; CHECK-OPT-NEXT:    v_add_u16_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
+; CHECK-OPT-NEXT:    global_store_dwordx2 v4, v[2:3], s[2:3]
+; CHECK-OPT-NEXT:    global_store_byte v4, v0, s[6:7]
+; CHECK-OPT-NEXT:    s_endpgm
+;
+; CHECK-NOOPT-LABEL: combine_with_extract_other_uses_asm:
+; CHECK-NOOPT:       ; %bb.0: ; %entry
+; CHECK-NOOPT-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; CHECK-NOOPT-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; CHECK-NOOPT-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NOOPT-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; CHECK-NOOPT-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1]
+; CHECK-NOOPT-NEXT:    s_load_dword s0, s[4:5], 0x18
+; CHECK-NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NOOPT-NEXT:    s_bitcmp1_b32 s0, 0
+; CHECK-NOOPT-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NOOPT-NEXT:    v_lshrrev_b64 v[2:3], 24, v[0:1]
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v5, 8, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v3, 8, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v8, 24, v1
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; CHECK-NOOPT-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v10, 0, v5, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v12, 0, v2, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v9, 0, v0, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v11, 0, v6, vcc
+; CHECK-NOOPT-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; CHECK-NOOPT-NEXT:    v_add_u16_e32 v0, v0, v5
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v5, 8, v8
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v8, 8, v10
+; CHECK-NOOPT-NEXT:    v_lshlrev_b16_e32 v10, 8, v12
+; CHECK-NOOPT-NEXT:    v_add_u16_e32 v0, v0, v6
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v3, v7, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v5, v9, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v6, v11, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_add_u16_e32 v2, v0, v2
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    v_or_b32_sdwa v0, v5, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-NOOPT-NEXT:    global_store_dwordx2 v4, v[0:1], s[2:3]
+; CHECK-NOOPT-NEXT:    global_store_byte v4, v2, s[6:7]
+; CHECK-NOOPT-NEXT:    s_endpgm
+  ptr addrspace(1) %in,
+  ptr addrspace(1) %out,
+  ptr addrspace(1) %out2,
+  i1 %cond
+) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = zext i32 %tid to i64
+  %gep = getelementptr <2 x i32>, ptr addrspace(1) %in, i64 %tid.ext
+  %loaded = load <2 x i32>, ptr addrspace(1) %gep, align 8
+  %bytes = bitcast <2 x i32> %loaded to <8 x i8>
+  %e0 = extractelement <8 x i8> %bytes, i64 0
+  %e1 = extractelement <8 x i8> %bytes, i64 1
+  %e2 = extractelement <8 x i8> %bytes, i64 2
+  %e3 = extractelement <8 x i8> %bytes, i64 3
+  %e4 = extractelement <8 x i8> %bytes, i64 4
+  %e5 = extractelement <8 x i8> %bytes, i64 5
+  %e6 = extractelement <8 x i8> %bytes, i64 6
+  %e7 = extractelement <8 x i8> %bytes, i64 7
+  ; Selects that will be combined
+  %s0 = select i1 %cond, i8 %e0, i8 0
+  %s1 = select i1 %cond, i8 %e1, i8 0
+  %s2 = select i1 %cond, i8 %e2, i8 0
+  %s3 = select i1 %cond, i8 %e3, i8 0
+  %s4 = select i1 %cond, i8 %e4, i8 0
+  %s5 = select i1 %cond, i8 %e5, i8 0
+  %s6 = select i1 %cond, i8 %e6, i8 0
+  %s7 = select i1 %cond, i8 %e7, i8 0
+  ; Store select results
+  store i8 %s0, ptr addrspace(1) %out, align 1
+  %ptr1 = getelementptr i8, ptr addrspace(1) %out, i64 1
+  store i8 %s1, ptr addrspace(1) %ptr1, align 1
+  %ptr2 = getelementptr i8, ptr addrspace(1) %out, i64 2
+  store i8 %s2, ptr addrspace(1) %ptr2, align 1
+  %ptr3 = getelementptr i8, ptr addrspace(1) %out, i64 3
+  store i8 %s3, ptr addrspace(1) %ptr3, align 1
+  %ptr4 = getelementptr i8, ptr addrspace(1) %out, i64 4
+  store i8 %s4, ptr addrspace(1) %ptr4, align 1
+  %ptr5 = getelementptr i8, ptr addrspace(1) %out, i64 5
+  store i8 %s5, ptr addrspace(1) %ptr5, align 1
+  %ptr6 = getelementptr i8, ptr addrspace(1) %out, i64 6
+  store i8 %s6, ptr addrspace(1) %ptr6, align 1
+  %ptr7 = getelementptr i8, ptr addrspace(1) %out, i64 7
+  store i8 %s7, ptr addrspace(1) %ptr7, align 1
+  ; Additional unrelated uses of the extracts - these prevent extract removal
+  %sum = add i8 %e0, %e1
+  %sum2 = add i8 %sum, %e2
+  %sum3 = add i8 %sum2, %e3
+  store i8 %sum3, ptr addrspace(1) %out2, align 1
+  ret void
+}
+
 ; Test <4 x i32> to <8 x i16> (32-bit elements to 16-bit elements)
 define amdgpu_kernel void @combine_v4i32_to_v8i16_asm(
 ; CHECK-OPT-LABEL: combine_v4i32_to_v8i16_asm:
