@@ -1,6 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth,+fpac -filetype=asm -o - %t/unsigned-got.ll | FileCheck %t/unsigned-got.ll
+; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth -filetype=asm -o - %t/unsigned-got.ll | FileCheck %t/unsigned-got.ll
+; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth -filetype=asm -o - %t/signed-got.ll | FileCheck --check-prefixes=CHECK,NOFPAC %t/signed-got.ll
 ; RUN: llc -mtriple aarch64-linux-gnu -mattr=+pauth,+fpac -filetype=asm -o - %t/signed-got.ll | FileCheck %t/signed-got.ll
 
 ;--- unsigned-got.ll
@@ -145,6 +146,12 @@ $comdat = comdat any
 ; CHECK-NEXT: add x16, x16, :got_auth_lo12:global
 ; CHECK-NEXT: ldr x0, [x16]
 ; CHECK-NEXT: autda x0, x16
+; NOFPAC-NEXT: mov x16, x0
+; NOFPAC-NEXT: xpacd x16
+; NOFPAC-NEXT: cmp x0, x16
+; NOFPAC-NEXT: b.eq .Lauth_success_0
+; NOFPAC-NEXT: brk #0xc472
+; NOFPAC-NEXT: .Lauth_success_0:
 ; CHECK-NEXT: mov x1, #4
 ; CHECK-NEXT: b __emupac_pacda
 ; CHECK-NEXT: .section .rodata
@@ -159,6 +166,12 @@ $comdat = comdat any
 ; CHECK-NEXT: add x16, x16, :got_auth_lo12:global
 ; CHECK-NEXT: ldr x0, [x16]
 ; CHECK-NEXT: autda x0, x16
+; NOFPAC-NEXT: mov x16, x0
+; NOFPAC-NEXT: xpacd x16
+; NOFPAC-NEXT: cmp x0, x16
+; NOFPAC-NEXT: b.eq .Lauth_success_1
+; NOFPAC-NEXT: brk #0xc472
+; NOFPAC-NEXT: .Lauth_success_1:
 ; CHECK-NEXT: add x0, x0, #8
 ; CHECK-NEXT: mov x1, #5
 ; CHECK-NEXT: b __emupac_pacda
@@ -174,6 +187,12 @@ $comdat = comdat any
 ; CHECK-NEXT: add x16, x16, :got_auth_lo12:global
 ; CHECK-NEXT: ldr x0, [x16]
 ; CHECK-NEXT: autda x0, x16
+; NOFPAC-NEXT: mov x16, x0
+; NOFPAC-NEXT: xpacd x16
+; NOFPAC-NEXT: cmp x0, x16
+; NOFPAC-NEXT: b.eq .Lauth_success_2
+; NOFPAC-NEXT: brk #0xc472
+; NOFPAC-NEXT: .Lauth_success_2:
 ; CHECK-NEXT: mov x16, #0
 ; CHECK-NEXT: movk x16, #256, lsl #16
 ; CHECK-NEXT: add x0, x0, x16

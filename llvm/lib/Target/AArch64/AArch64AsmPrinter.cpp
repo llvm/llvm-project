@@ -14,6 +14,7 @@
 #include "AArch64.h"
 #include "AArch64MCInstLower.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64PointerAuth.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetObjectFile.h"
@@ -113,14 +114,7 @@ public:
     if (AsmPrinter::doInitialization(M))
       return true;
 
-    if (TM.getTargetTriple().isOSBinFormatELF()) {
-      const auto *Flag = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("ptrauth-elf-got"));
-      IsELFSignedGOT = Flag && Flag->getZExtValue() == 1;
-    } else {
-      IsELFSignedGOT = false;
-    }
-
+    IsELFSignedGOT = AArch64PAuth::hasELFSignedGOT(M);
     return false;
   }
 
@@ -1047,9 +1041,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     // corresponding R_AARCH64_AUTH_GLOB_DAT dynamic reloc. To avoid that, force
     // all function symbols used in the module to have STT_FUNC type. See
     // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#default-signing-schema
-    const auto *PtrAuthELFGOTFlag = mdconst::extract_or_null<ConstantInt>(
-        M.getModuleFlag("ptrauth-elf-got"));
-    if (PtrAuthELFGOTFlag && PtrAuthELFGOTFlag->getZExtValue() == 1)
+    if (AArch64PAuth::hasELFSignedGOT(M))
       for (const GlobalValue &GV : M.global_values())
         if (!GV.use_empty() && isa<Function>(GV) &&
             !GV.getName().starts_with("llvm."))

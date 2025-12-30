@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace llvm::AArch64PAuth;
@@ -277,4 +278,14 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Modified;
+}
+
+bool llvm::AArch64PAuth::hasELFSignedGOT(const Module &M) {
+  if (M.getTargetTriple().isOSBinFormatELF()) {
+    const auto *Flag = mdconst::extract_or_null<ConstantInt>(
+        M.getModuleFlag("ptrauth-elf-got"));
+    return Flag && Flag->getZExtValue() == 1;
+  } else {
+    return false;
+  }
 }
