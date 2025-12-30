@@ -1,5 +1,4 @@
-//===- llvm/Support/IntegerInclusiveInterval.h - Integer inclusive interval
-// parsing utility -----------*- C++ -*-===//
+//===- IntegerInclusiveInterval.h -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides utilities for parsing interval specifications like
-// "1-10,20-30,45" which are commonly used in debugging and bisection tools,
-// but the same utilities can be used for any other type of interval.
+// This file defines the IntegerInclusiveInterval class and utilities for handling
+// lists of inclusive integer intervals, such as parsing interval strings like
+// "1-10,20-30,45", which are used in debugging and bisection tools.
 //
 //===----------------------------------------------------------------------===//
 
