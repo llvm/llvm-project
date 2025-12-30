@@ -52,20 +52,18 @@ define i32 @flags_copy_lowering() nounwind {
 ; PREFER_NO_SETZUCC-LABEL: flags_copy_lowering:
 ; PREFER_NO_SETZUCC:       # %bb.0: # %bb
 ; PREFER_NO_SETZUCC-NEXT:    xorl %eax, %eax
-; PREFER_NO_SETZUCC-NEXT:    xorl %edx, %edx
 ; PREFER_NO_SETZUCC-NEXT:    xorl %ecx, %ecx
+; PREFER_NO_SETZUCC-NEXT:    xorl %edx, %edx
 ; PREFER_NO_SETZUCC-NEXT:    .p2align 4
 ; PREFER_NO_SETZUCC-NEXT:  .LBB4_1: # %bb1
 ; PREFER_NO_SETZUCC-NEXT:    # =>This Inner Loop Header: Depth=1
-; PREFER_NO_SETZUCC-NEXT:    addl %edx, 0
-; PREFER_NO_SETZUCC-NEXT:    setb %sil
-; PREFER_NO_SETZUCC-NEXT:    adcl $0, %ecx
-; PREFER_NO_SETZUCC-NEXT:    testb %sil, %sil
+; PREFER_NO_SETZUCC-NEXT:    addl %ecx, 0
+; PREFER_NO_SETZUCC-NEXT:    setb %cl
+; PREFER_NO_SETZUCC-NEXT:    adcl $0, %edx
+; PREFER_NO_SETZUCC-NEXT:    testb %cl, %cl
 ; PREFER_NO_SETZUCC-NEXT:    je .LBB4_3
 ; PREFER_NO_SETZUCC-NEXT:  # %bb.2: # %bb1
 ; PREFER_NO_SETZUCC-NEXT:    # in Loop: Header=BB4_1 Depth=1
-; PREFER_NO_SETZUCC-NEXT:    xorl %edx, %edx
-; PREFER_NO_SETZUCC-NEXT:    movb %sil, %dl
 ; PREFER_NO_SETZUCC-NEXT:    testb %al, %al
 ; PREFER_NO_SETZUCC-NEXT:    jne .LBB4_1
 ; PREFER_NO_SETZUCC-NEXT:  .LBB4_3: # %bb2
@@ -75,20 +73,18 @@ define i32 @flags_copy_lowering() nounwind {
 ; PREFER_SETZUCC-LABEL: flags_copy_lowering:
 ; PREFER_SETZUCC:       # %bb.0: # %bb
 ; PREFER_SETZUCC-NEXT:    xorl %eax, %eax
-; PREFER_SETZUCC-NEXT:    xorl %edx, %edx
 ; PREFER_SETZUCC-NEXT:    xorl %ecx, %ecx
+; PREFER_SETZUCC-NEXT:    xorl %edx, %edx
 ; PREFER_SETZUCC-NEXT:    .p2align 4
 ; PREFER_SETZUCC-NEXT:  .LBB4_1: # %bb1
 ; PREFER_SETZUCC-NEXT:    # =>This Inner Loop Header: Depth=1
-; PREFER_SETZUCC-NEXT:    addl %edx, 0
-; PREFER_SETZUCC-NEXT:    setzub %sil
-; PREFER_SETZUCC-NEXT:    adcl $0, %ecx
-; PREFER_SETZUCC-NEXT:    testb %sil, %sil
+; PREFER_SETZUCC-NEXT:    addl %ecx, 0
+; PREFER_SETZUCC-NEXT:    setzub %cl
+; PREFER_SETZUCC-NEXT:    adcl $0, %edx
+; PREFER_SETZUCC-NEXT:    testb %cl, %cl
 ; PREFER_SETZUCC-NEXT:    je .LBB4_3
 ; PREFER_SETZUCC-NEXT:  # %bb.2: # %bb1
 ; PREFER_SETZUCC-NEXT:    # in Loop: Header=BB4_1 Depth=1
-; PREFER_SETZUCC-NEXT:    xorl %edx, %edx
-; PREFER_SETZUCC-NEXT:    movb %sil, %dl
 ; PREFER_SETZUCC-NEXT:    testb %al, %al
 ; PREFER_SETZUCC-NEXT:    jne .LBB4_1
 ; PREFER_SETZUCC-NEXT:  .LBB4_3: # %bb2
