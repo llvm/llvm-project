@@ -160,6 +160,7 @@ Changes to the RISC-V Backend
   to be used together when building for the RISC-V platform.
 * The Xqci Qualcomm uC Vendor Extension is no longger marked as experimental.
 * `-mcpu=spacemit-x100` is now supported.
+* `-mcpu=spacemit-a100` is now supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
