@@ -28,6 +28,10 @@
 
 using namespace llvm;
 
+namespace {
+  constexpr int BACKREF_LIMIT = 20;
+} // anonymous namespace
+
 StringRef ExpressionFormat::toString() const {
   switch (Value) {
   case Kind::NoFormat:
@@ -1054,10 +1058,11 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
         if (!IsNumBlock &&
             (It = VariableDefs.find(SubstStr)) != VariableDefs.end()) {
           unsigned CaptureParenGroup = It->second;
-          if (CaptureParenGroup < 1 || CaptureParenGroup > 9) {
+          if (CaptureParenGroup < 1 || CaptureParenGroup > BACKREF_LIMIT) {
             SM.PrintMessage(SMLoc::getFromPointer(SubstStr.data()),
                             SourceMgr::DK_Error,
-                            "Can't back-reference more than 9 variables");
+                            "Can't back-reference more than " +
+                                Twine(BACKREF_LIMIT) + " variables");
             return true;
           }
           AddBackrefToRegEx(CaptureParenGroup);
@@ -1108,8 +1113,14 @@ bool Pattern::AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM) {
 }
 
 void Pattern::AddBackrefToRegEx(unsigned BackrefNum) {
-  assert(BackrefNum >= 1 && BackrefNum <= 9 && "Invalid backref number");
-  std::string Backref = std::string("\\") + std::string(1, '0' + BackrefNum);
+  assert(BackrefNum >= 1 && BackrefNum <= BACKREF_LIMIT &&
+         "Invalid backref number");
+  std::string Backref;
+  if (BackrefNum >= 1 && BackrefNum <= 9)
+    Backref = std::string("\\") + std::string(1, '0' + BackrefNum);
+  else
+    Backref = std::string("\\g<") + std::to_string(BackrefNum) + '>';
+
   RegExStr += Backref;
 }
 
