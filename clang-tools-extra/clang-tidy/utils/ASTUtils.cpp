@@ -135,4 +135,21 @@ findOutermostIndirectFieldDeclForField(const FieldDecl *FD) {
   return nullptr;
 }
 
+const Type *unwrapPointee(const Type *T) {
+  if (!T->isPointerOrReferenceType())
+    return T;
+
+  while (T && T->isPointerOrReferenceType()) {
+    if (T->isReferenceType()) {
+      const QualType QType = T->getPointeeType();
+      if (QType.isNull())
+        return T;
+      T = QType.getTypePtr();
+    } else
+      T = T->getPointeeOrArrayElementType();
+  }
+
+  return T;
+}
+
 } // namespace clang::tidy::utils
