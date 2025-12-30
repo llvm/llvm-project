@@ -45,6 +45,7 @@ public:
     eBroadcastBitWatchpointChanged = (1 << 3),
     eBroadcastBitSymbolsLoaded = (1 << 4),
     eBroadcastBitSymbolsChanged = (1 << 5),
+    eBroadcastBitNewTargetCreated = (1 << 6),
   };
 
   // Constructors
@@ -64,6 +65,10 @@ public:
   static bool EventIsTargetEvent(const lldb::SBEvent &event);
 
   static lldb::SBTarget GetTargetFromEvent(const lldb::SBEvent &event);
+
+  /// For eBroadcastBitNewTargetCreated events, returns the newly created
+  /// target. For other event types, returns an invalid SBTarget.
+  static lldb::SBTarget GetCreatedTargetFromEvent(const lldb::SBEvent &event);
 
   static uint32_t GetNumModulesFromEvent(const lldb::SBEvent &event);
 
@@ -333,7 +338,7 @@ public:
   /// \return
   ///     A lldb::SBModule object that represents the found module, or an
   ///     invalid SBModule object if no module was found.
-  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec) const;
 
   /// Find compile units related to *this target and passed source
   /// file.
@@ -354,6 +359,8 @@ public:
 
   const char *GetTriple();
 
+  const char *GetArchName() const;
+
   const char *GetABIName();
 
   const char *GetLabel() const;
@@ -365,6 +372,16 @@ public:
   ///     The globally unique ID for this target, or
   ///     LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID if the target is invalid.
   lldb::user_id_t GetGloballyUniqueID() const;
+
+  /// Get the target session name for this target.
+  ///
+  /// The target session name provides a meaningful name for IDEs or tools to
+  /// display to help the user identify the origin and purpose of the target.
+  ///
+  /// \return
+  ///     The target session name for this target, or nullptr if the target is
+  ///     invalid or has no target session name.
+  const char *GetTargetSessionName() const;
 
   SBError SetLabel(const char *label);
 

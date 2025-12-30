@@ -38,8 +38,10 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
 //------------------------------------------------------------------------------
 
 MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
-  return BuildMI(getMF(), {getDL(), getPCSections(), getMMRAMetadata()},
-                 getTII().get(Opcode));
+  return BuildMI(
+      getMF(),
+      {getDL(), getPCSections(), getMMRAMetadata(), getDeactivationSymbol()},
+      getTII().get(Opcode));
 }
 
 MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {

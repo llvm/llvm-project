@@ -23,7 +23,7 @@ namespace llvm {
 /// This analysis only keeps track and cares about super registers, not the
 /// subregisters. All reads from/writes to subregisters are considered the
 /// same operation to super registers.
-inline bool isSuperReg(const MCRegisterInfo *MCRI, MCPhysReg Reg) {
+inline bool isSuperReg(const MCRegisterInfo *MCRI, MCRegister Reg) {
   return MCRI->superregs(Reg).empty();
 }
 
@@ -31,9 +31,9 @@ inline SmallVector<MCPhysReg> getSuperRegs(const MCRegisterInfo *MCRI) {
   SmallVector<MCPhysReg> SuperRegs;
   for (auto &&RegClass : MCRI->regclasses())
     for (unsigned I = 0; I < RegClass.getNumRegs(); I++) {
-      MCPhysReg Reg = RegClass.getRegister(I);
+      MCRegister Reg = RegClass.getRegister(I);
       if (isSuperReg(MCRI, Reg))
-        SuperRegs.push_back(Reg);
+        SuperRegs.push_back(Reg.id());
     }
 
   sort(SuperRegs.begin(), SuperRegs.end());
@@ -49,7 +49,7 @@ inline SmallVector<MCPhysReg> getTrackingRegs(const MCRegisterInfo *MCRI) {
   return TrackingRegs;
 }
 
-inline MCPhysReg getSuperReg(const MCRegisterInfo *MCRI, MCPhysReg Reg) {
+inline MCRegister getSuperReg(const MCRegisterInfo *MCRI, MCRegister Reg) {
   if (isSuperReg(MCRI, Reg))
     return Reg;
   for (auto SuperReg : MCRI->superregs(Reg))

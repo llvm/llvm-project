@@ -53,7 +53,6 @@
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
-#include <optional>
 
 using namespace llvm;
 
@@ -226,7 +225,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableNewSMEABILowering("aarch64-new-sme-abi",
                             cl::desc("Enable new lowering for the SME ABI"),
-                            cl::init(false), cl::Hidden);
+                            cl::init(true), cl::Hidden);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
@@ -261,6 +260,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PostSelectOptimizePass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationPass(PR);
+  initializeAArch64RedundantCondBranchPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
@@ -863,6 +863,8 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive &&
       EnableAArch64CopyPropagation)
     addPass(createMachineCopyPropagationPass(true));
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64RedundantCondBranchPass());
 
   addPass(createAArch64A53Fix835769());
 

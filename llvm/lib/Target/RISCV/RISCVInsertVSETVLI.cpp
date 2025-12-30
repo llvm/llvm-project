@@ -519,13 +519,13 @@ class VSETVLIInfo {
     unsigned AVLImm;
   };
 
-  enum : uint8_t {
+  enum class AVLState : uint8_t {
     Uninitialized,
     AVLIsReg,
     AVLIsImm,
     AVLIsVLMAX,
     Unknown, // AVL and VTYPE are fully unknown
-  } State = Uninitialized;
+  } State = AVLState::Uninitialized;
 
   // Fields from VTYPE.
   RISCVVType::VLMUL VLMul = RISCVVType::LMUL_1;
@@ -539,7 +539,7 @@ class VSETVLIInfo {
 public:
   VSETVLIInfo()
       : AVLImm(0), TailAgnostic(false), MaskAgnostic(false),
-        SEWLMULRatioOnly(false) {}
+        SEWLMULRatioOnly(false), AltFmt(false), TWiden(0) {}
 
   static VSETVLIInfo getUnknown() {
     VSETVLIInfo Info;
@@ -547,27 +547,27 @@ public:
     return Info;
   }
 
-  bool isValid() const { return State != Uninitialized; }
-  void setUnknown() { State = Unknown; }
-  bool isUnknown() const { return State == Unknown; }
+  bool isValid() const { return State != AVLState::Uninitialized; }
+  void setUnknown() { State = AVLState::Unknown; }
+  bool isUnknown() const { return State == AVLState::Unknown; }
 
   void setAVLRegDef(const VNInfo *VNInfo, Register AVLReg) {
     assert(AVLReg.isVirtual());
     AVLRegDef.ValNo = VNInfo;
     AVLRegDef.DefReg = AVLReg;
-    State = AVLIsReg;
+    State = AVLState::AVLIsReg;
   }
 
   void setAVLImm(unsigned Imm) {
     AVLImm = Imm;
-    State = AVLIsImm;
+    State = AVLState::AVLIsImm;
   }
 
-  void setAVLVLMAX() { State = AVLIsVLMAX; }
+  void setAVLVLMAX() { State = AVLState::AVLIsVLMAX; }
 
-  bool hasAVLImm() const { return State == AVLIsImm; }
-  bool hasAVLReg() const { return State == AVLIsReg; }
-  bool hasAVLVLMAX() const { return State == AVLIsVLMAX; }
+  bool hasAVLImm() const { return State == AVLState::AVLIsImm; }
+  bool hasAVLReg() const { return State == AVLState::AVLIsReg; }
+  bool hasAVLVLMAX() const { return State == AVLState::AVLIsVLMAX; }
   Register getAVLReg() const {
     assert(hasAVLReg() && AVLRegDef.DefReg.isVirtual());
     return AVLRegDef.DefReg;
@@ -607,12 +607,38 @@ public:
     }
   }
 
-  unsigned getSEW() const { return SEW; }
-  RISCVVType::VLMUL getVLMUL() const { return VLMul; }
-  bool getTailAgnostic() const { return TailAgnostic; }
-  bool getMaskAgnostic() const { return MaskAgnostic; }
-  bool getAltFmt() const { return AltFmt; }
-  unsigned getTWiden() const { return TWiden; }
+  bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
+
+  unsigned getSEW() const {
+    assert(isValid() && !isUnknown() && !hasSEWLMULRatioOnly() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return SEW;
+  }
+  RISCVVType::VLMUL getVLMUL() const {
+    assert(isValid() && !isUnknown() && !hasSEWLMULRatioOnly() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return VLMul;
+  }
+  bool getTailAgnostic() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return TailAgnostic;
+  }
+  bool getMaskAgnostic() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return MaskAgnostic;
+  }
+  bool getAltFmt() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return AltFmt;
+  }
+  unsigned getTWiden() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return TWiden;
+  }
 
   bool hasNonZeroAVL(const LiveIntervals *LIS) const {
     if (hasAVLImm())
@@ -702,8 +728,6 @@ public:
     return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic,
                                    AltFmt);
   }
-
-  bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
 
   bool hasSameVTYPE(const VSETVLIInfo &Other) const {
     assert(isValid() && Other.isValid() &&
@@ -837,35 +861,44 @@ public:
   /// Implement operator<<.
   /// @{
   void print(raw_ostream &OS) const {
-    OS << "{";
-    if (!isValid())
+    OS << '{';
+    switch (State) {
+    case AVLState::Uninitialized:
       OS << "Uninitialized";
-    if (isUnknown())
+      break;
+    case AVLState::Unknown:
       OS << "unknown";
-    if (hasAVLReg())
+      break;
+    case AVLState::AVLIsReg:
       OS << "AVLReg=" << llvm::printReg(getAVLReg());
-    if (hasAVLImm())
+      break;
+    case AVLState::AVLIsImm:
       OS << "AVLImm=" << (unsigned)AVLImm;
-    if (hasAVLVLMAX())
+      break;
+    case AVLState::AVLIsVLMAX:
       OS << "AVLVLMAX";
-    OS << ", ";
+      break;
+    }
+    if (isValid() && !isUnknown()) {
+      OS << ", ";
 
-    unsigned LMul;
-    bool Fractional;
-    std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
+      unsigned LMul;
+      bool Fractional;
+      std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
 
-    OS << "VLMul=";
-    if (Fractional)
-      OS << "mf";
-    else
-      OS << "m";
-    OS << LMul << ", "
-       << "SEW=e" << (unsigned)SEW << ", "
-       << "TailAgnostic=" << (bool)TailAgnostic << ", "
-       << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
-       << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << ", "
-       << "TWiden=" << (unsigned)TWiden << ", "
-       << "AltFmt=" << (bool)AltFmt << "}";
+      OS << "VLMul=m";
+      if (Fractional)
+        OS << 'f';
+      OS << LMul << ", "
+         << "SEW=e" << (unsigned)SEW << ", "
+         << "TailAgnostic=" << (bool)TailAgnostic << ", "
+         << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
+         << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << ", "
+         << "TWiden=" << (unsigned)TWiden << ", "
+         << "AltFmt=" << (bool)AltFmt;
+    }
+
+    OS << '}';
   }
 #endif
 };
@@ -1284,8 +1317,8 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
 
   if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
       !PrevInfo.isUnknown()) {
-    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
-            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
+    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(PrevInfo.getSEWLMULRatio(),
+                                                     Info.getSEW()))
       Info.setVLMul(*NewVLMul);
     Demanded.LMUL = DemandedFields::LMULEqual;
   }
@@ -1338,25 +1371,25 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (Demanded.VLAny || (Demanded.VLZeroness && !EquallyZero))
     Info.setAVL(IncomingInfo);
 
-  Info.setVTYPE(
-      ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
-          .getVLMUL(),
-      ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info).getSEW(),
-      // Prefer tail/mask agnostic since it can be relaxed to undisturbed later
-      // if needed.
-      (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
-          IncomingInfo.getTailAgnostic(),
-      (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
-          IncomingInfo.getMaskAgnostic(),
-      (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt(),
-      Demanded.TWiden ? IncomingInfo.getTWiden() : 0);
-
-  // If we only knew the sew/lmul ratio previously, replace the VTYPE but keep
-  // the AVL.
+  // If we only knew the sew/lmul ratio previously, replace the VTYPE.
   if (Info.hasSEWLMULRatioOnly()) {
     VSETVLIInfo RatiolessInfo = IncomingInfo;
     RatiolessInfo.setAVL(Info);
     Info = RatiolessInfo;
+  } else {
+    Info.setVTYPE(
+        ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+            .getVLMUL(),
+        ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+            .getSEW(),
+        // Prefer tail/mask agnostic since it can be relaxed to undisturbed
+        // later if needed.
+        (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
+            IncomingInfo.getTailAgnostic(),
+        (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
+            IncomingInfo.getMaskAgnostic(),
+        (Demanded.AltFmt ? IncomingInfo : Info).getAltFmt(),
+        Demanded.TWiden ? IncomingInfo.getTWiden() : 0);
   }
 }
 
@@ -1755,6 +1788,14 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
       if (!VNI || !PrevVNI || VNI != PrevVNI)
         return false;
     }
+
+    // If we define VL and need to move the definition up, check we can extend
+    // the live interval upwards from MI to PrevMI.
+    Register VL = MI.getOperand(0).getReg();
+    if (VL.isVirtual() && LIS &&
+        LIS->getInterval(VL).overlaps(LIS->getInstructionIndex(PrevMI),
+                                      LIS->getInstructionIndex(MI)))
+      return false;
   }
 
   assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());
@@ -1950,7 +1991,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
                      .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                      .addReg(Op.getReg())
                      .addImm(Log2_32(CurrInfo.getSEW()))
-                     .addImm(Log2_32(CurrInfo.getTWiden()) + 1);
+                     .addImm(CurrInfo.getTWiden());
 
     Changed = true;
     Register Reg = Op.getReg();

@@ -1832,8 +1832,9 @@ inline const char *Registers_ppc64::getRegisterName(int regNum) {
 /// Registers_arm64  holds the register state of a thread in a 64-bit arm
 /// process.
 class _LIBUNWIND_HIDDEN Registers_arm64;
-extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
 extern "C" int64_t __libunwind_Registers_arm64_za_disable();
+extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *,
+                                                   unsigned walkedFrames);
 
 #if defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_shstk_get_jump_target() {
@@ -1861,10 +1862,14 @@ public:
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
-  void jumpto() {
+  void        jumpto(unsigned walkedFrames = 0) {
     zaDisable();
-    __libunwind_Registers_arm64_jumpto(this);
+    __libunwind_Registers_arm64_jumpto(this, walkedFrames);
   }
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  _LIBUNWIND_TRACE_NO_INLINE
+  void        returnto(unsigned walkedFrames) { jumpto(walkedFrames); }
+#endif
   static constexpr int lastDwarfRegNum() {
     return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64;
   }

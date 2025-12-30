@@ -20,10 +20,8 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
@@ -196,10 +194,8 @@ public:
   }
 };
 
-typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
-typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
-
-raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
+LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
+                                          const VPRecipeBase &R);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
@@ -348,7 +344,6 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
-    VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
@@ -437,7 +432,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the VPDef to stderr (for debugging).
-  void dump() const;
+  LLVM_ABI_FOR_TEST void dump() const;
 
   /// Each concrete VPDef prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent,

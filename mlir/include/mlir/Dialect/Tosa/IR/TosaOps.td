@@ -826,12 +826,12 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementTy
   }];
 
   let arguments = (ins
-    Tosa_Int32Tensor:$input1,
-    Tosa_Int32Tensor:$input2
+    Tosa_Int32Or64Tensor:$input1,
+    Tosa_Int32Or64Tensor:$input2
   );
 
   let results = (outs
-    Tosa_Int32Tensor:$output
+    Tosa_Int32Or64Tensor:$output
   );
 
   list<Availability> availability = [
@@ -2271,7 +2271,7 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values,
-    Tosa_Int32Tensor2D:$indices
+    Tosa_IndexTensor2D:$indices
   );
 
   let results = (outs
@@ -2308,7 +2308,7 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values_in,
-    Tosa_Int32Tensor2D:$indices,
+    Tosa_IndexTensor2D:$indices,
     Tosa_Tensor3D:$input
   );
 
@@ -2464,7 +2464,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";

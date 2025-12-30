@@ -12,6 +12,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Target/BorrowedStackFrame.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
@@ -105,6 +106,13 @@ std::string ScriptedFrameProvider::GetDescription() const {
   return m_interface_sp->GetDescription(m_descriptor.GetName());
 }
 
+std::optional<uint32_t> ScriptedFrameProvider::GetPriority() const {
+  if (!m_interface_sp)
+    return std::nullopt;
+
+  return m_interface_sp->GetPriority(m_descriptor.GetName());
+}
+
 llvm::Expected<StackFrameSP>
 ScriptedFrameProvider::GetFrameAtIndex(uint32_t idx) {
   if (!m_interface_sp)
@@ -168,7 +176,12 @@ ScriptedFrameProvider::GetFrameAtIndex(uint32_t idx) {
           obj_sp->GetAsUnsignedInteger()) {
     uint32_t real_frame_index = int_obj->GetValue();
     if (real_frame_index < m_input_frames->GetNumFrames()) {
-      synth_frame_sp = m_input_frames->GetFrameAtIndex(real_frame_index);
+      StackFrameSP real_frame_sp =
+          m_input_frames->GetFrameAtIndex(real_frame_index);
+      synth_frame_sp =
+          (real_frame_index == idx)
+              ? real_frame_sp
+              : std::make_shared<BorrowedStackFrame>(real_frame_sp, idx);
     }
   } else if (StructuredData::Dictionary *dict = obj_sp->GetAsDictionary()) {
     // Check if it's a dictionary describing a frame.

@@ -132,6 +132,12 @@ SBTarget SBTarget::GetTargetFromEvent(const SBEvent &event) {
   return Target::TargetEventData::GetTargetFromEvent(event.get());
 }
 
+SBTarget SBTarget::GetCreatedTargetFromEvent(const SBEvent &event) {
+  LLDB_INSTRUMENT_VA(event);
+
+  return Target::TargetEventData::GetCreatedTargetFromEvent(event.get());
+}
+
 uint32_t SBTarget::GetNumModulesFromEvent(const SBEvent &event) {
   LLDB_INSTRUMENT_VA(event);
 
@@ -1575,7 +1581,7 @@ SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
   return sb_module;
 }
 
-SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) {
+SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) const {
   LLDB_INSTRUMENT_VA(this, sb_module_spec);
 
   SBModule sb_module;
@@ -1618,6 +1624,19 @@ const char *SBTarget::GetTriple() {
   return nullptr;
 }
 
+const char *SBTarget::GetArchName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP()) {
+    llvm::StringRef arch_name =
+        target_sp->GetArchitecture().GetTriple().getArchName();
+    ConstString const_arch_name(arch_name);
+
+    return const_arch_name.GetCString();
+  }
+  return nullptr;
+}
+
 const char *SBTarget::GetABIName() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -1643,6 +1662,14 @@ lldb::user_id_t SBTarget::GetGloballyUniqueID() const {
   if (TargetSP target_sp = GetSP())
     return target_sp->GetGloballyUniqueID();
   return LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID;
+}
+
+const char *SBTarget::GetTargetSessionName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return ConstString(target_sp->GetTargetSessionName()).AsCString();
+  return nullptr;
 }
 
 SBError SBTarget::SetLabel(const char *label) {

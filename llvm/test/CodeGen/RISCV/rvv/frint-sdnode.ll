@@ -184,7 +184,6 @@ define <vscale x 1 x half> @rint_nxv1f16(<vscale x 1 x half> %x) {
   %a = call <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half> %x)
   ret <vscale x 1 x half> %a
 }
-declare <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half>)
 
 define <vscale x 2 x half> @rint_nxv2f16(<vscale x 2 x half> %x) {
 ; ZVFH-LABEL: rint_nxv2f16:
@@ -220,7 +219,6 @@ define <vscale x 2 x half> @rint_nxv2f16(<vscale x 2 x half> %x) {
   %a = call <vscale x 2 x half> @llvm.rint.nxv2f16(<vscale x 2 x half> %x)
   ret <vscale x 2 x half> %a
 }
-declare <vscale x 2 x half> @llvm.rint.nxv2f16(<vscale x 2 x half>)
 
 define <vscale x 4 x half> @rint_nxv4f16(<vscale x 4 x half> %x) {
 ; ZVFH-LABEL: rint_nxv4f16:
@@ -256,7 +254,6 @@ define <vscale x 4 x half> @rint_nxv4f16(<vscale x 4 x half> %x) {
   %a = call <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half> %x)
   ret <vscale x 4 x half> %a
 }
-declare <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half>)
 
 define <vscale x 8 x half> @rint_nxv8f16(<vscale x 8 x half> %x) {
 ; ZVFH-LABEL: rint_nxv8f16:
@@ -292,7 +289,6 @@ define <vscale x 8 x half> @rint_nxv8f16(<vscale x 8 x half> %x) {
   %a = call <vscale x 8 x half> @llvm.rint.nxv8f16(<vscale x 8 x half> %x)
   ret <vscale x 8 x half> %a
 }
-declare <vscale x 8 x half> @llvm.rint.nxv8f16(<vscale x 8 x half>)
 
 define <vscale x 16 x half> @rint_nxv16f16(<vscale x 16 x half> %x) {
 ; ZVFH-LABEL: rint_nxv16f16:
@@ -328,7 +324,6 @@ define <vscale x 16 x half> @rint_nxv16f16(<vscale x 16 x half> %x) {
   %a = call <vscale x 16 x half> @llvm.rint.nxv16f16(<vscale x 16 x half> %x)
   ret <vscale x 16 x half> %a
 }
-declare <vscale x 16 x half> @llvm.rint.nxv16f16(<vscale x 16 x half>)
 
 define <vscale x 32 x half> @rint_nxv32f16(<vscale x 32 x half> %x) {
 ; ZVFH-LABEL: rint_nxv32f16:
@@ -376,7 +371,6 @@ define <vscale x 32 x half> @rint_nxv32f16(<vscale x 32 x half> %x) {
   %a = call <vscale x 32 x half> @llvm.rint.nxv32f16(<vscale x 32 x half> %x)
   ret <vscale x 32 x half> %a
 }
-declare <vscale x 32 x half> @llvm.rint.nxv32f16(<vscale x 32 x half>)
 
 define <vscale x 1 x float> @rint_nxv1f32(<vscale x 1 x float> %x) {
 ; CHECK-LABEL: rint_nxv1f32:
@@ -394,7 +388,6 @@ define <vscale x 1 x float> @rint_nxv1f32(<vscale x 1 x float> %x) {
   %a = call <vscale x 1 x float> @llvm.rint.nxv1f32(<vscale x 1 x float> %x)
   ret <vscale x 1 x float> %a
 }
-declare <vscale x 1 x float> @llvm.rint.nxv1f32(<vscale x 1 x float>)
 
 define <vscale x 2 x float> @rint_nxv2f32(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: rint_nxv2f32:
@@ -412,7 +405,6 @@ define <vscale x 2 x float> @rint_nxv2f32(<vscale x 2 x float> %x) {
   %a = call <vscale x 2 x float> @llvm.rint.nxv2f32(<vscale x 2 x float> %x)
   ret <vscale x 2 x float> %a
 }
-declare <vscale x 2 x float> @llvm.rint.nxv2f32(<vscale x 2 x float>)
 
 define <vscale x 4 x float> @rint_nxv4f32(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: rint_nxv4f32:
@@ -430,7 +422,6 @@ define <vscale x 4 x float> @rint_nxv4f32(<vscale x 4 x float> %x) {
   %a = call <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float> %x)
   ret <vscale x 4 x float> %a
 }
-declare <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float>)
 
 define <vscale x 8 x float> @rint_nxv8f32(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: rint_nxv8f32:
@@ -448,7 +439,6 @@ define <vscale x 8 x float> @rint_nxv8f32(<vscale x 8 x float> %x) {
   %a = call <vscale x 8 x float> @llvm.rint.nxv8f32(<vscale x 8 x float> %x)
   ret <vscale x 8 x float> %a
 }
-declare <vscale x 8 x float> @llvm.rint.nxv8f32(<vscale x 8 x float>)
 
 define <vscale x 16 x float> @rint_nxv16f32(<vscale x 16 x float> %x) {
 ; CHECK-LABEL: rint_nxv16f32:
@@ -466,7 +456,6 @@ define <vscale x 16 x float> @rint_nxv16f32(<vscale x 16 x float> %x) {
   %a = call <vscale x 16 x float> @llvm.rint.nxv16f32(<vscale x 16 x float> %x)
   ret <vscale x 16 x float> %a
 }
-declare <vscale x 16 x float> @llvm.rint.nxv16f32(<vscale x 16 x float>)
 
 define <vscale x 1 x double> @rint_nxv1f64(<vscale x 1 x double> %x) {
 ; RV32ZVFH-LABEL: rint_nxv1f64:
@@ -525,7 +514,6 @@ define <vscale x 1 x double> @rint_nxv1f64(<vscale x 1 x double> %x) {
   %a = call <vscale x 1 x double> @llvm.rint.nxv1f64(<vscale x 1 x double> %x)
   ret <vscale x 1 x double> %a
 }
-declare <vscale x 1 x double> @llvm.rint.nxv1f64(<vscale x 1 x double>)
 
 define <vscale x 2 x double> @rint_nxv2f64(<vscale x 2 x double> %x) {
 ; RV32ZVFH-LABEL: rint_nxv2f64:
@@ -584,7 +572,6 @@ define <vscale x 2 x double> @rint_nxv2f64(<vscale x 2 x double> %x) {
   %a = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> %x)
   ret <vscale x 2 x double> %a
 }
-declare <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double>)
 
 define <vscale x 4 x double> @rint_nxv4f64(<vscale x 4 x double> %x) {
 ; RV32ZVFH-LABEL: rint_nxv4f64:
@@ -643,7 +630,6 @@ define <vscale x 4 x double> @rint_nxv4f64(<vscale x 4 x double> %x) {
   %a = call <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double> %x)
   ret <vscale x 4 x double> %a
 }
-declare <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double>)
 
 define <vscale x 8 x double> @rint_nxv8f64(<vscale x 8 x double> %x) {
 ; RV32ZVFH-LABEL: rint_nxv8f64:
@@ -702,4 +688,3 @@ define <vscale x 8 x double> @rint_nxv8f64(<vscale x 8 x double> %x) {
   %a = call <vscale x 8 x double> @llvm.rint.nxv8f64(<vscale x 8 x double> %x)
   ret <vscale x 8 x double> %a
 }
-declare <vscale x 8 x double> @llvm.rint.nxv8f64(<vscale x 8 x double>)

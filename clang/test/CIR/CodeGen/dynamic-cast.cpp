@@ -21,11 +21,11 @@ Derived *ptr_cast(Base *b) {
   return dynamic_cast<Derived *>(b);
 }
 
-// CIR-BEFORE: cir.func dso_local @_Z8ptr_castP4Base
+// CIR-BEFORE: cir.func {{.*}} @_Z8ptr_castP4Base
 // CIR-BEFORE:   %{{.+}} = cir.dyn_cast ptr %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
 // CIR-BEFORE: }
 
-//      CIR-AFTER: cir.func dso_local @_Z8ptr_castP4Base
+//      CIR-AFTER: cir.func {{.*}} @_Z8ptr_castP4Base
 //      CIR-AFTER:   %[[SRC:.*]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!rec_Base>>, !cir.ptr<!rec_Base>
 // CIR-AFTER-NEXT:   %[[SRC_IS_NOT_NULL:.*]] = cir.cast ptr_to_bool %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.bool
 // CIR-AFTER-NEXT:   %{{.+}} = cir.ternary(%[[SRC_IS_NOT_NULL]], true {
@@ -69,11 +69,11 @@ Derived &ref_cast(Base &b) {
   return dynamic_cast<Derived &>(b);
 }
 
-// CIR-BEFORE: cir.func dso_local @_Z8ref_castR4Base
+// CIR-BEFORE: cir.func {{.*}} @_Z8ref_castR4Base
 // CIR-BEFORE:   %{{.+}} = cir.dyn_cast ref %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
 // CIR-BEFORE: }
 
-//      CIR-AFTER: cir.func dso_local @_Z8ref_castR4Base
+//      CIR-AFTER: cir.func {{.*}} @_Z8ref_castR4Base
 //      CIR-AFTER:   %[[SRC_VOID_PTR:.*]] = cir.cast bitcast %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
 // CIR-AFTER-NEXT:   %[[SRC_RTTI:.*]] = cir.const #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>
 // CIR-AFTER-NEXT:   %[[DEST_RTTI:.*]] = cir.const #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>
@@ -106,11 +106,11 @@ void *ptr_cast_to_complete(Base *ptr) {
   return dynamic_cast<void *>(ptr);
 }
 
-// CIR-BEFORE: cir.func dso_local @_Z20ptr_cast_to_completeP4Base
+// CIR-BEFORE: cir.func {{.*}} @_Z20ptr_cast_to_completeP4Base
 // CIR-BEFORE:   %{{.+}} = cir.dyn_cast ptr %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
 // CIR-BEFORE: }
 
-//      CIR-AFTER: cir.func dso_local @_Z20ptr_cast_to_completeP4Base
+//      CIR-AFTER: cir.func {{.*}} @_Z20ptr_cast_to_completeP4Base
 //      CIR-AFTER:   %[[SRC:.*]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!rec_Base>>, !cir.ptr<!rec_Base>
 // CIR-AFTER-NEXT:   %[[SRC_IS_NOT_NULL:.*]] = cir.cast ptr_to_bool %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.bool
 // CIR-AFTER-NEXT:   %{{.+}} = cir.ternary(%[[SRC_IS_NOT_NULL]], true {

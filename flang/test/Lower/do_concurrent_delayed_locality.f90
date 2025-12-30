@@ -7,7 +7,7 @@ subroutine do_concurrent_with_locality_specs
   do concurrent (i=1:10) local(local_var) local_init(local_init_var)
     if (i < 5) then
       local_var = 42
-    else 
+    else
       local_init_var = 84
     end if
   end do

@@ -165,7 +165,8 @@ ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
 
-  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec, false))
+  if (ModuleSP module_sp =
+          target.GetOrCreateModule(module_spec, /*notify=*/false))
     return module_sp;
 
   return nullptr;

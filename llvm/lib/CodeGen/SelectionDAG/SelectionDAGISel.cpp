@@ -331,6 +331,17 @@ namespace llvm {
 MachineBasicBlock *
 TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::STATEPOINT:
+    // As an implementation detail, STATEPOINT shares the STACKMAP format at
+    // this point in the process.  We diverge later.
+  case TargetOpcode::STACKMAP:
+  case TargetOpcode::PATCHPOINT:
+    return emitPatchPoint(MI, MBB);
+  default:
+    break;
+  }
+
 #ifndef NDEBUG
   dbgs() << "If a target marks an instruction with "
           "'usesCustomInserter', it must implement "
@@ -519,9 +530,7 @@ void SelectionDAGISel::initializeAnalysisResults(
 
   SP = &FAM.getResult<SSPLayoutAnalysis>(Fn);
 
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
-#endif
 }
 
 void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
@@ -578,9 +587,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
 
   SP = &MFP.getAnalysis<StackProtector>().getLayoutInfo();
 
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
-#endif
 }
 
 bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
@@ -593,7 +600,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << '\n');
 
-  SDB->init(GFI, getBatchAA(), AC, LibInfo);
+  SDB->init(GFI, getBatchAA(), AC, LibInfo, *TTI);
 
   MF->setHasInlineAsm(false);
 
@@ -1841,6 +1848,14 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
           reportFastISelFailure(*MF, *ORE, R, EnableFastISelAbort > 2);
 
+          // If the call has operand bundles, then it's best if they are handled
+          // together with the call instead of selecting the call as its own
+          // block.
+          if (cast<CallInst>(Inst)->hasOperandBundles()) {
+            NumFastIselFailures += NumFastIselRemaining;
+            break;
+          }
+
           if (!Inst->getType()->isVoidTy() && !Inst->getType()->isTokenTy() &&
               !Inst->use_empty()) {
             Register &R = FuncInfo->ValueMap[Inst];
@@ -2782,8 +2797,8 @@ void SelectionDAGISel::UpdateChains(
 /// induce cycles in the DAG) and if so, creating a TokenFactor node. that will
 /// be used as the input node chain for the generated nodes.
 static SDValue
-HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
-                       SelectionDAG *CurDAG) {
+HandleMergeInputChains(const SmallVectorImpl<SDNode *> &ChainNodesMatched,
+                       SDValue InputGlue, SelectionDAG *CurDAG) {
 
   SmallPtrSet<const SDNode *, 16> Visited;
   SmallVector<const SDNode *, 8> Worklist;
@@ -2826,8 +2841,16 @@ HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
   // node that is both the predecessor and successor of the
   // to-be-merged nodes. Fail.
   Visited.clear();
-  for (SDValue V : InputChains)
+  for (SDValue V : InputChains) {
+    // If we need to create a TokenFactor, and any of the input chain nodes will
+    // also be glued to the output, we cannot merge the chains. The TokenFactor
+    // would prevent the glue from being honored.
+    if (InputChains.size() != 1 &&
+        V->getValueType(V->getNumValues() - 1) == MVT::Glue &&
+        InputGlue.getNode() == V.getNode())
+      return SDValue();
     Worklist.push_back(V.getNode());
+  }
 
   for (auto *N : ChainNodesMatched)
     if (SDNode::hasPredecessorHelper(N, Visited, Worklist, Max, true))
@@ -3304,6 +3327,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   case ISD::LIFETIME_START:
   case ISD::LIFETIME_END:
   case ISD::PSEUDO_PROBE:
+  case ISD::DEACTIVATION_SYMBOL:
     NodeToMatch->setNodeId(-1); // Mark selected.
     return;
   case ISD::AssertSext:
@@ -3385,7 +3409,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   // These are the current input chain and glue for use when generating nodes.
   // Various Emit operations change these.  For example, emitting a copytoreg
   // uses and updates these.
-  SDValue InputChain, InputGlue;
+  SDValue InputChain, InputGlue, DeactivationSymbol;
 
   // ChainNodesMatched - If a pattern matches nodes that have input/output
   // chains, the OPC_EmitMergeInputChains operation is emitted which indicates
@@ -3505,7 +3529,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       SDNode *Parent = nullptr;
       if (NodeStack.size() > 1)
         Parent = NodeStack[NodeStack.size()-2].getNode();
-      RecordedNodes.push_back(std::make_pair(N, Parent));
+      RecordedNodes.emplace_back(N, Parent);
       continue;
     }
 
@@ -3517,8 +3541,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (ChildNo >= N.getNumOperands())
         break;  // Match fails if out of range child #.
 
-      RecordedNodes.push_back(std::make_pair(N->getOperand(ChildNo),
-                                             N.getNode()));
+      RecordedNodes.emplace_back(N->getOperand(ChildNo), N.getNode());
       continue;
     }
     case OPC_RecordMemRef:
@@ -3536,6 +3559,15 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (N->getNumOperands() != 0 &&
           N->getOperand(N->getNumOperands()-1).getValueType() == MVT::Glue)
         InputGlue = N->getOperand(N->getNumOperands()-1);
+      continue;
+
+    case OPC_CaptureDeactivationSymbol:
+      // If the current node has a deactivation symbol, capture it in
+      // DeactivationSymbol.
+      if (N->getNumOperands() != 0 &&
+          N->getOperand(N->getNumOperands() - 1).getOpcode() ==
+              ISD::DEACTIVATION_SYMBOL)
+        DeactivationSymbol = N->getOperand(N->getNumOperands() - 1);
       continue;
 
     case OPC_MoveChild: {
@@ -3866,25 +3898,25 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
     case OPC_EmitInteger:
-    case OPC_EmitInteger8:
-    case OPC_EmitInteger16:
-    case OPC_EmitInteger32:
-    case OPC_EmitInteger64:
+    case OPC_EmitIntegerI8:
+    case OPC_EmitIntegerI16:
+    case OPC_EmitIntegerI32:
+    case OPC_EmitIntegerI64:
     case OPC_EmitStringInteger:
-    case OPC_EmitStringInteger32: {
+    case OPC_EmitStringIntegerI32: {
       MVT::SimpleValueType VT;
       switch (Opcode) {
-      case OPC_EmitInteger8:
+      case OPC_EmitIntegerI8:
         VT = MVT::i8;
         break;
-      case OPC_EmitInteger16:
+      case OPC_EmitIntegerI16:
         VT = MVT::i16;
         break;
-      case OPC_EmitInteger32:
-      case OPC_EmitStringInteger32:
+      case OPC_EmitIntegerI32:
+      case OPC_EmitStringIntegerI32:
         VT = MVT::i32;
         break;
-      case OPC_EmitInteger64:
+      case OPC_EmitIntegerI64:
         VT = MVT::i64;
         break;
       default:
@@ -3894,12 +3926,12 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       int64_t Val = MatcherTable[MatcherIndex++];
       if (Val & 128)
         Val = GetVBR(Val, MatcherTable, MatcherIndex);
-      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitInteger64)
+      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitIntegerI64)
         Val = decodeSignRotatedValue(Val);
-      RecordedNodes.push_back(std::pair<SDValue, SDNode *>(
+      RecordedNodes.emplace_back(
           CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
                                     /*isTarget=*/true),
-          nullptr));
+          nullptr);
       continue;
     }
     case OPC_EmitRegister:
@@ -3918,8 +3950,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
       }
       unsigned RegNo = MatcherTable[MatcherIndex++];
-      RecordedNodes.push_back(std::pair<SDValue, SDNode *>(
-          CurDAG->getRegister(RegNo, VT), nullptr));
+      RecordedNodes.emplace_back(CurDAG->getRegister(RegNo, VT), nullptr);
       continue;
     }
     case OPC_EmitRegister2: {
@@ -3929,8 +3960,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       MVT::SimpleValueType VT = getSimpleVT(MatcherTable, MatcherIndex);
       unsigned RegNo = MatcherTable[MatcherIndex++];
       RegNo |= MatcherTable[MatcherIndex++] << 8;
-      RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
-                              CurDAG->getRegister(RegNo, VT), nullptr));
+      RecordedNodes.emplace_back(CurDAG->getRegister(RegNo, VT), nullptr);
       continue;
     }
 
@@ -3960,7 +3990,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                                           Imm.getValueType());
       }
 
-      RecordedNodes.push_back(std::make_pair(Imm, RecordedNodes[RecNo].second));
+      RecordedNodes.emplace_back(Imm, RecordedNodes[RecNo].second);
       continue;
     }
 
@@ -3989,7 +4019,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       }
 
       // Merge the input chains if they are not intra-pattern references.
-      InputChain = HandleMergeInputChains(ChainNodesMatched, CurDAG);
+      InputChain = HandleMergeInputChains(ChainNodesMatched, InputGlue, CurDAG);
 
       if (!InputChain.getNode())
         break;  // Failed to merge.
@@ -4033,7 +4063,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
 
       // Merge the input chains if they are not intra-pattern references.
-      InputChain = HandleMergeInputChains(ChainNodesMatched, CurDAG);
+      InputChain = HandleMergeInputChains(ChainNodesMatched, InputGlue, CurDAG);
 
       if (!InputChain.getNode())
         break;  // Failed to merge.
@@ -4076,7 +4106,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       unsigned RecNo = MatcherTable[MatcherIndex++];
       assert(RecNo < RecordedNodes.size() && "Invalid EmitNodeXForm");
       SDValue Res = RunSDNodeXForm(RecordedNodes[RecNo].first, XFormNo);
-      RecordedNodes.push_back(std::pair<SDValue,SDNode*>(Res, nullptr));
+      RecordedNodes.emplace_back(Res, nullptr);
       continue;
     }
     case OPC_Coverage: {
@@ -4219,6 +4249,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // If this has chain/glue inputs, add them.
       if (EmitNodeInfo & OPFL_Chain)
         Ops.push_back(InputChain);
+      if (DeactivationSymbol.getNode() != nullptr)
+        Ops.push_back(DeactivationSymbol);
       if ((EmitNodeInfo & OPFL_GlueInput) && InputGlue.getNode() != nullptr)
         Ops.push_back(InputGlue);
 
@@ -4245,8 +4277,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         // Add all the non-glue/non-chain results to the RecordedNodes list.
         for (unsigned i = 0, e = VTs.size(); i != e; ++i) {
           if (VTs[i] == MVT::Other || VTs[i] == MVT::Glue) break;
-          RecordedNodes.push_back(std::pair<SDValue,SDNode*>(SDValue(Res, i),
-                                                             nullptr));
+          RecordedNodes.emplace_back(SDValue(Res, i), nullptr);
         }
       } else {
         assert(NodeToMatch->getOpcode() != ISD::DELETED_NODE &&
@@ -4388,8 +4419,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // formed.
       MatchScope &LastScope = MatchScopes.back();
       RecordedNodes.resize(LastScope.NumRecordedNodes);
-      NodeStack.clear();
-      NodeStack.append(LastScope.NodeStack.begin(), LastScope.NodeStack.end());
+      NodeStack.assign(LastScope.NodeStack.begin(), LastScope.NodeStack.end());
       N = NodeStack.back();
 
       if (LastScope.NumMatchedMemRefs != MatchedMemRefs.size())

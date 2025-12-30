@@ -70,6 +70,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::EXTRACT_VECTOR_ELT:
       R = SoftenFloatRes_EXTRACT_VECTOR_ELT(N, ResNo); break;
     case ISD::FABS:        R = SoftenFloatRes_FABS(N); break;
+    case ISD::FCANONICALIZE:
+      R = SoftenFloatRes_FCANONICALIZE(N); break;
     case ISD::STRICT_FMINNUM:
     case ISD::FMINNUM:     R = SoftenFloatRes_FMINNUM(N); break;
     case ISD::STRICT_FMAXNUM:
@@ -309,6 +311,31 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
   SDValue Mask = DAG.getConstant(API, SDLoc(N), NVT);
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
   return DAG.getNode(ISD::AND, SDLoc(N), NVT, Op, Mask);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
+  SDLoc dl(N);
+
+  // This implements llvm.canonicalize.f* by multiplication with 1.0, as
+  // suggested in
+  // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
+  // It uses strict_fp operations even outside a strict_fp context in order
+  // to guarantee that the canonicalization is not optimized away by later
+  // passes. The result chain introduced by that is intentionally ignored
+  // since no ordering requirement is intended here.
+
+  // Create strict multiplication by 1.0.
+  SDValue Operand = N->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDValue One = DAG.getConstantFP(1.0, dl, VT);
+  SDValue Chain = DAG.getEntryNode();
+  // Propagate existing flags on canonicalize, and additionally set
+  // NoFPExcept.
+  SDNodeFlags CanonicalizeFlags = N->getFlags();
+  CanonicalizeFlags.setNoFPExcept(true);
+  SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
+                            {Chain, Operand, One}, CanonicalizeFlags);
+  return BitConvertToInteger(Mul);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
@@ -717,7 +744,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
                              : RTLIB::getLDEXP(N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-  if (!TLI.getLibcallName(LC)) {
+  if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
     DAG.getContext()->emitError("do not know how to soften fpowi to fpow");
@@ -802,7 +829,8 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   assert(VT == N->getValueType(1) &&
          "expected both return values to have the same type");
 
-  if (!TLI.getLibcallName(LC))
+  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
     return false;
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -831,8 +859,9 @@ bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   CallOptions.setTypeListBeforeSoften({OpsVT}, VT)
       .setOpsTypeOverrides(CallOpsTypeOverrides);
 
-  auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
-                                            /*Chain=*/SDValue());
+  auto [ReturnVal, Chain] =
+      TLI.makeLibCall(DAG, LCImpl, NVT, Ops, CallOptions, DL,
+                      /*Chain=*/SDValue());
 
   auto CreateStackLoad = [&, Chain = Chain](SDValue StackSlot) {
     int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
@@ -862,7 +891,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
   RTLIB::Libcall CosLC = RTLIB::getCOS(VT);
 
   SDValue SoftSin, SoftCos;
-  if (!TLI.getLibcallName(SinLC) || !TLI.getLibcallName(CosLC)) {
+  if (TLI.getLibcallImpl(SinLC) == RTLIB::Unsupported ||
+      TLI.getLibcallImpl(CosLC) == RTLIB::Unsupported) {
     DAG.getContext()->emitError("do not know how to soften fsincos");
 
     EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -1726,8 +1756,7 @@ void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(
     SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
   assert(!N->isStrictFPOpcode() && "strictfp not implemented");
   SmallVector<SDValue> Results;
-  DAG.expandMultipleResultFPLibCall(LC, N, Results, N->getValueType(0),
-                                    CallRetResNo);
+  TLI.expandMultipleResultFPLibCall(DAG, LC, N, Results, CallRetResNo);
   for (auto [ResNo, Res] : enumerate(Results)) {
     SDValue Lo, Hi;
     GetPairElements(Res, Lo, Hi);
@@ -3508,6 +3537,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
   SDValue Op1 = GetSoftPromotedHalf(N->getOperand(1));
   SDValue Op2 = GetSoftPromotedHalf(N->getOperand(2));
+  SDNodeFlags Flags = N->getFlags();
   SDLoc dl(N);
 
   // Promote to the larger FP type.
@@ -3516,9 +3546,28 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
   Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
   Op2 = DAG.getNode(PromotionOpcode, dl, NVT, Op2);
 
-  SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1, Op2);
+  SDValue Res;
+  if (OVT == MVT::f16) {
+    // If f16 fma is not natively supported, the value must be promoted to an
+    // f64 (and not to f32!) to prevent double rounding issues.
+    SDValue A64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op0, Flags);
+    SDValue B64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op1, Flags);
+    SDValue C64 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Op2, Flags);
 
-  // Convert back to FP16 as an integer.
+    // Prefer a wide FMA node if available; otherwise expand to mul+add.
+    SDValue WideRes;
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), MVT::f64)) {
+      WideRes = DAG.getNode(ISD::FMA, dl, MVT::f64, A64, B64, C64, Flags);
+    } else {
+      SDValue Mul = DAG.getNode(ISD::FMUL, dl, MVT::f64, A64, B64, Flags);
+      WideRes = DAG.getNode(ISD::FADD, dl, MVT::f64, Mul, C64, Flags);
+    }
+
+    return DAG.getNode(GetPromotionOpcode(MVT::f64, OVT), dl, MVT::i16,
+                       WideRes);
+  }
+
+  Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1, Op2, Flags);
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
