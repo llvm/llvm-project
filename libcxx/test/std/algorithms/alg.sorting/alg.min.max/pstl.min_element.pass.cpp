@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <functional>
 #include <string>
 #include <vector>
 

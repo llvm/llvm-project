@@ -13,6 +13,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/merge.h>
+#include <__algorithm/min_element.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
