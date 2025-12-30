@@ -35,12 +35,14 @@ void ExpireFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
 
 void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                           const OriginManager &OM) const {
-  OS << "OriginFlow (Dest: ";
+  OS << "OriginFlow: \n";
+  OS << "\tDest: ";
   OM.dump(getDestOriginID(), OS);
-  OS << ", Src: ";
+  OS << "\n";
+  OS << "\tSrc:  ";
   OM.dump(getSrcOriginID(), OS);
   OS << (getKillDest() ? "" : ", Merge");
-  OS << ")\n";
+  OS << "\n";
 }
 
 void OriginEscapesFact::dump(llvm::raw_ostream &OS, const LoanManager &,
@@ -53,7 +55,14 @@ void OriginEscapesFact::dump(llvm::raw_ostream &OS, const LoanManager &,
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                    const OriginManager &OM) const {
   OS << "Use (";
-  OM.dump(getUsedOrigin(), OS);
+  size_t NumUsedOrigins = getUsedOrigins()->getLength();
+  size_t I = 0;
+  for (const OriginList *Cur = getUsedOrigins(); Cur;
+       Cur = Cur->peelOuterOrigin(), ++I) {
+    OM.dump(Cur->getOuterOriginID(), OS);
+    if (I < NumUsedOrigins - 1)
+      OS << ", ";
+  }
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
 }
 

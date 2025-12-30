@@ -254,7 +254,7 @@ public:
   /// \returns true to continue receiving the next input file, false to stop.
   virtual bool visitInputFileAsRequested(StringRef FilenameAsRequested,
                                          StringRef Filename, bool isSystem,
-                                         bool isOverridden,
+                                         bool isOverridden, time_t StoredTime,
                                          bool isExplicitModule) {
     return true;
   }
@@ -1078,6 +1078,9 @@ private:
 
   /// The IDs of all decls with function effects to be checked.
   SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
+
+  /// The RISC-V intrinsic pragma(including RVV, SiFive and Andes).
+  SmallVector<bool, 3> RISCVVecIntrinsicPragma;
 
 private:
   struct ImportedSubmodule {

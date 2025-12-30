@@ -45,7 +45,7 @@
 namespace {
 void anonFunction() {}
 // MD-ANON-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
-// HTML-ANON-INDEX-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-ANON-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 class AnonClass {};
 // MD-ANON-CLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
@@ -80,7 +80,7 @@ namespace PrimaryNamespace {
 // Function in PrimaryNamespace
 void functionInPrimaryNamespace() {}
 // MD-PRIMARY-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
-// HTML-PRIMARY-INDEX-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-PRIMARY-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 // Class in PrimaryNamespace
 class ClassInPrimaryNamespace {};
@@ -97,7 +97,7 @@ namespace NestedNamespace {
 // Function in NestedNamespace
 void functionInNestedNamespace() {}
 // MD-NESTED-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
-// HTML-NESTED-INDEX-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-NESTED-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 // Class in NestedNamespace
 class ClassInNestedNamespace {};
@@ -128,10 +128,17 @@ class ClassInNestedNamespace {};
 // HTML-NESTED-INDEX:             </a>
 // HTML-NESTED-INDEX:         </li>
 // HTML-NESTED-INDEX:     </ul>
-// HTML-NESTED-INDEX-NOT: <h2 id="Functions">Functions</h2>
-// HTML-NESTED-INDEX-NOT: <h3 id="{{([0-9A-F]{40})}}">functionInNestedNamespace</h3>
-// HTML-NESTED-INDEX-NOT: <p>void functionInNestedNamespace()</p>
-// HTML-NESTED-INDEX-NOT: <p> Function in NestedNamespace</p>
+// HTML-NESTED-INDEX:     <div class="delimiter-container">
+// HTML-NESTED-INDEX:         <div id="{{([0-9A-F]{40})}}">
+// HTML-NESTED-INDEX:             <pre><code class="language-cpp code-clang-doc">void functionInNestedNamespace ()</code></pre>
+// HTML-NESTED-INDEX:             <div>
+// HTML-NESTED-INDEX:                 <div>
+// HTML-NESTED-INDEX:                     <p> Function in NestedNamespace</p>
+// HTML-NESTED-INDEX:                 </div>
+// HTML-NESTED-INDEX:             </div>
+// HTML-NESTED-INDEX:             <p>Defined at line 98 of file {{.*}}namespace.cpp</p>
+// HTML-NESTED-INDEX:         </div>
+// HTML-NESTED-INDEX:     </div>
 } // namespace PrimaryNamespace
 
 // MD-PRIMARY-INDEX: # namespace PrimaryNamespace
@@ -148,25 +155,31 @@ class ClassInNestedNamespace {};
 // HTML-PRIMARY-INDEX: <h2>PrimaryNamespace</h2>
 // HTML-PRIMARY-INDEX-NOT: <h2 id="Namespaces">Namespaces</h2>
 // HTML-PRIMARY-INDEX-NOT: <a href="NestedNamespace{{[\/]}}index.html">NestedNamespace</a>
-// HTML-PRIMARY-INDEX      <h2>Inner Classes</h2>
-// HTML-PRIMARY-INDEX          <ul class="class-container">
-// HTML-PRIMARY-INDEX              <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
-// HTML-PRIMARY-INDEX                  <a href="_ZTVN16PrimaryNamespace23ClassInPrimaryNamespaceE.html">
-// HTML-PRIMARY-INDEX                      <pre><code class="language-cpp code-clang-doc">class ClassInPrimaryNamespace</code></pre>
-// HTML-PRIMARY-INDEX                  </a>
-// HTML-PRIMARY-INDEX              </li>
-// HTML-PRIMARY-INDEX          </ul>
-// HTML-PRIMARY-INDEX-NOT: <h2 id="Functions">Functions</h2>
-// HTML-PRIMARY-INDEX-NOT: <h3 id="{{([0-9A-F]{40})}}">functionInPrimaryNamespace</h3>
-// HTML-PRIMARY-INDEX-NOT: <p>void functionInPrimaryNamespace()</p>
-// HTML-PRIMARY-INDEX-NOT: <p> Function in PrimaryNamespace</p>
-
+// HTML-PRIMARY-INDEX:      <h2>Inner Classes</h2>
+// HTML-PRIMARY-INDEX:          <ul class="class-container">
+// HTML-PRIMARY-INDEX:              <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
+// HTML-PRIMARY-INDEX:                  <a href="_ZTVN16PrimaryNamespace23ClassInPrimaryNamespaceE.html">
+// HTML-PRIMARY-INDEX:                      <pre><code class="language-cpp code-clang-doc">class ClassInPrimaryNamespace</code></pre>
+// HTML-PRIMARY-INDEX:                 </a>
+// HTML-PRIMARY-INDEX:              </li>
+// HTML-PRIMARY-INDEX:          </ul>
+// HTML-PRIMARY-INDEX:      <div class="delimiter-container">
+// HTML-PRIMARY-INDEX:          <div id="{{([0-9A-F]{40})}}">
+// HTML-PRIMARY-INDEX:              <pre><code class="language-cpp code-clang-doc">void functionInPrimaryNamespace ()</code></pre>
+// HTML-PRIMARY-INDEX:              <div>
+// HTML-PRIMARY-INDEX:                  <div>
+// HTML-PRIMARY-INDEX:                      <p> Function in PrimaryNamespace</p>
+// HTML-PRIMARY-INDEX:                  </div>
+// HTML-PRIMARY-INDEX:              </div>
+// HTML-PRIMARY-INDEX:              <p>Defined at line 81 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-PRIMARY-INDEX:          </div>
+// HTML-PRIMARY-INDEX:      </div>
 // AnotherNamespace
 namespace AnotherNamespace {
 // Function in AnotherNamespace
 void functionInAnotherNamespace() {}
 // MD-ANOTHER-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp#[[@LINE-1]]*
-// HTML-ANOTHER-INDEX-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-ANOTHER-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 
 // Class in AnotherNamespace
 class ClassInAnotherNamespace {};
@@ -198,10 +211,17 @@ class ClassInAnotherNamespace {};
 // HTML-ANOTHER-INDEX:             </a>
 // HTML-ANOTHER-INDEX:         </li>
 // HTML-ANOTHER-INDEX:     </ul>
-// HTML-ANOTHER-INDEX-NOT: <h2 id="Functions">Functions</h2>
-// HTML-ANOTHER-INDEX-NOT: <h3 id="{{([0-9A-F]{40})}}">functionInAnotherNamespace</h3>
-// HTML-ANOTHER-INDEX-NOT: <p>void functionInAnotherNamespace()</p>
-// HTML-ANOTHER-INDEX-NOT: <p> Function in AnotherNamespace</p>
+// HTML-ANOTHER-INDEX:     <div class="delimiter-container">
+// HTML-ANOTHER-INDEX:         <div id="{{([0-9A-F]{40})}}">
+// HTML-ANOTHER-INDEX:             <pre><code class="language-cpp code-clang-doc">void functionInAnotherNamespace ()</code></pre>
+// HTML-ANOTHER-INDEX:             <div>
+// HTML-ANOTHER-INDEX:                 <div>
+// HTML-ANOTHER-INDEX:                     <p> Function in AnotherNamespace</p>
+// HTML-ANOTHER-INDEX:                 </div>
+// HTML-ANOTHER-INDEX:             </div>
+// HTML-ANOTHER-INDEX:             <p>Defined at line 180 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
+// HTML-ANOTHER-INDEX:         </div>
+// HTML-ANOTHER-INDEX:     </div>
 
 // COM: FIXME: Add namespaces to namespace template
 // HTML-GLOBAL-INDEX-NOT: <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">

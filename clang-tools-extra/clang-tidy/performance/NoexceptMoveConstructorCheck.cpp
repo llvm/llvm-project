@@ -30,7 +30,7 @@ DiagnosticBuilder NoexceptMoveConstructorCheck::reportMissingNoexcept(
   return diag(FuncDecl->getLocation(),
               "move %select{assignment operator|constructor}0s should "
               "be marked noexcept")
-         << CXXConstructorDecl::classof(FuncDecl);
+         << isa<CXXConstructorDecl>(FuncDecl);
 }
 
 void NoexceptMoveConstructorCheck::reportNoexceptEvaluatedToFalse(
@@ -38,7 +38,7 @@ void NoexceptMoveConstructorCheck::reportNoexceptEvaluatedToFalse(
   diag(NoexceptExpr->getExprLoc(),
        "noexcept specifier on the move %select{assignment "
        "operator|constructor}0 evaluates to 'false'")
-      << CXXConstructorDecl::classof(FuncDecl);
+      << isa<CXXConstructorDecl>(FuncDecl);
 }
 
 } // namespace clang::tidy::performance

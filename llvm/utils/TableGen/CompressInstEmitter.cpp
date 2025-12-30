@@ -633,7 +633,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   // HwModeId is used if we have any RegClassByHwMode patterns
   if (!Target.getAllRegClassByHwMode().empty())
     FuncH.indent(2) << "[[maybe_unused]] unsigned HwModeId = "
-                    << "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);";
+                    << "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n";
 
   if (CompressPatterns.empty()) {
     OS << FH;

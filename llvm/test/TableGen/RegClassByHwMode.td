@@ -66,6 +66,19 @@ include "Common/RegClassByHwModeCommon.td"
 // INSTRINFO: static inline void InitMyTargetMCInstrInfo(
 // INSTRINFO-NEXT: II->InitMCInstrInfo(MyTargetDescs.Insts, MyTargetInstrNameIndices, MyTargetInstrNameData, nullptr, nullptr, {{[0-9]+}}, &MyTargetRegClassByHwModeTables[0][0], 3);
 
+// INSTRINFO: #ifdef GET_INSTRINFO_HEADER
+// INSTRINFO-NEXT: #undef GET_INSTRINFO_HEADER
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: namespace llvm {
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: struct MyTargetGenInstrInfo : public TargetInstrInfo {
+// INSTRINFO-NEXT:   explicit MyTargetGenInstrInfo(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u, unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);
+// INSTRINFO-NEXT:   ~MyTargetGenInstrInfo() override = default;
+// INSTRINFO-NEXT: };
+// INSTRINFO-NEXT: extern const int16_t MyTargetRegClassByHwModeTables[4][3];
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: } // namespace llvm
+// INSTRINFO: #endif // GET_INSTRINFO_HEADER
 
 
 // ASMMATCHER: enum MatchClassKind {
