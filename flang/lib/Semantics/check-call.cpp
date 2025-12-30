@@ -18,7 +18,6 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
-#include "llvm/ADT/StringSet.h"
 #include <map>
 #include <string>
 
@@ -340,15 +339,6 @@ static bool DefersSameTypeParameters(
   }
   return true;
 }
-
-// List of intrinsics that are skipped when checking for device actual
-// arguments.
-static const llvm::StringSet<> cudaSkippedIntrinsics = {
-    "__builtin_c_f_pointer", "__builtin_c_loc"};
-// List of intrinsics that can have a device actual argument if it is an
-// allocatable or pointer.
-static const llvm::StringSet<> cudaAllowedIntrinsics = {"size", "lbound",
-    "ubound", "shape", "allocated", "associated", "kind", "present"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
@@ -1148,32 +1138,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "%s has %s but its associated actual argument has %s"_err_en_US,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
-    }
-  }
-  // Emit an error message if an actual argument passed to a host intrinsic is
-  // on the device.
-  if (intrinsic && !FindCUDADeviceContext(scope) &&
-      !FindOpenACCConstructContaining(scope)) {
-    if (!cudaSkippedIntrinsics.contains(intrinsic->name)) {
-      std::optional<common::CUDADataAttr> actualDataAttr;
-      if (const auto *actualObject{actualLastSymbol
-                  ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
-                  : nullptr}) {
-        actualDataAttr = actualObject->cudaDataAttr();
-      }
-      if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::Device) {
-        // Allocatable or pointer with device attribute have their descriptor in
-        // managed memory. It is allowed to pass them to some inquiry
-        // intrinsics.
-        if (!actualLastSymbol || !IsAllocatableOrPointer(*actualLastSymbol) ||
-            (IsAllocatableOrPointer(*actualLastSymbol) &&
-                !cudaAllowedIntrinsics.contains(intrinsic->name))) {
-          messages.Say(
-              "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
-              actualLastSymbol ? actualLastSymbol->name() : "",
-              intrinsic->name);
-        }
-      }
     }
   }
 
