@@ -86,23 +86,6 @@ def _llvm_repos_extension_impl(module_ctx):
         build_file = "@llvm-raw//utils/bazel/third_party_build:pyyaml.BUILD",
     )
 
-    # TODO: bump to robin-map-1.4.0
-    http_archive(
-        name = "robin_map",
-        build_file = "@llvm-raw//utils/bazel/third_party_build:robin_map.BUILD",
-        sha256 = "a8424ad3b0affd4c57ed26f0f3d8a29604f0e1f2ef2089f497f614b1c94c7236",
-        strip_prefix = "robin-map-1.3.0",
-        url = "https://github.com/Tessil/robin-map/archive/refs/tags/v1.3.0.tar.gz",
-    )
-
-    http_archive(
-        name = "nanobind",
-        build_file = "@llvm-raw//utils/bazel/third_party_build:nanobind.BUILD",
-        sha256 = "8ce3667dce3e64fc06bfb9b778b6f48731482362fb89a43da156632266cd5a90",
-        strip_prefix = "nanobind-2.9.2",
-        url = "https://github.com/wjakob/nanobind/archive/refs/tags/v2.9.2.tar.gz",
-    )
-
 llvm_repos_extension = module_extension(
     implementation = _llvm_repos_extension_impl,
 )

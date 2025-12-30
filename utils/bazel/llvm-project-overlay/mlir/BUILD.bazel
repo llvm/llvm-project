@@ -7,6 +7,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@nanobind_bazel//:build_defs.bzl", "nanobind_extension", "nanobind_library")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//llvm:targets.bzl", "llvm_targets")
@@ -1132,7 +1133,7 @@ cc_library(
     ],
 )
 
-cc_library(
+nanobind_library(
     name = "MLIRBindingsPythonNanobindHeaders",
     includes = [
         "include",
@@ -1140,12 +1141,11 @@ cc_library(
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIRHeaders",
-        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
-cc_library(
+nanobind_library(
     name = "MLIRBindingsPythonNanobindHeadersAndDeps",
     includes = [
         "include",
@@ -1153,18 +1153,11 @@ cc_library(
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIR",
-        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
-# These flags are needed for pybind11 to work.
-PYBIND11_COPTS = [
-    "-fexceptions",
-    "-frtti",
-]
-
-PYBIND11_FEATURES = [
+NB_FEATURES = [
     # Cannot use header_modules (parse_headers feature fails).
     "-use_header_modules",
 ]
@@ -1190,11 +1183,10 @@ filegroup(
     ]),
 )
 
-cc_library(
+nanobind_library(
     name = "MLIRBindingsPythonCore",
     srcs = [":MLIRBindingsPythonSourceFiles"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    features = NB_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
@@ -1209,16 +1201,14 @@ cc_library(
         ":Support",
         ":config",
         "//llvm:Support",
-        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
-cc_library(
+nanobind_library(
     name = "MLIRBindingsPythonCoreNoCAPI",
     srcs = [":MLIRBindingsPythonSourceFiles"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    features = NB_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
@@ -1232,7 +1222,6 @@ cc_library(
         ":Support",
         ":config",
         "//llvm:Support",
-        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
@@ -1251,130 +1240,105 @@ cc_library(
 )
 
 # Dynamic library with the MLIR Python extension.
-cc_binary(
-    name = "_mlir.so",
+nanobind_extension(
+    name = "_mlir",
     srcs = ["lib/Bindings/Python/MainModule.cpp"],
-    # These flags are needed for pybind11 to work.
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    features = NB_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
-    linkshared = 1,
     linkstatic = 0,
     deps = [
         ":MLIRBindingsPythonCore",
         ":MLIRBindingsPythonHeadersAndDeps",
-        "@nanobind",
     ],
 )
 
-cc_binary(
-    name = "_mlirDialectsIRDL.so",
+nanobind_extension(
+    name = "_mlirDialectsIRDL",
     srcs = ["lib/Bindings/Python/DialectIRDL.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
-    linkshared = 1,
+    features = NB_FEATURES,
     linkstatic = 0,
     deps = [
         ":CAPIIR",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
-        "@nanobind",
     ],
 )
 
-cc_binary(
-    name = "_mlirDialectsLinalg.so",
+nanobind_extension(
+    name = "_mlirDialectsLinalg",
     srcs = ["lib/Bindings/Python/DialectLinalg.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
+    features = NB_FEATURES,
     includes = [
         "lib/Bindings/Python",
     ],
-    linkshared = 1,
     linkstatic = 0,
     deps = [
         ":CAPIIR",
         ":CAPILinalg",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
-        "@nanobind",
     ],
 )
 
-cc_binary(
-    name = "_mlirDialectsLLVM.so",
+nanobind_extension(
+    name = "_mlirDialectsLLVM",
     srcs = ["lib/Bindings/Python/DialectLLVM.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
-    linkshared = 1,
+    features = NB_FEATURES,
     linkstatic = 0,
     deps = [
         ":CAPIIR",
         ":CAPILLVM",
         ":CAPITarget",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
-        "@nanobind",
     ],
 )
 
-cc_binary(
-    name = "_mlirDialectsQuant.so",
+nanobind_extension(
+    name = "_mlirDialectsQuant",
     srcs = ["lib/Bindings/Python/DialectQuant.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
-    linkshared = 1,
+    features = NB_FEATURES,
     linkstatic = 0,
     deps = [
         ":CAPIIR",
         ":CAPIQuant",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
-        "@nanobind",
     ],
 )
 
-cc_binary(
-    name = "_mlirDialectsSparseTensor.so",
+nanobind_extension(
+    name = "_mlirDialectsSparseTensor",
     srcs = ["lib/Bindings/Python/DialectSparseTensor.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
-    linkshared = 1,
+    features = NB_FEATURES,
     linkstatic = 0,
     deps = [
         ":CAPIIR",
         ":CAPISparseTensor",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
-        "@nanobind",
     ],
 )
 
 # Dynamic library with the MLIR Conversions Python extension.
-cc_binary(
-    name = "_mlirExecutionEngine.so",
+nanobind_extension(
+    name = "_mlirExecutionEngine",
     srcs = ["lib/Bindings/Python/ExecutionEngineModule.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
-    linkshared = 1,
+    features = NB_FEATURES,
     linkstatic = 0,
     deps = [
         ":CAPIExecutionEngine",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
-        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
 # Dynamic library with the MLIR Linalg dialect+passes Python extension.
-cc_binary(
-    name = "_mlirLinalgPasses.so",
+nanobind_extension(
+    name = "_mlirLinalgPasses",
     srcs = ["lib/Bindings/Python/LinalgPasses.cpp"],
-    copts = PYBIND11_COPTS,
-    features = PYBIND11_FEATURES,
-    linkshared = 1,
+    features = NB_FEATURES,
     linkstatic = 0,
     deps = [
         ":CAPILinalg",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
-        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )

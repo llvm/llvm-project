@@ -8,6 +8,7 @@ module(name = "llvm-project-overlay")
 
 bazel_dep(name = "apple_support", version = "1.24.1", repo_name = "build_bazel_apple_support")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "nanobind_bazel", version = "2.9.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "protobuf", version = "31.1", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_android", version = "0.6.6")
@@ -25,11 +26,9 @@ use_repo(
     "llvm-raw",
     "mpc",
     "mpfr",
-    "nanobind",
     "pfm",
     "pybind11",
     "pyyaml",
-    "robin_map",
     "vulkan_headers",
     "vulkan_sdk",
 )
