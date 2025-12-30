@@ -257,6 +257,263 @@ createCustomDialectWrapper(const std::string &dialectNamespace,
 }
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// NB: all bind and bindDerived methods need to reside in the same
+// binary/extension as the NB_MODULE macro/call. This is because
+// nb_internals *internals within the non-unique nanobind::detail (i.e., the
+// same namespace for all bindings packages).
+//===----------------------------------------------------------------------===//
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+void PyRegionList::bindDerived(ClassTy &c) {
+  c.def("__iter__", &PyRegionList::dunderIter,
+        "Returns an iterator over the regions in the sequence.");
+}
+
+void PyOpResult::bindDerived(ClassTy &c) {
+  c.def_prop_ro(
+      "owner",
+      [](PyOpResult &self) -> nanobind::typed<nanobind::object, PyOpView> {
+        assert(mlirOperationEqual(self.getParentOperation()->get(),
+                                  mlirOpResultGetOwner(self.get())) &&
+               "expected the owner of the value in Python to match that in "
+               "the IR");
+        return self.getParentOperation()->createOpView();
+      },
+      "Returns the operation that produces this result.");
+  c.def_prop_ro(
+      "result_number",
+      [](PyOpResult &self) { return mlirOpResultGetResultNumber(self.get()); },
+      "Returns the position of this result in the operation's result list.");
+}
+
+void PyOpResultList::bindDerived(ClassTy &c) {
+  c.def_prop_ro(
+      "types",
+      [](PyOpResultList &self) {
+        return getValueTypes(self, self.operation->getContext());
+      },
+      "Returns a list of types for all results in this result list.");
+  c.def_prop_ro(
+      "owner",
+      [](PyOpResultList &self) -> nanobind::typed<nanobind::object, PyOpView> {
+        return self.operation->createOpView();
+      },
+      "Returns the operation that owns this result list.");
+}
+
+void PyBlockArgument::bindDerived(ClassTy &c) {
+  c.def_prop_ro(
+      "owner",
+      [](PyBlockArgument &self) {
+        return PyBlock(self.getParentOperation(),
+                       mlirBlockArgumentGetOwner(self.get()));
+      },
+      "Returns the block that owns this argument.");
+  c.def_prop_ro(
+      "arg_number",
+      [](PyBlockArgument &self) {
+        return mlirBlockArgumentGetArgNumber(self.get());
+      },
+      "Returns the position of this argument in the block's argument list.");
+  c.def(
+      "set_type",
+      [](PyBlockArgument &self, PyType type) {
+        return mlirBlockArgumentSetType(self.get(), type);
+      },
+      nanobind::arg("type"), "Sets the type of this block argument.");
+  c.def(
+      "set_location",
+      [](PyBlockArgument &self, PyLocation loc) {
+        return mlirBlockArgumentSetLocation(self.get(), loc);
+      },
+      nanobind::arg("loc"), "Sets the location of this block argument.");
+}
+
+void PyOpOperandList::bindDerived(ClassTy &c) {
+  c.def("__setitem__", &PyOpOperandList::dunderSetItem, nanobind::arg("index"),
+        nanobind::arg("value"),
+        "Sets the operand at the specified index to a new value.");
+}
+
+void PyOpSuccessors::bindDerived(ClassTy &c) {
+  c.def("__setitem__", &PyOpSuccessors::dunderSetItem, nanobind::arg("index"),
+        nanobind::arg("block"),
+        "Sets the successor block at the specified index.");
+}
+
+void PyBlockArgumentList::bindDerived(ClassTy &c) {
+  c.def_prop_ro(
+      "types",
+      [](PyBlockArgumentList &self) {
+        return getValueTypes(self, self.operation->getContext());
+      },
+      "Returns a list of types for all arguments in this argument list.");
+}
+
+void PyAttrBuilderMap::bind(nanobind::module_ &m) {
+  nanobind::class_<PyAttrBuilderMap>(m, "AttrBuilder")
+      .def_static("contains", &PyAttrBuilderMap::dunderContains,
+                  nanobind::arg("attribute_kind"),
+                  "Checks whether an attribute builder is registered for the "
+                  "given attribute kind.")
+      .def_static("get", &PyAttrBuilderMap::dunderGetItemNamed,
+                  nanobind::arg("attribute_kind"),
+                  "Gets the registered attribute builder for the given "
+                  "attribute kind.")
+      .def_static("insert", &PyAttrBuilderMap::dunderSetItemNamed,
+                  nanobind::arg("attribute_kind"),
+                  nanobind::arg("attr_builder"),
+                  nanobind::arg("replace") = false,
+                  "Register an attribute builder for building MLIR "
+                  "attributes from Python values.");
+}
+
+void PyRegionIterator::bind(nanobind::module_ &m) {
+  nanobind::class_<PyRegionIterator>(m, "RegionIterator")
+      .def("__iter__", &PyRegionIterator::dunderIter,
+           "Returns an iterator over the regions in the operation.")
+      .def("__next__", &PyRegionIterator::dunderNext,
+           "Returns the next region in the iteration.");
+}
+
+void PyBlockIterator::bind(nanobind::module_ &m) {
+  nanobind::class_<PyBlockIterator>(m, "BlockIterator")
+      .def("__iter__", &PyBlockIterator::dunderIter,
+           "Returns an iterator over the blocks in the operation's region.")
+      .def("__next__", &PyBlockIterator::dunderNext,
+           "Returns the next block in the iteration.");
+}
+
+void PyBlockList::bind(nanobind::module_ &m) {
+  nanobind::class_<PyBlockList>(m, "BlockList")
+      .def("__getitem__", &PyBlockList::dunderGetItem,
+           "Returns the block at the specified index.")
+      .def("__iter__", &PyBlockList::dunderIter,
+           "Returns an iterator over blocks in the operation's region.")
+      .def("__len__", &PyBlockList::dunderLen,
+           "Returns the number of blocks in the operation's region.")
+      .def("append", &PyBlockList::appendBlock,
+           R"(
+              Appends a new block, with argument types as positional args.
+
+              Returns:
+                The created block.
+             )",
+           nanobind::arg("args"), nanobind::kw_only(),
+           nanobind::arg("arg_locs") = std::nullopt);
+}
+
+void PyOperationIterator::bind(nanobind::module_ &m) {
+  nanobind::class_<PyOperationIterator>(m, "OperationIterator")
+      .def("__iter__", &PyOperationIterator::dunderIter,
+           "Returns an iterator over the operations in an operation's block.")
+      .def("__next__", &PyOperationIterator::dunderNext,
+           "Returns the next operation in the iteration.");
+}
+
+void PyOperationList::bind(nanobind::module_ &m) {
+  nanobind::class_<PyOperationList>(m, "OperationList")
+      .def("__getitem__", &PyOperationList::dunderGetItem,
+           "Returns the operation at the specified index.")
+      .def("__iter__", &PyOperationList::dunderIter,
+           "Returns an iterator over operations in the list.")
+      .def("__len__", &PyOperationList::dunderLen,
+           "Returns the number of operations in the list.");
+}
+
+void PyOpOperand::bind(nanobind::module_ &m) {
+  nanobind::class_<PyOpOperand>(m, "OpOperand")
+      .def_prop_ro("owner", &PyOpOperand::getOwner,
+                   "Returns the operation that owns this operand.")
+      .def_prop_ro("operand_number", &PyOpOperand::getOperandNumber,
+                   "Returns the operand number in the owning operation.");
+}
+
+void PyOpOperandIterator::bind(nanobind::module_ &m) {
+  nanobind::class_<PyOpOperandIterator>(m, "OpOperandIterator")
+      .def("__iter__", &PyOpOperandIterator::dunderIter,
+           "Returns an iterator over operands.")
+      .def("__next__", &PyOpOperandIterator::dunderNext,
+           "Returns the next operand in the iteration.");
+}
+
+void PyOpAttributeMap::bind(nanobind::module_ &m) {
+  nanobind::class_<PyOpAttributeMap>(m, "OpAttributeMap")
+      .def("__contains__", &PyOpAttributeMap::dunderContains,
+           nanobind::arg("name"),
+           "Checks if an attribute with the given name exists in the map.")
+      .def("__len__", &PyOpAttributeMap::dunderLen,
+           "Returns the number of attributes in the map.")
+      .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed,
+           nanobind::arg("name"), "Gets an attribute by name.")
+      .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed,
+           nanobind::arg("index"), "Gets a named attribute by index.")
+      .def("__setitem__", &PyOpAttributeMap::dunderSetItem,
+           nanobind::arg("name"), nanobind::arg("attr"),
+           "Sets an attribute with the given name.")
+      .def("__delitem__", &PyOpAttributeMap::dunderDelItem,
+           nanobind::arg("name"), "Deletes an attribute with the given name.")
+      .def(
+          "__iter__",
+          [](PyOpAttributeMap &self) {
+            nanobind::list keys;
+            PyOpAttributeMap::forEachAttr(
+                self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
+                  keys.append(nanobind::str(name.data, name.length));
+                });
+            return nanobind::iter(keys);
+          },
+          "Iterates over attribute names.")
+      .def(
+          "keys",
+          [](PyOpAttributeMap &self) {
+            nanobind::list out;
+            PyOpAttributeMap::forEachAttr(
+                self.operation->get(), [&](MlirStringRef name, MlirAttribute) {
+                  out.append(nanobind::str(name.data, name.length));
+                });
+            return out;
+          },
+          "Returns a list of attribute names.")
+      .def(
+          "values",
+          [](PyOpAttributeMap &self) {
+            nanobind::list out;
+            PyOpAttributeMap::forEachAttr(
+                self.operation->get(), [&](MlirStringRef, MlirAttribute attr) {
+                  out.append(PyAttribute(self.operation->getContext(), attr)
+                                 .maybeDownCast());
+                });
+            return out;
+          },
+          "Returns a list of attribute values.")
+      .def(
+          "items",
+          [](PyOpAttributeMap &self) {
+            nanobind::list out;
+            PyOpAttributeMap::forEachAttr(
+                self.operation->get(),
+                [&](MlirStringRef name, MlirAttribute attr) {
+                  out.append(nanobind::make_tuple(
+                      nanobind::str(name.data, name.length),
+                      PyAttribute(self.operation->getContext(), attr)
+                          .maybeDownCast()));
+                });
+            return out;
+          },
+          "Returns a list of `(name, attribute)` tuples.");
+}
+
+void populateIRAffine(nb::module_ &m);
+void populateIRAttributes(nb::module_ &m);
+void populateIRInterfaces(nb::module_ &m);
+void populateIRTypes(nb::module_ &m);
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
+
 //------------------------------------------------------------------------------
 // Populates the core exports of the 'ir' submodule.
 //------------------------------------------------------------------------------
@@ -2329,17 +2586,6 @@ static void populateIRCore(nb::module_ &m) {
   // Attribute builder getter.
   PyAttrBuilderMap::bind(m);
 }
-
-namespace mlir {
-namespace python {
-namespace MLIR_BINDINGS_PYTHON_DOMAIN {
-void populateIRAffine(nb::module_ &m);
-void populateIRAttributes(nb::module_ &m);
-void populateIRInterfaces(nb::module_ &m);
-void populateIRTypes(nb::module_ &m);
-} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
-} // namespace python
-} // namespace mlir
 
 // -----------------------------------------------------------------------------
 // Module initialization.

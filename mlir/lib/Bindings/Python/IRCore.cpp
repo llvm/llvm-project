@@ -1958,6 +1958,14 @@ PyOpOperand PyOpOperandIterator::dunderNext() {
 // PyConcreteValue
 //------------------------------------------------------------------------------
 
+PyOpResultList::PyOpResultList(PyOperationRef operation, intptr_t startIndex,
+                               intptr_t length, intptr_t step)
+    : Sliceable(startIndex,
+                length == -1 ? mlirOperationGetNumResults(operation->get())
+                             : length,
+                step),
+      operation(std::move(operation)) {}
+
 intptr_t PyOpResultList::getRawNumElements() {
   operation->checkValid();
   return mlirOperationGetNumResults(operation->get());
@@ -1972,6 +1980,13 @@ PyOpResultList PyOpResultList::slice(intptr_t startIndex, intptr_t length,
                                      intptr_t step) const {
   return PyOpResultList(operation, startIndex, length, step);
 }
+
+PyBlockArgumentList::PyBlockArgumentList(PyOperationRef operation,
+                                         MlirBlock block, intptr_t startIndex,
+                                         intptr_t length, intptr_t step)
+    : Sliceable(startIndex,
+                length == -1 ? mlirBlockGetNumArguments(block) : length, step),
+      operation(std::move(operation)), block(block) {}
 
 intptr_t PyBlockArgumentList::getRawNumElements() {
   operation->checkValid();
@@ -1988,6 +2003,14 @@ PyBlockArgumentList PyBlockArgumentList::slice(intptr_t startIndex,
                                                intptr_t step) const {
   return PyBlockArgumentList(operation, block, startIndex, length, step);
 }
+
+PyOpOperandList::PyOpOperandList(PyOperationRef operation, intptr_t startIndex,
+                                 intptr_t length, intptr_t step)
+    : Sliceable(startIndex,
+                length == -1 ? mlirOperationGetNumOperands(operation->get())
+                             : length,
+                step),
+      operation(operation) {}
 
 void PyOpOperandList::dunderSetItem(intptr_t index, PyValue value) {
   index = wrapIndex(index);
@@ -2018,6 +2041,14 @@ PyOpOperandList PyOpOperandList::slice(intptr_t startIndex, intptr_t length,
   return PyOpOperandList(operation, startIndex, length, step);
 }
 
+PyOpSuccessors::PyOpSuccessors(PyOperationRef operation, intptr_t startIndex,
+                               intptr_t length, intptr_t step)
+    : Sliceable(startIndex,
+                length == -1 ? mlirOperationGetNumSuccessors(operation->get())
+                             : length,
+                step),
+      operation(operation) {}
+
 void PyOpSuccessors::dunderSetItem(intptr_t index, PyBlock block) {
   index = wrapIndex(index);
   mlirOperationSetSuccessor(operation->get(), index, block.get());
@@ -2038,6 +2069,14 @@ PyOpSuccessors PyOpSuccessors::slice(intptr_t startIndex, intptr_t length,
   return PyOpSuccessors(operation, startIndex, length, step);
 }
 
+PyBlockSuccessors::PyBlockSuccessors(PyBlock block, PyOperationRef operation,
+                                     intptr_t startIndex, intptr_t length,
+                                     intptr_t step)
+    : Sliceable(startIndex,
+                length == -1 ? mlirBlockGetNumSuccessors(block.get()) : length,
+                step),
+      operation(operation), block(block) {}
+
 intptr_t PyBlockSuccessors::getRawNumElements() {
   block.checkValid();
   return mlirBlockGetNumSuccessors(block.get());
@@ -2052,6 +2091,16 @@ PyBlockSuccessors PyBlockSuccessors::slice(intptr_t startIndex, intptr_t length,
                                            intptr_t step) const {
   return PyBlockSuccessors(block, operation, startIndex, length, step);
 }
+
+PyBlockPredecessors::PyBlockPredecessors(PyBlock block,
+                                         PyOperationRef operation,
+                                         intptr_t startIndex, intptr_t length,
+                                         intptr_t step)
+    : Sliceable(startIndex,
+                length == -1 ? mlirBlockGetNumPredecessors(block.get())
+                             : length,
+                step),
+      operation(operation), block(block) {}
 
 intptr_t PyBlockPredecessors::getRawNumElements() {
   block.checkValid();

@@ -1339,23 +1339,7 @@ struct MLIR_PYTHON_API_EXPORTED PyAttrBuilderMap {
   static void dunderSetItemNamed(const std::string &attributeKind,
                                  nanobind::callable func, bool replace);
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyAttrBuilderMap>(m, "AttrBuilder")
-        .def_static("contains", &PyAttrBuilderMap::dunderContains,
-                    nanobind::arg("attribute_kind"),
-                    "Checks whether an attribute builder is registered for the "
-                    "given attribute kind.")
-        .def_static("get", &PyAttrBuilderMap::dunderGetItemNamed,
-                    nanobind::arg("attribute_kind"),
-                    "Gets the registered attribute builder for the given "
-                    "attribute kind.")
-        .def_static("insert", &PyAttrBuilderMap::dunderSetItemNamed,
-                    nanobind::arg("attribute_kind"),
-                    nanobind::arg("attr_builder"),
-                    nanobind::arg("replace") = false,
-                    "Register an attribute builder for building MLIR "
-                    "attributes from Python values.");
-  }
+  static void bind(nanobind::module_ &m);
 };
 
 //------------------------------------------------------------------------------
@@ -1371,13 +1355,7 @@ public:
 
   PyRegion dunderNext();
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyRegionIterator>(m, "RegionIterator")
-        .def("__iter__", &PyRegionIterator::dunderIter,
-             "Returns an iterator over the regions in the operation.")
-        .def("__next__", &PyRegionIterator::dunderNext,
-             "Returns the next region in the iteration.");
-  }
+  static void bind(nanobind::module_ &m);
 
 private:
   PyOperationRef operation;
@@ -1396,10 +1374,7 @@ public:
 
   PyRegionIterator dunderIter();
 
-  static void bindDerived(ClassTy &c) {
-    c.def("__iter__", &PyRegionList::dunderIter,
-          "Returns an iterator over the regions in the sequence.");
-  }
+  static void bindDerived(ClassTy &c);
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
@@ -1423,13 +1398,7 @@ public:
 
   PyBlock dunderNext();
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyBlockIterator>(m, "BlockIterator")
-        .def("__iter__", &PyBlockIterator::dunderIter,
-             "Returns an iterator over the blocks in the operation's region.")
-        .def("__next__", &PyBlockIterator::dunderNext,
-             "Returns the next block in the iteration.");
-  }
+  static void bind(nanobind::module_ &m);
 
 private:
   PyOperationRef operation;
@@ -1453,24 +1422,7 @@ public:
   PyBlock appendBlock(const nanobind::args &pyArgTypes,
                       const std::optional<nanobind::sequence> &pyArgLocs);
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyBlockList>(m, "BlockList")
-        .def("__getitem__", &PyBlockList::dunderGetItem,
-             "Returns the block at the specified index.")
-        .def("__iter__", &PyBlockList::dunderIter,
-             "Returns an iterator over blocks in the operation's region.")
-        .def("__len__", &PyBlockList::dunderLen,
-             "Returns the number of blocks in the operation's region.")
-        .def("append", &PyBlockList::appendBlock,
-             R"(
-              Appends a new block, with argument types as positional args.
-
-              Returns:
-                The created block.
-             )",
-             nanobind::arg("args"), nanobind::kw_only(),
-             nanobind::arg("arg_locs") = std::nullopt);
-  }
+  static void bind(nanobind::module_ &m);
 
 private:
   PyOperationRef operation;
@@ -1486,13 +1438,7 @@ public:
 
   nanobind::typed<nanobind::object, PyOpView> dunderNext();
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyOperationIterator>(m, "OperationIterator")
-        .def("__iter__", &PyOperationIterator::dunderIter,
-             "Returns an iterator over the operations in an operation's block.")
-        .def("__next__", &PyOperationIterator::dunderNext,
-             "Returns the next operation in the iteration.");
-  }
+  static void bind(nanobind::module_ &m);
 
 private:
   PyOperationRef parentOperation;
@@ -1518,15 +1464,7 @@ public:
 
   nanobind::typed<nanobind::object, PyOpView> dunderGetItem(intptr_t index);
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyOperationList>(m, "OperationList")
-        .def("__getitem__", &PyOperationList::dunderGetItem,
-             "Returns the operation at the specified index.")
-        .def("__iter__", &PyOperationList::dunderIter,
-             "Returns an iterator over operations in the list.")
-        .def("__len__", &PyOperationList::dunderLen,
-             "Returns the number of operations in the list.");
-  }
+  static void bind(nanobind::module_ &m);
 
 private:
   PyOperationRef parentOperation;
@@ -1541,13 +1479,7 @@ public:
 
   size_t getOperandNumber() const;
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyOpOperand>(m, "OpOperand")
-        .def_prop_ro("owner", &PyOpOperand::getOwner,
-                     "Returns the operation that owns this operand.")
-        .def_prop_ro("operand_number", &PyOpOperand::getOperandNumber,
-                     "Returns the operand number in the owning operation.");
-  }
+  static void bind(nanobind::module_ &m);
 
 private:
   MlirOpOperand opOperand;
@@ -1561,13 +1493,7 @@ public:
 
   PyOpOperand dunderNext();
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyOpOperandIterator>(m, "OpOperandIterator")
-        .def("__iter__", &PyOpOperandIterator::dunderIter,
-             "Returns an iterator over operands.")
-        .def("__next__", &PyOpOperandIterator::dunderNext,
-             "Returns the next operand in the iteration.");
-  }
+  static void bind(nanobind::module_ &m);
 
 private:
   MlirOpOperand opOperand;
@@ -1641,24 +1567,7 @@ public:
   static constexpr const char *pyClassName = "OpResult";
   using PyConcreteValue::PyConcreteValue;
 
-  static void bindDerived(ClassTy &c) {
-    c.def_prop_ro(
-        "owner",
-        [](PyOpResult &self) -> nanobind::typed<nanobind::object, PyOpView> {
-          assert(mlirOperationEqual(self.getParentOperation()->get(),
-                                    mlirOpResultGetOwner(self.get())) &&
-                 "expected the owner of the value in Python to match that in "
-                 "the IR");
-          return self.getParentOperation()->createOpView();
-        },
-        "Returns the operation that produces this result.");
-    c.def_prop_ro(
-        "result_number",
-        [](PyOpResult &self) {
-          return mlirOpResultGetResultNumber(self.get());
-        },
-        "Returns the position of this result in the operation's result list.");
-  }
+  static void bindDerived(ClassTy &c);
 };
 
 /// Returns the list of types of the values held by container.
@@ -1686,28 +1595,9 @@ public:
   using SliceableT = Sliceable<PyOpResultList, PyOpResult>;
 
   PyOpResultList(PyOperationRef operation, intptr_t startIndex = 0,
-                 intptr_t length = -1, intptr_t step = 1)
-      : Sliceable(startIndex,
-                  length == -1 ? mlirOperationGetNumResults(operation->get())
-                               : length,
-                  step),
-        operation(std::move(operation)) {}
+                 intptr_t length = -1, intptr_t step = 1);
 
-  static void bindDerived(ClassTy &c) {
-    c.def_prop_ro(
-        "types",
-        [](PyOpResultList &self) {
-          return getValueTypes(self, self.operation->getContext());
-        },
-        "Returns a list of types for all results in this result list.");
-    c.def_prop_ro(
-        "owner",
-        [](PyOpResultList &self)
-            -> nanobind::typed<nanobind::object, PyOpView> {
-          return self.operation->createOpView();
-        },
-        "Returns the operation that owns this result list.");
-  }
+  static void bindDerived(ClassTy &c);
 
   PyOperationRef &getOperation() { return operation; }
 
@@ -1733,33 +1623,7 @@ public:
   static constexpr const char *pyClassName = "BlockArgument";
   using PyConcreteValue::PyConcreteValue;
 
-  static void bindDerived(ClassTy &c) {
-    c.def_prop_ro(
-        "owner",
-        [](PyBlockArgument &self) {
-          return PyBlock(self.getParentOperation(),
-                         mlirBlockArgumentGetOwner(self.get()));
-        },
-        "Returns the block that owns this argument.");
-    c.def_prop_ro(
-        "arg_number",
-        [](PyBlockArgument &self) {
-          return mlirBlockArgumentGetArgNumber(self.get());
-        },
-        "Returns the position of this argument in the block's argument list.");
-    c.def(
-        "set_type",
-        [](PyBlockArgument &self, PyType type) {
-          return mlirBlockArgumentSetType(self.get(), type);
-        },
-        nanobind::arg("type"), "Sets the type of this block argument.");
-    c.def(
-        "set_location",
-        [](PyBlockArgument &self, PyLocation loc) {
-          return mlirBlockArgumentSetLocation(self.get(), loc);
-        },
-        nanobind::arg("loc"), "Sets the location of this block argument.");
-  }
+  static void bindDerived(ClassTy &c);
 };
 
 /// A list of block arguments. Internally, these are stored as consecutive
@@ -1774,20 +1638,9 @@ public:
 
   PyBlockArgumentList(PyOperationRef operation, MlirBlock block,
                       intptr_t startIndex = 0, intptr_t length = -1,
-                      intptr_t step = 1)
-      : Sliceable(startIndex,
-                  length == -1 ? mlirBlockGetNumArguments(block) : length,
-                  step),
-        operation(std::move(operation)), block(block) {}
+                      intptr_t step = 1);
 
-  static void bindDerived(ClassTy &c) {
-    c.def_prop_ro(
-        "types",
-        [](PyBlockArgumentList &self) {
-          return getValueTypes(self, self.operation->getContext());
-        },
-        "Returns a list of types for all arguments in this argument list.");
-  }
+  static void bindDerived(ClassTy &c);
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
@@ -1818,20 +1671,11 @@ public:
   using SliceableT = Sliceable<PyOpOperandList, PyValue>;
 
   PyOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,
-                  intptr_t length = -1, intptr_t step = 1)
-      : Sliceable(startIndex,
-                  length == -1 ? mlirOperationGetNumOperands(operation->get())
-                               : length,
-                  step),
-        operation(operation) {}
+                  intptr_t length = -1, intptr_t step = 1);
 
   void dunderSetItem(intptr_t index, PyValue value);
 
-  static void bindDerived(ClassTy &c) {
-    c.def("__setitem__", &PyOpOperandList::dunderSetItem,
-          nanobind::arg("index"), nanobind::arg("value"),
-          "Sets the operand at the specified index to a new value.");
-  }
+  static void bindDerived(ClassTy &c);
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
@@ -1857,20 +1701,11 @@ public:
   static constexpr const char *pyClassName = "OpSuccessors";
 
   PyOpSuccessors(PyOperationRef operation, intptr_t startIndex = 0,
-                 intptr_t length = -1, intptr_t step = 1)
-      : Sliceable(startIndex,
-                  length == -1 ? mlirOperationGetNumSuccessors(operation->get())
-                               : length,
-                  step),
-        operation(operation) {}
+                 intptr_t length = -1, intptr_t step = 1);
 
   void dunderSetItem(intptr_t index, PyBlock block);
 
-  static void bindDerived(ClassTy &c) {
-    c.def("__setitem__", &PyOpSuccessors::dunderSetItem, nanobind::arg("index"),
-          nanobind::arg("block"),
-          "Sets the successor block at the specified index.");
-  }
+  static void bindDerived(ClassTy &c);
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
@@ -1897,12 +1732,7 @@ public:
 
   PyBlockSuccessors(PyBlock block, PyOperationRef operation,
                     intptr_t startIndex = 0, intptr_t length = -1,
-                    intptr_t step = 1)
-      : Sliceable(startIndex,
-                  length == -1 ? mlirBlockGetNumSuccessors(block.get())
-                               : length,
-                  step),
-        operation(operation), block(block) {}
+                    intptr_t step = 1);
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
@@ -1933,12 +1763,7 @@ public:
 
   PyBlockPredecessors(PyBlock block, PyOperationRef operation,
                       intptr_t startIndex = 0, intptr_t length = -1,
-                      intptr_t step = 1)
-      : Sliceable(startIndex,
-                  length == -1 ? mlirBlockGetNumPredecessors(block.get())
-                               : length,
-                  step),
-        operation(operation), block(block) {}
+                      intptr_t step = 1);
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
@@ -1979,75 +1804,7 @@ public:
   forEachAttr(MlirOperation op,
               llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn);
 
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<PyOpAttributeMap>(m, "OpAttributeMap")
-        .def("__contains__", &PyOpAttributeMap::dunderContains,
-             nanobind::arg("name"),
-             "Checks if an attribute with the given name exists in the map.")
-        .def("__len__", &PyOpAttributeMap::dunderLen,
-             "Returns the number of attributes in the map.")
-        .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed,
-             nanobind::arg("name"), "Gets an attribute by name.")
-        .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed,
-             nanobind::arg("index"), "Gets a named attribute by index.")
-        .def("__setitem__", &PyOpAttributeMap::dunderSetItem,
-             nanobind::arg("name"), nanobind::arg("attr"),
-             "Sets an attribute with the given name.")
-        .def("__delitem__", &PyOpAttributeMap::dunderDelItem,
-             nanobind::arg("name"), "Deletes an attribute with the given name.")
-        .def(
-            "__iter__",
-            [](PyOpAttributeMap &self) {
-              nanobind::list keys;
-              PyOpAttributeMap::forEachAttr(
-                  self.operation->get(),
-                  [&](MlirStringRef name, MlirAttribute) {
-                    keys.append(nanobind::str(name.data, name.length));
-                  });
-              return nanobind::iter(keys);
-            },
-            "Iterates over attribute names.")
-        .def(
-            "keys",
-            [](PyOpAttributeMap &self) {
-              nanobind::list out;
-              PyOpAttributeMap::forEachAttr(
-                  self.operation->get(),
-                  [&](MlirStringRef name, MlirAttribute) {
-                    out.append(nanobind::str(name.data, name.length));
-                  });
-              return out;
-            },
-            "Returns a list of attribute names.")
-        .def(
-            "values",
-            [](PyOpAttributeMap &self) {
-              nanobind::list out;
-              PyOpAttributeMap::forEachAttr(
-                  self.operation->get(),
-                  [&](MlirStringRef, MlirAttribute attr) {
-                    out.append(PyAttribute(self.operation->getContext(), attr)
-                                   .maybeDownCast());
-                  });
-              return out;
-            },
-            "Returns a list of attribute values.")
-        .def(
-            "items",
-            [](PyOpAttributeMap &self) {
-              nanobind::list out;
-              PyOpAttributeMap::forEachAttr(
-                  self.operation->get(),
-                  [&](MlirStringRef name, MlirAttribute attr) {
-                    out.append(nanobind::make_tuple(
-                        nanobind::str(name.data, name.length),
-                        PyAttribute(self.operation->getContext(), attr)
-                            .maybeDownCast()));
-                  });
-              return out;
-            },
-            "Returns a list of `(name, attribute)` tuples.");
-  }
+  static void bind(nanobind::module_ &m);
 
 private:
   PyOperationRef operation;
