@@ -2658,6 +2658,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_device";
   case LangAS::hlsl_input:
     return "hlsl_input";
+  case LangAS::hlsl_push_constant:
+    return "hlsl_push_constant";
   case LangAS::wasm_funcref:
     return "__funcref";
   default:
