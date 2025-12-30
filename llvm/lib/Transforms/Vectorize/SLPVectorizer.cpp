@@ -13079,19 +13079,11 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
 }
 
 void BoUpSLP::transformNodes() {
+  auto withinNodeTransform = [&](VecTreeTy &VT) -> bool {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  BaseGraphSize = VectorizableTree.back().size();
-  // Turn graph transforming mode on and off, when done.
-  class GraphTransformModeRAAI {
-    bool &SavedIsGraphTransformMode;
+  BaseGraphSize = VT.size();
 
-  public:
-    GraphTransformModeRAAI(bool &IsGraphTransformMode)
-        : SavedIsGraphTransformMode(IsGraphTransformMode) {
-      IsGraphTransformMode = true;
-    }
-    ~GraphTransformModeRAAI() { SavedIsGraphTransformMode = false; }
-  } TransformContext(IsGraphTransformMode);
+  // Turn graph transforming mode on and off, when done.
   // Operands are profitable if they are:
   // 1. At least one constant
   // or
@@ -13118,7 +13110,7 @@ void BoUpSLP::transformNodes() {
 
   // Try to reorder gather nodes for better vectorization opportunities.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
-    TreeEntry &E = *VectorizableTree.back()[Idx];
+    TreeEntry &E = *VT[Idx];
     if (E.isGather())
       reorderGatherNode(E);
   }
@@ -13127,12 +13119,11 @@ void BoUpSLP::transformNodes() {
   // gathered nodes each having less than 16 elements.
   constexpr unsigned VFLimit = 16;
   bool ForceLoadGather =
-      count_if(VectorizableTree.back(),
-               [&](const std::unique_ptr<TreeEntry> &TE) {
-                 return TE->isGather() && TE->hasState() &&
-                        TE->getOpcode() == Instruction::Load &&
-                        TE->getVectorFactor() < VFLimit;
-               }) == 2;
+      count_if(VT, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->isGather() && TE->hasState() &&
+               TE->getOpcode() == Instruction::Load &&
+               TE->getVectorFactor() < VFLimit;
+      }) == 2;
 
   // Checks if the scalars are used in other node.
   auto AreReusedScalars = [&](const TreeEntry *TE, ArrayRef<Value *> VL,
@@ -13189,15 +13180,14 @@ void BoUpSLP::transformNodes() {
   };
   // The tree may grow here, so iterate over nodes, built before.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
-    TreeEntry &E = *VectorizableTree.back()[Idx];
+    TreeEntry &E = *VT[Idx];
     if (E.isGather()) {
       ArrayRef<Value *> VL = E.Scalars;
       const unsigned Sz = getVectorElementSize(VL.front());
       unsigned MinVF = getMinVF(2 * Sz);
       // Do not try partial vectorization for small nodes (<= 2), nodes with the
       // same opcode and same parent block or all constants.
-      if (VL.size() <= 2 ||
-          LoadEntriesToVectorize.contains({VectorizableTree.size() - 1, Idx}) ||
+      if (VL.size() <= 2 || LoadEntriesToVectorize.contains({E.CntIdx, Idx}) ||
           !(!E.hasState() || E.getOpcode() == Instruction::Load ||
             // We use allSameOpcode instead of isAltShuffle because we don't
             // want to use interchangeable instruction here.
@@ -13325,19 +13315,19 @@ void BoUpSLP::transformNodes() {
             // If any instruction is vectorized already - do not try again.
             SameTE = getSameValuesTreeEntry(*It, Slice);
           }
-          unsigned PrevSize = VectorizableTree.back().size();
+          unsigned PrevSize = VT.size();
           [[maybe_unused]] unsigned PrevEntriesSize =
               LoadEntriesToVectorize.size();
           buildTreeRec(Slice, 0, EdgeInfo(&E, UINT_MAX));
-          if (PrevSize + 1 == VectorizableTree.back().size() && !SameTE &&
-              VectorizableTree.back()[PrevSize]->isGather() &&
-              VectorizableTree.back()[PrevSize]->hasState() &&
-              VectorizableTree.back()[PrevSize]->getOpcode() !=
+          if (PrevSize + 1 == VT.size() && !SameTE &&
+              VT[PrevSize]->isGather() &&
+              VT[PrevSize]->hasState() &&
+              VT[PrevSize]->getOpcode() !=
                   Instruction::ExtractElement &&
               !isSplat(Slice)) {
             if (UserIgnoreList && E.Idx == 0 && VF == 2)
               analyzedReductionVals(Slice);
-            VectorizableTree.back().pop_back();
+            VT.pop_back();
             assert(PrevEntriesSize == LoadEntriesToVectorize.size() &&
                    "LoadEntriesToVectorize expected to remain the same");
             continue;
@@ -13490,30 +13480,47 @@ void BoUpSLP::transformNodes() {
 
   if (LoadEntriesToVectorize.empty()) {
     // Single load node - exit.
-    if (VectorizableTree.back().size() <= 1 &&
-        VectorizableTree.back().front()->hasState() &&
-        VectorizableTree.back().front()->getOpcode() == Instruction::Load)
-      return;
+    if (VT.size() <= 1 && VT.front()->hasState() &&
+        VT.front()->getOpcode() == Instruction::Load)
+      return false;
     // Small graph with small VF - exit.
     constexpr unsigned SmallTree = 3;
     constexpr unsigned SmallVF = 2;
-    if ((VectorizableTree.back().size() <= SmallTree &&
-         VectorizableTree.back().front()->Scalars.size() == SmallVF) ||
-        (VectorizableTree.back().size() <= 2 && UserIgnoreList))
-      return;
+    if ((VT.size() <= SmallTree &&
+         VT.front()->Scalars.size() == SmallVF) ||
+        (VT.size() <= 2 && UserIgnoreList))
+      return false;
 
-    if (VectorizableTree.back().front()->isNonPowOf2Vec() &&
+    if (VT.front()->isNonPowOf2Vec() &&
         getCanonicalGraphSize() != getTreeSize() && UserIgnoreList &&
         getCanonicalGraphSize() <= SmallTree &&
-        count_if(ArrayRef(VectorizableTree.back())
-                     .drop_front(getCanonicalGraphSize()),
+        count_if(ArrayRef(VT).drop_front(getCanonicalGraphSize()),
                  [](const std::unique_ptr<TreeEntry> &TE) {
                    return TE->isGather() && TE->hasState() &&
                           TE->getOpcode() == Instruction::Load &&
                           !allSameBlock(TE->Scalars);
                  }) == 1)
-      return;
+      return false;
   }
+  return true;
+  };
+
+  class GraphTransformModeRAAI {
+    bool &SavedIsGraphTransformMode;
+
+  public:
+    GraphTransformModeRAAI(bool &IsGraphTransformMode)
+        : SavedIsGraphTransformMode(IsGraphTransformMode) {
+      IsGraphTransformMode = true;
+    }
+    ~GraphTransformModeRAAI() { SavedIsGraphTransformMode = false; }
+  } TransformContext(IsGraphTransformMode);
+
+  bool Cont = true;
+  for (auto &VT : VectorizableTree)
+    Cont |= withinNodeTransform(VT);
+  if (!Cont)
+    return;
 
   // A list of loads to be gathered during the vectorization process. We can
   // try to vectorize them at the end, if profitable.
@@ -13521,7 +13528,8 @@ void BoUpSLP::transformNodes() {
                  SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>>, 8>
       GatheredLoads;
 
-  for (std::unique_ptr<TreeEntry> &TE : VectorizableTree.back()) {
+  for (auto &VT : VectorizableTree) {
+    for (std::unique_ptr<TreeEntry> &TE : VT) {
     TreeEntry &E = *TE;
     if (E.isGather() &&
         ((E.hasState() && E.getOpcode() == Instruction::Load) ||
@@ -13546,7 +13554,7 @@ void BoUpSLP::transformNodes() {
                 LI->getType())]);
       }
     }
-  }
+  }}
   // Try to vectorize gathered loads if this is not just a gather of loads.
   if (!GatheredLoads.empty())
     tryToVectorizeGatheredLoads(GatheredLoads);
@@ -23268,7 +23276,6 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     R.reorderTopToBottom();
     R.reorderBottomToTop();
   }
-  R.transformNodes();
 
   R.computeMinimumValueSizes();
 
@@ -23603,6 +23610,7 @@ bool SLPVectorizerPass::vectorizeStores(
               }
               if (Res && *Res) {
                 if (TreeSize) {
+                  R.transformNodes();
                   R.buildExternalUses();
                   InstructionCost Cost = R.getTreeCost();
 
