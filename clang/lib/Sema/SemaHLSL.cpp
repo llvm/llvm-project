@@ -2361,6 +2361,99 @@ static bool DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   return ValidateMultipleRegisterAnnotations(S, D, RegType);
 }
 
+bool ExceedsUInt32Max(llvm::StringRef S) {
+  constexpr size_t MaxDigits = 10; // UINT32_MAX = 4294967295
+  if (S.size() > MaxDigits)
+    return true;
+
+  if (S.size() < MaxDigits)
+    return false;
+
+  return S.compare("4294967295") > 0;
+}
+
+// return false if the slot count exceeds the limit, true otherwise
+static bool AccumulateHLSLResourceSlots(QualType Ty, llvm::APInt &SlotCount,
+                                        const llvm::APInt &Limit,
+                                        ASTContext &Ctx,
+                                        uint64_t Multiplier = 1) {
+  Ty = Ty.getCanonicalType();
+  const Type *T = Ty.getTypePtr();
+
+  // Early exit if already overflowed
+  if (SlotCount.ugt(Limit))
+    return false;
+
+  // Case 1: array type
+  if (const auto *AT = dyn_cast<ArrayType>(T)) {
+    uint64_t Count = 1;
+
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+      Count = CAT->getSize().getZExtValue();
+    }
+    // TODO: how do we handle non constant resource arrays?
+
+    QualType ElemTy = AT->getElementType();
+
+    return AccumulateHLSLResourceSlots(ElemTy, SlotCount, Limit, Ctx,
+                                       Multiplier * Count);
+  }
+
+  // Case 2: resource leaf
+  if (T->isHLSLResourceRecord()) {
+    llvm::APInt Add(SlotCount.getBitWidth(), Multiplier);
+    SlotCount += Add;
+    return SlotCount.ule(Limit);
+  }
+
+  // Case 3: struct / record
+  if (const auto *RT = dyn_cast<RecordType>(T)) {
+    const RecordDecl *RD = RT->getDecl();
+    for (const FieldDecl *Field : RD->fields()) {
+      if (!AccumulateHLSLResourceSlots(Field->getType(), SlotCount, Limit, Ctx,
+                                       Multiplier))
+        return false;
+    }
+    return true;
+  }
+
+  // Case 4: everything else
+  return true;
+}
+
+// return true if there is something invalid, false otherwise
+bool ValidateRegisterNumber(StringRef SlotNumStr, Decl *TheDecl,
+                            ASTContext &Ctx) {
+  if (ExceedsUInt32Max(SlotNumStr))
+    return true;
+
+  llvm::APInt SlotNum;
+  if (SlotNumStr.getAsInteger(10, SlotNum))
+    return false;
+  SlotNum = SlotNum.zext(64);
+
+  // uint32_max isn't 64 bits, but this int should
+  // have a 64 bit width in case it is compared to
+  // another 64 bit-width value. Assert failure otherwise.
+  llvm::APInt Limit(64, UINT32_MAX);
+  VarDecl *VD = dyn_cast<VarDecl>(TheDecl);
+  if (VD) {
+    AccumulateHLSLResourceSlots(VD->getType(), SlotNum, Limit, Ctx);
+    return SlotNum.ugt(Limit);
+  }
+  // handle the cbuffer case
+  HLSLBufferDecl *HBD = dyn_cast<HLSLBufferDecl>(TheDecl);
+  if (HBD) {
+    // resources cannot be put within a cbuffer, so no need
+    // to analyze the structure since the register number
+    // won't be pushed any higher.
+    return SlotNum.ugt(Limit);
+  }
+
+  // we don't expect any other decl type, so fail
+  return true;
+}
+
 void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
     QualType Ty = VD->getType();
@@ -2420,6 +2513,15 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
       return;
     }
     StringRef SlotNumStr = Slot.substr(1);
+
+    // Validate register number. It should not exceed UINT32_MAX,
+    // including if the resource type is an array that starts
+    // before UINT32_MAX, but ends afterwards.
+    if (ValidateRegisterNumber(SlotNumStr, TheDecl, getASTContext())) {
+      Diag(SlotLoc, diag::err_hlsl_register_number_too_large);
+      return;
+    }
+
     unsigned N;
     if (SlotNumStr.getAsInteger(10, N)) {
       Diag(SlotLoc, diag::err_hlsl_unsupported_register_number);
