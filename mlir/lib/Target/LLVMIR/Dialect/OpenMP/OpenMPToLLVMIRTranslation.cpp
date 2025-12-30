@@ -187,17 +187,41 @@ public:
                        llvm::Value *loopInductionVar) {
     builder.SetInsertPoint(loopBody->getTerminator());
     for (size_t index = 0; index < linearPreconditionVars.size(); index++) {
-      // Emit increments for linear vars
-      llvm::LoadInst *linearVarStart = builder.CreateLoad(
-          linearVarTypes[index], linearPreconditionVars[index]);
-      auto mulInst = builder.CreateMul(loopInductionVar, linearSteps[index]);
-      if (linearVarTypes[index]->isIntegerTy()) {
-        auto addInst = builder.CreateAdd(linearVarStart, mulInst);
+      llvm::Type *linearVarType = linearVarTypes[index];
+      llvm::Value *iv = loopInductionVar;
+      llvm::Value *step = linearSteps[index];
+
+      // Helper to cast signed integers with sign extension or truncation
+      auto castSignedInt = [&](llvm::Value *val,
+                               llvm::Type *targetType) -> llvm::Value * {
+        if (val->getType() == targetType)
+          return val;
+        return builder.CreateSExtOrTrunc(val, targetType);
+      };
+
+      if (linearVarType->isIntegerTy()) {
+        // Integer path: normalize all arithmetic to linearVarType
+        iv = castSignedInt(iv, linearVarType);
+        step = castSignedInt(step, linearVarType);
+
+        llvm::LoadInst *linearVarStart =
+            builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
+        llvm::Value *mulInst = builder.CreateMul(iv, step);
+        llvm::Value *addInst = builder.CreateAdd(linearVarStart, mulInst);
         builder.CreateStore(addInst, linearLoopBodyTemps[index]);
-      } else if (linearVarTypes[index]->isFloatingPointTy()) {
-        auto cvt = builder.CreateSIToFP(mulInst, linearVarTypes[index]);
-        auto addInst = builder.CreateFAdd(linearVarStart, cvt);
-        builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+      } else if (linearVarType->isFloatingPointTy()) {
+        // Float path: perform multiply in integer, then convert to float
+        llvm::Type *ivType = iv->getType();
+        if (ivType->isIntegerTy()) {
+          step = castSignedInt(step, ivType);
+          llvm::Value *mulInst = builder.CreateMul(iv, step);
+
+          llvm::LoadInst *linearVarStart =
+              builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
+          llvm::Value *mulFp = builder.CreateSIToFP(mulInst, linearVarType);
+          llvm::Value *addInst = builder.CreateFAdd(linearVarStart, mulFp);
+          builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+        }
       }
     }
   }
