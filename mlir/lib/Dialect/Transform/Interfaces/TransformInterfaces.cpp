@@ -554,8 +554,7 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
       auto arg = llvm::cast<BlockArgument>(payloadValue);
       definingOp = arg.getParentBlock()->getParentOp();
       argumentNo = arg.getArgNumber();
-      blockNo = std::distance(arg.getOwner()->getParent()->begin(),
-                              arg.getOwner()->getIterator());
+      blockNo = arg.getOwner()->computeBlockNumber();
       regionNo = arg.getOwner()->getParent()->getRegionNumber();
     }
     assert(definingOp && "expected the value to be defined by an op as result "
