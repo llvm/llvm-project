@@ -125,7 +125,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread);
 /// \return
 ///     A unique integer that allows us to easily find the right
 ///     stack frame within a thread on subsequent VS code requests.
-int64_t MakeDAPFrameID(lldb::SBFrame &frame);
+uint64_t MakeDAPFrameID(lldb::SBFrame &frame);
 
 /// Given a DAP frame ID, convert to a LLDB thread index id.
 ///
