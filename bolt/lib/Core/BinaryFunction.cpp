@@ -3887,7 +3887,7 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
 
 std::optional<uint64_t>
 BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
-  if (!isMultiEntry())
+  if (!isMultiEntry() || !Symbol)
     return 0;
 
   for (const MCSymbol *FunctionSymbol : getSymbols())

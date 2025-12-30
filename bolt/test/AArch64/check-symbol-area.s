@@ -11,7 +11,7 @@
 # CHECK-NOT: UNREACHABLE
 
 // Now BOLT throws a warning and does not crash.
-# CHECK: BOLT-WARNING: symbol third_block/1  is in data region of function first_block(0x{{[0-9a-f]+}}).
+# CHECK: BOLT-WARNING: ignoring entry point at address 0x{{[0-9a-f]+}} in constant island of function first_block
 
 .text
 .global main

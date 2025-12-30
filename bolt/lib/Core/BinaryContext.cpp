@@ -2518,13 +2518,12 @@ BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
 
   BinaryFunction *BF = BFI->second;
   if (EntryDesc) {
-    const uint64_t Address = BF->getAddress() + Symbol->getOffset();
-    if (BF->isInConstantIsland(Address)) {
-      this->outs() << "BOLT-WARNING: symbol " << Symbol->getName()
-                   << " is in data region of function " << BF->getOneName()
-                   << "(0x" << Twine::utohexstr(BF->getAddress()) << ").\n";
+    std::optional<uint64_t> EntryID = BF->getEntryIDForSymbol(Symbol);
+    if (BF->isMultiEntry() && EntryID.has_value() && *EntryID != 0 &&
+        !BF->validateInternalBranches()) {
+      EntryID = 0;
     }
-    *EntryDesc = BF->getEntryIDForSymbol(Symbol).value_or(0);
+    *EntryDesc = EntryID.value_or(0);
   }
 
   return BF;
