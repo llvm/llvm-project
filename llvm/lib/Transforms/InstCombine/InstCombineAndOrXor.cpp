@@ -2413,6 +2413,10 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
 static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
                                                InstCombiner::BuilderTy &Builder,
                                                const DataLayout &DL) {
+  // Currently only support scalars
+  if (Or.getType()->isVectorTy())
+    return nullptr;
+
   ConstantComparesGatherer ConstantCompare(&Or, DL, /*OneUse=*/true);
   // Unpack the result
   SmallVectorImpl<ConstantInt *> &Values = ConstantCompare.Vals;
