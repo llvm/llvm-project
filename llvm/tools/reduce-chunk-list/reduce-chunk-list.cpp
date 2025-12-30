@@ -26,13 +26,13 @@ static cl::opt<bool> Pessimist("pessimist", cl::init(false));
 namespace {
 
 bool isStillInteresting(ArrayRef<IntegerInclusiveInterval> Chunks) {
-  IntegerIntervalUtils::IntervalList SimpleChunks =
-      IntegerIntervalUtils::mergeAdjacentIntervals(Chunks);
+  IntegerInclusiveIntervalUtils::IntervalList SimpleChunks =
+      IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(Chunks);
 
   std::string ChunkStr;
   {
     raw_string_ostream OS(ChunkStr);
-    IntegerIntervalUtils::printIntervals(OS, SimpleChunks);
+    IntegerInclusiveIntervalUtils::printIntervals(OS, SimpleChunks);
   }
 
   errs() << "Checking with: " << ChunkStr << "\n";
@@ -59,9 +59,9 @@ bool isStillInteresting(ArrayRef<IntegerInclusiveInterval> Chunks) {
   return Res;
 }
 
-bool increaseGranularity(IntegerIntervalUtils::IntervalList &Chunks) {
+bool increaseGranularity(IntegerInclusiveIntervalUtils::IntervalList &Chunks) {
   errs() << "Increasing granularity\n";
-  IntegerIntervalUtils::IntervalList NewChunks;
+  IntegerInclusiveIntervalUtils::IntervalList NewChunks;
   bool SplitOne = false;
 
   for (auto &C : Chunks) {
@@ -85,14 +85,14 @@ bool increaseGranularity(IntegerIntervalUtils::IntervalList &Chunks) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  auto ExpectedChunks = IntegerIntervalUtils::parseIntervals(StartChunks, ',');
+  auto ExpectedChunks = IntegerInclusiveIntervalUtils::parseIntervals(StartChunks, ',');
   if (!ExpectedChunks) {
     handleAllErrors(ExpectedChunks.takeError(), [](const StringError &E) {
       errs() << "Error parsing chunks: " << E.getMessage() << "\n";
     });
     return 1;
   }
-  IntegerIntervalUtils::IntervalList CurrChunks = std::move(*ExpectedChunks);
+  IntegerInclusiveIntervalUtils::IntervalList CurrChunks = std::move(*ExpectedChunks);
 
   auto Program = sys::findProgramByName(ReproductionCmd);
   if (!Program) {
@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
   }
 
   errs() << "Minimal Chunks = ";
-  IntegerIntervalUtils::printIntervals(
-      llvm::errs(), IntegerIntervalUtils::mergeAdjacentIntervals(CurrChunks));
+  IntegerInclusiveIntervalUtils::printIntervals(
+      llvm::errs(), IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(CurrChunks));
   errs() << "\n";
 }

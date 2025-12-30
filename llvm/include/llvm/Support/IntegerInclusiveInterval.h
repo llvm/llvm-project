@@ -76,7 +76,7 @@ public:
   }
 };
 
-namespace IntegerIntervalUtils {
+namespace IntegerInclusiveIntervalUtils {
 
 /// A list of integer intervals.
 using IntervalList = SmallVector<IntegerInclusiveInterval, 8>;
@@ -108,7 +108,7 @@ void printIntervals(raw_ostream &OS,
 IntervalList
 mergeAdjacentIntervals(ArrayRef<IntegerInclusiveInterval> Intervals);
 
-} // end namespace IntegerIntervalUtils
+} // end namespace IntegerInclusiveIntervalUtils
 
 } // end namespace llvm
 

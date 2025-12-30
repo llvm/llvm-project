@@ -12,7 +12,7 @@ namespace llvm {
 
 void DebugCounter::printChunks(raw_ostream &OS,
                                ArrayRef<IntegerInclusiveInterval> Chunks) {
-  IntegerIntervalUtils::printIntervals(OS, Chunks, ':');
+  IntegerInclusiveIntervalUtils::printIntervals(OS, Chunks, ':');
 }
 
 } // namespace llvm
@@ -134,7 +134,7 @@ void DebugCounter::push_back(const std::string &Val) {
   }
 
   auto ExpectedChunks =
-      IntegerIntervalUtils::parseIntervals(CounterPair.second, ':');
+      IntegerInclusiveIntervalUtils::parseIntervals(CounterPair.second, ':');
   if (!ExpectedChunks) {
     handleAllErrors(ExpectedChunks.takeError(), [&](const StringError &E) {
       errs() << "DebugCounter Error: " << E.getMessage() << "\n";

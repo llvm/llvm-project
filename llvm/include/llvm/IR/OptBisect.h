@@ -70,7 +70,7 @@ public:
   bool isEnabled() const override { return !BisectIntervals.empty(); }
 
   /// Set intervals directly from an IntervalList.
-  void setIntervals(IntegerIntervalUtils::IntervalList Intervals) {
+  void setIntervals(IntegerInclusiveIntervalUtils::IntervalList Intervals) {
     BisectIntervals = std::move(Intervals);
   }
 
@@ -82,7 +82,7 @@ public:
 
 private:
   mutable int LastBisectNum = 0;
-  IntegerIntervalUtils::IntervalList BisectIntervals;
+  IntegerInclusiveIntervalUtils::IntervalList BisectIntervals;
 };
 
 /// This class implements a mechanism to disable passes and individual

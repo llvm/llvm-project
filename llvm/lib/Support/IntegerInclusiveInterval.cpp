@@ -1,9 +1,13 @@
-//===- llvm/Support/IntegerInclusiveInterval.cpp - Integer inclusive interval
-// parsing utility -----------*- C++ -*-===//
+//===- IntegerInclusiveInterval.cpp -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements utilities for handling lists of inclusive integer intervals,
+// such as parsing interval strings like "1-10,20-30,45", which are used in debugging and bisection tools.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,8 +20,7 @@
 
 using namespace llvm;
 
-namespace llvm {
-namespace IntegerIntervalUtils {
+namespace llvm::IntegerInclusiveIntervalUtils {
 
 Expected<IntervalList> parseIntervals(StringRef Str, char Separator) {
   IntervalList Intervals;
@@ -118,6 +121,4 @@ mergeAdjacentIntervals(ArrayRef<IntegerInclusiveInterval> Intervals) {
   return Result;
 }
 
-} // end namespace IntegerIntervalUtils
-
-} // end namespace llvm
+} // end namespace llvm::IntegerInclusiveIntervalUtils

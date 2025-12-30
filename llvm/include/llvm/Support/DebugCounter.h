@@ -72,7 +72,7 @@ public:
     uint64_t CurrChunkIdx = 0;
     StringRef Name;
     StringRef Desc;
-    IntegerIntervalUtils::IntervalList Chunks;
+    IntegerInclusiveIntervalUtils::IntervalList Chunks;
 
   public:
     CounterInfo(StringRef Name, StringRef Desc) : Name(Name), Desc(Desc) {
@@ -86,7 +86,7 @@ public:
   /// Return true on parsing error and print the error message on the
   /// llvm::errs()
   LLVM_ABI static bool parseChunks(StringRef Str,
-                                   IntegerIntervalUtils::IntervalList &Res);
+                                   IntegerInclusiveIntervalUtils::IntervalList &Res);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();

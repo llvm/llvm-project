@@ -1,5 +1,4 @@
-//===- llvm/unittests/Support/IntegerInclusiveIntervalTest.cpp - Integer
-// inclusive interval tests ----------------===//
+//===- llvm/unittest/Support/IntegerInclusiveIntervalTest.cpp -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,8 +46,8 @@ TEST(IntegerInclusiveIntervalTest, IntervalOverlaps) {
   EXPECT_FALSE(I3.overlaps(I4));
 }
 
-TEST(IntegerIntervalUtilsTest, ParseSingleNumber) {
-  auto ER = IntegerIntervalUtils::parseIntervals("42");
+TEST(IntegerInclusiveIntervalUtilsTest, ParseSingleNumber) {
+  auto ER = IntegerInclusiveIntervalUtils::parseIntervals("42");
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Intervals = std::move(*ER);
   EXPECT_EQ(Intervals.size(), 1U);
@@ -56,8 +55,8 @@ TEST(IntegerIntervalUtilsTest, ParseSingleNumber) {
   EXPECT_EQ(Intervals[0].getEnd(), 42);
 }
 
-TEST(IntegerIntervalUtilsTest, ParseSingleInterval) {
-  auto ER = IntegerIntervalUtils::parseIntervals("10-20");
+TEST(IntegerInclusiveIntervalUtilsTest, ParseSingleInterval) {
+  auto ER = IntegerInclusiveIntervalUtils::parseIntervals("10-20");
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Intervals = std::move(*ER);
   EXPECT_EQ(Intervals.size(), 1U);
@@ -65,8 +64,8 @@ TEST(IntegerIntervalUtilsTest, ParseSingleInterval) {
   EXPECT_EQ(Intervals[0].getEnd(), 20);
 }
 
-TEST(IntegerIntervalUtilsTest, ParseMultipleIntervals) {
-  auto ER = IntegerIntervalUtils::parseIntervals("1-5,10,15-20");
+TEST(IntegerInclusiveIntervalUtilsTest, ParseMultipleIntervals) {
+  auto ER = IntegerInclusiveIntervalUtils::parseIntervals("1-5,10,15-20");
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Intervals = std::move(*ER);
   EXPECT_EQ(Intervals.size(), 3U);
@@ -80,8 +79,8 @@ TEST(IntegerIntervalUtilsTest, ParseMultipleIntervals) {
   EXPECT_EQ(Intervals[2].getEnd(), 20);
 }
 
-TEST(IntegerIntervalUtilsTest, ParseColonSeparatedIntervals) {
-  auto ER = IntegerIntervalUtils::parseIntervals("1-5:10:15-20", ':');
+TEST(IntegerInclusiveIntervalUtilsTest, ParseColonSeparatedIntervals) {
+  auto ER = IntegerInclusiveIntervalUtils::parseIntervals("1-5:10:15-20", ':');
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Intervals = std::move(*ER);
   EXPECT_EQ(Intervals.size(), 3U);
@@ -93,63 +92,63 @@ TEST(IntegerIntervalUtilsTest, ParseColonSeparatedIntervals) {
   EXPECT_EQ(Intervals[2].getEnd(), 20);
 }
 
-TEST(IntegerIntervalUtilsTest, ParseEmptyString) {
-  auto ER = IntegerIntervalUtils::parseIntervals("");
+TEST(IntegerInclusiveIntervalUtilsTest, ParseEmptyString) {
+  auto ER = IntegerInclusiveIntervalUtils::parseIntervals("");
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Intervals = std::move(*ER);
   EXPECT_TRUE(Intervals.empty());
 }
 
-TEST(IntegerIntervalUtilsTest, ParseInvalidIntervals) {
+TEST(IntegerInclusiveIntervalUtilsTest, ParseInvalidIntervals) {
   // Invalid number.
-  auto ER1 = IntegerIntervalUtils::parseIntervals("abc");
+  auto ER1 = IntegerInclusiveIntervalUtils::parseIntervals("abc");
   EXPECT_THAT_EXPECTED(ER1, Failed());
   consumeError(ER1.takeError());
 
   // Invalid interval (begin > end).
-  auto ER2 = IntegerIntervalUtils::parseIntervals("10-5");
+  auto ER2 = IntegerInclusiveIntervalUtils::parseIntervals("10-5");
   EXPECT_THAT_EXPECTED(ER2, Failed());
   consumeError(ER2.takeError());
 
   // Out of order intervals (DebugCounter constraint and overlap).
-  auto ER3 = IntegerIntervalUtils::parseIntervals("10,5");
+  auto ER3 = IntegerInclusiveIntervalUtils::parseIntervals("10,5");
   EXPECT_THAT_EXPECTED(ER3, Failed());
   consumeError(ER3.takeError());
 
-  auto ER4 = IntegerIntervalUtils::parseIntervals("1-5,3-7");
+  auto ER4 = IntegerInclusiveIntervalUtils::parseIntervals("1-5,3-7");
   EXPECT_THAT_EXPECTED(ER4, Failed());
   consumeError(ER4.takeError());
 }
 
-TEST(IntegerIntervalUtilsTest, Contains) {
-  auto ER = IntegerIntervalUtils::parseIntervals("1-5,10,15-20");
+TEST(IntegerInclusiveIntervalUtilsTest, Contains) {
+  auto ER = IntegerInclusiveIntervalUtils::parseIntervals("1-5,10,15-20");
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Intervals = std::move(*ER);
 
-  EXPECT_TRUE(IntegerIntervalUtils::contains(Intervals, 1));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(Intervals, 3));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(Intervals, 5));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(Intervals, 10));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(Intervals, 15));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(Intervals, 18));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(Intervals, 20));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(Intervals, 1));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(Intervals, 3));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(Intervals, 5));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(Intervals, 10));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(Intervals, 15));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(Intervals, 18));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(Intervals, 20));
 
-  EXPECT_FALSE(IntegerIntervalUtils::contains(Intervals, 6));
-  EXPECT_FALSE(IntegerIntervalUtils::contains(Intervals, 9));
-  EXPECT_FALSE(IntegerIntervalUtils::contains(Intervals, 11));
-  EXPECT_FALSE(IntegerIntervalUtils::contains(Intervals, 14));
-  EXPECT_FALSE(IntegerIntervalUtils::contains(Intervals, 21));
+  EXPECT_FALSE(IntegerInclusiveIntervalUtils::contains(Intervals, 6));
+  EXPECT_FALSE(IntegerInclusiveIntervalUtils::contains(Intervals, 9));
+  EXPECT_FALSE(IntegerInclusiveIntervalUtils::contains(Intervals, 11));
+  EXPECT_FALSE(IntegerInclusiveIntervalUtils::contains(Intervals, 14));
+  EXPECT_FALSE(IntegerInclusiveIntervalUtils::contains(Intervals, 21));
 }
 
-TEST(IntegerIntervalUtilsTest, SeparatorParameter) {
-  IntegerIntervalUtils::IntervalList ColonIntervals, CommaIntervals;
+TEST(IntegerInclusiveIntervalUtilsTest, SeparatorParameter) {
+  IntegerInclusiveIntervalUtils::IntervalList ColonIntervals, CommaIntervals;
 
   // Test explicit separator parameters.
-  auto ERC = IntegerIntervalUtils::parseIntervals("1-5:10:15-20", ':');
+  auto ERC = IntegerInclusiveIntervalUtils::parseIntervals("1-5:10:15-20", ':');
   ASSERT_THAT_EXPECTED(ERC, Succeeded());
   ColonIntervals = std::move(*ERC);
 
-  auto ERM = IntegerIntervalUtils::parseIntervals("1-5,10,15-20", ',');
+  auto ERM = IntegerInclusiveIntervalUtils::parseIntervals("1-5,10,15-20", ',');
   ASSERT_THAT_EXPECTED(ERM, Succeeded());
   CommaIntervals = std::move(*ERM);
 
@@ -160,20 +159,20 @@ TEST(IntegerIntervalUtilsTest, SeparatorParameter) {
   }
 
   // Test that both work with contains().
-  EXPECT_TRUE(IntegerIntervalUtils::contains(ColonIntervals, 3));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(CommaIntervals, 3));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(ColonIntervals, 10));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(CommaIntervals, 10));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(ColonIntervals, 18));
-  EXPECT_TRUE(IntegerIntervalUtils::contains(CommaIntervals, 18));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(ColonIntervals, 3));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(CommaIntervals, 3));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(ColonIntervals, 10));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(CommaIntervals, 10));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(ColonIntervals, 18));
+  EXPECT_TRUE(IntegerInclusiveIntervalUtils::contains(CommaIntervals, 18));
 
-  EXPECT_FALSE(IntegerIntervalUtils::contains(ColonIntervals, 8));
-  EXPECT_FALSE(IntegerIntervalUtils::contains(CommaIntervals, 8));
+  EXPECT_FALSE(IntegerInclusiveIntervalUtils::contains(ColonIntervals, 8));
+  EXPECT_FALSE(IntegerInclusiveIntervalUtils::contains(CommaIntervals, 8));
 }
 
-TEST(IntegerIntervalUtilsTest, DefaultCommaSeparator) {
+TEST(IntegerInclusiveIntervalUtilsTest, DefaultCommaSeparator) {
   // Test that comma is the default separator.
-  auto ER = IntegerIntervalUtils::parseIntervals("1-5,10,15-20");
+  auto ER = IntegerInclusiveIntervalUtils::parseIntervals("1-5,10,15-20");
   ASSERT_THAT_EXPECTED(ER, Succeeded());
   auto Intervals = std::move(*ER);
   EXPECT_EQ(Intervals.size(), 3U);
@@ -186,16 +185,16 @@ TEST(IntegerIntervalUtilsTest, DefaultCommaSeparator) {
 }
 
 TEST(IntegerInclusiveIntervalTest, MergeAdjacentIntervals) {
-  IntegerIntervalUtils::IntervalList Input, Expected, Result;
+  IntegerInclusiveIntervalUtils::IntervalList Input, Expected, Result;
 
   // Empty input
-  Result = IntegerIntervalUtils::mergeAdjacentIntervals(Input);
+  Result = IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(Input);
   EXPECT_TRUE(Result.empty());
 
   // Single interval - no change.
   Input.push_back(IntegerInclusiveInterval(5, 10));
   Expected.push_back(IntegerInclusiveInterval(5, 10));
-  Result = IntegerIntervalUtils::mergeAdjacentIntervals(Input);
+  Result = IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(Input);
   EXPECT_EQ(Expected, Result);
 
   // Adjacent intervals should merge.
@@ -205,7 +204,7 @@ TEST(IntegerInclusiveIntervalTest, MergeAdjacentIntervals) {
   Input.push_back(IntegerInclusiveInterval(4, 6));
   Input.push_back(IntegerInclusiveInterval(7, 9));
   Expected.push_back(IntegerInclusiveInterval(1, 9));
-  Result = IntegerIntervalUtils::mergeAdjacentIntervals(Input);
+  Result = IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(Input);
   EXPECT_EQ(Expected, Result);
 
   // Non-adjacent intervals should not merge.
@@ -217,7 +216,7 @@ TEST(IntegerInclusiveIntervalTest, MergeAdjacentIntervals) {
   Expected.push_back(IntegerInclusiveInterval(1, 3));
   Expected.push_back(IntegerInclusiveInterval(5, 7));
   Expected.push_back(IntegerInclusiveInterval(10, 12));
-  Result = IntegerIntervalUtils::mergeAdjacentIntervals(Input);
+  Result = IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(Input);
   EXPECT_EQ(Expected, Result);
 
   // Mixed adjacent and non-adjacent intervals.
@@ -231,7 +230,7 @@ TEST(IntegerInclusiveIntervalTest, MergeAdjacentIntervals) {
   Expected.push_back(IntegerInclusiveInterval(1, 6)); // Merged 1-3 and 4-6.
   Expected.push_back(
       IntegerInclusiveInterval(8, 16)); // Merged 8-10, 11-13, 14-16.
-  Result = IntegerIntervalUtils::mergeAdjacentIntervals(Input);
+  Result = IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(Input);
   EXPECT_EQ(Expected, Result);
 
   // Single numbers that are adjacent.
@@ -241,6 +240,6 @@ TEST(IntegerInclusiveIntervalTest, MergeAdjacentIntervals) {
   Input.push_back(IntegerInclusiveInterval(6));
   Input.push_back(IntegerInclusiveInterval(7));
   Expected.push_back(IntegerInclusiveInterval(5, 7));
-  Result = IntegerIntervalUtils::mergeAdjacentIntervals(Input);
+  Result = IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(Input);
   EXPECT_EQ(Expected, Result);
 }
