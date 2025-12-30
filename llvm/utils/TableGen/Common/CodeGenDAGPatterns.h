@@ -1134,14 +1134,10 @@ private:
   TypeSetByHwMode LegalVTS;
   TypeSetByHwMode LegalPtrVTS;
 
-  using PatternRewriterFn = std::function<void(TreePattern *)>;
-  PatternRewriterFn PatternRewriter;
-
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(const RecordKeeper &R,
-                     PatternRewriterFn PatternRewriter = nullptr);
+  CodeGenDAGPatterns(const RecordKeeper &R);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }
