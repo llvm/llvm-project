@@ -38,8 +38,9 @@ function(llvm_update_compile_flags name)
   # force EH
   if(LLVM_REQUIRES_EH OR LLVM_ENABLE_EH)
     if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
-      message(AUTHOR_WARNING "Exception handling requires RTTI. Enabling RTTI for ${name}")
-      set(LLVM_REQUIRES_RTTI ON)
+      # XXX: still required?
+      #message(AUTHOR_WARNING "Exception handling requires RTTI. Enabling RTTI for ${name}")
+      #set(LLVM_REQUIRES_RTTI ON)
     endif()
     if(MSVC)
       list(APPEND LLVM_COMPILE_CXXFLAGS "/EHsc")
@@ -1858,8 +1859,15 @@ function(add_unittest test_suite test_name)
   # If it is not defined, fall back to llvm_gtest.
   if(TARGET default_gtest)
     target_link_libraries(${test_name} PRIVATE default_gtest_main default_gtest ${LLVM_PTHREAD_LIB})
+    # Runtime builds are too diverse in compiler flags/defines.
+    if(NOT LLVM_RUNTIMES_BUILD AND NOT LLVM_REQUIRES_RTTI AND NOT LLVM_REQUIRES_EH)
+      target_precompile_headers(${test_name} REUSE_FROM default_gtest)
+    endif()
   else ()
     target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
+    if(NOT LLVM_REQUIRES_RTTI AND NOT LLVM_REQUIRES_EH)
+      target_precompile_headers(${test_name} REUSE_FROM llvm_gtest)
+    endif()
   endif ()
 
   add_dependencies(${test_suite} ${test_name})

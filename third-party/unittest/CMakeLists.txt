@@ -13,6 +13,8 @@
 
 set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
 
+set(GTEST_PCH [["gtest/gtest.h"]])
+
 if(LLVM_RUNTIMES_BUILD)
   # This instance of GTest is use for unittests for the runtime libraries. It
   # must not link to LLVMSupport (used for llvm::raw_ostream and llvm::cl
@@ -37,6 +39,7 @@ else()
   set(GTEST_LLVM_COMPONENTS "Support")
   set(gtest_name "llvm_gtest")
   set(gtest_main_src UnitTestMain/TestMain.cpp)
+  list(APPEND GTEST_PCH [["llvm/Support/pch.h"]])
 endif()
 
 if(WIN32)
@@ -59,7 +62,6 @@ if(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG)
   add_definitions("-Wno-covered-switch-default")
 endif()
 
-set(LLVM_REQUIRES_RTTI 1)
 add_definitions( -DGTEST_HAS_RTTI=0 )
 
 if (HAVE_LIBPTHREAD)
@@ -75,6 +77,9 @@ endif ()
 add_llvm_library("${gtest_name}"
   googletest/src/gtest-all.cc
   googlemock/src/gmock-all.cc
+
+  PRECOMPILE_HEADERS
+  ${GTEST_PCH}
 
   LINK_LIBS
   ${LIBS}
