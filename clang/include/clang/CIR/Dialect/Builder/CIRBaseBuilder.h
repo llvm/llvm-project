@@ -488,6 +488,38 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Other Instructions
+  //===--------------------------------------------------------------------===//
+
+  mlir::Value createExtractElement(mlir::Location loc, mlir::Value vec,
+                                   mlir::Value idx) {
+    auto vecTy = mlir::cast<cir::VectorType>(vec.getType());
+    mlir::Type eltTy = vecTy.getElementType();
+    auto op = cir::VecExtractOp::create(*this, loc, eltTy, vec, idx);
+    return op.getResult();
+  }
+
+  mlir::Value createExtractElement(mlir::Location loc, mlir::Value vec,
+                                   uint64_t idx) {
+    auto idxVal = getConstAPInt(loc, mlir::IntegerType::get(getContext(), 64),
+                                llvm::APInt(64, idx));
+    return createExtractElement(loc, vec, idxVal);
+  }
+
+  mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
+                                  mlir::Value newElt, mlir::Value idx) {
+    auto op = cir::VecInsertOp::create(*this, loc, vec.getType(), vec, newElt, idx);
+    return op.getResult();
+  }
+
+  mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
+                                  mlir::Value newElt, uint64_t idx) {
+    auto idxVal = getConstAPInt(loc, mlir::IntegerType::get(getContext(), 64),
+                                llvm::APInt(64, idx));
+    return createInsertElement(loc, vec, newElt, idxVal);
+  }
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
