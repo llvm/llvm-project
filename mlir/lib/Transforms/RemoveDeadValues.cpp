@@ -791,7 +791,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     LDBG_OS([&](raw_ostream &os) {
       os << "Erasing non-live arguments [";
       llvm::interleaveComma(b.nonLiveArgs.set_bits(), os);
-      os << "] from block: " << b.b << " in region "
+      os << "] from block #" << b.b->computeBlockNumber() << " in region #"
          << b.b->getParent()->getRegionNumber() << " of operation "
          << OpWithFlags(b.b->getParent()->getParentOp(),
                         OpPrintingFlags().skipRegions().printGenericOpForm());
