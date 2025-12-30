@@ -109,8 +109,8 @@ constexpr bool test() {
 }
 
 constexpr bool tests() {
-  // Verify that iterator is present for object type T, but for T&, that iterator is available only if T is
-  // an object type and is not an unbounded array.
+  // Verify that iterator and const_iterator are present for object type T, but for T&,
+  // that only iterator is available iff T is an object type and is not an unbounded array.
 
   static_assert(has_both_iterators<std::optional<int>>);
   static_assert(has_both_iterators<std::optional<const int>>);
