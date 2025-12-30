@@ -23,16 +23,16 @@
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=NEOVERSEV2
 
-; VSCALEFORTUNING1: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
-; VSCALEFORTUNING1: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
+; VSCALEFORTUNING1: Cost for VF vscale x 2: 10 (Estimated cost per lane: 5.
+; VSCALEFORTUNING1: Cost for VF vscale x 4: 10 (Estimated cost per lane: 2.
 ; VSCALEFORTUNING1: LV: Selecting VF: vscale x 16
 
-; VSCALEFORTUNING2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 2.
-; VSCALEFORTUNING2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.
+; VSCALEFORTUNING2: Cost for VF vscale x 2: 10 (Estimated cost per lane: 2.
+; VSCALEFORTUNING2: Cost for VF vscale x 4: 10 (Estimated cost per lane: 1.
 ; VSCALEFORTUNING2: LV: Selecting VF: vscale x 16
 
-; NEOVERSEV2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
-; NEOVERSEV2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
+; NEOVERSEV2: Cost for VF vscale x 2: 10 (Estimated cost per lane: 5.
+; NEOVERSEV2: Cost for VF vscale x 4: 10 (Estimated cost per lane: 2.
 ; NEOVERSEV2: LV: Selecting VF: 16
 
 ; VSCALEFORTUNING1: <vscale x 16 x i8>

@@ -9,7 +9,8 @@ define void @load_store(ptr %p) {
 ; LMUL1-LABEL: @load_store(
 ; LMUL1-NEXT:  entry:
 ; LMUL1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP0]]
+; LMUL1-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 2)
+; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; LMUL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL1:       vector.ph:
 ; LMUL1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()

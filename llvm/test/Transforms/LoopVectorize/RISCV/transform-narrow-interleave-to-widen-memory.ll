@@ -38,7 +38,8 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; EPILOGUE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
+; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 4)
+; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
 ; EPILOGUE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -137,7 +138,8 @@ define void @load_store_interleave_group_i32(ptr noalias %data) {
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; EPILOGUE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
+; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 8)
+; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
 ; EPILOGUE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
