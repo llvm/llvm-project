@@ -355,6 +355,7 @@ Clang-Tidy Checks
    :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes"
    :doc:`performance-inefficient-string-concatenation <performance/inefficient-string-concatenation>`,
    :doc:`performance-inefficient-vector-operation <performance/inefficient-vector-operation>`, "Yes"
+   :doc:`performance-lost-std-move <performance/lost-std-move>`, "Yes"
    :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
    :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
    :doc:`performance-no-automatic-move <performance/no-automatic-move>`,
