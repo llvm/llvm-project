@@ -6882,6 +6882,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   if (CM.maskPartialAliasing())
     RUN_VPLAN_PASS(VPlanTransforms::attachAliasMaskToHeaderMask, *Plan);
 
+  if (PreferControlFlow || TTI.preferControlFlowVectorization())
+    RUN_VPLAN_PASS(VPlanTransforms::optimizeConditionalVPBB, *Plan);
+
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
 }

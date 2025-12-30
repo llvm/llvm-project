@@ -7326,9 +7326,7 @@ void VPlanTransforms::optimizeConditionalVPBB(VPlan &Plan) {
     if (!isa<VPWidenStoreRecipe>(R))
       return nullptr;
     VPValue *OrigMask = cast<VPWidenMemoryRecipe>(R).getMask();
-    if (!OrigMask || OrigMask == HeaderMask ||
-        match(OrigMask, m_VPInstruction<VPInstruction::ActiveLaneMask>(
-                            m_VPValue(), m_VPValue())))
+    if (!OrigMask || OrigMask == HeaderMask)
       return nullptr;
 
     return OrigMask;
