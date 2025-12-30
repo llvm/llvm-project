@@ -12,32 +12,34 @@ define void @test(ptr %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i32 [[ADD_NARROWED_I_I]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP18]], -1
-; CHECK-NEXT:    [[TMP21:%.*]] = trunc i64 [[TMP19]] to i32
-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <2 x i32> poison, i32 [[TMP21]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP28]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i32> [[TMP11]], splat (i32 -2)
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> <i32 poison, i32 -2>, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i32> [[TMP13]], [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = xor <2 x i32> [[TMP13]], [[TMP12]]
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i32> [[TMP14]], <2 x i32> [[TMP15]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <2 x i32>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <2 x i32> <i32 1, i32 poison>, i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP33:%.*]] = and <2 x i32> [[TMP17]], [[TMP32]]
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr null)
+; CHECK-NEXT:    [[TMP23:%.*]] = zext <2 x i32> [[TMP33]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i32> [[TMP33]], <2 x i32> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <2 x i32> [[TMP20]], i32 [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = zext <2 x i32> [[TMP34]] to <2 x i64>
-; CHECK-NEXT:    [[TMP23:%.*]] = zext <2 x i32> [[TMP33]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP35:%.*]] = shl <2 x i64> [[TMP23]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP25:%.*]] = or <2 x i64> [[TMP35]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = trunc <2 x i64> [[TMP25]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc <2 x i64> [[TMP25]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP24:%.*]] = tail call i32 asm sideeffect "", "=r,0,~{dirflag},~{fpsr},~{flags}"(i32 0)
-; CHECK-NEXT:    store <2 x i32> [[TMP16]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <2 x i32> [[TMP32]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP30:%.*]] = and <2 x i32> [[TMP29]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = or <2 x i32> [[TMP30]], [[TMP27]]
-; CHECK-NEXT:    store <2 x i32> [[TMP31]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP36:%.*]] = trunc i64 [[TMP19]] to i32
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <2 x i32> poison, i32 [[TMP36]], i32 0
+; CHECK-NEXT:    [[TMP38:%.*]] = shufflevector <2 x i32> [[TMP37]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP39:%.*]] = and <2 x i32> [[TMP38]], splat (i32 -2)
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <2 x i32> <i32 poison, i32 -2>, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP40:%.*]] = or <2 x i32> [[TMP28]], [[TMP39]]
+; CHECK-NEXT:    [[TMP41:%.*]] = xor <2 x i32> [[TMP28]], [[TMP39]]
+; CHECK-NEXT:    [[TMP42:%.*]] = shufflevector <2 x i32> [[TMP40]], <2 x i32> [[TMP41]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP43:%.*]] = shufflevector <2 x i32> [[TMP42]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP44:%.*]] = shufflevector <2 x i32> [[TMP31]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP45:%.*]] = shufflevector <4 x i32> [[TMP43]], <4 x i32> [[TMP44]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    store <4 x i32> [[TMP45]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:

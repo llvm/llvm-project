@@ -53,3 +53,10 @@ attributes(global) subroutine global_with_block()
     print*, a ! ok
   end block
 end subroutine
+
+subroutine intrinsic_error(n)
+  integer :: n
+  real(8), device :: d(n,n), x(n)
+!ERROR: Actual argument d associated with host intrinsic sum is on the device
+  x = sum(d,dim=2)
+end subroutine

@@ -964,7 +964,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
            hasSALUFloat)
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  addRulesForGOpcs({G_FSUB}, Standard)
+  addRulesForGOpcs({G_FSUB, G_STRICT_FSUB}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
