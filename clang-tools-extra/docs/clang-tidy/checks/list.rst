@@ -279,6 +279,7 @@ Clang-Tidy Checks
    :doc:`misc-override-with-different-visibility <misc/override-with-different-visibility>`,
    :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
+   :doc:`misc-shadowed-namespace-function <misc/shadowed-namespace-function>`, "Yes"
    :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,

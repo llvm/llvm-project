@@ -25,6 +25,7 @@
 #include "OverrideWithDifferentVisibilityCheck.h"
 #include "PredictableRandCheck.h"
 #include "RedundantExpressionCheck.h"
+#include "ShadowedNamespaceFunctionCheck.h"
 #include "StaticAssertCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UnconventionalAssignOperatorCheck.h"
@@ -72,6 +73,8 @@ public:
     CheckFactories.registerCheck<PredictableRandCheck>("misc-predictable-rand");
     CheckFactories.registerCheck<RedundantExpressionCheck>(
         "misc-redundant-expression");
+    CheckFactories.registerCheck<ShadowedNamespaceFunctionCheck>(
+        "misc-shadowed-namespace-function");
     CheckFactories.registerCheck<StaticAssertCheck>("misc-static-assert");
     CheckFactories.registerCheck<ThrowByValueCatchByReferenceCheck>(
         "misc-throw-by-value-catch-by-reference");
