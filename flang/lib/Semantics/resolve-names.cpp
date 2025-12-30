@@ -1081,6 +1081,8 @@ public:
   bool Pre(const parser::SaveStmt &);
   bool Pre(const parser::BasedPointer &);
   void Post(const parser::BasedPointer &);
+  bool Pre(const parser::CUFKernelDoConstruct &);
+  void Post(const parser::CUFKernelDoConstruct &);
 
   void PointerInitialization(
       const parser::Name &, const parser::InitialDataTarget &);
@@ -7565,12 +7567,14 @@ void DeclarationVisitor::SetType(
   } else if (HadForwardRef(symbol)) {
     // error recovery after use of host-associated name
   } else if (!symbol.test(Symbol::Flag::Implicit)) {
-    SayWithDecl(
-        name, symbol, "The type of '%s' has already been declared"_err_en_US);
+    SayWithDecl(name, symbol,
+        "The type of '%s' has already been declared as %s"_err_en_US,
+        prevType->AsFortran());
     context().SetError(symbol);
   } else if (type != *prevType) {
     SayWithDecl(name, symbol,
-        "The type of '%s' has already been implicitly declared"_err_en_US);
+        "The type of '%s' has already been implicitly declared as %s"_err_en_US,
+        prevType->AsFortran());
     context().SetError(symbol);
   } else {
     symbol.set(Symbol::Flag::Implicit, false);
@@ -9276,6 +9280,16 @@ void DeclarationVisitor::LegacyDataInitialization(const parser::Name &name,
   }
 }
 
+bool DeclarationVisitor::Pre(const parser::CUFKernelDoConstruct &x) {
+  // Treat CUDA kernel do construct as OpenACC construct.
+  PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  return true;
+}
+
+void DeclarationVisitor::Post(const parser::CUFKernelDoConstruct &x) {
+  PopScope();
+}
+
 void ResolveNamesVisitor::HandleCall(
     Symbol::Flag procFlag, const parser::Call &call) {
   common::visit(
@@ -9710,12 +9724,20 @@ void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
     const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
         &stmt) {
   context().set_location(stmt.source);
-  const auto &[declTypeSpec, attrs, entities] = stmt.statement.value().t;
+  const auto &[declTypeSpec, attrs, entities]{stmt.statement.value().t};
   if (const auto *intrin{
           std::get_if<parser::IntrinsicTypeSpec>(&declTypeSpec.u)}) {
     if (const auto *intType{std::get_if<parser::IntegerTypeSpec>(&intrin->u)}) {
       if (const auto &kind{intType->v}) {
-        if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
+        if (const auto *call{parser::Unwrap<parser::Call>(*kind)}) {
+          if (!std::get<std::list<parser::ActualArgSpec>>(call->t).empty()) {
+            // Accept INTEGER(int_ptr_kind()), at least.  Don't allow a
+            // nonempty argument list, to prevent implicitly typing names
+            // that might appear.  (TODO: But maybe INTEGER(KIND(n)) after
+            // an explicit declaration of 'n' would be useful.)
+            return;
+          }
+        } else if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
             !parser::Unwrap<parser::IntLiteralConstant>(*kind)) {
           return;
         }

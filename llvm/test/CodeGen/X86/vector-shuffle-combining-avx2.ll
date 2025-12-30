@@ -1258,18 +1258,19 @@ define <8 x float> @PR173030(i8 %a0, i16 %a1, i32 %a2) {
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx def $ecx
 ; X86-NEXT:    incb %cl
 ; X86-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; X86-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovd %ecx, %xmm1
 ; X86-NEXT:    incl %ecx
 ; X86-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
-; X86-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    vpmovsxwd %xmm1, %xmm1
+; X86-NEXT:    vmovd %eax, %xmm2
 ; X86-NEXT:    incl %eax
-; X86-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X86-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; X86-NEXT:    vpmovsxbd %xmm0, %ymm0
+; X86-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X86-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
+; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
 ; X86-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
@@ -1282,17 +1283,18 @@ define <8 x float> @PR173030(i8 %a0, i16 %a1, i32 %a2) {
 ; X64-NEXT:    leal 1(%rdi), %eax
 ; X64-NEXT:    vmovd %edi, %xmm0
 ; X64-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; X64-NEXT:    vmovd %esi, %xmm1
 ; X64-NEXT:    incl %esi
 ; X64-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
-; X64-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X64-NEXT:    vmovd %edx, %xmm1
+; X64-NEXT:    vpmovsxwd %xmm1, %xmm1
+; X64-NEXT:    vmovd %edx, %xmm2
 ; X64-NEXT:    incl %edx
-; X64-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
-; X64-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; X64-NEXT:    vpmovsxbd %xmm0, %ymm0
+; X64-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
+; X64-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
+; X64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X64-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
 ; X64-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]

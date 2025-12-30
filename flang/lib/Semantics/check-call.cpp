@@ -18,6 +18,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringSet.h"
 #include <map>
 #include <string>
 
@@ -340,6 +341,15 @@ static bool DefersSameTypeParameters(
   return true;
 }
 
+// List of intrinsics that are skipped when checking for device actual
+// arguments.
+static const llvm::StringSet<> cudaSkippedIntrinsics = {
+    "__builtin_c_f_pointer", "__builtin_c_loc"};
+// List of intrinsics that can have a device actual argument if it is an
+// allocatable or pointer.
+static const llvm::StringSet<> cudaAllowedIntrinsics = {"size", "lbound",
+    "ubound", "shape", "allocated", "associated", "kind", "present"};
+
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
     characteristics::TypeAndShape &actualType, bool isElemental,
@@ -610,9 +620,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
           if (IsPointer(*actualLastSymbol)) {
             if (isOkBecauseContiguous) {
-              context.Warn(
+              foldingContext.Warn(
                   common::LanguageFeature::ContiguousOkForSeqAssociation,
-                  messages.at(),
                   "Element of contiguous pointer array is accepted for storage sequence association"_port_en_US);
             } else {
               basicError = true;
@@ -623,9 +632,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           } else if (IsAssumedShape(*actualLastSymbol) &&
               !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
             if (isOkBecauseContiguous) {
-              context.Warn(
+              foldingContext.Warn(
                   common::LanguageFeature::ContiguousOkForSeqAssociation,
-                  messages.at(),
                   "Element of contiguous assumed-shape array is accepted for storage sequence association"_port_en_US);
             } else {
               basicError = true;
@@ -653,9 +661,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             messages.Say(
                 "Assumed-rank array may not be associated with a dummy argument that is not assumed-rank"_err_en_US);
           } else {
-            context.Warn(
+            foldingContext.Warn(
                 common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
-                messages.at(),
                 "Assumed-rank array should not be associated with a dummy argument that is not assumed-rank"_port_en_US);
           }
         } else if (actualRank == 0) {
@@ -693,7 +700,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                       static_cast<std::intmax_t>(*actualElements), dummyName,
                       static_cast<std::intmax_t>(*dummySize));
                 } else {
-                  context.Warn(common::UsageWarning::ShortArrayActual,
+                  foldingContext.Warn(common::UsageWarning::ShortArrayActual,
                       "Actual argument has fewer elements remaining in storage sequence (%jd) than %s array (%jd)"_warn_en_US,
                       static_cast<std::intmax_t>(*actualElements), dummyName,
                       static_cast<std::intmax_t>(*dummySize));
@@ -711,7 +718,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                   static_cast<std::intmax_t>(*actualSize), dummyName,
                   static_cast<std::intmax_t>(*dummySize));
             } else {
-              context.Warn(common::UsageWarning::ShortArrayActual,
+              foldingContext.Warn(common::UsageWarning::ShortArrayActual,
                   "Actual argument array has fewer elements (%jd) than %s array (%jd)"_warn_en_US,
                   static_cast<std::intmax_t>(*actualSize), dummyName,
                   static_cast<std::intmax_t>(*dummySize));
@@ -826,8 +833,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                    (actualIsPointer && dummyIsPointer)) &&
         evaluate::IsArraySection(actual) && !actualIsContiguous &&
         !evaluate::HasVectorSubscript(actual)) {
-      context.Warn(common::UsageWarning::VolatileOrAsynchronousTemporary,
-          messages.at(),
+      foldingContext.Warn(common::UsageWarning::VolatileOrAsynchronousTemporary,
           "The array section '%s' should not be associated with %s with %s attribute, unless the dummy is assumed-shape or assumed-rank"_warn_en_US,
           actual.AsFortran(), dummyName,
           dummyIsAsynchronous ? "ASYNCHRONOUS" : "VOLATILE");
@@ -844,8 +850,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued) {
     if ((actualIsVolatile || actualIsAsynchronous) &&
         (dummyIsVolatile || dummyIsAsynchronous)) {
-      context.Warn(common::UsageWarning::VolatileOrAsynchronousTemporary,
-          messages.at(),
+      foldingContext.Warn(common::UsageWarning::VolatileOrAsynchronousTemporary,
           "The actual argument '%s' with %s attribute should not be associated with %s with %s attribute, because a temporary copy is required during the call"_warn_en_US,
           actual.AsFortran(), actualIsVolatile ? "VOLATILE" : "ASYNCHRONOUS",
           dummyName, dummyIsVolatile ? "VOLATILE" : "ASYNCHRONOUS");
@@ -863,7 +868,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             (actualIsPointer && dummyIsPointer)) &&
         evaluate::IsArraySection(actual) &&
         !evaluate::HasVectorSubscript(actual)) {
-      context.Warn(common::UsageWarning::Portability, messages.at(),
+      foldingContext.Warn(common::UsageWarning::Portability,
           "The array section '%s' should not be associated with %s with %s attribute, unless the dummy is assumed-shape or assumed-rank"_port_en_US,
           actual.AsFortran(), dummyName,
           dummyIsAsynchronous ? "ASYNCHRONOUS" : "VOLATILE");
@@ -872,7 +877,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued) {
       if ((dummyIsVolatile && !actualIsVolatile && !actualIsAsynchronous) ||
           (dummyIsAsynchronous && !actualIsVolatile && !actualIsAsynchronous)) {
-        context.Warn(common::UsageWarning::Portability, messages.at(),
+        foldingContext.Warn(common::UsageWarning::Portability,
             "The actual argument '%s' should not be associated with %s with %s attribute, because a temporary copy is required during the call"_port_en_US,
             actual.AsFortran(), dummyName,
             dummyIsVolatile ? "VOLATILE" : "ASYNCHRONOUS");
@@ -1143,6 +1148,32 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "%s has %s but its associated actual argument has %s"_err_en_US,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
+    }
+  }
+  // Emit an error message if an actual argument passed to a host intrinsic is
+  // on the device.
+  if (intrinsic && !FindCUDADeviceContext(scope) &&
+      !FindOpenACCConstructContaining(scope)) {
+    if (!cudaSkippedIntrinsics.contains(intrinsic->name)) {
+      std::optional<common::CUDADataAttr> actualDataAttr;
+      if (const auto *actualObject{actualLastSymbol
+                  ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
+                  : nullptr}) {
+        actualDataAttr = actualObject->cudaDataAttr();
+      }
+      if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::Device) {
+        // Allocatable or pointer with device attribute have their descriptor in
+        // managed memory. It is allowed to pass them to some inquiry
+        // intrinsics.
+        if (!actualLastSymbol || !IsAllocatableOrPointer(*actualLastSymbol) ||
+            (IsAllocatableOrPointer(*actualLastSymbol) &&
+                !cudaAllowedIntrinsics.contains(intrinsic->name))) {
+          messages.Say(
+              "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
+              actualLastSymbol ? actualLastSymbol->name() : "",
+              intrinsic->name);
+        }
+      }
     }
   }
 
@@ -2437,7 +2468,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
         intrinsic, allowArgumentConversions,
         /*extentErrors=*/true, ignoreImplicitVsExplicit)};
     if (!explicitBuffer.empty()) {
-      if (treatingExternalAsImplicit) {
+      if (treatingExternalAsImplicit && explicitBuffer.AnyFatalError()) {
         // Combine all messages into one warning
         if (auto *warning{messages.Warn(/*inModuleFile=*/false,
                 context.languageFeatures(),
