@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -24,14 +23,12 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
-#include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
@@ -46,7 +43,6 @@
 #include "llvm/CodeGen/InitUndef.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
-#include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -113,7 +109,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -282,12 +277,17 @@ protected:
 
   void requireCGSCCOrder(PassManagerWrapper &PMW) const {
     assert(!AddInCGSCCOrder);
-    flushFPMsToMPM(PMW);
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Requiring CGSCC ordering requires flushing the current function "
+           "pipelines to the MPM.");
     AddInCGSCCOrder = true;
   }
+
   void stopAddingInCGSCCOrder(PassManagerWrapper &PMW) const {
     assert(AddInCGSCCOrder);
-    flushFPMsToMPM(PMW);
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Stopping CGSCC ordering requires flushing the current function "
+           "pipelines to the MPM.");
     AddInCGSCCOrder = false;
   }
 

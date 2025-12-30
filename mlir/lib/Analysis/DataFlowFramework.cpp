@@ -67,8 +67,12 @@ void ProgramPoint::print(raw_ostream &os) const {
        << OpWithFlags(getPrevOp(), OpPrintingFlags().skipRegions());
     return;
   }
-  os << "<before operation>:"
-     << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
+  if (!isBlockEnd()) {
+    os << "<before operation>:"
+       << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
+    return;
+  }
+  os << "<beginning of empty block>";
 }
 
 //===----------------------------------------------------------------------===//

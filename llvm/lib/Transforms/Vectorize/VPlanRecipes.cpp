@@ -171,7 +171,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     auto *VPI = cast<VPInstruction>(this);
     return mayWriteToMemory() ||
            VPI->getOpcode() == VPInstruction::BranchOnCount ||
-           VPI->getOpcode() == VPInstruction::BranchOnCond;
+           VPI->getOpcode() == VPInstruction::BranchOnCond ||
+           VPI->getOpcode() == VPInstruction::BranchOnTwoConds;
   }
   case VPWidenCallSC: {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
@@ -453,6 +454,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ExtractElement:
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -499,6 +501,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case Instruction::PHI:
   case Instruction::Select:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -1179,6 +1182,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::PHI:
   case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
@@ -1273,6 +1277,7 @@ bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
     return vputils::onlyFirstPartUsed(this);
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
@@ -1315,6 +1320,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";
+    break;
+  case VPInstruction::BranchOnTwoConds:
+    O << "branch-on-two-conds";
     break;
   case VPInstruction::CalculateTripCountMinusVF:
     O << "TC > VF ? TC - VF : 0";
@@ -1695,8 +1703,11 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1, State.TTI))
-    TysForDecl.push_back(VectorType::get(getResultType(), State.VF));
+  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
+                                             State.TTI)) {
+    Type *RetTy = toVectorizedTy(getResultType(), State.VF);
+    append_range(TysForDecl, getContainedTypes(RetTy));
+  }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
     // Some intrinsics have a scalar argument - don't replace it with a
@@ -1964,9 +1975,11 @@ InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
   if (!ScalarCond)
     CondTy = VectorType::get(CondTy, VF);
 
-  CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-  if (auto *Cmp = dyn_cast<CmpInst>(SI->getCondition()))
-    Pred = Cmp->getPredicate();
+  llvm::CmpPredicate Pred;
+  if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
+    if (getOperand(0)->isLiveIn())
+      if (auto *Cmp = dyn_cast<CmpInst>(getOperand(0)->getLiveInIRValue()))
+        Pred = Cmp->getPredicate();
   return Ctx.TTI.getCmpSelInstrCost(
       Instruction::Select, VectorTy, CondTy, Pred, Ctx.CostKind,
       {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, SI);
@@ -3124,21 +3137,14 @@ bool VPReplicateRecipe::shouldPack() const {
 /// address cost. Computing SCEVs for VPValues is incomplete and returns
 /// SCEVCouldNotCompute in cases the legacy cost model can compute SCEVs. In
 /// those cases we fall back to the legacy cost model. Otherwise return nullptr.
-static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
+static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
+                                        PredicatedScalarEvolution &PSE,
                                         const Loop *L) {
-  auto *PtrR = Ptr->getDefiningRecipe();
-  if (!PtrR || !((isa<VPReplicateRecipe>(Ptr) &&
-                  cast<VPReplicateRecipe>(Ptr)->getOpcode() ==
-                      Instruction::GetElementPtr) ||
-                 isa<VPWidenGEPRecipe>(Ptr) ||
-                 match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
-    return nullptr;
-
-  const SCEV *Addr = vputils::getSCEVExprForVPValue(Ptr, SE, L);
+  const SCEV *Addr = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
   if (isa<SCEVCouldNotCompute>(Addr))
     return Addr;
 
-  return vputils::isAddressSCEVForCost(Addr, SE, L) ? Addr : nullptr;
+  return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), L) ? Addr : nullptr;
 }
 
 /// Returns true if \p V is used as part of the address of another load or
@@ -3306,7 +3312,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
-    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.SE, Ctx.L);
+    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.PSE, Ctx.L);
     if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
       break;
 
@@ -3323,9 +3329,10 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     bool UsedByLoadStoreAddress =
         !PreferVectorizedAddressing && isUsedByLoadStoreAddress(this);
     InstructionCost ScalarCost =
-        ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
-                              PtrTy, UsedByLoadStoreAddress ? nullptr : &Ctx.SE,
-                              PtrSCEV, Ctx.CostKind);
+        ScalarMemOpCost +
+        Ctx.TTI.getAddressComputationCost(
+            PtrTy, UsedByLoadStoreAddress ? nullptr : Ctx.PSE.getSE(), PtrSCEV,
+            Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 
