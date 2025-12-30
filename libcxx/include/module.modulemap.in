@@ -1926,6 +1926,10 @@ module std [system] {
     module subrange_fwd {
       header "__fwd/subrange.h"
     }
+    module stride_view {
+      header "__ranges/stride_view.h"
+      export std.functional.bind_back
+    }
     module take_view {
       header "__ranges/take_view.h"
       export std.functional.bind_back

@@ -54,6 +54,7 @@ Implemented Papers
 - P3567R2: ``flat_meow`` Fixes (`Github <https://llvm.org/PR162022>`__)
 - P3836R2: Make ``optional<T&>`` trivially copyable (`Github <https://llvm.org/PR171275>`__)
 - P1789R3: Library Support for Expansion Statements (`Github <https://llvm.org/PR167184>`__)
+- P1899: ``stride_view`` (`Github <https://github.com/llvm/llvm-project/issues/105198>` __)
 
 Improvements and New Features
 -----------------------------

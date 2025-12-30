@@ -216,6 +216,7 @@ __cpp_lib_ranges_join_with                              202202L <ranges>
 __cpp_lib_ranges_repeat                                 202207L <ranges>
 __cpp_lib_ranges_slide                                  202202L <ranges>
 __cpp_lib_ranges_starts_ends_with                       202106L <algorithm>
+__cpp_lib_ranges_stride                                 202207L <ranges>
 __cpp_lib_ranges_to_container                           202202L <ranges>
 __cpp_lib_ranges_zip                                    202110L <ranges> <tuple> <utility>
 __cpp_lib_ratio                                         202306L <ratio>
@@ -532,6 +533,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_ranges_repeat                        202207L
 // # define __cpp_lib_ranges_slide                         202202L
 # define __cpp_lib_ranges_starts_ends_with              202106L
+# define __cpp_lib_ranges_stride                        202207L
 # define __cpp_lib_ranges_to_container                  202202L
 // # define __cpp_lib_ranges_zip                           202110L
 // # define __cpp_lib_reference_from_temporary             202202L
