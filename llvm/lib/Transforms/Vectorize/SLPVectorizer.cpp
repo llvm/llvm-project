@@ -7166,8 +7166,8 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   // Check if the offsets are contiguous.
   SmallVector<int64_t> SortedOffsetsV(NumOffsets);
-  for (auto [K, _] : OffsetToPointerOpIdxMap)
-    SortedOffsetsV.push_back(K);
+  for (auto [Idx, MapPair] : OffsetToPointerOpIdxMap)
+    SortedOffsetsV.push_back(MapPair.first);
   sort(SortedOffsetsV);
 
   if (NumOffsets > 1) {
@@ -7247,7 +7247,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // \param `SortedIndicesForOffset = SortedIndices_OffsetNum`
   auto UpdateSortedIndices =
       [&](SmallVectorImpl<unsigned> &SortedIndicesForOffset,
-          const ArrayRef<unsigned> &IndicesInAllPointerOps,
+          ArrayRef<unsigned> IndicesInAllPointerOps,
           const int64_t OffsetNum) {
         if (SortedIndicesForOffset.empty()) {
           SortedIndicesForOffset.resize(IndicesInAllPointerOps.size());
@@ -7263,7 +7263,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   int64_t LowestOffset = SortedOffsetsV[0];
   ArrayRef<Value *> PointerOps0 = OffsetToPointerOpIdxMap[LowestOffset].first;
 
-  SmallVector<int64_t> Coeffs0(VecSz);
+  SmallVector<int64_t> Coeffs0;
   SmallVector<unsigned> SortedIndicesForOffset0;
   const SCEV *Stride0 = calculateRtStride(PointerOps0, ScalarTy, *DL, *SE,
                                           SortedIndicesForOffset0, Coeffs0);
@@ -7280,7 +7280,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   // Now that we know what the common stride and coefficients has to be check
   // the remaining `PointerOps_j`.
-  SmallVector<int64_t> Coeffs(VecSz);
+  SmallVector<int64_t> Coeffs;
   SmallVector<unsigned> SortedIndicesForOffset;
   for (int J : seq<int>(1, NumOffsets)) {
     Coeffs.clear();
