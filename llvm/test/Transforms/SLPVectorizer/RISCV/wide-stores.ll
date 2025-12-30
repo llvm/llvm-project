@@ -5,16 +5,13 @@ define dso_local void @wide_gather(ptr noalias noundef writeonly captures(none) 
 ; CHECK-LABEL: define dso_local void @wide_gather(
 ; CHECK-SAME: ptr noalias noundef writeonly captures(none) initializes((0, 64)) [[X:%.*]], ptr noalias noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[Y]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, <8 x ptr> [[TMP5]], <8 x i64> <i64 0, i64 48, i64 8, i64 16, i64 112, i64 24, i64 56, i64 64>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, <8 x ptr> [[TMP5]], <8 x i64> <i64 40, i64 72, i64 80, i64 88, i64 120, i64 104, i64 32, i64 96>
 ; CHECK-NEXT:    [[ARRAYIDX2_8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 64
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 [[TMP6]], <8 x i1> splat (i1 true), <8 x i64> poison), !tbaa [[LONG_TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i64>, ptr [[Y]], align 8, !tbaa [[LONG_TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i64> [[TMP0]], <16 x i64> poison, <8 x i32> <i32 0, i32 6, i32 1, i32 2, i32 14, i32 3, i32 7, i32 8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <8 x i64> [[TMP1]], splat (i64 1)
-; CHECK-NEXT:    store <8 x i64> [[TMP2]], ptr [[X]], align 8, !tbaa [[LONG_TBAA0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 [[TMP7]], <8 x i1> splat (i1 true), <8 x i64> poison), !tbaa [[LONG_TBAA0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i64> [[TMP0]], <16 x i64> poison, <8 x i32> <i32 5, i32 9, i32 10, i32 11, i32 15, i32 13, i32 4, i32 12>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <8 x i64> [[TMP3]], splat (i64 1)
+; CHECK-NEXT:    store <8 x i64> [[TMP2]], ptr [[X]], align 8, !tbaa [[LONG_TBAA0]]
 ; CHECK-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARRAYIDX2_8]], align 8, !tbaa [[LONG_TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
