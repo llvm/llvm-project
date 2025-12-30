@@ -2,14 +2,17 @@
 
 // The case is taken from the real code in clang/lib/APINotes/APINotesWriter.cpp
 
+void take(bool value) {}
+void take_int(int value) {}
+
 void general(unsigned flags, bool value) {
     (flags << 1) | value;
     flags = (flags << 1) | value;
     flags = (flags << 1) | (flags << 2) | value;
     flags = (flags << 1) | (flags << 2) | (flags << 4) | value;
+    take_int((flags << 1) | value);
+    take_int((flags << 1) | (flags << 2) | value);
 }
-
-void take(bool value) {}
 
 // FIXME: implement `template<bool bb=true|1>` cases
 
