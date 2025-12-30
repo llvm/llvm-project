@@ -65,6 +65,9 @@ namespace bolt {
 
 class BinaryFunction;
 
+using BinaryFunctionListType = std::vector<BinaryFunction *>;
+using ConstBinaryFunctionListType = std::vector<const BinaryFunction *>;
+
 /// Information on loadable part of the file.
 struct SegmentInfo {
   uint64_t Address;           /// Address of the segment in memory.
@@ -228,11 +231,14 @@ class BinaryContext {
   /// Store all functions in the binary, sorted by original address.
   std::map<uint64_t, BinaryFunction> BinaryFunctions;
 
-  /// A mutex that is used to control parallel accesses to BinaryFunctions
+  /// Functions to be considered for the output in a sorted order.
+  BinaryFunctionListType OutputFunctions;
+
+  /// A mutex that is used to control parallel accesses to BinaryFunctions.
   mutable llvm::sys::RWMutex BinaryFunctionsMutex;
 
-  /// Functions injected by BOLT
-  std::vector<BinaryFunction *> InjectedBinaryFunctions;
+  /// Functions injected by BOLT.
+  BinaryFunctionListType InjectedBinaryFunctions;
 
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
@@ -551,6 +557,9 @@ public:
     return BinaryFunctions;
   }
 
+  /// Return functions meant for the output in a sorted order.
+  BinaryFunctionListType &getOutputBinaryFunctions() { return OutputFunctions; }
+
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
                                                bool IsSimple = true);
@@ -567,13 +576,13 @@ public:
                          const InstructionListType &Instructions,
                          const Twine &Name = "");
 
-  std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
+  BinaryFunctionListType &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
 
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
-  std::vector<BinaryFunction *> getAllBinaryFunctions();
+  BinaryFunctionListType getAllBinaryFunctions();
 
   /// Construct a jump table for \p Function at \p Address or return an existing
   /// one at that location.
@@ -1383,9 +1392,6 @@ public:
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
                                   const uint32_t SrcCUID, unsigned FileIndex);
-
-  /// Return functions in output layout order
-  std::vector<BinaryFunction *> getSortedFunctions();
 
   /// Do the best effort to calculate the size of the function by emitting
   /// its code, and relaxing branch instructions. By default, branch

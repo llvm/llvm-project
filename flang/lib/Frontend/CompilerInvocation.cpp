@@ -884,6 +884,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   return diags.getNumErrors() == numErrorsBefore;
 }
 
+// Generate the path to look for intrinsic modules
+static std::string getIntrinsicDir(const char *argv) {
+  // TODO: Find a system independent API
+  llvm::SmallString<128> driverPath;
+  driverPath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
+  llvm::sys::path::remove_filename(driverPath);
+  driverPath.append("/../include/flang/");
+  return std::string(driverPath);
+}
+
 // Generate the path to look for OpenMP headers
 static std::string getOpenMPHeadersDir(const char *argv) {
   llvm::SmallString<128> includePath;
@@ -1076,15 +1086,35 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // -fdefault* family
-  if (args.hasArg(clang::options::OPT_fdefault_real_8)) {
-    res.getDefaultKinds().set_defaultRealKind(8);
-    res.getDefaultKinds().set_doublePrecisionKind(16);
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_fdefault_real_8,
+                          clang::options::OPT_fdefault_real_4)) {
+    const llvm::opt::Option &opt = arg->getOption();
+    if (opt.matches(clang::options::OPT_fdefault_real_8)) {
+      res.getDefaultKinds().set_defaultRealKind(8);
+      res.getDefaultKinds().set_doublePrecisionKind(16);
+    } else if (opt.matches(clang::options::OPT_fdefault_real_4)) {
+      res.getDefaultKinds().set_defaultRealKind(4);
+      res.getDefaultKinds().set_doublePrecisionKind(8);
+    }
   }
-  if (args.hasArg(clang::options::OPT_fdefault_integer_8)) {
-    res.getDefaultKinds().set_defaultIntegerKind(8);
-    res.getDefaultKinds().set_subscriptIntegerKind(8);
-    res.getDefaultKinds().set_sizeIntegerKind(8);
-    res.getDefaultKinds().set_defaultLogicalKind(8);
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_fdefault_integer_8,
+                          clang::options::OPT_fdefault_integer_4)) {
+    const llvm::opt::Option &opt = arg->getOption();
+    if (opt.matches(clang::options::OPT_fdefault_integer_8)) {
+      res.getDefaultKinds().set_defaultIntegerKind(8);
+      res.getDefaultKinds().set_subscriptIntegerKind(8);
+      res.getDefaultKinds().set_sizeIntegerKind(8);
+      res.getDefaultKinds().set_defaultLogicalKind(8);
+    } else if (opt.matches(clang::options::OPT_fdefault_integer_4)) {
+      // Note that the subscript integer kind is set to 8 here. If a
+      // default-integer-kind is not provided, it is also set to 8.
+      res.getDefaultKinds().set_defaultIntegerKind(4);
+      res.getDefaultKinds().set_subscriptIntegerKind(8);
+      res.getDefaultKinds().set_sizeIntegerKind(4);
+      res.getDefaultKinds().set_defaultLogicalKind(4);
+    }
   }
   if (args.hasArg(clang::options::OPT_fdefault_double_8)) {
     if (!args.hasArg(clang::options::OPT_fdefault_real_8)) {
@@ -1557,14 +1587,6 @@ bool CompilerInvocation::createFromArgs(
     success = false;
   }
 
-  // User-specified or default resource dir
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::options::OPT_resource_dir))
-    invoc.resourceDir = a->getValue();
-  else
-    invoc.resourceDir = clang::GetResourcesPath(
-        llvm::sys::fs::getMainExecutable(argv0, nullptr));
-
   // -flang-experimental-hlfir
   if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
       args.hasArg(clang::options::OPT_emit_hlfir)) {
@@ -1831,11 +1853,9 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
-  // Add the ordered list of -fintrinsic-modules-path
-  fortranOptions.intrinsicModuleDirectories.insert(
-      fortranOptions.intrinsicModuleDirectories.end(),
-      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
-      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+  //  Add the default intrinsic module directory
+  fortranOptions.intrinsicModuleDirectories.emplace_back(
+      getIntrinsicDir(getArgv0()));
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories

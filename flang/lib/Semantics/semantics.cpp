@@ -621,15 +621,12 @@ bool Semantics::Perform() {
     const auto *frontModule{std::get_if<common::Indirection<parser::Module>>(
         &program_.v.front().u)};
     if (frontModule &&
-        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                .statement.v.source == "__fortran_builtins") {
+        (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                    .statement.v.source == "__fortran_builtins" ||
+            std::get<parser::Statement<parser::ModuleStmt>>(
+                frontModule->value().t)
+                    .statement.v.source == "__ppc_types")) {
       // Don't try to read the builtins module when we're actually building it.
-    } else if (frontModule &&
-        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                .statement.v.source == "__ppc_types") {
-      // Don't try to read the UsePPCBuiltinTypesModule() we are currently
-      // building, but __fortran_builtins is needed to build it.
-      context_.UseFortranBuiltinsModule();
     } else if (frontModule &&
         (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
                     .statement.v.source == "__ppc_intrinsics" ||
