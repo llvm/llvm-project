@@ -7708,8 +7708,11 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                         *VPI, Load->getDebugLoc());
     if (Reverse) {
       Builder.insert(LoadR);
-      auto *Rev = new VPInstruction(VPInstruction::Reverse, LoadR, {}, {},
-                                    LoadR->getDebugLoc());
+      auto *Rev = new VPInstruction(VPInstruction::Reverse, LoadR, /*Flags=*/{},
+                                    /*MD=*/{}, LoadR->getDebugLoc());
+      // FIXME: Set underlying value so the cost model can identify this recipe
+      // as part of an exit condition. Remove this once the VPlan-based cost
+      // model properly handles exit recipes.
       Rev->setUnderlyingValue(Load);
       return Rev;
     }
