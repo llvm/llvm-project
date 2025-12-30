@@ -7369,9 +7369,12 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
 }
 
 static SDValue lowerWaveShuffle(const SITargetLowering &TLI, SDNode *N,
-                                    SelectionDAG &DAG) {
+                                SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  assert(VT.getSizeInBits() == 32);
+
+  if (VT.getSizeInBits() != 32)
+    return SDValue();
+
   SDLoc SL(N);
 
   SDValue Value = N->getOperand(1);
@@ -7379,8 +7382,8 @@ static SDValue lowerWaveShuffle(const SITargetLowering &TLI, SDNode *N,
 
   // ds_bpermute requires index to be multiplied by 4
   SDValue ShiftAmount = DAG.getShiftAmountConstant(2, MVT::i32, SL);
-  SDValue ShiftedIndex = DAG.getNode(ISD::SHL, SL, Index.getValueType(), Index,
-                                   ShiftAmount);
+  SDValue ShiftedIndex =
+      DAG.getNode(ISD::SHL, SL, Index.getValueType(), Index, ShiftAmount);
 
   // Intrinsics will require i32 to operate on
   SDValue ValueI32 = DAG.getBitcast(MVT::i32, Value);
@@ -7415,8 +7418,8 @@ static SDValue lowerWaveShuffle(const SITargetLowering &TLI, SDNode *N,
       MakeIntrinsic(Intrinsic::amdgcn_permlane64, MVT::i32, {WWMValue});
 
   // Get permutation of each half, then we'll select which one to use
-  SDValue BPermSameHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
-                                        MVT::i32, {WWMIndex, WWMValue});
+  SDValue BPermSameHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute, MVT::i32,
+                                        {WWMIndex, WWMValue});
   SDValue BPermOtherHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
                                          MVT::i32, {WWMIndex, Swapped});
   SDValue BPermOtherHalfWWM =

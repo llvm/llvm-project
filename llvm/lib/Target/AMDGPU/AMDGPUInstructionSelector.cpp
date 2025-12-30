@@ -3912,7 +3912,8 @@ bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
   const TargetRegisterClass *DstRC =
       TRI.getRegClassForSizeOnBank(DstSize, *DstRB);
 
-  assert(DstTy == LLT::scalar(32));
+  if (DstTy != LLT::scalar(32))
+    return false;
 
   // If we can bpermute across the whole wave, then just do that
   if (Subtarget->supportsWaveWideBPermute()) {
