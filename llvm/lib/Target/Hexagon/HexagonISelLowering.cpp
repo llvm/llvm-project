@@ -3413,7 +3413,17 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
   if (DCI.isBeforeLegalizeOps()) {
     switch (Opc) {
     case ISD::VECREDUCE_ADD:
-      return expandVecReduceAdd(N, DCI.DAG);
+      if (SDValue V = splitVecReduceAdd(N, DCI.DAG))
+        return V;
+      if (SDValue V = expandVecReduceAdd(N, DCI.DAG))
+        return V;
+      return SDValue();
+    case ISD::PARTIAL_REDUCE_SMLA:
+    case ISD::PARTIAL_REDUCE_UMLA:
+    case ISD::PARTIAL_REDUCE_SUMLA:
+      if (SDValue V = splitExtendingPartialReduceMLA(N, DCI.DAG))
+        return V;
+      return SDValue();
     }
   } else {
     switch (Opc) {

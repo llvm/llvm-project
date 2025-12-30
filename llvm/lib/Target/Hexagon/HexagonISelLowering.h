@@ -485,6 +485,7 @@ private:
   SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
 
@@ -518,7 +519,13 @@ private:
   SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
       const;
   SDValue expandVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
-  SDValue PerformHvxDAGCombine(SDNode * N, DAGCombinerInfo & DCI) const;
+  SDValue createExtendingPartialReduceMLA(
+      unsigned Opcode, EVT AccEltType, unsigned AccNumElements, EVT InputType,
+      const SDValue &A, const SDValue &B, unsigned &RemainingReductionRatio,
+      const SDLoc &DL, SelectionDAG &DAG) const;
+  SDValue splitVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
+  SDValue splitExtendingPartialReduceMLA(SDNode *N, SelectionDAG &DAG) const;
+  SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 };
 
 } // end namespace llvm
