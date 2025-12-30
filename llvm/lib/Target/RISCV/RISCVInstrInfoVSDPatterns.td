@@ -1326,22 +1326,6 @@ foreach fvti = AllFloatVectors in {
                    // RISCVInsertReadWriteCSR
                    FRM_DYN,
                    fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
-    def : Pat<(fvti.Vector (any_fma (SplatFPOp (fneg fvti.ScalarRegClass:$rs1)),
-                                    fvti.RegClass:$rd, (fneg fvti.RegClass:$rs2))),
-              (!cast<Instruction>("PseudoVFNMADD_V" # fvti.ScalarSuffix # "_" # suffix)
-                   fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
-                   // Value to indicate no rounding mode change in
-                   // RISCVInsertReadWriteCSR
-                   FRM_DYN,
-                   fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
-    def : Pat<(fvti.Vector (any_fma (SplatFPOp (fneg fvti.ScalarRegClass:$rs1)),
-                                    fvti.RegClass:$rd, fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVFNMSUB_V" # fvti.ScalarSuffix # "_" # suffix)
-                   fvti.RegClass:$rd, fvti.ScalarRegClass:$rs1, fvti.RegClass:$rs2,
-                   // Value to indicate no rounding mode change in
-                   // RISCVInsertReadWriteCSR
-                   FRM_DYN,
-                   fvti.AVL, fvti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
 
