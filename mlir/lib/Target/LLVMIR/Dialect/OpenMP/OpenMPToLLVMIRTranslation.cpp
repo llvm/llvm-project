@@ -212,16 +212,20 @@ public:
       } else if (linearVarType->isFloatingPointTy()) {
         // Float path: perform multiply in integer, then convert to float
         llvm::Type *ivType = iv->getType();
-        if (ivType->isIntegerTy()) {
-          step = castSignedInt(step, ivType);
-          llvm::Value *mulInst = builder.CreateMul(iv, step);
+        if (!ivType->isIntegerTy())
+          llvm_unreachable("OpenMP loop induction variable must be an integer "
+                           "type when updating floating-point linear vars");
+        step = castSignedInt(step, ivType);
+        llvm::Value *mulInst = builder.CreateMul(iv, step);
 
-          llvm::LoadInst *linearVarStart =
-              builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
-          llvm::Value *mulFp = builder.CreateSIToFP(mulInst, linearVarType);
-          llvm::Value *addInst = builder.CreateFAdd(linearVarStart, mulFp);
-          builder.CreateStore(addInst, linearLoopBodyTemps[index]);
-        }
+        llvm::LoadInst *linearVarStart =
+            builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
+        llvm::Value *mulFp = builder.CreateSIToFP(mulInst, linearVarType);
+        llvm::Value *addInst = builder.CreateFAdd(linearVarStart, mulFp);
+        builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+      } else {
+        llvm_unreachable(
+            "Linear variable must be of integer or floating-point type");
       }
     }
   }
