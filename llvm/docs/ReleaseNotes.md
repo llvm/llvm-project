@@ -159,6 +159,7 @@ Changes to the RISC-V Backend
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the RISC-V platform.
 * The Xqci Qualcomm uC Vendor Extension is no longger marked as experimental.
+* `-mcpu=spacemit-x100` is now supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------

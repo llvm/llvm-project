@@ -160,6 +160,14 @@
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+xsmtvdot"
 // MCPU-SPACEMIT-X60-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-x100 | FileCheck -check-prefix=MCPU-SPACEMIT-X100 %s
+// MCPU-SPACEMIT-X100: "-target-cpu" "spacemit-x100"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-spacemit-x100.c`
+// MCPU-SPACEMIT-X100-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=spacemit-x100 | FileCheck -check-prefix=MTUNE-SPACEMIT-X100 %s
+// MTUNE-SPACEMIT-X100: "-tune-cpu" "spacemit-x100"
+
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
 // RUN: %clang --target=riscv64 -### -c %s -mcpu=native 2> %t.err || true
 // RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
