@@ -961,6 +961,14 @@ FailureOr<BufferLikeType> bufferization::detail::defaultGetBufferType(
   assert(llvm::isa<TensorType>(value.getType()) && "expected tensor type");
   auto tensorType = cast<TensorType>(value.getType());
 
+  auto elementType = tensorType.getElementType();
+
+  if (!BaseMemRefType::isValidElementType(elementType))
+    return getOwnerOfValue(value)->emitError()
+           << "cannot bufferize value of type " << tensorType
+           << ": element type " << elementType
+           << " is not a valid memref element type";
+
   // No further analysis is possible for a block argument.
   if (llvm::isa<BlockArgument>(value)) {
     return cast<BufferLikeType>(
