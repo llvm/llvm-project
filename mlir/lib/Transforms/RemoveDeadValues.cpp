@@ -111,7 +111,6 @@ struct SuccessorOperandsToCleanup {
 
 struct RDVFinalCleanupList {
   SmallVector<Operation *> operations;
-  SmallVector<Value> values;
   SmallVector<FunctionToCleanUp> functions;
   SmallVector<OperandsToCleanup> operands;
   SmallVector<ResultsToCleanup> results;
@@ -325,10 +324,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
 
   // Do (1).
   for (auto [index, arg] : llvm::enumerate(arguments))
-    if (arg && nonLiveArgs[index]) {
-      cl.values.push_back(arg);
+    if (arg && nonLiveArgs[index])
       nonLiveSet.insert(arg);
-    }
 
   // Do (2). (Skip creating generic operand cleanup entries for call ops.
   // Call arguments will be removed in the call-site specific segment-aware
@@ -478,13 +475,10 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // Return the operands of `terminator` that are forwarded to `successor` if
   // the former is not null. Else return the operands of `regionBranchOp`
   // forwarded to `successor`.
-  auto getForwardedOpOperands = [&](const RegionSuccessor &successor,
-                                    Operation *terminator = nullptr) {
-    OperandRange operands =
-        terminator ? cast<RegionBranchTerminatorOpInterface>(terminator)
-                         .getSuccessorOperands(successor)
-                   : regionBranchOp.getEntrySuccessorOperands(successor);
-    SmallVector<OpOperand *> opOperands = operandsToOpOperands(operands);
+  auto getForwardedOpOperands = [&](RegionBranchPoint src,
+                                    const RegionSuccessor &successor) {
+    SmallVector<OpOperand *> opOperands = operandsToOpOperands(
+        regionBranchOp.getSuccessorOperands(src, successor));
     return opOperands;
   };
 
@@ -494,7 +488,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
     nonForwardedOperands.resize(regionBranchOp->getNumOperands(), true);
     for (const RegionSuccessor &successor :
          getSuccessors(RegionBranchPoint::parent())) {
-      for (OpOperand *opOperand : getForwardedOpOperands(successor))
+      for (OpOperand *opOperand :
+           getForwardedOpOperands(RegionBranchPoint::parent(), successor))
         nonForwardedOperands.reset(opOperand->getOperandNumber());
     }
   };
@@ -507,14 +502,13 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
           if (region.empty())
             continue;
           // TODO: this isn't correct in face of multiple terminators.
-          Operation *terminator = region.front().getTerminator();
+          auto terminator = cast<RegionBranchTerminatorOpInterface>(
+              region.front().getTerminator());
           nonForwardedRets[terminator] =
               BitVector(terminator->getNumOperands(), true);
-          for (const RegionSuccessor &successor :
-               getSuccessors(RegionBranchPoint(
-                   cast<RegionBranchTerminatorOpInterface>(terminator)))) {
-            for (OpOperand *opOperand :
-                 getForwardedOpOperands(successor, terminator))
+          for (const RegionSuccessor &successor : getSuccessors(terminator)) {
+            for (OpOperand *opOperand : getForwardedOpOperands(
+                     RegionBranchPoint(terminator), successor))
               nonForwardedRets[terminator].reset(opOperand->getOperandNumber());
           }
         }
@@ -538,7 +532,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
         for (const RegionSuccessor &successor : getSuccessors(point)) {
           Region *successorRegion = successor.getSuccessor();
           for (auto [opOperand, input] :
-               llvm::zip(getForwardedOpOperands(successor, terminator),
+               llvm::zip(getForwardedOpOperands(point, successor),
                          successor.getSuccessorInputs())) {
             size_t operandNum = opOperand->getOperandNumber();
             bool updateBasedOn =
@@ -566,7 +560,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
              getSuccessors(RegionBranchPoint::parent())) {
           Region *successorRegion = successor.getSuccessor();
           for (auto [opOperand, input] :
-               llvm::zip(getForwardedOpOperands(successor),
+               llvm::zip(getForwardedOpOperands(RegionBranchPoint::parent(),
+                                                successor),
                          successor.getSuccessorInputs())) {
             bool recomputeBasedOn =
                 operandsToKeep[opOperand->getOperandNumber()];
@@ -596,13 +591,13 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
         for (Region &region : regionBranchOp->getRegions()) {
           if (region.empty())
             continue;
-          Operation *terminator = region.front().getTerminator();
-          for (const RegionSuccessor &successor :
-               getSuccessors(RegionBranchPoint(
-                   cast<RegionBranchTerminatorOpInterface>(terminator)))) {
+          auto terminator = cast<RegionBranchTerminatorOpInterface>(
+              region.front().getTerminator());
+          for (const RegionSuccessor &successor : getSuccessors(terminator)) {
             Region *successorRegion = successor.getSuccessor();
             for (auto [opOperand, input] :
-                 llvm::zip(getForwardedOpOperands(successor, terminator),
+                 llvm::zip(getForwardedOpOperands(RegionBranchPoint(terminator),
+                                                  successor),
                            successor.getSuccessorInputs())) {
               bool recomputeBasedOn =
                   terminatorOperandsToKeep[region.back().getTerminator()]
@@ -850,14 +845,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     op->erase();
   }
 
-  // 4. Values
-  LDBG() << "Cleaning up " << list.values.size() << " values";
-  for (auto &v : list.values) {
-    LDBG() << "Dropping all uses of value: " << v;
-    v.dropAllUses();
-  }
-
-  // 5. Functions
+  // 4. Functions
   LDBG() << "Cleaning up " << list.functions.size() << " functions";
   // Record which function arguments were erased so we can shrink call-site
   // argument segments for CallOpInterface operations (e.g. ops using
@@ -874,6 +862,9 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
       llvm::interleaveComma(f.nonLiveRets.set_bits(), os);
       os << "]";
     });
+    // Drop all uses of the dead arguments.
+    for (auto deadIdx : f.nonLiveArgs.set_bits())
+      f.funcOp.getArgument(deadIdx).dropAllUses();
     // Some functions may not allow erasing arguments or results. These calls
     // return failure in such cases without modifying the function, so it's okay
     // to proceed.
@@ -885,7 +876,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
-  // 6. Operands
+  // 5. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperandsToCleanup &o : list.operands) {
     // Handle call-specific cleanup only when we have a cached callee reference.
@@ -934,7 +925,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     }
   }
 
-  // 7. Results
+  // 6. Results
   LDBG() << "Cleaning up " << list.results.size() << " result lists";
   for (auto &r : list.results) {
     LDBG_OS([&](raw_ostream &os) {
