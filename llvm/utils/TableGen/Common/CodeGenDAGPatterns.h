@@ -1123,7 +1123,7 @@ private:
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(const RecordKeeper &R);
+  CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode = true);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }

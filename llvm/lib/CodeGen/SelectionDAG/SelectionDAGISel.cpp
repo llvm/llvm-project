@@ -3920,6 +3920,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
       }
       int64_t Val = GetSignedVBR(MatcherTable, MatcherIndex);
+      Val = SignExtend64(Val, MVT(VT).getFixedSizeInBits());
       RecordedNodes.emplace_back(
           CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
                                     /*isTarget=*/true),

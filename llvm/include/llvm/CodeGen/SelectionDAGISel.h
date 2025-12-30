@@ -202,7 +202,9 @@ public:
     // Space-optimized forms that implicitly encode VT.
     OPC_CheckTypeI32,
     OPC_CheckTypeI64,
+    OPC_CheckTypeByHwMode,
     OPC_CheckTypeRes,
+    OPC_CheckTypeResByHwMode,
     OPC_SwitchType,
     OPC_CheckChild0Type,
     OPC_CheckChild1Type,
@@ -230,6 +232,15 @@ public:
     OPC_CheckChild5TypeI64,
     OPC_CheckChild6TypeI64,
     OPC_CheckChild7TypeI64,
+
+    OPC_CheckChild0TypeByHwMode,
+    OPC_CheckChild1TypeByHwMode,
+    OPC_CheckChild2TypeByHwMode,
+    OPC_CheckChild3TypeByHwMode,
+    OPC_CheckChild4TypeByHwMode,
+    OPC_CheckChild5TypeByHwMode,
+    OPC_CheckChild6TypeByHwMode,
+    OPC_CheckChild7TypeByHwMode,
 
     OPC_CheckInteger,
     OPC_CheckChild0Integer,
@@ -261,10 +272,13 @@ public:
     OPC_EmitIntegerI16,
     OPC_EmitIntegerI32,
     OPC_EmitIntegerI64,
+    OPC_EmitIntegerByHwMode,
     OPC_EmitRegister,
     OPC_EmitRegisterI32,
     OPC_EmitRegisterI64,
+    OPC_EmitRegisterByHwMode,
     OPC_EmitRegister2,
+    OPC_EmitRegisterByHwMode2,
     OPC_EmitConvertToTarget,
     OPC_EmitConvertToTarget0,
     OPC_EmitConvertToTarget1,
@@ -290,6 +304,7 @@ public:
     OPC_EmitCopyToRegTwoByte,
     OPC_EmitNodeXForm,
     OPC_EmitNode,
+    OPC_EmitNodeByHwMode,
     // Space-optimized forms that implicitly encode number of result VTs.
     OPC_EmitNode0,
     OPC_EmitNode1,
@@ -302,6 +317,7 @@ public:
     OPC_EmitNode1Chain,
     OPC_EmitNode2Chain,
     OPC_MorphNodeTo,
+    OPC_MorphNodeToByHwMode,
     // Space-optimized forms that implicitly encode number of result VTs.
     OPC_MorphNodeTo0,
     OPC_MorphNodeTo1,
@@ -446,6 +462,10 @@ public:
 
   virtual SDValue RunSDNodeXForm(SDValue V, unsigned XFormNo) {
     llvm_unreachable("Tblgen should generate this!");
+  }
+
+  virtual MVT getValueTypeByHwMode(unsigned Index) const {
+    llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 
   void SelectCodeCommon(SDNode *NodeToMatch, const uint8_t *MatcherTable,

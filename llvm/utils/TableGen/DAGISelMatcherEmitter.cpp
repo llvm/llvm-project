@@ -71,6 +71,8 @@ class MatcherTableEmitter {
   std::vector<std::string> VecIncludeStrings;
   MapVector<std::string, unsigned, StringMap<unsigned>> VecPatterns;
 
+  std::map<ValueTypeByHwMode, unsigned> ValueTypeMap;
+
   unsigned getPatternIdxFromTable(std::string &&P, std::string &&include_loc) {
     const auto [It, Inserted] =
         VecPatterns.try_emplace(std::move(P), VecPatterns.size());
@@ -174,6 +176,8 @@ public:
 
   void EmitPredicateFunctions(raw_ostream &OS);
 
+  void EmitValueTypeFunction(raw_ostream &OS);
+
   void EmitHistogram(const Matcher *N, raw_ostream &OS);
 
   void EmitPatternMatchTable(raw_ostream &OS);
@@ -210,6 +214,13 @@ private:
       NodeXForms.push_back(Rec);
       Entry = NodeXForms.size();
     }
+    return Entry - 1;
+  }
+
+  unsigned getValueTypeID(const ValueTypeByHwMode &VT) {
+    unsigned &Entry = ValueTypeMap[VT];
+    if (Entry == 0)
+      Entry = ValueTypeMap.size();
     return Entry - 1;
   }
 };
@@ -660,46 +671,68 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
   }
 
   case Matcher::CheckType: {
+    const ValueTypeByHwMode &VTBH = cast<CheckTypeMatcher>(N)->getType();
     if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
-      MVT VT = cast<CheckTypeMatcher>(N)->getType();
-      switch (VT.SimpleTy) {
-      case MVT::i32:
-      case MVT::i64:
-        OS << "OPC_CheckTypeI" << MVT(VT).getSizeInBits() << ",\n";
-        return 1;
-      default:
-        OS << "OPC_CheckType, ";
-        if (!OmitComments)
-          OS << "/*" << getEnumName(VT) << "*/";
-        unsigned NumBytes = EmitVBRValue(VT.SimpleTy, OS);
-        OS << "\n";
+      if (VTBH.isSimple()) {
+        MVT VT = VTBH.getSimple();
+        switch (VT.SimpleTy) {
+        case MVT::i32:
+        case MVT::i64:
+          OS << "OPC_CheckTypeI" << MVT(VT).getSizeInBits() << ",\n";
+          return 1;
+        default:
+          OS << "OPC_CheckType, ";
+          if (!OmitComments)
+            OS << "/*" << getEnumName(VT) << "*/";
+          unsigned NumBytes = EmitVBRValue(VT.SimpleTy, OS);
+          OS << '\n';
+          return NumBytes + 1;
+        }
+      } else {
+        OS << "OPC_CheckTypeByHwMode, ";
+        unsigned NumBytes = EmitVBRValue(getValueTypeID(VTBH), OS);
+        OS << '\n';
         return NumBytes + 1;
       }
     }
-    OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo() << ", ";
-    if (!OmitComments)
-      OS << "/*" << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << "*/";
-    unsigned NumBytes =
-        EmitVBRValue(cast<CheckTypeMatcher>(N)->getType().SimpleTy, OS);
-    OS << "\n";
+    if (VTBH.isSimple()) {
+      OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo()
+         << ", ";
+      if (!OmitComments)
+        OS << "/*" << getEnumName(VTBH.getSimple()) << "*/";
+      unsigned NumBytes = EmitVBRValue(VTBH.getSimple().SimpleTy, OS);
+      OS << '\n';
+      return NumBytes + 2;
+    }
+    unsigned NumBytes = EmitVBRValue(getValueTypeID(VTBH), OS);
+    OS << '\n';
     return NumBytes + 2;
   }
 
   case Matcher::CheckChildType: {
-    MVT VT = cast<CheckChildTypeMatcher>(N)->getType();
-    switch (VT.SimpleTy) {
-    case MVT::i32:
-    case MVT::i64:
+    const ValueTypeByHwMode &VTBH = cast<CheckChildTypeMatcher>(N)->getType();
+    if (VTBH.isSimple()) {
+      MVT VT = VTBH.getSimple();
+      switch (VT.SimpleTy) {
+      case MVT::i32:
+      case MVT::i64:
+        OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+           << "TypeI" << MVT(VT).getSizeInBits() << ",\n";
+        return 1;
+      default:
+        OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+           << "Type, ";
+        if (!OmitComments)
+          OS << "/*" << getEnumName(VT) << "*/";
+        unsigned NumBytes = EmitVBRValue(VT.SimpleTy, OS);
+        OS << '\n';
+        return NumBytes + 1;
+      }
+    } else {
       OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
-         << "TypeI" << MVT(VT).getSizeInBits() << ",\n";
-      return 1;
-    default:
-      OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
-         << "Type, ";
-      if (!OmitComments)
-        OS << "/*" << getEnumName(VT) << "*/";
-      unsigned NumBytes = EmitVBRValue(VT.SimpleTy, OS);
-      OS << "\n";
+         << "TypeByHwMode, ";
+      unsigned NumBytes = EmitVBRValue(getValueTypeID(VTBH), OS);
+      OS << '\n';
       return NumBytes + 1;
     }
   }
@@ -796,22 +829,29 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     const auto *IM = cast<EmitIntegerMatcher>(N);
     int64_t Val = IM->getValue();
     const std::string &Str = IM->getString();
-    MVT VT = IM->getVT();
+    const ValueTypeByHwMode &VTBH = IM->getVT();
     unsigned TypeBytes = 0;
-    switch (VT.SimpleTy) {
-    case MVT::i8:
-    case MVT::i16:
-    case MVT::i32:
-    case MVT::i64:
-      OS << "OPC_EmitIntegerI" << VT.getSizeInBits() << ", ";
-      break;
-    default:
-      OS << "OPC_EmitInteger, ";
-      if (!OmitComments)
-        OS << "/*" << getEnumName(VT) << "*/";
-      TypeBytes = EmitVBRValue(VT.SimpleTy, OS);
+    if (VTBH.isSimple()) {
+      MVT VT = VTBH.getSimple();
+      switch (VT.SimpleTy) {
+      case MVT::i8:
+      case MVT::i16:
+      case MVT::i32:
+      case MVT::i64:
+        OS << "OPC_EmitIntegerI" << VT.getSizeInBits() << ", ";
+        break;
+      default:
+        OS << "OPC_EmitInteger, ";
+        if (!OmitComments)
+          OS << "/*" << getEnumName(VT) << "*/";
+        TypeBytes = EmitVBRValue(VT.SimpleTy, OS);
+        OS << ' ';
+        break;
+      }
+    } else {
+      OS << "OPC_EmitIntegerByHwMode, ";
+      TypeBytes = EmitVBRValue(getValueTypeID(VTBH), OS);
       OS << ' ';
-      break;
     }
     // If the value is 63 or smaller, use the string directly. Otherwise, use
     // a VBR.
@@ -834,30 +874,45 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
   case Matcher::EmitRegister: {
     const EmitRegisterMatcher *Matcher = cast<EmitRegisterMatcher>(N);
     const CodeGenRegister *Reg = Matcher->getReg();
-    MVT VT = Matcher->getVT();
+    const ValueTypeByHwMode &VTBH = Matcher->getVT();
     unsigned OpBytes;
-    // If the enum value of the register is larger than one byte can handle,
-    // use EmitRegister2.
-    if (Reg && Reg->EnumValue > 255) {
-      OS << "OPC_EmitRegister2, ";
-      if (!OmitComments)
-        OS << "/*" << getEnumName(VT) << "*/";
-      OpBytes = EmitVBRValue(VT.SimpleTy, OS);
-      OS << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
-      return OpBytes + 3;
-    }
-    switch (VT.SimpleTy) {
-    case MVT::i32:
-    case MVT::i64:
-      OpBytes = 1;
-      OS << "OPC_EmitRegisterI" << VT.getSizeInBits() << ", ";
-      break;
-    default:
-      OS << "OPC_EmitRegister, ";
-      if (!OmitComments)
-        OS << "/*" << getEnumName(VT) << "*/";
-      OpBytes = EmitVBRValue(VT.SimpleTy, OS) + 1;
-      break;
+    if (VTBH.isSimple()) {
+      MVT VT = VTBH.getSimple();
+      // If the enum value of the register is larger than one byte can handle,
+      // use EmitRegister2.
+      if (Reg && Reg->EnumValue > 255) {
+        OS << "OPC_EmitRegister2, ";
+        if (!OmitComments)
+          OS << "/*" << getEnumName(VT) << "*/";
+        OpBytes = EmitVBRValue(VT.SimpleTy, OS);
+        OS << " TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
+        return OpBytes + 3;
+      }
+      switch (VT.SimpleTy) {
+      case MVT::i32:
+      case MVT::i64:
+        OpBytes = 1;
+        OS << "OPC_EmitRegisterI" << VT.getSizeInBits() << ", ";
+        break;
+      default:
+        OS << "OPC_EmitRegister, ";
+        if (!OmitComments)
+          OS << "/*" << getEnumName(VT) << "*/";
+        OpBytes = EmitVBRValue(VT.SimpleTy, OS) + 1;
+        OS << ' ';
+        break;
+      }
+    } else {
+      if (Reg && Reg->EnumValue > 255) {
+        OS << "OPC_EmitRegisterByHwMode2, ";
+        OpBytes = EmitVBRValue(getValueTypeID(VTBH), OS);
+        OS << " TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
+        return OpBytes + 3;
+      }
+
+      OS << "OPC_EmitRegisterByHwMode, ";
+      OpBytes = EmitVBRValue(getValueTypeID(VTBH), OS) + 1;
+      OS << ' ';
     }
     if (Reg) {
       OS << getQualifiedName(Reg->TheDef);
@@ -964,9 +1019,15 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << "OPC_CaptureDeactivationSymbol,\n";
       OS.indent(FullIndexWidth + Indent);
     }
+
+    bool ByHwMode =
+        llvm::any_of(EN->getVTList(), [](const ValueTypeByHwMode &VT) {
+          return !VT.isSimple();
+        });
+
     bool IsEmitNode = isa<EmitNodeMatcher>(EN);
     OS << (IsEmitNode ? "OPC_EmitNode" : "OPC_MorphNodeTo");
-    bool CompressVTs = EN->getNumVTs() < 3;
+    bool CompressVTs = !ByHwMode && EN->getNumVTs() < 3;
     bool CompressNodeInfo = false;
     if (CompressVTs) {
       OS << EN->getNumVTs();
@@ -990,6 +1051,9 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         OS << "GlueOutput";
       }
     }
+
+    if (ByHwMode)
+      OS << "ByHwMode";
 
     const CodeGenInstruction &CGI = EN->getInstruction();
     OS << ", TARGET_VAL(" << CGI.Namespace << "::" << CGI.TheDef->getName()
@@ -1018,11 +1082,18 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << ",";
     }
     unsigned NumTypeBytes = 0;
-    for (unsigned i = 0, e = EN->getNumVTs(); i != e; ++i) {
-      OS << ' ';
-      if (!OmitComments)
-        OS << "/*" << getEnumName(EN->getVT(i)) << "*/";
-      NumTypeBytes += EmitVBRValue(EN->getVT(i).SimpleTy, OS);
+    if (ByHwMode) {
+      for (unsigned i = 0, e = EN->getNumVTs(); i != e; ++i) {
+        OS << " 0,";
+        ++NumTypeBytes;
+      }
+    } else {
+      for (unsigned i = 0, e = EN->getNumVTs(); i != e; ++i) {
+        OS << ' ';
+        if (!OmitComments)
+          OS << "/*" << getEnumName(EN->getVT(i).getSimple()) << "*/";
+        NumTypeBytes += EmitVBRValue(EN->getVT(i).getSimple().SimpleTy, OS);
+      }
     }
 
     OS << ' ' << EN->getNumOperands();
@@ -1267,6 +1338,18 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
   }
 }
 
+void MatcherTableEmitter::EmitValueTypeFunction(raw_ostream &OS) {
+  if (ValueTypeMap.empty())
+    return;
+
+  BeginEmitFunction(OS, "MVT", "getValueTypeByHwMode(unsigned Index) const",
+                    /*AddOverride=*/true);
+  OS << "{\n";
+
+  OS << "}\n";
+  EndEmitFunction(OS);
+}
+
 static StringRef getOpcodeString(Matcher::KindTy Kind) {
   switch (Kind) {
   case Matcher::Scope:
@@ -1428,6 +1511,8 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
 
   // Next up, emit the function for node and pattern predicates:
   MatcherEmitter.EmitPredicateFunctions(OS);
+
+  MatcherEmitter.EmitValueTypeFunction(OS);
 
   if (InstrumentCoverage)
     MatcherEmitter.EmitPatternMatchTable(OS);

@@ -9,6 +9,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H
 #define LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H
 
+#include "InfoByHwMode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -516,14 +517,14 @@ private:
 /// CheckTypeMatcher - This checks to see if the current node has the
 /// specified type at the specified result, if not it fails to match.
 class CheckTypeMatcher : public Matcher {
-  MVT Type;
+  ValueTypeByHwMode Type;
   unsigned ResNo;
 
 public:
-  CheckTypeMatcher(MVT type, unsigned resno)
-      : Matcher(CheckType), Type(type), ResNo(resno) {}
+  CheckTypeMatcher(ValueTypeByHwMode type, unsigned resno)
+      : Matcher(CheckType), Type(std::move(type)), ResNo(resno) {}
 
-  MVT getType() const { return Type; }
+  const ValueTypeByHwMode &getType() const { return Type; }
   unsigned getResNo() const { return ResNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == CheckType; }
@@ -565,14 +566,14 @@ private:
 /// specified type, if not it fails to match.
 class CheckChildTypeMatcher : public Matcher {
   unsigned ChildNo;
-  MVT Type;
+  ValueTypeByHwMode Type;
 
 public:
-  CheckChildTypeMatcher(unsigned childno, MVT type)
-      : Matcher(CheckChildType), ChildNo(childno), Type(type) {}
+  CheckChildTypeMatcher(unsigned childno, ValueTypeByHwMode type)
+      : Matcher(CheckChildType), ChildNo(childno), Type(std::move(type)) {}
 
   unsigned getChildNo() const { return ChildNo; }
-  MVT getType() const { return Type; }
+  const ValueTypeByHwMode &getType() const { return Type; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == CheckChildType;
@@ -831,22 +832,20 @@ class EmitIntegerMatcher : public Matcher {
   // Optional string to give the value a symbolic name for readability.
   std::string Str;
   int64_t Val;
-  MVT VT;
+  ValueTypeByHwMode VT;
 
   unsigned ResultNo;
 
 public:
-  EmitIntegerMatcher(int64_t val, MVT vt, unsigned resultNo)
-      : Matcher(EmitInteger),
-        Val(SignExtend64(val, MVT(vt).getFixedSizeInBits())), VT(vt),
-        ResultNo(resultNo) {}
+  EmitIntegerMatcher(int64_t val, ValueTypeByHwMode vt, unsigned resultNo)
+      : Matcher(EmitInteger), Val(val), VT(std::move(vt)), ResultNo(resultNo) {}
   EmitIntegerMatcher(const std::string &str, int64_t val, MVT vt,
                      unsigned resultNo)
       : Matcher(EmitInteger), Str(str), Val(val), VT(vt), ResultNo(resultNo) {}
 
   const std::string &getString() const { return Str; }
   int64_t getValue() const { return Val; }
-  MVT getVT() const { return VT; }
+  const ValueTypeByHwMode &getVT() const { return VT; }
   unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == EmitInteger; }
@@ -865,16 +864,18 @@ class EmitRegisterMatcher : public Matcher {
   /// Reg - The def for the register that we're emitting.  If this is null, then
   /// this is a reference to zero_reg.
   const CodeGenRegister *Reg;
-  MVT VT;
+  ValueTypeByHwMode VT;
 
   unsigned ResultNo;
 
 public:
-  EmitRegisterMatcher(const CodeGenRegister *reg, MVT vt, unsigned resultNo)
-      : Matcher(EmitRegister), Reg(reg), VT(vt), ResultNo(resultNo) {}
+  EmitRegisterMatcher(const CodeGenRegister *reg, ValueTypeByHwMode vt,
+                      unsigned resultNo)
+      : Matcher(EmitRegister), Reg(reg), VT(std::move(vt)), ResultNo(resultNo) {
+  }
 
   const CodeGenRegister *getReg() const { return Reg; }
-  MVT getVT() const { return VT; }
+  const ValueTypeByHwMode &getVT() const { return VT; }
   unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == EmitRegister; }
@@ -1002,7 +1003,7 @@ private:
 /// MorphNodeTo.
 class EmitNodeMatcherCommon : public Matcher {
   const CodeGenInstruction &CGI;
-  const SmallVector<MVT, 3> VTs;
+  const SmallVector<ValueTypeByHwMode, 3> VTs;
   const SmallVector<unsigned, 6> Operands;
   bool HasChain, HasInGlue, HasOutGlue, HasMemRefs;
 
@@ -1012,7 +1013,8 @@ class EmitNodeMatcherCommon : public Matcher {
   int NumFixedArityOperands;
 
 public:
-  EmitNodeMatcherCommon(const CodeGenInstruction &cgi, ArrayRef<MVT> vts,
+  EmitNodeMatcherCommon(const CodeGenInstruction &cgi,
+                        ArrayRef<ValueTypeByHwMode> vts,
                         ArrayRef<unsigned> operands, bool hasChain,
                         bool hasInGlue, bool hasOutGlue, bool hasmemrefs,
                         int numfixedarityoperands, bool isMorphNodeTo)
@@ -1024,7 +1026,7 @@ public:
   const CodeGenInstruction &getInstruction() const { return CGI; }
 
   unsigned getNumVTs() const { return VTs.size(); }
-  MVT getVT(unsigned i) const {
+  const ValueTypeByHwMode &getVT(unsigned i) const {
     assert(i < VTs.size());
     return VTs[i];
   }
@@ -1035,8 +1037,8 @@ public:
     return Operands[i];
   }
 
-  const SmallVectorImpl<MVT> &getVTList() const { return VTs; }
-  const SmallVectorImpl<unsigned> &getOperandList() const { return Operands; }
+  ArrayRef<ValueTypeByHwMode> getVTList() const { return VTs; }
+  ArrayRef<unsigned> getOperandList() const { return Operands; }
 
   bool hasChain() const { return HasChain; }
   bool hasInGlue() const { return HasInGlue; }
@@ -1059,9 +1061,10 @@ class EmitNodeMatcher : public EmitNodeMatcherCommon {
   unsigned FirstResultSlot;
 
 public:
-  EmitNodeMatcher(const CodeGenInstruction &cgi, ArrayRef<MVT> vts,
-                  ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
-                  bool hasOutGlue, bool hasmemrefs, int numfixedarityoperands,
+  EmitNodeMatcher(const CodeGenInstruction &cgi,
+                  ArrayRef<ValueTypeByHwMode> vts, ArrayRef<unsigned> operands,
+                  bool hasChain, bool hasInGlue, bool hasOutGlue,
+                  bool hasmemrefs, int numfixedarityoperands,
                   unsigned firstresultslot)
       : EmitNodeMatcherCommon(cgi, vts, operands, hasChain, hasInGlue,
                               hasOutGlue, hasmemrefs, numfixedarityoperands,
@@ -1078,7 +1081,8 @@ class MorphNodeToMatcher : public EmitNodeMatcherCommon {
   const PatternToMatch &Pattern;
 
 public:
-  MorphNodeToMatcher(const CodeGenInstruction &cgi, ArrayRef<MVT> vts,
+  MorphNodeToMatcher(const CodeGenInstruction &cgi,
+                     ArrayRef<ValueTypeByHwMode> vts,
                      ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
                      bool hasOutGlue, bool hasmemrefs,
                      int numfixedarityoperands, const PatternToMatch &pattern)
