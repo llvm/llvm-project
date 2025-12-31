@@ -258,6 +258,7 @@ std::optional<ProvenanceRange> Message::GetProvenanceRange(
 static std::string Prefix(Severity severity) {
   switch (severity) {
   case Severity::Error:
+  case Severity::ErrorUnlessDeadCode:
     return "error: ";
   case Severity::Warning:
     return "warning: ";

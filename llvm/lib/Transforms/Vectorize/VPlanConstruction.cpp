@@ -580,7 +580,7 @@ static void simplifyLiveInsWithSCEV(VPlan &Plan,
     return nullptr;
   };
 
-  for (VPValue *LiveIn : Plan.getLiveIns()) {
+  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
     if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
       LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
   }
