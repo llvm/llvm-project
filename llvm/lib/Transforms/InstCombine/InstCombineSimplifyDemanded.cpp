@@ -2386,7 +2386,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
           return PoisonValue::get(VTy);
 
         // Only need nan propagation.
-        // Note: Dropping snan quieting.
+        if ((DemandedMask & ~fcNan) == fcNone)
+          return ConstantFP::getQNaN(VTy);
+
         return CI->getArgOperand(0);
       }
 
@@ -2471,7 +2473,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       }
 
       Known = KnownFPClass::exp(KnownSrc);
-      break;
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
     }
     case Intrinsic::log:
     case Intrinsic::log2:
