@@ -88,9 +88,13 @@ void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
 /// with the in-memory offsets of each of the individual values.
 ///
 void computeValueLLTs(const DataLayout &DL, Type &Ty,
-                      SmallVectorImpl<LLT> &ValueTys,
-                      SmallVectorImpl<uint64_t> *Offsets = nullptr,
-                      uint64_t StartingOffset = 0);
+                      SmallVectorImpl<LLT> &ValueLLTs,
+                      SmallVectorImpl<TypeSize> *Offsets = nullptr,
+                      TypeSize StartingOffset = TypeSize::getZero());
+void computeValueLLTs(const DataLayout &DL, Type &Ty,
+                      SmallVectorImpl<LLT> &ValueLLTs,
+                      SmallVectorImpl<uint64_t> *FixedOffsets,
+                      uint64_t FixedStartingOffset = 0);
 
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
 GlobalValue *ExtractTypeInfo(Value *V);
