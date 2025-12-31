@@ -248,6 +248,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+ - Clang: Avoid crash when declaring functions with ``__typeof``, ``__asm__`` alias and ``__attribute__((noreturn))`` in C2X mode. (PR #174092)
+
 - Added ``__scoped_atomic_uinc_wrap`` and ``__scoped_atomic_udec_wrap``.
 
 - Removed OpenCL header-only feature macros (previously unconditionally enabled
@@ -506,6 +508,8 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+- Avoid crash when declaring functions with ``__typeof``, ``__asm__`` alias and ``__attribute__((noreturn))`` in C2X mode. (PR #174092)
+
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (#GH149762).
 - Fix a crash in variable length array (e.g. ``int a[*]``) function parameter type

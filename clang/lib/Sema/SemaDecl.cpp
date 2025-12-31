@@ -9529,12 +9529,28 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     //     declarator to still have a function type. e.g.,
     //       typedef void func(int a);
     //       __attribute__((noreturn)) func other_func; // This has a prototype
-    bool HasPrototype =
-        (D.isFunctionDeclarator() && D.getFunctionTypeInfo().hasPrototype) ||
-        (D.getDeclSpec().isTypeRep() &&
-         SemaRef.GetTypeFromParser(D.getDeclSpec().getRepAsType(), nullptr)
-             ->isFunctionProtoType()) ||
-        (!R->getAsAdjusted<FunctionType>() && R->isFunctionProtoType());
+    // Determine whether the function was written with a prototype. We
+    // consider several sources: an explicit prototype in the declarator,
+    // a typedef reference that resolves to a function prototype, or the
+    // result type `R` being a function prototype.
+    auto hasPrototype = [&]() -> bool {
+      if (D.isFunctionDeclarator() && D.getFunctionTypeInfo().hasPrototype)
+        return true;
+
+      if (D.getDeclSpec().isTypeRep()) {
+        QualType RepTy = SemaRef.GetTypeFromParser(D.getDeclSpec().getRepAsType(),
+                                                  nullptr);
+        if (!RepTy.isNull() && RepTy->getAs<FunctionProtoType>())
+          return true;
+      }
+
+      if (!R.isNull() && R->getAs<FunctionProtoType>())
+        return true;
+
+      return false;
+    };
+
+    bool HasPrototype = hasPrototype();
     assert(
         (HasPrototype || !SemaRef.getLangOpts().requiresStrictPrototypes()) &&
         "Strict prototypes are required");
