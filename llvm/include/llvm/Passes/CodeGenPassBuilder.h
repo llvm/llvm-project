@@ -728,7 +728,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     flushFPMsToMPM(PMW);
     addModulePass(ShadowStackGCLoweringPass(), PMW);
   }
-  addFunctionPass(LowerConstantIntrinsicsPass(), PMW);
 
   // Make sure that no unreachable blocks are instruction selected.
   addFunctionPass(UnreachableBlockElimPass(), PMW);
