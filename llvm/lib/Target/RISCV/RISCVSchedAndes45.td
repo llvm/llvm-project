@@ -462,10 +462,11 @@ foreach mx = SchedMxList in {
 // The latency for loads is (4+VLSU_MEM_LATENCY+(DLEN/EEW)).
 // The throughput for loads and stores is VL.
 foreach mx = SchedMxList in {
-  defvar Cycles = Andes45GetCyclesOnePerElement<mx, 8>.c;
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
   foreach eew = [8, 16, 32, 64] in {
+    defvar Cycles = Andes45GetCyclesOnePerElement<mx, eew>.c;
+
     let Latency = !add(4, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, eew))),
         ReleaseAtCycles = [Cycles] in
       defm "" : LMULWriteResMX<"WriteVLDS"  # eew, [Andes45VLSU], mx, IsWorstCase>;
@@ -482,10 +483,11 @@ foreach mx = SchedMxList in {
 // The latency for loads is (5+VLSU_MEM_LATENCY+(DLEN/EEW)).
 // The throughput for loads and stores is (VL+EMUL-1).
 foreach mx = SchedMxList in {
-  defvar Cycles = Andes45GetCyclesOnePerElement<mx, 8>.c;
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
   foreach eew = [8, 16, 32, 64] in {
+    defvar Cycles = Andes45GetCyclesOnePerElement<mx, eew>.c;
+
     let Latency = !add(5, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, eew))),
         ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
       defm "" : LMULWriteResMX<"WriteVLDUX" # eew, [Andes45VLSU], mx, IsWorstCase>;
