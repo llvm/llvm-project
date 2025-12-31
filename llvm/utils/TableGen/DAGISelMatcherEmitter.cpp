@@ -269,7 +269,7 @@ static unsigned EmitSignedVBRValue(int64_t Val, raw_ostream &OS) {
   OS << static_cast<unsigned>(Buffer[Len - 1]);
   if ((Len > 1 || Val < 0) && !OmitComments)
     OS << "/*" << Val << "*/";
-  OS << ", ";
+  OS << ',';
   return Len;
 }
 
@@ -810,6 +810,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       if (!OmitComments)
         OS << "/*" << getEnumName(VT) << "*/";
       TypeBytes = EmitVBRValue(VT.SimpleTy, OS);
+      OS << ' ';
       break;
     }
     // If the value is 63 or smaller, use the string directly. Otherwise, use
