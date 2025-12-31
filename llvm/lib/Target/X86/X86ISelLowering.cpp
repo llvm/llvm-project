@@ -29456,6 +29456,10 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = Op.getValueType();
+
+  assert(VT.isFloatingPoint() && VT != MVT::f80 && VT != MVT::f128 &&
+         "Unexpected type in LowerFMINIMUM_FMAXIMUM");
+
   SDValue X = Op.getOperand(0);
   SDValue Y = Op.getOperand(1);
   SDLoc DL(Op);
