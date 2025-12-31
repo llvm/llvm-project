@@ -857,20 +857,16 @@ private:
 /// EmitStringIntegerMatcher - A target constant whose value is represented
 /// by a string.
 class EmitStringIntegerMatcher : public Matcher {
-  std::string Str;
-  int64_t Val;
+  std::string Val;
   MVT VT;
 
   unsigned ResultNo;
 
 public:
-  EmitStringIntegerMatcher(const std::string &str, int64_t val, MVT vt,
-                           unsigned resultNo)
-      : Matcher(EmitStringInteger), Str(str), Val(val), VT(vt),
-        ResultNo(resultNo) {}
+  EmitStringIntegerMatcher(const std::string &val, MVT vt, unsigned resultNo)
+      : Matcher(EmitStringInteger), Val(val), VT(vt), ResultNo(resultNo) {}
 
-  const std::string &getString() const { return Str; }
-  int64_t getValue() const { return Val; }
+  const std::string &getValue() const { return Val; }
   MVT getVT() const { return VT; }
   unsigned getResultNo() const { return ResultNo; }
 
