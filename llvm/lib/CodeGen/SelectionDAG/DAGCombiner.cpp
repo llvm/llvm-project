@@ -18038,19 +18038,6 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
             N0, DAG, LegalOperations, ForCodeSize))
       return DAG.getNode(ISD::FSUB, DL, VT, N1, NegN0);
 
-  // fold (fadd A, Splat(fneg(B))) -> (fsub A, Splat(B))
-  if (VT.isVector() &&
-      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FSUB, VT))) {
-    if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
-      SDValue SplatN0 = N1->getOperand(0);
-      if (SplatN0.getOpcode() == ISD::FNEG && SplatN0.hasOneUse()) {
-        SDValue Splat =
-            DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0->getOperand(0));
-        return DAG.getNode(ISD::FSUB, DL, VT, N0, Splat);
-      }
-    }
-  }
-
   auto isFMulNegTwo = [](SDValue FMul) {
     if (!FMul.hasOneUse() || FMul.getOpcode() != ISD::FMUL)
       return false;
