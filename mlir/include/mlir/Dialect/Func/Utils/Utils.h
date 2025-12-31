@@ -83,6 +83,24 @@ lookupOrCreateFnDecl(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
                      SymbolTableCollection *symbolTables = nullptr,
                      Type resultType = {});
 
+/// Extract a slice of operations into a new function.
+///
+/// The operations are cloned into a new function body. All operands that are
+/// defined outside the slice become function arguments, and all results from
+/// the operations become function return values. Unused function arguments
+/// are automatically removed.
+///
+/// Note: Operations with regions containing compute payloads are cloned but
+/// the region contents may not be properly handled in all cases.
+///
+/// \param ops The operations to extract (will be cloned, not moved)
+/// \param context The MLIRContext to use for creating the function
+/// \param functionName The name for the new function
+/// \returns The newly created FuncOp containing the cloned operations
+FuncOp extractOperationsIntoFunction(ArrayRef<Operation *> ops,
+                                     MLIRContext *context,
+                                     StringRef functionName);
+
 } // namespace func
 } // namespace mlir
 

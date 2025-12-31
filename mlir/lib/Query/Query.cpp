@@ -9,7 +9,7 @@
 #include "mlir/Query/Query.h"
 #include "QueryParser.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/IRMapping.h"
+#include "mlir/Dialect/Func/Utils/Utils.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Query/Matcher/MatchFinder.h"
 #include "mlir/Query/QuerySession.h"
@@ -25,71 +25,6 @@ QueryRef parse(llvm::StringRef line, const QuerySession &qs) {
 std::vector<llvm::LineEditor::Completion>
 complete(llvm::StringRef line, size_t pos, const QuerySession &qs) {
   return QueryParser::complete(line, pos, qs);
-}
-
-// TODO: Extract into a helper function that can be reused outside query
-// context.
-static Operation *extractFunction(std::vector<Operation *> &ops,
-                                  MLIRContext *context,
-                                  llvm::StringRef functionName) {
-  context->loadDialect<func::FuncDialect>();
-  OpBuilder builder(context);
-
-  // Collect data for function creation
-  std::vector<Operation *> slice;
-  std::vector<Value> values;
-  std::vector<Type> outputTypes;
-
-  for (auto *op : ops) {
-    // Return op's operands are propagated, but the op itself isn't needed.
-    if (!isa<func::ReturnOp>(op))
-      slice.push_back(op);
-
-    // All results are returned by the extracted function.
-    llvm::append_range(outputTypes, op->getResults().getTypes());
-
-    // Track all values that need to be taken as input to function.
-    llvm::append_range(values, op->getOperands());
-  }
-
-  // Create the function
-  FunctionType funcType =
-      builder.getFunctionType(TypeRange(ValueRange(values)), outputTypes);
-  auto loc = builder.getUnknownLoc();
-  func::FuncOp funcOp = func::FuncOp::create(loc, functionName, funcType);
-
-  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
-
-  // Map original values to function arguments
-  IRMapping mapper;
-  for (const auto &arg : llvm::enumerate(values))
-    mapper.map(arg.value(), funcOp.getArgument(arg.index()));
-
-  // Clone operations and build function body
-  std::vector<Operation *> clonedOps;
-  std::vector<Value> clonedVals;
-  // TODO: Handle extraction of operations with compute payloads defined via
-  // regions.
-  for (Operation *slicedOp : slice) {
-    Operation *clonedOp =
-        clonedOps.emplace_back(builder.clone(*slicedOp, mapper));
-    clonedVals.insert(clonedVals.end(), clonedOp->result_begin(),
-                      clonedOp->result_end());
-  }
-  // Add return operation
-  func::ReturnOp::create(builder, loc, clonedVals);
-
-  // Remove unused function arguments
-  size_t currentIndex = 0;
-  while (currentIndex < funcOp.getNumArguments()) {
-    // Erase if possible.
-    if (funcOp.getArgument(currentIndex).use_empty())
-      if (succeeded(funcOp.eraseArgument(currentIndex)))
-        continue;
-    ++currentIndex;
-  }
-
-  return funcOp;
 }
 
 Query::~Query() = default;
@@ -130,8 +65,8 @@ LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   if (!functionName.empty()) {
     std::vector<Operation *> flattenedMatches =
         finder.flattenMatchedOps(matches);
-    Operation *function =
-        extractFunction(flattenedMatches, rootOp->getContext(), functionName);
+    func::FuncOp function = func::extractOperationsIntoFunction(
+        flattenedMatches, rootOp->getContext(), functionName);
     if (failed(verify(function)))
       return mlir::failure();
     os << "\n" << *function << "\n\n";
