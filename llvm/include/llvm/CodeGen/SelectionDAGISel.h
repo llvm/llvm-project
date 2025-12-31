@@ -261,6 +261,9 @@ public:
     OPC_EmitIntegerI16,
     OPC_EmitIntegerI32,
     OPC_EmitIntegerI64,
+    OPC_EmitStringInteger,
+    // Space-optimized forms that implicitly encode integer VT.
+    OPC_EmitStringIntegerI32,
     OPC_EmitRegister,
     OPC_EmitRegisterI32,
     OPC_EmitRegisterI64,
