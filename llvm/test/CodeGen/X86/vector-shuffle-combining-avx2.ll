@@ -1215,3 +1215,106 @@ entry:
   %shuffle5 = shufflevector <32 x i16> zeroinitializer, <32 x i16> %not, <32 x i32> <i32 3, i32 9, i32 3, i32 1, i32 9, i32 8, i32 9, i32 2, i32 0, i32 8, i32 48, i32 8, i32 35, i32 3, i32 0, i32 4, i32 4, i32 7, i32 4, i32 39, i32 9, i32 0, i32 59, i32 6, i32 0, i32 4, i32 9, i32 1, i32 1, i32 2, i32 8, i32 9>
   ret <32 x i16> %shuffle5
 }
+
+define <9 x i16> @PR172010(<4 x i64> %a0) {
+; AVX2-LABEL: PR172010:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[1,1,1,1]
+; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,1,1,3]
+; AVX2-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,15,4,5,8,9,0,1],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: PR172010:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[0,1,0,1,2,3,6,7]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,2,1]
+; AVX512-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,4,6,7]
+; AVX512-NEXT:    vprolq $16, %zmm0, %zmm0
+; AVX512-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-NEXT:    ret{{[l|q]}}
+  %shuffle = shufflevector <4 x i64> %a0, <4 x i64> zeroinitializer, <16 x i32> <i32 5, i32 3, i32 0, i32 5, i32 2, i32 2, i32 1, i32 1, i32 4, i32 6, i32 5, i32 3, i32 1, i32 7, i32 2, i32 1>
+  %trunc = trunc nuw <16 x i64> %shuffle to <16 x i16>
+  %result = shufflevector <16 x i16> zeroinitializer, <16 x i16> %trunc, <9 x i32> <i32 31, i32 18, i32 28, i32 20, i32 7, i32 5, i32 8, i32 4, i32 7>
+  ret <9 x i16> %result
+}
+
+define <8 x float> @PR173030(i8 %a0, i16 %a1, i32 %a2) {
+; X86-LABEL: PR173030:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx def $ecx
+; X86-NEXT:    incb %cl
+; X86-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; X86-NEXT:    vpmovsxbd %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovd %ecx, %xmm1
+; X86-NEXT:    incl %ecx
+; X86-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
+; X86-NEXT:    vpmovsxwd %xmm1, %xmm1
+; X86-NEXT:    vmovd %eax, %xmm2
+; X86-NEXT:    incl %eax
+; X86-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X86-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
+; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; X86-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; X86-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR173030:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 1(%rdi), %eax
+; X64-NEXT:    vmovd %edi, %xmm0
+; X64-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpmovsxbd %xmm0, %xmm0
+; X64-NEXT:    vmovd %esi, %xmm1
+; X64-NEXT:    incl %esi
+; X64-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
+; X64-NEXT:    vpmovsxwd %xmm1, %xmm1
+; X64-NEXT:    vmovd %edx, %xmm2
+; X64-NEXT:    incl %edx
+; X64-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
+; X64-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
+; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X64-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; X64-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; X64-NEXT:    retq
+  %i = add i8 %a0, 1
+  %i1 = insertelement <2 x i8> poison, i8 %a0, i64 0
+  %i2 = insertelement <2 x i8> %i1, i8 %i, i64 1
+  %i3 = sitofp <2 x i8> %i2 to <2 x float>
+  %i4 = add i16 %a1, 1
+  %i5 = insertelement <2 x i16> poison, i16 %a1, i64 0
+  %i6 = insertelement <2 x i16> %i5, i16 %i4, i64 1
+  %i7 = sitofp <2 x i16> %i6 to <2 x float>
+  %i8 = add i32 %a2, 1
+  %i9 = insertelement <2 x i32> poison, i32 %a2, i64 0
+  %i10 = insertelement <2 x i32> %i9, i32 %i8, i64 1
+  %i11 = sitofp <2 x i32> %i10 to <2 x float>
+  %i12 = shufflevector <2 x float> %i3, <2 x float> %i7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+  %i13 = shufflevector <2 x float> %i11, <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %i14 = shufflevector <8 x float> %i12, <8 x float> %i13, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
+  %i15 = shufflevector <8 x float> %i14, <8 x float> <float poison, float poison, float poison, float poison, float poison, float poison, float 1.000000e+00, float 1.000000e+00>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 14, i32 15>
+  ret <8 x float> %i15
+}

@@ -1131,4 +1131,14 @@ static_assert(
     std::common_reference_with<one_way_ne const&, explicit_operators const&>);
 static_assert(
     !check_equality_comparable_with<one_way_ne, explicit_operators>());
+
+// P2404
+static_assert(check_equality_comparable_with<move_only_equality_with_int, int>());
+static_assert(check_equality_comparable_with<std::unique_ptr<int>, std::nullptr_t>());
+// TODO: Clang is broken, see https://llvm.org/PR171438
+#if defined(TEST_COMPILER_CLANG) && !defined(TEST_COMPILER_APPLE_CLANG)
+static_assert(check_equality_comparable_with<nonmovable_equality_with_int, int>());
+#else
+static_assert(!check_equality_comparable_with<nonmovable_equality_with_int, int>());
+#endif
 } // namespace types_fit_for_purpose

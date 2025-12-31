@@ -218,6 +218,45 @@ func.func @conv_3d(%in : tensor<?x?x?xf32>, %filter : tensor<?x?x?xf32>, %out : 
 
 // -----
 
+func.func @conv_3d_ndhwc_dhwcf(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.conv_3d_ndhwc_dhwcf
+         {dilations = dense<2> : tensor<3xi64>, strides = dense<3> : tensor<3xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @conv_3d_ndhwc_dhwcf
+//      CHECK:   linalg.conv_3d_ndhwc_dhwcf
+// CHECK-SAME:      dilations = dense<2> : tensor<3xi64>, strides = dense<3> : tensor<3xi64>
+
+// -----
+
+func.func @conv_3d_ndhwc_dhwcf_q(%input: tensor<?x?x?x?x?xi8>, %filter: tensor<?x?x?x?x?xi8>, %output: tensor<?x?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?x?xi32> {
+  %0 = linalg.conv_3d_ndhwc_dhwcf_q
+         {dilations = dense<1> : tensor<3xi64>, strides = dense<1> : tensor<3xi64>}
+         ins (%input, %filter, %zp_input, %zp_filter : tensor<?x?x?x?x?xi8>, tensor<?x?x?x?x?xi8>, i32, i32)
+         outs (%output: tensor<?x?x?x?x?xi32>) -> tensor<?x?x?x?x?xi32>
+  return %0 : tensor<?x?x?x?x?xi32>
+}
+//      CHECK: @conv_3d_ndhwc_dhwcf_q
+//      CHECK:   linalg.conv_3d_ndhwc_dhwcf_q
+// CHECK-SAME:      dilations = dense<1> : tensor<3xi64>, strides = dense<1> : tensor<3xi64>
+
+// -----
+
+func.func @conv_3d_ncdhw_fcdhw(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.conv_3d_ncdhw_fcdhw
+         {dilations = dense<[1, 2, 3]> : tensor<3xi64>, strides = dense<[4, 5, 6]> : tensor<3xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @conv_3d_ncdhw_fcdhw
+//      CHECK:   linalg.conv_3d_ncdhw_fcdhw
+// CHECK-SAME:      dilations = dense<[1, 2, 3]> : tensor<3xi64>, strides = dense<[4, 5, 6]> : tensor<3xi64>
+
+// -----
+
 // -------------------------------
 // Depthwise Convolution ops - 1D.
 // -------------------------------
@@ -334,6 +373,32 @@ func.func @depthwise_conv_2d_nhwc_hwcm_q(%input: tensor<?x?x?x?xi8>, %filter: te
 // Depthwise Convolution ops - 3D.
 // -------------------------------
 
+func.func @depthwise_conv_3d_ndhwc_dhwc(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.depthwise_conv_3d_ndhwc_dhwc
+         {dilations = dense<2> : tensor<3xi64>, strides = dense<3> : tensor<3xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @depthwise_conv_3d_ndhwc_dhwc
+//      CHECK:   linalg.depthwise_conv_3d_ndhwc_dhwc
+// CHECK-SAME:      dilations = dense<2> : tensor<3xi64>, strides = dense<3> : tensor<3xi64>
+
+// -----
+
+func.func @depthwise_conv_3d_ncdhw_cdhw(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.depthwise_conv_3d_ncdhw_cdhw
+         {dilations = dense<[1, 2, 3]> : tensor<3xi64>, strides = dense<[4, 5, 6]> : tensor<3xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @depthwise_conv_3d_ncdhw_cdhw
+//      CHECK:   linalg.depthwise_conv_3d_ncdhw_cdhw
+// CHECK-SAME:      dilations = dense<[1, 2, 3]> : tensor<3xi64>, strides = dense<[4, 5, 6]> : tensor<3xi64>
+
+// -----
+
 func.func @depthwise_conv_3d_ndhwc_dhwcm(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?x?xf32>, %output: tensor<?x?x?x?x?x?xf32>) -> tensor<?x?x?x?x?x?xf32> {
   %0 = linalg.depthwise_conv_3d_ndhwc_dhwcm
          {dilations = dense<1> : tensor<3xi64>, strides = dense<1> : tensor<3xi64>}
@@ -426,3 +491,160 @@ func.func @pooling_nhwc_min_unsigned_float(%input: tensor<?x?x?x?xf32>, %filter:
 //      CHECK: @pooling_nhwc_min_unsigned_float
 //      CHECK:   linalg.pooling_nhwc_min
 // CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
+func.func @pooling_nchw_sum(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %0 = linalg.pooling_nchw_sum
+         {dilations = dense<2> : tensor<2xi64>, strides = dense<3> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?xf32>)
+         outs (%output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}
+//      CHECK: @pooling_nchw_sum
+//      CHECK:   linalg.pooling_nchw_sum
+// CHECK-SAME:      dilations = dense<2> : tensor<2xi64>, strides = dense<3> : tensor<2xi64>
+
+// -----
+
+func.func @pooling_nchw_max(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %0 = linalg.pooling_nchw_max
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?xf32>)
+         outs (%output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}
+//      CHECK: @pooling_nchw_max
+//      CHECK:   linalg.pooling_nchw_max
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>
+
+// -----
+
+func.func @pooling_nwc_sum(%input: tensor<?x?x?xf32>, %filter: tensor<?xf32>, %output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = linalg.pooling_nwc_sum
+         {dilations = dense<3> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>}
+         ins (%input, %filter: tensor<?x?x?xf32>, tensor<?xf32>)
+         outs (%output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+//      CHECK: @pooling_nwc_sum
+//      CHECK:   linalg.pooling_nwc_sum
+// CHECK-SAME:      dilations = dense<3> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>
+
+// -----
+
+func.func @pooling_ncw_sum(%input: tensor<?x?x?xf32>, %filter: tensor<?xf32>, %output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = linalg.pooling_ncw_sum
+         {dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>}
+         ins (%input, %filter: tensor<?x?x?xf32>, tensor<?xf32>)
+         outs (%output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+//      CHECK: @pooling_ncw_sum
+//      CHECK:   linalg.pooling_ncw_sum
+// CHECK-SAME:      dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>
+
+// -----
+
+func.func @pooling_nwc_max(%input: tensor<?x?x?xf32>, %filter: tensor<?xf32>, %output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = linalg.pooling_nwc_max
+         {dilations = dense<1> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>}
+         ins (%input, %filter: tensor<?x?x?xf32>, tensor<?xf32>)
+         outs (%output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+//      CHECK: @pooling_nwc_max
+//      CHECK:   linalg.pooling_nwc_max
+// CHECK-SAME:      dilations = dense<1> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>
+
+// -----
+
+func.func @pooling_nwc_max_unsigned(%input: tensor<?x?x?xi8>, %filter: tensor<?xi8>, %output: tensor<?x?x?xi32>) -> tensor<?x?x?xi32> {
+  %0 = linalg.pooling_nwc_max_unsigned
+         {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+         ins (%input, %filter: tensor<?x?x?xi8>, tensor<?xi8>)
+         outs (%output: tensor<?x?x?xi32>) -> tensor<?x?x?xi32>
+  return %0 : tensor<?x?x?xi32>
+}
+//      CHECK: @pooling_nwc_max_unsigned
+//      CHECK:   linalg.pooling_nwc_max_unsigned
+// CHECK-SAME:      dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>
+
+// -----
+
+func.func @pooling_ncw_max(%input: tensor<?x?x?xf32>, %filter: tensor<?xf32>, %output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = linalg.pooling_ncw_max
+         {dilations = dense<2> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+         ins (%input, %filter: tensor<?x?x?xf32>, tensor<?xf32>)
+         outs (%output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+//      CHECK: @pooling_ncw_max
+//      CHECK:   linalg.pooling_ncw_max
+// CHECK-SAME:      dilations = dense<2> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>
+
+// -----
+
+func.func @pooling_nwc_min(%input: tensor<?x?x?xf32>, %filter: tensor<?xf32>, %output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = linalg.pooling_nwc_min
+         {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+         ins (%input, %filter: tensor<?x?x?xf32>, tensor<?xf32>)
+         outs (%output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+//      CHECK: @pooling_nwc_min
+//      CHECK:   linalg.pooling_nwc_min
+// CHECK-SAME:      dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>
+
+// -----
+
+func.func @pooling_nwc_min_unsigned(%input: tensor<?x?x?xi8>, %filter: tensor<?xi8>, %output: tensor<?x?x?xi32>) -> tensor<?x?x?xi32> {
+  %0 = linalg.pooling_nwc_min_unsigned
+         {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+         ins (%input, %filter: tensor<?x?x?xi8>, tensor<?xi8>)
+         outs (%output: tensor<?x?x?xi32>) -> tensor<?x?x?xi32>
+  return %0 : tensor<?x?x?xi32>
+}
+//      CHECK: @pooling_nwc_min_unsigned
+//      CHECK:   linalg.pooling_nwc_min_unsigned
+// CHECK-SAME:      dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>
+
+// -----
+
+func.func @pooling_ndhwc_sum(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.pooling_ndhwc_sum
+         {dilations = dense<2> : tensor<3xi64>, strides = dense<3> : tensor<3xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @pooling_ndhwc_sum
+//      CHECK:   linalg.pooling_ndhwc_sum
+// CHECK-SAME:      dilations = dense<2> : tensor<3xi64>, strides = dense<3> : tensor<3xi64>
+
+// -----
+
+func.func @pooling_ndhwc_max(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.pooling_ndhwc_max
+         {dilations = dense<1> : tensor<3xi64>, strides = dense<2> : tensor<3xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @pooling_ndhwc_max
+//      CHECK:   linalg.pooling_ndhwc_max
+// CHECK-SAME:      dilations = dense<1> : tensor<3xi64>, strides = dense<2> : tensor<3xi64>
+
+// -----
+
+func.func @pooling_ndhwc_min(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.pooling_ndhwc_min
+         {dilations = dense<[1, 2, 3]> : tensor<3xi64>, strides = dense<[4, 5, 6]> : tensor<3xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @pooling_ndhwc_min
+//      CHECK:   linalg.pooling_ndhwc_min
+// CHECK-SAME:      dilations = dense<[1, 2, 3]> : tensor<3xi64>, strides =
+// dense<[4, 5, 6]> : tensor<3xi64>
