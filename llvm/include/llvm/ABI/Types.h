@@ -310,7 +310,7 @@ public:
 
 /// TypeBuilder manages the lifecycle of ABI types using bump pointer
 /// allocation. Types created by a TypeBuilder are valid for the lifetime of the
-/// builder->allocator.
+/// allocator.
 ///
 /// Example usage:
 /// \code
