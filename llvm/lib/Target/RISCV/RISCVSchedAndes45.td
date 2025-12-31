@@ -501,7 +501,7 @@ foreach mx = SchedMxList in {
 
 // Unit-Stride Segmented Loads and Stores
 
-// The latency for loads is (4+VLSU_MEM_LATENCY+EMUL* NFIELDS+2)
+// The latency for loads is (4+VLSU_MEM_LATENCY+EMUL*NFIELDS+2)
 // The throughput for loads and stores is (VLEN/VLSU_MEM_DW)*EMUL*NFIELDS.
 foreach mx = SchedMxList in {
   foreach nf=2-8 in {
@@ -517,8 +517,7 @@ foreach mx = SchedMxList in {
         defm "" : LMULWriteResMX<"WriteVLSEGFF" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
       }
-      // TODO
-      let ReleaseAtCycles = [Cycles] in
+      let ReleaseAtCycles = [!mul(Cycles, nf)] in
       defm "" : LMULWriteResMX<"WriteVSSEG" # nf # "e" # eew,
                                [Andes45VLSU], mx, IsWorstCase>;
     }
@@ -527,19 +526,19 @@ foreach mx = SchedMxList in {
 
 // Strided Segmented Loads and Stores
 
-// The latency for loads is (5+VLSU_MEM_LATENCY+(DLEN/EEW))
-// The throughput for loads and stores is VL.
+// The latency for loads is (5+VLSU_MEM_LATENCY+(DLEN/EEW)*NFIELDS)
+// The throughput for loads and stores is VL*NFIELDS.
 foreach mx = SchedMxList in {
   foreach nf=2-8 in {
     foreach eew = [8, 16, 32, 64] in {
       defvar Cycles = Andes45GetCyclesOnePerElement<mx, eew>.c;
       defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-      let Latency = !add(5, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, eew))),
-          ReleaseAtCycles = [Cycles] in
+      let Latency = !add(5, !add(VLSU_MEM_LATENCY, !mul(!div(Andes45DLEN, eew), nf))),
+          ReleaseAtCycles = [!mul(Cycles, nf)] in
         defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
-      let ReleaseAtCycles = [Cycles] in
+      let ReleaseAtCycles = [!mul(Cycles, nf)] in
         defm "" : LMULWriteResMX<"WriteVSSSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
     }
@@ -548,22 +547,24 @@ foreach mx = SchedMxList in {
 
 // Indexed Segmented Loads and Stores
 
-// The latency for loads is (6+VLSU_MEM_LATENCY+(DLEN/EEW))
-// The throughput for loads and stores is (VL+EMUL-1).
+// The latency for loads is (6+VLSU_MEM_LATENCY+(DLEN/EEW)*NFIELDS)
+// The throughput for loads and stores is (VL*NFIELDS+EMUL-1).
 foreach mx = SchedMxList in {
   foreach nf=2-8 in {
     foreach eew = [8, 16, 32, 64] in {
       defvar Cycles = Andes45GetCyclesOnePerElement<mx, eew>.c;
       defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-      let Latency = !add(6, !add(VLSU_MEM_LATENCY, !div(Andes45DLEN, eew))),
-          ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
+      let Latency = !add(6, !add(VLSU_MEM_LATENCY, !mul(!div(Andes45DLEN, eew), nf))),
+          ReleaseAtCycles = [!add(!mul(Cycles, nf),
+                                  !sub(Andes45GetLMULValue<mx>.c, 1))] in {
         defm "" : LMULWriteResMX<"WriteVLUXSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVLOXSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
       }
-      let ReleaseAtCycles = [!add(Cycles, !sub(Andes45GetLMULValue<mx>.c, 1))] in {
+      let ReleaseAtCycles = [!add(!mul(Cycles, nf),
+                                  !sub(Andes45GetLMULValue<mx>.c, 1))] in {
         defm "" : LMULWriteResMX<"WriteVSUXSEG" # nf # "e" # eew,
                                  [Andes45VLSU], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVSOXSEG" # nf # "e" # eew,
