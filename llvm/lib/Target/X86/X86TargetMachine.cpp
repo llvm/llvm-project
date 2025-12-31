@@ -92,7 +92,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
-  initializeX86FlagsCopyLoweringPassPass(PR);
+  initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAsLegacyPass(PR);
@@ -530,7 +530,7 @@ void X86PassConfig::addPreRegAlloc() {
   addPass(createX86SuppressAPXForRelocationPass());
 
   addPass(createX86SpeculativeLoadHardeningPass());
-  addPass(createX86FlagsCopyLoweringPass());
+  addPass(createX86FlagsCopyLoweringLegacyPass());
   addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)

@@ -93,7 +93,14 @@ FunctionPass *createX86FixupSetCC();
 FunctionPass *createX86AvoidStoreForwardingBlocks();
 
 /// Return a pass that lowers EFLAGS copy pseudo instructions.
-FunctionPass *createX86FlagsCopyLoweringPass();
+class X86FlagsCopyLoweringPass
+    : public PassInfoMixin<X86FlagsCopyLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FlagsCopyLoweringLegacyPass();
 
 /// Return a pass that expands DynAlloca pseudo-instructions.
 class X86DynAllocaExpanderPass
@@ -262,7 +269,7 @@ void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
 void initializeX86FastTileConfigPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
-void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
+void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
