@@ -7166,10 +7166,14 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
     return false;
 
-  // Check if the offsets are contiguous.
+  // Check if the offsets are contiguous and that each group has the required
+  // size.
   SmallVector<int64_t> SortedOffsetsV(NumOffsets);
-  for (auto [Idx, MapPair] : enumerate(OffsetToPointerOpIdxMap))
+  for (auto [Idx, MapPair] : enumerate(OffsetToPointerOpIdxMap)) {
+    if (MapPair.second.first.size() != VecSz)
+      return false;
     SortedOffsetsV[Idx] = MapPair.first;
+  }
   sort(SortedOffsetsV);
 
   if (NumOffsets > 1) {
@@ -7264,7 +7268,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   int64_t LowestOffset = SortedOffsetsV[0];
   ArrayRef<Value *> PointerOps0 = OffsetToPointerOpIdxMap[LowestOffset].first;
 
-  SmallVector<int64_t> Coeffs0;
+  SmallVector<int64_t> Coeffs0(VecSz);
   SmallVector<unsigned> SortedIndicesForOffset0;
   const SCEV *Stride0 = calculateRtStride(PointerOps0, ScalarTy, *DL, *SE,
                                           SortedIndicesForOffset0, Coeffs0);
