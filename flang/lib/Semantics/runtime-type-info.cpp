@@ -1394,13 +1394,19 @@ CollectNonTbpDefinedIoGenericInterfaces(
               // scope has an equivalent type, use it for the table rather
               // than the "dtv" argument's type.
               if (const Symbol *inScope{scope.FindSymbol(derived.name())}) {
-                const Symbol &ultimate{inScope->GetUltimate()};
-                DerivedTypeSpec localDerivedType{inScope->name(), ultimate};
-                if (ultimate.has<DerivedTypeDetails>() &&
-                    evaluate::DynamicType{derived, /*isPolymorphic=*/false}
-                        .IsTkCompatibleWith(evaluate::DynamicType{
-                            localDerivedType, /*iP=*/false})) {
-                  derivedScope = ultimate.scope();
+                const Symbol *localDerived{&inScope->GetUltimate()};
+                if (const auto *generic{
+                        localDerived->detailsIf<GenericDetails>()}) {
+                  localDerived = generic->derivedType();
+                }
+                if (localDerived && localDerived->has<DerivedTypeDetails>()) {
+                  DerivedTypeSpec localDerivedType{
+                      inScope->name(), *localDerived};
+                  if (evaluate::DynamicType{derived, /*isPolymorphic=*/false}
+                          .IsTkCompatibleWith(evaluate::DynamicType{
+                              localDerivedType, /*iP=*/false})) {
+                    derivedScope = localDerived->scope();
+                  }
                 }
               }
             }
