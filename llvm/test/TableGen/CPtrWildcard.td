@@ -3,7 +3,7 @@
 // Create an intrinsic that uses cPTR to overload on capability pointer types,
 // and verify that we can match it correct in SelectionDAG.
 
-// CHECK:        static const unsigned char MatcherTable[] = {
+// CHECK:        static const uint8_t MatcherTable[] = {
 // CHECK-NEXT: /*     0*/ OPC_CheckOpcode, TARGET_VAL(ISD::INTRINSIC_WO_CHAIN),
 // CHECK-NEXT:/*     3*/ OPC_CheckChild0Integer, [[#]],
 // CHECK-NEXT:/*     5*/ OPC_RecordChild1, // #0 = $src
