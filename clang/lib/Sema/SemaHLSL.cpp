@@ -2408,7 +2408,7 @@ static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &SlotCount,
 }
 
 // return true if there is something invalid, false otherwise
-static bool ValidateRegisterNumber(StringRef SlotNumStr, Decl *TheDecl,
+static bool ValidateRegisterNumber(const StringRef SlotNumStr, Decl *TheDecl,
                                    ASTContext &Ctx) {
   uint64_t SlotNum;
   if (SlotNumStr.getAsInteger(10, SlotNum))
@@ -2491,7 +2491,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
       Diag(SlotLoc, diag::warn_hlsl_deprecated_register_type_i);
       return;
     }
-    StringRef SlotNumStr = Slot.substr(1);
+    const StringRef SlotNumStr = Slot.substr(1);
 
     unsigned N;
     // validate that the stringref has a non-empty number
@@ -2508,8 +2508,10 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
       return;
     }
 
-    // this shouldn't fail now that it's validated.
-    assert(!SlotNumStr.getAsInteger(10, N));
+    if (SlotNumStr.getAsInteger(10, N)) {
+      Diag(SlotLoc, diag::err_hlsl_unsupported_register_number);
+      return;
+    }
     SlotNum = N;
   }
 
