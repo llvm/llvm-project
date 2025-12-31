@@ -1851,19 +1851,19 @@ extern "C" void *__libunwind_shstk_get_jump_target() {
 #define STRING_IMPL(x) #x
 #define STRING(x) STRING_IMPL(x)
 
-#define RUN_IF_PAUTH_FEATURE_PRESENT(scratchReg, code)             \
-  "mrs  " #scratchReg ", ID_AA64ISAR1_EL1"                  "\n\t" \
-  "lsr  " #scratchReg ", " #scratchReg ", #24"              "\n\t" \
-  "ands " #scratchReg ", " #scratchReg ", #255"             "\n\t" \
-  "cbnz " #scratchReg ", .Lcheck_pac_code" STRING(__LINE__) "\n\t" \
-  "mrs  " #scratchReg ", ID_AA64ISAR2_EL1"                  "\n\t" \
-  "lsr  " #scratchReg ", " #scratchReg ", #8"               "\n\t" \
-  "ands " #scratchReg ", " #scratchReg ", #15"              "\n\t" \
-  "cbnz " #scratchReg ", .Lcheck_pac_code" STRING(__LINE__) "\n\t" \
-  "b .Lcheck_pac_end" STRING(__LINE__)                      "\n\t" \
-  ".Lcheck_pac_code" STRING(__LINE__) ":"                   "\n\t" \
-  code                                                      "\n\t" \
-  ".Lcheck_pac_end" STRING(__LINE__) ":"                    "\n\t"
+#define RUN_IF_PAUTH_FEATURE_PRESENT(scratchReg, code)                \
+  "mrs  " #scratchReg ", ID_AA64ISAR1_EL1"                  "\n\t"    \
+  "lsr  " #scratchReg ", " #scratchReg ", #24"              "\n\t"    \
+  "ands " #scratchReg ", " #scratchReg ", #255"             "\n\t"    \
+  "cbnz " #scratchReg ", .Lcheck_pac_code%=_" STRING(__LINE__) "\n\t" \
+  "mrs  " #scratchReg ", ID_AA64ISAR2_EL1"                  "\n\t"    \
+  "lsr  " #scratchReg ", " #scratchReg ", #8"               "\n\t"    \
+  "ands " #scratchReg ", " #scratchReg ", #15"              "\n\t"    \
+  "cbnz " #scratchReg ", .Lcheck_pac_code%=_" STRING(__LINE__) "\n\t" \
+  "b .Lcheck_pac_end%=_" STRING(__LINE__)                      "\n\t" \
+  ".Lcheck_pac_code%=_" STRING(__LINE__) ":"                   "\n\t" \
+  code                                                         "\n\t" \
+  ".Lcheck_pac_end%=_" STRING(__LINE__) ":"                    "\n\t"
 
 // The '0xc470 + KeyID' trap code is used by LLVM codegen to abort execution
 // on auth failure w/o FPAC. Mimic this behavior assuming GA key ID is 4.
@@ -1873,48 +1873,50 @@ extern "C" void *__libunwind_shstk_get_jump_target() {
                                              modifierReg, scratchReg) \
   RUN_IF_PAUTH_FEATURE_PRESENT(                                       \
     scratchReg,                                                       \
+    ".arch armv8.3-a"                                          "\n\t" \
+    ".arch_extension pauth"                                    "\n\t" \
     "pacga " #modifierReg ", " #schemeReg ", " #modifierReg    "\n\t" \
     "cmp " #modifierReg ", " #schemePacReg                     "\n\t" \
-    "b.eq  .Lcheck_integrity_success_" STRING(__LINE__)        "\n\t" \
+    "b.eq  .Lcheck_integrity_success_%=_" STRING(__LINE__)     "\n\t" \
     PACGA_TRAP                                                 "\n\t" \
-    ".Lcheck_integrity_success_" STRING(__LINE__) ":"          "\n\t" \
+    ".Lcheck_integrity_success_%=_" STRING(__LINE__) ":"       "\n\t" \
   )
 
 #define CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(schemeReg)      \
   "cmp   " #schemeReg ", 5"                                        "\n\t" \
-  "b.eq  .Lcheck_integrity_for_pauthabi_success_" STRING(__LINE__) "\n\t" \
+  "b.eq  .Lcheck_integrity_for_pauthabi_success_%=_" STRING(__LINE__) "\n\t" \
   PACGA_TRAP                                                       "\n\t" \
-  ".Lcheck_integrity_for_pauthabi_success_" STRING(__LINE__) ":"   "\n\t" \
+  ".Lcheck_integrity_for_pauthabi_success_%=_" STRING(__LINE__) ":"   "\n\t" \
 
 #define SIGNING_SCHEME_FLAGS_SWITCH(schemeReg, codeIf0, codeIf1, \
                                     codeIf3, codeIf5, codeIf7)   \
-  "cmp " #schemeReg ", #0"                     "\n\t"            \
-  "b.ne .Lswitch_1_"   STRING(__LINE__)        "\n\t"            \
-  codeIf0                                      "\n\t"            \
-  "b    .Lswitch_end_" STRING(__LINE__)        "\n\t"            \
-  ".Lswitch_1_" STRING(__LINE__) ":"           "\n\t"            \
-  "cmp " #schemeReg ", #1"                     "\n\t"            \
-  "b.ne .Lswitch_3_" STRING(__LINE__)          "\n\t"            \
-  codeIf1                                      "\n\t"            \
-  "b    .Lswitch_end_" STRING(__LINE__)        "\n\t"            \
-  ".Lswitch_3_" STRING(__LINE__) ":"           "\n\t"            \
-  "cmp " #schemeReg ", #3"                     "\n\t"            \
-  "b.ne .Lswitch_5_"   STRING(__LINE__)        "\n\t"            \
-  codeIf3                                      "\n\t"            \
-  "b    .Lswitch_end_" STRING(__LINE__)        "\n\t"            \
-  ".Lswitch_5_" STRING(__LINE__) ":"           "\n\t"            \
-  "cmp " #schemeReg ", #5"                     "\n\t"            \
-  "b.ne .Lswitch_7_"   STRING(__LINE__)        "\n\t"            \
-  codeIf5                                      "\n\t"            \
-  "b    .Lswitch_end_" STRING(__LINE__)        "\n\t"            \
-  ".Lswitch_7_" STRING(__LINE__) ":"           "\n\t"            \
-  "cmp " #schemeReg ", #7"                     "\n\t"            \
-  "b.ne .Lswitch_unexpected" STRING(__LINE__)  "\n\t"            \
-  codeIf7                                      "\n\t"            \
-  "b    .Lswitch_end_" STRING(__LINE__)        "\n\t"            \
-  ".Lswitch_unexpected" STRING(__LINE__) ":"   "\n\t"            \
-  PACGA_TRAP                                   "\n\t"            \
-  ".Lswitch_end_" STRING(__LINE__) ":"         "\n\t"
+  "cmp " #schemeReg ", #0"                        "\n\t"         \
+  "b.ne .Lswitch_1_%=_"   STRING(__LINE__)        "\n\t"         \
+  codeIf0                                         "\n\t"         \
+  "b    .Lswitch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  ".Lswitch_1_%=_" STRING(__LINE__) ":"           "\n\t"         \
+  "cmp " #schemeReg ", #1"                        "\n\t"         \
+  "b.ne .Lswitch_3_%=_" STRING(__LINE__)          "\n\t"         \
+  codeIf1                                         "\n\t"         \
+  "b    .Lswitch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  ".Lswitch_3_%=_" STRING(__LINE__) ":"           "\n\t"         \
+  "cmp " #schemeReg ", #3"                        "\n\t"         \
+  "b.ne .Lswitch_5_%=_"   STRING(__LINE__)        "\n\t"         \
+  codeIf3                                         "\n\t"         \
+  "b    .Lswitch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  ".Lswitch_5_%=_" STRING(__LINE__) ":"           "\n\t"         \
+  "cmp " #schemeReg ", #5"                        "\n\t"         \
+  "b.ne .Lswitch_7_%=_"   STRING(__LINE__)        "\n\t"         \
+  codeIf5                                         "\n\t"         \
+  "b    .Lswitch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  ".Lswitch_7_%=_" STRING(__LINE__) ":"           "\n\t"         \
+  "cmp " #schemeReg ", #7"                        "\n\t"         \
+  "b.ne .Lswitch_unexpected%=_" STRING(__LINE__)  "\n\t"         \
+  codeIf7                                         "\n\t"         \
+  "b    .Lswitch_end_%=_" STRING(__LINE__)        "\n\t"         \
+  ".Lswitch_unexpected%=_" STRING(__LINE__) ":"   "\n\t"         \
+  PACGA_TRAP                                      "\n\t"         \
+  ".Lswitch_end_%=_" STRING(__LINE__) ":"         "\n\t"
 
 #endif
 
@@ -2137,21 +2139,23 @@ public:
 #endif
         SIGNING_SCHEME_FLAGS_SWITCH(
             /*schemeReg=*/x16,
-            /*codeIf0=*/"cbnz  x15, .Lsetscheme_unexpected\n\t",
-            /*codeIf1=*/"cbnz  x15, .Lsetscheme_unexpected\n\t",
-            /*codeIf3=*/"cbz   x15, .Lsetscheme_unexpected\n\t",
-            /*codeIf5=*/"cbnz  x15, .Lsetscheme_unexpected\n\t",
-            /*codeIf7=*/"cbz   x15, .Lsetscheme_unexpected\n\t"
+            /*codeIf0=*/"cbnz  x15, .Lsetscheme_unexpected%=\n\t",
+            /*codeIf1=*/"cbnz  x15, .Lsetscheme_unexpected%=\n\t",
+            /*codeIf3=*/"cbz   x15, .Lsetscheme_unexpected%=\n\t",
+            /*codeIf5=*/"cbnz  x15, .Lsetscheme_unexpected%=\n\t",
+            /*codeIf7=*/"cbz   x15, .Lsetscheme_unexpected%=\n\t"
             )
-        "b .Lsetscheme_ok       \n\t"
-        ".Lsetscheme_unexpected:\n\t"
-        PACGA_TRAP             "\n\t"
-        ".Lsetscheme_ok:        \n\t"
-        "str x16, [x17, #0]     \n\t"
+        "b .Lsetscheme_ok%=       \n\t"
+        ".Lsetscheme_unexpected%=:\n\t"
+        PACGA_TRAP               "\n\t"
+        ".Lsetscheme_ok%=:        \n\t"
+        "str x16, [x17, #0]       \n\t"
         RUN_IF_PAUTH_FEATURE_PRESENT(
             /*scratchReg=*/x14,
-            "pacga x16, x16, x17 \n\t"
-            "str   x16, [x17, #8]\n\t"
+            ".arch armv8.3-a      \n\t"
+            ".arch_extension pauth\n\t"
+            "pacga x16, x16, x17  \n\t"
+            "str   x16, [x17, #8] \n\t"
             )
         "str   x15, [x17, #16]\n\t"
         :
@@ -2175,17 +2179,19 @@ private:
         reinterpret_cast<uint64_t>(&_registers.__ra_signing_scheme.__flags);
 
     asm(// Ensure that second modifier is zero
-        "ldr x16, [x17, #16]\n\t"
-        "cbz .Lsetzero_ok   \n\t"
-        PACGA_TRAP         "\n\t"
-        ".Lsetzero_ok:      \n\t"
+        "ldr x16, [x17, #16]    \n\t"
+        "cbz x16, .Lsetzero_ok%=\n\t"
+        PACGA_TRAP             "\n\t"
+        ".Lsetzero_ok%=:        \n\t"
         // Assign zero to signing scheme flags field
-        "str xzr, [x17, #0] \n\t"
+        "str xzr, [x17, #0]     \n\t"
         // Compute PAC for signing scheme flags field
         RUN_IF_PAUTH_FEATURE_PRESENT(
             /*scratchReg=*/x14,
-            "pacga x16, xzr, x17 \n\t"
-            "str   x16, [x17, #8]\n\t"
+            ".arch armv8.3-a      \n\t"
+            ".arch_extension pauth\n\t"
+            "pacga x16, xzr, x17  \n\t"
+            "str   x16, [x17, #8] \n\t"
         )
         :
         : "r"(x17)
@@ -2208,8 +2214,10 @@ private:
 #endif
         RUN_IF_PAUTH_FEATURE_PRESENT(
             /*scratchReg=*/x13,
-            "pacga x16, x16, x14 \n\t"
-            "str   x16, [x14, #8]\n\t"
+            ".arch armv8.3-a      \n\t"
+            ".arch_extension pauth\n\t"
+            "pacga x16, x16, x14  \n\t"
+            "str   x16, [x14, #8] \n\t"
         )
         :
         : "r"(x17), "r"(x16), "r"(x15), "r"(x14)
@@ -2236,13 +2244,15 @@ private:
 #endif
         RUN_IF_PAUTH_FEATURE_PRESENT(
             /*scratchReg=*/x13,
-            "pacga x17, x16, x17          \n\t"
-            "cmp   x17, x15               \n\t"
-            "b.eq  .Lget_ra_scheme_success\n\t"
-            PACGA_TRAP                   "\n\t"
-            ".Lget_ra_scheme_success:     \n\t"
-            "pacga x14, x16, x14          \n\t"
-            "orr   x16, x14, x16          \n\t"
+            ".arch armv8.3-a                \n\t"
+            ".arch_extension pauth          \n\t"
+            "pacga x17, x16, x17            \n\t"
+            "cmp   x17, x15                 \n\t"
+            "b.eq  .Lget_ra_scheme_success%=\n\t"
+            PACGA_TRAP                     "\n\t"
+            ".Lget_ra_scheme_success%=:     \n\t"
+            "pacga x14, x16, x14            \n\t"
+            "orr   x16, x14, x16            \n\t"
         )
         : "+r"(x16)
         : "r"(x17), "r"(x15), "r"(x14));

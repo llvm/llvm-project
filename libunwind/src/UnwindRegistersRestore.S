@@ -729,6 +729,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   .Lcheck_pac:
 
   // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY in Registers.hpp.
+  .arch armv8.3-a
+  .arch_extension pauth
   add   x17, x0, #0x108
   pacga x17, x1, x17
   cmp   x17, x16

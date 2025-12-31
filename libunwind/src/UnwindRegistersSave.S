@@ -860,6 +860,8 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    xzr,     [x0, #0x110]    // __flags_pac
   b      .Lno_pauth
   .Lcompute_pac:
+  .arch armv8.3-a
+  .arch_extension pauth
   add    x17, x0, #0x108
   pacga  x17, x16, x17
   str    x17,     [x0, #0x110]    // __flags_pac

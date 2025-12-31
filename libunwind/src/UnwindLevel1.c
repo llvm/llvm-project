@@ -647,66 +647,68 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
         "mrs  x12, ID_AA64ISAR1_EL1 \n\t"
         "lsr  x12, x12, #24         \n\t"
         "ands x12, x12, #255        \n\t"
-        "cbnz x12, .Lcheck_pac      \n\t"
+        "cbnz x12, .Lcheck_pac_%=   \n\t"
         "mrs  x12, ID_AA64ISAR2_EL1 \n\t"
         "lsr  x12, x12, #8          \n\t"
         "ands x12, x12, #15         \n\t"
-        "cbnz x12, .Lcheck_pac      \n\t"
-        "b .Lno_pauth               \n\t"
-        ".Lcheck_pac:               \n\t"
+        "cbnz x12, .Lcheck_pac_%=   \n\t"
+        "b .Lno_pauth_%=            \n\t"
+        ".Lcheck_pac_%=:            \n\t"
 
         // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY in Registers.hpp.
-        "pacga x12, x14, x16  \n\t"
-        "cmp   x12, x13       \n\t"
-        "b.eq  .Lpacga_success\n\t"
-        "brk   #0xc474        \n\t"
-        ".Lpacga_success:     \n\t"
-        ".Lno_pauth:          \n\t"
+        ".arch armv8.3-a         \n\t"
+        ".arch_extension pauth   \n\t"
+        "pacga x12, x14, x16     \n\t"
+        "cmp   x12, x13          \n\t"
+        "b.eq  .Lpacga_success_%=\n\t"
+        "brk   #0xc474           \n\t"
+        ".Lpacga_success_%=:     \n\t"
+        ".Lno_pauth_%=:          \n\t"
 
         // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI
         // in Registers.hpp.
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
-        "cmp   x14, 5            \n\t"
-        "b.eq  .Lpauthabi_success\n\t"
-        "brk   #0xc474           \n\t"
-        ".Lpauthabi_success:     \n\t"
+        "cmp   x14, 5               \n\t"
+        "b.eq  .Lpauthabi_success_%=\n\t"
+        "brk   #0xc474              \n\t"
+        ".Lpauthabi_success_%=:     \n\t"
 #endif
 
         // See also SIGNING_SCHEME_FLAGS_SWITCH in Registers.hpp.
-        "cmp   x14, #0     \n\t"
-        "b.ne  .Lswitch_1  \n\t"
-        "b     .Lswitch_end\n\t"
+        "cmp   x14, #0        \n\t"
+        "b.ne  .Lswitch_1_%=  \n\t"
+        "b     .Lswitch_end_%=\n\t"
 
-        ".Lswitch_1:       \n\t"
-        "cmp   x14, #1     \n\t"
-        "b.ne  .Lswitch_3  \n\t"
-        "hint 0xc          \n\t" // autia1716
-        "b     .Lswitch_end\n\t"
+        ".Lswitch_1_%=:       \n\t"
+        "cmp   x14, #1        \n\t"
+        "b.ne  .Lswitch_3_%=  \n\t"
+        "hint 0xc             \n\t" // autia1716
+        "b     .Lswitch_end_%=\n\t"
 
-        ".Lswitch_3:       \n\t"
-        "cmp   x14, #3     \n\t"
-        "b.ne  .Lswitch_5  \n\t"
-        "hint 0x27         \n\t" // pacm
-        "hint 0xc          \n\t" // autia1716
-        "b     .Lswitch_end\n\t"
+        ".Lswitch_3_%=:       \n\t"
+        "cmp   x14, #3        \n\t"
+        "b.ne  .Lswitch_5_%=  \n\t"
+        "hint 0x27            \n\t" // pacm
+        "hint 0xc             \n\t" // autia1716
+        "b     .Lswitch_end_%=\n\t"
 
-        ".Lswitch_5:       \n\t"
-        "cmp   x14, #5     \n\t"
-        "b.ne  .Lswitch_7  \n\t"
-        "hint 0xe          \n\t" // autib1716
-        "b     .Lswitch_end\n\t"
+        ".Lswitch_5_%=:       \n\t"
+        "cmp   x14, #5        \n\t"
+        "b.ne  .Lswitch_7_%=  \n\t"
+        "hint 0xe             \n\t" // autib1716
+        "b     .Lswitch_end_%=\n\t"
 
-        ".Lswitch_7:       \n\t"
-        "cmp   x14, #7     \n\t"
-        "b.ne  .Lswitch_unexpected\n\t"
-        "hint 0x27         \n\t" // pacm
-        "hint 0xe          \n\t" // autib1716
-        "b     .Lswitch_end\n\t"
+        ".Lswitch_7_%=:       \n\t"
+        "cmp   x14, #7        \n\t"
+        "b.ne  .Lswitch_unexpected_%=\n\t"
+        "hint 0x27            \n\t" // pacm
+        "hint 0xe             \n\t" // autib1716
+        "b     .Lswitch_end_%=\n\t"
 
-        ".Lswitch_unexpected:\n\t"
-        "brk   #0xc474       \n\t"
+        ".Lswitch_unexpected_%=:\n\t"
+        "brk   #0xc474          \n\t"
 
-        ".Lswitch_end:\n\t"
+        ".Lswitch_end_%=:\n\t"
         : "+r"(x17)
         : "r"(x16), "r"(x15), "r"(x14), "r"(x13)
     );
