@@ -137,7 +137,7 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3ff
+/// row_index := imm8 & 0x3f
 /// row_chunk := (imm8 >> 6) * VL_bytes
 /// FOR i := 0 TO (VL_bytes / 4) - 1
 ///     IF i + row_chunk / 4 >= tsrc.colsb / 4
@@ -211,7 +211,7 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3ff
+/// row_index := imm8 & 0x3f
 /// row_chunk := (imm8 >> 6) * VL_bytes
 /// FOR i := 0 TO (VL_bytes / 4) - 1
 ///     IF i + row_chunk / 4 >= tsrc.colsb / 4
@@ -284,7 +284,7 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3ff
+/// row_index := imm8 & 0x3f
 /// row_chunk := (imm8 >> 6) * VL_bytes
 /// FOR i := 0 TO (VL_bytes / 4) - 1
 ///     IF i + row_chunk / 4 >= tsrc.colsb / 4
@@ -357,7 +357,7 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3ff
+/// row_index := imm8 & 0x3f
 /// row_chunk := (imm8 >> 6) * VL_bytes
 /// FOR i := 0 TO (VL_bytes / 4) - 1
 ///     IF i + row_chunk / 4 >= tsrc.colsb / 4
@@ -433,7 +433,7 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL>>3
-/// row_index := b&0x3ff
+/// row_index := b&0x3f
 /// row_chunk := (b>>6) * VL_bytes
 /// FOR i := 0 TO (VL_bytes-1)
 ///     IF (row_chunk + i >= a.colsb)
