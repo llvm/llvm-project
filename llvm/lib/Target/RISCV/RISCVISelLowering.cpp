@@ -293,9 +293,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       addRegisterClass(MVT::v2i32, &RISCV::GPRRegClass);
       addRegisterClass(MVT::v4i16, &RISCV::GPRRegClass);
       addRegisterClass(MVT::v8i8, &RISCV::GPRRegClass);
+      addRegisterClass(MVT::v2i16, &RISCV::GPRRegClass);
+      addRegisterClass(MVT::v4i8, &RISCV::GPRRegClass);
     } else {
       addRegisterClass(MVT::v2i16, &RISCV::GPRRegClass);
       addRegisterClass(MVT::v4i8, &RISCV::GPRRegClass);
+      addRegisterClass(MVT::v8i8, &RISCV::GPRPairRegClass);
+      addRegisterClass(MVT::v4i16, &RISCV::GPRPairRegClass);
+      addRegisterClass(MVT::v2i32, &RISCV::GPRPairRegClass);
     }
   }
 

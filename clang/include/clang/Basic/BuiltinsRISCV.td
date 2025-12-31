@@ -137,6 +137,23 @@ def sm3p0 : RISCVBuiltin<"unsigned int(unsigned int)">;
 def sm3p1 : RISCVBuiltin<"unsigned int(unsigned int)">;
 } // Features = "zksh"
 
+//===----------------------------------------------------------------------===//
+// P extension.
+//===----------------------------------------------------------------------===//
+let Features = "experimental-p" in {
+def padd_v4i8  : RISCVBuiltin<"_Vector<4, char>(_Vector<4, char>, _Vector<4, char>)">;
+def padd_v2i16 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
+def padd_v8i8  : RISCVBuiltin<"_Vector<8, char>(_Vector<8, char>, _Vector<8, char>)">;
+def padd_v4i16 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>)">;
+def padd_v2i32 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
+
+def psub_v4i8  : RISCVBuiltin<"_Vector<4, char>(_Vector<4, char>, _Vector<4, char>)">;
+def psub_v2i16 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
+def psub_v8i8  : RISCVBuiltin<"_Vector<8, char>(_Vector<8, char>, _Vector<8, char>)">;
+def psub_v4i16 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>)">;
+def psub_v2i32 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
+} // Features = "experimental-p"
+
 } // Attributes = [Const, NoThrow]
 
 //===----------------------------------------------------------------------===//

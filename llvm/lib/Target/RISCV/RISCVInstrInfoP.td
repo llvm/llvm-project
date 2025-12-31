@@ -1685,3 +1685,39 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (PACK GPR:$a, GPR:$b)>;
 } // Predicates = [HasStdExtP, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// P-extension Intrinsic patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtP] in {
+  def : Pat<(XLenVecI8VT (int_riscv_padd (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))), (PADD_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (int_riscv_psub (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))), (PSUB_B GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(XLenVecI16VT (int_riscv_padd (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))), (PADD_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (int_riscv_psub (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))), (PSUB_H GPR:$rs1, GPR:$rs2)>;
+}
+
+let Predicates = [HasStdExtP, IsRV64] in {
+  def : Pat<(v2i32 (int_riscv_padd (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))), (PADD_W GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (int_riscv_psub (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))), (PSUB_W GPR:$rs1, GPR:$rs2)>;
+
+  // Sub-XLEN vectors on RV64
+  def : Pat<(v4i8 (int_riscv_padd (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (PADD_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8 (int_riscv_psub (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (PSUB_B GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(v2i16 (int_riscv_padd (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (PADD_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (int_riscv_psub (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (PSUB_H GPR:$rs1, GPR:$rs2)>;
+}
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  // 64-bit vectors (v8i8, v4i16, v2i32) using register pairs
+  def : Pat<(v8i8 (int_riscv_padd (v8i8 GPRPairRV32:$rs1), (v8i8 GPRPairRV32:$rs2))), (PADD_DB GPRPairRV32:$rs1, GPRPairRV32:$rs2)>;
+  def : Pat<(v8i8 (int_riscv_psub (v8i8 GPRPairRV32:$rs1), (v8i8 GPRPairRV32:$rs2))), (PSUB_DB GPRPairRV32:$rs1, GPRPairRV32:$rs2)>;
+
+  def : Pat<(v4i16 (int_riscv_padd (v4i16 GPRPairRV32:$rs1), (v4i16 GPRPairRV32:$rs2))), (PADD_DH GPRPairRV32:$rs1, GPRPairRV32:$rs2)>;
+  def : Pat<(v4i16 (int_riscv_psub (v4i16 GPRPairRV32:$rs1), (v4i16 GPRPairRV32:$rs2))), (PSUB_DH GPRPairRV32:$rs1, GPRPairRV32:$rs2)>;
+
+  def : Pat<(v2i32 (int_riscv_padd (v2i32 GPRPairRV32:$rs1), (v2i32 GPRPairRV32:$rs2))), (PADD_DW GPRPairRV32:$rs1, GPRPairRV32:$rs2)>;
+  def : Pat<(v2i32 (int_riscv_psub (v2i32 GPRPairRV32:$rs1), (v2i32 GPRPairRV32:$rs2))), (PSUB_DW GPRPairRV32:$rs1, GPRPairRV32:$rs2)>;
+}

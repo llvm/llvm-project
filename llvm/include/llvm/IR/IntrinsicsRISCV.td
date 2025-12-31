@@ -1978,6 +1978,18 @@ let TargetPrefix = "riscv" in {
   defm vfncvt_sat_f_f_q_alt : RISCVConversionRoundingMode;
 } // TargetPrefix = "riscv"
 
+//===----------------------------------------------------------------------===//
+// Packed SIMD (P) Extension
+
+let TargetPrefix = "riscv" in {
+  def int_riscv_padd : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                             [LLVMMatchType<0>, LLVMMatchType<0>],
+                                             [IntrNoMem]>;
+  def int_riscv_psub : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                             [LLVMMatchType<0>, LLVMMatchType<0>],
+                                             [IntrNoMem]>;
+}
+
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 include "llvm/IR/IntrinsicsRISCVXTHead.td"
