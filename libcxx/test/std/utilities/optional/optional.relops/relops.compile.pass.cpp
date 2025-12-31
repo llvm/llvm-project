@@ -12,7 +12,6 @@
 // Verify that comparison operators of `optional` accept underlying return types convertible both from and to `bool`
 // as required by LWG4370.
 
-#include <cassert>
 #include <optional>
 
 struct Bool {
@@ -29,7 +28,7 @@ struct S {
   Bool operator>=(S) const { return true; }
 };
 
-int main() {
+constexpr void test() {
   std::optional<S> s{S{}};
 
   (void)(s == S{});
@@ -38,6 +37,4 @@ int main() {
   (void)(s > S{});
   (void)(s <= S{});
   (void)(s >= S{});
-
-  return 0;
 }
