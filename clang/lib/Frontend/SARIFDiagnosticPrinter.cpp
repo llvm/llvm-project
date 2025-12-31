@@ -38,11 +38,11 @@ void SARIFDiagnosticPrinter::BeginSourceFile(const LangOptions &LO,
 
 void SARIFDiagnosticPrinter::EndSourceFile() {
   assert(SARIFDiag && "SARIFDiagnostic has not been set.");
-  Writer->endRun();
+  SARIFDiag.reset();
   llvm::json::Value Value(Writer->createDocument());
   OS << "\n" << Value << "\n\n";
   OS.flush();
-  SARIFDiag.reset();
+  Writer->endRun();
 }
 
 void SARIFDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
