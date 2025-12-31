@@ -1718,7 +1718,7 @@ class DropInnerMostUnitDimsTransferWrite
   }
 };
 
-/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to a contraction suitable for MMT (matrix matrix multiplication
 /// with the RHS transposed) lowering.
 struct CanonicalizeContractMatmulToMMT final
