@@ -302,10 +302,8 @@ define fp128 @test_select(i1 %cond, fp128 %lhs, fp128 %rhs) {
 ; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-GI-NEXT:    fcsel d1, d2, d3, ne
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
   %val = select i1 %cond, fp128 %lhs, fp128 %rhs
   ret fp128 %val
@@ -1156,18 +1154,14 @@ define <2 x fp128> @vec_select(<2 x i1> %cond, <2 x fp128> %lhs, <2 x fp128> %rh
 ; CHECK-GI-NEXT:    fcsel d0, d1, d3, ne
 ; CHECK-GI-NEXT:    fcsel d3, d5, d6, ne
 ; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    mov d1, v2.d[1]
-; CHECK-GI-NEXT:    mov d5, v4.d[1]
-; CHECK-GI-NEXT:    fcsel d2, d2, d4, ne
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d2
-; CHECK-GI-NEXT:    fcsel d2, d1, d5, ne
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov x8, d3
-; CHECK-GI-NEXT:    mov v1.d[0], x9
-; CHECK-GI-NEXT:    fmov x9, d2
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    mov d5, v2.d[1]
+; CHECK-GI-NEXT:    mov d6, v4.d[1]
+; CHECK-GI-NEXT:    fcsel d1, d2, d4, ne
+; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v1.d[0]
+; CHECK-GI-NEXT:    fcsel d2, d5, d6, ne
+; CHECK-GI-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    ret
   %val = select <2 x i1> %cond, <2 x fp128> %lhs, <2 x fp128> %rhs
   ret <2 x fp128> %val

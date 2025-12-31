@@ -1105,14 +1105,17 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     break;
   }
-  case TargetOpcode::G_UNMERGE_VALUES: {
+  case TargetOpcode::G_UNMERGE_VALUES:
     // If the first operand belongs to a FPR register bank, then make sure that
     // we preserve that.
     if (OpRegBankIdx[0] != PMI_FirstGPR)
       break;
+    [[fallthrough]];
 
+  case TargetOpcode::G_MERGE_VALUES: {
     LLT SrcTy = MRI.getType(MI.getOperand(MI.getNumOperands()-1).getReg());
     // UNMERGE into scalars from a vector should always use FPR.
+    // MERGE into a vector should use FPR if the operands are already on FPR.
     // Likewise if any of the uses are FP instructions.
     if (SrcTy.isVector() || SrcTy == LLT::scalar(128) ||
         any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
