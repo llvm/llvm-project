@@ -92,11 +92,6 @@ lookupOrCreateFnDecl(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
 ///
 /// Note: Operations with regions containing compute payloads are cloned but
 /// the region contents may not be properly handled in all cases.
-///
-/// \param ops The operations to extract (will be cloned, not moved)
-/// \param context The MLIRContext to use for creating the function
-/// \param functionName The name for the new function
-/// \returns The newly created FuncOp containing the cloned operations
 FuncOp extractOperationsIntoFunction(ArrayRef<Operation *> ops,
                                      MLIRContext *context,
                                      StringRef functionName);
