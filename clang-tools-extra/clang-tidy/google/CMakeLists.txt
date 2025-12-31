@@ -23,6 +23,7 @@ add_clang_library(clangTidyGoogleModule STATIC
 
   LINK_LIBS
   clangTidy
+  clangTidyMiscModule
   clangTidyModernizeModule
   clangTidyReadabilityModule
   clangTidyUtils
