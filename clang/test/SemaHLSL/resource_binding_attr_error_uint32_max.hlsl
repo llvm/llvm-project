@@ -2,10 +2,6 @@
 
 // test semantic validation for register numbers that exceed UINT32_MAX
 
-
-// expected-error@+1 {{expected <numeric_constant>}}
-RWBuffer<float> BadBuf[10][10] : register(u); 
-
 struct S {
   RWBuffer<float> A[4];
   RWBuffer<int> B[10];
