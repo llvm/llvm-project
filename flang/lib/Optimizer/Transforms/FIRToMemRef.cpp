@@ -525,7 +525,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       auto ifOp = arrayCoorOperation->getParentOfType<scf::IfOp>();
       if (ifOp) {
         Operation *condition = ifOp.getCondition().getDefiningOp();
-        if (condition && isa<fir::IsPresentOp>(condition)) {
+        if (condition && isa<fir::IsPresentOp>(condition))
           if (condition->getOperand(0) == firMemref) {
             if (arrayCoorOperation->getParentRegion() == &ifOp.getThenRegion())
               rewriter.setInsertionPointToStart(
@@ -535,7 +535,6 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
               rewriter.setInsertionPointToStart(
                   &(ifOp.getElseRegion().front()));
           }
-        }
       }
     }
 
