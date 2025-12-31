@@ -1157,8 +1157,8 @@ private:
   void executeCheckTypes();
   void executeContinue();
   void executeCreateConstantTypeRange();
-  void executeCreateOperation(PatternRewriter &rewriter,
-                              Location mainRewriteLoc);
+  LogicalResult executeCreateOperation(PatternRewriter &rewriter,
+                                       Location mainRewriteLoc);
   template <typename T>
   void executeDynamicCreateRange(StringRef type);
   void executeEraseOp(PatternRewriter &rewriter);
@@ -1626,8 +1626,9 @@ void ByteCodeExecutor::executeCreateConstantTypeRange() {
                       rangeIndex);
 }
 
-void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
-                                              Location mainRewriteLoc) {
+LogicalResult
+ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
+                                         Location mainRewriteLoc) {
   LDBG() << "Executing CreateOperation:";
 
   unsigned memIndex = read();
@@ -1648,12 +1649,11 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
     assert(inferInterface &&
            "expected operation to provide InferTypeOpInterface");
 
-    // TODO: Handle failure.
     if (failed(inferInterface->inferReturnTypes(
             state.getContext(), state.location, state.operands,
             state.attributes.getDictionary(state.getContext()),
             state.getRawProperties(), state.regions, state.types)))
-      return;
+      return failure();
   } else {
     // Otherwise, this is a fixed number of results.
     for (unsigned i = 0; i != numResults; ++i) {
@@ -1674,6 +1674,7 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
          << "\n  * Operands: " << llvm::interleaved(state.operands)
          << "\n  * Result Types: " << llvm::interleaved(state.types)
          << "\n  * Result: " << *resultOp;
+  return success();
 }
 
 template <typename T>
@@ -2153,7 +2154,8 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
       executeCreateConstantTypeRange();
       break;
     case CreateOperation:
-      executeCreateOperation(rewriter, *mainRewriteLoc);
+      if (failed(executeCreateOperation(rewriter, *mainRewriteLoc)))
+        return failure();
       break;
     case CreateDynamicTypeRange:
       executeDynamicCreateRange<Type>("Type");
