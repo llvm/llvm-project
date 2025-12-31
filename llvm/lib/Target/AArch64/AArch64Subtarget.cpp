@@ -59,11 +59,13 @@ static cl::opt<unsigned> OverrideVectorInsertExtractBaseCost(
 // Reserve a list of X# registers, so they are unavailable for register
 // allocator, but can still be used as ABI requests, such as passing arguments
 // to function call.
-static cl::list<std::string>
-ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
-                  "registers, so they can't be used by register allocator. "
-                  "Should only be used for testing register allocator."),
-                  cl::CommaSeparated, cl::Hidden);
+static cl::list<std::string> ReservedRegsForRA(
+    "reserve-regs-for-regalloc",
+    cl::desc("Reserve physical "
+             "registers, so they can't be used by register allocator. "
+             "Should be used for testing regalloc, or for exposing a "
+             "regalloc reservation feature which is not a guarantee."),
+    cl::CommaSeparated, cl::Hidden);
 
 static cl::opt<AArch64PAuth::AuthCheckMethod>
     AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
