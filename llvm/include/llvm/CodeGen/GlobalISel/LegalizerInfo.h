@@ -862,6 +862,39 @@ public:
     return actionFor(LegalizeAction::NarrowScalar, Types, Mutation);
   }
 
+  /// Promote bf16 operands/results to \p PromoteEltTy so the operation executes
+  /// in that wider type before truncating back to bf16.
+  LegalizeRuleSet &convertBF16(unsigned TypeIdx = 0,
+                               LLT PromoteEltTy = LLT::float32()) {
+    assert(!PromoteEltTy.isVector() && PromoteEltTy.isScalar() &&
+           PromoteEltTy.isFloat() &&
+           "convertBF16 expects a floating-point scalar promotion type");
+    typeIdx(TypeIdx);
+    const LLT BF16Ty = LLT::bfloat16();
+    return widenScalarIf(
+        [=](const LegalityQuery &Query) {
+          if (TypeIdx >= Query.Types.size())
+            return false;
+          const LLT Ty = Query.Types[TypeIdx];
+          if (!Ty.isValid())
+            return false;
+          if (Ty == BF16Ty)
+            return true;
+          if (Ty.isVector() && Ty.getElementType() == BF16Ty)
+            return true;
+          return false;
+        },
+        LegalizeMutations::changeElementTo(TypeIdx, PromoteEltTy));
+  }
+
+  /// Conditionally promote bf16 operands/results to \p PromoteEltTy.
+  LegalizeRuleSet &convertBF16(bool Enable, unsigned TypeIdx = 0,
+                               LLT PromoteEltTy = LLT::float32()) {
+    if (!Enable)
+      return *this;
+    return convertBF16(TypeIdx, PromoteEltTy);
+  }
+
   /// Add more elements to reach the type selected by the mutation if the
   /// predicate is true.
   LegalizeRuleSet &moreElementsIf(LegalityPredicate Predicate,
