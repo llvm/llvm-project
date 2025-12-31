@@ -377,7 +377,7 @@ define i32 @bseti_2(i32 %a, i32 %b, i32 %c) nounwind {
 ;
 ; RV32IXQCIBMZBS-LABEL: bseti_2:
 ; RV32IXQCIBMZBS:       # %bb.0:
-; RV32IXQCIBMZBS-NEXT:    ori a0, a1, 2
+; RV32IXQCIBMZBS-NEXT:    bseti a0, a1, 1
 ; RV32IXQCIBMZBS-NEXT:    ret
   %or = or i32 %b, 2
   ret i32 %or
@@ -396,7 +396,7 @@ define i32 @bseti_i32_10(i32 %a) nounwind {
 ;
 ; RV32IXQCIBMZBS-LABEL: bseti_i32_10:
 ; RV32IXQCIBMZBS:       # %bb.0:
-; RV32IXQCIBMZBS-NEXT:    ori a0, a0, 1024
+; RV32IXQCIBMZBS-NEXT:    bseti a0, a0, 10
 ; RV32IXQCIBMZBS-NEXT:    ret
   %or = or i32 %a, 1024
   ret i32 %or
