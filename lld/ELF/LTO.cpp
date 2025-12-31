@@ -19,6 +19,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
@@ -195,14 +196,18 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         ctx.arg.thinLTOEmitImportsFiles);
   }
 
-  constexpr llvm::lto::LTO::LTOKind ltoModes[3] =
-    {llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
-     llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
-     llvm::lto::LTO::LTOKind::LTOK_Default};
-  ltoObj = std::make_unique<lto::LTO>(createConfig(ctx), backend,
-                                      ctx.arg.ltoPartitions,
-                                      ltoModes[ctx.arg.ltoKind]);
-
+  constexpr llvm::lto::LTO::LTOKind ltoModes[3] = {
+      llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
+      llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
+      llvm::lto::LTO::LTOKind::LTOK_Default};
+  if (ctx.arg.dtltoDistributor.empty())
+    ltoObj = std::make_unique<lto::LTO>(createConfig(ctx), backend,
+                                        ctx.arg.ltoPartitions,
+                                        ltoModes[ctx.arg.ltoKind]);
+  else
+    ltoObj = std::make_unique<lto::DTLTO>(createConfig(ctx), backend,
+                                          ctx.arg.ltoPartitions,
+                                          ltoModes[ctx.arg.ltoKind]);
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;

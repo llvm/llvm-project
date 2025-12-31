@@ -221,6 +221,10 @@ def AddLike: PatFrags<(ops node:$A, node:$B),
     return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
 }]>;
 
+def SingleBitSetMaskImm12 : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
+  return isPowerOf2_32(Imm) && isInt<12>(Imm) && Imm != 1;
+}], SingleBitSetMaskToIndex>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -1738,6 +1742,11 @@ def: Pat<(i32 (qc_e_li tblockaddress:$A)), (QC_E_LI bare_simm32:$A)>;
 def: Pat<(i32 (qc_e_li tjumptable:$A)), (QC_E_LI bare_simm32:$A)>;
 def: Pat<(i32 (qc_e_li tconstpool:$A)), (QC_E_LI bare_simm32:$A)>;
 } // Predicates = [HasVendorXqcili, IsRV32]
+
+let Predicates = [HasVendorXqcibm, HasStdExtZbs, IsRV32], AddedComplexity = 1 in {
+def : Pat<(XLenVT (or GPR:$rs1, SingleBitSetMaskImm12:$mask)),
+          (BSETI GPR:$rs1, SingleBitSetMaskImm12:$mask)>;
+} // Predicates = [HasVendorXqcibm, HasStdExtZbs, IsRV32]
 
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.
