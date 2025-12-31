@@ -20,7 +20,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -67,22 +66,16 @@ public:
   /// Return true if the given FIR type can be converted to a MemRef-typed
   /// descriptor (i.e. is a supported base element for MemRef converting).
   bool convertibleMemrefType(mlir::Type ty) {
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
-      auto elTy = refTy.getElementType();
-      return convertibleMemrefType(elTy);
-    } else if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty)) {
-      auto elTy = pointerTy.getElementType();
-      return convertibleMemrefType(elTy);
-    } else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty)) {
-      auto elTy = heapTy.getElementType();
-      return convertibleMemrefType(elTy);
-    } else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
-      auto elTy = seqTy.getElementType();
-      return convertibleMemrefType(elTy);
-    } else if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty)) {
-      auto elTy = boxTy.getElementType();
-      return convertibleMemrefType(elTy);
-    }
+    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty))
+      return convertibleMemrefType(refTy.getElementType());
+    else if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty))
+      return convertibleMemrefType(pointerTy.getElementType());
+    else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
+      return convertibleMemrefType(heapTy.getElementType());
+    else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+      return convertibleMemrefType(seqTy.getElementType());
+    else if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
+      return convertibleMemrefType(boxTy.getElementType());
 
     setConvertScalarTypesOnly(true);
     bool result = convertibleType(ty);
@@ -93,16 +86,13 @@ public:
   /// Return true if the given FIR type represents an empty array (has a zero
   /// extent in its shape).
   bool isEmptyArray(mlir::Type ty) const {
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
-      auto elTy = refTy.getElementType();
-      return isEmptyArray(elTy);
-    } else if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty)) {
-      auto elTy = pointerTy.getElementType();
-      return isEmptyArray(elTy);
-    } else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty)) {
-      auto elTy = heapTy.getElementType();
-      return isEmptyArray(elTy);
-    } else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty))
+      return isEmptyArray(refTy.getElementType());
+    else if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty))
+      return isEmptyArray(pointerTy.getElementType());
+    else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
+      return isEmptyArray(heapTy.getElementType());
+    else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
       llvm::ArrayRef<int64_t> firShape = seqTy.getShape();
       for (auto shape : firShape) {
         if (shape == 0)
