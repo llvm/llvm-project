@@ -182,7 +182,8 @@ private:
 void FIRToMemRef::populateShapeAndShift(SmallVectorImpl<Value> &shapeVec,
                                         SmallVectorImpl<Value> &shiftVec,
                                         fir::ShapeShiftOp shift) const {
-  for (auto i = shift.getPairs().begin(), endIter = shift.getPairs().end();
+  for (mlir::OperandRange::iterator i = shift.getPairs().begin(),
+                                    endIter = shift.getPairs().end();
        i != endIter;) {
     shiftVec.push_back(*i++);
     shapeVec.push_back(*i++);
@@ -198,7 +199,7 @@ bool FIRToMemRef::isCompilerGeneratedAlloca(Operation *op) const {
 
 void FIRToMemRef::copyAttribute(Operation *from, Operation *to,
                                 llvm::StringRef name) const {
-  if (auto value = from->getAttr(name))
+  if (Attribute value = from->getAttr(name))
     to->setAttr(name, value);
 }
 
@@ -245,12 +246,12 @@ bool FIRToMemRef::isMarshalLikeOp(Operation *op) const {
 
   auto isaPolymorphicConversion = [](fir::ConvertOp c) {
     bool retVal{false};
-    if (auto fromBoxTy{dyn_cast<fir::ClassType>(
-            fir::unwrapRefType(c.getValue().getType()))}) {
-      if (auto toBoxTy{
-              dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(c.getType()))}) {
-        auto fromEleTy{fir::unwrapAllRefAndSeqType(fromBoxTy.getEleTy())};
-        auto toEleTy{fir::unwrapAllRefAndSeqType(toBoxTy.getEleTy())};
+    if (fir::ClassType fromBoxTy = dyn_cast<fir::ClassType>(
+            fir::unwrapRefType(c.getValue().getType()))) {
+      if (fir::BaseBoxType toBoxTy =
+              dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(c.getType()))) {
+        Type fromEleTy = fir::unwrapAllRefAndSeqType(fromBoxTy.getEleTy());
+        Type toEleTy = fir::unwrapAllRefAndSeqType(toBoxTy.getEleTy());
         if (fromEleTy != toEleTy)
           retVal = true;
       }
@@ -268,7 +269,7 @@ mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
   llvm::SmallPtrSet<Operation *, 8> visited;
 
   while (currentVal) {
-    auto defOp = currentVal.getDefiningOp();
+    Operation *defOp = currentVal.getDefiningOp();
     if (!defOp || !visited.insert(defOp).second)
       break;
 
