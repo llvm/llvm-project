@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
@@ -984,7 +985,7 @@ AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
   // LocalI is the final instruction causing the access.
   // To begin with, we fork new paths for the arguments of LocalI.
   for (Use *It = LocalI->op_begin(); It != LocalI->op_end(); It++) {
-    Value *V = cast<Value>(It);
+    Value *V = It->get();
     if (!OffsetInfoMap.contains(V))
       continue;
 
@@ -13678,53 +13679,42 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     // change.
     if (AAPrivatizablePtrI && (AAPrivatizablePtrI->isAssumedPrivatizablePtr() ||
                                AAPrivatizablePtrI->isKnownPrivatizablePtr()))
-      return indicateOptimisticFixpoint();
+      return ChangeStatus::UNCHANGED;
 
-    // For all call sites, check if the called function can privatize the
-    // pointer.
-    for (Use &U : I->uses()) {
-      auto *CB = dyn_cast<CallBase>(U.getUser());
-      if (!CB)
-        continue;
+    // This function checks wheather the allocation can be privatized
+    // at any call site. If yes, then we don't want to modify the allocation and
+    // the predicate returns false. If it cannot be privatized, we return true.
+    auto CallSiteCheckPrivitizablePtr = [&](AbstractCallSite ACS) {
+      unsigned ArgNo = getIRPosition().getCallSiteArgNo();
+      const IRPosition &ACSArgPos = IRPosition::callsite_argument(ACS, ArgNo);
 
-      unsigned ArgIdx = 0;
-      for (Use *It = CB->arg_begin(); It != CB->arg_end(); It++) {
-        Value *ArgVal = *It;
+      if (ACSArgPos.getPositionKind() == IRPosition::IRP_INVALID)
+        return true;
 
-        // Remove any pointer casts.
-        Value *Stripped = ArgVal->stripPointerCasts();
-        if (Stripped != I)
-          continue;
+      const AAPrivatizablePtr *AAPrivateArgPos =
+          A.getOrCreateAAFor<AAPrivatizablePtr>(ACSArgPos, *this,
+                                                DepClassTy::OPTIONAL);
 
-        Function *Callee = CB->getCalledFunction();
-        if (!Callee)
-          continue;
+      if (!AAPrivateArgPos)
+        return true;
 
-        if (ArgIdx >= Callee->arg_size())
-          continue;
+      // If this allocation is privitizable we don't want to modify its
+      // allocation size.
+      // TODO: update AAPointerInfo to update bins once AAPrivitizable makes a
+      // change.
+      if (AAPrivateArgPos->isAssumedPrivatizablePtr() ||
+          AAPrivateArgPos->isKnownPrivatizablePtr())
+        return false;
 
-        Argument &FunctionDefArg = *Callee->getArg(ArgIdx);
+      return true;
+    };
 
-        IRPosition FunctionDefArgPos = IRPosition::argument(FunctionDefArg);
-
-        const AAPrivatizablePtr *AAPrivateArgPos =
-            A.getOrCreateAAFor<AAPrivatizablePtr>(FunctionDefArgPos, *this,
-                                                  DepClassTy::OPTIONAL);
-
-        if (!AAPrivateArgPos)
-          continue;
-
-        // If this allocation is privitizable we don't want to modify its
-        // allocation size.
-        // TODO: update AAPointerInfo to update bins once AAPrivitizable makes a
-        // change.
-        if (AAPrivateArgPos->isAssumedPrivatizablePtr() ||
-            AAPrivateArgPos->isKnownPrivatizablePtr())
-          return indicateOptimisticFixpoint();
-
-        ArgIdx++;
-      }
-    }
+    // In case a function can be privatized at any call site, we return
+    // unchanged.
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallSites(CallSiteCheckPrivitizablePtr, *this, false,
+                                UsedAssumedInformation))
+      return ChangeStatus::UNCHANGED;
 
     const AAPointerInfo *PI =
         A.getOrCreateAAFor<AAPointerInfo>(IRP, *this, DepClassTy::REQUIRED);
@@ -13749,8 +13739,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
     int64_t NumBins = PI->numOffsetBins();
     if (NumBins == 0) {
-      std::optional<TypeSize> NewAllocationSize =
-          std::optional<TypeSize>(TypeSize(0, false));
+      TypeSize NewAllocationSize = TypeSize(TypeSize(0, /*Scalable=*/false));
       if (!changeAllocationSize(NewAllocationSize))
         return ChangeStatus::UNCHANGED;
       return ChangeStatus::CHANGED;
@@ -13851,8 +13840,8 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
     // Set the new size of the allocation. The new size of the Allocation should
     // be the size of PrevBinEndOffset * 8 in bits.
-    std::optional<TypeSize> NewAllocationSize =
-        std::optional<TypeSize>(TypeSize(PackedRangeSize * 8, false));
+    TypeSize NewAllocationSize =
+        TypeSize(TypeSize(PackedRangeSize * 8, /*Scalable*/ false));
 
     if (!changeAllocationSize(NewAllocationSize))
       return ChangeStatus::UNCHANGED;
@@ -13948,7 +13937,8 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
           CallInst *CallInstruction = cast<CallInst>(LocalInst);
           for (Use *It = CallInstruction->op_begin();
                It != CallInstruction->op_end(); It++) {
-            if (Instruction *OperandInstruction = dyn_cast<Instruction>(It)) {
+            if (Instruction *OperandInstruction =
+                    dyn_cast<Instruction>(It->get())) {
               // Operand does not cause an access in the current byte range.
               if (!OffsetInfoMap.contains(OperandInstruction))
                 continue;

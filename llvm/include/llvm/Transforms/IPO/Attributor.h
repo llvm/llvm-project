@@ -5994,7 +5994,7 @@ public:
 
       // We cannot return if nothing changed since we might still be adding a
       // new Origin.
-      for (const AA::RangeTy &Range : Ranges) {
+      for (const AA::RangeTy &Range : R.Ranges) {
         if (!is_contained(Ranges, Range)) {
           Changed = true;
           break;

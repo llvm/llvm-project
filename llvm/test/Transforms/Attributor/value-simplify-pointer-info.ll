@@ -2647,13 +2647,13 @@ define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; TUNIT-SAME: (ptr nofree writeonly captures(none) [[DST:%.*]], ptr nofree readonly captures(none) [[SRC:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 24, align 1
-; TUNIT-NEXT:    [[LOCAL1:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[LOCAL1]], i64 0, i32 2
+; TUNIT-NEXT:    [[LOCAL1:%.*]] = alloca [8 x i8], align 8
+; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [8 x i8], ptr [[LOCAL1]], i64 0
 ; TUNIT-NEXT:    store ptr @global, ptr [[NEWGEP]], align 8
 ; TUNIT-NEXT:    store ptr [[DST]], ptr [[CALL_H2S]], align 8
 ; TUNIT-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[CALL_H2S]], i64 8
 ; TUNIT-NEXT:    store ptr [[SRC]], ptr [[SRC2]], align 8
-; TUNIT-NEXT:    store ptr [[CALL_H2S]], ptr getelementptr inbounds ([[STRUCT_STY]], ptr @global, i64 0, i32 2), align 8
+; TUNIT-NEXT:    store ptr [[CALL_H2S]], ptr getelementptr inbounds ([[STRUCT_STY:%.*]], ptr @global, i64 0, i32 2), align 8
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[LOCAL1]], align 8
 ; TUNIT-NEXT:    [[LOCAL1_B8:%.*]] = getelementptr i8, ptr [[LOCAL1]], i64 8
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[LOCAL1_B8]], align 8
