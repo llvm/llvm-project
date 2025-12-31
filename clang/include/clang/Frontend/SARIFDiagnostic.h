@@ -14,9 +14,13 @@
 #ifndef LLVM_CLANG_FRONTEND_SARIFDIAGNOSTIC_H
 #define LLVM_CLANG_FRONTEND_SARIFDIAGNOSTIC_H
 
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang {
 
@@ -25,7 +29,7 @@ public:
   SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                   DiagnosticOptions &DiagOpts, SarifDocumentWriter *Writer);
 
-  ~SARIFDiagnostic() = default;
+  ~SARIFDiagnostic();
 
   SARIFDiagnostic &operator=(const SARIFDiagnostic &&) = delete;
   SARIFDiagnostic(SARIFDiagnostic &&) = delete;
@@ -36,7 +40,7 @@ protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
-                             DiagOrStoredDiag D) override;
+                             DiagOrStoredDiag Diag) override;
 
   void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
                          DiagnosticsEngine::Level Level,
@@ -55,28 +59,63 @@ protected:
                                   StringRef ModuleName) override;
 
 private:
-  // Shared between SARIFDiagnosticPrinter and this renderer.
-  SarifDocumentWriter *Writer;
+  class Node {
+    public:
+      // Subclasses
+      struct Result {
+        DiagnosticsEngine::Level Level;
+        std::string Message;
+        DiagOrStoredDiag Diag;
+      };
 
-  SarifResult addLocationToResult(SarifResult Result, FullSourceLoc Loc,
-                                  PresumedLoc PLoc,
-                                  ArrayRef<CharSourceRange> Ranges,
-                                  const Diagnostic &Diag);
+      struct Option {
+        const LangOptions* LangOptsPtr;
+        const DiagnosticOptions* DiagnosticOptsPtr;
+      };
 
-  SarifResult addRelatedLocationToResult(SarifResult Result, FullSourceLoc Loc,
-                                         PresumedLoc PLoc);
+      struct Location {
+        FullSourceLoc Loc;
+        PresumedLoc PLoc;
+        llvm::SmallVector<CharSourceRange> Ranges;
 
-  llvm::SmallVector<CharSourceRange>
-  getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
-                   ArrayRef<CharSourceRange> Ranges);
+        // Methods to construct a llvm-style location.
+        llvm::SmallVector<CharSourceRange> getCharSourceRangesWithOption(Option);
+      };
 
-  SarifRule addDiagnosticLevelToRule(SarifRule Rule,
-                                     DiagnosticsEngine::Level Level);
+      // Constructor
+      Node(Result Result_, Option Option_, int Nesting);
 
-  llvm::StringRef emitFilename(StringRef Filename, const SourceManager &SM);
+      // Operations on building a node-tree. 
+      // Arguments and results are all in node-style.
+      Node& getParent(); 
+      Node& getForkableParent();
+      llvm::SmallVector<std::unique_ptr<Node>>& getChildrenPtrs();   
+      Node& addChildResult(Result);
+      Node& addLocation(Location);
+      Node& addRelatedLocation(Location);
 
-  llvm::SmallVector<std::pair<FullSourceLoc, PresumedLoc>>
-      RelatedLocationsCache;
+      // Methods to access underlying data for other llvm-components to read from it.
+      // Arguments and results are all in llvm-style.
+      unsigned getDiagID();
+      DiagnosticsEngine::Level getLevel();
+      std::string getDiagnosticMessage();
+      llvm::SmallVector<CharSourceRange> getLocations();
+      llvm::SmallVector<CharSourceRange> getRelatedLocations();
+      int getNesting();
+
+    private:
+      Result Result_;
+      llvm::SmallVector<Location> Locations;
+      llvm::SmallVector<Location> RelatedLocations;
+      Option Option_;
+      int Nesting;
+      Node* ParentPtr = nullptr;
+      llvm::SmallVector<std::unique_ptr<Node>> ChildrenPtrs = {};
+  };
+
+  Node Root;
+  Node* Current = &Root;
+  SarifDocumentWriter *Writer; // Shared between SARIFDiagnosticPrinter and this renderer.
 };
 
 } // end namespace clang
