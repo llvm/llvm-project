@@ -2,6 +2,10 @@
 
 // test semantic validation for register numbers that exceed UINT32_MAX
 
+
+// expected-error@+1 {{expected <numeric_constant>}}
+RWBuffer<float> BadBuf[10][10] : register(u); 
+
 struct S {
   RWBuffer<float> A[4];
   RWBuffer<int> B[10];
@@ -48,6 +52,3 @@ RWBuffer<float> Buf3[10][10] : register(u4294967194);
 
 // expected-error@+1 {{register number should be an integer}}
 RWBuffer<float> Buf4[10][10] : register(ud); 
-
-// expected-error@+1 {{expected <numeric_constant>}}
-RWBuffer<float> BadBuf[10][10] : register(u); 
