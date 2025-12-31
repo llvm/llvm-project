@@ -191,18 +191,14 @@ public:
       llvm::Value *iv = loopInductionVar;
       llvm::Value *step = linearSteps[index];
 
-      // Helper to cast signed integers with sign extension or truncation
-      auto castSignedInt = [&](llvm::Value *val,
-                               llvm::Type *targetType) -> llvm::Value * {
-        if (val->getType() == targetType)
-          return val;
-        return builder.CreateSExtOrTrunc(val, targetType);
-      };
+      if (!iv->getType()->isIntegerTy())
+        llvm_unreachable("OpenMP loop induction variable must be an integer "
+                         "type");
 
       if (linearVarType->isIntegerTy()) {
         // Integer path: normalize all arithmetic to linearVarType
-        iv = castSignedInt(iv, linearVarType);
-        step = castSignedInt(step, linearVarType);
+        iv = builder.CreateSExtOrTrunc(iv, linearVarType);
+        step = builder.CreateSExtOrTrunc(step, linearVarType);
 
         llvm::LoadInst *linearVarStart =
             builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
@@ -211,11 +207,7 @@ public:
         builder.CreateStore(addInst, linearLoopBodyTemps[index]);
       } else if (linearVarType->isFloatingPointTy()) {
         // Float path: perform multiply in integer, then convert to float
-        llvm::Type *ivType = iv->getType();
-        if (!ivType->isIntegerTy())
-          llvm_unreachable("OpenMP loop induction variable must be an integer "
-                           "type when updating floating-point linear vars");
-        step = castSignedInt(step, ivType);
+        step = builder.CreateSExtOrTrunc(step, iv->getType());
         llvm::Value *mulInst = builder.CreateMul(iv, step);
 
         llvm::LoadInst *linearVarStart =
