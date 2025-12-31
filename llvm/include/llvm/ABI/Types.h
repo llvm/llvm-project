@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
@@ -255,22 +256,9 @@ enum RecordFlags : unsigned {
   IsCXXRecord = 1 << 3,
   IsPolymorphic = 1 << 4,
   HasFlexibleArrayMember = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ HasFlexibleArrayMember),
 };
 
-inline RecordFlags operator|(RecordFlags LHS, RecordFlags RHS) {
-  return static_cast<RecordFlags>(static_cast<unsigned>(LHS) |
-                                  static_cast<unsigned>(RHS));
-}
-
-inline RecordFlags operator&(RecordFlags LHS, RecordFlags RHS) {
-  return static_cast<RecordFlags>(static_cast<unsigned>(LHS) &
-                                  static_cast<unsigned>(RHS));
-}
-
-inline RecordFlags &operator|=(RecordFlags &LHS, RecordFlags RHS) {
-  LHS = LHS | RHS;
-  return LHS;
-}
 class RecordType : public Type {
 private:
   ArrayRef<FieldInfo> Fields;
@@ -322,7 +310,7 @@ public:
 
 /// TypeBuilder manages the lifecycle of ABI types using bump pointer
 /// allocation. Types created by a TypeBuilder are valid for the lifetime of the
-/// builder.
+/// builder->allocator.
 ///
 /// Example usage:
 /// \code
