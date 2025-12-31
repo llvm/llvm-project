@@ -129,17 +129,26 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const TypeLoc TL = MatchedDecl->getTypeSourceInfo()->getTypeLoc();
+  const bool InvolvesMacro =
+      TL.getBeginLoc().isMacroID() || TL.getEndLoc().isMacroID();
+  const bool FunctionPointerCase =
+      TL.getSourceRange().fullyContains(MatchedDecl->getLocation());
 
-  bool FunctionPointerCase = false;
-  auto [Type, QualifierStr] = [MatchedDecl, this, &TL, &FunctionPointerCase,
-                               &SM,
-                               &LO]() -> std::pair<std::string, std::string> {
+  auto [Type, QualifierStr] =
+      [MatchedDecl, this, &TL, &SM, &LO, InvolvesMacro,
+       FunctionPointerCase]() -> std::pair<std::string, std::string> {
+    if (!InvolvesMacro) {
+      PrintingPolicy Policy(LO);
+      Policy.SuppressScope = false;
+      Policy.SuppressUnwrittenScope = true;
+      return {MatchedDecl->getUnderlyingType().getAsString(Policy), ""};
+    }
+
     SourceRange TypeRange = TL.getSourceRange();
 
     // Function pointer case, get the left and right side of the identifier
     // without the identifier.
-    if (TypeRange.fullyContains(MatchedDecl->getLocation())) {
-      FunctionPointerCase = true;
+    if (FunctionPointerCase) {
       const auto RangeLeftOfIdentifier = CharSourceRange::getCharRange(
           TypeRange.getBegin(), MatchedDecl->getLocation());
       const auto RangeRightOfIdentifier = CharSourceRange::getCharRange(
@@ -175,6 +184,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
             .str(),
         ExtraReference.str()};
   }();
+
   const StringRef Name = MatchedDecl->getName();
   SourceRange ReplaceRange = MatchedDecl->getSourceRange();
 
@@ -197,8 +207,21 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   } else {
     // This is additional TypedefDecl in a comma-separated typedef declaration.
     // Start replacement *after* prior replacement and separate with semicolon.
-    ReplaceRange.setBegin(LastReplacementEnd);
     Using = ";\nusing ";
+
+    // Find the comma that precedes this declarator
+    SourceLocation CommaLoc = utils::lexer::findPreviousAnyTokenKind(
+        MatchedDecl->getLocation(), SM, LO, tok::TokenKind::comma);
+    if (CommaLoc.isValid() && !CommaLoc.isMacroID())
+      ReplaceRange.setBegin(CommaLoc);
+    else
+      ReplaceRange.setBegin(LastReplacementEnd);
+
+    if (FunctionPointerCase) {
+      SourceLocation DeclaratorEnd = TL.getEndLoc();
+      if (DeclaratorEnd.isValid() && !DeclaratorEnd.isMacroID())
+        ReplaceRange.setEnd(DeclaratorEnd);
+    }
 
     // If this additional TypedefDecl's Type starts with the first TypedefDecl's
     // type, make this using statement refer back to the first type, e.g. make
@@ -207,10 +230,9 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       Type = FirstTypedefName;
   }
 
-  if (!ReplaceRange.getEnd().isMacroID()) {
-    const SourceLocation::IntTy Offset = FunctionPointerCase ? 0 : Name.size();
-    LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Offset);
-  }
+  if (!ReplaceRange.getEnd().isMacroID())
+    LastReplacementEnd =
+        Lexer::getLocForEndOfToken(ReplaceRange.getEnd(), 0, SM, LO);
 
   auto Diag = diag(ReplaceRange.getBegin(), UseUsingWarning);
 

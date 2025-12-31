@@ -111,10 +111,10 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
-- Added a new ``MacroFilter`` configuration option to ``Completion`` to 
-  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting 
-  macros. ``ExactPrefix`` is the default, which retains previous 
-  behavior of suggesting macros which match the prefix exactly.  
+- Added a new ``MacroFilter`` configuration option to ``Completion`` to
+  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting
+  macros. ``ExactPrefix`` is the default, which retains previous
+  behavior of suggesting macros which match the prefix exactly.
 
 Code actions
 ^^^^^^^^^^^^
@@ -205,7 +205,7 @@ Improvements to clang-tidy
 
 - Improved :program:`clang-tidy` by adding the `--removed-arg` option to remove
   arguments sent to the compiler when invoking Clang-Tidy. This option was also
-  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and 
+  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and
   can be configured in the config file through the `RemovedArgs` option.
 
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
@@ -585,7 +585,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check to correctly provide fix-its
-  for typedefs of pointers or references to array types.
+  for typedefs of pointers, references to array types and cases with
+  comma-separated multiple declarations and complex declarators.
 
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
