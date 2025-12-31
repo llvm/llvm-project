@@ -1993,6 +1993,34 @@ intptr_t PyBlockArgumentList::getRawNumElements() {
   return mlirBlockGetNumArguments(block);
 }
 
+void PyBlockArgument::bindDerived(ClassTy &c) {
+  c.def_prop_ro(
+      "owner",
+      [](PyBlockArgument &self) {
+        return PyBlock(self.getParentOperation(),
+                       mlirBlockArgumentGetOwner(self.get()));
+      },
+      "Returns the block that owns this argument.");
+  c.def_prop_ro(
+      "arg_number",
+      [](PyBlockArgument &self) {
+        return mlirBlockArgumentGetArgNumber(self.get());
+      },
+      "Returns the position of this argument in the block's argument list.");
+  c.def(
+      "set_type",
+      [](PyBlockArgument &self, PyType type) {
+        return mlirBlockArgumentSetType(self.get(), type);
+      },
+      nanobind::arg("type"), "Sets the type of this block argument.");
+  c.def(
+      "set_location",
+      [](PyBlockArgument &self, PyLocation loc) {
+        return mlirBlockArgumentSetLocation(self.get(), loc);
+      },
+      nanobind::arg("loc"), "Sets the location of this block argument.");
+}
+
 PyBlockArgument PyBlockArgumentList::getRawElement(intptr_t pos) const {
   MlirValue argument = mlirBlockGetArgument(block, pos);
   return PyBlockArgument(operation, argument);

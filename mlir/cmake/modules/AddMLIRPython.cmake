@@ -908,6 +908,9 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     PRIVATE
     MLIR_BINDINGS_PYTHON_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
+  if(APPLE)
+    target_link_options(${libname} PRIVATE "LINKER:-twolevel_namespace")
+  endif()
 
   if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
       AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
