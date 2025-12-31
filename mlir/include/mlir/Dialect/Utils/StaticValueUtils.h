@@ -24,8 +24,15 @@
 
 namespace mlir {
 
-/// Return true if `v` is an IntegerAttr with value `0`.
+/// Return "true" if `v` is an integer value/attribute with constant value `0`.
 bool isZeroInteger(OpFoldResult v);
+
+/// Return "true" if `v` is a float value/attribute with constant value `0.0`.
+bool isZeroFloat(OpFoldResult v);
+
+/// Return "true" if `v` is an integer/float value/attribute with constant
+/// value zero.
+bool isZeroIntegerOrFloat(OpFoldResult v);
 
 /// Return true if `v` is an IntegerAttr with value `1`.
 bool isOneInteger(OpFoldResult v);
