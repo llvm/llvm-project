@@ -736,11 +736,9 @@ public:
 };
 
 template <class _Tp>
-struct __optional_iterator<_Tp&,
-                           enable_if_t<is_object_v<__libcpp_remove_reference_t<_Tp>> &&
-                                       !__is_unbounded_array_v<__libcpp_remove_reference_t<_Tp>> >> {
+struct __optional_iterator<_Tp&, enable_if_t<is_object_v<_Tp> && !__is_unbounded_array_v<_Tp> >> {
 private:
-  using __pointer _LIBCPP_NODEBUG = add_pointer_t<remove_reference_t<_Tp>>;
+  using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
 
 public:
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
