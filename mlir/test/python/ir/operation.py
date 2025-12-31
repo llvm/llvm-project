@@ -652,22 +652,6 @@ def testOperationAttributes():
     # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
     print("Dict mapping", d)
 
-    # Structural pattern matching test using Mapping
-
-    # CHECK: Matched Mapping Attribute 'some.attribute': 1
-    # CHECK: Matched Mapping Attribute 'other.attribute': 3.0
-    # CHECK: Matched Mapping Attribute 'dependent': text
-    match op:
-        case OpView(attributes={"does_not_exist": a0}):
-            assert False
-        case OpView(attributes={"some.attribute": Attribute() as some_attr, "other.attribute": Attribute() as other_attr, "dependent": Attribute() as dep_attr}):
-            print(f"Matched Mapping Attribute 'some.attribute': {some_attr.value}")
-            print(f"Matched Mapping Attribute 'other.attribute': {other_attr.value}")
-            print(f"Matched Mapping Attribute 'dependent': {dep_attr.value}")
-        case _:
-            print("Did not match!")
-            assert False
-
     # Check that exceptions are raised as expected.
     try:
         op.attributes["does_not_exist"]

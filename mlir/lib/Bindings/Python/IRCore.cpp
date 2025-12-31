@@ -4962,9 +4962,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                  "Sequence.register(OpOperandList)\n"
                  "Sequence.register(OpResultList)\n"
                  "Sequence.register(OpSuccessors)\n"
-                 "Sequence.register(RegionSequence)\n"
-                 "OpAttributeMap.get = Mapping.get\n"
-                 "Mapping.register(OpAttributeMap)\n",
+                 "Sequence.register(RegionSequence)\n",
                  scope);
 
   // Debug bindings.
