@@ -7901,8 +7901,8 @@ void IntrinsicLibrary::genShowDescriptor(
   // pass it directly
   if (fir::isa_ref_type(descriptor.getType()) &&
       fir::isa_box_type(fir::unwrapRefType(descriptor.getType()))) {
-    fir::runtime::genShowDescriptor(builder, loc,
-        builder.createConvert(loc, targetRefType, descriptor));
+    fir::runtime::genShowDescriptor(
+        builder, loc, builder.createConvert(loc, targetRefType, descriptor));
     return;
   }
 
