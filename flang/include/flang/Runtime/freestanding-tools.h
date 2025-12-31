@@ -158,7 +158,6 @@ static inline RT_API_ATTRS void *memmove(
   }
   if (to + count <= from || from + count <= to) {
     memcpy(dest, src, count);
-    return dest;
   } else if (to < from) {
     while (count--) {
       *to++ = *from++;
