@@ -3760,6 +3760,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Parentheses &x) {
   if (MaybeExpr operand{Analyze(x.v.value())}) {
     if (IsNullPointerOrAllocatable(&*operand)) {
       Say("NULL() may not be parenthesized"_err_en_US);
+    } else if (semantics::IsAssumedRank(*operand)) {
+      Say("An assumed-rank dummy argument may not be parenthesized"_err_en_US);
     } else if (const semantics::Symbol *symbol{GetLastSymbol(*operand)}) {
       if (const semantics::Symbol *result{FindFunctionResult(*symbol)}) {
         if (semantics::IsProcedurePointer(*result)) {
@@ -5343,6 +5345,96 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
   auto restorer{
       analyzer.GetContextualMessages().SetLocation(*context.location())};
   return analyzer.AnalyzeKindSelector(category, selector);
+}
+
+// NoteUsedSymbols()
+
+static void NoteUsedSymbol(SemanticsContext &context, const Symbol &symbol) {
+  const Symbol &root{GetAssociationRoot(symbol)};
+  switch (root.owner().kind()) {
+  case semantics::Scope::Kind::Subprogram:
+  case semantics::Scope::Kind::MainProgram:
+  case semantics::Scope::Kind::BlockConstruct:
+    if ((root.has<semantics::ObjectEntityDetails>() ||
+            IsProcedurePointer(root))) {
+      context.NoteUsedSymbol(root);
+      if (root.test(Symbol::Flag::CrayPointee)) {
+        context.NoteUsedSymbol(GetCrayPointer(root));
+      }
+    }
+    break;
+  default:
+    break;
+  }
+}
+
+template <typename A>
+void NoteUsedSymbolsHelper(SemanticsContext &context, const A &x) {
+  if (context.ShouldWarn(common::UsageWarning::UnusedVariable)) {
+    for (const Symbol &symbol : CollectSymbols(x)) {
+      NoteUsedSymbol(context, symbol);
+    }
+  }
+}
+
+void NoteUsedSymbols(SemanticsContext &context, const SomeExpr &expr) {
+  NoteUsedSymbolsHelper(context, expr);
+}
+
+static bool IsBindingUsedAsProcedure(const SomeExpr &expr) {
+  if (const auto *pd{std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
+    if (const Symbol *symbol{pd->GetSymbol()}) {
+      return symbol->has<ProcBindingDetails>();
+    }
+  }
+  return false;
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const evaluate::ProcedureRef &call) {
+  NoteUsedSymbolsHelper(context, call.proc());
+  for (const auto &maybeArg : call.arguments()) {
+    if (maybeArg) {
+      if (const auto *expr{maybeArg->UnwrapExpr()}) {
+        if (!IsBindingUsedAsProcedure(*expr)) {
+          // Ignore procedure bindings being used as actual procedures
+          // (a local extension).
+          NoteUsedSymbolsHelper(context, *expr);
+        }
+      }
+    }
+  }
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const evaluate::Assignment &assignment) {
+  if (IsBindingUsedAsProcedure(assignment.rhs)) {
+    // Don't look at the RHS, we're just using its binding (extension).
+    NoteUsedSymbolsHelper(context, assignment.lhs);
+  } else {
+    NoteUsedSymbolsHelper(context, assignment);
+  }
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const parser::TypedExpr &typedExpr) {
+  if (typedExpr && typedExpr->v) {
+    NoteUsedSymbols(context, *typedExpr->v);
+  }
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const parser::TypedCall &typedCall) {
+  if (typedCall) {
+    NoteUsedSymbols(context, *typedCall);
+  }
+}
+
+void NoteUsedSymbols(
+    SemanticsContext &context, const parser::TypedAssignment &typedAssignment) {
+  if (typedAssignment && typedAssignment->v) {
+    NoteUsedSymbols(context, *typedAssignment->v);
+  }
 }
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}

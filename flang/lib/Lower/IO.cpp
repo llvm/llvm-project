@@ -1427,6 +1427,9 @@ static void threadSpecs(Fortran::lower::AbstractConverter &converter,
               // already finished.
               return ok;
             },
+            [](const Fortran::parser::ErrorRecovery &) -> mlir::Value {
+              llvm::report_fatal_error("ErrorRecovery in parse tree");
+            },
             [&](const auto &x) {
               return genIOOption(converter, loc, cookie, x);
             }},
