@@ -2453,8 +2453,7 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
 
   // If the maximum value in the bitmap is larger than can be stored
   // in Index, don't have to worry about overflow on the shift
-  unsigned IndexBits =
-      dyn_cast<IntegerType>(Index->getType())->getScalarSizeInBits();
+  unsigned IndexBits = Index->getType()->getScalarSizeInBits();
   if (isUIntN(IndexBits, MaxVal)) {
     Value *MaxValue = ConstantInt::get(Context, APInt(IndexBits, MaxVal + 1));
     // %icmp = icmp ult %Index, %max_value
