@@ -94,10 +94,9 @@ public:
       return isEmptyArray(heapTy.getElementType());
     else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
       llvm::ArrayRef<int64_t> firShape = seqTy.getShape();
-      for (auto shape : firShape) {
+      for (auto shape : firShape)
         if (shape == 0)
           return true;
-      }
       return false;
     }
     return false;
@@ -114,10 +113,8 @@ public:
         return convertibleType(elTy);
       }
 
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
-        auto elTy = seqTy.getElementType();
-        return convertibleType(elTy);
-      }
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type))
+        return convertibleType(seqTy.getElementType());
     }
 
     if (fir::isa_fir_type(type)) {
@@ -179,20 +176,14 @@ public:
       return mlir::MemRefType::get({}, ty);
     };
 
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(firTy)) {
-      auto elTy = refTy.getElementType();
-      return convertBaseType(elTy);
-    }
+    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(firTy))
+      return convertBaseType(refTy.getElementType());
 
-    if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(firTy)) {
-      auto elTy = pointerTy.getElementType();
-      return convertBaseType(elTy);
-    }
+    if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(firTy))
+      return convertBaseType(pointerTy.getElementType());
 
-    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(firTy)) {
-      auto elTy = heapTy.getElementType();
-      return convertBaseType(elTy);
-    }
+    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(firTy))
+      return convertBaseType(heapTy.getElementType());
 
     if (auto boxTy = mlir::dyn_cast<fir::BoxType>(firTy)) {
       auto elTy = boxTy.getElementType();
