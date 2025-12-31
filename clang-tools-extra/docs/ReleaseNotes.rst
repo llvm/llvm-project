@@ -265,6 +265,12 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check.
+
+  Detects ``if``/``else`` statements where one branch uses braces and the other
+  does not.
+
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
 
@@ -426,7 +432,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
   the canonical types of base classes as written and adding a note on the base
-  class that triggered the warning.
+  class that triggered the warning. Also, fixed an issue where the check
+  wouldn't fire in constructors or (in certain contexts) lambdas.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
