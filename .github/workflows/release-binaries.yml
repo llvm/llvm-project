@@ -227,7 +227,7 @@ jobs:
       run: |
           echo "digest=$(cat $RELEASE_BINARY_FILENAME | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
-    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       id: artifact-upload
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary

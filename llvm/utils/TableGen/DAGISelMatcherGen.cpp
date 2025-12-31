@@ -706,8 +706,8 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       const CodeGenRegisterClass &RC =
           CGP.getTargetInfo().getRegisterClass(Def);
       std::string Name = RC.getQualifiedIdName();
-      AddMatcher(new EmitStringIntegerMatcher(Name, RC.EnumValue, MVT::i32,
-                                              NextRecordedOperandNo));
+      AddMatcher(new EmitIntegerMatcher(Name, RC.EnumValue, MVT::i32,
+                                        NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -717,8 +717,8 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       const CodeGenRegBank &RB = CGP.getTargetInfo().getRegBank();
       const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
       std::string Name = getQualifiedName(Def);
-      AddMatcher(new EmitStringIntegerMatcher(Name, I->EnumValue, MVT::i32,
-                                              NextRecordedOperandNo));
+      AddMatcher(new EmitIntegerMatcher(Name, I->EnumValue, MVT::i32,
+                                        NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
