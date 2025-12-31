@@ -35,16 +35,10 @@ template <typename T>
 concept has_no_iterators = !has_iterator<T> && !has_const_iterator<T>;
 
 template <typename T>
-constexpr bool test_range_concept() {
-  return std::ranges::range<std::optional<T>>;
-}
-
-template <typename T, std::remove_reference_t<T> __val>
-constexpr bool test() {
-  std::remove_reference_t<T> v{__val};
+constexpr void test(std::decay_t<T> v) {
   std::optional<T> opt{v};
   {
-    assert(test_range_concept<T>());
+    static_assert(std::ranges::range<decltype(opt)>);
   }
 
   { // Dereferencing an iterator of an engaged optional will return the same value that the optional holds.
@@ -57,24 +51,24 @@ constexpr bool test() {
   { // optional::iterator and optional::const_iterator satisfy the Cpp17RandomAccessIterator and contiguous iterator.
     auto it  = opt.begin();
     auto it2 = std::as_const(opt).begin();
-    assert(std::contiguous_iterator<decltype(it)>);
-    assert(std::contiguous_iterator<decltype(it2)>);
+    static_assert(std::contiguous_iterator<decltype(it)>);
+    static_assert(std::contiguous_iterator<decltype(it2)>);
 
-    assert(std::random_access_iterator<decltype(it)>);
-    assert(std::random_access_iterator<decltype(it2)>);
+    static_assert(std::random_access_iterator<decltype(it)>);
+    static_assert(std::random_access_iterator<decltype(it2)>);
   }
 
   { // const_iterator::value_type == std::remove_cvref_t<T>, const_iterator::reference == const T&, iterator::value_type = std::remove_cvref_t<T>, iterator::reference == T&
     // std::remove_cv_t is impossible for optional<T&>
     auto it  = opt.begin();
     auto it2 = std::as_const(opt).begin();
-    assert((std::is_same_v<typename decltype(it)::value_type, std::remove_cvref_t<T>>));
-    assert((std::is_same_v<typename decltype(it)::reference, std::remove_reference_t<T>&>));
-    assert((std::is_same_v<typename decltype(it2)::value_type, std::remove_cvref_t<T>>));
+    static_assert(std::is_same_v<typename decltype(it)::value_type, std::remove_cvref_t<T>>);
+    static_assert(std::is_same_v<typename decltype(it)::reference, std::remove_reference_t<T>&>);
+    static_assert(std::is_same_v<typename decltype(it2)::value_type, std::remove_cvref_t<T>>);
 
-    // for optional<T&>, there is no const_iterator
-    if (!std::is_lvalue_reference_v<T>) {
-      assert((std::is_same_v<typename decltype(it2)::reference, const std::remove_reference_t<T>&>));
+    // optional<T&> doesn't have const_iterator
+    if constexpr (!std::is_lvalue_reference_v<T>) {
+      static_assert(std::is_same_v<typename decltype(it2)::reference, const std::remove_reference_t<T>&>);
     }
   }
 
@@ -88,7 +82,7 @@ constexpr bool test() {
     assert(std::ranges::size(disengaged2) == 0);
   }
 
-  { // std::ranges::enable_view<optional<T>> == true, and std::format_kind<optional<T>> == true
+  { // std::ranges::enable_view<optional<T>> == true, and std::format_kind<optional<T>> == std::range_format::disabled
     static_assert(std::ranges::enable_view<std::optional<T>> == true);
     static_assert(std::format_kind<std::optional<T>> == std::range_format::disabled);
   }
@@ -104,11 +98,9 @@ constexpr bool test() {
     assert(val.begin() != val.end());
     assert(*(val.begin()) == v);
   }
-
-  return true;
 }
 
-constexpr bool tests() {
+constexpr bool test() {
   // Verify that iterator and const_iterator are present for object type T, but for T&,
   // that only iterator is available iff T is an object type and is not an unbounded array.
 
@@ -120,27 +112,27 @@ constexpr bool tests() {
   static_assert(has_no_iterators<std::optional<int (&)[]>>);
   static_assert(has_no_iterators<std::optional<int (&)()>>);
 
-  assert((test<int, 1>()));
-  assert((test<char, 'a'>()));
-  assert((test<bool, true>()));
-  assert((test<const int, 2>()));
-  assert((test<const char, 'b'>()));
-  assert((test<int&, 1>()));
-  assert((test<char&, 'a'>()));
-  assert((test<bool&, true>()));
-  assert((test<const int&, 2>()));
-  assert((test<const char&, 'b'>()));
+  test<int>(1);
+  test<char>('a');
+  test<bool>(true);
+  test<const int>(2);
+  test<const char>('b');
+  test<int&>(1);
+  test<char&>('a');
+  test<bool&>(true);
+  test<const int&>(2);
+  test<const char&>('b');
 
-  assert(!test_range_concept<int (&)()>());
-  assert(!test_range_concept<int (&)[]>());
-  assert(test_range_concept<int (&)[42]>());
+  static_assert(!std::ranges::range<std::optional<int (&)()>>);
+  static_assert(!std::ranges::range<std::optional<int (&)[]>>);
+  static_assert(std::ranges::range<std::optional<int (&)[42]>>);
 
   return true;
 }
 
 int main(int, char**) {
-  assert(tests());
-  static_assert(tests());
+  assert(test());
+  static_assert(test());
 
   return 0;
 }
