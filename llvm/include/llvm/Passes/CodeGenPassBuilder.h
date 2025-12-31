@@ -164,9 +164,6 @@ private:
   friend class CodeGenPassBuilder;
 };
 
-using CreateMCStreamer =
-    std::function<Expected<std::unique_ptr<MCStreamer>>(TargetMachine &)>;
-
 /// This class provides access to building LLVM's passes.
 ///
 /// Its members provide the baseline state available to passes during their
@@ -199,8 +196,8 @@ public:
   }
 
   Error buildPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                      MCContext &Ctx) const;
+                      raw_pwrite_stream *DwoOut,
+                      CodeGenFileType FileType) const;
 
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
@@ -488,6 +485,10 @@ protected:
   /// Add standard basic block placement passes.
   void addBlockPlacement(PassManagerWrapper &PMW) const;
 
+  void addPostBBSections(PassManagerWrapper &PMW) const {}
+
+  using CreateMCStreamer =
+      std::function<Expected<std::unique_ptr<MCStreamer>>(MCContext &)>;
   void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const {
     llvm_unreachable("addAsmPrinter is not overridden");
   }
@@ -561,7 +562,7 @@ private:
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, MCContext &Ctx) const {
+    CodeGenFileType FileType) const {
   auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
@@ -597,8 +598,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
 
   if (PrintAsm) {
     derived().addAsmPrinter(
-        PMW, [&Out, DwoOut, FileType, &Ctx](TargetMachine &TM) {
-          return TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
+        PMW, [this, &Out, DwoOut, FileType](MCContext &Ctx) {
+          return this->TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
         });
   }
 
@@ -727,7 +728,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     flushFPMsToMPM(PMW);
     addModulePass(ShadowStackGCLoweringPass(), PMW);
   }
-  addFunctionPass(LowerConstantIntrinsicsPass(), PMW);
 
   // Make sure that no unreachable blocks are instruction selected.
   addFunctionPass(UnreachableBlockElimPass(), PMW);
@@ -1061,6 +1061,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
   }
+
+  derived().addPostBBSections(PMW);
 
   addMachineFunctionPass(StackFrameLayoutAnalysisPass(), PMW);
 
