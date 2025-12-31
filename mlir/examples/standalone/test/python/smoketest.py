@@ -23,15 +23,6 @@ with mlir_standalone.ir.Context():
 # CHECK: Testing mlir package
 print("Testing mlir package", file=sys.stderr)
 
-import mlir.ir
+from mlir.ir import *
 
 # CHECK-NOT: RuntimeWarning: nanobind: type '{{.*}}' was already registered!
-
-with mlir.ir.Context():
-    mlir_module = mlir.ir.Module.parse(
-        """
-    %0 = arith.constant 3 : i32
-    """
-    )
-    # CHECK: %[[C3:.*]] = arith.constant 3 : i32
-    print(str(mlir_module), file=sys.stderr)

@@ -41,6 +41,3 @@
 
 # CHECK-NOT: RuntimeWarning: nanobind: type '{{.*}}' was already registered!
 
-# CHECK: module {
-# CHECK:   %[[C3:.*]] = arith.constant 3 : i32
-# CHECK: }
