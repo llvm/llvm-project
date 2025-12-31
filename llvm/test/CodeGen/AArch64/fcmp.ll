@@ -31,17 +31,15 @@ define fp128 @f128_fp128(fp128 %a, fp128 %b, fp128 %d, fp128 %e) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
 ; CHECK-GI-NEXT:    stp q3, q2, [sp] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    bl __lttf2
-; CHECK-GI-NEXT:    ldp q3, q2, [sp] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q0, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-GI-NEXT:    mov d0, v2.d[1]
-; CHECK-GI-NEXT:    mov d1, v3.d[1]
-; CHECK-GI-NEXT:    fcsel d2, d2, d3, mi
-; CHECK-GI-NEXT:    fmov x8, d2
-; CHECK-GI-NEXT:    fcsel d1, d0, d1, mi
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    mov d2, v3.d[1]
+; CHECK-GI-NEXT:    fcsel d0, d0, d3, mi
+; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    fcsel d1, d1, d2, mi
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -477,21 +475,17 @@ define <2 x fp128> @v2f128_fp128(<2 x fp128> %a, <2 x fp128> %b, <2 x fp128> %d,
 ; CHECK-GI-NEXT:    mov d0, v2.d[1]
 ; CHECK-GI-NEXT:    mov d1, v3.d[1]
 ; CHECK-GI-NEXT:    fcsel d2, d2, d3, mi
-; CHECK-GI-NEXT:    fmov x8, d2
 ; CHECK-GI-NEXT:    fcsel d3, d0, d1, mi
-; CHECK-GI-NEXT:    ldp q5, q0, [sp, #64] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q1, q0, [sp, #64] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    mov d4, v5.d[1]
-; CHECK-GI-NEXT:    fcsel d0, d0, d5, mi
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov x8, d3
-; CHECK-GI-NEXT:    fcsel d2, d1, d4, mi
-; CHECK-GI-NEXT:    mov v1.d[0], x9
-; CHECK-GI-NEXT:    fmov x9, d2
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    mov d4, v0.d[1]
+; CHECK-GI-NEXT:    mov d5, v1.d[1]
+; CHECK-GI-NEXT:    fcsel d1, d0, d1, mi
+; CHECK-GI-NEXT:    mov v0.d[0], v2.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v1.d[0]
+; CHECK-GI-NEXT:    fcsel d2, d4, d5, mi
+; CHECK-GI-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    add sp, sp, #112
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -574,29 +568,23 @@ define <3 x fp128> @v3f128_fp128(<3 x fp128> %a, <3 x fp128> %b, <3 x fp128> %d,
 ; CHECK-GI-NEXT:    fcsel d4, d4, d5, mi
 ; CHECK-GI-NEXT:    mov d2, v7.d[1]
 ; CHECK-GI-NEXT:    mov d3, v6.d[1]
-; CHECK-GI-NEXT:    fmov x8, d4
 ; CHECK-GI-NEXT:    fcsel d5, d0, d1, mi
 ; CHECK-GI-NEXT:    cmp w20, #0
-; CHECK-GI-NEXT:    fcsel d1, d7, d6, mi
-; CHECK-GI-NEXT:    ldp q7, q0, [sp, #128] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcsel d3, d2, d3, mi
+; CHECK-GI-NEXT:    ldp q2, q0, [sp, #128] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    fcsel d1, d7, d6, mi
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #176] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov d2, v0.d[1]
-; CHECK-GI-NEXT:    mov d6, v7.d[1]
-; CHECK-GI-NEXT:    fcsel d7, d0, d7, mi
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    fmov x9, d7
-; CHECK-GI-NEXT:    fcsel d4, d2, d6, mi
-; CHECK-GI-NEXT:    mov v1.d[0], x8
-; CHECK-GI-NEXT:    fmov x8, d5
-; CHECK-GI-NEXT:    mov v2.d[0], x9
-; CHECK-GI-NEXT:    fmov x9, d3
-; CHECK-GI-NEXT:    fmov x10, d4
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    mov v2.d[1], x10
+; CHECK-GI-NEXT:    mov d6, v0.d[1]
+; CHECK-GI-NEXT:    mov d7, v2.d[1]
+; CHECK-GI-NEXT:    fcsel d2, d0, d2, mi
+; CHECK-GI-NEXT:    mov v0.d[0], v4.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v1.d[0]
+; CHECK-GI-NEXT:    mov v2.d[0], v2.d[0]
+; CHECK-GI-NEXT:    fcsel d4, d6, d7, mi
+; CHECK-GI-NEXT:    mov v0.d[1], v5.d[0]
+; CHECK-GI-NEXT:    mov v1.d[1], v3.d[0]
+; CHECK-GI-NEXT:    mov v2.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    add sp, sp, #192
 ; CHECK-GI-NEXT:    ret
 entry:
