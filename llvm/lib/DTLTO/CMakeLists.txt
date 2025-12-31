@@ -3,5 +3,6 @@ add_llvm_component_library(LLVMDTLTO
 
   LINK_COMPONENTS
   Core
+  LTO
   Support
   )
