@@ -344,3 +344,60 @@ define i64 @test8(i64 %a) {
   %2 = or i64 %1, 157601565442048     ; 0x00008f5679530000
   ret i64 %2
 }
+
+define i32 @no_bseti_1(i32 %a, i32 %b, i32 %c) nounwind {
+; RV32I-LABEL: no_bseti_1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ori a0, a1, 1
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: no_bseti_1:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    ori a0, a1, 1
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: no_bseti_1:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    ori a0, a1, 1
+; RV32IXQCIBMZBS-NEXT:    ret
+  %or = or i32 %b, 1
+  ret i32 %or
+}
+
+define i32 @bseti_2(i32 %a, i32 %b, i32 %c) nounwind {
+; RV32I-LABEL: bseti_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ori a0, a1, 2
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: bseti_2:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    ori a0, a1, 2
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: bseti_2:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    ori a0, a1, 2
+; RV32IXQCIBMZBS-NEXT:    ret
+  %or = or i32 %b, 2
+  ret i32 %or
+}
+
+define i32 @bseti_i32_10(i32 %a) nounwind {
+; RV32I-LABEL: bseti_i32_10:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    ori a0, a0, 1024
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: bseti_i32_10:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    ori a0, a0, 1024
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: bseti_i32_10:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    ori a0, a0, 1024
+; RV32IXQCIBMZBS-NEXT:    ret
+  %or = or i32 %a, 1024
+  ret i32 %or
+}
