@@ -392,6 +392,9 @@ int main(int argc, char **argv) {
   if (!TheTarget)
     return 1;
 
+  if (MCPU == "native")
+    MCPU = std::string(llvm::sys::getHostCPUName());
+
   // Package up features to be passed to target/subtarget
   std::string FeaturesStr;
   if (MATTRS.size()) {
@@ -401,43 +404,12 @@ int main(int argc, char **argv) {
     FeaturesStr = Features.getString();
   }
 
-  auto CreateSubtargetInfo = [&](StringRef CPU) {
-    return std::unique_ptr<MCSubtargetInfo>(
-        TheTarget->createMCSubtargetInfo(TheTriple, CPU, FeaturesStr));
-  };
-
-  std::unique_ptr<MCSubtargetInfo> STI;
-  if (MCPU == "native") {
-    std::string HostCPU = std::string(llvm::sys::getHostCPUName());
-    STI = CreateSubtargetInfo("");
-    if (!STI) {
-      WithColor::error() << "unable to create subtarget info\n";
-      return 1;
-    }
-    if (!HostCPU.empty() && STI->isCPUStringValid(HostCPU)) {
-      // Only utilise the detected host CPU when it exists in the processor
-      // table for the requested triple.
-      STI = CreateSubtargetInfo(HostCPU);
-      if (!STI) {
-        WithColor::error() << "unable to create subtarget info\n";
-        return 1;
-      }
-      MCPU = HostCPU;
-    } else {
-      MCPU.clear();
-    }
-  } else {
-    STI = CreateSubtargetInfo(MCPU);
-    if (!STI) {
-      WithColor::error() << "unable to create subtarget info\n";
-      return 1;
-    }
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
+  if (!STI) {
+    WithColor::error() << "unable to create subtarget info\n";
+    return 1;
   }
-
-  if (MCPU.empty())
-    // MCPU being empty here means the target default was selected above,
-    // which avoids forwarding incompatible host CPUs when cross-compiling.
-    MCPU = std::string(STI->getCPU());
 
   if (MCPU == "help")
     return 0;
