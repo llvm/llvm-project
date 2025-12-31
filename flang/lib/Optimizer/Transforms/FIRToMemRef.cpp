@@ -38,6 +38,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -222,8 +223,8 @@ bool FIRToMemRef::memrefIsDeviceData(Operation *memref) const {
   if (isa<ACC_DATA_ENTRY_OPS>(memref))
     return true;
 
-  if (auto cudaAttr = cuf::getDataAttr(memref)) {
-    auto attrValue = cudaAttr.getValue();
+  if (cuf::DataAttributeAttr cudaAttr = cuf::getDataAttr(memref)) {
+    cuf::DataAttribute attrValue = cudaAttr.getValue();
     return attrValue == cuf::DataAttribute::Device ||
            attrValue == cuf::DataAttribute::Managed ||
            attrValue == cuf::DataAttribute::Constant ||
@@ -274,7 +275,7 @@ mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
     if (!defOp || !visited.insert(defOp).second)
       break;
 
-    if (auto cudaAttr = cuf::getDataAttr(defOp))
+    if (cuf::DataAttributeAttr cudaAttr = cuf::getDataAttr(defOp))
       return cudaAttr;
 
     if (auto reboxOp = dyn_cast<fir::ReboxOp>(defOp)) {
@@ -654,9 +655,8 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
           continue;
 
         if (userOp->getParentOp() == memOp->getParentOp() &&
-            domInfo->dominates(userOp, memOp)) {
+            domInfo->dominates(userOp, memOp))
           return converted;
-        }
       }
     }
   }
