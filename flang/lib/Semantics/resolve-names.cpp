@@ -7501,7 +7501,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
       SayAlreadyDeclared(name, *prev);
       return nullptr;
     }
-    name.symbol = nullptr;
+    // Inhibit diagnostics about an unused local symbol here, since
+    // this one may well have been declared solely to determine the
+    // type of an implied DO index.  Some compilers don't yet support
+    // an explicit "integer(k)::" in an implied DO.
+    context().NoteDefinedSymbol(*prev);
+    name.symbol = nullptr; // undo the "FindSymbol()" above
     // F'2023 19.4 p5 ambiguous rule about outer declarations
     declTypeSpec = prev->GetType();
   }
