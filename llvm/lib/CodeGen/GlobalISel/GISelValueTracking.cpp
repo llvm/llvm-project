@@ -622,7 +622,37 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_UADDE:
   case TargetOpcode::G_SADDO:
-  case TargetOpcode::G_SADDE:
+  case TargetOpcode::G_SADDE: {
+    if (MI.getOperand(1).getReg() == R) {
+      // If we know the result of a compare has the top bits zero, use this
+      // info.
+      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+              TargetLowering::ZeroOrOneBooleanContent &&
+          BitWidth > 1)
+        Known.Zero.setBitsFrom(1);
+      break;
+    }
+
+    assert(MI.getOperand(0).getReg() == R &&
+           "We only compute knownbits for the sum here.");
+    // With [US]ADDE, a carry bit may be added in.
+    KnownBits Carry(1);
+    if (Opcode == TargetOpcode::G_UADDE || Opcode == TargetOpcode::G_SADDE) {
+      computeKnownBitsImpl(MI.getOperand(4).getReg(), Carry, DemandedElts,
+                           Depth + 1);
+      // Carry has bit width 1
+      Carry = Carry.trunc(1);
+    } else {
+      Carry.setAllZero();
+    }
+
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(3).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+    break;
+  }
   case TargetOpcode::G_USUBO:
   case TargetOpcode::G_USUBE:
   case TargetOpcode::G_SSUBO:
