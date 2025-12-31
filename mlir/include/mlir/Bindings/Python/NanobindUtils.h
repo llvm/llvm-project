@@ -296,9 +296,9 @@ protected:
 
   /// Returns a new instance of the pseudo-container restricted to the given
   /// slice. Returns a nullptr object on failure.
-  nanobind::object getItemSlice(PyObject *slice) {
+  nanobind::object getItemSlice(nanobind::slice slice) {
     ssize_t start, stop, extraStep, sliceLength;
-    if (PySlice_GetIndicesEx(slice, length, &start, &stop, &extraStep,
+    if (PySlice_GetIndicesEx(slice.ptr(), length, &start, &stop, &extraStep,
                              &sliceLength) != 0) {
       PyErr_SetString(PyExc_IndexError, "index out of range");
       return {};
@@ -355,51 +355,11 @@ public:
                       nanobind::cast<std::string>(elemTyName) + "])";
     auto clazz = nanobind::class_<Derived>(m, Derived::pyClassName,
                                            nanobind::sig(sig.c_str()))
+                     .def("__len__", &Sliceable::size)
+                     .def("__getitem__", &Sliceable::getItem)
+                     .def("__getitem__", &Sliceable::getItemSlice)
                      .def("__add__", &Sliceable::dunderAdd);
     Derived::bindDerived(clazz);
-
-    // Manually implement the sequence protocol via the C API. We do this
-    // because it is approx 4x faster than via nanobind, largely because that
-    // formulation requires a C++ exception to be thrown to detect end of
-    // sequence.
-    // Since we are in a C-context, any C++ exception that happens here
-    // will terminate the program. There is nothing in this implementation
-    // that should throw in a non-terminal way, so we forgo further
-    // exception marshalling.
-    // See: https://github.com/pybind/nanobind/issues/2842
-    auto heap_type = reinterpret_cast<PyHeapTypeObject *>(clazz.ptr());
-    assert(heap_type->ht_type.tp_flags & Py_TPFLAGS_HEAPTYPE &&
-           "must be heap type");
-    heap_type->as_sequence.sq_length = +[](PyObject *rawSelf) -> Py_ssize_t {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      return self->length;
-    };
-    // sq_item is called as part of the sequence protocol for iteration,
-    // list construction, etc.
-    heap_type->as_sequence.sq_item =
-        +[](PyObject *rawSelf, Py_ssize_t index) -> PyObject * {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      return self->getItem(index).release().ptr();
-    };
-    // mp_subscript is used for both slices and integer lookups.
-    heap_type->as_mapping.mp_subscript =
-        +[](PyObject *rawSelf, PyObject *rawSubscript) -> PyObject * {
-      auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
-      Py_ssize_t index = PyNumber_AsSsize_t(rawSubscript, PyExc_IndexError);
-      if (!PyErr_Occurred()) {
-        // Integer indexing.
-        return self->getItem(index).release().ptr();
-      }
-      PyErr_Clear();
-
-      // Assume slice-based indexing.
-      if (PySlice_Check(rawSubscript)) {
-        return self->getItemSlice(rawSubscript).release().ptr();
-      }
-
-      PyErr_SetString(PyExc_ValueError, "expected integer or slice");
-      return nullptr;
-    };
   }
 
   /// Hook for derived classes willing to bind more methods.
