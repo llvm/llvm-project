@@ -1217,7 +1217,7 @@ public:
         break;
       case Instruction::Xor:
         if (CIValue.isZero())
-          InterchangeableMask = XorBIT | OrBIT | AndBIT | SubBIT | AddBIT;
+          InterchangeableMask = XorBIT | OrBIT | SubBIT | AddBIT;
         break;
       default:
         if (CIValue.isZero())
