@@ -1014,8 +1014,9 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
   if (failed(memrefInfo))
     return;
 
-  auto originalType = load.getResult().getType();
-  auto [converted, indices] = *memrefInfo;
+  Type originalType = load.getResult().getType();
+  Value converted = memrefInfo->first;
+  SmallVector<Value> indices = memrefInfo->second;
 
   LLVM_DEBUG(llvm::dbgs()
                  << "FIRToMemRef: convert for FIR load created successfully:\n";
@@ -1023,8 +1024,8 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
 
   rewriter.setInsertionPointAfter(load);
 
-  auto attr = (load.getOperation())->getAttr("tbaa");
-  auto loadOp =
+  Attribute attr = (load.getOperation())->getAttr("tbaa");
+  memref::LoadOp loadOp =
       rewriter.replaceOpWithNewOp<memref::LoadOp>(load, converted, indices);
   if (attr)
     loadOp.getOperation()->setAttr("tbaa", attr);
@@ -1036,7 +1037,7 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
     SmallVector<Operation *> loadUsers(
         loadOp.getOperation()->getUsers().begin(),
         loadOp.getOperation()->getUsers().end());
-    auto logicalVal =
+    Value logicalVal =
         fir::ConvertOp::create(rewriter, loadOp.getLoc(), originalType, loadOp);
     for (Operation *user : loadUsers)
       for (auto &operand : user->getOpOperands())
@@ -1063,7 +1064,8 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
   if (failed(memrefInfo))
     return;
 
-  auto [converted, indices] = *memrefInfo;
+  Value converted = memrefInfo->first;
+  SmallVector<Value> indices = memrefInfo->second;
   LLVM_DEBUG(
       llvm::dbgs()
           << "FIRToMemRef: convert for FIR store created successfully:\n";
@@ -1073,13 +1075,13 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
   rewriter.setInsertionPointAfter(store);
 
   if (isa<fir::LogicalType>(value.getType())) {
-    auto convertedType = typeConverter.convertType(value.getType());
+    Type convertedType = typeConverter.convertType(value.getType());
     value =
         fir::ConvertOp::create(rewriter, store.getLoc(), convertedType, value);
   }
 
-  auto attr = (store.getOperation())->getAttr("tbaa");
-  auto storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(
+  Attribute attr = (store.getOperation())->getAttr("tbaa");
+  memref::StoreOp storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(
       store, value, converted, indices);
   if (attr)
     storeOp.getOperation()->setAttr("tbaa", attr);
@@ -1088,7 +1090,8 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
              storeOp.dump(); assert(succeeded(verify(storeOp))));
 
   bool isLogicalRef = false;
-  if (auto refTy = llvm::dyn_cast<fir::ReferenceType>(firMemref.getType()))
+  if (fir::ReferenceType refTy =
+          llvm::dyn_cast<fir::ReferenceType>(firMemref.getType()))
     isLogicalRef = llvm::isa<fir::LogicalType>(refTy.getEleTy());
   if (!isLogicalRef)
     replaceFIRMemrefs(firMemref, converted, rewriter);
@@ -1097,9 +1100,9 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
 void FIRToMemRef::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Enter FIRToMemRef()\n");
 
-  auto op = getOperation();
-  auto context = op.getContext();
-  auto mod = op->getParentOfType<ModuleOp>();
+  func::FuncOp op = getOperation();
+  MLIRContext *context = op.getContext();
+  ModuleOp mod = op->getParentOfType<ModuleOp>();
   FIRToMemRefTypeConverter typeConverter(mod);
 
   typeConverter.setConvertComplexTypes(true);
@@ -1112,9 +1115,9 @@ void FIRToMemRef::runOnOperation() {
   });
 
   op.walk([&](Operation *op) {
-    if (auto loadOp = dyn_cast<fir::LoadOp>(op)) {
+    if (fir::LoadOp loadOp = dyn_cast<fir::LoadOp>(op)) {
       rewriteLoadOp(loadOp, rewriter, typeConverter);
-    } else if (auto storeOp = dyn_cast<fir::StoreOp>(op)) {
+    } else if (fir::StoreOp storeOp = dyn_cast<fir::StoreOp>(op)) {
       rewriteStoreOp(storeOp, rewriter, typeConverter);
     }
   });
