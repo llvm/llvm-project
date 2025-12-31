@@ -165,7 +165,8 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
           _LIBUNWIND_ABORT("Bad unwind with PAuth-enabled ABI");
         }
       }
-#elif defined(_LIBUNWIND_TARGET_AARCH64) && defined(_LIBUNWIND_IS_NATIVE_ONLY) &&    \
+#elif defined(_LIBUNWIND_TARGET_AARCH64) &&                                    \
+    defined(_LIBUNWIND_IS_NATIVE_ONLY) &&                                      \
     !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
       // We expect IP register value to be signed only for a full-fledged
       // PAuth ABI such as Apple's arm64e or Linux's pauthtest. Otherwise,

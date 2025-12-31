@@ -77,7 +77,7 @@ private:
   }
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   static pint_t getRASignedState(A &addressSpace, const R &registers,
-                                        pint_t cfa, const PrologInfo &prolog);
+                                 pint_t cfa, const PrologInfo &prolog);
 #endif
 };
 
@@ -290,9 +290,9 @@ int DwarfInstructions<A, R>::stepWithDwarf(
 #if !defined(_LIBUNWIND_IS_NATIVE_ONLY)
         return UNW_ECROSSRASIGNING;
 #else
-        newRegisters.setRASigningScheme(
-            raSignState, cieInfo.addressesSignedWithBKey,
-            prolog.ptrAuthDiversifier);
+        newRegisters.setRASigningScheme(raSignState,
+                                        cieInfo.addressesSignedWithBKey,
+                                        prolog.ptrAuthDiversifier);
 #endif
       }
 #endif

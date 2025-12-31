@@ -1852,13 +1852,13 @@ extern "C" void *__libunwind_shstk_get_jump_target() {
 #define STRING(x) STRING_IMPL(x)
 
 #define RUN_IF_PAUTH_FEATURE_PRESENT(scratchReg, code)                \
-  "mrs  " #scratchReg ", ID_AA64ISAR1_EL1"                  "\n\t"    \
-  "lsr  " #scratchReg ", " #scratchReg ", #24"              "\n\t"    \
-  "ands " #scratchReg ", " #scratchReg ", #255"             "\n\t"    \
+  "mrs  " #scratchReg ", ID_AA64ISAR1_EL1"                     "\n\t" \
+  "lsr  " #scratchReg ", " #scratchReg ", #24"                 "\n\t" \
+  "ands " #scratchReg ", " #scratchReg ", #255"                "\n\t" \
   "cbnz " #scratchReg ", .Lcheck_pac_code%=_" STRING(__LINE__) "\n\t" \
-  "mrs  " #scratchReg ", ID_AA64ISAR2_EL1"                  "\n\t"    \
-  "lsr  " #scratchReg ", " #scratchReg ", #8"               "\n\t"    \
-  "ands " #scratchReg ", " #scratchReg ", #15"              "\n\t"    \
+  "mrs  " #scratchReg ", ID_AA64ISAR2_EL1"                     "\n\t" \
+  "lsr  " #scratchReg ", " #scratchReg ", #8"                  "\n\t" \
+  "ands " #scratchReg ", " #scratchReg ", #15"                 "\n\t" \
   "cbnz " #scratchReg ", .Lcheck_pac_code%=_" STRING(__LINE__) "\n\t" \
   "b .Lcheck_pac_end%=_" STRING(__LINE__)                      "\n\t" \
   ".Lcheck_pac_code%=_" STRING(__LINE__) ":"                   "\n\t" \
@@ -1882,10 +1882,10 @@ extern "C" void *__libunwind_shstk_get_jump_target() {
     ".Lcheck_integrity_success_%=_" STRING(__LINE__) ":"       "\n\t" \
   )
 
-#define CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(schemeReg)      \
-  "cmp   " #schemeReg ", 5"                                        "\n\t" \
+#define CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI(schemeReg)         \
+  "cmp   " #schemeReg ", 5"                                           "\n\t" \
   "b.eq  .Lcheck_integrity_for_pauthabi_success_%=_" STRING(__LINE__) "\n\t" \
-  PACGA_TRAP                                                       "\n\t" \
+  PACGA_TRAP                                                          "\n\t" \
   ".Lcheck_integrity_for_pauthabi_success_%=_" STRING(__LINE__) ":"   "\n\t" \
 
 #define SIGNING_SCHEME_FLAGS_SWITCH(schemeReg, codeIf0, codeIf1, \
@@ -2344,8 +2344,8 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   memmove(&pcRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __pc),
           sizeof(pcRegister));
 #if defined(_LIBUNWIND_IS_NATIVE_ONLY)
-  recomputeSigningSchemeFlagsPAC(
-      (const uint8_t *)registers + offsetof(GPRs, __ra_signing_scheme.__flags));
+  recomputeSigningSchemeFlagsPAC((const uint8_t *)registers +
+                                 offsetof(GPRs, __ra_signing_scheme.__flags));
 #endif
   setIP(pcRegister);
 }
@@ -2358,7 +2358,8 @@ inline Registers_arm64 &
 Registers_arm64::operator=(const Registers_arm64 &other) {
   memmove(static_cast<void *>(this), &other, sizeof(*this));
 #if defined(_LIBUNWIND_IS_NATIVE_ONLY)
-  recomputeSigningSchemeFlagsPAC((const uint8_t *)&other._registers.__ra_signing_scheme.__flags);
+  recomputeSigningSchemeFlagsPAC(
+      (const uint8_t *)&other._registers.__ra_signing_scheme.__flags);
 #endif
   // We perform this step to ensure that we correctly authenticate and re-sign
   // the pc after the bitwise copy.
