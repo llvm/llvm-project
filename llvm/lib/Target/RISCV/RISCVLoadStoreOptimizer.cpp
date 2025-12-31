@@ -576,7 +576,12 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
   const MachineOperand &BaseOp = MI->getOperand(2);
   Register FirstReg = FirstOp.getReg();
   Register SecondReg = SecondOp.getReg();
-  Register BaseReg = BaseOp.getReg();
+  unsigned BaseReg;
+  bool BaseIsReg = BaseOp.isReg();
+  if (BaseIsReg)
+    BaseReg = BaseOp.getReg().id();
+  else
+    BaseReg = BaseOp.getIndex();
 
   // Handle both immediate and symbolic operands for offset
   const MachineOperand &OffsetOp = MI->getOperand(3);
@@ -601,26 +606,37 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
     // we can just switch the order to resolve that:
     // X13 = LW X10, 4
     // X10 = LW killed X10, 0
-    if (FirstReg == BaseReg) {
+    if (BaseIsReg && FirstReg == BaseReg) {
       MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
                  .addReg(SecondReg,
-                         RegState::Define | getDeadRegState(SecondOp.isDead()))
-                 .addReg(BaseReg);
+                         RegState::Define | getDeadRegState(SecondOp.isDead()));
       MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
                  .addReg(FirstReg,
-                         RegState::Define | getDeadRegState(FirstOp.isDead()))
-                 .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+                         RegState::Define | getDeadRegState(FirstOp.isDead()));
+
+      if (BaseIsReg) {
+        MIB2 = MIB2.addReg(BaseReg);
+        MIB1 = MIB1.addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+      } else {
+        MIB2 = MIB2.addFrameIndex(BaseReg);
+        MIB1 = MIB1.addFrameIndex(BaseReg);
+      }
 
     } else {
       MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
                  .addReg(FirstReg,
-                         RegState::Define | getDeadRegState(FirstOp.isDead()))
-                 .addReg(BaseReg);
-
+                         RegState::Define | getDeadRegState(FirstOp.isDead()));
       MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
                  .addReg(SecondReg,
-                         RegState::Define | getDeadRegState(SecondOp.isDead()))
-                 .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+                         RegState::Define | getDeadRegState(SecondOp.isDead()));
+
+      if (BaseIsReg) {
+        MIB1 = MIB1.addReg(BaseReg);
+        MIB2 = MIB2.addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+      } else {
+        MIB1 = MIB1.addFrameIndex(BaseReg);
+        MIB2 = MIB2.addFrameIndex(BaseReg);
+      }
     }
 
     ++NumLD2LW;
@@ -630,12 +646,18 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
         FirstReg != SecondReg &&
         "First register and second register is impossible to be same register");
     MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-               .addReg(FirstReg, getKillRegState(FirstOp.isKill()))
-               .addReg(BaseReg);
+               .addReg(FirstReg, getKillRegState(FirstOp.isKill()));
 
     MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-               .addReg(SecondReg, getKillRegState(SecondOp.isKill()))
-               .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+               .addReg(SecondReg, getKillRegState(SecondOp.isKill()));
+
+    if (BaseIsReg) {
+      MIB1 = MIB1.addReg(BaseReg);
+      MIB2 = MIB2.addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+    } else {
+      MIB1 = MIB1.addFrameIndex(BaseReg);
+      MIB2 = MIB2.addFrameIndex(BaseReg);
+    }
 
     ++NumSD2SW;
     LLVM_DEBUG(dbgs() << "Split SD back to two SW instructions\n");
@@ -689,7 +711,12 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
 
   // Registers are valid, convert to real LD/SD instruction
   const MachineOperand &BaseOp = MI->getOperand(2);
-  Register BaseReg = BaseOp.getReg();
+  unsigned BaseReg;
+  bool BaseIsReg = BaseOp.isReg();
+  if (BaseIsReg)
+    BaseReg = BaseOp.getReg().id();
+  else
+    BaseReg = BaseOp.getIndex();
   DebugLoc DL = MI->getDebugLoc();
   // Handle both immediate and symbolic operands for offset
   const MachineOperand &OffsetOp = MI->getOperand(3);
@@ -711,9 +738,11 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
     MIB.addReg(RegPair, getKillRegState(FirstOp.isKill() && SecondOp.isKill()));
   }
 
-  MIB.addReg(BaseReg, getKillRegState(BaseOp.isKill()))
-      .add(OffsetOp)
-      .cloneMemRefs(*MI);
+  if (BaseIsReg)
+    MIB = MIB.addReg(BaseReg, getKillRegState(BaseOp.isKill()));
+  else
+    MIB = MIB.addFrameIndex(BaseReg);
+  MIB.add(OffsetOp).cloneMemRefs(*MI);
 
   LLVM_DEBUG(dbgs() << "Converted pseudo to real instruction: " << *MIB
                     << "\n");

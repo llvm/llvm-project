@@ -10,10 +10,18 @@
     ret i32 %5
   }
 
+  define void @expand_pseudold_frame_index_valid(ptr %0) {
+    ret void
+  }
+
   define void @expand_pseudosd_valid(ptr %0, i32 %1, i32 %2) {
     store i32 %1, ptr %0, align 4
     %4 = getelementptr inbounds i32, ptr %0, i32 1
     store i32 %2, ptr %4, align 4
+    ret void
+  }
+
+  define void @expand_pseudosd_frame_index_valid(ptr %0, i32 %1, i32 %2) {
     ret void
   }
 
@@ -25,10 +33,18 @@
     ret i32 %5
   }
 
+  define void @expand_pseudold_frame_index_invalid_pair(ptr %0) {
+    ret void
+  }
+
   define void @expand_pseudosd_invalid_pair(ptr %0, i32 %1, i32 %2) {
     store i32 %1, ptr %0, align 4
     %4 = getelementptr inbounds i32, ptr %0, i32 1
     store i32 %2, ptr %4, align 4
+    ret void
+  }
+
+  define void @expand_pseudosd_frame_index_invalid_pair(ptr %0, i32 %1, i32 %2) {
     ret void
   }
 
@@ -77,6 +93,27 @@ body: |
 
 ...
 ---
+# Valid consecutive even/odd register pair - should expand to LD_RV32
+name: expand_pseudold_frame_index_valid
+tracksRegLiveness: false
+stack:
+  - { id: 0, offset: 0, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: expand_pseudold_frame_index_valid
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x12_x13 = LD_RV32 %stack.0, 0
+    ; CHECK-NEXT: $x10 = ADD killed $x12, killed $x13
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    $x12, $x13 = PseudoLD_RV32_OPT %stack.0, 0
+    $x10 = ADD killed $x12, killed $x13
+    PseudoRET implicit $x10
+
+...
+---
 # Valid consecutive even/odd register pair - should expand to SD_RV32
 name: expand_pseudosd_valid
 tracksRegLiveness: false
@@ -91,6 +128,26 @@ body: |
     ; CHECK-NEXT: SD_RV32 killed $x12_x13, killed $x10, 0
     ; CHECK-NEXT: PseudoRET
     PseudoSD_RV32_OPT killed $x12, killed $x13, killed $x10, 0
+    PseudoRET
+
+...
+---
+# Valid consecutive even/odd register pair - should expand to SD_RV32
+name: expand_pseudosd_frame_index_valid
+tracksRegLiveness: false
+stack:
+  - { id: 0, offset: 0, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    liveins: $x12, $x13
+
+    ; PseudoSD_RV32_OPT with consecutive even/odd registers (x12, x13)
+    ; CHECK-LABEL: name: expand_pseudosd_frame_index_valid
+    ; CHECK: liveins: $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SD_RV32 killed $x12_x13, %stack.0, 0
+    ; CHECK-NEXT: PseudoRET
+    PseudoSD_RV32_OPT killed $x12, killed $x13, %stack.0, 0
     PseudoRET
 
 ...
@@ -117,6 +174,26 @@ body: |
 
 ...
 ---
+# Invalid register pair (not consecutive) - should decompose back to LW
+name: expand_pseudold_frame_index_invalid_pair
+tracksRegLiveness: false
+stack:
+  - { id: 0, offset: 0, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    ; PseudoLD_RV32_OPT with non-consecutive registers (x11, x13)
+    ; Should decompose back to two LW instructions
+    ; CHECK-LABEL: name: expand_pseudold_frame_index_invalid_pair
+    ; CHECK: $x11 = LW %stack.0, 0
+    ; CHECK-NEXT: $x13 = LW %stack.0, 4
+    ; CHECK-NEXT: $x10 = ADD killed $x11, killed $x13
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    $x11, $x13 = PseudoLD_RV32_OPT %stack.0, 0
+    $x10 = ADD killed $x11, killed $x13
+    PseudoRET implicit $x10
+
+...
+---
 # Invalid register pair (not even/odd) - should decompose back to SW
 name: expand_pseudosd_invalid_pair
 tracksRegLiveness: false
@@ -133,6 +210,28 @@ body: |
     ; CHECK-NEXT: SW killed $x14, killed $x10, 4
     ; CHECK-NEXT: PseudoRET
     PseudoSD_RV32_OPT killed $x11, killed $x14, killed $x10, 0
+    PseudoRET
+
+...
+---
+# Invalid register pair (not even/odd) - should decompose back to SW
+name: expand_pseudosd_frame_index_invalid_pair
+tracksRegLiveness: false
+stack:
+  - { id: 0, offset: 0, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    liveins: $x11, $x14
+
+    ; PseudoSD_RV32_OPT with non-consecutive registers (x11, x14)
+    ; Should decompose back to two SW instructions
+    ; CHECK-LABEL: name: expand_pseudosd_frame_index_invalid_pair
+    ; CHECK: liveins: $x11, $x14
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW killed $x11, %stack.0, 0
+    ; CHECK-NEXT: SW killed $x14, %stack.0, 4
+    ; CHECK-NEXT: PseudoRET
+    PseudoSD_RV32_OPT killed $x11, killed $x14, %stack.0, 0
     PseudoRET
 
 ...

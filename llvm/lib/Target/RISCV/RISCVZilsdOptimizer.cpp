@@ -87,7 +87,8 @@ public:
     Global = 1,
     CPI = 2,
     BlockAddr = 3,
-    Unknown = 4,
+    FrameIdx = 4,
+    Unknown = 5,
   };
   using MemOffset = std::pair<MemoryOffsetKind, int>;
   using BaseRegInfo = std::pair<unsigned, MemoryOffsetKind>;
@@ -160,12 +161,16 @@ RISCVPreAllocZilsdOpt::getMemoryOpOffset(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case RISCV::LW:
   case RISCV::SW: {
-    // For LW/SW, the offset is in operand 2
+    // For LW/SW, the base is in operand 1 and offset is in operand 2
+    const MachineOperand &BaseOp = MI.getOperand(1);
     const MachineOperand &OffsetOp = MI.getOperand(2);
 
     // Handle immediate offset
-    if (OffsetOp.isImm())
+    if (OffsetOp.isImm()) {
+      if (BaseOp.isFI())
+        return std::make_pair(MemoryOffsetKind::FrameIdx, OffsetOp.getImm());
       return std::make_pair(MemoryOffsetKind::Imm, OffsetOp.getImm());
+    }
 
     // Handle symbolic operands with MO_LO flag (from MergeBaseOffset)
     if (OffsetOp.getTargetFlags() & RISCVII::MO_LO) {
@@ -229,7 +234,7 @@ bool RISCVPreAllocZilsdOpt::isSafeToMove(MachineInstr *MI, MachineInstr *Target,
     ++Start;
 
   Register DefReg = MI->getOperand(0).getReg();
-  Register BaseReg = MI->getOperand(1).getReg();
+  const MachineOperand &BaseOp = MI->getOperand(1);
 
   unsigned ScanCount = 0;
   for (auto It = Start; It != End; ++It, ++ScanCount) {
@@ -247,8 +252,8 @@ bool RISCVPreAllocZilsdOpt::isSafeToMove(MachineInstr *MI, MachineInstr *Target,
     }
 
     // Check if the base register is modified
-    if (It->modifiesRegister(BaseReg, TRI)) {
-      LLVM_DEBUG(dbgs() << "Base register " << BaseReg
+    if (BaseOp.isReg() && It->modifiesRegister(BaseOp.getReg(), TRI)) {
+      LLVM_DEBUG(dbgs() << "Base register " << BaseOp.getReg()
                         << " modified by: " << *It);
       return false;
     }
@@ -297,8 +302,16 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
 
     Register FirstReg = MI0->getOperand(0).getReg();
     Register SecondReg = MI1->getOperand(0).getReg();
-    Register BaseReg = MI0->getOperand(1).getReg();
+    const MachineOperand &BaseOp = MI0->getOperand(1);
     const MachineOperand &OffsetOp = MI0->getOperand(2);
+    assert((BaseOp.isReg() || BaseOp.isFI()) &&
+           "Base register should be register or frame index");
+    unsigned BaseReg;
+    bool BaseIsReg = BaseOp.isReg();
+    if (BaseIsReg)
+      BaseReg = BaseOp.getReg().id();
+    else
+      BaseReg = BaseOp.getIndex();
 
     // At this point, MI0 and MI1 are:
     //    1. both either LW or SW.
@@ -347,20 +360,22 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
     if (IsLoad) {
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(RISCV::PseudoLD_RV32_OPT))
                 .addReg(FirstReg, RegState::Define)
-                .addReg(SecondReg, RegState::Define)
-                .addReg(BaseReg)
-                .add(OffsetOp);
+                .addReg(SecondReg, RegState::Define);
       ++NumLDFormed;
       LLVM_DEBUG(dbgs() << "Formed LD: " << *MIB << "\n");
     } else {
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(RISCV::PseudoSD_RV32_OPT))
                 .addReg(FirstReg)
-                .addReg(SecondReg)
-                .addReg(BaseReg)
-                .add(OffsetOp);
+                .addReg(SecondReg);
       ++NumSDFormed;
       LLVM_DEBUG(dbgs() << "Formed SD: " << *MIB << "\n");
     }
+
+    if (BaseIsReg)
+      MIB = MIB.addReg(BaseReg);
+    else
+      MIB = MIB.addFrameIndex(BaseReg);
+    MIB = MIB.add(OffsetOp);
 
     // Copy memory operands
     MIB.cloneMergedMemRefs({MI0, MI1});
@@ -394,7 +409,7 @@ bool RISCVPreAllocZilsdOpt::isMemoryOp(const MachineInstr &MI) {
   if (Opcode != RISCV::LW && Opcode != RISCV::SW)
     return false;
 
-  if (!MI.getOperand(1).isReg())
+  if (!MI.getOperand(1).isReg() && !MI.getOperand(1).isFI())
     return false;
 
   // When no memory operands are present, conservatively assume unaligned,
@@ -413,7 +428,7 @@ bool RISCVPreAllocZilsdOpt::isMemoryOp(const MachineInstr &MI) {
     return false;
 
   // Likewise don't mess with references to undefined addresses.
-  if (MI.getOperand(1).isUndef())
+  if (MI.getOperand(1).isReg() && MI.getOperand(1).isUndef())
     return false;
 
   return true;
@@ -462,16 +477,22 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
         continue;
 
       bool IsLd = (MI.getOpcode() == RISCV::LW);
-      Register Base = MI.getOperand(1).getReg();
+      const MachineOperand &BaseOp = MI.getOperand(1);
+      unsigned BaseReg;
+      bool BaseIsReg = BaseOp.isReg();
+      if (BaseIsReg)
+        BaseReg = BaseOp.getReg().id();
+      else
+        BaseReg = BaseOp.getIndex();
       bool StopHere = false;
 
       // Lambda to find or add base register entries
       auto FindBases = [&](Base2InstMap &Base2Ops, BaseVec &Bases) {
-        auto [BI, Inserted] = Base2Ops.try_emplace({Base.id(), Offset.first});
+        auto [BI, Inserted] = Base2Ops.try_emplace({BaseReg, Offset.first});
         if (Inserted) {
           // First time seeing this base register
           BI->second.push_back(&MI);
-          Bases.push_back({Base.id(), Offset.first});
+          Bases.push_back({BaseReg, Offset.first});
           return;
         }
         // Check if we've seen this exact base+offset before
