@@ -44,6 +44,7 @@
 #include <initializer_list>
 #include <optional>
 #include <string>
+#include <variant>
 
 namespace clang {
 
@@ -295,6 +296,42 @@ public:
   }
 };
 
+/// A SARIF child-result is
+/// - logically, a sub-result (e.g. note) belonging to a SARIF result (e.g. error, warning)
+/// - physically, a RelatedLocation in a SARIF result (same level as "in file included from..." locations)
+class SarifChildResult {
+  friend class clang::SarifDocumentWriter;
+
+  std::string DiagnosticMessage;
+  llvm::SmallVector<CharSourceRange> Locations;
+  int Nesting;
+  std::optional<SarifResultLevel> LevelOverride;
+
+public:
+  static SarifChildResult create() { return SarifChildResult(); }
+
+  SarifChildResult setDiagnosticMessage(llvm::StringRef Message) {
+    DiagnosticMessage = Message.str();
+    return *this;
+  }
+
+  SarifChildResult addLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
+#ifndef NDEBUG
+    for (const auto &Loc : DiagLocs) {
+      assert(Loc.isCharRange() &&
+             "SARIF Child Results require character granular source ranges!");
+    }
+#endif
+    Locations.append(DiagLocs.begin(), DiagLocs.end());
+    return *this;
+  }
+
+  SarifChildResult setNesting(int Nest) {
+    Nesting = Nest;
+    return *this;
+  }
+};
+
 /// A SARIF result (also called a "reporting item") is a unit of output
 /// produced when one of the tool's \c reportingDescriptor encounters a match
 /// on the file being analysed by the tool.
@@ -325,7 +362,7 @@ class SarifResult {
   std::string HostedViewerURI;
   llvm::SmallDenseMap<StringRef, std::string, 4> PartialFingerprints;
   llvm::SmallVector<CharSourceRange, 8> Locations;
-  llvm::SmallVector<CharSourceRange, 8> RelatedLocations;
+  llvm::SmallVector<std::variant<SarifChildResult, CharSourceRange>, 8> RelatedLocations; // A RelatedLocation is either a ChildResult or a plain "in file included from..." Location.
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
 
@@ -375,6 +412,11 @@ public:
     }
 #endif
     RelatedLocations.append(DiagLocs.begin(), DiagLocs.end());
+    return *this;
+  }
+
+  SarifResult addRelatedLocations(llvm::ArrayRef<SarifChildResult> ChildResults) {
+    RelatedLocations.append(ChildResults.begin(), ChildResults.end());
     return *this;
   }
 

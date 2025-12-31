@@ -406,8 +406,22 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
 
   if (!Result.RelatedLocations.empty()) {
     json::Array ReLocs;
-    for (auto &Range : Result.RelatedLocations) {
-      ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
+    for (auto &RelatedLocation : Result.RelatedLocations) {
+      if (RelatedLocation.index() == 0) { // variant is a SarifChildResult
+        const SarifChildResult& ChildResult = std::get<0>(RelatedLocation);
+        json::Object Object;
+        Object.insert({"message", createMessage(ChildResult.DiagnosticMessage)});
+        if (ChildResult.Locations.size() >= 1)
+          for (auto& kv : createLocation(createPhysicalLocation(ChildResult.Locations[0])))
+            Object.insert({kv.getFirst(), kv.getSecond()});
+        Object.insert({
+          "properties", json::Object{{"nestingLevel", ChildResult.Nesting}}
+        });
+        ReLocs.emplace_back(std::move(Object));
+      } else { // variant is a CharSourceRange
+        const CharSourceRange& Range = std::get<1>(RelatedLocation);
+        ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
+      }
     }
     Ret["relatedLocations"] = std::move(ReLocs);
   }
