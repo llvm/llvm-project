@@ -16,7 +16,7 @@
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //   e. NonNF (EVEX) -> NF (EVEX)
 //   f. SETZUCCm (EVEX) -> SETCCm (legacy)
-//   g. VPMOV*2M (EVEX) + KMOV -> VMOVMSK (VEX)
+//   g. VPMOV*2M (EVEX) + KMOV -> VMOVMSK/VPMOVMSKB (VEX)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -177,6 +177,47 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   return true;
 }
 
+static bool isKMovNarrowing(unsigned VPMOVOpc, unsigned KMOVOpc) {
+  unsigned VPMOVBits = 0;
+  switch (VPMOVOpc) {
+  case X86::VPMOVQ2MZ128kr:
+    VPMOVBits = 2;
+    break;
+  case X86::VPMOVQ2MZ256kr:
+  case X86::VPMOVD2MZ128kr:
+    VPMOVBits = 4;
+    break;
+  case X86::VPMOVD2MZ256kr:
+    VPMOVBits = 8;
+    break;
+  case X86::VPMOVB2MZ128kr:
+    VPMOVBits = 16;
+    break;
+  case X86::VPMOVB2MZ256kr:
+    VPMOVBits = 32;
+    break;
+  default:
+    llvm_unreachable("Unknown VPMOV opcode");
+  }
+
+  unsigned KMOVSize = 0;
+  switch (KMOVOpc) {
+  case X86::KMOVBrk:
+    KMOVSize = 8;
+    break;
+  case X86::KMOVWrk:
+    KMOVSize = 16;
+    break;
+  case X86::KMOVDrk:
+    KMOVSize = 32;
+    break;
+  default:
+    llvm_unreachable("Unknown KMOV opcode");
+  }
+
+  return KMOVSize < VPMOVBits;
+}
+
 // Try to compress VPMOV*2M + KMOV chain patterns:
 //   vpmov*2m %xmm0, %k0     ->  (erase this)
 //   kmov* %k0, %eax         ->  vmovmskp* %xmm0, %eax
@@ -188,7 +229,8 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
 
   unsigned Opc = MI.getOpcode();
   if (Opc != X86::VPMOVD2MZ128kr && Opc != X86::VPMOVD2MZ256kr &&
-      Opc != X86::VPMOVQ2MZ128kr && Opc != X86::VPMOVQ2MZ256kr)
+      Opc != X86::VPMOVQ2MZ128kr && Opc != X86::VPMOVQ2MZ256kr &&
+      Opc != X86::VPMOVB2MZ128kr && Opc != X86::VPMOVB2MZ256kr)
     return false;
 
   Register MaskReg = MI.getOperand(0).getReg();
@@ -207,6 +249,12 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
     break;
   case X86::VPMOVQ2MZ256kr:
     MovMskOpc = X86::VMOVMSKPDYrr;
+    break;
+  case X86::VPMOVB2MZ128kr:
+    MovMskOpc = X86::VPMOVMSKBrr;
+    break;
+  case X86::VPMOVB2MZ256kr:
+    MovMskOpc = X86::VPMOVMSKBYrr;
     break;
   default:
     llvm_unreachable("Unknown VPMOV opcode");
@@ -227,10 +275,11 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
         return false; // Fail: Mask has MULTIPLE uses
 
       unsigned UseOpc = CurMI.getOpcode();
-      bool IsKMOV = (UseOpc == X86::KMOVBrk || UseOpc == X86::KMOVWrk ||
-                     UseOpc == X86::KMOVDrk || UseOpc == X86::KMOVQrk);
-
-      if (IsKMOV && CurMI.getOperand(1).getReg() == MaskReg) {
+      bool IsKMOV = UseOpc == X86::KMOVBrk || UseOpc == X86::KMOVWrk ||
+                    UseOpc == X86::KMOVDrk;
+      // Only allow non-narrowing KMOV uses of the mask.
+      if (IsKMOV && CurMI.getOperand(1).getReg() == MaskReg &&
+          !isKMovNarrowing(Opc, UseOpc)) {
         KMovMI = &CurMI;
         // continue scanning to ensure
         // there are no *other* uses of the mask later in the block.
