@@ -43,8 +43,14 @@ cbuffer MyCB : register(b9995294967294) {
   int   I[10];
 };
 
-// no errors expected, all 100 register numbers are occupied here
-RWBuffer<float> Buf3[10][10] : register(u4294967194); 
 
 // expected-error@+1 {{register number should be an integer}}
-RWBuffer<float> Buf4[10][10] : register(ud); 
+RWBuffer<float> Buf3[10][10] : register(ud); 
+
+// this should work
+RWBuffer<float> GoodBuf : register(u4294967295);
+
+// no errors expected, all 100 register numbers are occupied here
+RWBuffer<float> GoodBufArray[10][10] : register(u4294967194); 
+
+

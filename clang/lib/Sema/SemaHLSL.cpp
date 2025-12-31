@@ -2386,9 +2386,14 @@ static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &SlotCount,
 
   // Case 2: resource leaf
   if (T->isHLSLResourceRecord()) {
+    // Validate highest slot used
+    uint64_t EndSlot = SlotCount + Multiplier - 1;
+    if (EndSlot > Limit)
+      return false;
 
-    SlotCount += Multiplier;
-    return SlotCount <= Limit;
+    // Advance SlotCount past the consumed range
+    SlotCount = EndSlot + 1;
+    return true;
   }
 
   // Case 3: struct / record
@@ -2411,29 +2416,33 @@ static bool ValidateRegisterNumber(const StringRef SlotNumStr, Decl *TheDecl,
                                    ASTContext &Ctx, unsigned &Result) {
   uint64_t SlotNum;
   if (SlotNumStr.getAsInteger(10, SlotNum))
-    return false;
+    return true;
 
-  uint64_t Limit = UINT32_MAX;
+  const uint64_t Limit = UINT32_MAX;
   if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
-    AccumulateHLSLResourceSlots(VD->getType(), SlotNum, Limit, Ctx);
+    uint64_t BaseSlot = SlotNum;
 
-    bool TooHigh = SlotNum > Limit;
-    if (!TooHigh)
-      SlotNumStr.getAsInteger(10, Result);
-    return TooHigh;
+    if (!AccumulateHLSLResourceSlots(VD->getType(), SlotNum, Limit, Ctx))
+      return true;
+
+    // After AccumulateHLSLResourceSlots runs, SlotNum is now
+    // the first free slot; last used was SlotNum - 1
+    if (BaseSlot > Limit)
+      return true;
+
+    SlotNumStr.getAsInteger(10, Result);
+    return false;
   }
   // handle the cbuffer case
-  HLSLBufferDecl *HBD = dyn_cast<HLSLBufferDecl>(TheDecl);
-  if (HBD) {
-    SlotNumStr.getAsInteger(10, Result);
+  if (dyn_cast<HLSLBufferDecl>(TheDecl)) {
     // resources cannot be put within a cbuffer, so no need
     // to analyze the structure since the register number
     // won't be pushed any higher.
-    bool TooHigh = SlotNum > Limit;
-    if (!TooHigh)
-      SlotNumStr.getAsInteger(10, Result);
+    if (SlotNum > Limit)
+      return true;
 
-    return TooHigh;
+    SlotNumStr.getAsInteger(10, Result);
+    return false;
   }
 
   // we don't expect any other decl type, so fail
