@@ -15,6 +15,8 @@
 # RUN: export LLVM_USE_LINKER=%llvm_use_linker
 # RUN: export MLIR_DIR="%mlir_cmake_dir"
 # RUN: export MLIR_INCLUDE_TESTS=ON
+# RUN: export MLIR_PYTHON_PACKAGE_PREFIX=mlir_standalone
+# RUN: export MLIR_BINDINGS_PYTHON_NB_DOMAIN=mlir_standalone
 
 # RUN: %python -m pip wheel "%mlir_src_root/examples/standalone" -w "%mlir_obj_root/wheelhouse" -v | tee %t
 
@@ -38,3 +40,7 @@
 # CHECK: Testing mlir package
 
 # CHECK-NOT: RuntimeWarning: nanobind: type '{{.*}}' was already registered!
+
+# CHECK: module {
+# CHECK:   %[[C3:.*]] = arith.constant 3 : i32
+# CHECK: }

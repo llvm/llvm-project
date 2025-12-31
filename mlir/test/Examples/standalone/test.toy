@@ -4,6 +4,7 @@
 # RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR=%mlir_cmake_dir \
 # RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
 # RUN: -DMLIR_PYTHON_PACKAGE_PREFIX=mlir_standalone \
+# RUN: -DMLIR_BINDINGS_PYTHON_NB_DOMAIN=mlir_standalone \
 # RUN: -DMLIR_INCLUDE_TESTS=ON \
 # RUN: -DPython3_EXECUTABLE=%python \
 # RUN: -DPython_EXECUTABLE=%python
