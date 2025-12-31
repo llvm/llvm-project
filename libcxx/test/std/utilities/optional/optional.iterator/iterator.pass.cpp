@@ -20,6 +20,21 @@
 #include <utility>
 
 template <typename T>
+concept has_iterator = requires { typename T::iterator; };
+
+template <typename T>
+concept has_const_iterator = requires { typename T::const_iterator; };
+
+template <typename T>
+concept has_both_iterators = has_iterator<T> && has_const_iterator<T>;
+
+template <typename T>
+concept only_has_iterator = has_iterator<T> && !has_const_iterator<T>;
+
+template <typename T>
+concept has_no_iterators = !has_iterator<T> && !has_const_iterator<T>;
+
+template <typename T>
 constexpr bool test_range_concept() {
   return std::ranges::range<std::optional<T>>;
 }
@@ -56,7 +71,11 @@ constexpr bool test() {
     assert((std::is_same_v<typename decltype(it)::value_type, std::remove_cvref_t<T>>));
     assert((std::is_same_v<typename decltype(it)::reference, std::remove_reference_t<T>&>));
     assert((std::is_same_v<typename decltype(it2)::value_type, std::remove_cvref_t<T>>));
-    assert((std::is_same_v<typename decltype(it2)::reference, const std::remove_reference_t<T>&>));
+
+    // for optional<T&>, there is no const_iterator
+    if (!std::is_lvalue_reference_v<T>) {
+      assert((std::is_same_v<typename decltype(it2)::reference, const std::remove_reference_t<T>&>));
+    }
   }
 
   { // std::ranges::size for an engaged optional<T> == 1, disengaged optional<T> == 0
@@ -90,6 +109,17 @@ constexpr bool test() {
 }
 
 constexpr bool tests() {
+  // Verify that iterator and const_iterator are present for object type T, but for T&,
+  // that only iterator is available iff T is an object type and is not an unbounded array.
+
+  static_assert(has_both_iterators<std::optional<int>>);
+  static_assert(has_both_iterators<std::optional<const int>>);
+  static_assert(only_has_iterator<std::optional<int&>>);
+  static_assert(only_has_iterator<std::optional<const int&>>);
+  static_assert(only_has_iterator<std::optional<int (&)[1]>>);
+  static_assert(has_no_iterators<std::optional<int (&)[]>>);
+  static_assert(has_no_iterators<std::optional<int (&)()>>);
+
   assert((test<int, 1>()));
   assert((test<char, 'a'>()));
   assert((test<bool, true>()));
@@ -103,7 +133,7 @@ constexpr bool tests() {
 
   assert(!test_range_concept<int (&)()>());
   assert(!test_range_concept<int (&)[]>());
-  assert(!test_range_concept<int (&)[42]>());
+  assert(test_range_concept<int (&)[42]>());
 
   return true;
 }

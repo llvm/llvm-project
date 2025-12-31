@@ -184,7 +184,7 @@
 "`LWG4302 <https://wg21.link/LWG4302>`__","Problematic ``vector_sum_of_squares`` wording","2025-11 (Kona)","","","`#171342 <https://github.com/llvm/llvm-project/issues/171342>`__",""
 "`LWG4304 <https://wg21.link/LWG4304>`__","``std::optional<NonReturnable&>`` is ill-formed due to ``value_or``","2025-11 (Kona)","","","`#171343 <https://github.com/llvm/llvm-project/issues/171343>`__",""
 "`LWG4305 <https://wg21.link/LWG4305>`__","Missing user requirements on ``type_order`` template","2025-11 (Kona)","","","`#171344 <https://github.com/llvm/llvm-project/issues/171344>`__",""
-"`LWG4308 <https://wg21.link/LWG4308>`__","``std::optional<T&>::iterator`` can't be a contiguous iterator for some ``T``","2025-11 (Kona)","","","`#171345 <https://github.com/llvm/llvm-project/issues/171345>`__",""
+"`LWG4308 <https://wg21.link/LWG4308>`__","``std::optional<T&>::iterator`` can't be a contiguous iterator for some ``T``","2025-11 (Kona)","|Complete|","22","`#171345 <https://github.com/llvm/llvm-project/issues/171345>`__",""
 "`LWG4312 <https://wg21.link/LWG4312>`__","Const and value category mismatch for ``allocator_arg_t``/``allocator_arg`` in the description of uses-allocator construction","2025-11 (Kona)","","","`#171346 <https://github.com/llvm/llvm-project/issues/171346>`__",""
 "`LWG4315 <https://wg21.link/LWG4315>`__","Insufficient specification of ``vector_two_norm`` and ``matrix_frob_norm``","2025-11 (Kona)","","","`#171347 <https://github.com/llvm/llvm-project/issues/171347>`__",""
 "`LWG4316 <https://wg21.link/LWG4316>`__","``{can_}substitute`` specification is ill-formed","2025-11 (Kona)","","","`#171348 <https://github.com/llvm/llvm-project/issues/171348>`__",""
