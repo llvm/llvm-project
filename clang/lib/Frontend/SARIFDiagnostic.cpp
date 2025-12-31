@@ -26,9 +26,9 @@
 
 namespace clang {
 
-// In sarif mode, 
-// a diagnostics 'group' have 1 top-level error/warning and several sub-level notes.
-// For example:
+// In sarif mode,
+// a diagnostics 'group' have 1 top-level error/warning and several sub-level
+// notes. For example:
 //
 // error: static assertion failed.
 //   note: in instantiation of 'cat::meow'.
@@ -46,24 +46,24 @@ namespace clang {
 SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                  DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
-    : DiagnosticRenderer(LangOpts, DiagOpts), 
-      Root(Node::Result(), Node::Option{&LangOpts, &DiagOpts}, /*Nesting=*/-1), // The root does not represents a diagnostic.
-      Current(&Root),
-      Writer(Writer) 
-{
+    : DiagnosticRenderer(LangOpts, DiagOpts),
+      Root(Node::Result(), Node::Option{&LangOpts, &DiagOpts},
+           /*Nesting=*/-1), // The root does not represents a diagnostic.
+      Current(&Root), Writer(Writer) {
   // Don't print 'X warnings and Y errors generated'.
   DiagOpts.ShowCarets = false;
 }
 
 // helper function
 namespace {
-  template <class NodeType, class IterateFuncType, class ApplyFuncType>
-  void RecursiveFor (NodeType&& Node, IterateFuncType&& IterateFunc, ApplyFuncType&& ApplyFunc) {
-    for (auto&& Child : IterateFunc(Node)) {
-      ApplyFunc(*Child);
-      RecursiveFor(*Child, IterateFunc, ApplyFunc);
-    }
+template <class NodeType, class IterateFuncType, class ApplyFuncType>
+void RecursiveFor(NodeType &&Node, IterateFuncType &&IterateFunc,
+                  ApplyFuncType &&ApplyFunc) {
+  for (auto &&Child : IterateFunc(Node)) {
+    ApplyFunc(*Child);
+    RecursiveFor(*Child, IterateFunc, ApplyFunc);
   }
+}
 } // namespace
 
 SARIFDiagnostic::~SARIFDiagnostic() {
@@ -115,62 +115,78 @@ void SARIFDiagnostic::emitDiagnosticMessage(
     DiagOrStoredDiag Diag) {
 
   if (Level >= DiagnosticsEngine::Level::Warning) {
-    Current = &Root; // If this is a top-level error/warning, repoint Current to Root.
+    Current =
+        &Root; // If this is a top-level error/warning, repoint Current to Root.
   } else {
     if (Message.starts_with("candidate"))
-      Current = &Current->getForkableParent(); // If this is an forked-case note, repoint Current to the nearest forkable Node.
+      Current =
+          &Current
+               ->getForkableParent(); // If this is an forked-case note, repoint
+                                      // Current to the nearest forkable Node.
   }
-  Current = &Current->addChildResult(Node::Result{Level, std::string(Message), Diag}); // add child to the parent error/warning/note Node.
-  Current = &Current->addLocation(Node::Location{Loc, PLoc, llvm::SmallVector<CharSourceRange>(Ranges)});
+  Current = &Current->addChildResult(
+      Node::Result{Level, std::string(Message),
+                   Diag}); // add child to the parent error/warning/note Node.
+  Current = &Current->addLocation(
+      Node::Location{Loc, PLoc, llvm::SmallVector<CharSourceRange>(Ranges)});
 }
 
 void SARIFDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
   Current = &Current->addRelatedLocation(Node::Location{Loc, PLoc, {}});
 }
 
-void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc, StringRef ModuleName) {
+void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                                         StringRef ModuleName) {
   Current = &Current->addRelatedLocation(Node::Location{Loc, PLoc, {}});
 }
 
 SARIFDiagnostic::Node::Node(Result Result_, Option Option_, int Nesting)
-  : Result_(std::move(Result_)), Option_(std::move(Option_)), Nesting(Nesting) {}
+    : Result_(std::move(Result_)), Option_(std::move(Option_)),
+      Nesting(Nesting) {}
 
-SARIFDiagnostic::Node& SARIFDiagnostic::Node::getParent() {
+SARIFDiagnostic::Node &SARIFDiagnostic::Node::getParent() {
   assert(ParentPtr && "getParent() of SARIFDiagnostic::Root!");
   return *ParentPtr;
 }
 
-SARIFDiagnostic::Node& SARIFDiagnostic::Node::getForkableParent() {
-  Node* Ptr = this;
-  while (Ptr->getLevel() <= DiagnosticsEngine::Note) // The forkable node here "is and only is" warning/error/fatal.
+SARIFDiagnostic::Node &SARIFDiagnostic::Node::getForkableParent() {
+  Node *Ptr = this;
+  while (Ptr->getLevel() <=
+         DiagnosticsEngine::Note) // The forkable node here "is and only is"
+                                  // warning/error/fatal.
     Ptr = &Ptr->getParent();
   return *Ptr;
 }
 
-llvm::SmallVector<std::unique_ptr<SARIFDiagnostic::Node>>& SARIFDiagnostic::Node::getChildrenPtrs() {
+llvm::SmallVector<std::unique_ptr<SARIFDiagnostic::Node>> &
+SARIFDiagnostic::Node::getChildrenPtrs() {
   return ChildrenPtrs;
 }
 
-SARIFDiagnostic::Node& SARIFDiagnostic::Node::addChildResult(Result ChildResult) {
-  ChildrenPtrs.push_back(std::make_unique<Node>(Node::Result(std::move(ChildResult)), Node::Option(std::move(Option_)), Nesting + 1));
+SARIFDiagnostic::Node &
+SARIFDiagnostic::Node::addChildResult(Result ChildResult) {
+  ChildrenPtrs.push_back(
+      std::make_unique<Node>(Node::Result(std::move(ChildResult)),
+                             Node::Option(std::move(Option_)), Nesting + 1));
   ChildrenPtrs.back()->ParentPtr = this; // I am the parent of this new child.
   return *ChildrenPtrs.back();
 }
 
-SARIFDiagnostic::Node& SARIFDiagnostic::Node::addLocation(Location Location) {
+SARIFDiagnostic::Node &SARIFDiagnostic::Node::addLocation(Location Location) {
   Locations.push_back(std::move(Location));
   return *this;
 }
 
-SARIFDiagnostic::Node& SARIFDiagnostic::Node::addRelatedLocation(Location Location) {
+SARIFDiagnostic::Node &
+SARIFDiagnostic::Node::addRelatedLocation(Location Location) {
   RelatedLocations.push_back(std::move(Location));
   return *this;
 }
 
 unsigned SARIFDiagnostic::Node::getDiagID() {
-  return llvm::isa<const Diagnostic*>(Result_.Diag) ? 
-    Result_.Diag.dyn_cast<const Diagnostic*>()->getID() :
-    Result_.Diag.dyn_cast<const StoredDiagnostic*>()->getID();
+  return llvm::isa<const Diagnostic *>(Result_.Diag)
+             ? Result_.Diag.dyn_cast<const Diagnostic *>()->getID()
+             : Result_.Diag.dyn_cast<const StoredDiagnostic *>()->getID();
 }
 
 DiagnosticsEngine::Level SARIFDiagnostic::Node::getLevel() {
@@ -183,34 +199,36 @@ std::string SARIFDiagnostic::Node::getDiagnosticMessage() {
 
 llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations() {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
-  std::for_each(Locations.begin(), Locations.end(), [&] (Location& Location) { 
-    CharSourceRanges.append(Location.getCharSourceRangesWithOption(Option_)); 
+  std::for_each(Locations.begin(), Locations.end(), [&](Location &Location) {
+    CharSourceRanges.append(Location.getCharSourceRangesWithOption(Option_));
   });
   return CharSourceRanges;
 }
 
-llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getRelatedLocations() {
+llvm::SmallVector<CharSourceRange>
+SARIFDiagnostic::Node::getRelatedLocations() {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
-  std::for_each(RelatedLocations.begin(), RelatedLocations.end(), [&] (Location& RelatedLocation) { 
-    CharSourceRanges.append(RelatedLocation.getCharSourceRangesWithOption(Option_)); 
-  });
+  std::for_each(RelatedLocations.begin(), RelatedLocations.end(),
+                [&](Location &RelatedLocation) {
+                  CharSourceRanges.append(
+                      RelatedLocation.getCharSourceRangesWithOption(Option_));
+                });
   return CharSourceRanges;
 }
 
-int SARIFDiagnostic::Node::getNesting() {
-  return Nesting;
-}
+int SARIFDiagnostic::Node::getNesting() { return Nesting; }
 
-llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(Option Option) {
+llvm::SmallVector<CharSourceRange>
+SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(Option Option) {
   SmallVector<CharSourceRange> Locations = {};
-  
+
   if (PLoc.isInvalid()) {
     // FIXME(llvm-project/issues/57366): File-only locations
     // At least add the file name if available:
     FileID FID = Loc.getFileID();
     if (FID.isValid()) {
       if (OptionalFileEntryRef FE = Loc.getFileEntryRef()) {
-       // EmitFilename(FE->getName(), Loc.getManager()); 
+        // EmitFilename(FE->getName(), Loc.getManager());
       }
     }
     return {};
@@ -258,10 +276,11 @@ llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::Location::getCharSourc
   auto &SM = Loc.getManager();
   auto FID = PLoc.getFileID();
   // Visual Studio 2010 or earlier expects column number to be off by one.
-  unsigned int ColNo = (Option.LangOptsPtr->MSCompatibilityVersion &&
-                        !Option.LangOptsPtr->isCompatibleWithMSVC(LangOptions::MSVC2012))
-                           ? PLoc.getColumn() - 1
-                           : PLoc.getColumn();
+  unsigned int ColNo =
+      (Option.LangOptsPtr->MSCompatibilityVersion &&
+       !Option.LangOptsPtr->isCompatibleWithMSVC(LangOptions::MSVC2012))
+          ? PLoc.getColumn() - 1
+          : PLoc.getColumn();
   SourceLocation DiagLoc = SM.translateLineCol(FID, PLoc.getLine(), ColNo);
 
   // FIXME(llvm-project/issues/57366): Properly process #line directives.
@@ -279,15 +298,18 @@ llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::Location::getCharSourc
 //     if (File) {
 //       // We want to print a simplified absolute path, i. e. without "dots".
 //       //
-//       // The hardest part here are the paths like "<part1>/<link>/../<part2>".
+//       // The hardest part here are the paths like
+//       "<part1>/<link>/../<part2>".
 //       // On Unix-like systems, we cannot just collapse "<link>/..", because
 //       // paths are resolved sequentially, and, thereby, the path
 //       // "<part1>/<part2>" may point to a different location. That is why
-//       // we use FileManager::getCanonicalName(), which expands all indirections
+//       // we use FileManager::getCanonicalName(), which expands all
+//       indirections
 //       // with llvm::sys::fs::real_path() and caches the result.
 //       //
 //       // On the other hand, it would be better to preserve as much of the
-//       // original path as possible, because that helps a user to recognize it.
+//       // original path as possible, because that helps a user to recognize
+//       it.
 //       // real_path() expands all links, which is sometimes too much. Luckily,
 //       // on Windows we can just use llvm::sys::path::remove_dots(), because,
 //       // on that system, both aforementioned paths point to the same place.

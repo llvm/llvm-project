@@ -297,8 +297,10 @@ public:
 };
 
 /// A SARIF child-result is
-/// - logically, a sub-result (e.g. note) belonging to a SARIF result (e.g. error, warning)
-/// - physically, a RelatedLocation in a SARIF result (same level as "in file included from..." locations)
+/// - logically, a sub-result (e.g. note) belonging to a SARIF result (e.g.
+/// error, warning)
+/// - physically, a RelatedLocation in a SARIF result (same level as "in file
+/// included from..." locations)
 class SarifChildResult {
   friend class clang::SarifDocumentWriter;
 
@@ -362,7 +364,9 @@ class SarifResult {
   std::string HostedViewerURI;
   llvm::SmallDenseMap<StringRef, std::string, 4> PartialFingerprints;
   llvm::SmallVector<CharSourceRange, 8> Locations;
-  llvm::SmallVector<std::variant<SarifChildResult, CharSourceRange>, 8> RelatedLocations; // A RelatedLocation is either a ChildResult or a plain "in file included from..." Location.
+  llvm::SmallVector<std::variant<SarifChildResult, CharSourceRange>, 8>
+      RelatedLocations; // A RelatedLocation is either a ChildResult or a plain
+                        // "in file included from..." Location.
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
 
@@ -415,7 +419,8 @@ public:
     return *this;
   }
 
-  SarifResult addRelatedLocations(llvm::ArrayRef<SarifChildResult> ChildResults) {
+  SarifResult
+  addRelatedLocations(llvm::ArrayRef<SarifChildResult> ChildResults) {
     RelatedLocations.append(ChildResults.begin(), ChildResults.end());
     return *this;
   }

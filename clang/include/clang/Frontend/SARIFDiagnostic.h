@@ -60,62 +60,63 @@ protected:
 
 private:
   class Node {
-    public:
-      // Subclasses
-      struct Result {
-        DiagnosticsEngine::Level Level;
-        std::string Message;
-        DiagOrStoredDiag Diag;
-      };
+  public:
+    // Subclasses
+    struct Result {
+      DiagnosticsEngine::Level Level;
+      std::string Message;
+      DiagOrStoredDiag Diag;
+    };
 
-      struct Option {
-        const LangOptions* LangOptsPtr;
-        const DiagnosticOptions* DiagnosticOptsPtr;
-      };
+    struct Option {
+      const LangOptions *LangOptsPtr;
+      const DiagnosticOptions *DiagnosticOptsPtr;
+    };
 
-      struct Location {
-        FullSourceLoc Loc;
-        PresumedLoc PLoc;
-        llvm::SmallVector<CharSourceRange> Ranges;
+    struct Location {
+      FullSourceLoc Loc;
+      PresumedLoc PLoc;
+      llvm::SmallVector<CharSourceRange> Ranges;
 
-        // Methods to construct a llvm-style location.
-        llvm::SmallVector<CharSourceRange> getCharSourceRangesWithOption(Option);
-      };
+      // Methods to construct a llvm-style location.
+      llvm::SmallVector<CharSourceRange> getCharSourceRangesWithOption(Option);
+    };
 
-      // Constructor
-      Node(Result Result_, Option Option_, int Nesting);
+    // Constructor
+    Node(Result Result_, Option Option_, int Nesting);
 
-      // Operations on building a node-tree. 
-      // Arguments and results are all in node-style.
-      Node& getParent(); 
-      Node& getForkableParent();
-      llvm::SmallVector<std::unique_ptr<Node>>& getChildrenPtrs();   
-      Node& addChildResult(Result);
-      Node& addLocation(Location);
-      Node& addRelatedLocation(Location);
+    // Operations on building a node-tree.
+    // Arguments and results are all in node-style.
+    Node &getParent();
+    Node &getForkableParent();
+    llvm::SmallVector<std::unique_ptr<Node>> &getChildrenPtrs();
+    Node &addChildResult(Result);
+    Node &addLocation(Location);
+    Node &addRelatedLocation(Location);
 
-      // Methods to access underlying data for other llvm-components to read from it.
-      // Arguments and results are all in llvm-style.
-      unsigned getDiagID();
-      DiagnosticsEngine::Level getLevel();
-      std::string getDiagnosticMessage();
-      llvm::SmallVector<CharSourceRange> getLocations();
-      llvm::SmallVector<CharSourceRange> getRelatedLocations();
-      int getNesting();
+    // Methods to access underlying data for other llvm-components to read from
+    // it. Arguments and results are all in llvm-style.
+    unsigned getDiagID();
+    DiagnosticsEngine::Level getLevel();
+    std::string getDiagnosticMessage();
+    llvm::SmallVector<CharSourceRange> getLocations();
+    llvm::SmallVector<CharSourceRange> getRelatedLocations();
+    int getNesting();
 
-    private:
-      Result Result_;
-      llvm::SmallVector<Location> Locations;
-      llvm::SmallVector<Location> RelatedLocations;
-      Option Option_;
-      int Nesting;
-      Node* ParentPtr = nullptr;
-      llvm::SmallVector<std::unique_ptr<Node>> ChildrenPtrs = {};
+  private:
+    Result Result_;
+    llvm::SmallVector<Location> Locations;
+    llvm::SmallVector<Location> RelatedLocations;
+    Option Option_;
+    int Nesting;
+    Node *ParentPtr = nullptr;
+    llvm::SmallVector<std::unique_ptr<Node>> ChildrenPtrs = {};
   };
 
   Node Root;
-  Node* Current = &Root;
-  SarifDocumentWriter *Writer; // Shared between SARIFDiagnosticPrinter and this renderer.
+  Node *Current = &Root;
+  SarifDocumentWriter
+      *Writer; // Shared between SARIFDiagnosticPrinter and this renderer.
 };
 
 } // end namespace clang
