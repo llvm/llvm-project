@@ -510,6 +510,15 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tdphf8ps:
   case X86::BI__builtin_ia32_tmmultf32ps:
     return CheckBuiltinTileRangeAndDuplicate(TheCall, {0, 1, 2});
+  case X86::BI__builtin_ia32_tcvtrowps2bf16hi:
+  case X86::BI__builtin_ia32_tcvtrowps2bf16li:
+  case X86::BI__builtin_ia32_tcvtrowps2phhi:
+  case X86::BI__builtin_ia32_tcvtrowps2phli:
+  case X86::BI__builtin_ia32_tcvtrowd2psi:
+  case X86::BI__builtin_ia32_tilemovrowi:
+    return CheckBuiltinTileArgumentsRange(TheCall, 0) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 255,
+                                           /*RangeIsError=*/false);
   }
 }
 static bool isX86_32Builtin(unsigned BuiltinID) {

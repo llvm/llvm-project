@@ -1129,6 +1129,7 @@ Improvements
   including diagnosing when the array-section's base is not a named-variable.
 - Handling of ``use_device_addr`` and ``use_device_ptr`` in the presence of
   other maps with the same base-pointer/variable, was improved.
+- Preserve the initializer when variable declaration dedution fails for better error recovery.
 
 Additional Information
 ======================
