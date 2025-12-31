@@ -5372,6 +5372,20 @@ bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
     Changed = true;
   }
 
+  // We convert all paths to their slash forms to ensure that a
+  // Linux -> $TARGET and a Windows -> $TARGET compile can share PCMs.
+  // The below is the equivalent of llvm::sys::path::convert_to_slash.
+  // We don't use it directly because:
+  // * It creates a copy rather than mutating the path.
+  // * There's no way to detect whether it's changed without the copy,
+  //   so the copy can't be optimized out.
+  if (llvm::sys::path::is_style_windows(llvm::sys::path::Style::native)) {
+    if (llvm::is_contained(Path, '\\')) {
+      llvm::replace(Path, '\\', '/');
+      Changed = true;
+    }
+  }
+
   return Changed;
 }
 

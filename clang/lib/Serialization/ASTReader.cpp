@@ -3014,6 +3014,12 @@ ASTReader::TemporarilyOwnedStringRef
 ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
                                StringRef Prefix) {
   assert(Buf.capacity() != 0 && "Overlapping ResolveImportedPath calls");
+  // ASTWriter always writes in posix form.
+  // Thus, we skip converting it to native form if we're already in posix
+  // (since that would convert backslashes to forward slashes).
+  if (!llvm::sys::path::is_style_posix(llvm::sys::path::Style::native)) {
+    llvm::sys::path::native(Buf, llvm::sys::path::Style::native);
+  }
 
   if (Prefix.empty() || Path.empty() || llvm::sys::path::is_absolute(Path) ||
       Path == "<built-in>" || Path == "<command line>")
