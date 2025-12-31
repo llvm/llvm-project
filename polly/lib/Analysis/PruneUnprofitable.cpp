@@ -13,7 +13,6 @@
 #include "polly/PruneUnprofitable.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Debug.h"
@@ -78,19 +77,4 @@ bool polly::runPruneUnprofitable(Scop &S) {
   }
 
   return false;
-}
-
-llvm::PreservedAnalyses
-PruneUnprofitablePass::run(Scop &S, ScopAnalysisManager &SAM,
-                           ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
-  bool Changed = runPruneUnprofitable(S);
-
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
 }

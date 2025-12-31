@@ -195,7 +195,7 @@ public:
   bool padInstructionEncoding(MCFragment &RF, MCCodeEmitter &Emitter,
                               unsigned &RemainingSize) const;
 
-  bool finishLayout(const MCAssembler &Asm) const override;
+  bool finishLayout() const override;
 
   unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
@@ -850,7 +850,7 @@ bool X86AsmBackend::padInstructionEncoding(MCFragment &RF,
   return Changed;
 }
 
-bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
+bool X86AsmBackend::finishLayout() const {
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
@@ -864,11 +864,11 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
   // MCSymbols and therefore different relaxation results. X86PadForAlign is
   // disabled by default to eliminate the -g vs non -g difference.
   DenseSet<MCFragment *> LabeledFragments;
-  for (const MCSymbol &S : Asm.symbols())
+  for (const MCSymbol &S : Asm->symbols())
     LabeledFragments.insert(S.getFragment());
 
   bool Changed = false;
-  for (MCSection &Sec : Asm) {
+  for (MCSection &Sec : *Asm) {
     if (!Sec.isText())
       continue;
 
@@ -908,13 +908,13 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
       // the align directive.  This is purely about human understandability
       // of the resulting code.  If we later find a reason to expand
       // particular instructions over others, we can adjust.
-      unsigned RemainingSize = Asm.computeFragmentSize(F) - F.getFixedSize();
+      unsigned RemainingSize = Asm->computeFragmentSize(F) - F.getFixedSize();
       while (!Relaxable.empty() && RemainingSize != 0) {
         auto &RF = *Relaxable.pop_back_val();
         // Give the backend a chance to play any tricks it wishes to increase
         // the encoding size of the given instruction.  Target independent code
         // will try further relaxation, but target's may play further tricks.
-        Changed |= padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize);
+        Changed |= padInstructionEncoding(RF, Asm->getEmitter(), RemainingSize);
 
         // If we have an instruction which hasn't been fully relaxed, we can't
         // skip past it and insert bytes before it.  Changing its starting

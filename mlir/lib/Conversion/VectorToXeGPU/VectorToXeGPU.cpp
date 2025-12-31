@@ -102,18 +102,46 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
                                                 xegpu::TensorDescType descType,
                                                 TypedValue<MemRefType> src) {
   MemRefType srcTy = src.getType();
+  assert(srcTy.isStrided() && "Expected strided memref type");
   auto [strides, offset] = srcTy.getStridesAndOffset();
+  bool isStatic = true;
+
+  // Memref is dynamic if any of its shape, offset or strides is dynamic.
+  if (!srcTy.hasStaticShape())
+    isStatic = false;
+
+  if (!ShapedType::isStatic(offset))
+    isStatic = false;
+
+  for (auto stride : strides) {
+    if (!ShapedType::isStatic(stride)) {
+      isStatic = false;
+      break;
+    }
+  }
 
   xegpu::CreateNdDescOp ndDesc;
-  if (srcTy.hasStaticShape()) {
+  if (isStatic) {
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
   } else {
-    // In case of any dynamic shapes, source's shape and strides have to be
+    // In case of ranked dynamic memref, instead of passing on the memref,
+    // i64 base address, source's offset, shape and strides have to be
     // explicitly provided.
     auto meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
-    ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
-                                           meta.getConstifiedMixedSizes(),
-                                           meta.getConstifiedMixedStrides());
+    auto baseAddrIndex = memref::ExtractAlignedPointerAsIndexOp::create(
+        rewriter, loc, meta.getBaseBuffer());
+    auto offset = meta.getOffset();
+    auto elemByteSize = srcTy.getElementTypeBitWidth() / 8;
+    auto offsetInBytes = arith::MulIOp::create(
+        rewriter, loc, offset,
+        arith::ConstantIndexOp::create(rewriter, loc, elemByteSize));
+    auto adjustedBaseAddr = arith::AddIOp::create(
+        rewriter, loc, baseAddrIndex.getResult(), offsetInBytes);
+    auto adjustedAddrI64 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI64Type(), adjustedBaseAddr);
+    ndDesc = xegpu::CreateNdDescOp::create(
+        rewriter, loc, descType, adjustedAddrI64,
+        meta.getConstifiedMixedSizes(), meta.getConstifiedMixedStrides());
   }
 
   return ndDesc;
@@ -519,8 +547,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return lowerToScatteredLoadOp(readOp, rewriter);
     }
 
-    // Perform common data transfer checks.
     VectorType vecTy = readOp.getVectorType();
+
+    // Lower using load.gather in 1D case
+    if (vecTy.getRank() == 1 && !readOp.hasOutOfBoundsDim())
+      return lowerToScatteredLoadOp(readOp, rewriter);
+
+    // Perform common data transfer checks.
     if (failed(storeLoadPreconditions(rewriter, readOp, vecTy)))
       return failure();
 
@@ -562,7 +595,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     auto loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc, indices,
                                           /*packed=*/nullptr, transposeAttr,
                                           /*l1_hint=*/hint,
-                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                          /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                          /*layout=*/nullptr);
     rewriter.replaceOp(readOp, loadOp);
 
     return success();
@@ -616,7 +650,8 @@ struct TransferWriteLowering
     auto storeOp = xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(),
                                             ndDesc, indices,
                                             /*l1_hint=*/hint,
-                                            /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                            /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                            /*layout=*/nullptr);
     rewriter.replaceOp(writeOp, storeOp);
 
     return success();
@@ -720,7 +755,8 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
         xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc, indices,
                                 /*packed=*/nullptr, /*transpose=*/nullptr,
                                 /*l1_hint=*/hint,
-                                /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                /*layout=*/nullptr);
     rewriter.replaceOp(loadOp, loadNdOp);
 
     return success();
@@ -758,7 +794,8 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     auto storeNdOp =
         xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc, indices,
                                  /*l1_hint=*/hint,
-                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                 /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                 /*layout=*/nullptr);
 
     rewriter.replaceOp(storeOp, storeNdOp);
 

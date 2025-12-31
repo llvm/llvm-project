@@ -66,7 +66,10 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
       constexpr auto noModRef = mlir::LLVM::ModRefInfo::NoModRef;
       auto memAttr = b.getAttr<LLVM::MemoryEffectsAttr>(
           /*other=*/noModRef,
-          /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef);
+          /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef,
+          /*errnoMem=*/noModRef,
+          /*targetMem0=*/noModRef,
+          /*targetMem1=*/noModRef);
       func.setMemoryEffectsAttr(memAttr);
     }
 
@@ -93,12 +96,14 @@ namespace {
 // Barriers
 //===----------------------------------------------------------------------===//
 
-/// Replace `gpu.barrier` with an `llvm.call` to `barrier` with
-/// `CLK_LOCAL_MEM_FENCE` argument, indicating work-group memory scope:
+/// Replace `gpu.barrier` with an `llvm.call` to `barrier` using
+/// `CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE`, ensuring that all memory
+/// accesses are visible to all work-items in the work-group.
 /// ```
 /// // gpu.barrier
-/// %c1 = llvm.mlir.constant(1: i32) : i32
-/// llvm.call spir_funccc @_Z7barrierj(%c1) : (i32) -> ()
+/// // 3 = CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE
+/// %c3 = llvm.mlir.constant(3: i32) : i32
+/// llvm.call spir_funccc @_Z7barrierj(%c3) : (i32) -> ()
 /// ```
 struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
@@ -116,12 +121,16 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
         lookupOrCreateSPIRVFn(moduleOp, funcName, flagTy, voidTy,
                               /*isMemNone=*/false, /*isConvergent=*/true);
 
-    // Value used by SPIR-V backend to represent `CLK_LOCAL_MEM_FENCE`.
+    // Values used by SPIR-V backend to represent a combination of
+    // `CLK_LOCAL_MEM_FENCE` and `CLK_GLOBAL_MEM_FENCE`.
     // See `llvm/lib/Target/SPIRV/SPIRVBuiltins.td`.
     constexpr int64_t localMemFenceFlag = 1;
+    constexpr int64_t globalMemFenceFlag = 2;
+    constexpr int64_t localGlobalMemFenceFlag =
+        localMemFenceFlag | globalMemFenceFlag;
     Location loc = op->getLoc();
-    Value flag =
-        LLVM::ConstantOp::create(rewriter, loc, flagTy, localMemFenceFlag);
+    Value flag = LLVM::ConstantOp::create(rewriter, loc, flagTy,
+                                          localGlobalMemFenceFlag);
     rewriter.replaceOp(op, createSPIRVBuiltinCall(loc, rewriter, func, flag));
     return success();
   }

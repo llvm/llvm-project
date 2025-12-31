@@ -214,6 +214,8 @@ public:
       if (Value *GlobalElem =
               Global->getNumOperands() > 0 ? Global->getOperand(0) : nullptr)
         ElementTy = findDeducedCompositeType(GlobalElem);
+      else if (const Function *Fn = dyn_cast<Function>(Global))
+        ElementTy = SPIRV::getOriginalFunctionType(*Fn);
     }
     return ElementTy ? ElementTy : Global->getValueType();
   }
@@ -276,7 +278,7 @@ public:
   }
 
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
-  // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
+  // and map it to the given VReg.
   SPIRVType *assignTypeToVReg(const Type *Type, Register VReg,
                               MachineIRBuilder &MIRBuilder,
                               SPIRV::AccessQualifier::AccessQualifier AQ,
@@ -290,7 +292,7 @@ public:
                                   const SPIRVInstrInfo &TII);
 
   // In cases where the SPIR-V type is already known, this function can be
-  // used to map it to the given VReg via an ASSIGN_TYPE instruction.
+  // used to map it to the given VReg.
   void assignSPIRVTypeToVReg(SPIRVType *Type, Register VReg,
                              const MachineFunction &MF);
 
@@ -464,7 +466,7 @@ private:
   SPIRVType *getOpTypeForwardPointer(SPIRV::StorageClass::StorageClass SC,
                                      MachineIRBuilder &MIRBuilder);
 
-  SPIRVType *getOpTypeFunction(SPIRVType *RetType,
+  SPIRVType *getOpTypeFunction(const FunctionType *Ty, SPIRVType *RetType,
                                const SmallVectorImpl<SPIRVType *> &ArgTypes,
                                MachineIRBuilder &MIRBuilder);
 
@@ -610,6 +612,11 @@ public:
                                          Type *ElemType,
                                          SPIRV::StorageClass::StorageClass SC,
                                          bool IsWritable, bool EmitIr = false);
+
+  SPIRVType *getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+
+  SPIRVType *getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
+                                               Type *ElemType);
 
   SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
                                    const TargetExtType *T, bool EmitIr = false);

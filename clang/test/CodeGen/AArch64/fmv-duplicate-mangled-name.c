@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -verify -emit-llvm-only %s -DCHECK_IMPLICIT_DEFAULT
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -verify -emit-llvm-only %s -DCHECK_EXPLICIT_DEFAULT
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -verify -emit-llvm-only %s -DCHECK_EXPLICIT_VERSION_PRIORITY
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -verify -emit-llvm-only %s -DCHECK_EXPLICIT_CLONES_PRIORITY
 
 #if defined(CHECK_IMPLICIT_DEFAULT)
 
@@ -20,5 +22,19 @@ __attribute__((target_version("default"))) int explicit_default_bad(void) { retu
 // expected-error@+2 {{definition with same mangled name 'explicit_default_bad.default' as another definition}}
 // expected-note@-2 {{previous definition is here}}
 __attribute__((target_clones("aes", "lse", "default"))) int explicit_default_bad(void) { return 1; }
+
+#elif defined(CHECK_EXPLICIT_VERSION_PRIORITY)
+
+__attribute__((target_version("aes"))) int explicit_version_priority(void) { return 0; }
+// expected-error@+2 {{definition with same mangled name 'explicit_version_priority._Maes' as another definition}}
+// expected-note@-2 {{previous definition is here}}
+__attribute__((target_version("aes;priority=10"))) int explicit_version_priority(void) { return 1; }
+
+#elif defined(CHECK_EXPLICIT_CLONES_PRIORITY)
+
+__attribute__((target_version("aes;priority=20"))) int explicit_clones_priority(void) { return 0; }
+// expected-error@+2 {{definition with same mangled name 'explicit_clones_priority._Maes' as another definition}}
+// expected-note@-2 {{previous definition is here}}
+__attribute__((target_clones("aes;priority=5", "lse"))) int explicit_clones_priority(void) { return 1; }
 
 #endif

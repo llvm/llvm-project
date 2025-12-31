@@ -6,11 +6,17 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-SAME: i32 [[TMP0:%.*]], i8 [[TMP1:%.*]], i64 [[TMP2:%.*]], float [[TMP3:%.*]]) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = and <2 x i64> [[TMP6]], <i64 255, i64 -65536>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> <i64 1, i64 poison>, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr <2 x i64> [[TMP9]], <i64 1, i64 16>
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc <2 x i64> [[TMP10]] to <2 x i8>
+; CHECK-NEXT:    [[TMP7:%.*]] = and <2 x i64> [[TMP6]], <i64 -65536, i64 255>
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP2]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP52:%.*]] = add i64 [[TMP10]], 1
+; CHECK-NEXT:    [[TMP53:%.*]] = lshr i64 [[TMP9]], 16
+; CHECK-NEXT:    [[TMP58:%.*]] = lshr i64 [[TMP52]], 1
+; CHECK-NEXT:    [[TMP90:%.*]] = trunc i64 [[TMP53]] to i8
+; CHECK-NEXT:    [[TMP91:%.*]] = trunc i64 [[TMP58]] to i8
+; CHECK-NEXT:    [[TMP92:%.*]] = insertelement <2 x i8> poison, i8 [[TMP91]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i8> [[TMP92]], i8 [[TMP90]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[TMP11]], <2 x i8> zeroinitializer)
 ; CHECK-NEXT:    [[TMP13:%.*]] = uitofp <2 x i8> [[TMP12]] to <2 x float>
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> poison, i8 [[TMP1]], i32 0
@@ -25,7 +31,7 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = sub <2 x i32> zeroinitializer, [[TMP22]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = ashr <2 x i32> [[TMP23]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP25:%.*]] = sitofp <2 x i32> [[TMP24]] to <2 x float>
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x float> [[TMP25]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x float> [[TMP25]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x float> [[TMP26]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP51:%.*]] = shufflevector <4 x float> [[TMP16]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <8 x float> [[TMP27]], <8 x float> [[TMP51]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
@@ -51,12 +57,12 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = select i1 [[TMP47]], i64 0, i64 8388608
 ; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <8 x i1> [[TMP32]], i32 1
 ; CHECK-NEXT:    [[TMP50:%.*]] = select i1 [[TMP49]], i64 0, i64 32768
-; CHECK-NEXT:    br label %[[BB53:.*]]
-; CHECK:       [[BB52:.*]]:
+; CHECK-NEXT:    br label %[[BB59:.*]]
+; CHECK:       [[BB58:.*]]:
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB53]]:
-; CHECK-NEXT:    br label %[[BB54:.*]]
-; CHECK:       [[BB54]]:
+; CHECK:       [[BB59]]:
+; CHECK-NEXT:    br label %[[BB60:.*]]
+; CHECK:       [[BB60]]:
 ; CHECK-NEXT:    [[TMP54:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[TMP17]])
 ; CHECK-NEXT:    [[TMP55:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[TMP21]])
 ; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <8 x float> poison, float [[TMP3]], i32 0
@@ -96,7 +102,7 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP85:%.*]] = or i64 [[TMP84]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP86:%.*]] = or i64 [[TMP85]], [[TMP81]]
 ; CHECK-NEXT:    store i64 [[TMP86]], ptr null, align 1
-; CHECK-NEXT:    br label %[[BB52]]
+; CHECK-NEXT:    br label %[[BB58]]
 ;
   %5 = and i64 %2, 255
   %6 = and i64 %2, -65536

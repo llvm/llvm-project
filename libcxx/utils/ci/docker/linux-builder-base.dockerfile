@@ -48,8 +48,6 @@ RUN sudo apt-get update \
         tzdata
 
 # Install various tools used by the build or the test suite
-# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual
-# installation below.
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         bash \
@@ -70,6 +68,7 @@ RUN sudo apt-get update \
         libxml2-dev \
         lsb-release \
         make \
+        ninja-build \
         python3 \
         python3-dev \
         python3-packaging \
@@ -82,14 +81,6 @@ RUN sudo apt-get update \
         wget \
         xz-utils \
     && sudo rm -rf /var/lib/apt/lists/*
-
-RUN <<EOF
-  set -e
-  wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
-  gunzip /tmp/ninja.gz
-  chmod a+x /tmp/ninja
-  sudo mv /tmp/ninja /usr/local/bin/ninja
-EOF
 
 # These two locales are not enabled by default so generate them
 RUN <<EOF

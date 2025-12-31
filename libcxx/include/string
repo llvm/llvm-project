@@ -756,7 +756,7 @@ public:
   // external memory. In such cases, the destructor is responsible for unpoisoning
   // the memory to avoid triggering false positives.
   // Therefore it's crucial to ensure the destructor is called.
-  using __trivially_relocatable = void;
+  using __trivially_relocatable _LIBCPP_NODEBUG = void;
 #  else
   using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
       __libcpp_is_trivially_relocatable<allocator_type>::value && __libcpp_is_trivially_relocatable<pointer>::value,
@@ -2273,7 +2273,9 @@ private:
   // Allocate a buffer of __capacity size with __alloc and return it
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX20 __long
   __allocate_long_buffer(_Allocator& __alloc, size_type __capacity) {
-    auto __buffer = std::__allocate_at_least(__alloc, __recommend(__capacity) + 1);
+    _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__capacity),
+                            "Trying to allocate long buffer for a capacity what would fit into the small buffer");
+    auto __buffer = std::__allocate_at_least(__alloc, __align_allocation_size(__capacity));
 
     if (__libcpp_is_constant_evaluated()) {
       for (size_type __i = 0; __i != __buffer.count; ++__i)
@@ -2365,17 +2367,34 @@ private:
     return (__s + (__a - 1)) & ~(__a - 1);
   }
   enum { __alignment = 8 };
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
-    if (__s < __min_cap) {
-      return static_cast<size_type>(__min_cap) - 1;
-    }
+
+  // This makes sure that we're using a capacity with some extra alignment, since allocators almost always over-align
+  // the allocations anyways, improving memory usage. More importantly, this ensures that the lowest bit is never set
+  // if __endian_factor == 2, allowing us to store whether we're in the long string inside the lowest bit.
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
+  __align_allocation_size(size_type __size) _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(
+        !__fits_in_sso(__size), "Trying to align allocation of a size which would fit into the SSO");
     const size_type __boundary = sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : __endian_factor;
-    size_type __guess          = __align_it<__boundary>(__s + 1) - 1;
-    if (__guess == __min_cap)
+    size_type __guess          = __align_it<__boundary>(__size + 1);
+    if (__guess == __min_cap + 1)
       __guess += __endian_factor;
 
-    _LIBCPP_ASSERT_INTERNAL(__guess >= __s, "recommendation is below the requested size");
+    _LIBCPP_ASSERT_INTERNAL(__guess >= __size, "aligned allocation size is below the requested size");
     return __guess;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
+  __get_amortized_growth_capacity(size_type __required_capacity) {
+    size_type __max_size = max_size();
+    if (__required_capacity > __max_size)
+      __throw_length_error();
+    size_type __current_cap = capacity();
+    _LIBCPP_ASSERT_INTERNAL(
+        __current_cap < __required_capacity, "Trying to grow string even though there is enough capacity already?");
+    if (__current_cap > __max_size / 2 - __alignment)
+      return __max_size;
+    return std::max(__required_capacity, 2 * __current_cap);
   }
 
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(const value_type* __s, size_type __sz);
@@ -2708,15 +2727,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     size_type __n_del,
     size_type __n_add,
     const value_type* __p_new_stuff) {
-  size_type __ms = max_size();
-  if (__delta_cap > __ms - __old_cap)
-    __throw_length_error();
+  __long __buffer = __allocate_long_buffer(__alloc_, __get_amortized_growth_capacity(__old_cap + __delta_cap));
   pointer __old_p = __get_pointer();
-  size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
   __annotate_delete();
-  auto __guard    = std::__make_scope_guard(__annotate_new_size(*this));
-  __long __buffer = __allocate_long_buffer(__alloc_, __cap);
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
   if (__n_add != 0)
@@ -2746,13 +2760,8 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
     size_type __n_copy,
     size_type __n_del,
     size_type __n_add) {
-  size_type __ms = max_size();
-  if (__delta_cap > __ms - __old_cap)
-    this->__throw_length_error();
+  __long __buffer = __allocate_long_buffer(__alloc_, __get_amortized_growth_capacity(__old_cap + __delta_cap));
   pointer __old_p = __get_pointer();
-  size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
-  __long __buffer = __allocate_long_buffer(__alloc_, __cap);
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
   size_type __sec_cp_sz = __old_sz - __n_del - __n_copy;
@@ -3417,24 +3426,24 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
 
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::shrink_to_fit() _NOEXCEPT {
-  size_type __target_capacity = __recommend(size());
-  if (__target_capacity == capacity())
+  if (!__is_long())
     return;
 
-  _LIBCPP_ASSERT_INTERNAL(__is_long(), "Trying to shrink small string");
-
-  // We're a long string and we're shrinking into the small buffer.
   const auto __ptr  = __get_long_pointer();
   const auto __size = __get_long_size();
   const auto __cap  = __get_long_cap();
 
-  if (__fits_in_sso(__target_capacity)) {
+  // We're a long string and we're shrinking into the small buffer.
+  if (__fits_in_sso(__size)) {
     __annotation_guard __g(*this);
     __set_short_size(__size);
     traits_type::copy(std::__to_address(__get_short_pointer()), std::__to_address(__ptr), __size + 1);
     __alloc_traits::deallocate(__alloc_, __ptr, __cap);
     return;
   }
+
+  if (__align_allocation_size(__size) == __cap)
+    return;
 
 #  if _LIBCPP_HAS_EXCEPTIONS
   try {
@@ -3842,46 +3851,52 @@ swap(basic_string<_CharT, _Traits, _Allocator>& __lhs, basic_string<_CharT, _Tra
   __lhs.swap(__rhs);
 }
 
-_LIBCPP_EXPORTED_FROM_ABI int stoi(const string& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI long stol(const string& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI unsigned long stoul(const string& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI long long stoll(const string& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI unsigned long long stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI int stoi(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned long
+stoul(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long stol(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long long
+stoll(const string& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned long long
+stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
 
-_LIBCPP_EXPORTED_FROM_ABI float stof(const string& __str, size_t* __idx = nullptr);
-_LIBCPP_EXPORTED_FROM_ABI double stod(const string& __str, size_t* __idx = nullptr);
-_LIBCPP_EXPORTED_FROM_ABI long double stold(const string& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI float stof(const string& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const string& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const string& __str, size_t* __idx = nullptr);
 
-_LIBCPP_EXPORTED_FROM_ABI string to_string(int __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(int __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_EXPORTED_FROM_ABI int stoi(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI long stol(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI unsigned long stoul(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI long long stoll(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
-_LIBCPP_EXPORTED_FROM_ABI unsigned long long stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI int stoi(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long stol(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned long
+stoul(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long long
+stoll(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned long long
+stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 
-_LIBCPP_EXPORTED_FROM_ABI float stof(const wstring& __str, size_t* __idx = nullptr);
-_LIBCPP_EXPORTED_FROM_ABI double stod(const wstring& __str, size_t* __idx = nullptr);
-_LIBCPP_EXPORTED_FROM_ABI long double stold(const wstring& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI float stof(const wstring& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const wstring& __str, size_t* __idx = nullptr);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const wstring& __str, size_t* __idx = nullptr);
 
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
-_LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3890,7 +3905,7 @@ _LIBCPP_TEMPLATE_DATA_VIS const typename basic_string<_CharT, _Traits, _Allocato
 
 template <class _CharT, class _Allocator>
 struct __string_hash : public __unary_function<basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t
   operator()(const basic_string<_CharT, char_traits<_CharT>, _Allocator>& __val) const _NOEXCEPT {
     return std::__do_string_hash(__val.data(), __val.data() + __val.size());
   }
@@ -3961,30 +3976,31 @@ erase_if(basic_string<_CharT, _Traits, _Allocator>& __str, _Predicate __pred) {
 // Literal suffixes for basic_string [basic.string.literals]
 inline namespace literals {
 inline namespace string_literals {
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char>
 operator""s(const char* __str, size_t __len) {
   return basic_string<char>(__str, __len);
 }
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<wchar_t>
-operator""s(const wchar_t* __str, size_t __len) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<wchar_t> operator""s(const wchar_t* __str, size_t __len) {
   return basic_string<wchar_t>(__str, __len);
 }
 #    endif
 
 #    if _LIBCPP_HAS_CHAR8_T
-inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string<char8_t> operator""s(const char8_t* __str, size_t __len) {
+[[__nodiscard__]] inline
+    _LIBCPP_HIDE_FROM_ABI constexpr basic_string<char8_t> operator""s(const char8_t* __str, size_t __len) {
   return basic_string<char8_t>(__str, __len);
 }
 #    endif
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char16_t>
-operator""s(const char16_t* __str, size_t __len) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char16_t> operator""s(const char16_t* __str, size_t __len) {
   return basic_string<char16_t>(__str, __len);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char32_t>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<char32_t>
 operator""s(const char32_t* __str, size_t __len) {
   return basic_string<char32_t>(__str, __len);
 }

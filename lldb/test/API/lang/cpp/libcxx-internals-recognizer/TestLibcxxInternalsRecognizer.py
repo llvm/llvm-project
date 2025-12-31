@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 
 import re
 
+@skipIf(macos_version=[">=", "15.4"], asan=True)
 class LibCxxInternalsRecognizerTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

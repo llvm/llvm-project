@@ -81,6 +81,9 @@ public:
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
 
+  void emitBeginCatch(CIRGenFunction &cgf,
+                      const CXXCatchStmt *catchStmt) override;
+
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
     // Itanium does not emit any destructor variant as an inline thunk.
@@ -118,9 +121,22 @@ public:
 
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                           QualType ty) override;
+  CatchTypeInfo
+  getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
+                               QualType catchHandlerType) override {
+    auto rtti = dyn_cast<cir::GlobalViewAttr>(getAddrOfRTTIDescriptor(loc, ty));
+    assert(rtti && "expected GlobalViewAttr");
+    return CatchTypeInfo{rtti, 0};
+  }
 
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
     return true;
+  }
+
+  size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
+                              FunctionArgList &args) const override {
+    assert(!args.empty() && "expected the arglist to not be empty!");
+    return args.size() - 1;
   }
 
   void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) override;
@@ -459,7 +475,8 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
                  "emitVTableDefinitions: __fundamental_type_info");
   }
 
-  auto vtableAsGlobalValue = dyn_cast<cir::CIRGlobalValueInterface>(*vtable);
+  [[maybe_unused]] auto vtableAsGlobalValue =
+      dyn_cast<cir::CIRGlobalValueInterface>(*vtable);
   assert(vtableAsGlobalValue && "VTable must support CIRGlobalValueInterface");
   // Always emit type metadata on non-available_externally definitions, and on
   // available_externally definitions if we are performing whole program
@@ -2258,4 +2275,165 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       cgf.getBuilder().createPtrBitcast(dataPtr, newPtr.getElementType());
   CharUnits finalAlignment = baseAlignment.alignmentAtOffset(cookieSize);
   return Address(finalPtr, newPtr.getElementType(), finalAlignment);
+}
+
+namespace {
+/// From traditional LLVM, useful info for LLVM lowering support:
+/// A cleanup to call __cxa_end_catch.  In many cases, the caught
+/// exception type lets us state definitively that the thrown exception
+/// type does not have a destructor.  In particular:
+///   - Catch-alls tell us nothing, so we have to conservatively
+///     assume that the thrown exception might have a destructor.
+///   - Catches by reference behave according to their base types.
+///   - Catches of non-record types will only trigger for exceptions
+///     of non-record types, which never have destructors.
+///   - Catches of record types can trigger for arbitrary subclasses
+///     of the caught type, so we have to assume the actual thrown
+///     exception type might have a throwing destructor, even if the
+///     caught type's destructor is trivial or nothrow.
+struct CallEndCatch final : EHScopeStack::Cleanup {
+  CallEndCatch(bool mightThrow) : mightThrow(mightThrow) {}
+  bool mightThrow;
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    if (!mightThrow) {
+      // Traditional LLVM codegen would emit a call to __cxa_end_catch
+      // here. For CIR, just let it pass since the cleanup is going
+      // to be emitted on a later pass when lowering the catch region.
+      // CGF.EmitNounwindRuntimeCall(getEndCatchFn(CGF.CGM));
+      cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
+      return;
+    }
+
+    // Traditional LLVM codegen would emit a call to __cxa_end_catch
+    // here. For CIR, just let it pass since the cleanup is going
+    // to be emitted on a later pass when lowering the catch region.
+    // CGF.EmitRuntimeCallOrTryCall(getEndCatchFn(CGF.CGM));
+    if (!cgf.getBuilder().getBlock()->mightHaveTerminator())
+      cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
+  }
+};
+} // namespace
+
+static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Type paramTy,
+                                  bool endMightThrow) {
+  auto catchParam = cir::CatchParamOp::create(
+      cgf.getBuilder(), cgf.getBuilder().getUnknownLoc(), paramTy);
+
+  cgf.ehStack.pushCleanup<CallEndCatch>(
+      NormalAndEHCleanup,
+      endMightThrow && !cgf.cgm.getLangOpts().AssumeNothrowExceptionDtor);
+
+  return catchParam.getParam();
+}
+
+/// A "special initializer" callback for initializing a catch
+/// parameter during catch initialization.
+static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
+                           Address paramAddr, SourceLocation loc) {
+  CanQualType catchType =
+      cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
+  // If we're catching by reference, we can just cast the object
+  // pointer to the appropriate pointer.
+  if (isa<ReferenceType>(catchType)) {
+    cgf.cgm.errorNYI(loc, "initCatchParam: ReferenceType");
+    return;
+  }
+
+  // Scalars and complexes.
+  cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
+  if (tek != cir::TEK_Aggregate) {
+    // Notes for LLVM lowering:
+    // If the catch type is a pointer type, __cxa_begin_catch returns
+    // the pointer by value.
+    if (catchType->hasPointerRepresentation()) {
+      cgf.cgm.errorNYI(loc, "initCatchParam: hasPointerRepresentation");
+      return;
+    }
+
+    mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
+    mlir::Value catchParam =
+        callBeginCatch(cgf, cgf.getBuilder().getPointerTo(cirCatchTy), false);
+    LValue srcLV = cgf.makeNaturalAlignAddrLValue(catchParam, catchType);
+    LValue destLV = cgf.makeAddrLValue(paramAddr, catchType);
+    switch (tek) {
+    case cir::TEK_Complex: {
+      cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Complex");
+      return;
+    }
+    case cir::TEK_Scalar: {
+      auto exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
+      cgf.emitStoreOfScalar(exnLoad, destLV, /*isInit=*/true);
+      return;
+    }
+    case cir::TEK_Aggregate:
+      llvm_unreachable("evaluation kind filtered out!");
+    }
+
+    // Otherwise, it returns a pointer into the exception object.
+    llvm_unreachable("bad evaluation kind");
+  }
+
+  cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Aggregate");
+}
+
+/// Begins a catch statement by initializing the catch variable and
+/// calling __cxa_begin_catch.
+void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &cgf,
+                                         const CXXCatchStmt *catchStmt) {
+  // We have to be very careful with the ordering of cleanups here:
+  //   C++ [except.throw]p4:
+  //     The destruction [of the exception temporary] occurs
+  //     immediately after the destruction of the object declared in
+  //     the exception-declaration in the handler.
+  //
+  // So the precise ordering is:
+  //   1.  Construct catch variable.
+  //   2.  __cxa_begin_catch
+  //   3.  Enter __cxa_end_catch cleanup
+  //   4.  Enter dtor cleanup
+  //
+  // We do this by using a slightly abnormal initialization process.
+  // Delegation sequence:
+  //   - ExitCXXTryStmt opens a RunCleanupsScope
+  //     - EmitAutoVarAlloca creates the variable and debug info
+  //       - InitCatchParam initializes the variable from the exception
+  //       - CallBeginCatch calls __cxa_begin_catch
+  //       - CallBeginCatch enters the __cxa_end_catch cleanup
+  //     - EmitAutoVarCleanups enters the variable destructor cleanup
+  //   - EmitCXXTryStmt emits the code for the catch body
+  //   - EmitCXXTryStmt close the RunCleanupsScope
+
+  VarDecl *catchParam = catchStmt->getExceptionDecl();
+  if (!catchParam) {
+    callBeginCatch(cgf, cgf.getBuilder().getVoidPtrTy(),
+                   /*endMightThrow=*/true);
+    return;
+  }
+
+  auto getCatchParamAllocaIP = [&]() {
+    cir::CIRBaseBuilderTy::InsertPoint currIns =
+        cgf.getBuilder().saveInsertionPoint();
+    mlir::Operation *currParent = currIns.getBlock()->getParentOp();
+
+    mlir::Block *insertBlock = nullptr;
+    if (auto scopeOp = currParent->getParentOfType<cir::ScopeOp>()) {
+      insertBlock = &scopeOp.getScopeRegion().getBlocks().back();
+    } else if (auto fnOp = currParent->getParentOfType<cir::FuncOp>()) {
+      insertBlock = &fnOp.getRegion().getBlocks().back();
+    } else {
+      llvm_unreachable("unknown outermost scope-like parent");
+    }
+    return cgf.getBuilder().getBestAllocaInsertPoint(insertBlock);
+  };
+
+  // Emit the local. Make sure the alloca's superseed the current scope, since
+  // these are going to be consumed by `cir.catch`, which is not within the
+  // current scope.
+
+  CIRGenFunction::AutoVarEmission var =
+      cgf.emitAutoVarAlloca(*catchParam, getCatchParamAllocaIP());
+  initCatchParam(cgf, *catchParam, var.getObjectAddress(cgf),
+                 catchStmt->getBeginLoc());
+  cgf.emitAutoVarCleanups(var);
 }
