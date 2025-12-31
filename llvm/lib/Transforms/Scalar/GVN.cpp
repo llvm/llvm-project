@@ -2744,6 +2744,23 @@ bool GVNPass::processInstruction(Instruction *I) {
     return Changed;
   }
 
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    SimplifyQuery SQ = {DL, TLI, DT, AC}; 
+
+    for (unsigned i = 0; i < CI->arg_size(); ++i) {
+      Value *Arg = CI->getArgOperand(i);
+      auto *Sub = dyn_cast<BinaryOperator>(Arg);
+
+      if (!Sub || Sub->getOpcode() != Instruction::Sub)
+        continue;
+
+      if (!isKnownNonEqual(Sub->getOperand(0), Sub->getOperand(1), SQ)) {
+        CI->setArgOperand(i, ConstantInt::get(Sub->getType(), 0)); 
+        return true;
+      }    
+    }    
+  }
+
   // Instructions with void type don't return a value, so there's
   // no point in trying to find redundancies in them.
   if (I->getType()->isVoidTy())
