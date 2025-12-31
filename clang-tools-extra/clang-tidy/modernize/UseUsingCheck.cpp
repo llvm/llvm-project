@@ -210,7 +210,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     Using = ";\nusing ";
 
     // Find the comma that precedes this declarator
-    SourceLocation CommaLoc = utils::lexer::findPreviousAnyTokenKind(
+    const SourceLocation CommaLoc = utils::lexer::findPreviousAnyTokenKind(
         MatchedDecl->getLocation(), SM, LO, tok::TokenKind::comma);
     if (CommaLoc.isValid() && !CommaLoc.isMacroID())
       ReplaceRange.setBegin(CommaLoc);
@@ -218,7 +218,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       ReplaceRange.setBegin(LastReplacementEnd);
 
     if (FunctionPointerCase) {
-      SourceLocation DeclaratorEnd = TL.getEndLoc();
+      const SourceLocation DeclaratorEnd = TL.getEndLoc();
       if (DeclaratorEnd.isValid() && !DeclaratorEnd.isMacroID())
         ReplaceRange.setEnd(DeclaratorEnd);
     }
