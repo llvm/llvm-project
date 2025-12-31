@@ -274,10 +274,8 @@ define fp128 @tf128(i1 %c, ptr %p, fp128 %a, fp128 %b) {
 ; CHECK-GI-NEXT:  .LBB9_2:
 ; CHECK-GI-NEXT:    mov d2, v1.d[1]
 ; CHECK-GI-NEXT:  .LBB9_3: // %e
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov x8, d2
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[0], v1.d[0]
+; CHECK-GI-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
@@ -1303,14 +1301,10 @@ define <2 x fp128> @tv2f128(i1 %c, ptr %p, <2 x fp128> %a, <2 x fp128> %b) {
 ; CHECK-GI-NEXT:    mov d4, v3.d[1]
 ; CHECK-GI-NEXT:    mov d5, v2.d[1]
 ; CHECK-GI-NEXT:  .LBB44_3: // %e
-; CHECK-GI-NEXT:    fmov x8, d2
-; CHECK-GI-NEXT:    fmov x9, d3
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    mov v1.d[0], x9
-; CHECK-GI-NEXT:    fmov x8, d5
-; CHECK-GI-NEXT:    fmov x9, d4
-; CHECK-GI-NEXT:    mov v0.d[1], x8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    mov v0.d[0], v2.d[0]
+; CHECK-GI-NEXT:    mov v1.d[0], v3.d[0]
+; CHECK-GI-NEXT:    mov v0.d[1], v5.d[0]
+; CHECK-GI-NEXT:    mov v1.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
     br i1 %c, label %t, label %e
