@@ -257,13 +257,13 @@ public:
 
     OPC_EmitInteger,
     // Space-optimized forms that implicitly encode integer VT.
-    OPC_EmitInteger8,
-    OPC_EmitInteger16,
-    OPC_EmitInteger32,
-    OPC_EmitInteger64,
+    OPC_EmitIntegerI8,
+    OPC_EmitIntegerI16,
+    OPC_EmitIntegerI32,
+    OPC_EmitIntegerI64,
     OPC_EmitStringInteger,
     // Space-optimized forms that implicitly encode integer VT.
-    OPC_EmitStringInteger32,
+    OPC_EmitStringIntegerI32,
     OPC_EmitRegister,
     OPC_EmitRegisterI32,
     OPC_EmitRegisterI64,
@@ -451,7 +451,7 @@ public:
     llvm_unreachable("Tblgen should generate this!");
   }
 
-  void SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
+  void SelectCodeCommon(SDNode *NodeToMatch, const uint8_t *MatcherTable,
                         unsigned TableSize);
 
   /// Return true if complex patterns for this target can mutate the
