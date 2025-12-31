@@ -507,7 +507,7 @@ def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [
 // -----
 
 def SPIRV_ReturnOp : SPIRV_Op<"Return", [InFunctionScope, Pure,
-                                     Terminator]> {
+                                         ReturnLike, Terminator]> {
   let summary = "Return with no value from a function with void return type.";
 
   let description = [{
@@ -546,7 +546,7 @@ def SPIRV_UnreachableOp : SPIRV_Op<"Unreachable", [InFunctionScope, Terminator]>
 // -----
 
 def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, Pure,
-                                               Terminator]> {
+                                                   ReturnLike, Terminator]> {
   let summary = "Return a value from a function.";
 
   let description = [{
