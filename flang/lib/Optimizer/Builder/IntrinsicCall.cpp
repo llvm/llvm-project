@@ -7893,22 +7893,27 @@ void IntrinsicLibrary::genShowDescriptor(
   assert(args.size() == 1 && "expected single argument for show_descriptor");
   const mlir::Value descriptor = fir::getBase(args[0]);
 
-  // If it's already a reference to a box, pass it directly.
+  // Use consistent !fir.ref<!fir.box<none>> argument type
+  auto targetType = fir::BoxType::get(builder.getNoneType());
+  auto targetRefType = fir::ReferenceType::get(targetType);
+
+  // If it's already a reference to a box, convert it to correct type and
+  // pass it directly
   if (fir::isa_ref_type(descriptor.getType()) &&
       fir::isa_box_type(fir::unwrapRefType(descriptor.getType()))) {
-    fir::runtime::genShowDescriptor(builder, loc, descriptor);
+    fir::runtime::genShowDescriptor(builder, loc,
+        builder.createConvert(loc, targetRefType, descriptor));
     return;
   }
 
   mlir::Value descrAddr = nullptr;
   if (fir::isa_box_type(descriptor.getType())) {
     // Spill it to the stack
-    descrAddr = builder.createTemporary(loc, descriptor.getType());
+    descrAddr = builder.createTemporary(loc, targetType);
     builder.createStoreWithConvert(loc, descriptor, descrAddr);
   } else {
     // If argument is not a box type (and not ref<box>), pass fir.absent.
-    descrAddr = builder.genAbsentOp(
-        loc, fir::BoxType::get(builder.getNoneType()));
+    descrAddr = builder.genAbsentOp(loc, targetRefType);
   }
   fir::runtime::genShowDescriptor(builder, loc, descrAddr);
 }
