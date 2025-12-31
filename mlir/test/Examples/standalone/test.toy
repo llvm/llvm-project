@@ -5,6 +5,9 @@
 # RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
 # RUN: -DMLIR_PYTHON_PACKAGE_PREFIX=mlir_standalone \
 # RUN: -DPython3_EXECUTABLE=%python \
+# RUN: -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON \
+# RUN: -DCMAKE_C_VISIBILITY_PRESET=hidden \
+# RUN: -DCMAKE_CXX_VISIBILITY_PRESET=hidden \
 # RUN: -DPython_EXECUTABLE=%python
 # RUN: export PYTHONPATH="%mlir_obj_root/python_packages/mlir_core"
 # RUN: "%cmake_exe" --build . --target check-standalone | tee %t

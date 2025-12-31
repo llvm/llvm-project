@@ -875,7 +875,6 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
   elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
     set(eh_rtti_enable -frtti -fexceptions)
   endif ()
-
   if(ARG__PRIVATE_SUPPORT_LIB)
     add_library(${libname} SHARED ${ARG_SOURCES})
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -908,6 +907,9 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     PRIVATE
     MLIR_BINDINGS_PYTHON_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
+  if(APPLE)
+    target_link_options(${libname} PRIVATE "LINKER:-twolevel_namespace")
+  endif()
 
   if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
       AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
