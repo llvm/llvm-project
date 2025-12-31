@@ -793,56 +793,39 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     return 1;
 
   case Matcher::EmitInteger: {
-    int64_t Val = cast<EmitIntegerMatcher>(N)->getValue();
-    MVT VT = cast<EmitIntegerMatcher>(N)->getVT();
-    unsigned OpBytes;
+    const auto *IM = cast<EmitIntegerMatcher>(N);
+    int64_t Val = IM->getValue();
+    const std::string &Str = IM->getString();
+    MVT VT = IM->getVT();
+    unsigned TypeBytes = 0;
     switch (VT.SimpleTy) {
     case MVT::i8:
     case MVT::i16:
     case MVT::i32:
     case MVT::i64:
-      OpBytes = 1;
       OS << "OPC_EmitIntegerI" << VT.getSizeInBits() << ", ";
       break;
     default:
       OS << "OPC_EmitInteger, ";
       if (!OmitComments)
         OS << "/*" << getEnumName(VT) << "*/";
-      OpBytes = EmitVBRValue(VT.SimpleTy, OS) + 1;
-      break;
-    }
-    unsigned Bytes = OpBytes + EmitSignedVBRValue(Val, OS);
-    if (!OmitComments)
-      OS << " // " << Val << " #" << cast<EmitIntegerMatcher>(N)->getResultNo();
-    OS << '\n';
-    return Bytes;
-  }
-  case Matcher::EmitStringInteger: {
-    const auto *SIM = cast<EmitStringIntegerMatcher>(N);
-    int64_t Val = SIM->getValue();
-    const std::string &Str = SIM->getString();
-    MVT VT = SIM->getVT();
-    unsigned TypeBytes = 0;
-    switch (VT.SimpleTy) {
-    case MVT::i32:
-      OS << "OPC_EmitIntegerI" << VT.getSizeInBits() << ", ";
-      break;
-    default:
-      OS << "OPC_EmitInteger, ";
-      if (!OmitComments)
-        OS << "/*" << getEnumName(VT) << "*/";
-      TypeBytes = EmitVBRValue(VT.SimpleTy, OS) + 1;
+      TypeBytes = EmitVBRValue(VT.SimpleTy, OS);
       break;
     }
     // If the value is 63 or smaller, use the string directly. Otherwise, use
     // a VBR.
     unsigned ValBytes = 1;
-    if (Val <= 63)
+    if (!Str.empty() && Val <= 63)
       OS << Str << ',';
     else
       ValBytes = EmitSignedVBRValue(Val, OS);
-    if (!OmitComments)
-      OS << " // #" << SIM->getResultNo() << " = " << Str;
+    if (!OmitComments) {
+      OS << " // #" << IM->getResultNo() << " = ";
+      if (!Str.empty())
+        OS << Str;
+      else
+        OS << Val;
+    }
     OS << '\n';
     return 1 + TypeBytes + ValBytes;
   }
@@ -1343,8 +1326,6 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
     return "OPC_CheckImmAllZerosV";
   case Matcher::EmitInteger:
     return "OPC_EmitInteger";
-  case Matcher::EmitStringInteger:
-    return "OPC_EmitStringInteger";
   case Matcher::EmitRegister:
     return "OPC_EmitRegister";
   case Matcher::EmitConvertToTarget:
