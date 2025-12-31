@@ -618,6 +618,11 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
 #if defined(_LIBUNWIND_TARGET_AARCH64) &&                                      \
     defined(_LIBUNWIND_IS_NATIVE_ONLY) &&                                      \
     !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
+#ifdef __APPLE__
+#define LOCAL_LABEL_PREFIX "L"
+#else
+#define LOCAL_LABEL_PREFIX ".L"
+#endif
   {
     unw_word_t raSigningSchemeFlagsWithPAC;
     __unw_get_reg(cursor, UNW_AARCH64_RA_SIGNING_SCHEME_FLAGS,
@@ -647,72 +652,73 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
         "mrs  x12, ID_AA64ISAR1_EL1 \n\t"
         "lsr  x12, x12, #24         \n\t"
         "ands x12, x12, #255        \n\t"
-        "cbnz x12, .Lcheck_pac_%=   \n\t"
+        "cbnz x12, " LOCAL_LABEL_PREFIX "check_pac_%=   \n\t"
         "mrs  x12, ID_AA64ISAR2_EL1 \n\t"
         "lsr  x12, x12, #8          \n\t"
         "ands x12, x12, #15         \n\t"
-        "cbnz x12, .Lcheck_pac_%=   \n\t"
-        "b .Lno_pauth_%=            \n\t"
-        ".Lcheck_pac_%=:            \n\t"
+        "cbnz x12, " LOCAL_LABEL_PREFIX "check_pac_%=   \n\t"
+        "b " LOCAL_LABEL_PREFIX "no_pauth_%=            \n\t"
+        LOCAL_LABEL_PREFIX "check_pac_%=:            \n\t"
 
         // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY in Registers.hpp.
         ".arch armv8.3-a         \n\t"
         ".arch_extension pauth   \n\t"
         "pacga x12, x14, x16     \n\t"
         "cmp   x12, x13          \n\t"
-        "b.eq  .Lpacga_success_%=\n\t"
+        "b.eq  " LOCAL_LABEL_PREFIX "pacga_success_%=\n\t"
         "brk   #0xc474           \n\t"
-        ".Lpacga_success_%=:     \n\t"
-        ".Lno_pauth_%=:          \n\t"
+        LOCAL_LABEL_PREFIX "pacga_success_%=:     \n\t"
+        LOCAL_LABEL_PREFIX "no_pauth_%=:          \n\t"
 
         // See also CHECK_SIGNING_SCHEME_FLAGS_INTEGRITY_FOR_PAUTHABI
         // in Registers.hpp.
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
         "cmp   x14, 5               \n\t"
-        "b.eq  .Lpauthabi_success_%=\n\t"
+        "b.eq  " LOCAL_LABEL_PREFIX "pauthabi_success_%=\n\t"
         "brk   #0xc474              \n\t"
-        ".Lpauthabi_success_%=:     \n\t"
+        LOCAL_LABEL_PREFIX "pauthabi_success_%=:     \n\t"
 #endif
 
         // See also SIGNING_SCHEME_FLAGS_SWITCH in Registers.hpp.
         "cmp   x14, #0        \n\t"
-        "b.ne  .Lswitch_1_%=  \n\t"
-        "b     .Lswitch_end_%=\n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_1_%=  \n\t"
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
 
-        ".Lswitch_1_%=:       \n\t"
+        LOCAL_LABEL_PREFIX "switch_1_%=:       \n\t"
         "cmp   x14, #1        \n\t"
-        "b.ne  .Lswitch_3_%=  \n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_3_%=  \n\t"
         "hint 0xc             \n\t" // autia1716
-        "b     .Lswitch_end_%=\n\t"
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
 
-        ".Lswitch_3_%=:       \n\t"
+        LOCAL_LABEL_PREFIX "switch_3_%=:       \n\t"
         "cmp   x14, #3        \n\t"
-        "b.ne  .Lswitch_5_%=  \n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_5_%=  \n\t"
         "hint 0x27            \n\t" // pacm
         "hint 0xc             \n\t" // autia1716
-        "b     .Lswitch_end_%=\n\t"
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
 
-        ".Lswitch_5_%=:       \n\t"
+        LOCAL_LABEL_PREFIX "switch_5_%=:       \n\t"
         "cmp   x14, #5        \n\t"
-        "b.ne  .Lswitch_7_%=  \n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_7_%=  \n\t"
         "hint 0xe             \n\t" // autib1716
-        "b     .Lswitch_end_%=\n\t"
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
 
-        ".Lswitch_7_%=:       \n\t"
+        LOCAL_LABEL_PREFIX "switch_7_%=:       \n\t"
         "cmp   x14, #7        \n\t"
-        "b.ne  .Lswitch_unexpected_%=\n\t"
+        "b.ne  " LOCAL_LABEL_PREFIX "switch_unexpected_%=\n\t"
         "hint 0x27            \n\t" // pacm
         "hint 0xe             \n\t" // autib1716
-        "b     .Lswitch_end_%=\n\t"
+        "b     " LOCAL_LABEL_PREFIX "switch_end_%=\n\t"
 
-        ".Lswitch_unexpected_%=:\n\t"
+        LOCAL_LABEL_PREFIX "switch_unexpected_%=:\n\t"
         "brk   #0xc474          \n\t"
 
-        ".Lswitch_end_%=:\n\t"
+        LOCAL_LABEL_PREFIX "switch_end_%=:\n\t"
         : "+r"(x17)
         : "r"(x16), "r"(x15), "r"(x14), "r"(x13));
     result = x17;
   }
+#undef LOCAL_LABEL_PREFIX
 #endif
 
   _LIBUNWIND_TRACE_API("_Unwind_GetIP(context=%p) => 0x%" PRIxPTR,
