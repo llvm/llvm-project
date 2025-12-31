@@ -75,7 +75,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
   initializeCompressEVEXPassPass(PR);
-  initializeFixupLEAPassPass(PR);
+  initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
@@ -573,7 +573,7 @@ void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInsts());
     addPass(createX86PadShortFunctions());
-    addPass(createX86FixupLEAs());
+    addPass(createX86FixupLEAsLegacyPass());
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
   }
