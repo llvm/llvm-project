@@ -28,7 +28,7 @@ struct S {
   Bool operator>=(S) const { return true; }
 };
 
-constexpr void test() {
+void test() {
   std::optional<S> s{S{}};
 
   (void)(s == S{});
