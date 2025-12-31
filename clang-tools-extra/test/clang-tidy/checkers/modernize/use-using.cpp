@@ -464,7 +464,7 @@ namespace GH173732 {
   // CHECK-FIXES-NEXT: using ptrArray = char (*)[2];
 }
 
-namespace GHReportedIssue {
+namespace GH173830 {
   typedef char x1, (&refArray)();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
   // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: use 'using' instead of 'typedef' [modernize-use-using]
@@ -489,7 +489,6 @@ namespace GHReportedIssue {
   // CHECK-FIXES: using PtrPtr = int **;
   // CHECK-FIXES-NEXT: using RefArr = int (&)[5];
 
-  // 4. Qualifiers
   typedef const int CInt, (*PCInt);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
   // CHECK-MESSAGES: :[[@LINE-2]]:25: warning: use 'using' instead of 'typedef'
