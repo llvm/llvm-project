@@ -7253,7 +7253,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // * EVL-based VPlans with gather/scatters (the VPlan-based cost model uses
   //   vp_scatter/vp_gather).
   // The legacy cost model doesn't properly model costs for such loops.
-  bool UsesEVLGatherScatter =
+  [[maybe_unused]] bool UsesEVLGatherScatter =
       any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
                  BestPlan.getVectorLoopRegion()->getEntry())),
              [](VPBasicBlock *VPBB) {
