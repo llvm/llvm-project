@@ -2053,8 +2053,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     return FoldedToConst == V ? nullptr : FoldedToConst;
   }
 
-  if (!I->hasOneUse())
+  if (!I->hasOneUse()) {
+    Known = computeKnownFPClass(V, DemandedMask, CxtI, Depth + 1);
     return nullptr;
+  }
 
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
     if (FPOp->hasNoNaNs())
