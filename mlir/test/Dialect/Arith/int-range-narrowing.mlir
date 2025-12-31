@@ -347,3 +347,33 @@ func.func @clamp_to_loop_bound_and_id() {
   }
   return
 }
+
+func.func private @use(index)
+
+// CHECK-LABEL: func.func @loop_with_iter_arg
+func.func @loop_with_iter_arg() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+
+  %cst = arith.constant dense<0.000000e+00> : vector<4xf32>
+
+//       CHECK:  %[[POS:.*]] = test.with_bounds {smax = 1 : index, smin = 0 : index, umax = 1 : index, umin = 0 : index} : index
+//       CHECK:  %[[NEG:.*]] = test.with_bounds {smax = 0 : index, smin = -1 : index, umax = -1 : index, umin = 0 : index} : index
+// Check iter args are still present
+//       CHECK:  scf.for {{.*}} iter_args({{.*}})
+//       CHECK:  %[[POS_I8:.*]] = arith.index_castui %[[POS]] : index to i8
+//       CHECK:  %[[NEG_I8:.*]] = arith.index_cast %[[NEG]] : index to i8
+//       CHECK:  %[[RES_I8:.*]] = arith.addi %[[POS_I8]], %[[NEG_I8]] : i8
+//       CHECK:  %[[RES:.*]] = arith.index_cast %[[RES_I8]] : i8 to index
+//       CHECK:  call @use(%[[RES]])
+
+  %0 = test.with_bounds { umin = 0 : index, umax = 1 : index, smin = 0 : index, smax = 1 : index } : index
+  %1 = test.with_bounds { umin = 0 : index, umax = -1 : index, smin = -1 : index, smax = 0 : index } : index
+  %res = scf.for %arg0 = %c0 to %c16 step %c1 iter_args(%arg1 = %cst) -> (vector<4xf32>) {
+    %2 = arith.addi %0, %1 : index
+    func.call @use(%2) : (index) -> ()
+    scf.yield %arg1 : vector<4xf32>
+  }
+  return
+}

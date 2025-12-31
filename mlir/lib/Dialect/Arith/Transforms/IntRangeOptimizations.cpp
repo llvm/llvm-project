@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
@@ -485,8 +486,7 @@ struct IntRangeOptimizationsPass final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<IntegerRangeAnalysis>();
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
@@ -511,7 +511,7 @@ struct IntRangeNarrowingPass final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
-    solver.load<DeadCodeAnalysis>();
+    loadBaselineAnalyses(solver);
     solver.load<IntegerRangeAnalysis>();
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
