@@ -29,7 +29,6 @@
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <array>
-#include <functional>
 #include <map>
 #include <numeric>
 #include <vector>
@@ -928,7 +927,6 @@ public:
   const std::vector<TreePatternNodePtr> &getTrees() const { return Trees; }
   unsigned getNumTrees() const { return Trees.size(); }
   const TreePatternNodePtr &getTree(unsigned i) const { return Trees[i]; }
-  void setTree(unsigned i, TreePatternNodePtr Tree) { Trees[i] = Tree; }
   const TreePatternNodePtr &getOnlyTree() const {
     assert(Trees.size() == 1 && "Doesn't have exactly one pattern!");
     return Trees[0];
