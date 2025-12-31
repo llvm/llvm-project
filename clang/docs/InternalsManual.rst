@@ -2351,7 +2351,7 @@ different "from" contexts; in this case, they have to share the associated
 errors of the "to" context.
 
 When an error happens, that propagates through the call stack, through all the
-dependant nodes. However, in case of dependency cycles, this is not enough,
+dependent nodes. However, in case of dependency cycles, this is not enough,
 because we strive to mark the erroneous nodes so clients can act upon. In those
 cases, we have to keep track of the errors for those nodes which are
 intermediate nodes of a cycle.

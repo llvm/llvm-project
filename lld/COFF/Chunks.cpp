@@ -946,7 +946,7 @@ void ECCodeMapChunk::writeTo(uint8_t *buf) const {
   auto table = reinterpret_cast<chpe_range_entry *>(buf);
   for (uint32_t i = 0; i < map.size(); i++) {
     const ECCodeMapEntry &entry = map[i];
-    uint32_t start = entry.first->getRVA();
+    uint32_t start = entry.first->getRVA() & ~0xfff;
     table[i].StartOffset = start | entry.type;
     table[i].Length = entry.last->getRVA() + entry.last->getSize() - start;
   }

@@ -25,6 +25,7 @@ add_llvm_component_library(LLVMLTO
   CodeGen
   CodeGenTypes
   Core
+  DTLTO
   Extensions
   IPO
   InstCombine
@@ -34,6 +35,7 @@ add_llvm_component_library(LLVMLTO
   ObjCARC
   Object
   Passes
+  Plugins
   Remarks
   Scalar
   Support

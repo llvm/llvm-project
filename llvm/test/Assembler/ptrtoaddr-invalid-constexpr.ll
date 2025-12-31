@@ -51,6 +51,20 @@
 @g = global i32 ptrtoaddr (ptr @g to i32)
 ; DST_NOT_ADDR_SIZE-NEXT: PtrToAddr result must be address width
 ; DST_NOT_ADDR_SIZE-NEXT: i32 ptrtoaddr (ptr @g to i32)
-@g_vec = global <4 x i32> ptrtoaddr (<4 x ptr> <ptr @g, ptr @g, ptr @g, ptr @g> to <4 x i32>)
-; TODO: Verifier.cpp does not visit ConstantVector/ConstantStruct values
-; TODO-DST_NOT_ADDR_SIZE: PtrToAddr result must be address width
+@g_vec = global <4 x i32> ptrtoaddr (<4 x ptr> <ptr @g_vec, ptr @g_vec, ptr @g_vec, ptr @g_vec> to <4 x i32>)
+; DST_NOT_ADDR_SIZE-NEXT: PtrToAddr result must be address width
+; DST_NOT_ADDR_SIZE-NEXT: i32 ptrtoaddr (ptr @g_vec to i32)
+
+;--- dst_not_addr_size_in_inst.ll
+; RUN: not llvm-as %t/dst_not_addr_size_in_inst.ll -o /dev/null 2>&1 | FileCheck -check-prefix=DST_NOT_ADDR_SIZE_IN_INST %s --implicit-check-not="error:"
+; DST_NOT_ADDR_SIZE_IN_INST: PtrToAddr result must be address width
+; DST_NOT_ADDR_SIZE_IN_INST-NEXT: i32 ptrtoaddr (ptr @fn to i32)
+define i32 @fn() {
+    ret i32 ptrtoaddr (ptr @fn to i32)
+}
+
+; DST_NOT_ADDR_SIZE_IN_INST: PtrToAddr result must be address width
+; DST_NOT_ADDR_SIZE_IN_INST-NEXT: i32 ptrtoaddr (ptr @fn2 to i32)
+define <2 x i32> @fn2() {
+    ret <2 x i32> <i32 ptrtoaddr (ptr @fn2 to i32), i32 ptrtoaddr (ptr @fn2 to i32)>
+}

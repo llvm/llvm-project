@@ -1086,6 +1086,7 @@ public:
       const parser::Name &, const parser::InitialDataTarget &);
   void PointerInitialization(
       const parser::Name &, const parser::ProcPointerInit &);
+  bool CheckRank(const Symbol &symbol);
   bool CheckNonPointerInitialization(
       const parser::Name &, bool inLegacyDataInitialization);
   void NonPointerInitialization(
@@ -2152,6 +2153,8 @@ public:
   void Post(const parser::AssignStmt &);
   void Post(const parser::AssignedGotoStmt &);
   void Post(const parser::CompilerDirective &);
+
+  bool Pre(const parser::SectionSubscript &);
 
   // These nodes should never be reached: they are handled in ProgramUnit
   bool Pre(const parser::MainProgram &) {
@@ -3967,22 +3970,6 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     useProcedure = &useUltimate;
   }
 
-  // Creates a UseErrorDetails symbol in the current scope for a
-  // current UseDetails symbol, but leaves the UseDetails in the
-  // scope's name map.
-  auto CreateLocalUseError{[&]() {
-    EraseSymbol(*localSymbol);
-    CHECK(localSymbol->has<UseDetails>());
-    UseErrorDetails details{localSymbol->get<UseDetails>()};
-    details.add_occurrence(location, useSymbol);
-    Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
-    // Restore *localSymbol in currScope
-    auto iter{currScope().find(localName)};
-    CHECK(iter != currScope().end() && &*iter->second == newSymbol);
-    iter->second = MutableSymbolRef{*localSymbol};
-    return newSymbol;
-  }};
-
   // When two derived types arrived, try to combine them.
   const Symbol *combinedDerivedType{nullptr};
   if (!useDerivedType) {
@@ -4008,8 +3995,19 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       combinedDerivedType = localDerivedType;
     } else {
       // Create a local UseErrorDetails for the ambiguous derived type
-      if (localGeneric) {
-        combinedDerivedType = CreateLocalUseError();
+      if (localSymbol->has<UseDetails>() && localGeneric) {
+        // Creates a UseErrorDetails symbol in the current scope for a
+        // current UseDetails symbol, but leaves the UseDetails in the
+        // scope's name map.
+        UseErrorDetails details{localSymbol->get<UseDetails>()};
+        EraseSymbol(*localSymbol);
+        details.add_occurrence(location, useSymbol);
+        Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
+        // Restore *localSymbol in currScope
+        auto iter{currScope().find(localName)};
+        CHECK(iter != currScope().end() && &*iter->second == newSymbol);
+        iter->second = MutableSymbolRef{*localSymbol};
+        combinedDerivedType = newSymbol;
       } else {
         ConvertToUseError(*localSymbol, location, useSymbol);
         localDerivedType = nullptr;
@@ -7567,12 +7565,14 @@ void DeclarationVisitor::SetType(
   } else if (HadForwardRef(symbol)) {
     // error recovery after use of host-associated name
   } else if (!symbol.test(Symbol::Flag::Implicit)) {
-    SayWithDecl(
-        name, symbol, "The type of '%s' has already been declared"_err_en_US);
+    SayWithDecl(name, symbol,
+        "The type of '%s' has already been declared as %s"_err_en_US,
+        prevType->AsFortran());
     context().SetError(symbol);
   } else if (type != *prevType) {
     SayWithDecl(name, symbol,
-        "The type of '%s' has already been implicitly declared"_err_en_US);
+        "The type of '%s' has already been implicitly declared as %s"_err_en_US,
+        prevType->AsFortran());
     context().SetError(symbol);
   } else {
     symbol.set(Symbol::Flag::Implicit, false);
@@ -9055,6 +9055,12 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
     return;
   }
   Symbol &ultimate{name.symbol->GetUltimate()};
+  // Don't evaluate initializers for arrays with a rank greater than the
+  // maximum supported, to avoid running out of memory.
+  if (!CheckRank(ultimate)) {
+    return;
+  }
+
   // TODO: check C762 - all bounds and type parameters of component
   // are colons or constant expressions if component is initialized
   common::visit(
@@ -9179,6 +9185,18 @@ void DeclarationVisitor::PointerInitialization(
       }
     }
   }
+}
+
+bool DeclarationVisitor::CheckRank(const Symbol &symbol) {
+  if (auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (details->shape().Rank() > common::maxRank) {
+      Say(symbol.name(),
+          "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
+          symbol.name(), details->shape().Rank(), common::maxRank);
+      return false;
+    }
+  }
+  return true;
 }
 
 bool DeclarationVisitor::CheckNonPointerInitialization(
@@ -9694,12 +9712,20 @@ void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
     const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
         &stmt) {
   context().set_location(stmt.source);
-  const auto &[declTypeSpec, attrs, entities] = stmt.statement.value().t;
+  const auto &[declTypeSpec, attrs, entities]{stmt.statement.value().t};
   if (const auto *intrin{
           std::get_if<parser::IntrinsicTypeSpec>(&declTypeSpec.u)}) {
     if (const auto *intType{std::get_if<parser::IntegerTypeSpec>(&intrin->u)}) {
       if (const auto &kind{intType->v}) {
-        if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
+        if (const auto *call{parser::Unwrap<parser::Call>(*kind)}) {
+          if (!std::get<std::list<parser::ActualArgSpec>>(call->t).empty()) {
+            // Accept INTEGER(int_ptr_kind()), at least.  Don't allow a
+            // nonempty argument list, to prevent implicitly typing names
+            // that might appear.  (TODO: But maybe INTEGER(KIND(n)) after
+            // an explicit declaration of 'n' would be useful.)
+            return;
+          }
+        } else if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
             !parser::Unwrap<parser::IntLiteralConstant>(*kind)) {
           return;
         }
@@ -10080,6 +10106,7 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::VectorLength>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Unroll>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
@@ -10220,6 +10247,14 @@ template <typename A> std::set<SourceName> GetUses(const A &x) {
     }
   }
   return uses;
+}
+
+bool ResolveNamesVisitor::Pre(const parser::SectionSubscript &x) {
+  // Turn off "in EQUIVALENCE" check for array indexing, because
+  // the indices themselves are not part of the EQUIVALENCE.
+  auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
+  Walk(x.u);
+  return false;
 }
 
 bool ResolveNamesVisitor::Pre(const parser::Program &x) {
@@ -10616,11 +10651,13 @@ public:
 private:
   void Init(const parser::Name &name,
       const std::optional<parser::Initialization> &init) {
-    if (init) {
+    // Don't evaluate initializers for arrays with a rank greater than the
+    // maximum supported, to avoid running out of memory.
+    if (init && name.symbol && resolver_.CheckRank(*name.symbol)) {
       if (const auto *target{
               std::get_if<parser::InitialDataTarget>(&init->u)}) {
         resolver_.PointerInitialization(name, *target);
-      } else if (name.symbol) {
+      } else {
         if (const auto *object{name.symbol->detailsIf<ObjectEntityDetails>()};
             !object || !object->init()) {
           if (const auto *expr{std::get_if<parser::ConstantExpr>(&init->u)}) {

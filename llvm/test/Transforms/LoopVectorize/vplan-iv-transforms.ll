@@ -21,7 +21,7 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[STEPS:%.+]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%iv>
 ; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VEC_TC]]>
@@ -115,7 +115,8 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:   WIDEN store ir<%q>, ir<%y>
 ; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<[[SCALAR_PHI]]>, ir<8>
 ; CHECK-NEXT:   EMIT vp<%vec.ind.next> = add ir<%iv>, vp<[[BROADCAST_INC]]>
-; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:   EMIT vp<{{%.+}}> = icmp eq vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:   EMIT branch-on-cond vp<{{%.+}}>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 entry:
   br label %loop

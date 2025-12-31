@@ -708,6 +708,11 @@ private:
         IsCpp && !IsCpp11AttributeSpecifier && !IsCSharpAttributeSpecifier &&
         Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         CurrentToken->isNoneOf(tok::l_brace, tok::r_square) &&
+        // Do not consider '[' after a comma inside a braced initializer the
+        // start of an ObjC method expression. In braced initializer lists,
+        // commas are list separators and should not trigger ObjC parsing.
+        (!Parent || !Parent->is(tok::comma) ||
+         Contexts.back().ContextKind != tok::l_brace) &&
         (!Parent ||
          Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
                          tok::kw_return, tok::kw_throw) ||
@@ -3032,10 +3037,8 @@ private:
     auto *NextToken = Tok.getNextNonComment();
     if (!NextToken)
       return TT_PointerOrReference;
-    if (NextToken->is(tok::greater)) {
-      NextToken->setFinalizedType(TT_TemplateCloser);
+    if (NextToken->is(tok::greater))
       return TT_PointerOrReference;
-    }
 
     if (InTemplateArgument && NextToken->is(tok::kw_noexcept))
       return TT_BinaryOperator;
@@ -3129,8 +3132,11 @@ private:
 
     // It is very unlikely that we are going to find a pointer or reference type
     // definition on the RHS of an assignment.
-    if (IsExpression && !Contexts.back().CaretFound)
+    if (IsExpression && !Contexts.back().CaretFound &&
+        Line.getFirstNonComment()->isNot(
+            TT_RequiresClauseInARequiresExpression)) {
       return TT_BinaryOperator;
+    }
 
     // Opeartors at class scope are likely pointer or reference members.
     if (!Scopes.empty() && Scopes.back() == ST_Class)
@@ -3660,6 +3666,39 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
   return Result;
 }
 
+// Returns the token after the first qualifier of the name, or nullptr if there
+// is no qualifier.
+static FormatToken *skipNameQualifier(const FormatToken *Tok) {
+  assert(Tok);
+
+  // Qualified names must start with an identifier.
+  if (Tok->isNot(tok::identifier))
+    return nullptr;
+
+  Tok = Tok->getNextNonComment();
+  if (!Tok)
+    return nullptr;
+
+  // Consider:       A::B::B()
+  //            Tok --^
+  if (Tok->is(tok::coloncolon))
+    return Tok->getNextNonComment();
+
+  // Consider:       A<float>::B<int>::B()
+  //            Tok --^
+  if (Tok->is(TT_TemplateOpener)) {
+    Tok = Tok->MatchingParen;
+    if (!Tok)
+      return nullptr;
+
+    Tok = Tok->getNextNonComment();
+    if (!Tok)
+      return nullptr;
+  }
+
+  return Tok->is(tok::coloncolon) ? Tok->getNextNonComment() : nullptr;
+}
+
 // Returns the name of a function with no return type, e.g. a constructor or
 // destructor.
 static FormatToken *getFunctionName(const AnnotatedLine &Line,
@@ -3670,7 +3709,7 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     if (Tok->is(TT_AttributeLSquare)) {
       Tok = Tok->MatchingParen;
       if (!Tok)
-        break;
+        return nullptr;
       continue;
     }
 
@@ -3689,31 +3728,49 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
       continue;
     }
 
+    // Skip past template typename declarations that may precede the
+    // constructor/destructor name.
+    if (Tok->is(tok::kw_template)) {
+      Tok = Tok->getNextNonComment();
+      if (!Tok)
+        return nullptr;
+
+      // If the next token after the template keyword is not an opening bracket,
+      // it is a template instantiation, and not a function.
+      if (Tok->isNot(TT_TemplateOpener))
+        return nullptr;
+
+      Tok = Tok->MatchingParen;
+      if (!Tok)
+        return nullptr;
+
+      continue;
+    }
+
     // A qualified name may start from the global namespace.
     if (Tok->is(tok::coloncolon)) {
       Tok = Tok->Next;
       if (!Tok)
-        break;
+        return nullptr;
     }
 
     // Skip to the unqualified part of the name.
-    while (Tok->startsSequence(tok::identifier, tok::coloncolon)) {
-      assert(Tok->Next);
-      Tok = Tok->Next->Next;
-      if (!Tok)
-        return nullptr;
-    }
+    while (auto *Next = skipNameQualifier(Tok))
+      Tok = Next;
+
+    if (!Tok)
+      return nullptr;
 
     // Skip the `~` if a destructor name.
     if (Tok->is(tok::tilde)) {
       Tok = Tok->Next;
       if (!Tok)
-        break;
+        return nullptr;
     }
 
     // Make sure the name is not already annotated, e.g. as NamespaceMacro.
     if (Tok->isNot(tok::identifier) || Tok->isNot(TT_Unknown))
-      break;
+      return nullptr;
 
     Name = Tok;
   }
@@ -3729,10 +3786,18 @@ static bool isCtorOrDtorName(const FormatToken *Tok) {
   if (Prev && Prev->is(tok::tilde))
     Prev = Prev->Previous;
 
-  if (!Prev || !Prev->endsSequence(tok::coloncolon, tok::identifier))
+  // Consider: A::A() and A<int>::A()
+  if (!Prev || (!Prev->endsSequence(tok::coloncolon, tok::identifier) &&
+                !Prev->endsSequence(tok::coloncolon, TT_TemplateCloser))) {
     return false;
+  }
 
   assert(Prev->Previous);
+  if (Prev->Previous->is(TT_TemplateCloser) && Prev->Previous->MatchingParen) {
+    Prev = Prev->Previous->MatchingParen;
+    assert(Prev->Previous);
+  }
+
   return Prev->Previous->TokenText == Tok->TokenText;
 }
 
@@ -5030,8 +5095,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     // Space between import <iostream>.
     // or import .....;
-    if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
+    if (Left.is(Keywords.kw_import) &&
+        Right.isOneOf(tok::less, tok::ellipsis) &&
+        (!BeforeLeft || BeforeLeft->is(tok::kw_export))) {
       return true;
+    }
     // Space between `module :` and `import :`.
     if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
         Right.is(TT_ModulePartitionColon)) {

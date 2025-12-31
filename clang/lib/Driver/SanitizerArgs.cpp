@@ -55,7 +55,7 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
     SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
     SanitizerKind::NumericalStability | SanitizerKind::Vptr |
-    SanitizerKind::CFI;
+    SanitizerKind::CFI | SanitizerKind::AllocToken;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
@@ -358,7 +358,7 @@ bool SanitizerArgs::needsFuzzerInterceptors() const {
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsNsanRt() || needsHwasanRt() ||
-      needsTsanRt() || needsDfsanRt() || needsLsanRt() ||
+      needsTsanRt() || needsDfsanRt() || needsLsanRt() || needsTysanRt() ||
       needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
@@ -419,10 +419,16 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   const Driver &D = TC.getDriver();
   SanitizerMask TrappingKinds = parseSanitizeTrapArgs(D, Args, DiagnoseErrors);
   SanitizerMask InvalidTrappingKinds = TrappingKinds & NotAllowedWithTrap;
+  const llvm::Triple &Triple = TC.getTriple();
 
   MinimalRuntime =
       Args.hasFlag(options::OPT_fsanitize_minimal_runtime,
                    options::OPT_fno_sanitize_minimal_runtime, MinimalRuntime);
+  HandlerPreserveAllRegs =
+      Args.hasFlag(options::OPT_fsanitize_handler_preserve_all_regs,
+                   options::OPT_fno_sanitize_handler_preserve_all_regs,
+                   HandlerPreserveAllRegs) &&
+      MinimalRuntime && (Triple.isAArch64() || Triple.isX86_64());
 
   // The object size sanitizer should not be enabled at -O0.
   Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
@@ -490,7 +496,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       // -fsanitize=function and -fsanitize=kcfi instrument indirect function
       // calls to load a type hash before the function label. Therefore, an
       // execute-only target doesn't support the function and kcfi sanitizers.
-      const llvm::Triple &Triple = TC.getTriple();
       if (isExecuteOnlyTarget(Triple, Args)) {
         if (SanitizerMask KindsToDiagnose =
                 Add & NotAllowedWithExecuteOnly & ~DiagnosedKinds) {
@@ -1176,6 +1181,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         options::OPT_fno_sanitize_alloc_token_extended, AllocTokenExtended);
   }
 
+  if (AllAddedKinds & SanitizerKind::Type) {
+    TysanOutlineInstrumentation =
+        Args.hasFlag(options::OPT_fsanitize_type_outline_instrumentation,
+                     options::OPT_fno_sanitize_type_outline_instrumentation,
+                     TysanOutlineInstrumentation);
+  }
+
   LinkRuntimes = Args.hasFlag(options::OPT_fsanitize_link_runtime,
                               options::OPT_fno_sanitize_link_runtime,
                               !Args.hasArg(options::OPT_r));
@@ -1469,6 +1481,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (MinimalRuntime)
     CmdArgs.push_back("-fsanitize-minimal-runtime");
 
+  if (HandlerPreserveAllRegs)
+    CmdArgs.push_back("-fsanitize-handler-preserve-all-regs");
+
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +
                                          Twine(AsanFieldPadding)));
@@ -1498,6 +1513,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanOutlineInstrumentation) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-asan-instrumentation-with-call-threshold=0");
+  }
+
+  if (!TysanOutlineInstrumentation) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-tysan-outline-instrumentation=false");
   }
 
   // When emitting Stable ABI instrumentation, force outlining calls and avoid

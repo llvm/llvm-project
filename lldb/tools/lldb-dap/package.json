@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.18",
+  "version": "0.4.1",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -727,6 +727,11 @@
                 "description": "If set to true, then wait for the process to launch by looking for a process with a basename that matches `program`. No process ID needs to be specified when using this flag.",
                 "default": true
               },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop after attach.",
+                "default": false
+              },
               "sourcePath": {
                 "type": "string",
                 "description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
@@ -777,6 +782,10 @@
                 },
                 "description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail.",
                 "default": []
+              },
+              "targetId": {
+                "type": "number",
+                "description": "The globally unique target id to attach to. Used when a target is dynamically created."
               },
               "initCommands": {
                 "type": "array",

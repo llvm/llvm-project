@@ -81,6 +81,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::exp:
   case Intrinsic::exp10:
   case Intrinsic::exp2:
+  case Intrinsic::frexp:
   case Intrinsic::ldexp:
   case Intrinsic::log:
   case Intrinsic::log10:
@@ -129,10 +130,7 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 
-  // TODO: Move frexp to isTriviallyVectorizable.
-  // https://github.com/llvm/llvm-project/issues/112408
   switch (ID) {
-  case Intrinsic::frexp:
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::ssub_with_overflow:
@@ -317,9 +315,9 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 
   if (InsertElementInst *III = dyn_cast<InsertElementInst>(V)) {
     // If this is an insert to a variable element, we don't know what it is.
-    if (!isa<ConstantInt>(III->getOperand(2)))
+    uint64_t IIElt;
+    if (!match(III->getOperand(2), m_ConstantInt(IIElt)))
       return nullptr;
-    unsigned IIElt = cast<ConstantInt>(III->getOperand(2))->getZExtValue();
 
     // If this is an insert to the element we are looking for, return the
     // inserted value.
@@ -1084,6 +1082,10 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
   for (auto &[Kind, MD] : Metadata) {
+    // Skip MMRA metadata if the instruction cannot have it.
+    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Inst))
+      continue;
+
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
