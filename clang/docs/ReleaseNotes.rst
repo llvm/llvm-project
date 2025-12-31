@@ -383,6 +383,7 @@ clang-format
 
 libclang
 --------
+- visit identifier initializers in lambda capture as VarDecl
 
 Code Completion
 ---------------
