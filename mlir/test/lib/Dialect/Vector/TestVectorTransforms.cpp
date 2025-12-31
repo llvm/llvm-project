@@ -51,8 +51,8 @@ struct TestVectorToVectorLowering
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<affine::AffineDialect>();
-    registry.insert<vector::VectorDialect>();
+    registry.insert<affine::AffineDialect, arith::ArithDialect,
+                    vector::VectorDialect>();
   }
 
   Option<bool> unroll{*this, "unroll", llvm::cl::desc("Include unrolling"),
@@ -149,6 +149,9 @@ struct TestVectorUnrollingPatterns
   StringRef getDescription() const final {
     return "Test lowering patterns to unroll contract ops in the vector "
            "dialect";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect>();
   }
   TestVectorUnrollingPatterns() = default;
   TestVectorUnrollingPatterns(const TestVectorUnrollingPatterns &pass)

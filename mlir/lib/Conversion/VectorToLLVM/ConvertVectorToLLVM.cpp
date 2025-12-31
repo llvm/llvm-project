@@ -1088,6 +1088,161 @@ public:
   }
 };
 
+/// VectorExtractOpConversion rewritten to use 1:N conversion.
+///
+/// Handles the same cases as VectorExtractOp:
+/// * Mostly static indices (with the exception of the innermost dimension index
+///   which can be used to select a scalar.
+///
+/// Translates:
+///
+/// ```mlir
+/// %tgt = vector.extract %src[0] : vector<2xf32> from vector<2x2xf32>
+/// ```
+///
+/// Since 1:N conversion is used, src is now a collection of vectors.
+/// and target will be replaced (without any operations) into the correct
+/// vector from the collection. Following the example above:
+///
+/// %src : {vector<2xf32>, vector<2xf32>}
+/// %tgt = %src[0]
+///
+/// This pattern will insert operations only when extracting scalars.
+/// For example:
+///
+/// ```mlir
+/// %scalar = vector.extract %src[%idx] : f32 from vector<2xf32>
+/// ```
+///
+/// %src : {vector<2xf32>}
+/// %tgt = %src[0]
+///
+/// ```mlir
+/// %scalar = llvm.extractelement %tgt[%idx]
+/// ```
+///
+/// There is another case not present in VectorExtractOp where the left hand
+/// side of the statement is written into multiple operations. E.g.,
+///
+/// ```mlir
+/// %vec = vector.extract %nd[0] : vector<2x2xf32> from vector<2x2x2xf32>
+/// ```
+///
+/// In this case, source is a collection of four vector<2xf32> and target
+/// is a collection of two vector<2xf32>
+///
+/// %src : {vector<2xf32>, vector<2xf32>, vector<2xf32>, vector<2xf32>}
+/// %tgt : {%src[0], %src[1]}
+class VectorExtractOneToNOpConversion
+    : public ConvertOpToLLVMPattern<vector::ExtractOp> {
+public:
+  using ConvertOpToLLVMPattern<vector::ExtractOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ExtractOp extractOp, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type resultType = extractOp.getResult().getType();
+    SmallVector<Type> llvmResultTypes;
+    if (failed(typeConverter->convertType(resultType, llvmResultTypes)))
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "expected conversion to succeed.");
+
+    // Unlike VectorExtractOpConversion, dynamicPositions may
+    // be multiple values, even though we don't realistically expect that.
+    // Let's just verify our assumptions and get the input into a single
+    // SmallVector.
+    ArrayRef<ValueRange> dynamicPositions = adaptor.getDynamicPosition();
+    SmallVector<Value> dynamicPositionsSafe;
+    for (auto dynamicPosition : dynamicPositions)
+      if (dynamicPosition.size() > 1)
+        return rewriter.notifyMatchFailure(
+            extractOp, "expected single value in dynamic position.");
+      else
+        dynamicPositionsSafe.push_back(dynamicPosition[0]);
+
+    auto loc = extractOp->getLoc();
+    SmallVector<OpFoldResult> positionVec = getMixedValues(
+        adaptor.getStaticPosition(), dynamicPositionsSafe, rewriter);
+
+    // The Vector -> LLVM 1:N lowering models N-D vectors as a collection of
+    // 1-d vectors. We do this conversion by:
+    //  - Selecting the correct values that correspond to the target vector.
+    //    No operations are produced at this stage.
+    //  - Extract a scalar out of the vector if needed. This is done using
+    //   `llvm.extractelement`.
+
+    // Determine if we need to extract a scalar as the result. We extract
+    // a scalar if the extract is full rank, i.e., the number of indices is
+    // equal to source vector rank.
+    bool extractsScalar = static_cast<int64_t>(positionVec.size()) ==
+                          extractOp.getSourceVectorType().getRank();
+
+    // Since the LLVM type converter converts 0-d vectors to 1-d vectors, we
+    // need to add a position for this change.
+    VectorType sourceTy = extractOp.getSourceVectorType();
+    bool isZeroRank = sourceTy.getRank() == 0;
+    if (isZeroRank) {
+      Type idxType = typeConverter->convertType(rewriter.getIndexType());
+      positionVec.push_back(rewriter.getZeroAttr(idxType));
+    }
+
+    ArrayRef<int64_t> sourceShape = sourceTy.getShape();
+
+    SmallVector<int64_t> strides(sourceShape);
+    if (!isZeroRank)
+      strides[strides.size() - 1] = 1;
+    else
+      strides.push_back(1);
+
+    for (int64_t i = strides.size() - 2; i >= 0; --i)
+      strides[i] *= strides[i + 1];
+
+    // Unlike VectorExtractOp, a source here will be a SmallVector<Value>
+    SmallVector<Value> extracted = adaptor.getSource();
+    ArrayRef<Value> selected;
+
+    ArrayRef<OpFoldResult> position(positionVec);
+
+    // If we are extracting a scalar from the extracted member, we drop
+    // the last index, which will be used to extract the scalar out of the
+    // vector.
+    if (extractsScalar)
+      position = position.drop_back();
+
+    if (!llvm::all_of(position, llvm::IsaPred<Attribute>))
+      return rewriter.notifyMatchFailure(
+          extractOp, "expected leading indices to be statically known.");
+
+    SmallVector<int64_t> positionInts = getAsIntegers(position);
+
+    int64_t linearIdx = 0;
+    for (auto [offset, coeff] :
+         llvm::zip(llvm::reverse(positionInts), llvm::reverse(strides)))
+      linearIdx += offset * coeff;
+
+    selected =
+        ArrayRef<Value>(extracted).slice(linearIdx, llvmResultTypes.size());
+
+    if (extractsScalar && selected.size() != 1)
+      return rewriter.notifyMatchFailure(
+          extractOp, "expected selected vectors to be a single vector");
+
+    SmallVector<Value> replacements;
+    if (extractsScalar) {
+      Value scalar = LLVM::ExtractElementOp::create(
+          rewriter, loc, selected[0],
+          getAsLLVMValue(rewriter, loc, positionVec.back()));
+      replacements.push_back(scalar);
+    } else {
+      replacements = SmallVector<Value>(selected);
+    }
+
+    rewriter.replaceOpWithMultiple(extractOp, {replacements});
+    return success();
+  }
+};
+
 class VectorExtractOpConversion
     : public ConvertOpToLLVMPattern<vector::ExtractOp> {
 public:
@@ -1187,6 +1342,156 @@ public:
 
     rewriter.replaceOpWithNewOp<LLVM::FMulAddOp>(
         fmaOp, adaptor.getLhs(), adaptor.getRhs(), adaptor.getAcc());
+    return success();
+  }
+};
+
+/// VectorInsertOpConversion rewritten to use 1:N conversion.
+///
+/// Handles the same cases as VectorInsertOp:
+/// * Mostly static indices (with the exception of the innermost dimension index
+///   which can be used to select a scalar.
+///
+/// ```mlir
+/// %upd = vector.insert %src, %tgt[0] : vector<2xf32> into vector<2x2xf32>
+/// ```
+///
+/// Since 1:N conversion is used, src and tgt may now be a collection of
+/// vectors. Update will be replaced into the correct vectors from src and tgt
+/// the collection. Following the example above:
+///
+/// %src : {vector<2xf32>}
+/// %tgt : {vector<2x2xf32>, vector<2x2xf32>}
+/// %upd : {%src[0], %tgt[1]}
+///
+/// This pattern will insert operations only when inserting scalars.
+/// For example:
+///
+/// ```mlir
+/// %upd = vector.insert %src, tgt[%idx] : f32 into vector<2xf32>
+/// ```
+///
+/// %src : {f32}
+/// %tgt : {vector<2xf32>}
+///
+/// ```mlir
+/// %upd = llvm.insertelement %src, %tgt[%idx] : vector<2xf32>
+/// ```
+class VectorInsertOneToNOpConversion
+    : public ConvertOpToLLVMPattern<vector::InsertOp> {
+public:
+  using ConvertOpToLLVMPattern<vector::InsertOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InsertOp insertOp, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto loc = insertOp->getLoc();
+    auto destVectorType = insertOp.getDestVectorType();
+    SmallVector<Type> llvmResultTypes;
+    if (failed(typeConverter->convertType(destVectorType, llvmResultTypes)))
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "expected conversion to succeed.");
+
+    // Unlike VectorInsertOpConversion, dynamicPositions may
+    // be multiple values, even though we don't realistically expect that.
+    // Let's just verify our assumptions and get the input into a single
+    // SmallVector.
+    ArrayRef<ValueRange> dynamicPositions = adaptor.getDynamicPosition();
+    SmallVector<Value> dynamicPositionsSafe;
+    for (auto dynamicPosition : dynamicPositions)
+      if (dynamicPosition.size() > 1)
+        return rewriter.notifyMatchFailure(
+            insertOp, "expected single value in dynamic position.");
+      else
+        dynamicPositionsSafe.push_back(dynamicPosition[0]);
+
+    SmallVector<OpFoldResult> positionVec = getMixedValues(
+        adaptor.getStaticPosition(), dynamicPositionsSafe, rewriter);
+
+    // The logic in this pattern mirrors VectorExtractOneToNOpConversion. Refer
+    // to its explanatory comment about how N-D vectors are converted to a
+    // collection of vectors.
+    //
+    // The innermost dimension of the destination vector, when converted to a
+    // collection of vectors, will always be a 1D vector.
+    //
+    // * If the insertion is happening into the innermost dimension of the
+    //   destination vector:
+    //   - Select the appropriate vectors that correspond to the position
+    //   indices.
+    //     Unlike VectorInsertOpConversion, the inserted element may be
+    //     converted to multiple values.
+    //   - From the selection just done, use the innermost dimension's index
+    //     to decide where to insert. This is done with
+    //     llvm.insertelement.
+    // * Return the original destination vector but with the elements selected
+    //   above replacing the original ones.
+
+    // Determine if we need to insert a scalar into the 1D vector.
+    bool insertIntoInnermostDim =
+        static_cast<int64_t>(positionVec.size()) == destVectorType.getRank();
+
+    bool isZeroRank = destVectorType.getRank() == 0;
+
+    ArrayRef<OpFoldResult> positionOf1DVector(
+        positionVec.begin(), insertIntoInnermostDim && !isZeroRank
+                                 ? positionVec.size() - 1
+                                 : positionVec.size());
+
+    if (!llvm::all_of(positionOf1DVector, llvm::IsaPred<Attribute>))
+      return rewriter.notifyMatchFailure(
+          insertOp,
+          "dynamic dimensions are not supported for picking 1d vectors.");
+
+    OpFoldResult positionOfScalarWithin1DVector;
+    if (isZeroRank) {
+      // Since the LLVM type converter converts 0D vectors to 1D vectors, we
+      // need to create a 0 here as the position into the 1D vector.
+      Type idxType = typeConverter->convertType(rewriter.getIndexType());
+      positionOfScalarWithin1DVector = rewriter.getZeroAttr(idxType);
+    } else if (insertIntoInnermostDim) {
+      positionOfScalarWithin1DVector = positionVec.back();
+    }
+
+    ArrayRef<int64_t> destShape = destVectorType.getShape();
+    SmallVector<int64_t> strides(destShape);
+    if (!isZeroRank)
+      strides[strides.size() - 1] = 1;
+    else
+      strides.push_back(1);
+
+    for (int64_t i = strides.size() - 2; i >= 0; --i)
+      strides[i] *= strides[i + 1];
+
+    SmallVector<int64_t> positionInts = getAsIntegers(positionOf1DVector);
+    int64_t linearIdx = 0;
+    for (auto [offset, coeff] :
+         llvm::zip(llvm::reverse(positionInts), llvm::reverse(strides)))
+      linearIdx += offset * coeff;
+
+    SmallVector<Value> sources = adaptor.getValueToStore();
+    SmallVector<Value> dests = adaptor.getDest();
+
+    SmallVector<Value> selected(
+        ArrayRef<Value>(dests).slice(linearIdx, sources.size()));
+
+    if (insertIntoInnermostDim) {
+      assert(selected.size() == 1 && "expected selected to be a scalar");
+      Value destVector = selected[0];
+      assert(sources.size() == 1 && "expected to to store one scalar");
+      Value scalar = sources[0];
+
+      // Insert the scalar into the 1D vector.
+      sources[0] = LLVM::InsertElementOp::create(
+          rewriter, loc, destVector.getType(), destVector, scalar,
+          getAsLLVMValue(rewriter, loc, positionOfScalarWithin1DVector));
+    }
+
+    for (auto [idx, val] : llvm::enumerate(sources))
+      dests[linearIdx + idx] = val;
+
+    rewriter.replaceOpWithMultiple(insertOp, {dests});
     return success();
   }
 };
@@ -2196,10 +2501,12 @@ void mlir::vector::populateVectorTransposeToFlatTranspose(
 }
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
-void mlir::populateVectorToLLVMConversionPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool reassociateFPReductions, bool force32BitVectorIndices,
-    bool useVectorAlignment) {
+void mlir::populateVectorToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                                  RewritePatternSet &patterns,
+                                                  bool reassociateFPReductions,
+                                                  bool force32BitVectorIndices,
+                                                  bool useVectorAlignment,
+                                                  bool enableOneToNConversion) {
   // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
@@ -2211,8 +2518,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorGatherOpConversion, VectorScatterOpConversion>(
       converter, useVectorAlignment);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
-               VectorExtractOpConversion, VectorFMAOp1DConversion,
-               VectorInsertOpConversion, VectorPrintOpConversion,
+               VectorFMAOp1DConversion, VectorPrintOpConversion,
                VectorTypeCastOpConversion, VectorScaleOpConversion,
                VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,
                VectorBroadcastScalarToLowRankLowering,
@@ -2222,6 +2528,77 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
                VectorToElementsLowering, VectorScalableStepOpLowering>(
       converter);
+  if (enableOneToNConversion)
+    patterns
+        .add<VectorInsertOneToNOpConversion, VectorExtractOneToNOpConversion>(
+            converter);
+  else
+    patterns.add<VectorInsertOpConversion, VectorExtractOpConversion>(
+        converter);
+
+  if (enableOneToNConversion) {
+    converter.addConversion(
+        [&](VectorType type,
+            SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+          auto elementType = converter.convertType(type.getElementType());
+          if (!elementType)
+            return failure();
+          if (type.getShape().empty()) {
+            result.push_back(VectorType::get({1}, elementType));
+            return success();
+          }
+          Type vectorType = VectorType::get(type.getShape().back(), elementType,
+                                            type.getScalableDims().back());
+          assert(LLVM::isCompatibleVectorType(vectorType) &&
+                 "expected vector type compatible with the LLVM dialect");
+          // For n-D vector types for which a _non-trailing_ dim is scalable,
+          // return a failure. Supporting such cases would require LLVM
+          // to support something akin "scalable arrays" of vectors.
+          if (llvm::is_contained(type.getScalableDims().drop_back(), true))
+            return failure();
+
+          ArrayRef<int64_t> shapeLeadingDims = type.getShape().drop_back();
+          int64_t numVectors = ShapedType::getNumElements(shapeLeadingDims);
+          for (int64_t i = 0; i < numVectors; i++)
+            result.push_back(vectorType);
+
+          return success();
+        });
+    converter.addTargetMaterialization(
+        [&](OpBuilder &builder, TypeRange resultTypes, ValueRange inputs,
+            Location loc) -> SmallVector<Value> {
+          // from ('vector<4x4xf32>')
+          // to ('vector<4xf32>', 'vector<4xf32>', 'vector<4xf32>',
+          // 'vector<4xf32>')
+          Type ty = resultTypes[0];
+          for (Type ithTy : resultTypes)
+            if (ithTy != ty)
+              return {};
+
+          if (!isa<VectorType>(ty))
+            return {};
+
+          if (inputs.size() != 1)
+            return {};
+
+          Type inputTy = inputs[0].getType();
+          if (!isa<VectorType>(inputTy))
+            return {};
+
+          VectorType inputVectorTy = cast<VectorType>(inputTy);
+          ArrayRef<int64_t> inputShape = inputVectorTy.getShape();
+          size_t numElements =
+              !inputShape.empty()
+                  ? ShapedType::getNumElements(inputShape.drop_back())
+                  : 1;
+          if (numElements != resultTypes.size())
+            return {};
+
+          return UnrealizedConversionCastOp::create(builder, loc, resultTypes,
+                                                    inputs)
+              .getResults();
+        });
+  }
 }
 
 namespace {
