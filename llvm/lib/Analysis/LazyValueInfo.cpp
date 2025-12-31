@@ -891,6 +891,7 @@ private:
     // Try to merge with the previous interval
     if (It != Intervals.begin()) {
       auto Prev = std::prev(It);
+      // Can reference as the It is updated at last
       const auto &[PrevL, PrevU] = *Prev;
       assert(PrevL.ule(L) && "Prev.L should be <= Cur.L");
       //  L---------U      : PrevR
@@ -920,7 +921,8 @@ private:
     // Merge all Next intervals with NextR.L <= U
     while (It != Intervals.end()) {
       assert(!U.isZero() && "U is zero should be handled earlier");
-      const auto &[NextL, NextU] = *It;
+      // Cannot reference as the It is NOT updated at last
+      const auto [NextL, NextU] = *It;
       // If U < NextL, stop
       if (U.ult(NextL))
         break;
