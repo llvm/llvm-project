@@ -202,17 +202,15 @@ public:
 
   pint_t getEncodedP(pint_t &addr, pint_t end, uint8_t encoding,
                      pint_t datarelBase = 0, pint_t *resultAddr = nullptr);
-  // Note: R::link_reg_arg_t is used intentionally instead of `pint_t` to keep
-  // signature of `__ptrauth`-qualified values of `link_reg_t` type on AArch64
-  // PAuth-enabled ABI intact. See corresponding typedefs in `Registers_arm64`.
   template <typename R>
-  bool findFunctionName(typename R::link_reg_arg_t addr, char *buf,
+  bool findFunctionName(typename R::link_hardened_reg_arg_t addr, char *buf,
                         size_t bufLen, unw_word_t *offset);
   template <typename R>
-  bool findUnwindSections(typename R::link_reg_arg_t targetAddr,
+  bool findUnwindSections(typename R::link_hardened_reg_arg_t targetAddr,
                           UnwindInfoSections &info);
   template <typename R>
-  bool findOtherFDE(typename R::link_reg_arg_t targetAddr, pint_t &fde);
+  bool findOtherFDE(typename R::link_hardened_reg_arg_t targetAddr,
+                    pint_t &fde);
 
   static LocalAddressSpace sThisAddressSpace;
 };
@@ -505,9 +503,8 @@ static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
 #endif  // defined(_LIBUNWIND_USE_DL_ITERATE_PHDR)
 
 template <typename R>
-inline bool
-LocalAddressSpace::findUnwindSections(typename R::link_reg_arg_t targetAddr,
-                                      UnwindInfoSections &info) {
+inline bool LocalAddressSpace::findUnwindSections(
+    typename R::link_hardened_reg_arg_t targetAddr, UnwindInfoSections &info) {
 #ifdef __APPLE__
   dyld_unwind_sections dyldInfo;
   if (_dyld_find_unwind_sections((void *)targetAddr, &dyldInfo)) {
@@ -679,7 +676,7 @@ LocalAddressSpace::findUnwindSections(typename R::link_reg_arg_t targetAddr,
 
 template <typename R>
 inline bool
-LocalAddressSpace::findOtherFDE(typename R::link_reg_arg_t targetAddr,
+LocalAddressSpace::findOtherFDE(typename R::link_hardened_reg_arg_t targetAddr,
                                 pint_t &fde) {
   // TO DO: if OS has way to dynamically register FDEs, check that.
   (void)targetAddr;
@@ -688,9 +685,10 @@ LocalAddressSpace::findOtherFDE(typename R::link_reg_arg_t targetAddr,
 }
 
 template <typename R>
-inline bool LocalAddressSpace::findFunctionName(typename R::link_reg_arg_t addr,
-                                                char *buf, size_t bufLen,
-                                                unw_word_t *offset) {
+inline bool
+LocalAddressSpace::findFunctionName(typename R::link_hardened_reg_arg_t addr,
+                                    char *buf, size_t bufLen,
+                                    unw_word_t *offset) {
 #if _LIBUNWIND_USE_DLADDR
   Dl_info dyldInfo;
   if (dladdr((void *)addr, &dyldInfo)) {

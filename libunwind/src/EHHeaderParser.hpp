@@ -37,12 +37,8 @@ public:
 
   static bool decodeEHHdr(A &addressSpace, pint_t ehHdrStart, pint_t ehHdrEnd,
                           EHHeaderInfo &ehHdrInfo);
-
-  // Note: R::link_reg_arg_t is used intentionally instead of `pint_t` to keep
-  // signature of `__ptrauth`-qualified values of `link_reg_t` type on AArch64
-  // PAuth-enabled ABI intact. See corresponding typedefs in `Registers_arm64`.
   template <typename R>
-  static bool findFDE(A &addressSpace, typename R::link_reg_arg_t pc,
+  static bool findFDE(A &addressSpace, typename R::link_hardened_reg_arg_t pc,
                       pint_t ehHdrStart, uint32_t sectionLength,
                       typename CFI_Parser<A>::FDE_Info *fdeInfo,
                       typename CFI_Parser<A>::CIE_Info *cieInfo);
@@ -118,7 +114,8 @@ bool EHHeaderParser<A>::decodeTableEntry(
 
 template <typename A>
 template <typename R>
-bool EHHeaderParser<A>::findFDE(A &addressSpace, typename R::link_reg_arg_t pc,
+bool EHHeaderParser<A>::findFDE(A &addressSpace,
+                                typename R::link_hardened_reg_arg_t pc,
                                 pint_t ehHdrStart, uint32_t sectionLength,
                                 typename CFI_Parser<A>::FDE_Info *fdeInfo,
                                 typename CFI_Parser<A>::CIE_Info *cieInfo) {

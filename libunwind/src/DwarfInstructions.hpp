@@ -33,10 +33,8 @@ public:
   typedef typename A::pint_t pint_t;
   typedef typename A::sint_t sint_t;
 
-  // Note: R::link_reg_arg_t is used intentionally instead of `pint_t` to keep
-  // signature of `__ptrauth`-qualified values of `link_reg_t` type on AArch64
-  // PAuth-enabled ABI intact. See corresponding typedefs in `Registers_arm64`.
-  static int stepWithDwarf(A &addressSpace, typename R::link_reg_arg_t pc,
+  static int stepWithDwarf(A &addressSpace,
+                           typename R::link_hardened_reg_arg_t pc,
                            pint_t fdeStart, R &registers, bool &isSignalFrame,
                            bool stage2);
 
@@ -211,10 +209,9 @@ bool DwarfInstructions<A, R>::isReturnAddressSignedWithPC(A &addressSpace,
 #endif
 
 template <typename A, typename R>
-int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
-                                           typename R::link_reg_arg_t pc,
-                                           pint_t fdeStart, R &registers,
-                                           bool &isSignalFrame, bool stage2) {
+int DwarfInstructions<A, R>::stepWithDwarf(
+    A &addressSpace, typename R::link_hardened_reg_arg_t pc, pint_t fdeStart,
+    R &registers, bool &isSignalFrame, bool stage2) {
   FDE_Info fdeInfo;
   CIE_Info cieInfo;
   if (CFI_Parser<A>::decodeFDE(addressSpace, fdeStart, &fdeInfo,

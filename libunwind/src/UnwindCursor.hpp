@@ -121,12 +121,8 @@ class _LIBUNWIND_HIDDEN DwarfFDECache {
   typedef typename A::pint_t pint_t;
 public:
   static constexpr pint_t kSearchAll = static_cast<pint_t>(-1);
-
-  // Note: R::link_reg_arg_t is used intentionally instead of `pint_t` to keep
-  // signature of `__ptrauth`-qualified values of `link_reg_t` type on AArch64
-  // PAuth-enabled ABI intact. See corresponding typedefs in `Registers_arm64`.
   template <typename R>
-  static pint_t findFDE(pint_t mh, typename R::link_reg_arg_t pc);
+  static pint_t findFDE(pint_t mh, typename R::link_hardened_reg_arg_t pc);
 
   static void add(pint_t mh, pint_t ip_start, pint_t ip_end, pint_t fde);
   static void removeAllIn(pint_t mh);
@@ -182,7 +178,7 @@ bool DwarfFDECache<A>::_registeredForDyldUnloads = false;
 template <typename A>
 template <typename R>
 typename DwarfFDECache<A>::pint_t
-DwarfFDECache<A>::findFDE(pint_t mh, typename R::link_reg_arg_t pc) {
+DwarfFDECache<A>::findFDE(pint_t mh, typename R::link_hardened_reg_arg_t pc) {
   pint_t result = 0;
   _LIBUNWIND_LOG_IF_FALSE(_lock.lock_shared());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
@@ -1065,13 +1061,11 @@ private:
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
-  // Note: R::link_reg_arg_t is used intentionally instead of `pint_t` to keep
-  // signature of `__ptrauth`-qualified values of `link_reg_t` type on AArch64
-  // PAuth-enabled ABI intact. See corresponding typedefs in `Registers_arm64`.
   bool getInfoFromFdeCie(const typename CFI_Parser<A>::FDE_Info &fdeInfo,
                          const typename CFI_Parser<A>::CIE_Info &cieInfo,
-                         typename R::link_reg_arg_t pc, uintptr_t dso_base);
-  bool getInfoFromDwarfSection(typename R::link_reg_arg_t pc,
+                         typename R::link_hardened_reg_arg_t pc,
+                         uintptr_t dso_base);
+  bool getInfoFromDwarfSection(typename R::link_hardened_reg_arg_t pc,
                                const UnwindInfoSections &sects,
                                uint32_t fdeSectionOffsetHint = 0);
   int stepWithDwarfFDE(bool stage2) {
@@ -1089,7 +1083,7 @@ private:
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-  bool getInfoFromCompactEncodingSection(typename R::link_reg_arg_t pc,
+  bool getInfoFromCompactEncodingSection(typename R::link_hardened_reg_arg_t pc,
                                          const UnwindInfoSections &sects);
   int stepWithCompactEncoding(bool stage2 = false) {
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
@@ -1741,7 +1735,7 @@ template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromFdeCie(
     const typename CFI_Parser<A>::FDE_Info &fdeInfo,
     const typename CFI_Parser<A>::CIE_Info &cieInfo,
-    typename R::link_reg_arg_t pc, uintptr_t dso_base) {
+    typename R::link_hardened_reg_arg_t pc, uintptr_t dso_base) {
   typename CFI_Parser<A>::PrologInfo prolog;
   if (CFI_Parser<A>::template parseFDEInstructions<R>(
           _addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
@@ -1765,7 +1759,7 @@ bool UnwindCursor<A, R>::getInfoFromFdeCie(
 
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromDwarfSection(
-    typename R::link_reg_arg_t pc, const UnwindInfoSections &sects,
+    typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects,
     uint32_t fdeSectionOffsetHint) {
   typename CFI_Parser<A>::FDE_Info fdeInfo;
   typename CFI_Parser<A>::CIE_Info cieInfo;
@@ -1824,7 +1818,7 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
-    typename R::link_reg_arg_t pc, const UnwindInfoSections &sects) {
+    typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects) {
   const bool log = false;
   if (log)
     fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX, mh=0x%llX)\n",
