@@ -467,12 +467,6 @@ public:
   /// add + cnt instructions.
   bool useScalarIncVL() const;
 
-  const char* getChkStkName() const {
-    if (isWindowsArm64EC())
-      return "#__chkstk_arm64ec";
-    return "__chkstk";
-  }
-
   /// Choose a method of checking LR before performing a tail call.
   AArch64PAuth::AuthCheckMethod
   getAuthenticatedLRCheckMethod(const MachineFunction &MF) const;

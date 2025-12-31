@@ -86,6 +86,10 @@ Potentially Breaking Changes
   `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
   to an empty string.
 
+- The ``clang-tidy/ClangTidyModuleRegistry.h`` header has been deprecated and will
+  be removed in LLVM 24. All of the symbols it used to define have been moved into
+  ``clang-tidy/ClangTidyModule.h``.
+
 Improvements to clangd
 ----------------------
 
@@ -260,6 +264,12 @@ New checks
 
   Finds virtual function overrides with different visibility than the function
   in the base class.
+
+- New :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check.
+
+  Detects ``if``/``else`` statements where one branch uses braces and the other
+  does not.
 
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
@@ -446,7 +456,9 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check by adding
-  `InvalidationFunctions` option to support custom invalidation functions.
+  `InvalidationFunctions` option to support custom invalidation functions
+  and `ReinitializationFunctions` option to support custom reinitialization
+  functions.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -517,6 +529,13 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` to suggest giving
+  user-defined types (structs, classes, unions, and enums) internal
+  linkage. Added fine-grained options to control whether the check
+  should diagnose functions, variables, and/or user-defined types.
+  Enabled the check for C.
+
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
   which are part of an implicit instantiation of a template.
@@ -570,6 +589,10 @@ Changes in existing checks
   constructor call, and fixed a crash when handling format strings
   containing non-ASCII characters.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check to correctly provide fix-its
+  for typedefs of pointers or references to array types.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
   the type of the diagnosed variable.
@@ -607,12 +630,16 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations and macros in system headers. The documentation is also improved
   to differentiate the general options from the specific ones. Options for
-  fine-grained control over ``constexpr`` variables were added.
+  fine-grained control over ``constexpr`` variables were added. Added default
+  options which simplify configs by removing the need to specify each
+  identifier kind separately.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
-  adding parentheses when the inner expression are implicitly converted
-  multiple times.
+  adding parentheses when inner expressions are implicitly converted multiple
+  times, enabling the check for C99 and later standards, and allowing implicit
+  conversions from ``bool`` to integer when used as operands of logical
+  operators (``&&``, ``||``) in C.
 
 - Improved :doc:`readability-inconsistent-declaration-parameter-name
   <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check

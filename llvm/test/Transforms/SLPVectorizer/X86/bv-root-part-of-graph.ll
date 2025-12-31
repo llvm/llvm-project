@@ -4,15 +4,16 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00>, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00>, <4 x float> <float poison, float 0.000000e+00, float poison, float poison>, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP9:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[FMUL:%.*]] = sitofp i32 0 to float
+; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i32 0 to float
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float poison, float 1.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[SITOFP]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> <float 1.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> <float poison, float poison, float poison, float 0.000000e+00>, <4 x i32> <i32 0, i32 0, i32 poison, i32 7>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[FMUL]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP0]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <4 x float> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer

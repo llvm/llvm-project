@@ -3421,6 +3421,30 @@ static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
   pushInteger(S, RetMask, Call->getType());
   return true;
 }
+
+static bool interp__builtin_ia32_cvt_mask2vec(InterpState &S, CodePtr OpPC,
+                                              const CallExpr *Call,
+                                              unsigned ID) {
+  assert(Call->getNumArgs() == 1);
+
+  APSInt Mask = popToAPSInt(S, Call->getArg(0));
+
+  const Pointer &Vec = S.Stk.peek<Pointer>();
+  unsigned NumElems = Vec.getNumElems();
+  PrimType ElemT = Vec.getFieldDesc()->getPrimType();
+
+  for (unsigned I = 0; I != NumElems; ++I) {
+    bool BitSet = Mask[I];
+
+    INT_TYPE_SWITCH_NO_BOOL(
+        ElemT, { Vec.elem<T>(I) = BitSet ? T::from(-1) : T::from(0); });
+  }
+
+  Vec.initializeAllElements();
+
+  return true;
+}
+
 static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
                                           const CallExpr *Call,
                                           bool HasRoundingMask) {
@@ -5165,6 +5189,29 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
+  case X86::BI__builtin_ia32_vperm2f128_pd256:
+  case X86::BI__builtin_ia32_vperm2f128_ps256:
+  case X86::BI__builtin_ia32_vperm2f128_si256:
+  case X86::BI__builtin_ia32_permti256: {
+    unsigned NumElements =
+        Call->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    unsigned PreservedBitsCnt = NumElements >> 2;
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call,
+        [PreservedBitsCnt](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned ControlBitsCnt = DstIdx >> PreservedBitsCnt << 2;
+          unsigned ControlBits = ShuffleMask >> ControlBitsCnt;
+
+          if (ControlBits & 0b1000)
+            return std::make_pair(0u, -1);
+
+          unsigned SrcVecIdx = (ControlBits & 0b10) >> 1;
+          unsigned PreservedBitsMask = (1 << PreservedBitsCnt) - 1;
+          int SrcIdx = ((ControlBits & 0b1) << PreservedBitsCnt) |
+                       (DstIdx & PreservedBitsMask);
+          return std::make_pair(SrcVecIdx, SrcIdx);
+        });
+  }
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
   case X86::BI__builtin_ia32_pshufb512:
@@ -5509,6 +5556,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
     return interp__builtin_ia32_cvt_vec2mask(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cvtmask2b128:
+  case X86::BI__builtin_ia32_cvtmask2b256:
+  case X86::BI__builtin_ia32_cvtmask2b512:
+  case X86::BI__builtin_ia32_cvtmask2w128:
+  case X86::BI__builtin_ia32_cvtmask2w256:
+  case X86::BI__builtin_ia32_cvtmask2w512:
+  case X86::BI__builtin_ia32_cvtmask2d128:
+  case X86::BI__builtin_ia32_cvtmask2d256:
+  case X86::BI__builtin_ia32_cvtmask2d512:
+  case X86::BI__builtin_ia32_cvtmask2q128:
+  case X86::BI__builtin_ia32_cvtmask2q256:
+  case X86::BI__builtin_ia32_cvtmask2q512:
+    return interp__builtin_ia32_cvt_mask2vec(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_cvtsd2ss:
     return interp__builtin_ia32_cvtsd2ss(S, OpPC, Call, false);
