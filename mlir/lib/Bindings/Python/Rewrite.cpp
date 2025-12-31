@@ -26,6 +26,40 @@ using namespace mlir::python;
 
 namespace {
 
+class PyPatternRewriter {
+public:
+  PyPatternRewriter(MlirPatternRewriter rewriter)
+      : base(mlirPatternRewriterAsBase(rewriter)),
+        ctx(PyMlirContext::forContext(mlirRewriterBaseGetContext(base))) {}
+
+  PyInsertionPoint getInsertionPoint() const {
+    MlirBlock block = mlirRewriterBaseGetInsertionBlock(base);
+    MlirOperation op = mlirRewriterBaseGetOperationAfterInsertion(base);
+
+    if (mlirOperationIsNull(op)) {
+      MlirOperation owner = mlirBlockGetParentOperation(block);
+      auto parent = PyOperation::forOperation(ctx, owner);
+      return PyInsertionPoint(PyBlock(parent, block));
+    }
+
+    return PyInsertionPoint(PyOperation::forOperation(ctx, op));
+  }
+
+  void replaceOp(MlirOperation op, MlirOperation newOp) {
+    mlirRewriterBaseReplaceOpWithOperation(base, op, newOp);
+  }
+
+  void replaceOp(MlirOperation op, const std::vector<MlirValue> &values) {
+    mlirRewriterBaseReplaceOpWithValues(base, op, values.size(), values.data());
+  }
+
+  void eraseOp(MlirOperation op) { mlirRewriterBaseEraseOp(base, op); }
+
+private:
+  MlirRewriterBase base;
+  PyMlirContextRef ctx;
+};
+
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 static nb::object objectFromPDLValue(MlirPDLValue value) {
   if (MlirValue v = mlirPDLValueAsValue(value); !mlirValueIsNull(v))
@@ -84,7 +118,8 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(rewriter, results, objectsFromPDLValues(nValues, values)));
+              f(PyPatternRewriter(rewriter), results,
+                objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
   }
@@ -98,7 +133,8 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(rewriter, results, objectsFromPDLValues(nValues, values)));
+              f(PyPatternRewriter(rewriter), results,
+                objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
   }
@@ -139,11 +175,142 @@ private:
   MlirFrozenRewritePatternSet set;
 };
 
+class PyRewritePatternSet {
+public:
+  PyRewritePatternSet(MlirContext ctx)
+      : set(mlirRewritePatternSetCreate(ctx)), ctx(ctx) {}
+  ~PyRewritePatternSet() {
+    if (set.ptr)
+      mlirRewritePatternSetDestroy(set);
+  }
+
+  void add(MlirStringRef rootName, unsigned benefit,
+           const nb::callable &matchAndRewrite) {
+    MlirRewritePatternCallbacks callbacks;
+    callbacks.construct = [](void *userData) {
+      nb::handle(static_cast<PyObject *>(userData)).inc_ref();
+    };
+    callbacks.destruct = [](void *userData) {
+      nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+    };
+    callbacks.matchAndRewrite = [](MlirRewritePattern, MlirOperation op,
+                                   MlirPatternRewriter rewriter,
+                                   void *userData) -> MlirLogicalResult {
+      nb::handle f(static_cast<PyObject *>(userData));
+
+      PyMlirContextRef ctx =
+          PyMlirContext::forContext(mlirOperationGetContext(op));
+      nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
+
+      nb::object res = f(opView, PyPatternRewriter(rewriter));
+      return logicalResultFromObject(res);
+    };
+    MlirRewritePattern pattern = mlirOpRewritePatternCreate(
+        rootName, benefit, ctx, callbacks, matchAndRewrite.ptr(),
+        /* nGeneratedNames */ 0,
+        /* generatedNames */ nullptr);
+    mlirRewritePatternSetAdd(set, pattern);
+  }
+
+  PyFrozenRewritePatternSet freeze() {
+    MlirRewritePatternSet s = set;
+    set.ptr = nullptr;
+    return mlirFreezeRewritePattern(s);
+  }
+
+private:
+  MlirRewritePatternSet set;
+  MlirContext ctx;
+};
+
 } // namespace
 
 /// Create the `mlir.rewrite` here.
 void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
-  nb::class_<MlirPatternRewriter>(m, "PatternRewriter");
+  //----------------------------------------------------------------------------
+  // Mapping of the PatternRewriter
+  //----------------------------------------------------------------------------
+  nb::
+      class_<PyPatternRewriter>(m, "PatternRewriter")
+          .def_prop_ro("ip", &PyPatternRewriter::getInsertionPoint,
+                       "The current insertion point of the PatternRewriter.")
+          .def(
+              "replace_op",
+              [](PyPatternRewriter &self, MlirOperation op,
+                 MlirOperation newOp) { self.replaceOp(op, newOp); },
+              "Replace an operation with a new operation.", nb::arg("op"),
+              nb::arg("new_op"),
+              // clang-format off
+              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", new_op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
+              // clang-format on
+              )
+          .def(
+              "replace_op",
+              [](PyPatternRewriter &self, MlirOperation op,
+                 const std::vector<MlirValue> &values) {
+                self.replaceOp(op, values);
+              },
+              "Replace an operation with a list of values.", nb::arg("op"),
+              nb::arg("values"),
+              // clang-format off
+              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", values: list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Value") "]) -> None")
+              // clang-format on
+              )
+          .def("erase_op", &PyPatternRewriter::eraseOp, "Erase an operation.",
+               nb::arg("op"),
+               // clang-format off
+                nb::sig("def erase_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
+               // clang-format on
+          );
+
+  //----------------------------------------------------------------------------
+  // Mapping of the RewritePatternSet
+  //----------------------------------------------------------------------------
+  nb::class_<PyRewritePatternSet>(m, "RewritePatternSet")
+      .def(
+          "__init__",
+          [](PyRewritePatternSet &self, DefaultingPyMlirContext context) {
+            new (&self) PyRewritePatternSet(context.get()->get());
+          },
+          "context"_a = nb::none())
+      .def(
+          "add",
+          [](PyRewritePatternSet &self, nb::handle root, const nb::callable &fn,
+             unsigned benefit) {
+            std::string opName;
+            if (root.is_type()) {
+              opName = nb::cast<std::string>(root.attr("OPERATION_NAME"));
+            } else if (nb::isinstance<nb::str>(root)) {
+              opName = nb::cast<std::string>(root);
+            } else {
+              throw nb::type_error(
+                  "the root argument must be a type or a string");
+            }
+            self.add(mlirStringRefCreate(opName.data(), opName.size()), benefit,
+                     fn);
+          },
+          "root"_a, "fn"_a, "benefit"_a = 1,
+          // clang-format off
+          nb::sig("def add(self, root: type | str, fn: typing.Callable[[" MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", PatternRewriter], typing.Any], benefit: int = 1) -> None"),
+          // clang-format on
+          R"(
+            Add a new rewrite pattern on the specified root operation, using the provided callable
+            for matching and rewriting, and assign it the given benefit.
+
+            Args:
+              root: The root operation to which this pattern applies.
+                    This may be either an OpView subclass (e.g., ``arith.AddIOp``) or
+                    an operation name string (e.g., ``"arith.addi"``).
+              fn: The callable to use for matching and rewriting,
+                  which takes an operation and a pattern rewriter as arguments.
+                  The match is considered successful iff the callable returns
+                  a value where ``bool(value)`` is ``False`` (e.g. ``None``).
+                  If possible, the operation is cast to its corresponding OpView subclass
+                  before being passed to the callable.
+              benefit: The benefit of the pattern, defaulting to 1.)")
+      .def("freeze", &PyRewritePatternSet::freeze,
+           "Freeze the pattern set into a frozen one.");
+
   //----------------------------------------------------------------------------
   // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
@@ -209,7 +376,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
       .def(
           "freeze",
           [](PyPDLPatternModule &self) {
-            return new PyFrozenRewritePatternSet(mlirFreezeRewritePattern(
+            return PyFrozenRewritePatternSet(mlirFreezeRewritePattern(
                 mlirRewritePatternSetFromPDLPatternModule(self.get())));
           },
           nb::keep_alive<0, 1>())
@@ -292,5 +459,16 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
           // clang-format on
           "Applys the given patterns to the given op greedily while folding "
-          "results.");
+          "results.")
+      .def(
+          "walk_and_apply_patterns",
+          [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
+            mlirWalkAndApplyPatterns(op.getOperation(), set.get());
+          },
+          "op"_a, "set"_a,
+          // clang-format off
+          nb::sig("def walk_and_apply_patterns(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
+          // clang-format on
+          "Applies the given patterns to the given op by a fast walk-based "
+          "driver.");
 }

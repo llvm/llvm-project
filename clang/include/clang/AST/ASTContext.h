@@ -370,6 +370,21 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::DenseSet<const FunctionDecl *> DestroyingOperatorDeletes;
   mutable llvm::DenseSet<const FunctionDecl *> TypeAwareOperatorNewAndDeletes;
 
+  /// Global and array operators delete are only required for MSVC deleting
+  /// destructors support. Store them here to avoid keeping 4 pointers that are
+  /// not always used in each redeclaration of the destructor.
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      OperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      GlobalOperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      ArrayOperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      GlobalArrayOperatorDeletesForVirtualDtor;
+
+  /// To remember which types did require a vector deleting dtor.
+  llvm::DenseSet<const CXXRecordDecl *> RequireVectorDeletingDtor;
+
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
   /// string literal.
@@ -488,6 +503,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// Declaration for the CUDA cudaConfigureCall function.
   FunctionDecl *cudaConfigureCallDecl = nullptr;
+  /// Declaration for the CUDA cudaGetParameterBuffer function.
+  FunctionDecl *cudaGetParameterBufferDecl = nullptr;
+  /// Declaration for the CUDA cudaLaunchDevice function.
+  FunctionDecl *cudaLaunchDeviceDecl = nullptr;
 
   /// Keeps track of all declaration attributes.
   ///
@@ -662,7 +681,6 @@ private:
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
-    unsigned IsReplaceable;
   };
   std::optional<CXXRecordDeclRelocationInfo>
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
@@ -1640,6 +1658,18 @@ public:
   FunctionDecl *getcudaConfigureCallDecl() {
     return cudaConfigureCallDecl;
   }
+
+  void setcudaGetParameterBufferDecl(FunctionDecl *FD) {
+    cudaGetParameterBufferDecl = FD;
+  }
+
+  FunctionDecl *getcudaGetParameterBufferDecl() {
+    return cudaGetParameterBufferDecl;
+  }
+
+  void setcudaLaunchDeviceDecl(FunctionDecl *FD) { cudaLaunchDeviceDecl = FD; }
+
+  FunctionDecl *getcudaLaunchDeviceDecl() { return cudaLaunchDeviceDecl; }
 
   /// Returns true iff we need copy/dispose helpers for the given type.
   bool BlockRequiresCopying(QualType Ty, const VarDecl *D);
@@ -2779,6 +2809,10 @@ public:
   /// runtime, such as those using the Itanium C++ ABI.
   CharUnits getExnObjectAlignment() const;
 
+  /// Return whether unannotated records are treated as if they have
+  /// [[gnu::ms_struct]].
+  bool defaultsToMsStruct() const;
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
@@ -2874,11 +2908,11 @@ public:
   /// returned type is guaranteed to be free of any of these, allowing two
   /// canonical types to be compared for exact equality with a simple pointer
   /// comparison.
-  CanQualType getCanonicalType(QualType T) const {
+  static CanQualType getCanonicalType(QualType T) {
     return CanQualType::CreateUnsafe(T.getCanonicalType());
   }
 
-  const Type *getCanonicalType(const Type *T) const {
+  static const Type *getCanonicalType(const Type *T) {
     return T->getCanonicalTypeInternal().getTypePtr();
   }
 
@@ -2890,10 +2924,10 @@ public:
   CanQualType getCanonicalParamType(QualType T) const;
 
   /// Determine whether the given types \p T1 and \p T2 are equivalent.
-  bool hasSameType(QualType T1, QualType T2) const {
+  static bool hasSameType(QualType T1, QualType T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
-  bool hasSameType(const Type *T1, const Type *T2) const {
+  static bool hasSameType(const Type *T1, const Type *T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
 
@@ -2921,7 +2955,7 @@ public:
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
-  bool hasSameUnqualifiedType(QualType T1, QualType T2) const {
+  static bool hasSameUnqualifiedType(QualType T1, QualType T2) {
     return getCanonicalType(T1).getTypePtr() ==
            getCanonicalType(T2).getTypePtr();
   }
@@ -3473,6 +3507,18 @@ public:
                                          bool IsTypeAware);
   bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const;
 
+  enum OperatorDeleteKind { Regular, GlobalRegular, Array, ArrayGlobal };
+
+  void addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                 FunctionDecl *OperatorDelete,
+                                 OperatorDeleteKind K) const;
+  FunctionDecl *getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                          OperatorDeleteKind K) const;
+  bool dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
+                             OperatorDeleteKind K) const;
+  void setClassNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
+  bool classNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
+
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.
   MangleNumberingContext &getManglingNumberContext(const DeclContext *DC);
@@ -3877,7 +3923,6 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
     return new (Ctx) LazyData(Source, Value);
   return Value;
 }
-
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
 

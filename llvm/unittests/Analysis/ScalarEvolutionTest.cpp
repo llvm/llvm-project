@@ -11,6 +11,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
@@ -25,6 +26,8 @@
 #include "gtest/gtest.h"
 
 namespace llvm {
+
+using namespace SCEVPatternMatch;
 
 // We use this fixture to ensure that we clean up ScalarEvolution before
 // deleting the PassManager.
@@ -63,11 +66,6 @@ static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
                                                       const SCEV *RHS) {
   return SE.computeConstantDifference(LHS, RHS);
 }
-
-  static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
-                        const SCEV *&RHS) {
-    return SE.matchURem(Expr, LHS, RHS);
-  }
 
   static bool isImpliedCond(
       ScalarEvolution &SE, ICmpInst::Predicate Pred, const SCEV *LHS,
@@ -1524,7 +1522,7 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
       auto *URemI = getInstructionByName(F, N);
       auto *S = SE.getSCEV(URemI);
       const SCEV *LHS, *RHS;
-      EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
+      EXPECT_TRUE(match(S, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), SE)));
       EXPECT_EQ(LHS, SE.getSCEV(URemI->getOperand(0)));
       EXPECT_EQ(RHS, SE.getSCEV(URemI->getOperand(1)));
       EXPECT_EQ(LHS->getType(), S->getType());
@@ -1537,7 +1535,7 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
     auto *URem1 = getInstructionByName(F, "rem4");
     auto *S = SE.getSCEV(Ext);
     const SCEV *LHS, *RHS;
-    EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
+    EXPECT_TRUE(match(S, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), SE)));
     EXPECT_NE(LHS, SE.getSCEV(URem1->getOperand(0)));
     // RHS and URem1->getOperand(1) have different widths, so compare the
     // integer values.

@@ -22,7 +22,10 @@ using namespace llvm::json;
 TEST(MustacheInterpolation, NoInterpolation) {
   // Mustache-free templates should render as-is.
   Value D = {};
-  Template T("Hello from {Mustache}!\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello from {Mustache}!\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -32,7 +35,10 @@ TEST(MustacheInterpolation, NoInterpolation) {
 TEST(MustacheInterpolation, BasicInterpolation) {
   // Unadorned tags should interpolate content into the template.
   Value D = Object{{"subject", "World"}};
-  Template T("Hello, {{subject}}!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{subject}}!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -42,7 +48,10 @@ TEST(MustacheInterpolation, BasicInterpolation) {
 TEST(MustacheInterpolation, NoReinterpolation) {
   // Interpolated tag output should not be re-interpolated.
   Value D = Object{{"template", "{{planet}}"}, {"planet", "Earth"}};
-  Template T("{{template}}: {{planet}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{template}}: {{planet}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -54,7 +63,10 @@ TEST(MustacheInterpolation, HTMLEscaping) {
   Value D = Object{
       {"forbidden", "& \" < >"},
   };
-  Template T("These characters should be HTML escaped: {{forbidden}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("These characters should be HTML escaped: {{forbidden}}\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -67,7 +79,11 @@ TEST(MustacheInterpolation, Ampersand) {
   Value D = Object{
       {"forbidden", "& \" < >"},
   };
-  Template T("These characters should not be HTML escaped: {{&forbidden}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("These characters should not be HTML escaped: {{&forbidden}}\n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -77,7 +93,10 @@ TEST(MustacheInterpolation, Ampersand) {
 TEST(MustacheInterpolation, BasicIntegerInterpolation) {
   // Integers should interpolate seamlessly.
   Value D = Object{{"mph", 85}};
-  Template T("{{mph}} miles an hour!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{mph}} miles an hour!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -87,7 +106,10 @@ TEST(MustacheInterpolation, BasicIntegerInterpolation) {
 TEST(MustacheInterpolation, AmpersandIntegerInterpolation) {
   // Integers should interpolate seamlessly.
   Value D = Object{{"mph", 85}};
-  Template T("{{&mph}} miles an hour!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{&mph}} miles an hour!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -97,7 +119,10 @@ TEST(MustacheInterpolation, AmpersandIntegerInterpolation) {
 TEST(MustacheInterpolation, BasicDecimalInterpolation) {
   // Decimals should interpolate seamlessly with proper significance.
   Value D = Object{{"power", 1.21}};
-  Template T("{{power}} jiggawatts!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{power}} jiggawatts!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -107,7 +132,10 @@ TEST(MustacheInterpolation, BasicDecimalInterpolation) {
 TEST(MustacheInterpolation, BasicNullInterpolation) {
   // Nulls should interpolate as the empty string.
   Value D = Object{{"cannot", nullptr}};
-  Template T("I ({{cannot}}) be seen!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("I ({{cannot}}) be seen!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -117,7 +145,10 @@ TEST(MustacheInterpolation, BasicNullInterpolation) {
 TEST(MustacheInterpolation, AmpersandNullInterpolation) {
   // Nulls should interpolate as the empty string.
   Value D = Object{{"cannot", nullptr}};
-  Template T("I ({{&cannot}}) be seen!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("I ({{&cannot}}) be seen!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -127,7 +158,10 @@ TEST(MustacheInterpolation, AmpersandNullInterpolation) {
 TEST(MustacheInterpolation, BasicContextMissInterpolation) {
   // Failed context lookups should default to empty strings.
   Value D = Object{};
-  Template T("I ({{cannot}}) be seen!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("I ({{cannot}}) be seen!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -137,7 +171,10 @@ TEST(MustacheInterpolation, BasicContextMissInterpolation) {
 TEST(MustacheInterpolation, DottedNamesBasicInterpolation) {
   // Dotted names should be considered a form of shorthand for sections.
   Value D = Object{{"person", Object{{"name", "Joe"}}}};
-  Template T("{{person.name}} == {{#person}}{{name}}{{/person}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{person.name}} == {{#person}}{{name}}{{/person}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -147,7 +184,10 @@ TEST(MustacheInterpolation, DottedNamesBasicInterpolation) {
 TEST(MustacheInterpolation, DottedNamesAmpersandInterpolation) {
   // Dotted names should be considered a form of shorthand for sections.
   Value D = Object{{"person", Object{{"name", "Joe"}}}};
-  Template T("{{&person.name}} == {{#person}}{{&name}}{{/person}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{&person.name}} == {{#person}}{{&name}}{{/person}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -162,7 +202,10 @@ TEST(MustacheInterpolation, DottedNamesArbitraryDepth) {
                Object{{"c",
                        Object{{"d",
                                Object{{"e", Object{{"name", "Phil"}}}}}}}}}}}};
-  Template T("{{a.b.c.d.e.name}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{a.b.c.d.e.name}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -172,7 +215,10 @@ TEST(MustacheInterpolation, DottedNamesArbitraryDepth) {
 TEST(MustacheInterpolation, DottedNamesBrokenChains) {
   // Any falsey value prior to the last part of the name should yield ''.
   Value D = Object{{"a", Object{}}};
-  Template T("{{a.b.c}} == ");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{a.b.c}} == ", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -183,7 +229,10 @@ TEST(MustacheInterpolation, DottedNamesBrokenChainResolution) {
   // Each part of a dotted name should resolve only against its parent.
   Value D =
       Object{{"a", Object{{"b", Object{}}}}, {"c", Object{{"name", "Jim"}}}};
-  Template T("{{a.b.c.name}} == ");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{a.b.c.name}} == ", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -200,7 +249,10 @@ TEST(MustacheInterpolation, DottedNamesInitialResolution) {
                     Object{{"d", Object{{"e", Object{{"name", "Phil"}}}}}}}}}}},
       {"b",
        Object{{"c", Object{{"d", Object{{"e", Object{{"name", "Wrong"}}}}}}}}}};
-  Template T("{{#a}}{{b.c.d.e.name}}{{/a}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#a}}{{b.c.d.e.name}}{{/a}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -211,7 +263,10 @@ TEST(MustacheInterpolation, DottedNamesContextPrecedence) {
   // Dotted names should be resolved against former resolutions.
   Value D =
       Object{{"a", Object{{"b", Object{}}}}, {"b", Object{{"c", "ERROR"}}}};
-  Template T("{{#a}}{{b.c}}{{/a}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#a}}{{b.c}}{{/a}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -221,7 +276,10 @@ TEST(MustacheInterpolation, DottedNamesContextPrecedence) {
 TEST(MustacheInterpolation, DottedNamesAreNotSingleKeys) {
   // Dotted names shall not be parsed as single, atomic keys
   Value D = Object{{"a.b", "c"}};
-  Template T("{{a.b}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{a.b}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -231,7 +289,10 @@ TEST(MustacheInterpolation, DottedNamesAreNotSingleKeys) {
 TEST(MustacheInterpolation, DottedNamesNoMasking) {
   // Dotted Names in a given context are unavailable due to dot splitting
   Value D = Object{{"a.b", "c"}, {"a", Object{{"b", "d"}}}};
-  Template T("{{a.b}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{a.b}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -241,7 +302,10 @@ TEST(MustacheInterpolation, DottedNamesNoMasking) {
 TEST(MustacheInterpolation, ImplicitIteratorsBasicInterpolation) {
   // Unadorned tags should interpolate content into the template.
   Value D = "world";
-  Template T("Hello, {{.}}!\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{.}}!\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -251,7 +315,10 @@ TEST(MustacheInterpolation, ImplicitIteratorsBasicInterpolation) {
 TEST(MustacheInterpolation, ImplicitIteratorsAmersand) {
   // Basic interpolation should be HTML escaped.
   Value D = "& \" < >";
-  Template T("These characters should not be HTML escaped: {{&.}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("These characters should not be HTML escaped: {{&.}}\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -261,7 +328,10 @@ TEST(MustacheInterpolation, ImplicitIteratorsAmersand) {
 TEST(MustacheInterpolation, ImplicitIteratorsInteger) {
   // Integers should interpolate seamlessly.
   Value D = 85;
-  Template T("{{.}} miles an hour!\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{.}} miles an hour!\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -271,7 +341,10 @@ TEST(MustacheInterpolation, ImplicitIteratorsInteger) {
 TEST(MustacheInterpolation, InterpolationSurroundingWhitespace) {
   // Interpolation should not alter surrounding whitespace.
   Value D = Object{{"string", "---"}};
-  Template T("| {{string}} |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| {{string}} |", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -281,7 +354,10 @@ TEST(MustacheInterpolation, InterpolationSurroundingWhitespace) {
 TEST(MustacheInterpolation, AmersandSurroundingWhitespace) {
   // Interpolation should not alter surrounding whitespace.
   Value D = Object{{"string", "---"}};
-  Template T("| {{&string}} |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| {{&string}} |", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -291,7 +367,10 @@ TEST(MustacheInterpolation, AmersandSurroundingWhitespace) {
 TEST(MustacheInterpolation, StandaloneInterpolationWithWhitespace) {
   // Standalone interpolation should not alter surrounding whitespace.
   Value D = Object{{"string", "---"}};
-  Template T("  {{string}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  {{string}}\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -301,7 +380,10 @@ TEST(MustacheInterpolation, StandaloneInterpolationWithWhitespace) {
 TEST(MustacheInterpolation, StandaloneAmpersandWithWhitespace) {
   // Standalone interpolation should not alter surrounding whitespace.
   Value D = Object{{"string", "---"}};
-  Template T("  {{&string}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  {{&string}}\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -311,7 +393,10 @@ TEST(MustacheInterpolation, StandaloneAmpersandWithWhitespace) {
 TEST(MustacheInterpolation, InterpolationWithPadding) {
   // Superfluous in-tag whitespace should be ignored.
   Value D = Object{{"string", "---"}};
-  Template T("|{{ string }}|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|{{ string }}|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -321,7 +406,10 @@ TEST(MustacheInterpolation, InterpolationWithPadding) {
 TEST(MustacheInterpolation, AmpersandWithPadding) {
   // Superfluous in-tag whitespace should be ignored.
   Value D = Object{{"string", "---"}};
-  Template T("|{{& string }}|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|{{& string }}|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -331,7 +419,10 @@ TEST(MustacheInterpolation, AmpersandWithPadding) {
 TEST(MustacheInterpolation, InterpolationWithPaddingAndNewlines) {
   // Superfluous in-tag whitespace should be ignored.
   Value D = Object{{"string", "---"}};
-  Template T("|{{ string \n\n\n }}|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|{{ string \n\n\n }}|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -340,7 +431,10 @@ TEST(MustacheInterpolation, InterpolationWithPaddingAndNewlines) {
 
 TEST(MustacheSections, Truthy) {
   Value D = Object{{"boolean", true}};
-  Template T("{{#boolean}}This should be rendered.{{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#boolean}}This should be rendered.{{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -349,7 +443,10 @@ TEST(MustacheSections, Truthy) {
 
 TEST(MustacheSections, Falsey) {
   Value D = Object{{"boolean", false}};
-  Template T("{{#boolean}}This should not be rendered.{{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#boolean}}This should not be rendered.{{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -359,7 +456,10 @@ TEST(MustacheSections, Falsey) {
 TEST(MustacheInterpolation, IsFalseyNull) {
   // Mustache-free templates should render as-is.
   Value D = Object{{"boolean", nullptr}};
-  Template T("Hello, {{#boolean}}World{{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{#boolean}}World{{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -369,7 +469,10 @@ TEST(MustacheInterpolation, IsFalseyNull) {
 TEST(MustacheInterpolation, IsFalseyArray) {
   // Mustache-free templates should render as-is.
   Value D = Object{{"boolean", Array()}};
-  Template T("Hello, {{#boolean}}World{{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{#boolean}}World{{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -379,7 +482,10 @@ TEST(MustacheInterpolation, IsFalseyArray) {
 TEST(MustacheInterpolation, IsFalseyObject) {
   // Mustache-free templates should render as-is.
   Value D = Object{{"boolean", Object{}}};
-  Template T("Hello, {{#boolean}}World{{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{#boolean}}World{{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -389,7 +495,10 @@ TEST(MustacheInterpolation, IsFalseyObject) {
 TEST(MustacheInterpolation, DoubleRendering) {
   // Mustache-free templates should render as-is.
   Value D1 = Object{{"subject", "World"}};
-  Template T("Hello, {{subject}}!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{subject}}!", Ctx);
   std::string Out1;
   raw_string_ostream OS1(Out1);
   T.render(D1, OS1);
@@ -403,7 +512,10 @@ TEST(MustacheInterpolation, DoubleRendering) {
 
 TEST(MustacheSections, NullIsFalsey) {
   Value D = Object{{"null", nullptr}};
-  Template T("{{#null}}This should not be rendered.{{/null}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#null}}This should not be rendered.{{/null}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -412,7 +524,10 @@ TEST(MustacheSections, NullIsFalsey) {
 
 TEST(MustacheSections, Context) {
   Value D = Object{{"context", Object{{"name", "Joe"}}}};
-  Template T("{{#context}}Hi {{name}}.{{/context}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#context}}Hi {{name}}.{{/context}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -424,7 +539,10 @@ TEST(MustacheSections, ParentContexts) {
                    {"b", "wrong"},
                    {"sec", Object{{"b", "bar"}}},
                    {"c", Object{{"d", "baz"}}}};
-  Template T("{{#sec}}{{a}}, {{b}}, {{c.d}}{{/sec}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#sec}}{{a}}, {{b}}, {{c.d}}{{/sec}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -433,7 +551,10 @@ TEST(MustacheSections, ParentContexts) {
 
 TEST(MustacheSections, VariableTest) {
   Value D = Object{{"foo", "bar"}};
-  Template T("{{#foo}}{{.}} is {{foo}}{{/foo}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#foo}}{{.}} is {{foo}}{{/foo}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -449,6 +570,9 @@ TEST(MustacheSections, ListContexts) {
             Array{Object{{"mname", "1"},
                          {"bottoms", Array{Object{{"bname", "x"}},
                                            Object{{"bname", "y"}}}}}}}}}}};
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
   Template T("{{#tops}}"
              "{{#middles}}"
              "{{tname.lower}}{{mname}}."
@@ -456,7 +580,8 @@ TEST(MustacheSections, ListContexts) {
              "{{tname.upper}}{{mname}}{{bname}}."
              "{{/bottoms}}"
              "{{/middles}}"
-             "{{/tops}}");
+             "{{/tops}}",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -468,6 +593,9 @@ TEST(MustacheSections, DeeplyNestedContexts) {
       {"a", Object{{"one", 1}}},
       {"b", Object{{"two", 2}}},
       {"c", Object{{"three", 3}, {"d", Object{{"four", 4}, {"five", 5}}}}}};
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
   Template T(
       "{{#a}}\n{{one}}\n{{#b}}\n{{one}}{{two}}{{one}}\n{{#c}}\n{{one}}{{two}}{{"
       "three}}{{two}}{{one}}\n{{#d}}\n{{one}}{{two}}{{three}}{{four}}{{three}}{"
@@ -477,7 +605,8 @@ TEST(MustacheSections, DeeplyNestedContexts) {
       "four}}{{three}}{{two}}{{one}}\n{{/"
       "five}}\n{{one}}{{two}}{{three}}{{four}}{{three}}{{two}}{{one}}\n{{/"
       "d}}\n{{one}}{{two}}{{three}}{{two}}{{one}}\n{{/"
-      "c}}\n{{one}}{{two}}{{one}}\n{{/b}}\n{{one}}\n{{/a}}\n");
+      "c}}\n{{one}}{{two}}{{one}}\n{{/b}}\n{{one}}\n{{/a}}\n",
+      Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -489,7 +618,10 @@ TEST(MustacheSections, DeeplyNestedContexts) {
 TEST(MustacheSections, List) {
   Value D = Object{{"list", Array{Object{{"item", 1}}, Object{{"item", 2}},
                                   Object{{"item", 3}}}}};
-  Template T("{{#list}}{{item}}{{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#list}}{{item}}{{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -498,7 +630,10 @@ TEST(MustacheSections, List) {
 
 TEST(MustacheSections, EmptyList) {
   Value D = Object{{"list", Array{}}};
-  Template T("{{#list}}Yay lists!{{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#list}}Yay lists!{{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -507,8 +642,12 @@ TEST(MustacheSections, EmptyList) {
 
 TEST(MustacheSections, Doubled) {
   Value D = Object{{"bool", true}, {"two", "second"}};
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
   Template T("{{#bool}}\n* first\n{{/bool}}\n* "
-             "{{two}}\n{{#bool}}\n* third\n{{/bool}}\n");
+             "{{two}}\n{{#bool}}\n* third\n{{/bool}}\n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -517,7 +656,10 @@ TEST(MustacheSections, Doubled) {
 
 TEST(MustacheSections, NestedTruthy) {
   Value D = Object{{"bool", true}};
-  Template T("| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -526,7 +668,10 @@ TEST(MustacheSections, NestedTruthy) {
 
 TEST(MustacheSections, NestedFalsey) {
   Value D = Object{{"bool", false}};
-  Template T("| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| A {{#bool}}B {{#bool}}C{{/bool}} D{{/bool}} E |", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -535,7 +680,10 @@ TEST(MustacheSections, NestedFalsey) {
 
 TEST(MustacheSections, ContextMisses) {
   Value D = Object{};
-  Template T("[{{#missing}}Found key 'missing'!{{/missing}}]");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("[{{#missing}}Found key 'missing'!{{/missing}}]", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -544,7 +692,10 @@ TEST(MustacheSections, ContextMisses) {
 
 TEST(MustacheSections, ImplicitIteratorString) {
   Value D = Object{{"list", Array{"a", "b", "c", "d", "e"}}};
-  Template T("{{#list}}({{.}}){{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#list}}({{.}}){{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -553,7 +704,10 @@ TEST(MustacheSections, ImplicitIteratorString) {
 
 TEST(MustacheSections, ImplicitIteratorInteger) {
   Value D = Object{{"list", Array{1, 2, 3, 4, 5}}};
-  Template T("{{#list}}({{.}}){{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#list}}({{.}}){{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -562,7 +716,10 @@ TEST(MustacheSections, ImplicitIteratorInteger) {
 
 TEST(MustacheSections, ImplicitIteratorArray) {
   Value D = Object{{"list", Array{Array{1, 2, 3}, Array{"a", "b", "c"}}}};
-  Template T("{{#list}}({{#.}}{{.}}{{/.}}){{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#list}}({{#.}}{{.}}{{/.}}){{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -571,7 +728,10 @@ TEST(MustacheSections, ImplicitIteratorArray) {
 
 TEST(MustacheSections, ImplicitIteratorHTMLEscaping) {
   Value D = Object{{"list", Array{"&", "\"", "<", ">"}}};
-  Template T("{{#list}}({{.}}){{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#list}}({{.}}){{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -580,7 +740,10 @@ TEST(MustacheSections, ImplicitIteratorHTMLEscaping) {
 
 TEST(MustacheSections, ImplicitIteratorAmpersand) {
   Value D = Object{{"list", Array{"&", "\"", "<", ">"}}};
-  Template T("{{#list}}({{&.}}){{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#list}}({{&.}}){{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -589,7 +752,10 @@ TEST(MustacheSections, ImplicitIteratorAmpersand) {
 
 TEST(MustacheSections, ImplicitIteratorRootLevel) {
   Value D = Array{Object{{"value", "a"}}, Object{{"value", "b"}}};
-  Template T("{{#.}}({{value}}){{/.}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#.}}({{value}}){{/.}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -598,7 +764,10 @@ TEST(MustacheSections, ImplicitIteratorRootLevel) {
 
 TEST(MustacheSections, DottedNamesTruthy) {
   Value D = Object{{"a", Object{{"b", Object{{"c", true}}}}}};
-  Template T("{{#a.b.c}}Here{{/a.b.c}} == Here");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#a.b.c}}Here{{/a.b.c}} == Here", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -607,7 +776,10 @@ TEST(MustacheSections, DottedNamesTruthy) {
 
 TEST(MustacheSections, DottedNamesFalsey) {
   Value D = Object{{"a", Object{{"b", Object{{"c", false}}}}}};
-  Template T("{{#a.b.c}}Here{{/a.b.c}} == ");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#a.b.c}}Here{{/a.b.c}} == ", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -615,8 +787,11 @@ TEST(MustacheSections, DottedNamesFalsey) {
 }
 
 TEST(MustacheSections, DottedNamesBrokenChains) {
-  Value D = Object{{"a", Object{}}};
-  Template T("{{#a.b.c}}Here{{/a.b.c}} == ");
+  Value D = Object{{"a", Object{{}}}};
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#a.b.c}}Here{{/a.b.c}} == ", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -625,7 +800,10 @@ TEST(MustacheSections, DottedNamesBrokenChains) {
 
 TEST(MustacheSections, SurroundingWhitespace) {
   Value D = Object{{"boolean", true}};
-  Template T(" | {{#boolean}}\t|\t{{/boolean}} | \n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T(" | {{#boolean}}\t|\t{{/boolean}} | \n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -634,7 +812,11 @@ TEST(MustacheSections, SurroundingWhitespace) {
 
 TEST(MustacheSections, InternalWhitespace) {
   Value D = Object{{"boolean", true}};
-  Template T(" | {{#boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T(" | {{#boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -643,7 +825,11 @@ TEST(MustacheSections, InternalWhitespace) {
 
 TEST(MustacheSections, IndentedInlineSections) {
   Value D = Object{{"boolean", true}};
-  Template T(" {{#boolean}}YES{{/boolean}}\n {{#boolean}}GOOD{{/boolean}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T(" {{#boolean}}YES{{/boolean}}\n {{#boolean}}GOOD{{/boolean}}\n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -652,7 +838,10 @@ TEST(MustacheSections, IndentedInlineSections) {
 
 TEST(MustacheSections, StandaloneLines) {
   Value D = Object{{"boolean", true}};
-  Template T("| This Is\n{{#boolean}}\n|\n{{/boolean}}\n| A Line\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| This Is\n{{#boolean}}\n|\n{{/boolean}}\n| A Line\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -661,7 +850,10 @@ TEST(MustacheSections, StandaloneLines) {
 
 TEST(MustacheSections, IndentedStandaloneLines) {
   Value D = Object{{"boolean", true}};
-  Template T("| This Is\n  {{#boolean}}\n|\n  {{/boolean}}\n| A Line\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| This Is\n  {{#boolean}}\n|\n  {{/boolean}}\n| A Line\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -670,7 +862,10 @@ TEST(MustacheSections, IndentedStandaloneLines) {
 
 TEST(MustacheSections, StandaloneLineEndings) {
   Value D = Object{{"boolean", true}};
-  Template T("|\r\n{{#boolean}}\r\n{{/boolean}}\r\n|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|\r\n{{#boolean}}\r\n{{/boolean}}\r\n|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -679,7 +874,10 @@ TEST(MustacheSections, StandaloneLineEndings) {
 
 TEST(MustacheSections, StandaloneWithoutPreviousLine) {
   Value D = Object{{"boolean", true}};
-  Template T("  {{#boolean}}\n#{{/boolean}}\n/");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  {{#boolean}}\n#{{/boolean}}\n/", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -688,7 +886,10 @@ TEST(MustacheSections, StandaloneWithoutPreviousLine) {
 
 TEST(MustacheSections, StandaloneWithoutNewline) {
   Value D = Object{{"boolean", true}};
-  Template T("#{{#boolean}}\n/\n  {{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("#{{#boolean}}\n/\n  {{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -697,7 +898,10 @@ TEST(MustacheSections, StandaloneWithoutNewline) {
 
 TEST(MustacheSections, Padding) {
   Value D = Object{{"boolean", true}};
-  Template T("|{{# boolean }}={{/ boolean }}|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|{{# boolean }}={{/ boolean }}|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -706,7 +910,10 @@ TEST(MustacheSections, Padding) {
 
 TEST(MustacheInvertedSections, Falsey) {
   Value D = Object{{"boolean", false}};
-  Template T("{{^boolean}}This should be rendered.{{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^boolean}}This should be rendered.{{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -715,7 +922,10 @@ TEST(MustacheInvertedSections, Falsey) {
 
 TEST(MustacheInvertedSections, Truthy) {
   Value D = Object{{"boolean", true}};
-  Template T("{{^boolean}}This should not be rendered.{{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^boolean}}This should not be rendered.{{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -724,7 +934,10 @@ TEST(MustacheInvertedSections, Truthy) {
 
 TEST(MustacheInvertedSections, NullIsFalsey) {
   Value D = Object{{"null", nullptr}};
-  Template T("{{^null}}This should be rendered.{{/null}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^null}}This should be rendered.{{/null}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -733,7 +946,10 @@ TEST(MustacheInvertedSections, NullIsFalsey) {
 
 TEST(MustacheInvertedSections, Context) {
   Value D = Object{{"context", Object{{"name", "Joe"}}}};
-  Template T("{{^context}}Hi {{name}}.{{/context}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^context}}Hi {{name}}.{{/context}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -743,7 +959,10 @@ TEST(MustacheInvertedSections, Context) {
 TEST(MustacheInvertedSections, List) {
   Value D = Object{
       {"list", Array{Object{{"n", 1}}, Object{{"n", 2}}, Object{{"n", 3}}}}};
-  Template T("{{^list}}{{n}}{{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^list}}{{n}}{{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -752,7 +971,10 @@ TEST(MustacheInvertedSections, List) {
 
 TEST(MustacheInvertedSections, EmptyList) {
   Value D = Object{{"list", Array{}}};
-  Template T("{{^list}}Yay lists!{{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^list}}Yay lists!{{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -761,8 +983,12 @@ TEST(MustacheInvertedSections, EmptyList) {
 
 TEST(MustacheInvertedSections, Doubled) {
   Value D = Object{{"bool", false}, {"two", "second"}};
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
   Template T("{{^bool}}\n* first\n{{/bool}}\n* "
-             "{{two}}\n{{^bool}}\n* third\n{{/bool}}\n");
+             "{{two}}\n{{^bool}}\n* third\n{{/bool}}\n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -771,7 +997,10 @@ TEST(MustacheInvertedSections, Doubled) {
 
 TEST(MustacheInvertedSections, NestedFalsey) {
   Value D = Object{{"bool", false}};
-  Template T("| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -780,7 +1009,10 @@ TEST(MustacheInvertedSections, NestedFalsey) {
 
 TEST(MustacheInvertedSections, NestedTruthy) {
   Value D = Object{{"bool", true}};
-  Template T("| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -789,7 +1021,10 @@ TEST(MustacheInvertedSections, NestedTruthy) {
 
 TEST(MustacheInvertedSections, ContextMisses) {
   Value D = Object{};
-  Template T("[{{^missing}}Cannot find key 'missing'!{{/missing}}]");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("[{{^missing}}Cannot find key 'missing'!{{/missing}}]", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -798,7 +1033,10 @@ TEST(MustacheInvertedSections, ContextMisses) {
 
 TEST(MustacheInvertedSections, DottedNamesTruthy) {
   Value D = Object{{"a", Object{{"b", Object{{"c", true}}}}}};
-  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == ");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == ", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -807,7 +1045,10 @@ TEST(MustacheInvertedSections, DottedNamesTruthy) {
 
 TEST(MustacheInvertedSections, DottedNamesFalsey) {
   Value D = Object{{"a", Object{{"b", Object{{"c", false}}}}}};
-  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == Not Here");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == Not Here", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -816,7 +1057,10 @@ TEST(MustacheInvertedSections, DottedNamesFalsey) {
 
 TEST(MustacheInvertedSections, DottedNamesBrokenChains) {
   Value D = Object{{"a", Object{}}};
-  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == Not Here");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{^a.b.c}}Not Here{{/a.b.c}} == Not Here", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -825,7 +1069,10 @@ TEST(MustacheInvertedSections, DottedNamesBrokenChains) {
 
 TEST(MustacheInvertedSections, SurroundingWhitespace) {
   Value D = Object{{"boolean", false}};
-  Template T(" | {{^boolean}}\t|\t{{/boolean}} | \n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T(" | {{^boolean}}\t|\t{{/boolean}} | \n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -834,7 +1081,11 @@ TEST(MustacheInvertedSections, SurroundingWhitespace) {
 
 TEST(MustacheInvertedSections, InternalWhitespace) {
   Value D = Object{{"boolean", false}};
-  Template T(" | {{^boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T(" | {{^boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -843,7 +1094,11 @@ TEST(MustacheInvertedSections, InternalWhitespace) {
 
 TEST(MustacheInvertedSections, IndentedInlineSections) {
   Value D = Object{{"boolean", false}};
-  Template T(" {{^boolean}}NO{{/boolean}}\n {{^boolean}}WAY{{/boolean}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T(" {{^boolean}}NO{{/boolean}}\n {{^boolean}}WAY{{/boolean}}\n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -852,7 +1107,10 @@ TEST(MustacheInvertedSections, IndentedInlineSections) {
 
 TEST(MustacheInvertedSections, StandaloneLines) {
   Value D = Object{{"boolean", false}};
-  Template T("| This Is\n{{^boolean}}\n|\n{{/boolean}}\n| A Line\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| This Is\n{{^boolean}}\n|\n{{/boolean}}\n| A Line\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -861,7 +1119,10 @@ TEST(MustacheInvertedSections, StandaloneLines) {
 
 TEST(MustacheInvertedSections, StandaloneIndentedLines) {
   Value D = Object{{"boolean", false}};
-  Template T("| This Is\n  {{^boolean}}\n|\n  {{/boolean}}\n| A Line\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| This Is\n  {{^boolean}}\n|\n  {{/boolean}}\n| A Line\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -870,7 +1131,10 @@ TEST(MustacheInvertedSections, StandaloneIndentedLines) {
 
 TEST(MustacheInvertedSections, StandaloneLineEndings) {
   Value D = Object{{"boolean", false}};
-  Template T("|\r\n{{^boolean}}\r\n{{/boolean}}\r\n|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|\r\n{{^boolean}}\r\n{{/boolean}}\r\n|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -879,7 +1143,10 @@ TEST(MustacheInvertedSections, StandaloneLineEndings) {
 
 TEST(MustacheInvertedSections, StandaloneWithoutPreviousLine) {
   Value D = Object{{"boolean", false}};
-  Template T("  {{^boolean}}\n^{{/boolean}}\n/");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  {{^boolean}}\n^{{/boolean}}\n/", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -888,7 +1155,10 @@ TEST(MustacheInvertedSections, StandaloneWithoutPreviousLine) {
 
 TEST(MustacheInvertedSections, StandaloneWithoutNewline) {
   Value D = Object{{"boolean", false}};
-  Template T("^{{^boolean}}\n/\n  {{/boolean}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("^{{^boolean}}\n/\n  {{/boolean}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -897,7 +1167,10 @@ TEST(MustacheInvertedSections, StandaloneWithoutNewline) {
 
 TEST(MustacheInvertedSections, Padding) {
   Value D = Object{{"boolean", false}};
-  Template T("|{{^ boolean }}={{/ boolean }}|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|{{^ boolean }}={{/ boolean }}|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -906,7 +1179,10 @@ TEST(MustacheInvertedSections, Padding) {
 
 TEST(MustachePartials, BasicBehavior) {
   Value D = Object{};
-  Template T("{{>text}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{>text}}", Ctx);
   T.registerPartial("text", "from partial");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -916,7 +1192,10 @@ TEST(MustachePartials, BasicBehavior) {
 
 TEST(MustachePartials, FailedLookup) {
   Value D = Object{};
-  Template T("{{>text}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{>text}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -925,7 +1204,10 @@ TEST(MustachePartials, FailedLookup) {
 
 TEST(MustachePartials, Context) {
   Value D = Object{{"text", "content"}};
-  Template T("{{>partial}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{>partial}}", Ctx);
   T.registerPartial("partial", "*{{text}}*");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -937,7 +1219,10 @@ TEST(MustachePartials, Recursion) {
   Value D =
       Object{{"content", "X"},
              {"nodes", Array{Object{{"content", "Y"}, {"nodes", Array{}}}}}};
-  Template T("{{>node}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{>node}}", Ctx);
   T.registerPartial("node", "{{content}}({{#nodes}}{{>node}}{{/nodes}})");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -947,7 +1232,10 @@ TEST(MustachePartials, Recursion) {
 
 TEST(MustachePartials, Nested) {
   Value D = Object{{"a", "hello"}, {"b", "world"}};
-  Template T("{{>outer}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{>outer}}", Ctx);
   T.registerPartial("outer", "*{{a}} {{>inner}}*");
   T.registerPartial("inner", "{{b}}!");
   std::string Out;
@@ -958,7 +1246,10 @@ TEST(MustachePartials, Nested) {
 
 TEST(MustachePartials, SurroundingWhitespace) {
   Value D = Object{};
-  Template T("| {{>partial}} |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| {{>partial}} |", Ctx);
   T.registerPartial("partial", "\t|\t");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -968,7 +1259,10 @@ TEST(MustachePartials, SurroundingWhitespace) {
 
 TEST(MustachePartials, InlineIndentation) {
   Value D = Object{{"data", "|"}};
-  Template T("  {{data}}  {{> partial}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  {{data}}  {{> partial}}\n", Ctx);
   T.registerPartial("partial", "<\n<");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -978,7 +1272,10 @@ TEST(MustachePartials, InlineIndentation) {
 
 TEST(MustachePartials, PaddingWhitespace) {
   Value D = Object{{"boolean", true}};
-  Template T("|{{> partial }}|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|{{> partial }}|", Ctx);
   T.registerPartial("partial", "[]");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -987,7 +1284,10 @@ TEST(MustachePartials, PaddingWhitespace) {
 }
 
 TEST(MustachePartials, StandaloneIndentation) {
-  mustache::Template T("\\\n {{>partial}}\n/\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  mustache::Template T("\\\n {{>partial}}\n/\n", Ctx);
   T.registerPartial("partial", "|\n{{{content}}}\n|\n");
   std::string O;
   raw_string_ostream OS(O);
@@ -998,7 +1298,10 @@ TEST(MustachePartials, StandaloneIndentation) {
 
 TEST(MustacheLambdas, BasicInterpolation) {
   Value D = Object{};
-  Template T("Hello, {{lambda}}!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{lambda}}!", Ctx);
   Lambda L = []() -> llvm::json::Value { return "World"; };
   T.registerLambda("lambda", L);
   std::string Out;
@@ -1009,7 +1312,10 @@ TEST(MustacheLambdas, BasicInterpolation) {
 
 TEST(MustacheLambdas, InterpolationExpansion) {
   Value D = Object{{"planet", "World"}};
-  Template T("Hello, {{lambda}}!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{lambda}}!", Ctx);
   Lambda L = []() -> llvm::json::Value { return "{{planet}}"; };
   T.registerLambda("lambda", L);
   std::string Out;
@@ -1020,7 +1326,10 @@ TEST(MustacheLambdas, InterpolationExpansion) {
 
 TEST(MustacheLambdas, BasicMultipleCalls) {
   Value D = Object{};
-  Template T("{{lambda}} == {{lambda}} == {{lambda}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{lambda}} == {{lambda}} == {{lambda}}", Ctx);
   int I = 0;
   Lambda L = [&I]() -> llvm::json::Value {
     I += 1;
@@ -1035,7 +1344,10 @@ TEST(MustacheLambdas, BasicMultipleCalls) {
 
 TEST(MustacheLambdas, Escaping) {
   Value D = Object{};
-  Template T("<{{lambda}}{{&lambda}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("<{{lambda}}{{&lambda}}", Ctx);
   Lambda L = []() -> llvm::json::Value { return ">"; };
   T.registerLambda("lambda", L);
   std::string Out;
@@ -1046,7 +1358,10 @@ TEST(MustacheLambdas, Escaping) {
 
 TEST(MustacheLambdas, Sections) {
   Value D = Object{};
-  Template T("<{{#lambda}}{{x}}{{/lambda}}>");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("<{{#lambda}}{{x}}{{/lambda}}>", Ctx);
   SectionLambda L = [](StringRef Text) -> llvm::json::Value {
     if (Text == "{{x}}") {
       return "yes";
@@ -1064,7 +1379,10 @@ TEST(MustacheLambdas, SectionExpansion) {
   Value D = Object{
       {"planet", "Earth"},
   };
-  Template T("<{{#lambda}}-{{/lambda}}>");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("<{{#lambda}}-{{/lambda}}>", Ctx);
   SectionLambda L = [](StringRef Text) -> llvm::json::Value {
     SmallString<128> Result;
     Result += Text;
@@ -1081,7 +1399,10 @@ TEST(MustacheLambdas, SectionExpansion) {
 
 TEST(MustacheLambdas, SectionsMultipleCalls) {
   Value D = Object{};
-  Template T("{{#lambda}}FILE{{/lambda}} != {{#lambda}}LINE{{/lambda}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#lambda}}FILE{{/lambda}} != {{#lambda}}LINE{{/lambda}}", Ctx);
   SectionLambda L = [](StringRef Text) -> llvm::json::Value {
     SmallString<128> Result;
     Result += "__";
@@ -1098,7 +1419,10 @@ TEST(MustacheLambdas, SectionsMultipleCalls) {
 
 TEST(MustacheLambdas, InvertedSections) {
   Value D = Object{{"static", "static"}};
-  Template T("<{{^lambda}}{{static}}{{/lambda}}>");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("<{{^lambda}}{{static}}{{/lambda}}>", Ctx);
   SectionLambda L = [](StringRef Text) -> llvm::json::Value { return false; };
   T.registerLambda("lambda", L);
   std::string Out;
@@ -1110,7 +1434,10 @@ TEST(MustacheLambdas, InvertedSections) {
 TEST(MustacheComments, Inline) {
   // Comment blocks should be removed from the template.
   Value D = {};
-  Template T("12345{{! Comment Block! }}67890");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("12345{{! Comment Block! }}67890", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1120,7 +1447,10 @@ TEST(MustacheComments, Inline) {
 TEST(MustacheComments, Multiline) {
   // Multiline comments should be permitted.
   Value D = {};
-  Template T("12345{{!\n  This is a\n  multi-line comment...\n}}67890\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("12345{{!\n  This is a\n  multi-line comment...\n}}67890\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1130,7 +1460,10 @@ TEST(MustacheComments, Multiline) {
 TEST(MustacheComments, Standalone) {
   // All standalone comment lines should be removed.
   Value D = {};
-  Template T("Begin.\n{{! Comment Block! }}\nEnd.\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Begin.\n{{! Comment Block! }}\nEnd.\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1140,7 +1473,10 @@ TEST(MustacheComments, Standalone) {
 TEST(MustacheComments, IndentedStandalone) {
   // All standalone comment lines should be removed.
   Value D = {};
-  Template T("Begin.\n  {{! Indented Comment Block! }}\nEnd.\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Begin.\n  {{! Indented Comment Block! }}\nEnd.\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1150,7 +1486,10 @@ TEST(MustacheComments, IndentedStandalone) {
 TEST(MustacheComments, StandaloneLineEndings) {
   // "\r\n" should be considered a newline for standalone tags.
   Value D = {};
-  Template T("|\r\n{{! Standalone Comment }}\r\n|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|\r\n{{! Standalone Comment }}\r\n|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1160,7 +1499,10 @@ TEST(MustacheComments, StandaloneLineEndings) {
 TEST(MustacheComments, StandaloneWithoutPreviousLine) {
   // Standalone tags should not require a newline to precede them.
   Value D = {};
-  Template T("  {{! I'm Still Standalone }}\n!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  {{! I'm Still Standalone }}\n!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1170,7 +1512,10 @@ TEST(MustacheComments, StandaloneWithoutPreviousLine) {
 TEST(MustacheComments, StandaloneWithoutNewline) {
   // Standalone tags should not require a newline to follow them.
   Value D = {};
-  Template T("!\n  {{! I'm Still Standalone }}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("!\n  {{! I'm Still Standalone }}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1180,7 +1525,10 @@ TEST(MustacheComments, StandaloneWithoutNewline) {
 TEST(MustacheComments, MultilineStandalone) {
   // All standalone comment lines should be removed.
   Value D = {};
-  Template T("Begin.\n{{!\nSomething's going on here...\n}}\nEnd.\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Begin.\n{{!\nSomething's going on here...\n}}\nEnd.\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1190,7 +1538,11 @@ TEST(MustacheComments, MultilineStandalone) {
 TEST(MustacheComments, IndentedMultilineStandalone) {
   // All standalone comment lines should be removed.
   Value D = {};
-  Template T("Begin.\n  {{!\n    Something's going on here...\n  }}\nEnd.\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Begin.\n  {{!\n    Something's going on here...\n  }}\nEnd.\n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1200,7 +1552,10 @@ TEST(MustacheComments, IndentedMultilineStandalone) {
 TEST(MustacheComments, IndentedInline) {
   // Inline comments should not strip whitespace.
   Value D = {};
-  Template T("  12 {{! 34 }}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  12 {{! 34 }}\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1210,7 +1565,10 @@ TEST(MustacheComments, IndentedInline) {
 TEST(MustacheComments, SurroundingWhitespace) {
   // Comment removal should preserve surrounding whitespace.
   Value D = {};
-  Template T("12345 {{! Comment Block! }} 67890");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("12345 {{! Comment Block! }} 67890", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1221,7 +1579,10 @@ TEST(MustacheComments, VariableNameCollision) {
   // Comments must never render, even if a variable with the same name exists.
   Value D = Object{
       {"! comment", 1}, {"! comment ", 2}, {"!comment", 3}, {"comment", 4}};
-  Template T("comments never show: >{{! comment }}<");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("comments never show: >{{! comment }}<", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1234,7 +1595,10 @@ TEST(MustacheComments, VariableNameCollision) {
 // implemented, these assertions should be changed back to EXPECT_EQ.
 TEST(MustacheTripleMustache, Basic) {
   Value D = Object{{"subject", "<b>World</b>"}};
-  Template T("Hello, {{{subject}}}!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Hello, {{{subject}}}!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1243,7 +1607,10 @@ TEST(MustacheTripleMustache, Basic) {
 
 TEST(MustacheTripleMustache, IntegerInterpolation) {
   Value D = Object{{"mph", 85}};
-  Template T("{{{mph}}} miles an hour!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{{mph}}} miles an hour!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1252,7 +1619,10 @@ TEST(MustacheTripleMustache, IntegerInterpolation) {
 
 TEST(MustacheTripleMustache, DecimalInterpolation) {
   Value D = Object{{"power", 1.21}};
-  Template T("{{{power}}} jiggawatts!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{{power}}} jiggawatts!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1261,7 +1631,10 @@ TEST(MustacheTripleMustache, DecimalInterpolation) {
 
 TEST(MustacheTripleMustache, NullInterpolation) {
   Value D = Object{{"cannot", nullptr}};
-  Template T("I ({{{cannot}}}) be seen!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("I ({{{cannot}}}) be seen!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1270,7 +1643,10 @@ TEST(MustacheTripleMustache, NullInterpolation) {
 
 TEST(MustacheTripleMustache, ContextMissInterpolation) {
   Value D = Object{};
-  Template T("I ({{{cannot}}}) be seen!");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("I ({{{cannot}}}) be seen!", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1279,7 +1655,10 @@ TEST(MustacheTripleMustache, ContextMissInterpolation) {
 
 TEST(MustacheTripleMustache, DottedNames) {
   Value D = Object{{"person", Object{{"name", "<b>Joe</b>"}}}};
-  Template T("{{{person.name}}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{{person.name}}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1288,7 +1667,10 @@ TEST(MustacheTripleMustache, DottedNames) {
 
 TEST(MustacheTripleMustache, ImplicitIterator) {
   Value D = Object{{"list", Array{"<a>", "<b>"}}};
-  Template T("{{#list}}({{{.}}}){{/list}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{#list}}({{{.}}}){{/list}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1297,7 +1679,10 @@ TEST(MustacheTripleMustache, ImplicitIterator) {
 
 TEST(MustacheTripleMustache, SurroundingWhitespace) {
   Value D = Object{{"string", "---"}};
-  Template T("| {{{string}}} |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| {{{string}}} |", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1306,7 +1691,10 @@ TEST(MustacheTripleMustache, SurroundingWhitespace) {
 
 TEST(MustacheTripleMustache, Standalone) {
   Value D = Object{{"string", "---"}};
-  Template T("  {{{string}}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  {{{string}}}\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1315,7 +1703,10 @@ TEST(MustacheTripleMustache, Standalone) {
 
 TEST(MustacheTripleMustache, WithPadding) {
   Value D = Object{{"string", "---"}};
-  Template T("|{{{ string }}}|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|{{{ string }}}|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1324,7 +1715,10 @@ TEST(MustacheTripleMustache, WithPadding) {
 
 TEST(MustacheDelimiters, PairBehavior) {
   Value D = Object{{"text", "Hey!"}};
-  Template T("{{=<% %>=}}(<%text%>)");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("{{=<% %>=}}(<%text%>)", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1333,7 +1727,10 @@ TEST(MustacheDelimiters, PairBehavior) {
 
 TEST(MustacheDelimiters, SpecialCharacters) {
   Value D = Object{{"text", "It worked!"}};
-  Template T("({{=[ ]=}}[text])");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("({{=[ ]=}}[text])", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1342,9 +1739,12 @@ TEST(MustacheDelimiters, SpecialCharacters) {
 
 TEST(MustacheDelimiters, Sections) {
   Value D = Object{{"section", true}, {"data", "I got interpolated."}};
-  auto T =
-      Template("[\n{{#section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= "
-               "| | =}}\n|#section|\n  {{data}}\n  |data|\n|/section|\n]\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("[\n{{#section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= "
+             "| | =}}\n|#section|\n  {{data}}\n  |data|\n|/section|\n]\n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1355,9 +1755,12 @@ TEST(MustacheDelimiters, Sections) {
 
 TEST(MustacheDelimiters, InvertedSections) {
   Value D = Object{{"section", false}, {"data", "I got interpolated."}};
-  auto T =
-      Template("[\n{{^section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= "
-               "| | =}}\n|^section|\n  {{data}}\n  |data|\n|/section|\n]\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("[\n{{^section}}\n  {{data}}\n  |data|\n{{/section}}\n\n{{= "
+             "| | =}}\n|^section|\n  {{data}}\n  |data|\n|/section|\n]\n",
+             Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1368,7 +1771,10 @@ TEST(MustacheDelimiters, InvertedSections) {
 
 TEST(MustacheDelimiters, PartialInheritence) {
   Value D = Object{{"value", "yes"}};
-  Template T("[ {{>include}} ]\n{{= | | =}}\n[ |>include| ]\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("[ {{>include}} ]\n{{= | | =}}\n[ |>include| ]\n", Ctx);
   T.registerPartial("include", ".{{value}}.");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -1378,7 +1784,10 @@ TEST(MustacheDelimiters, PartialInheritence) {
 
 TEST(MustacheDelimiters, PostPartialBehavior) {
   Value D = Object{{"value", "yes"}};
-  Template T("[ {{>include}} ]\n[ .{{value}}.  .|value|. ]\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("[ {{>include}} ]\n[ .{{value}}.  .|value|. ]\n", Ctx);
   T.registerPartial("include", ".{{value}}. {{= | | =}} .|value|.");
   std::string Out;
   raw_string_ostream OS(Out);
@@ -1388,7 +1797,10 @@ TEST(MustacheDelimiters, PostPartialBehavior) {
 
 TEST(MustacheDelimiters, SurroundingWhitespace) {
   Value D = Object{};
-  Template T("| {{=@ @=}} |");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("| {{=@ @=}} |", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1397,7 +1809,10 @@ TEST(MustacheDelimiters, SurroundingWhitespace) {
 
 TEST(MustacheDelimiters, OutlyingWhitespaceInline) {
   Value D = Object{};
-  Template T(" | {{=@ @=}}\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T(" | {{=@ @=}}\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1406,7 +1821,10 @@ TEST(MustacheDelimiters, OutlyingWhitespaceInline) {
 
 TEST(MustacheDelimiters, StandaloneTag) {
   Value D = Object{};
-  Template T("Begin.\n{{=@ @=}}\nEnd.\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Begin.\n{{=@ @=}}\nEnd.\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1415,7 +1833,10 @@ TEST(MustacheDelimiters, StandaloneTag) {
 
 TEST(MustacheDelimiters, IndentedStandaloneTag) {
   Value D = Object{};
-  Template T("Begin.\n  {{=@ @=}}\nEnd.\n");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("Begin.\n  {{=@ @=}}\nEnd.\n", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1424,7 +1845,10 @@ TEST(MustacheDelimiters, IndentedStandaloneTag) {
 
 TEST(MustacheDelimiters, StandaloneLineEndings) {
   Value D = Object{};
-  Template T("|\r\n{{= @ @ =}}\r\n|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|\r\n{{= @ @ =}}\r\n|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1433,7 +1857,10 @@ TEST(MustacheDelimiters, StandaloneLineEndings) {
 
 TEST(MustacheDelimiters, StandaloneWithoutPreviousLine) {
   Value D = Object{};
-  Template T("  {{=@ @=}}\n=");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("  {{=@ @=}}\n=", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1442,7 +1869,10 @@ TEST(MustacheDelimiters, StandaloneWithoutPreviousLine) {
 
 TEST(MustacheDelimiters, StandaloneWithoutNewline) {
   Value D = Object{};
-  Template T("=\n  {{=@ @=}}");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("=\n  {{=@ @=}}", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
@@ -1451,7 +1881,10 @@ TEST(MustacheDelimiters, StandaloneWithoutNewline) {
 
 TEST(MustacheDelimiters, PairwithPadding) {
   Value D = Object{};
-  Template T("|{{= @   @ =}}|");
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  MustacheContext Ctx(Allocator, Saver);
+  Template T("|{{= @   @ =}}|", Ctx);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);

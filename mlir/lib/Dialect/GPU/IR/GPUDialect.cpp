@@ -208,7 +208,7 @@ Type MMAMatrixType::getElementType() const { return getImpl()->elementType; }
 StringRef MMAMatrixType::getOperand() const { return getImpl()->getOperand(); }
 
 bool MMAMatrixType::isValidElementType(Type elementType) {
-  return elementType.isF16() || elementType.isF32() ||
+  return elementType.isF16() || elementType.isF32() || elementType.isF64() ||
          elementType.isUnsignedInteger(8) || elementType.isSignedInteger(8) ||
          elementType.isInteger(32);
 }
@@ -225,7 +225,7 @@ MMAMatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 
   if (!MMAMatrixType::isValidElementType(elementType))
     return emitError()
-           << "MMAMatrixType elements must be SI8, UI8, I32, F16, or F32";
+           << "MMAMatrixType elements must be SI8, UI8, I32, F16, F32, or F64";
 
   return success();
 }
@@ -375,7 +375,7 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
         os << shape.back() << 'x' << fragTy.getElementType();
         os << ", \"" << fragTy.getOperand() << "\"" << '>';
       })
-      .Default([](Type) { llvm_unreachable("unexpected 'gpu' type kind"); });
+      .DefaultUnreachable("unexpected 'gpu' type kind");
 }
 
 static LogicalResult verifyKnownLaunchSizeAttr(Operation *op,
@@ -2399,7 +2399,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getResults()));
+    regions.push_back(RegionSuccessor(getOperation(), getResults()));
     return;
   }
 
@@ -2460,8 +2460,7 @@ static LogicalResult verifyDistributedType(Type expanded, Type distributed,
              << dDim << ")";
     scales[i] = eDim / dDim;
   }
-  if (std::accumulate(scales.begin(), scales.end(), 1,
-                      std::multiplies<int64_t>()) != warpSize)
+  if (llvm::product_of(scales) != warpSize)
     return op->emitOpError()
            << "incompatible distribution dimensions from " << expandedVecType
            << " to " << distributedVecType << " with warp size = " << warpSize;

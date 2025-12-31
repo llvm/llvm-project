@@ -2,17 +2,17 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o -  | FileCheck %s
 
 void empty() { }
-// CHECK: cir.func{{.*}} @_Z5emptyv() {
+// CHECK: cir.func{{.*}} @_Z5emptyv()
 // CHECK:   cir.return
 // CHECK: }
 
 void voidret() { return; }
-// CHECK: cir.func{{.*}} @_Z7voidretv() {
+// CHECK: cir.func{{.*}} @_Z7voidretv()
 // CHECK:   cir.return
 // CHECK: }
 
 int intfunc() { return 42; }
-// CHECK: cir.func{{.*}} @_Z7intfuncv() -> !s32i {
+// CHECK: cir.func{{.*}} @_Z7intfuncv() -> !s32i
 // CHECK:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.const #cir.int<42> : !s32i
 // CHECK:   cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
@@ -27,7 +27,7 @@ int scopes() {
     }
   }
 }
-// CHECK: cir.func{{.*}} @_Z6scopesv() -> !s32i {
+// CHECK: cir.func{{.*}} @_Z6scopesv() -> !s32i
 // CHECK:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   cir.scope {
 // CHECK:     cir.scope {
@@ -68,7 +68,7 @@ unsigned long long ullfunc() { return 42ull; }
 // CHECK: }
 
 bool boolfunc() { return true; }
-// CHECK: cir.func{{.*}} @_Z8boolfuncv() -> !cir.bool {
+// CHECK: cir.func{{.*}} @_Z8boolfuncv() -> !cir.bool
 // CHECK:   %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"] {alignment = 1 : i64}
 // CHECK:   %1 = cir.const #true
 // CHECK:   cir.store %1, %0 : !cir.bool, !cir.ptr<!cir.bool>
@@ -77,7 +77,7 @@ bool boolfunc() { return true; }
 // CHECK: }
 
 float floatfunc() { return 42.42f; }
-// CHECK: cir.func{{.*}} @_Z9floatfuncv() -> !cir.float {
+// CHECK: cir.func{{.*}} @_Z9floatfuncv() -> !cir.float
 // CHECK:   %0 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.const #cir.fp<4.242
 // CHECK:   cir.store %1, %0 : !cir.float, !cir.ptr<!cir.float>
@@ -86,7 +86,7 @@ float floatfunc() { return 42.42f; }
 // CHECK: }
 
 double doublefunc() { return 42.42; }
-// CHECK: cir.func{{.*}} @_Z10doublefuncv() -> !cir.double {
+// CHECK: cir.func{{.*}} @_Z10doublefuncv() -> !cir.double
 // CHECK:   %0 = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["__retval"] {alignment = 8 : i64}
 // CHECK:   %1 = cir.const #cir.fp<4.242
 // CHECK:   cir.store %1, %0 : !cir.double, !cir.ptr<!cir.double>

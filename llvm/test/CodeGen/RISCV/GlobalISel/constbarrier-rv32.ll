@@ -32,9 +32,12 @@ define void @constant_fold_barrier_i128(ptr %p) {
 ; RV32-NEXT:    mv a6, a1
 ; RV32-NEXT:    seqz a7, a1
 ; RV32-NEXT:    and a1, a7, a1
+; RV32-NEXT:    mv a1, a1
 ; RV32-NEXT:    mv a7, a1
 ; RV32-NEXT:    seqz a3, a1
 ; RV32-NEXT:    and a1, a3, a1
+; RV32-NEXT:    mv a1, a1
+; RV32-NEXT:    mv a1, a1
 ; RV32-NEXT:    sw a2, 0(a0)
 ; RV32-NEXT:    sw a6, 4(a0)
 ; RV32-NEXT:    sw a7, 8(a0)

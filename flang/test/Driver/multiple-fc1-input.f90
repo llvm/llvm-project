@@ -5,5 +5,5 @@
 ! RUN: %flang_fc1 -emit-fir %s %s -o - | FileCheck %s
 subroutine foo()
 end subroutine
-! CHECK: func @_QPfoo() 
-! CHECK: func @_QPfoo() 
+! CHECK: func @_QPfoo()
+! CHECK: func @_QPfoo()

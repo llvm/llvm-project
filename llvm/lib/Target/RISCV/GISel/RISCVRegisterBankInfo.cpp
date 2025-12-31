@@ -112,6 +112,19 @@ using namespace llvm;
 RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
     : RISCVGenRegisterBankInfo(HwMode) {}
 
+const RegisterBank &
+RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                              LLT Ty) const {
+  switch (RC.getID()) {
+  // Vector control and status register class
+  case RISCV::VCSRRegClassID:
+    return getRegBank(RISCV::GPRBRegBankID);
+  default:
+    // For all GPR register classes and others, use the default implementation
+    return RISCVGenRegisterBankInfo::getRegBankFromRegClass(RC, Ty);
+  }
+}
+
 static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   unsigned Idx;
   switch (Size) {
@@ -324,6 +337,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     OpdsMapping[0] = GPRValueMapping;
 
+    // Atomics always use GPR destinations. Don't refine any further.
+    if (cast<GLoad>(MI).isAtomic())
+      break;
+
     // Use FPR64 for s64 loads on rv32.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
@@ -357,6 +374,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
 
     OpdsMapping[0] = GPRValueMapping;
+
+    // Atomics always use GPR sources. Don't refine any further.
+    if (cast<GStore>(MI).isAtomic())
+      break;
 
     // Use FPR64 for s64 stores on rv32.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {

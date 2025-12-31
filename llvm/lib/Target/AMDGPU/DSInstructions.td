@@ -463,7 +463,7 @@ class DS_GWS_0D <string opName>
 
 class DS_GWS_1D <string opName>
 : DS_GWS<opName,
-  (ins AVLdSt_32:$data0, Offset:$offset),
+  (ins AV_LdSt_32_Align2_RegOp:$data0, Offset:$offset),
   " $data0$offset gds"> {
 
   let has_gws_data0 = 1;
@@ -886,17 +886,6 @@ defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc_gfx9<"ds_sub_clamp_rtn_u32", VGPROp_3
 def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
                                              int_amdgcn_ds_bpermute_fi_b32>;
 
-multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
-                                  ValueType vt, string frag> {
-  def : DSAtomicRetPat<inst, vt,
-                        !cast<PatFrag>(frag#"_local_addrspace")>;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    def : DSAtomicRetPat<noRetInst, vt,
-                          !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
-}
-
-defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = isGFX1250Plus in {
@@ -904,7 +893,7 @@ let SubtargetPredicate = isGFX1250Plus in {
 let WaveSizePredicate = isWave32, mayStore = 0 in {
 let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VGPROp_64>;
-defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96_Align1>;
 } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VGPROp_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VGPROp_128>;
@@ -934,7 +923,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
   defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", AVLdSt_64>;
   defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", AVLdSt_64>;
   defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", AVLdSt_64>;
-  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96>;
+  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96_Align1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -949,6 +938,11 @@ def : GCNPat <
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
   (inst $ptr, Offset:$offset, (i1 gds))
+>;
+
+class DSReadPat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
+  (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (EXTRACT_SUBREG (inst $ptr, Offset:$offset, (i1 gds)), lo16)
 >;
 
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
@@ -968,13 +962,14 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
     def : DSReadPat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    let True16Predicate = NotUseRealTrue16Insts in {
-      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-    }
-    let True16Predicate = UseRealTrue16Insts in {
-      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
-    }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = NotUseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseTrue16WithSramECC in {
+    def : DSReadPat_t16<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 }
 
@@ -1273,6 +1268,14 @@ defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "ato
 defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
 }
 
+let SubtargetPredicate = HasAtomicDsCondSubClampInsts in {
+
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_usub_cond">;
+
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_SUB_CLAMP_RTN_U32, DS_SUB_CLAMP_U32, i32, "atomic_load_usub_sat">;
+
+} // let SubtargetPredicate = HasAtomicDsCondSubClampInsts
+
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B32, DS_CMPST_B32, i32, "atomic_cmp_swap">;
 }
@@ -1481,6 +1484,12 @@ let AssemblerPredicate = isGFX12Plus in {
 // Aliases that have existed since these instructions were introduced.
 def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1250Plus]>;
 def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250Plus]>;
+
+// Additional aliases for ds load transpose instructions.
+def : MnemonicAlias<"ds_load_b64_tr_b8", "ds_load_tr8_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b128_tr_b16", "ds_load_tr16_b128">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b64_tr_b4", "ds_load_tr4_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b96_tr_b6", "ds_load_tr6_b96">, Requires<[isGFX125xOnly]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

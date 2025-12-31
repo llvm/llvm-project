@@ -26,11 +26,14 @@ namespace llvm {
 class AArch64RegisterBankInfo;
 class AArch64Subtarget;
 class AArch64TargetMachine;
+enum class CodeGenOptLevel;
 class FunctionPass;
 class InstructionSelector;
+class ModulePass;
 
 FunctionPass *createAArch64DeadRegisterDefinitions();
 FunctionPass *createAArch64RedundantCopyEliminationPass();
+FunctionPass *createAArch64RedundantCondBranchPass();
 FunctionPass *createAArch64CondBrTuning();
 FunctionPass *createAArch64CompressJumpTablesPass();
 FunctionPass *createAArch64ConditionalCompares();
@@ -60,7 +63,7 @@ FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 FunctionPass *createAArch64CollectLOHPass();
 FunctionPass *createSMEABIPass();
 FunctionPass *createSMEPeepholeOptPass();
-FunctionPass *createMachineSMEABIPass();
+FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
 ModulePass *createSVEIntrinsicOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
@@ -101,6 +104,7 @@ void initializeAArch64PostSelectOptimizePass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationPass(PassRegistry&);
+void initializeAArch64RedundantCondBranchPass(PassRegistry &);
 void initializeAArch64SIMDInstrOptPass(PassRegistry &);
 void initializeAArch64SLSHardeningPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);

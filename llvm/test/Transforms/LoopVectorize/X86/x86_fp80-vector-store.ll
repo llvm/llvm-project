@@ -33,11 +33,11 @@ define void @example() {
 ; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; FORCED-NEXT:    [[TMP2:%.*]] = sitofp <2 x i64> [[VEC_IND]] to <2 x x86_fp80>
+; FORCED-NEXT:    [[TMP5:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i32 0
+; FORCED-NEXT:    [[TMP6:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i32 1
 ; FORCED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[TMP0]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[TMP1]]
-; FORCED-NEXT:    [[TMP5:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i32 0
 ; FORCED-NEXT:    store x86_fp80 [[TMP5]], ptr [[TMP3]], align 16
-; FORCED-NEXT:    [[TMP6:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i32 1
 ; FORCED-NEXT:    store x86_fp80 [[TMP6]], ptr [[TMP4]], align 16
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; FORCED-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
@@ -100,8 +100,8 @@ define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 ; FORCED-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[TMP4:%.*]] = zext <2 x i32> [[VEC_IND]] to <2 x i64>
 ; FORCED-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
-; FORCED-NEXT:    [[TMP6:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP5]]
 ; FORCED-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
+; FORCED-NEXT:    [[TMP6:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP5]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP7]]
 ; FORCED-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP6]], align 16
 ; FORCED-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP8]], align 16

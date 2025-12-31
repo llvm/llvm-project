@@ -3,7 +3,7 @@
 # RUN: split-file %s %t
 
 // For the first test case, in case the nop before .Lci will be removed
-// the pointer to exit function won't be alinged and the test will fail.
+// the pointer to exit function won't be aligned and the test will fail.
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:   %t/xword_align.s -o %t_xa.o
@@ -53,6 +53,7 @@ _start:
   blr x0
   mov x0, #1
   ret
+.size _start,.-_start
   nop
 # CHECK: {{0|8}} <$d>:
 .Lci:

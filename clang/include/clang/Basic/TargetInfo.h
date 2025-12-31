@@ -229,6 +229,7 @@ class TargetInfo : public TransferrableTargetInfo,
 protected:
   // Target values set by the ctor of the actual target implementation.  Default
   // values are specified by the TargetInfo constructor.
+  bool HasMustTail;
   bool BigEndian;
   bool TLSSupported;
   bool VLASupported;
@@ -295,9 +296,11 @@ protected:
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
-  // UserLabelPrefix must match DL's getGlobalPrefix() when interpreted
-  // as a DataLayout object.
-  void resetDataLayout(StringRef DL, const char *UserLabelPrefix = "");
+  /// Set the data layout to the given string.
+  void resetDataLayout(StringRef DL);
+
+  /// Set the data layout based on current triple and ABI.
+  void resetDataLayout();
 
   // Target features that are read-only and should not be disabled/enabled
   // by command line options. Such features are for emitting predefined
@@ -668,6 +671,8 @@ public:
     return PaddingOnUnsignedFixedPoint ? getLongFractScale()
                                        : getLongFractScale() + 1;
   }
+
+  virtual bool hasMustTail() const { return HasMustTail; }
 
   /// Determine whether the __int128 type is supported on this target.
   virtual bool hasInt128Type() const {
@@ -1210,6 +1215,25 @@ public:
       Flags = Output.Flags;
       TiedOperand = N;
       // Don't copy Name or constraint string.
+    }
+
+    // For output operand constraints, the target can set bounds to indicate
+    // that the result value is guaranteed to fall within a certain range.
+    // This will cause corresponding assertions to be emitted that will allow
+    // for potential optimization based of that guarantee.
+    //
+    // NOTE: This re-uses the `ImmRange` fields to store the range, which are
+    // otherwise unused for constraint types used for output operands.
+    void setOutputOperandBounds(unsigned Min, unsigned Max) {
+      ImmRange.Min = Min;
+      ImmRange.Max = Max;
+      ImmRange.isConstrained = true;
+    }
+    std::optional<std::pair<unsigned, unsigned>>
+    getOutputOperandBounds() const {
+      return ImmRange.isConstrained
+                 ? std::make_pair(ImmRange.Min, ImmRange.Max)
+                 : std::optional<std::pair<unsigned, unsigned>>();
     }
   };
 
@@ -1774,6 +1798,11 @@ public:
   /// destructor body.
   virtual bool callGlobalDeleteInDeletingDtor(const LangOptions &) const;
 
+  /// Controls whether to emit MSVC vector deleting destructors. The support for
+  /// vector deleting affects vtable layout and therefore is an ABI breaking
+  /// change. The support was only implemented at Clang 22 timeframe.
+  virtual bool emitVectorDeletingDtors(const LangOptions &) const;
+
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
   virtual bool hasSjLjLowering() const {
@@ -1825,6 +1854,9 @@ public:
       getTargetOpts().OpenCLFeaturesMap[Name] = V;
     }
   }
+
+  /// Set features that depend on other features.
+  virtual void setDependentOpenCLOpts();
 
   /// Get supported OpenCL extensions and optional core features.
   llvm::StringMap<bool> &getSupportedOpenCLOpts() {

@@ -2790,6 +2790,72 @@ public:
   }
 };
 
+/// MatrixSingleSubscriptExpr - Matrix single subscript expression for the
+/// MatrixType extension when you want to get\set a vector from a Matrix.
+class MatrixSingleSubscriptExpr : public Expr {
+  enum { BASE, ROW_IDX, END_EXPR };
+  Stmt *SubExprs[END_EXPR];
+
+public:
+  /// matrix[row]
+  ///
+  /// \param Base        The matrix expression.
+  /// \param RowIdx      The row index expression.
+  /// \param T           The type of the row (usually a vector type).
+  /// \param RBracketLoc Location of the closing ']'.
+  MatrixSingleSubscriptExpr(Expr *Base, Expr *RowIdx, QualType T,
+                            SourceLocation RBracketLoc)
+      : Expr(MatrixSingleSubscriptExprClass, T,
+             Base->getValueKind(), // lvalue/rvalue follows the matrix base
+             OK_MatrixComponent) {
+    SubExprs[BASE] = Base;
+    SubExprs[ROW_IDX] = RowIdx;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = RBracketLoc;
+    setDependence(computeDependence(this));
+  }
+
+  /// Create an empty matrix single-subscript expression.
+  explicit MatrixSingleSubscriptExpr(EmptyShell Shell)
+      : Expr(MatrixSingleSubscriptExprClass, Shell) {}
+
+  Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
+  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
+  void setBase(Expr *E) { SubExprs[BASE] = E; }
+
+  Expr *getRowIdx() { return cast<Expr>(SubExprs[ROW_IDX]); }
+  const Expr *getRowIdx() const { return cast<Expr>(SubExprs[ROW_IDX]); }
+  void setRowIdx(Expr *E) { SubExprs[ROW_IDX] = E; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const { return getRBracketLoc(); }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return getBase()->getExprLoc();
+  }
+
+  SourceLocation getRBracketLoc() const {
+    return ArrayOrMatrixSubscriptExprBits.RBracketLoc;
+  }
+  void setRBracketLoc(SourceLocation L) {
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L;
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == MatrixSingleSubscriptExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
+  }
+  const_child_range children() const {
+    return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
+  }
+};
+
 /// MatrixSubscriptExpr - Matrix subscript expression for the MatrixType
 /// extension.
 /// MatrixSubscriptExpr can be either incomplete (only Base and RowIdx are set
@@ -7159,6 +7225,18 @@ public:
 
   /// Return original type of the base expression for array section.
   static QualType getBaseOriginalType(const Expr *Base);
+
+  /// Return the effective 'element' type of this array section. As the array
+  /// section itself returns a collection of elements (closer to its `getBase`
+  /// type), this is only useful for figuring out the effective type of this if
+  /// it were a normal Array subscript expr.
+  QualType getElementType() const;
+
+  /// Returns the effective 'type' of the base of this array section.  This
+  /// should be the array/pointer type that this operates on.  Just
+  /// getBase->getType isn't sufficient, since it doesn't look through existing
+  /// Array sections to figure out the actual 'base' of this.
+  QualType getBaseType() const;
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ArraySectionExprClass;

@@ -308,7 +308,7 @@ void PseudoProbeRewriter::encodePseudoProbes() {
     Contents.append(OSE.str().begin(), OSE.str().end());
   };
 
-  // Emit indiviual pseudo probes in a inline tree node
+  // Emit individual pseudo probes in a inline tree node
   // Probe index, type, attribute, address type and address are encoded
   // Address of the first probe is absolute.
   // Other probes' address are represented by delta

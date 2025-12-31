@@ -4,6 +4,7 @@
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 
@@ -110,12 +111,11 @@ private:
     // width, so we do the same.
     Option::printHelpStr(HelpStr, GlobalWidth, ArgStr.size() + 6);
     const auto &CounterInstance = DebugCounter::instance();
-    for (const auto &Name : CounterInstance) {
-      const auto Info =
-          CounterInstance.getCounterInfo(CounterInstance.getCounterId(Name));
-      size_t NumSpaces = GlobalWidth - Info.first.size() - 8;
-      outs() << "    =" << Info.first;
-      outs().indent(NumSpaces) << " -   " << Info.second << '\n';
+    for (const auto &Entry : CounterInstance) {
+      const auto &[Name, Desc] = CounterInstance.getCounterDesc(Entry.second);
+      size_t NumSpaces = GlobalWidth - Name.size() - 8;
+      outs() << "    =" << Name;
+      outs().indent(NumSpaces) << " -   " << Desc << '\n';
     }
   }
 };
@@ -135,7 +135,18 @@ struct DebugCounterOwner : DebugCounter {
       cl::Optional,
       cl::location(this->ShouldPrintCounter),
       cl::init(false),
-      cl::desc("Print out debug counter info after all counters accumulated")};
+      cl::desc("Print out debug counter info after all counters accumulated"),
+      cl::callback([&](const bool &Value) {
+        if (Value)
+          activateAllCounters();
+      })};
+  cl::opt<bool, true> PrintDebugCounterQueries{
+      "print-debug-counter-queries",
+      cl::Hidden,
+      cl::Optional,
+      cl::location(this->ShouldPrintCounterQueries),
+      cl::init(false),
+      cl::desc("Print out each query of an enabled debug counter")};
   cl::opt<bool, true> BreakOnLastCount{
       "debug-counter-break-on-last",
       cl::Hidden,
@@ -160,23 +171,20 @@ struct DebugCounterOwner : DebugCounter {
 
 } // anonymous namespace
 
+// Use ManagedStatic instead of function-local static variable to ensure
+// the destructor (which accesses counters and streams) runs during
+// llvm_shutdown() rather than at some unspecified point.
+static ManagedStatic<DebugCounterOwner> Owner;
+
 void llvm::initDebugCounterOptions() { (void)DebugCounter::instance(); }
 
-DebugCounter &DebugCounter::instance() {
-  static DebugCounterOwner O;
-  return O;
-}
+DebugCounter &DebugCounter::instance() { return *Owner; }
 
 // This is called by the command line parser when it sees a value for the
 // debug-counter option defined above.
 void DebugCounter::push_back(const std::string &Val) {
   if (Val.empty())
     return;
-#ifdef NDEBUG
-  // isCountingEnabled is hardcoded to false in NDEBUG.
-  errs() << "Requested --debug-counter in LLVM build without assertions. This "
-            "is a no-op.\n";
-#endif
 
   // The strings should come in as counter=chunk_list
   auto CounterPair = StringRef(Val).split('=');
@@ -191,66 +199,63 @@ void DebugCounter::push_back(const std::string &Val) {
     return;
   }
 
-  unsigned CounterID = getCounterId(std::string(CounterName));
-  if (!CounterID) {
+  CounterInfo *Counter = getCounterInfo(CounterName);
+  if (!Counter) {
     errs() << "DebugCounter Error: " << CounterName
            << " is not a registered counter\n";
     return;
   }
-  enableAllCounters();
 
-  CounterInfo &Counter = Counters[CounterID];
-  Counter.IsSet = true;
-  Counter.Chunks = std::move(Chunks);
+  Counter->Active = Counter->IsSet = true;
+  Counter->Chunks = std::move(Chunks);
 }
 
 void DebugCounter::print(raw_ostream &OS) const {
-  SmallVector<StringRef, 16> CounterNames(RegisteredCounters.begin(),
-                                          RegisteredCounters.end());
+  SmallVector<StringRef, 16> CounterNames(Counters.keys());
   sort(CounterNames);
 
-  auto &Us = instance();
   OS << "Counters and values:\n";
-  for (auto &CounterName : CounterNames) {
-    unsigned CounterID = getCounterId(std::string(CounterName));
-    const CounterInfo &C = Us.Counters[CounterID];
-    OS << left_justify(RegisteredCounters[CounterID], 32) << ": {" << C.Count
-       << ",";
-    printChunks(OS, C.Chunks);
+  for (StringRef CounterName : CounterNames) {
+    const CounterInfo *C = getCounterInfo(CounterName);
+    OS << left_justify(C->Name, 32) << ": {" << C->Count << ",";
+    printChunks(OS, C->Chunks);
     OS << "}\n";
   }
 }
 
-bool DebugCounter::shouldExecuteImpl(unsigned CounterName) {
-  auto &Us = instance();
-  auto Result = Us.Counters.find(CounterName);
-  if (Result != Us.Counters.end()) {
-    auto &CounterInfo = Result->second;
-    int64_t CurrCount = CounterInfo.Count++;
-    uint64_t CurrIdx = CounterInfo.CurrChunkIdx;
+bool DebugCounter::handleCounterIncrement(CounterInfo &Info) {
+  int64_t CurrCount = Info.Count++;
+  uint64_t CurrIdx = Info.CurrChunkIdx;
 
-    if (CounterInfo.Chunks.empty())
-      return true;
-    if (CurrIdx >= CounterInfo.Chunks.size())
-      return false;
+  if (Info.Chunks.empty())
+    return true;
+  if (CurrIdx >= Info.Chunks.size())
+    return false;
 
-    bool Res = CounterInfo.Chunks[CurrIdx].contains(CurrCount);
-    if (Us.BreakOnLast && CurrIdx == (CounterInfo.Chunks.size() - 1) &&
-        CurrCount == CounterInfo.Chunks[CurrIdx].End) {
-      LLVM_BUILTIN_DEBUGTRAP;
-    }
-    if (CurrCount > CounterInfo.Chunks[CurrIdx].End) {
-      CounterInfo.CurrChunkIdx++;
-
-      /// Handle consecutive blocks.
-      if (CounterInfo.CurrChunkIdx < CounterInfo.Chunks.size() &&
-          CurrCount == CounterInfo.Chunks[CounterInfo.CurrChunkIdx].Begin)
-        return true;
-    }
-    return Res;
+  bool Res = Info.Chunks[CurrIdx].contains(CurrCount);
+  if (BreakOnLast && CurrIdx == (Info.Chunks.size() - 1) &&
+      CurrCount == Info.Chunks[CurrIdx].End) {
+    LLVM_BUILTIN_DEBUGTRAP;
   }
-  // Didn't find the counter, should we warn?
-  return true;
+  if (CurrCount > Info.Chunks[CurrIdx].End) {
+    Info.CurrChunkIdx++;
+
+    /// Handle consecutive blocks.
+    if (Info.CurrChunkIdx < Info.Chunks.size() &&
+        CurrCount == Info.Chunks[Info.CurrChunkIdx].Begin)
+      return true;
+  }
+  return Res;
+}
+
+bool DebugCounter::shouldExecuteImpl(CounterInfo &Counter) {
+  auto &Us = instance();
+  bool Res = Us.handleCounterIncrement(Counter);
+  if (Us.ShouldPrintCounterQueries && Counter.IsSet) {
+    dbgs() << "DebugCounter " << Counter.Name << "=" << (Counter.Count - 1)
+           << (Res ? " execute" : " skip") << "\n";
+  }
+  return Res;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

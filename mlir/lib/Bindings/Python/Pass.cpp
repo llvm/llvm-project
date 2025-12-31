@@ -8,6 +8,7 @@
 
 #include "Pass.h"
 
+#include "Globals.h"
 #include "IRModule.h"
 #include "mlir-c/Pass.h"
 // clang-format off
@@ -56,6 +57,13 @@ private:
 
 /// Create the `mlir.passmanager` here.
 void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
+  //----------------------------------------------------------------------------
+  // Mapping of enumerated types
+  //----------------------------------------------------------------------------
+  nb::enum_<MlirPassDisplayMode>(m, "PassDisplayMode")
+      .value("LIST", MLIR_PASS_DISPLAY_MODE_LIST)
+      .value("PIPELINE", MLIR_PASS_DISPLAY_MODE_PIPELINE);
+
   //----------------------------------------------------------------------------
   // Mapping of MlirExternalPass
   //----------------------------------------------------------------------------
@@ -138,6 +146,14 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             mlirPassManagerEnableTiming(passManager.get());
           },
           "Enable pass timing.")
+      .def(
+          "enable_statistics",
+          [](PyPassManager &passManager, MlirPassDisplayMode displayMode) {
+            mlirPassManagerEnableStatistics(passManager.get(), displayMode);
+          },
+          "displayMode"_a =
+              MlirPassDisplayMode::MLIR_PASS_DISPLAY_MODE_PIPELINE,
+          "Enable pass statistics.")
       .def_static(
           "parse",
           [](const std::string &pipeline, DefaultingPyMlirContext context) {
@@ -181,9 +197,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
               name = nb::cast<std::string>(
                   nb::borrow<nb::str>(run.attr("__name__")));
             }
-            MlirTypeIDAllocator typeIDAllocator = mlirTypeIDAllocatorCreate();
-            MlirTypeID passID =
-                mlirTypeIDAllocatorAllocateTypeID(typeIDAllocator);
+            MlirTypeID passID = PyGlobals::get().allocateTypeID();
             MlirExternalPassCallbacks callbacks;
             callbacks.construct = [](void *obj) {
               (void)nb::handle(static_cast<PyObject *>(obj)).inc_ref();
@@ -210,7 +224,19 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           },
           "run"_a, "name"_a.none() = nb::none(), "argument"_a.none() = "",
           "description"_a.none() = "", "op_name"_a.none() = "",
-          "Add a python-defined pass to the pass manager.")
+          R"(
+            Add a python-defined pass to the current pipeline of the pass manager.
+
+            Args:
+              run: A callable with signature ``(op: ir.Operation, pass_: ExternalPass) -> None``.
+                   Called when the pass executes. It receives the operation to be processed and
+                   the current ``ExternalPass`` instance.
+                   Use ``pass_.signal_pass_failure()`` to signal failure.
+              name: The name of the pass. Defaults to ``run.__name__``.
+              argument: The command-line argument for the pass. Defaults to empty.
+              description: The description of the pass. Defaults to empty.
+              op_name: The name of the operation this pass operates on.
+                       It will be a generic operation pass if not specified.)")
       .def(
           "run",
           [](PyPassManager &passManager, PyOperationBase &op) {

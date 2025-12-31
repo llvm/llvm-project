@@ -335,6 +335,12 @@ void ASTStmtReader::VisitContinueStmt(ContinueStmt *S) {
 
 void ASTStmtReader::VisitBreakStmt(BreakStmt *S) { VisitLoopControlStmt(S); }
 
+void ASTStmtReader::VisitDeferStmt(DeferStmt *S) {
+  VisitStmt(S);
+  S->setDeferLoc(readSourceLocation());
+  S->setBody(Record.readSubStmt());
+}
+
 void ASTStmtReader::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
 
@@ -807,15 +813,19 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
   if (!Satisfaction.IsSatisfied) {
     unsigned NumDetailRecords = Record.readInt();
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
-      if (/* IsDiagnostic */Record.readInt()) {
+      auto Kind = Record.readInt();
+      if (Kind == 0) {
         SourceLocation DiagLocation = Record.readSourceLocation();
         StringRef DiagMessage = C.backupStr(Record.readString());
 
-        Satisfaction.Details.emplace_back(
-            new (C) ConstraintSatisfaction::SubstitutionDiagnostic(
-                DiagLocation, DiagMessage));
-      } else
+        Satisfaction.Details.emplace_back(new (
+            C) ConstraintSubstitutionDiagnostic(DiagLocation, DiagMessage));
+      } else if (Kind == 1) {
         Satisfaction.Details.emplace_back(Record.readExpr());
+      } else {
+        assert(Kind == 2);
+        Satisfaction.Details.emplace_back(Record.readConceptReference());
+      }
     }
   }
   return Satisfaction;
@@ -955,6 +965,14 @@ void ASTStmtReader::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   VisitExpr(E);
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
+  E->setRBracketLoc(readSourceLocation());
+}
+
+void ASTStmtReader::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  VisitExpr(E);
+  E->setBase(Record.readSubExpr());
+  E->setRowIdx(Record.readSubExpr());
   E->setRBracketLoc(readSourceLocation());
 }
 
@@ -3140,6 +3158,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_BREAK:
       S = new (Context) BreakStmt(Empty);
+      break;
+
+    case STMT_DEFER:
+      S = DeferStmt::CreateEmpty(Context, Empty);
       break;
 
     case STMT_RETURN:

@@ -458,7 +458,7 @@ public:
     template <typename T>
     std::enable_if_t<std::is_enum_v<T>, std::vector<NameAndValue>>
     typeEraseMapping() const {
-      ArrayRef<std::pair<T, StringRef>> Mapping =
+      const ArrayRef<std::pair<T, StringRef>> Mapping =
           OptionEnumMapping<T>::getEnumMapping();
       std::vector<NameAndValue> Result;
       Result.reserve(Mapping.size());

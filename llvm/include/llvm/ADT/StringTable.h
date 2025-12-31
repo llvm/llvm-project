@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
+#include <cassert>
 #include <iterator>
 #include <limits>
 

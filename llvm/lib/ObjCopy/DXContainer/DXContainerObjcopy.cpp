@@ -9,8 +9,10 @@
 #include "llvm/ObjCopy/DXContainer/DXContainerObjcopy.h"
 #include "DXContainerReader.h"
 #include "DXContainerWriter.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/DXContainer/DXContainerConfig.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -42,7 +44,47 @@ static Error extractPartAsObject(StringRef PartName, StringRef OutFilename,
                          "part '%s' not found", PartName.str().c_str());
 }
 
+static Error dumpPartToFile(StringRef PartName, StringRef Filename,
+                            StringRef InputFilename, Object &Obj) {
+  auto PartIter = llvm::find_if(
+      Obj.Parts, [&PartName](const Part &P) { return P.Name == PartName; });
+  if (PartIter == Obj.Parts.end())
+    return createFileError(Filename,
+                           std::make_error_code(std::errc::invalid_argument),
+                           "part '%s' not found", PartName.str().c_str());
+  ArrayRef<uint8_t> Contents = PartIter->Data;
+  // The DXContainer format is a bit odd because the part-specific headers are
+  // contained inside the part data itself. For parts that contain LLVM bitcode
+  // when we dump the part we want to skip the part-specific header so that we
+  // get a valid .bc file that we can inspect. All the data contained inside the
+  // program header is pulled out of the bitcode, so the header can be
+  // reconstructed if needed from the bitcode itself. More comprehensive
+  // documentation on the DXContainer format can be found at
+  // https://llvm.org/docs/DirectX/DXContainer.html.
+
+  if (PartName == "DXIL" || PartName == "STAT")
+    Contents = Contents.drop_front(sizeof(llvm::dxbc::ProgramHeader));
+  if (Contents.empty())
+    return createFileError(Filename, object_error::parse_failed,
+                           "part '%s' is empty", PartName.str().c_str());
+  Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+      FileOutputBuffer::create(Filename, Contents.size());
+  if (!BufferOrErr)
+    return createFileError(Filename, BufferOrErr.takeError());
+  std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
+  llvm::copy(Contents, Buf->getBufferStart());
+  if (Error E = Buf->commit())
+    return createFileError(Filename, std::move(E));
+  return Error::success();
+}
+
 static Error handleArgs(const CommonConfig &Config, Object &Obj) {
+  for (StringRef Flag : Config.DumpSection) {
+    auto [SecName, FileName] = Flag.split("=");
+    if (Error E = dumpPartToFile(SecName, FileName, Config.InputFilename, Obj))
+      return E;
+  }
+
   // Extract all sections before any modifications.
   for (StringRef Flag : Config.ExtractSection) {
     StringRef SectionName;

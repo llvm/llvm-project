@@ -43,7 +43,7 @@ public:
 class DGTestGraph : public DGTestBase {
 public:
   DGTestGraph() = default;
-  ~DGTestGraph(){};
+  ~DGTestGraph() = default;
 };
 
 using EdgeListTy = SmallVector<DGTestEdge *, 2>;

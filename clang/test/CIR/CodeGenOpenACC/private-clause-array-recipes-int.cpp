@@ -21,7 +21,7 @@ void do_things(unsigned A, unsigned B) {
   ;
 
   T TwoArr[5][5];
-#pragma acc parallel private(TwoArr[B][B])
+#pragma acc parallel private(TwoArr[A:B][A:B])
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt2__ZTSA5_A5_i : !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!s32i x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>>, ["openacc.private.init"] {alignment = 4 : i64}
@@ -30,7 +30,7 @@ void do_things(unsigned A, unsigned B) {
   ;
 #pragma acc parallel private(TwoArr[B][A:B])
   ;
-#pragma acc parallel private(TwoArr[A:B][A:B])
+#pragma acc parallel private(TwoArr[B][B])
   ;
 #pragma acc parallel private(TwoArr)
 // CHECK-NEXT: acc.private.recipe @privatization__ZTSA5_A5_i : !cir.ptr<!cir.array<!cir.array<!s32i x 5> x 5>> init {

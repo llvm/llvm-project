@@ -18,8 +18,8 @@
 #include "llvm/XRay/Trace.h"
 #include <memory>
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace llvm::xray;
 
 Profile::Profile(const Profile &O) {
   // We need to re-create all the tries from the original (O), into the current
@@ -46,6 +46,7 @@ struct BlockHeader {
   uint32_t Number;
   uint64_t Thread;
 };
+} // namespace
 
 static Expected<BlockHeader> readBlockHeader(DataExtractor &Extractor,
                                              uint64_t &Offset) {
@@ -114,8 +115,6 @@ static Expected<Profile::Data> readData(DataExtractor &Extractor,
         std::make_error_code(std::errc::invalid_argument));
   return D;
 }
-
-} // namespace
 
 Error Profile::addBlock(Block &&B) {
   if (B.PathData.empty())
@@ -189,7 +188,7 @@ Profile::PathID Profile::internPath(ArrayRef<FuncID> P) {
   return Node->ID;
 }
 
-Profile mergeProfilesByThread(const Profile &L, const Profile &R) {
+Profile xray::mergeProfilesByThread(const Profile &L, const Profile &R) {
   Profile Merged;
   using PathDataMap = DenseMap<Profile::PathID, Profile::Data>;
   using PathDataMapPtr = std::unique_ptr<PathDataMap>;
@@ -228,7 +227,7 @@ Profile mergeProfilesByThread(const Profile &L, const Profile &R) {
   return Merged;
 }
 
-Profile mergeProfilesByStack(const Profile &L, const Profile &R) {
+Profile xray::mergeProfilesByStack(const Profile &L, const Profile &R) {
   Profile Merged;
   using PathDataMap = DenseMap<Profile::PathID, Profile::Data>;
   PathDataMap PathData;
@@ -258,7 +257,7 @@ Profile mergeProfilesByStack(const Profile &L, const Profile &R) {
   return Merged;
 }
 
-Expected<Profile> loadProfile(StringRef Filename) {
+Expected<Profile> xray::loadProfile(StringRef Filename) {
   Expected<sys::fs::file_t> FdOrErr = sys::fs::openNativeFileForRead(Filename);
   if (!FdOrErr)
     return FdOrErr.takeError();
@@ -322,7 +321,7 @@ struct StackEntry {
 
 } // namespace
 
-Expected<Profile> profileFromTrace(const Trace &T) {
+Expected<Profile> xray::profileFromTrace(const Trace &T) {
   Profile P;
 
   // The implementation of the algorithm re-creates the execution of
@@ -397,6 +396,3 @@ Expected<Profile> profileFromTrace(const Trace &T) {
 
   return P;
 }
-
-} // namespace xray
-} // namespace llvm

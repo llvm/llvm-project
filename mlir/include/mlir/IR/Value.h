@@ -433,8 +433,18 @@ inline unsigned OpResultImpl::getResultNumber() const {
 template <typename Ty>
 struct TypedValue : Value {
   using Value::Value;
+  using ValueType = Ty;
 
   static bool classof(Value value) { return llvm::isa<Ty>(value.getType()); }
+
+  /// TypedValue<B> can implicitly convert to TypedValue<A> if B is assignable
+  /// to A.
+  template <typename ToTy,
+            typename = typename std::enable_if<std::is_assignable<
+                typename ToTy::ValueType &, Ty>::value>::type>
+  operator ToTy() const {
+    return llvm::cast<ToTy>(*this);
+  }
 
   /// Return the known Type
   Ty getType() const { return llvm::cast<Ty>(Value::getType()); }

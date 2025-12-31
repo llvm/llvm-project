@@ -8,74 +8,40 @@ define void @h(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h, i
 ; CHECK-NEXT:    [[CONV9:%.*]] = zext i16 [[A]] to i32
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr null, i64 16
 ; CHECK-NEXT:    [[CONV310:%.*]] = zext i16 [[B]] to i32
-; CHECK-NEXT:    [[ADD4:%.*]] = or i32 [[CONV310]], [[CONV9]]
-; CHECK-NEXT:    [[SUB:%.*]] = or i32 [[CONV9]], [[CONV310]]
-; CHECK-NEXT:    [[CONV15:%.*]] = sext i16 [[C]] to i32
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 0, 0
-; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr i8, ptr null, i64 24
-; CHECK-NEXT:    [[CONV19:%.*]] = sext i16 [[D]] to i32
-; CHECK-NEXT:    [[SUB20:%.*]] = or i32 [[SHR]], [[CONV19]]
-; CHECK-NEXT:    [[SHR29:%.*]] = ashr i32 0, 0
-; CHECK-NEXT:    [[ADD30:%.*]] = or i32 [[SHR29]], [[CONV15]]
-; CHECK-NEXT:    [[SUB39:%.*]] = or i32 [[SUB]], [[SUB20]]
-; CHECK-NEXT:    [[CONV40:%.*]] = trunc i32 [[SUB39]] to i16
-; CHECK-NEXT:    store i16 [[CONV40]], ptr [[ARRAYIDX2]], align 2
-; CHECK-NEXT:    [[SUB44:%.*]] = or i32 [[ADD4]], [[ADD30]]
-; CHECK-NEXT:    [[CONV45:%.*]] = trunc i32 [[SUB44]] to i16
-; CHECK-NEXT:    store i16 [[CONV45]], ptr [[ARRAYIDX18]], align 2
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr i8, ptr null, i64 18
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[D]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[G]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[K]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[O]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i16> [[TMP3]], i16 [[C]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[F]], i32 5
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[J]], i32 6
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP6]], i16 [[N]], i32 7
 ; CHECK-NEXT:    [[CONV3_112:%.*]] = zext i16 [[E]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[H]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[L]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i16> poison, i16 [[I]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i16> [[TMP10]], i16 [[M]], i32 1
 ; CHECK-NEXT:    [[ADD4_1:%.*]] = or i32 [[CONV3_112]], 0
-; CHECK-NEXT:    [[SUB_1:%.*]] = or i32 0, [[CONV3_112]]
-; CHECK-NEXT:    [[CONV15_1:%.*]] = sext i16 [[F]] to i32
-; CHECK-NEXT:    [[SHR_1:%.*]] = ashr i32 0, 0
-; CHECK-NEXT:    [[ARRAYIDX18_1:%.*]] = getelementptr i8, ptr null, i64 26
-; CHECK-NEXT:    [[CONV19_1:%.*]] = sext i16 [[G]] to i32
-; CHECK-NEXT:    [[SUB20_1:%.*]] = or i32 [[SHR_1]], [[CONV19_1]]
-; CHECK-NEXT:    [[SHR29_1:%.*]] = ashr i32 0, 0
-; CHECK-NEXT:    [[ADD30_1:%.*]] = or i32 [[SHR29_1]], [[CONV15_1]]
-; CHECK-NEXT:    [[SUB39_1:%.*]] = or i32 [[SUB_1]], [[SUB20_1]]
-; CHECK-NEXT:    [[CONV40_1:%.*]] = trunc i32 [[SUB39_1]] to i16
-; CHECK-NEXT:    store i16 [[CONV40_1]], ptr [[ARRAYIDX2_1]], align 2
-; CHECK-NEXT:    [[SUB44_1:%.*]] = or i32 [[ADD4_1]], [[ADD30_1]]
-; CHECK-NEXT:    [[CONV45_1:%.*]] = trunc i32 [[SUB44_1]] to i16
-; CHECK-NEXT:    store i16 [[CONV45_1]], ptr [[ARRAYIDX18_1]], align 2
-; CHECK-NEXT:    [[CONV_213:%.*]] = zext i16 [[H]] to i32
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr i8, ptr null, i64 20
-; CHECK-NEXT:    [[CONV3_214:%.*]] = zext i16 [[I]] to i32
-; CHECK-NEXT:    [[ADD4_2:%.*]] = or i32 0, [[CONV_213]]
-; CHECK-NEXT:    [[SUB_2:%.*]] = or i32 0, [[CONV3_214]]
-; CHECK-NEXT:    [[CONV15_2:%.*]] = sext i16 [[J]] to i32
-; CHECK-NEXT:    [[SHR_2:%.*]] = ashr i32 0, 0
-; CHECK-NEXT:    [[ARRAYIDX18_2:%.*]] = getelementptr i8, ptr null, i64 28
-; CHECK-NEXT:    [[CONV19_2:%.*]] = sext i16 [[K]] to i32
-; CHECK-NEXT:    [[SUB20_2:%.*]] = or i32 [[SHR_2]], [[CONV19_2]]
-; CHECK-NEXT:    [[SHR29_2:%.*]] = ashr i32 0, 0
-; CHECK-NEXT:    [[ADD30_2:%.*]] = or i32 [[SHR29_2]], [[CONV15_2]]
-; CHECK-NEXT:    [[SUB39_2:%.*]] = or i32 [[SUB_2]], [[SUB20_2]]
+; CHECK-NEXT:    [[SUB39_3:%.*]] = or i32 [[CONV310]], [[CONV9]]
+; CHECK-NEXT:    [[SUB44_2:%.*]] = or i32 0, [[CONV3_112]]
+; CHECK-NEXT:    [[SUB39_2:%.*]] = or i32 [[CONV9]], [[CONV310]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or <8 x i16> zeroinitializer, [[TMP7]]
 ; CHECK-NEXT:    [[CONV40_2:%.*]] = trunc i32 [[SUB39_2]] to i16
-; CHECK-NEXT:    store i16 [[CONV40_2]], ptr [[ARRAYIDX2_2]], align 2
-; CHECK-NEXT:    [[SUB44_2:%.*]] = or i32 [[ADD4_2]], [[ADD30_2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i16> poison, i16 [[CONV40_2]], i32 0
 ; CHECK-NEXT:    [[CONV45_2:%.*]] = trunc i32 [[SUB44_2]] to i16
-; CHECK-NEXT:    store i16 [[CONV45_2]], ptr [[ARRAYIDX18_2]], align 2
-; CHECK-NEXT:    [[CONV_315:%.*]] = zext i16 [[L]] to i32
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr i8, ptr null, i64 22
-; CHECK-NEXT:    [[CONV3_316:%.*]] = zext i16 [[M]] to i32
-; CHECK-NEXT:    [[ADD4_3:%.*]] = or i32 0, [[CONV_315]]
-; CHECK-NEXT:    [[SUB_3:%.*]] = or i32 0, [[CONV3_316]]
-; CHECK-NEXT:    [[CONV15_3:%.*]] = sext i16 [[N]] to i32
-; CHECK-NEXT:    [[SHR_3:%.*]] = ashr i32 0, 0
-; CHECK-NEXT:    [[ARRAYIDX18_3:%.*]] = getelementptr i8, ptr null, i64 30
-; CHECK-NEXT:    [[CONV19_3:%.*]] = sext i16 [[O]] to i32
-; CHECK-NEXT:    [[SUB20_3:%.*]] = or i32 [[SHR_3]], [[CONV19_3]]
-; CHECK-NEXT:    [[SHR29_3:%.*]] = ashr i32 0, 0
-; CHECK-NEXT:    [[ADD30_3:%.*]] = or i32 [[SHR29_3]], [[CONV15_3]]
-; CHECK-NEXT:    [[SUB39_3:%.*]] = or i32 [[SUB_3]], [[SUB20_3]]
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i16> [[TMP14]], i16 [[CONV45_2]], i32 1
+; CHECK-NEXT:    [[TMP17:%.*]] = or <2 x i16> zeroinitializer, [[TMP11]]
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i16> [[TMP17]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i16> [[TMP16]], <8 x i16> [[TMP18]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[CONV40_3:%.*]] = trunc i32 [[SUB39_3]] to i16
-; CHECK-NEXT:    store i16 [[CONV40_3]], ptr [[ARRAYIDX2_3]], align 2
-; CHECK-NEXT:    [[SUB44_3:%.*]] = or i32 [[ADD4_3]], [[ADD30_3]]
-; CHECK-NEXT:    [[CONV45_3:%.*]] = trunc i32 [[SUB44_3]] to i16
-; CHECK-NEXT:    store i16 [[CONV45_3]], ptr [[ARRAYIDX18_3]], align 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <8 x i16> [[TMP19]], i16 [[CONV40_3]], i32 4
+; CHECK-NEXT:    [[TMP22:%.*]] = trunc i32 [[ADD4_1]] to i16
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <8 x i16> [[TMP21]], i16 [[TMP22]], i32 5
+; CHECK-NEXT:    [[TMP24:%.*]] = or <2 x i16> zeroinitializer, [[TMP9]]
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x i16> [[TMP24]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <8 x i16> [[TMP23]], <8 x i16> [[TMP25]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; CHECK-NEXT:    [[TMP27:%.*]] = or <8 x i16> [[TMP26]], [[TMP12]]
+; CHECK-NEXT:    store <8 x i16> [[TMP27]], ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -99,7 +99,7 @@ public:
 };
 
 class BitVector {
-  typedef uintptr_t BitWord;
+  using BitWord = uintptr_t;
 
   enum { BITWORD_SIZE = (unsigned)sizeof(BitWord) * CHAR_BIT };
 
@@ -147,8 +147,8 @@ public:
     }
   };
 
-  typedef const_set_bits_iterator_impl<BitVector> const_set_bits_iterator;
-  typedef const_set_bits_iterator set_iterator;
+  using const_set_bits_iterator = const_set_bits_iterator_impl<BitVector>;
+  using set_iterator = const_set_bits_iterator;
 
   const_set_bits_iterator set_bits_begin() const {
     return const_set_bits_iterator(*this);
@@ -550,7 +550,7 @@ public:
     return *this;
   }
 
-  /// test - Check if (This - RHS) is zero.
+  /// test - Check if (This - RHS) is non-zero.
   /// This is the same as reset(RHS) and any().
   bool test(const BitVector &RHS) const {
     unsigned ThisWords = Bits.size();
@@ -566,6 +566,9 @@ public:
 
     return false;
   }
+
+  /// subsetOf - Check if This is a subset of RHS.
+  bool subsetOf(const BitVector &RHS) const { return !test(RHS); }
 
   template <class F, class... ArgTys>
   static BitVector &apply(F &&f, BitVector &Out, BitVector const &Arg,

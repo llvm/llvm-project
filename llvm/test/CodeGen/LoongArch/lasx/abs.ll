@@ -6,8 +6,7 @@ define void @vabs_b(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvneg.b $xr1, $xr0
-; CHECK-NEXT:    xvmax.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsigncov.b $xr0, $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -21,8 +20,7 @@ define void @vabs_b_1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_b_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvneg.b $xr1, $xr0
-; CHECK-NEXT:    xvmax.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsigncov.b $xr0, $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -36,8 +34,7 @@ define void @vabs_h(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_h:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvneg.h $xr1, $xr0
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsigncov.h $xr0, $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -51,8 +48,7 @@ define void @vabs_h_1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_h_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvneg.h $xr1, $xr0
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsigncov.h $xr0, $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -66,8 +62,7 @@ define void @vabs_w(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_w:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvneg.w $xr1, $xr0
-; CHECK-NEXT:    xvmax.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsigncov.w $xr0, $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -81,8 +76,7 @@ define void @vabs_w_1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_w_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvneg.w $xr1, $xr0
-; CHECK-NEXT:    xvmax.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsigncov.w $xr0, $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -96,8 +90,7 @@ define void @vabs_d(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_d:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvneg.d $xr1, $xr0
-; CHECK-NEXT:    xvmax.d $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsigncov.d $xr0, $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -111,8 +104,7 @@ define void @vabs_d_1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: vabs_d_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvneg.d $xr1, $xr0
-; CHECK-NEXT:    xvmax.d $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvsigncov.d $xr0, $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

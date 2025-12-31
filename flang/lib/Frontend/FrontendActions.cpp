@@ -42,6 +42,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
@@ -54,8 +55,8 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
@@ -277,11 +278,11 @@ bool CodeGenAction::beginSourceFileAction() {
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
-  if (ci.getInvocation().getLangOpts().NoFastRealMod) {
+  if (ci.getInvocation().getLangOpts().FastRealMod) {
     mlir::ModuleOp mod = lb.getModule();
     mod.getOperation()->setAttr(
         mlir::StringAttr::get(mod.getContext(),
-                              llvm::Twine{"fir.no_fast_real_mod"}),
+                              llvm::Twine{"fir.fast_real_mod"}),
         mlir::BoolAttr::get(mod.getContext(), true));
   }
 
@@ -902,6 +903,9 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   llvm::TargetLibraryInfoImpl *tlii =
       llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
   codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
+  codeGenPasses.add(new llvm::RuntimeLibraryInfoWrapper(
+      triple, tm.Options.ExceptionModel, tm.Options.FloatABIType,
+      tm.Options.EABIVersion, tm.Options.MCOptions.ABIName, tm.Options.VecLib));
 
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
                                    ? llvm::CodeGenFileType::AssemblyFile
@@ -1009,6 +1013,13 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::TargetLibraryInfoImpl *tlii =
       llvm::driver::createTLII(triple, opts.getVecLib());
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
+  mam.registerPass([&] {
+    return llvm::RuntimeLibraryAnalysis(
+        triple, targetMachine->Options.ExceptionModel,
+        targetMachine->Options.FloatABIType, targetMachine->Options.EABIVersion,
+        targetMachine->Options.MCOptions.ABIName,
+        targetMachine->Options.VecLib);
+  });
 
   // Register all the basic analyses with the managers.
   pb.registerModuleAnalyses(mam);
@@ -1019,24 +1030,40 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Create the pass manager.
   llvm::ModulePassManager mpm;
-  if (opts.PrepareForFatLTO) {
-    // The module summary should be emitted by default for regular LTO
-    // except for ld64 targets.
-    bool emitSummary = opts.PrepareForThinLTO || opts.PrepareForFullLTO ||
-                       triple.getVendor() != llvm::Triple::Apple;
+  // The module summary should be emitted by default for regular LTO
+  // except for ld64 targets.
+  bool emitSummary =
+      opts.PrepareForFullLTO && (triple.getVendor() != llvm::Triple::Apple);
+  if (opts.PrepareForFatLTO)
     mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
                                         emitSummary);
-  } else if (opts.PrepareForFullLTO)
+  else if (opts.PrepareForFullLTO)
     mpm = pb.buildLTOPreLinkDefaultPipeline(level);
   else if (opts.PrepareForThinLTO)
     mpm = pb.buildThinLTOPreLinkDefaultPipeline(level);
   else
     mpm = pb.buildPerModuleDefaultPipeline(level);
 
-  if (action == BackendActionTy::Backend_EmitBC)
-    mpm.addPass(llvm::BitcodeWriterPass(os));
-  else if (action == BackendActionTy::Backend_EmitLL)
-    mpm.addPass(llvm::PrintModulePass(os));
+  if (action == BackendActionTy::Backend_EmitBC ||
+      action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
+    if (opts.PrepareForThinLTO) {
+      // TODO: ThinLTO module summary support is yet to be enabled.
+      if (action == BackendActionTy::Backend_EmitBC)
+        mpm.addPass(llvm::BitcodeWriterPass(os));
+      else if (action == BackendActionTy::Backend_EmitLL)
+        mpm.addPass(llvm::PrintModulePass(os));
+    } else {
+      if (emitSummary && !llvmModule->getModuleFlag("ThinLTO"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+      if (action == BackendActionTy::Backend_EmitBC)
+        mpm.addPass(llvm::BitcodeWriterPass(
+            os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
+      else if (action == BackendActionTy::Backend_EmitLL)
+        mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
+                                          /*ShouldPreserveUseListOrder=*/false,
+                                          emitSummary));
+    }
+  }
 
   // FIXME: This should eventually be replaced by a first-class driver option.
   // This should be done for both flang and clang simultaneously.

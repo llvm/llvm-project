@@ -151,11 +151,11 @@ namespace {
       else StmtVisitor<StmtPrinter>::Visit(S);
     }
 
-    void VisitStmt(Stmt *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitStmt(Stmt *Node) {
       Indent() << "<<unknown stmt type>>" << NL;
     }
 
-    void VisitExpr(Expr *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitExpr(Expr *Node) {
       OS << "<<unknown expr type>>";
     }
 
@@ -489,6 +489,11 @@ void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
   else
     OS << "break;";
   if (Policy.IncludeNewlines) OS << NL;
+}
+
+void StmtPrinter::VisitDeferStmt(DeferStmt *Node) {
+  Indent() << "_Defer";
+  PrintControlledStmt(Node->getBody());
 }
 
 void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
@@ -1682,6 +1687,14 @@ void StmtPrinter::VisitArraySubscriptExpr(ArraySubscriptExpr *Node) {
   PrintExpr(Node->getLHS());
   OS << "[";
   PrintExpr(Node->getRHS());
+  OS << "]";
+}
+
+void StmtPrinter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << "[";
+  PrintExpr(Node->getRowIdx());
   OS << "]";
 }
 

@@ -162,7 +162,9 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_C_Conversion_Extension,
       ICR_Conversion,
       ICR_HLSL_Dimension_Reduction,
+      ICR_HLSL_Dimension_Reduction,
       ICR_Conversion,
+      ICR_HLSL_Scalar_Widening,
       ICR_HLSL_Scalar_Widening,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
@@ -224,8 +226,10 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Incompatible pointer conversion",
       "Fixed point conversion",
       "HLSL vector truncation",
+      "HLSL matrix truncation",
       "Non-decaying array conversion",
       "HLSL vector splat",
+      "HLSL matrix splat",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -804,7 +808,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
   case TemplateDeductionResult::ConstraintsNotSatisfied: {
     CNSInfo *Saved = new (Context) CNSInfo;
     Saved->TemplateArgs = Info.takeSugared();
-    Saved->Satisfaction = Info.AssociatedConstraintsSatisfaction;
+    Saved->Satisfaction = std::move(Info.AssociatedConstraintsSatisfaction);
     Result.Data = Saved;
     break;
   }
@@ -852,6 +856,7 @@ void DeductionFailureInfo::Destroy() {
 
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     // FIXME: Destroy the template argument list?
+    static_cast<CNSInfo *>(Data)->Satisfaction.~ConstraintSatisfaction();
     Data = nullptr;
     if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
       Diag->~PartialDiagnosticAt();
@@ -1086,14 +1091,14 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
 }
 
 bool OverloadCandidateSet::OperatorRewriteInfo::allowsReversed(
-    OverloadedOperatorKind Op) {
+    OverloadedOperatorKind Op) const {
   if (!AllowRewrittenCandidates)
     return false;
   return Op == OO_EqualEqual || Op == OO_Spaceship;
 }
 
 bool OverloadCandidateSet::OperatorRewriteInfo::shouldAddReversed(
-    Sema &S, ArrayRef<Expr *> OriginalArgs, FunctionDecl *FD) {
+    Sema &S, ArrayRef<Expr *> OriginalArgs, FunctionDecl *FD) const {
   auto Op = FD->getOverloadedOperator();
   if (!allowsReversed(Op))
     return false;
@@ -1824,20 +1829,34 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
-  if (S.getLangOpts().HLSL && ToType->isHLSLAttributedResourceType() &&
-      FromType->isHLSLAttributedResourceType()) {
-    auto *ToResType = cast<HLSLAttributedResourceType>(ToType);
-    auto *FromResType = cast<HLSLAttributedResourceType>(FromType);
-    if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
-                                         FromResType->getWrappedType()) &&
-        S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
-                                         FromResType->getContainedType()) &&
-        ToResType->getAttrs() == FromResType->getAttrs()) {
-      ICS.setStandard();
-      ICS.Standard.setAsIdentityConversion();
-      ICS.Standard.setFromType(FromType);
-      ICS.Standard.setAllToTypes(ToType);
-      return ICS;
+  if (S.getLangOpts().HLSL) {
+    // Handle conversion of the HLSL resource types.
+    const Type *FromTy = FromType->getUnqualifiedDesugaredType();
+    if (FromTy->isHLSLAttributedResourceType()) {
+      // Attributed resource types can convert to other attributed
+      // resource types with the same attributes and contained types,
+      // or to __hlsl_resource_t without any attributes.
+      bool CanConvert = false;
+      const Type *ToTy = ToType->getUnqualifiedDesugaredType();
+      if (ToTy->isHLSLAttributedResourceType()) {
+        auto *ToResType = cast<HLSLAttributedResourceType>(ToTy);
+        auto *FromResType = cast<HLSLAttributedResourceType>(FromTy);
+        if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
+                                             FromResType->getWrappedType()) &&
+            S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
+                                             FromResType->getContainedType()) &&
+            ToResType->getAttrs() == FromResType->getAttrs())
+          CanConvert = true;
+      } else if (ToTy->isHLSLResourceType()) {
+        CanConvert = true;
+      }
+      if (CanConvert) {
+        ICS.setStandard();
+        ICS.Standard.setAsIdentityConversion();
+        ICS.Standard.setFromType(FromType);
+        ICS.Standard.setAllToTypes(ToType);
+        return ICS;
+      }
     }
   }
 
@@ -1891,14 +1910,7 @@ bool Sema::TryFunctionConversion(QualType FromType, QualType ToType,
   return Changed;
 }
 
-bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
-                                bool *DiscardingCFIUncheckedCallee,
-                                bool *AddingCFIUncheckedCallee) const {
-  if (DiscardingCFIUncheckedCallee)
-    *DiscardingCFIUncheckedCallee = false;
-  if (AddingCFIUncheckedCallee)
-    *AddingCFIUncheckedCallee = false;
-
+bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
@@ -1957,25 +1969,14 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn);
 
   if (FromFPT && ToFPT) {
-    if (FromFPT->hasCFIUncheckedCallee() && !ToFPT->hasCFIUncheckedCallee()) {
+    if (FromFPT->hasCFIUncheckedCallee() != ToFPT->hasCFIUncheckedCallee()) {
       QualType NewTy = Context.getFunctionType(
           FromFPT->getReturnType(), FromFPT->getParamTypes(),
-          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(false));
+          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(
+              ToFPT->hasCFIUncheckedCallee()));
       FromFPT = cast<FunctionProtoType>(NewTy.getTypePtr());
       FromFn = FromFPT;
       Changed = true;
-      if (DiscardingCFIUncheckedCallee)
-        *DiscardingCFIUncheckedCallee = true;
-    } else if (!FromFPT->hasCFIUncheckedCallee() &&
-               ToFPT->hasCFIUncheckedCallee()) {
-      QualType NewTy = Context.getFunctionType(
-          FromFPT->getReturnType(), FromFPT->getParamTypes(),
-          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(true));
-      FromFPT = cast<FunctionProtoType>(NewTy.getTypePtr());
-      FromFn = FromFPT;
-      Changed = true;
-      if (AddingCFIUncheckedCallee)
-        *AddingCFIUncheckedCallee = true;
     }
   }
 
@@ -2006,11 +2007,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       Changed = true;
     }
 
-    // For C, when called from checkPointerTypesForAssignment,
-    // we need to not alter FromFn, or else even an innocuous cast
-    // like dropping effects will fail. In C++ however we do want to
-    // alter FromFn (because of the way PerformImplicitConversion works).
-    if (Context.hasAnyFunctionEffects() && getLangOpts().CPlusPlus) {
+    if (Context.hasAnyFunctionEffects()) {
       FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
 
       // Transparently add/drop effects; here we are concerned with
@@ -2067,9 +2064,10 @@ static bool IsFloatingPointConversion(Sema &S, QualType FromType,
   return true;
 }
 
-static bool IsVectorElementConversion(Sema &S, QualType FromType,
-                                      QualType ToType,
-                                      ImplicitConversionKind &ICK, Expr *From) {
+static bool IsVectorOrMatrixElementConversion(Sema &S, QualType FromType,
+                                              QualType ToType,
+                                              ImplicitConversionKind &ICK,
+                                              Expr *From) {
   if (S.Context.hasSameUnqualifiedType(FromType, ToType))
     return true;
 
@@ -2104,6 +2102,66 @@ static bool IsVectorElementConversion(Sema &S, QualType FromType,
       ToType->isIntegralType(S.Context)) {
     ICK = ICK_Integral_Conversion;
     return true;
+  }
+
+  return false;
+}
+
+/// Determine whether the conversion from FromType to ToType is a valid
+/// matrix conversion.
+///
+/// \param ICK Will be set to the matrix conversion kind, if this is a matrix
+/// conversion.
+static bool IsMatrixConversion(Sema &S, QualType FromType, QualType ToType,
+                               ImplicitConversionKind &ICK,
+                               ImplicitConversionKind &ElConv, Expr *From,
+                               bool InOverloadResolution, bool CStyle) {
+  // Implicit conversions for matrices are an HLSL feature not present in C/C++.
+  if (!S.getLangOpts().HLSL)
+    return false;
+
+  auto *ToMatrixType = ToType->getAs<ConstantMatrixType>();
+  auto *FromMatrixType = FromType->getAs<ConstantMatrixType>();
+
+  // If both arguments are matrix, handle possible matrix truncation and
+  // element conversion.
+  if (ToMatrixType && FromMatrixType) {
+    unsigned FromCols = FromMatrixType->getNumColumns();
+    unsigned ToCols = ToMatrixType->getNumColumns();
+    if (FromCols < ToCols)
+      return false;
+
+    unsigned FromRows = FromMatrixType->getNumRows();
+    unsigned ToRows = ToMatrixType->getNumRows();
+    if (FromRows < ToRows)
+      return false;
+
+    if (FromRows == ToRows && FromCols == ToCols)
+      ElConv = ICK_Identity;
+    else
+      ElConv = ICK_HLSL_Matrix_Truncation;
+
+    QualType FromElTy = FromMatrixType->getElementType();
+    QualType ToElTy = ToMatrixType->getElementType();
+    if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
+      return true;
+    return IsVectorOrMatrixElementConversion(S, FromElTy, ToElTy, ICK, From);
+  }
+
+  // Matrix splat from any arithmetic type to a matrix.
+  if (ToMatrixType && FromType->isArithmeticType()) {
+    ElConv = ICK_HLSL_Matrix_Splat;
+    QualType ToElTy = ToMatrixType->getElementType();
+    return IsVectorOrMatrixElementConversion(S, FromType, ToElTy, ICK, From);
+    ICK = ICK_HLSL_Matrix_Splat;
+    return true;
+  }
+  if (FromMatrixType && !ToMatrixType) {
+    ElConv = ICK_HLSL_Matrix_Truncation;
+    QualType FromElTy = FromMatrixType->getElementType();
+    if (S.Context.hasSameUnqualifiedType(FromElTy, ToType))
+      return true;
+    return IsVectorOrMatrixElementConversion(S, FromElTy, ToType, ICK, From);
   }
 
   return false;
@@ -2148,14 +2206,14 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
       QualType ToElTy = ToExtType->getElementType();
       if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
         return true;
-      return IsVectorElementConversion(S, FromElTy, ToElTy, ICK, From);
+      return IsVectorOrMatrixElementConversion(S, FromElTy, ToElTy, ICK, From);
     }
     if (FromExtType && !ToExtType) {
       ElConv = ICK_HLSL_Vector_Truncation;
       QualType FromElTy = FromExtType->getElementType();
       if (S.Context.hasSameUnqualifiedType(FromElTy, ToType))
         return true;
-      return IsVectorElementConversion(S, FromElTy, ToType, ICK, From);
+      return IsVectorOrMatrixElementConversion(S, FromElTy, ToType, ICK, From);
     }
     // Fallthrough for the case where ToType is a vector and FromType is not.
   }
@@ -2182,7 +2240,8 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
       if (S.getLangOpts().HLSL) {
         ElConv = ICK_HLSL_Vector_Splat;
         QualType ToElTy = ToExtType->getElementType();
-        return IsVectorElementConversion(S, FromType, ToElTy, ICK, From);
+        return IsVectorOrMatrixElementConversion(S, FromType, ToElTy, ICK,
+                                                 From);
       }
       ICK = ICK_Vector_Splat;
       return true;
@@ -2481,6 +2540,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     SCS.Second = SecondICK;
     SCS.Dimension = DimensionICK;
     FromType = ToType.getUnqualifiedType();
+  } else if (IsMatrixConversion(S, FromType, ToType, SecondICK, DimensionICK,
+                                From, InOverloadResolution, CStyle)) {
+    SCS.Second = SecondICK;
+    SCS.Dimension = DimensionICK;
+    FromType = ToType.getUnqualifiedType();
   } else if (!S.getLangOpts().CPlusPlus &&
              S.Context.typesAreCompatible(ToType, FromType)) {
     // Compatible conversions (Clang extension for C function overloading)
@@ -2553,15 +2617,12 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
-  // If we have not converted the argument type to the parameter type,
-  // this is a bad conversion sequence, unless we're resolving an overload in C.
-  //
-  // Permit conversions from a function without `cfi_unchecked_callee` to a
-  // function with `cfi_unchecked_callee`.
-  if (CanonFrom == CanonTo || S.AddingCFIUncheckedCallee(CanonFrom, CanonTo))
+  if (CanonFrom == CanonTo)
     return true;
 
-  if ((S.getLangOpts().CPlusPlus || !InOverloadResolution))
+  // If we have not converted the argument type to the parameter type,
+  // this is a bad conversion sequence, unless we're resolving an overload in C.
+  if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
     return false;
 
   ExprResult ER = ExprResult{From};
@@ -2615,7 +2676,7 @@ IsTransparentUnionStandardConversion(Sema &S, Expr* From,
   if (!UT)
     return false;
   // The field to initialize within the transparent union.
-  const RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return false;
   // It's compatible if the expression matches any of the fields.
@@ -3994,7 +4055,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     if (!S.isCompleteType(From->getExprLoc(), ToType)) {
       // We're not going to find any constructors.
     } else if (auto *ToRecordDecl =
-                   dyn_cast<CXXRecordDecl>(ToRecordType->getOriginalDecl())) {
+                   dyn_cast<CXXRecordDecl>(ToRecordType->getDecl())) {
       ToRecordDecl = ToRecordDecl->getDefinitionOrSelf();
 
       Expr **Args = &From;
@@ -4069,7 +4130,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
   } else if (const RecordType *FromRecordType =
                  From->getType()->getAsCanonical<RecordType>()) {
     if (auto *FromRecordDecl =
-            dyn_cast<CXXRecordDecl>(FromRecordType->getOriginalDecl())) {
+            dyn_cast<CXXRecordDecl>(FromRecordType->getDecl())) {
       FromRecordDecl = FromRecordDecl->getDefinitionOrSelf();
       // Add all of the conversion functions as candidates.
       const auto &Conversions = FromRecordDecl->getVisibleConversionFunctions();
@@ -4412,14 +4473,23 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
     Result = CompareStandardConversionSequences(S, Loc,
                                                 ICS1.Standard, ICS2.Standard);
   else if (ICS1.isUserDefined()) {
+    // With lazy template loading, it is possible to find non-canonical
+    // FunctionDecls, depending on when redecl chains are completed. Make sure
+    // to compare the canonical decls of conversion functions. This avoids
+    // ambiguity problems for templated conversion operators.
+    const FunctionDecl *ConvFunc1 = ICS1.UserDefined.ConversionFunction;
+    if (ConvFunc1)
+      ConvFunc1 = ConvFunc1->getCanonicalDecl();
+    const FunctionDecl *ConvFunc2 = ICS2.UserDefined.ConversionFunction;
+    if (ConvFunc2)
+      ConvFunc2 = ConvFunc2->getCanonicalDecl();
     // User-defined conversion sequence U1 is a better conversion
     // sequence than another user-defined conversion sequence U2 if
     // they contain the same user-defined conversion function or
     // constructor and if the second standard conversion sequence of
     // U1 is better than the second standard conversion sequence of
     // U2 (C++ 13.3.3.2p3).
-    if (ICS1.UserDefined.ConversionFunction ==
-          ICS2.UserDefined.ConversionFunction)
+    if (ConvFunc1 == ConvFunc2)
       Result = CompareStandardConversionSequences(S, Loc,
                                                   ICS1.UserDefined.After,
                                                   ICS2.UserDefined.After);
@@ -6242,6 +6312,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_SVE_Vector_Conversion:
   case ICK_RVV_Vector_Conversion:
   case ICK_HLSL_Vector_Splat:
+  case ICK_HLSL_Matrix_Splat:
   case ICK_Vector_Splat:
   case ICK_Complex_Real:
   case ICK_Block_Pointer_Conversion:
@@ -6252,6 +6323,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Incompatible_Pointer_Conversion:
   case ICK_Fixed_Point_Conversion:
   case ICK_HLSL_Vector_Truncation:
+  case ICK_HLSL_Matrix_Truncation:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
@@ -6852,7 +6924,7 @@ ExprResult Sema::PerformContextualImplicitConversion(
   UnresolvedSet<4>
       ViableConversions; // These are *potentially* viable in C++1y.
   UnresolvedSet<4> ExplicitConversions;
-  const auto &Conversions = cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
+  const auto &Conversions = cast<CXXRecordDecl>(RecordTy->getDecl())
                                 ->getDefinitionOrSelf()
                                 ->getVisibleConversionFunctions();
 
@@ -10206,9 +10278,7 @@ public:
 
       if (S.getLangOpts().CPlusPlus11) {
         for (QualType EnumTy : CandidateTypes[ArgIdx].enumeration_types()) {
-          if (!EnumTy->castAsCanonical<EnumType>()
-                   ->getOriginalDecl()
-                   ->isScoped())
+          if (!EnumTy->castAsCanonical<EnumType>()->getDecl()->isScoped())
             continue;
 
           if (!AddedTypes.insert(S.Context.getCanonicalType(EnumTy)).second)
@@ -12739,7 +12809,8 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
         << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
         << FnDesc /* Ignored */;
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckFunctionConstraints(Fn, Satisfaction))
+    if (S.CheckFunctionConstraints(Fn, Satisfaction, SourceLocation(),
+                                   /*ForOverloadResolution=*/true))
       break;
     S.DiagnoseUnsatisfiedConstraint(Satisfaction);
   }
@@ -13221,7 +13292,10 @@ void OverloadCandidateSet::NoteCandidates(
 
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
-  S.Diag(PD.first, PD.second, shouldDeferDiags(S, Args, OpLoc));
+  {
+    Sema::DeferDiagsRAII RAII{S, shouldDeferDiags(S, Args, OpLoc)};
+    S.Diag(PD.first, PD.second);
+  }
 
   // In WebAssembly we don't want to emit further diagnostics if a table is
   // passed as an argument to a function.
@@ -13284,10 +13358,10 @@ void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
   // inform the future value of S.Diags.getNumOverloadCandidatesToShow().
   S.Diags.overloadCandidatesShown(CandsShown);
 
-  if (I != E)
-    S.Diag(OpLoc, diag::note_ovl_too_many_candidates,
-           shouldDeferDiags(S, Args, OpLoc))
-        << int(E - I);
+  if (I != E) {
+    Sema::DeferDiagsRAII RAII{S, shouldDeferDiags(S, Args, OpLoc)};
+    S.Diag(OpLoc, diag::note_ovl_too_many_candidates) << int(E - I);
+  }
 }
 
 static SourceLocation

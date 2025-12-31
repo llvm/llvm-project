@@ -405,7 +405,7 @@ ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
 void AllocaScopeOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getResults()));
+    regions.push_back(RegionSuccessor(getOperation(), getResults()));
     return;
   }
 
@@ -850,7 +850,7 @@ void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// If the source/target of a CopyOp is a CastOp that does not modify the shape
 /// and element type, the cast can be skipped. Such CastOps only cast the layout
 /// of the type.
-static LogicalResult FoldCopyOfCast(CopyOp op) {
+static LogicalResult foldCopyOfCast(CopyOp op) {
   for (OpOperand &operand : op->getOpOperands()) {
     auto castOp = operand.get().getDefiningOp<memref::CastOp>();
     if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
@@ -865,7 +865,7 @@ LogicalResult CopyOp::fold(FoldAdaptor adaptor,
                            SmallVectorImpl<OpFoldResult> &results) {
 
   /// copy(memrefcast) -> copy
-  return FoldCopyOfCast(*this);
+  return foldCopyOfCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1072,13 +1072,6 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
     assert(subview.isDynamicSize(sourceIndex) &&
            "expected dynamic subview size");
     return subview.getDynamicSize(sourceIndex);
-  }
-
-  if (auto sizeInterface =
-          dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
-    assert(sizeInterface.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic subview size");
-    return sizeInterface.getDynamicSize(unsignedIndex);
   }
 
   // dim(memrefcast) -> dim
@@ -1437,6 +1430,13 @@ ExtractStridedMetadataOp::fold(FoldAdaptor adaptor,
   atLeastOneReplacement |= replaceConstantUsesOf(
       builder, getLoc(), getStrides(), getConstifiedMixedStrides());
 
+  // extract_strided_metadata(cast(x)) -> extract_strided_metadata(x).
+  if (auto prev = getSource().getDefiningOp<CastOp>())
+    if (isa<MemRefType>(prev.getSource().getType())) {
+      getSourceMutable().assign(prev.getSource());
+      atLeastOneReplacement = true;
+    }
+
   return success(atLeastOneReplacement);
 }
 
@@ -1744,11 +1744,11 @@ OpFoldResult MemorySpaceCastOp::fold(FoldAdaptor adaptor) {
 }
 
 TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getSourcePtr() {
-  return cast<TypedValue<PtrLikeTypeInterface>>(getSource());
+  return getSource();
 }
 
 TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getTargetPtr() {
-  return cast<TypedValue<PtrLikeTypeInterface>>(getDest());
+  return getDest();
 }
 
 bool MemorySpaceCastOp::isValidMemorySpaceCast(PtrLikeTypeInterface tgt,
@@ -2158,11 +2158,45 @@ public:
     return success();
   }
 };
+
+struct ReinterpretCastOpConstantFolder
+    : public OpRewritePattern<ReinterpretCastOp> {
+public:
+  using OpRewritePattern<ReinterpretCastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ReinterpretCastOp op,
+                                PatternRewriter &rewriter) const override {
+    unsigned srcStaticCount = llvm::count_if(
+        llvm::concat<OpFoldResult>(op.getMixedOffsets(), op.getMixedSizes(),
+                                   op.getMixedStrides()),
+        [](OpFoldResult ofr) { return isa<Attribute>(ofr); });
+
+    SmallVector<OpFoldResult> offsets = {op.getConstifiedMixedOffset()};
+    SmallVector<OpFoldResult> sizes = op.getConstifiedMixedSizes();
+    SmallVector<OpFoldResult> strides = op.getConstifiedMixedStrides();
+
+    // TODO: Using counting comparison instead of direct comparison because
+    // getMixedValues (and therefore ReinterpretCastOp::getMixed...) returns
+    // IntegerAttrs, while constifyIndexValues (and therefore
+    // ReinterpretCastOp::getConstifiedMixed...) returns IndexAttrs.
+    if (srcStaticCount ==
+        llvm::count_if(llvm::concat<OpFoldResult>(offsets, sizes, strides),
+                       [](OpFoldResult ofr) { return isa<Attribute>(ofr); }))
+      return failure();
+
+    auto newReinterpretCast = ReinterpretCastOp::create(
+        rewriter, op->getLoc(), op.getSource(), offsets[0], sizes, strides);
+
+    rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newReinterpretCast);
+    return success();
+  }
+};
 } // namespace
 
 void ReinterpretCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                     MLIRContext *context) {
-  results.add<ReinterpretCastOpExtractStridedMetadataFolder>(context);
+  results.add<ReinterpretCastOpExtractStridedMetadataFolder,
+              ReinterpretCastOpConstantFolder>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
@@ -3437,6 +3471,65 @@ SubViewOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
 }
 
+void SubViewOp::inferStridedMetadataRanges(
+    ArrayRef<StridedMetadataRange> ranges, GetIntRangeFn getIntRange,
+    SetStridedMetadataRangeFn setMetadata, int32_t indexBitwidth) {
+  auto isUninitialized =
+      +[](IntegerValueRange range) { return range.isUninitialized(); };
+
+  // Bail early if any of the operands metadata is not ready:
+  SmallVector<IntegerValueRange> offsetOperands =
+      getIntValueRanges(getMixedOffsets(), getIntRange, indexBitwidth);
+  if (llvm::any_of(offsetOperands, isUninitialized))
+    return;
+
+  SmallVector<IntegerValueRange> sizeOperands =
+      getIntValueRanges(getMixedSizes(), getIntRange, indexBitwidth);
+  if (llvm::any_of(sizeOperands, isUninitialized))
+    return;
+
+  SmallVector<IntegerValueRange> stridesOperands =
+      getIntValueRanges(getMixedStrides(), getIntRange, indexBitwidth);
+  if (llvm::any_of(stridesOperands, isUninitialized))
+    return;
+
+  StridedMetadataRange sourceRange =
+      ranges[getSourceMutable().getOperandNumber()];
+  if (sourceRange.isUninitialized())
+    return;
+
+  ArrayRef<ConstantIntRanges> srcStrides = sourceRange.getStrides();
+
+  // Get the dropped dims.
+  llvm::SmallBitVector droppedDims = getDroppedDims();
+
+  // Compute the new offset, strides and sizes.
+  ConstantIntRanges offset = sourceRange.getOffsets()[0];
+  SmallVector<ConstantIntRanges> strides, sizes;
+
+  for (size_t i = 0, e = droppedDims.size(); i < e; ++i) {
+    bool dropped = droppedDims.test(i);
+    // Compute the new offset.
+    ConstantIntRanges off =
+        intrange::inferMul({offsetOperands[i].getValue(), srcStrides[i]});
+    offset = intrange::inferAdd({offset, off});
+
+    // Skip dropped dimensions.
+    if (dropped)
+      continue;
+    // Multiply the strides.
+    strides.push_back(
+        intrange::inferMul({stridesOperands[i].getValue(), srcStrides[i]}));
+    // Get the sizes.
+    sizes.push_back(sizeOperands[i].getValue());
+  }
+
+  setMetadata(getResult(),
+              StridedMetadataRange::getRanked(
+                  SmallVector<ConstantIntRanges>({std::move(offset)}),
+                  std::move(sizes), std::move(strides)));
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
@@ -3582,7 +3675,8 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
   MemRefType sourceMemrefType = getSource().getType();
   MemRefType resultMemrefType = getResult().getType();
 
-  if (resultMemrefType == sourceMemrefType && resultMemrefType.hasStaticShape())
+  if (resultMemrefType == sourceMemrefType &&
+      resultMemrefType.hasStaticShape() && isZeroInteger(getByteShift()))
     return getViewSource();
 
   return {};
@@ -3591,7 +3685,7 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
 namespace {
 
 struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
-  using OpRewritePattern<ViewOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
@@ -3658,26 +3752,22 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
   }
 };
 
+/// view(memref.cast(%source)) -> view(%source).
 struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
-  using OpRewritePattern<ViewOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
-    Value memrefOperand = viewOp.getOperand(0);
-    CastOp memrefCastOp = memrefOperand.getDefiningOp<CastOp>();
+    auto memrefCastOp = viewOp.getSource().getDefiningOp<CastOp>();
     if (!memrefCastOp)
       return failure();
-    Value allocOperand = memrefCastOp.getOperand();
-    AllocOp allocOp = allocOperand.getDefiningOp<AllocOp>();
-    if (!allocOp)
-      return failure();
-    rewriter.replaceOpWithNewOp<ViewOp>(viewOp, viewOp.getType(), allocOperand,
-                                        viewOp.getByteShift(),
-                                        viewOp.getSizes());
+
+    rewriter.replaceOpWithNewOp<ViewOp>(
+        viewOp, viewOp.getType(), memrefCastOp.getSource(),
+        viewOp.getByteShift(), viewOp.getSizes());
     return success();
   }
 };
-
 } // namespace
 
 void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
