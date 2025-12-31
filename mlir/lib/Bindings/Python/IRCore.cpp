@@ -2388,6 +2388,16 @@ PyOpAttributeMap::dunderGetItemNamed(const std::string &name) {
   return PyAttribute(operation->getContext(), attr).maybeDownCast();
 }
 
+nb::object PyOpAttributeMap::getWithDefaultNamed(const std::string &key,
+                                                 nb::object defaultValue) {
+  MlirAttribute attr =
+      mlirOperationGetAttributeByName(operation->get(), toMlirStringRef(key));
+  if (mlirAttributeIsNull(attr)) {
+    return defaultValue;
+  }
+  return PyAttribute(operation->getContext(), attr).maybeDownCast();
+}
+
 PyNamedAttribute PyOpAttributeMap::dunderGetItemIndexed(intptr_t index) {
   if (index < 0) {
     index += dunderLen();
@@ -2450,6 +2460,10 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
            "Sets an attribute with the given name.")
       .def("__delitem__", &PyOpAttributeMap::dunderDelItem, "name"_a,
            "Deletes an attribute with the given name.")
+      .def("get", &PyOpAttributeMap::getWithDefaultNamed, nb::arg("key"),
+           nb::arg("default") = nb::none(),
+           "Gets an attribute by name or the default value, if it does not "
+           "exist.")
       .def(
           "__iter__",
           [](PyOpAttributeMap &self) {
