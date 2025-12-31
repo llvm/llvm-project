@@ -947,11 +947,9 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
       continue;
     if (!domInfo->dominates(converted, user))
       continue;
-
     if (!(isa<omp::AtomicCaptureOp>(user->getParentOp()) ||
-          isa<acc::AtomicCaptureOp>(user->getParentOp()))) {
+          isa<acc::AtomicCaptureOp>(user->getParentOp())))
       worklist.insert(user);
-    }
   }
 
   Type ty = firMemref.getType();
@@ -969,10 +967,9 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
     if (isMarshalLike(user) || isa<fir::LoadOp, fir::StoreOp>(user))
       continue;
     if (isa<omp::AtomicCaptureOp>(user->getParentOp()) ||
-        isa<acc::AtomicCaptureOp>(user->getParentOp())) {
+        isa<acc::AtomicCaptureOp>(user->getParentOp()))
       if (domInfo->dominates(converted, user))
         worklist.insert(user);
-    }
   }
 
   if (worklist.empty())
@@ -1115,11 +1112,10 @@ void FIRToMemRef::runOnOperation() {
   });
 
   op.walk([&](Operation *op) {
-    if (fir::LoadOp loadOp = dyn_cast<fir::LoadOp>(op)) {
+    if (fir::LoadOp loadOp = dyn_cast<fir::LoadOp>(op))
       rewriteLoadOp(loadOp, rewriter, typeConverter);
-    } else if (fir::StoreOp storeOp = dyn_cast<fir::StoreOp>(op)) {
+    else if (fir::StoreOp storeOp = dyn_cast<fir::StoreOp>(op))
       rewriteStoreOp(storeOp, rewriter, typeConverter);
-    }
   });
 
   SmallVector<Operation *> worklist;
