@@ -9,7 +9,8 @@
 // REQUIRES: std-at-least-c++17
 // <optional>
 
-// Verify that example provided for LWG4370 compiles.
+// Verify that comparison operators of `optional` accept underlying return types convertible both from and to `bool`
+// as required by LWG4370.
 
 #include <cassert>
 #include <optional>
