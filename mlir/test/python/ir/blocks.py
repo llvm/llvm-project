@@ -80,11 +80,14 @@ def testBlockCreation():
                     Block(
                         predecessors=[matched_entry_block],
                         successors=[
-                            Block(predecessors=[matched_middle_block], successors=[])
-                        ]
-                    )
-                ]
-            ) if entry_block == matched_entry_block and middle_block == matched_middle_block:
+                            Block(predecessors=[matched_middle_block], successors=[]),
+                        ],
+                    ),
+                ],
+            ) if (
+                entry_block == matched_entry_block
+                and middle_block == matched_middle_block
+            ):
                 assert True
             case _:
                 assert False

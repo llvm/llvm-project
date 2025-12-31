@@ -206,7 +206,7 @@ def testBlockArgumentList():
         # CHECK: Argument 2, type i24
         for arg in entry_block.arguments:
             print(f"Argument {arg.arg_number}, type {arg.type}")
-        
+
         # CHECK: Matched Arg 0, type i8
         # CHECK: Matched Arg 1, type i16
         # CHECK: Matched Arg 2, type i24
@@ -273,10 +273,22 @@ def testOperationOperands():
         # CHECK: Operand 1, type i64
         for i, operand in enumerate(consumer.operands):
             print(f"Operand {i}, type {operand.type}")
-        
+
         match module.body.operations:
             case [
-                func.FuncOp(body=Region(blocks=[Block(operations=[_, OpView(operands=[o1, o2]) as matched_consumer, *_])]))
+                func.FuncOp(
+                    body=Region(
+                        blocks=[
+                            Block(
+                                operations=[
+                                    _,
+                                    OpView(operands=[o1, o2]) as matched_consumer,
+                                    *_,
+                                ],
+                            ),
+                        ],
+                    ),
+                ),
             ]:
                 print(f"Matched Operand 0, type {o1.type}")
                 print(f"Matched Operand 1, type {o2.type}")
@@ -506,7 +518,15 @@ def testOperationResultList():
     # CHECK: Matched Result r1, type f64
     # CHECK: Matched Result r2, type index
     match caller:
-        case func.FuncOp(body=Region(blocks=[Block(operations=[OpView(results=[r0, r1, r2]) as matched_call, *_])])):
+        case func.FuncOp(
+            body=Region(
+                blocks=[
+                    Block(
+                        operations=[OpView(results=[r0, r1, r2]) as matched_call, *_],
+                    ),
+                ],
+            ),
+        ):
             assert matched_call == call
             print(f"Matched Result r0, type {r0.type}")
             print(f"Matched Result r1, type {r1.type}")
