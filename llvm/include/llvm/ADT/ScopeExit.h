@@ -53,10 +53,8 @@ template <typename Callable> scope_exit(Callable) -> scope_exit<Callable>;
 // Interface is specified by p0052r2.
 template <typename Callable>
 [[nodiscard]]
-LLVM_DEPRECATED(
-    "llvm::make_scope_exit is deprecated and will be removed in LLVM 24. "
-    "Prefer calling the constructor of llvm::scope_exit directly.",
-    "scope_exit") auto make_scope_exit(Callable &&F) {
+LLVM_DEPRECATED("Prefer calling the constructor of llvm::scope_exit directly.",
+                "scope_exit") auto make_scope_exit(Callable &&F) {
   // TODO(LLVM 24): Remove this function.
   return scope_exit(std::forward<Callable>(F));
 }
