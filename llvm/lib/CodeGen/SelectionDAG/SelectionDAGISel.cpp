@@ -96,7 +96,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -2722,9 +2721,18 @@ GetVBR(uint64_t Val, const uint8_t *MatcherTable, unsigned &Idx) {
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static int64_t
 GetSignedVBR(const unsigned char *MatcherTable, unsigned &Idx) {
-  unsigned Len;
-  int64_t Val = decodeSLEB128(&MatcherTable[Idx], &Len);
-  Idx += Len;
+  int64_t Val = 0;
+  unsigned Shift = 0;
+  uint64_t NextBits;
+  do {
+    NextBits = MatcherTable[Idx++];
+    Val |= (NextBits & 127) << Shift;
+    Shift += 7;
+  } while (NextBits & 128);
+
+  if (Shift < 64 && (NextBits & 0x40))
+    Val |= UINT64_MAX << Shift;
+
   return Val;
 }
 
