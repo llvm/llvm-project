@@ -212,10 +212,9 @@ Type FIRToMemRef::getBaseType(Type type, bool complexBaseTypes) const {
     type = memrefTy.getElementType();
   }
 
-  if (!complexBaseTypes) {
+  if (!complexBaseTypes)
     if (auto complexTy = dyn_cast<ComplexType>(type))
       type = complexTy.getElementType();
-  }
   return type;
 }
 
@@ -391,12 +390,10 @@ bool FIRToMemRef::memrefIsOptional(Operation *op) const {
       return true;
   }
 
-  for (mlir::Value result : op->getResults()) {
-    for (mlir::Operation *userOp : result.getUsers()) {
+  for (mlir::Value result : op->getResults())
+    for (mlir::Operation *userOp : result.getUsers())
       if (isa<fir::IsPresentOp>(userOp))
         return true;
-    }
-  }
 
   return false;
 }
@@ -573,9 +570,8 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
 
   unsigned rank = arrayCoorOp.getIndices().size();
 
-  if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>()) {
+  if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
     rank = getRankFromEmbox(embox);
-  }
 
   SmallVector<Value> sizes;
   sizes.reserve(rank);
@@ -620,9 +616,8 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       sizes.push_back(castTypeToIndexType(size, rewriter));
 
       Value stride = shapeVec[0];
-      for (unsigned j = 1; j <= i - 1; ++j) {
+      for (unsigned j = 1; j <= i - 1; ++j)
         stride = arith::MulIOp::create(rewriter, loc, shapeVec[j], stride);
-      }
       strides.push_back(castTypeToIndexType(stride, rewriter));
     }
 
@@ -682,9 +677,8 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
       Value input = convertOp.getOperand();
       if (auto alloca = input.getDefiningOp<memref::AllocaOp>()) {
         assert(alloca.getType() == memrefTy && "expected same types");
-        if (isCompilerGeneratedAlloca(alloca)) {
+        if (isCompilerGeneratedAlloca(alloca))
           return alloca.getResult();
-        }
       }
     }
   }
@@ -695,9 +689,8 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
     Operation *baseOp = basePtr.getDefiningOp();
     auto boxAddrOp = fir::BoxAddrOp::create(rewriter, loc, basePtr);
 
-    if (auto cudaAttr = findCudaDataAttr(basePtr)) {
+    if (auto cudaAttr = findCudaDataAttr(basePtr))
       boxAddrOp->setAttr(cuf::getDataAttrName(), cudaAttr);
-    }
 
     basePtr = boxAddrOp;
     memrefTy = typeConverter.convertMemrefType(basePtr.getType());
@@ -739,9 +732,8 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
           return failure();
         }
         Type originalType = rebox.getBox().getType();
-        if (auto boxTy = dyn_cast<fir::BoxType>(originalType)) {
+        if (auto boxTy = dyn_cast<fir::BoxType>(originalType))
           originalType = boxTy.getElementType();
-        }
         if (!typeConverter.convertibleMemrefType(originalType)) {
           return failure();
         } else {
@@ -785,9 +777,8 @@ Value FIRToMemRef::canonicalizeIndex(Value index,
   if (auto add = dyn_cast<arith::AddIOp>(op)) {
     Value lhs = canonicalizeIndex(add.getLhs(), rewriter);
     Value rhs = canonicalizeIndex(add.getRhs(), rewriter);
-    if (lhs.getType() == rhs.getType()) {
+    if (lhs.getType() == rhs.getType())
       return arith::AddIOp::create(rewriter, op->getLoc(), lhs, rhs);
-    }
   }
   return index;
 }
@@ -801,10 +792,9 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
     if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
       rewriter.setInsertionPoint(memOp);
       Type memrefTy = typeConverter.convertMemrefType(blockArg.getType());
-      if (auto mt = dyn_cast<MemRefType>(memrefTy)) {
+      if (auto mt = dyn_cast<MemRefType>(memrefTy))
         if (auto inner = llvm::dyn_cast<MemRefType>(mt.getElementType()))
           memrefTy = inner;
-      }
       Value converted = fir::ConvertOp::create(rewriter, blockArg.getLoc(),
                                                memrefTy, blockArg);
       SmallVector<Value> indices;
@@ -1048,12 +1038,10 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
         loadOp.getOperation()->getUsers().end());
     auto logicalVal =
         fir::ConvertOp::create(rewriter, loadOp.getLoc(), originalType, loadOp);
-    for (Operation *user : loadUsers) {
-      for (auto &operand : user->getOpOperands()) {
+    for (Operation *user : loadUsers)
+      for (auto &operand : user->getOpOperands())
         if (operand.get() == loadOp)
           operand.set(logicalVal);
-      }
-    }
   }
 
   if (!isa<fir::LogicalType>(originalType))
@@ -1100,9 +1088,8 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
              storeOp.dump(); assert(succeeded(verify(storeOp))));
 
   bool isLogicalRef = false;
-  if (auto refTy = llvm::dyn_cast<fir::ReferenceType>(firMemref.getType())) {
+  if (auto refTy = llvm::dyn_cast<fir::ReferenceType>(firMemref.getType()))
     isLogicalRef = llvm::isa<fir::LogicalType>(refTy.getEleTy());
-  }
   if (!isLogicalRef)
     replaceFIRMemrefs(firMemref, converted, rewriter);
 }
@@ -1134,16 +1121,13 @@ void FIRToMemRef::runOnOperation() {
 
   SmallVector<Operation *> worklist;
   op->walk([&worklist](Operation *arithOp) {
-    if (llvm::isa<arith::ArithDialect>(arithOp->getDialect())) {
-      if (arithOp->use_empty()) {
+    if (llvm::isa<arith::ArithDialect>(arithOp->getDialect()))
+      if (arithOp->use_empty())
         worklist.push_back(arithOp);
-      }
-    }
   });
 
-  for (auto eraseOp : eraseOps) {
+  for (auto eraseOp : eraseOps)
     rewriter.eraseOp(eraseOp);
-  }
   eraseOps.clear();
 
   if (domInfo)
