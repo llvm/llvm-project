@@ -4951,6 +4951,22 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 
+  // Register containers as Sequences, so they can be used with `match`.
+  nanobind::object scope = m.attr("__dict__");
+  nanobind::exec("from collections.abc import Sequence, Mapping\n"
+                 "Sequence.register(BlockArgumentList)\n"
+                 "Sequence.register(BlockList)\n"
+                 "Sequence.register(BlockSuccessors)\n"
+                 "Sequence.register(BlockPredecessors)\n"
+                 "Sequence.register(OperationList)\n"
+                 "Sequence.register(OpOperandList)\n"
+                 "Sequence.register(OpResultList)\n"
+                 "Sequence.register(OpSuccessors)\n"
+                 "Sequence.register(RegionSequence)\n"
+                 "OpAttributeMap.get = Mapping.get\n"
+                 "Mapping.register(OpAttributeMap)\n",
+                 scope);
+
   // Debug bindings.
   PyGlobalDebugFlag::bind(m);
 
