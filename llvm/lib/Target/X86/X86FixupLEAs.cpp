@@ -28,14 +28,14 @@
 using namespace llvm;
 
 #define FIXUPLEA_DESC "X86 LEA Fixup"
-#define FIXUPLEA_NAME "x86-fixup-leas"
+#define FIXUPLEA_NAME "x86-fixup-LEAs"
 
 #define DEBUG_TYPE FIXUPLEA_NAME
 
 STATISTIC(NumLEAs, "Number of LEA instructions created");
 
 namespace {
-class FixupLEAsImpl {
+class FixupLEAPass : public MachineFunctionPass {
   enum RegUsageState { RU_NotUsed, RU_Write, RU_Read };
 
   /// Given a machine register, look for the instruction
@@ -121,30 +121,15 @@ class FixupLEAsImpl {
                                    MachineBasicBlock::iterator &MBBI) const;
 
 public:
-  FixupLEAsImpl(ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI)
-      : PSI(PSI), MBFI(MBFI) {}
-
-  /// Loop over all of the basic blocks,
-  /// replacing instructions by equivalent LEA instructions
-  /// if needed and when possible.
-  bool runOnMachineFunction(MachineFunction &MF);
-
-private:
-  TargetSchedModel TSM;
-  const X86InstrInfo *TII = nullptr;
-  const X86RegisterInfo *TRI = nullptr;
-  ProfileSummaryInfo *PSI;
-  MachineBlockFrequencyInfo *MBFI;
-};
-
-class FixupLEAsLegacy : public MachineFunctionPass {
-public:
   static char ID;
 
   StringRef getPassName() const override { return FIXUPLEA_DESC; }
 
-  FixupLEAsLegacy() : MachineFunctionPass(ID) {}
+  FixupLEAPass() : MachineFunctionPass(ID) { }
 
+  /// Loop over all of the basic blocks,
+  /// replacing instructions by equivalent LEA instructions
+  /// if needed and when possible.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   // This pass runs after regalloc and doesn't support VReg operands.
@@ -157,16 +142,21 @@ public:
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+private:
+  TargetSchedModel TSM;
+  const X86InstrInfo *TII = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
 };
 }
 
-char FixupLEAsLegacy::ID = 0;
+char FixupLEAPass::ID = 0;
 
-INITIALIZE_PASS(FixupLEAsLegacy, FIXUPLEA_NAME, FIXUPLEA_DESC, false, false)
+INITIALIZE_PASS(FixupLEAPass, FIXUPLEA_NAME, FIXUPLEA_DESC, false, false)
 
 MachineInstr *
-FixupLEAsImpl::postRAConvertToLEA(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator &MBBI) const {
+FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator &MBBI) const {
   MachineInstr &MI = *MBBI;
   switch (MI.getOpcode()) {
   case X86::MOV32rr:
@@ -220,16 +210,17 @@ FixupLEAsImpl::postRAConvertToLEA(MachineBasicBlock &MBB,
   return TII->convertToThreeAddress(MI, nullptr, nullptr);
 }
 
-FunctionPass *llvm::createX86FixupLEAsLegacyPass() {
-  return new FixupLEAsLegacy();
-}
+FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
 
 static bool isLEA(unsigned Opcode) {
   return Opcode == X86::LEA32r || Opcode == X86::LEA64r ||
          Opcode == X86::LEA64_32r;
 }
 
-bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
+bool FixupLEAPass::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   bool IsSlowLEA = ST.slowLEA();
   bool IsSlow3OpsLEA = ST.slow3OpsLEA();
@@ -241,6 +232,10 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
   TSM.init(&ST);
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
+  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto *MBFI = (PSI && PSI->hasProfileSummary())
+                   ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+                   : nullptr;
 
   LLVM_DEBUG(dbgs() << "Start X86FixupLEAs\n";);
   for (MachineBasicBlock &MBB : MF) {
@@ -273,8 +268,8 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FixupLEAsImpl::RegUsageState
-FixupLEAsImpl::usesRegister(MachineOperand &p, MachineBasicBlock::iterator I) {
+FixupLEAPass::RegUsageState
+FixupLEAPass::usesRegister(MachineOperand &p, MachineBasicBlock::iterator I) {
   RegUsageState RegUsage = RU_NotUsed;
   MachineInstr &MI = *I;
 
@@ -305,8 +300,9 @@ static inline bool getPreviousInstr(MachineBasicBlock::iterator &I,
   return true;
 }
 
-MachineBasicBlock::iterator FixupLEAsImpl::searchBackwards(
-    MachineOperand &p, MachineBasicBlock::iterator &I, MachineBasicBlock &MBB) {
+MachineBasicBlock::iterator
+FixupLEAPass::searchBackwards(MachineOperand &p, MachineBasicBlock::iterator &I,
+                              MachineBasicBlock &MBB) {
   int InstrDistance = 1;
   MachineBasicBlock::iterator CurInst;
   static const int INSTR_DISTANCE_THRESHOLD = 5;
@@ -398,8 +394,8 @@ static inline unsigned getINCDECFromLEA(unsigned LEAOpcode, bool IsINC) {
 }
 
 MachineBasicBlock::iterator
-FixupLEAsImpl::searchALUInst(MachineBasicBlock::iterator &I,
-                             MachineBasicBlock &MBB) const {
+FixupLEAPass::searchALUInst(MachineBasicBlock::iterator &I,
+                            MachineBasicBlock &MBB) const {
   const int InstrDistanceThreshold = 5;
   int InstrDistance = 1;
   MachineBasicBlock::iterator CurInst = std::next(I);
@@ -451,11 +447,11 @@ FixupLEAsImpl::searchALUInst(MachineBasicBlock::iterator &I,
   return MachineBasicBlock::iterator();
 }
 
-void FixupLEAsImpl::checkRegUsage(MachineBasicBlock::iterator &LeaI,
-                                  MachineBasicBlock::iterator &AluI,
-                                  bool &BaseIndexDef, bool &AluDestRef,
-                                  MachineOperand **KilledBase,
-                                  MachineOperand **KilledIndex) const {
+void FixupLEAPass::checkRegUsage(MachineBasicBlock::iterator &LeaI,
+                                 MachineBasicBlock::iterator &AluI,
+                                 bool &BaseIndexDef, bool &AluDestRef,
+                                 MachineOperand **KilledBase,
+                                 MachineOperand **KilledIndex) const {
   BaseIndexDef = AluDestRef = false;
   *KilledBase = *KilledIndex = nullptr;
   Register BaseReg = LeaI->getOperand(1 + X86::AddrBaseReg).getReg();
@@ -485,8 +481,8 @@ void FixupLEAsImpl::checkRegUsage(MachineBasicBlock::iterator &LeaI,
   }
 }
 
-bool FixupLEAsImpl::optLEAALU(MachineBasicBlock::iterator &I,
-                              MachineBasicBlock &MBB) const {
+bool FixupLEAPass::optLEAALU(MachineBasicBlock::iterator &I,
+                             MachineBasicBlock &MBB) const {
   // Look for an add/sub instruction which uses the result of lea.
   MachineBasicBlock::iterator AluI = searchALUInst(I, MBB);
   if (AluI == MachineBasicBlock::iterator())
@@ -549,9 +545,9 @@ bool FixupLEAsImpl::optLEAALU(MachineBasicBlock::iterator &I,
   return true;
 }
 
-bool FixupLEAsImpl::optTwoAddrLEA(MachineBasicBlock::iterator &I,
-                                  MachineBasicBlock &MBB, bool OptIncDec,
-                                  bool UseLEAForSP) const {
+bool FixupLEAPass::optTwoAddrLEA(MachineBasicBlock::iterator &I,
+                                 MachineBasicBlock &MBB, bool OptIncDec,
+                                 bool UseLEAForSP) const {
   MachineInstr &MI = *I;
 
   const MachineOperand &Base =    MI.getOperand(1 + X86::AddrBaseReg);
@@ -649,8 +645,8 @@ bool FixupLEAsImpl::optTwoAddrLEA(MachineBasicBlock::iterator &I,
   return true;
 }
 
-void FixupLEAsImpl::processInstruction(MachineBasicBlock::iterator &I,
-                                       MachineBasicBlock &MBB) {
+void FixupLEAPass::processInstruction(MachineBasicBlock::iterator &I,
+                                      MachineBasicBlock &MBB) {
   // Process a load, store, or LEA instruction.
   MachineInstr &MI = *I;
   const MCInstrDesc &Desc = MI.getDesc();
@@ -668,9 +664,9 @@ void FixupLEAsImpl::processInstruction(MachineBasicBlock::iterator &I,
   }
 }
 
-void FixupLEAsImpl::seekLEAFixup(MachineOperand &p,
-                                 MachineBasicBlock::iterator &I,
-                                 MachineBasicBlock &MBB) {
+void FixupLEAPass::seekLEAFixup(MachineOperand &p,
+                                MachineBasicBlock::iterator &I,
+                                MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBI = searchBackwards(p, I, MBB);
   if (MBI != MachineBasicBlock::iterator()) {
     MachineInstr *NewMI = postRAConvertToLEA(MBB, MBI);
@@ -688,8 +684,8 @@ void FixupLEAsImpl::seekLEAFixup(MachineOperand &p,
   }
 }
 
-void FixupLEAsImpl::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
-                                                 MachineBasicBlock &MBB) {
+void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
+                                                MachineBasicBlock &MBB) {
   MachineInstr &MI = *I;
   const unsigned Opcode = MI.getOpcode();
 
@@ -739,9 +735,9 @@ void FixupLEAsImpl::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
   }
 }
 
-void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
-                                              MachineBasicBlock &MBB,
-                                              bool OptIncDec) {
+void FixupLEAPass::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
+                                             MachineBasicBlock &MBB,
+                                             bool OptIncDec) {
   MachineInstr &MI = *I;
   const unsigned LEAOpcode = MI.getOpcode();
 
@@ -914,36 +910,4 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
   MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
   MBB.erase(I);
   I = NewMI;
-}
-
-bool FixupLEAsLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
-  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto *MBFI = (PSI && PSI->hasProfileSummary())
-                   ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
-                   : nullptr;
-  FixupLEAsImpl PassImpl(PSI, MBFI);
-  return PassImpl.runOnMachineFunction(MF);
-}
-
-PreservedAnalyses X86FixupLEAsPass::run(MachineFunction &MF,
-                                        MachineFunctionAnalysisManager &MFAM) {
-  ProfileSummaryInfo *PSI =
-      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-          .getCachedResult<ProfileSummaryAnalysis>(
-              *MF.getFunction().getParent());
-  if (!PSI)
-    report_fatal_error("x86-fixup-leas requires ProfileSummaryAnalysis", false);
-  MachineBlockFrequencyInfo *MBFI =
-      &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-
-  FixupLEAsImpl PassImpl(PSI, MBFI);
-  bool Changed = PassImpl.runOnMachineFunction(MF);
-  if (!Changed)
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
 }

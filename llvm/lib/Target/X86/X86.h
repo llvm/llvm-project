@@ -67,13 +67,7 @@ FunctionPass *createX86PadShortFunctions();
 /// Return a pass that selectively replaces certain instructions (like add,
 /// sub, inc, dec, some shifts, and some multiplies) by equivalent LEA
 /// instructions, in order to eliminate execution delays in some processors.
-class X86FixupLEAsPass : public PassInfoMixin<X86FixupLEAsPass> {
-public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
-};
-
-FunctionPass *createX86FixupLEAsLegacyPass();
+FunctionPass *createX86FixupLEAs();
 
 /// Return a pass that replaces equivalent slower instructions with faster
 /// ones.
@@ -255,7 +249,7 @@ FunctionPass *createX86SuppressAPXForRelocationPass();
 
 void initializeCompressEVEXPassPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
-void initializeFixupLEAsLegacyPass(PassRegistry &);
+void initializeFixupLEAPassPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningPassPass(PassRegistry &);
