@@ -233,6 +233,48 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+
+  // Adding positive and negative infinity produces NaN.
+  // TODO: Check sign of infinities.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()))
+    Known.knownNot(fcNan);
+
+  if (KnownLHS.cannotBeOrderedLessThanZero() &&
+      KnownRHS.cannotBeOrderedLessThanZero())
+    Known.knownNot(OrderedLessThanZeroMask);
+
+  if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
+      KnownRHS.cannotBeOrderedGreaterThanZero())
+    Known.knownNot(OrderedGreaterThanZeroMask);
+
+  // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
+  if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
+       KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
+      // Make sure output negative denormal can't flush to -0
+      (Mode.Output == DenormalMode::IEEE ||
+       Mode.Output == DenormalMode::PositiveZero))
+    Known.knownNot(fcNegZero);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
+                                     DenormalMode Mode) {
+  KnownFPClass Known = fadd(KnownSrc, KnownSrc, Mode);
+
+  // Doubling 0 will give the same 0.
+  if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+    Known.knownNot(fcPosZero);
+  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+    Known.knownNot(fcNegZero);
+  return Known;
+}
+
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const KnownFPClass &KnownRHS,
                                 DenormalMode Mode) {
