@@ -479,6 +479,16 @@ bool RegionBranchOpInterface::hasLoop() {
   return false;
 }
 
+OperandRange
+RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
+                                              RegionSuccessor dest) {
+  if (src.isParent())
+    return getEntrySuccessorOperands(dest);
+  auto terminator = cast<RegionBranchTerminatorOpInterface>(
+      src.getTerminatorPredecessorOrNull());
+  return terminator.getSuccessorOperands(dest);
+}
+
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {
   LDBG() << "Finding enclosing repetitive region for operation "
          << op->getName();

@@ -22,6 +22,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -258,13 +259,18 @@ static unsigned EmitVBRValue(uint64_t Val, raw_ostream &OS) {
 /// Emit the specified signed value as a VBR. To improve compression we encode
 /// positive numbers shifted left by 1 and negative numbers negated and shifted
 /// left by 1 with bit 0 set.
-static unsigned EmitSignedVBRValue(uint64_t Val, raw_ostream &OS) {
-  if ((int64_t)Val >= 0)
-    Val = Val << 1;
-  else
-    Val = (-Val << 1) | 1;
+static unsigned EmitSignedVBRValue(int64_t Val, raw_ostream &OS) {
+  uint8_t Buffer[10];
+  unsigned Len = encodeSLEB128(Val, Buffer);
 
-  return EmitVBRValue(Val, OS);
+  for (unsigned i = 0; i != Len - 1; ++i)
+    OS << static_cast<unsigned>(Buffer[i] & 127) << "|128,";
+
+  OS << static_cast<unsigned>(Buffer[Len - 1]);
+  if ((Len > 1 || Val < 0) && !OmitComments)
+    OS << "/*" << Val << "*/";
+  OS << ", ";
+  return Len;
 }
 
 // This is expensive and slow.
@@ -1419,7 +1425,7 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
   OS << "  #define TARGET_VAL(X) X & 255, unsigned(X) >> 8\n";
   OS << "  #define COVERAGE_IDX_VAL(X) X & 255, (unsigned(X) >> 8) & 255, ";
   OS << "(unsigned(X) >> 16) & 255, (unsigned(X) >> 24) & 255\n";
-  OS << "  static const unsigned char MatcherTable[] = {\n";
+  OS << "  static const uint8_t MatcherTable[] = {\n";
   TotalSize = MatcherEmitter.EmitMatcherList(TheMatcher, 1, 0, OS);
   OS << "    0\n  }; // Total Array size is " << (TotalSize + 1)
      << " bytes\n\n";
