@@ -5619,14 +5619,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedSrcs,
                         KnownRHS, Q, Depth + 1);
 
+    // Special case fadd x, x, which is the canonical form of fmul x, 2.
+    bool SameOperands = Op->getOperand(0) == Op->getOperand(1);
+    if (SameOperands)
+      KnownLHS = KnownRHS;
+
     if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
         (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) ||
         WantNegZero || Opc == Instruction::FSub) {
 
-      // RHS is canonically cheaper to compute. Skip inspecting the LHS if
-      // there's no point.
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                          KnownLHS, Q, Depth + 1);
+      if (!SameOperands) {
+        // RHS is canonically cheaper to compute. Skip inspecting the LHS if
+        // there's no point.
+        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
+                            KnownLHS, Q, Depth + 1);
+      }
+
       // Adding positive and negative infinity produces NaN.
       // TODO: Check sign of infinities.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
@@ -5640,12 +5648,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownLHS.cannotBeOrderedLessThanZero() &&
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+        if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
+            KnownRHS.cannotBeOrderedGreaterThanZero())
+          Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+
         if (!F)
           break;
 
         const fltSemantics &FltSem =
             Op->getType()->getScalarType()->getFltSemantics();
         DenormalMode Mode = F->getDenormalMode(FltSem);
+
+        if (SameOperands) {
+          // Doubling 0 will give the same 0.
+          if (KnownRHS.isKnownNeverLogicalPosZero(Mode))
+            Known.knownNot(fcPosZero);
+          if (KnownRHS.isKnownNeverLogicalNegZero(Mode))
+            Known.knownNot(fcNegZero);
+        }
 
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
