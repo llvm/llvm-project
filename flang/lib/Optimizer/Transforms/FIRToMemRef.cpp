@@ -527,15 +527,13 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
         Operation *condition = ifOp.getCondition().getDefiningOp();
         if (condition && isa<fir::IsPresentOp>(condition)) {
           if (condition->getOperand(0) == firMemref) {
-            if (arrayCoorOperation->getParentRegion() ==
-                &ifOp.getThenRegion()) {
+            if (arrayCoorOperation->getParentRegion() == &ifOp.getThenRegion())
               rewriter.setInsertionPointToStart(
                   &(ifOp.getThenRegion().front()));
-            } else if (arrayCoorOperation->getParentRegion() ==
-                       &ifOp.getElseRegion()) {
+            else if (arrayCoorOperation->getParentRegion() ==
+                     &ifOp.getElseRegion())
               rewriter.setInsertionPointToStart(
                   &(ifOp.getElseRegion().front()));
-            }
           }
         }
       }
@@ -583,11 +581,10 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
 
   Value box = firMemref;
   if (!isa<BlockArgument>(firMemref)) {
-    if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>()) {
+    if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
       getShapeFrom<fir::EmboxOp>(embox, shapeVec, shiftVec, sliceVec);
-    } else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>()) {
+    else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
       getShapeFrom<fir::ReboxOp>(rebox, shapeVec, shiftVec, sliceVec);
-    }
   }
 
   if (shapeVec.empty()) {
@@ -846,13 +843,12 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
         Operation *condition = ifOp.getCondition().getDefiningOp();
         if (condition && isa<fir::IsPresentOp>(condition)) {
           if (condition->getOperand(0) == declareOp) {
-            if (memOp->getParentRegion() == &ifOp.getThenRegion()) {
+            if (memOp->getParentRegion() == &ifOp.getThenRegion())
               rewriter.setInsertionPointToStart(
                   &(ifOp.getThenRegion().front()));
-            } else if (memOp->getParentRegion() == &ifOp.getElseRegion()) {
+            else if (memOp->getParentRegion() == &ifOp.getElseRegion())
               rewriter.setInsertionPointToStart(
                   &(ifOp.getElseRegion().front()));
-            }
           }
         }
       }
