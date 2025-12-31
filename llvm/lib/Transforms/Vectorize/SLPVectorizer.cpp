@@ -17308,12 +17308,14 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         ValueToGatherNodes.lookup(V).takeVector());
     if (TransformedToGatherNodes.contains(TE)) {
       for (TreeEntry *E : getSplitTreeEntries(V)) {
-        if (TE == E || !TransformedToGatherNodes.contains(E))
+        if (TE == E || !TransformedToGatherNodes.contains(E) ||
+            !E->UserTreeIndex || E->UserTreeIndex.UserTE->isGather())
           continue;
         GatherNodes.push_back(E);
       }
       for (TreeEntry *E : getTreeEntries(V)) {
-        if (TE == E || !TransformedToGatherNodes.contains(E))
+        if (TE == E || !TransformedToGatherNodes.contains(E) ||
+            !E->UserTreeIndex || E->UserTreeIndex.UserTE->isGather())
           continue;
         GatherNodes.push_back(E);
       }
