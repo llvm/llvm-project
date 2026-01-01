@@ -1776,8 +1776,8 @@ def : MipsPat<(select i32:$cond, immz, i32:$f),
 defm : SelectInt_Pats<i32, OR_MM, XORI_MMR6, SLTi_MM, SLTiu_MM, SELEQZ_MMR6,
                       SELNEZ_MMR6, immZExt16, i32>, ISA_MICROMIPS32R6;
 
-defm S_MMR6 : Cmp_Pats<f32, NOR_MMR6, ZERO>, ISA_MICROMIPS32R6;
-defm D_MMR6 : Cmp_Pats<f64, NOR_MMR6, ZERO>, ISA_MICROMIPS32R6;
+defm S_MMR6 : Cmp_Pats<f32>, ISA_MICROMIPS32R6;
+defm D_MMR6 : Cmp_Pats<f64>, ISA_MICROMIPS32R6;
 
 def : MipsPat<(f32 fpimm0), (MTC1_MMR6 ZERO)>, ISA_MICROMIPS32R6;
 def : MipsPat<(f32 fpimm0neg), (FNEG_S_MMR6(MTC1_MMR6 ZERO))>,

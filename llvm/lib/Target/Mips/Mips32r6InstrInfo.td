@@ -1047,13 +1047,7 @@ def : MipsInstAlias<"lapc $rd, $imm",
 //===----------------------------------------------------------------------===//
 
 // comparisons supported via another comparison
-multiclass Cmp_Pats<ValueType VT, Instruction NOROp, Register ZEROReg> {
-def : MipsPat<(setone VT:$lhs, VT:$rhs),
-      (NOROp (!cast<Instruction>("CMP_UEQ_"#NAME) VT:$lhs, VT:$rhs), ZEROReg)>;
-def : MipsPat<(seto VT:$lhs, VT:$rhs),
-      (NOROp (!cast<Instruction>("CMP_UN_"#NAME) VT:$lhs, VT:$rhs), ZEROReg)>;
-def : MipsPat<(setune VT:$lhs, VT:$rhs),
-      (NOROp (!cast<Instruction>("CMP_EQ_"#NAME) VT:$lhs, VT:$rhs), ZEROReg)>;
+multiclass Cmp_Pats<ValueType VT> {
 def : MipsPat<(seteq VT:$lhs, VT:$rhs),
       (!cast<Instruction>("CMP_EQ_"#NAME) VT:$lhs, VT:$rhs)>;
 def : MipsPat<(setgt VT:$lhs, VT:$rhs),
@@ -1064,13 +1058,11 @@ def : MipsPat<(setlt VT:$lhs, VT:$rhs),
       (!cast<Instruction>("CMP_LT_"#NAME) VT:$lhs, VT:$rhs)>;
 def : MipsPat<(setle VT:$lhs, VT:$rhs),
       (!cast<Instruction>("CMP_LE_"#NAME) VT:$lhs, VT:$rhs)>;
-def : MipsPat<(setne VT:$lhs, VT:$rhs),
-      (NOROp (!cast<Instruction>("CMP_EQ_"#NAME) VT:$lhs, VT:$rhs), ZEROReg)>;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  defm S : Cmp_Pats<f32, NOR, ZERO>, ISA_MIPS32R6;
-  defm D : Cmp_Pats<f64, NOR, ZERO>, ISA_MIPS32R6;
+  defm S : Cmp_Pats<f32>, ISA_MIPS32R6;
+  defm D : Cmp_Pats<f64>, ISA_MIPS32R6;
 }
 
 // i32 selects
