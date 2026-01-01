@@ -566,10 +566,6 @@ private:
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
 
-  // C++2a contextual keywords.
-  mutable IdentifierInfo *Ident_import;
-  mutable IdentifierInfo *Ident_module;
-
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
   /// Gets set to true after calling ProduceSignatureHelp, it is for a
@@ -1083,6 +1079,9 @@ private:
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
+  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
+  void DiagnoseInvalidCXXModuleImport();
+
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
   void CodeCompleteDirective(bool InConditional) override;
@@ -1093,6 +1092,8 @@ private:
                                  unsigned ArgumentIndex) override;
   void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) override;
   void CodeCompleteNaturalLanguage() override;
+  void CodeCompleteModuleImport(SourceLocation ImportLoc,
+                                ModuleIdPath Path) override;
 
   ///@}
 
