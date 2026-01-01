@@ -267,7 +267,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(
             newRegisters.setRegister(
                 i, getSavedRegister(addressSpace, registers, cfa,
                                     prolog.savedRegisters[i]));
-          else
+          else if (!(R::getArch() == REGISTERS_ARM64 && i == UNW_AARCH64_RA_SIGN_STATE))
             return UNW_EBADREG;
         } else if (i == (int)cieInfo.returnAddressRegister) {
             // Leaf function keeps the return address in register and there is no
