@@ -26,12 +26,12 @@
 #include <cstdio>
 
 #ifdef _WIN32
-  #define WIN32_LEAN_AND_MEAN
-  #define NOGDI
-  #ifndef NOMINMAX
-    #define NOMINMAX
-  #endif
-  #include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#define NOGDI
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 using namespace clang::driver;
@@ -88,7 +88,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
       !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
     CmdArgs.push_back("-defaultlib:libcmt");
-    CmdArgs.push_back("-defaultlib:oldnames");
+    bool NeedsOldNames = std::none_of(
+        TC.getFilePaths().begin(), TC.getFilePaths().end(),
+        [](const auto &P) { return P.find("10.") != llvm::StringRef::npos; });
+    if (NeedsOldNames)
+      CmdArgs.push_back("-defaultlib:oldnames");
   }
 
   // If the VC environment hasn't been configured (perhaps because the user
@@ -213,8 +217,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       // to ensure proper SEH handling.
       CmdArgs.push_back(Args.MakeArgString(
           TC.getArch() == llvm::Triple::x86
-              ? "-include:___asan_seh_interceptor"
-              : "-include:__asan_seh_interceptor"));
+                                 ? "-include:___asan_seh_interceptor"
+                                 : "-include:__asan_seh_interceptor"));
       // Make sure the linker consider all object files from the dynamic runtime
       // thunk.
       CmdArgs.push_back(Args.MakeArgString(
@@ -776,10 +780,10 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // As a fallback, select default install paths.
   // FIXME: Don't guess drives and paths like this on Windows.
   const StringRef Paths[] = {
-    "C:/Program Files/Microsoft Visual Studio 10.0/VC/include",
-    "C:/Program Files/Microsoft Visual Studio 9.0/VC/include",
-    "C:/Program Files/Microsoft Visual Studio 9.0/VC/PlatformSDK/Include",
-    "C:/Program Files/Microsoft Visual Studio 8/VC/include",
+      "C:/Program Files/Microsoft Visual Studio 10.0/VC/include",
+      "C:/Program Files/Microsoft Visual Studio 9.0/VC/include",
+      "C:/Program Files/Microsoft Visual Studio 9.0/VC/PlatformSDK/Include",
+      "C:/Program Files/Microsoft Visual Studio 8/VC/include",
     "C:/Program Files/Microsoft Visual Studio 8/VC/PlatformSDK/Include"
   };
   addSystemIncludes(DriverArgs, CC1Args, Paths);
