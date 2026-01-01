@@ -21,6 +21,7 @@
 #include "VPlanUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1294,11 +1295,11 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 /// FindLastIV reduction to a new UMin reduction of a wide canonical IV. If the
 /// original IV was not canonical, a new canonical wide IV is added, and the
 /// final result is scaled back to the original IV.
-static bool handleFirstArgMinArgMax(VPlan &Plan,
-                                    VPReductionPHIRecipe *MinOrMaxPhiR,
-                                    VPReductionPHIRecipe *FindLastIVPhiR,
-                                    VPWidenIntOrFpInductionRecipe *WideIV,
-                                    VPInstruction *MinOrMaxResult) {
+static bool handleFirstArgMinOrMax(VPlan &Plan,
+                                   VPReductionPHIRecipe *MinOrMaxPhiR,
+                                   VPReductionPHIRecipe *FindLastIVPhiR,
+                                   VPWidenIntOrFpInductionRecipe *WideIV,
+                                   VPInstruction *MinOrMaxResult) {
   Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
   // TODO: Support non (i.e., narrower than) canonical IV types.
   if (Ty != VPTypeAnalysis(Plan).inferScalarType(WideIV))
@@ -1331,14 +1332,14 @@ static bool handleFirstArgMinArgMax(VPlan &Plan,
   // Create the new UMin reduction recipe to track the minimum index.
   assert(!FindLastIVPhiR->isInLoop() && !FindLastIVPhiR->isOrdered() &&
          "inloop and ordered reductions not supported");
-  VPValue *MaxInt =
+  VPValue *MaxIV =
       Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
   assert(FindLastIVPhiR->getVFScaleFactor() == 1 &&
          "FindIV reduction must not be scaled");
   ReductionStyle Style = RdxUnordered{1};
   auto *FirstIdxPhiR = new VPReductionPHIRecipe(
       dyn_cast_or_null<PHINode>(FindLastIVPhiR->getUnderlyingValue()),
-      RecurKind::UMin, *MaxInt, *FindIVSelectR, Style,
+      RecurKind::UMin, *MaxIV, *FindIVSelectR, Style,
       FindLastIVPhiR->hasUsesOutsideReductionChain());
   FirstIdxPhiR->insertBefore(FindLastIVPhiR);
 
@@ -1387,7 +1388,7 @@ static bool handleFirstArgMinArgMax(VPlan &Plan,
       Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
   VPValue *LastIVExiting = FindLastIVResult->getOperand(3);
   auto *FinalIVSelect =
-      Builder.createSelect(FinalMinOrMaxCmp, LastIVExiting, MaxInt);
+      Builder.createSelect(FinalMinOrMaxCmp, LastIVExiting, MaxIV);
   VPSingleDefRecipe *FinalCanIV = Builder.createNaryOp(
       VPInstruction::ComputeReductionResult, {FirstIdxPhiR, FinalIVSelect}, {},
       FindLastIVResult->getDebugLoc());
@@ -1416,27 +1417,29 @@ static bool handleFirstArgMinArgMax(VPlan &Plan,
   return true;
 }
 
-bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
+bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
+                                               OptimizationRemarkEmitter *ORE,
+                                               Loop *TheLoop) {
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
-    auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
+    auto *MinOrMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
     // TODO: check for multi-uses in VPlan directly.
-    if (!MinMaxPhiR || !MinMaxPhiR->hasUsesOutsideReductionChain())
+    if (!MinOrMaxPhiR || !MinOrMaxPhiR->hasUsesOutsideReductionChain())
       continue;
 
-    // MinMaxPhiR has users outside the reduction cycle in the loop. Check if
-    // the only other user is a FindLastIV reduction. MinMaxPhiR must have
+    // MinOrMaxPhiR has users outside the reduction cycle in the loop. Check if
+    // the only other user is a FindLastIV reduction. MinOrMaxPhiR must have
     // exactly 3 users: 1) the min/max operation, the compare of a FindLastIV
     // reduction and ComputeReductionResult. The comparison must compare
-    // MinMaxPhiR against the min/max operand used for the min/max reduction
+    // MinOrMaxPhiR against the min/max operand used for the min/max reduction
     // and only be used by the select of the FindLastIV reduction.
-    RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
+    RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
     assert(
         RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
 
     auto *MinMaxOp =
-        dyn_cast<VPRecipeWithIRFlags>(MinMaxPhiR->getBackedgeValue());
+        dyn_cast<VPRecipeWithIRFlags>(MinOrMaxPhiR->getBackedgeValue());
     if (!MinMaxOp)
       return false;
 
@@ -1446,19 +1449,19 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     if (!match(MinMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
       return false;
 
-    // MinMaxOp must have 2 users: 1) MinMaxPhiR and 2) ComputeReductionResult
+    // MinMaxOp must have 2 users: 1) MinOrMaxPhiR and 2) ComputeReductionResult
     // (asserted below).
     assert(MinMaxOp->getNumUsers() == 2 &&
            "MinMaxOp must have exactly 2 users");
     VPValue *MinMaxOpValue = MinMaxOp->getOperand(0);
-    if (MinMaxOpValue == MinMaxPhiR)
+    if (MinMaxOpValue == MinOrMaxPhiR)
       MinMaxOpValue = MinMaxOp->getOperand(1);
 
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
     auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
-        MinMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
+        MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
         (CmpOpA != MinMaxOpValue && CmpOpB != MinMaxOpValue))
       return false;
@@ -1466,20 +1469,20 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     if (MinMaxOpValue != CmpOpB)
       Pred = CmpInst::getSwappedPredicate(Pred);
 
-    // MinMaxPhiR must have exactly 3 users:
+    // MinOrMaxPhiR must have exactly 3 users:
     // * MinMaxOp,
     // * Cmp (that's part of a FindLastIV chain),
     // * ComputeReductionResult.
-    if (MinMaxPhiR->getNumUsers() != 3)
+    if (MinOrMaxPhiR->getNumUsers() != 3)
       return false;
 
-    VPInstruction *MinMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinMaxPhiR);
-    assert(is_contained(MinMaxPhiR->users(), MinMaxOp) &&
+    VPInstruction *MinOrMaxResult =
+        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxPhiR);
+    assert(is_contained(MinOrMaxPhiR->users(), MinMaxOp) &&
            "one user must be MinMaxOp");
-    assert(MinMaxResult && "MinMaxResult must be a user of MinMaxPhiR");
-    assert(is_contained(MinMaxOp->users(), MinMaxResult) &&
-           "MinMaxResult must be a user of MinMaxOp (and of MinMaxPhiR");
+    assert(MinOrMaxResult && "MinOrMaxResult must be a user of MinOrMaxPhiR");
+    assert(is_contained(MinMaxOp->users(), MinOrMaxResult) &&
+           "MinOrMaxResult must be a user of MinMaxOp (and of MinOrMaxPhiR)");
 
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
@@ -1522,21 +1525,29 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
         llvm_unreachable("unhandled recurrence kind");
       }
     }();
-
-    if (!IsValidKindPred)
+    if (!IsValidKindPred) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(
+                   DEBUG_TYPE, "VectorizationMultiUseReductionPredicate",
+                   TheLoop->getStartLoc(), TheLoop->getHeader())
+               << "Multi-use reduction with predicate "
+               << CmpInst::getPredicateName(Pred)
+               << " incompatible with reduction kind";
+      });
       return false;
+    }
 
     // For strict predicates, use a UMin reduction to find the minimum index.
     // Canonical IVs (0, 1, 2, ...) are guaranteed not to wrap in the vector
     // loop, so UMin can always be used.
     bool IsStrictPredicate = ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred);
     if (IsStrictPredicate) {
-      return handleFirstArgMinArgMax(Plan, MinMaxPhiR, FindIVPhiR,
-                                     cast<VPWidenIntOrFpInductionRecipe>(IVOp),
-                                     MinMaxResult);
+      return handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
+                                    cast<VPWidenIntOrFpInductionRecipe>(IVOp),
+                                    MinOrMaxResult);
     }
 
-    // The reduction using MinMaxPhiR needs adjusting to compute the correct
+    // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
     // result:
     //  1. We need to find the last IV for which the condition based on the
     //     min/max recurrence is true,
@@ -1559,15 +1570,15 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     //                                             SENTINEL, vp<%final.iv>
     VPInstruction *FindIVResult =
         findUserOf<VPInstruction::ComputeFindIVResult>(FindIVPhiR);
-    assert(FindIVResult->getParent() == MinMaxResult->getParent() &&
+    assert(FindIVResult->getParent() == MinOrMaxResult->getParent() &&
            "both results must be computed in the same block");
-    MinMaxResult->moveBefore(*FindIVResult->getParent(),
-                             FindIVResult->getIterator());
+    MinOrMaxResult->moveBefore(*FindIVResult->getParent(),
+                               FindIVResult->getIterator());
 
     VPBuilder B(FindIVResult);
-    VPValue *MinMaxExiting = MinMaxResult->getOperand(1);
+    VPValue *MinMaxExiting = MinOrMaxResult->getOperand(1);
     auto *FinalMinMaxCmp =
-        B.createICmp(CmpInst::ICMP_EQ, MinMaxExiting, MinMaxResult);
+        B.createICmp(CmpInst::ICMP_EQ, MinMaxExiting, MinOrMaxResult);
     VPValue *Sentinel = FindIVResult->getOperand(2);
     VPValue *LastIVExiting = FindIVResult->getOperand(3);
     auto *FinalIVSelect =

@@ -23,7 +23,9 @@ namespace llvm {
 
 class InductionDescriptor;
 class Instruction;
+class Loop;
 class LoopVersioning;
+class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
@@ -170,7 +172,9 @@ struct VPlanTransforms {
   /// Try to legalize reductions with multiple in-loop uses. Currently only
   /// min/max reductions used by FindLastIV and FindFirstIV reductions are
   /// supported. Otherwise return false.
-  static bool handleMultiUseReductions(VPlan &Plan);
+  static bool handleMultiUseReductions(VPlan &Plan,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
