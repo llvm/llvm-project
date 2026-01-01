@@ -29457,9 +29457,6 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = Op.getValueType();
 
-  assert(VT.isFloatingPoint() && VT != MVT::f80 && VT != MVT::f128 &&
-         "Unexpected type in LowerFMINIMUM_FMAXIMUM");
-
   SDValue X = Op.getOperand(0);
   SDValue Y = Op.getOperand(1);
   SDLoc DL(Op);
@@ -29589,6 +29586,10 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
     NewY = DAG.getSelect(DL, VT, NeedSwap, X, Y);
     return DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
   }
+
+  EVT SVT = VT.getScalarType();
+  assert(VT.isFloatingPoint() && (SVT == MVT::f16 || SVT == MVT::f32 || SVT == MVT::f64) &&
+         "Unexpected type in LowerFMINIMUM_FMAXIMUM");
 
   bool IgnoreNaN = DAG.getTarget().Options.NoNaNsFPMath ||
                    Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
