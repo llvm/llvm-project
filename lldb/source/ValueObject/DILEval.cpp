@@ -282,10 +282,10 @@ Interpreter::Visit(const IdentifierNode &node) {
     // Implement LanguageCPlusPlus::GetParentNameIfClosure and upstream this.
     // rdar://152321823
     if (std::string message =
-            m_exe_ctx_scope->GetVariableNotCapturedDiagnostic(node->GetName());
+            m_exe_ctx_scope->GetVariableNotCapturedDiagnostic(node.GetName());
         !message.empty())
       return llvm::make_error<DILDiagnosticError>(
-          m_expr, message, node->GetLocation(), node->GetName().size());
+          m_expr, message, node.GetLocation(), node.GetName().size());
     // END SWIFT
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());
