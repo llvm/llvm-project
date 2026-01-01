@@ -1,4 +1,4 @@
-# RUN: llvm-mc --triple=riscv32 -mattr=+relax,+experimental-xqcilb,+experimental-xqcibi \
+# RUN: llvm-mc --triple=riscv32 -mattr=+relax,+xqcilb,+xqcibi \
 # RUN:    %s -filetype=obj -o - -riscv-add-build-attributes \
 # RUN:    | llvm-objdump -dr -M no-aliases - \
 # RUN:    | FileCheck %s
