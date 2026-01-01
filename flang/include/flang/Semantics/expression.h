@@ -464,6 +464,13 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
     SemanticsContext &, common::TypeCategory,
     const std::optional<parser::KindSelector> &);
 
+void NoteUsedSymbols(SemanticsContext &, const SomeExpr &);
+void NoteUsedSymbols(SemanticsContext &, const evaluate::ProcedureRef &);
+void NoteUsedSymbols(SemanticsContext &, const evaluate::Assignment &);
+void NoteUsedSymbols(SemanticsContext &, const parser::TypedExpr &);
+void NoteUsedSymbols(SemanticsContext &, const parser::TypedCall &);
+void NoteUsedSymbols(SemanticsContext &, const parser::TypedAssignment &);
+
 // Semantic analysis of all expressions in a parse tree, which becomes
 // decorated with typed representations for top-level expressions.
 class ExprChecker {
@@ -475,11 +482,11 @@ public:
   bool Walk(const parser::Program &);
 
   bool Pre(const parser::Expr &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::Variable &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::Selector &x) {
@@ -491,11 +498,11 @@ public:
     return false;
   }
   bool Pre(const parser::AllocateObject &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::PointerObject &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::DataStmtObject &);
@@ -503,15 +510,15 @@ public:
   bool Pre(const parser::DataImpliedDo &);
 
   bool Pre(const parser::CallStmt &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::AssignmentStmt &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::PointerAssignmentStmt &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
 
@@ -552,27 +559,37 @@ public:
   }
 
   template <typename A> bool Pre(const parser::Scalar<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Constant<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Integer<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Logical<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   template <typename A> bool Pre(const parser::DefaultChar<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
 
 private:
+  template <typename A> void AnalyzeAndNoteUses(const A &x) {
+    exprAnalyzer_.Analyze(x);
+    if constexpr (parser::HasTypedExpr<A>::value) {
+      NoteUsedSymbols(context_, x.typedExpr);
+    } else if constexpr (parser::HasTypedCall<A>::value) {
+      NoteUsedSymbols(context_, x.typedCall);
+    } else if constexpr (parser::HasTypedAssignment<A>::value) {
+      NoteUsedSymbols(context_, x.typedAssignment);
+    }
+  }
   bool InWhereBody() const { return whereDepth_ > 0; }
 
   SemanticsContext &context_;
