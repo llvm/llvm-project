@@ -3328,4 +3328,56 @@ foreach sp = [0, 1] in {
   }
 }
 
+//
+// tensormap.replace intrinsics
+//
+
+let IntrProperties = [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>] in {
+  def int_nvvm_tensormap_replace_global_address :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i64_ty], []>;
+  def int_nvvm_tensormap_replace_rank :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], []>;
+}
+
+let IntrProperties = [IntrArgMemOnly, ImmArg<ArgIndex<1>>, IntrWriteMem,
+                      NoCapture<ArgIndex<0>>] in {
+  def int_nvvm_tensormap_replace_global_stride :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty, llvm_i64_ty], []>;
+  foreach tmap_field = ["box_dim", "global_dim", "element_stride"] in {
+    def int_nvvm_tensormap_replace_ # tmap_field :
+      DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty], []>;
+  }
+}
+
+def int_nvvm_tensormap_replace_elemtype : 
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], 
+    [IntrArgMemOnly, IntrWriteMem, ImmArg<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+     Range<ArgIndex<1>, 0, 16>,
+     ArgInfo<ArgIndex<1>, [ArgName<"elemtype">, 
+                           ImmArgPrinter<"printTensormapElemType">]>]>;
+def int_nvvm_tensormap_replace_interleave_layout :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], 
+    [IntrArgMemOnly, IntrWriteMem, ImmArg<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+     Range<ArgIndex<1>, 0, 3>,
+     ArgInfo<ArgIndex<1>, [ArgName<"interleave_layout">, 
+                           ImmArgPrinter<"printTensormapInterleaveLayout">]>]>;
+def int_nvvm_tensormap_replace_swizzle_mode :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], 
+    [IntrArgMemOnly, IntrWriteMem, ImmArg<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+     Range<ArgIndex<1>, 0, 5>,
+     ArgInfo<ArgIndex<1>, [ArgName<"swizzle_mode">, 
+                           ImmArgPrinter<"printTensormapSwizzleMode">]>]>;
+def int_nvvm_tensormap_replace_swizzle_atomicity :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], 
+    [IntrArgMemOnly, IntrWriteMem, ImmArg<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+     Range<ArgIndex<1>, 0, 4>,
+     ArgInfo<ArgIndex<1>, [ArgName<"swizzle_atomicity">, 
+                           ImmArgPrinter<"printTensormapSwizzleAtomicity">]>]>;
+def int_nvvm_tensormap_replace_fill_mode :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], 
+    [IntrArgMemOnly, IntrWriteMem, ImmArg<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+     Range<ArgIndex<1>, 0, 2>,
+     ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
+                           ImmArgPrinter<"printTensormapFillMode">]>]>;
+
 } // let TargetPrefix = "nvvm"
