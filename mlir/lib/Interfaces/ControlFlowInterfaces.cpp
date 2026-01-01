@@ -489,6 +489,50 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
   return terminator.getSuccessorOperands(dest);
 }
 
+static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
+  return MutableArrayRef<OpOperand>(operands.getBase(), operands.size());
+}
+
+static void
+getSuccessorOperandInputMapping(RegionBranchOpInterface branchOp,
+                                RegionBranchSuccessorMapping &mapping,
+                                RegionBranchPoint src) {
+  SmallVector<RegionSuccessor> successors;
+  branchOp.getSuccessorRegions(src, successors);
+  for (RegionSuccessor dst : successors) {
+    OperandRange operands = branchOp.getSuccessorOperands(src, dst);
+    assert(operands.size() == dst.getSuccessorInputs().size() &&
+           "expected the same number of operands and inputs");
+    for (const auto &[operand, input] : llvm::zip_equal(
+             operandsToOpOperands(operands), dst.getSuccessorInputs()))
+      mapping[&operand].push_back(input);
+  }
+}
+void RegionBranchOpInterface::getSuccessorOperandInputMapping(
+    RegionBranchSuccessorMapping &mapping,
+    std::optional<RegionBranchPoint> src) {
+  if (src.has_value()) {
+    ::getSuccessorOperandInputMapping(*this, mapping, src.value());
+  } else {
+    // No region branch point specified: populate the mapping for all possible
+    // region branch points.
+    for (RegionBranchPoint branchPoint : getAllRegionBranchPoints())
+      ::getSuccessorOperandInputMapping(*this, mapping, branchPoint);
+  }
+}
+
+SmallVector<RegionBranchPoint>
+RegionBranchOpInterface::getAllRegionBranchPoints() {
+  SmallVector<RegionBranchPoint> branchPoints;
+  branchPoints.push_back(RegionBranchPoint::parent());
+  for (Region &region : getOperation()->getRegions())
+    for (Block &block : region)
+      if (auto terminator =
+              dyn_cast<RegionBranchTerminatorOpInterface>(block.back()))
+        branchPoints.push_back(RegionBranchPoint(terminator));
+  return branchPoints;
+}
+
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {
   LDBG() << "Finding enclosing repetitive region for operation "
          << op->getName();

@@ -1248,20 +1248,15 @@ updateControlFlowOps(mlir::OpBuilder &builder,
                      mlir::RegionBranchTerminatorOpInterface terminator,
                      GetLayoutFnTy getLayoutOfValue) {
   // Only process if the terminator is inside a region branch op.
-  if (!mlir::isa<mlir::RegionBranchOpInterface>(terminator->getParentOp()))
+  auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branchOp)
     return success();
 
-  llvm::SmallVector<mlir::RegionSuccessor> successors;
-  llvm::SmallVector<mlir::Attribute> operands(terminator->getNumOperands(),
-                                              nullptr);
-  terminator.getSuccessorRegions(operands, successors);
-
-  for (mlir::RegionSuccessor &successor : successors) {
-    mlir::OperandRange successorOperands =
-        terminator.getSuccessorOperands(successor);
-    mlir::ValueRange successorInputs = successor.getSuccessorInputs();
-    for (auto [successorOperand, successorInput] :
-         llvm::zip(successorOperands, successorInputs)) {
+  RegionBranchSuccessorMapping mapping;
+  branchOp.getSuccessorOperandInputMapping(mapping,
+                                           RegionBranchPoint(terminator));
+  for (const auto &[successorOperand, successorInputs] : mapping) {
+    for (Value successorInput : successorInputs) {
       Type inputType = successorInput.getType();
       // We only need to operate on tensor descriptor or vector types.
       if (!isa<xegpu::TensorDescType, VectorType>(inputType))
@@ -1269,13 +1264,13 @@ updateControlFlowOps(mlir::OpBuilder &builder,
       xegpu::DistributeLayoutAttr successorInputLayout =
           getLayoutOfValue(successorInput);
       xegpu::DistributeLayoutAttr successorOperandLayout =
-          getLayoutOfValue(successorOperand);
+          getLayoutOfValue(successorOperand->get());
 
       // If either of the layouts is not assigned, we cannot proceed.
       if (!successorOperandLayout) {
         LLVM_DEBUG(DBGS() << "No layout assigned for forwarded operand in "
                              "branch terminator: "
-                          << successorOperand << "\n");
+                          << successorOperand->get() << "\n");
         return failure();
       }
       // We expect the layouts to match.
