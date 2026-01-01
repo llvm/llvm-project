@@ -854,6 +854,10 @@ def err_drv_invalid_empty_dxil_validator_version : Error<
   "invalid validator version : %0; if validator major version is 0, minor "
   "version must also be 0">;
 
+def warn_drv_sarif_format_unstable : Warning<
+  "diagnostic formatting in SARIF mode is currently unstable">,
+  InGroup<DiagGroup<"sarif-format-unstable">>;
+
 def warn_drv_loongarch_conflicting_implied_val : Warning<
   "ignoring '%0' as it conflicts with that implied by '%1' (%2)">,
   InGroup<OptionIgnored>;
