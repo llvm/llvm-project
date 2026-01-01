@@ -11,7 +11,7 @@ define i1 @test_explicit_poison_leaves(i1 %a, i1 %b) {
 ; CHECK-LABEL: define i1 @test_explicit_poison_leaves(
 ; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]]) {
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[A]], i1 true, i1 poison
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[B]], i1 true, i1 [[OP_RDX]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i1 true, i1 [[B]]
 ; CHECK-NEXT:    ret i1 [[OP_RDX1]]
 ;
   %op1 = select i1 %a, i1 true, i1 poison
