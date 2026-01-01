@@ -835,7 +835,7 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
   // optimizations.
   if (isa<ConstantPointerNull>(To))
     return true;
-  if (isa<Constant>(To) &&
+  if (isa<Constant>(To) && To->getType()->isPointerTy() &&
       isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
     return true;
   return getUnderlyingObjectAggressive(From) ==
