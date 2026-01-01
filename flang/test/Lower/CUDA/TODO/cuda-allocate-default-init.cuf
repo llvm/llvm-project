@@ -1,0 +1,15 @@
+! RUN: %not_todo_cmd bbc -emit-fir -fcuda -o - %s 2>&1 | FileCheck %s
+
+program test
+implicit none
+
+type :: t1
+   real(4) :: x_fin(1:10) = acos(-1.0_4)
+end type t1
+
+type(t1), allocatable, device :: t(:)
+
+! CHECK: not yet implemented: CUDA Fortran: allocate on device with default initialization
+allocate(t(1:2))
+
+end program
