@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror 
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512dq -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
@@ -22,7 +22,7 @@ __m128i test_mm_movm_epi32(__mmask8 __A) {
   // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // OGCG: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // OGCG: %{{.*}} = sext <4 x i1> %{{.*}} to <4 x i32>
-  return _mm_movm_epi32(__A); 
+  return _mm_movm_epi32(__A);
 }
 
 __m256i test_mm256_movm_epi32(__mmask8 __A) {
@@ -37,7 +37,7 @@ __m256i test_mm256_movm_epi32(__mmask8 __A) {
   // OGCG-LABEL: @test_mm256_movm_epi32
   // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // OGCG: %{{.*}} = sext <8 x i1> %{{.*}} to <8 x i32>
-  return _mm256_movm_epi32(__A); 
+  return _mm256_movm_epi32(__A);
 }
 
 __m512i test_mm512_movm_epi32(__mmask16 __A) {
@@ -52,7 +52,7 @@ __m512i test_mm512_movm_epi32(__mmask16 __A) {
   // OGCG-LABEL: @test_mm512_movm_epi32
   // OGCG: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // OGCG: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i32>
-  return _mm512_movm_epi32(__A); 
+  return _mm512_movm_epi32(__A);
 }
 
 __m128i test_mm_movm_epi64(__mmask8 __A) {
@@ -70,7 +70,7 @@ __m128i test_mm_movm_epi64(__mmask8 __A) {
   // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // OGCG: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // OGCG: %{{.*}} = sext <2 x i1> %{{.*}} to <2 x i64>
-  return _mm_movm_epi64(__A); 
+  return _mm_movm_epi64(__A);
 }
 
 __m256i test_mm256_movm_epi64(__mmask8 __A) {
@@ -88,7 +88,7 @@ __m256i test_mm256_movm_epi64(__mmask8 __A) {
   // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // OGCG: %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // OGCG: %{{.*}} = sext <4 x i1> %{{.*}} to <4 x i64>
-  return _mm256_movm_epi64(__A); 
+  return _mm256_movm_epi64(__A);
 }
 
 __mmask8 test_mm256_movepi32_mask(__m256i __A) {
@@ -103,7 +103,7 @@ __mmask8 test_mm256_movepi32_mask(__m256i __A) {
   // OGCG-LABEL: @test_mm256_movepi32_mask
   // OGCG: [[CMP:%.*]] = icmp slt <8 x i32> %{{.*}}, zeroinitializer
   // OGCG: bitcast <8 x i1> [[CMP]] to i8
-  return _mm256_movepi32_mask(__A); 
+  return _mm256_movepi32_mask(__A);
 }
 
 __mmask8 test_mm_movepi64_mask(__m128i __A) {
@@ -121,7 +121,7 @@ __mmask8 test_mm_movepi64_mask(__m128i __A) {
   // OGCG: [[CMP:%.*]] = icmp slt <2 x i64> %{{.*}}, zeroinitializer
   // OGCG: [[SHUF:%.*]] = shufflevector <2 x i1> [[CMP]], <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
   // OGCG: bitcast <8 x i1> [[SHUF]] to i8
-  return _mm_movepi64_mask(__A); 
+  return _mm_movepi64_mask(__A);
 }
 
 __mmask8 test_mm256_movepi64_mask(__m256i __A) {
@@ -139,5 +139,29 @@ __mmask8 test_mm256_movepi64_mask(__m256i __A) {
   // OGCG: [[CMP:%.*]] = icmp slt <4 x i64> %{{.*}}, zeroinitializer
   // OGCG: [[SHUF:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   // OGCG: bitcast <8 x i1> [[SHUF]] to i8
-  return _mm256_movepi64_mask(__A); 
+  return _mm256_movepi64_mask(__A);
+}
+
+__m256d test_mm256_insertf64x2(__m256d __A, __m128d __B) {
+  // CIR-LABEL: test_mm256_insertf64x2
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.double>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i] : !cir.vector<4 x !cir.double>
+
+  // LLVM-LABEL: @test_mm256_insertf64x2
+  // LLVM: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+
+  // OGCG-LABEL: @test_mm256_insertf64x2
+  // OGCG: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  return _mm256_insertf64x2(__A, __B, 1);
+}
+
+__m256i test_mm256_inserti64x2(__m256i __A, __m128i __B) {
+  // CIR-LABEL: test_mm256_inserti64x2
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !s64i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i] : !cir.vector<4 x !s64i>
+
+  // LLVM-LABEL: @test_mm256_inserti64x2
+  // LLVM: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+
+  // OGCG-LABEL: @test_mm256_inserti64x2
+  // OGCG: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  return _mm256_inserti64x2(__A, __B, 1);
 }
