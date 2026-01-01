@@ -19,9 +19,8 @@ RandomGeneratorSeedCheck::RandomGeneratorSeedCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawDisallowedSeedTypes(
-          Options.get("DisallowedSeedTypes", "time_t,std::time_t")) {
-  RawDisallowedSeedTypes.split(DisallowedSeedTypes, ',');
-}
+          Options.get("DisallowedSeedTypes", "time_t,std::time_t")),
+      DisallowedSeedTypes(llvm::split(RawDisallowedSeedTypes, ',')) {}
 
 void RandomGeneratorSeedCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "DisallowedSeedTypes", RawDisallowedSeedTypes);

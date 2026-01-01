@@ -90,9 +90,8 @@ AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
       CheckFunctionCalls(Options.get("CheckFunctionCalls", false)),
       RawAssertList(Options.get("AssertMacros", "assert,NSAssert,NSCAssert")),
       IgnoredFunctions(utils::options::parseListPair(
-          "__builtin_expect;", Options.get("IgnoredFunctions", ""))) {
-  RawAssertList.split(AssertMacros, ",", -1, false);
-}
+          "__builtin_expect;", Options.get("IgnoredFunctions", ""))),
+      AssertMacros(llvm::split(RawAssertList, ',')) {}
 
 // The options are explained in AssertSideEffectCheck.h.
 void AssertSideEffectCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

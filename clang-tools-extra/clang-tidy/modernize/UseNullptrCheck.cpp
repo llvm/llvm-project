@@ -495,9 +495,8 @@ UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NullMacrosStr(Options.get("NullMacros", "NULL")),
       IgnoredTypes(utils::options::parseStringList(Options.get(
-          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))) {
-  NullMacrosStr.split(NullMacros, ",");
-}
+          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))),
+      NullMacros(llvm::split(NullMacrosStr, ',')) {}
 
 void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "NullMacros", NullMacrosStr);

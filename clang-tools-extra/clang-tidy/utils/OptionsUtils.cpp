@@ -11,7 +11,7 @@
 
 namespace clang::tidy::utils::options {
 
-static constexpr char StringsDelimiter[] = ";";
+static constexpr char StringsDelimiter = ';';
 
 std::vector<StringRef> parseStringList(StringRef Option) {
   Option = Option.trim().trim(StringsDelimiter);
@@ -19,16 +19,11 @@ std::vector<StringRef> parseStringList(StringRef Option) {
     return {};
   std::vector<StringRef> Result;
   Result.reserve(Option.count(StringsDelimiter) + 1);
-  StringRef Cur;
-  while (std::tie(Cur, Option) = Option.split(StringsDelimiter),
-         !Option.empty()) {
-    Cur = Cur.trim();
-    if (!Cur.empty())
-      Result.push_back(Cur);
+  for (StringRef SubStr : llvm::split(Option, StringsDelimiter)) {
+    SubStr = SubStr.trim();
+    if (!SubStr.empty())
+      Result.push_back(SubStr);
   }
-  Cur = Cur.trim();
-  if (!Cur.empty())
-    Result.push_back(Cur);
   return Result;
 }
 
@@ -57,7 +52,7 @@ std::vector<StringRef> parseListPair(StringRef L, StringRef R) {
 }
 
 std::string serializeStringList(ArrayRef<StringRef> Strings) {
-  return llvm::join(Strings, StringsDelimiter);
+  return llvm::join(Strings, {&StringsDelimiter, 1});
 }
 
 } // namespace clang::tidy::utils::options

@@ -20,13 +20,9 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawIgnoredExceptions(Options.get("IgnoredExceptions", "")) {
-  llvm::SmallVector<StringRef, 8> IgnoredExceptionsVec;
-
   llvm::StringSet<> IgnoredExceptions;
-  RawIgnoredExceptions.split(IgnoredExceptionsVec, ",", -1, false);
-  llvm::transform(IgnoredExceptionsVec, IgnoredExceptionsVec.begin(),
-                  [](StringRef S) { return S.trim(); });
-  IgnoredExceptions.insert_range(IgnoredExceptionsVec);
+  for (const StringRef S : llvm::split(RawIgnoredExceptions, ','))
+    IgnoredExceptions.insert(S.trim());
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
 }

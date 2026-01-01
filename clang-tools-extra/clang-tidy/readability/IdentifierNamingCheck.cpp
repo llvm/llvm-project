@@ -660,13 +660,9 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
   static const llvm::Regex Splitter(
       "([a-z0-9A-Z]*)(_+)|([A-Z]?[a-z0-9]+)([A-Z]|$)|([A-Z]+)([A-Z]|$)");
 
-  const StringRef EnumName(Name);
-  SmallVector<StringRef, 8> Substrs;
-  EnumName.split(Substrs, "_", -1, false);
-
   SmallVector<StringRef, 8> Words;
   SmallVector<StringRef, 8> Groups;
-  for (auto Substr : Substrs) {
+  for (StringRef Substr : llvm::split(Name, '_')) {
     while (!Substr.empty()) {
       Groups.clear();
       if (!Splitter.match(Substr, &Groups))
@@ -910,12 +906,9 @@ std::string IdentifierNamingCheck::fixupWithCase(
   static const llvm::Regex Splitter(
       "([a-z0-9A-Z]*)(_+)|([A-Z]?[a-z0-9]+)([A-Z]|$)|([A-Z]+)([A-Z]|$)");
 
-  SmallVector<StringRef, 8> Substrs;
-  Name.split(Substrs, "_", -1, false);
-
   SmallVector<StringRef, 8> Words;
   SmallVector<StringRef, 8> Groups;
-  for (auto Substr : Substrs) {
+  for (auto Substr : llvm::split(Name, '_')) {
     while (!Substr.empty()) {
       Groups.clear();
       if (!Splitter.match(Substr, &Groups))

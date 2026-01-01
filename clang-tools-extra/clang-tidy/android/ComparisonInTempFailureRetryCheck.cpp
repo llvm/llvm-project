@@ -18,9 +18,8 @@ namespace clang::tidy::android {
 ComparisonInTempFailureRetryCheck::ComparisonInTempFailureRetryCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      RawRetryList(Options.get("RetryMacros", "TEMP_FAILURE_RETRY")) {
-  RawRetryList.split(RetryMacros, ",", -1, false);
-}
+      RawRetryList(Options.get("RetryMacros", "TEMP_FAILURE_RETRY")),
+      RetryMacros(llvm::split(RawRetryList, ',')) {}
 
 void ComparisonInTempFailureRetryCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
