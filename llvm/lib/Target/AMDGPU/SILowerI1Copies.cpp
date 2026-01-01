@@ -881,9 +881,7 @@ SILowerI1CopiesPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   // TODO: Probably preserves most.
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 
 class SILowerI1CopiesLegacy : public MachineFunctionPass {
