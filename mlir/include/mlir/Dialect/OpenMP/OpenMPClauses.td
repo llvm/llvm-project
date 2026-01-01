@@ -1388,6 +1388,14 @@ class OpenMP_TaskReductionClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms
   );
 
+  let extraClassDeclaration = [{
+        /// Returns the number of reduction variables.
+	unsigned getNumReductionVars() { return getTaskReductionVars().size(); }
+
+        /// Returns the reduction symbols
+	auto getReductionSyms() { return getTaskReductionSyms(); }
+  }];
+
   let description = [{
     The `task_reduction` clause specifies a reduction among tasks. For each list
     item, the number of copies is unspecified. Any copies associated with the
