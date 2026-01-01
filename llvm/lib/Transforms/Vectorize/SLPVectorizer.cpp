@@ -17412,7 +17412,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     if (ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V); !VTEs.empty()) {
       const auto *It = find_if(VTEs, [&](const TreeEntry *MTE) {
         return MTE != TE && MTE != TEUseEI.UserTE &&
-               !DeletedNodes.contains(MTE);
+               !DeletedNodes.contains(MTE) &&
+               !TransformedToGatherNodes.contains(MTE);
       });
       if (It != VTEs.end()) {
         const TreeEntry *VTE = *It;
