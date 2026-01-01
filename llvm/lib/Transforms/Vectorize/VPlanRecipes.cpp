@@ -986,11 +986,13 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   case Instruction::FPToSI:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::SIToFP:
   case Instruction::UIToFP:
   case Instruction::Trunc:
-  case Instruction::FPTrunc: {
+  case Instruction::FPTrunc:
+  case Instruction::AddrSpaceCast: {
     // Computes the CastContextHint from a recipe that may access memory.
     auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
       if (isa<VPInterleaveBase>(R))
@@ -3379,11 +3381,13 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::FPToSI:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::SIToFP:
   case Instruction::UIToFP:
   case Instruction::Trunc:
-  case Instruction::FPTrunc: {
+  case Instruction::FPTrunc:
+  case Instruction::AddrSpaceCast: {
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());

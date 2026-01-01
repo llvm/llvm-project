@@ -176,6 +176,19 @@ namespace detail {
 LogicalResult verifyTypesAlongControlFlowEdges(Operation *op);
 } //  namespace detail
 
+/// A mapping from successor operands to successor inputs.
+///
+/// * A successor operand is an operand of a region branch op or region
+///   branch terminator, that is forwarded to a successor input.
+/// * A successor input is a block argument of a region or a result of the
+///   region branch op, that is populated by a successor operand.
+///
+/// The mapping is 1:N. Each successor operand may be forwarded to multiple
+/// successor inputs. (Because the control flow can dispatch to multiple
+/// possible successors.) Operands that not forwarded at all are not present in
+/// the mapping.
+using RegionBranchSuccessorMapping = DenseMap<OpOperand *, SmallVector<Value>>;
+
 /// This class represents a successor of a region. A region successor can either
 /// be another region, or the parent operation. If the successor is a region,
 /// this class represents the destination region, as well as a set of arguments

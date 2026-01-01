@@ -2266,7 +2266,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       [[fallthrough]];
     }
     default:
-      Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+      Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
       break;
     }
 
