@@ -258,7 +258,9 @@ define ptr @icmp_ptr_eq_replace(ptr %a, ptr %b) {
 
 define <2 x ptr> @icmp_vector_ptr_eq_replace(<2 x ptr> %a, <2 x ptr> %b) {
 ; CHECK-LABEL: @icmp_vector_ptr_eq_replace(
-; CHECK-NEXT:    ret <2 x ptr> [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[A:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = select <2 x i1> [[CMP]], <2 x ptr> [[A]], <2 x ptr> [[B1]]
+; CHECK-NEXT:    ret <2 x ptr> [[B]]
 ;
   %cmp = icmp eq <2 x ptr> %a, %b
   %sel = select <2 x i1> %cmp, <2 x ptr> %a, <2 x ptr> %b

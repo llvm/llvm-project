@@ -847,7 +847,7 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
   Type *Ty = To->getType();
   assert(U->getType() == Ty && "values must have matching types");
   // Not a pointer, just return true.
-  if (!Ty->isPointerTy())
+  if (!Ty->isPtrOrPtrVectorTy())
     return true;
 
   // Do not perform replacements in lifetime intrinsic arguments.
@@ -866,7 +866,7 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
                                      const DataLayout &DL) {
   assert(From->getType() == To->getType() && "values must have matching types");
   // Not a pointer, just return true.
-  if (!From->getType()->isPointerTy())
+  if (!From->getType()->isPtrOrPtrVectorTy())
     return true;
 
   return isPointerAlwaysReplaceable(From, To, DL);
