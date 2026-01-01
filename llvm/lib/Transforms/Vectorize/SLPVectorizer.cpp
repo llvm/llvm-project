@@ -14177,6 +14177,11 @@ public:
         ArrayRef<TreeEntry *> VEs = R.getTreeEntries(V);
         if (!CheckedExtracts.insert(V).second ||
             !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
+            any_of(VEs,
+                   [&](const TreeEntry *TE) {
+                     return R.DeletedNodes.contains(TE) ||
+                            R.TransformedToGatherNodes.contains(TE);
+                   }) ||
             (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
              !R.isVectorized(EE) &&
              count_if(E->Scalars, [&](Value *V) { return V == EE; }) !=
@@ -17407,7 +17412,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     if (ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V); !VTEs.empty()) {
       const auto *It = find_if(VTEs, [&](const TreeEntry *MTE) {
         return MTE != TE && MTE != TEUseEI.UserTE &&
-               !DeletedNodes.contains(MTE);
+               !DeletedNodes.contains(MTE) &&
+               !TransformedToGatherNodes.contains(MTE);
       });
       if (It != VTEs.end()) {
         const TreeEntry *VTE = *It;
@@ -18614,6 +18620,11 @@ public:
           any_of(EI->users(), [&](User *U) {
             ArrayRef<TreeEntry *> UTEs = R.getTreeEntries(U);
             return UTEs.empty() || UTEs.size() > 1 ||
+                   any_of(UTEs,
+                          [&](const TreeEntry *TE) {
+                            return R.DeletedNodes.contains(TE) ||
+                                   R.TransformedToGatherNodes.contains(TE);
+                          }) ||
                    (isa<GetElementPtrInst>(U) &&
                     !R.areAllUsersVectorized(cast<Instruction>(U))) ||
                    (!UTEs.empty() &&
