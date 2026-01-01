@@ -3760,6 +3760,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Parentheses &x) {
   if (MaybeExpr operand{Analyze(x.v.value())}) {
     if (IsNullPointerOrAllocatable(&*operand)) {
       Say("NULL() may not be parenthesized"_err_en_US);
+    } else if (semantics::IsAssumedRank(*operand)) {
+      Say("An assumed-rank dummy argument may not be parenthesized"_err_en_US);
     } else if (const semantics::Symbol *symbol{GetLastSymbol(*operand)}) {
       if (const semantics::Symbol *result{FindFunctionResult(*symbol)}) {
         if (semantics::IsProcedurePointer(*result)) {
