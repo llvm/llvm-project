@@ -2313,6 +2313,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     Known = KnownVec | KnownInserted;
     break;
   }
+  case Instruction::ShuffleVector: {
+    KnownFPClass KnownLHS, KnownRHS;
+    if (SimplifyDemandedFPClass(I, 1, DemandedMask, KnownRHS, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 0, DemandedMask, KnownLHS, Depth + 1))
+      return I;
+
+    // TODO: This is overly conservative and should consider demanded elements,
+    // and splats.
+    Known = KnownLHS | KnownRHS;
+    break;
+  }
   default:
     Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
     break;
