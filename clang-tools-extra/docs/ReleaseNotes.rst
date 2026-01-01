@@ -265,6 +265,12 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check.
+
+  Detects ``if``/``else`` statements where one branch uses braces and the other
+  does not.
+
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
 
@@ -357,6 +363,11 @@ New check aliases
   <clang-tidy/checks/misc/multiple-inheritance>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`google-build-namespaces <clang-tidy/checks/google/build-namespaces>` to
+  :doc:`misc-anonymous-namespace-in-header 
+  <clang-tidy/checks/misc/anonymous-namespace-in-header>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`google-readability-casting <clang-tidy/checks/google/readability-casting>` to
   :doc:`modernize-avoid-c-style-cast
   <clang-tidy/checks/modernize/avoid-c-style-cast>`
@@ -426,7 +437,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
   the canonical types of base classes as written and adding a note on the base
-  class that triggered the warning.
+  class that triggered the warning. Also, fixed an issue where the check
+  wouldn't fire in constructors or (in certain contexts) lambdas.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
@@ -583,6 +595,10 @@ Changes in existing checks
   constructor call, and fixed a crash when handling format strings
   containing non-ASCII characters.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check to correctly provide fix-its
+  for typedefs of pointers or references to array types.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
   the type of the diagnosed variable.
@@ -626,8 +642,10 @@ Changes in existing checks
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
-  adding parentheses when the inner expression are implicitly converted
-  multiple times.
+  adding parentheses when inner expressions are implicitly converted multiple
+  times, enabling the check for C99 and later standards, and allowing implicit
+  conversions from ``bool`` to integer when used as operands of logical
+  operators (``&&``, ``||``) in C.
 
 - Improved :doc:`readability-inconsistent-declaration-parameter-name
   <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
