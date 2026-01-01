@@ -7,10 +7,10 @@ define void @test(ptr %0, ptr %1, float %.sroa.3232.0.copyload) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 12
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP3]], <float 0.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> <float 0.000000e+00, float poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP3]], float [[DOTSROA_3232_0_COPYLOAD]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP5]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> <float poison, float 0.000000e+00>, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x float> [[TMP5]], [[TMP9]]
