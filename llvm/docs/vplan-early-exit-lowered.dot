@@ -6,17 +6,15 @@ compound=true
   N1 [label =
     "vector.ph"
   ]
-  N1 -> N2 [ label="" lhead=cluster_N3]
-  subgraph cluster_N3 {
-    fontname=Courier
-    label="\<x1\> vector loop"
-    N2 [label =
-      "vector.body"
-    ]
-  }
-  N2 -> N5 [ label="" ltail=cluster_N3]
-  N2 -> N7 [ label="" ltail=cluster_N3]
-  N2 -> N2 [style=dotted, dir=back, constraint=false, splines=true, weight=10]
+  N1 -> N2 [ label=""]
+  N2 [label ="vector.body"]
+  N2 -> N4 [ label=""]
+  N2 -> N2 [ label="" dir=back]
+  N4 [label =
+    "middle.split"
+  ]
+  N4 -> N5 [ label=""]
+  N4 -> N7 [ label=""]
   N5 [label =
     "vector.early.exit"
   ]

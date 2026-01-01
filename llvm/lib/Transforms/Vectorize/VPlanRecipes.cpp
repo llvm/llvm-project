@@ -171,7 +171,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     auto *VPI = cast<VPInstruction>(this);
     return mayWriteToMemory() ||
            VPI->getOpcode() == VPInstruction::BranchOnCount ||
-           VPI->getOpcode() == VPInstruction::BranchOnCond;
+           VPI->getOpcode() == VPInstruction::BranchOnCond ||
+           VPI->getOpcode() == VPInstruction::BranchOnTwoConds;
   }
   case VPWidenCallSC: {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
@@ -453,6 +454,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ExtractElement:
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -499,6 +501,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case Instruction::PHI:
   case Instruction::Select:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
@@ -1179,6 +1182,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::PHI:
   case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
@@ -1273,6 +1277,7 @@ bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
     return vputils::onlyFirstPartUsed(this);
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
@@ -1315,6 +1320,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";
+    break;
+  case VPInstruction::BranchOnTwoConds:
+    O << "branch-on-two-conds";
     break;
   case VPInstruction::CalculateTripCountMinusVF:
     O << "TC > VF ? TC - VF : 0";

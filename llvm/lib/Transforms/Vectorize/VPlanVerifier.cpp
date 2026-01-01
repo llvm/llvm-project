@@ -391,20 +391,18 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
-  if (!isa<VPIRBasicBlock>(VPB)) {
+  if (VPBB && !isa<VPIRBasicBlock>(VPB)) {
     if (VPB->getNumSuccessors() > 1 ||
-        (VPBB && VPBB->getParent() && VPBB->isExiting() &&
+        (VPBB->getParent() && VPBB->isExiting() &&
          !VPBB->getParent()->isReplicator())) {
-      if (!VPBB || !VPBB->getTerminator()) {
+      if (!VPBB->getTerminator()) {
         errs() << "Block has multiple successors but doesn't "
                   "have a proper branch recipe!\n";
         return false;
       }
-    } else {
-      if (VPBB && VPBB->getTerminator()) {
-        errs() << "Unexpected branch recipe!\n";
-        return false;
-      }
+    } else if (VPBB->getTerminator()) {
+      errs() << "Unexpected branch recipe!\n";
+      return false;
     }
   }
 
@@ -531,15 +529,17 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   if (Exiting->empty()) {
-    errs() << "VPlan vector loop exiting block must end with BranchOnCount or "
-              "BranchOnCond VPInstruction but is empty\n";
+    errs() << "VPlan vector loop exiting block must end with BranchOnCount, "
+              "BranchOnCond, or BranchOnTwoConds VPInstruction but is empty\n";
     return false;
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!match(LastInst, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()))) {
-    errs() << "VPlan vector loop exit must end with BranchOnCount or "
-              "BranchOnCond VPInstruction\n";
+  if (!match(LastInst, m_CombineOr(m_BranchOnCond(),
+                                   m_CombineOr(m_BranchOnCount(),
+                                               m_BranchOnTwoConds())))) {
+    errs() << "VPlan vector loop exit must end with BranchOnCount, "
+              "BranchOnCond, or BranchOnTwoConds VPInstruction\n";
     return false;
   }
 
