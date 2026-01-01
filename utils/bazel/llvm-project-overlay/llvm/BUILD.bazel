@@ -3327,6 +3327,13 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenGlobalISel.inc",
             ),
             (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=X86PreLegalizerCombiner",
+                ],
+                "lib/Target/X86/X86GenPreLegalizeGICombiner.inc",
+            ),
+            (
                 ["-gen-callingconv"],
                 "lib/Target/X86/X86GenCallingConv.inc",
             ),
