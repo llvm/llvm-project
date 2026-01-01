@@ -22,6 +22,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -258,13 +259,18 @@ static unsigned EmitVBRValue(uint64_t Val, raw_ostream &OS) {
 /// Emit the specified signed value as a VBR. To improve compression we encode
 /// positive numbers shifted left by 1 and negative numbers negated and shifted
 /// left by 1 with bit 0 set.
-static unsigned EmitSignedVBRValue(uint64_t Val, raw_ostream &OS) {
-  if ((int64_t)Val >= 0)
-    Val = Val << 1;
-  else
-    Val = (-Val << 1) | 1;
+static unsigned EmitSignedVBRValue(int64_t Val, raw_ostream &OS) {
+  uint8_t Buffer[10];
+  unsigned Len = encodeSLEB128(Val, Buffer);
 
-  return EmitVBRValue(Val, OS);
+  for (unsigned i = 0; i != Len - 1; ++i)
+    OS << static_cast<unsigned>(Buffer[i] & 127) << "|128,";
+
+  OS << static_cast<unsigned>(Buffer[Len - 1]);
+  if ((Len > 1 || Val < 0) && !OmitComments)
+    OS << "/*" << Val << "*/";
+  OS << ", ";
+  return Len;
 }
 
 // This is expensive and slow.
@@ -812,27 +818,33 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     return Bytes;
   }
   case Matcher::EmitStringInteger: {
-    const std::string &Val = cast<EmitStringIntegerMatcher>(N)->getValue();
-    MVT VT = cast<EmitStringIntegerMatcher>(N)->getVT();
-    // These should always fit into 7 bits.
-    unsigned OpBytes;
+    const auto *SIM = cast<EmitStringIntegerMatcher>(N);
+    int64_t Val = SIM->getValue();
+    const std::string &Str = SIM->getString();
+    MVT VT = SIM->getVT();
+    unsigned TypeBytes = 0;
     switch (VT.SimpleTy) {
     case MVT::i32:
-      OpBytes = 1;
-      OS << "OPC_EmitStringIntegerI" << VT.getSizeInBits() << ", ";
+      OS << "OPC_EmitIntegerI" << VT.getSizeInBits() << ", ";
       break;
     default:
-      OS << "OPC_EmitStringInteger, ";
+      OS << "OPC_EmitInteger, ";
       if (!OmitComments)
         OS << "/*" << getEnumName(VT) << "*/";
-      OpBytes = EmitVBRValue(VT.SimpleTy, OS) + 1;
+      TypeBytes = EmitVBRValue(VT.SimpleTy, OS) + 1;
       break;
     }
-    OS << Val << ',';
+    // If the value is 63 or smaller, use the string directly. Otherwise, use
+    // a VBR.
+    unsigned ValBytes = 1;
+    if (Val <= 63)
+      OS << Str << ',';
+    else
+      ValBytes = EmitSignedVBRValue(Val, OS);
     if (!OmitComments)
-      OS << " // #" << cast<EmitStringIntegerMatcher>(N)->getResultNo();
+      OS << " // #" << SIM->getResultNo() << " = " << Str;
     OS << '\n';
-    return OpBytes + 1;
+    return 1 + TypeBytes + ValBytes;
   }
 
   case Matcher::EmitRegister: {
