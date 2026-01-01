@@ -256,6 +256,15 @@ define ptr @icmp_ptr_eq_replace(ptr %a, ptr %b) {
   ret ptr %sel
 }
 
+define <2 x ptr> @icmp_vector_ptr_eq_replace(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: @icmp_vector_ptr_eq_replace(
+; CHECK-NEXT:    ret <2 x ptr> [[B:%.*]]
+;
+  %cmp = icmp eq <2 x ptr> %a, %b
+  %sel = select <2 x i1> %cmp, <2 x ptr> %a, <2 x ptr> %b
+  ret <2 x ptr> %sel
+}
+
 define ptr @icmp_ptr_eq_replace_null(ptr %a) {
 ; CHECK-LABEL: @icmp_ptr_eq_replace_null(
 ; CHECK-NEXT:    ret ptr [[A:%.*]]
