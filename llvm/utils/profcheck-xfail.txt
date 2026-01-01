@@ -515,6 +515,7 @@ Transforms/MergeFunc/metadata-call-arguments.ll
 Transforms/MergeFunc/nonzero-address-spaces.ll
 Transforms/MergeFunc/phi-speculation2.ll
 Transforms/MergeFunc/ptr-int-transitivity-2.ll
+Transforms/MergeFunc/ptrauth-const-compare.ll
 Transforms/MergeFunc/ranges.ll
 Transforms/MergeFunc/ranges-multiple.ll
 Transforms/MergeFunc/self-referential-global.ll
