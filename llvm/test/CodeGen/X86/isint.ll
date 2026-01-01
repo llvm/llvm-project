@@ -148,8 +148,7 @@ define i64 @isint64_float_return(float %f) nounwind {
 ;
 ; AVX512VL-LABEL: isint64_float_return:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvttps2qq %xmm0, %xmm1
-; AVX512VL-NEXT:    vcvtqq2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
 ; AVX512VL-NEXT:    retq
@@ -200,8 +199,7 @@ define i64 @isint64_return(double %d) nounwind {
 ;
 ; AVX512VL-LABEL: isint64_return:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvttpd2qq %xmm0, %xmm1
-; AVX512VL-NEXT:    vcvtqq2pd %xmm1, %xmm1
+; AVX512VL-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vcmpeqsd %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
 ; AVX512VL-NEXT:    retq
@@ -245,8 +243,7 @@ define i32 @isuint_return(double %d) nounwind {
 ;
 ; AVX512VL-LABEL: isuint_return:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvttpd2udq %xmm0, %xmm1
-; AVX512VL-NEXT:    vcvtudq2pd %xmm1, %xmm1
+; AVX512VL-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vcmpeqsd %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
 ; AVX512VL-NEXT:    retq
@@ -279,8 +276,7 @@ define i32 @isuint_float_return(float %f) nounwind {
 ;
 ; AVX512VL-LABEL: isuint_float_return:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvttps2dq %xmm0, %xmm1
-; AVX512VL-NEXT:    vcvtdq2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
 ; AVX512VL-NEXT:    retq
@@ -359,8 +355,7 @@ define i64 @isuint64_return(double %d) nounwind {
 ;
 ; AVX512VL-LABEL: isuint64_return:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvttpd2uqq %xmm0, %xmm1
-; AVX512VL-NEXT:    vcvtuqq2pd %xmm1, %xmm1
+; AVX512VL-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vcmpeqsd %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
 ; AVX512VL-NEXT:    retq
@@ -447,8 +442,7 @@ define i64 @isuint64_float_return(float %f) nounwind {
 ;
 ; AVX512VL-LABEL: isuint64_float_return:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvttps2uqq %xmm0, %xmm1
-; AVX512VL-NEXT:    vcvtuqq2ps %xmm1, %xmm1
+; AVX512VL-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
 ; AVX512VL-NEXT:    retq
