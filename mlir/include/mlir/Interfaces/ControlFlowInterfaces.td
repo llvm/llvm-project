@@ -251,30 +251,16 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
            "::llvm::SmallVectorImpl<::mlir::RegionBranchPoint> &":$predecessors),
       [{}],
       /*defaultImplementation=*/[{
-        ::llvm::SmallVector<::mlir::RegionSuccessor> successors;
-        $_op.getSuccessorRegions(RegionBranchPoint::parent(),
-                                 successors);
-        if (llvm::any_of(successors, [&] (const RegionSuccessor & succ) {
+        auto op = cast<RegionBranchOpInterface>($_op.getOperation());
+        for (::mlir::RegionBranchPoint point : op.getAllRegionBranchPoints()) {
+          ::llvm::SmallVector<::mlir::RegionSuccessor> successors;
+          op.getSuccessorRegions(point, successors);
+          bool isPred = llvm::any_of(successors, [&] (const auto &succ) {
             return succ.getSuccessor() == successor.getSuccessor() ||
-              (succ.isParent() && successor.isParent());
-          }))
-          predecessors.push_back(RegionBranchPoint::parent());
-        for (Region &region : $_op->getRegions()) {
-          for (::mlir::Block &block : region) {
-            if (block.empty())
-              continue;
-            if (auto terminator =
-                    dyn_cast<RegionBranchTerminatorOpInterface>(block.back())) {
-              ::llvm::SmallVector<::mlir::RegionSuccessor> successors;
-              $_op.getSuccessorRegions(RegionBranchPoint(terminator),
-                                       successors);
-              if (llvm::any_of(successors, [&] (const RegionSuccessor & succ) {
-                  return succ.getSuccessor() == successor.getSuccessor() ||
-                    (succ.isParent() && successor.isParent());
-                }))
-                predecessors.push_back(terminator);
-            }
-          }
+                   (succ.isParent() && successor.isParent());
+            });
+          if (isPred)
+            predecessors.push_back(point);
         }
       }]>,
     InterfaceMethod<[{
@@ -359,6 +345,19 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     /// of the respective terminator.
     ::mlir::OperandRange getSuccessorOperands(
         ::mlir::RegionBranchPoint src, ::mlir::RegionSuccessor dest);
+
+    /// Build a mapping from successor operands to successor input. Each
+    /// successor operand could be forwarded to multiple successor inputs.
+    /// Operands that are not forwarded are not added to the map. Unless a
+    /// specific region branch point is specified, this function takes into
+    /// account all possible region branch points.
+    void getSuccessorOperandInputMapping(
+        ::mlir::RegionBranchSuccessorMapping &mapping,
+        std::optional<::mlir::RegionBranchPoint> src = std::nullopt);
+
+    /// Return all possible region branch points: the region branch op itself
+    /// and all region branch terminators.
+    ::llvm::SmallVector<::mlir::RegionBranchPoint> getAllRegionBranchPoints();
   }];
 }
 
