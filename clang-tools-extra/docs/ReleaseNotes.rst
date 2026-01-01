@@ -265,6 +265,12 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check.
+
+  Detects ``if``/``else`` statements where one branch uses braces and the other
+  does not.
+
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
 

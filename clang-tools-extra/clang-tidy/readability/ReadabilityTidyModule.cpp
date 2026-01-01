@@ -29,6 +29,7 @@
 #include "IdentifierNamingCheck.h"
 #include "ImplicitBoolConversionCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
+#include "InconsistentIfElseBracesCheck.h"
 #include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
 #include "MakeMemberFunctionConstCheck.h"
@@ -112,6 +113,8 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
+    CheckFactories.registerCheck<InconsistentIfElseBracesCheck>(
+        "readability-inconsistent-ifelse-braces");
     CheckFactories.registerCheck<MathMissingParenthesesCheck>(
         "readability-math-missing-parentheses");
     CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
