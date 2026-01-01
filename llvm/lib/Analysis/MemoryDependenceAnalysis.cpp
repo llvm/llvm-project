@@ -355,6 +355,11 @@ static bool canSkipClobberingStore(const StoreInst *SI,
       MemLoc.Size.getValue().getKnownMinValue())
     return false;
 
+  auto *StoredVal = SI->getValueOperand();
+  if (isa<Argument>(StoredVal)) {
+    return true;
+  }
+
   auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
   if (!LI || LI->getParent() != SI->getParent())
     return false;
