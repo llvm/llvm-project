@@ -1602,6 +1602,14 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+WMMA clamp operand
+~~~~~~~~~~~~~~~~~~
+
+The WMMA integer matrix multiply intrinsics and C builtins (IU4/IU8, wave32 and
+wave64 forms) accept an optional boolean clamp operand. It defaults to 0 (no
+saturation) for backward compatibility. When set, the hardware clamps the
+32-bit accumulation result instead of allowing wraparound.
+
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
