@@ -289,3 +289,26 @@ func.func @gpu_launch_without_side_effects() {
   }
   return
 }
+
+// -----
+
+
+// CHECK-LABEL: func @broadcast_of_broadcast1
+//  CHECK-SAME:   (%[[VALUE:.*]]: f32, %[[LANE:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = gpu.subgroup_broadcast %[[VALUE]], first_active_lane : f32
+//       CHECK:   return %[[RES:.*]]
+func.func @broadcast_of_broadcast1(%value : f32, %lane : i32) -> f32 {
+  %0 = gpu.subgroup_broadcast %value, first_active_lane : f32
+  %1 = gpu.subgroup_broadcast %0, specific_lane %lane : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: func @broadcast_of_broadcast2
+//  CHECK-SAME:   (%[[VALUE:.*]]: f32, %[[LANE:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = gpu.subgroup_broadcast %[[VALUE]], specific_lane %[[LANE]] : f32
+//       CHECK:   return %[[RES:.*]]
+func.func @broadcast_of_broadcast2(%value : f32, %lane : i32) -> f32 {
+  %0 = gpu.subgroup_broadcast %value, specific_lane %lane : f32
+  %1 = gpu.subgroup_broadcast %0, first_active_lane : f32
+  return %1 : f32
+}

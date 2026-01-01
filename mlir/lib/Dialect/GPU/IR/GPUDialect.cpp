@@ -2536,6 +2536,14 @@ LogicalResult gpu::SubgroupBroadcastOp::verify() {
   }
 }
 
+OpFoldResult gpu::SubgroupBroadcastOp::fold(FoldAdaptor /*adaptor*/) {
+  // Broadcast result is always uniform.
+  if (auto prev = getSrc().getDefiningOp<SubgroupBroadcastOp>())
+    return prev.getResult();
+
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // GPU KernelMetadataAttr
 //===----------------------------------------------------------------------===//
