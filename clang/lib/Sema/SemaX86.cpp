@@ -1053,9 +1053,10 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
                  X86ForceAlignArgPointerAttr(getASTContext(), AL));
 }
 
-bool SemaX86::checkTargetClonesAttr(
-    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
-    SmallVectorImpl<SmallString<64>> &NewParams) {
+bool SemaX86::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
+                                    const SmallVectorImpl<SourceLocation> &Locs,
+                                    SmallVectorImpl<SmallString<64>> &NewParams,
+                                    SourceLocation AttrLoc) {
   using namespace DiagAttrParams;
 
   assert(Params.size() == Locs.size() &&
@@ -1105,7 +1106,7 @@ bool SemaX86::checkTargetClonesAttr(
     Diag(Locs[0], diag::warn_target_clone_mixed_values);
 
   if (!HasDefault)
-    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+    return Diag(AttrLoc, diag::err_target_clone_must_have_default);
 
   return false;
 }

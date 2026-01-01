@@ -3510,10 +3510,12 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (S.ARM().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams,
+                                        AL.getLoc()))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isX86()) {
-    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
+                                      AL.getLoc()))
       return;
   }
   Params.clear();

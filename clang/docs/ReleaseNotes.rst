@@ -570,6 +570,7 @@ Bug Fixes to Attribute Support
 - Fix ``cleanup`` attribute by delaying type checks until after the type is deduced. (#GH129631)
 - Fix a crash when instantiating a function template with ``constructor`` or ``destructor``
   attributes without a priority argument. (#GH169072)
+- Fix an assertion when using ``target_clones`` attribute with empty argument list. (#GH173684)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
