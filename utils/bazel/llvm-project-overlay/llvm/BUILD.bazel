@@ -3916,6 +3916,20 @@ cc_library(
 )
 
 cc_library(
+    name = "DTLTO",
+    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    hdrs = ["include/llvm/DTLTO/DTLTO.h"],
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":Core",
+        ":LTO",
+        ":Object",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "LTO",
     srcs = glob([
         "lib/LTO/*.cpp",
