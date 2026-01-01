@@ -2130,8 +2130,8 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
   // Exceptions and StackMaps are not supported, so these passes will never do
   // anything.
   // Garbage collection is not supported.
-  disablePass<StackMapLivenessPass, FuncletLayoutPass,
-              ShadowStackGCLoweringPass>();
+  disablePass<StackMapLivenessPass, FuncletLayoutPass, PatchableFunctionPass,
+              ShadowStackGCLoweringPass, GCLoweringPass>();
 }
 
 void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
