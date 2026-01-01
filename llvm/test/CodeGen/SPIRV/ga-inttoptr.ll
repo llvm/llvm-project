@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown < %s 2>&1 | FileCheck %s
 ; CHECK: argument of incompatible type!
 
