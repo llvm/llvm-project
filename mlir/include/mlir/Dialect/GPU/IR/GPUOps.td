@@ -3252,6 +3252,7 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
   let assemblyFormat = [{
     $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 
