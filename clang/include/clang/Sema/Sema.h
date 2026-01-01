@@ -5343,12 +5343,14 @@ public:
   void copyFeatureAvailabilityCheck(Decl *Dst, NamedDecl *Src,
                                     bool Redeclaration = false);
 
-  AvailabilityAttr *mergeAvailabilityAttr(
-      NamedDecl *D, const AttributeCommonInfo &CI, IdentifierInfo *Platform,
-      bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
-      VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
-      bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-      int Priority, IdentifierInfo *IIEnvironment);
+  AvailabilityAttr *
+  mergeAvailabilityAttr(NamedDecl *D, const AttributeCommonInfo &CI,
+                        const IdentifierInfo *Platform, bool Implicit,
+                        VersionTuple Introduced, VersionTuple Deprecated,
+                        VersionTuple Obsoleted, bool IsUnavailable,
+                        StringRef Message, bool IsStrict, StringRef Replacement,
+                        AvailabilityMergeKind AMK, int Priority,
+                        const IdentifierInfo *IIEnvironment);
 
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -5379,16 +5381,16 @@ public:
   ErrorAttr *mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
                             StringRef NewUserDiagnostic);
   FormatAttr *mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
-                              IdentifierInfo *Format, int FormatIdx,
+                              const IdentifierInfo *Format, int FormatIdx,
                               int FirstArg);
   FormatMatchesAttr *mergeFormatMatchesAttr(Decl *D,
                                             const AttributeCommonInfo &CI,
-                                            IdentifierInfo *Format,
+                                            const IdentifierInfo *Format,
                                             int FormatIdx,
                                             StringLiteral *FormatStr);
   ModularFormatAttr *mergeModularFormatAttr(Decl *D,
                                             const AttributeCommonInfo &CI,
-                                            IdentifierInfo *ModularImplFn,
+                                            const IdentifierInfo *ModularImplFn,
                                             StringRef ImplName,
                                             MutableArrayRef<StringRef> Aspects);
 
@@ -5414,8 +5416,8 @@ public:
   void CheckAlignasUnderalignment(Decl *D);
 
   /// AddModeAttr - Adds a mode attribute to a particular declaration.
-  void AddModeAttr(Decl *D, const AttributeCommonInfo &CI, IdentifierInfo *Name,
-                   bool InInstantiation = false);
+  void AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
+                   const IdentifierInfo *Name, bool InInstantiation = false);
   AlwaysInlineAttr *mergeAlwaysInlineAttr(Decl *D,
                                           const AttributeCommonInfo &CI,
                                           const IdentifierInfo *Ident);
