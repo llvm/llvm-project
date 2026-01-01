@@ -193,8 +193,7 @@ TEST_P(ASTMatchersTest, ExportDecl) {
   if (!GetParam().isCXX20OrLater()) {
     return;
   }
-  const std::string moduleHeader =
-      "module;\n export module ast_matcher_test;\n";
+  const std::string moduleHeader = "module;export module ast_matcher_test;";
   EXPECT_TRUE(matches(moduleHeader + "export void foo();",
                       exportDecl(has(functionDecl()))));
   EXPECT_TRUE(matches(moduleHeader + "export { void foo(); int v; }",
