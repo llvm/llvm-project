@@ -48471,8 +48471,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                           MaskVal->getAPIntValue().exactLogBase2());
       }
       // vsel ((X & C) == 0), LHS, RHS --> vsel ((shl X, C') < 0), RHS, LHS
-      SDValue ShlAmt = getConstVector(ShlVals, VT.getSimpleVT(), DAG, DL);
-      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, And.getOperand(0), ShlAmt);
+      MVT MskVT = Mask.getSimpleValueType();
+      SDValue ShlAmt = getConstVector(ShlVals, MskVT, DAG, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, MskVT, And.getOperand(0), ShlAmt);
       SDValue NewCond =
           DAG.getSetCC(DL, CondVT, Shl, Cond.getOperand(1), ISD::SETLT);
       return DAG.getSelect(DL, VT, NewCond, RHS, LHS);
