@@ -2058,12 +2058,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     return nullptr;
   }
 
+  FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
-    if (FPOp->hasNoNaNs())
+    FMF = FPOp->getFastMathFlags();
+    if (FMF.noNaNs())
       DemandedMask &= ~fcNan;
-    if (FPOp->hasNoInfs())
+
+    if (FMF.noInfs())
       DemandedMask &= ~fcInf;
   }
+
   switch (I->getOpcode()) {
   case Instruction::FNeg: {
     if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
@@ -2174,8 +2178,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
 
         // fadd +/-0, 1.0 => 1.0
         // fadd nan, 1.0 => nan
-        return Builder.CreateFAdd(CI->getArgOperand(0),
-                                  ConstantFP::get(VTy, 1.0));
+        return Builder.CreateFAddFMF(CI->getArgOperand(0),
+                                     ConstantFP::get(VTy, 1.0), FMF);
       }
 
       if (KnownSrc.isKnownAlways(fcInf | fcNan)) {
@@ -2186,9 +2190,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
 
         // Note: Dropping canonicalize / quiet of signaling nan.
         Value *X = CI->getArgOperand(0);
-        Value *IsPosInfOrNan =
-            Builder.CreateFCmpUEQ(X, ConstantFP::getInfinity(VTy));
-        return Builder.CreateSelect(IsPosInfOrNan, X, ConstantFP::getZero(VTy));
+        Value *IsPosInfOrNan = Builder.CreateFCmpFMF(
+            FCmpInst::FCMP_UEQ, X, ConstantFP::getInfinity(VTy), FMF);
+        return Builder.CreateSelectFMF(IsPosInfOrNan, X,
+                                       ConstantFP::getZero(VTy), FMF);
       }
 
       // Only perform nan propagation.
