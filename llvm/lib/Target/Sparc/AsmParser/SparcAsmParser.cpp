@@ -1457,6 +1457,10 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
     if (MCRegister Reg = matchRegisterName(Parser.getTok(), RegKind)) {
       StringRef Name = Parser.getTok().getString();
       Parser.Lex(); // Eat the identifier token.
+
+      if (Name == "ncc")
+        Name = is64Bit() ? "xcc" : "icc";
+
       E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
       if (Reg == Sparc::ICC && Name == "xcc")
         Op = SparcOperand::CreateToken("%xcc", S);
@@ -1592,7 +1596,7 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
     return IntRegs[RegNo];
   }
 
-  if (Name == "xcc") {
+  if (Name == "xcc" || Name == "ncc") {
     // FIXME:: check 64bit.
     RegKind = SparcOperand::rk_Special;
     return SP::ICC;
