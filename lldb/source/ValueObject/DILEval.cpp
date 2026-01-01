@@ -239,20 +239,20 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
       m_fragile_ivar(fragile_ivar), m_check_ptr_vs_member(check_ptr_vs_member) {
 }
 
-llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
   // Evaluate an AST.
-  auto value_or_error = node->Accept(this);
+  auto value_or_error = node.Accept(this);
   // Convert SP with a nullptr to an error.
   if (value_or_error && !*value_or_error)
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
-                                                node->GetLocation());
+                                                node.GetLocation());
   // Return the computed value-or-error. The caller is responsible for
   // checking if an error occured during the evaluation.
   return value_or_error;
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::EvaluateAndDereference(const ASTNode *node) {
+Interpreter::EvaluateAndDereference(const ASTNode &node) {
   auto valobj_or_err = Evaluate(node);
   if (!valobj_or_err)
     return valobj_or_err;
@@ -268,14 +268,14 @@ Interpreter::EvaluateAndDereference(const ASTNode *node) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const IdentifierNode *node) {
+Interpreter::Visit(const IdentifierNode &node) {
   lldb::DynamicValueType use_dynamic = m_use_dynamic;
 
   lldb::ValueObjectSP identifier =
-      LookupIdentifier(node->GetName(), m_exe_ctx_scope, use_dynamic);
+      LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
   if (!identifier)
-    identifier = LookupGlobalIdentifier(node->GetName(), m_exe_ctx_scope,
+    identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
   if (!identifier) {
     // BEGIN SWIFT
@@ -288,24 +288,24 @@ Interpreter::Visit(const IdentifierNode *node) {
           m_expr, message, node->GetLocation(), node->GetName().size());
     // END SWIFT
     std::string errMsg =
-        llvm::formatv("use of undeclared identifier '{0}'", node->GetName());
+        llvm::formatv("use of undeclared identifier '{0}'", node.GetName());
     return llvm::make_error<DILDiagnosticError>(
-        m_expr, errMsg, node->GetLocation(), node->GetName().size());
+        m_expr, errMsg, node.GetLocation(), node.GetName().size());
   }
 
   return identifier;
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const UnaryOpNode *node) {
+Interpreter::Visit(const UnaryOpNode &node) {
   Status error;
-  auto op_or_err = Evaluate(node->GetOperand());
+  auto op_or_err = Evaluate(node.GetOperand());
   if (!op_or_err)
     return op_or_err;
 
   lldb::ValueObjectSP operand = *op_or_err;
 
-  switch (node->GetKind()) {
+  switch (node.GetKind()) {
   case UnaryOpKind::Deref: {
     lldb::ValueObjectSP dynamic_op = operand->GetDynamicValue(m_use_dynamic);
     if (dynamic_op)
@@ -320,7 +320,7 @@ Interpreter::Visit(const UnaryOpNode *node) {
     }
     if (error.Fail())
       return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
-                                                  node->GetLocation());
+                                                  node.GetLocation());
 
     return child_sp;
   }
@@ -329,7 +329,7 @@ Interpreter::Visit(const UnaryOpNode *node) {
     lldb::ValueObjectSP value = operand->AddressOf(error);
     if (error.Fail())
       return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
-                                                  node->GetLocation());
+                                                  node.GetLocation());
 
     return value;
   }
@@ -340,7 +340,7 @@ Interpreter::Visit(const UnaryOpNode *node) {
         return error.ToError();
     }
     llvm::Expected<lldb::ValueObjectSP> conv_op =
-        UnaryConversion(operand, node->GetOperand()->GetLocation());
+        UnaryConversion(operand, node.GetOperand().GetLocation());
     if (!conv_op)
       return conv_op;
     operand = *conv_op;
@@ -350,7 +350,7 @@ Interpreter::Visit(const UnaryOpNode *node) {
           llvm::formatv("invalid argument type '{0}' to unary expression",
                         operand_type.GetTypeName());
       return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                  node->GetLocation());
+                                                  node.GetLocation());
     }
     Scalar scalar;
     bool resolved = operand->ResolveValue(scalar);
@@ -370,7 +370,7 @@ Interpreter::Visit(const UnaryOpNode *node) {
         return error.ToError();
     }
     llvm::Expected<lldb::ValueObjectSP> conv_op =
-        UnaryConversion(operand, node->GetOperand()->GetLocation());
+        UnaryConversion(operand, node.GetOperand().GetLocation());
     if (!conv_op)
       return conv_op;
     operand = *conv_op;
@@ -382,25 +382,25 @@ Interpreter::Visit(const UnaryOpNode *node) {
           llvm::formatv("invalid argument type '{0}' to unary expression",
                         operand_type.GetTypeName());
       return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                  node->GetLocation());
+                                                  node.GetLocation());
     }
     return operand;
   }
   }
   return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
-                                              node->GetLocation());
+                                              node.GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const MemberOfNode *node) {
-  auto base_or_err = Evaluate(node->GetBase());
+Interpreter::Visit(const MemberOfNode &node) {
+  auto base_or_err = Evaluate(node.GetBase());
   if (!base_or_err)
     return base_or_err;
-  bool expr_is_ptr = node->GetIsArrow();
+  bool expr_is_ptr = node.GetIsArrow();
   lldb::ValueObjectSP base = *base_or_err;
 
   // Perform some basic type & correctness checking.
-  if (node->GetIsArrow()) {
+  if (node.GetIsArrow()) {
     if (!m_fragile_ivar) {
       // Make sure we aren't trying to deref an objective
       // C ivar if this is not allowed
@@ -427,14 +427,14 @@ Interpreter::Visit(const MemberOfNode *node) {
         std::string errMsg = llvm::formatv(
             "Failed to dereference synthetic value: {0}", deref_error);
         return llvm::make_error<DILDiagnosticError>(
-            m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+            m_expr, errMsg, node.GetLocation(), node.GetFieldName().size());
       }
 
       // Some synthetic plug-ins fail to set the error in Dereference
       if (!base) {
         std::string errMsg = "Failed to dereference synthetic value";
         return llvm::make_error<DILDiagnosticError>(
-            m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+            m_expr, errMsg, node.GetLocation(), node.GetFieldName().size());
       }
       expr_is_ptr = false;
     }
@@ -450,33 +450,33 @@ Interpreter::Visit(const MemberOfNode *node) {
                           "did you mean to use '->'?",
                           base->GetCompilerType().TypeDescription());
         return llvm::make_error<DILDiagnosticError>(
-            m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+            m_expr, errMsg, node.GetLocation(), node.GetFieldName().size());
       } else {
         std::string errMsg =
             llvm::formatv("member reference type {0} is not a pointer; "
                           "did you mean to use '.'?",
                           base->GetCompilerType().TypeDescription());
         return llvm::make_error<DILDiagnosticError>(
-            m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+            m_expr, errMsg, node.GetLocation(), node.GetFieldName().size());
       }
     }
   }
 
   lldb::ValueObjectSP field_obj =
-      base->GetChildMemberWithName(node->GetFieldName());
+      base->GetChildMemberWithName(node.GetFieldName());
   if (!field_obj) {
     if (m_use_synthetic) {
       field_obj = base->GetSyntheticValue();
       if (field_obj)
-        field_obj = field_obj->GetChildMemberWithName(node->GetFieldName());
+        field_obj = field_obj->GetChildMemberWithName(node.GetFieldName());
     }
 
     if (!m_use_synthetic || !field_obj) {
       std::string errMsg = llvm::formatv(
-          "\"{0}\" is not a member of \"({1}) {2}\"", node->GetFieldName(),
+          "\"{0}\" is not a member of \"({1}) {2}\"", node.GetFieldName(),
           base->GetTypeName().AsCString("<invalid type>"), base->GetName());
       return llvm::make_error<DILDiagnosticError>(
-          m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+          m_expr, errMsg, node.GetLocation(), node.GetFieldName().size());
     }
   }
 
@@ -491,32 +491,32 @@ Interpreter::Visit(const MemberOfNode *node) {
   }
 
   CompilerType base_type = base->GetCompilerType();
-  if (node->GetIsArrow() && base->IsPointerType())
+  if (node.GetIsArrow() && base->IsPointerType())
     base_type = base_type.GetPointeeType();
   std::string errMsg = llvm::formatv(
-      "\"{0}\" is not a member of \"({1}) {2}\"", node->GetFieldName(),
+      "\"{0}\" is not a member of \"({1}) {2}\"", node.GetFieldName(),
       base->GetTypeName().AsCString("<invalid type>"), base->GetName());
   return llvm::make_error<DILDiagnosticError>(
-      m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+      m_expr, errMsg, node.GetLocation(), node.GetFieldName().size());
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const ArraySubscriptNode *node) {
-  auto idx_or_err = EvaluateAndDereference(node->GetIndex());
+Interpreter::Visit(const ArraySubscriptNode &node) {
+  auto idx_or_err = EvaluateAndDereference(node.GetIndex());
   if (!idx_or_err)
     return idx_or_err;
   lldb::ValueObjectSP idx = *idx_or_err;
 
   if (!idx->GetCompilerType().IsIntegerOrUnscopedEnumerationType()) {
     return llvm::make_error<DILDiagnosticError>(
-        m_expr, "array subscript is not an integer", node->GetLocation());
+        m_expr, "array subscript is not an integer", node.GetLocation());
   }
 
   StreamString var_expr_path_strm;
   uint64_t child_idx = idx->GetValueAsUnsigned(0);
   lldb::ValueObjectSP child_valobj_sp;
 
-  auto base_or_err = Evaluate(node->GetBase());
+  auto base_or_err = Evaluate(node.GetBase());
   if (!base_or_err)
     return base_or_err;
   lldb::ValueObjectSP base = *base_or_err;
@@ -538,7 +538,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
           base->GetTypeName().AsCString("<invalid type>"),
           var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                  node->GetLocation());
+                                                  node.GetLocation());
     }
     if (is_objc_pointer) {
       lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
@@ -548,7 +548,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
                           base->GetTypeName().AsCString("<invalid type>"),
                           var_expr_path_strm.GetData());
         return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                    node->GetLocation());
+                                                    node.GetLocation());
       }
       if (static_cast<uint32_t>(child_idx) >=
           synthetic->GetNumChildrenIgnoringErrors()) {
@@ -557,7 +557,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
             base->GetTypeName().AsCString("<invalid type>"),
             var_expr_path_strm.GetData());
         return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                    node->GetLocation());
+                                                    node.GetLocation());
       }
       child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
       if (!child_valobj_sp) {
@@ -566,7 +566,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
             base->GetTypeName().AsCString("<invalid type>"),
             var_expr_path_strm.GetData());
         return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                    node->GetLocation());
+                                                    node.GetLocation());
       }
       if (m_use_dynamic != lldb::eNoDynamicValues) {
         if (auto dynamic_sp = child_valobj_sp->GetDynamicValue(m_use_dynamic))
@@ -585,7 +585,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
       if (base_type.IsPointerToVoid())
         err_msg = "subscript of pointer to incomplete type 'void'";
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                  node->GetLocation());
+                                                  node.GetLocation());
     }
   } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array)) {
     child_valobj_sp = base->GetChildAtIndex(child_idx);
@@ -597,7 +597,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
           base->GetTypeName().AsCString("<invalid type>"),
           var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                  node->GetLocation());
+                                                  node.GetLocation());
     }
   } else if (base_type.IsScalarType()) {
     child_valobj_sp =
@@ -608,7 +608,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
           child_idx, base->GetTypeName().AsCString("<invalid type>"),
           var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                  node->GetLocation(), 1);
+                                                  node.GetLocation(), 1);
     }
   } else {
     lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
@@ -617,7 +617,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
           llvm::formatv("\"{0}\" is not an array type",
                         base->GetTypeName().AsCString("<invalid type>"));
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                  node->GetLocation(), 1);
+                                                  node.GetLocation(), 1);
     }
     if (static_cast<uint32_t>(child_idx) >=
         synthetic->GetNumChildrenIgnoringErrors(child_idx + 1)) {
@@ -626,7 +626,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
           base->GetTypeName().AsCString("<invalid type>"),
           var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                  node->GetLocation(), 1);
+                                                  node.GetLocation(), 1);
     }
     child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
     if (!child_valobj_sp) {
@@ -635,7 +635,7 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
           base->GetTypeName().AsCString("<invalid type>"),
           var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
-                                                  node->GetLocation(), 1);
+                                                  node.GetLocation(), 1);
     }
   }
 
@@ -652,17 +652,17 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
   if (!success)
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "could not get the index as an integer",
-        node->GetIndex()->GetLocation());
+        node.GetIndex().GetLocation());
   return base->GetSyntheticArrayMember(signed_child_idx, true);
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const BitFieldExtractionNode *node) {
-  auto first_idx_or_err = EvaluateAndDereference(node->GetFirstIndex());
+Interpreter::Visit(const BitFieldExtractionNode &node) {
+  auto first_idx_or_err = EvaluateAndDereference(node.GetFirstIndex());
   if (!first_idx_or_err)
     return first_idx_or_err;
   lldb::ValueObjectSP first_idx = *first_idx_or_err;
-  auto last_idx_or_err = EvaluateAndDereference(node->GetLastIndex());
+  auto last_idx_or_err = EvaluateAndDereference(node.GetLastIndex());
   if (!last_idx_or_err)
     return last_idx_or_err;
   lldb::ValueObjectSP last_idx = *last_idx_or_err;
@@ -670,7 +670,7 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
   if (!first_idx->GetCompilerType().IsIntegerOrUnscopedEnumerationType() ||
       !last_idx->GetCompilerType().IsIntegerOrUnscopedEnumerationType()) {
     return llvm::make_error<DILDiagnosticError>(
-        m_expr, "bit index is not an integer", node->GetLocation());
+        m_expr, "bit index is not an integer", node.GetLocation());
   }
 
   bool success_first, success_last;
@@ -678,13 +678,13 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
   int64_t last_index = last_idx->GetValueAsSigned(0, &success_last);
   if (!success_first || !success_last)
     return llvm::make_error<DILDiagnosticError>(
-        m_expr, "could not get the index as an integer", node->GetLocation());
+        m_expr, "could not get the index as an integer", node.GetLocation());
 
   // if the format given is [high-low], swap range
   if (first_index > last_index)
     std::swap(first_index, last_index);
 
-  auto base_or_err = EvaluateAndDereference(node->GetBase());
+  auto base_or_err = EvaluateAndDereference(node.GetBase());
   if (!base_or_err)
     return base_or_err;
   lldb::ValueObjectSP base = *base_or_err;
@@ -696,7 +696,7 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
         last_index, base->GetTypeName().AsCString("<invalid type>"),
         base->GetName().AsCString());
     return llvm::make_error<DILDiagnosticError>(m_expr, message,
-                                                node->GetLocation());
+                                                node.GetLocation());
   }
   return child_valobj_sp;
 }
@@ -704,18 +704,18 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
 llvm::Expected<CompilerType>
 Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
                              std::shared_ptr<ExecutionContextScope> ctx,
-                             const IntegerLiteralNode *literal) {
+                             const IntegerLiteralNode &literal) {
   // Binary, Octal, Hexadecimal and literals with a U suffix are allowed to be
   // an unsigned integer.
-  bool unsigned_is_allowed = literal->IsUnsigned() || literal->GetRadix() != 10;
-  llvm::APInt apint = literal->GetValue();
+  bool unsigned_is_allowed = literal.IsUnsigned() || literal.GetRadix() != 10;
+  llvm::APInt apint = literal.GetValue();
 
   llvm::SmallVector<std::pair<lldb::BasicType, lldb::BasicType>, 3> candidates;
-  if (literal->GetTypeSuffix() <= IntegerTypeSuffix::None)
+  if (literal.GetTypeSuffix() <= IntegerTypeSuffix::None)
     candidates.emplace_back(lldb::eBasicTypeInt,
                             unsigned_is_allowed ? lldb::eBasicTypeUnsignedInt
                                                 : lldb::eBasicTypeInvalid);
-  if (literal->GetTypeSuffix() <= IntegerTypeSuffix::Long)
+  if (literal.GetTypeSuffix() <= IntegerTypeSuffix::Long)
     candidates.emplace_back(lldb::eBasicTypeLong,
                             unsigned_is_allowed ? lldb::eBasicTypeUnsignedLong
                                                 : lldb::eBasicTypeInvalid);
@@ -728,7 +728,7 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
     llvm::Expected<uint64_t> size = signed_type.GetBitSize(ctx.get());
     if (!size)
       return size.takeError();
-    if (!literal->IsUnsigned() && apint.isIntN(*size - 1))
+    if (!literal.IsUnsigned() && apint.isIntN(*size - 1))
       return signed_type;
     if (unsigned_ != lldb::eBasicTypeInvalid && apint.isIntN(*size))
       return type_system->GetBasicTypeFromAST(unsigned_);
@@ -737,11 +737,11 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
   return llvm::make_error<DILDiagnosticError>(
       m_expr,
       "integer literal is too large to be represented in any integer type",
-      literal->GetLocation());
+      literal.GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const IntegerLiteralNode *node) {
+Interpreter::Visit(const IntegerLiteralNode &node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
       GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)
@@ -752,7 +752,7 @@ Interpreter::Visit(const IntegerLiteralNode *node) {
   if (!type)
     return type.takeError();
 
-  Scalar scalar = node->GetValue();
+  Scalar scalar = node.GetValue();
   // APInt from StringRef::getAsInteger comes with just enough bitwidth to
   // hold the value. This adjusts APInt bitwidth to match the compiler type.
   llvm::Expected<uint64_t> type_bitsize =
@@ -765,35 +765,35 @@ Interpreter::Visit(const IntegerLiteralNode *node) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const FloatLiteralNode *node) {
+Interpreter::Visit(const FloatLiteralNode &node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
       GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
   bool isFloat =
-      &node->GetValue().getSemantics() == &llvm::APFloat::IEEEsingle();
+      &node.GetValue().getSemantics() == &llvm::APFloat::IEEEsingle();
   lldb::BasicType basic_type =
       isFloat ? lldb::eBasicTypeFloat : lldb::eBasicTypeDouble;
   CompilerType type = GetBasicType(*type_system, basic_type);
 
   if (!type)
     return llvm::make_error<DILDiagnosticError>(
-        m_expr, "unable to create a const literal", node->GetLocation());
+        m_expr, "unable to create a const literal", node.GetLocation());
 
-  Scalar scalar = node->GetValue();
+  Scalar scalar = node.GetValue();
   return ValueObject::CreateValueObjectFromScalar(m_target, scalar, type,
                                                   "result");
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const BooleanLiteralNode *node) {
-  bool value = node->GetValue();
+Interpreter::Visit(const BooleanLiteralNode &node) {
+  bool value = node.GetValue();
   return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
 }
 
-llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
-  auto operand_or_err = Evaluate(node->GetOperand());
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
+  auto operand_or_err = Evaluate(node.GetOperand());
   if (!operand_or_err)
     return operand_or_err;
 
@@ -801,7 +801,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
   // Don't actually do the cast for now -- that code will be added later.
   // For now just return an error message.
   return llvm::make_error<DILDiagnosticError>(
-      m_expr, "Type casting is not supported here.", node->GetLocation());
+      m_expr, "Type casting is not supported here.", node.GetLocation());
 }
 
 } // namespace lldb_private::dil
