@@ -25,14 +25,14 @@ def GPRAbove127 : RegisterClass<"TestTarget", [i32], 32,
 // CHECK-NEXT: OPC_RecordChild0, // #0 = $src
 // CHECK-NEXT: OPC_Scope, 12, /*->18*/ // 2 children in Scope
 // CHECK-NEXT: OPC_CheckChild1Integer, 0,
-// CHECK-NEXT: OPC_EmitInteger32, 0|128,2/*256*/,
+// CHECK-NEXT: OPC_EmitIntegerI32, 0|128,2/*256*/,
 // CHECK-NEXT: OPC_MorphNodeTo1None, TARGET_VAL(TargetOpcode::COPY_TO_REGCLASS),
 // CHECK-NEXT:     /*MVT::i32*/7, 2/*#Ops*/, 1, 0,
 def : Pat<(i32 (add i32:$src, (i32 0))),
           (COPY_TO_REGCLASS GPRAbove127, GPR0:$src)>;
 
 // CHECK:      OPC_CheckChild1Integer, 2,
-// CHECK-NEXT: OPC_EmitStringInteger32, TestNamespace::GPR127RegClassID,
+// CHECK-NEXT: OPC_EmitStringIntegerI32, TestNamespace::GPR127RegClassID,
 // CHECK-NEXT: OPC_MorphNodeTo1None, TARGET_VAL(TargetOpcode::COPY_TO_REGCLASS),
 // CHECK-NEXT:     /*MVT::i32*/7, 2/*#Ops*/, 1, 0,
 def : Pat<(i32 (add i32:$src, (i32 1))),
