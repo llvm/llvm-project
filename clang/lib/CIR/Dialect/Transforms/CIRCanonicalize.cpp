@@ -66,42 +66,6 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
   }
 };
 
-struct RemoveEmptyScope : public OpRewritePattern<ScopeOp> {
-  using OpRewritePattern<ScopeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ScopeOp op,
-                                PatternRewriter &rewriter) const final {
-    // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
-    // trivially dead operations
-    if (op.isEmpty()) {
-      rewriter.eraseOp(op);
-      return success();
-    }
-
-    Region &region = op.getScopeRegion();
-    if (region.getBlocks().front().getOperations().size() == 1 &&
-        isa<YieldOp>(region.getBlocks().front().front())) {
-      rewriter.eraseOp(op);
-      return success();
-    }
-
-    return failure();
-  }
-};
-
-struct RemoveEmptySwitch : public OpRewritePattern<SwitchOp> {
-  using OpRewritePattern<SwitchOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(SwitchOp op,
-                                PatternRewriter &rewriter) const final {
-    if (!(op.getBody().empty() || isa<YieldOp>(op.getBody().front().front())))
-      return failure();
-
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 //===----------------------------------------------------------------------===//
 // CIRCanonicalizePass
 //===----------------------------------------------------------------------===//
@@ -124,8 +88,7 @@ struct CIRCanonicalizePass
 void populateCIRCanonicalizePatterns(RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-    RemoveRedundantBranches,
-    RemoveEmptyScope
+    RemoveRedundantBranches
   >(patterns.getContext());
   // clang-format on
 }
@@ -138,7 +101,6 @@ void CIRCanonicalizePass::runOnOperation() {
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
-    assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
     assert(!cir::MissingFeatures::callOp());
 

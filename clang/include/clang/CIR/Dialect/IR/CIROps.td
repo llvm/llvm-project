@@ -842,7 +842,7 @@ defvar CIR_YieldableScopes = [
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
-  ReturnLike, Terminator, ParentOneOf<CIR_YieldableScopes>
+  ReturnLike, Terminator, ParentOneOf<CIR_YieldableScopes>, NoMemoryEffect
 ]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
@@ -999,7 +999,8 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 
 def CIR_ScopeOp : CIR_Op<"scope", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
 ]> {
   let summary = "Represents a C/C++ scope";
   let description = [{
@@ -1026,6 +1027,7 @@ def CIR_ScopeOp : CIR_Op<"scope", [
   let results = (outs Optional<CIR_AnyType>:$results);
   let regions = (region AnyRegion:$scopeRegion);
 
+  let hasFolder = 1;
   let hasVerifier = 1;
   let skipDefaultBuilders = 1;
   let assemblyFormat = [{
@@ -1104,7 +1106,8 @@ def CIR_CaseOp : CIR_Op<"case", [
 def CIR_SwitchOp : CIR_Op<"switch", [
   SameVariadicOperandSize,
   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
 ]> {
   let summary = "Switch operation";
   let description = [{
