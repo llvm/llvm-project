@@ -138,6 +138,26 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getSignExtendExpr(Ops[0], DestTy);
     });
   }
+  if (match(V,
+            m_Intrinsic<Intrinsic::umax>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getUMaxExpr(Ops[0], Ops[1]);
+    });
+  if (match(V,
+            m_Intrinsic<Intrinsic::smax>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getSMaxExpr(Ops[0], Ops[1]);
+    });
+  if (match(V,
+            m_Intrinsic<Intrinsic::umin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getUMinExpr(Ops[0], Ops[1]);
+    });
+  if (match(V,
+            m_Intrinsic<Intrinsic::smin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getSMinExpr(Ops[0], Ops[1]);
+    });
 
   // TODO: Support constructing SCEVs for more recipes as needed.
   const VPRecipeBase *DefR = V->getDefiningRecipe();
