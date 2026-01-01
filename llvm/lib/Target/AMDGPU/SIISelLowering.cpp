@@ -7806,8 +7806,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
   // Round-inexact-to-odd f64 to f32, then do the final rounding using the
   // hardware f32 -> bf16 instruction.
-  EVT F32VT = SrcVT.isVector() ? SrcVT.changeVectorElementType(MVT::f32) :
-                                 MVT::f32;
+  EVT F32VT = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
   return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
                      DAG.getTargetConstant(0, DL, MVT::i32));
@@ -7954,13 +7953,12 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
 
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
-  auto ExtTy = OpTy.changeElementType(MVT::i32);
+  auto &DAG = DCI.DAG;
+  auto ExtTy = OpTy.changeElementType(*DAG.getContext(), MVT::i32);
 
   if (DCI.isBeforeLegalizeOps() ||
       isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
     return SDValue();
-
-  auto &DAG = DCI.DAG;
 
   SDLoc DL(Op);
   SDValue LHS;
@@ -16542,7 +16540,7 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
   EVT ScalarVT = VT.getScalarType();
-  EVT IntVT = VT.changeElementType(MVT::i32);
+  EVT IntVT = VT.changeElementType(*DAG.getContext(), MVT::i32);
 
   if (!N->isDivergent() && getSubtarget()->hasSALUFloatInsts() &&
       (ScalarVT == MVT::f32 || ScalarVT == MVT::f16)) {

@@ -661,8 +661,9 @@ static SDValue widenVectorToPartType(SelectionDAG &DAG, SDValue Val,
   if (ValueEVT == MVT::bf16 && PartEVT == MVT::f16) {
     assert(DAG.getTargetLoweringInfo().isTypeLegal(PartVT) &&
            "Cannot widen to illegal type");
-    Val = DAG.getNode(ISD::BITCAST, DL,
-                      ValueVT.changeVectorElementType(MVT::f16), Val);
+    Val = DAG.getNode(
+        ISD::BITCAST, DL,
+        ValueVT.changeVectorElementType(*DAG.getContext(), MVT::f16), Val);
   } else if (PartEVT != ValueEVT) {
     return SDValue();
   }
@@ -5088,7 +5089,7 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   EVT IdxVT = Index.getValueType();
   EVT EltTy = IdxVT.getVectorElementType();
   if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
-    EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
+    EVT NewIdxVT = IdxVT.changeVectorElementType(*DAG.getContext(), EltTy);
     Index = DAG.getNode(ISD::SIGN_EXTEND, sdl, NewIdxVT, Index);
   }
 
@@ -5187,7 +5188,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   EVT IdxVT = Index.getValueType();
   EVT EltTy = IdxVT.getVectorElementType();
   if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
-    EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
+    EVT NewIdxVT = IdxVT.changeVectorElementType(*DAG.getContext(), EltTy);
     Index = DAG.getNode(ISD::SIGN_EXTEND, sdl, NewIdxVT, Index);
   }
 
@@ -6571,7 +6572,7 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   EVT IdxVT = Index.getValueType();
   EVT EltTy = IdxVT.getVectorElementType();
   if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
-    EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
+    EVT NewIdxVT = IdxVT.changeVectorElementType(*DAG.getContext(), EltTy);
     Index = DAG.getNode(ISD::SIGN_EXTEND, sdl, NewIdxVT, Index);
   }
 
@@ -7696,10 +7697,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Op2 = getValue(I.getArgOperand(1));
 
     EVT ResultVT = Op1.getValueType();
-    EVT OverflowVT = MVT::i1;
-    if (ResultVT.isVector())
-      OverflowVT = EVT::getVectorVT(
-          *Context, OverflowVT, ResultVT.getVectorElementCount());
+    EVT OverflowVT = ResultVT.changeElementType(*Context, MVT::i1);
 
     SDVTList VTs = DAG.getVTList(ResultVT, OverflowVT);
     setValue(&I, DAG.getNode(Op, sdl, VTs, Op1, Op2));
@@ -8718,7 +8716,7 @@ void SelectionDAGBuilder::visitVPGather(
   EVT IdxVT = Index.getValueType();
   EVT EltTy = IdxVT.getVectorElementType();
   if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
-    EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
+    EVT NewIdxVT = IdxVT.changeVectorElementType(*DAG.getContext(), EltTy);
     Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
   }
   LD = DAG.getGatherVP(
@@ -8784,7 +8782,7 @@ void SelectionDAGBuilder::visitVPScatter(
   EVT IdxVT = Index.getValueType();
   EVT EltTy = IdxVT.getVectorElementType();
   if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
-    EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
+    EVT NewIdxVT = IdxVT.changeVectorElementType(*DAG.getContext(), EltTy);
     Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
   }
   ST = DAG.getScatterVP(DAG.getVTList(MVT::Other), VT, DL,

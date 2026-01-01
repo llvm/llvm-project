@@ -4150,8 +4150,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
 
   EVT ElementType = VT.getScalarType();
   EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
-  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
-                                 : TargetScalarType;
+  EVT TargetType = VT.changeElementType(*DAG.getContext(), TargetScalarType);
 
   if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();
@@ -4215,8 +4214,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
 
   EVT ElementType = VT.getScalarType();
   EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
-  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
-                                 : TargetScalarType;
+  EVT TargetType = VT.changeElementType(*DAG.getContext(), TargetScalarType);
 
   if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();
@@ -4337,8 +4335,7 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
 
   EVT ElementType = VT.getScalarType();
   EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
-  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
-                                 : TargetScalarType;
+  EVT TargetType = VT.changeElementType(*DAG.getContext(), TargetScalarType);
 
   if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();

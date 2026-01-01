@@ -4261,10 +4261,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     // sub 0, (and x, 1)  -->  SIGN_EXTEND_INREG x, i1
     if (N1.getOpcode() == ISD::AND && N1.hasOneUse() &&
         isOneOrOneSplat(N1->getOperand(1))) {
-      EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), 1);
-      if (VT.isVector())
-        ExtVT = EVT::getVectorVT(*DAG.getContext(), ExtVT,
-                                 VT.getVectorElementCount());
+      EVT ExtVT = VT.changeElementType(*DAG.getContext(), MVT::i1);
       if (TLI.getOperationAction(ISD::SIGN_EXTEND_INREG, ExtVT) ==
           TargetLowering::Legal) {
         return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N1->getOperand(0),
@@ -6123,10 +6120,8 @@ static SDValue PerformMinMaxFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
   if (!Fp || Fp.getOpcode() != ISD::FP_TO_SINT)
     return SDValue();
   EVT FPVT = Fp.getOperand(0).getValueType();
-  EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), BW);
-  if (FPVT.isVector())
-    NewVT = EVT::getVectorVT(*DAG.getContext(), NewVT,
-                             FPVT.getVectorElementCount());
+  EVT NewVT = FPVT.changeElementType(*DAG.getContext(),
+                                     EVT::getIntegerVT(*DAG.getContext(), BW));
   unsigned NewOpc = Unsigned ? ISD::FP_TO_UINT_SAT : ISD::FP_TO_SINT_SAT;
   if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(NewOpc, FPVT, NewVT))
     return SDValue();
@@ -6158,10 +6153,8 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
 
   unsigned BW = (C1 + 1).exactLogBase2();
   EVT FPVT = N0.getOperand(0).getValueType();
-  EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), BW);
-  if (FPVT.isVector())
-    NewVT = EVT::getVectorVT(*DAG.getContext(), NewVT,
-                             FPVT.getVectorElementCount());
+  EVT NewVT = FPVT.changeElementType(*DAG.getContext(),
+                                     EVT::getIntegerVT(*DAG.getContext(), BW));
   if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(ISD::FP_TO_UINT_SAT,
                                                         FPVT, NewVT))
     return SDValue();
@@ -11062,10 +11055,8 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     if (N01C) {
       LLVMContext &Ctx = *DAG.getContext();
       // Determine what the truncate's result bitsize and type would be.
-      EVT TruncVT = EVT::getIntegerVT(Ctx, OpSizeInBits - N1C->getZExtValue());
-
-      if (VT.isVector())
-        TruncVT = EVT::getVectorVT(Ctx, TruncVT, VT.getVectorElementCount());
+      EVT TruncVT = VT.changeElementType(
+          Ctx, EVT::getIntegerVT(Ctx, OpSizeInBits - N1C->getZExtValue()));
 
       // Determine the residual right-shift amount.
       int ShiftAmt = N1C->getZExtValue() - N01C->getZExtValue();
@@ -11107,9 +11098,8 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
         // that is a free operation.
         LLVMContext &Ctx = *DAG.getContext();
         unsigned ShiftAmt = N1C->getZExtValue();
-        EVT TruncVT = EVT::getIntegerVT(Ctx, OpSizeInBits - ShiftAmt);
-        if (VT.isVector())
-          TruncVT = EVT::getVectorVT(Ctx, TruncVT, VT.getVectorElementCount());
+        EVT TruncVT = VT.changeElementType(
+            Ctx, EVT::getIntegerVT(Ctx, OpSizeInBits - ShiftAmt));
 
         // TODO: The simple type check probably belongs in the default hook
         //       implementation and/or target-specific overrides (because
@@ -16088,9 +16078,8 @@ static SDValue foldExtendVectorInregToExtendOfSubvector(
 
   SDValue Src = N->getOperand(0);
   EVT VT = N->getValueType(0);
-  EVT SrcVT = EVT::getVectorVT(*DAG.getContext(),
-                               Src.getValueType().getVectorElementType(),
-                               VT.getVectorElementCount());
+  EVT SrcVT = VT.changeVectorElementType(
+      *DAG.getContext(), Src.getValueType().getVectorElementType());
 
   assert(ISD::isExtVecInRegOpcode(InregOpcode) &&
          "Expected EXTEND_VECTOR_INREG dag node in input!");
@@ -18310,10 +18299,9 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
   // BuildLogBase2 may create a new node.
   SDLoc DL(N);
   // Get Log2 type with same bitwidth as the float type (VT).
-  EVT NewIntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits());
-  if (VT.isVector())
-    NewIntVT = EVT::getVectorVT(*DAG.getContext(), NewIntVT,
-                                VT.getVectorElementCount());
+  EVT NewIntVT = VT.changeElementType(
+      *DAG.getContext(),
+      EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits()));
 
   SDValue Log2 = BuildLogBase2(Pow2Op, DL, DAG.isKnownNeverZero(Pow2Op),
                                /*InexpensiveOnly*/ true, NewIntVT);
@@ -23747,7 +23735,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     if (!IsByteSized) {
       EltVT =
           EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
-      VT = VT.changeElementType(EltVT);
+      VT = VT.changeElementType(*DAG.getContext(), EltVT);
     }
 
     // Check if this operation will be handled the default way for its type.
