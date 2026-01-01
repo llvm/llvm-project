@@ -5,7 +5,7 @@ import * as path from "path";
  * Expands the character `~` to the user's home directory
  */
 export function expandUser(file_path: string): string {
-  if (os.platform() == "win32") {
+  if (os.platform() === "win32") {
     return file_path;
   }
 
@@ -18,22 +18,22 @@ export function expandUser(file_path: string): string {
   }
 
   const path_len = file_path.length;
-  if (path_len == 1) {
+  if (path_len === 1) {
     return os.homedir();
   }
 
-  if (file_path.charAt(1) == path.sep) {
+  if (file_path.charAt(1) === path.sep) {
     return path.join(os.homedir(), file_path.substring(1));
   }
 
   const sep_index = file_path.indexOf(path.sep);
-  const user_name_end = sep_index == -1 ? file_path.length : sep_index;
+  const user_name_end = sep_index === -1 ? file_path.length : sep_index;
   const user_name = file_path.substring(1, user_name_end);
   try {
-    if (user_name == os.userInfo().username) {
+    if (user_name === os.userInfo().username) {
       return path.join(os.homedir(), file_path.substring(user_name_end));
     }
-  } catch (err) {
+  } catch (error) {
     return file_path;
   }
 
