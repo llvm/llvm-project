@@ -304,6 +304,12 @@ let Features = "amx-avx512,avx10.2", Attributes = [NoThrow, RequiredVectorWidth<
   def tcvtrowps2phh : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2phl : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, unsigned int)">;
   def tilemovrow : X86Builtin<"_Vector<16, int>(_Constant unsigned char, unsigned int)">;
+  def tcvtrowd2psi : X86Builtin<"_Vector<16, float>(_Constant unsigned char, _Constant unsigned int)">;
+  def tcvtrowps2bf16hi : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, _Constant unsigned int)">;
+  def tcvtrowps2bf16li : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, _Constant unsigned int)">;
+  def tcvtrowps2phhi : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, _Constant unsigned int)">;
+  def tcvtrowps2phli : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, _Constant unsigned int)">;
+  def tilemovrowi : X86Builtin<"_Vector<16, int>(_Constant unsigned char, _Constant unsigned int)">;
 }
 
 let Features = "amx-fp16", Attributes = [NoThrow] in {

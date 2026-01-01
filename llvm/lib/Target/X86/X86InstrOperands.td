@@ -415,6 +415,14 @@ def ImmUnsignedi4AsmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidImmUnsignedi4";
 }
 
+// 6-bit immediate used by some AMX instructions
+// [0, 0x3F]
+def ImmUnsignedi6AsmOperand : AsmOperandClass {
+  let Name = "ImmUnsignedi6";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidImmUnsignedi6";
+}
+
 // Unsigned immediate used by SSE/AVX instructions
 // [0, 0xFF]
 //   [0xFFFFFFFFFFFFFF80, 0xFFFFFFFFFFFFFFFF]
@@ -472,6 +480,14 @@ def u8imm : Operand<i8> {
 def i16u8imm : Operand<i16> {
   let PrintMethod = "printU8Imm";
   let ParserMatchClass = ImmUnsignedi8AsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+// 32-bit immediate but only 6-bits are significant and they are unsigned.
+// Used by some AMX instructions that use intrinsics.
+def i32u6imm : Operand<i32> {
+  let PrintMethod = "printU8Imm";
+  let ParserMatchClass = ImmUnsignedi6AsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
