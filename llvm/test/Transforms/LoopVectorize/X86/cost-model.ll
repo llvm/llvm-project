@@ -839,8 +839,107 @@ exit:
   ret i32 %select.next
 }
 
+define void @replicate_cast_cost(i32 %N, ptr %dst, ptr %src) #3 {
+; CHECK-LABEL: define void @replicate_cast_cost(
+; CHECK-SAME: i32 [[N:%.*]], ptr [[DST:%.*]], ptr [[SRC:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 40
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 12, i64 [[TMP1]])
+; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[DST]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 4, i32 [[N]])
+; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[MUL_RESULT2]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW3]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[MUL4:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP7]])
+; CHECK-NEXT:    [[MUL_RESULT5:%.*]] = extractvalue { i64, i1 } [[MUL4]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW6:%.*]] = extractvalue { i64, i1 } [[MUL4]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult ptr [[TMP8]], [[SCEVGEP]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw nsw i64 [[TMP13]], 12
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[TMP14]], 4
+; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw nsw i64 [[TMP13]], 4
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[TMP16]], 8
+; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP17]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP8]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP7]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i32 8, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP19]]
+; CHECK-NEXT:    [[TMP20:%.*]] = mul i32 [[N_VEC]], 4
+; CHECK-NEXT:    [[TMP21:%.*]] = mul i32 [[N_VEC]], 3
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP22:%.*]] = sext i32 [[OFFSET_IDX]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr nusw i32, ptr [[SRC]], i64 [[TMP22]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i32>, ptr [[TMP23]], align 4, !alias.scope [[META28:![0-9]+]]
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <32 x i32> [[WIDE_VEC]], <32 x i32> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-NEXT:    [[TMP24:%.*]] = sext <8 x i32> [[VEC_IND]] to <8 x i64>
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[DST]], <8 x i64> [[TMP24]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[STRIDED_VEC]], <8 x ptr> align 4 [[TMP25]], <8 x i1> splat (i1 true)), !alias.scope [[META31:![0-9]+]], !noalias [[META28]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[STRIDED_VEC9]], <8 x ptr> align 4 [[TMP25]], <8 x i1> splat (i1 true)), !alias.scope [[META31]], !noalias [[META28]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 24)
+; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.1 = phi i32 [ %iv.1.next, %loop ], [ 0, %entry ]
+  %iv.2 = phi i32 [ %iv.2.next, %loop ], [ 0, %entry ]
+  %iv.3 = phi i32 [ %iv.3.next, %loop ], [ 0, %entry ]
+  %iv.2.ext = sext i32 %iv.2 to i64
+  %gep.src.1 = getelementptr nusw i32, ptr %src, i64 %iv.2.ext
+  %l.0 = load i32, ptr %gep.src.1, align 4
+  %iv.3.ext = sext i32 %iv.3 to i64
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv.3.ext
+  store i32 %l.0, ptr %gep.dst, align 4
+  %gep.src.2 = getelementptr i8, ptr %gep.src.1, i64 4
+  %l.1 = load i32, ptr %gep.src.2, align 4
+  store i32 %l.1, ptr %gep.dst, align 4
+  %iv.1.next = add i32 %iv.1, 1
+  %iv.3.next = add i32 %iv.3, 3
+  %iv.2.next = add i32 %iv.2, 4
+  %ec = icmp eq i32 %iv.1, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }
 attributes #1 = { "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
 attributes #2 = { "target-cpu"="znver3" }
+attributes #3 = { "min-legal-vector-width"="0" "target-cpu"="skylake-avx512" }
