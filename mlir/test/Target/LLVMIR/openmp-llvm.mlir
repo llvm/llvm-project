@@ -769,6 +769,38 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
+// Test linear clause with mismatched types (i32 step, i64 variable)
+// This is a regression test for issue #173332
+llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
+  %step = llvm.mlir.constant(1 : i32) : i32
+
+// CHECK-LABEL: @simd_linear_i64_var_i32_step
+
+// CHECK: %[[LINEAR_VAR:.*]] = alloca i64
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca i64
+
+// CHECK: omp_loop.preheader:
+// CHECK: %[[LOAD:.*]] = load i64, ptr {{.*}}
+// CHECK: store i64 %[[LOAD]], ptr %[[LINEAR_VAR]]
+
+// CHECK: omp_loop.body:
+// Verify type conversions: iv (i32) is extended to i64 before multiplication
+// CHECK: %[[IV_I64:.*]] = sext i32 %omp_loop.iv to i64
+// CHECK: %[[LOAD:.*]] = load i64, ptr %[[LINEAR_VAR]], {{.*}}!llvm.access.group
+// Verify multiplication and addition use consistent i64 types
+// CHECK: %[[MUL:.*]] = mul i64 %[[IV_I64]], {{.*}}
+// CHECK: %[[ADD:.*]] = add i64 %[[LOAD]], %[[MUL]]
+// CHECK: store i64 %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
+  omp.simd linear(%x = %step : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i64]}
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @simd_simple_multiple
 llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   omp.simd {
