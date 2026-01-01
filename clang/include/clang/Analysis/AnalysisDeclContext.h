@@ -151,7 +151,7 @@ public:
 
   CFG *getCFG();
 
-  CFGStmtMap *getCFGStmtMap();
+  const CFGStmtMap *getCFGStmtMap();
 
   CFGReverseBlockReachabilityAnalysis *getCFGReachablityAnalysis();
 
