@@ -2024,7 +2024,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       // load). We also need to check WAW dependency with saved PC.
       Wait = AMDGPU::Waitcnt();
 
-      const auto &CallAddrOp = *TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+      const MachineOperand &CallAddrOp = TII->getCalleeOperand(MI);
       if (CallAddrOp.isReg()) {
         ScoreBrackets.determineWaitForPhysReg(
             SmemAccessCounter, CallAddrOp.getReg().asMCReg(), Wait);

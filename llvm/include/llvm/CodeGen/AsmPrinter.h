@@ -1044,6 +1044,7 @@ PreservedAnalyses runOnModuleNewPM(Module &M, ModuleAnalysisManager &MAM,
       continue;
     MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
     AsmPrinter.runOnMachineFunction(MF);
+    FAM.clearAnalysis<MachineFunctionAnalysis>(F);
   }
   AsmPrinter.doFinalization(M);
   return PreservedAnalyses::all();

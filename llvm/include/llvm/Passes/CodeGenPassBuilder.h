@@ -488,6 +488,8 @@ protected:
   /// Add standard basic block placement passes.
   void addBlockPlacement(PassManagerWrapper &PMW) const;
 
+  void addPostBBSections(PassManagerWrapper &PMW) const {}
+
   void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const {
     llvm_unreachable("addAsmPrinter is not overridden");
   }
@@ -727,7 +729,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     flushFPMsToMPM(PMW);
     addModulePass(ShadowStackGCLoweringPass(), PMW);
   }
-  addFunctionPass(LowerConstantIntrinsicsPass(), PMW);
 
   // Make sure that no unreachable blocks are instruction selected.
   addFunctionPass(UnreachableBlockElimPass(), PMW);
@@ -1061,6 +1062,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
   }
+
+  derived().addPostBBSections(PMW);
 
   addMachineFunctionPass(StackFrameLayoutAnalysisPass(), PMW);
 
