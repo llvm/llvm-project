@@ -85,7 +85,9 @@ public:
   using pointer = PointerT;
   using reference = ReferenceT;
 
-protected:
+  // Note: These were previously protected, but MSVC has trouble with SFINAE
+  // accessing protected members in derived class templates (specifically in
+  // iterator_adaptor_base::operator-). Making them public fixes the build.
   enum {
     IsRandomAccess = std::is_base_of<std::random_access_iterator_tag,
                                      IteratorCategoryT>::value,
@@ -93,6 +95,7 @@ protected:
                                       IteratorCategoryT>::value,
   };
 
+protected:
   /// A proxy object for computing a reference via indirecting a copy of an
   /// iterator. This is used in APIs which need to produce a reference via
   /// indirection but for which the iterator object might be a temporary. The
