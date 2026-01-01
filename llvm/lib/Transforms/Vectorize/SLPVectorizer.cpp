@@ -21267,9 +21267,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           if (ScheduleData *OpSD = getScheduleData(Op);
               OpSD && OpSD->hasValidDependencies()) {
             OpSD->clearDirectDependencies();
-            if (RegionHasStackSave ||
-                !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
-              ControlDependentMembers.push_back(OpSD);
+            ControlDependentMembers.push_back(OpSD);
           }
         }
       }
