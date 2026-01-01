@@ -113,7 +113,7 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) override;
 
-  void addConstant(const Relocation &r);
+  void addConstant(const Relocation &r) { addReloc(r); }
   void addEntry(const Symbol &sym);
   void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
