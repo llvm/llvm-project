@@ -37,6 +37,10 @@ static cl::opt<unsigned> SimplifyDemandedVectorEltsDepthLimit(
         "Depth limit when simplifying vector instructions and their operands"),
     cl::Hidden, cl::init(10));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
 /// constant that are not demanded. If so, shrink the constant and return true.
@@ -2192,8 +2196,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
         Value *X = CI->getArgOperand(0);
         Value *IsPosInfOrNan = Builder.CreateFCmpFMF(
             FCmpInst::FCMP_UEQ, X, ConstantFP::getInfinity(VTy), FMF);
-        return Builder.CreateSelectFMF(IsPosInfOrNan, X,
-                                       ConstantFP::getZero(VTy), FMF);
+        Value *ZeroOrInf = Builder.CreateSelectFMF(
+            IsPosInfOrNan, X, ConstantFP::getZero(VTy), FMF);
+        // We do not know whether an infinity or a NaN is more likely here,
+        // so mark the branch weights as unkown.
+        if (auto *SI = dyn_cast<SelectInst>(ZeroOrInf))
+          if (!ProfcheckDisableMetadataFixes)
+            setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
+        return ZeroOrInf;
       }
 
       // Only perform nan propagation.
