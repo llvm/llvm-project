@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_IR2VEC_EMB_TOOL_H
-#define LLVM_TOOLS_LLVM_IR2VEC_EMB_TOOL_H
+#ifndef LLVM_TOOLS_LLVM_IR2VEC_UTILS_H
+#define LLVM_TOOLS_LLVM_IR2VEC_UTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
@@ -198,4 +198,4 @@ struct MIRContext {
 
 } // namespace llvm
 
-#endif // LLVM_TOOLS_LLVM_IR2VEC_EMB_TOOL_H
+#endif // LLVM_TOOLS_LLVM_IR2VEC_UTILS_H
