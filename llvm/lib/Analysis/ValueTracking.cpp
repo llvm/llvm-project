@@ -4923,8 +4923,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
   if (auto *CFP = dyn_cast<ConstantFP>(V)) {
-    Known.KnownFPClasses = CFP->getValueAPF().classify();
-    Known.SignBit = CFP->isNegative();
+    Known = KnownFPClass(CFP->getValueAPF());
     return;
   }
 
@@ -5726,8 +5725,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known.knownNot(fcNegative);
 
     KnownFPClass KnownLHS, KnownRHS;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
-                        Q, Depth + 1);
 
     const APFloat *CRHS;
     if (match(Op->getOperand(1), m_APFloat(CRHS))) {
@@ -5744,6 +5741,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       int MinKnownExponent = ilogb(*CRHS);
       if (MinKnownExponent >= MantissaBits)
         Known.knownNot(fcSubnormal);
+
+      KnownRHS = KnownFPClass(*CRHS);
+    } else {
+      computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
+                          Q, Depth + 1);
     }
 
     computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
