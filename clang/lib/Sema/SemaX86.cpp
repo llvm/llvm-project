@@ -1047,7 +1047,7 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
 bool SemaX86::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
                                     const SmallVectorImpl<SourceLocation> &Locs,
                                     SmallVectorImpl<SmallString<64>> &NewParams,
-                                    const SourceLocation &AttrLoc) {
+                                    SourceLocation AttrLoc) {
   using namespace DiagAttrParams;
 
   assert(Params.size() == Locs.size() &&
