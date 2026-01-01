@@ -690,7 +690,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
-  def SLX          : RVPBinary_rr<0b0001, 0b11, 0b001, "slx">;
+  def SLX          : RVPTernary_rrr<0b0001, 0b11, 0b001, "slx">;
 
   def PMUL_H_B01   : RVPBinary_rr<0b0010, 0b00, 0b001, "pmul.h.b01">;
 
@@ -1473,6 +1473,11 @@ def riscv_pmulhsu : RVSDNode<"PMULHSU", SDT_RISCVPBinOp>;
 
 let Predicates = [HasStdExtP] in {
   def : PatGpr<abs, ABS>;
+
+  def : Pat<(XLenVT (fshl GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)),
+            (SLX GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)>;
+  def : Pat<(XLenVT (fshr GPR:$rs1, GPR:$rd, shiftMaskXLen:$rs2)),
+            (SRX GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)>;
 
   // Basic 8-bit arithmetic patterns
   def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
