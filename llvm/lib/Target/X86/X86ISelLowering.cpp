@@ -24553,13 +24553,13 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     }
   }
 
-  // ICMP_EQ(AND(X,C),C) -> SRA(SHL(X,LOG2(C)),BW-1) iff C is power-of-2.
+  // ICMP_EQ(AND(X,C),C) -> SRA(SHL(X,CTLZ(C)),BW-1) iff C is power-of-2.
   if (Cond == ISD::SETEQ && Op0.getOpcode() == ISD::AND &&
       Op0.getOperand(1) == Op1 && Op0.hasOneUse()) {
     ConstantSDNode *C1 = isConstOrConstSplat(Op1);
     if (C1 && C1->getAPIntValue().isPowerOf2()) {
       unsigned BitWidth = VT.getScalarSizeInBits();
-      unsigned ShiftAmt = BitWidth - C1->getAPIntValue().logBase2() - 1;
+      unsigned ShiftAmt = C1->getAPIntValue().countl_zero();
 
       SDValue Result = Op0.getOperand(0);
       Result = DAG.getNode(ISD::SHL, dl, VT, Result,
@@ -48466,8 +48466,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       SmallVector<int, 32> ShlVals;
       for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
         auto *MaskVal = cast<ConstantSDNode>(Mask.getOperand(i));
-        ShlVals.push_back(EltBitWidth - 1 -
-                          MaskVal->getAPIntValue().exactLogBase2());
+        ShlVals.push_back(MaskVal->getAPIntValue().countl_zero());
       }
       // vsel ((X & C) == 0), LHS, RHS --> vsel ((shl X, C') < 0), RHS, LHS
       MVT MskVT = Mask.getSimpleValueType();
