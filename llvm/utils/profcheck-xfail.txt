@@ -313,6 +313,7 @@ Transforms/InstCombine/select-of-symmetric-selects.ll
 Transforms/InstCombine/select-select.ll
 Transforms/InstCombine/shift.ll
 Transforms/InstCombine/simplify-demanded-fpclass.ll
+Transforms/InstCombine/simplify-demanded-fpclass-exp.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-or.ll
 Transforms/InstCombine/sink-not-into-logical-and.ll
