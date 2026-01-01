@@ -152,6 +152,8 @@ LanguageFeatureControl::LanguageFeatureControl() {
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
+  warnUsage_.set(UsageWarning::UsedUndefinedVariable);
+  warnUsage_.set(UsageWarning::BadValueInDeadCode);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
