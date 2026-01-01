@@ -4925,19 +4925,28 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         break;
       Data.MotionModifiers.push_back(Modifier);
       Data.MotionModifiersLoc.push_back(Tok.getLocation());
-      ConsumeToken();
-      if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
-        IsInvalidMapperModifier = parseMapperModifier(Data);
-        if (IsInvalidMapperModifier)
-          break;
-      }
-      // OpenMP < 5.1 doesn't permit a ',' or additional modifiers.
-      if (getLangOpts().OpenMP < 51)
-        break;
-      // OpenMP 5.1 accepts an optional ',' even if the next character is ':'.
-      // TODO: Is that intentional?
-      if (Tok.is(tok::comma))
+      if (PP.getSpelling(Tok) == "iterator" && getLangOpts().OpenMP >= 51) {
+        ExprResult Tail;
+        Tail = ParseOpenMPIteratorsExpr();
+        Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
+                                           /*DiscardedValue=*/false);
+        if (Tail.isUsable())
+          Data.IteratorExpr = Tail.get();
+      } else {
         ConsumeToken();
+        if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
+          IsInvalidMapperModifier = parseMapperModifier(Data);
+          if (IsInvalidMapperModifier)
+            break;
+        }
+        // OpenMP < 5.1 doesn't permit a ',' or additional modifiers.
+        if (getLangOpts().OpenMP < 51)
+          break;
+        // OpenMP 5.1 accepts an optional ',' even if the next character is ':'.
+        // TODO: Is that intentional?
+        if (Tok.is(tok::comma))
+          ConsumeToken();
+      }
     }
     if (!Data.MotionModifiers.empty() && Tok.isNot(tok::colon)) {
       if (!IsInvalidMapperModifier) {

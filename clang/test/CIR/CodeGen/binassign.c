@@ -125,8 +125,7 @@ int ignore_result_assign() {
 // CIR:         %[[VAL_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:         %[[VAL_5:.*]] = cir.const #cir.int<5> : !s32i
 // CIR:         cir.store{{.*}} %[[VAL_5]], %[[I]] : !s32i, !cir.ptr<!s32i>
-// CIR:         %[[ARR_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
-// CIR:         %[[ARR_ELEM:.*]] = cir.ptr_stride %[[ARR_DECAY]], %[[VAL_5]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5]] : !s32i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR:         %[[ARR_LOAD:.*]] = cir.load{{.*}} %[[ARR_ELEM]] : !cir.ptr<!s32i>, !s32i
 // CIR:         cir.store{{.*}} %[[ARR_LOAD]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
@@ -157,9 +156,8 @@ int ignore_result_assign() {
 // LLVM:         store i32 123, ptr %[[I_PTR]]
 // LLVM:         store i32 123, ptr %[[J_PTR]]
 // LLVM:         store i32 5, ptr %[[I_PTR]]
-// LLVM:         %[[GEP1:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i32 0
-// LLVM:         %[[GEP2:.*]] = getelementptr i32, ptr %[[GEP1]], i64 5
-// LLVM:         %[[ARR_VAL:.*]] = load i32, ptr %[[GEP2]]
+// LLVM:         %[[GEP:.*]] = getelementptr [10 x i32], ptr %[[ARR_PTR]], i32 0, i64 5
+// LLVM:         %[[ARR_VAL:.*]] = load i32, ptr %[[GEP]]
 // LLVM:         store i32 %[[ARR_VAL]], ptr %[[J_PTR]]
 // LLVM:         store ptr null, ptr %[[Q_PTR]]
 // LLVM:         br label

@@ -465,19 +465,19 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                     - Radeon RX 7900 XT
                                                                         IDs                           - Radeon RX 7900 GRE
 
-     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7800 XT
+                                                    - wavefrontsize64   flat                          - Radeon RX 7700 XT
+                                                                        scratch                       - Radeon RX 7700
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
-     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7600 XT
+                                                    - wavefrontsize64   flat                          - Radeon RX 7600
+                                                                        scratch
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
      ``gfx1103``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -1527,11 +1527,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
-  llvm.amdgcn.atomic.cond.sub.u32                  Provides direct access to flat_atomic_cond_sub_u32, global_atomic_cond_sub_u32
-                                                   and ds_cond_sub_u32 based on address space on gfx12 targets. This
-                                                   performs a subtraction only if the memory value is greater than or
-                                                   equal to the data value.
-
   llvm.amdgcn.s.barrier.signal.isfirst             Provides access to the s_barrier_signal_first instruction;
                                                    additionally ensures that the result value is valid even when the
                                                    intrinsic is used from a wave that is not running in a workgroup.
@@ -1606,6 +1601,14 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 .. TODO::
 
    List AMDGPU intrinsics.
+
+WMMA clamp operand
+~~~~~~~~~~~~~~~~~~
+
+The WMMA integer matrix multiply intrinsics and C builtins (IU4/IU8, wave32 and
+wave64 forms) accept an optional boolean clamp operand. It defaults to 0 (no
+saturation) for backward compatibility. When set, the hardware clamps the
+32-bit accumulation result instead of allowing wraparound.
 
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

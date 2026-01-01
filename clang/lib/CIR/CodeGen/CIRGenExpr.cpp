@@ -188,6 +188,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_HLSLArrayRValue:
     case CK_HLSLElementwiseCast:
     case CK_HLSLVectorTruncation:
+    case CK_HLSLMatrixTruncation:
     case CK_IntToOCLSampler:
     case CK_IntegralCast:
     case CK_IntegralComplexCast:
@@ -281,7 +282,6 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
   QualType t = e->getType();
 
   // If it's thread_local, emit a call to its wrapper function instead.
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
   if (vd->getTLSKind() == VarDecl::TLS_Dynamic)
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "emitGlobalVarDeclLValue: thread_local variable");
@@ -317,7 +317,6 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
                                        LValueBaseInfo baseInfo, bool isInit,
                                        bool isNontemporal) {
-  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
     // Boolean vectors use `iN` as storage type.
@@ -568,7 +567,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              QualType ty, SourceLocation loc,
                                              LValueBaseInfo baseInfo) {
-  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
+  // Traditional LLVM codegen handles thread local separately, CIR handles
+  // as part of getAddrOfGlobalVar (GetGlobalOp).
   mlir::Type eltTy = addr.getElementType();
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
@@ -681,6 +681,29 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   }
 
   return RValue::get(resultVec);
+}
+
+LValue
+CIRGenFunction::emitPointerToDataMemberBinaryExpr(const BinaryOperator *e) {
+  assert((e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI) &&
+         "unexpected binary operator opcode");
+
+  Address baseAddr = Address::invalid();
+  if (e->getOpcode() == BO_PtrMemD)
+    baseAddr = emitLValue(e->getLHS()).getAddress();
+  else
+    baseAddr = emitPointerWithAlignment(e->getLHS());
+
+  const auto *memberPtrTy = e->getRHS()->getType()->castAs<MemberPointerType>();
+
+  mlir::Value memberPtr = emitScalarExpr(e->getRHS());
+
+  LValueBaseInfo baseInfo;
+  assert(!cir::MissingFeatures::opTBAA());
+  Address memberAddr = emitCXXMemberDataPointerAddress(e, baseAddr, memberPtr,
+                                                       memberPtrTy, &baseInfo);
+
+  return makeAddrLValue(memberAddr, memberPtrTy->getPointeeType(), baseInfo);
 }
 
 /// Generates lvalue for partial ext_vector access.
@@ -1323,6 +1346,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
@@ -1761,10 +1785,8 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     return emitLValue(e->getRHS());
   }
 
-  if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI) {
-    cgm.errorNYI(e->getSourceRange(), "member pointers");
-    return {};
-  }
+  if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI)
+    return emitPointerToDataMemberBinaryExpr(e);
 
   assert(e->getOpcode() == BO_Assign && "unexpected binary l-value");
 
@@ -1870,8 +1892,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");
-        clone.setInlineKindAttr(cir::InlineAttr::get(
-            &cgm.getMLIRContext(), cir::InlineKind::AlwaysInline));
+        clone.setInlineKind(cir::InlineKind::AlwaysInline);
       }
       return CIRGenCallee::forDirect(clone, gd);
     }
