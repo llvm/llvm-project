@@ -357,6 +357,13 @@ static bool canSkipClobberingStore(const StoreInst *SI,
 
   auto *StoredVal = SI->getValueOperand();
   if (isa<Argument>(StoredVal)) {
+    auto *SIPtr = SI->getPointerOperand();
+    // If this store is the first one to write /read from this pointer
+    // then we can skip this store as well.
+    // i.e. skipping this store won't change the value stored at this
+    // memory location.
+    if (!SIPtr->hasOneUse())
+      return false;
     return true;
   }
 
