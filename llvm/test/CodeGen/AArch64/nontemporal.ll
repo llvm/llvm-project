@@ -793,6 +793,40 @@ entry:
   ret void
 }
 
+define void @test_stnp_i64_register_offset_w(ptr %ptr, i64 %v, i32 %offset) {
+; CHECK-LE-LABEL: test_stnp_i64_register_offset_w:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    add x8, x0, w2, sxtw #3
+; CHECK-LE-NEXT:    lsr x9, x1, #32
+; CHECK-LE-NEXT:    stnp w1, w9, [x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i64_register_offset_w:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    str x1, [x0, w2, sxtw #3]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i32 %offset
+  store i64 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_i64_register_offset_x(ptr %ptr, i64 %v, i64 %offset) {
+; CHECK-LE-LABEL: test_stnp_i64_register_offset_x:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-LE-NEXT:    lsr x9, x1, #32
+; CHECK-LE-NEXT:    stnp w1, w9, [x8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_i64_register_offset_x:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    str x1, [x0, x2, lsl #3]
+; CHECK-BE-NEXT:    ret
+  %gep = getelementptr i64, ptr %ptr, i64 %offset
+  store i64 %v, ptr %gep, !nontemporal !0
+  ret void
+}
+
 !0 = !{ i32 1 }
 
 attributes #0 = { nounwind }
