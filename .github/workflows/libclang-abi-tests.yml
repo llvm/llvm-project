@@ -85,7 +85,7 @@ jobs:
     needs: abi-dump-setup
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:9138b6aea737d935e92ad2afdf5d49325880f9b187b5b979b135ac80cd456135" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:ef869c1d087258db22c2b19b93f585d53c0d0e70952aaf02d45866ad26a200a0" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
     strategy:
       matrix:
         name:
@@ -129,7 +129,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:9138b6aea737d935e92ad2afdf5d49325880f9b187b5b979b135ac80cd456135" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:ef869c1d087258db22c2b19b93f585d53c0d0e70952aaf02d45866ad26a200a0" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
     needs:
       - abi-dump-setup
       - abi-dump
