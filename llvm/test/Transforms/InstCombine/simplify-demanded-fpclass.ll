@@ -1137,8 +1137,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__select_assumed_call_result_only_
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MUST_BE_INF]])
 ; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_INF]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[MUST_BE_INF]], float [[Y]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[Y]]
 ;
   %must.be.inf = call float @extern()
   %fabs = call float @llvm.fabs.f32(float %must.be.inf)
@@ -1339,4 +1338,22 @@ define nofpclass(ninf) float @ret_nofpclass_ninf__maxnum_pinf(i1 %cond, float %x
 ;
   %max = call float @llvm.maximumnum.f32(float %x, float 0x7FF0000000000000)
   ret float %max
+}
+
+declare nofpclass(inf norm sub zero) float @returns_nan()
+
+; %nan has multiple uses, but we should still know what class is is
+; %allowing this to fold to a single select.
+define nofpclass(nan) float @known_class_multiple_uses(i1 %cond0, i1 %cond1, i1 %cond2, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(nan) float @known_class_multiple_uses
+; CHECK-SAME: (i1 [[COND0:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[NAN:%.*]] = call float @returns_nan()
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[COND2]], float [[UNKNOWN0]], float [[UNKNOWN1]]
+; CHECK-NEXT:    ret float [[SELECT2]]
+;
+  %nan = call float @returns_nan()
+  %select0 = select i1 %cond0, float %unknown0, float %nan
+  %select1 = select i1 %cond1, float %nan, float %unknown1
+  %select2 = select i1 %cond2, float %select0, float %select1
+  ret float %select2
 }
