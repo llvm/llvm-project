@@ -2287,6 +2287,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     Known = KnownLHS | KnownRHS;
     break;
   }
+  case Instruction::ExtractElement: {
+    // TODO: Handle demanded element mask
+    if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
+      return I;
+    break;
+  }
   default:
     Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
     break;
