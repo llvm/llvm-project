@@ -54,7 +54,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "emb-tool.h"
+#include "utils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/IR/BasicBlock.h"
