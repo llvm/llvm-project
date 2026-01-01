@@ -24861,46 +24861,8 @@ public:
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
-    SmallVector<SmallVector<Value *>> LocalReducedVals;
-    // Try merge consecutive reduced values into a single vectorizable group and
-    // check, if they can be vectorized as copyables.
-    for (ArrayRef<Value *> RV : ReducedVals) {
-      // Loads are not very compatible with undefs.
-      if (isa<UndefValue>(RV.front()) &&
-          (States.empty() || !States.back() ||
-           States.back().getOpcode() == Instruction::Load)) {
-        LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
-        States.push_back(InstructionsState::invalid());
-        continue;
-      }
-      if (!LocalReducedVals.empty() &&
-          isa<UndefValue>(LocalReducedVals.back().front()) &&
-          isa<LoadInst>(RV.front())) {
-        LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
-        States.push_back(getSameOpcode(RV, TLI));
-        continue;
-      }
-      SmallVector<Value *> Ops;
-      if (!LocalReducedVals.empty())
-        Ops = LocalReducedVals.back();
-      Ops.append(RV.begin(), RV.end());
-      InstructionsCompatibilityAnalysis Analysis(DT, DL, *TTI, TLI);
-      InstructionsState OpS =
-          Analysis.buildInstructionsState(Ops, V, VectorizeCopyableElements);
-      if (LocalReducedVals.empty()) {
-        LocalReducedVals.push_back(Ops);
-        States.push_back(OpS);
-        continue;
-      }
-      if (OpS) {
-        LocalReducedVals.back().swap(Ops);
-        States.back() = OpS;
-        continue;
-      }
-      LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
+    for (ArrayRef<Value *> RV : ReducedVals)
       States.push_back(getSameOpcode(RV, TLI));
-    }
-    ReducedVals.swap(LocalReducedVals);
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
       InstructionsState S = States[I];
@@ -24915,10 +24877,8 @@ public:
         // Also check if the instruction was folded to constant/other value.
         auto *Inst = dyn_cast<Instruction>(RdxVal);
         if ((Inst && isVectorLikeInstWithConstOps(Inst) &&
-             (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
-                     !S.isCopyableElement(Inst)))) ||
-            (S && !Inst && !isa<PoisonValue>(RdxVal) &&
-             !S.isCopyableElement(RdxVal)))
+             (!S || !S.getMatchingMainOpOrAltOp(Inst))) ||
+            (S && !Inst))
           continue;
         Candidates.push_back(RdxVal);
         TrackedToOrig.try_emplace(RdxVal, ReducedVal);
@@ -25520,8 +25480,6 @@ private:
       // Scalar cost is repeated for N-1 elements.
       int Cnt = ReducedVals.size();
       for (Value *RdxVal : ReducedVals) {
-        if (!isa<Instruction>(RdxVal))
-          continue;
         if (Cnt == 1)
           break;
         --Cnt;
