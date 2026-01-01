@@ -206,21 +206,17 @@ static void dropUsesAndEraseResults(Operation *op, BitVector toErase) {
   for (OpResult result : op->getResults())
     if (!toErase[result.getResultNumber()])
       newResultTypes.push_back(result.getType());
-  OpBuilder builder(op);
-  builder.setInsertionPointAfter(op);
+  IRRewriter rewriter(op);
+  rewriter.setInsertionPointAfter(op);
   OperationState state(op->getLoc(), op->getName().getStringRef(),
                        op->getOperands(), newResultTypes, op->getAttrs());
   for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i)
     state.addRegion();
-  Operation *newOp = builder.create(state);
+  Operation *newOp = rewriter.create(state);
   for (const auto &[index, region] : llvm::enumerate(op->getRegions())) {
-    Region &newRegion = newOp->getRegion(index);
     // Move all blocks of `region` into `newRegion`.
-    Block *temp = new Block();
-    newRegion.push_back(temp);
-    while (!region.empty())
-      region.front().moveBefore(temp);
-    temp->erase();
+    Region &newRegion = newOp->getRegion(index);
+    rewriter.inlineRegionBefore(region, newRegion, newRegion.begin());
   }
 
   unsigned indexOfNextNewCallOpResultToReplace = 0;
