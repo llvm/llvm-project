@@ -891,6 +891,41 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   }
 }
 
+/// Compute and return the end value for \p WideIV, unless it is truncated. If
+/// the induction recipe is not canonical, creates a VPDerivedIVRecipe to
+/// compute the end value of the induction.
+static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
+                                                 VPBuilder &VectorPHBuilder,
+                                                 VPTypeAnalysis &TypeInfo,
+                                                 VPValue *VectorTC) {
+  auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
+  // Truncated wide inductions resume from the last lane of their vector value
+  // in the last vector iteration which is handled elsewhere.
+  if (WideIntOrFp && WideIntOrFp->getTruncInst())
+    return nullptr;
+
+  VPValue *Start = WideIV->getStartValue();
+  VPValue *Step = WideIV->getStepValue();
+  const InductionDescriptor &ID = WideIV->getInductionDescriptor();
+  VPValue *EndValue = VectorTC;
+  if (!WideIntOrFp || !WideIntOrFp->isCanonical()) {
+    EndValue = VectorPHBuilder.createDerivedIV(
+        ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
+        Start, VectorTC, Step);
+  }
+
+  // EndValue is derived from the vector trip count (which has the same type as
+  // the widest induction) and thus may be wider than the induction here.
+  Type *ScalarTypeOfWideIV = TypeInfo.inferScalarType(WideIV);
+  if (ScalarTypeOfWideIV != TypeInfo.inferScalarType(EndValue)) {
+    EndValue = VectorPHBuilder.createScalarCast(Instruction::Trunc, EndValue,
+                                                ScalarTypeOfWideIV,
+                                                WideIV->getDebugLoc());
+  }
+
+  return EndValue;
+}
+
 /// Check if \p VPV is an untruncated wide induction, either before or after the
 /// increment. If so return the header IV (before the increment), otherwise
 /// return null.
@@ -1054,11 +1089,28 @@ static VPValue *optimizeLatchExitInductionUser(
   return nullptr;
 }
 
+static void recursivelyDeleteDeadRecipes(VPValue *V);
+
 void VPlanTransforms::optimizeInductionExitUsers(
-    VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues,
-    PredicatedScalarEvolution &PSE) {
+    VPlan &Plan, PredicatedScalarEvolution &PSE) {
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan);
+  VPBuilder VectorPHBuilder(
+      cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));
+
+  // Compute end values for all inductions.
+  DenseMap<VPValue *, VPValue *> EndValues;
+  for (auto &Phi : VectorRegion->getEntryBasicBlock()->phis()) {
+    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&Phi);
+    if (!WideIV)
+      continue;
+    if (VPValue *EndValue = tryToComputeEndValueForInduction(
+            WideIV, VectorPHBuilder, TypeInfo, &Plan.getVectorTripCount()))
+      EndValues[WideIV] = EndValue;
+  }
+
+  // Optimize induction exit users in exit blocks.
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
     for (VPRecipeBase &R : ExitVPBB->phis()) {
       auto *ExitIRI = cast<VPIRPhi>(&R);
@@ -1076,6 +1128,22 @@ void VPlanTransforms::optimizeInductionExitUsers(
           ExitIRI->setOperand(Idx, Escape);
       }
     }
+  }
+
+  // Optimize resume phis for inductions in the scalar preheader.
+  for (VPRecipeBase &PhiR : Plan.getScalarPreheader()->phis()) {
+    auto *ResumePhiR = cast<VPPhi>(&PhiR);
+    VPValue *Incoming = ResumePhiR->getOperand(0);
+
+    VPValue *ExtractedFrom;
+    if (!match(Incoming, m_ExtractLastLaneOfLastPart(m_VPValue(ExtractedFrom))))
+      continue;
+    VPValue *EndValue = EndValues.lookup(ExtractedFrom);
+    if (!EndValue)
+      continue;
+    ResumePhiR->setOperand(0, EndValue);
+    recursivelyDeleteDeadRecipes(Incoming);
+    continue;
   }
 }
 
@@ -5124,69 +5192,23 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   MiddleTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
-/// Compute and return the end value for \p WideIV, unless it is truncated. If
-/// the induction recipe is not canonical, creates a VPDerivedIVRecipe to
-/// compute the end value of the induction.
-static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
-                                                 VPBuilder &VectorPHBuilder,
-                                                 VPTypeAnalysis &TypeInfo,
-                                                 VPValue *VectorTC) {
-  auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-  // Truncated wide inductions resume from the last lane of their vector value
-  // in the last vector iteration which is handled elsewhere.
-  if (WideIntOrFp && WideIntOrFp->getTruncInst())
-    return nullptr;
-
-  VPValue *Start = WideIV->getStartValue();
-  VPValue *Step = WideIV->getStepValue();
-  const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-  VPValue *EndValue = VectorTC;
-  if (!WideIntOrFp || !WideIntOrFp->isCanonical()) {
-    EndValue = VectorPHBuilder.createDerivedIV(
-        ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
-        Start, VectorTC, Step);
-  }
-
-  // EndValue is derived from the vector trip count (which has the same type as
-  // the widest induction) and thus may be wider than the induction here.
-  Type *ScalarTypeOfWideIV = TypeInfo.inferScalarType(WideIV);
-  if (ScalarTypeOfWideIV != TypeInfo.inferScalarType(EndValue)) {
-    EndValue = VectorPHBuilder.createScalarCast(Instruction::Trunc, EndValue,
-                                                ScalarTypeOfWideIV,
-                                                WideIV->getDebugLoc());
-  }
-
-  return EndValue;
-}
-
-void VPlanTransforms::updateScalarResumePhis(
-    VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues) {
-  VPTypeAnalysis TypeInfo(Plan);
+void VPlanTransforms::updateScalarResumePhis(VPlan &Plan) {
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  VPBuilder VectorPHBuilder(
-      cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   for (VPRecipeBase &PhiR : Plan.getScalarPreheader()->phis()) {
     auto *ResumePhiR = cast<VPPhi>(&PhiR);
 
-    // TODO: Extract final value from induction recipe initially, optimize to
-    // pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR = cast<VPHeaderPHIRecipe>(ResumePhiR->getOperand(0));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
-      if (VPValue *EndValue = tryToComputeEndValueForInduction(
-              WideIVR, VectorPHBuilder, TypeInfo, &Plan.getVectorTripCount())) {
-        IVEndValues[WideIVR] = EndValue;
-        ResumePhiR->setOperand(0, EndValue);
-        ResumePhiR->setName("bc.resume.val");
-        continue;
-      }
-      // TODO: Also handle truncated inductions here. Computing end-values
-      // separately should be done as VPlan-to-VPlan optimization, after
-      // legalizing all resume values to use the last lane from the loop.
-      assert(cast<VPWidenIntOrFpInductionRecipe>(VectorPhiR)->getTruncInst() &&
-             "should only skip truncated wide inductions");
+      auto *ExtractPart =
+          MiddleBuilder.createNaryOp(VPInstruction::ExtractLastPart, WideIVR);
+      auto *ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractLastLane, ExtractPart, DebugLoc::getUnknown(),
+          "bc.resume.val");
+      ResumePhiR->setOperand(0, ResumeFromVectorLoop);
+      ResumePhiR->setName("bc.resume.val");
       continue;
     }
 
