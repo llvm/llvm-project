@@ -58292,7 +58292,8 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
   //               (extract_elt Mul, 3),
   //               (extract_elt Mul, 5),
   //                   ...
-  // and identify Mul.
+  // and identify Mul. Mul must be either ISD::MUL, or can be ISD::SIGN_EXTEND
+  // in which case we add a trivial multiplication by 1.
   SDValue Mul;
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; i += 2) {
     SDValue Op0L = Op0->getOperand(i), Op1L = Op1->getOperand(i),
@@ -58323,7 +58324,8 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       // with 2X number of vector elements than the BUILD_VECTOR.
       // Both extracts must be from same MUL.
       Mul = Vec0L;
-      if (Mul.getOpcode() != ISD::MUL ||
+      if ((Mul.getOpcode() != ISD::MUL &&
+           Mul.getOpcode() != ISD::SIGN_EXTEND) ||
           Mul.getValueType().getVectorNumElements() != 2 * e)
         return SDValue();
     }
@@ -58332,16 +58334,30 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       return SDValue();
   }
 
-  // Check if the Mul source can be safely shrunk.
-  ShrinkMode Mode;
-  if (!canReduceVMulWidth(Mul.getNode(), DAG, Mode) ||
-      Mode == ShrinkMode::MULU16)
-    return SDValue();
-
   EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
                                  VT.getVectorNumElements() * 2);
-  SDValue N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(0));
-  SDValue N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(1));
+
+  SDValue N0, N1;
+  if (Mul.getOpcode() == ISD::MUL) {
+    // Check if the Mul source can be safely shrunk.
+    ShrinkMode Mode;
+    if (!canReduceVMulWidth(Mul.getNode(), DAG, Mode) ||
+        Mode == ShrinkMode::MULU16)
+      return SDValue();
+
+    N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(0));
+    N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(1));
+  } else {
+    assert(Mul.getOpcode() == ISD::SIGN_EXTEND);
+
+    // Add a trivial multiplication with 1 so that we can make use of VPMADDWD.
+    N0 = Mul.getOperand(0);
+
+    if (N0.getValueType() != TruncVT)
+      return SDValue();
+
+    N1 = DAG.getConstant(1, DL, TruncVT);
+  }
 
   auto PMADDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                          ArrayRef<SDValue> Ops) {
