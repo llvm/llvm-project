@@ -58168,8 +58168,8 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   if (!IsSub && LHS.getOpcode() == X86ISD::ADC &&
       isa<ConstantSDNode>(LHS.getOperand(1)) && isa<ConstantSDNode>(RHS) &&
       !needCarryOrOverflowFlag(SDValue(N, 1))) {
-    auto *C1 = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
-    auto *C2 = dyn_cast<ConstantSDNode>(RHS);
+    auto *C1 = cast<ConstantSDNode>(LHS.getOperand(1));
+    auto *C2 = cast<ConstantSDNode>(RHS);
     APInt Sum = C1->getAPIntValue() + C2->getAPIntValue();
     return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0),
                        DAG.getConstant(Sum, DL, VT), LHS.getOperand(2));
