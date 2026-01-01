@@ -10,11 +10,57 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "HexagonSelectionDAGInfo.h"
 #include "HexagonTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+
+#define GET_SDNODE_DESC
+#include "HexagonGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-selectiondag-info"
+
+HexagonSelectionDAGInfo::HexagonSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(HexagonGenSDNodeInfo) {}
+
+const char *HexagonSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
+#define CASE(NAME)                                                             \
+  case HexagonISD::NAME:                                                       \
+    return "HexagonISD::" #NAME
+
+  // These nodes don't have corresponding entries in *.td files yet.
+  switch (static_cast<HexagonISD::NodeType>(Opcode)) {
+    CASE(CALLR);
+    CASE(VROR);
+    CASE(D2P);
+    CASE(P2D);
+    CASE(V2Q);
+    CASE(Q2V);
+    CASE(TL_EXTEND);
+    CASE(TL_TRUNCATE);
+    CASE(TYPECAST);
+    CASE(ISEL);
+  }
+#undef CASE
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
+}
+
+void HexagonSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
+                                               const SDNode *N) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case HexagonISD::VALIGNADDR:
+    // invalid number of operands; expected 1, got 2
+  case HexagonISD::VINSERTW0:
+    // operand #1 must have type i32, but has type v4i8/v2i16
+    return;
+  }
+
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+}
 
 SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
