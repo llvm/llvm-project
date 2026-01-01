@@ -355,30 +355,49 @@ static bool canSkipClobberingStore(const StoreInst *SI,
       MemLoc.Size.getValue().getKnownMinValue())
     return false;
 
-  auto *StoredVal = SI->getValueOperand();
-  if (isa<Argument>(StoredVal)) {
-    auto *SIPtr = SI->getPointerOperand();
-    // If this store is the first one to write /read from this pointer
-    // then we can skip this store as well.
-    // i.e. skipping this store won't change the value stored at this
-    // memory location.
-    if (!SIPtr->hasOneUse())
-      return false;
-    return true;
+  if (auto *LI = dyn_cast<LoadInst>(SI->getValueOperand())) {
+    if (LI->getParent() == SI->getParent() &&
+        BatchAA.alias(MemoryLocation::get(LI), MemLoc) ==
+            AliasResult::MustAlias) {
+      unsigned NumVisitedInsts = 0;
+      bool Clean = true;
+      for (const Instruction *I = LI; I != SI; I = I->getNextNode()) {
+        if (++NumVisitedInsts > ScanLimit ||
+            isModSet(BatchAA.getModRefInfo(I, MemLoc))) {
+          Clean = false;
+          break;
+        }
+      }
+      if (Clean)
+        return true;
+    }
   }
 
-  auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
-  if (!LI || LI->getParent() != SI->getParent())
-    return false;
-  if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
-    return false;
+  // Checking if the store is writing the same value that MemLoc contains now.
+  // Then we can skip this store as well, because it does not effect the value
+  // loaded from MemLoc.
+  auto *StoredVal = SI->getValueOperand();
   unsigned NumVisitedInsts = 0;
-  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
-    if (++NumVisitedInsts > ScanLimit ||
-        isModSet(BatchAA.getModRefInfo(I, MemLoc)))
-      return false;
+  for (auto It = std::next(SI->getReverseIterator()),
+            End = SI->getParent()->rend();
+       It != End; ++It) {
+    if (++NumVisitedInsts > ScanLimit)
+      break;
+    const Instruction *I = &*It;
+    if (!isModSet(BatchAA.getModRefInfo(I, MemLoc)))
+      continue;
+    // I is the most recent modifier of MemLoc before SI.
+    // If it's a must-alias store of the exact same SSA value, SI is a no-op.
+    if (const auto *PrevSI = dyn_cast<StoreInst>(I)) {
+      if (PrevSI->getValueOperand() == StoredVal &&
+          BatchAA.alias(MemoryLocation::get(PrevSI), MemLoc) ==
+              AliasResult::MustAlias)
+        return true;
+    }
+    break;
+  }
 
-  return true;
+  return false;
 }
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
@@ -386,8 +405,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
     BatchAAResults &BatchAA) {
   bool isInvariantLoad = false;
-  Align MemLocAlign =
-      MemLoc.Ptr->getPointerAlignment(BB->getDataLayout());
+  Align MemLocAlign = MemLoc.Ptr->getPointerAlignment(BB->getDataLayout());
 
   unsigned DefaultLimit = getDefaultBlockScanLimit();
   if (!Limit)
@@ -435,7 +453,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // True for volatile instruction.
   // For Load/Store return true if atomic ordering is stronger than AO,
   // for other instruction just true if it can read or write to memory.
-  auto isComplexForReordering = [](Instruction * I, AtomicOrdering AO)->bool {
+  auto isComplexForReordering = [](Instruction *I, AtomicOrdering AO) -> bool {
     if (I->isVolatile())
       return true;
     if (auto *LI = dyn_cast<LoadInst>(I))
@@ -469,7 +487,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       case Intrinsic::masked_load:
       case Intrinsic::masked_store: {
         MemoryLocation Loc;
-        /*ModRefInfo MR =*/ GetLocation(II, Loc, TLI);
+        /*ModRefInfo MR =*/GetLocation(II, Loc, TLI);
         AliasResult R = BatchAA.alias(Loc, MemLoc);
         if (R == AliasResult::NoAlias)
           continue;
@@ -1448,7 +1466,6 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
         I.setResult(MemDepResult::getUnknown());
 
-
         break;
       }
     }
@@ -1769,9 +1786,7 @@ MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {}
 
 MemoryDependenceWrapperPass::~MemoryDependenceWrapperPass() = default;
 
-void MemoryDependenceWrapperPass::releaseMemory() {
-  MemDep.reset();
-}
+void MemoryDependenceWrapperPass::releaseMemory() { MemDep.reset(); }
 
 void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -1781,8 +1796,9 @@ void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
 }
 
-bool MemoryDependenceResults::invalidate(Function &F, const PreservedAnalyses &PA,
-                               FunctionAnalysisManager::Invalidator &Inv) {
+bool MemoryDependenceResults::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &Inv) {
   // Check whether our analysis is preserved.
   auto PAC = PA.getChecker<MemoryDependenceAnalysis>();
   if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
