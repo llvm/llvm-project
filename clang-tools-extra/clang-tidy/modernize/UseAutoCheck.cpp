@@ -21,10 +21,10 @@ using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::modernize {
 
-static const char IteratorDeclStmtId[] = "iterator_decl";
-static const char DeclWithNewId[] = "decl_new";
-static const char DeclWithCastId[] = "decl_cast";
-static const char DeclWithTemplateCastId[] = "decl_template";
+static constexpr char IteratorDeclStmtId[] = "iterator_decl";
+static constexpr char DeclWithNewId[] = "decl_new";
+static constexpr char DeclWithCastId[] = "decl_cast";
+static constexpr char DeclWithTemplateCastId[] = "decl_template";
 
 static size_t getTypeNameLength(bool RemoveStars, StringRef Text) {
   enum CharType { Space, Alpha, Punctuation };
