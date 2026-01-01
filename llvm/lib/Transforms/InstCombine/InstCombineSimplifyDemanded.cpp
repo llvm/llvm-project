@@ -2303,6 +2303,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       return I;
     break;
   }
+  case Instruction::InsertElement: {
+    KnownFPClass KnownInserted, KnownVec;
+    if (SimplifyDemandedFPClass(I, 1, DemandedMask, KnownInserted, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 0, DemandedMask, KnownVec, Depth + 1))
+      return I;
+
+    // TODO: Use demanded elements logic from computeKnownFPClass
+    Known = KnownVec | KnownInserted;
+    break;
+  }
   default:
     Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
     break;
