@@ -728,12 +728,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   // don't store the addend values, so we must write it to the relocated
   // address.
   if (part.relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    isec.addReloc({expr, type, offsetInSec, addend, &sym});
-    if (shard)
-      part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
-          {&isec, isec.relocs().size() - 1});
-    else
-      part.relrDyn->relocs.push_back({&isec, isec.relocs().size() - 1});
+    part.relrDyn->addRelativeReloc<shard>(isec, offsetInSec, sym, addend, type,
+                                          expr);
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
@@ -1014,8 +1010,8 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
           // When symbol values are determined in
           // finalizeAddressDependentContent, some .relr.auth.dyn relocations
           // may be moved to .rela.dyn.
-          sec->addReloc({expr, type, offset, addend, &sym});
-          part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
+          part.relrAuthDyn->addRelativeReloc(*sec, offset, sym, addend, type,
+                                             expr);
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
                                   sym, addend, R_ABS});
