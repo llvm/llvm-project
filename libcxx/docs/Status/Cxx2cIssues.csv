@@ -203,7 +203,7 @@
 "`LWG4360 <https://wg21.link/LWG4360>`__","``awaitable-sender`` concept should qualify use of ``awaitable-receiver`` type","2025-11 (Kona)","","","`#171361 <https://github.com/llvm/llvm-project/issues/171361>`__",""
 "`LWG4366 <https://wg21.link/LWG4366>`__","Heterogeneous comparison of ``expected`` may be ill-formed","2025-11 (Kona)","","","`#171362 <https://github.com/llvm/llvm-project/issues/171362>`__",""
 "`LWG4369 <https://wg21.link/LWG4369>`__","``check-types`` function for ``upon_error`` and ``upon_stopped`` is wrong","2025-11 (Kona)","","","`#171363 <https://github.com/llvm/llvm-project/issues/171363>`__",""
-"`LWG4370 <https://wg21.link/LWG4370>`__","Comparison of ``optional<T>`` to ``T`` may be ill-formed","2025-11 (Kona)","","","`#171364 <https://github.com/llvm/llvm-project/issues/171364>`__",""
+"`LWG4370 <https://wg21.link/LWG4370>`__","Comparison of ``optional<T>`` to ``T`` may be ill-formed","2025-11 (Kona)","|Complete|","22","`#171364 <https://github.com/llvm/llvm-project/issues/171364>`__",""
 "`LWG4372 <https://wg21.link/LWG4372>`__","Weaken *Mandates:* for dynamic padding values in padded layouts","2025-11 (Kona)","","","`#171365 <https://github.com/llvm/llvm-project/issues/171365>`__",""
 "`LWG4375 <https://wg21.link/LWG4375>`__","``std::simd::bit_ceil`` should not be ``noexcept``","2025-11 (Kona)","","","`#171366 <https://github.com/llvm/llvm-project/issues/171366>`__",""
 "`LWG4376 <https://wg21.link/LWG4376>`__","ABI tag in return type of [simd.mask.unary] is overconstrained","2025-11 (Kona)","","","`#171367 <https://github.com/llvm/llvm-project/issues/171367>`__",""
