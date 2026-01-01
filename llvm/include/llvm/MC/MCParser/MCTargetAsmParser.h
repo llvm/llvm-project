@@ -471,6 +471,15 @@ public:
                                        uint64_t &ErrorInfo,
                                        bool MatchingInlineAsm) = 0;
 
+  /// Canonicalize instruction mnemonics after instruction parsing.
+  ///
+  /// parseInstruction() is not allowed to update the string contents of any
+  /// tokens, which might be necessary in some cases. This allows targets to
+  /// change the mnemonic. Due to lifetime constraints, the changed mnemonic
+  /// string needs to be stored in NameStorage.
+  virtual void canonicalizeMnemonic(OperandVector &Operands,
+                                    std::string &NameStorage) {};
+
   /// Allows targets to let registers opt out of clobber lists.
   virtual bool omitRegisterFromClobberLists(MCRegister Reg) { return false; }
 
