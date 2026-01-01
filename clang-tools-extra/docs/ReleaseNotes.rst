@@ -583,6 +583,10 @@ Changes in existing checks
   constructor call, and fixed a crash when handling format strings
   containing non-ASCII characters.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check to correctly provide fix-its
+  for typedefs of pointers or references to array types.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
   the type of the diagnosed variable.
