@@ -81,6 +81,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::exp:
   case Intrinsic::exp10:
   case Intrinsic::exp2:
+  case Intrinsic::frexp:
   case Intrinsic::ldexp:
   case Intrinsic::log:
   case Intrinsic::log10:
@@ -129,10 +130,7 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 
-  // TODO: Move frexp to isTriviallyVectorizable.
-  // https://github.com/llvm/llvm-project/issues/112408
   switch (ID) {
-  case Intrinsic::frexp:
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::ssub_with_overflow:
