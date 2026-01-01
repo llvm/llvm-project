@@ -32,7 +32,6 @@ add_llvm_component_library(LLVMLTO
   CodeGen
   CodeGenTypes
   Core
-  DTLTO
   Extensions
   IPO
   InstCombine
