@@ -15,7 +15,13 @@ except AttributeError:
     have_readline = False
 else:
     have_readline = True
-    if "libedit" in readline.__doc__:
+
+    def is_libedit():
+        if hasattr(readline, "backend"):
+            return readline.backend == "editline"
+        return "libedit" in getattr(readline, "__doc__", "")
+
+    if is_libedit():
         readline.parse_and_bind("bind ^I rl_complete")
     else:
         readline.parse_and_bind("tab: complete")
