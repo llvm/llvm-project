@@ -268,7 +268,7 @@ public:
 
     // Move alloca operations into the alloca-block, and all other
     // operations - right before fir.do_concurrent.
-    for (mlir::Operation *op : llvm::reverse(opsToMove))
+    for (mlir::Operation *op : opsToMove)
       if (mlir::isa<fir::AllocaOp>(op))
         rewriter.moveOpBefore(op, allocIt, allocIt->begin());
       else

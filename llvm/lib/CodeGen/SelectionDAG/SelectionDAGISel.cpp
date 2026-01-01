@@ -96,7 +96,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -2722,9 +2721,18 @@ GetVBR(uint64_t Val, const uint8_t *MatcherTable, unsigned &Idx) {
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static int64_t
 GetSignedVBR(const unsigned char *MatcherTable, unsigned &Idx) {
-  unsigned Len;
-  int64_t Val = decodeSLEB128(&MatcherTable[Idx], &Len);
-  Idx += Len;
+  int64_t Val = 0;
+  unsigned Shift = 0;
+  uint64_t NextBits;
+  do {
+    NextBits = MatcherTable[Idx++];
+    Val |= (NextBits & 127) << Shift;
+    Shift += 7;
+  } while (NextBits & 128);
+
+  if (Shift < 64 && (NextBits & 0x40))
+    Val |= UINT64_MAX << Shift;
+
   return Val;
 }
 
@@ -3693,7 +3701,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
     case OPC_CheckType:
     case OPC_CheckTypeI32:
-    case OPC_CheckTypeI64:
+    case OPC_CheckTypeI64: {
       MVT::SimpleValueType VT;
       switch (Opcode) {
       case OPC_CheckTypeI32:
@@ -3709,6 +3717,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (!::CheckType(VT, N, TLI, CurDAG->getDataLayout()))
         break;
       continue;
+    }
 
     case OPC_CheckTypeRes: {
       unsigned Res = MatcherTable[MatcherIndex++];
@@ -3891,9 +3900,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitIntegerI8:
     case OPC_EmitIntegerI16:
     case OPC_EmitIntegerI32:
-    case OPC_EmitIntegerI64:
-    case OPC_EmitStringInteger:
-    case OPC_EmitStringIntegerI32: {
+    case OPC_EmitIntegerI64: {
       MVT::SimpleValueType VT;
       switch (Opcode) {
       case OPC_EmitIntegerI8:
@@ -3903,7 +3910,6 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = MVT::i16;
         break;
       case OPC_EmitIntegerI32:
-      case OPC_EmitStringIntegerI32:
         VT = MVT::i32;
         break;
       case OPC_EmitIntegerI64:
@@ -3913,14 +3919,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = getSimpleVT(MatcherTable, MatcherIndex);
         break;
       }
-      int64_t Val;
-      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitIntegerI64) {
-        Val = GetSignedVBR(MatcherTable, MatcherIndex);
-      } else {
-        Val = MatcherTable[MatcherIndex++];
-        if (Val & 128)
-          Val = GetVBR(Val, MatcherTable, MatcherIndex);
-      }
+      int64_t Val = GetSignedVBR(MatcherTable, MatcherIndex);
       RecordedNodes.emplace_back(
           CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
                                     /*isTarget=*/true),
