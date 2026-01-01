@@ -239,7 +239,7 @@ let Features = "amx-complex", Attributes = [NoThrow] in {
   def tcmmrlfp16ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
 }
 
-let Features = "amx-avx512,avx10.2", Attributes = [NoThrow] in {
+let Features = "amx-avx512,avx10.2", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
   def tcvtrowd2ps_internal : X86Builtin<"_Vector<16, float>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tcvtrowps2bf16h_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tcvtrowps2bf16l_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
@@ -297,7 +297,7 @@ let Features = "amx-complex", Attributes = [NoThrow] in {
   def tcmmrlfp16ps : X86Builtin<"void(_Constant unsigned char, _Constant unsigned char, _Constant unsigned char)">;
 }
 
-let Features = "amx-avx512,avx10.2", Attributes = [NoThrow] in {
+let Features = "amx-avx512,avx10.2", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
   def tcvtrowd2ps : X86Builtin<"_Vector<16, float>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2bf16h : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2bf16l : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
