@@ -1,6 +1,15 @@
-// RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- -- -I%S/Inputs/use-internal-linkage
 // RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- \
-// RUN:   -config="{CheckOptions: {misc-use-internal-linkage.FixMode: 'UseStatic'}}"  -- -I%S/Inputs/use-internal-linkage
+// RUN:   -config="{CheckOptions: { \
+// RUN:     misc-use-internal-linkage.AnalyzeVariables: false, \
+// RUN:     misc-use-internal-linkage.AnalyzeTypes: false \
+// RUN:   }}" -- -I%S/Inputs/use-internal-linkage
+
+// RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- \
+// RUN:   -config="{CheckOptions: { \
+// RUN:     misc-use-internal-linkage.FixMode: 'UseStatic', \
+// RUN:     misc-use-internal-linkage.AnalyzeVariables: false, \
+// RUN:     misc-use-internal-linkage.AnalyzeTypes: false \
+// RUN:   }}" -- -I%S/Inputs/use-internal-linkage
 
 #include "func.h"
 
@@ -57,7 +66,6 @@ NNDS void func_nnds() {}
 void func_h_inc() {}
 
 struct S {
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: struct 'S' can be moved into an anonymous namespace to enforce internal linkage
   void method();
 };
 void S::method() {}
@@ -96,3 +104,6 @@ void * operator new[](std::size_t) { return nullptr; }
 void operator delete(void*) noexcept {}
 void operator delete[](void*) noexcept {}
 // gh117489 end
+
+int ignored_global = 0; // AnalyzeVariables is false.
+struct IgnoredStruct {}; // AnalyzeTypes is false.

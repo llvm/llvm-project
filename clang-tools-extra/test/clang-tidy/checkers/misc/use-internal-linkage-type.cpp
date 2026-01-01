@@ -1,8 +1,15 @@
-// RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- -- -I%S/Inputs/use-internal-linkage
 // RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- \
-// RUN:   -config="{CheckOptions: {misc-use-internal-linkage.FixMode: 'UseStatic'}}"  -- -I%S/Inputs/use-internal-linkage
+// RUN:   -config="{CheckOptions: { \
+// RUN:     misc-use-internal-linkage.AnalyzeFunctions: false \
+// RUN:   }}" -- -I%S/Inputs/use-internal-linkage
 
-#include "tag.h"
+// RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- \
+// RUN:   -config="{CheckOptions: { \
+// RUN:     misc-use-internal-linkage.FixMode: 'UseStatic', \
+// RUN:     misc-use-internal-linkage.AnalyzeFunctions: false \
+// RUN:   }}" -- -I%S/Inputs/use-internal-linkage
+
+#include "type.h"
 
 struct StructDeclaredInHeader {};
 union UnionDeclaredInHeader {};
@@ -56,7 +63,6 @@ struct OuterStruct {
 struct OuterStruct::InnerStructDefinedOutOfLine {};
 
 void f() {
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'f' can be made static or moved into an anonymous namespace to enforce internal linkage
   struct StructInsideFunction {};
 }
 
@@ -97,3 +103,5 @@ extern "C" {
 struct InExternCBlock { int i; };
 
 }
+
+void ignored_func() {} // AnalyzeFunctions is false.
