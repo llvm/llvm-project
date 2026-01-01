@@ -630,8 +630,10 @@ Changes in existing checks
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
-  adding parentheses when the inner expression are implicitly converted
-  multiple times.
+  adding parentheses when inner expressions are implicitly converted multiple
+  times, enabling the check for C99 and later standards, and allowing implicit
+  conversions from ``bool`` to integer when used as operands of logical
+  operators (``&&``, ``||``) in C.
 
 - Improved :doc:`readability-inconsistent-declaration-parameter-name
   <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
