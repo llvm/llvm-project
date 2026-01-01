@@ -2573,6 +2573,10 @@ llvm_target_lib_list = [lib for lib in [
                 ],
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/Hexagon/HexagonGenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/Hexagon/HexagonGenSubtargetInfo.inc",
             ),
