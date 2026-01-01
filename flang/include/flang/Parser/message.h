@@ -35,6 +35,7 @@ namespace Fortran::parser {
 // and severity of a message or attachment.
 enum class Severity {
   Error, // fatal error that prevents code and module file generation
+  ErrorUnlessDeadCode,
   Warning, // likely problem
   Portability, // nonstandard or obsolete features
   Because, // for AttachTo(), explanatory attachment to support another message
@@ -62,7 +63,9 @@ public:
     return *this;
   }
   bool IsFatal() const {
-    return severity_ == Severity::Error || severity_ == Severity::Todo;
+    return severity_ == Severity::Error ||
+        severity_ == Severity::ErrorUnlessDeadCode ||
+        severity_ == Severity::Todo;
   }
 
   static const MessageFixedText endOfFileMessage; // "end of file"_err_en_US
@@ -76,6 +79,10 @@ inline namespace literals {
 constexpr MessageFixedText operator""_err_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::Error};
+}
+constexpr MessageFixedText operator""_errUnlessDead_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::ErrorUnlessDeadCode};
 }
 constexpr MessageFixedText operator""_warn_en_US(
     const char str[], std::size_t n) {
