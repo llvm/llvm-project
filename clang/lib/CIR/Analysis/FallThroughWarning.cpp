@@ -10,12 +10,14 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
 
 #define DEBUG_TYPE "cir-fallthrough"
 
@@ -197,8 +199,88 @@ bool CheckFallThroughDiagnostics::checkDiagnostics(DiagnosticsEngine &d,
   // For blocks / lambdas.
   return returnsVoid && !hasNoReturn;
 }
+static ControlFlowKind isFallThroughAble(mlir::Operation &op);
+static ControlFlowKind isFallThroughAble(mlir::Block &block);
+static ControlFlowKind handleFallthroughCaseOp(cir::CaseOp caseOp) {
+  assert(!caseOp.getCaseRegion().empty() &&
+         "CaseOp cannot be empty, need a block here");
+  assert(caseOp.getCaseRegion().hasOneBlock() && "CaseOp should only have 1 block?");
+  auto &b = caseOp.getCaseRegion().front();
+
+  if (b.mightHaveTerminator()) {
+    mlir::Operation* term =b.getTerminator();
+    if (auto yieldOp = mlir::dyn_cast_or_null<cir::YieldOp>(term)) {
+      return ControlFlowKind::MaybeFallThrough;
+    }
+  }
+  return ControlFlowKind::NeverFallThrough;
+}
+
+static ControlFlowKind handleFallthroughSwitchOp(cir::SwitchOp swOp) {
+  // go through each cases
+  llvm::SmallVector<CaseOp> cases;
+  swOp.collectCases(cases);
+
+  bool coverAllCases = swOp.getAllEnumCasesCovered();
+  bool coverDefault = false;
+  for (auto caseOp : cases) {
+    if (caseOp.getKind() == CaseOpKind::Default) {
+      coverDefault = true;
+      break;
+    }
+  }
+
+  return ControlFlowKind::NeverFallThrough;
+}
+static ControlFlowKind handleFallthroughScopeOp(cir::ScopeOp scopeOp) {
+  for (auto &block : scopeOp.getScopeRegion()) {
+    isFallThroughAble(block);
+  }
+  return ControlFlowKind::NeverFallThrough;
+}
+
+static ControlFlowKind isFallThroughAble(mlir::Operation &op) {
+  if (auto swOp = mlir::dyn_cast_or_null<cir::SwitchOp>(op)) {
+    return handleFallthroughSwitchOp(swOp);
+  }
+  if (auto caseOp = mlir::dyn_cast_or_null<cir::CaseOp>(op)) {
+    return handleFallthroughCaseOp(caseOp);
+  }
+  if (auto scopeOp = mlir::dyn_cast_or_null<cir::ScopeOp>(op)) {
+    return handleFallthroughScopeOp(scopeOp);
+  }
+  return ControlFlowKind::NeverFallThrough;
+}
+
+static ControlFlowKind isFallThroughAble(mlir::Block &block) {
+  ControlFlowKind det = NeverFallThroughOrReturn;
+  LLVM_DEBUG({ llvm::dbgs() << "Calling isFallThroughAble for block\n"; });
+  for (auto &op : block) {
+    LLVM_DEBUG({
+      llvm::dbgs() << "Dealing with ";
+      op.dump();
+      llvm::dbgs() << "\n";
+    });
+    ControlFlowKind s = isFallThroughAble(op);
+
+    det = std::min(det, s);
+  }
+  return det;
+}
 
 // TODO: Add a class for fall through config later
+static ControlFlowKind handleFallthroughFuncOp(cir::FuncOp fnOp) {
+
+  int count = 0;
+  for (auto &o : fnOp) {
+    isFallThroughAble(o);
+    count++;
+  }
+
+  llvm::errs() << "Count is " << count << "\n";
+
+  return ControlFlowKind::NeverFallThrough;
+}
 
 void FallThroughWarningPass::checkFallThroughForFuncBody(
     Sema &s, cir::FuncOp cfg, QualType blockType,
@@ -216,7 +298,7 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
   bool returnsVoid = false;
   bool hasNoReturn = false;
 
-  SourceLocation lBrace = body->getBeginLoc(), rBrace = body->getEndLoc();
+  SourceLocation rBrace = body->getEndLoc();
   // Supposedly all function in cir is FuncOp
   // 1. If normal function (FunctionDecl), check if it's coroutine.
   // 1a. if coroutine -> check the fallthrough handler (idk what this means,
@@ -248,8 +330,9 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
 
   // cpu_dispatch functions permit empty function bodies for ICC compatibility.
   // TODO: Do we have isCPUDispatchMultiVersion?
-
-  switch (ControlFlowKind fallThroughType = checkFallThrough(cfg)) {
+  ControlFlowKind fallThroughType = handleFallthroughFuncOp(cfg);
+  return;
+  switch (ControlFlowKind fallThroughType = handleFallthroughFuncOp(cfg)) {
   case UnknownFallThrough:
     break;
   case MaybeFallThrough:
@@ -442,7 +525,7 @@ ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
       continue;
     }
 
-    hasPlainEdge = true;   
+    hasPlainEdge = true;
   }
 
   if (!hasPlainEdge) {
