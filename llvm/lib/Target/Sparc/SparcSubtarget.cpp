@@ -44,13 +44,7 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
   if (!Is64Bit && TT.isSPARC64()) {
     setFeatureBits(Features.set(Sparc::Feature64Bit));
     Is64Bit = true;
-  } else if (!Is32Bit && !TT.isSPARC64()) {
-    setFeatureBits(Features.set(Sparc::Feature32Bit));
-    Is32Bit = true;
   }
-  assert(Features.test(Sparc::Feature32Bit) !=
-         Features.test(Sparc::Feature64Bit));
-  assert(Is32Bit != Is64Bit);
 
   // Popc is a v9-only instruction.
   if (!IsV9)

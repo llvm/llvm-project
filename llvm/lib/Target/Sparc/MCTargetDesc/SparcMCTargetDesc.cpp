@@ -88,11 +88,7 @@ createSparcMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   FeatureBitset Features = STI->getFeatureBits();
   if (TT.isSPARC64() && !STI->hasFeature(Sparc::Feature64Bit)) {
     STI->setFeatureBits(Features.set(Sparc::Feature64Bit));
-  } else if (!TT.isSPARC64() && !STI->hasFeature(Sparc::Feature32Bit)) {
-    STI->setFeatureBits(Features.set(Sparc::Feature32Bit));
   }
-  assert(Features.test(Sparc::Feature32Bit) !=
-         Features.test(Sparc::Feature64Bit));
 
   return STI;
 }
