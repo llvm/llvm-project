@@ -490,8 +490,8 @@ namespace GH173830 {
   // CHECK-FIXES-NEXT: using RefArr = int (&)[5];
 
   typedef const int CInt, (*PCInt);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
-  // CHECK-MESSAGES: :[[@LINE-2]]:25: warning: use 'using' instead of 'typedef'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-MESSAGES: :[[@LINE-2]]:25: warning: use 'using' instead of 'typedef' [modernize-use-using]
   // CHECK-FIXES: using CInt = const int;
   // CHECK-FIXES-NEXT: using PCInt = const int (*);
 }
