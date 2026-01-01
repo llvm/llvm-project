@@ -23,16 +23,11 @@ class ParentMap;
 class Stmt;
 
 class CFGStmtMap {
-  using SMap = llvm::DenseMap<const Stmt *, const CFGBlock *>;
   const ParentMap *PM;
-  SMap M;
-
-  CFGStmtMap(const ParentMap *pm, SMap m) : PM(pm), M(std::move(m)) {}
+  llvm::DenseMap<const Stmt *, const CFGBlock *> M;
 
 public:
-  /// Returns a new CFGMap for the given CFG.  It is the caller's
-  /// responsibility to 'delete' this object when done using it.
-  static CFGStmtMap *Build(const CFG *C, const ParentMap *PM);
+  CFGStmtMap(const CFG &C, const ParentMap &PM);
 
   /// Returns the CFGBlock the specified Stmt* appears in.  For Stmt* that
   /// are terminators, the CFGBlock is the block they appear as a terminator,
