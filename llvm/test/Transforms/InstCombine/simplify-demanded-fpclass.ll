@@ -1357,3 +1357,32 @@ define nofpclass(nan) float @known_class_multiple_uses(i1 %cond0, i1 %cond1, i1 
   %select2 = select i1 %cond2, float %select0, float %select1
   ret float %select2
 }
+
+; Do not overdefine the poison element to inf.
+define nofpclass(ninf) <2 x float> @single_class_constant_partially_poison_pinf() {
+; CHECK-LABEL: define nofpclass(ninf) <2 x float> @single_class_constant_partially_poison_pinf() {
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float poison>
+;
+  ret <2 x float> <float 0x7FF0000000000000, float poison>
+}
+
+define nofpclass(ninf) <2 x float> @single_class_constant_partially_undef_pinf() {
+; CHECK-LABEL: define nofpclass(ninf) <2 x float> @single_class_constant_partially_undef_pinf() {
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float undef>
+;
+  ret <2 x float> <float 0x7FF0000000000000, float undef>
+}
+
+define nofpclass(zero) <3 x float> @mixed_sign_zero_splat_to_poison() {
+; CHECK-LABEL: define nofpclass(zero) <3 x float> @mixed_sign_zero_splat_to_poison() {
+; CHECK-NEXT:    ret <3 x float> poison
+;
+  ret <3 x float> <float 0.0, float -0.0, float poison>
+}
+
+define nofpclass(zero) <3 x float> @partially_defined_0_splat_to_poison() {
+; CHECK-LABEL: define nofpclass(zero) <3 x float> @partially_defined_0_splat_to_poison() {
+; CHECK-NEXT:    ret <3 x float> poison
+;
+  ret <3 x float> <float 0.0, float 0.0, float poison>
+}

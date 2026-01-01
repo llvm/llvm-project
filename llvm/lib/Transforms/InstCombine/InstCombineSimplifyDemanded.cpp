@@ -2048,8 +2048,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
   if (!I) {
     // Handle constants and arguments
     Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth + 1);
-    Value *FoldedToConst =
-        getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+
+    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+    if (ValidResults == fcNone)
+      return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
+
+    // Do not try to replace values which are already constants (unless we are
+    // folding to poison). Doing so could promote poison elements to non-poison
+    // constants.
+    if (isa<Constant>(V))
+      return nullptr;
+
+    Value *FoldedToConst = getFPClassConstant(VTy, ValidResults);
     return FoldedToConst == V ? nullptr : FoldedToConst;
   }
 
