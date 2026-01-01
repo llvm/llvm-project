@@ -22,6 +22,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
 #include <cstring>
 #include <mutex>
 #include <system_error>
@@ -159,8 +160,8 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id) {
   return dap_frame_id & ((1u << THREAD_INDEX_SHIFT) - 1);
 }
 
-int64_t MakeDAPFrameID(lldb::SBFrame &frame) {
-  return ((int64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
+uint64_t MakeDAPFrameID(lldb::SBFrame &frame) {
+  return ((uint64_t)frame.GetThread().GetIndexID() << THREAD_INDEX_SHIFT) |
          frame.GetFrameID();
 }
 
