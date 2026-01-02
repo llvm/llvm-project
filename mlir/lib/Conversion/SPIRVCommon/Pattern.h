@@ -18,7 +18,6 @@
 namespace mlir {
 namespace spirv {
 
-
 /// Converts elementwise unary, binary and ternary standard operations to SPIR-V
 /// operations.
 template <typename Op, typename SPIRVOp>
