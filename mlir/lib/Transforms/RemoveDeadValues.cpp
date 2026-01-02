@@ -805,22 +805,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     }
   }
 
-  // 3. Operations
-  LDBG() << "Cleaning up " << list.operations.size() << " operations";
-  for (Operation *op : list.operations) {
-    LDBG() << "Erasing operation: "
-           << OpWithFlags(op,
-                          OpPrintingFlags().skipRegions().printGenericOpForm());
-    if (op->hasTrait<OpTrait::IsTerminator>()) {
-      // When erasing a terminator, insert an unreachable op in its place.
-      OpBuilder b(op);
-      ub::UnreachableOp::create(b, op->getLoc());
-    }
-    op->dropAllUses();
-    op->erase();
-  }
-
-  // 4. Functions
+  // 3. Functions
   LDBG() << "Cleaning up " << list.functions.size() << " functions";
   // Record which function arguments were erased so we can shrink call-site
   // argument segments for CallOpInterface operations (e.g. ops using
@@ -851,7 +836,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
-  // 5. Operands
+  // 4. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperandsToCleanup &o : list.operands) {
     // Handle call-specific cleanup only when we have a cached callee reference.
@@ -900,7 +885,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     }
   }
 
-  // 6. Results
+  // 5. Results
   LDBG() << "Cleaning up " << list.results.size() << " result lists";
   for (auto &r : list.results) {
     LDBG_OS([&](raw_ostream &os) {
@@ -912,6 +897,22 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     });
     dropUsesAndEraseResults(r.op, r.nonLive);
   }
+
+  // 6. Operations
+  LDBG() << "Cleaning up " << list.operations.size() << " operations";
+  for (Operation *op : list.operations) {
+    LDBG() << "Erasing operation: "
+           << OpWithFlags(op,
+                          OpPrintingFlags().skipRegions().printGenericOpForm());
+    if (op->hasTrait<OpTrait::IsTerminator>()) {
+      // When erasing a terminator, insert an unreachable op in its place.
+      OpBuilder b(op);
+      ub::UnreachableOp::create(b, op->getLoc());
+    }
+    op->dropAllUses();
+    op->erase();
+  }
+
   LDBG() << "Finished cleanup of dead values";
 }
 
