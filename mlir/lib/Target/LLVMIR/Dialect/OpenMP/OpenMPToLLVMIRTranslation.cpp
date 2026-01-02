@@ -2473,18 +2473,29 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-template <typename OP>
+/*
+ * Utility function for translating `red_init`, `red_comb`, and `red_fini` to
+ * LLVMIR. The ulitity first (commonly) generates a skeleton for any of the
+ * three functions, and then generates the function body based on the
+ * specific operations involved in `red_init` (codegen related to initialization
+ * of task reduction variables) and `red_comb` (codegen related to combination).
+ * Currently, codegen for `red_fini` is skipped since finalization is optional
+ * for `task_reduction` clause, but this ulitity has the capability of defining
+ * finalization if needed. Finally, the returned `llvm::Function` is used to
+ * populate the relevant entries in the task reduction specific data structure.
+ */
 static llvm::Value *createTaskReductionFunction(
-    llvm::IRBuilderBase &builder, const std::string &name, llvm::Type *redTy,
-    LLVM::ModuleTranslation &moduleTranslation,
-    SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls, Region &region,
-    OP &op, unsigned cnt,
+    omp::TaskgroupOp &op, llvm::IRBuilderBase &builder, const std::string &name,
+    llvm::Type *redTy, LLVM::ModuleTranslation &moduleTranslation,
+    omp::DeclareReductionOp &reductionDecl, Region &region, unsigned cnt,
     SmallVectorImpl<llvm::Value *> &privateReductionVariables,
     DenseMap<Value, llvm::Value *> &reductionVariableMap) {
 
   llvm::LLVMContext &Context = builder.getContext();
   // TODO: by-ref reduction variables are yet to be handled.
-  llvm::Type *OpaquePtrTy = llvm::PointerType::get(Context, 0);
+  llvm::DataLayout DL = builder.GetInsertBlock()->getModule()->getDataLayout();
+  llvm::Type *OpaquePtrTy =
+      llvm::PointerType::get(Context, DL.getProgramAddressSpace());
   if (region.empty() && name == "red_fini")
     // Finalization is optional for reductions.
     return llvm::Constant::getNullValue(OpaquePtrTy);
@@ -2509,20 +2520,19 @@ static llvm::Value *createTaskReductionFunction(
     // to the arguments of the function
     function->addParamAttr(0, llvm::Attribute::NoAlias);
     function->addParamAttr(1, llvm::Attribute::NoAlias);
-    mlir::omp::DeclareReductionOp &reduction = reductionDecls[cnt];
-    Region &initializerRegion = reduction.getInitializerRegion();
+    Region &initializerRegion = reductionDecl.getInitializerRegion();
     Block &entry = initializerRegion.front();
 
     mlir::Value mlirSource = op.getTaskReductionVars()[cnt];
     llvm::Value *llvmSource = moduleTranslation.lookupValue(mlirSource);
     llvm::Value *origVal = llvmSource;
 
-    moduleTranslation.mapValue(reduction.getInitializerMoldArg(), origVal);
+    moduleTranslation.mapValue(reductionDecl.getInitializerMoldArg(), origVal);
 
     if (entry.getNumArguments() > 1) {
       llvm::Value *allocation =
-          reductionVariableMap.lookup(op.getReductionVars()[cnt]);
-      moduleTranslation.mapValue(reduction.getInitializerAllocArg(),
+          reductionVariableMap.lookup(op.getTaskReductionVars()[cnt]);
+      moduleTranslation.mapValue(reductionDecl.getInitializerAllocArg(),
                                  allocation);
     }
 
@@ -2553,10 +2563,11 @@ static llvm::Value *createTaskReductionFunction(
   return function;
 }
 
-void emitTaskRedInitCall(
-    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
-    const llvm::OpenMPIRBuilder::LocationDescription &ompLoc, int arraySize,
-    llvm::Value *ArrayAlloca) {
+static void
+emitTaskRedInitCall(llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    const llvm::OpenMPIRBuilder::LocationDescription &ompLoc,
+                    int arraySize, llvm::Value *ArrayAlloca) {
 
   llvm::LLVMContext &Context = builder.getContext();
   uint32_t SrcLocStrSize;
@@ -2590,19 +2601,15 @@ static LogicalResult allocAndInitializeTaskReductionVars(
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::LLVMContext &Context = builder.getContext();
-  SmallVector<DeferredStore> deferredStores;
-
-  // Save the current insertion point
-  auto oldIP = builder.saveIP();
-
-  // Set insertion point after the allocations
-  builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
+  llvm::DataLayout DL = builder.GetInsertBlock()->getModule()->getDataLayout();
 
   // Define the kmp_taskred_input_t structure
   llvm::StructType *kmp_taskred_input_t =
       llvm::StructType::create(Context, "kmp_taskred_input_t");
-  llvm::Type *OpaquePtrTy = llvm::PointerType::get(Context, 0); // void*
-  llvm::Type *SizeTy = builder.getInt64Ty(); // size_t (assumed to be i64)
+  llvm::Type *OpaquePtrTy =
+      llvm::PointerType::get(Context,
+                             DL.getProgramAddressSpace()); // void*
+  llvm::Type *SizeTy = DL.getIntPtrType(Context);          // size_t
   llvm::Type *FlagsTy = llvm::Type::getInt32Ty(Context); // flags (i32)
 
   // Structure members
@@ -2621,13 +2628,18 @@ static LogicalResult allocAndInitializeTaskReductionVars(
   llvm::ArrayType *ArrayTy =
       llvm::ArrayType::get(kmp_taskred_input_t, arraySize);
 
+  // Save the current insertion point
+  auto oldIP = builder.saveIP();
+
+  // Set insertion point after the allocations
+  builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
+
   // Allocate the array for kmp_taskred_input_t
   llvm::AllocaInst *ArrayAlloca =
       builder.CreateAlloca(ArrayTy, nullptr, "kmp_taskred_array");
 
   // Restore the insertion point
   builder.restoreIP(oldIP);
-  llvm::DataLayout DL = builder.GetInsertBlock()->getModule()->getDataLayout();
 
   for (int cnt = 0; cnt < arraySize; ++cnt) {
     llvm::Value *shared =
@@ -2660,8 +2672,8 @@ static LogicalResult allocAndInitializeTaskReductionVars(
     llvm::Value *FieldPtrReduceInit = builder.CreateStructGEP(
         kmp_taskred_input_t, StructPtr, 3, "reduce_init");
     llvm::Value *initFunction = createTaskReductionFunction(
-        builder, "red_init", redTy, moduleTranslation, reductionDecls,
-        reductionDecls[cnt].getInitializerRegion(), op, cnt,
+        op, builder, "red_init", redTy, moduleTranslation, reductionDecls[cnt],
+        reductionDecls[cnt].getInitializerRegion(), cnt,
         privateReductionVariables, reductionVariableMap);
     builder.CreateStore(initFunction, FieldPtrReduceInit);
 
@@ -2669,23 +2681,23 @@ static LogicalResult allocAndInitializeTaskReductionVars(
     llvm::Value *FieldPtrReduceFini = builder.CreateStructGEP(
         kmp_taskred_input_t, StructPtr, 4, "reduce_fini");
     llvm::Value *finiFunction = createTaskReductionFunction(
-        builder, "red_fini", redTy, moduleTranslation, reductionDecls,
-        reductionDecls[cnt].getCleanupRegion(), op, cnt,
-        privateReductionVariables, reductionVariableMap);
+        op, builder, "red_fini", redTy, moduleTranslation, reductionDecls[cnt],
+        reductionDecls[cnt].getCleanupRegion(), cnt, privateReductionVariables,
+        reductionVariableMap);
     builder.CreateStore(finiFunction, FieldPtrReduceFini);
 
     llvm::Value *FieldPtrReduceComb = builder.CreateStructGEP(
         kmp_taskred_input_t, StructPtr, 5, "reduce_comb");
     llvm::Value *combFunction = createTaskReductionFunction(
-        builder, "red_comb", redTy, moduleTranslation, reductionDecls,
-        reductionDecls[cnt].getReductionRegion(), op, cnt,
+        op, builder, "red_comb", redTy, moduleTranslation, reductionDecls[cnt],
+        reductionDecls[cnt].getReductionRegion(), cnt,
         privateReductionVariables, reductionVariableMap);
     builder.CreateStore(combFunction, FieldPtrReduceComb);
 
     llvm::Value *FieldPtrFlags =
         builder.CreateStructGEP(kmp_taskred_input_t, StructPtr, 6, "flags");
     llvm::ConstantInt *flagVal =
-        llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), 0);
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), 0);
     builder.CreateStore(flagVal, FieldPtrFlags);
   }
 

@@ -3093,7 +3093,7 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK: %[[REDUCE_COMB:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 5
 // CHECK: store ptr @red_comb, ptr %[[REDUCE_COMB]], align 8
 // CHECK: %[[FLAGS:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 6
-// CHECK: store i64 0, ptr %[[FLAGS]], align 4
+// CHECK: store i32 0, ptr %[[FLAGS]], align 4
 // CHECK: %omp_global_thread_num1 = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK: %[[INIT:.*]] = call ptr @__kmpc_taskred_init(i32 %omp_global_thread_num1, i32 1, ptr %kmp_taskred_array)
 
@@ -3152,7 +3152,7 @@ llvm.func @_QPtaskred_integer_arg() {
 // CHECK: %[[REDUCE_COMB:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 5
 // CHECK: store ptr @red_comb, ptr %[[REDUCE_COMB]], align 8
 // CHECK: %[[FLAGS:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 6
-// CHECK: store i64 0, ptr %[[FLAGS]], align 4
+// CHECK: store i32 0, ptr %[[FLAGS]], align 4
 // CHECK: %omp_global_thread_num1 = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK: %[[INIT:.*]] = call ptr @__kmpc_taskred_init(i32 %omp_global_thread_num1, i32 1, ptr %kmp_taskred_array)
 
@@ -3214,7 +3214,7 @@ llvm.func @_QPfloat_arg() {
 // CHECK: %[[REDUCE_COMB:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 5
 // CHECK: store ptr @red_comb, ptr %[[REDUCE_COMB]], align 8
 // CHECK: %[[FLAGS:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 6
-// CHECK: store i64 0, ptr %[[FLAGS]], align 4
+// CHECK: store i32 0, ptr %[[FLAGS]], align 4
 // CHECK: %omp_global_thread_num1 = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK: %[[INIT:.*]] = call ptr @__kmpc_taskred_init(i32 %omp_global_thread_num1, i32 1, ptr %kmp_taskred_array)
 

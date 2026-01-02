@@ -1389,11 +1389,11 @@ class OpenMP_TaskReductionClauseSkip<
   );
 
   let extraClassDeclaration = [{
-        /// Returns the number of reduction variables.
-	unsigned getNumReductionVars() { return getTaskReductionVars().size(); }
+    /// Returns the number of reduction variables.
+    unsigned getNumReductionVars() { return getTaskReductionVars().size(); }
 
-        /// Returns the reduction symbols
-	auto getReductionSyms() { return getTaskReductionSyms(); }
+    /// Returns the reduction symbols
+    auto getReductionSyms() { return getTaskReductionSyms(); }
   }];
 
   let description = [{
