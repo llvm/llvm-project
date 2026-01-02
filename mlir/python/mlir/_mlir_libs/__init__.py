@@ -31,7 +31,7 @@ def get_include_dirs() -> Sequence[str]:
 #   1. Attempting to load initializer modules, specific to the distribution.
 #   2. Defining the concrete mlir.ir.Context that does site specific
 #      initialization.
-#   3. Registering container classes.
+#   3. Registering container classes with their respective protocols.
 #
 # Aside from just being far more convenient to do this at the Python level,
 # it is actually quite hard/impossible to have such __init__ hooks, given
