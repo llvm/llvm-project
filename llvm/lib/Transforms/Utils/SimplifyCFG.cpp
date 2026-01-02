@@ -8001,7 +8001,7 @@ struct EqualBBWrapper {
   Phi2IVsMap *PhiPredIVs;
 
   // We only merge the identical non-entry BBs with
-  // - terminator unconditional br to Succ,
+  // - terminator unconditional br to Succ (pending relaxation),
   // - does not have address taken / weird control.
   static bool canBeMerged(const BasicBlock *BB) {
     assert(BB && "Expected non-null BB");
@@ -8010,6 +8010,9 @@ struct EqualBBWrapper {
       return false;
 
     // Single successor and must be Succ.
+    // FIXME: Relax that the terminator is a BranchInst by checking for equality
+    // on other kinds of terminators. We decide to only support unconditional
+    // branches for now for compile time reasons.
     auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
     if (!BI || !BI->isUnconditional())
       return false;
@@ -8021,7 +8024,7 @@ struct EqualBBWrapper {
     if (BB->isLandingPad())
       return false;
 
-    // TODO: should we support Pred with >1 instructions?
+    // TODO: relax this condition to merge equal blocks with >1 instructions?
     if (BB->size() != 1)
       return false;
 
@@ -8100,8 +8103,9 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
   }
 };
 
-static bool mergeIdenticalUncondBBs(ArrayRef<BasicBlock *> Candidates,
-                                    DomTreeUpdater *DTU) {
+// Merge identical BBs into one of them.
+static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
+                              DomTreeUpdater *DTU) {
   if (Candidates.size() < 2)
     return false;
 
@@ -8181,25 +8185,25 @@ static bool mergeIdenticalUncondBBs(ArrayRef<BasicBlock *> Candidates,
   };
 
   // Try to eliminate duplicate predecessors.
-  for (const auto &Pred : BBs2Merge) {
+  for (const auto &EBW : BBs2Merge) {
     // Pred is a candidate for simplification. If we find a duplicate BB,
     // replace it.
-    const auto [It, Inserted] = Keep.insert(&Pred);
+    const auto [It, Inserted] = Keep.insert(&EBW);
     if (Inserted)
       continue;
 
     // Found duplicate: merge P into canonical predecessor It->Pred.
-    BasicBlock *KeepPred = (*It)->BB;
-    BasicBlock *DeadPred = Pred.BB;
+    BasicBlock *KeepBB = (*It)->BB;
+    BasicBlock *DeadBB = EBW.BB;
 
     // Avoid merging if either is the other's predecessor in weird ways.
-    if (KeepPred == DeadPred)
+    if (KeepBB == DeadBB)
       continue;
 
     // Redirect all edges into DeadPred to KeepPred.
-    RedirectIncomingEdges(DeadPred, KeepPred);
+    RedirectIncomingEdges(DeadBB, KeepBB);
 
-    // Now DeadPred should become unreachable; leave DCE to later,
+    // Now DeadBB should become unreachable; leave DCE to later,
     // but we can try to simplify it if it only branches to Succ.
     // (We won't erase here to keep the routine simple and DT-safe.)
     MadeChange = true;
@@ -8213,13 +8217,11 @@ static bool mergeIdenticalUncondBBs(ArrayRef<BasicBlock *> Candidates,
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
                                                  DomTreeUpdater *DTU) {
-  // Collect candidate switch-arms top-down with:
-  // - terminator unconditional br to Succ,
-  // - does not have address taken / weird control.
-  SmallSetVector<BasicBlock *, 8> FilteredPreds(
+  // Collect candidate switch-arms top-down
+  SmallSetVector<BasicBlock *, 8> FilteredArms(
       llvm::from_range,
       make_filter_range(successors(SI), EqualBBWrapper::canBeMerged));
-  return mergeIdenticalUncondBBs(FilteredPreds.getArrayRef(), DTU);
+  return mergeIdenticalBBs(FilteredArms.getArrayRef(), DTU);
 }
 
 bool SimplifyCFGOpt::simplifyDuplicatePredecessors(BasicBlock *BB,
@@ -8233,13 +8235,11 @@ bool SimplifyCFGOpt::simplifyDuplicatePredecessors(BasicBlock *BB,
   if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BB))
     return false;
 
-  // Collect candidate predecessors bottom-up with:
-  // - terminator unconditional br to Succ,
-  // - does not have address taken / weird control.
+  // Collect candidate predecessors bottom-up
   SmallSetVector<BasicBlock *, 8> FilteredPreds(
       llvm::from_range,
       make_filter_range(predecessors(BB), EqualBBWrapper::canBeMerged));
-  return mergeIdenticalUncondBBs(FilteredPreds.getArrayRef(), DTU);
+  return mergeIdenticalBBs(FilteredPreds.getArrayRef(), DTU);
 }
 
 bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
