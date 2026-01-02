@@ -174,6 +174,14 @@ static void addConstFixits(DiagnosticBuilder &Diag, const VarDecl *Variable,
   // function declarations
   if (const auto *ParamDecl = dyn_cast<ParmVarDecl>(Variable)) {
     const unsigned ParamIdx = ParamDecl->getFunctionScopeIndex();
+    // Skip if all fix-its can not be applied properly due to 'using'/'typedef'
+    if (llvm::any_of(
+            Function->redecls(), [ParamIdx](const FunctionDecl *Redecl) {
+              const QualType Type = Redecl->getParamDecl(ParamIdx)->getType();
+              return Type->isTypedefNameType() || Type->getAs<UsingType>();
+            }))
+      return;
+
     for (const FunctionDecl *Redecl : Function->redecls()) {
       Diag << addQualifierToVarDecl(*Redecl->getParamDecl(ParamIdx), Context,
                                     Qualifier, Target, Policy);

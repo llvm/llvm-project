@@ -3,9 +3,11 @@
 misc-const-correctness
 ======================
 
-This check implements detection of local variables and function parameters
-which could be declared as ``const`` but are not. Declaring variables as
-``const`` is required or recommended by many coding guidelines, such as:
+Finds local variables and function parameters which could be declared as
+``const`` but are not.
+
+Declaring variables as ``const`` is required or recommended by many coding
+guidelines, such as:
 `ES.25 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es25-declare-an-object-const-or-constexpr-unless-you-want-to-modify-its-value-later-on>`_
 from the C++ Core Guidelines.
 

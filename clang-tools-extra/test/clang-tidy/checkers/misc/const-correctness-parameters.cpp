@@ -165,7 +165,7 @@ void instantiate() {
   sfinae_func(b);
 }
 
-// Leave this for futher reference if const-correctness is implemented on template functions/methods 
+// Leave this for further reference if const-correctness is implemented on template functions/methods 
 
 template<typename T>
 struct TemplateClass {
@@ -270,6 +270,35 @@ namespace ns {
     // CHECK-FIXES: void namespaced_func(Bar const& f) {
     f.const_method();
   }
+}
+
+using int_ptr = int*;
+using f_signature = void(int*);
+
+void decl_different_style(int_ptr);
+f_signature decl_different_style;
+void decl_different_style(int* p) {
+  // CHECK-MESSAGES: [[@LINE-1]]:27: warning: pointee of variable 'p' of type 'int *' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-2]]:27: warning: variable 'p' of type 'int *' can be declared 'const'
+  // No CHECK-FIXES - declaration uses 'using'
+}
+
+typedef int* int_ptr_typedef;
+void typedef_decl(int_ptr_typedef);
+void typedef_decl(int* p) {
+  // CHECK-MESSAGES: [[@LINE-1]]:19: warning: pointee of variable 'p' of type 'int *' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-2]]:19: warning: variable 'p' of type 'int *' can be declared 'const'
+  // No CHECK-FIXES - declaration uses 'typedef'
+}
+
+void multi_param_one_alias(int_ptr, int*);
+void multi_param_one_alias(int* p, int* q) {
+  // CHECK-MESSAGES: [[@LINE-1]]:28: warning: pointee of variable 'p' of type 'int *' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-2]]:28: warning: variable 'p' of type 'int *' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-3]]:36: warning: pointee of variable 'q' of type 'int *' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-4]]:36: warning: variable 'q' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: void multi_param_one_alias(int_ptr, int const*const );
+  // CHECK-FIXES-NEXT: void multi_param_one_alias(int* p, int const* const q) {
 }
 
 void func_ptr_param(void (*fp)(int&)) {
