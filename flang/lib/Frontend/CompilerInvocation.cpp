@@ -1679,6 +1679,14 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
   success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+
+  // Enable USE statement preservation for debug info if debug level is above
+  // LineTablesOnly.
+  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  DebugInfoKind debugLevel = invoc.getCodeGenOpts().getDebugInfo();
+  invoc.loweringOpts.setPreserveUseDebugInfo(
+      debugLevel > DebugInfoKind::DebugLineTablesOnly);
+
   success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(invoc, args, diags);
   success &= parseDialectArgs(invoc, args, diags);
