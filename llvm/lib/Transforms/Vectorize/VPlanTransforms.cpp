@@ -4716,9 +4716,7 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
                                                  VPBasicBlock *VectorPHVPBB,
                                                  bool TailByMasking,
                                                  bool RequiresScalarEpilogue) {
-  VPValue &VectorTC = Plan.getVectorTripCount();
-  assert(isa<VPSymbolicValue>(VectorTC) &&
-         "vector-trip-count must be symbolic");
+  VPSymbolicValue &VectorTC = Plan.getVectorTripCount();
   // There's nothing to do if there are no users of the vector trip count or its
   // IR value has already been set.
   if (VectorTC.getNumUsers() == 0 || VectorTC.getUnderlyingValue())

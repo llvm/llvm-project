@@ -57,7 +57,8 @@ class LLVM_ABI_FOR_TEST VPValue {
   /// Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
-  VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
+  VPValue(const unsigned char SC, Value *UV = nullptr)
+      : SubclassID(SC), UnderlyingVal(UV) {}
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -76,15 +77,17 @@ public:
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {
-    VPVLiveInSC,   /// A live-in VPValue wrapping an IR Value.
-    VPVSymbolicSC, /// A symbolic live-in VPValue without IR backing.
-    VPVDefValueSC, /// A VPValue defined by a recipe.
+    VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
+    VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
+    VPVRecipeValueSC, /// A VPValue defined by a recipe.
   };
 
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
-  virtual ~VPValue();
+  virtual ~VPValue() {
+    assert(Users.empty() && "trying to delete a VPValue with remaining users");
+  }
 
   /// \return an ID for the concrete type of this object.
   /// This is used to implement the classof checks. This should not be used
@@ -179,7 +182,7 @@ LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
 /// A VPValue representing a live-in from the input IR. It wraps an underlying
 /// IR Value.
 struct VPIRValue : public VPValue {
-  VPIRValue(Value *UV) : VPValue(VPVLiveInSC, UV, nullptr) {
+  VPIRValue(Value *UV) : VPValue(VPVIRValueSC, UV) {
     assert(UV && "VPIRValue requires an underlying IR value");
   }
 
@@ -190,14 +193,14 @@ struct VPIRValue : public VPValue {
   Type *getType() const;
 
   static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVLiveInSC;
+    return V->getVPValueID() == VPVIRValueSC;
   }
 };
 
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
 /// VFxUF.
 struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue() : VPValue(VPVSymbolicSC, nullptr, nullptr) {}
+  VPSymbolicValue() : VPValue(VPVSymbolicSC, nullptr) {}
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;
@@ -217,7 +220,7 @@ public:
   virtual ~VPRecipeValue();
 
   static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVDefValueSC;
+    return V->getVPValueID() == VPVRecipeValueSC;
   }
 };
 

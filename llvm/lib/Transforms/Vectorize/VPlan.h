@@ -2155,6 +2155,7 @@ public:
 
   void execute(VPTransformState &State) override = 0;
 
+  /// Returns the start value of the induction.
   VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
 
   /// Returns the step value of the induction.
@@ -2252,6 +2253,7 @@ public:
                      "expandVPWidenIntOrFpInductionRecipe");
   }
 
+  /// Returns the start value of the induction.
   VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
 
   VPValue *getSplatVFValue() {
@@ -3145,8 +3147,7 @@ public:
     assert(Red->getRecurrenceKind() == RecurKind::Add &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst =
-        dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
+    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
     assert(SubConst && SubConst->getValue() == 0 &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }
@@ -3595,6 +3596,7 @@ public:
                      "scalar phi recipe");
   }
 
+  /// Returns the start value of the canonical induction.
   VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
 
   /// Returns the scalar type of the induction.
@@ -4484,7 +4486,7 @@ public:
   VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
 
   /// The vector trip count.
-  VPValue &getVectorTripCount() { return VectorTripCount; }
+  VPSymbolicValue &getVectorTripCount() { return VectorTripCount; }
 
   /// Returns the VF of the vector loop region.
   VPValue &getVF() { return VF; };

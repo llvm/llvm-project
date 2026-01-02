@@ -91,13 +91,6 @@ Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
   llvm_unreachable("Unknown lane kind");
 }
 
-VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
-    : SubclassID(SC), UnderlyingVal(UV) {}
-
-VPValue::~VPValue() {
-  assert(Users.empty() && "trying to delete a VPValue with remaining users");
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
   if (const VPRecipeBase *R = getDefiningRecipe())
@@ -134,7 +127,6 @@ const VPRecipeBase *VPValue::getDefiningRecipe() const {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
   if (!DefValue)
     return nullptr;
-  assert(DefValue);
   return cast<VPRecipeBase>(DefValue->Def);
 }
 
@@ -145,15 +137,15 @@ Value *VPValue::getLiveInIRValue() const {
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
 VPRecipeValue::VPRecipeValue(VPDef *Def, Value *UV)
-    : VPValue(VPVDefValueSC, UV, nullptr), Def(Def) {
+    : VPValue(VPVRecipeValueSC, UV), Def(Def) {
   assert(Def && "VPRecipeValue requires a defining recipe");
   Def->addDefinedValue(this);
 }
 
 VPRecipeValue::~VPRecipeValue() {
-  assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  if (Def)
-    Def->removeDefinedValue(this);
+  assert(Users.empty() &&
+         "trying to delete a VPRecipeValue with remaining users");
+  Def->removeDefinedValue(this);
 }
 
 // Get the top-most entry block of \p Start. This is the entry block of the
@@ -304,8 +296,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   };
 
   if (!hasScalarValue(Def, {0})) {
-    assert((isa<VPIRValue, VPSymbolicValue>(Def)) && "expected a live-in");
-    Value *IRV = Def->getUnderlyingValue();
+    Value *IRV = Def->getLiveInIRValue();
     Value *B = GetBroadcastInstrs(IRV);
     set(Def, B);
     return B;
@@ -1189,9 +1180,8 @@ VPlan *VPlan::duplicate() {
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-  for (VPIRValue *OldLiveIn : getLiveIns()) {
+  for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn->getValue());
-  }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VF] = &NewPlan->VF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
