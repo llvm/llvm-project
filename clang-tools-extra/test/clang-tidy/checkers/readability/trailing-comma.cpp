@@ -31,6 +31,22 @@ enum E3 {
   P,
   Q,
 };
+
+enum SingleEnum1 { ONE };   
+enum SingleEnum2 { TWO, };  
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: enum should not have a trailing comma
+// CHECK-FIXES: enum SingleEnum2 { TWO };  
+enum SingleEnum3 {
+  THREE
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:8: warning: enum should have a trailing comma
+// CHECK-FIXES: enum SingleEnum3 {
+// CHECK-FIXES-NEXT:    THREE,
+// CHECK-FIXES-NEXT:  };
+enum SingleEnum4 {
+  FOUR,
+};
+
 enum Empty {};
 
 void f() {
@@ -64,6 +80,25 @@ void f() {
     2,
   };
   int d[] = {};
+
+  int single1[] = {1};
+  int single2[] = {1,};
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES:  int single2[] = {1};       
+  int single3[] = {
+    1
+  };
+  // CHECK-MESSAGES: :[[@LINE-2]]:6: warning: initializer list should have a trailing comma
+  // CHECK-FIXES:  int single3[] = {
+  // CHECK-FIXES-NEXT:    1,
+  // CHECK-FIXES-NEXT:  };
+  int single4[] = {
+    1,
+  };
+  S singleS1 = {42};          
+  S singleS2 = {42,};         
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES:  S singleS2 = {42};      
 }
 
 struct N { S a, b; };
@@ -90,6 +125,26 @@ void nestedMultiLine() {
     {1, 2},
     {3, 4},
   };
+
+  struct Container { int arr[3]; };
+  Container c1 = {{}};
+  Container c2 = {{},};
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES:   Container c2 = {{[{][{][}][}]}};
+
+  struct Wrapper { S s; };
+  Wrapper w1 = {{1}};
+  Wrapper w2 = {{1,}};
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES:   Wrapper w2 = {{[{][{]1[}][}]}};
+
+  Wrapper w3 = {
+    {1}
+  };
+  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: initializer list should have a trailing comma
+  // CHECK-FIXES: Wrapper w3 = {
+  // CHECK-FIXES-NEXT:     {1},
+  // CHECK-FIXES-NEXT:   };
 }
 
 // Macros are ignored
@@ -105,7 +160,7 @@ struct Pack {
   int values[sizeof...(Ts) + 1] = {sizeof(T), sizeof(Ts)...};
 };
 
-Pack<int> single;
+Pack<int> one;
 Pack<int, double> two;
 Pack<int, double, char> three;
 

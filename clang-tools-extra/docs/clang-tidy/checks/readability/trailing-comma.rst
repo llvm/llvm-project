@@ -12,8 +12,8 @@ commas in multi-line constructs and removes them from single-line constructs.
 
 Trailing commas in multi-line constructs offer several benefits:
 
-- Adding or removing elements only changes a single line, making diffs smaller
-  and easier to read.
+- Adding or removing elements at the end only changes a single line, making
+  diffs smaller and easier to read.
 - Formatters may change code to a more desired style.
 - Code generators avoid the need for special handling of the last element.
 
@@ -37,7 +37,7 @@ Trailing commas in multi-line constructs offer several benefits:
 Limitations
 -----------
 
-The check currently don't analyze code inside macros.
+The check currently doesn't analyze code inside macros.
 
 
 Options

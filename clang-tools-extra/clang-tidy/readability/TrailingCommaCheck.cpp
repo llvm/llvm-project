@@ -134,8 +134,7 @@ void TrailingCommaCheck::checkInitListExpr(
   if (Policy == CommaPolicyKind::Ignore)
     return;
 
-  const unsigned NumInits = InitList->getNumInits();
-  const Expr *LastInit = InitList->getInit(NumInits - 1);
+  const Expr *LastInit = LastInit = InitList->inits().back();
   assert(LastInit);
 
   // Skip pack expansions - they already have special syntax with '...'
@@ -160,10 +159,9 @@ void TrailingCommaCheck::emitDiag(
     return;
 
   const bool HasTrailingComma = NextToken->is(tok::comma);
-  const SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
-      LastLoc, 0, *Result.SourceManager, getLangOpts());
-
   if (Policy == CommaPolicyKind::Append && !HasTrailingComma) {
+    const SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
+        LastLoc, 0, *Result.SourceManager, getLangOpts());
     diag(InsertLoc, "%select{initializer list|enum}0 should have "
                     "a trailing comma")
         << Kind << FixItHint::CreateInsertion(InsertLoc, ",");
