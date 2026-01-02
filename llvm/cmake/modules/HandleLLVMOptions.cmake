@@ -1170,14 +1170,16 @@ endif()
 set(LLVM_CXXFLAGS_RTTI_DISABLE "")
 set(LLVM_CXXFLAGS_RTTI_ENABLE "")
 if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-  set(LLVM_CXXFLAGS_RTTI_DISABLE "-fno-rtti")
+  if (LLVM_ALLOW_NO_RTTI)
+    set(LLVM_CXXFLAGS_RTTI_DISABLE "-fno-rtti")
+  endif()
 elseif(MSVC)
   # Remove flags here, for exceptions and RTTI.
   # Each target property or source property should be responsible to control
   # them.
   # CL.EXE complains to override flags like "/GR /GR-".
-  string(REGEX REPLACE "(^| ) */EH[-cs]+ *( |$)" "\\1 \\2" CMAKE_CXXFLAGS "${CMAKE_CXX_FLAGS}")
-  string(REGEX REPLACE "(^| ) */GR-? *( |$)" "\\1 \\2" CMAKE_CXXFLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "(^| ) */EH[-cs]+ *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "(^| ) */GR-? *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(LLVM_CXXFLAGS_RTTI_DISABLE "/GR-")
   set(LLVM_CXXFLAGS_RTTI_ENABLE "/GR")
 elseif(CMAKE_CXXCOMPILER_ID MATCHES "XL")
