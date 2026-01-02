@@ -4276,6 +4276,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":SCFDialect",
         ":SCFUtils",
