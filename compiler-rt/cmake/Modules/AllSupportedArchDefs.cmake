@@ -18,20 +18,12 @@ set(WASM64 wasm64)
 set(VE ve)
 
 if (COMPILER_RT_PROFILE_BAREMETAL)
-  set(ARM64 aarch64 aarch64_be)
   set(ARM32
     arm
     armhf
     armv4t
     armv5te
     armv6m
-    armv7a
-    armv7m
-    armv7r
-    armebv7
-    armv8m.main
-    armv8.1m.main
-    armv8-r
   )
 endif()
 
