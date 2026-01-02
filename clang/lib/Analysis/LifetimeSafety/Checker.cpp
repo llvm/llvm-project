@@ -194,16 +194,23 @@ public:
   }
 
   void inferAnnotations() {
-    // FIXME: To maximise inference propagation, functions should be analyzed in
-    // post-order of the call graph, allowing inferred annotations to propagate
-    // through the call chain
-    // FIXME: Add the inferred attribute to all redeclarations of the function,
-    // not just the definition being analyzed.
     for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
       ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
-      if (!PVD->hasAttr<LifetimeBoundAttr>())
+      if (!PVD->hasAttr<LifetimeBoundAttr>()) {
         PVD->addAttr(
             LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
+        if (const FunctionDecl *FD =
+                dyn_cast<FunctionDecl>(PVD->getDeclContext())) {
+          for (const FunctionDecl *Redecl : FD->redecls()) {
+            if (Redecl != FD)
+              if (const ParmVarDecl *RedeclPVD =
+                      Redecl->getParamDecl(PVD->getFunctionScopeIndex());
+                  RedeclPVD)
+                const_cast<ParmVarDecl *>(RedeclPVD)->addAttr(
+                    LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
+          }
+        }
+      }
     }
   }
 };
