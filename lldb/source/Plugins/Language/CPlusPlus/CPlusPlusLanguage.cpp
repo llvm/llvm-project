@@ -1286,6 +1286,22 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(new StringSummaryFormat(
           eTypeOptionHideChildren | eTypeOptionHideValue,
           "${var.__y_} ${var.__m_} ${var.__wdl_}")));
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxPartialOrderingSummaryProvider,
+                "libc++ std::partial_ordering summary provider",
+                "^std::__[[:alnum:]]+::partial_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxWeakOrderingSummaryProvider,
+                "libc++ std::weak_ordering summary provider",
+                "^std::__[[:alnum:]]+::weak_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStrongOrderingSummaryProvider,
+                "libc++ std::strong_ordering summary provider",
+                "^std::__[[:alnum:]]+::strong_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
 }
 
 static void RegisterStdStringSummaryProvider(
@@ -1506,6 +1522,23 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppPartialOrderingSummaryProvider,
+      "libstdc++ std::partial_ordering summary provider",
+      "std::partial_ordering", eTypeOptionHideChildren | eTypeOptionHideValue,
+      false);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibStdcppWeakOrderingSummaryProvider,
+                "libstdc++ std::weak_ordering summary provider",
+                "std::weak_ordering",
+                eTypeOptionHideChildren | eTypeOptionHideValue, false);
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider,
+      "libstdc++ std::strong_ordering summary provider", "std::strong_ordering",
+      eTypeOptionHideChildren | eTypeOptionHideValue, false);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
