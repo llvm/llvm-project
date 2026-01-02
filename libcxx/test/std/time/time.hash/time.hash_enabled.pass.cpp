@@ -13,8 +13,30 @@
 // Test that <chrono> provides all of the hash specializations.
 
 #include <chrono>
+#include <type_traits>
 #include "poisoned_hash_helper.h"
 #include "test_macros.h"
+
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::day>, std::chrono::day>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::month>, std::chrono::month>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::year>, std::chrono::year>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::weekday>, std::chrono::weekday>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::weekday_indexed>, std::chrono::weekday_indexed>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::weekday_last>, std::chrono::weekday_last>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::month_day>, std::chrono::month_day>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::month_day_last>, std::chrono::month_day_last>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::month_weekday>, std::chrono::month_weekday>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::month_weekday_last>, std::chrono::month_weekday_last>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::year_month>, std::chrono::year_month>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::year_month_day>, std::chrono::year_month_day>);
+static_assert(
+    std::is_nothrow_invocable_v<std::hash<std::chrono::year_month_day_last>, std::chrono::year_month_day_last>);
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::year_month_weekday>, std::chrono::year_month_weekday>);
+static_assert(
+    std::is_nothrow_invocable_v<std::hash<std::chrono::year_month_weekday_last>, std::chrono::year_month_weekday_last>);
+#ifndef TEST_HAS_NO_EXPERIMENTAL_TZDB
+static_assert(std::is_nothrow_invocable_v<std::hash<std::chrono::leap_second>, std::chrono::leap_second>);
+#endif // TEST_HAS_NO_EXPERIMENTAL_TZDB
 
 int main(int, char**) {
   test_hash_enabled<std::chrono::nanoseconds>();
