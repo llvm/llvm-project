@@ -1799,8 +1799,8 @@ struct ForallOpIterArgsFolder : public OpRewritePattern<ForallOp> {
       for (Operation *combiningOp : combiningOps)
         rewriter.eraseOp(combiningOp);
     }
-    for (auto [blockArg, out, result] :
-         llvm::zip_equal(blockArgsToDelete, outsToDelete, resultsToDelete)) {
+    for (auto [blockArg, result, out] :
+         llvm::zip_equal(blockArgsToDelete, resultsToDelete, outsToDelete)) {
       rewriter.replaceAllUsesWith(blockArg, out);
       rewriter.replaceAllUsesWith(result, out);
     }

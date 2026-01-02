@@ -261,7 +261,7 @@ Operation *RewriterBase::eraseOpResults(Operation *op,
   setInsertionPoint(op);
   OperationState state(op->getLoc(), op->getName().getStringRef(),
                        op->getOperands(), newResultTypes, op->getAttrs());
-  for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i)
+  for ([[maybe_unused]] auto i : llvm::seq<unsigned>(0, op->getNumRegions()))
     state.addRegion();
   Operation *newOp = create(state);
   for (const auto &[index, region] : llvm::enumerate(op->getRegions())) {
