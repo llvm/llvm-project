@@ -759,12 +759,8 @@ public:
     if (Result.isOverdefined() || Intervals.empty())
       return;
     RangeIncludingUndef |= Result.isUndef();
-    SmallVector<ConstantRange, 8> Ranges;
-    Ranges.reserve(Intervals.size());
-    for (const auto &[L, U] : Intervals)
-      Ranges.emplace_back(L, U);
     // Get the most accurate approximation reliably
-    ConstantRange UnionCR = ConstantRange::unionOf(Ranges);
+    ConstantRange UnionCR = ConstantRange::unionOf(Intervals);
     Result.markConstantRange(
         std::move(UnionCR),
         MergeOptions().setMayIncludeUndef(RangeIncludingUndef));
@@ -787,10 +783,6 @@ public:
   }
 
 private:
-  struct APIntULTComparator {
-    bool operator()(const APInt &A, const APInt &B) const { return A.ult(B); }
-  };
-
   // This is a precise version of Constant::toConstantRange
   static bool collectAPInts(const Constant *C, SmallVectorImpl<APInt> &Ints) {
     if (auto *CI = dyn_cast<ConstantInt>(C)) {
@@ -885,14 +877,20 @@ private:
     assert(L.ule(U - 1) && "Unexpected wrapped range");
     assert(L != U && "Unexpected empty/full range");
 
-    // Find the first interval with start > L
-    auto It = Intervals.upper_bound(L);
+    // Find upper bound, i.e., the first interval with start > L
+    auto *It = find_if(Intervals, [L](const ConstantRange &CR) {
+      return CR.getLower().ugt(L);
+    });
 
+    // vec[RemoveL:RemoveR] = ConstantRange(L, U) by
+    //     1. vec[RemoveL + 1:RemoveR].erase()
+    //     2. vec[RemoveL] = ConstantRange(L, U)
+    ConstantRange *RemoveL = It, *RemoveR;
     // Try to merge with the previous interval
     if (It != Intervals.begin()) {
-      auto Prev = std::prev(It);
+      auto *Prev = std::prev(It);
       // Can reference as the It is updated at last
-      const auto &[PrevL, PrevU] = *Prev;
+      const APInt PrevL = Prev->getLower(), PrevU = Prev->getUpper();
       assert(PrevL.ule(L) && "Prev.L should be <= Cur.L");
       //  L---------U      : PrevR
       //     L----U        : this
@@ -905,12 +903,12 @@ private:
       //  results
       //  L------------U : NewR
       if (PrevU.uge(L)) {
-        L = Prev->first;
-        It = Intervals.erase(Prev);
+        L = PrevL;
+        RemoveL = Prev;
       }
     }
 
-    if (U.isZero()) {
+    if (U.isZero() && It != Intervals.end()) {
       // Remove all intervals with NextR.L > L
       //    L-------------- : this
       //      L-R L--R L-R  : NextRs
@@ -922,12 +920,12 @@ private:
     while (It != Intervals.end()) {
       assert(!U.isZero() && "U is zero should be handled earlier");
       // Cannot reference as the It is NOT updated at last
-      const auto [NextL, NextU] = *It;
+      const APInt NextL = It->getLower(), NextU = It->getUpper();
       // If U < NextL, stop
       if (U.ult(NextL))
         break;
       assert(U.uge(NextL) && "U < NextL should be handled earlier");
-      It = Intervals.erase(It);
+      ++It;
       //  L----------U   : this
       //     L----U      : NextR
       //  results
@@ -941,23 +939,36 @@ private:
       //  results
       //  L----------U   : NewR
       U = NextU;
-      assert((It == Intervals.end() || NextU.ult(It->first)) &&
+      assert((It == Intervals.end() || NextU.ult(It->getLower())) &&
              "Unexpected non-disjoint interval");
       break;
     }
 
-    // Already overdefined, i.e., [0, MAX]
-    if (Intervals.empty() && L.isZero() && U.isZero()) {
-      Result.markOverdefined();
-      return;
+    RemoveR = It;
+    assert(RemoveR >= RemoveL && "RemoveR should be >= RemoveL");
+    if (RemoveL == RemoveR) {
+      // Remove nothing but insert [L, U)
+      Intervals.insert(RemoveL, ConstantRange{L, U});
+    } else {
+      // 1. Erase all intervals in vec[RemoveL + 1, RemoveR]
+      if (RemoveL + 1 < RemoveR) {
+        Intervals.erase(RemoveL + 1, RemoveR);
+      }
+      // Already overdefined, i.e., [0, MAX]
+      if (Intervals.size() == 1 && L.isZero() && U.isZero()) {
+        Result.markOverdefined();
+        Intervals.clear();
+        return;
+      }
+      // 2. Replace vec[RemoveL] with [L, U)
+      Intervals[RemoveL - Intervals.begin()] = ConstantRange{L, U};
     }
-
-    // Insert the new merged interval
-    Intervals.emplace(std::move(L), std::move(U));
   }
 
-  // L as key, U as value, ult as comparator
-  std::map<APInt, APInt, APIntULTComparator> Intervals;
+  // In theory, we should use std::map for O(log n) insertion and removal.
+  // However, considering the scale of the problem is small (size of predecessors),
+  // it is more efficient to use a vector with O(n) insertion and removal.
+  SmallVector<ConstantRange, 8> Intervals;
   SmallVector<APInt, 8> IntsInVec;
   ValueLatticeElement &Result;
   bool RangeIncludingUndef = false;
