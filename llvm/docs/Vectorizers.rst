@@ -208,10 +208,9 @@ operations.
 Changing floating-point results is implicitly prohibited by the C and C++
 standards, therefore LLVM supports vectorizing floating point reductions
 only when at least the `-fassociative-math -fno-signed-zeros 
--fno-trapping-math` subset of `-ffast-math` is used on most targets. On select
-targets such as AArch64 and RISC-V LLVM supports generating ordered reductions
-which preserve the exact result, allowing a limited form of vectorization to
-take place while remaining standards-compliant. However, ordered reductions
+-fno-trapping-math` subset of `-ffast-math` is used on most targets. On some
+targets, such as AArch64 and RISC-V, LLVM can generate ordered reductions
+that preserve the exact result, enabling limited, standards-compliant vectorization. However, ordered reductions
 are typically less efficient than traditionally vectorized reductions,
 therefore enabling floating-point reordering may still result in more
 performant reductions on these targets.
