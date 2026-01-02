@@ -1014,6 +1014,17 @@ Value *IRBuilderBase::CreateSelectWithUnknownProfile(Value *C, Value *True,
   return Ret;
 }
 
+Value *IRBuilderBase::CreateSelectFMFWithUnknownProfile(Value *C, Value *True,
+                                                        Value *False,
+                                                        FMFSource FMFSource,
+                                                        StringRef PassName,
+                                                        const Twine &Name) {
+  Value *Ret = CreateSelectFMF(C, True, False, FMFSource, Name);
+  if (auto *SI = dyn_cast<SelectInst>(Ret))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, PassName);
+  return Ret;
+}
+
 Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
                                    const Twine &Name, Instruction *MDFrom) {
   return CreateSelectFMF(C, True, False, {}, Name, MDFrom);

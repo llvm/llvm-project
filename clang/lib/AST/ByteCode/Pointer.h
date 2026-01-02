@@ -354,7 +354,8 @@ public:
       if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
-    return getFieldDesc()->getType();
+
+    return getFieldDesc()->getDataElemType();
   }
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }

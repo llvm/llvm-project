@@ -46,21 +46,15 @@ static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
         return success();
       })
       .Case<memref::ExpandShapeOp>([&](memref::ExpandShapeOp expandShapeOp) {
-        if (failed(mlir::memref::resolveSourceIndicesExpandShape(
-                loc, rewriter, expandShapeOp, indices, resolvedIndices,
-                false))) {
-          return failure();
-        }
+        mlir::memref::resolveSourceIndicesExpandShape(
+            loc, rewriter, expandShapeOp, indices, resolvedIndices, false);
         memrefBase = expandShapeOp.getViewSource();
         return success();
       })
       .Case<memref::CollapseShapeOp>(
           [&](memref::CollapseShapeOp collapseShapeOp) {
-            if (failed(mlir::memref::resolveSourceIndicesCollapseShape(
-                    loc, rewriter, collapseShapeOp, indices,
-                    resolvedIndices))) {
-              return failure();
-            }
+            mlir::memref::resolveSourceIndicesCollapseShape(
+                loc, rewriter, collapseShapeOp, indices, resolvedIndices);
             memrefBase = collapseShapeOp.getViewSource();
             return success();
           })

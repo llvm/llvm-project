@@ -203,6 +203,7 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
+  QualType getDataElemType() const;
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 

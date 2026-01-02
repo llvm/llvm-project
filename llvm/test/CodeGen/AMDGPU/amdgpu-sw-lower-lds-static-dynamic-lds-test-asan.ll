@@ -88,7 +88,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP53:%.*]] = and i1 [[TMP49]], [[TMP52]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP53]])
 ; CHECK-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP54]], 0
-; CHECK-NEXT:    br i1 [[TMP55]], label [[ASAN_REPORT:%.*]], label [[TMP58:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP55]], label [[ASAN_REPORT:%.*]], label [[TMP58:%.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP53]], label [[TMP56:%.*]], label [[CONDFREE:%.*]]
 ; CHECK:       56:
@@ -114,7 +114,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP71:%.*]] = and i1 [[TMP66]], [[TMP70]]
 ; CHECK-NEXT:    [[TMP72:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP71]])
 ; CHECK-NEXT:    [[TMP73:%.*]] = icmp ne i64 [[TMP72]], 0
-; CHECK-NEXT:    br i1 [[TMP73]], label [[ASAN_REPORT1:%.*]], label [[TMP76:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    br i1 [[TMP73]], label [[ASAN_REPORT1:%.*]], label [[TMP76:%.*]], !prof [[PROF3]]
 ; CHECK:       asan.report1:
 ; CHECK-NEXT:    br i1 [[TMP71]], label [[TMP74:%.*]], label [[TMP75:%.*]]
 ; CHECK:       74:
@@ -139,7 +139,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP88:%.*]] = and i1 [[TMP84]], [[TMP87]]
 ; CHECK-NEXT:    [[TMP89:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP88]])
 ; CHECK-NEXT:    [[TMP90:%.*]] = icmp ne i64 [[TMP89]], 0
-; CHECK-NEXT:    br i1 [[TMP90]], label [[ASAN_REPORT2:%.*]], label [[TMP93:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    br i1 [[TMP90]], label [[ASAN_REPORT2:%.*]], label [[TMP93:%.*]], !prof [[PROF3]]
 ; CHECK:       asan.report2:
 ; CHECK-NEXT:    br i1 [[TMP88]], label [[TMP91:%.*]], label [[TMP92:%.*]]
 ; CHECK:       91:
@@ -164,7 +164,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP105:%.*]] = and i1 [[TMP101]], [[TMP104]]
 ; CHECK-NEXT:    [[TMP106:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP105]])
 ; CHECK-NEXT:    [[TMP107:%.*]] = icmp ne i64 [[TMP106]], 0
-; CHECK-NEXT:    br i1 [[TMP107]], label [[ASAN_REPORT3:%.*]], label [[TMP110:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    br i1 [[TMP107]], label [[ASAN_REPORT3:%.*]], label [[TMP110:%.*]], !prof [[PROF3]]
 ; CHECK:       asan.report3:
 ; CHECK-NEXT:    br i1 [[TMP105]], label [[TMP108:%.*]], label [[TMP109:%.*]]
 ; CHECK:       108:
@@ -203,11 +203,12 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nofree nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nocallback nofree nounwind }
 ; CHECK: attributes #[[ATTR6]] = { nomerge }
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 1}
 ; CHECK: [[META1]] = !{i32 8, i32 9}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+; CHECK: [[META2:![0-9]+]] = !{i32 4, !"nosanitize_address", i32 1}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
