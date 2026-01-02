@@ -211,15 +211,6 @@ public:
         Depth);
   }
 
-  KnownFPClass computeKnownFPClass(Value *Val, const APInt &DemandedElts,
-                                   FastMathFlags FMF,
-                                   FPClassTest Interested = fcAllFlags,
-                                   const Instruction *CtxI = nullptr,
-                                   unsigned Depth = 0) const {
-    return llvm::computeKnownFPClass(
-        Val, DemandedElts, FMF, Interested,
-        getSimplifyQuery().getWithInstruction(CtxI), Depth);
-  }
   KnownFPClass computeKnownFPClass(Value *Val,
                                    FPClassTest Interested = fcAllFlags,
                                    const Instruction *CtxI = nullptr,
@@ -228,14 +219,6 @@ public:
         Val, Interested, getSimplifyQuery().getWithInstruction(CtxI), Depth);
   }
 
-  KnownFPClass computeKnownFPClass(Value *Val, const APInt &DemandedElts,
-                                   FPClassTest Interested = fcAllFlags,
-                                   const Instruction *CtxI = nullptr,
-                                   unsigned Depth = 0) const {
-    return llvm::computeKnownFPClass(
-        Val, DemandedElts, Interested,
-        getSimplifyQuery().getWithInstruction(CtxI), Depth);
-  }
   /// Check if fmul \p MulVal, +0.0 will yield +0.0 (or signed zero is
   /// ignorable).
   bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
@@ -631,15 +614,7 @@ public:
   Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
                                     KnownFPClass &Known, Instruction *CxtI,
                                     unsigned Depth = 0);
-  Value *SimplifyDemandedUseFPClass(Value *V, const APInt &DemandedElts,
-                                    FPClassTest DemandedMask,
-                                    KnownFPClass &Known, Instruction *CxtI,
-                                    unsigned Depth = 0);
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
-                               FPClassTest DemandedMask, KnownFPClass &Known,
-                               unsigned Depth = 0);
-  bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
-                               const APInt &DemandedElts,
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
 
