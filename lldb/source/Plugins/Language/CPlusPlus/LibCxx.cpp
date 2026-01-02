@@ -256,92 +256,6 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   return true;
 }
 
-static std::optional<int64_t> LibcxxExtractOrderingValue(ValueObject &valobj) {
-  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("__value_");
-  if (!value_sp)
-    return std::nullopt;
-  bool success;
-  int64_t value = value_sp->GetValueAsSigned(0, &success);
-  if (!success)
-    return std::nullopt;
-  return value;
-}
-
-bool lldb_private::formatters::LibcxxPartialOrderingSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
-  if (!value) {
-    stream << "Summary Unavailable";
-    return true;
-  }
-  switch (*value) {
-  case -1:
-    stream << "less";
-    break;
-  case 0:
-    stream << "equivalent";
-    break;
-  case 1:
-    stream << "greater";
-    break;
-  case -127:
-    stream << "unordered";
-    break;
-  default:
-    stream << "Invalid partial ordering value";
-    break;
-  }
-  return true;
-}
-
-bool lldb_private::formatters::LibcxxWeakOrderingSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
-  if (!value) {
-    stream << "Summary Unavailable";
-    return true;
-  }
-  switch (*value) {
-  case -1:
-    stream << "less";
-    break;
-  case 0:
-    stream << "equivalent";
-    break;
-  case 1:
-    stream << "greater";
-    break;
-  default:
-    stream << "Invalid weak ordering value";
-    break;
-  }
-  return true;
-}
-
-bool lldb_private::formatters::LibcxxStrongOrderingSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
-  if (!value) {
-    stream << "Summary Unavailable";
-    return true;
-  }
-  switch (*value) {
-  case -1:
-    stream << "less";
-    break;
-  case 0:
-    stream << "equal";
-    break;
-  case 1:
-    stream << "greater";
-    break;
-  default:
-    stream << "Invalid strong ordering value";
-    break;
-  }
-  return true;
-}
-
 /*
  (lldb) fr var ibeg --raw --ptr-depth 1 -T
  (std::__1::__wrap_iter<int *>) ibeg = {
@@ -581,8 +495,8 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   StringLayout layout =
       *index_or_err == 0 ? StringLayout::DSC : StringLayout::CSD;
 
-  bool short_mode = false;    // this means the string is in short-mode and the
-                              // data is stored inline
+  bool short_mode = false; // this means the string is in short-mode and the
+                           // data is stored inline
   bool using_bitmasks = true; // Whether the class uses bitmasks for the mode
                               // flag (pre-D123580).
   uint64_t size;
@@ -725,23 +639,23 @@ bool lldb_private::formatters::LibcxxStringSummaryProviderUTF32(
 }
 
 static std::tuple<bool, ValueObjectSP, size_t>
-LibcxxExtractStringViewData(ValueObject &valobj) {
+LibcxxExtractStringViewData(ValueObject& valobj) {
   auto dataobj = GetChildMemberWithName(
       valobj, {ConstString("__data_"), ConstString("__data")});
   auto sizeobj = GetChildMemberWithName(
       valobj, {ConstString("__size_"), ConstString("__size")});
   if (!dataobj || !sizeobj)
-    return std::make_tuple<bool, ValueObjectSP, size_t>(false, {}, {});
+    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
 
   if (!dataobj->GetError().Success() || !sizeobj->GetError().Success())
-    return std::make_tuple<bool, ValueObjectSP, size_t>(false, {}, {});
+    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
 
   bool success{false};
   uint64_t size = sizeobj->GetValueAsUnsigned(0, &success);
   if (!success)
-    return std::make_tuple<bool, ValueObjectSP, size_t>(false, {}, {});
+    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
 
-  return std::make_tuple(true, dataobj, size);
+  return std::make_tuple(true,dataobj,size);
 }
 
 template <StringPrinter::StringElementType element_type>
