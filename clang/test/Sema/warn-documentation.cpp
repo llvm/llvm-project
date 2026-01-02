@@ -242,6 +242,15 @@ int test_param6(int a);
 /// \param [in,out] a Blah blah.
 int test_param7(int a);
 
+/// \param [out,in] a Blah blah.
+int test_param7b(int a);
+
+/// \param [inout] a Blah blah.
+int test_param7c(int a);
+
+/// \param [outin] a Blah blah.
+int test_param7d(int a);
+
 // expected-warning@+1 {{whitespace is not allowed in parameter passing direction}}
 /// \param [ in ] a Blah blah.
 int test_param8(int a);
@@ -250,7 +259,7 @@ int test_param8(int a);
 /// \param [in, out] a Blah blah.
 int test_param9(int a);
 
-// expected-warning@+1 {{unrecognized parameter passing direction, valid directions are '[in]', '[out]' and '[in,out]'}}
+// expected-warning@+1 {{unrecognized parameter passing direction, valid directions are '[in]', '[out]', '[in,out]', '[out,in]', '[inout]', and '[outin]'}}
 /// \param [ junk] a Blah blah.
 int test_param10(int a);
 
