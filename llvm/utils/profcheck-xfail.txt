@@ -535,9 +535,6 @@ Transforms/OpenMP/spmdization_indirect.ll
 Transforms/OpenMP/spmdization.ll
 Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
-Transforms/PGOProfile/comdat.ll
-Transforms/PGOProfile/memop_profile_funclet_wasm.ll
-Transforms/PGOProfile/X86/macho.ll
 Transforms/PhaseOrdering/AArch64/constraint-elimination-placement.ll
 Transforms/PhaseOrdering/AArch64/globals-aa-required-for-vectorization.ll
 Transforms/PhaseOrdering/AArch64/hoist-load-from-vector-loop.ll
