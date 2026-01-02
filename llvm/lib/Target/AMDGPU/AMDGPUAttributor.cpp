@@ -38,10 +38,9 @@ enum ImplicitArgumentPositions {
 #define AMDGPU_ATTRIBUTE(Name, Str) Name = 1 << Name##_POS,
 
 enum ImplicitArgumentMask {
-  UNKNOWN_INTRINSIC = 0,
+  NOT_IMPLICIT_INPUT = 0,
 #include "AMDGPUAttributes.def"
-  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1,
-  NOT_IMPLICIT_INPUT
+  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1
 };
 
 #define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},
@@ -116,7 +115,7 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     NeedsImplicit = (CodeObjectVersion >= AMDGPU::AMDHSA_COV5);
     return QUEUE_PTR;
   default:
-    return UNKNOWN_INTRINSIC;
+    return NOT_IMPLICIT_INPUT;
   }
 }
 
@@ -526,21 +525,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       ImplicitArgumentMask AttrMask =
           intrinsicToAttrMask(IID, NonKernelOnly, NeedsImplicit,
                               HasApertureRegs, SupportsGetDoorbellID, COV);
-
-      if (AttrMask == UNKNOWN_INTRINSIC) {
-        // Assume not-nocallback intrinsics may invoke a function which accesses
-        // implicit arguments.
-        //
-        // FIXME: This isn't really the correct check. We want to ensure it
-        // isn't calling any function that may use implicit arguments regardless
-        // of whether it's internal to the module or not.
-        //
-        // TODO: Ignoring callsite attributes.
-        if (!Callee->hasFnAttribute(Attribute::NoCallback))
-          return indicatePessimisticFixpoint();
-        continue;
-      }
-
       if (AttrMask != NOT_IMPLICIT_INPUT) {
         if ((IsNonEntryFunc || !NonKernelOnly))
           removeAssumedBits(AttrMask);
@@ -1364,10 +1348,7 @@ struct AAAMDGPUMinAGPRAlloc
       default:
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
-
-        // Assume !nocallback intrinsics may call a function which requires
-        // AGPRs.
-        return CB.hasFnAttr(Attribute::NoCallback);
+        return true;
       }
 
       // TODO: Handle callsite attributes
