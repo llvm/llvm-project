@@ -2538,19 +2538,19 @@ static llvm::Value *createTaskReductionFunction(
   // Emit an empty function body in case of empty region
   if (region.empty())
     bbBuilder.CreateRet(arg0); // Return from the function
-    return function;
+  return function;
 }
 
-  SmallVector<llvm::Value *, 1> phis;
-  if (failed(inlineConvertOmpRegions(region, "", bbBuilder, moduleTranslation,
-                                     &phis)))
-    return nullptr;
-  assert(
-      phis.size() == 1 &&
-      "expected one value to be yielded from the reduction declaration region");
-  bbBuilder.CreateStore(phis[0], arg0);
-  bbBuilder.CreateRet(arg0); // Return from the function
-  return function;
+SmallVector<llvm::Value *, 1> phis;
+if (failed(inlineConvertOmpRegions(region, "", bbBuilder, moduleTranslation,
+                                   &phis)))
+  return nullptr;
+assert(
+    phis.size() == 1 &&
+    "expected one value to be yielded from the reduction declaration region");
+bbBuilder.CreateStore(phis[0], arg0);
+bbBuilder.CreateRet(arg0); // Return from the function
+return function;
 }
 
 void emitTaskRedInitCall(
