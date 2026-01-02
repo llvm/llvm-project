@@ -21255,6 +21255,9 @@ Value *BoUpSLP::vectorizeTree(
   if (UserIgnoreList) {
     for (Instruction *I : RemovedInsts) {
       const TreeEntry *IE = getTreeEntries(I).front();
+      if (ArrayRef<TreeEntry *> SplitEntries = getSplitTreeEntries(I);
+          !SplitEntries.empty() && SplitEntries.front()->Idx < IE->Idx)
+        IE = SplitEntries.front();
       if (IE->Idx != 0 &&
           !(VectorizableTree.front()->isGather() && IE->UserTreeIndex &&
             (ValueToGatherNodes.lookup(I).contains(
