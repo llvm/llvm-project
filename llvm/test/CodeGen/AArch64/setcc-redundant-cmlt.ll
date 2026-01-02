@@ -129,3 +129,149 @@ define <4 x i32> @bitcast_widen_negative(<16 x i8> %a, <16 x i8> %b, <4 x i32> %
   %sel = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
   ret <4 x i32> %sel
 }
+
+define <4 x i32> @smax_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: smax_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v5.16b
+; CHECK-NEXT:    ret
+  %cmp1 = icmp slt <4 x i32> %a, %b
+  %sext1 = sext <4 x i1> %cmp1 to <4 x i32>
+  %cmp2 = icmp slt <4 x i32> %c, %d
+  %sext2 = sext <4 x i1> %cmp2 to <4 x i32>
+  %smax = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %sext1, <4 x i32> %sext2)
+  %lt0 = icmp slt <4 x i32> %smax, zeroinitializer
+  %sel = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @smin_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: smin_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v5.16b
+; CHECK-NEXT:    ret
+  %cmp1 = icmp slt <4 x i32> %a, %b
+  %sext1 = sext <4 x i1> %cmp1 to <4 x i32>
+  %cmp2 = icmp slt <4 x i32> %c, %d
+  %sext2 = sext <4 x i1> %cmp2 to <4 x i32>
+  %smin = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %sext1, <4 x i32> %sext2)
+  %lt0 = icmp slt <4 x i32> %smin, zeroinitializer
+  %sel = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @umax_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: umax_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v5.16b
+; CHECK-NEXT:    ret
+  %cmp1 = icmp slt <4 x i32> %a, %b
+  %sext1 = sext <4 x i1> %cmp1 to <4 x i32>
+  %cmp2 = icmp slt <4 x i32> %c, %d
+  %sext2 = sext <4 x i1> %cmp2 to <4 x i32>
+  %umax = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %sext1, <4 x i32> %sext2)
+  %lt0 = icmp slt <4 x i32> %umax, zeroinitializer
+  %sel = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @umin_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: umin_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v5.16b
+; CHECK-NEXT:    ret
+  %cmp1 = icmp slt <4 x i32> %a, %b
+  %sext1 = sext <4 x i1> %cmp1 to <4 x i32>
+  %cmp2 = icmp slt <4 x i32> %c, %d
+  %sext2 = sext <4 x i1> %cmp2 to <4 x i32>
+  %umin = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %sext1, <4 x i32> %sext2)
+  %lt0 = icmp slt <4 x i32> %umin, zeroinitializer
+  %sel = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @select_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: select_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    cmgt v1.4s, v5.4s, v4.4s
+; CHECK-NEXT:    bif v0.16b, v2.16b, v1.16b
+; CHECK-NEXT:    bsl v0.16b, v6.16b, v7.16b
+; CHECK-NEXT:    ret
+  %cmp1 = icmp slt <4 x i32> %a, %b
+  %sext1 = sext <4 x i1> %cmp1 to <4 x i32>
+  %cmp2 = icmp slt <4 x i32> %c, %d
+  %sext2 = sext <4 x i1> %cmp2 to <4 x i32>
+  %cond = icmp slt <4 x i32> %e, %f
+  %sel1 = select <4 x i1> %cond, <4 x i32> %sext1, <4 x i32> %sext2
+  %lt0 = icmp slt <4 x i32> %sel1, zeroinitializer
+  %sel2 = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel2
+}
+
+define <4 x i32> @and_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: and_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v5.16b
+; CHECK-NEXT:    ret
+  %cmp1 = icmp slt <4 x i32> %a, %b
+  %sext1 = sext <4 x i1> %cmp1 to <4 x i32>
+  %cmp2 = icmp slt <4 x i32> %c, %d
+  %sext2 = sext <4 x i1> %cmp2 to <4 x i32>
+  %and = and <4 x i32> %sext1, %sext2
+  %lt0 = icmp slt <4 x i32> %and, zeroinitializer
+  %sel = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @or_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: or_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v5.16b
+; CHECK-NEXT:    ret
+  %cmp1 = icmp slt <4 x i32> %a, %b
+  %sext1 = sext <4 x i1> %cmp1 to <4 x i32>
+  %cmp2 = icmp slt <4 x i32> %c, %d
+  %sext2 = sext <4 x i1> %cmp2 to <4 x i32>
+  %or = or <4 x i32> %sext1, %sext2
+  %lt0 = icmp slt <4 x i32> %or, zeroinitializer
+  %sel = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @xor_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: xor_setcc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v5.16b
+; CHECK-NEXT:    ret
+  %cmp1 = icmp slt <4 x i32> %a, %b
+  %sext1 = sext <4 x i1> %cmp1 to <4 x i32>
+  %cmp2 = icmp slt <4 x i32> %c, %d
+  %sext2 = sext <4 x i1> %cmp2 to <4 x i32>
+  %xor = xor <4 x i32> %sext1, %sext2
+  %lt0 = icmp slt <4 x i32> %xor, zeroinitializer
+  %sel = select <4 x i1> %lt0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
