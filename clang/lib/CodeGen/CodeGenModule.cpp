@@ -1132,6 +1132,10 @@ void CodeGenModule::Release() {
     // Function ID tables for EH Continuation Guard.
     getModule().addModuleFlag(llvm::Module::Warning, "ehcontguard", 1);
   }
+  if (CodeGenOpts.HotPatch) {
+    // Note if we are compiling with /hotpatch.
+    getModule().addModuleFlag(llvm::Module::Warning, "ms-hotpatch", 1);
+  }
   if (Context.getLangOpts().Kernel) {
     // Note if we are compiling with /kernel.
     getModule().addModuleFlag(llvm::Module::Warning, "ms-kernel", 1);
