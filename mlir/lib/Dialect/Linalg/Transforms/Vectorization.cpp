@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -2071,7 +2072,7 @@ vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
     return failure();
   }
 
-  if (!isa<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
+  if (!isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
     LDBG() << "Not a 1D depth-wise WC conv, dynamic shapes are not supported";
     return failure();
   }
@@ -2436,10 +2437,11 @@ static LogicalResult vectorizeLinalgOpPrecondition(
   if (isElementwise(linalgOp))
     return success();
 
-  // TODO: isaConvolutionOpInterface that can also infer from generic
-  // features. But we will still need stride/dilation attributes that will be
-  // annoying to reverse-engineer...
-  if (isa<ConvolutionOpInterface>(linalgOp.getOperation()))
+  // Check for convolution ops - both named ops implementing
+  // ConvolutionOpInterface and generic ops that semantically match convolution
+  // patterns.
+  if (isa<ConvolutionOpInterface>(linalgOp.getOperation()) ||
+      isaConvolutionOpInterface(linalgOp))
     return vectorizeConvOpPrecondition(linalgOp);
 
   // TODO: the common vector shape is equal to the static loop sizes only when
@@ -2649,12 +2651,12 @@ vectorizeScalableVectorPrecondition(Operation *op,
 
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
-  return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
-                 isa<linalg::BatchMatmulOp>(op) ||
-                 isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
-                 isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
-                 isa<linalg::BatchMmt4DOp>(op) ||
-                 hasReductionIterator(linalgOp));
+  return success(
+      isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
+      isa<linalg::BatchMatmulOp>(op) ||
+      isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(linalgOp) ||
+      isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
+      isa<linalg::BatchMmt4DOp>(op) || hasReductionIterator(linalgOp));
 }
 
 LogicalResult mlir::linalg::vectorizeOpPrecondition(
@@ -2745,7 +2747,8 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
             // TODO: isaConvolutionOpInterface that can also infer from
             // generic features. Will require stride/dilation attributes
             // inference.
-            if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
+            if (isa<ConvolutionOpInterface>(linalgOp.getOperation()) ||
+                isaConvolutionOpInterface(linalgOp)) {
               FailureOr<Operation *> convOr = vectorizeConvolution(
                   rewriter, linalgOp, inputVectorSizes, inputScalableVecDims,
                   flatten1DDepthwiseConv);
@@ -3491,6 +3494,42 @@ static void bindShapeDims(ShapedType shapedType, IntTy &...vals) {
   bindShapeDims<0>(shapedType, vals...);
 }
 
+/// Helper to extract strides and dilations for 1D convolution/pooling ops.
+/// Returns true if the op is a recognized 1D conv/pool op and extracts the
+/// stride and dilation values. For unrecognized ops, returns false.
+static bool extract1DConvPoolStrideDilation(LinalgOp op, int &strideW,
+                                            int &dilationW) {
+#define EXTRACT_1D_CONV_POOL_STRIDE_DILATION(ConvOpTy)                         \
+  if (std::optional<DilationsAndStrides> convParams =                          \
+          matchConvolutionOpOfType<ConvOpTy>(op)) {                            \
+    strideW = static_cast<int>(convParams->strides.front());                   \
+    dilationW = static_cast<int>(convParams->dilations.front());               \
+    return true;                                                               \
+  }
+
+  // 1D Convolution ops
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::Conv1DOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::Conv1DNwcWcfOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::Conv1DNcwFcwOp);
+  // Depthwise 1D Convolution ops
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::DepthwiseConv1DNwcWcOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::DepthwiseConv1DNcwCwOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::DepthwiseConv1DNwcWcmOp);
+  // 1D Pooling ops (NWC layout)
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcSumOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcMaxOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcMaxUnsignedOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcMinOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNwcMinUnsignedOp);
+  // 1D Pooling ops (NCW layout)
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNcwSumOp);
+  EXTRACT_1D_CONV_POOL_STRIDE_DILATION(linalg::PoolingNcwMaxOp);
+
+#undef EXTRACT_1D_CONV_POOL_STRIDE_DILATION
+
+  return false;
+}
+
 namespace {
 /// Generate a vector implementation for either:
 /// ```
@@ -3546,14 +3585,19 @@ struct Conv1DGenerator
     auto maybeKind = getCombinerOpKind(reduceOp);
     reductionKind = maybeKind.value();
 
-    // The ConvolutionOpInterface gives us guarantees of existence for
-    // strides/dilations. However, we do not need to rely on those, we can
-    // simply use them if present, otherwise use the default and let the generic
-    // conv. matcher in the ConvGenerator succeed or fail.
-    auto strides = linalgOp->getAttrOfType<DenseIntElementsAttr>("strides");
-    auto dilations = linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations");
-    strideW = strides ? *strides.getValues<uint64_t>().begin() : 1;
-    dilationW = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
+    // Try to extract strides/dilations from named 1D conv/pool ops using
+    // matchConvolutionOpOfType. This works for both named ops and generic ops
+    // that match their semantics. For unrecognized generic ops, fall back to
+    // checking attributes directly (which may not exist for generic ops).
+    if (!extract1DConvPoolStrideDilation(linalgOp, strideW, dilationW)) {
+      // Fallback: check for stride/dilation attributes directly.
+      // For generic ops without these attributes, default to 1.
+      auto strides = linalgOp->getAttrOfType<DenseIntElementsAttr>("strides");
+      auto dilations =
+          linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations");
+      strideW = strides ? *strides.getValues<uint64_t>().begin() : 1;
+      dilationW = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
+    }
   }
 
   /// Generate a vector implementation for:
@@ -4276,13 +4320,14 @@ static FailureOr<Operation *> vectorizeConvolution(
   if (!inputVecSizes.empty()) {
     // Only use the input vector size corresponding to the channel dim. Other
     // vector dims will be inferred from the Ops.
-    assert((isa<linalg::DepthwiseConv1DNwcWcOp>(*op) ||
-            isa<linalg::DepthwiseConv1DNcwCwOp>(*op)) &&
+    assert((isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(op) ||
+            isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(op)) &&
            "Not a 1D depthwise conv!");
-    size_t chDimIdx =
-        TypeSwitch<Operation *, size_t>(op)
-            .Case<linalg::DepthwiseConv1DNwcWcOp>([](auto conv) { return 2; })
-            .Case<linalg::DepthwiseConv1DNcwCwOp>([](auto conv) { return 1; });
+    size_t chDimIdx = 0;
+    if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(op))
+      chDimIdx = 2;
+    else if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(op))
+      chDimIdx = 1;
 
     vecChDimSize = inputVecSizes[chDimIdx];
     vecChDimScalableFlag = inputScalableVecDims[chDimIdx];

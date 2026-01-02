@@ -346,9 +346,9 @@ static bool bodyMatcherForConvolutionOps(Value yieldVal, Block *body,
     return bodyMatcherForZeroPointOffsets(accOp, mulOp, body);
   }
   BlockArgument lhsBlockArg =
-      getBlockArgumentWithOptionalCastOps(mulOp->getOperand(0));
+      getBlockArgumentWithOptionalCastOps(mulAndOp->getOperand(0));
   BlockArgument rhsBlockArg =
-      getBlockArgumentWithOptionalCastOps(mulOp->getOperand(1));
+      getBlockArgumentWithOptionalCastOps(mulAndOp->getOperand(1));
   BlockArgument outBlockArg =
       getBlockArgumentWithOptionalCastOps(accOp->getOperand(0));
   if (!lhsBlockArg || !rhsBlockArg || !outBlockArg ||
