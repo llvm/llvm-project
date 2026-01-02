@@ -1627,12 +1627,38 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
 
   // If we already have a vector select, this transformation is always
   // beneficial - we just extract from it instead of doing a scalar select.
-  // If we don't have one yet, we'll create it and subsequent selects will
-  // find and reuse it.
-  //
-  // This is always profitable because on targets like AMDGPU, a vector
-  // select with scalar condition produces fewer cndmask instructions than
-  // multiple scalar selects (one per 32-bit chunk vs one per scalar element).
+  if (!ExistingVecSel) {
+    // If we need to create a new vector select, check profitability using TTI.
+    // Compare the cost of one scalar select vs amortized cost of vector select.
+    //
+    // The vector select cost is amortized across all elements, so we compare:
+    //   ScalarSelCost vs VecSelCost / NumDstElements
+    //
+    // This is profitable when VecSelCost < ScalarSelCost * NumDstElements,
+    // which is equivalent to checking if the vector select is cheaper per
+    // element.
+    auto *CondTy = CmpInst::makeCmpResultType(DstEltTy);
+    auto *VecCondTy = CmpInst::makeCmpResultType(SrcVecTy);
+
+    InstructionCost ScalarSelCost =
+        TTI.getCmpSelInstrCost(Instruction::Select, DstEltTy, CondTy,
+                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
+    InstructionCost VecSelCost =
+        TTI.getCmpSelInstrCost(Instruction::Select, SrcVecTy, VecCondTy,
+                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+    // The transformation creates one vector select that replaces multiple
+    // scalar selects. It's profitable if the vector select cost is less than
+    // the cost of all the scalar selects it replaces.
+    unsigned NumDstElements = DstVecTy->getNumElements();
+    if (VecSelCost >= ScalarSelCost * NumDstElements) {
+      LLVM_DEBUG(dbgs() << "VectorCombine: foldSelectsFromBitcast not "
+                        << "profitable (VecCost=" << VecSelCost
+                        << ", ScalarCost=" << ScalarSelCost
+                        << ", NumElts=" << NumDstElements << ")\n");
+      return false;
+    }
+  }
 
   // Create the transformation.
   Builder.SetInsertPoint(&I);
