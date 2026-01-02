@@ -347,7 +347,7 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedily(
 
 /// Creates a greedy rewrite driver configuration with default settings.
 MLIR_CAPI_EXPORTED MlirGreedyRewriteDriverConfig
-mlirGreedyRewriteDriverConfigCreate();
+mlirGreedyRewriteDriverConfigCreate(void);
 
 /// Destroys a greedy rewrite driver configuration.
 MLIR_CAPI_EXPORTED void
