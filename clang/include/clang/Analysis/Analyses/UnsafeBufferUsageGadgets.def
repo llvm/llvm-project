@@ -51,6 +51,7 @@ WARNING_BOUNDS_SAFETY_GADGET(SinglePointerAssignment)
 // TO_UPSTREAM(BoundsSafety) OFF
 WARNING_GADGET(UniquePtrArrayAccess)
 WARNING_OPTIONAL_GADGET(UnsafeLibcFunctionCall)
+WARNING_OPTIONAL_GADGET(UnsafeFormatAttributedFunctionCall)
 WARNING_OPTIONAL_GADGET(SpanTwoParamConstructor) // Uses of `std::span(arg0, arg1)`
 FIXABLE_GADGET(ULCArraySubscript)          // `DRE[any]` in an Unspecified Lvalue Context
 FIXABLE_GADGET(DerefSimplePtrArithFixable)
