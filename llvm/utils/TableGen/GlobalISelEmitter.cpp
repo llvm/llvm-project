@@ -2412,11 +2412,9 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
 
 bool hasBFloatType(const TreePatternNode &Node) {
   for (unsigned I = 0, E = Node.getNumTypes(); I < E; I++) {
-    auto Ty = Node.getType(I);
-    for (auto T : Ty)
-      if (T.second == MVT::bf16 ||
-          (T.second.isVector() && T.second.getScalarType() == MVT::bf16))
-        return true;
+    MVT VT = Node.getSimpleType(I);
+    if (VT.getScalarType() == MVT::bf16)
+      return true;
   }
   for (const TreePatternNode &C : Node.children())
     if (hasBFloatType(C))
