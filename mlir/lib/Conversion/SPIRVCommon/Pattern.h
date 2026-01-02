@@ -18,7 +18,6 @@
 namespace mlir {
 namespace spirv {
 
-// Note: spirv::getDecorationString() is defined in SPIRVEnums.h
 
 /// Converts elementwise unary, binary and ternary standard operations to SPIR-V
 /// operations.
