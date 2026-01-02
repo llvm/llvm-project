@@ -500,8 +500,8 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   m.def(
        "apply_patterns_and_fold_greedily",
        [](PyModule &module, PyFrozenRewritePatternSet &set) {
-         auto status =
-             mlirApplyPatternsAndFoldGreedily(module.get(), set.get(), {});
+         auto status = mlirApplyPatternsAndFoldGreedily(
+             module.get(), set.get(), mlirGreedyRewriteDriverConfigCreate());
          if (mlirLogicalResultIsFailure(status))
            throw std::runtime_error("pattern application failed to converge");
        },
@@ -514,8 +514,8 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
       .def(
           "apply_patterns_and_fold_greedily",
           [](PyModule &module, MlirFrozenRewritePatternSet set) {
-            auto status =
-                mlirApplyPatternsAndFoldGreedily(module.get(), set, {});
+            auto status = mlirApplyPatternsAndFoldGreedily(
+                module.get(), set, mlirGreedyRewriteDriverConfigCreate());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");
@@ -531,7 +531,8 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           "apply_patterns_and_fold_greedily",
           [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
             auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
-                op.getOperation(), set.get(), {});
+                op.getOperation(), set.get(),
+                mlirGreedyRewriteDriverConfigCreate());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");
@@ -546,7 +547,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           "apply_patterns_and_fold_greedily",
           [](PyOperationBase &op, MlirFrozenRewritePatternSet set) {
             auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
-                op.getOperation(), set, {});
+                op.getOperation(), set, mlirGreedyRewriteDriverConfigCreate());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");

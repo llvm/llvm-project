@@ -5,6 +5,7 @@ from mlir.ir import *
 from mlir.passmanager import *
 from mlir.dialects.builtin import ModuleOp
 from mlir.dialects import arith
+from mlir.rewrite import *
 
 
 def run(f):
