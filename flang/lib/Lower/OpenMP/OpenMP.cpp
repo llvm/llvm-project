@@ -2337,10 +2337,13 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallVector<mlir::omp::LoopWrapperInterface> loopWrappers;
   loopNestOp.gatherWrappers(loopWrappers);
   mlir::Operation *loopWrapperOp = loopWrappers.front().getOperation();
-  if (llvm::isa<mlir::omp::SimdOp>(loopWrapperOp)) TODO(loc, "unsupported simd");
-  if (loopWrappers.size() > 1) TODO(loc, "unsupported composite");
+  if (llvm::isa<mlir::omp::SimdOp>(loopWrapperOp))
+    TODO(loc, "unsupported simd");
+  if (loopWrappers.size() > 1)
+    TODO(loc, "unsupported composite");
   mlir::omp::WsloopOp wsLoopOp = llvm::cast<mlir::omp::WsloopOp>(loopWrapperOp);
-  //mlir::omp::WsloopOp wsLoopOp = scanOp->getParentOfType<mlir::omp::WsloopOp>();
+  // mlir::omp::WsloopOp wsLoopOp =
+  // scanOp->getParentOfType<mlir::omp::WsloopOp>();
   bool isNested =
       (loopNestOp.getNumLoops() > 1) ||
       (wsLoopOp && (wsLoopOp->getParentOfType<mlir::omp::WsloopOp>()));

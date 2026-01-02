@@ -38,6 +38,7 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <numeric>
@@ -75,29 +76,14 @@ class OpenMPAllocaStackFrame
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPAllocaStackFrame)
 
-  explicit OpenMPAllocaStackFrame(llvm::OpenMPIRBuilder::InsertPointTy allocaIP, bool parallelOp = false)
+  explicit OpenMPAllocaStackFrame(llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
+                                  bool parallelOp = false)
       : allocaInsertPoint(allocaIP), containsParallelOp(parallelOp) {}
   llvm::OpenMPIRBuilder::InsertPointTy allocaInsertPoint;
   // is set to true when a parallel Op is encountered.
-  // The alloca IP of a function where a parallel Op is defined may 
+  // The alloca IP of a function where a parallel Op is defined may
   // be used for the scan directive.
   bool containsParallelOp = false;
-};
-
-/// ModuleTranslation stack frame for OpenMP operations. This keeps track of the
-/// insertion points for allocas of parent of the current parallel region. The
-/// insertion point is used to allocate variables to be shared by the threads
-/// executing the parallel region. Lowering of scan reduction requires declaring
-/// shared pointers to the temporary buffer to perform scan reduction.
-class OpenMPParallelAllocaStackFrame
-    : public StateStackFrameBase<OpenMPParallelAllocaStackFrame> {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPParallelAllocaStackFrame)
-
-  explicit OpenMPParallelAllocaStackFrame(
-      llvm::OpenMPIRBuilder::InsertPointTy allocaIP)
-      : allocaInsertPoint(allocaIP) {}
-  llvm::OpenMPIRBuilder::InsertPointTy allocaInsertPoint;
 };
 
 /// Stack frame to hold a \see llvm::CanonicalLoopInfo representing the
@@ -111,7 +97,7 @@ public:
   /// Canonical Loops as a single openmpLoopNestOp will be split into input
   /// loop and scan loop.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
-  llvm::ScanInfo *scanInfo;
+  llvm::ScanInfo *scanInfo = nullptr;
   /// Map reduction variables to their LLVM types.
   std::unique_ptr<llvm::DenseMap<llvm::Value *, llvm::Type *>>
       reductionVarToType =
@@ -420,8 +406,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       if (isa<omp::WsloopOp>(op)) {
         if (op.getReductionMod().value() == omp::ReductionModifier::task)
           result = todo("reduction with task modifier");
-      } else {
-        result = todo("reduction with modifier");
       }
     }
   };
@@ -617,17 +601,47 @@ findReductionVarTypes(LLVM::ModuleTranslation &moduleTranslation) {
 }
 
 // Scan reduction requires a shared buffer to be allocated to perform reduction.
-// ParallelAllocaStackFrame holds the allocaIP where shared allocation can be
-// done.
+// The allocation needs to be done outside the parallel region where scan
+// operation is used.
 static llvm::OpenMPIRBuilder::InsertPointTy
-findParallelAllocaIP(LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::OpenMPIRBuilder::InsertPointTy parallelAllocaIP;
-  moduleTranslation.stackWalk<OpenMPParallelAllocaStackFrame>(
-      [&](OpenMPParallelAllocaStackFrame &frame) {
-        parallelAllocaIP = frame.allocaInsertPoint;
-        return WalkResult::interrupt();
+findParallelAllocaIP(llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  // If there is an alloca insertion point on stack, i.e. we are in a nested
+  // operation and a specific point was provided by some surrounding operation,
+  // use it.
+  llvm::OpenMPIRBuilder::InsertPointTy allocaInsertPoint;
+  WalkResult walkResult = moduleTranslation.stackWalk<OpenMPAllocaStackFrame>(
+      [&](OpenMPAllocaStackFrame &frame) {
+        if (frame.containsParallelOp) {
+          allocaInsertPoint = frame.allocaInsertPoint;
+          return WalkResult::interrupt();
+        }
+        return WalkResult::skip();
       });
-  return parallelAllocaIP;
+  if (walkResult.wasInterrupted())
+    return allocaInsertPoint;
+  // Otherwise, insert to the entry block of the surrounding function.
+  // If the current IRBuilder InsertPoint is the function's entry, it cannot
+  // also be used for alloca insertion which would result in insertion order
+  // confusion. Create a new BasicBlock for the Builder and use the entry block
+  // for the allocs.
+  // TODO: Create a dedicated alloca BasicBlock at function creation such that
+  // we do not need to move the current InertPoint here.
+  if (builder.GetInsertBlock() ==
+      &builder.GetInsertBlock()->getParent()->getEntryBlock()) {
+    assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end() &&
+           "Assuming end of basic block");
+    llvm::BasicBlock *entryBB = llvm::BasicBlock::Create(
+        builder.getContext(), "entry", builder.GetInsertBlock()->getParent(),
+        builder.GetInsertBlock()->getNextNode());
+    builder.CreateBr(entryBB);
+    builder.SetInsertPoint(entryBB);
+  }
+
+  llvm::BasicBlock &funcEntryBlock =
+      builder.GetInsertBlock()->getParent()->getEntryBlock();
+  return llvm::OpenMPIRBuilder::InsertPointTy(
+      &funcEntryBlock, funcEntryBlock.getFirstInsertionPt());
 }
 
 /// Converts the given region that appears within an OpenMP dialect operation to
@@ -2808,7 +2822,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
             convertToScheduleKind(schedule), chunk, isSimd,
             scheduleMod == omp::ScheduleModifier::monotonic,
             scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-            workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk));
+            workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk);
 
     if (failed(handleError(wsloopIP, opInst)))
       return failure();
@@ -2840,9 +2854,12 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     SmallVector<OwningReductionGen> owningReductionGens;
     SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
     SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
+    SmallVector<OwningDataPtrPtrReductionGen> owningReductionGenRefDataPtrGens;
+    ArrayRef<bool> isByRef = getIsByRef(wsloopOp.getReductionByref());
     collectReductionInfo(wsloopOp, builder, moduleTranslation, reductionDecls,
                          owningReductionGens, owningAtomicReductionGens,
-                         privateReductionVariables, reductionInfos);
+                         owningReductionGenRefDataPtrGens,
+                         privateReductionVariables, reductionInfos, isByRef);
     llvm::BasicBlock *cont = splitBB(builder, false, "omp.scan.loop.cont");
     llvm::ScanInfo *scanInfo = findScanInfo(moduleTranslation);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy redIP =
@@ -2853,7 +2870,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
     builder.restoreIP(*redIP);
     builder.CreateBr(cont);
->>>>>>> e715dc85eb45 ([MLIR][OpenMP] Add scan reduction lowering to llvm)
   }
 
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
@@ -2934,6 +2950,15 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       opInst.getNumReductionVars());
   SmallVector<DeferredStore> deferredStores;
 
+  bool foundParallelOp = false;
+  moduleTranslation.stackWalk<OpenMPAllocaStackFrame>(
+      [&](OpenMPAllocaStackFrame &frame) {
+        if (foundParallelOp) {
+          frame.containsParallelOp = true;
+          return WalkResult::interrupt();
+        }
+        foundParallelOp = true;
+      });
   auto bodyGenCB = [&](InsertPointTy allocaIP,
                        InsertPointTy codeGenIP) -> llvm::Error {
     llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
@@ -3088,8 +3113,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  LLVM::ModuleTranslation::SaveStack<OpenMPParallelAllocaStackFrame> frame(
-      moduleTranslation, allocaIP);
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createParallel(ompLoc, allocaIP, bodyGenCB, privCB, finiCB,
@@ -3241,9 +3264,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos =
       findCurrentLoopInfos(moduleTranslation);
-  llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation).front();
-  SmallVector<llvm::CanonicalLoopInfo *> loopInfos =
-      findCurrentLoopInfos(moduleTranslation);
+  llvm::CanonicalLoopInfo *loopInfo = loopInfos.front();
   // Emit Initialization for linear variables
   if (simdOp.getLinearVars().size()) {
     linearClauseProcessor.initLinearVar(builder, moduleTranslation,
@@ -3336,7 +3357,7 @@ convertOmpScan(Operation &opInst, llvm::IRBuilderBase &builder,
     llvmScanVarsType.push_back((*reductionVarToType)[llvmVal]);
   }
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
-      findParallelAllocaIP(moduleTranslation);
+      findParallelAllocaIP(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::ScanInfo *scanInfo = findScanInfo(moduleTranslation);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =

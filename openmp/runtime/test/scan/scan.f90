@@ -21,5 +21,18 @@ program inclusive_scan
  end do
 
  print *,'x =', x
+ do k = 1, 10
+  print *, 'b(', k, ') =', b(k)
+ end do
 end program
 !CHECK: x = 5050
+!CHECK: b( 1 ) = 1
+!CHECK: b( 2 ) = 3
+!CHECK: b( 3 ) = 6
+!CHECK: b( 4 ) = 10
+!CHECK: b( 5 ) = 15
+!CHECK: b( 6 ) = 21
+!CHECK: b( 7 ) = 28
+!CHECK: b( 8 ) = 36
+!CHECK: b( 9 ) = 45
+!CHECK: b( 10 ) = 55
