@@ -25,10 +25,6 @@ function(llvm_update_compile_flags name)
   # LLVM_REQUIRES_EH is an internal flag that individual targets can use to
   # force EH
   if(LLVM_REQUIRES_EH OR LLVM_ENABLE_EH)
-    if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
-      message(AUTHOR_WARNING "Exception handling requires RTTI. Enabling RTTI for ${name}")
-      set(LLVM_REQUIRES_RTTI ON)
-    endif()
     if(MSVC)
       list(APPEND LLVM_COMPILE_CXXFLAGS "/EHsc")
     endif()
@@ -49,12 +45,7 @@ function(llvm_update_compile_flags name)
     endif()
   endif()
 
-  # LLVM_REQUIRES_RTTI is an internal flag that individual
-  # targets can use to force RTTI
-  if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
-    # TODO: GTEST_HAS_RTTI should be determined automatically, evaluate whether
-    # the explicit definition is actually required.
-    list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_RTTI=0)
+  if(NOT LLVM_ENABLE_RTTI)
     list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_DISABLE})
   else()
     list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_ENABLE})
@@ -1758,10 +1749,6 @@ function(add_unittest test_suite test_name)
   # Some parts of gtest rely on this GNU extension, don't warn on it.
   if(SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-gnu-zero-variadic-macro-arguments")
-  endif()
-
-  if (NOT DEFINED LLVM_REQUIRES_RTTI)
-    set(LLVM_REQUIRES_RTTI OFF)
   endif()
 
   list(APPEND LLVM_LINK_COMPONENTS Support) # gtest needs it for raw_ostream
