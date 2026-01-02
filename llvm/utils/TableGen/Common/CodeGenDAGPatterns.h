@@ -681,9 +681,6 @@ public:
 
   // Type accessors.
   unsigned getNumTypes() const { return Types.size(); }
-  ValueTypeByHwMode getType(unsigned ResNo) const {
-    return Types[ResNo].getValueTypeByHwMode();
-  }
   const std::vector<TypeSetByHwMode> &getExtTypes() const { return Types; }
   const TypeSetByHwMode &getExtType(unsigned ResNo) const {
     return Types[ResNo];
