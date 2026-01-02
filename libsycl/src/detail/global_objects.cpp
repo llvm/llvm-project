@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <detail/device_impl.hpp>
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
 
