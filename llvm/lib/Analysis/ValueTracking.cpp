@@ -5663,9 +5663,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
         if (SelfAdd) {
           // Doubling 0 will give the same 0.
-          if (KnownRHS.isKnownNeverLogicalPosZero(Mode))
+          if (KnownRHS.isKnownNeverLogicalPosZero(Mode) &&
+              Mode.Output == DenormalMode::IEEE)
             Known.knownNot(fcPosZero);
-          if (KnownRHS.isKnownNeverLogicalNegZero(Mode))
+          if (KnownRHS.isKnownNeverLogicalNegZero(Mode) &&
+              (Mode.Output == DenormalMode::IEEE ||
+               Mode.Output == DenormalMode::PositiveZero))
             Known.knownNot(fcNegZero);
         }
 
