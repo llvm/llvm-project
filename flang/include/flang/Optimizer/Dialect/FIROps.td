@@ -3102,6 +3102,58 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
   }];
 }
 
+def fir_UseStmtOp
+    : fir_Op<"use_stmt", [MemoryEffects<[MemWrite<DebuggingResource>]>]> {
+  let summary = "Represents a Fortran USE statement";
+  let description = [{
+    This operation records a Fortran USE statement with its associated only/rename
+    information. It has no runtime effect but preserves semantic information for
+    debug information generation.
+
+    The operation captures:
+    - The module being used (via module_name string)
+    - Symbol references to symbols imported via the ONLY clause (if present)
+    - Symbol renames (local_name and symbol reference)
+
+    Examples:
+    ```
+      // USE mod1
+      fir.use_stmt "mod1"
+
+      // USE mod1, ONLY: var2
+      fir.use_stmt "mod1" only_symbols [@_QMmod1Evar2]
+
+      // USE mod2, var4 => var3
+      fir.use_stmt "mod2" renames [#fir.use_rename<"var4", @_QMmod2Evar3>]
+
+      // USE mod2, ONLY: var1, renamed => original
+      fir.use_stmt "mod2" only_symbols [@_QMmod2Evar1]
+                   renames [#fir.use_rename<"renamed", @_QMmod2Eoriginal>]
+    ```
+  }];
+
+  let arguments = (ins StrAttr:$module_name,
+      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames);
+
+  let assemblyFormat = [{
+    $module_name
+    (`only_symbols` `[` $only_symbols^ `]`)?
+    (`renames` `[` $renames^ `]`)?
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if this is a USE with ONLY clause
+    bool hasOnlyClause() { return getOnlySymbols().has_value(); }
+
+    /// Returns true if this has any renames
+    bool hasRenames() { return getRenames().has_value(); }
+
+    /// Returns true if this imports the entire module (no ONLY clause)
+    bool importsAll() { return !hasOnlyClause(); }
+  }];
+}
+
 def ImplicitFirTerminator : SingleBlockImplicitTerminator<"FirEndOp">;
 
 def fir_TypeInfoOp : fir_Op<"type_info",
