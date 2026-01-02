@@ -50,8 +50,6 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-constexpr const char prefetchSymbolPrefix[] = "__llvm_prefetch_target_";
-
 static void printDefinedLocation(ELFSyncStream &s, const Symbol &sym) {
   s << "\n>>> defined in " << sym.file;
 }
@@ -959,6 +957,17 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     return;
   }
 
+  if (sym.getName().starts_with(prefetchSymbolPrefix)) {
+    sec->addReloc({expr, type, offset, addend, &sym});
+    dbgs() << "MY Sym: " << sym.getName() << " " << offset  << " " << addend << "\n";
+    // Prefetch target symbols may be undefined due to inaccurate profiles.
+    // The unresolved relocation will result in 0x0, effectively prefetching the
+    // next instruction.
+    return;
+  }
+
+
+
   if (needsGot(expr)) {
     if (ctx.arg.emachine == EM_MIPS) {
       // MIPS ABI has special rules to process GOT entries and doesn't
@@ -1137,14 +1146,6 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
       sec->addReloc({expr, type, offset, addend, &sym});
       return;
     }
-  }
-
-  if (sym.getName().starts_with(prefetchSymbolPrefix)) {
-    dbgs() << "Sym: " << sym.getName() << " " << offset  << " " << addend << "\n";
-    // Prefetch target symbols may be undefined due to inaccurate profiles.
-    // The unresolved relocation will result in 0x0, effectively prefetching the
-    // next instruction.
-    return;
   }
 
   auto diag = Err(ctx);
