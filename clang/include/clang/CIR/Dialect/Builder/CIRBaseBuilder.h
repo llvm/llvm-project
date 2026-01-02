@@ -429,16 +429,12 @@ public:
   /// Returns the source if types already match. CIR casts do not
   /// encode NUW/NSW; wrap semantics should be handled by callers.
   /// Supports both scalar integers and vectors of integers.
-  mlir::Value createTrunc(mlir::Location loc, mlir::Value src,
-                          mlir::Type newTy) {
+  mlir::Value createTrunc(mlir::Value src, mlir::Type newTy) {
+    mlir::Location loc = src.getLoc();
     auto srcIntTy = mlir::dyn_cast<cir::VectorType>(src.getType());
     if (newTy == srcIntTy)
       return src;
     return createCast(loc, cir::CastKind::integral, src, newTy);
-  }
-
-  mlir::Value createTrunc(mlir::Value src, mlir::Type newTy) {
-    return createTrunc(src.getLoc(), src, newTy);
   }
 
   mlir::Value createCast(mlir::Location loc, cir::CastKind kind,
