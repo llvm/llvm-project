@@ -51,13 +51,19 @@ function(llvm_update_compile_flags name)
 
   # LLVM_REQUIRES_RTTI is an internal flag that individual
   # targets can use to force RTTI
+  set(LLVM_CONFIG_HAS_RTTI YES CACHE INTERNAL "")
   if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
-    # TODO: GTEST_HAS_RTTI should be determined automatically, evaluate whether
-    # the explicit definition is actually required.
+    set(LLVM_CONFIG_HAS_RTTI NO CACHE INTERNAL "")
     list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_RTTI=0)
-    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_DISABLE})
-  else()
-    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_ENABLE})
+    if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+      list(APPEND LLVM_COMPILE_CXXFLAGS "-fno-rtti")
+    elseif (MSVC)
+      list(APPEND LLVM_COMPILE_CXXFLAGS "/GR-")
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+      list(APPEND LLVM_COMPILE_CXXFLAGS "-qnortti")
+    endif ()
+  elseif(MSVC)
+    list(APPEND LLVM_COMPILE_CXXFLAGS "/GR")
   endif()
 
   target_compile_options(${name} PRIVATE ${LLVM_COMPILE_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${LLVM_COMPILE_CXXFLAGS}>)
