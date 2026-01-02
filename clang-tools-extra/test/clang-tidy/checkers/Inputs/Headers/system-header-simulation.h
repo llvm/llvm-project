@@ -56,6 +56,14 @@ namespace detail {
 struct X {};
 } // namespace detail
 
+
+namespace ranges {
+
+template <typename T>
+inline constexpr bool enable_view = false;
+
+} // namespace ranges
+
 } // namespace std
 
 // Template specializations that are in a system-header file.

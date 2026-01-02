@@ -413,6 +413,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/sizeof-expression>` check by fixing
   a crash on ``sizeof`` of an array of dependent type.
 
+- Improved :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>`. It now:
+
+  - No longer diagnoses simply opening subnamespaces of ``std::``
+    such as ``std::chrono``.
+
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by adding
   `IgnoredRegex` option.
