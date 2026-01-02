@@ -3319,12 +3319,10 @@ void TreePattern::dump() const { print(errs()); }
 // CodeGenDAGPatterns implementation
 //
 
-CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
-                                       PatternRewriterFn PatternRewriter)
+CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
-      LegalPtrVTS(ComputeLegalPtrTypes()),
-      PatternRewriter(std::move(PatternRewriter)) {
+      LegalPtrVTS(ComputeLegalPtrTypes()) {
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();
@@ -4452,9 +4450,6 @@ void CodeGenDAGPatterns::ParseOnePattern(
 
   const ListInit *Preds = TheDef->getValueAsListInit("Predicates");
   int Complexity = TheDef->getValueAsInt("AddedComplexity");
-
-  if (PatternRewriter)
-    PatternRewriter(&Pattern);
 
   // A pattern may end up with an "impossible" type, i.e. a situation
   // where all types have been eliminated for some node in this pattern.
