@@ -1,4 +1,3 @@
-
 # Min/max operations
 
 vsetvli x28, x0, e8, mf2, tu, mu

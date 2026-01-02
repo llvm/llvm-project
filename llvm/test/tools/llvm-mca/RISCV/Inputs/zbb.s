@@ -1,3 +1,4 @@
+# Input instructions for the 'Zbb' extension.
 
 andn a0, a0, a0
 orn a0, a0, a0

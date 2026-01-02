@@ -1,3 +1,5 @@
+# Vector indexed load/store.
+
 vsetvli zero, zero, e8, mf8, ta, ma
 vluxei8.v   v8, (a0), v0
 vsetvli zero, zero, e8, mf4, ta, ma

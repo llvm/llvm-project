@@ -1,3 +1,4 @@
+# Input instructions for the 'Zba' extension.
 
 add.uw a0, a0, a0
 slli.uw a0, a0, 1

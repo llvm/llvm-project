@@ -1,3 +1,4 @@
+# Vector segmented load/store.
 
 vsetvli zero, zero, e8, mf8, tu, mu
 vlseg2e8.v  v8,(a0)

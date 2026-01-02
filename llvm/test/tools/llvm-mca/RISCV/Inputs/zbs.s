@@ -1,3 +1,4 @@
+# Input instructions for the 'Zbs' extension.
 
 bclr a0, a1, a2
 bclri a0, a1, 1

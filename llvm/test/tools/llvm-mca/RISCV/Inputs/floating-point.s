@@ -1,3 +1,5 @@
+# Input instructions for the 'F' and 'D' extensions.
+
 # Floating-Point Load and Store Instructions
 ## Single-Precision
 flw ft0, 0(a0)

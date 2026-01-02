@@ -1,4 +1,5 @@
-# These instructions only work with e64
+# Input instructions for the 'Zvbc' extension.
+# Note: These instructions only work with EEW=64
 
 vsetvli zero, zero, e64, m1, tu, mu
 vclmul.vv v4, v8, v12

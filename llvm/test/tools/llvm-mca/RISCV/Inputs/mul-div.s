@@ -1,3 +1,5 @@
+# Input instructions for the 'M' extension.
+
 mul a0, a0, a0
 mulh a0, a0, a0
 mulhu a0, a0, a0

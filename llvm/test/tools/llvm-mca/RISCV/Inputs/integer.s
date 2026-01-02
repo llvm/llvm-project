@@ -1,3 +1,5 @@
+# Input instructions for the 'I' and 'Zicsr' extensions.
+
 # Integer Register-Immediate Instructions
 addi a0, a0, 1
 addiw a0, a0, 1

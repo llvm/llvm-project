@@ -1,3 +1,4 @@
+# Input instructions for the 'Zfhmin' extension.
 
 # Floating-Point Load and Store Instructions
 flh ft0, 0(a0)

@@ -1,3 +1,5 @@
+# Input instructions for the 'A' extension.
+
 # Zalrsc
 lr.w t0, (t1)
 lr.w.aq t1, (t2)
