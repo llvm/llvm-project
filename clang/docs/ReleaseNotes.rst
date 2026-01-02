@@ -639,7 +639,6 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 - Fixed a crash when applying the ``sentinel`` attribute to block variables. (#GH173820)
 
 OpenACC Specific Changes
