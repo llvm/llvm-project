@@ -1755,10 +1755,18 @@ class ParamUsageVisitor : public RecursiveASTVisitor<ParamUsageVisitor> {
 public:
   bool HasWrite = false;
   bool HasRead = false;
-  const ParmVarDecl *TargetParam;
+  const ValueDecl *TargetParam;
   
-  ParamUsageVisitor(const ParmVarDecl *P) : TargetParam(P) {}
+  ParamUsageVisitor(const ValueDecl *P) : TargetParam(P) {}
   
+  // Any reference to the target is at least a read, unless we later
+  // identify it specifically as a write (e.g. assignment/inc/dec on LHS).
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (DRE->getDecl() == TargetParam)
+      HasRead = true;
+    return true;
+  }
+
   bool VisitUnaryOperator(UnaryOperator *UO) {
     // Check for increment/decrement on parameter
     if (UO->isIncrementDecrementOp()) {
@@ -1774,14 +1782,17 @@ public:
   bool VisitBinaryOperator(BinaryOperator *BO) {
     // Check for assignment to parameter
     if (BO->isAssignmentOp()) {
-      if (auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+      if (isa<DeclRefExpr>(BO->getLHS())) {
+        auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS());
         if (DRE->getDecl() == TargetParam) {
           HasWrite = true;
         }
       }
     }
+
     // Any other use is at least a read
-    if (auto *DRE = dyn_cast<DeclRefExpr>(BO->getRHS())) {
+    if (isa<DeclRefExpr>(BO->getRHS())) {
+      auto *DRE = dyn_cast<DeclRefExpr>(BO->getRHS());
       if (DRE->getDecl() == TargetParam) {
         HasRead = true;
       }
@@ -1790,88 +1801,23 @@ public:
   }
 };
 
-static std::vector<ReferenceTag> analyseParameterUsage(const FunctionDecl *FD) {
+static std::vector<ReferenceTag> analyseParameterUsage(const FunctionDecl *FD,
+                                                       const ValueDecl *PVD) {
   std::vector<ReferenceTag> Result;
-  // This requires more sophisticated analysis - checking if param is modified
   const Stmt *Body = FD->getBody();
   if (!Body)
     return Result; // No definition available
 
-  for (unsigned I = 0; I < FD->getNumParams(); ++I) {
-    const ParmVarDecl *Param = FD->getParamDecl(I);
+  // Walk the body and determine read/write usage of the referenced variable
+  // within this function.
+  ParamUsageVisitor Visitor(PVD);
+  Visitor.TraverseStmt(const_cast<Stmt *>(Body));
+  if (Visitor.HasWrite)
+    Result.push_back(ReferenceTag::Write);
+  if (Visitor.HasRead)
+    Result.push_back(ReferenceTag::Read);
 
-    // Check const qualifier
-    // QualType ParamType = Param->getType();
-    // bool IsReadOnly = ParamType.isConstQualified();
-
-    // For deeper analysis, you'd need to:
-    // 1. Walk the AST of the function body
-    // 2. Find all references to the parameter
-    // 3. Check if they appear on the left side of assignments (write)
-    //    or only on the right side (read)
-
-    ParamUsageVisitor Visitor(Param);
-    Visitor.TraverseStmt(const_cast<Stmt *>(Body));
-    if (Visitor.HasWrite)
-      Result.push_back(ReferenceTag::Write);
-    if (Visitor.HasRead)
-      Result.push_back(ReferenceTag::Read);
-  }
   return Result;
-}
-
-template <typename HierarchyItem>
-static void determineParameterUsage(const NamedDecl &ND, HierarchyItem &HI) {
-  // Get parent context and check if it's a function parameter
-  const DeclContext *DC = ND.getDeclContext();
-  elog("determineParameterUsage: called for ND={0}", ND.getNameAsString());
-  if (const auto *TD = llvm::dyn_cast<TagDecl>(DC)) {
-    elog("determineParameterUsage: ND is inside a TagDecl: {0}", TD->getNameAsString());
-    // No parameter analysis for TagDecl parent contexts.
-  } else if (const auto *FD = llvm::dyn_cast<FunctionDecl>(DC)) {
-    elog("determineParameterUsage: ND is inside a FunctionDecl");
-    for (unsigned I = 0; I < FD->getNumParams(); ++I) {
-      if (FD->getParamDecl(I) == &ND) {
-        elog("determineParameterUsage: ND is the {0}-th parameter of function {1}", I, FD->getNameAsString());
-
-        const ParmVarDecl *Param = FD->getParamDecl(I);
-        QualType ParamType = Param->getType();
-
-        bool IsConst = false;
-        bool IsConstRef = false;
-        bool IsConstPtr = false;
-
-        // Check if const (read-only)
-        IsConst = ParamType.isConstQualified();
-        elog("determineParameterUsage: ParamType.isConstQualified() = {0}", IsConst);
-
-        // Check if it's a const reference
-        if (const auto *RT = ParamType->getAs<ReferenceType>()) {
-          IsConstRef = RT->getPointeeType().isConstQualified();
-          elog("determineParameterUsage: ParamType is ReferenceType, isConstQualified = {0}", IsConstRef);
-        }
-
-        // Check if it's a const pointer
-        if (const auto *PT = ParamType->getAs<PointerType>()) {
-          IsConstPtr = PT->getPointeeType().isConstQualified();
-          elog("determineParameterUsage: ParamType is PointerType, isConstQualified = {0}", IsConstPtr);
-        }
-
-        if (IsConst && IsConstRef && IsConstPtr) {
-          elog("determineParameterUsage: All const checks passed, marking as Read");
-          HI.referenceTags.push_back(ReferenceTag::Read);
-        } else {
-          elog("determineParameterUsage: Performing analyseParameterUsage");
-          HI.referenceTags = analyseParameterUsage(FD);
-        }
-
-        break;
-      }
-      elog("determineParameterUsage: ND is not parameter {0} of function {1}", I, FD->getNameAsString());
-    }
-  } else {
-    elog("determineParameterUsage: ND is not inside a FunctionDecl or TagDecl");
-  }
 }
 
 template <typename HierarchyItem>
@@ -1904,7 +1850,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
-  // FIXME: Populate HI.detail the way we do in symbolToHierarchyItem?
+  HI.detail = printQualifiedName(ND);
   HI.kind = SK;
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
                    sourceLocToPosition(SM, DeclRange->getEnd())};
@@ -1915,7 +1861,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
     HI.range = HI.selectionRange;
   }
 
-  determineParameterUsage(ND, HI);
+  //determineParameterUsage(ND, HI);
 
   HI.uri = URIForFile::canonicalize(*FilePath, TUPath);
 
@@ -2464,8 +2410,38 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
   return Result;
 }
 
+// Tries to find a NamedDecl in the AST that matches the given Symbol.
+// Returns nullptr if the symbol is not found in the current AST.
+const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
+                                        const ParsedAST &AST) {
+  // Try to convert the symbol to a location and find the decl at that location
+  auto SymLoc = symbolToLocation(Sym, AST.tuPath());
+  if (!SymLoc)
+    return nullptr;
+
+  // Check if the symbol location is in the main file
+  if (SymLoc->uri.file() != AST.tuPath())
+    return nullptr;
+
+  // Convert LSP position to source location
+  const auto &SM = AST.getSourceManager();
+  auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return nullptr;
+  }
+
+  // Get all decls at this location
+  auto Decls = getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
+  if (Decls.empty())
+    return nullptr;
+
+  // Return the first decl (usually the most specific one)
+  return Decls[0];
+}
+
 std::vector<CallHierarchyIncomingCall>
-incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index, ParsedAST &AST) {
   std::vector<CallHierarchyIncomingCall> Results;
   if (!Index || Item.data.empty())
     return Results;
@@ -2474,6 +2450,24 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     elog("incomingCalls failed to find symbol: {0}", ID.takeError());
     return Results;
   }
+
+
+  LookupRequest LR;
+  LR.IDs.insert(*ID);
+
+  std::optional<const NamedDecl*> PVD;
+  Index->lookup(LR, [&ID, &AST, &PVD](const Symbol &Sym) {
+    // This callback is called once per found symbol; here we expect exactly one
+    if (Sym.ID == *ID) {
+      PVD = getNamedDeclFromSymbol(Sym, AST);
+    }
+  });
+
+  if (PVD == nullptr || !PVD.has_value()) {
+    // Not found in index
+    return Results;
+  }
+
   // In this function, we find incoming calls based on the index only.
   // In principle, the AST could have more up-to-date information about
   // occurrences within the current file. However, going from a SymbolID
@@ -2510,7 +2504,21 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
       auto It = CallsIn.find(Caller.ID);
       assert(It != CallsIn.end());
-      if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+
+      std::optional<CallHierarchyItem> CHI;
+      if (auto *ND = getNamedDeclFromSymbol(Caller, AST)) {
+        CHI = declToCallHierarchyItem(*ND, AST.tuPath());
+        if (const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(ND)) {
+          if (isa<ValueDecl>(PVD.value())) {
+            const auto *VD = llvm::dyn_cast<clang::ValueDecl>(PVD.value());
+            CHI->referenceTags = analyseParameterUsage(FD, VD); // FD is the caller of var
+          }
+        }
+      } else {
+        CHI = symbolToCallHierarchyItem(Caller, Item.uri.file());
+      }
+
+      if (CHI) {
         std::vector<Range> FromRanges;
         for (const Location &L : It->second) {
           if (L.uri != CHI->uri) {

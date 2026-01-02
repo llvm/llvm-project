@@ -1496,7 +1496,7 @@ llvm::json::Value toJSON(const CallHierarchyItem &I) {
     Result["data"] = I.data;
   if (!I.referenceTags.empty())
     Result["referenceTags"] = I.referenceTags;
-  
+
   return std::move(Result);
 }
 
