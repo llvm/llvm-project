@@ -3258,6 +3258,8 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
     bool ZeroInit = E->requiresZeroInitialization();
     if (ZeroInit) {
       const Record *R = getRecord(E->getType());
+      if (!R)
+        return false;
 
       if (!this->visitZeroRecordInitializer(R, E))
         return false;
