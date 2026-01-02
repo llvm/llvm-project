@@ -32,7 +32,7 @@ using namespace llvm;
 #define DEBUG_TYPE "si-lower-sgpr-spills"
 
 using MBBVector = SmallVector<MachineBasicBlock *, 4>;
-using MIVector  = SmallVector<MachineInstr *, 64>;
+using MIVector  = SmallVector<MachineInstr*>;
 
 namespace {
 
@@ -66,8 +66,8 @@ public:
       int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
       DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr);
   void determineRegsForWWMAllocation(MachineFunction &MF, BitVector &RegMask);
-  void updateDbgValueInsts(MIVector &Insts, BitVector &SpillFIs);
-  void updateDbgValueInst(MachineInstr &MI, BitVector &SpillFIs);
+  void updateDbgValueInst(MachineInstr &MI, const BitVector &SpillFIs);
+  void updateDbgValueInsts(MIVector &Insts, const BitVector &SpillFIs);
   void updateDbgValueArg(MachineInstr &MI, uint32_t FIOpndIdx,
                          const SIRegisterInfo::SpilledReg &vgpr);
 };
@@ -422,44 +422,47 @@ void SILowerSGPRSpills::updateDbgValueArg(MachineInstr &MI,
 
 // Replace frame index in a DBG_VALUE or DBG_VALUE_LIST instruction with VGPR lane.
 void SILowerSGPRSpills::updateDbgValueInst(MachineInstr &MI,
-                                           BitVector &SpillFIs) {
+                                           const BitVector &SpillFIs) {
   assert(MI.isDebugValue());
-  const DIExpression *Expr = MI.getDebugExpression();
-  MachineFunction *MF = MI.getParent()->getParent();
-  auto FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
+  const MachineFunction *MF = MI.getParent()->getParent();
+  auto *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
+  const auto &FrInfo = MF->getFrameInfo();
   ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills;
 
+  auto WasOpndSpilled = [&](const MachineOperand &Opnd, bool IsValueList) {
+    int FrObjIdx = (IsValueList ? Opnd.getIndex() : 0);
+    return (Opnd.isFI() && FrInfo.isFixedObjectIndex(FrObjIdx) &&
+            SpillFIs[Opnd.getIndex()]);
+  };
+  
   if (MI.getDebugExpression()->holdsOldElements()) {
     // For old-style DIExpressions, just replace the frame index
     // argument with empty register.
-    MachineOperand &FIOpnd = MI.getOperand(MI.isDebugValueList() ? 2 : 0);
-    int FIIdx = FIOpnd.getIndex();
-    if (FIOpnd.isFI() && !MF->getFrameInfo().isFixedObjectIndex(FIIdx) &&
-        SpillFIs[FIIdx]) {
+    // FIXME: We should instead, update it with the
+    // correct register value. It should be worked out later.
+    auto &FIOpnd = MI.getOperand(MI.isDebugValueList() ? 2 : 0);
+    if (WasOpndSpilled(FIOpnd, true)) {
       FIOpnd.ChangeToRegister(Register(), false /*isDef*/);
     }
   } else if (MI.isDebugValueList()) {
     // Walk over DIOpArg nodes in the DIExpression and check
     // if corresponding DBG_VALUE_LIST arguments have been spilled to VGPR lanes.
-    for (DIOp::Variant Elem : *Expr->getNewElementsRef()) {
+    for (DIOp::Variant Elem : *MI.getDebugExpression()->getNewElementsRef()) {
       if (auto *Arg = std::get_if<DIOp::Arg>(&Elem)) {
-        MachineOperand &FIOpnd = MI.getOperand(Arg->getIndex() + 2);
-        int FIIdx = FIOpnd.getIndex();
-        if (FIOpnd.isFI() && !MF->getFrameInfo().isFixedObjectIndex(FIIdx) &&
-            SpillFIs[FIIdx]) {
-          VGPRSpills = FuncInfo->getSGPRSpillToVirtualVGPRLanes(FIIdx);
+        auto &FIOpnd = MI.getOperand(Arg->getIndex() + 2);
+        if (WasOpndSpilled(FIOpnd, true)) {
+          VGPRSpills = FuncInfo->getSGPRSpillToVirtualVGPRLanes(FIOpnd.getIndex());
           updateDbgValueArg(MI, Arg->getIndex(), VGPRSpills[0]);
         }
       }
     }
-  } else if (MI.isNonListDebugValue()) {
+  } else {
+    assert(MI.isNonListDebugValue());
     // Check if the 1st argument of DBG_VALUE is a frame index (FI)
     // which have been spilled to a VGPR lane.
-    MachineOperand &opnd = MI.getOperand(0);
-    int FIIdx = opnd.getIndex();
-    if (opnd.isFI() && !MF->getFrameInfo().isFixedObjectIndex(0) &&
-        SpillFIs[FIIdx]) {
-      VGPRSpills = FuncInfo->getSGPRSpillToVirtualVGPRLanes(FIIdx);
+    auto &FIOpnd = MI.getOperand(0);
+    if (WasOpndSpilled(FIOpnd, false)) {
+      VGPRSpills = FuncInfo->getSGPRSpillToVirtualVGPRLanes(FIOpnd.getIndex());
       updateDbgValueArg(MI, 0, VGPRSpills[0]);
     }
   }
@@ -471,7 +474,7 @@ void SILowerSGPRSpills::updateDbgValueInst(MachineInstr &MI,
 //  DBG_VALUE  %stack.8, 0, !"next", !DIExpression(DIOpArg(0, ptr addrspace(5)),
 //                                                 DIOpDeref(i32))
 //    --->
-//  DBG_VALUE  %249 : vgpr_32, 0, !”next”, !DIExpression(DIOpArg(0, i32),
+//  DBG_VALUE  %249 : vgpr_32, 0, !"next", !DIExpression(DIOpArg(0, i32),
 //                                                       DIOpConstant(i8 40),
 //                                                       DIOpByteOffset(i32))
 //
@@ -492,11 +495,11 @@ void SILowerSGPRSpills::updateDbgValueInst(MachineInstr &MI,
 //                 %14 : vgpr_32, %stack.5
 //
 void SILowerSGPRSpills::updateDbgValueInsts(MIVector &Insts,
-                                            BitVector &SpillFIs) {
+                                            const BitVector &SpillFIs) {
   for (MachineInstr *MI : Insts) {
     if (MI->isDebugValue() &&
         std::any_of(MI->operands_begin(), MI->operands_end(),
-                    [](auto &opnd) { return opnd.isFI(); })) {
+                    [](auto &Opnd) { return Opnd.isFI(); })) {
       updateDbgValueInst(*MI, SpillFIs);
     }
   }
