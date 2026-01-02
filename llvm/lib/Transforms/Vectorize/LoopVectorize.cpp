@@ -6937,9 +6937,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     for (Value *Op : CondI->operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
       if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
-          any_of(OpI->users(), [&ExitInstrs, this](User *U) {
-            return OrigLoop->contains(cast<Instruction>(U)->getParent()) &&
-                   !ExitInstrs.contains(cast<Instruction>(U));
+          any_of(OpI->users(), [&ExitInstrs](User *U) {
+            return !ExitInstrs.contains(cast<Instruction>(U));
           }))
         continue;
       ExitInstrs.insert(OpI);
@@ -7408,6 +7407,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
+  // Expand BranchOnTwoConds after dissolution, when latch has direct access to
+  // its successors.
+  VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
   // Canonicalize EVL loops after regions are dissolved.
   VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
@@ -8457,12 +8459,13 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Convert input VPInstructions to widened recipes.
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      // Skip recipes that do not need transforming, including
-      // non-VPInstructions (such as ...) and VPInstructions without underlying
-      // values. The latter are added above for masking.
-      if (!VPI || !VPI->getUnderlyingValue())
+    for (VPRecipeBase &R : make_early_inc_range(
+             make_range(VPBB->getFirstNonPhi(), VPBB->end()))) {
+      // Skip recipes that do not need transforming.
+      if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe>(&R))
+        continue;
+      auto *VPI = cast<VPInstruction>(&R);
+      if (!VPI->getUnderlyingValue())
         continue;
 
       // TODO: Gradually replace uses of underlying instruction by analyses on

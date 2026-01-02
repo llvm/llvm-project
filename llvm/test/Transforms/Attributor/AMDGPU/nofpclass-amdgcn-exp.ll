@@ -104,10 +104,10 @@ define float @ret_exp_noinf_nonegzero(float nofpclass(inf nzero) %arg0) {
 }
 
 define float @ret_exp_positive_source(i32 %arg) {
-; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @ret_exp_positive_source(
+; CHECK-LABEL: define nofpclass(nan ninf zero sub nnorm) float @ret_exp_positive_source(
 ; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[ARG]] to float
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.amdgcn.exp2.f32(float [[UITOFP]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero sub nnorm) float @llvm.amdgcn.exp2.f32(float [[UITOFP]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %uitofp = uitofp i32 %arg to float

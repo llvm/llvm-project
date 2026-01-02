@@ -819,6 +819,8 @@ void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
   auto ScaledCutoffs = CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
   uint64_t AllowRuntimeCheckSkipHotCutoff =
       CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.value_or(0.0) * 1000000;
+  // Only register the pass if one of the relevant sanitizers is enabled.
+  // This avoids pipeline overhead for builds that do not use these sanitizers.
   bool LowerAllowSanitize = LangOpts.Sanitize.hasOneOf(
       SanitizerKind::Address | SanitizerKind::KernelAddress |
       SanitizerKind::Thread | SanitizerKind::Memory |

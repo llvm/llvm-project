@@ -578,6 +578,8 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   File->COFFLinkerOpts = FOrErr->TheReader.getCOFFLinkerOpts();
   File->DependentLibraries = FOrErr->TheReader.getDependentLibraries();
   File->ComdatTable = FOrErr->TheReader.getComdatTable();
+  File->MbRef =
+      Object; // Save a memory buffer reference to an input file object.
 
   for (unsigned I = 0; I != FOrErr->Mods.size(); ++I) {
     size_t Begin = File->Symbols.size();
@@ -738,13 +740,19 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
   assert(ResI == Res.end());
 }
 
-Error LTO::add(std::unique_ptr<InputFile> Input,
+Error LTO::add(std::unique_ptr<InputFile> InputPtr,
                ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope timeScope("LTO add input", Input->getName());
+  llvm::TimeTraceScope timeScope("LTO add input", InputPtr->getName());
   assert(!CalledGetMaxTasks);
 
+  Expected<std::shared_ptr<InputFile>> InputOrErr =
+      addInput(std::move(InputPtr));
+  if (!InputOrErr)
+    return InputOrErr.takeError();
+  InputFile *Input = (*InputOrErr).get();
+
   if (Conf.ResolutionFile)
-    writeToResolutionFile(*Conf.ResolutionFile, Input.get(), Res);
+    writeToResolutionFile(*Conf.ResolutionFile, Input, Res);
 
   if (RegularLTO.CombinedModule->getTargetTriple().empty()) {
     Triple InputTriple(Input->getTargetTriple());
@@ -793,6 +801,10 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     LTOMode = LTOK_UnifiedThin;
 
   bool IsThinLTO = LTOInfo->IsThinLTO && (LTOMode != LTOK_UnifiedRegular);
+  // If any of the modules inside of a input bitcode file was compiled with
+  // ThinLTO, we assume that the whole input file also was compiled with
+  // ThinLTO.
+  Input.IsThinLTO = IsThinLTO;
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, Res,
@@ -1203,6 +1215,9 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
+  if (Error EC = handleArchiveInputs())
+    return EC;
+
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
