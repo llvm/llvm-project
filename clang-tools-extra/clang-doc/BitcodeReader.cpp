@@ -800,6 +800,9 @@ template <> void addTemplate(ConceptInfo *I, TemplateInfo &&P) {
 template <> void addTemplate(FriendInfo *I, TemplateInfo &&P) {
   I->Template.emplace(std::move(P));
 }
+template <> void addTemplate(TypedefInfo *I, TemplateInfo &&P) {
+  I->Template.emplace(std::move(P));
+}
 
 // Template specializations go only into template records.
 template <typename T>

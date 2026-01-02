@@ -349,8 +349,10 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
     Obj["HasEnums"] = true;
   }
 
-  if (!Children.Typedefs.empty())
+  if (!Children.Typedefs.empty()) {
     serializeArray(Children.Typedefs, Obj, "Typedefs", SerializeInfo);
+    Obj["HasTypedefs"] = true;
+  }
 
   if (!Children.Records.empty()) {
     serializeArray(Children.Records, Obj, "Records", SerializeReferenceLambda);
@@ -494,6 +496,8 @@ static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
   auto &TypeObj = *TypeVal.getAsObject();
   serializeInfo(I.Underlying, TypeObj);
   Obj["Underlying"] = TypeVal;
+  if (I.Template)
+    serializeInfo(I.Template.value(), Obj);
 }
 
 static void serializeInfo(const BaseRecordInfo &I, Object &Obj,

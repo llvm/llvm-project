@@ -74,12 +74,12 @@ Error HTMLGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
       ConvertToNative(CDCtx.MustacheTemplates.lookup("head-template"));
   std::string NavbarFilePath =
       ConvertToNative(CDCtx.MustacheTemplates.lookup("navbar-template"));
+  std::string AliasFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("alias-template"));
   std::vector<std::pair<StringRef, StringRef>> Partials = {
-      {"Comments", CommentFilePath},
-      {"FunctionPartial", FunctionFilePath},
-      {"EnumPartial", EnumFilePath},
-      {"HeadPartial", HeadFilePath},
-      {"NavbarPartial", NavbarFilePath}};
+      {"Comments", CommentFilePath},     {"FunctionPartial", FunctionFilePath},
+      {"EnumPartial", EnumFilePath},     {"HeadPartial", HeadFilePath},
+      {"NavbarPartial", NavbarFilePath}, {"AliasPartial", AliasFilePath}};
 
   if (Error Err = setupTemplate(NamespaceTemplate, NamespaceFilePath, Partials))
     return Err;

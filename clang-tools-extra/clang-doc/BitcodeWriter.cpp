@@ -512,6 +512,8 @@ void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
     emitBlock(CI);
   if (T.DefLoc)
     emitRecord(*T.DefLoc, TYPEDEF_DEFLOCATION);
+  if (T.Template)
+    emitBlock(*T.Template);
   emitRecord(T.IsUsing, TYPEDEF_IS_USING);
   emitBlock(T.Underlying);
 }

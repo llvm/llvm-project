@@ -85,9 +85,20 @@
                         </ul>
                     </li>
                     {{/Enums}}
-                    {{#Typedef}}
-                    <li class="sidebar-section">Typedef</li>
-                    {{/Typedef}}
+                    {{#HasTypedefs}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Typedefs">Typedefs</a>
+                    </li>
+                    <li>
+                        <ul>
+                            {{#Typedefs}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Typedefs}}
+                        </ul>
+                    </li>
+                    {{/HasTypedefs}}
                     {{#Record}}
                     <li class="sidebar-section">
                         <a class="sidebar-item" href="#Classes">Inner Classes</a>
@@ -200,11 +211,14 @@
                     </ul>
                 </section>
                 {{/Record}}
-                {{#Typedef}}
-                <section class="section-container">
-                    <h2 id="Enums">Enums</h2>
+                {{#HasTypedefs}}
+                <section id="Typedefs" class="section-container">
+                    <h2>Typedefs</h2>
+                    {{#Typedefs}}
+                    {{>AliasPartial}}
+                    {{/Typedefs}}
                 </section>
-                {{/Typedef}}
+                {{/HasTypedefs}}
             </div>
         </div>
     </main>
