@@ -247,6 +247,16 @@ public:
         builder.saveIP(), llvm::omp::OMPD_barrier);
   }
 
+  // Emit stores for linear variables. Useful in case of SIMD
+  // construct.
+  void emitStoresForLinearVar(llvm::IRBuilderBase &builder) {
+    for (size_t index = 0; index < linearOrigVal.size(); index++) {
+      llvm::LoadInst *linearVarTemp =
+          builder.CreateLoad(linearVarTypes[index], linearLoopBodyTemps[index]);
+      builder.CreateStore(linearVarTemp, linearOrigVal[index]);
+    }
+  }
+
   // Rewrite all uses of the original variable in `BBName`
   //  with the linear variable in-place
   void rewriteInPlace(llvm::IRBuilderBase &builder, const std::string &BBName,
@@ -3059,6 +3069,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             : nullptr,
                         order, simdlen, safelen);
 
+  linearClauseProcessor.emitStoresForLinearVar(builder);
   for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
     linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
                                          index);
