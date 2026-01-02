@@ -210,7 +210,7 @@ not change.
 For this reason, on most targets we support floating point reduction operations
 only when `-ffast-math` (or at least the `-fassociative-math -fno-signed-zeros 
 -fno-trapping-math` subset of `-ffast-math`) is used. On select targets such as
-AArch64 and RISC-V we support generating ordered reductions which preserve the
+AArch64 and RISC-V LLVM supports generating ordered reductions which preserve the
 exact result, allowing a limited form of vectorization to take place while
 remaining standards-compliant. However, ordered reductions are typically less
 efficient than traditionally vectorized reductions, therefore enabling floating-
