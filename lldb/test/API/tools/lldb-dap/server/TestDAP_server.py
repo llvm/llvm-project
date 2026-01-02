@@ -17,7 +17,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
     def start_server(
         self, connection, connection_timeout=None, wait_seconds_for_termination=None
     ):
-        log_file_path = self.getBuildArtifact("dap.txt")
+        log_file_path = self.getBuildArtifact("dap.log")
         (process, connection) = dap_server.DebugAdapterServer.launch(
             executable=self.lldbDAPExec,
             connection=connection,
