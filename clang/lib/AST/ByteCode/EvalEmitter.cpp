@@ -155,6 +155,8 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
 }
 
 bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  if (!isActive())
+    return true;
   size_t StackSizeBefore = S.Stk.size();
   const Expr *Arg = E->getArg(0);
   if (!this->visit(Arg)) {
