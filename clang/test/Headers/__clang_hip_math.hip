@@ -9048,7 +9048,7 @@ extern "C" __device__ float test___sinf(float x) {
   return __sinf(x);
 }
 
-// DEFAULT-LABEL: define dso_local float @test___tanf(
+// DEFAULT-LABEL: define dso_local noundef float @test___tanf(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
@@ -9066,7 +9066,7 @@ extern "C" __device__ float test___sinf(float x) {
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract float [[CALL_I_I]], [[TMP0]]
 // FINITEONLY-NEXT:    ret float [[MUL_I]]
 //
-// APPROX-LABEL: define dso_local float @test___tanf(
+// APPROX-LABEL: define dso_local noundef float @test___tanf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
@@ -9075,7 +9075,7 @@ extern "C" __device__ float test___sinf(float x) {
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract float [[CALL_I_I]], [[TMP0]]
 // APPROX-NEXT:    ret float [[MUL_I]]
 //
-// NCRDIV-LABEL: define dso_local float @test___tanf(
+// NCRDIV-LABEL: define dso_local noundef float @test___tanf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
@@ -9084,7 +9084,7 @@ extern "C" __device__ float test___sinf(float x) {
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[CALL_I_I]], [[TMP0]]
 // NCRDIV-NEXT:    ret float [[MUL_I]]
 //
-// AMDGCNSPIRV-LABEL: define spir_func float @test___tanf(
+// AMDGCNSPIRV-LABEL: define spir_func noundef float @test___tanf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR6]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
