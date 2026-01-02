@@ -2676,7 +2676,7 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
       .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
         return vectorizeInsertSliceOpPrecondition(sliceOp, inputVectorSizes);
       })
-      .Default([](auto) { return failure(); });
+      .Default(failure());
 }
 
 /// Converts affine.apply Ops to arithmetic operations.
@@ -2783,7 +2783,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
             return vectorizeAsInsertSliceOp(rewriter, sliceOp, inputVectorSizes,
                                             results);
           })
-          .Default([](auto) { return failure(); });
+          .Default(failure());
 
   if (failed(vectorizeResult)) {
     LDBG() << "Vectorization failed";
