@@ -48,6 +48,15 @@ tablegen("X86GenRegisterBank") {
   td_file = "X86.td"
 }
 
+tablegen("X86GenPreLegalizeGICombiner") {
+  visibility = [ ":LLVMX86CodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=X86PreLegalizerCombiner",
+  ]
+  td_file = "X86.td"
+}
+
 static_library("LLVMX86CodeGen") {
   deps = [
     ":X86GenCallingConv",
@@ -57,6 +66,7 @@ static_library("LLVMX86CodeGen") {
     ":X86GenGlobalISel",
     ":X86GenInstrMapping",
     ":X86GenRegisterBank",
+    ":X86GenPreLegalizeGICombiner",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -80,6 +90,7 @@ static_library("LLVMX86CodeGen") {
     "GISel/X86CallLowering.cpp",
     "GISel/X86InstructionSelector.cpp",
     "GISel/X86LegalizerInfo.cpp",
+    "GISel/X86PreLegalizerCombiner.cpp",
     "GISel/X86RegisterBankInfo.cpp",
     "X86ArgumentStackSlotRebase.cpp",
     "X86AsmPrinter.cpp",
