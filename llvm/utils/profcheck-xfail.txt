@@ -454,7 +454,6 @@ Transforms/IROutliner/region-inputs-in-phi-nodes.ll
 Transforms/LoopBoundSplit/bug51866.ll
 Transforms/LoopBoundSplit/bug-loop-bound-split-phi-in-exit-block.ll
 Transforms/LoopBoundSplit/loop-bound-split.ll
-Transforms/LoopDeletion/invalidate-scev-after-hoisting.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
 Transforms/LoopIdiom/RISCV/byte-compare-index.ll

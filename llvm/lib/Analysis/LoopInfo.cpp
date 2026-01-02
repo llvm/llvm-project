@@ -54,6 +54,10 @@ static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                     cl::Hidden, cl::desc("Verify loop info (time consuming)"));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
+
 //===----------------------------------------------------------------------===//
 // Loop implementation
 //
@@ -112,8 +116,13 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // There is possibility of hoisting this instruction above some arbitrary
   // condition. Any metadata defined on it can be control dependent on this
   // condition. Conservatively strip it here so that we don't give any wrong
-  // information to the optimizer.
-  I->dropUnknownNonDebugMetadata();
+  // information to the optimizer. We preserve profile metadata as instructions
+  // that can take profile metadata (select and br) with loop invariant
+  // conditions will maintain their weights.
+  if (ProfcheckDisableMetadataFixes)
+    I->dropUnknownNonDebugMetadata();
+  else
+    I->dropUnknownNonDebugMetadata({LLVMContext::MD_prof});
 
   if (SE)
     SE->forgetBlockAndLoopDispositions(I);
