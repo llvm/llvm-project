@@ -57,10 +57,7 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
-      const Symbol &symbol{GetAssociationRoot(*base)};
-      if (IsFunctionResult(symbol)) {
-        context.NoteDefinedSymbol(symbol);
-      }
+      context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument %s requires an explicit interface"_err_en_US,
@@ -781,10 +778,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     } else if (dummy.intent != common::Intent::In ||
         (dummyIsPointer && !actualIsPointer)) {
       if (auto named{evaluate::ExtractNamedEntity(actual)}) {
-        if (const Symbol & base{named->GetFirstSymbol()};
-            IsFunctionResult(base)) {
-          context.NoteDefinedSymbol(base);
-        }
+        context.NoteDefinedSymbol(named->GetFirstSymbol());
       }
     }
   }
