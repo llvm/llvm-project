@@ -918,15 +918,15 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP operand,
       source_type.TypeDescription().length());
 }
 
-llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
-  auto operand_or_err = Evaluate(node->GetOperand());
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
+  auto operand_or_err = Evaluate(node.GetOperand());
 
   if (!operand_or_err)
     return operand_or_err;
 
   lldb::ValueObjectSP operand = *operand_or_err;
   CompilerType op_type = operand->GetCompilerType();
-  CompilerType target_type = node->GetType();
+  CompilerType target_type = node.GetType();
 
   if (op_type.IsReferenceType())
     op_type = op_type.GetNonReferenceType();
@@ -936,7 +936,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
     op_type = operand->GetCompilerType();
   }
   auto type_or_err =
-      VerifyCastType(operand, op_type, target_type, node->GetLocation());
+      VerifyCastType(operand, op_type, target_type, node.GetLocation());
   if (!type_or_err)
     return type_or_err.takeError();
 
@@ -946,7 +946,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
     operand = operand->Dereference(error);
     if (error.Fail())
       return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
-                                                  node->GetLocation());
+                                                  node.GetLocation());
   }
 
   switch (cast_kind) {
@@ -987,7 +987,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
       llvm::formatv("unable to cast from '{0}' to '{1}'",
                     op_type.TypeDescription(), target_type.TypeDescription());
   return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                              node->GetLocation());
+                                              node.GetLocation());
 }
 
 } // namespace lldb_private::dil
