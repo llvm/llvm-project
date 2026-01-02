@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -target-feature +avx512bw -target-feature +avx512dq -target-feature +avx512fp16 -target-feature +avx512bf16 -fclangir -emit-cir -o %t.cir
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.2 -fclangir -emit-cir -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -target-feature +avx512bw -target-feature +avx512dq -target-feature +avx512fp16 -target-feature +avx512bf16 -fclangir -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.2 -fclangir -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -target-feature +avx512bw -target-feature +avx512dq -target-feature +avx512fp16 -target-feature +avx512bf16 -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.2 -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefixes=OGCG --input-file=%t.ll %s
 
 #include <immintrin.h>
@@ -131,7 +131,7 @@ __m128i test_selectq_128(__mmask8 k, __m128i a, __m128i b) {
 
   // OGCG-LABEL: @test_selectq_128
   // OGCG: select <2 x i1> %{{.+}}, <2 x i64> %{{.+}}, <2 x i64> %{{.+}}
-  return __builtin_ia32_selectq_128(k, a, b);
+  return __builtin_ia32_selectq_128(k, (__v2di)a, (__v2di)b);
 }
 
 __m256i test_selectq_256(__mmask8 k, __m256i a, __m256i b) {
@@ -144,7 +144,7 @@ __m256i test_selectq_256(__mmask8 k, __m256i a, __m256i b) {
 
   // OGCG-LABEL: @test_selectq_256
   // OGCG: select <4 x i1> %{{.+}}, <4 x i64> %{{.+}}, <4 x i64> %{{.+}}
-  return __builtin_ia32_selectq_256(k, a, b);
+  return __builtin_ia32_selectq_256(k, (__v4di)a, (__v4di)b);
 }
 
 __m512i test_selectq_512(__mmask8 k, __m512i a, __m512i b) {
@@ -156,7 +156,7 @@ __m512i test_selectq_512(__mmask8 k, __m512i a, __m512i b) {
 
   // OGCG-LABEL: @test_selectq_512
   // OGCG: select <8 x i1> %{{.+}}, <8 x i64> %{{.+}}, <8 x i64> %{{.+}}
-  return __builtin_ia32_selectq_512(k, a, b);
+  return __builtin_ia32_selectq_512(k, (__v8di)a, (__v8di)b);
 }
 
 __m128h test_selectph_128(__mmask8 k, __m128h a, __m128h b) {
@@ -168,7 +168,7 @@ __m128h test_selectph_128(__mmask8 k, __m128h a, __m128h b) {
 
   // OGCG-LABEL: @test_selectph_128
   // OGCG: select <8 x i1> %{{.+}}, <8 x half> %{{.+}}, <8 x half> %{{.+}}
-  return __builtin_ia32_selectph_128(k, a, b);
+  return __builtin_ia32_selectph_128(k, (__v8hf)a, (__v8hf)b);
 }
 
 __m256h test_selectph_256(__mmask16 k, __m256h a, __m256h b) {
@@ -180,7 +180,7 @@ __m256h test_selectph_256(__mmask16 k, __m256h a, __m256h b) {
 
   // OGCG-LABEL: @test_selectph_256
   // OGCG: select <16 x i1> %{{.+}}, <16 x half> %{{.+}}, <16 x half> %{{.+}}
-  return __builtin_ia32_selectph_256(k, a, b);
+  return __builtin_ia32_selectph_256(k, (__v16hf)a, (__v16hf)b);
 }
 
 __m512h test_selectph_512(__mmask32 k, __m512h a, __m512h b) {
@@ -192,7 +192,7 @@ __m512h test_selectph_512(__mmask32 k, __m512h a, __m512h b) {
 
   // OGCG-LABEL: @test_selectph_512
   // OGCG: select <32 x i1> %{{.+}}, <32 x half> %{{.+}}, <32 x half> %{{.+}}
-  return __builtin_ia32_selectph_512(k, a, b);
+  return __builtin_ia32_selectph_512(k, (__v32hf)a, (__v32hf)b);
 }
 
 __m128bh test_selectsbf_128(__mmask8 k, __m128bh a, __m128bh b) {
@@ -205,7 +205,7 @@ __m128bh test_selectsbf_128(__mmask8 k, __m128bh a, __m128bh b) {
 
   // OGCG-LABEL: @test_selectsbf_128
   // OGCG: select i1 %{{.+}}, bfloat %{{.+}}, bfloat %{{.+}}
-  return __builtin_ia32_selectsbf_128(k, a, b);
+  return __builtin_ia32_selectsbf_128(k, (__v8bf)a, (__v8bf)b);
 }
 
 __m256bh test_selectpbf_256(__mmask16 k, __m256bh a, __m256bh b) {
@@ -217,7 +217,7 @@ __m256bh test_selectpbf_256(__mmask16 k, __m256bh a, __m256bh b) {
 
   // OGCG-LABEL: @test_selectpbf_256
   // OGCG: select <16 x i1> %{{.+}}, <16 x bfloat> %{{.+}}, <16 x bfloat> %{{.+}}
-  return __builtin_ia32_selectpbf_256(k, a, b);
+  return __builtin_ia32_selectpbf_256(k, (__v16bf)a, (__v16bf)b);
 }
 
 __m512bh test_selectpbf_512(__mmask32 k, __m512bh a, __m512bh b) {
@@ -229,7 +229,7 @@ __m512bh test_selectpbf_512(__mmask32 k, __m512bh a, __m512bh b) {
 
   // OGCG-LABEL: @test_selectpbf_512
   // OGCG: select <32 x i1> %{{.+}}, <32 x bfloat> %{{.+}}, <32 x bfloat> %{{.+}}
-  return __builtin_ia32_selectpbf_512(k, a, b);
+  return __builtin_ia32_selectpbf_512(k, (__v32bf)a, (__v32bf)b);
 }
 
 __m128 test_selectps_128(__mmask8 k, __m128 a, __m128 b) {
@@ -242,7 +242,7 @@ __m128 test_selectps_128(__mmask8 k, __m128 a, __m128 b) {
 
   // OGCG-LABEL: @test_selectps_128
   // OGCG: select <4 x i1> %{{.+}}, <4 x float> %{{.+}}, <4 x float> %{{.+}}
-  return __builtin_ia32_selectps_128(k, a, b);
+  return __builtin_ia32_selectps_128(k, (__v4sf)a, (__v4sf)b);
 }
 
 __m256 test_selectps_256(__mmask8 k, __m256 a, __m256 b) {
@@ -254,7 +254,7 @@ __m256 test_selectps_256(__mmask8 k, __m256 a, __m256 b) {
 
   // OGCG-LABEL: @test_selectps_256
   // OGCG: select <8 x i1> %{{.+}}, <8 x float> %{{.+}}, <8 x float> %{{.+}}
-  return __builtin_ia32_selectps_256(k, a, b);
+  return __builtin_ia32_selectps_256(k, (__v8sf)a, (__v8sf)b);
 }
 
 __m512 test_selectps_512(__mmask16 k, __m512 a, __m512 b) {
@@ -266,7 +266,7 @@ __m512 test_selectps_512(__mmask16 k, __m512 a, __m512 b) {
 
   // OGCG-LABEL: @test_selectps_512
   // OGCG: select <16 x i1> %{{.+}}, <16 x float> %{{.+}}, <16 x float> %{{.+}}
-  return __builtin_ia32_selectps_512(k, a, b);
+  return __builtin_ia32_selectps_512(k, (__v16sf)a, (__v16sf)b);
 }
 
 __m128d test_selectpd_128(__mmask8 k, __m128d a, __m128d b) {
@@ -279,7 +279,7 @@ __m128d test_selectpd_128(__mmask8 k, __m128d a, __m128d b) {
 
   // OGCG-LABEL: @test_selectpd_128
   // OGCG: select <2 x i1> %{{.+}}, <2 x double> %{{.+}}, <2 x double> %{{.+}}
-  return __builtin_ia32_selectpd_128(k, a, b);
+  return __builtin_ia32_selectpd_128(k, (__v2df)a, (__v2df)b);
 }
 
 __m256d test_selectpd_256(__mmask8 k, __m256d a, __m256d b) {
@@ -292,7 +292,7 @@ __m256d test_selectpd_256(__mmask8 k, __m256d a, __m256d b) {
 
   // OGCG-LABEL: @test_selectpd_256
   // OGCG: select <4 x i1> %{{.+}}, <4 x double> %{{.+}}, <4 x double> %{{.+}}
-  return __builtin_ia32_selectpd_256(k, a, b);
+  return __builtin_ia32_selectpd_256(k, (__v4df)a, (__v4df)b);
 }
 
 __m512d test_selectpd_512(__mmask8 k, __m512d a, __m512d b) {
@@ -304,7 +304,7 @@ __m512d test_selectpd_512(__mmask8 k, __m512d a, __m512d b) {
 
   // OGCG-LABEL: @test_selectpd_512
   // OGCG: select <8 x i1> %{{.+}}, <8 x double> %{{.+}}, <8 x double> %{{.+}}
-  return __builtin_ia32_selectpd_512(k, a, b);
+  return __builtin_ia32_selectpd_512(k, (__v8df)a, (__v8df)b);
 }
 
 // Scalar Selects 
@@ -325,7 +325,7 @@ __m128h test_selectsh_128(__mmask8 k, __m128h a, __m128h b) {
 
   // OGCG-LABEL: @test_selectsh_128
   // OGCG: select i1 %{{.+}}, half %{{.+}}, half %{{.+}}
-  return __builtin_ia32_selectsh_128(k, a, b);
+  return __builtin_ia32_selectsh_128(k, (__v8hf)a, (__v8hf)b);
 }
 
 __m128 test_selectss_128(__mmask8 k, __m128 a, __m128 b) {
@@ -339,7 +339,7 @@ __m128 test_selectss_128(__mmask8 k, __m128 a, __m128 b) {
 
   // OGCG-LABEL: @test_selectss_128
   // OGCG: select i1 %{{.+}}, float %{{.+}}, float %{{.+}}
-  return __builtin_ia32_selectss_128(k, a, b);
+  return __builtin_ia32_selectss_128(k, (__v4sf)a, (__v4sf)b);
 }
 
 __m128d test_selectsd_128(__mmask8 k, __m128d a, __m128d b) {
@@ -353,5 +353,5 @@ __m128d test_selectsd_128(__mmask8 k, __m128d a, __m128d b) {
 
   // OGCG-LABEL: @test_selectsd_128
   // OGCG: select i1 %{{.+}}, double %{{.+}}, double %{{.+}}
-  return __builtin_ia32_selectsd_128(k, a, b);
+  return __builtin_ia32_selectsd_128(k, (__v2df)a, (__v2df)b);
 }
