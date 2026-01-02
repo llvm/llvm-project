@@ -1536,6 +1536,48 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::CheckInitOnDepobj(
+    const parser::OpenMPDepobjConstruct &depobj,
+    const parser::OmpClause &initClause) {
+  const parser::OmpDirectiveSpecification &dirSpec{depobj.v};
+  const parser::OmpArgumentList &args{dirSpec.Arguments()};
+  const parser::OmpInitClause &init{
+      std::get<parser::OmpClause::Init>(initClause.u).v};
+
+  if (!args.v.empty()) {
+    context_.Say(args.source,
+        "The INIT clause is not allowed when the DEPOBJ directive has an argument"_err_en_US);
+  }
+
+  if (!OmpVerifyModifiers(
+          init, llvm::omp::Clause::OMPC_init, initClause.source, context_)) {
+    return;
+  }
+
+  auto &modifiers{OmpGetModifiers(init)};
+  if (auto *depInfo{
+          OmpGetUniqueModifier<parser::OmpDepinfoModifier>(modifiers)}) {
+    auto depKind{std::get<common::OmpDependenceKind>(depInfo->t)};
+    if (depKind == common::OmpDependenceKind::Depobj) {
+      auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
+      context_.Say(OmpGetModifierSource(modifiers, depInfo),
+          "'%s' is not an allowed value of the '%s' modifier"_err_en_US,
+          parser::ToUpperCaseLetters(EnumToString(depKind)), desc.name.str());
+    }
+  } else {
+    auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
+    context_.Say(initClause.source,
+        "The '%s' modifier is required on a DEPOBJ construct"_err_en_US,
+        desc.name.str());
+  }
+  if (auto *prefType{OmpGetUniqueModifier<parser::OmpPreferType>(modifiers)}) {
+    auto &desc{OmpGetDescriptor<parser::OmpPreferType>()};
+    context_.Say(OmpGetModifierSource(modifiers, prefType),
+        "The '%s' modifier is not allowed on a DEPOBJ construct"_err_en_US,
+        desc.name.str());
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
   const auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
   PushContextAndClauseSets(dirName.source, llvm::omp::Directive::OMPD_depobj);
@@ -1560,45 +1602,49 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
     return;
   }
 
-  auto &clause{clauses.v.front()};
-
   if (version >= 60 && arguments.v.empty()) {
     context_.Say(x.source,
         "DEPOBJ syntax with no argument is not handled yet"_err_en_US);
-    return;
   }
 
-  // [5.2:73:27-28]
-  // If the destroy clause appears on a depobj construct, destroy-var must
-  // refer to the same depend object as the depobj argument of the construct.
-  if (clause.Id() == llvm::omp::Clause::OMPC_destroy) {
-    auto getObjSymbol{[&](const parser::OmpObject &obj) {
-      return common::visit( //
-          common::visitors{
-              [&](auto &&s) { return GetLastName(s).symbol; },
-              [&](const parser::OmpObject::Invalid &invalid) {
-                return static_cast<Symbol *>(nullptr);
-              },
-          },
-          obj.u);
-    }};
-    auto getArgSymbol{[&](const parser::OmpArgument &arg) {
-      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
-        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-          return getObjSymbol(*object);
-        }
+  auto getObjSymbol{[&](const parser::OmpObject &obj) {
+    return common::visit( //
+        common::visitors{
+            [&](auto &&s) { return GetLastName(s).symbol; },
+            [&](const parser::OmpObject::Invalid &invalid) {
+              return static_cast<Symbol *>(nullptr);
+            },
+        },
+        obj.u);
+  }};
+  auto getArgSymbol{[&](const parser::OmpArgument &arg) {
+    if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
+      if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
+        return getObjSymbol(*object);
       }
-      return static_cast<Symbol *>(nullptr);
-    }};
+    }
+    return static_cast<Symbol *>(nullptr);
+  }};
 
-    auto &wrapper{std::get<parser::OmpClause::Destroy>(clause.u)};
-    if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
-      const Symbol *constrSym{getArgSymbol(arguments.v.front())};
-      const Symbol *clauseSym{getObjSymbol(destroy->v)};
-      if (constrSym && clauseSym && constrSym != clauseSym) {
-        context_.Say(x.source,
-            "The DESTROY clause must refer to the same object as the "
-            "DEPOBJ construct"_err_en_US);
+  for (auto &clause : clauses.v) {
+    llvm::omp::Clause clauseId{clause.Id()};
+
+    if (clauseId == llvm::omp::Clause::OMPC_init) {
+      CheckInitOnDepobj(x, clause);
+    } else if (clauseId == llvm::omp::Clause::OMPC_destroy) {
+      // [5.2:73:27-28]
+      // If the destroy clause appears on a depobj construct, destroy-var must
+      // refer to the same depend object as the depobj argument of the
+      // construct.
+      auto &wrapper{std::get<parser::OmpClause::Destroy>(clause.u)};
+      if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
+        const Symbol *constrSym{getArgSymbol(arguments.v.front())};
+        const Symbol *clauseSym{getObjSymbol(destroy->v)};
+        if (constrSym && clauseSym && constrSym != clauseSym) {
+          context_.Say(x.source,
+              "The DESTROY clause must refer to the same object as the "
+              "DEPOBJ construct"_err_en_US);
+        }
       }
     }
   }
@@ -5484,6 +5530,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                     ++targetCount;
                   }
                 }
+                if (auto *depInfo{
+                        OmpGetUniqueModifier<parser::OmpDepinfoModifier>(
+                            modifiers)}) {
+                  auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
+                  context_.Say(OmpGetModifierSource(modifiers, depInfo),
+                      "The '%s' is not allowed on INTEROP construct"_err_en_US,
+                      desc.name.str());
+                }
               }
               const auto &interopVar{parser::Unwrap<parser::OmpObject>(
                   std::get<parser::OmpObject>(initClause.v.t))};
@@ -5599,12 +5653,14 @@ CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
 CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
+CHECK_SIMPLE_CLAUSE(Apply, OMPC_apply)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
 CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
 CHECK_SIMPLE_CLAUSE(Collector, OMPC_collector)
 CHECK_SIMPLE_CLAUSE(Combiner, OMPC_combiner)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(Contains, OMPC_contains)
+CHECK_SIMPLE_CLAUSE(Counts, OMPC_counts)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
@@ -5623,12 +5679,17 @@ CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
 CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
+CHECK_SIMPLE_CLAUSE(Induction, OMPC_induction)
 CHECK_SIMPLE_CLAUSE(Inductor, OMPC_inductor)
+CHECK_SIMPLE_CLAUSE(InitComplete, OMPC_init_complete)
 CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
 CHECK_SIMPLE_CLAUSE(Init, OMPC_init)
+CHECK_SIMPLE_CLAUSE(Interop, OMPC_interop)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
+CHECK_SIMPLE_CLAUSE(Local, OMPC_local)
 CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
 CHECK_SIMPLE_CLAUSE(MemoryOrder, OMPC_memory_order)
+CHECK_SIMPLE_CLAUSE(Memscope, OMPC_memscope)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
 CHECK_SIMPLE_CLAUSE(Message, OMPC_message)
 CHECK_SIMPLE_CLAUSE(Nocontext, OMPC_nocontext)
@@ -5651,6 +5712,7 @@ CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
 CHECK_SIMPLE_CLAUSE(Replayable, OMPC_replayable)
+CHECK_SIMPLE_CLAUSE(Safesync, OMPC_safesync)
 CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Severity, OMPC_severity)
 CHECK_SIMPLE_CLAUSE(Simd, OMPC_simd)

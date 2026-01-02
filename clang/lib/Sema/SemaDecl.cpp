@@ -13840,8 +13840,15 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       return;
     }
 
-    if (DeduceVariableDeclarationType(VDecl, DirectInit, Init))
+    if (DeduceVariableDeclarationType(VDecl, DirectInit, Init)) {
+      assert(VDecl->isInvalidDecl() &&
+             "decl should be invalidated when deduce fails");
+      if (auto *RecoveryExpr =
+              CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), {Init})
+                  .get())
+        VDecl->setInit(RecoveryExpr);
       return;
+    }
   }
 
   this->CheckAttributesOnDeducedType(RealDecl);
@@ -16468,19 +16475,19 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         FD->getAttr<SYCLKernelEntryPointAttr>();
     if (FD->isDefaulted()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*defaulted function*/ 3;
+          << SKEPAttr << diag::InvalidSKEPReason::DefaultedFn;
       SKEPAttr->setInvalidAttr();
     } else if (FD->isDeleted()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*deleted function*/ 2;
+          << SKEPAttr << diag::InvalidSKEPReason::DeletedFn;
       SKEPAttr->setInvalidAttr();
     } else if (FSI->isCoroutine()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*coroutine*/ 7;
+          << SKEPAttr << diag::InvalidSKEPReason::Coroutine;
       SKEPAttr->setInvalidAttr();
     } else if (Body && isa<CXXTryStmt>(Body)) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*function defined with a function try block*/ 8;
+          << SKEPAttr << diag::InvalidSKEPReason::FunctionTryBlock;
       SKEPAttr->setInvalidAttr();
     }
 
@@ -20161,7 +20168,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
-  ProcessAPINotes(Record);
+  if (Record && !isa<ClassTemplateSpecializationDecl>(Record))
+    ProcessAPINotes(Record);
 }
 
 // Given an integral type, return the next larger integral type
