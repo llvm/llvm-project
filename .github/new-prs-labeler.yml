@@ -618,6 +618,12 @@ github:workflow:
   - changed-files:
     - any-glob-to-any-file:
       - .github/workflows/**
+      - .github/new-prs-labeler.yml
+
+github-prs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - .github/new-prs-labeler.yml
 
 cmake:
   - changed-files:
