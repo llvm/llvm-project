@@ -1382,9 +1382,11 @@ define void @add_U256_without_i128_or_recursive(ptr sret(%uint256) %0, ptr %1, p
 define i32 @addcarry_ult(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: addcarry_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
 ; CHECK-NEXT:    cmpl %ecx, %edx
-; CHECK-NEXT:    adcl %esi, %eax
+; CHECK-NEXT:    adcl $0, %eax
 ; CHECK-NEXT:    retq
   %s = add i32 %a, %b
   %k = icmp ult i32 %x, %y
@@ -1396,9 +1398,11 @@ define i32 @addcarry_ult(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
 define i32 @addcarry_ugt(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: addcarry_ugt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
 ; CHECK-NEXT:    cmpl %edx, %ecx
-; CHECK-NEXT:    adcl %esi, %eax
+; CHECK-NEXT:    adcl $0, %eax
 ; CHECK-NEXT:    retq
   %s = add i32 %a, %b
   %k = icmp ugt i32 %x, %y
