@@ -959,14 +959,13 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
 
   if (sym.getName().starts_with(prefetchSymbolPrefix)) {
     sec->addReloc({expr, type, offset, addend, &sym});
-    dbgs() << "MY Sym: " << sym.getName() << " " << offset  << " " << addend << "\n";
+    dbgs() << "MY Sym: " << sym.getName() << " " << offset << " " << addend
+           << "\n";
     // Prefetch target symbols may be undefined due to inaccurate profiles.
     // The unresolved relocation will result in 0x0, effectively prefetching the
     // next instruction.
     return;
   }
-
-
 
   if (needsGot(expr)) {
     if (ctx.arg.emachine == EM_MIPS) {
