@@ -3268,6 +3268,10 @@ def : InstAlias<"tst $src1, $src2$sh",
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
+def : Pat<(not logical_shifted_reg32:$Rm_and_shift),
+          (ORNWrs WZR, logical_shifted_reg32:$Rm_and_shift)>;
+def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
+          (ORNXrs XZR, logical_shifted_reg64:$Rm_and_shift)>;
 
 // Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
 let AddedComplexity = 6 in

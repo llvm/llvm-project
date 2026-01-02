@@ -205,35 +205,10 @@ static void dropUsesAndEraseResults(Operation *op, BitVector toErase) {
   assert(op->getNumResults() == toErase.size() &&
          "expected the number of results in `op` and the size of `toErase` to "
          "be the same");
-
-  std::vector<Type> newResultTypes;
-  for (OpResult result : op->getResults())
-    if (!toErase[result.getResultNumber()])
-      newResultTypes.push_back(result.getType());
+  for (auto idx : toErase.set_bits())
+    op->getResult(idx).dropAllUses();
   IRRewriter rewriter(op);
-  rewriter.setInsertionPointAfter(op);
-  OperationState state(op->getLoc(), op->getName().getStringRef(),
-                       op->getOperands(), newResultTypes, op->getAttrs());
-  for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i)
-    state.addRegion();
-  Operation *newOp = rewriter.create(state);
-  for (const auto &[index, region] : llvm::enumerate(op->getRegions())) {
-    // Move all blocks of `region` into `newRegion`.
-    Region &newRegion = newOp->getRegion(index);
-    rewriter.inlineRegionBefore(region, newRegion, newRegion.begin());
-  }
-
-  unsigned indexOfNextNewCallOpResultToReplace = 0;
-  for (auto [index, result] : llvm::enumerate(op->getResults())) {
-    assert(result && "expected result to be non-null");
-    if (toErase[index]) {
-      result.dropAllUses();
-    } else {
-      result.replaceAllUsesWith(
-          newOp->getResult(indexOfNextNewCallOpResultToReplace++));
-    }
-  }
-  op->erase();
+  rewriter.eraseOpResults(op, toErase);
 }
 
 /// Convert a list of `Operand`s to a list of `OpOperand`s.
