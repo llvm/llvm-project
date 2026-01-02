@@ -594,7 +594,6 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   // Not all operands are forwarded to a successor. This set can be
   // non-contiguous in the presence of multiple successors.
   BitVector unaccounted(branch->getNumOperands(), true);
-
   RegionBranchSuccessorMapping mapping;
   branch.getSuccessorOperandInputMapping(mapping, RegionBranchPoint::parent());
   for (const auto &[operand, inputs] : mapping) {
@@ -603,6 +602,27 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
            *getLatticeElementFor(getProgramPointAfter(branch), input));
       unaccounted.reset(operand->getOperandNumber());
     }
+  }
+
+  Operation *op = branch.getOperation();
+  SmallVector<RegionSuccessor> successors;
+  SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
+  branch.getEntrySuccessorRegions(operands, successors);
+  for (RegionSuccessor &successor : successors) {
+    if (successor.isParent())
+      continue;
+    SmallVector<BlockArgument> noControlFlowArguments;
+    MutableArrayRef<BlockArgument> arguments =
+        successor.getSuccessor()->getArguments();
+    ValueRange inputs = successor.getSuccessorInputs();
+    for (BlockArgument argument : arguments) {
+      // Visit blockArgument of RegionBranchOp which isn't "control
+      // flow block arguments". For example, the IV of a loop.
+      if (!llvm::is_contained(inputs, argument)) {
+        noControlFlowArguments.push_back(argument);
+      }
+    }
+    visitNonControlFlowArguments(successor, noControlFlowArguments);
   }
 
   // All operands not forwarded to regions are typically parameters of the

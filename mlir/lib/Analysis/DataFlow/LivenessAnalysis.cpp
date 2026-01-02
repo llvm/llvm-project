@@ -137,7 +137,6 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // Populating such blocks in `blocks`.
   bool mayLive = false;
   SmallVector<Block *, 4> blocks;
-  SmallVector<BlockArgument> argumentNotOperand;
   if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
     if (op->getNumResults() != 0) {
       // This mark value of type 1.c liveness as may live, because the region
@@ -164,25 +163,6 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       for (Region &region : op->getRegions()) {
         for (Block &block : region)
           blocks.push_back(&block);
-      }
-    }
-
-    // In the block of the successor block argument of RegionBranchOpInterface,
-    // there may be arguments of RegionBranchOpInterface, such as the IV of
-    // scf.forOp. Explicitly set this argument to live.
-    for (Region &region : op->getRegions()) {
-      SmallVector<RegionSuccessor> successors;
-      regionBranchOp.getSuccessorRegions(region, successors);
-      for (RegionSuccessor successor : successors) {
-        if (successor.isParent())
-          continue;
-        auto arguments = successor.getSuccessor()->getArguments();
-        ValueRange regionInputs = successor.getSuccessorInputs();
-        for (auto argument : arguments) {
-          if (llvm::find(regionInputs, argument) == regionInputs.end()) {
-            argumentNotOperand.push_back(argument);
-          }
-        }
       }
     }
   } else if (isa<BranchOpInterface>(op)) {
@@ -244,15 +224,6 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
     Liveness *operandLiveness = getLatticeElement(operand.get());
     LDBG() << "Marking branch operand live: " << operand.get();
     propagateIfChanged(operandLiveness, operandLiveness->markLive());
-    for (BlockArgument argument : argumentNotOperand) {
-      Liveness *argumentLiveness = getLatticeElement(argument);
-      LDBG() << "Marking RegionBranchOp's argument live: " << argument;
-      // TODO: this is overly conservative: we should be able to eliminate
-      // unused values in a RegionBranchOpInterface operation but that may
-      // requires removing operation results which is beyond current
-      // capabilities of this pass right now.
-      propagateIfChanged(argumentLiveness, argumentLiveness->markLive());
-    }
   }
 
   // Now that we have checked for memory-effecting ops in the blocks of concern,
@@ -260,8 +231,6 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // mark it "live" due to type (1.a/3) liveness.
   SmallVector<Liveness *, 4> operandLiveness;
   operandLiveness.push_back(getLatticeElement(operand.get()));
-  for (BlockArgument argument : argumentNotOperand)
-    operandLiveness.push_back(getLatticeElement(argument));
   SmallVector<const Liveness *, 4> resultsLiveness;
   for (const Value result : op->getResults())
     resultsLiveness.push_back(getLatticeElement(result));
@@ -301,6 +270,30 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
   Liveness *operandLiveness = getLatticeElement(operand.get());
   LDBG() << "Marking call operand live: " << operand.get();
   propagateIfChanged(operandLiveness, operandLiveness->markLive());
+}
+
+void LivenessAnalysis::visitNonControlFlowArguments(
+    RegionSuccessor &successor, ArrayRef<BlockArgument> arguments) {
+  Operation *parentOp = successor.getSuccessor()->getParentOp();
+  LDBG() << "visitNonControlFlowArguments visit the region # "
+         << successor.getSuccessor()->getRegionNumber() << "of "
+         << OpWithFlags(parentOp, OpPrintingFlags().skipRegions());
+  auto valuesToLattices = [&](Value value) { return getLatticeElement(value); };
+  SmallVector<Liveness *> argumentLattices =
+      llvm::map_to_vector(arguments, valuesToLattices);
+  SmallVector<Liveness *> parentResultLattices =
+      llvm::map_to_vector(parentOp->getResults(), valuesToLattices);
+
+  for (Liveness *resultLattice : parentResultLattices) {
+    if (resultLattice->isLive) {
+      for (Liveness *argumentLattice : argumentLattices) {
+        LDBG() << "make lattice: " << argumentLattice << " live";
+        propagateIfChanged(argumentLattice, argumentLattice->markLive());
+      }
+      return;
+    }
+  }
+  (void)visitOperation(parentOp, argumentLattices, parentResultLattices);
 }
 
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
