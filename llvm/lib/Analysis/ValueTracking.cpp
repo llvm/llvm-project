@@ -5661,16 +5661,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             Op->getType()->getScalarType()->getFltSemantics();
         DenormalMode Mode = F->getDenormalMode(FltSem);
 
-        if (SelfAdd) {
-          // Doubling 0 will give the same 0.
-          if (KnownRHS.isKnownNeverLogicalPosZero(Mode) &&
-              Mode.Output == DenormalMode::IEEE)
-            Known.knownNot(fcPosZero);
-          if (KnownRHS.isKnownNeverLogicalNegZero(Mode) &&
-              (Mode.Output == DenormalMode::IEEE ||
-               Mode.Output == DenormalMode::PositiveZero))
-            Known.knownNot(fcNegZero);
-        }
+        // Doubling 0 will give the same 0.
+        if (SelfAdd && KnownRHS.isKnownNeverLogicalPosZero(Mode) &&
+            Mode.Output == DenormalMode::IEEE)
+          Known.knownNot(fcPosZero);
 
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
