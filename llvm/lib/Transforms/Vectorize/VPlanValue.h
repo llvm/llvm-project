@@ -10,9 +10,9 @@
 /// This file contains the declarations of the entities induced by Vectorization
 /// Plans, e.g. the instructions the VPlan intends to generate if executed.
 /// VPlan models the following entities:
-/// VPValue   VPUser   VPDef
-///    |        |
-///   VPInstruction
+/// VPValue   VPUser   VPRecipeBase
+///    |        |         |
+///   VPInstruction ------+
 /// These are documented in docs/VectorizationPlan.rst.
 ///
 //===----------------------------------------------------------------------===//
@@ -32,8 +32,6 @@ namespace llvm {
 class raw_ostream;
 class Type;
 class Value;
-class VPDef;
-struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
@@ -43,8 +41,6 @@ class VPPhiAccessors;
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
-  friend class VPDef;
-  friend struct VPDoubleValueDef;
   friend class VPlan;
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
@@ -210,12 +206,12 @@ struct VPSymbolicValue : public VPValue {
 /// A VPValue defined by a recipe that produces one or more values.
 class VPRecipeValue : public VPValue {
   friend class VPValue;
-  friend class VPDef;
-  /// Pointer to the VPDef that defines this VPValue.
-  VPDef *Def;
+  friend class VPRecipeBase;
+  /// Pointer to the VPRecipeBase that defines this VPValue.
+  VPRecipeBase *Def;
 
 public:
-  VPRecipeValue(VPDef *Def, Value *UV = nullptr);
+  VPRecipeValue(VPRecipeBase *Def, Value *UV = nullptr);
 
   virtual ~VPRecipeValue();
 
@@ -322,149 +318,6 @@ public:
            "Op must be an operand of the recipe");
     return false;
   }
-};
-
-/// This class augments a recipe with a set of VPValues defined by the recipe.
-/// It allows recipes to define zero, one or multiple VPValues. A VPDef owns
-/// the VPValues it defines and is responsible for deleting its defined values.
-/// Single-value VPDefs that also inherit from VPValue must make sure to inherit
-/// from VPDef before VPValue.
-class VPDef {
-  friend class VPValue;
-  friend class VPRecipeValue;
-
-  /// Subclass identifier (for isa/dyn_cast).
-  const unsigned char SubclassID;
-
-  /// The VPValues defined by this VPDef.
-  TinyPtrVector<VPRecipeValue *> DefinedValues;
-
-  /// Add \p V as a defined value by this VPDef.
-  void addDefinedValue(VPRecipeValue *V) {
-    assert(V->Def == this &&
-           "can only add VPValue already linked with this VPDef");
-    DefinedValues.push_back(V);
-  }
-
-  /// Remove \p V from the values defined by this VPDef. \p V must be a defined
-  /// value of this VPDef.
-  void removeDefinedValue(VPRecipeValue *V) {
-    assert(V->Def == this && "can only remove VPValue linked with this VPDef");
-    assert(is_contained(DefinedValues, V) &&
-           "VPValue to remove must be in DefinedValues");
-    llvm::erase(DefinedValues, V);
-    V->Def = nullptr;
-  }
-
-public:
-  /// An enumeration for keeping track of the concrete subclass of VPRecipeBase
-  /// that is actually instantiated. Values of this enumeration are kept in the
-  /// SubclassID field of the VPRecipeBase objects. They are used for concrete
-  /// type identification.
-  using VPRecipeTy = enum {
-    VPBranchOnMaskSC,
-    VPDerivedIVSC,
-    VPExpandSCEVSC,
-    VPExpressionSC,
-    VPIRInstructionSC,
-    VPInstructionSC,
-    VPInterleaveEVLSC,
-    VPInterleaveSC,
-    VPReductionEVLSC,
-    VPReductionSC,
-    VPReplicateSC,
-    VPScalarIVStepsSC,
-    VPVectorPointerSC,
-    VPVectorEndPointerSC,
-    VPWidenCallSC,
-    VPWidenCanonicalIVSC,
-    VPWidenCastSC,
-    VPWidenGEPSC,
-    VPWidenIntrinsicSC,
-    VPWidenLoadEVLSC,
-    VPWidenLoadSC,
-    VPWidenStoreEVLSC,
-    VPWidenStoreSC,
-    VPWidenSC,
-    VPWidenSelectSC,
-    VPBlendSC,
-    VPHistogramSC,
-    // START: Phi-like recipes. Need to be kept together.
-    VPWidenPHISC,
-    VPPredInstPHISC,
-    // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
-    // VPHeaderPHIRecipe need to be kept together.
-    VPCanonicalIVPHISC,
-    VPActiveLaneMaskPHISC,
-    VPEVLBasedIVPHISC,
-    VPFirstOrderRecurrencePHISC,
-    VPWidenIntOrFpInductionSC,
-    VPWidenPointerInductionSC,
-    VPReductionPHISC,
-    // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
-    // END: Phi-like recipes
-    VPFirstPHISC = VPWidenPHISC,
-    VPFirstHeaderPHISC = VPCanonicalIVPHISC,
-    VPLastHeaderPHISC = VPReductionPHISC,
-    VPLastPHISC = VPReductionPHISC,
-  };
-
-  VPDef(const unsigned char SC) : SubclassID(SC) {}
-
-  virtual ~VPDef() {
-    for (VPRecipeValue *D : to_vector(DefinedValues)) {
-      assert(D->Def == this &&
-             "all defined VPValues should point to the containing VPDef");
-      assert(D->getNumUsers() == 0 &&
-             "all defined VPValues should have no more users");
-      delete D;
-    }
-  }
-
-  /// Returns the only VPValue defined by the VPDef. Can only be called for
-  /// VPDefs with a single defined value.
-  VPValue *getVPSingleValue() {
-    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
-    assert(DefinedValues[0] && "defined value must be non-null");
-    return DefinedValues[0];
-  }
-  const VPValue *getVPSingleValue() const {
-    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
-    assert(DefinedValues[0] && "defined value must be non-null");
-    return DefinedValues[0];
-  }
-
-  /// Returns the VPValue with index \p I defined by the VPDef.
-  VPValue *getVPValue(unsigned I) {
-    assert(DefinedValues[I] && "defined value must be non-null");
-    return DefinedValues[I];
-  }
-  const VPValue *getVPValue(unsigned I) const {
-    assert(DefinedValues[I] && "defined value must be non-null");
-    return DefinedValues[I];
-  }
-
-  /// Returns an ArrayRef of the values defined by the VPDef.
-  ArrayRef<VPRecipeValue *> definedValues() { return DefinedValues; }
-  /// Returns an ArrayRef of the values defined by the VPDef.
-  ArrayRef<VPRecipeValue *> definedValues() const { return DefinedValues; }
-
-  /// Returns the number of values defined by the VPDef.
-  unsigned getNumDefinedValues() const { return DefinedValues.size(); }
-
-  /// \return an ID for the concrete type of this object.
-  /// This is used to implement the classof checks. This should not be used
-  /// for any other purpose, as the values may change as LLVM evolves.
-  unsigned getVPDefID() const { return SubclassID; }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Dump the VPDef to stderr (for debugging).
-  LLVM_ABI_FOR_TEST void dump() const;
-
-  /// Each concrete VPDef prints itself.
-  virtual void print(raw_ostream &O, const Twine &Indent,
-                     VPSlotTracker &SlotTracker) const = 0;
-#endif
 };
 
 } // namespace llvm

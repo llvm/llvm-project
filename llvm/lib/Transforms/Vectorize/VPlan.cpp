@@ -107,10 +107,8 @@ void VPValue::dump() const {
   dbgs() << "\n";
 }
 
-void VPDef::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this);
-  VPSlotTracker SlotTracker(
-      (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
+void VPRecipeBase::dump() const {
+  VPSlotTracker SlotTracker(getParent() ? getParent()->getPlan() : nullptr);
   print(dbgs(), "", SlotTracker);
   dbgs() << "\n";
 }
@@ -120,14 +118,14 @@ VPRecipeBase *VPValue::getDefiningRecipe() {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
   if (!DefValue)
     return nullptr;
-  return cast<VPRecipeBase>(DefValue->Def);
+  return DefValue->Def;
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
   if (!DefValue)
     return nullptr;
-  return cast<VPRecipeBase>(DefValue->Def);
+  return DefValue->Def;
 }
 
 Value *VPValue::getLiveInIRValue() const {
@@ -136,7 +134,7 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
-VPRecipeValue::VPRecipeValue(VPDef *Def, Value *UV)
+VPRecipeValue::VPRecipeValue(VPRecipeBase *Def, Value *UV)
     : VPValue(VPVRecipeValueSC, UV), Def(Def) {
   assert(Def && "VPRecipeValue requires a defining recipe");
   Def->addDefinedValue(this);
