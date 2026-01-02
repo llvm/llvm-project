@@ -10,7 +10,7 @@
 /// This file implements the IR2VecTool and MIR2VecTool classes for
 /// IR2Vec/MIR2Vec embedding generation.
 ///
-//===----------------------------------------------------------------------===//
+//===------------------------------------------------------------------Fail----===//
 
 #include "utils.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "ir2vec"
@@ -152,8 +151,7 @@ void IR2VecTool::writeEntitiesToStream(raw_ostream &OS) {
 void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
                                          EmbeddingLevel Level) const {
   if (!Vocab->isValid()) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
+    errs() << "Error: Vocabulary is not valid. IR2VecTool not initialized.\n";
     return;
   }
 
@@ -164,8 +162,7 @@ void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
 void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
                                          EmbeddingLevel Level) const {
   if (!Vocab || !Vocab->isValid()) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
+    errs() << "Error: Vocabulary is not valid. IR2VecTool not initialized.\n";
     return;
   }
   if (F.isDeclaration()) {
@@ -176,8 +173,8 @@ void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
   // Create embedder for this function
   auto Emb = Embedder::create(IR2VecEmbeddingKind, F, *Vocab);
   if (!Emb) {
-    WithColor::error(errs(), ToolName)
-        << "Failed to create embedder for function " << F.getName() << "\n";
+    errs() << "Error: Failed to create embedder for function " << F.getName()
+           << "\n";
     return;
   }
 
@@ -232,17 +229,15 @@ bool MIR2VecTool::initializeVocabularyForLayout(const Module &M) {
 
     auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(TII, TRI, MRI, 1);
     if (!VocabOrErr) {
-      WithColor::error(errs(), ToolName)
-          << "Failed to create dummy vocabulary - "
-          << toString(VocabOrErr.takeError()) << "\n";
+      errs() << "Error: Failed to create dummy vocabulary - "
+             << toString(VocabOrErr.takeError()) << "\n";
       return false;
     }
     Vocab = std::make_unique<MIRVocabulary>(std::move(*VocabOrErr));
     return true;
   }
 
-  WithColor::error(errs(), ToolName)
-      << "No machine functions found to initialize vocabulary\n";
+  errs() << "Error: No machine functions found to initialize vocabulary\n";
   return false;
 }
 
@@ -251,8 +246,8 @@ TripletResult MIR2VecTool::generateTriplets(const MachineFunction &MF) const {
   Result.MaxRelation = MIRNextRelation;
 
   if (!Vocab) {
-    WithColor::error(errs(), ToolName)
-        << "MIR Vocabulary must be initialized for triplet generation.\n";
+    errs() << "Error: MIR Vocabulary must be initialized for triplet "
+              "generation.\n";
     return Result;
   }
 
@@ -309,8 +304,7 @@ TripletResult MIR2VecTool::generateTriplets(const Module &M) const {
   for (const Function &F : M.getFunctionDefs()) {
     MachineFunction *MF = MMI.getMachineFunction(F);
     if (!MF) {
-      WithColor::warning(errs(), ToolName)
-          << "No MachineFunction for " << F.getName() << "\n";
+      errs() << "Warning: No MachineFunction for " << F.getName() << "\n";
       continue;
     }
 
@@ -333,8 +327,7 @@ void MIR2VecTool::writeTripletsToStream(const Module &M,
 
 EntityList MIR2VecTool::collectEntityMappings() const {
   if (!Vocab) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary must be initialized for entity mappings.\n";
+    errs() << "Error: Vocabulary must be initialized for entity mappings.\n";
     return {};
   }
 
@@ -359,15 +352,14 @@ void MIR2VecTool::writeEntitiesToStream(raw_ostream &OS) const {
 void MIR2VecTool::writeEmbeddingsToStream(const Module &M, raw_ostream &OS,
                                           EmbeddingLevel Level) const {
   if (!Vocab) {
-    WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
+    errs() << "Error: Vocabulary not initialized.\n";
     return;
   }
 
   for (const Function &F : M.getFunctionDefs()) {
     MachineFunction *MF = MMI.getMachineFunction(F);
     if (!MF) {
-      WithColor::warning(errs(), ToolName)
-          << "No MachineFunction for " << F.getName() << "\n";
+      errs() << "Warning: No MachineFunction for " << F.getName() << "\n";
       continue;
     }
 
@@ -378,14 +370,13 @@ void MIR2VecTool::writeEmbeddingsToStream(const Module &M, raw_ostream &OS,
 void MIR2VecTool::writeEmbeddingsToStream(MachineFunction &MF, raw_ostream &OS,
                                           EmbeddingLevel Level) const {
   if (!Vocab) {
-    WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
+    errs() << "Error: Vocabulary not initialized.\n";
     return;
   }
 
   auto Emb = MIREmbedder::create(MIR2VecKind::Symbolic, MF, *Vocab);
   if (!Emb) {
-    WithColor::error(errs(), ToolName)
-        << "Failed to create embedder for " << MF.getName() << "\n";
+    errs() << "Error: Failed to create embedder for " << MF.getName() << "\n";
     return;
   }
 

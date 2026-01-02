@@ -34,8 +34,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
 #include <string>
