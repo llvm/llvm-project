@@ -6973,7 +6973,7 @@ static void InstantiateFunctionBeforeCall(const FunctionDecl *FD,
   // semantics of the program.
 
   if (!FD->isDefined() && FD->isImplicitlyInstantiable() && FD->isConstexpr() &&
-      Info.InConstantContext && !Info.TryConstantInitialization &&
+      Info.InConstantContext && !Info.PerformingTrialEvaluation &&
       !Info.checkingPotentialConstantExpression()) {
 
     SemaProxy *SP = Info.getASTContext().getSemaProxy();
@@ -20828,7 +20828,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                     : EvaluationMode::ConstantFold);
   Info.setEvaluatingDecl(VD, Value);
   Info.InConstantContext = IsConstantInitialization;
-  Info.TryConstantInitialization =
+  Info.PerformingTrialEvaluation =
       !VD->isConstexpr() && !VD->hasAttr<ConstInitAttr>();
 
   SourceLocation DeclLoc = VD->getLocation();

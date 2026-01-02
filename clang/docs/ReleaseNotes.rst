@@ -403,7 +403,7 @@ Bug Fixes to C++ Support
 - Fixed a bug where our ``member-like constrained friend`` checking caused an incorrect analysis of lambda captures. (#GH156225)
 - Fixed a crash when implicit conversions from initialize list to arrays of
   unknown bound during constant evaluation. (#GH151716)
-- Instantiate constexpr functions as needed before they are evaluated. (#GH73232)
+- Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 - Support the dynamic_cast to final class optimization with pointer
   authentication enabled. (#GH152601)
 - Fix the check for narrowing int-to-float conversions, so that they are detected in

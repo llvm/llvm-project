@@ -88,3 +88,52 @@ private:
 
 constexpr int x = X().f( 1 );
 }
+
+
+namespace GH35052 {
+
+template <typename F>
+constexpr int func(F f) {
+    if constexpr (f(1UL)) {
+        return 1;
+    }
+    return 0;
+}
+
+int test() {
+    auto predicate = [](auto v) constexpr -> bool  { return v == 1; };
+    return func(predicate);
+}
+
+}  // namespace GH35052
+
+namespace GH115118 {
+
+struct foo {
+    foo(const foo&) = default;
+    foo(auto)
+        requires([]<int = 0>() -> bool { return true; }())
+    {}
+};
+
+struct bar {
+    foo x;
+};
+
+}  // namespace GH115118
+
+namespace GH100897 {
+
+template <typename>
+constexpr auto foo() noexcept {
+    constexpr auto extract_size = []<typename argument_t>() constexpr -> int {
+        return 1;
+    };
+
+    constexpr int result = extract_size.template operator()<int>();
+    return result;
+}
+
+void test() { foo<void>(); }
+
+}  // namespace GH100897

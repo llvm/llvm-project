@@ -187,7 +187,9 @@ public:
   /// is set; this is used when evaluating ICEs in C.
   bool CheckingForUndefinedBehavior = false;
 
-  bool TryConstantInitialization = false;
+  /// Whether we are performing trial evaluation, i.e when evaluating the
+  /// initializer of a constant-initialized variable.
+  bool PerformingTrialEvaluation = false;
 
   EvaluationMode EvalMode;
   ASTContext &Ctx;

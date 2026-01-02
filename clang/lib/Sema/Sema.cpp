@@ -75,7 +75,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <memory>
 #include <optional>
 
 using namespace clang;
@@ -626,8 +625,8 @@ Sema::~Sema() {
 }
 
 void Sema::RegisterSemaProxy() {
-  // Let the AST context relies on Sema for
-  // ast mutations features that require semantic analysis
+  // Let the AST context rely on Sema for
+  // AST mutation features that require semantic analysis
   // (lazy instantiation, reflection, etc).
   Context.setSemaProxy(getSemaProxyImplementation(*this));
 }
