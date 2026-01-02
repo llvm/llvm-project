@@ -240,8 +240,7 @@ define i64 @or_eon3(i32 %0, i64 %1) {
 define i32 @mvn_lsl_i32(i32 %0) {
 ; CHECK-LABEL: mvn_lsl_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    eor w0, w8, w0, lsl #5
+; CHECK-NEXT:    mvn w0, w0, lsl #5
 ; CHECK-NEXT:    ret
   %2 = shl i32 %0, 5
   %3 = xor i32 %2, -1
@@ -251,8 +250,7 @@ define i32 @mvn_lsl_i32(i32 %0) {
 define i64 @mvn_lsl_i64(i64 %0) {
 ; CHECK-LABEL: mvn_lsl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor x0, x8, x0, lsl #5
+; CHECK-NEXT:    mvn x0, x0, lsl #5
 ; CHECK-NEXT:    ret
   %2 = shl i64 %0, 5
   %3 = xor i64 %2, -1
@@ -262,8 +260,7 @@ define i64 @mvn_lsl_i64(i64 %0) {
 define i32 @mvn_lsr_i32(i32 %0) {
 ; CHECK-LABEL: mvn_lsr_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    eor w0, w8, w0, lsr #10
+; CHECK-NEXT:    mvn w0, w0, lsr #10
 ; CHECK-NEXT:    ret
   %2 = lshr i32 %0, 10
   %3 = xor i32 %2, -1
@@ -273,8 +270,7 @@ define i32 @mvn_lsr_i32(i32 %0) {
 define i64 @mvn_lsr_i64(i64 %0) {
 ; CHECK-LABEL: mvn_lsr_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor x0, x8, x0, lsr #10
+; CHECK-NEXT:    mvn x0, x0, lsr #10
 ; CHECK-NEXT:    ret
   %2 = lshr i64 %0, 10
   %3 = xor i64 %2, -1
@@ -284,8 +280,7 @@ define i64 @mvn_lsr_i64(i64 %0) {
 define i32 @mvn_asr_i32(i32 %0) {
 ; CHECK-LABEL: mvn_asr_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    eor w0, w8, w0, asr #15
+; CHECK-NEXT:    mvn w0, w0, asr #15
 ; CHECK-NEXT:    ret
   %2 = ashr i32 %0, 15
   %3 = xor i32 %2, -1
@@ -295,8 +290,7 @@ define i32 @mvn_asr_i32(i32 %0) {
 define i64 @mvn_asr_i64(i64 %0) {
 ; CHECK-LABEL: mvn_asr_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor x0, x8, x0, asr #15
+; CHECK-NEXT:    mvn x0, x0, asr #15
 ; CHECK-NEXT:    ret
   %2 = ashr i64 %0, 15
   %3 = xor i64 %2, -1
@@ -306,8 +300,7 @@ define i64 @mvn_asr_i64(i64 %0) {
 define i32 @mvn_ror_i32(i32 %0) {
 ; CHECK-LABEL: mvn_ror_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    eor w0, w8, w0, ror #1
+; CHECK-NEXT:    mvn w0, w0, ror #1
 ; CHECK-NEXT:    ret
   %2 = shl i32 %0, 31
   %3 = lshr i32 %0, 1
@@ -319,8 +312,7 @@ define i32 @mvn_ror_i32(i32 %0) {
 define i64 @mvn_ror_i64(i64 %0) {
 ; CHECK-LABEL: mvn_ror_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor x0, x8, x0, ror #1
+; CHECK-NEXT:    mvn x0, x0, ror #1
 ; CHECK-NEXT:    ret
   %2 = shl i64 %0, 63
   %3 = lshr i64 %0, 1
