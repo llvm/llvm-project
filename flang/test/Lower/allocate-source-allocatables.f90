@@ -14,9 +14,9 @@
 ! CHECK:         %[[EMBOX_A:.*]] = fir.embox %[[A_DECL]] : (!fir.ref<f32>) -> !fir.box<f32>
 ! CHECK:         %[[X1_BOX_NONE:.*]] = fir.convert %[[X1_DECL]] : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[A_BOX_NONE:.*]] = fir.convert %[[EMBOX_A]] : (!fir.box<f32>) -> !fir.box<none>
-! CHECK:         %[[RES1:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[A_BOX_NONE]], %[[FALSE]], %[[ABSENT]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         %[[RES1:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[A_BOX_NONE]], %[[FALSE]], %[[ABSENT]], %{{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:         %[[X2_BOX_NONE:.*]] = fir.convert %[[X2_DECL]] : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:         %[[RES2:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[X2_BOX_NONE]], %[[A_BOX_NONE]], %[[FALSE]], %[[ABSENT]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         %[[RES2:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[X2_BOX_NONE]], %[[A_BOX_NONE]], %[[FALSE]], %[[ABSENT]], %{{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:         return
 ! CHECK:       }
 
@@ -73,10 +73,10 @@ end
 ! CHECK:         %[[X1_BOX_NONE:.*]] = fir.convert %[[X1_DECL]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[X1_BOX_NONE]], {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[A_BOX_NONE:.*]] = fir.convert %{{.*}} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[A_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[A_BOX_NONE]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:         %[[X2_BOX_NONE:.*]] = fir.convert %[[X2_DECL]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[X2_BOX_NONE]], {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
-! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X2_BOX_NONE]], %[[A_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X2_BOX_NONE]], %[[A_BOX_NONE]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 subroutine test_allocatable_with_shapespec(n, a, m)
   integer, allocatable :: x1(:), x2(:)
@@ -96,7 +96,7 @@ end
 ! CHECK:         %[[X1_BOX_NONE:.*]] = fir.convert %[[X1_DECL]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[X1_BOX_NONE]], {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[CONST_BOX_NONE:.*]] = fir.convert %[[EMBOX_CONST]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
-! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[CONST_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[CONST_BOX_NONE]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:         return
 ! CHECK:       }
 
@@ -119,7 +119,7 @@ end
 ! CHECK:         %[[X1_BOX_NONE:.*]] = fir.convert %[[X1_DECL]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,4>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[X1_BOX_NONE]], {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[A_BOX_NONE:.*]] = fir.convert %{{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
-! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[A_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[A_BOX_NONE]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 subroutine test_allocatable_chararray(n, a)
   character(4), allocatable :: x1(:)
@@ -138,9 +138,9 @@ end
 ! CHECK-DAG:     %[[A_DECL:.*]] = fir.declare %[[UNBOX]]#0 typeparams %[[UNBOX]]#1 {{.*}}
 ! CHECK:         fir.embox %[[A_DECL]]
 ! CHECK:         %[[X1_BOX_NONE:.*]] = fir.convert %[[X1_DECL]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:         fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[X1_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> ()
+! CHECK:         fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[X1_BOX_NONE]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> ()
 ! CHECK:         %[[A_BOX_NONE:.*]] = fir.convert %{{.*}} : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[A_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[X1_BOX_NONE]], %[[A_BOX_NONE]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 subroutine test_allocatable_char(n, a)
   character(:), allocatable :: x1
@@ -159,7 +159,7 @@ end
 ! CHECK:         %[[Z_BOX_NONE:.*]] = fir.convert %[[Z_DECL]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtest_allocatable_derived_typeTt{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[Z_BOX_NONE]], {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[Y_BOX_NONE:.*]] = fir.convert %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtest_allocatable_derived_typeTt{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> !fir.box<none>
-! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[Z_BOX_NONE]], %[[Y_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         fir.call @_FortranAAllocatableAllocateSource(%[[Z_BOX_NONE]], %[[Y_BOX_NONE]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 subroutine test_allocatable_derived_type(y)
   type t
