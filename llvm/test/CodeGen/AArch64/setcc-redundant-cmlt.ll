@@ -101,6 +101,19 @@ define <8 x i16> @chain_shuffle_bitcast(<4 x i32> %a, <4 x i32> %b, <8 x i16> %x
   ret <8 x i16> %sel
 }
 
+define <4 x i32> @setcc_ne0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: setcc_ne0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %ne0 = icmp ne <4 x i32> %sext, zeroinitializer
+  %sel = select <4 x i1> %ne0, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %sel
+}
+
 ; NEGATIVE TEST: Widening bitcast should NOT be optimized
 define <4 x i32> @bitcast_widen_negative(<16 x i8> %a, <16 x i8> %b, <4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: bitcast_widen_negative:
