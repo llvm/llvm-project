@@ -1481,8 +1481,11 @@ WRAPPER_CLASS(ContiguousStmt, std::list<ObjectName>);
 // R846 int-constant-subobject -> constant-subobject
 using ConstantSubobject = Constant<common::Indirection<Designator>>;
 
-// Represents an analyzed expression
+// Represent an analyzed expression
 using TypedExpr = common::ForwardOwningPointer<evaluate::GenericExprWrapper>;
+using TypedCall = common::ForwardOwningPointer<evaluate::ProcedureRef>;
+using TypedAssignment =
+    common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
 
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
@@ -2025,8 +2028,6 @@ struct DeallocateStmt {
 // R1032 assignment-stmt -> variable = expr
 struct AssignmentStmt {
   TUPLE_CLASS_BOILERPLATE(AssignmentStmt);
-  using TypedAssignment =
-      common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
   mutable TypedAssignment typedAssignment;
   std::tuple<Variable, Expr> t;
 };
@@ -2053,7 +2054,7 @@ struct PointerAssignmentStmt {
     std::variant<std::list<BoundsRemapping>, std::list<BoundsSpec>> u;
   };
   TUPLE_CLASS_BOILERPLATE(PointerAssignmentStmt);
-  mutable AssignmentStmt::TypedAssignment typedAssignment;
+  mutable TypedAssignment typedAssignment;
   std::tuple<DataRef, Bounds, Expr> t;
 };
 
@@ -2748,7 +2749,8 @@ struct IoControlSpec {
   WRAPPER_CLASS(Rec, ScalarIntExpr);
   WRAPPER_CLASS(Size, ScalarIntVariable);
   std::variant<IoUnit, Format, Name, CharExpr, Asynchronous, EndLabel, EorLabel,
-      ErrLabel, IdVariable, MsgVariable, StatVariable, Pos, Rec, Size>
+      ErrLabel, IdVariable, MsgVariable, StatVariable, Pos, Rec, Size,
+      ErrorRecovery>
       u;
 };
 
@@ -3298,8 +3300,7 @@ struct CallStmt {
   Call call;
   std::optional<Chevrons> chevrons;
   CharBlock source;
-  mutable common::ForwardOwningPointer<evaluate::ProcedureRef>
-      typedCall; // filled by semantics
+  mutable TypedCall typedCall; // filled by semantics
 };
 
 // R1529 function-subprogram ->
@@ -5350,7 +5351,7 @@ struct OpenMPAtomicConstruct : public OmpBlockConstruct {
 
     struct Op {
       int what;
-      AssignmentStmt::TypedAssignment assign;
+      TypedAssignment assign;
     };
     TypedExpr atom, cond;
     Op op0, op1;

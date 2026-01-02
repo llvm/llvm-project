@@ -14177,6 +14177,11 @@ public:
         ArrayRef<TreeEntry *> VEs = R.getTreeEntries(V);
         if (!CheckedExtracts.insert(V).second ||
             !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
+            any_of(VEs,
+                   [&](const TreeEntry *TE) {
+                     return R.DeletedNodes.contains(TE) ||
+                            R.TransformedToGatherNodes.contains(TE);
+                   }) ||
             (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
              !R.isVectorized(EE) &&
              count_if(E->Scalars, [&](Value *V) { return V == EE; }) !=
@@ -17180,6 +17185,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     const TreeEntry *TE, ArrayRef<Value *> VL, MutableArrayRef<int> Mask,
     SmallVectorImpl<const TreeEntry *> &Entries, unsigned Part, bool ForOrder) {
   Entries.clear();
+  if (TE->Idx == 0)
+    return std::nullopt;
   // TODO: currently checking only for Scalars in the tree entry, need to count
   // reused elements too for better cost estimation.
   auto GetUserEntry = [&](const TreeEntry *TE) {
@@ -17407,7 +17414,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     if (ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V); !VTEs.empty()) {
       const auto *It = find_if(VTEs, [&](const TreeEntry *MTE) {
         return MTE != TE && MTE != TEUseEI.UserTE &&
-               !DeletedNodes.contains(MTE);
+               !DeletedNodes.contains(MTE) &&
+               !TransformedToGatherNodes.contains(MTE);
       });
       if (It != VTEs.end()) {
         const TreeEntry *VTE = *It;
@@ -18614,6 +18622,11 @@ public:
           any_of(EI->users(), [&](User *U) {
             ArrayRef<TreeEntry *> UTEs = R.getTreeEntries(U);
             return UTEs.empty() || UTEs.size() > 1 ||
+                   any_of(UTEs,
+                          [&](const TreeEntry *TE) {
+                            return R.DeletedNodes.contains(TE) ||
+                                   R.TransformedToGatherNodes.contains(TE);
+                          }) ||
                    (isa<GetElementPtrInst>(U) &&
                     !R.areAllUsersVectorized(cast<Instruction>(U))) ||
                    (!UTEs.empty() &&
@@ -21242,6 +21255,9 @@ Value *BoUpSLP::vectorizeTree(
   if (UserIgnoreList) {
     for (Instruction *I : RemovedInsts) {
       const TreeEntry *IE = getTreeEntries(I).front();
+      if (ArrayRef<TreeEntry *> SplitEntries = getSplitTreeEntries(I);
+          !SplitEntries.empty() && SplitEntries.front()->Idx < IE->Idx)
+        IE = SplitEntries.front();
       if (IE->Idx != 0 &&
           !(VectorizableTree.front()->isGather() && IE->UserTreeIndex &&
             (ValueToGatherNodes.lookup(I).contains(
@@ -24850,8 +24866,46 @@ public:
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
-    for (ArrayRef<Value *> RV : ReducedVals)
+    SmallVector<SmallVector<Value *>> LocalReducedVals;
+    // Try merge consecutive reduced values into a single vectorizable group and
+    // check, if they can be vectorized as copyables.
+    for (ArrayRef<Value *> RV : ReducedVals) {
+      // Loads are not very compatible with undefs.
+      if (isa<UndefValue>(RV.front()) &&
+          (States.empty() || !States.back() ||
+           States.back().getOpcode() == Instruction::Load)) {
+        LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
+        States.push_back(InstructionsState::invalid());
+        continue;
+      }
+      if (!LocalReducedVals.empty() &&
+          isa<UndefValue>(LocalReducedVals.back().front()) &&
+          isa<LoadInst>(RV.front())) {
+        LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
+        States.push_back(getSameOpcode(RV, TLI));
+        continue;
+      }
+      SmallVector<Value *> Ops;
+      if (!LocalReducedVals.empty())
+        Ops = LocalReducedVals.back();
+      Ops.append(RV.begin(), RV.end());
+      InstructionsCompatibilityAnalysis Analysis(DT, DL, *TTI, TLI);
+      InstructionsState OpS =
+          Analysis.buildInstructionsState(Ops, V, VectorizeCopyableElements);
+      if (LocalReducedVals.empty()) {
+        LocalReducedVals.push_back(Ops);
+        States.push_back(OpS);
+        continue;
+      }
+      if (OpS) {
+        LocalReducedVals.back().swap(Ops);
+        States.back() = OpS;
+        continue;
+      }
+      LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
       States.push_back(getSameOpcode(RV, TLI));
+    }
+    ReducedVals.swap(LocalReducedVals);
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
       InstructionsState S = States[I];
@@ -24866,8 +24920,10 @@ public:
         // Also check if the instruction was folded to constant/other value.
         auto *Inst = dyn_cast<Instruction>(RdxVal);
         if ((Inst && isVectorLikeInstWithConstOps(Inst) &&
-             (!S || !S.getMatchingMainOpOrAltOp(Inst))) ||
-            (S && !Inst))
+             (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
+                     !S.isCopyableElement(Inst)))) ||
+            (S && !Inst && !isa<PoisonValue>(RdxVal) &&
+             !S.isCopyableElement(RdxVal)))
           continue;
         Candidates.push_back(RdxVal);
         TrackedToOrig.try_emplace(RdxVal, ReducedVal);
@@ -25469,6 +25525,8 @@ private:
       // Scalar cost is repeated for N-1 elements.
       int Cnt = ReducedVals.size();
       for (Value *RdxVal : ReducedVals) {
+        if (!isa<Instruction>(RdxVal))
+          continue;
         if (Cnt == 1)
           break;
         --Cnt;

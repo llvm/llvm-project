@@ -126,8 +126,6 @@ config.recursiveExpansionLimit = 10
 
 # Setup test format.
 config.test_format = lit.formats.ShTest(execute_external)
-if execute_external:
-    config.available_features.add("shell")
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
