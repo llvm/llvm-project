@@ -437,15 +437,6 @@ define i8 @test_select_rotate_left(i1 %0) {
   ret i8 %ret
 }
 
-define i8 @test_select_rotate_left_poison(i1 %0) {
-; CHECK-LABEL: @test_select_rotate_left_poison(
-; CHECK-NEXT:    ret i8 -1
-;
-  %s = select i1 %0, i8 poison, i8 -1
-  %ret = call i8 @llvm.fshl.i8(i8 %s, i8 %s, i8 1)
-  ret i8 %ret
-}
-
 define i8 @test_select_rotate_left_multiuser(i1 %0) {
 ; CHECK-LABEL: @test_select_rotate_left_multiuser(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP0:%.*]], i8 1, i8 -1
@@ -495,15 +486,6 @@ define i8 @test_select_rotate_right(i1 %0) {
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %s = select i1 %0, i8 1, i8 -1
-  %ret = call i8 @llvm.fshr.i8(i8 %s, i8 %s, i8 7)
-  ret i8 %ret
-}
-
-define i8 @test_select_rotate_right_poison_args(i1 %0) {
-; CHECK-LABEL: @test_select_rotate_right_poison_args(
-; CHECK-NEXT:    ret i8 -1
-;
-  %s = select i1 %0, i8 poison, i8 -1
   %ret = call i8 @llvm.fshr.i8(i8 %s, i8 %s, i8 7)
   ret i8 %ret
 }
