@@ -2610,7 +2610,7 @@ static LogicalResult allocAndInitializeTaskReductionVars(
       llvm::PointerType::get(Context,
                              DL.getProgramAddressSpace()); // void*
   llvm::Type *SizeTy = DL.getIntPtrType(Context);          // size_t
-  llvm::Type *FlagsTy = llvm::Type::getInt32Ty(Context); // flags (i32)
+  llvm::Type *FlagsTy = llvm::Type::getInt32Ty(Context);   // flags (i32)
 
   // Structure members
   std::vector<llvm::Type *> structMembers = {
