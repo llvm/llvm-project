@@ -3186,7 +3186,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // If the guard/stackslot do not equal, branch to failure MBB.
   SDValue BrCond = DAG.getNode(ISD::BRCOND, dl,
-                               MVT::Other, GuardVal.getOperand(0),
+                               MVT::Other, getControlRoot(),
                                Cmp, DAG.getBasicBlock(SPD.getFailureMBB()));
   // Otherwise branch to success MBB.
   SDValue Br = DAG.getNode(ISD::BR, dl,
