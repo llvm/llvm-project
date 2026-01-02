@@ -6,15 +6,16 @@ readability-trailing-comma
 Checks for presence or absence of trailing commas in enum definitions and
 initializer lists.
 
-The check can either append trailing commas where they are missing or remove
-them where they are present, based on the configured policy.
+The check supports separate policies for single-line and multi-line constructs,
+allowing different styles for each. By default, the check enforces trailing
+commas in multi-line constructs and removes them from single-line constructs.
 
-Trailing commas offer several benefits:
+Trailing commas in multi-line constructs offer several benefits:
 
-- Adding or removing elements may only changes a single line, making diffs
-  smaller and easier to read.
+- Adding or removing elements only changes a single line, making diffs smaller
+  and easier to read.
 - Formatters may change code to a more desired style.
-- Code generators avoid for need special handling of the last element.
+- Code generators avoid the need for special handling of the last element.
 
 .. code-block:: c++
 
@@ -42,42 +43,26 @@ The check currently don't analyze code inside macros.
 Options
 -------
 
-.. option:: CommaPolicy
+.. option:: SingleLineCommaPolicy
 
-  Controls whether to add or remove trailing commas.
+  Controls whether to add, remove, or ignore trailing commas in single-line
+  enum definitions and initializer lists.
   Valid values are:
 
   - `Append`: Add trailing commas where missing.
   - `Remove`: Remove trailing commas where present.
+  - `Ignore`: Do not check single-line constructs.
 
-  Example with `CommaPolicy` set to `Append`:
+  Default is `Remove`.
 
-  .. code-block:: c++
+.. option:: MultiLineCommaPolicy
 
-    enum Status {
-      OK,
-      Error     // warning: enum should have a trailing comma
-    };
+  Controls whether to add, remove, or ignore trailing commas in multi-line
+  enum definitions and initializer lists.
+  Valid values are:
 
-  Example with `CommaPolicy` set to `Remove`:
-
-  .. code-block:: c++
-
-    enum Status {
-      OK,
-      Error,    // warning: enum should not have a trailing comma
-    };
+  - `Append`: Add trailing commas where missing.
+  - `Remove`: Remove trailing commas where present.
+  - `Ignore`: Do not check multi-line constructs.
 
   Default is `Append`.
-
-.. option:: EnumThreshold
-
-  The minimum number of enumerators required in an enum before the check
-  will warn. This applies to both `Append` and `Remove` policies.
-  Default is `1` (always check enums).
-
-.. option:: InitListThreshold
-
-  The minimum number of elements required in an initializer list before
-  the check will warn. This applies to both `Append` and `Remove` policies.
-  Default is `3`.

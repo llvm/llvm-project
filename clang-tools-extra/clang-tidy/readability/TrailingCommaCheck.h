@@ -31,10 +31,11 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
-  enum class CommaPolicyKind { Append, Remove };
+  enum class CommaPolicyKind { Append, Remove, Ignore };
 
 private:
-  const CommaPolicyKind CommaPolicy;
+  const CommaPolicyKind SingleLineCommaPolicy;
+  const CommaPolicyKind MultiLineCommaPolicy;
 
   void checkEnumDecl(const EnumDecl *Enum,
                      const ast_matchers::MatchFinder::MatchResult &Result);
@@ -44,7 +45,8 @@ private:
   // Values correspond to %select{initializer list|enum}0 indices
   enum DiagKind { InitList = 0, Enum = 1 };
   void emitDiag(SourceLocation LastLoc, DiagKind Kind,
-                const ast_matchers::MatchFinder::MatchResult &Result);
+                const ast_matchers::MatchFinder::MatchResult &Result,
+                CommaPolicyKind Policy);
 };
 
 } // namespace clang::tidy::readability

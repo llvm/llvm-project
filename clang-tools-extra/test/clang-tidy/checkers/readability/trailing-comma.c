@@ -14,6 +14,8 @@ enum Color {
 
 enum SingleLine { A, B, C };
 enum SingleLine2 { X1, Y1, };
+// CHECK-MESSAGES: :[[@LINE-1]]:26: warning: enum should not have a trailing comma
+// CHECK-FIXES: enum SingleLine2 { X1, Y1 };
 
 struct Point {
   int x;

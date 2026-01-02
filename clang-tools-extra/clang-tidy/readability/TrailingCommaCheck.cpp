@@ -28,6 +28,8 @@ struct OptionEnumMapping<readability::TrailingCommaCheck::CommaPolicyKind> {
              "Append"},
             {readability::TrailingCommaCheck::CommaPolicyKind::Remove,
              "Remove"},
+            {readability::TrailingCommaCheck::CommaPolicyKind::Ignore,
+             "Ignore"},
         };
     return {Mapping};
   }
@@ -59,10 +61,14 @@ AST_MATCHER(InitListExpr, isEmptyInitList) { return Node.getNumInits() == 0; }
 TrailingCommaCheck::TrailingCommaCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CommaPolicy(Options.get("CommaPolicy", CommaPolicyKind::Append)) {}
+      SingleLineCommaPolicy(
+          Options.get("SingleLineCommaPolicy", CommaPolicyKind::Remove)),
+      MultiLineCommaPolicy(
+          Options.get("MultiLineCommaPolicy", CommaPolicyKind::Append)) {}
 
 void TrailingCommaCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "CommaPolicy", CommaPolicy);
+  Options.store(Opts, "SingleLineCommaPolicy", SingleLineCommaPolicy);
+  Options.store(Opts, "MultiLineCommaPolicy", MultiLineCommaPolicy);
 }
 
 void TrailingCommaCheck::registerMatchers(MatchFinder *Finder) {
@@ -88,9 +94,12 @@ void TrailingCommaCheck::check(const MatchFinder::MatchResult &Result) {
 
 void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
                                        const MatchFinder::MatchResult &Result) {
-  if (isSingleLine(Enum->getBeginLoc(), Enum->getEndLoc(),
-                   *Result.SourceManager) &&
-      CommaPolicy == CommaPolicyKind::Append)
+  const bool IsSingleLine = isSingleLine(Enum->getBeginLoc(), Enum->getEndLoc(),
+                                         *Result.SourceManager);
+  const CommaPolicyKind Policy =
+      IsSingleLine ? SingleLineCommaPolicy : MultiLineCommaPolicy;
+
+  if (Policy == CommaPolicyKind::Ignore)
     return;
 
   const EnumConstantDecl *LastEnumerator = nullptr;
@@ -107,7 +116,7 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
   if (LastEnumLoc.isInvalid())
     return;
 
-  emitDiag(LastEnumLoc, DiagKind::Enum, Result);
+  emitDiag(LastEnumLoc, DiagKind::Enum, Result, Policy);
 }
 
 void TrailingCommaCheck::checkInitListExpr(
@@ -117,9 +126,12 @@ void TrailingCommaCheck::checkInitListExpr(
       SynInitInitList && SynInitInitList->getNumInits() > 0)
     InitList = SynInitInitList;
 
-  if (isSingleLine(InitList->getBeginLoc(), InitList->getEndLoc(),
-                   *Result.SourceManager) &&
-      CommaPolicy == CommaPolicyKind::Append)
+  const bool IsSingleLine = isSingleLine(
+      InitList->getBeginLoc(), InitList->getEndLoc(), *Result.SourceManager);
+  const CommaPolicyKind Policy =
+      IsSingleLine ? SingleLineCommaPolicy : MultiLineCommaPolicy;
+
+  if (Policy == CommaPolicyKind::Ignore)
     return;
 
   const unsigned NumInits = InitList->getNumInits();
@@ -134,12 +146,13 @@ void TrailingCommaCheck::checkInitListExpr(
   if (LastInitLoc.isInvalid())
     return;
 
-  emitDiag(LastInitLoc, DiagKind::InitList, Result);
+  emitDiag(LastInitLoc, DiagKind::InitList, Result, Policy);
 }
 
 void TrailingCommaCheck::emitDiag(
     SourceLocation LastLoc, DiagKind Kind,
-    const ast_matchers::MatchFinder::MatchResult &Result) {
+    const ast_matchers::MatchFinder::MatchResult &Result,
+    CommaPolicyKind Policy) {
   const std::optional<Token> NextToken =
       utils::lexer::findNextTokenSkippingComments(
           LastLoc, *Result.SourceManager, getLangOpts());
@@ -150,11 +163,11 @@ void TrailingCommaCheck::emitDiag(
   const SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
       LastLoc, 0, *Result.SourceManager, getLangOpts());
 
-  if (CommaPolicy == CommaPolicyKind::Append && !HasTrailingComma) {
+  if (Policy == CommaPolicyKind::Append && !HasTrailingComma) {
     diag(InsertLoc, "%select{initializer list|enum}0 should have "
                     "a trailing comma")
         << Kind << FixItHint::CreateInsertion(InsertLoc, ",");
-  } else if (CommaPolicy == CommaPolicyKind::Remove && HasTrailingComma) {
+  } else if (Policy == CommaPolicyKind::Remove && HasTrailingComma) {
     const SourceLocation CommaLoc = NextToken->getLocation();
     if (CommaLoc.isInvalid())
       return;

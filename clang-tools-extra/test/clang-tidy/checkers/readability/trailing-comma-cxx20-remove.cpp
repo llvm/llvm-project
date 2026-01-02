@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++20-or-later %s readability-trailing-comma %t -- \
-// RUN:   -config='{CheckOptions: {readability-trailing-comma.CommaPolicy: Remove}}'
+// RUN:   -config='{CheckOptions: {readability-trailing-comma.SingleLineCommaPolicy: Remove, readability-trailing-comma.MultiLineCommaPolicy: Remove}}'
 
 struct S { int x, y; };
 

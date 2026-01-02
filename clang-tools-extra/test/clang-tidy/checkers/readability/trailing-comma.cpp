@@ -22,9 +22,10 @@ enum E2 {
 // CHECK-FIXES-NEXT:   V = 1,
 // CHECK-FIXES-NEXT: };
 
-// Single-line enums - no warnings
 enum SingleLine { A1, B1, C1 };
 enum class SingleLine2 { X1, Y1, };
+// CHECK-MESSAGES: :[[@LINE-1]]:32: warning: enum should not have a trailing comma
+// CHECK-FIXES: enum class SingleLine2 { X1, Y1 };
 
 enum E3 {
   P,
@@ -51,9 +52,12 @@ void f() {
   // CHECK-FIXES-NEXT:     2,
   // CHECK-FIXES-NEXT:   };
 
-  // Single-line init lists - no warnings
   int b[] = {1, 2, 3};
   S s2 = {1, 2};
+
+  int e[] = {1, 2, 3,};
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES: int e[] = {1, 2, 3};
 
   int c[] = {
     1,
@@ -65,7 +69,10 @@ void f() {
 struct N { S a, b; };
 void nested() {
   N n = {{1, 2}, {3, 4}};
-  N n2 = {{1, 2,}, {3, 4,},};
+  N n2 = {{3, 4,},};
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initializer list should not have a trailing comma
+  // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES: N n2 = {{[{][{]3, 4[}][}]}};
 }
 
 void nestedMultiLine() {
