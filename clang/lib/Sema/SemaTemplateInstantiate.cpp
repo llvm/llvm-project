@@ -2204,6 +2204,11 @@ TemplateInstantiator::TransformLoopHintAttr(const LoopHintAttr *LH) {
   LoopHintAttr::OptionType Option = LH->getOption();
   LoopHintAttr::LoopHintState State = LH->getState();
 
+  // Since C++ does not have partial instantiation, we would expect a
+  // transformed loop hint expression to not be value dependent.  However, at
+  // the time of writing, the use of a generic lambda inside a template
+  // triggers a double instantiation, so we must protect against this event.
+  // This provision may become unneeded in the future.
   if (Option == LoopHintAttr::UnrollCount &&
       !TransformedExpr->isValueDependent()) {
     llvm::APSInt ValueAPS =
