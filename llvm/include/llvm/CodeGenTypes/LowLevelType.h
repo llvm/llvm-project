@@ -98,6 +98,27 @@ public:
                APFloat::getSizeInBits(APFloatBase::EnumToSemantics(Sem)), Sem};
   }
 
+  static LLT buildInteger(unsigned SizeInBits) {
+    if (!getUseExtended())
+      return LLT::scalar(SizeInBits);
+
+    return integer(SizeInBits);
+  }
+
+  static LLT buildFloatingPoint(const FpSemantics &Sem) {
+    if (!getUseExtended())
+      return LLT::scalar(APFloat::getSizeInBits(APFloatBase::EnumToSemantics(Sem)));
+
+    return floatingPoint(Sem);
+  }
+
+  static LLT buildFloatingIEEE(unsigned SizeInBits) {
+    if (!getUseExtended())
+      return LLT::scalar(SizeInBits);
+
+    return floatIEEE(SizeInBits);
+  }
+
   /// Get a low-level token; just a scalar with zero bits (or no size).
   static constexpr LLT token() {
     return LLT{Kind::ANY_SCALAR, ElementCount::getFixed(0),
