@@ -8025,6 +8025,10 @@ struct EqualBBWrapper {
     if (BB->size() != 1)
       return false;
 
+    // The BB must have at least one predecessor.
+    if (!BB->hasNPredecessorsOrMore(1))
+      return false;
+
     return true;
   }
 };
