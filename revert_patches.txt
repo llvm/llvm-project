@@ -3,7 +3,3 @@ breaks hipCUB and smoke and smoke-fort
 [VPlan] Re-use common cast cost logic for VPReplicateRecipe (NFCI).
 [VPlan] Handle addrspacecast/ptrtoaddr in VPlan-based cost model.
 ---
-breaks build of llvm
-[CMake] Re-add -fno-rtti to llvm-config --cxxflags (#174084)
-[CMake] Fix variable name mistake
----
