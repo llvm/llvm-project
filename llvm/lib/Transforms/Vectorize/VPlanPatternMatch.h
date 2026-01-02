@@ -370,6 +370,17 @@ m_BranchOnCond(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::BranchOnCond>(Op0);
 }
 
+inline VPInstruction_match<VPInstruction::BranchOnTwoConds>
+m_BranchOnTwoConds() {
+  return m_VPInstruction<VPInstruction::BranchOnTwoConds>();
+}
+
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::BranchOnTwoConds, Op0_t, Op1_t>
+m_BranchOnTwoConds(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::BranchOnTwoConds>(Op0, Op1);
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::Broadcast, Op0_t>
 m_Broadcast(const Op0_t &Op0) {
@@ -810,8 +821,11 @@ template <typename Opnd_t> struct Argument_match {
     if (const auto *R = dyn_cast<VPWidenCallRecipe>(V))
       return Val.match(R->getOperand(OpI));
     if (const auto *R = dyn_cast<VPReplicateRecipe>(V))
-      if (isa<CallInst>(R->getUnderlyingInstr()))
-        return Val.match(R->getOperand(OpI + 1));
+      if (R->getOpcode() == Instruction::Call)
+        return Val.match(R->getOperand(OpI));
+    if (const auto *R = dyn_cast<VPInstruction>(V))
+      if (R->getOpcode() == Instruction::Call)
+        return Val.match(R->getOperand(OpI));
     return false;
   }
 };
@@ -833,10 +847,22 @@ struct IntrinsicID_match {
       return R->getVectorIntrinsicID() == ID;
     if (const auto *R = dyn_cast<VPWidenCallRecipe>(V))
       return R->getCalledScalarFunction()->getIntrinsicID() == ID;
+
+    auto MatchCalleeIntrinsic = [&](VPValue *CalleeOp) {
+      if (!isa<VPIRValue>(CalleeOp))
+        return false;
+      auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
+      return F->getIntrinsicID() == ID;
+    };
     if (const auto *R = dyn_cast<VPReplicateRecipe>(V))
-      if (const auto *CI = dyn_cast<CallInst>(R->getUnderlyingInstr()))
-        if (const auto *F = CI->getCalledFunction())
-          return F->getIntrinsicID() == ID;
+      if (R->getOpcode() == Instruction::Call) {
+        // The mask is always the last operand if predicated.
+        return MatchCalleeIntrinsic(
+            R->getOperand(R->getNumOperands() - 1 - R->isPredicated()));
+      }
+    if (const auto *R = dyn_cast<VPInstruction>(V))
+      if (R->getOpcode() == Instruction::Call)
+        return MatchCalleeIntrinsic(R->getOperand(R->getNumOperands() - 1));
     return false;
   }
 };
