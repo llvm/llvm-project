@@ -683,8 +683,6 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
     std::tuple<unsigned, EventType, int, int, unsigned> Priority;
   };
 
-  removeDuplicatedDiagnosticsOfAliasCheckers();
-
   // Compute error sizes.
   std::vector<int> Sizes;
   std::vector<
@@ -760,9 +758,9 @@ struct LessClangTidyError {
     const tooling::DiagnosticMessage &M1 = LHS.Message;
     const tooling::DiagnosticMessage &M2 = RHS.Message;
 
-    return std::tie(M1.FilePath, M1.FileOffset, LHS.DiagnosticName,
-                    M1.Message) <
-           std::tie(M2.FilePath, M2.FileOffset, RHS.DiagnosticName, M2.Message);
+    return std::tie(M1.FilePath, M1.FileOffset, M1.Message,
+                    LHS.DiagnosticName) <
+           std::tie(M2.FilePath, M2.FileOffset, M2.Message, RHS.DiagnosticName);
   }
 };
 struct EqualClangTidyError {
@@ -778,43 +776,35 @@ std::vector<ClangTidyError> ClangTidyDiagnosticConsumer::take() {
 
   llvm::stable_sort(Errors, LessClangTidyError());
   Errors.erase(llvm::unique(Errors, EqualClangTidyError()), Errors.end());
-  if (RemoveIncompatibleErrors)
+  if (RemoveIncompatibleErrors) {
+    removeDuplicatedDiagnosticsOfAliasCheckers();
     removeIncompatibleErrors();
+  }
   return std::move(Errors);
 }
 
-namespace {
-struct LessClangTidyErrorWithoutDiagnosticName {
-  bool operator()(const ClangTidyError *LHS, const ClangTidyError *RHS) const {
-    const tooling::DiagnosticMessage &M1 = LHS->Message;
-    const tooling::DiagnosticMessage &M2 = RHS->Message;
-
-    return std::tie(M1.FilePath, M1.FileOffset, M1.Message) <
-           std::tie(M2.FilePath, M2.FileOffset, M2.Message);
-  }
-};
-} // end anonymous namespace
-
 void ClangTidyDiagnosticConsumer::removeDuplicatedDiagnosticsOfAliasCheckers() {
-  using UniqueErrorSet =
-      std::set<ClangTidyError *, LessClangTidyErrorWithoutDiagnosticName>;
-  UniqueErrorSet UniqueErrors;
+  if (Errors.size() <= 1)
+    return;
 
-  auto IT = Errors.begin();
-  while (IT != Errors.end()) {
-    ClangTidyError &Error = *IT;
-    const std::pair<UniqueErrorSet::iterator, bool> Inserted =
-        UniqueErrors.insert(&Error);
+  static constexpr auto Projection = [](const ClangTidyError &E) {
+    const tooling::DiagnosticMessage &M = E.Message;
+    return std::tie(M.FilePath, M.FileOffset, M.Message);
+  };
 
+  auto LastUniqueError = Errors.begin();
+  for (ClangTidyError &Error : llvm::drop_begin(Errors, 1)) {
+    ClangTidyError &ExistingError = *LastUniqueError;
     // Unique error, we keep it and move along.
-    if (Inserted.second) {
-      ++IT;
+    if (Projection(Error) != Projection(ExistingError)) {
+      ++LastUniqueError;
+      if (&*LastUniqueError != &Error)
+        *LastUniqueError = std::move(Error);
     } else {
-      ClangTidyError &ExistingError = **Inserted.first;
       const llvm::StringMap<tooling::Replacements> &CandidateFix =
           Error.Message.Fix;
       const llvm::StringMap<tooling::Replacements> &ExistingFix =
-          (*Inserted.first)->Message.Fix;
+          ExistingError.Message.Fix;
 
       if (CandidateFix != ExistingFix) {
         // In case of a conflict, don't suggest any fix-it.
@@ -833,7 +823,7 @@ void ClangTidyDiagnosticConsumer::removeDuplicatedDiagnosticsOfAliasCheckers() {
 
       // Since it is the same error, we should take it as alias and remove it.
       ExistingError.EnabledDiagnosticAliases.emplace_back(Error.DiagnosticName);
-      IT = Errors.erase(IT);
     }
   }
+  Errors.erase(LastUniqueError + 1, Errors.end());
 }
