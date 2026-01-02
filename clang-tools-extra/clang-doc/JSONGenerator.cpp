@@ -213,6 +213,8 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
     Child.insert({"Children", TextCommentsArray});
     if (I.Kind == CommentKind::CK_ParamCommandComment)
       insertComment(Description, ChildVal, "ParamComments");
+    if (I.Kind == CommentKind::CK_TParamCommandComment)
+      insertComment(Description, ChildVal, "TParamComments");
     return Obj;
   }
 
@@ -642,8 +644,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["HasFunctions"] = true;
   }
 
-  if (!I.Children.Concepts.empty())
+  if (!I.Children.Concepts.empty()) {
     serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
+    Obj["HasConcepts"] = true;
+  }
 
   if (!I.Children.Variables.empty())
     serializeArray(I.Children.Variables, Obj, "Variables", SerializeInfo);

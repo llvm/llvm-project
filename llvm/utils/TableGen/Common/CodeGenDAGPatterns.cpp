@@ -102,7 +102,7 @@ ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode() const {
 
   for (const auto &I : *this) {
     MVT T = I.second.empty() ? MVT::Other : *I.second.begin();
-    VVT.getOrCreateTypeForMode(I.first, T);
+    VVT.insertTypeForMode(I.first, T);
   }
   return VVT;
 }
