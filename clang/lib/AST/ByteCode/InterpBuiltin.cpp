@@ -64,6 +64,18 @@ static APSInt popToAPSInt(InterpState &S, QualType T) {
   return popToAPSInt(S.Stk, *S.getContext().classify(T));
 }
 
+/// Check for common reasons a pointer can't be read from, which
+/// are usually not diagnosed in a builtin function.
+static bool isReadable(const Pointer &P) {
+  if (P.isDummy())
+    return false;
+  if (!P.isBlockPointer())
+    return false;
+  if (!P.isLive())
+    return false;
+  return true;
+}
+
 /// Pushes \p Val on the stack as the type given by \p QT.
 static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(QT->isSignedIntegerOrEnumerationType() ||
@@ -1794,8 +1806,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Can't read from dummy pointers.
-  if (DestPtr.isDummy() || SrcPtr.isDummy())
+  if (!isReadable(DestPtr) || !isReadable(SrcPtr))
     return false;
 
   if (DestPtr.getType()->isIncompleteType()) {

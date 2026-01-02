@@ -431,6 +431,12 @@ protected:
   // Visit operands on branch instructions that are not forwarded.
   virtual void visitBranchOperand(OpOperand &operand) = 0;
 
+  // Visit the non-forwarded arguments of a region, such as the
+  // induction variables of a loop.
+  virtual void
+  visitNonControlFlowArguments(RegionSuccessor &successor,
+                               ArrayRef<BlockArgument> arguments) = 0;
+
   // Visit operands on call instructions that are not forwarded.
   virtual void visitCallOperand(OpOperand &operand) = 0;
 

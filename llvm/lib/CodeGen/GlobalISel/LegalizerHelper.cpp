@@ -8075,7 +8075,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
     RevShiftVal =
         MIRBuilder.buildInstr(RevShiftOpc, {DstTy}, {Inner, RevAmt}).getReg(0);
   }
-  MIRBuilder.buildOr(Dst, ShVal, RevShiftVal);
+  MIRBuilder.buildOr(Dst, ShVal, RevShiftVal, MachineInstr::Disjoint);
   MI.eraseFromParent();
   return Legalized;
 }

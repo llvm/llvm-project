@@ -315,3 +315,45 @@ func.func @dead_block() {
   ^bb4:
     return
 }
+
+// -----
+
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: live
+func.func @affine_loop_no_use_iv_has_side_effect_op() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<10xindex>
+  affine.for %arg0 = 0 to 79 {
+    memref.store %c1, %alloc[%c1] : memref<10xindex>
+  } {tag = "for"}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: not live
+func.func @affine_loop_no_use_iv() {
+  affine.for %arg0 = 0 to 79 { 
+  } {tag = "for"}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_tag: forall:
+// CHECK-NEXT: operand #0: live
+// CHECK-NEXT: region: #0:
+// CHECK-NEXT:   argument: #0: live
+
+func.func @forall_no_use_iv_has_side_effect_op(%idx1: index, %idx2: index) {
+  scf.parallel (%i) = (%idx1) to (%idx2) step (%idx2) {
+    %r = memref.alloca() : memref<10xf32>
+    scf.forall (%e2) in (%idx2) {
+      %a = memref.load %r[%idx2] : memref<10xf32>
+    } {tag = "forall"}
+  } 
+  return
+}
