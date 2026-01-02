@@ -130,6 +130,7 @@ private:
 // CHECK-NEXT:    "HasPublicFunctions": true,
 // CHECK-NEXT:    "HasPublicMembers": true,
 // CHECK-NEXT:    "HasRecords": true,
+// CHECK-NEXT:    "HasTypedefs": true,
 // CHECK-NEXT:    "InfoType": "record",
 // CHECK-NEXT:    "IsTypedef": false,
 // CHECK-NEXT:    "Location": {

@@ -429,6 +429,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->IsType, Blob);
   case CONCEPT_CONSTRAINT_EXPRESSION:
     return decodeRecord(R, I->ConstraintExpression, Blob);
+  case CONCEPT_DEFLOCATION:
+    return decodeRecord(R, I->DefLoc, Blob);
   }
   llvm_unreachable("invalid field for ConceptInfo");
 }
@@ -796,6 +798,9 @@ template <> void addTemplate(ConceptInfo *I, TemplateInfo &&P) {
   I->Template = std::move(P);
 }
 template <> void addTemplate(FriendInfo *I, TemplateInfo &&P) {
+  I->Template.emplace(std::move(P));
+}
+template <> void addTemplate(TypedefInfo *I, TemplateInfo &&P) {
   I->Template.emplace(std::move(P));
 }
 

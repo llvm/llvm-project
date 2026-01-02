@@ -223,10 +223,11 @@ MemrefValue skipViewLikeOps(MemrefValue source) {
   return source;
 }
 
-LogicalResult resolveSourceIndicesExpandShape(
-    Location loc, PatternRewriter &rewriter,
-    memref::ExpandShapeOp expandShapeOp, ValueRange indices,
-    SmallVectorImpl<Value> &sourceIndices, bool startsInbounds) {
+void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
+                                     memref::ExpandShapeOp expandShapeOp,
+                                     ValueRange indices,
+                                     SmallVectorImpl<Value> &sourceIndices,
+                                     bool startsInbounds) {
   SmallVector<OpFoldResult> destShape = expandShapeOp.getMixedOutputShape();
 
   // Traverse all reassociation groups to determine the appropriate indices
@@ -246,14 +247,12 @@ LogicalResult resolveSourceIndicesExpandShape(
         rewriter, loc, groupIndices, groupBasis, /*disjoint=*/startsInbounds);
     sourceIndices.push_back(collapsedIndex);
   }
-  return success();
 }
 
-LogicalResult
-resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
-                                  memref::CollapseShapeOp collapseShapeOp,
-                                  ValueRange indices,
-                                  SmallVectorImpl<Value> &sourceIndices) {
+void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
+                                       memref::CollapseShapeOp collapseShapeOp,
+                                       ValueRange indices,
+                                       SmallVectorImpl<Value> &sourceIndices) {
   // Note: collapse_shape requires a strided memref, we can do this.
   auto metadata = memref::ExtractStridedMetadataOp::create(
       rewriter, loc, collapseShapeOp.getSrc());
@@ -285,7 +284,6 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
           getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
     }
   }
-  return success();
 }
 
 } // namespace memref

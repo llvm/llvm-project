@@ -213,6 +213,8 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
     Child.insert({"Children", TextCommentsArray});
     if (I.Kind == CommentKind::CK_ParamCommandComment)
       insertComment(Description, ChildVal, "ParamComments");
+    if (I.Kind == CommentKind::CK_TParamCommandComment)
+      insertComment(Description, ChildVal, "TParamComments");
     return Obj;
   }
 
@@ -347,8 +349,10 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
     Obj["HasEnums"] = true;
   }
 
-  if (!Children.Typedefs.empty())
+  if (!Children.Typedefs.empty()) {
     serializeArray(Children.Typedefs, Obj, "Typedefs", SerializeInfo);
+    Obj["HasTypedefs"] = true;
+  }
 
   if (!Children.Records.empty()) {
     serializeArray(Children.Records, Obj, "Records", SerializeReferenceLambda);
@@ -492,6 +496,8 @@ static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
   auto &TypeObj = *TypeVal.getAsObject();
   serializeInfo(I.Underlying, TypeObj);
   Obj["Underlying"] = TypeVal;
+  if (I.Template)
+    serializeInfo(I.Template.value(), Obj);
 }
 
 static void serializeInfo(const BaseRecordInfo &I, Object &Obj,
@@ -642,8 +648,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["HasFunctions"] = true;
   }
 
-  if (!I.Children.Concepts.empty())
+  if (!I.Children.Concepts.empty()) {
     serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
+    Obj["HasConcepts"] = true;
+  }
 
   if (!I.Children.Variables.empty())
     serializeArray(I.Children.Variables, Obj, "Variables", SerializeInfo);

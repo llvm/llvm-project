@@ -1114,6 +1114,9 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
   Info.DefLoc = Loc;
   auto &LO = D->getLangOpts();
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
+  populateTemplateParameters(Info.Template, D);
+  if (Info.Template)
+    populateConstraints(Info.Template.value(), D->getDescribedTemplate());
 
   if (Info.Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
@@ -1144,6 +1147,9 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
   Info.TypeDeclaration = getTypeAlias(D);
   Info.IsUsing = true;
+  populateTemplateParameters(Info.Template, D);
+  if (Info.Template)
+    populateConstraints(Info.Template.value(), D->getDescribedAliasTemplate());
 
   extractCommentFromDecl(D, Info);
 

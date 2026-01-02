@@ -766,6 +766,12 @@ function(add_mlir_python_extension libname extname)
     FREE_THREADED
     ${ARG_SOURCES}
   )
+  if(APPLE)
+    # In llvm/cmake/modules/HandleLLVMOptions.cmake:268 we set -Wl,-flat_namespace which breaks
+    # the default name spacing on MacOS and causes "cross-wired" symbol resolution when multiple
+    # bindings packages are loaded.
+    target_link_options(${libname} PRIVATE "LINKER:-twolevel_namespace")
+  endif()
 
   if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
       AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
