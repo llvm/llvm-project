@@ -1649,6 +1649,10 @@ namespace Memchr {
     return __builtin_char_memchr(c + 1, 'f', 1) == nullptr;
   }
   static_assert(f());
+
+
+  extern const char char_memchr_arg[0l];
+  char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
 }
 
 namespace Strchr {

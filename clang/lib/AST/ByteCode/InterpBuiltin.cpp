@@ -73,6 +73,8 @@ static bool isReadable(const Pointer &P) {
     return false;
   if (!P.isLive())
     return false;
+  if (P.isOnePastEnd())
+    return false;
   return true;
 }
 
@@ -2088,6 +2090,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
         << S.getASTContext().BuiltinInfo.getQuotedName(ID) << ElemTy;
     return false;
   }
+
+  if (!isReadable(Ptr))
+    return false;
 
   if (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr) {
     int64_t DesiredTrunc;
