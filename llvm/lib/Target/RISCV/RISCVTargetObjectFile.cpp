@@ -15,6 +15,8 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCValue.h"
 
+#include "llvm/IR/Mangler.h"
+
 using namespace llvm;
 
 unsigned RISCVELFTargetObjectFile::getTextSectionAlignment() const {
@@ -178,4 +180,12 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
                                                             Alignment);
+}
+
+void RISCVMachOTargetObjectFile::getNameWithPrefix(
+    SmallVectorImpl<char> &OutName, const GlobalValue *GV,
+    const TargetMachine &TM) const {
+  // RISC-V does not use section-relative relocations so any global symbol must
+  // be accessed via at least a linker-private symbol.
+  getMangler().getNameWithPrefix(OutName, GV, /* CannotUsePrivateLabel */ true);
 }
