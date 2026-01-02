@@ -410,6 +410,13 @@ macro(construct_compiler_rt_default_triple)
     # Android uses i686, but that's remapped at a later stage.
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "i386")
   endif()
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^arm")
+    if("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
+      if(NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+        set(COMPILER_RT_DEFAULT_TARGET_ARCH "armhf")
+      endif()
+    endif()
+  endif()
 
   # If we are directly targeting a GPU we need to check that the compiler is
   # compatible and pass some default arguments.
