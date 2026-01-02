@@ -137,27 +137,25 @@ let Predicates = [HasCMOV, HasCF] in {
 }
 
 // SetCC instructions.
-let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1, Predicates = [PreferNoSetZUCC] in {
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
+  Predicates = [PreferSetCC] in
   def SETCCr : I<0x90, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "set${cond}\t$dst",
                 [(set GR8:$dst, (X86setcc timm:$cond, EFLAGS))]>,
                 TB, Sched<[WriteSETCC]>;
-}
-let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in {
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in
   def SETCCm : I<0x90, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
                 "set${cond}\t$dst",
                 [(store (X86setcc timm:$cond, EFLAGS), addr:$dst)]>,
                 TB, Sched<[WriteSETCCStore]>;
-} // Uses = [EFLAGS]
 
 // SetZUCC and promoted SetCC instructions.
 let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
-  hasSideEffects = 0, Predicates = [In64BitMode], Predicates = [PreferSetZUCC] in {
+  hasSideEffects = 0, Predicates = [In64BitMode, PreferNoSetCC] in
   def SETZUCCr : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "setzu${cond}\t$dst",
                 [(set GR8:$dst, (X86setcc timm:$cond, EFLAGS))]>,
                 XD, ZU, NoCD8, Sched<[WriteSETCC]>;
-}
 let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
   hasSideEffects = 0, Predicates = [In64BitMode] in {
   def SETCCr_EVEX : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),

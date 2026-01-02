@@ -269,14 +269,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
         Features.push_back(
             Args.MakeArgString((IsNegative ? "-" : "+") + Value));
-
-        // Implicitly add prefer-setzucc feature when ZU feature is enabled. The
-        // prefer-setzucc feature enables exclusively emitting SetZUCC
-        // instruction and never emitting the legacy SETCC instruction.
-        // The latter is susceptible to false dependences.
-        if (Value == "zu")
-          Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") +
-                                                Twine("prefer-setzucc")));
       }
       continue;
     }

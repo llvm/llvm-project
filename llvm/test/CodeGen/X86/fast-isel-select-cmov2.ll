@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOAVX --check-prefix=FAST
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=avx | FileCheck %s --check-prefix=CHECK --check-prefix=FAST_AVX
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=avx512f | FileCheck %s --check-prefix=CHECK --check-prefix=FAST_AVX
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=+zu,+prefer-setzucc | FileCheck %s --check-prefix=FAST_SETZUCC
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=+zu,-prefer-setzucc | FileCheck %s --check-prefix=FAST_NO-SETZUCC
+; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=+zu | FileCheck %s --check-prefix=FAST_SETZUCC
+; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=+zu,+prefer-setcc | FileCheck %s --check-prefix=FAST_NO-SETZUCC
 
 ; Test all the cmp predicates that can feed an integer conditional move.
 

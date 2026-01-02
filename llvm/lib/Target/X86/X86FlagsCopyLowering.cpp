@@ -746,8 +746,9 @@ Register X86FlagsCopyLoweringPass::promoteCondToReg(
     const DebugLoc &TestLoc, X86::CondCode Cond) {
   Register Reg = MRI->createVirtualRegister(PromoteRC);
   auto SetI = BuildMI(TestMBB, TestPos, TestLoc,
-                      TII->get(Subtarget->preferSetZUCC() ? X86::SETZUCCr
-                                                          : X86::SETCCr),
+                      TII->get((Subtarget->hasZU() && !Subtarget->preferSetCC())
+                                   ? X86::SETZUCCr
+                                   : X86::SETCCr),
                       Reg)
                   .addImm(Cond);
   (void)SetI;

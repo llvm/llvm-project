@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=X64,AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X64,AVX,AVX512
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu,+prefer-setzucc | FileCheck %s --check-prefix=SETZUCC
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu,-prefer-setzucc | FileCheck %s --check-prefix=NO-SETZUCC
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu | FileCheck %s --check-prefixes=SSE,SETZUCC
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu,+prefer-setcc | FileCheck %s --check-prefixes=SSE,NO-SETZUCC
 
 define i8 @scmp.8.8(i8 %x, i8 %y) nounwind {
 ; X64-LABEL: scmp.8.8:
@@ -772,24 +772,6 @@ define <4 x i32> @scmp_normal_vectors(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
-;
-; SETZUCC-LABEL: scmp_normal_vectors:
-; SETZUCC:       # %bb.0:
-; SETZUCC-NEXT:    movdqa %xmm0, %xmm2
-; SETZUCC-NEXT:    pcmpgtd %xmm1, %xmm2
-; SETZUCC-NEXT:    pcmpgtd %xmm0, %xmm1
-; SETZUCC-NEXT:    psubd %xmm2, %xmm1
-; SETZUCC-NEXT:    movdqa %xmm1, %xmm0
-; SETZUCC-NEXT:    retq
-;
-; NO-SETZUCC-LABEL: scmp_normal_vectors:
-; NO-SETZUCC:       # %bb.0:
-; NO-SETZUCC-NEXT:    movdqa %xmm0, %xmm2
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm1, %xmm2
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm0, %xmm1
-; NO-SETZUCC-NEXT:    psubd %xmm2, %xmm1
-; NO-SETZUCC-NEXT:    movdqa %xmm1, %xmm0
-; NO-SETZUCC-NEXT:    retq
   %1 = call <4 x i32> @llvm.scmp(<4 x i32> %x, <4 x i32> %y)
   ret <4 x i32> %1
 }

@@ -364,9 +364,6 @@ def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
                                  "Support zero-upper SETcc/IMUL">;
-def FeaturePreferSetZUCC
-    : SubtargetFeature<"prefer-setzucc", "PreferSetZUCC", "true",
-                       "Prefer to emit SetZUCC instead of legacy SetCC.">;
 def FeatureUseGPR32InInlineAsm
     : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
@@ -777,6 +774,10 @@ def TuningUseGLMDivSqrtCosts
 // (i.e., instruction prefix 3EH).
 def TuningBranchHint: SubtargetFeature<"branch-hint", "HasBranchHint", "true",
                                         "Target has branch hint feature">;
+
+def TuningPreferSetCC
+    : SubtargetFeature<"prefer-setcc", "PreferSetCC", "true",
+                       "Prefer to emit legacy SetCC.">;
 
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
