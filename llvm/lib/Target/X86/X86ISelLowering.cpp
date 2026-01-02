@@ -48442,7 +48442,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       Cond.getOperand(0).getScalarValueSizeInBits() == EltBitWidth) {
     // The 'and' mask must be composed of power-of-2 constants.
     SDValue And = Cond.getOperand(0);
-    auto *C = isConstOrConstSplat(And.getOperand(1));
+    SDValue Mask = And.getOperand(1);
+    auto *C = isConstOrConstSplat(Mask);
     if (C && C->getAPIntValue().isPowerOf2()) {
       // vselect (X & C == 0), LHS, RHS --> vselect (X & C != 0), RHS, LHS
       SDValue NotCond =
@@ -48457,12 +48458,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         TLI.isTypeLegal(VT) && ((Subtarget.hasAVX() && EltBitWidth == 32) ||
                                 (Subtarget.hasAVX2() && EltBitWidth == 64) ||
                                 (Subtarget.hasXOP()));
-    if (CanShiftBlend &&
-        ISD::matchUnaryPredicate(And.getOperand(1), [](ConstantSDNode *C) {
+    if (CanShiftBlend && ISD::matchUnaryPredicate(Mask, [](ConstantSDNode *C) {
           return C->getAPIntValue().isPowerOf2();
         })) {
       // Create a left-shift constant to get the mask bits over to the sign-bit.
-      SDValue Mask = And.getOperand(1);
       SmallVector<int, 32> ShlVals;
       for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
         auto *MaskVal = cast<ConstantSDNode>(Mask.getOperand(i));
