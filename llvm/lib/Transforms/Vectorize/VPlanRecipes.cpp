@@ -978,8 +978,12 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         Ctx.CostKind, {TTI::OK_AnyValue, TTI::OP_None},
         {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
   }
-  case Instruction::BitCast:
-    return 0;
+  case Instruction::BitCast: {
+    Type *ScalarTy = Ctx.Types.inferScalarType(this);
+    if (ScalarTy->isPointerTy())
+      return 0;
+    [[fallthrough]];
+  }
   case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::FPToUI:
