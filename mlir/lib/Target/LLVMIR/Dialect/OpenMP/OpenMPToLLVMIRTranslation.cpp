@@ -361,6 +361,15 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         op.getReductionMod().value() != omp::ReductionModifier::defaultmod)
       result = todo("reduction with modifier");
   };
+  auto checkTaskReduction = [&todo](auto op, LogicalResult &result) {
+    if (op.getTaskReductionByref()) {
+      llvm::ArrayRef<bool> ByrefAttrs = op.getTaskReductionByref().value();
+      for (bool ByrefAttr : ByrefAttrs) {
+        if (ByrefAttr)
+          result = todo("task_reduction with pass by reference argument");
+      }
+    }
+  };
   auto checkUntied = [&todo](auto op, LogicalResult &result) {
     if (op.getUntied())
       result = todo("untied");
@@ -394,7 +403,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
       })
-      .Case([&](omp::TaskgroupOp op) { checkAllocate(op, result); })
+      .Case([&](omp::TaskgroupOp op) {
+        checkAllocate(op, result);
+        checkTaskReduction(op, result);
+      })
       .Case([&](omp::TaskwaitOp op) {
         checkDepend(op, result);
         checkNowait(op, result);
@@ -2462,11 +2474,11 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 }
 
 template <typename OP>
-llvm::Value *createTaskReductionFunction(
+static llvm::Value *createTaskReductionFunction(
     llvm::IRBuilderBase &builder, const std::string &name, llvm::Type *redTy,
     LLVM::ModuleTranslation &moduleTranslation,
     SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls, Region &region,
-    OP &op, unsigned Cnt,
+    OP &op, unsigned cnt,
     SmallVectorImpl<llvm::Value *> &privateReductionVariables,
     DenseMap<Value, llvm::Value *> &reductionVariableMap) {
 
@@ -2476,6 +2488,8 @@ llvm::Value *createTaskReductionFunction(
   if (region.empty() && name == "red_fini")
     // Finalization is optional for reductions.
     return llvm::Constant::getNullValue(OpaquePtrTy);
+
+  // Prepare a general structure of the function to be emitted
   llvm::FunctionType *funcType =
       llvm::FunctionType::get(OpaquePtrTy, {OpaquePtrTy, OpaquePtrTy}, false);
   llvm::Function *function =
@@ -2486,17 +2500,20 @@ llvm::Value *createTaskReductionFunction(
       llvm::BasicBlock::Create(Context, "entry", function);
   llvm::IRBuilder<> bbBuilder(entry);
 
+  // Prepare the function arguments
   llvm::Value *arg0 = function->getArg(0);
   llvm::Value *arg1 = function->getArg(1);
 
   if (name == "red_init") {
+    // For the initialization, map the reduction variables
+    // to the arguments of the function
     function->addParamAttr(0, llvm::Attribute::NoAlias);
     function->addParamAttr(1, llvm::Attribute::NoAlias);
-    mlir::omp::DeclareReductionOp &reduction = reductionDecls[Cnt];
+    mlir::omp::DeclareReductionOp &reduction = reductionDecls[cnt];
     Region &initializerRegion = reduction.getInitializerRegion();
     Block &entry = initializerRegion.front();
 
-    mlir::Value mlirSource = op.getTaskReductionVars()[Cnt];
+    mlir::Value mlirSource = op.getTaskReductionVars()[cnt];
     llvm::Value *llvmSource = moduleTranslation.lookupValue(mlirSource);
     llvm::Value *origVal = llvmSource;
 
@@ -2504,22 +2521,25 @@ llvm::Value *createTaskReductionFunction(
 
     if (entry.getNumArguments() > 1) {
       llvm::Value *allocation =
-          reductionVariableMap.lookup(op.getReductionVars()[Cnt]);
+          reductionVariableMap.lookup(op.getReductionVars()[cnt]);
       moduleTranslation.mapValue(reduction.getInitializerAllocArg(),
                                  allocation);
     }
 
   } else if (name == "red_comb") {
+    // For the combiner, perform a load for each argument
+    // and map it to the combiner region.
     llvm::Value *arg0L = bbBuilder.CreateLoad(redTy, arg0);
     llvm::Value *arg1L = bbBuilder.CreateLoad(redTy, arg1);
     moduleTranslation.mapValue(region.front().getArgument(0), arg0L);
     moduleTranslation.mapValue(region.front().getArgument(1), arg1L);
   }
-  if (region.empty()) {
-    // Emit an empty function body in case of empty region
+
+  // Emit an empty function body in case of empty region
+  if (region.empty())
     bbBuilder.CreateRet(arg0); // Return from the function
     return function;
-  }
+}
 
   SmallVector<llvm::Value *, 1> phis;
   if (failed(inlineConvertOmpRegions(region, "", bbBuilder, moduleTranslation,
@@ -2609,13 +2629,13 @@ static LogicalResult allocAndInitializeTaskReductionVars(
   builder.restoreIP(oldIP);
   llvm::DataLayout DL = builder.GetInsertBlock()->getModule()->getDataLayout();
 
-  for (int Cnt = 0; Cnt < arraySize; ++Cnt) {
+  for (int cnt = 0; cnt < arraySize; ++cnt) {
     llvm::Value *shared =
-        moduleTranslation.lookupValue(op.getTaskReductionVars()[Cnt]);
+        moduleTranslation.lookupValue(op.getTaskReductionVars()[cnt]);
 
     // Create a GEP to access the reduction element
     llvm::Value *StructPtr = builder.CreateGEP(
-        ArrayTy, ArrayAlloca, {builder.getInt32(0), builder.getInt32(Cnt)},
+        ArrayTy, ArrayAlloca, {builder.getInt32(0), builder.getInt32(cnt)},
         "red_element");
 
     llvm::Value *FieldPtrReduceShar = builder.CreateStructGEP(
@@ -2630,7 +2650,7 @@ static LogicalResult allocAndInitializeTaskReductionVars(
     llvm::Value *FieldPtrReduceSize = builder.CreateStructGEP(
         kmp_taskred_input_t, StructPtr, 2, "reduce_size");
     llvm::Type *redTy =
-        moduleTranslation.convertType(reductionDecls[Cnt].getType());
+        moduleTranslation.convertType(reductionDecls[cnt].getType());
     uint64_t sizeInBytes = DL.getTypeAllocSize(redTy);
     llvm::ConstantInt *sizeConst =
         llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), sizeInBytes);
@@ -2641,7 +2661,7 @@ static LogicalResult allocAndInitializeTaskReductionVars(
         kmp_taskred_input_t, StructPtr, 3, "reduce_init");
     llvm::Value *initFunction = createTaskReductionFunction(
         builder, "red_init", redTy, moduleTranslation, reductionDecls,
-        reductionDecls[Cnt].getInitializerRegion(), op, Cnt,
+        reductionDecls[cnt].getInitializerRegion(), op, cnt,
         privateReductionVariables, reductionVariableMap);
     builder.CreateStore(initFunction, FieldPtrReduceInit);
 
@@ -2650,7 +2670,7 @@ static LogicalResult allocAndInitializeTaskReductionVars(
         kmp_taskred_input_t, StructPtr, 4, "reduce_fini");
     llvm::Value *finiFunction = createTaskReductionFunction(
         builder, "red_fini", redTy, moduleTranslation, reductionDecls,
-        reductionDecls[Cnt].getCleanupRegion(), op, Cnt,
+        reductionDecls[cnt].getCleanupRegion(), op, cnt,
         privateReductionVariables, reductionVariableMap);
     builder.CreateStore(finiFunction, FieldPtrReduceFini);
 
@@ -2658,7 +2678,7 @@ static LogicalResult allocAndInitializeTaskReductionVars(
         kmp_taskred_input_t, StructPtr, 5, "reduce_comb");
     llvm::Value *combFunction = createTaskReductionFunction(
         builder, "red_comb", redTy, moduleTranslation, reductionDecls,
-        reductionDecls[Cnt].getReductionRegion(), op, Cnt,
+        reductionDecls[cnt].getReductionRegion(), op, cnt,
         privateReductionVariables, reductionVariableMap);
     builder.CreateStore(combFunction, FieldPtrReduceComb);
 
@@ -2692,12 +2712,15 @@ convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
   LogicalResult bodyGenStatus = success();
 
   std::optional<ArrayAttr> attr = tgOp.getTaskReductionSyms();
-  assert(attr && "Missing task reduction symbols");
-  reductionDecls.reserve(reductionDecls.size() + tgOp.getNumReductionVars());
-  for (auto symbolRef : attr->getAsRange<SymbolRefAttr>()) {
-    reductionDecls.push_back(
-        SymbolTable::lookupNearestSymbolFrom<omp::DeclareReductionOp>(
-            tgOp, symbolRef));
+  if (attr) {
+    reductionDecls.reserve(reductionDecls.size() + tgOp.getNumReductionVars());
+    for (auto symbolRef : attr->getAsRange<SymbolRefAttr>()) {
+      reductionDecls.push_back(
+          SymbolTable::lookupNearestSymbolFrom<omp::DeclareReductionOp>(
+              tgOp, symbolRef));
+    }
+    assert(reductionDecls.size() == tgOp.getNumReductionVars() &&
+           "Missing reduction declaration");
   }
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
     builder.restoreIP(codegenIP);

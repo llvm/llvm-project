@@ -3074,6 +3074,195 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 
 // -----
 
+// CHECK-LABEL: define void @_QPtaskred_integer_arg() {
+// CHECK: %[[VAR:.*]] = alloca i32, i64 1, align 4
+// CHECK: %kmp_taskred_array = alloca [1 x %kmp_taskred_input_t], align 8
+// CHECK: %[[TID:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK: call void @__kmpc_taskgroup(ptr @1, i32 %[[TID]])
+// CHECK: %[[RED_ELEMENT:.*]] = getelementptr [1 x %kmp_taskred_input_t], ptr %kmp_taskred_array, i32 0, i32 0
+// CHECK: %[[REDUCE_SHAR:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 0
+// CHECK: store ptr %[[VAR]], ptr %[[REDUCE_SHAR]], align 8
+// CHECK: %[[REDUCE_ORIG:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 1
+// CHECK: store ptr %[[VAR]], ptr %[[REDUCE_ORIG]], align 8
+// CHECK: %[[REDUCE_SIZE:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 2
+// CHECK: store i64 4, ptr %[[REDUCE_SIZE]], align 4
+// CHECK: %[[REDUCE_INIT:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 3
+// CHECK: store ptr @red_init, ptr %[[REDUCE_INIT]], align 8
+// CHECK: %[[REDUCE_FINI:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 4
+// CHECK: store ptr null, ptr %reduce_fini, align 8
+// CHECK: %[[REDUCE_COMB:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 5
+// CHECK: store ptr @red_comb, ptr %[[REDUCE_COMB]], align 8
+// CHECK: %[[FLAGS:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 6
+// CHECK: store i64 0, ptr %[[FLAGS]], align 4
+// CHECK: %omp_global_thread_num1 = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK: %[[INIT:.*]] = call ptr @__kmpc_taskred_init(i32 %omp_global_thread_num1, i32 1, ptr %kmp_taskred_array)
+
+// CHECK: define ptr @red_init(ptr noalias %0, ptr noalias %1) #2 {
+// CHECK: entry:
+// CHECK: store i32 0, ptr %0, align 4
+// CHECK: ret ptr %0
+// CHECK: }
+ 
+// CHECK: ; Function Attrs: norecurse
+// CHECK: define ptr @red_comb(ptr %0, ptr %1) #2 {
+// CHECK: entry:
+// CHECK: %2 = load i32, ptr %0, align 4
+// CHECK: %3 = load i32, ptr %1, align 4
+// CHECK: %4 = add i32 %2, %3
+// CHECK: store i32 %4, ptr %0, align 4
+// CHECK: ret ptr %0
+// CHECK: }
+
+omp.declare_reduction @add_reduction_i32 : i32 init {
+^bb0(%arg0: i32):
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  omp.yield(%0 : i32)
+} combiner {
+^bb0(%arg0: i32, %arg1: i32):
+  %0 = llvm.add %arg0, %arg1 : i32
+  omp.yield(%0 : i32)
+}
+llvm.func @_QPtaskred_integer_arg() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 {bindc_name = "s"} : (i64) -> !llvm.ptr
+  omp.taskgroup task_reduction(@add_reduction_i32 %1 -> %arg0 : !llvm.ptr) {
+  omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: define void @_QPfloat_arg() {
+// CHECK: %[[VAR:.*]] = alloca float, i64 1, align 4
+// CHECK: %kmp_taskred_array = alloca [1 x %kmp_taskred_input_t], align 8
+// CHECK: %[[TID:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK: call void @__kmpc_taskgroup(ptr @1, i32 %[[TID]])
+// CHECK: %[[RED_ELEMENT:.*]] = getelementptr [1 x %kmp_taskred_input_t], ptr %kmp_taskred_array, i32 0, i32 0
+// CHECK: %[[REDUCE_SHAR:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 0
+// CHECK: store ptr %[[VAR]], ptr %[[REDUCE_SHAR]], align 8
+// CHECK: %[[REDUCE_ORIG:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 1
+// CHECK: store ptr %[[VAR]], ptr %[[REDUCE_ORIG]], align 8
+// CHECK: %[[REDUCE_SIZE:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 2
+// CHECK: store i64 4, ptr %[[REDUCE_SIZE]], align 4
+// CHECK: %[[REDUCE_INIT:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 3
+// CHECK: store ptr @red_init, ptr %[[REDUCE_INIT]], align 8
+// CHECK: %[[REDUCE_FINI:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 4
+// CHECK: store ptr null, ptr %reduce_fini, align 8
+// CHECK: %[[REDUCE_COMB:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 5
+// CHECK: store ptr @red_comb, ptr %[[REDUCE_COMB]], align 8
+// CHECK: %[[FLAGS:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 6
+// CHECK: store i64 0, ptr %[[FLAGS]], align 4
+// CHECK: %omp_global_thread_num1 = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK: %[[INIT:.*]] = call ptr @__kmpc_taskred_init(i32 %omp_global_thread_num1, i32 1, ptr %kmp_taskred_array)
+
+
+// CHECK: ; Function Attrs: norecurse
+// CHECK: define ptr @red_init(ptr noalias %0, ptr noalias %1) #2 {
+// CHECK: entry:
+// CHECK: store float 1.000000e+00, ptr %0, align 4
+// CHECK: ret ptr %0
+// CHECK: }
+
+// CHECK: ; Function Attrs: norecurse
+// CHECK: define ptr @red_comb(ptr %0, ptr %1) #2 {
+// CHECK: entry:
+// CHECK: %2 = load float, ptr %0, align 4
+// CHECK: %3 = load float, ptr %1, align 4
+// CHECK: %4 = fmul contract float %2, %3
+// CHECK: store float %4, ptr %0, align 4
+// CHECK: ret ptr %0
+// CHECK: }
+
+
+omp.declare_reduction @multiply_reduction_f32 : f32 init {
+^bb0(%arg0: f32):
+  %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  omp.yield(%0 : f32)
+} combiner {
+^bb0(%arg0: f32, %arg1: f32):
+  %0 = llvm.fmul %arg0, %arg1 {fastmathFlags = #llvm.fastmath<contract>} : f32
+  omp.yield(%0 : f32)
+}
+llvm.func @_QPfloat_arg() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x f32 {bindc_name = "s"} : (i64) -> !llvm.ptr
+  omp.taskgroup task_reduction(@multiply_reduction_f32 %1 -> %arg0 : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK: define void @_QPlogical_reduction() {
+// CHECK: %[[VAR:.*]] = alloca i32, i64 1, align 4
+// CHECK: %kmp_taskred_array = alloca [1 x %kmp_taskred_input_t], align 8
+// CHECK: %[[TID:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK: call void @__kmpc_taskgroup(ptr @1, i32 %[[TID]])
+// CHECK: %[[RED_ELEMENT:.*]] = getelementptr [1 x %kmp_taskred_input_t], ptr %kmp_taskred_array, i32 0, i32 0
+// CHECK: %[[REDUCE_SHAR:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 0
+// CHECK: store ptr %[[VAR]], ptr %[[REDUCE_SHAR]], align 8
+// CHECK: %[[REDUCE_ORIG:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 1
+// CHECK: store ptr %[[VAR]], ptr %[[REDUCE_ORIG]], align 8
+// CHECK: %[[REDUCE_SIZE:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 2
+// CHECK: store i64 4, ptr %[[REDUCE_SIZE]], align 4
+// CHECK: %[[REDUCE_INIT:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 3
+// CHECK: store ptr @red_init, ptr %[[REDUCE_INIT]], align 8
+// CHECK: %[[REDUCE_FINI:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 4
+// CHECK: store ptr null, ptr %reduce_fini, align 8
+// CHECK: %[[REDUCE_COMB:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 5
+// CHECK: store ptr @red_comb, ptr %[[REDUCE_COMB]], align 8
+// CHECK: %[[FLAGS:.*]] = getelementptr inbounds nuw %kmp_taskred_input_t, ptr %[[RED_ELEMENT]], i32 0, i32 6
+// CHECK: store i64 0, ptr %[[FLAGS]], align 4
+// CHECK: %omp_global_thread_num1 = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK: %[[INIT:.*]] = call ptr @__kmpc_taskred_init(i32 %omp_global_thread_num1, i32 1, ptr %kmp_taskred_array)
+
+
+// CHECK: define ptr @red_init(ptr noalias %0, ptr noalias %1) #2 {
+// CHECK: entry:
+// CHECK: store i32 1, ptr %0, align 4
+// CHECK: ret ptr %0
+// CHECK: }
+
+// CHECK: ; Function Attrs: norecurse
+// CHECK: define ptr @red_comb(ptr %0, ptr %1) #2 {
+// CHECK: entry:
+// CHECK: %2 = load i32, ptr %0, align 4
+// CHECK: %3 = load i32, ptr %1, align 4
+// CHECK: %4 = icmp ne i32 %2, 0
+// CHECK: %5 = icmp ne i32 %3, 0
+// CHECK: %6 = and i1 %4, %5
+// CHECK: %7 = zext i1 %6 to i32
+// CHECK: store i32 %7, ptr %0, align 4
+// CHECK: ret ptr %0
+// CHECK: }
+
+
+omp.declare_reduction @and_reduction_l32 : i32 init {
+^bb0(%arg0: i32):
+  %0 = llvm.mlir.constant(1 : i64) : i32
+  omp.yield(%0 : i32)
+} combiner {
+^bb0(%arg0: i32, %arg1: i32):
+  %0 = llvm.mlir.constant(0 : i64) : i32
+  %1 = llvm.icmp "ne" %arg0, %0 : i32
+  %2 = llvm.icmp "ne" %arg1, %0 : i32
+  %3 = llvm.and %1, %2 : i1
+  %4 = llvm.zext %3 : i1 to i32
+  omp.yield(%4 : i32)
+}
+llvm.func @_QPlogical_reduction() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 {bindc_name = "s"} : (i64) -> !llvm.ptr
+  omp.taskgroup task_reduction(@and_reduction_l32 %1 -> %arg0 : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @test_01() attributes {sym_visibility = "private"}
 llvm.func @test_02() attributes {sym_visibility = "private"}
 // CHECK-LABEL: define void @_QPomp_task_priority() {

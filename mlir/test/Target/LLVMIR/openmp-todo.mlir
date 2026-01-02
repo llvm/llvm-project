@@ -295,31 +295,35 @@ llvm.func @taskgroup_allocate(%x : !llvm.ptr) {
 
 // -----
 
-omp.declare_reduction @add_f32 : f32
-init {
-^bb0(%arg: f32):
-  %0 = llvm.mlir.constant(0.0 : f32) : f32
-  omp.yield (%0 : f32)
+omp.declare_reduction @add_reduction_byref_i32 : !llvm.ptr alloc {
+   %0 = llvm.mlir.constant(1 : i64) : i64
+   %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+   %2 = llvm.mlir.constant(1 : i64) : i64
+   omp.yield(%1 : !llvm.ptr)
+} init {
+ ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+   %0 = llvm.mlir.constant(0 : i32) : i32
+   llvm.store %0, %arg1 : i32, !llvm.ptr
+   omp.yield(%arg1 : !llvm.ptr)
+} combiner {
+ ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+   %0 = llvm.load %arg0 : !llvm.ptr -> i32
+   %1 = llvm.load %arg1 : !llvm.ptr -> i32
+   %2 = llvm.add %0, %1 : i32
+   llvm.store %2, %arg0 : i32, !llvm.ptr
+   omp.yield(%arg0 : !llvm.ptr)
 }
-combiner {
-^bb1(%arg0: f32, %arg1: f32):
-  %1 = llvm.fadd %arg0, %arg1 : f32
-  omp.yield (%1 : f32)
-}
-atomic {
-^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
-  %2 = llvm.load %arg3 : !llvm.ptr -> f32
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
-  omp.yield
-}
-llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause task_reduction in omp.taskgroup operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
-  omp.taskgroup task_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
-    omp.terminator
-  }
+llvm.func @_QPtask_reduction_byref() {
+   %0 = llvm.mlir.constant(1 : i64) : i64
+   %1 = llvm.alloca %0 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+   %2 = llvm.mlir.constant(1 : i64) : i64
+   // expected-error@below {{not yet implemented: Unhandled clause task_reduction with pass by reference argument in omp.taskgroup operation}}
+   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+   omp.taskgroup task_reduction(byref @add_reduction_byref_i32 %1 -> %arg0 : !llvm.ptr) {
+     omp.terminator
+   }
   llvm.return
-}
+} 
 
 // -----
 
