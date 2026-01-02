@@ -2076,8 +2076,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
                                    TaskloopAllocaIP, "ub", false, true);
   Value *FakeStep = createFakeIntVal(Builder, AllocaIP, ToBeDeleted,
                                      TaskloopAllocaIP, "step", false, true);
-  /* For Taskloop, we want to force the bounds being the first 3 inputs in the
-   * aggregate struct*/
+  // For Taskloop, we want to force the bounds being the first 3 inputs in the
+  // aggregate struct
   OI.Inputs.insert(FakeLB);
   OI.Inputs.insert(FakeUB);
   OI.Inputs.insert(FakeStep);
@@ -2121,7 +2121,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Value *Flags = Builder.getInt32(Tied);
 
     Value *TaskSize = Builder.getInt64(
-        divideCeil(M.getDataLayout().getTypeSizeInBits(Taskloop), 8));
+        divideCeil(M.getDataLayout().getTypeSizeInBits(Task), 8));
 
     AllocaInst *ArgStructAlloca =
         dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
@@ -2150,14 +2150,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
                          SharedsSize);
     // Get the pointer to loop lb, ub, step from task ptr
     // and set up the lowerbound,upperbound and step values
-    llvm::Value *Lb = Builder.CreateStructGEP(ArgStructType, TaskShareds, 0);
-    Builder.CreateStore(CastedLBVal, Lb);
+    llvm::Value *Lb = Builder.CreateGEP(
+        ArgStructType, TaskShareds, {Builder.getInt32(0), Builder.getInt32(0)});
 
-    llvm::Value *Ub = Builder.CreateStructGEP(ArgStructType, TaskShareds, 1);
-    Builder.CreateStore(CastedUBVal, Ub);
+    llvm::Value *Ub = Builder.CreateGEP(
+        ArgStructType, TaskShareds, {Builder.getInt32(0), Builder.getInt32(1)});
 
-    llvm::Value *Step = Builder.CreateStructGEP(ArgStructType, TaskShareds, 2);
-    Builder.CreateStore(CastedStepVal, Step);
+    llvm::Value *Step = Builder.CreateGEP(
+        ArgStructType, TaskShareds, {Builder.getInt32(0), Builder.getInt32(2)});
     llvm::Value *Loadstep = Builder.CreateLoad(Builder.getInt64Ty(), Step);
 
     // set up the arguments for emitting kmpc_taskloop runtime call
@@ -2243,13 +2243,31 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Builder.SetInsertPoint(CLI->getBody(),
                            CLI->getBody()->getFirstInsertionPt());
 
-    llvm::BasicBlock *Body = CLI->getBody();
-    for (llvm::Instruction &I : *Body) {
-      if (auto *Add = llvm::dyn_cast<llvm::BinaryOperator>(&I)) {
-        if (Add->getOpcode() == llvm::Instruction::Add) {
-          if (llvm::isa<llvm::BinaryOperator>(Add->getOperand(0))) {
-            // update the starting index of the loop
-            Add->setOperand(1, CastedTaskLB);
+    // The canonical loop is generated with a fixed lower bound. We need to
+    // update the index calculation code to use the task's lower bound. The
+    // generated code looks like this:
+    // %omp_loop.iv = phi ...
+    // ...
+    // %tmp = mul [type] %omp_loop.iv, step
+    // %user_index = add [type] tmp, lb
+    // OpenMPIRBuilder constructs canonical loops to have exactly three uses of
+    // the normalised induction variable:
+    // 1. This one: converting the normalised IV to the user IV
+    // 2. The increment (add)
+    // 3. The comparison against the trip count (icmp)
+    // (1) is the only use that is a mul followed by an add so this cannot match
+    // other IR.
+    assert(CLI->getIndVar()->getNumUses() == 3 &&
+           "Canonical loop should have exactly three uses of the ind var");
+    for (User *IVUser : CLI->getIndVar()->users()) {
+      if (auto *Mul = dyn_cast<BinaryOperator>(IVUser)) {
+        if (Mul->getOpcode() == Instruction::Mul) {
+          for (User *MulUser : Mul->users()) {
+            if (auto *Add = dyn_cast<BinaryOperator>(MulUser)) {
+              if (Add->getOpcode() == Instruction::Add) {
+                Add->setOperand(1, CastedTaskLB);
+              }
+            }
           }
         }
       }
