@@ -1212,8 +1212,14 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
     terminateBody(builder, caseOp.getCaseRegion(), caseOp.getLoc());
   terminateBody(builder, swop.getBody(), swop.getLoc());
 
-  swop.setHandlingEnum(s.getCond()->IgnoreParenImpCasts()->getType()->isEnumeralType());
+  swop.setIsEnum(
+      s.getCond()->IgnoreParenImpCasts()->getType()->isEnumeralType());
   swop.setAllEnumCasesCovered(s.isAllEnumCasesCovered());
+
+  // If all enum cases are covered, this implies IsEnum
+  // otherwise it must be the case that enum cases are not covered.
+  assert((swop.getAllEnumCasesCovered() && swop.getIsEnum()) ||
+         !swop.getAllEnumCasesCovered());
 
   return res;
 }

@@ -1250,7 +1250,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
   let arguments = (ins 
     CIR_IntType:$condition,
     UnitAttr:$all_enum_cases_covered,
-    UnitAttr:$handling_enum
+    UnitAttr:$is_enum
   );
 
   let regions = (region AnyRegion:$body);
@@ -1264,7 +1264,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
   let assemblyFormat = [{
     `(` $condition `:` qualified(type($condition)) `)` 
      (`all_enum_cases_covered` $all_enum_cases_covered^)?
-     (`handling_enum` $handling_enum^)?
+     (`is_enum` $is_enum^)?
     $body
     attr-dict
   }];
