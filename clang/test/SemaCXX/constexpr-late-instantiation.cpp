@@ -89,6 +89,7 @@ private:
 constexpr int x = X().f( 1 );
 }
 
+#if __cplusplus > 202002L
 
 namespace GH35052 {
 
@@ -104,6 +105,7 @@ int test() {
     auto predicate = [](auto v) constexpr -> bool  { return v == 1; };
     return func(predicate);
 }
+
 
 }  // namespace GH35052
 
@@ -122,6 +124,7 @@ struct bar {
 
 }  // namespace GH115118
 
+
 namespace GH100897 {
 
 template <typename>
@@ -137,3 +140,5 @@ constexpr auto foo() noexcept {
 void test() { foo<void>(); }
 
 }  // namespace GH100897
+
+#endif
