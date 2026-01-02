@@ -24,19 +24,19 @@ entry:
   ret i32 0
 }
 
-; ALL-DAG: attributes [[ATTR]] = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-f32"="preserve-sign,ieee" }
+; ALL-DAG: attributes [[ATTR]] = { nounwind denormal_fpenv(preservesign,ieee) }
 
-; IEEE-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="ieee,ieee" }
-; PRESERVESIGN-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-; POSITIVEZERO-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="positive-zero,positive-zero" }
+; IEEE-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee,ieee) }
+; PRESERVESIGN-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(preservesign,preservesign) }
+; POSITIVEZERO-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(positivezero,positivezero) }
 
-; IEEEF32-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-; PRESERVESIGNF32-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-; POSITIVEZEROF32-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-f32"="positive-zero,positive-zero" }
+; IEEEF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee,ieee) }
+; PRESERVESIGNF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(float: preservesign,preservesign) }
+; POSITIVEZEROF32-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(float: positivezero,positivezero) }
 
-; IEEE-BOTH-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="ieee,ieee" }
-; PRESERVESIGN-BOTH-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-; POSITIVEZERO-BOTH-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="positive-zero,positive-zero" "denormal-fp-math-f32"="positive-zero,positive-zero" }
+; IEEE-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee,ieee) }
+; PRESERVESIGN-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(preservesign,preservesign) }
+; POSITIVEZERO-BOTH-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(positivezero,positivezero) }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-f32"="preserve-sign,ieee" }
+attributes #1 = { nounwind denormal_fpenv(preservesign,ieee float: preservesign,ieee) }

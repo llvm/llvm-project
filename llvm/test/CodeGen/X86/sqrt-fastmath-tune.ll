@@ -403,6 +403,6 @@ declare float @llvm.sqrt.f32(float) #2
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>) #2
 declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #2
 
-attributes #0 = { "denormal-fp-math"="ieee,ieee" }
-attributes #1 = { "denormal-fp-math"="ieee,preserve-sign" }
+attributes #0 = { denormal_fpenv(ieee,ieee) }
+attributes #1 = { denormal_fpenv(ieee,preservesign) }
 attributes #2 = { nounwind readnone }

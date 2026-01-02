@@ -1671,7 +1671,7 @@ Currently, only the following parameter attributes are defined:
    This does not depend on the floating-point environment. For
    example, a function parameter marked ``nofpclass(zero)`` indicates
    no zero inputs. If this is applied to an argument in a function
-   marked with :ref:`\"denormal-fp-math\" <denormal_fp_math>`
+   marked with :ref:`denormal_fpenv <denormal_fpenv>`
    indicating zero treatment of input denormals, it does not imply the
    value cannot be a denormal value which would compare equal to 0.
 
@@ -2655,28 +2655,28 @@ For example:
     might otherwise be set or cleared by calling this function. LLVM will
     not introduce any new floating-point instructions that may trap.
 
-.. _denormal_fp_math:
+.. _denormal_fpenv:
 
-``"denormal-fp-math"``
+``denormal_fpenv``
     This indicates the denormal (subnormal) handling that may be
-    assumed for the default floating-point environment. This is a
-    comma separated pair. The elements may be one of ``"ieee"``,
-    ``"preserve-sign"``, ``"positive-zero"``, or ``"dynamic"``. The
-    first entry indicates the flushing mode for the result of floating
-    point operations. The second indicates the handling of denormal inputs
+    assumed for the default floating-point environment. The base form
+    is a comma separated pair. The elements may be one of ``ieee``,
+    ``preservesign``, ``positivezero``, or ``dynamic``. The first
+    entry indicates the flushing mode for the result of floating point
+    operations. The second indicates the handling of denormal inputs
     to floating point instructions. For compatibility with older
     bitcode, if the second value is omitted, both input and output
     modes will assume the same mode.
 
-    If this is attribute is not specified, the default is ``"ieee,ieee"``.
+    If this is attribute is not specified, the default is ``ieee,ieee``.
 
-    If the output mode is ``"preserve-sign"``, or ``"positive-zero"``,
+    If the output mode is ``preservesign``, or ``positivezero``,
     denormal outputs may be flushed to zero by standard floating-point
     operations. It is not mandated that flushing to zero occurs, but if
     a denormal output is flushed to zero, it must respect the sign
     mode. Not all targets support all modes.
 
-    If the mode is ``"dynamic"``, the behavior is derived from the
+    If the mode is ``dynamic``, the behavior is derived from the
     dynamic state of the floating-point environment. Transformations
     which depend on the behavior of denormal values should not be
     performed.
@@ -2686,18 +2686,18 @@ For example:
     the mode is consistent. User or platform code is expected to set
     the floating point mode appropriately before function entry.
 
-    If the input mode is ``"preserve-sign"``, or ``"positive-zero"``,
+    If the input mode is ``preservesign``, or ``positivezero``,
     a floating-point operation must treat any input denormal value as
     zero. In some situations, if an instruction does not respect this
     mode, the input may need to be converted to 0 as if by
     ``@llvm.canonicalize`` during lowering for correctness.
 
-``"denormal-fp-math-f32"``
-    Same as ``"denormal-fp-math"``, but only controls the behavior of
-    the 32-bit float type (or vectors of 32-bit floats). If both are
-    are present, this overrides ``"denormal-fp-math"``. Not all targets
-    support separately setting the denormal mode per type, and no
-    attempt is made to diagnose unsupported uses. Currently this
+    This may optionally specify a second pair, prefixed with
+    ``float:``. This provides an override for the behavior of 32-bit
+    float type. (or vectors of 32-bit floats). If this is present are
+    present, this overrides the base handling of the default mode. Not
+    all targets support separately setting the denormal mode per type,
+    and no attempt is made to diagnose unsupported uses. Currently this
     attribute is respected by the AMDGPU and NVPTX backends.
 
 ``"thunk"``
@@ -4119,7 +4119,7 @@ exceptions.)
 Various flags, attributes, and metadata can alter the behavior of these
 operations and thus make them not bit-identical across machines and optimization
 levels any more: most notably, the :ref:`fast-math flags <fastmath>` as well as
-the :ref:`strictfp <strictfp>` and :ref:`denormal-fp-math <denormal_fp_math>`
+the :ref:`strictfp <strictfp>` and :ref:`denormal_fpenv <denormal_fpenv>`
 attributes and :ref:`!fpmath metadata <fpmath-metadata>`. See their
 corresponding documentation for details.
 

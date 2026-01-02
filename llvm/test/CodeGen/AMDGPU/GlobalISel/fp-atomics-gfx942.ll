@@ -127,6 +127,6 @@ define void @flat_atomic_fadd_noret_v2f16_agent_offset(ptr %ptr, <2 x half> %val
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="ieee,ieee" }
+attributes #0 = { denormal_fpenv(float: ieee,ieee) }
 
 !0 = !{}
