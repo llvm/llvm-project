@@ -445,15 +445,6 @@ function(add_mlir_library name)
       MLIR_AGGREGATE_DEP_LIBS_IMPORTED "${CURRENT_LINK_LIBRARIES}"
     )
 
-    # On MacOS, all template instantiations become weak symbols - this causes incorrect symbol
-    # resolution in cases where multiple aggregates are loaded in the same process (such as when multiple Python
-    # bindings packages are loaded, each with their own C API aggregate).
-    if(APPLE AND TARGET "obj.${name}" AND (NOT BUILD_SHARED_LIBS))
-      set_target_properties("obj.${name}" PROPERTIES
-        C_VISIBILITY_PRESET hidden
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN YES)
-    endif()
     # In order for out-of-tree projects to build aggregates of this library,
     # we need to install the OBJECT library.
     if(TARGET "obj.${name}" AND MLIR_INSTALL_AGGREGATE_OBJECTS AND NOT ARG_DISABLE_INSTALL)
