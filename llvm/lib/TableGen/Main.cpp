@@ -180,23 +180,85 @@ static int WriteOutput(const char *argv0, StringRef Filename,
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
-  RecordKeeper Records;
-  TGTimer &Timer = Records.getTimer();
+static int Main(const char *argv0, MultiFileTableGenMainFn MainFn) {
+  if (Preprocess) {
+    std::string OutString;
+    raw_string_ostream Out(OutString);
+    if (int Ret = preprocessInput(Out))
+      return Ret;
+    return WriteOutput(argv0, OutputFilename, OutString);
+  }
 
+  RecordKeeper Records;
+  Records.saveInputFilename(InputFilename);
+
+  TGTimer &Timer = Records.getTimer();
   if (TimePhases)
     Timer.startPhaseTiming();
 
   // Parse the input file.
 
   Timer.startTimer("Parse, build records");
+
+  TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
+
+  if (Parser.ParseFile())
+    return 1;
+  Timer.stopTimer();
+
+  // Return early if any other errors were generated during parsing
+  // (e.g., assert failures).
+  if (ErrorsPrinted > 0)
+    return 0;
+
+  // Write output to memory.
+  Timer.startBackendTimer("Backend overall");
+  TableGenOutputFiles OutFiles;
+  unsigned status = 0;
+  // ApplyCallback will return true if it did not apply any callback. In that
+  // case, attempt to apply the MainFn.
+  StringRef FilenamePrefix(sys::path::stem(OutputFilename));
+  if (TableGen::Emitter::ApplyCallback(Records, OutFiles, FilenamePrefix))
+    status = MainFn ? MainFn(OutFiles, Records) : 1;
+  Timer.stopBackendTimer();
+  if (status)
+    return 1;
+
+  // Always write the depfile, even if the main output hasn't changed.
+  // If it's missing, Ninja considers the output dirty.  If this was below
+  // the early exit below and someone deleted the .inc.d file but not the .inc
+  // file, tablegen would never write the depfile.
+  if (!DependFilename.empty()) {
+    if (int Ret = createDependencyFile(Parser, argv0))
+      return Ret;
+  }
+
+  Timer.startTimer("Write output");
+  if (int Ret = WriteOutput(argv0, OutputFilename, OutFiles.MainFile))
+    return Ret;
+  for (auto [Suffix, Content] : OutFiles.AdditionalFiles) {
+    SmallString<128> Filename(OutputFilename);
+    // TODO: Format using the split-file convention when writing to stdout?
+    if (Filename != "-") {
+      sys::path::replace_extension(Filename, "");
+      Filename.append(Suffix);
+    }
+    if (int Ret = WriteOutput(argv0, Filename, Content))
+      return Ret;
+  }
+
+  Timer.stopTimer();
+  Timer.stopPhaseTiming();
+
+  return 0;
+}
+
+int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError())
     return reportError(argv0, "Could not open input file '" + InputFilename +
                                   "': " + EC.message() + "\n");
-
-  Records.saveInputFilename(InputFilename);
 
   // Tell SrcMgr about this buffer, which is what TGParser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
@@ -206,65 +268,8 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   SrcMgr.setIncludeDirs(IncludeDirs);
   SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
-  if (Preprocess) {
-    std::string OutString;
-    raw_string_ostream Out(OutString);
-    if (preprocessInput(Out))
-      return 1;
-    if (int Ret = WriteOutput(argv0, OutputFilename, OutString))
-      return Ret;
-  } else {
-    TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
-
-    if (Parser.ParseFile())
-      return 1;
-    Timer.stopTimer();
-
-    // Return early if any other errors were generated during parsing
-    // (e.g., assert failures).
-    if (ErrorsPrinted > 0)
-      return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
-
-    // Write output to memory.
-    Timer.startBackendTimer("Backend overall");
-    TableGenOutputFiles OutFiles;
-    unsigned status = 0;
-    // ApplyCallback will return true if it did not apply any callback. In that
-    // case, attempt to apply the MainFn.
-    StringRef FilenamePrefix(sys::path::stem(OutputFilename));
-    if (TableGen::Emitter::ApplyCallback(Records, OutFiles, FilenamePrefix))
-      status = MainFn ? MainFn(OutFiles, Records) : 1;
-    Timer.stopBackendTimer();
-    if (status)
-      return 1;
-
-    // Always write the depfile, even if the main output hasn't changed.
-    // If it's missing, Ninja considers the output dirty.  If this was below
-    // the early exit below and someone deleted the .inc.d file but not the .inc
-    // file, tablegen would never write the depfile.
-    if (!DependFilename.empty()) {
-      if (int Ret = createDependencyFile(Parser, argv0))
-        return Ret;
-    }
-
-    Timer.startTimer("Write output");
-    if (int Ret = WriteOutput(argv0, OutputFilename, OutFiles.MainFile))
-      return Ret;
-    for (auto [Suffix, Content] : OutFiles.AdditionalFiles) {
-      SmallString<128> Filename(OutputFilename);
-      // TODO: Format using the split-file convention when writing to stdout?
-      if (Filename != "-") {
-        sys::path::replace_extension(Filename, "");
-        Filename.append(Suffix);
-      }
-      if (int Ret = WriteOutput(argv0, Filename, Content))
-        return Ret;
-    }
-  }
-
-  Timer.stopTimer();
-  Timer.stopPhaseTiming();
-
+  if (int Ret = Main(argv0, MainFn))
+    return Ret;
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
   return 0;
