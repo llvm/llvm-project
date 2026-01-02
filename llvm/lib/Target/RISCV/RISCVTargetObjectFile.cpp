@@ -188,3 +188,8 @@ void RISCVMachOTargetObjectFile::getNameWithPrefix(
   // be accessed via at least a linker-private symbol.
   getMangler().getNameWithPrefix(OutName, GV, /*CannotUsePrivateLabel=*/true);
 }
+
+bool RISCVMachOTargetObjectFile::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  return true;
+}
