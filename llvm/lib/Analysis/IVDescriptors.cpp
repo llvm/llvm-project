@@ -796,6 +796,11 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
       const ConstantRange IVRange =
           IsSigned ? SE.getSignedRange(AR) : SE.getUnsignedRange(AR);
       unsigned NumBits = Ty->getIntegerBitWidth();
+      // For i1, the induction either wraps in the second iteration (if
+      // unsigned) or computing ValidRange wraps (if signed), incorrectly
+      // resulting in a full range.
+      if (NumBits == 1)
+        return false;
       ConstantRange ValidRange = ConstantRange::getEmpty(NumBits);
       if (isFindLastIVRecurrenceKind(Kind)) {
         APInt Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
