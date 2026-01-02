@@ -4803,7 +4803,8 @@ VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
       auto &GD = GlobalBlock->getBlockDesc<GlobalInlineDescriptor>();
 
       GD.InitState = GlobalInitState::InitializerFailed;
-      GlobalBlock->invokeDtor();
+      if (GlobalBlock->isInitialized())
+        GlobalBlock->invokeDtor();
     }
   }
 
@@ -4864,7 +4865,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
       auto &GD = GlobalBlock->getBlockDesc<GlobalInlineDescriptor>();
 
       GD.InitState = GlobalInitState::InitializerFailed;
-      GlobalBlock->invokeDtor();
+      if (GlobalBlock->isInitialized())
+        GlobalBlock->invokeDtor();
     }
     return false;
   }
