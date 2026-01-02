@@ -55,17 +55,17 @@ template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
 
 namespace modernize {
 
-static const char LoopNameArray[] = "forLoopArray";
-static const char LoopNameIterator[] = "forLoopIterator";
-static const char LoopNameReverseIterator[] = "forLoopReverseIterator";
-static const char LoopNamePseudoArray[] = "forLoopPseudoArray";
-static const char ConditionBoundName[] = "conditionBound";
-static const char InitVarName[] = "initVar";
-static const char BeginCallName[] = "beginCall";
-static const char EndCallName[] = "endCall";
-static const char EndVarName[] = "endVar";
-static const char DerefByValueResultName[] = "derefByValueResult";
-static const char DerefByRefResultName[] = "derefByRefResult";
+static constexpr char LoopNameArray[] = "forLoopArray";
+static constexpr char LoopNameIterator[] = "forLoopIterator";
+static constexpr char LoopNameReverseIterator[] = "forLoopReverseIterator";
+static constexpr char LoopNamePseudoArray[] = "forLoopPseudoArray";
+static constexpr char ConditionBoundName[] = "conditionBound";
+static constexpr char InitVarName[] = "initVar";
+static constexpr char BeginCallName[] = "beginCall";
+static constexpr char EndCallName[] = "endCall";
+static constexpr char EndVarName[] = "endVar";
+static constexpr char DerefByValueResultName[] = "derefByValueResult";
+static constexpr char DerefByRefResultName[] = "derefByRefResult";
 static const llvm::StringSet<> MemberNames{"begin",   "cbegin", "rbegin",
                                            "crbegin", "end",    "cend",
                                            "rend",    "crend",  "size"};
@@ -330,6 +330,8 @@ static StatementMatcher makePseudoArrayLoopMatcher() {
       .bind(LoopNamePseudoArray);
 }
 
+namespace {
+
 enum class IteratorCallKind {
   ICK_Member,
   ICK_ADL,
@@ -342,6 +344,8 @@ struct ContainerCall {
   bool IsArrow;
   IteratorCallKind CallKind;
 };
+
+} // namespace
 
 // Find the Expr likely initializing an iterator.
 //
@@ -420,7 +424,7 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
     return {};
   if (!Call->Name.empty() && Call->Name != "c")
     return {};
-  return std::make_pair(Call->Container, Call->CallKind);
+  return {Call->Container, Call->CallKind};
 }
 
 /// Determines the container whose begin() and end() functions are called
@@ -730,7 +734,7 @@ void LoopConvertCheck::doConversion(
                           ? "&" + VarNameOrStructuredBinding
                           : VarNameOrStructuredBinding;
       }
-      TUInfo->getReplacedVars().insert(std::make_pair(Loop, IndexVar));
+      TUInfo->getReplacedVars().try_emplace(Loop, IndexVar);
       FixIts.push_back(FixItHint::CreateReplacement(
           CharSourceRange::getTokenRange(Range), ReplaceText));
     }
@@ -792,8 +796,7 @@ void LoopConvertCheck::doConversion(
       FixIts.push_back(*Insertion);
   }
   diag(Loop->getForLoc(), "use range-based for loop instead") << FixIts;
-  TUInfo->getGeneratedDecls().insert(
-      make_pair(Loop, VarNameOrStructuredBinding));
+  TUInfo->getGeneratedDecls().try_emplace(Loop, VarNameOrStructuredBinding);
 }
 
 /// Returns a string which refers to the container iterated over.
