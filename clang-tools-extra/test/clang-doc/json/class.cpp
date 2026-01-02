@@ -95,7 +95,6 @@ private:
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Reference": {
 // CHECK-NEXT:          "Name": "friendFunction",
-// CHECK-NEXT:          "Path": "",
 // CHECK-NEXT:          "QualName": "friendFunction",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
@@ -108,7 +107,10 @@ private:
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "Template": {
 // CHECK-NEXT:          "Parameters": [
-// CHECK-NEXT:            "typename T"
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "End": true,
+// CHECK-NEXT:              "Param": "typename T"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:        }
 // CHECK-NEXT:      },

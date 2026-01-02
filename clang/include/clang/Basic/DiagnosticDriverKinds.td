@@ -93,6 +93,12 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
+def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
+                                 "is required for SPIR-V compilation. "
+                                 "It can be obtained from your system package "
+                                 "manager or from KhronosGroup/SPIRV-Tools "
+                                 "on GitHub">;
+
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via '%2'; "
   "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
@@ -598,13 +604,6 @@ def err_drv_reduced_module_output_overrided : Warning<
   "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
-
-def remark_found_cxx20_module_usage : Remark<
-  "found C++20 module usage in file '%0'">,
-  InGroup<ModulesDriver>;
-def remark_performing_driver_managed_module_build : Remark<
-  "performing driver managed module build">,
-  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,

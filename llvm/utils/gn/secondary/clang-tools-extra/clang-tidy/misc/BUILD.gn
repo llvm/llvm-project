@@ -42,6 +42,7 @@ static_library("misc") {
     "MisleadingBidirectionalCheck.cpp",
     "MisleadingIdentifierCheck.cpp",
     "MisplacedConstCheck.cpp",
+    "MultipleInheritanceCheck.cpp",
     "NewDeleteOverloadsCheck.cpp",
     "NoRecursionCheck.cpp",
     "NonCopyableObjectsCheck.cpp",

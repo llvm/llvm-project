@@ -554,8 +554,7 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
       auto arg = llvm::cast<BlockArgument>(payloadValue);
       definingOp = arg.getParentBlock()->getParentOp();
       argumentNo = arg.getArgNumber();
-      blockNo = std::distance(arg.getOwner()->getParent()->begin(),
-                              arg.getOwner()->getIterator());
+      blockNo = arg.getOwner()->computeBlockNumber();
       regionNo = arg.getOwner()->getParent()->getRegionNumber();
     }
     assert(definingOp && "expected the value to be defined by an op as result "
@@ -1305,8 +1304,8 @@ void transform::TrackingListener::notifyOperationReplaced(
   // Check if there are any handles that must be updated.
   Value aliveHandle;
   if (config.skipHandleFn) {
-    auto it = llvm::find_if(opHandles,
-                            [&](Value v) { return !config.skipHandleFn(v); });
+    auto *it = llvm::find_if(opHandles,
+                             [&](Value v) { return !config.skipHandleFn(v); });
     if (it != opHandles.end())
       aliveHandle = *it;
   } else if (!opHandles.empty()) {

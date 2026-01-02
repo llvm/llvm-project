@@ -75,7 +75,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
   initializeCompressEVEXPassPass(PR);
-  initializeFixupLEAPassPass(PR);
+  initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
@@ -85,17 +85,17 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FastTileConfigPass(PR);
   initializeKCFIPass(PR);
   initializeX86LowerTileCopyPass(PR);
-  initializeX86ExpandPseudoPass(PR);
+  initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
-  initializeX86FlagsCopyLoweringPassPass(PR);
+  initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
-  initializeX86OptimizeLEAPassPass(PR);
+  initializeX86OptimizeLEAsLegacyPass(PR);
   initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
@@ -107,6 +107,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
+  initializeX86PreLegalizerCombinerPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -373,6 +374,7 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
+  void addPreLegalizeMachineIR() override;
   bool addILPOpts() override;
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
@@ -487,6 +489,12 @@ bool X86PassConfig::addGlobalInstructionSelect() {
   return false;
 }
 
+void X86PassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createX86PreLegalizerCombiner());
+  }
+}
+
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
@@ -507,7 +515,7 @@ void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
     addPass(createX86FixupSetCC());
-    addPass(createX86OptimizeLEAs());
+    addPass(createX86OptimizeLEAsLegacyPass());
     addPass(createX86CallFrameOptimization());
     addPass(createX86AvoidStoreForwardingBlocks());
   }
@@ -515,7 +523,7 @@ void X86PassConfig::addPreRegAlloc() {
   addPass(createX86SuppressAPXForRelocationPass());
 
   addPass(createX86SpeculativeLoadHardeningPass());
-  addPass(createX86FlagsCopyLoweringPass());
+  addPass(createX86FlagsCopyLoweringLegacyPass());
   addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
@@ -541,7 +549,7 @@ void X86PassConfig::addPostRegAlloc() {
 }
 
 void X86PassConfig::addPreSched2() {
-  addPass(createX86ExpandPseudoPass());
+  addPass(createX86ExpandPseudoLegacyPass());
   addPass(createKCFIPass());
 }
 
@@ -558,7 +566,7 @@ void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInsts());
     addPass(createX86PadShortFunctions());
-    addPass(createX86FixupLEAs());
+    addPass(createX86FixupLEAsLegacyPass());
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
   }

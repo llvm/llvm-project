@@ -10221,7 +10221,8 @@ static bool isRenamedInGFX9(int Opcode) {
 }
 
 int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
-  Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Opcode);
+  assert(Opcode == (int)SIInstrInfo::getNonSoftWaitcntOpcode(Opcode) &&
+         "SIInsertWaitcnts should have promoted soft waitcnt instructions!");
 
   unsigned Gen = subtargetEncodingFamily(ST);
 
@@ -10543,6 +10544,14 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+const MachineOperand &
+SIInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
+  if (const MachineOperand *CallAddrOp =
+          getNamedOperand(MI, AMDGPU::OpName::src0))
+    return *CallAddrOp;
+  return TargetInstrInfo::getCalleeOperand(MI);
 }
 
 InstructionUniformity

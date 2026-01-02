@@ -32,6 +32,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -1284,6 +1285,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
+      if (F->arg_size() == 7 &&
+          F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8) {
+        // Legacy wmma iu8 intrinsic without the optional clamp operand.
+        NewFn = nullptr;
+        return true;
+      }
+
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
           Name.consume_front("flat.atomic.")) {
         if (Name.starts_with("fadd") ||
@@ -1619,6 +1627,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .Case("barrier.sync", true)
                      .Case("barrier", true)
                      .Case("bar.sync", true)
+                     .Case("barrier0.popc", true)
+                     .Case("barrier0.and", true)
+                     .Case("barrier0.or", true)
                      .Case("clz.ll", true)
                      .Case("popc.ll", true)
                      .Case("h2f", true)
@@ -2743,6 +2754,21 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else if (Name == "barrier.sync.cnt") {
     Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count, {},
                                   {CI->getArgOperand(0), CI->getArgOperand(1)});
+  } else if (Name == "barrier0.popc" || Name == "barrier0.and" ||
+             Name == "barrier0.or") {
+    Value *C = CI->getArgOperand(0);
+    C = Builder.CreateICmpNE(C, Builder.getInt32(0));
+
+    Intrinsic::ID IID =
+        StringSwitch<Intrinsic::ID>(Name)
+            .Case("barrier0.popc",
+                  Intrinsic::nvvm_barrier_cta_red_popc_aligned_all)
+            .Case("barrier0.and",
+                  Intrinsic::nvvm_barrier_cta_red_and_aligned_all)
+            .Case("barrier0.or",
+                  Intrinsic::nvvm_barrier_cta_red_or_aligned_all);
+    Value *Bar = Builder.CreateIntrinsic(IID, {}, {Builder.getInt32(0), C});
+    Rep = Builder.CreateZExt(Bar, CI->getType());
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
@@ -4595,6 +4621,30 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 //
 static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
                                          Function *F, IRBuilder<> &Builder) {
+  if (CI->arg_size() == 7 &&
+      F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8) {
+    // Legacy WMMA IU8 intrinsic lacked the optional clamp operand. Append
+    // clamp=false for compatibility.
+
+    SmallVector<Value *, 8> Args(CI->args().begin(), CI->args().end());
+    Args.push_back(Builder.getFalse());
+
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), Intrinsic::amdgcn_wmma_i32_16x16x64_iu8,
+        {CI->getArgOperand(4)->getType(), CI->getArgOperand(1)->getType()});
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->setDebugLoc(CI->getDebugLoc());
+    NewCall->copyMetadata(*CI);
+    return NewCall;
+  }
+
   AtomicRMWInst::BinOp RMWOp =
       StringSwitch<AtomicRMWInst::BinOp>(Name)
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
@@ -4995,12 +5045,16 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
 
   case Intrinsic::ctlz:
-  case Intrinsic::cttz:
-    assert(CI->arg_size() == 1 &&
-           "Mismatch between function args and call args");
+  case Intrinsic::cttz: {
+    if (CI->arg_size() != 1) {
+      DefaultCase();
+      return;
+    }
+
     NewCall =
         Builder.CreateCall(NewFn, {CI->getArgOperand(0), Builder.getFalse()});
     break;
+  }
 
   case Intrinsic::objectsize: {
     Value *NullIsUnknownSize =
