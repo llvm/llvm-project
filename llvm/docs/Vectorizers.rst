@@ -200,7 +200,7 @@ reduction operations, such as addition, multiplication, XOR, AND and OR.
     return sum;
   }
 
-The full vectorization of reductions inherently involves reordering operations,
+The full vectorization of reductions requires reordering operations,
 which is problematic for floating-point reductions. Since floating-point
 operations are not associative, the result may depend on the order of operations.
 Therefore, vectorizing floating-point reductions is implicitly prohibited by
