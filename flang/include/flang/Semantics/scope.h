@@ -56,7 +56,6 @@ struct EquivalenceObject {
 using EquivalenceSet = std::vector<EquivalenceObject>;
 
 // Preserved USE statement information for debug info generation.
-// Preserved USE statement information for debug info generation
 struct PreservedUseStmt {
   std::string moduleName;
   std::vector<std::string> onlyNames; // For USE ONLY

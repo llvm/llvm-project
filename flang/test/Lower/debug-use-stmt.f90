@@ -1,6 +1,6 @@
-! RUN: %flang_fc1 -emit-fir -debug-info-kind=standalone %s -o - | FileCheck %s --check-prefix=WITH_DEBUG
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefix=NO_DEBUG
-! RUN: %flang_fc1 -emit-fir -debug-info-kind=line-tables-only %s -o - | FileCheck %s --check-prefix=NO_DEBUG
+! RUN: %flang_fc1 -emit-hlfir -debug-info-kind=standalone %s -o - | FileCheck %s --check-prefix=WITH_DEBUG
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefix=NO_DEBUG
+! RUN: %flang_fc1 -emit-hlfir -debug-info-kind=line-tables-only %s -o - | FileCheck %s --check-prefix=NO_DEBUG
 
 module mod1
   integer :: a = 10, b = 20, c = 30
