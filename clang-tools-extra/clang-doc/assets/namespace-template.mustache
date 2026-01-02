@@ -71,6 +71,20 @@
                         </ul>
                     </li>
                     {{/HasNamespaces}}
+                    {{#HasConcepts}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Concepts">Concepts</a>
+                    </li>
+                    <li>
+                        <ul>
+                            {{#Concepts}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Concepts}}
+                        </ul>
+                    </li>
+                    {{/HasConcepts}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
@@ -125,6 +139,22 @@
                     </ul>
                 </section>
                 {{/HasFunctions}}
+                {{#HasConcepts}}
+                <section id="Concepts" class="section-container">
+                    <h2>Concepts</h2>
+                    {{#Concepts}}
+                    <div id="{{ID}}" class="delimiter-container">
+                        <div>
+                            <pre><code class="language-cpp code-clang-doc">{{#Template}}template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Template}} {{Name}} {{ConstraintExpression}}</code></pre> 
+                        </div>
+                        {{#Description}}
+                        {{>Comments}}
+                        {{/Description}}
+                        <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
+                    </div>
+                    {{/Concepts}}
+                </section>
+                {{/HasConcepts}}
             </div>
         </div>
     </main>
