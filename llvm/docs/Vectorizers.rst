@@ -203,11 +203,9 @@ reduction operations, such as addition, multiplication, XOR, AND and OR.
 The full vectorization of reductions requires reordering operations,
 which is problematic for floating-point reductions. Since floating-point
 operations are not associative, the result may depend on the order of operations.
-Therefore, vectorizing floating-point reductions is implicitly prohibited by
-the C and C++ standards, unless the compiler can ensure that the result does
-not change.
 
-Therefore LLVM supports vectorizing floating point reductions
+Changing floating-point results is implicitly prohibited by the C and C++ standards,
+therefore LLVM supports vectorizing floating point reductions
 only when at least the `-fassociative-math -fno-signed-zeros 
 -fno-trapping-math` subset of `-ffast-math` is used on most targets. On select targets such as
 AArch64 and RISC-V LLVM supports generating ordered reductions which preserve the
