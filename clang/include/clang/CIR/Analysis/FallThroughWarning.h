@@ -31,11 +31,12 @@ namespace clang {
 class Sema;
 Decl *getDeclByName(ASTContext &context, StringRef name);
 enum ControlFlowKind {
-  UnknownFallThrough,
-  NeverFallThrough,
-  MaybeFallThrough,
   AlwaysFallThrough,
-  NeverFallThroughOrReturn
+  UnknownFallThrough,
+  MaybeFallThrough,
+  NeverFallThrough,
+  NeverFallThroughOrReturn,
+  Undetermined,
 };
 
 /// Configuration for fall-through diagnostics

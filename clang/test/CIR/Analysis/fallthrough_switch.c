@@ -27,7 +27,7 @@ int test_enum_cases(enum Cases C) {
   case C4: return 3;
   case C3: return 4;
   }
-} // expected-warning {{non-void function does not return a value in all control paths}}
+} 
 // TODO: Should not warn - enum covers all cases (needs enum coverage analysis)
 
 // ===========================================================================

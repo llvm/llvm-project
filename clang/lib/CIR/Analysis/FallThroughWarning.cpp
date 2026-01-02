@@ -17,6 +17,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 
 #define DEBUG_TYPE "cir-fallthrough"
@@ -26,6 +27,25 @@ using namespace cir;
 using namespace clang;
 
 namespace clang {
+
+class FallthroughInstance {
+  ControlFlowKind fallthrough = Undetermined;
+
+  ControlFlowKind updateControlFlowKind(ControlFlowKind cfk,
+                                        ControlFlowKind newCfk) {
+    cfk = std::min(cfk, newCfk);
+    fallthrough = std::min(fallthrough, cfk);
+    return cfk;
+  }
+
+public:
+  ControlFlowKind isFallThroughAble(mlir::Operation &op);
+  ControlFlowKind isFallThroughAble(mlir::Block &block);
+  ControlFlowKind handleFallthroughCaseOp(cir::CaseOp caseOp);
+  ControlFlowKind handleFallthroughScopeOp(cir::ScopeOp scopeOp);
+  ControlFlowKind handleFallthroughSwitchOp(cir::SwitchOp swOp);
+  ControlFlowKind handleFallthroughFuncOp(cir::FuncOp fnOp);
+};
 
 //===----------------------------------------------------------------------===//
 // Helper function to lookup a Decl by name from ASTContext
@@ -199,30 +219,28 @@ bool CheckFallThroughDiagnostics::checkDiagnostics(DiagnosticsEngine &d,
   // For blocks / lambdas.
   return returnsVoid && !hasNoReturn;
 }
-static ControlFlowKind isFallThroughAble(mlir::Operation &op);
-static ControlFlowKind isFallThroughAble(mlir::Block &block);
-static ControlFlowKind handleFallthroughCaseOp(cir::CaseOp caseOp) {
-  assert(!caseOp.getCaseRegion().empty() &&
-         "CaseOp cannot be empty, need a block here");
-  assert(caseOp.getCaseRegion().hasOneBlock() && "CaseOp should only have 1 block?");
-  auto &b = caseOp.getCaseRegion().front();
-
-  if (b.mightHaveTerminator()) {
-    mlir::Operation* term =b.getTerminator();
-    if (auto yieldOp = mlir::dyn_cast_or_null<cir::YieldOp>(term)) {
-      return ControlFlowKind::MaybeFallThrough;
-    }
+ControlFlowKind
+FallthroughInstance::handleFallthroughCaseOp(cir::CaseOp caseOp) {
+  ControlFlowKind cfk = NeverFallThroughOrReturn;
+  for (auto &block : caseOp.getCaseRegion()) {
+    cfk = updateControlFlowKind(cfk, isFallThroughAble(block));
   }
-  return ControlFlowKind::NeverFallThrough;
+
+  return cfk;
 }
 
-static ControlFlowKind handleFallthroughSwitchOp(cir::SwitchOp swOp) {
+ControlFlowKind
+FallthroughInstance::handleFallthroughSwitchOp(cir::SwitchOp swOp) {
   // go through each cases
   llvm::SmallVector<CaseOp> cases;
   swOp.collectCases(cases);
 
   bool coverAllCases = swOp.getAllEnumCasesCovered();
   bool coverDefault = false;
+
+  ControlFlowKind cfk = Undetermined;
+
+  // Default case detection
   for (auto caseOp : cases) {
     if (caseOp.getKind() == CaseOpKind::Default) {
       coverDefault = true;
@@ -230,16 +248,27 @@ static ControlFlowKind handleFallthroughSwitchOp(cir::SwitchOp swOp) {
     }
   }
 
-  return ControlFlowKind::NeverFallThrough;
-}
-static ControlFlowKind handleFallthroughScopeOp(cir::ScopeOp scopeOp) {
-  for (auto &block : scopeOp.getScopeRegion()) {
-    isFallThroughAble(block);
+  for (auto caseOp : cases) {
+    ControlFlowKind fallthrough = handleFallthroughCaseOp(caseOp);
+    cfk = updateControlFlowKind(cfk, fallthrough);
   }
-  return ControlFlowKind::NeverFallThrough;
+
+  // if we don't cover all case and we don't have a default -> fall through
+  if (!coverAllCases && !coverDefault)  {
+    return MaybeFallThrough;
+  }
+  return cfk;
+}
+ControlFlowKind
+FallthroughInstance::handleFallthroughScopeOp(cir::ScopeOp scopeOp) {
+  ControlFlowKind cfk = Undetermined;
+  for (auto &block : scopeOp.getScopeRegion()) {
+    cfk = updateControlFlowKind(cfk, isFallThroughAble(block));
+  }
+  return cfk;
 }
 
-static ControlFlowKind isFallThroughAble(mlir::Operation &op) {
+ControlFlowKind FallthroughInstance::isFallThroughAble(mlir::Operation &op) {
   if (auto swOp = mlir::dyn_cast_or_null<cir::SwitchOp>(op)) {
     return handleFallthroughSwitchOp(swOp);
   }
@@ -249,37 +278,61 @@ static ControlFlowKind isFallThroughAble(mlir::Operation &op) {
   if (auto scopeOp = mlir::dyn_cast_or_null<cir::ScopeOp>(op)) {
     return handleFallthroughScopeOp(scopeOp);
   }
-  return ControlFlowKind::NeverFallThrough;
+  if (auto returnOp = mlir::dyn_cast_or_null<cir::ReturnOp>(op)) {
+    if (isPhonyReturn(returnOp)) {
+      if (this->fallthrough < ControlFlowKind::NeverFallThrough ||
+          this->fallthrough == Undetermined) {
+        return ControlFlowKind::MaybeFallThrough;
+      }
+    }
+    return ControlFlowKind::NeverFallThrough;
+  }
+  if (auto yieldOp = mlir::dyn_cast_or_null<cir::YieldOp>(op)) {
+    LLVM_DEBUG({
+      llvm::errs() << "Encountered yield op\n";
+      yieldOp->dump();
+    });
+    auto *parentOp = yieldOp->getParentOp();
+    if (isa<cir::CaseOp>(parentOp)) {
+      if (this->fallthrough < ControlFlowKind::NeverFallThrough ||
+          this->fallthrough == Undetermined) 
+        return ControlFlowKind::MaybeFallThrough;
+    }
+    if (isa<cir::ScopeOp>(parentOp)) {
+      if (this->fallthrough < ControlFlowKind::NeverFallThrough ||
+          this->fallthrough == Undetermined) 
+      return ControlFlowKind::MaybeFallThrough;
+    }
+    return ControlFlowKind::Undetermined;
+  }
+  if (auto breakOp = mlir::dyn_cast_or_null<cir::BreakOp>(op)) {
+    auto *parentOp = breakOp->getParentOp();
+    if (isa<cir::CaseOp>(parentOp)) {
+      return ControlFlowKind::MaybeFallThrough;
+    }
+  }
+  return ControlFlowKind::Undetermined;
 }
 
-static ControlFlowKind isFallThroughAble(mlir::Block &block) {
-  ControlFlowKind det = NeverFallThroughOrReturn;
-  LLVM_DEBUG({ llvm::dbgs() << "Calling isFallThroughAble for block\n"; });
+ControlFlowKind FallthroughInstance::isFallThroughAble(mlir::Block &block) {
+  ControlFlowKind cfk = Undetermined;
   for (auto &op : block) {
-    LLVM_DEBUG({
-      llvm::dbgs() << "Dealing with ";
-      op.dump();
-      llvm::dbgs() << "\n";
-    });
-    ControlFlowKind s = isFallThroughAble(op);
+    cfk = updateControlFlowKind(cfk, isFallThroughAble(op));
 
-    det = std::min(det, s);
+    if (cfk < ControlFlowKind::NeverFallThrough) {
+      return cfk;
+    }
   }
-  return det;
+  return cfk;
 }
 
 // TODO: Add a class for fall through config later
-static ControlFlowKind handleFallthroughFuncOp(cir::FuncOp fnOp) {
-
-  int count = 0;
+ControlFlowKind FallthroughInstance::handleFallthroughFuncOp(cir::FuncOp fnOp) {
+  ControlFlowKind cfk = Undetermined;
   for (auto &o : fnOp) {
-    isFallThroughAble(o);
-    count++;
+    cfk = updateControlFlowKind(cfk, isFallThroughAble(o));
   }
-
-  llvm::errs() << "Count is " << count << "\n";
-
-  return ControlFlowKind::NeverFallThrough;
+  return cfk;
 }
 
 void FallThroughWarningPass::checkFallThroughForFuncBody(
@@ -330,9 +383,16 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
 
   // cpu_dispatch functions permit empty function bodies for ICC compatibility.
   // TODO: Do we have isCPUDispatchMultiVersion?
-  ControlFlowKind fallThroughType = handleFallthroughFuncOp(cfg);
-  return;
-  switch (ControlFlowKind fallThroughType = handleFallthroughFuncOp(cfg)) {
+  FallthroughInstance fi;
+  ControlFlowKind fallThroughType = fi.handleFallthroughFuncOp(cfg);
+
+  if (fallThroughType < ControlFlowKind::NeverFallThrough) {
+    LLVM_DEBUG({ llvm::errs() << "Fall through detected\n"; });
+  }
+
+  switch (fallThroughType) {
+  case Undetermined:
+    [[fallthrough]];
   case UnknownFallThrough:
     break;
   case MaybeFallThrough:
@@ -378,168 +438,4 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
   }
 }
 
-mlir::SetVector<mlir::Block *>
-FallThroughWarningPass::getLiveSet(cir::FuncOp cfg) {
-  mlir::SetVector<mlir::Block *> liveSet;
-  if (cfg.getBody().empty())
-    return liveSet;
-
-  DataFlowSolver solver;
-  solver.load<mlir::dataflow::DeadCodeAnalysis>();
-  int blockCount = 0;
-  auto result = solver.initializeAndRun(cfg);
-  if (result.failed()) {
-    llvm::errs() << "Failure to perform deadcode analysis for ClangIR "
-                    "analyzer, returning empty live set\n";
-  } else {
-    cfg->walk([&](mlir::Block *op) {
-      blockCount++;
-      if (solver.lookupState<mlir::dataflow::Executable>(
-              solver.getProgramPointBefore(op))) {
-        liveSet.insert(op);
-      }
-    });
-  }
-  LLVM_DEBUG({
-    llvm::dbgs() << "=== DCA result for cir analysis fallthrough for "
-                 << cfg.getName() << " ===\n";
-    llvm::dbgs() << "Live set size: " << liveSet.size() << "\n";
-    llvm::dbgs() << "Block traversal count: " << blockCount << "\n";
-    llvm::dbgs() << "Dead blocks: " << (blockCount - liveSet.size()) << "\n";
-    llvm::dbgs() << "If this is unexpected, please file an issue via GitHub "
-                    "with mlir tag"
-                 << "\n";
-  });
-
-  return liveSet;
-}
-
-//===----------------------------------------------------------------------===//
-// Switch/Case Analysis Helpers
-//===----------------------------------------------------------------------===//
-
-/// Check if a switch operation returns on all code paths. Right now this only
-/// works with case default Returns true if:
-/// - Switch is in simple form AND
-/// - Has a default case that returns
-///
-/// \param switchOp The switch operation to analyze
-/// \return true if all paths through the switch return a value
-static bool switchDefaultsWithCoveredEnums(cir::SwitchOp switchOp) {
-  llvm::SmallVector<cir::CaseOp> cases;
-  if (!switchOp.isSimpleForm(cases))
-    return false;
-
-  // Check if there's a default case
-  bool hasDefault = false;
-
-  // TODO: Cover the enum case once switchOp comes out with input as enum
-  for (auto caseOp : cases) {
-    if (caseOp.getKind() == cir::CaseOpKind::Default) {
-      hasDefault = true;
-      break;
-    }
-  }
-
-  return hasDefault;
-}
-static bool
-ignoreDefaultsWithCoveredEnums(mlir::Block *block,
-                               mlir::DenseSet<mlir::Block *> &shouldNotVisit) {
-  mlir::Operation *potentialSwitchOp = block->getParentOp();
-  if (shouldNotVisit.contains(block))
-    return true;
-  if (cir::SwitchOp switchOp =
-          llvm::dyn_cast_or_null<cir::SwitchOp>(potentialSwitchOp)) {
-    if (switchDefaultsWithCoveredEnums(switchOp)) {
-      switchOp->walk(
-          [&shouldNotVisit](mlir::Block *op) { shouldNotVisit.insert(op); });
-    }
-    return true;
-  }
-
-  return false;
-}
-ControlFlowKind FallThroughWarningPass::checkFallThrough(cir::FuncOp cfg) {
-
-  assert(cfg && "there can't be a null func op");
-
-  // TODO: Is no CFG akin to a declaration?
-  if (cfg.isDeclaration()) {
-    return UnknownFallThrough;
-  }
-
-  mlir::SetVector<mlir::Block *> liveSet = this->getLiveSet(cfg);
-
-  bool hasLiveReturn = false;
-  bool hasFakeEdge = false;
-  bool hasPlainEdge = false;
-  bool hasAbnormalEdge = false;
-
-  // This corresponds to OG's IgnoreDefaultsWithCoveredEnums
-  mlir::DenseSet<mlir::Block *> shouldNotVisit;
-
-  // INFO: in OG clang CFG, they have an empty exit block, so when they query
-  // pred of exit OG, they get all exit blocks
-  //
-  // I guess in CIR, we can pretend exit blocks are all blocks that have no
-  // successor?
-  for (mlir::Block *pred : liveSet) {
-    if (ignoreDefaultsWithCoveredEnums(pred, shouldNotVisit))
-      continue;
-
-    // We consider no successor as 'exit blocks'
-    if (!pred->hasNoSuccessors())
-      continue;
-
-    // Walk all ReturnOp operations to find returns in nested regions
-
-    if (!pred->mightHaveTerminator())
-      continue;
-
-    mlir::Operation *term = pred->getTerminator();
-
-    LLVM_DEBUG(pred->dump());
-
-    // TODO: hasNoReturnElement() in OG here, not sure how to work it in here
-    // yet
-
-    // INFO: In OG, we'll be looking for destructor since it can appear past
-    // return but i guess not in CIR? In this case we'll only be examining the
-    // terminator
-
-    // INFO: OG clang has this equals true whenever ri == re, which means this
-    // is true only when a block only has the terminator, or its size is 1.
-    //
-    // equivalent is std::distance(pred.begin(), pred.end()) == 1;
-
-    if (auto returnOp = dyn_cast<cir::ReturnOp>(term)) {
-      if (!isPhonyReturn(returnOp)) {
-        hasLiveReturn = true;
-        continue;
-      }
-    }
-
-    if (isa<cir::TryOp>(term)) {
-      hasAbnormalEdge = true;
-      continue;
-    }
-
-    hasPlainEdge = true;
-  }
-
-  if (!hasPlainEdge) {
-    if (hasLiveReturn)
-      return NeverFallThrough;
-    return NeverFallThroughOrReturn;
-  }
-  if (hasAbnormalEdge || hasFakeEdge || hasLiveReturn)
-    return MaybeFallThrough;
-  // This says AlwaysFallThrough for calls to functions that are not marked
-  // noreturn, that don't return.  If people would like this warning to be
-  // more accurate, such functions should be marked as noreturn.
-  //
-  // llvm_unreachable("");
-  return AlwaysFallThrough;
-}
 } // namespace clang
