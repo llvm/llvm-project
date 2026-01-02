@@ -127,7 +127,7 @@ subroutine char_explicit_dyn(n, l1, l2)
   ! CHECK-DAG:  %[[l2:.*]] = arith.select %[[cmp2]], %[[raw_l2]], %[[c0_i32]] : i32
   ! CHECK-DAG:  %[[aBoxAddr:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {{{.*}}uniq_name = "_QFchar_explicit_dynEzarray"}
   ! CHECK-DAG:  %[[aBoxDecl:.*]] = fir.declare %[[aBoxAddr]]{{.*}}
-  
+
   allocate(scalar, zarray(20))
   ! CHECK-NOT: AllocatableInitCharacter
   ! CHECK: AllocatableAllocate
