@@ -2217,12 +2217,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
         Value *X = CI->getArgOperand(0);
         Value *IsPosInfOrNan = Builder.CreateFCmpFMF(
             FCmpInst::FCMP_UEQ, X, ConstantFP::getInfinity(VTy), FMF);
-        Value *ZeroOrInf = Builder.CreateSelectFMF(
-            IsPosInfOrNan, X, ConstantFP::getZero(VTy), FMF);
         // We do not know whether an infinity or a NaN is more likely here,
         // so mark the branch weights as unkown.
-        if (auto *SI = dyn_cast<SelectInst>(ZeroOrInf))
-          setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
+        Value *ZeroOrInf = Builder.CreateSelectFMFWithUnknownProfile(
+            IsPosInfOrNan, X, ConstantFP::getZero(VTy), FMF, DEBUG_TYPE);
         return ZeroOrInf;
       }
 
