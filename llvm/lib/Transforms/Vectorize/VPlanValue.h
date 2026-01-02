@@ -412,12 +412,11 @@ public:
   VPDef(const unsigned char SC) : SubclassID(SC) {}
 
   virtual ~VPDef() {
-    for (VPRecipeValue *D : make_early_inc_range(DefinedValues)) {
+    for (VPRecipeValue *D : to_vector(DefinedValues)) {
       assert(D->Def == this &&
              "all defined VPValues should point to the containing VPDef");
       assert(D->getNumUsers() == 0 &&
              "all defined VPValues should have no more users");
-      D->Def = nullptr;
       delete D;
     }
   }

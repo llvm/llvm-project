@@ -1,6 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --output=%t --format=html --executor=standalone %s
 // RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
+// RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7MyClass.html -check-prefix=HTML
 
 struct Foo;
 
@@ -57,7 +58,7 @@ private:
 // CHECK-NEXT:        "InfoType": "enum",
 // CHECK-NEXT:        "Location": {
 // CHECK-NEXT:          "Filename": "{{.*}}class.cpp",
-// CHECK-NEXT:          "LineNumber": 17
+// CHECK-NEXT:          "LineNumber": 18
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "Members": [
 // CHECK-NEXT:          {
@@ -130,11 +131,12 @@ private:
 // CHECK-NEXT:    "HasPublicFunctions": true,
 // CHECK-NEXT:    "HasPublicMembers": true,
 // CHECK-NEXT:    "HasRecords": true,
+// CHECK-NEXT:    "HasTypedefs": true,
 // CHECK-NEXT:    "InfoType": "record",
 // CHECK-NEXT:    "IsTypedef": false,
 // CHECK-NEXT:    "Location": {
 // CHECK-NEXT:      "Filename": "{{.*}}class.cpp",
-// CHECK-NEXT:      "LineNumber": 10
+// CHECK-NEXT:      "LineNumber": 11
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "MangledName": "_ZTV7MyClass",
 // CHECK-NEXT:    "Name": "MyClass",
@@ -222,6 +224,7 @@ private:
 // CHECK-NEXT:        "End": true,
 // CHECK-NEXT:        "Name": "NestedClass",
 // CHECK-NEXT:        "Path": "GlobalNamespace{{[\/]+}}MyClass",
+// CHECK-NEXT:        "PathStem": "MyClass",
 // CHECK-NEXT:        "QualName": "NestedClass",
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
@@ -234,7 +237,7 @@ private:
 // CHECK-NEXT:        "IsUsing": false,
 // CHECK-NEXT:        "Location": {
 // CHECK-NEXT:          "Filename": "{{.*}}class.cpp",
-// CHECK-NEXT:          "LineNumber": 23
+// CHECK-NEXT:          "LineNumber": 24
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "Name": "MyTypedef",
 // CHECK-NEXT:        "Namespace": [
@@ -251,3 +254,23 @@ private:
 // CHECK-NEXT:          "USR": "0000000000000000000000000000000000000000"
 // CHECK:         "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:  }
+
+// HTML:              <a class="sidebar-item" href="#Classes">Inner Classes</a>
+// HTML-NEXT:     </li>
+// HTML-NEXT:     <li>
+// HTML-NEXT:         <ul>
+// HTML-NEXT:             <li class="sidebar-item-container">
+// HTML-NEXT:                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">NestedClass</a>
+// HTML-NEXT:             </li>
+// HTML-NEXT:         </ul>
+// HTML-NEXT:     </li>
+// HTML:      <section id="Classes" class="section-container">
+// HTML-NEXT:     <h2>Inner Classes</h2>
+// HTML-NEXT:     <ul class="class-container">
+// HTML-NEXT:         <li id="{{([0-9A-F]{40})}}" style="max-height: 40px;">
+// HTML-NEXT:             <a href="MyClass/_ZTVN7MyClass11NestedClassE.html">
+// HTML-NEXT:                 <pre><code class="language-cpp code-clang-doc">class NestedClass</code></pre>
+// HTML-NEXT:             </a>
+// HTML-NEXT:         </li>
+// HTML-NEXT:     </ul>
+// HTML-NEXT: </section>
