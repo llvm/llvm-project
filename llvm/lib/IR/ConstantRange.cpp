@@ -1187,8 +1187,9 @@ ConstantRange ConstantRange::unionOf(ArrayRef<ConstantRange> Ranges,
     Ranges = Segs;
   } else if (NumEmpty) {
     // If we don't need sorting and there are empty ranges, the empty ranges
-    // must be the frontest ones in Ranges, as empty range is represented as [0,
-    // 0) Therefore, NonEmptyRanges = Ranges[NumEmpty:]
+    // must be the frontest ones in Ranges, as empty range is represented as
+    // [0, 0).
+    // Therefore, NonEmptyRanges = Ranges[NumEmpty:]
     assert(Ranges[NumEmpty - 1].isEmptySet() &&
            "Empty range must be in the front");
     Ranges = Ranges.slice(NumEmpty);
@@ -1207,7 +1208,7 @@ ConstantRange ConstantRange::unionOf(ArrayRef<ConstantRange> Ranges,
     return ConstantRange(LL, RR);
   }
 
-  // Init the MaxGap as the gap wrapping around the unsigned domain)
+  // Init the MaxGap as the gap wrapping around the unsigned domain
   ConstantRange MaxGap(RR, LL);
 
   // ------- Find the maximal gap among sorted Ranges ------------------

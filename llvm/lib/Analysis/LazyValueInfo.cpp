@@ -966,8 +966,9 @@ private:
   }
 
   // In theory, we should use std::map for O(log n) insertion and removal.
-  // However, considering the scale of the problem is small (size of predecessors),
-  // it is more efficient to use a vector with O(n) insertion and removal.
+  // However, considering the scale of the problem is small (i.e., size of
+  // predecessors), it is more efficient to use a vector with O(n) insertion and
+  // removal.
   SmallVector<ConstantRange, 8> Intervals;
   SmallVector<APInt, 8> IntsInVec;
   ValueLatticeElement &Result;
