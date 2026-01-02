@@ -2145,8 +2145,8 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
       ScalarV,
       IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
   uint64_t SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
-  uint64_t EltBitMask = (1ull << SrcEltSizeInBits) - 1;
   uint64_t TotalBits = DL->getTypeSizeInBits(SrcTy);
+  APInt EltBitMask = APInt::getLowBitsSet(TotalBits, SrcEltSizeInBits);
   Type *PackedTy = IntegerType::get(SrcTy->getContext(), TotalBits);
   Value *Mask = ConstantInt::get(PackedTy, EltBitMask);
   for (User *U : Ext->users()) {
