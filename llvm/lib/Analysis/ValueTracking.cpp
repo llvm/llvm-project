@@ -5620,15 +5620,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                         KnownRHS, Q, Depth + 1);
 
     // Special case fadd x, x, which is the canonical form of fmul x, 2.
-    bool SameOperands = Op->getOperand(0) == Op->getOperand(1);
-    if (SameOperands)
+    bool SelfAdd = Op->getOperand(0) == Op->getOperand(1) &&
+                   isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI,
+                                            Q.DT, Depth + 1);
+    if (SelfAdd)
       KnownLHS = KnownRHS;
 
     if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
         (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) ||
         WantNegZero || Opc == Instruction::FSub) {
 
-      if (!SameOperands) {
+      if (!SelfAdd) {
         // RHS is canonically cheaper to compute. Skip inspecting the LHS if
         // there's no point.
         computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
@@ -5659,7 +5661,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             Op->getType()->getScalarType()->getFltSemantics();
         DenormalMode Mode = F->getDenormalMode(FltSem);
 
-        if (SameOperands) {
+        if (SelfAdd) {
           // Doubling 0 will give the same 0.
           if (KnownRHS.isKnownNeverLogicalPosZero(Mode))
             Known.knownNot(fcPosZero);

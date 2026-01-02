@@ -3539,7 +3539,7 @@ define float @fadd_known_negative_normal_dapz(float nofpclass(pinf pnorm pzero) 
 ; Cannot conclude this can't return +0 due to undef.
 define float @fadd_double_no_zero_maybe_undef(float nofpclass(zero) %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(zero) float @fadd_double_no_zero_maybe_undef
+; CHECK-LABEL: define nofpclass(nzero) float @fadd_double_no_zero_maybe_undef
 ; CHECK-SAME: (float nofpclass(zero) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -3594,7 +3594,7 @@ define float @fadd_double_no_nzero_maybe_undef(float nofpclass(nzero) %arg) {
 
 define float @fadd_double_no_pzero_maybe_undef(float nofpclass(pzero) %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(pzero) float @fadd_double_no_pzero_maybe_undef
+; CHECK-LABEL: define float @fadd_double_no_pzero_maybe_undef
 ; CHECK-SAME: (float nofpclass(pzero) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[ADD]]
