@@ -29,3 +29,16 @@ void f(int x, int y) {
   return;
 }
 
+// Test that the analysis will not crash when a conditional expression
+// appears in dependent context:
+#ifdef __cplusplus
+struct Foo {
+  static void static_method(int);
+};
+void conditional_inside_dependent_context(void) {
+  auto lambda = [](auto result) { // opens a dependent context
+    Foo::static_method(result ? 1 : 2); // no-crash
+  };
+  (void)lambda;
+}
+#endif // __cplusplus

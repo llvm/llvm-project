@@ -319,7 +319,7 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
   options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
   options.SetPrefix(thread_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
-  options.SetLanguage(eLanguageTypeObjC_plus_plus);
+  options.SetLanguage(eLanguageTypeC);
 
   ValueObjectSP main_value;
   ExecutionContext exe_ctx;

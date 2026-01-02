@@ -296,10 +296,9 @@ bool PointerReplacer::collectUsers() {
       /// TODO: Handle poison and null pointers for PHI and select.
       // If all incoming values are available, mark this PHI as
       // replacable and push it's users into the worklist.
-      bool IsReplaceable = true;
-      if (all_of(PHI->incoming_values(), [&](Value *V) {
-            if (!isa<Instruction>(V))
-              return IsReplaceable = false;
+      bool IsReplaceable = all_of(PHI->incoming_values(),
+                                  [](Value *V) { return isa<Instruction>(V); });
+      if (IsReplaceable && all_of(PHI->incoming_values(), [&](Value *V) {
             return isAvailable(cast<Instruction>(V));
           })) {
         UsersToReplace.insert(PHI);
@@ -415,7 +414,7 @@ void PointerReplacer::replace(Instruction *I) {
                               LT->getAlign(), LT->getOrdering(),
                               LT->getSyncScopeID());
     NewI->takeName(LT);
-    copyMetadataForAccess(*NewI, *LT);
+    copyMetadataForLoad(*NewI, *LT);
 
     IC.InsertNewInstWith(NewI, LT->getIterator());
     IC.replaceInstUsesWith(*LT, NewI);
@@ -606,7 +605,7 @@ LoadInst *InstCombinerImpl::combineLoadToNewType(LoadInst &LI, Type *NewTy,
       Builder.CreateAlignedLoad(NewTy, LI.getPointerOperand(), LI.getAlign(),
                                 LI.isVolatile(), LI.getName() + Suffix);
   NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
-  copyMetadataForAccess(*NewLoad, LI);
+  copyMetadataForLoad(*NewLoad, LI);
   return NewLoad;
 }
 

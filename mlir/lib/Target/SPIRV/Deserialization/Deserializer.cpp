@@ -243,7 +243,7 @@ static LogicalResult deserializeCacheControlDecoration(
   auto value = opBuilder.getAttr<AttrTy>(cacheLevel, cacheControlAttr);
   SmallVector<Attribute> attrs;
   if (auto attrList =
-          llvm::dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
+          dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
     llvm::append_range(attrs, attrList);
   attrs.push_back(value);
   decorations[words[0]].set(symbol, opBuilder.getArrayAttr(attrs));
@@ -326,7 +326,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
         static_cast<::mlir::spirv::LinkageType>(words[wordIndex++]));
     auto linkageAttr = opBuilder.getAttr<::mlir::spirv::LinkageAttributesAttr>(
         StringAttr::get(context, linkageName), linkageTypeAttr);
-    decorations[words[0]].set(symbol, llvm::dyn_cast<Attribute>(linkageAttr));
+    decorations[words[0]].set(symbol, dyn_cast<Attribute>(linkageAttr));
     break;
   }
   case spirv::Decoration::Aliased:
@@ -346,6 +346,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Constant:
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
+  case spirv::Decoration::Coherent:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -1510,10 +1511,10 @@ spirv::Deserializer::processTensorARMType(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpTypeTensorARM shape must come from a "
                                  "constant instruction of type OpTypeArray");
 
-  ArrayAttr shapeArrayAttr = llvm::dyn_cast<ArrayAttr>(shapeInfo->first);
+  ArrayAttr shapeArrayAttr = dyn_cast<ArrayAttr>(shapeInfo->first);
   SmallVector<int64_t, 1> shape;
   for (auto dimAttr : shapeArrayAttr.getValue()) {
-    auto dimIntAttr = llvm::dyn_cast<IntegerAttr>(dimAttr);
+    auto dimIntAttr = dyn_cast<IntegerAttr>(dimAttr);
     if (!dimIntAttr)
       return emitError(unknownLoc, "OpTypeTensorARM shape has an invalid "
                                    "dimension size");

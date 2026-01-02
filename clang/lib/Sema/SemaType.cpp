@@ -32,8 +32,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
-#include "clang/Sema/EnterExpressionEvaluationContext.h"
-#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -2261,6 +2259,8 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
              isSFINAEContext() ? diag::err_typecheck_zero_array_size
                                : diag::ext_typecheck_zero_array_size)
             << 0 << ArraySize->getSourceRange();
+        if (isSFINAEContext())
+          return QualType();
       }
 
       // Is the array too large?
@@ -2467,7 +2467,7 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
 
   // Check element type, if it is not dependent.
   if (!ElementTy->isDependentType() &&
-      !MatrixType::isValidElementType(ElementTy)) {
+      !MatrixType::isValidElementType(ElementTy, getLangOpts())) {
     Diag(AttrLoc, diag::err_attribute_invalid_matrix_type) << ElementTy;
     return QualType();
   }
@@ -3798,8 +3798,10 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   }
+
   for (const ParsedAttr &AL : llvm::concat<ParsedAttr>(
-           D.getDeclSpec().getAttributes(), D.getAttributes())) {
+           D.getDeclSpec().getAttributes(), D.getAttributes(),
+           D.getDeclarationAttributes())) {
     if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
       CC = CC_DeviceKernel;
       break;
@@ -10070,81 +10072,6 @@ QualType Sema::BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
   if (Underlying.isNull())
     return Underlying;
   return Context.getQualifiedType(Underlying, BaseType.getQualifiers());
-}
-
-bool Sema::BuiltinIsConvertible(QualType From, QualType To, SourceLocation Loc,
-                                bool CheckNothrow) {
-  if (To->isVoidType())
-    return From->isVoidType();
-
-  // [meta.rel]
-  // From and To shall be complete types, cv void, or arrays of unknown bound.
-  if ((!From->isIncompleteArrayType() && !From->isVoidType() &&
-       RequireCompleteType(
-           Loc, From, diag::err_incomplete_type_used_in_type_trait_expr)) ||
-      (!To->isIncompleteArrayType() && !To->isVoidType() &&
-       RequireCompleteType(Loc, To,
-                           diag::err_incomplete_type_used_in_type_trait_expr)))
-    return false;
-
-  // C++11 [meta.rel]p4:
-  //   Given the following function prototype:
-  //
-  //     template <class T>
-  //       typename add_rvalue_reference<T>::type create();
-  //
-  //   the predicate condition for a template specialization
-  //   is_convertible<From, To> shall be satisfied if and only if
-  //   the return expression in the following code would be
-  //   well-formed, including any implicit conversions to the return
-  //   type of the function:
-  //
-  //     To test() {
-  //       return create<From>();
-  //     }
-  //
-  //   Access checking is performed as if in a context unrelated to To and
-  //   From. Only the validity of the immediate context of the expression
-  //   of the return-statement (including conversions to the return type)
-  //   is considered.
-  //
-  // We model the initialization as a copy-initialization of a temporary
-  // of the appropriate type, which for this expression is identical to the
-  // return statement (since NRVO doesn't apply).
-
-  // Functions aren't allowed to return function or array types.
-  if (To->isFunctionType() || To->isArrayType())
-    return false;
-
-  // A function definition requires a non-abstract return type.
-  if (isAbstractType(Loc, To))
-    return false;
-
-  From = BuiltinAddRValueReference(From, Loc);
-
-  // Build a fake source and destination for initialization.
-  InitializedEntity ToEntity(InitializedEntity::InitializeTemporary(To));
-  OpaqueValueExpr FromExpr(Loc, From.getNonLValueExprType(Context),
-                           Expr::getValueKindForType(From));
-  InitializationKind Kind =
-      InitializationKind::CreateCopy(Loc, SourceLocation());
-
-  // Perform the initialization in an unevaluated context within a SFINAE
-  // trap at translation unit scope.
-  EnterExpressionEvaluationContext Unevaluated(
-      *this, Sema::ExpressionEvaluationContext::Unevaluated);
-  Sema::SFINAETrap SFINAE(*this, /*AccessCheckingSFINAE=*/true);
-  Sema::ContextRAII TUContext(*this, Context.getTranslationUnitDecl());
-  Expr *FromExprPtr = &FromExpr;
-  InitializationSequence Init(*this, ToEntity, Kind, FromExprPtr);
-  if (Init.Failed())
-    return false;
-
-  ExprResult Result = Init.Perform(*this, ToEntity, Kind, FromExprPtr);
-  if (Result.isInvalid() || SFINAE.hasErrorOccurred())
-    return false;
-
-  return !CheckNothrow || canThrow(Result.get()) == CT_Cannot;
 }
 
 QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,

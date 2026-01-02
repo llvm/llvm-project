@@ -10,11 +10,11 @@ class TemplateArg<string name> {
   string Name = name;
 }
 
-class Template<list<TemplateArg> args, string name = ""> : TemplateArg<name> {
+class Template<list<TemplateArg> args, string name> : TemplateArg<name> {
   list<TemplateArg> Args = args;
 }
 
-class Class<string name = "", bit is_variadic = 0> : TemplateArg<name> {
+class Class<string name, bit is_variadic = 0> : TemplateArg<name> {
   bit IsVariadic = is_variadic;
 }
 
@@ -55,32 +55,6 @@ def __builtin_common_type : CPlusPlusBuiltinTemplate<
    Template<[Class<"TypeMember">], "HasTypeMember">,
    Class<"HasNoTypeMember">,
    Class<"Ts", /*is_variadic=*/1>]>;
-
-// template <template <class,"
-//                     class,"
-//                     template <class> class,"
-//                     template <class> class> class BasicCommonReferenceT,"
-//           template <class... Args> class CommonTypeT,"
-//           template <class> class HasTypeMember,"
-//           class HasNoTypeMember,"
-//           class... Ts>"
-def __builtin_common_reference : CPlusPlusBuiltinTemplate<
-            [Template<[Class<>,
-                       Class<>,
-                       Template<[Class<>]>,
-                       Template<[Class<>]>], "BasicCommonReferenceT">,
-             Template<[Class<"Args", /*is_variadic=*/1>], "CommonTypeT">,
-             Template<[Class<>], "HasTypeMember">,
-             Class<"HasNoTypeMember">,
-             Class<"Ts", /*is_variadic=*/1>]>;
-
-foreach Ref = ["", "lvalue", "rvalue"] in {
-  foreach Const = ["", "const"] in {
-    foreach Volatile = ["", "volatile"] in {
-      def __clang_internal_xref_#Ref#Const#Volatile : CPlusPlusBuiltinTemplate<[Class<>]>;
-    }
-  }
-}
 
 // template <uint32_t Opcode,
 //           uint32_t Size,

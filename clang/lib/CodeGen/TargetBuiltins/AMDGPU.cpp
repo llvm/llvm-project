@@ -343,23 +343,6 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
     SSID = getLLVMContext().getOrInsertSyncScopeID(SSN);
 }
 
-llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
-                                                          unsigned Idx,
-                                                          const CallExpr *E) {
-  llvm::Value *Arg = nullptr;
-  if ((ICEArguments & (1 << Idx)) == 0) {
-    Arg = EmitScalarExpr(E->getArg(Idx));
-  } else {
-    // If this is required to be a constant, constant fold it so that we
-    // know that the generated intrinsic gets a ConstantInt.
-    std::optional<llvm::APSInt> Result =
-        E->getArg(Idx)->getIntegerConstantExpr(getContext());
-    assert(Result && "Expected argument to be a constant");
-    Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
-  }
-  return Arg;
-}
-
 void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                                      const CallExpr *E) {
   constexpr const char *Tag = "amdgpu-synchronize-as";
@@ -1681,6 +1664,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(EmitScalarExpr(E->getArg(i)));
     if (AppendFalseForOpselArg)
       Args.push_back(Builder.getFalse());
+
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8) {
+      if (Args.size() == 7)
+        Args.push_back(Builder.getFalse());
+      if (Args.size() == 8)
+        Args[7] = Builder.CreateZExtOrTrunc(Args[7], Builder.getInt1Ty());
+    }
 
     SmallVector<llvm::Type *, 6> ArgTypes;
     if (NeedReturnType)

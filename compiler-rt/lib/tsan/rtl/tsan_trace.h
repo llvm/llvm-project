@@ -190,7 +190,7 @@ struct Trace {
   Mutex mtx;
   IList<TraceHeader, &TraceHeader::trace_parts, TracePart> parts;
   // First node non-queued into ctx->trace_part_recycle.
-  TracePart* local_head;
+  TracePart* local_head = nullptr;
   // Final position in the last part for finished threads.
   Event* final_pos = nullptr;
   // Number of trace parts allocated on behalf of this trace specifically.

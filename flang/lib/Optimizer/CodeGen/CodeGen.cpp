@@ -816,6 +816,15 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto fromFirTy = convert.getValue().getType();
     auto toFirTy = convert.getRes().getType();
+
+    // Let more specialized conversions (e.g. FIR to memref
+    // converters) handle fir.convert when either side is a memref. This
+    // avoids interfering with descriptor-based flows such as fir.box /
+    // fir.box_addr and keeps this pattern focused on value conversions.
+    if (mlir::isa<mlir::MemRefType>(fromFirTy) ||
+        mlir::isa<mlir::MemRefType>(toFirTy))
+      return mlir::failure();
+
     auto fromTy = convertType(fromFirTy);
     auto toTy = convertType(toFirTy);
     mlir::Value op0 = adaptor.getOperands()[0];
@@ -3453,6 +3462,20 @@ struct NoReassocOpConversion : public fir::FIROpConversion<fir::NoReassocOp> {
   }
 };
 
+/// Erase `fir.use_stmt` operations during LLVM lowering.
+/// These operations are only used for debug info generation by the
+/// AddDebugInfo pass and have no runtime representation.
+struct UseStmtOpConversion : public fir::FIROpConversion<fir::UseStmtOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::UseStmtOp useStmt, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.eraseOp(useStmt);
+    return mlir::success();
+  }
+};
+
 static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
                         std::optional<mlir::ValueRange> destOps,
                         mlir::ConversionPatternRewriter &rewriter,
@@ -4440,8 +4463,9 @@ void fir::populateFIRToLLVMConversionPatterns(
       SliceOpConversion, StoreOpConversion, StringLitOpConversion,
       SubcOpConversion, TypeDescOpConversion, TypeInfoOpConversion,
       UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
-      UnreachableOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
-      XReboxOpConversion, ZeroOpConversion>(converter, options);
+      UnreachableOpConversion, UseStmtOpConversion, XArrayCoorOpConversion,
+      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
+                                                                options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.
