@@ -368,6 +368,8 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
     IsUsing = Other.IsUsing;
   if (Underlying.Type.Name == "")
     Underlying = Other.Underlying;
+  if (!Template)
+    Template = Other.Template;
   SymbolInfo::merge(std::move(Other));
 }
 

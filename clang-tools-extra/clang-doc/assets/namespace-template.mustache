@@ -85,6 +85,20 @@
                         </ul>
                     </li>
                     {{/HasConcepts}}
+                    {{#HasTypedefs}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Typedefs">Typedefs</a>
+                    </li>
+                    <li>
+                        <ul>
+                            {{#Typedefs}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Typedefs}}
+                        </ul>
+                    </li>
+                    {{/HasTypedefs}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
@@ -155,6 +169,14 @@
                     {{/Concepts}}
                 </section>
                 {{/HasConcepts}}
+                {{#HasTypedefs}}
+                <section id="Typedefs" class="section-container">
+                    <h2>Typedefs</h2>
+                    {{#Typedefs}}
+                    {{>AliasPartial}}
+                    {{/Typedefs}}
+                </section>
+                {{/HasTypedefs}}
             </div>
         </div>
     </main>
