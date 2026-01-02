@@ -29,7 +29,7 @@
 using namespace llvm;
 
 namespace {
-  constexpr int BACKREF_LIMIT = 20;
+constexpr int BACKREF_LIMIT = 20;
 } // anonymous namespace
 
 StringRef ExpressionFormat::toString() const {
