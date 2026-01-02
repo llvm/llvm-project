@@ -2536,9 +2536,10 @@ static llvm::Value *createTaskReductionFunction(
   }
 
   // Emit an empty function body in case of empty region
-  if (region.empty())
+  if (region.empty()) {
     bbBuilder.CreateRet(arg0); // Return from the function
-  return function;
+    return function;
+  }
 
   SmallVector<llvm::Value *, 1> phis;
   if (failed(inlineConvertOmpRegions(region, "", bbBuilder, moduleTranslation,
