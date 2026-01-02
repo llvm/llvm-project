@@ -47,6 +47,7 @@ struct S {
 };
 const int s = S().w[1];
 
+#if __LP64__
 namespace NullRecord {
   struct S {
     int arr[1024 * 1024 * 1024];
@@ -56,3 +57,4 @@ namespace NullRecord {
 
   S s[2] = {};
 }
+#endif
