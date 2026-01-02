@@ -92,7 +92,7 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     # TODO: Support other Apple platforms.
     set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins_${arch}_osx")
   else()
-    set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins-${arch}")
+    set_output_name(BUILTIN_LIB_TARGET_NAME clang_rt.builtins ${arch})
   endif()
   # Normally, we can just inspect the target directly to get the sources, but if
   # we are testing an externally-built builtins library, we expect
