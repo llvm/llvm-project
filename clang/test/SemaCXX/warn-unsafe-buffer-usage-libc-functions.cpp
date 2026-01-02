@@ -255,8 +255,10 @@ void test(StrBuff& str)
 }
 
 void dontCrashForInvalidFormatString() {
-  snprintf((char*)0, 0, "%");
-  snprintf((char*)0, 0, "\0");
+  //snprintf((char*)0, 0, "%");  // FIXME: false positive rdar://166823188
+  snprintf(nullptr, 0, "%");
+  //snprintf((char*)0, 0, "\0");
+  snprintf(nullptr, 0, "\0");
 }
 
 

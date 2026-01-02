@@ -1879,7 +1879,7 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
   // In this case, this call is considered unsafe if at least one argument
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
-      llvm::make_range(Call->arg_begin() + FmtArgStartingIdx, Call->arg_end()),
+      llvm::make_range(Call->arg_begin() + FmtIdx, Call->arg_end()),
       [&UnsafeArg, &Ctx](const Expr *Arg) -> bool {
         if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
           UnsafeArg = Arg;
@@ -3184,7 +3184,8 @@ public:
   static bool matches(const Stmt *S, ASTContext &Ctx,
                       const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
-    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
+    if (!Ctx.getLangOpts().CPlusPlus /* Warn about libc ONLY in C++ */ ||
+        Handler->ignoreUnsafeBufferInLibcCall(S->getBeginLoc()))
       return false;
     auto *CE = dyn_cast<CallExpr>(S);
     if (!CE || !CE->getDirectCallee())
