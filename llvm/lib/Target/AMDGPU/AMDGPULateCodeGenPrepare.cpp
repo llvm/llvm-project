@@ -14,7 +14,6 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -22,17 +21,14 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "amdgpu-late-codegenprepare"
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 // Scalar load widening needs running after load-store-vectorizer as that pass
 // doesn't handle overlapping cases. In addition, this pass enhances the
@@ -43,12 +39,6 @@ static cl::opt<bool>
                cl::desc("Widen sub-dword constant address space loads in "
                         "AMDGPULateCodeGenPrepare"),
                cl::ReallyHidden, cl::init(true));
-
-static cl::opt<bool> CombineScalarSelects(
-    "amdgpu-late-codegenprepare-combine-scalar-selects",
-    cl::desc("Combine scalarized selects back into vector selects in "
-             "AMDGPULateCodeGenPrepare"),
-    cl::ReallyHidden, cl::init(true));
 
 namespace {
 
@@ -78,25 +68,6 @@ public:
 
   bool canWidenScalarExtLoad(LoadInst &LI) const;
   bool visitLoadInst(LoadInst &LI);
-  bool visitBitCastInst(BitCastInst &BC);
-
-  /// Combine scalarized selects from a bitcast back into a vector select.
-  ///
-  /// This optimization addresses VGPR bloat from patterns like:
-  ///   %vec = bitcast <4 x i32> %src to <16 x i8>
-  ///   %e0 = extractelement <16 x i8> %vec, i64 0
-  ///   %s0 = select i1 %cond, i8 %e0, i8 0
-  ///   ... (repeated for all 16 elements)
-  ///
-  /// Which generates 16 separate v_cndmask_b32 instructions. Instead, we
-  /// transform it to:
-  ///   %sel = select i1 %cond, <4 x i32> %src, <4 x i32> zeroinitializer
-  ///   %vec = bitcast <4 x i32> %sel to <16 x i8>
-  ///   %e0 = extractelement <16 x i8> %vec, i64 0
-  ///   ...
-  ///
-  /// This produces only 4 v_cndmask_b32 instructions operating on dwords.
-  bool tryCombineSelectsFromBitcast(BitCastInst &BC);
 };
 
 using ValueToValueMap = DenseMap<const Value *, Value *>;
@@ -246,9 +217,11 @@ bool AMDGPULateCodeGenPrepare::run() {
 
   bool Changed = false;
 
+  bool HasScalarSubwordLoads = ST.hasScalarSubwordLoads();
+
   for (auto &BB : reverse(F))
     for (Instruction &I : make_early_inc_range(reverse(BB))) {
-      Changed |= visit(I);
+      Changed |= !HasScalarSubwordLoads && visit(I);
       Changed |= LRO.optimizeLiveType(&I, DeadInsts);
     }
 
@@ -524,7 +497,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
-  if (!WidenLoads || ST.hasScalarSubwordLoads())
+  if (!WidenLoads)
     return false;
 
   // Skip if that load is already aligned on DWORD at least as it's handled in
@@ -576,128 +549,6 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   DeadInsts.emplace_back(&LI);
 
   return true;
-}
-
-bool AMDGPULateCodeGenPrepare::visitBitCastInst(BitCastInst &BC) {
-  if (CombineScalarSelects)
-    return tryCombineSelectsFromBitcast(BC);
-  return false;
-}
-
-bool AMDGPULateCodeGenPrepare::tryCombineSelectsFromBitcast(BitCastInst &BC) {
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(BC.getSrcTy());
-  auto *DstVecTy = dyn_cast<FixedVectorType>(BC.getDestTy());
-  if (!SrcVecTy || !DstVecTy)
-    return false;
-
-  // Source can be any 32-bit or 64-bit element type (i32, i64, float, double).
-  // Destination must be smaller integer elements (i8, i16, or i32 from i64).
-  // Zero in all these types is all-bits-zero, so the transformation is valid.
-  Type *SrcEltTy = SrcVecTy->getElementType();
-  Type *DstEltTy = DstVecTy->getElementType();
-  unsigned SrcEltBits = SrcEltTy->getPrimitiveSizeInBits();
-  unsigned DstEltBits = DstEltTy->getPrimitiveSizeInBits();
-
-  if (SrcEltBits != 32 && SrcEltBits != 64)
-    return false;
-
-  if (!DstEltTy->isIntegerTy() || DstEltBits >= SrcEltBits)
-    return false;
-
-  unsigned NumDstElts = DstVecTy->getNumElements();
-  BasicBlock *BB = BC.getParent();
-
-  // Require at least half the elements to have matching selects.
-  // This threshold ensures the transformation is profitable.
-  unsigned MinRequired = NumDstElts / 2;
-
-  // Early exit: not enough users to possibly meet the threshold.
-  if (BC.getNumUses() < MinRequired)
-    return false;
-
-  // Group selects by their condition value. Different conditions selecting
-  // from the same bitcast are handled as independent groups, allowing us to
-  // optimize multiple select patterns from a single bitcast.
-  struct SelectGroup {
-    // Map from element index to (select, extractelement) pair.
-    SmallDenseMap<unsigned, std::pair<SelectInst *, ExtractElementInst *>, 16>
-        Selects;
-    // Track the earliest select instruction for correct insertion point.
-    SelectInst *FirstSelect = nullptr;
-  };
-  DenseMap<Value *, SelectGroup> ConditionGroups;
-
-  // Collect all matching select patterns in a single pass.
-  // Pattern: select i1 %cond, i8 (extractelement %bc, idx), i8 0
-  for (User *U : BC.users()) {
-    auto *Ext = dyn_cast<ExtractElementInst>(U);
-    if (!Ext || Ext->getParent() != BB)
-      continue;
-
-    auto *IdxC = dyn_cast<ConstantInt>(Ext->getIndexOperand());
-    if (!IdxC || IdxC->getZExtValue() >= NumDstElts)
-      continue;
-
-    unsigned Idx = IdxC->getZExtValue();
-
-    for (User *EU : Ext->users()) {
-      // Must be: select %cond, %extract, 0 (in same BB)
-      if (!match(EU, m_Select(m_Value(), m_Specific(Ext), m_Zero())))
-        continue;
-      SelectInst *Sel = cast<SelectInst>(EU);
-      if (Sel->getParent() != BB)
-        continue;
-
-      auto &Group = ConditionGroups[Sel->getCondition()];
-      Group.Selects[Idx] = {Sel, Ext};
-
-      // Track earliest select to ensure correct dominance for insertion.
-      if (!Group.FirstSelect || Sel->comesBefore(Group.FirstSelect))
-        Group.FirstSelect = Sel;
-    }
-  }
-
-  bool Changed = false;
-
-  // Process each condition group that meets the threshold.
-  for (auto &[Cond, Group] : ConditionGroups) {
-    if (Group.Selects.size() < MinRequired)
-      continue;
-
-    LLVM_DEBUG(dbgs() << "AMDGPULateCodeGenPrepare: Combining "
-                      << Group.Selects.size()
-                      << " scalar selects into vector select\n");
-
-    // Insert before the first select to maintain dominance.
-    IRBuilder<> Builder(Group.FirstSelect);
-
-    // Create vector select: select i1 %cond, <N x i32> %src, zeroinitializer
-    Value *VecSel =
-        Builder.CreateSelect(Cond, BC.getOperand(0),
-                             Constant::getNullValue(SrcVecTy), "combined.sel");
-
-    // Bitcast the selected vector back to the byte vector type.
-    Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy, "combined.bc");
-
-    // Replace each scalar select with an extract from the combined result.
-    for (auto &[Idx, Pair] : Group.Selects) {
-      Value *NewExt = Builder.CreateExtractElement(NewBC, Idx);
-      Pair.first->replaceAllUsesWith(NewExt);
-      DeadInsts.emplace_back(Pair.first);
-
-      // Mark the original extract as dead if it has no remaining uses.
-      if (Pair.second->use_empty())
-        DeadInsts.emplace_back(Pair.second);
-    }
-
-    Changed = true;
-  }
-
-  // Mark the original bitcast as dead if all its users were replaced.
-  if (Changed && BC.use_empty())
-    DeadInsts.emplace_back(&BC);
-
-  return Changed;
 }
 
 PreservedAnalyses

@@ -127,6 +127,7 @@ private:
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
+  bool foldSelectsFromBitcast(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoad(Instruction &I);
@@ -1543,6 +1544,123 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   Value *NewExt = Builder.CreateExtractElement(VecLogic, CheapIndex);
   replaceValue(I, *NewExt);
   ++NumVecCmpBO;
+  return true;
+}
+
+/// Try to fold a scalar select that selects between an extracted element and
+/// zero into extracting from a vector select.
+///
+/// This pattern arises when a vector is bitcast to a smaller element type,
+/// elements are extracted, and then conditionally selected with zero:
+///
+///   %bc = bitcast <4 x i32> %src to <16 x i8>
+///   %e0 = extractelement <16 x i8> %bc, i32 0
+///   %s0 = select i1 %cond, i8 %e0, i8 0
+///
+/// Transforms to:
+///   %sel = select i1 %cond, <4 x i32> %src, <4 x i32> zeroinitializer
+///   %bc = bitcast <4 x i32> %sel to <16 x i8>
+///   %e0 = extractelement <16 x i8> %bc, i32 0
+///
+/// This is profitable because vector select on wider types produces fewer
+/// select/cndmask instructions than scalar selects on each element.
+bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
+  // Match: select i1 %cond, iN %extractelement, iN 0
+  Value *Cond, *Ext;
+  if (!match(&I, m_Select(m_Value(Cond), m_Value(Ext), m_Zero())))
+    return false;
+
+  // Condition must be scalar i1
+  if (!Cond->getType()->isIntegerTy(1))
+    return false;
+
+  // True value must be an extractelement from a bitcast
+  auto *ExtInst = dyn_cast<ExtractElementInst>(Ext);
+  if (!ExtInst)
+    return false;
+
+  auto *BC = dyn_cast<BitCastInst>(ExtInst->getVectorOperand());
+  if (!BC)
+    return false;
+
+  auto *SrcVecTy = dyn_cast<FixedVectorType>(BC->getSrcTy());
+  auto *DstVecTy = dyn_cast<FixedVectorType>(BC->getDestTy());
+  if (!SrcVecTy || !DstVecTy)
+    return false;
+
+  // Source must be 32-bit or 64-bit elements, destination must be smaller
+  // integer elements. Zero in all these types is all-bits-zero.
+  Type *SrcEltTy = SrcVecTy->getElementType();
+  Type *DstEltTy = DstVecTy->getElementType();
+  unsigned SrcEltBits = SrcEltTy->getPrimitiveSizeInBits();
+  unsigned DstEltBits = DstEltTy->getPrimitiveSizeInBits();
+
+  if (SrcEltBits != 32 && SrcEltBits != 64)
+    return false;
+
+  if (!DstEltTy->isIntegerTy() || DstEltBits >= SrcEltBits)
+    return false;
+
+  // Check if a compatible vector select already exists in this block.
+  // If so, we can reuse it and only create the extract.
+  BasicBlock *BB = BC->getParent();
+  Value *SrcVec = BC->getOperand(0);
+  SelectInst *ExistingVecSel = nullptr;
+  BitCastInst *ExistingBC = nullptr;
+
+  for (User *U : SrcVec->users()) {
+    auto *SI = dyn_cast<SelectInst>(U);
+    if (SI && SI->getParent() == BB && SI->getCondition() == Cond &&
+        SI->getTrueValue() == SrcVec && match(SI->getFalseValue(), m_Zero())) {
+      ExistingVecSel = SI;
+      // Also look for an existing bitcast of this select
+      for (User *SU : SI->users()) {
+        auto *BCI = dyn_cast<BitCastInst>(SU);
+        if (BCI && BCI->getParent() == BB && BCI->getDestTy() == DstVecTy) {
+          ExistingBC = BCI;
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  // If we already have a vector select, this transformation is always
+  // beneficial - we just extract from it instead of doing a scalar select.
+  // If we don't have one yet, we'll create it and subsequent selects will
+  // find and reuse it.
+  //
+  // This is always profitable because on targets like AMDGPU, a vector
+  // select with scalar condition produces fewer cndmask instructions than
+  // multiple scalar selects (one per 32-bit chunk vs one per scalar element).
+
+  // Create the transformation.
+  Builder.SetInsertPoint(&I);
+
+  Value *VecSel;
+  if (ExistingVecSel) {
+    // Reuse existing vector select
+    VecSel = ExistingVecSel;
+  } else {
+    // Create vector select: select i1 %cond, <N x T> %src, zeroinitializer
+    VecSel = Builder.CreateSelect(Cond, SrcVec,
+                                  Constant::getNullValue(SrcVecTy), "sel.bc");
+  }
+
+  // Reuse existing bitcast or create a new one
+  Value *NewBC;
+  if (ExistingBC) {
+    NewBC = ExistingBC;
+  } else {
+    NewBC = Builder.CreateBitCast(VecSel, DstVecTy, "sel.bc.cast");
+  }
+
+  // Extract the element from the new bitcast
+  Value *NewExt =
+      Builder.CreateExtractElement(NewBC, ExtInst->getIndexOperand());
+  replaceValue(I, *NewExt);
+
+  LLVM_DEBUG(dbgs() << "VectorCombine: folded select into vector select\n");
   return true;
 }
 
@@ -5075,6 +5193,10 @@ bool VectorCombine::run() {
       case Instruction::ICmp:
       case Instruction::FCmp:
         if (foldExtractExtract(I))
+          return true;
+        break;
+      case Instruction::Select:
+        if (foldSelectsFromBitcast(I))
           return true;
         break;
       case Instruction::Or:
