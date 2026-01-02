@@ -187,17 +187,37 @@ public:
                        llvm::Value *loopInductionVar) {
     builder.SetInsertPoint(loopBody->getTerminator());
     for (size_t index = 0; index < linearPreconditionVars.size(); index++) {
-      // Emit increments for linear vars
-      llvm::LoadInst *linearVarStart = builder.CreateLoad(
-          linearVarTypes[index], linearPreconditionVars[index]);
-      auto mulInst = builder.CreateMul(loopInductionVar, linearSteps[index]);
-      if (linearVarTypes[index]->isIntegerTy()) {
-        auto addInst = builder.CreateAdd(linearVarStart, mulInst);
+      llvm::Type *linearVarType = linearVarTypes[index];
+      llvm::Value *iv = loopInductionVar;
+      llvm::Value *step = linearSteps[index];
+
+      if (!iv->getType()->isIntegerTy())
+        llvm_unreachable("OpenMP loop induction variable must be an integer "
+                         "type");
+
+      if (linearVarType->isIntegerTy()) {
+        // Integer path: normalize all arithmetic to linearVarType
+        iv = builder.CreateSExtOrTrunc(iv, linearVarType);
+        step = builder.CreateSExtOrTrunc(step, linearVarType);
+
+        llvm::LoadInst *linearVarStart =
+            builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
+        llvm::Value *mulInst = builder.CreateMul(iv, step);
+        llvm::Value *addInst = builder.CreateAdd(linearVarStart, mulInst);
         builder.CreateStore(addInst, linearLoopBodyTemps[index]);
-      } else if (linearVarTypes[index]->isFloatingPointTy()) {
-        auto cvt = builder.CreateSIToFP(mulInst, linearVarTypes[index]);
-        auto addInst = builder.CreateFAdd(linearVarStart, cvt);
+      } else if (linearVarType->isFloatingPointTy()) {
+        // Float path: perform multiply in integer, then convert to float
+        step = builder.CreateSExtOrTrunc(step, iv->getType());
+        llvm::Value *mulInst = builder.CreateMul(iv, step);
+
+        llvm::LoadInst *linearVarStart =
+            builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
+        llvm::Value *mulFp = builder.CreateSIToFP(mulInst, linearVarType);
+        llvm::Value *addInst = builder.CreateFAdd(linearVarStart, mulFp);
         builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+      } else {
+        llvm_unreachable(
+            "Linear variable must be of integer or floating-point type");
       }
     }
   }
@@ -332,10 +352,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         op.getInReductionSyms())
       result = todo("in_reduction");
   };
-  auto checkIsDevicePtr = [&todo](auto op, LogicalResult &result) {
-    if (!op.getIsDevicePtrVars().empty())
-      result = todo("is_device_ptr");
-  };
   auto checkNowait = [&todo](auto op, LogicalResult &result) {
     if (op.getNowait())
       result = todo("nowait");
@@ -435,7 +451,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkBare(op, result);
         checkDevice(op, result);
         checkInReduction(op, result);
-        checkIsDevicePtr(op, result);
       })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
@@ -3986,6 +4001,9 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
   auto mapTypeToBool = [&mlirFlags](omp::ClauseMapFlags flag) {
     return (mlirFlags & flag) == flag;
   };
+  const bool hasExplicitMap =
+      (mlirFlags & ~omp::ClauseMapFlags::is_device_ptr) !=
+      omp::ClauseMapFlags::none;
 
   llvm::omp::OpenMPOffloadMappingFlags mapType =
       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
@@ -4025,6 +4043,12 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
 
   if (mapTypeToBool(omp::ClauseMapFlags::attach))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::is_device_ptr)) {
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
+    if (!hasExplicitMap)
+      mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
+  }
 
   return mapType;
 }
@@ -4149,6 +4173,9 @@ static void collectMapDataFromMapOperands(
     llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
     auto mapType = convertClauseMapFlags(mapOp.getMapType());
     auto mapTypeAlways = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+    bool isDevicePtr =
+        (mapOp.getMapType() & omp::ClauseMapFlags::is_device_ptr) !=
+        omp::ClauseMapFlags::none;
 
     mapData.OriginalValue.push_back(origValue);
     mapData.BasePointers.push_back(origValue);
@@ -4175,14 +4202,18 @@ static void collectMapDataFromMapOperands(
         mapData.Mappers.push_back(nullptr);
       }
     } else {
+      // For is_device_ptr we need the map type to propagate so the runtime
+      // can materialize the device-side copy of the pointer container.
       mapData.Types.push_back(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+          isDevicePtr ? mapType
+                      : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
       mapData.Mappers.push_back(nullptr);
     }
     mapData.Names.push_back(LLVM::createMappingInformation(
         mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
     mapData.DevicePointers.push_back(
-        llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
+        isDevicePtr ? llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer
+                    : llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
     mapData.IsAMapping.push_back(false);
     mapData.IsAMember.push_back(checkIsAMember(hasDevAddrOperands, mapOp));
   }

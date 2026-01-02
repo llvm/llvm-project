@@ -363,7 +363,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
         ScEnd = SE->getAddExpr(
             SE->getNegativeSCEV(EltSizeSCEV),
             SE->getSCEV(ConstantExpr::getIntToPtr(
-                ConstantInt::get(EltSizeSCEV->getType(), -1), AR->getType())));
+                ConstantInt::getAllOnesValue(EltSizeSCEV->getType()),
+                AR->getType())));
       }
     }
     const SCEV *Step = AR->getStepRecurrence(*SE);

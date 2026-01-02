@@ -66,6 +66,14 @@ enum class IndirectBranchType : char {
                              /// PIC jump table.
 };
 
+/// Enum used for readability when describing different BTI instruction
+/// variants. The variant is encoded as an immediate of the instruction in LLVM.
+enum BTIKind {
+  C, /// Accepting calls, and jumps using x16/x17.
+  J, /// Accepting jumps.
+  JC /// Accepting both.
+};
+
 class MCPlusBuilder {
 public:
   using AllocatorIdTy = uint16_t;
@@ -535,11 +543,6 @@ public:
 
   virtual void createDirectCall(MCInst &Inst, const MCSymbol *Target,
                                 MCContext *Ctx, bool IsTailCall) {
-    llvm_unreachable("not implemented");
-  }
-
-  virtual void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
-                                  MCContext *Ctx) {
     llvm_unreachable("not implemented");
   }
 
@@ -1876,8 +1879,7 @@ public:
 
   /// Check if an Instruction is a BTI landing pad with the required properties.
   /// Takes both explicit and implicit BTIs into account.
-  virtual bool isBTILandingPad(MCInst &Inst, bool CallTarget,
-                               bool JumpTarget) const {
+  virtual bool isBTILandingPad(MCInst &Inst, BTIKind BTI) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1889,13 +1891,20 @@ public:
   }
 
   /// Create a BTI landing pad instruction.
-  virtual void createBTI(MCInst &Inst, bool CallTarget, bool JumpTarget) const {
+  virtual void createBTI(MCInst &Inst, BTIKind BTI) const {
     llvm_unreachable("not implemented");
   }
 
-  /// Update operand of BTI instruction.
-  virtual void updateBTIVariant(MCInst &Inst, bool CallTarget,
-                                bool JumpTarget) const {
+  /// Checks if the indirect call / jump is accepted by the landing pad at the
+  /// start of the target BasicBlock.
+  virtual bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Inserts a BTI landing pad to the start of the BB, that matches the
+  /// indirect call inst used to call the BB.
+  virtual void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const {
     llvm_unreachable("not implemented");
   }
 

@@ -176,7 +176,8 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     if (auto attr = dyn_cast<Attribute>(paramOrHandle)) {
       reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
-    } else if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+    }
+    if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
       ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
@@ -4313,7 +4314,7 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
           .Case([&](linalg::BatchMatmulOp op) {
             return transposeBatchMatmul(rewriter, op, transposeLHS);
           })
-          .Default([&](Operation *op) { return failure(); });
+          .Default(failure());
   if (failed(maybeTransformed))
     return emitSilenceableFailure(target->getLoc()) << "not supported";
   // Handle to the new Matmul operation with transposed filters

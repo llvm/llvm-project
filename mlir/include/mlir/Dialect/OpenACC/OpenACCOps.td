@@ -1678,12 +1678,14 @@ def OpenACC_ReductionRecipeOp
 // 2.5.1 parallel Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_ParallelOp : OpenACC_Op<"parallel",
-    [AttrSizedOperandSegments, AutomaticAllocationScope,
-     RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_ParallelOp
+    : OpenACC_Op<"parallel",
+                 [AttrSizedOperandSegments, AutomaticAllocationScope,
+                  RecursiveMemoryEffects,
+                  DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "parallel construct";
   let description = [{
     The "acc.parallel" operation represents a parallel construct block. It has
@@ -1876,12 +1878,14 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
 // 2.5.2 serial Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_SerialOp : OpenACC_Op<"serial",
-    [AttrSizedOperandSegments, AutomaticAllocationScope,
-     RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_SerialOp
+    : OpenACC_Op<"serial",
+                 [AttrSizedOperandSegments, AutomaticAllocationScope,
+                  RecursiveMemoryEffects,
+                  DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "serial construct";
   let description = [{
     The "acc.serial" operation represents a serial construct block. It has
@@ -2014,12 +2018,14 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
 // 2.5.1 kernels Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_KernelsOp : OpenACC_Op<"kernels",
-    [AttrSizedOperandSegments, AutomaticAllocationScope,
-     RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_KernelsOp
+    : OpenACC_Op<"kernels",
+                 [AttrSizedOperandSegments, AutomaticAllocationScope,
+                  RecursiveMemoryEffects,
+                  DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "kernels construct";
   let description = [{
     The "acc.kernels" operation represents a kernels construct block. It has
@@ -2194,11 +2200,13 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
 // acc.kernel_environment
 //===----------------------------------------------------------------------===//
 
-def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
-    [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
-     NoTerminator,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_KernelEnvironmentOp
+    : OpenACC_Op<"kernel_environment",
+                 [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
+                  NoTerminator,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "Decomposition of compute constructs to capture data mapping "
                 "and asynchronous behavior information";
   let description = [{
@@ -2246,10 +2254,12 @@ def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
 // 2.6.5 data Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_DataOp : OpenACC_Op<"data",
-    [AttrSizedOperandSegments, RecursiveMemoryEffects,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_DataOp
+    : OpenACC_Op<
+          "data", [AttrSizedOperandSegments, RecursiveMemoryEffects,
+                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "data construct";
 
   let description = [{
@@ -2517,10 +2527,12 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
 // 2.8 Host_Data Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_HostDataOp : OpenACC_Op<"host_data",
-    [AttrSizedOperandSegments,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+def OpenACC_HostDataOp
+    : OpenACC_Op<"host_data",
+                 [AttrSizedOperandSegments,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "host_data construct";
 
   let description = [{
@@ -2558,12 +2570,14 @@ def OpenACC_HostDataOp : OpenACC_Op<"host_data",
 // 2.9 loop Construct
 //===----------------------------------------------------------------------===//
 
-def OpenACC_LoopOp : OpenACC_Op<"loop",
-    [AttrSizedOperandSegments, AutomaticAllocationScope,
-     RecursiveMemoryEffects,
-     DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-     MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
+def OpenACC_LoopOp
+    : OpenACC_Op<
+          "loop", [AttrSizedOperandSegments, AutomaticAllocationScope,
+                   RecursiveMemoryEffects,
+                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
+                   DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
   let summary = "loop construct";
 
   let description = [{
@@ -3344,6 +3358,14 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     // Add an entry to the 'gang' attribute with a value for each additional
     // device type.
     void addGang(MLIRContext *, llvm::ArrayRef<DeviceType>, uint64_t);
+    // Add an entry to the 'bind' string-name attribute for each additional
+    // device_type.
+    void addBindStrName(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                        mlir::StringAttr);
+    // Add an entry to the 'bind' ID-name attribute for each additional
+    // device_type.
+    void addBindIDName(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                       mlir::SymbolRefAttr);
   }];
 
   let assemblyFormat = [{

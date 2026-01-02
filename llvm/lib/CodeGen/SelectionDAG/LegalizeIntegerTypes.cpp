@@ -145,7 +145,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
-  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = PromoteIntRes_ScalarOp(N);
     break;
   case ISD::STEP_VECTOR: Res = PromoteIntRes_STEP_VECTOR(N); break;
@@ -1145,7 +1144,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSHLSAT(SDNode *N) {
   // FIXME: We need vp-aware PromotedInteger functions.
   if (IsShift) {
     Op1 = GetPromotedInteger(Op1);
-    Op2 = ZExtPromotedInteger(Op2);
+    if (getTypeAction(Op2.getValueType()) == TargetLowering::TypePromoteInteger)
+      Op2 = ZExtPromotedInteger(Op2);
   } else {
     Op1 = SExtPromotedInteger(Op1);
     Op2 = SExtPromotedInteger(Op2);
@@ -1272,10 +1272,8 @@ static SDValue earlyExpandDIVFIX(SDNode *N, SDValue LHS, SDValue RHS,
   SDLoc dl(N);
   // Widen the types by a factor of two. This is guaranteed to expand, since it
   // will always have enough high bits in the LHS to shift into.
-  EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), VTSize * 2);
-  if (VT.isVector())
-    WideVT = EVT::getVectorVT(*DAG.getContext(), WideVT,
-                              VT.getVectorElementCount());
+  EVT WideVT = VT.changeElementType(
+      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), VTSize * 2));
   LHS = DAG.getExtOrTrunc(Signed, LHS, dl, WideVT);
   RHS = DAG.getExtOrTrunc(Signed, RHS, dl, WideVT);
   SDValue Res = TLI.expandFixedPointDiv(N->getOpcode(), dl, LHS, RHS, Scale,
@@ -2008,7 +2006,6 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
-  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = PromoteIntOp_ScalarOp(N);
     break;
   case ISD::VSELECT:
@@ -2054,7 +2051,11 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SRA:
   case ISD::SRL:
   case ISD::ROTL:
-  case ISD::ROTR: Res = PromoteIntOp_Shift(N); break;
+  case ISD::ROTR:
+  case ISD::SSHLSAT:
+  case ISD::USHLSAT:
+    Res = PromoteIntOp_Shift(N);
+    break;
 
   case ISD::SCMP:
   case ISD::UCMP: Res = PromoteIntOp_CMP(N); break;
@@ -2363,9 +2364,6 @@ SDValue DAGTypeLegalizer::PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N,
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ScalarOp(SDNode *N) {
   SDValue Op = GetPromotedInteger(N->getOperand(0));
-  if (N->getOpcode() == ISD::EXPERIMENTAL_VP_SPLAT)
-    return SDValue(
-        DAG.UpdateNodeOperands(N, Op, N->getOperand(1), N->getOperand(2)), 0);
 
   // Integer SPLAT_VECTOR/SCALAR_TO_VECTOR operands are implicitly truncated,
   // so just promote the operand in place.
@@ -5213,8 +5211,7 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   Entry.IsZExt = false;
   Args.push_back(Entry);
 
-  SDValue Func =
-      DAG.getExternalSymbol(TLI.getLibcallImplName(LCImpl).data(), PtrVT);
+  SDValue Func = DAG.getExternalSymbol(LCImpl, PtrVT);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
@@ -5457,7 +5454,6 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::INSERT_VECTOR_ELT: Res = ExpandOp_INSERT_VECTOR_ELT(N); break;
   case ISD::SCALAR_TO_VECTOR:  Res = ExpandOp_SCALAR_TO_VECTOR(N); break;
-  case ISD::EXPERIMENTAL_VP_SPLAT:
   case ISD::SPLAT_VECTOR:      Res = ExpandIntOp_SPLAT_VECTOR(N); break;
   case ISD::SELECT_CC:         Res = ExpandIntOp_SELECT_CC(N); break;
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
@@ -5977,7 +5973,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
       assert(PromEltVT.bitsLE(NOutVTElem) &&
              "Promoted operand has an element type greater than result");
 
-      EVT ExtVT = NOutVT.changeVectorElementType(PromEltVT);
+      EVT ExtVT = NOutVT.changeVectorElementType(*DAG.getContext(), PromEltVT);
       SDValue Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), ExtVT, Ops);
       return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT, Ext);
     }
@@ -6101,10 +6097,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ScalarOp(SDNode *N) {
   EVT NOutElemVT = NOutVT.getVectorElementType();
 
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutElemVT, N->getOperand(0));
-  if (N->isVPOpcode())
-    return DAG.getNode(N->getOpcode(), dl, NOutVT, Op, N->getOperand(1),
-                       N->getOperand(2));
-
   return DAG.getNode(N->getOpcode(), dl, NOutVT, Op);
 }
 
@@ -6152,16 +6144,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {
 
       if (OpVT.getVectorElementType().getScalarSizeInBits() <
           MaxElementVT.getScalarSizeInBits())
-        Op = DAG.getAnyExtOrTrunc(Op, dl,
-                                  OpVT.changeVectorElementType(MaxElementVT));
+        Op = DAG.getAnyExtOrTrunc(
+            Op, dl,
+            OpVT.changeVectorElementType(*DAG.getContext(), MaxElementVT));
       Ops.push_back(Op);
     }
 
     // Do the CONCAT on the promoted type and finally truncate to (the promoted)
     // NOutVT.
     return DAG.getAnyExtOrTrunc(
-        DAG.getNode(ISD::CONCAT_VECTORS, dl,
-                    OutVT.changeVectorElementType(MaxElementVT), Ops),
+        DAG.getNode(
+            ISD::CONCAT_VECTORS, dl,
+            OutVT.changeVectorElementType(*DAG.getContext(), MaxElementVT),
+            Ops),
         dl, NOutVT);
   }
 
@@ -6216,6 +6211,15 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N) {
         break;
       default:
         llvm_unreachable("Node has unexpected Opcode");
+    }
+    unsigned NewSize = NVT.getSizeInBits();
+    if (Promoted.getValueType().getSizeInBits() > NewSize) {
+      EVT ExtractVT = EVT::getVectorVT(
+          *DAG.getContext(), Promoted.getValueType().getVectorElementType(),
+          NewSize / Promoted.getScalarValueSizeInBits());
+
+      Promoted = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ExtractVT, Promoted,
+                             DAG.getVectorIdxConstant(0, dl));
     }
     return DAG.getNode(N->getOpcode(), dl, NVT, Promoted);
   }

@@ -8,6 +8,15 @@ from lldb.plugins.scripted_process import ScriptedThread
 from lldb.plugins.scripted_process import ScriptedFrame
 
 
+def my_python_function(x, y):
+    """A sample Python function to demonstrate Python source display in scripted frames."""
+    result = x + y
+    if result > 100:
+        return result * 2
+    else:
+        return result
+
+
 class DummyStopHook:
     def __init__(self, target, args):
         self.target = target
@@ -86,6 +95,26 @@ class DummyScriptedThread(ScriptedThread):
 
         self.frames.append(
             DummyScriptedFrame(self, args, len(self.frames), "baz", sym_ctx)
+        )
+
+        # Add a frame with Python source
+        code = my_python_function.__code__
+        lineno = code.co_firstlineno
+        col_offset = getattr(
+            code, "co_firstcol_offset", 0
+        )  # Python ≥3.11 has column info
+        py_le = lldb.SBLineEntry()
+        py_le.SetFileSpec(lldb.SBFileSpec(__file__, True))
+        py_le.SetLine(lineno)  # Line where my_python_function is defined
+        py_le.SetColumn(col_offset)
+
+        py_sym_ctx = lldb.SBSymbolContext()
+        py_sym_ctx.SetLineEntry(py_le)
+
+        self.frames.append(
+            DummyScriptedFrame(
+                self, args, len(self.frames), "my_python_function", py_sym_ctx
+            )
         )
 
     def get_thread_id(self) -> int:

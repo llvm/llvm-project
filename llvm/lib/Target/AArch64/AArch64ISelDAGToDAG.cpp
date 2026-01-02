@@ -4417,31 +4417,8 @@ bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm,
   if (Invert)
     ImmVal = ~ImmVal;
 
-  // Shift mask depending on type size.
-  switch (VT.SimpleTy) {
-  case MVT::i8:
-    ImmVal &= 0xFF;
-    ImmVal |= ImmVal << 8;
-    ImmVal |= ImmVal << 16;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i16:
-    ImmVal &= 0xFFFF;
-    ImmVal |= ImmVal << 16;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i32:
-    ImmVal &= 0xFFFFFFFF;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i64:
-    break;
-  default:
-    llvm_unreachable("Unexpected type");
-  }
-
   uint64_t encoding;
-  if (!AArch64_AM::processLogicalImmediate(ImmVal, 64, encoding))
+  if (!AArch64_AM::isSVELogicalImm(VT.getScalarSizeInBits(), ImmVal, encoding))
     return false;
 
   Imm = CurDAG->getTargetConstant(encoding, SDLoc(N), MVT::i64);
@@ -6236,10 +6213,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::BFSCALE_2ZZ);
       return;
     case Intrinsic::aarch64_sve_fmul_single_x4:
-      SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::BFMUL_4ZZ);
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BFMUL_4ZZ, AArch64::FMUL_4ZZ_H, AArch64::FMUL_4ZZ_S,
+               AArch64::FMUL_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
       return;
     case Intrinsic::aarch64_sve_fmul_single_x2:
-      SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::BFMUL_2ZZ);
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BFMUL_2ZZ, AArch64::FMUL_2ZZ_H, AArch64::FMUL_2ZZ_S,
+               AArch64::FMUL_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
       return;
     case Intrinsic::aarch64_sve_fmaxnm_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
@@ -6276,10 +6261,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectDestructiveMultiIntrinsic(Node, 2, true, AArch64::BFSCALE_2Z2Z);
       return;
     case Intrinsic::aarch64_sve_fmul_x4:
-      SelectDestructiveMultiIntrinsic(Node, 4, true, AArch64::BFMUL_4Z4Z);
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BFMUL_4Z4Z, AArch64::FMUL_4Z4Z_H, AArch64::FMUL_4Z4Z_S,
+               AArch64::FMUL_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
       return;
     case Intrinsic::aarch64_sve_fmul_x2:
-      SelectDestructiveMultiIntrinsic(Node, 2, true, AArch64::BFMUL_2Z2Z);
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BFMUL_2Z2Z, AArch64::FMUL_2Z2Z_H, AArch64::FMUL_2Z2Z_S,
+               AArch64::FMUL_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
       return;
     case Intrinsic::aarch64_sve_fcvtzs_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::FCVTZS_2Z2Z_StoS);
@@ -7453,7 +7446,7 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     else
       llvm_unreachable("Unexpected MemSDNode!");
 
-    return DataVT.changeVectorElementType(MemVT.getVectorElementType());
+    return DataVT.changeVectorElementType(Ctx, MemVT.getVectorElementType());
   }
 
   const unsigned Opcode = Root->getOpcode();
