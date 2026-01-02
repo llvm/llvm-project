@@ -35,8 +35,6 @@ public:
 
 private:
   const CommaPolicyKind CommaPolicy;
-  const unsigned EnumThreshold;
-  const unsigned InitListThreshold;
 
   void checkEnumDecl(const EnumDecl *Enum,
                      const ast_matchers::MatchFinder::MatchResult &Result);

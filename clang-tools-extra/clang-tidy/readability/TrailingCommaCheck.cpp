@@ -37,6 +37,11 @@ struct OptionEnumMapping<readability::TrailingCommaCheck::CommaPolicyKind> {
 
 namespace clang::tidy::readability {
 
+static bool isSingleLine(SourceLocation Begin, SourceLocation End,
+                         const SourceManager &SM) {
+  return SM.getExpansionLineNumber(Begin) == SM.getExpansionLineNumber(End);
+}
+
 namespace {
 
 AST_POLYMORPHIC_MATCHER(isMacro,
@@ -54,14 +59,10 @@ AST_MATCHER(InitListExpr, isEmptyInitList) { return Node.getNumInits() == 0; }
 TrailingCommaCheck::TrailingCommaCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CommaPolicy(Options.get("CommaPolicy", CommaPolicyKind::Append)),
-      EnumThreshold(Options.get("EnumThreshold", 1U)),
-      InitListThreshold(Options.get("InitListThreshold", 3U)) {}
+      CommaPolicy(Options.get("CommaPolicy", CommaPolicyKind::Append)) {}
 
 void TrailingCommaCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CommaPolicy", CommaPolicy);
-  Options.store(Opts, "EnumThreshold", EnumThreshold);
-  Options.store(Opts, "InitListThreshold", InitListThreshold);
 }
 
 void TrailingCommaCheck::registerMatchers(MatchFinder *Finder) {
@@ -87,18 +88,15 @@ void TrailingCommaCheck::check(const MatchFinder::MatchResult &Result) {
 
 void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
                                        const MatchFinder::MatchResult &Result) {
-  // Count enumerators and get the last one
-  unsigned NumEnumerators = 0;
-  const EnumConstantDecl *LastEnumerator = nullptr;
-  for (const EnumConstantDecl *ECD : Enum->enumerators()) {
-    LastEnumerator = ECD;
-    ++NumEnumerators;
-  }
-  assert(LastEnumerator);
-  assert(NumEnumerators > 0);
-
-  if (NumEnumerators < EnumThreshold)
+  if (isSingleLine(Enum->getBeginLoc(), Enum->getEndLoc(),
+                   *Result.SourceManager) &&
+      CommaPolicy == CommaPolicyKind::Append)
     return;
+
+  const EnumConstantDecl *LastEnumerator = nullptr;
+  for (const EnumConstantDecl *ECD : Enum->enumerators())
+    LastEnumerator = ECD;
+  assert(LastEnumerator);
 
   SourceLocation LastEnumLoc;
   if (const Expr *Init = LastEnumerator->getInitExpr())
@@ -114,15 +112,17 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
 
 void TrailingCommaCheck::checkInitListExpr(
     const InitListExpr *InitList, const MatchFinder::MatchResult &Result) {
-  // We need to use the syntactic form for correct source locations.
-  if (InitList->isSemanticForm())
-    if (const InitListExpr *SyntacticForm = InitList->getSyntacticForm())
-      InitList = SyntacticForm;
+  // We need to use non-empty syntactic form for correct source locations.
+  if (const InitListExpr *SynInitInitList = InitList->getSyntacticForm();
+      SynInitInitList && SynInitInitList->getNumInits() > 0)
+    InitList = SynInitInitList;
 
-  const unsigned NumInits = InitList->getNumInits();
-  if (NumInits < InitListThreshold)
+  if (isSingleLine(InitList->getBeginLoc(), InitList->getEndLoc(),
+                   *Result.SourceManager) &&
+      CommaPolicy == CommaPolicyKind::Append)
     return;
 
+  const unsigned NumInits = InitList->getNumInits();
   const Expr *LastInit = InitList->getInit(NumInits - 1);
   assert(LastInit);
 
