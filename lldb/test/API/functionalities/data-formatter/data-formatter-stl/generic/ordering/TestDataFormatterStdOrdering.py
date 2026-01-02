@@ -31,6 +31,19 @@ class StdOrderingTestCase(TestBase):
             ],
         )
 
+        frame = self.frame()
+        self.assertEqual(frame.FindVariable("po_less").summary, "less")
+        self.assertEqual(frame.FindVariable("po_equivalent").summary, "equivalent")
+        self.assertEqual(frame.FindVariable("po_greater").summary, "greater")
+        self.assertEqual(frame.FindVariable("po_unordered").summary, "unordered")
+        self.assertEqual(frame.FindVariable("wo_less").summary, "less")
+        self.assertEqual(frame.FindVariable("wo_equivalent").summary, "equivalent")
+        self.assertEqual(frame.FindVariable("wo_greater").summary, "greater")
+        self.assertEqual(frame.FindVariable("so_less").summary, "less")
+        self.assertEqual(frame.FindVariable("so_equal").summary, "equal")
+        self.assertEqual(frame.FindVariable("so_equivalent").summary, "equal")
+        self.assertEqual(frame.FindVariable("so_greater").summary, "greater")
+
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
