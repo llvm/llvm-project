@@ -109,34 +109,11 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
   if (Policy == CommaPolicyKind::Ignore)
     return;
 
-  const EnumConstantDecl *LastEnumerator = nullptr;
-  for (const EnumConstantDecl *ECD : Enum->enumerators())
-    LastEnumerator = ECD;
-  assert(LastEnumerator);
+  const std::optional<Token> LastTok =
+      utils::lexer::findPreviousTokenSkippingComments(
+          Enum->getBraceRange().getEnd(), *Result.SourceManager, getLangOpts());
 
-  SourceLocation LastEnumLoc;
-  if (const Expr *Init = LastEnumerator->getInitExpr()) {
-    // InitExpr goes after attributes, so we don't need to process attributes.
-    LastEnumLoc = Init->getEndLoc();
-  } else {
-    LastEnumLoc = LastEnumerator->getLocation();
-    if (LastEnumerator->hasAttrs()) {
-      const Attr *LastAttr = LastEnumerator->getAttrs().back();
-      // Skip ']' tokens at the end of final attribute like '[[deprecated]]'.
-      std::optional<Token> NextTok;
-      while ((NextTok = utils::lexer::findNextTokenSkippingComments(
-                  NextTok.has_value() ? NextTok->getEndLoc()
-                                      : LastAttr->getRange().getEnd(),
-                  *Result.SourceManager, getLangOpts())) &&
-             NextTok->is(tok::r_square))
-        LastEnumLoc = NextTok->getEndLoc();
-    }
-  }
-
-  if (LastEnumLoc.isInvalid())
-    return;
-
-  emitDiag(LastEnumLoc, DiagKind::Enum, Result, Policy);
+  emitDiag(LastTok->getLocation(), LastTok, DiagKind::Enum, Result, Policy);
 }
 
 void TrailingCommaCheck::checkInitListExpr(
@@ -161,24 +138,20 @@ void TrailingCommaCheck::checkInitListExpr(
   if (isa<PackExpansionExpr>(LastInit))
     return;
 
-  const SourceLocation LastInitLoc = LastInit->getEndLoc();
-  if (LastInitLoc.isInvalid())
-    return;
-
-  emitDiag(LastInitLoc, DiagKind::InitList, Result, Policy);
+  emitDiag(LastInit->getEndLoc(),
+           utils::lexer::findNextTokenSkippingComments(
+               LastInit->getEndLoc(), *Result.SourceManager, getLangOpts()),
+           DiagKind::InitList, Result, Policy);
 }
 
 void TrailingCommaCheck::emitDiag(
-    SourceLocation LastLoc, DiagKind Kind,
+    SourceLocation LastLoc, std::optional<Token> Token, DiagKind Kind,
     const ast_matchers::MatchFinder::MatchResult &Result,
     CommaPolicyKind Policy) {
-  const std::optional<Token> NextToken =
-      utils::lexer::findNextTokenSkippingComments(
-          LastLoc, *Result.SourceManager, getLangOpts());
-  if (!NextToken)
+  if (LastLoc.isInvalid() || !Token)
     return;
 
-  const bool HasTrailingComma = NextToken->is(tok::comma);
+  const bool HasTrailingComma = Token->is(tok::comma);
   if (Policy == CommaPolicyKind::Append && !HasTrailingComma) {
     const SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
         LastLoc, 0, *Result.SourceManager, getLangOpts());
@@ -186,7 +159,7 @@ void TrailingCommaCheck::emitDiag(
                     "a trailing comma")
         << Kind << FixItHint::CreateInsertion(InsertLoc, ",");
   } else if (Policy == CommaPolicyKind::Remove && HasTrailingComma) {
-    const SourceLocation CommaLoc = NextToken->getLocation();
+    const SourceLocation CommaLoc = Token->getLocation();
     if (CommaLoc.isInvalid())
       return;
     diag(CommaLoc, "%select{initializer list|enum}0 should not have "

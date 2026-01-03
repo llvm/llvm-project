@@ -44,7 +44,8 @@ private:
 
   // Values correspond to %select{initializer list|enum}0 indices
   enum DiagKind { InitList = 0, Enum = 1 };
-  void emitDiag(SourceLocation LastLoc, DiagKind Kind,
+  void emitDiag(SourceLocation LastLoc, std::optional<Token> Token,
+                DiagKind Kind,
                 const ast_matchers::MatchFinder::MatchResult &Result,
                 CommaPolicyKind Policy);
 };
