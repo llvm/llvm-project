@@ -97,7 +97,7 @@ void SARIFDiagnostic::emitDiagnosticMessage(
   }
   Current = &Current->addChildResult(
       Node::Result{Level, std::string(Message),
-                   Diag}); // add child to the parent error/warning/note Node.
+                   Diag}); // Add child to the parent error/warning/note Node.
   Current = &Current->addLocation(
       Node::Location{Loc, PLoc, llvm::SmallVector<CharSourceRange>(Ranges)});
 }
@@ -227,7 +227,7 @@ SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(Option Option) {
     if (BInfo.first != CaretFileID || EInfo.first != CaretFileID)
       continue;
 
-    // add in the length of the token, so that we cover multi-char
+    // Add in the length of the token, so that we cover multi-char
     // tokens.
     unsigned TokSize = 0;
     if (IsTokenRange)
