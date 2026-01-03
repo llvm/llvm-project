@@ -2364,7 +2364,10 @@ def OpenACC_DataOp
   let hasVerifier = 1;
 }
 
-def OpenACC_TerminatorOp : OpenACC_Op<"terminator", [Pure, Terminator]> {
+def OpenACC_TerminatorOp
+    : OpenACC_Op<"terminator", [Pure, Terminator,
+                                DeclareOpInterfaceMethods<
+                                    RegionBranchTerminatorOpInterface>]> {
   let summary = "Generic terminator for OpenACC regions";
 
   let description = [{

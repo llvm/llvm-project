@@ -48442,7 +48442,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       Cond.getOperand(0).getScalarValueSizeInBits() == EltBitWidth) {
     // The 'and' mask must be composed of power-of-2 constants.
     SDValue And = Cond.getOperand(0);
-    auto *C = isConstOrConstSplat(And.getOperand(1));
+    SDValue Mask = And.getOperand(1);
+    auto *C = isConstOrConstSplat(Mask);
     if (C && C->getAPIntValue().isPowerOf2()) {
       // vselect (X & C == 0), LHS, RHS --> vselect (X & C != 0), RHS, LHS
       SDValue NotCond =
@@ -48457,12 +48458,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         TLI.isTypeLegal(VT) && ((Subtarget.hasAVX() && EltBitWidth == 32) ||
                                 (Subtarget.hasAVX2() && EltBitWidth == 64) ||
                                 (Subtarget.hasXOP()));
-    if (CanShiftBlend &&
-        ISD::matchUnaryPredicate(And.getOperand(1), [](ConstantSDNode *C) {
+    if (CanShiftBlend && ISD::matchUnaryPredicate(Mask, [](ConstantSDNode *C) {
           return C->getAPIntValue().isPowerOf2();
         })) {
       // Create a left-shift constant to get the mask bits over to the sign-bit.
-      SDValue Mask = And.getOperand(1);
       SmallVector<int, 32> ShlVals;
       for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
         auto *MaskVal = cast<ConstantSDNode>(Mask.getOperand(i));
@@ -49012,24 +49011,26 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
       // to more efficiently extract the sign bits and compare that.
       // TODO: Handle TESTC with comparison inversion.
       // TODO: Can we remove SimplifyMultipleUseDemandedBits and rely on
-      // TESTP/MOVMSK combines to make sure its never worse than PTEST?
+      // MOVMSK combines to make sure its never worse than PTEST?
       if (BCVT.isVector() && TLI.isTypeLegal(BCVT)) {
         unsigned EltBits = BCVT.getScalarSizeInBits();
         if (DAG.ComputeNumSignBits(BC) == EltBits) {
           assert(VT == MVT::i32 && "Expected i32 EFLAGS comparison result");
+          if ((EltBits == 32 || EltBits == 64) &&
+              EFLAGS.getOpcode() != X86ISD::TESTP && Subtarget.hasAVX()) {
+            MVT FloatSVT = MVT::getFloatingPointVT(EltBits);
+            MVT FloatVT =
+                MVT::getVectorVT(FloatSVT, OpVT.getSizeInBits() / EltBits);
+            BC = DAG.getBitcast(FloatVT, DAG.getFreeze(BC));
+            return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), VT, BC, BC);
+          }
           APInt SignMask = APInt::getSignMask(EltBits);
           if (SDValue Res =
                   TLI.SimplifyMultipleUseDemandedBits(BC, SignMask, DAG)) {
             // For vXi16 cases we need to use pmovmksb and extract every other
             // sign bit.
             SDLoc DL(EFLAGS);
-            if ((EltBits == 32 || EltBits == 64) && Subtarget.hasAVX()) {
-              MVT FloatSVT = MVT::getFloatingPointVT(EltBits);
-              MVT FloatVT =
-                  MVT::getVectorVT(FloatSVT, OpVT.getSizeInBits() / EltBits);
-              Res = DAG.getBitcast(FloatVT, DAG.getFreeze(Res));
-              return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), VT, Res, Res);
-            } else if (EltBits == 16) {
+            if (EltBits == 16) {
               MVT MovmskVT = BCVT.is128BitVector() ? MVT::v16i8 : MVT::v32i8;
               Res = DAG.getBitcast(MovmskVT, Res);
               Res = getPMOVMSKB(DL, Res, DAG, Subtarget);

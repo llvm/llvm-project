@@ -4728,12 +4728,6 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   return Intrinsic::not_intrinsic;
 }
 
-static bool outputDenormalIsIEEEOrPosZero(const Function &F, const Type *Ty) {
-  Ty = Ty->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
-  return Mode.Output == DenormalMode::IEEE ||
-         Mode.Output == DenormalMode::PositiveZero;
-}
 /// Given an exploded icmp instruction, return true if the comparison only
 /// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
 /// the result of the comparison is true when the input value is signed.
@@ -4999,7 +4993,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   // assume this from flags/attributes.
   InterestedClasses &= ~KnownNotFromFlags;
 
-  auto ClearClassesFromFlags = make_scope_exit([=, &Known] {
+  llvm::scope_exit ClearClassesFromFlags([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
     if (!Known.SignBit && AssumedClasses.SignBit) {
       if (*AssumedClasses.SignBit)
@@ -5619,14 +5613,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedSrcs,
                         KnownRHS, Q, Depth + 1);
 
+    // Special case fadd x, x, which is the canonical form of fmul x, 2.
+    bool SelfAdd = Op->getOperand(0) == Op->getOperand(1) &&
+                   isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI,
+                                            Q.DT, Depth + 1);
+    if (SelfAdd)
+      KnownLHS = KnownRHS;
+
     if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
         (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) ||
         WantNegZero || Opc == Instruction::FSub) {
 
-      // RHS is canonically cheaper to compute. Skip inspecting the LHS if
-      // there's no point.
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                          KnownLHS, Q, Depth + 1);
+      if (!SelfAdd) {
+        // RHS is canonically cheaper to compute. Skip inspecting the LHS if
+        // there's no point.
+        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
+                            KnownLHS, Q, Depth + 1);
+      }
+
       // Adding positive and negative infinity produces NaN.
       // TODO: Check sign of infinities.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
@@ -5640,6 +5644,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownLHS.cannotBeOrderedLessThanZero() &&
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+        if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
+            KnownRHS.cannotBeOrderedGreaterThanZero())
+          Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+
         if (!F)
           break;
 
@@ -5647,11 +5655,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             Op->getType()->getScalarType()->getFltSemantics();
         DenormalMode Mode = F->getDenormalMode(FltSem);
 
+        // Doubling 0 will give the same 0.
+        if (SelfAdd && KnownRHS.isKnownNeverLogicalPosZero(Mode) &&
+            (Mode.Output == DenormalMode::IEEE ||
+             Mode.Output == DenormalMode::PreserveSign))
+          Known.knownNot(fcPosZero);
+
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
              KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
             // Make sure output negative denormal can't flush to -0
-            outputDenormalIsIEEEOrPosZero(*F, Op->getType()))
+            (Mode.Output == DenormalMode::IEEE ||
+             Mode.Output == DenormalMode::PositiveZero))
           Known.knownNot(fcNegZero);
       } else {
         if (!F)
@@ -5665,7 +5680,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
              KnownRHS.isKnownNeverLogicalPosZero(Mode)) &&
             // Make sure output negative denormal can't flush to -0
-            outputDenormalIsIEEEOrPosZero(*F, Op->getType()))
+            (Mode.Output == DenormalMode::IEEE ||
+             Mode.Output == DenormalMode::PositiveZero))
           Known.knownNot(fcNegZero);
       }
     }
