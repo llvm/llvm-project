@@ -362,7 +362,7 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF1:       [[VECTOR_EARLY_EXIT]]:
 ; VF8UF1-NEXT:    br label %[[EXIT]]
 ; VF8UF1:       [[EXIT]]:
-; VF8UF1-NEXT:    [[RES:%.*]] = phi i1 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ false, %[[VECTOR_EARLY_EXIT]] ]
+; VF8UF1-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[VECTOR_EARLY_EXIT]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ]
 ; VF8UF1-NEXT:    ret i1 [[RES]]
 ;
 ; VF8UF2-LABEL: define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(
@@ -399,7 +399,7 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF2:       [[VECTOR_EARLY_EXIT]]:
 ; VF8UF2-NEXT:    br label %[[EXIT]]
 ; VF8UF2:       [[EXIT]]:
-; VF8UF2-NEXT:    [[RES:%.*]] = phi i1 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ false, %[[VECTOR_EARLY_EXIT]] ]
+; VF8UF2-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[VECTOR_EARLY_EXIT]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
 ; VF8UF2-NEXT:    ret i1 [[RES]]
 ;
 ; VF16UF1-LABEL: define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(
@@ -430,7 +430,7 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF16UF1:       [[VECTOR_EARLY_EXIT]]:
 ; VF16UF1-NEXT:    br label %[[EXIT]]
 ; VF16UF1:       [[EXIT]]:
-; VF16UF1-NEXT:    [[RES:%.*]] = phi i1 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ false, %[[VECTOR_EARLY_EXIT]] ]
+; VF16UF1-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[VECTOR_EARLY_EXIT]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ]
 ; VF16UF1-NEXT:    ret i1 [[RES]]
 ;
 entry:
