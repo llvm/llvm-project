@@ -1097,14 +1097,14 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
   SDValue ConstNeg1 = DAG->getConstant(APInt(32, -1, true), DL, Int32VT);
   SDValue ConstNeg2 = DAG->getConstant(APInt(32, -2, true), DL, Int32VT);
   SDValue ConstNeg3 = DAG->getConstant(APInt(32, -3, true), DL, Int32VT);
-  SmallVector<SDValue, 4> PosOps = {Const1, Const2, Const5, Const3};
-  SmallVector<SDValue, 4> NegOps = {ConstNeg1, ConstNeg2, ConstNeg5, ConstNeg3};
+  SDValue PosOps[] = {Const1, Const2, Const5, Const3};
+  SDValue NegOps[] = {ConstNeg1, ConstNeg2, ConstNeg5, ConstNeg3};
   SDValue VecPos = DAG->getBuildVector(VecVT, DL, PosOps);
   SDValue VecNeg = DAG->getBuildVector(VecVT, DL, NegOps);
   EXPECT_TRUE(sd_match(VecNeg, m_SpecificNeg(VecPos)));
   EXPECT_TRUE(sd_match(VecPos, m_SpecificNeg(VecNeg)));
 
-  SmallVector<SDValue, 4> WrongOps = {ConstNeg1, ConstNeg2, Const5, ConstNeg5};
+  SDValue WrongOps[] = {ConstNeg1, ConstNeg2, Const5, ConstNeg5};
   SDValue VecWrong = DAG->getBuildVector(VecVT, DL, WrongOps);
   EXPECT_FALSE(sd_match(VecWrong, m_SpecificNeg(VecPos)));
 

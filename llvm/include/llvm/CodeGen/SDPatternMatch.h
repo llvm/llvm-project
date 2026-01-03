@@ -1310,12 +1310,9 @@ struct SpecificNeg_match {
       return true;
 
     return ISD::matchBinaryPredicate(
-        V, N,
-        [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
-          return APInt::isSameValue(-LHS->getAPIntValue(),
-                                    RHS->getAPIntValue());
-        },
-        /*AllowUndefs=*/false, /*AllowTypeMismatch=*/false);
+        V, N, [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
+          return LHS->getAPIntValue() == -RHS->getAPIntValue();
+        });
   }
 };
 
