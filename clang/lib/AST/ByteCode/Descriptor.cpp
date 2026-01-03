@@ -433,6 +433,22 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
   return getType();
 }
 
+QualType Descriptor::getDataElemType() const {
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return E->getType()->getPointeeType();
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return E->getType()->getPointeeType();
+    return E->getType();
+  }
+
+  return getType();
+}
+
 SourceLocation Descriptor::getLocation() const {
   if (auto *D = dyn_cast<const Decl *>(Source))
     return D->getLocation();
