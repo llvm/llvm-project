@@ -1897,6 +1897,20 @@ def int_allow_runtime_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_metadata
     [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>,
     ClangBuiltin<"__builtin_allow_runtime_check">;
 
+// Return true if the specific sanitizer is enabled for the function.
+def int_allow_sanitize_address
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_thread
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_memory
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_hwaddress
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
                                             [Throws]>;
