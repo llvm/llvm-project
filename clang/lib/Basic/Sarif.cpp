@@ -407,21 +407,21 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   if (!Result.RelatedLocations.empty()) {
     json::Array ReLocs;
     for (auto &RelatedLocation : Result.RelatedLocations) {
-      if (RelatedLocation.index() == 0) { // variant is a SarifChildResult
-        const SarifChildResult &ChildResult = std::get<0>(RelatedLocation);
+      const SarifChildResult* ChildResultPtr = std::get_if<SarifChildResult>(&RelatedLocation);
+      const CharSourceRange* CharSourceRangePtr = std::get_if<CharSourceRange>(&RelatedLocation);
+      if (ChildResultPtr) {
         json::Object Object;
         Object.insert(
-            {"message", createMessage(ChildResult.DiagnosticMessage)});
-        if (ChildResult.Locations.size() >= 1)
+            {"message", createMessage(ChildResultPtr->DiagnosticMessage)});
+        if (ChildResultPtr->Locations.size() >= 1)
           for (auto &kv :
-               createLocation(createPhysicalLocation(ChildResult.Locations[0])))
+               createLocation(createPhysicalLocation(ChildResultPtr->Locations[0])))
             Object.insert({kv.getFirst(), kv.getSecond()});
         Object.insert({"properties",
-                       json::Object{{"nestingLevel", ChildResult.Nesting}}});
+                       json::Object{{"nestingLevel", ChildResultPtr->Nesting}}});
         ReLocs.emplace_back(std::move(Object));
-      } else { // variant is a CharSourceRange
-        const CharSourceRange &Range = std::get<1>(RelatedLocation);
-        ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
+      } else if (CharSourceRangePtr) {
+        ReLocs.emplace_back(createLocation(createPhysicalLocation(*CharSourceRangePtr)));
       }
     }
     Ret["relatedLocations"] = std::move(ReLocs);
