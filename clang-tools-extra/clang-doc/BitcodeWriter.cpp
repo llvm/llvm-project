@@ -493,6 +493,8 @@ void ClangDocBitcodeWriter::emitBlock(const FriendInfo &R) {
       emitBlock(P);
   if (R.ReturnType)
     emitBlock(*R.ReturnType);
+  for (const auto &CI : R.Description)
+    emitBlock(CI);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {

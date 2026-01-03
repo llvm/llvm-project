@@ -46,7 +46,7 @@ static void
 populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsAnonymousNamespace);
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
+template <typename T> static void populateMemberTypeInfo(T &I, const Decl *D);
 static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
                                    const DeclaratorDecl *D,
                                    bool IsStatic = false);
@@ -819,7 +819,9 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   }
 }
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
+// TODO: Rename this, since this doesn't populate anything besides comments and
+// isn't exclusive to members
+template <typename T> static void populateMemberTypeInfo(T &I, const Decl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
 
   ASTContext &Context = D->getASTContext();
@@ -968,6 +970,7 @@ static void parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
                   InfoType::IT_default, ActualDecl->getQualifiedNameAsString(),
                   getInfoRelativePath(ActualDecl));
 
+    populateMemberTypeInfo(F, ActualDecl);
     RI.Friends.push_back(std::move(F));
   }
 }
