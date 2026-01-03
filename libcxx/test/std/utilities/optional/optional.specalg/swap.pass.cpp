@@ -179,7 +179,7 @@ constexpr bool test_swap_ref() {
 struct ADLSwap {
   static inline bool called_adl_swap{false};
 
-  friend void swap(ADLSwap&, ADLSwap&) noexcept { called_adl_swap = true; }
+  friend void swap(ADLSwap*&, ADLSwap*&) noexcept { called_adl_swap = true; }
 };
 
 // LWG4439: Verify that an ADL-found swap is not selected when calling optional<T&>::swap()
