@@ -22,9 +22,11 @@
                     <li>
                         <ul>
                             {{#Enums}}
+                            {{^Anonymous}}
                             <li class="sidebar-item-container">
                                 <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                             </li>
+                            {{/Anonymous}}
                             {{/Enums}}
                         </ul>
                     </li>
@@ -36,9 +38,11 @@
                     <li>
                         <ul>
                             {{#Records}}
+                            {{^Anonymous}}
                             <li class="sidebar-item-container">
                                 <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                             </li>
+                            {{/Anonymous}}
                             {{/Records}}
                         </ul>
                     </li>

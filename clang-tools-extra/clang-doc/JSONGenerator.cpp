@@ -323,6 +323,12 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
       Obj["Location"] =
           serializeLocation(Symbol->DefLoc.value(), RepositoryUrl);
   }
+
+  // Allow for special handling for anonymous records/enums
+  // Anonymous records are a GNU extension, so we don't currently test them.
+  if ((I.IT == InfoType::IT_record || I.IT == InfoType::IT_enum) &&
+      I.Name.empty())
+    Obj["Anonymous"] = true;
 }
 
 static void serializeReference(const Reference &Ref, Object &ReferenceObj) {

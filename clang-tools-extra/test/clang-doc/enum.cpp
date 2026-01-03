@@ -251,3 +251,37 @@ enum ColorUserSpecified {
 // HTML-INDEX:             </tr>
 // HTML-INDEX:         </tbody>
 // HTML-INDEX:     </table>
+
+enum {
+  Debug,
+  Release,
+  RelWithDebInfo,
+  MinSizeRel
+};
+
+// HTML-INDEX:    <pre><code class="language-cpp code-clang-doc">enum </code></pre>
+// HTML-INDEX:  </div>
+// HTML-INDEX:  <table class="table-wrapper">
+// HTML-INDEX:      <tbody>
+// HTML-INDEX:          <tr>
+// HTML-INDEX:              <th>Name</th>
+// HTML-INDEX:              <th>Value</th>
+// HTML-INDEX:          </tr>
+// HTML-INDEX:          <tr>
+// HTML-INDEX:              <td>Debug</td>
+// HTML-INDEX:              <td>0</td>
+// HTML-INDEX:          </tr>
+// HTML-INDEX:          <tr>
+// HTML-INDEX:              <td>Release</td>
+// HTML-INDEX:              <td>1</td>
+// HTML-INDEX:          </tr>
+// HTML-INDEX:          <tr>
+// HTML-INDEX:              <td>RelWithDebInfo</td>
+// HTML-INDEX:              <td>2</td>
+// HTML-INDEX:          </tr>
+// HTML-INDEX:          <tr>
+// HTML-INDEX:              <td>MinSizeRel</td>
+// HTML-INDEX:              <td>3</td>
+// HTML-INDEX:          </tr>
+// HTML-INDEX:      </tbody>
+// HTML-INDEX:  </table>
