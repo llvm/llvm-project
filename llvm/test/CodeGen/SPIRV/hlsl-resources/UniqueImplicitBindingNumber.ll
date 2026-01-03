@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; RUN: not --crash llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; CHECK-ERROR: LLVM ERROR: Implicit binding calls with the same order ID must have the same descriptor set
 

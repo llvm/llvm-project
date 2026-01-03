@@ -914,7 +914,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if not_crash:
             args = not_args + args
             not_count = 0
-        elif not_args == ['not']:
+        elif not_args == ["not"]:
             pass
         else:
             not_args = []
@@ -1011,7 +1011,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if old_umask != -1:
                 os.umask(old_umask)
             proc_not_counts.append(not_count)
-            if not not_crash and not_args == ['not']:
+            if not not_crash and not_args == ["not"]:
                 proc_not_fail_if_crash.append(True)
             else:
                 proc_not_fail_if_crash.append(False)
