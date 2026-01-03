@@ -915,6 +915,18 @@ def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
                                               "UseWzrToVecMove", "true",
                                               "Move from WZR to insert 0 into vector registers">;
 
+def FeatureDisableUnpredicatedLdStLower : SubtargetFeature<
+    "disable-unpredicated-ld-st-lower", "DisableUnpredicatedLdStLower",
+    "true", "Disable lowering unpredicated loads/stores as LDR/STR">;
+
+def FeatureAggressiveInterleaving : SubtargetFeature<"aggressive-interleaving",
+                                                     "AggressiveInterleaving", "true",
+                                                     "Make use of aggressive interleaving during vectorization">;
+
+def FeatureMaxInterleaveFactor4 : SubtargetFeature<
+    "max-interleave-factor-4", "MaxInterleaveFactor", "4",
+    "Set the MaxInterleaveFactor to 4 (from the default 2)">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

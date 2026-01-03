@@ -222,6 +222,76 @@ static mlir::FlatSymbolRefAttr gatherComponentInit(
   return mlir::FlatSymbolRefAttr::get(mlirContext, name);
 }
 
+/// Emit fir.use_stmt operations for USE statements in the given function unit
+static void
+emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
+                           mlir::OpBuilder &builder, mlir::Location loc,
+                           const Fortran::lower::pft::FunctionLikeUnit &funit) {
+  mlir::MLIRContext *context = builder.getContext();
+  const Fortran::semantics::Scope &scope = funit.getScope();
+
+  for (const auto &preservedStmt : funit.preservedUseStmts) {
+
+    auto getMangledName = [&](const std::string &localName) -> std::string {
+      Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
+      const auto *sym = scope.FindSymbol(charBlock);
+      if (!sym)
+        return "";
+
+      const auto &ultimateSym = sym->GetUltimate();
+
+      // Skip cases which can cause mangleName to fail.
+      if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
+        return "";
+
+      if (const auto *generic =
+              ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
+        if (!generic->specific())
+          return "";
+      }
+
+      return converter.mangleName(ultimateSym);
+    };
+
+    mlir::StringAttr moduleNameAttr =
+        mlir::StringAttr::get(context, preservedStmt.moduleName);
+
+    llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
+    llvm::SmallVector<mlir::Attribute> renameAttrs;
+
+    // Handle only
+    for (const auto &name : preservedStmt.onlyNames) {
+      std::string mangledName = getMangledName(name);
+      if (!mangledName.empty())
+        onlySymbolAttrs.push_back(
+            mlir::FlatSymbolRefAttr::get(context, mangledName));
+    }
+
+    // Handle renames
+    for (const auto &local : preservedStmt.renames) {
+      std::string mangledName = getMangledName(local);
+      if (!mangledName.empty()) {
+        auto localAttr = mlir::StringAttr::get(context, local);
+        auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
+        renameAttrs.push_back(
+            fir::UseRenameAttr::get(context, localAttr, symbolRef));
+      }
+    }
+
+    // Create optional array attributes
+    mlir::ArrayAttr onlySymbolsAttr =
+        onlySymbolAttrs.empty()
+            ? mlir::ArrayAttr()
+            : mlir::ArrayAttr::get(context, onlySymbolAttrs);
+    mlir::ArrayAttr renamesAttr =
+        renameAttrs.empty() ? mlir::ArrayAttr()
+                            : mlir::ArrayAttr::get(context, renameAttrs);
+
+    fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
+                           renamesAttr);
+  }
+}
+
 /// Helper class to generate the runtime type info global data and the
 /// fir.type_info operations that contain the dipatch tables (if any).
 /// The type info global data is required to describe the derived type to the
@@ -307,7 +377,11 @@ private:
     if (!insertPointIfCreated.isSet())
       return; // fir.type_info was already built in a previous call.
 
-    // Set init, destroy, and nofinal attributes.
+    // Set abstract, init, destroy, and nofinal attributes.
+    const Fortran::semantics::Symbol &dtSymbol = info.typeSpec.typeSymbol();
+    if (dtSymbol.attrs().test(Fortran::semantics::Attr::ABSTRACT))
+      dt->setAttr(dt.getAbstractAttrName(), builder.getUnitAttr());
+
     if (!info.typeSpec.HasDefaultInitialization(/*ignoreAllocatable=*/false,
                                                 /*ignorePointer=*/false))
       dt->setAttr(dt.getNoInitAttrName(), builder.getUnitAttr());
@@ -331,10 +405,14 @@ private:
         if (details.numPrivatesNotOverridden() > 0)
           tbpName += "."s + std::to_string(details.numPrivatesNotOverridden());
         std::string bindingName = converter.mangleName(details.symbol());
-        fir::DTEntryOp::create(
+        auto dtEntry = fir::DTEntryOp::create(
             builder, info.loc,
             mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
+        // Propagate DEFERRED attribute on the binding to fir.dt_entry.
+        if (binding.get().attrs().test(Fortran::semantics::Attr::DEFERRED))
+          dtEntry->setAttr(fir::DTEntryOp::getDeferredAttrNameStr(),
+                           builder.getUnitAttr());
       }
       fir::FirEndOp::create(builder, info.loc);
     }
@@ -2347,8 +2425,7 @@ private:
     if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
       // Open up a new scope for the loop variables.
       localSymbols.pushScope();
-      auto scopeGuard =
-          llvm::make_scope_exit([&]() { localSymbols.popScope(); });
+      llvm::scope_exit scopeGuard([&]() { localSymbols.popScope(); });
 
       mlir::Operation *loopOp = Fortran::lower::genOpenACCLoopFromDoConstruct(
           *this, bridge.getSemanticsContext(), localSymbols, doConstruct, eval);
@@ -2576,12 +2653,16 @@ private:
 
   // Enabling loop vectorization attribute.
   mlir::LLVM::LoopVectorizeAttr
-  genLoopVectorizeAttr(mlir::BoolAttr disableAttr) {
+  genLoopVectorizeAttr(mlir::BoolAttr disableAttr,
+                       mlir::BoolAttr scalableEnable,
+                       mlir::IntegerAttr vectorWidth) {
     mlir::LLVM::LoopVectorizeAttr va;
     if (disableAttr)
-      va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
-                                              /*disable=*/disableAttr, {}, {},
-                                              {}, {}, {}, {});
+      va = mlir::LLVM::LoopVectorizeAttr::get(
+          builder->getContext(),
+          /*disable=*/disableAttr, /*predicate=*/{},
+          /*scalableEnable=*/scalableEnable,
+          /*vectorWidth=*/vectorWidth, {}, {}, {});
     return va;
   }
 
@@ -2589,6 +2670,8 @@ private:
       IncrementLoopInfo &info,
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
     mlir::BoolAttr disableVecAttr;
+    mlir::BoolAttr scalableEnable;
+    mlir::IntegerAttr vectorWidth;
     mlir::LLVM::LoopUnrollAttr ua;
     mlir::LLVM::LoopUnrollAndJamAttr uja;
     llvm::SmallVector<mlir::LLVM::AccessGroupAttr> aga;
@@ -2599,6 +2682,30 @@ private:
               [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
                 disableVecAttr =
                     mlir::BoolAttr::get(builder->getContext(), false);
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::VectorLength &vl) {
+                using Kind =
+                    Fortran::parser::CompilerDirective::VectorLength::Kind;
+                Kind kind = std::get<Kind>(vl.t);
+                uint64_t length = std::get<uint64_t>(vl.t);
+                disableVecAttr =
+                    mlir::BoolAttr::get(builder->getContext(), false);
+                if (length != 0)
+                  vectorWidth =
+                      builder->getIntegerAttr(builder->getI64Type(), length);
+                switch (kind) {
+                case Kind::Scalable:
+                  scalableEnable =
+                      mlir::BoolAttr::get(builder->getContext(), true);
+                  break;
+                case Kind::Fixed:
+                  scalableEnable =
+                      mlir::BoolAttr::get(builder->getContext(), false);
+                  break;
+                case Kind::Auto:
+                  break;
+                }
                 has_attrs = true;
               },
               [&](const Fortran::parser::CompilerDirective::Unroll &u) {
@@ -2632,7 +2739,8 @@ private:
               [&](const auto &) {}},
           dir->u);
     }
-    mlir::LLVM::LoopVectorizeAttr va = genLoopVectorizeAttr(disableVecAttr);
+    mlir::LLVM::LoopVectorizeAttr va =
+        genLoopVectorizeAttr(disableVecAttr, scalableEnable, vectorWidth);
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
         builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua,
         /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {},
@@ -3337,6 +3445,9 @@ private:
     Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::VectorLength &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::Unroll &) {
@@ -6243,6 +6354,9 @@ private:
 
     mapDummiesAndResults(funit, callee);
 
+    // Emit USE statement operations for debug info generation
+    emitUseStatementsFromFunit(*this, *builder, toLocation(), funit);
+
     // Map host associated symbols from parent procedure if any.
     if (funit.parentHasHostAssoc())
       funit.parentHostAssoc().internalProcedureBindings(*this, localSymbols);
@@ -7072,7 +7186,7 @@ void Fortran::lower::LoweringBridge::lower(
     const Fortran::parser::Program &prg,
     const Fortran::semantics::SemanticsContext &semanticsContext) {
   std::unique_ptr<Fortran::lower::pft::Program> pft =
-      Fortran::lower::createPFT(prg, semanticsContext);
+      Fortran::lower::createPFT(prg, semanticsContext, getLoweringOptions());
   FirConverter converter{*this};
   converter.run(*pft);
 }

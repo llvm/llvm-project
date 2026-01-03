@@ -17,6 +17,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
@@ -80,7 +81,10 @@ def AnyRefOfConstantSizeAggregateType : TypeConstraint<
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
-def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments]> {
+def fir_AllocaOp : fir_Op<"alloca", [
+  AttrSizedOperandSegments,
+  DeclareOpInterfaceMethods<PromotableAllocationOpInterface>
+]> {
   let summary = "allocate storage for a temporary on the stack given a type";
   let description = [{
     This primitive operation is used to allocate an object on the stack.  A
@@ -288,8 +292,11 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
-                                          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def fir_LoadOp : fir_OneResultOp<"load", [
+  FirAliasTagOpInterface,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -319,8 +326,11 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
-                                   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def fir_StoreOp : fir_Op<"store", [
+  FirAliasTagOpInterface,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -3092,6 +3102,58 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
   }];
 }
 
+def fir_UseStmtOp
+    : fir_Op<"use_stmt", [MemoryEffects<[MemWrite<DebuggingResource>]>]> {
+  let summary = "Represents a Fortran USE statement";
+  let description = [{
+    This operation records a Fortran USE statement with its associated only/rename
+    information. It has no runtime effect but preserves semantic information for
+    debug information generation.
+
+    The operation captures:
+    - The module being used (via module_name string)
+    - Symbol references to symbols imported via the ONLY clause (if present)
+    - Symbol renames (local_name and symbol reference)
+
+    Examples:
+    ```
+      // USE mod1
+      fir.use_stmt "mod1"
+
+      // USE mod1, ONLY: var2
+      fir.use_stmt "mod1" only_symbols [@_QMmod1Evar2]
+
+      // USE mod2, var4 => var3
+      fir.use_stmt "mod2" renames [#fir.use_rename<"var4", @_QMmod2Evar3>]
+
+      // USE mod2, ONLY: var1, renamed => original
+      fir.use_stmt "mod2" only_symbols [@_QMmod2Evar1]
+                   renames [#fir.use_rename<"renamed", @_QMmod2Eoriginal>]
+    ```
+  }];
+
+  let arguments = (ins StrAttr:$module_name,
+      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames);
+
+  let assemblyFormat = [{
+    $module_name
+    (`only_symbols` `[` $only_symbols^ `]`)?
+    (`renames` `[` $renames^ `]`)?
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if this is a USE with ONLY clause
+    bool hasOnlyClause() { return getOnlySymbols().has_value(); }
+
+    /// Returns true if this has any renames
+    bool hasRenames() { return getRenames().has_value(); }
+
+    /// Returns true if this imports the entire module (no ONLY clause)
+    bool importsAll() { return !hasOnlyClause(); }
+  }];
+}
+
 def ImplicitFirTerminator : SingleBlockImplicitTerminator<"FirEndOp">;
 
 def fir_TypeInfoOp : fir_Op<"type_info",
@@ -3107,9 +3169,12 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     between method identifiers and corresponding `FuncOp` symbols.
     The ordering of associations in the map is determined by the front end.
 
-    The "no_init" flag indicates that this type has no components requiring default
-    initialization (including setting allocatable component to a clean deallocated
-    state).
+    The "abstract" flag indicates that this type is an ABSTRACT derived type and
+    that it cannot be instantiated.
+
+    The "no_init" flag indicates that this type has no components requiring
+    default initialization (including setting allocatable component to a clean
+    deallocated state).
 
     The "no_destroy" flag indicates that there are no allocatable components
     that require deallocation.
@@ -3118,7 +3183,8 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     for its parents ,or for components.
 
     ```
-      fir.type_info @_QMquuzTfoo noinit nofinal : !fir.type<_QMquuzTfoo{i:i32}> dispatch_table {
+      fir.type_info @_QMquuzTfoo abstract noinit nofinal
+        : !fir.type<_QMquuzTfoo{i:i32}> dispatch_table {
         fir.dt_entry method1, @_QFNMquuzTfooPmethod1AfooR
         fir.dt_entry method2, @_QFNMquuzTfooPmethod2AfooII
       }
@@ -3129,6 +3195,7 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     SymbolNameAttr:$sym_name,
     TypeAttr:$type,
     OptionalAttr<TypeAttr>:$parent_type,
+    UnitAttr:$abstract,
     UnitAttr:$no_init,
     UnitAttr:$no_destroy,
     UnitAttr:$no_final
@@ -3147,8 +3214,9 @@ def fir_TypeInfoOp : fir_Op<"type_info",
   ];
 
   let assemblyFormat = [{
-    $sym_name (`noinit` $no_init^)? (`nodestroy` $no_destroy^)?
-    (`nofinal` $no_final^)? (`extends` $parent_type^)? attr-dict `:` $type
+    $sym_name (`abstract` $abstract^)? (`noinit` $no_init^)?
+    (`nodestroy` $no_destroy^)? (`nofinal` $no_final^)?
+    (`extends` $parent_type^)? attr-dict `:` $type
     (`dispatch_table` $dispatch_table^)?
     (`component_info` $component_info^)?
   }];
@@ -3174,23 +3242,34 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let summary = "map entry in a dispatch table";
 
   let description = [{
-    An entry in a dispatch table.  Allows a function symbol to be bound
-    to a specifier method identifier.  A dispatch operation uses the dynamic
+    An entry in a dispatch table. Allows a function symbol to be bound
+    to a specifier method identifier. A dispatch operation uses the dynamic
     type of a distinguished argument to determine an exact dispatch table
     and uses the method identifier to select the type-bound procedure to
     be called.
 
+    The optional "deferred" flag indicates that the binding is a DEFERRED
+    type-bound procedure (declared but without an implementation at this
+    type level).
+
     ```
+      // Non-deferred binding
       fir.dt_entry method_name, @uniquedProcedure
+
+      // Deferred binding
+      fir.dt_entry method_name, @uniquedProcedure deferred
     ```
   }];
 
-  let arguments = (ins StrAttr:$method, SymbolRefAttr:$proc);
+  let arguments = (ins StrAttr:$method, SymbolRefAttr:$proc, UnitAttr:$deferred);
 
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
+    static constexpr llvm::StringRef getDeferredAttrNameStr() {
+      return "deferred";
+    }
   }];
 }
 

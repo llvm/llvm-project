@@ -31,6 +31,10 @@ static cl::opt<unsigned> HvxWidenThreshold("hexagon-hvx-widen",
   cl::Hidden, cl::init(16),
   cl::desc("Lower threshold (in bytes) for widening to HVX vectors"));
 
+static cl::opt<bool>
+    EnableFpFastConvert("hexagon-fp-fast-convert", cl::Hidden, cl::init(false),
+                        cl::desc("Enable FP fast conversion routine."));
+
 static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
 static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
 static const MVT LegalV128[] = { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
@@ -180,10 +184,18 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v64bf16, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v64bf16, Custom);
 
+      setOperationAction(ISD::LOAD, MVT::v128bf16, Custom);
+      setOperationAction(ISD::STORE, MVT::v128bf16, Custom);
+
       setOperationAction(ISD::MLOAD, MVT::v64bf16, Custom);
       setOperationAction(ISD::MSTORE, MVT::v64bf16, Custom);
       setOperationAction(ISD::BUILD_VECTOR, MVT::v64bf16, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, MVT::v64bf16, Custom);
+
+      setOperationAction(ISD::MLOAD, MVT::v128bf16, Custom);
+      setOperationAction(ISD::MSTORE, MVT::v128bf16, Custom);
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v128bf16, Custom);
+      setOperationAction(ISD::CONCAT_VECTORS, MVT::v128bf16, Custom);
 
       setOperationAction(ISD::SPLAT_VECTOR, MVT::bf16, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::bf16, Custom);
@@ -465,7 +477,7 @@ HexagonTargetLowering::initializeHVXLowering() {
         setOperationAction(ISD::TRUNCATE,     VecTy, Custom);
         setOperationAction(ISD::ANY_EXTEND,   VecTy, Custom);
         setOperationAction(ISD::SIGN_EXTEND,  VecTy, Custom);
-        setOperationAction(ISD::ZERO_EXTEND,  VecTy, Custom);
+        setOperationAction(ISD::ZERO_EXTEND, VecTy, Custom);
         if (Subtarget.useHVXFloatingPoint()) {
           setOperationAction(ISD::FP_TO_SINT,   VecTy, Custom);
           setOperationAction(ISD::FP_TO_UINT,   VecTy, Custom);
@@ -2969,6 +2981,32 @@ HexagonTargetLowering::ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
   MVT InpTy = ty(Op0);
   MVT ResTy = ty(Op);
   assert(InpTy.changeTypeToInteger() == ResTy);
+
+  // At this point this is an experiment under a flag.
+  // In arch before V81 the rounding mode is towards nearest value.
+  // The C/C++ standard requires rounding towards zero:
+  // C (C99 and later): ISO/IEC 9899:2018 (C18), section 6.3.1.4 — "When a
+  // finite value of real floating type is converted to an integer type, the
+  // fractional part is discarded (i.e., the value is truncated toward zero)."
+  // C++: ISO/IEC 14882:2020 (C++20), section 7.3.7 — "A prvalue of a
+  // floating-point type can be converted to a prvalue of an integer type. The
+  // conversion truncates; that is, the fractional part is discarded."
+  if (InpTy == MVT::v64f16) {
+    if (Subtarget.useHVXV81Ops()) {
+      // This is c/c++ compliant
+      SDValue ConvVec =
+          getInstr(Hexagon::V6_vconv_h_hf_rnd, dl, ResTy, {Op0}, DAG);
+      return ConvVec;
+    } else if (EnableFpFastConvert) {
+      // Vd32.h=Vu32.hf same as Q6_Vh_equals_Vhf
+      SDValue ConvVec = getInstr(Hexagon::V6_vconv_h_hf, dl, ResTy, {Op0}, DAG);
+      return ConvVec;
+    }
+  } else if (EnableFpFastConvert && InpTy == MVT::v32f32) {
+    // Vd32.w=Vu32.sf same as Q6_Vw_equals_Vsf
+    SDValue ConvVec = getInstr(Hexagon::V6_vconv_w_sf, dl, ResTy, {Op0}, DAG);
+    return ConvVec;
+  }
 
   // int32_t conv_f32_to_i32(uint32_t inp) {
   //   // s | exp8 | frac23

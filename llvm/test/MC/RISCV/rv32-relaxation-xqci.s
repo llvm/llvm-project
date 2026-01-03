@@ -1,7 +1,7 @@
 # RUN: split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilb %t/pass.s -o - \
-# RUN:   | llvm-objdump -dr -M no-aliases - --mattr=+experimental-xqcilb | FileCheck %s
-# RUN: not llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilb %t/fail.s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcilb %t/pass.s -o - \
+# RUN:   | llvm-objdump -dr -M no-aliases - --mattr=+xqcilb | FileCheck %s
+# RUN: not llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcilb %t/fail.s \
 # RUN:   2>&1 | FileCheck %t/fail.s --check-prefix=ERROR
 
 ## This testcase shows how `c.j`, `c.jal` and `jal` can be relaxed to `qc.e.j` and `qc.e.jal`

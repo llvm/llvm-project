@@ -20,7 +20,6 @@
 #include "WinException.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -37,6 +36,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
@@ -150,6 +150,7 @@ enum class PGOMapFeaturesEnum {
   FuncEntryCount,
   BBFreq,
   BrProb,
+  PropellerCFG,
   All,
 };
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
@@ -165,6 +166,12 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
+
+static cl::opt<bool> PgoAnalysisMapEmitBBSectionsCfg(
+    "pgo-analysis-map-emit-bb-sections-cfg",
+    cl::desc("Enable the post-link cfg information from the basic block "
+             "sections profile in the PGO analysis map"),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
     "basic-block-address-map-skip-bb-entries",
@@ -479,15 +486,16 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   if (EmitBBHash)
     AU.addRequired<MachineBlockHashInfo>();
+  AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
-  VFS = vfs::getRealFileSystem();
   auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
   MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
   HasSplitStack = false;
   HasNoSplitStack = false;
   DbgInfoAvailable = !M.debug_compile_units().empty();
+  const Triple &Target = TM.getTargetTriple();
 
   AddrLabelSymbols = nullptr;
 
@@ -500,7 +508,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // after emitting the .file pseudo-op. This allows additional
   // information (such as the embedded command line) to be associated
   // with all sections in the object file rather than a single section.
-  if (!TM.getTargetTriple().isOSBinFormatXCOFF())
+  if (!Target.isOSBinFormatXCOFF())
     OutStreamer->initSections(false, *TM.getMCSubtargetInfo());
 
   // Emit the version-min deployment target directive if needed.
@@ -511,7 +519,6 @@ bool AsmPrinter::doInitialization(Module &M) {
   // alternative is duplicated code in each of the target asm printers that
   // use the directive, where it would need the same conditionalization
   // anyway.
-  const Triple &Target = TM.getTargetTriple();
   if (Target.isOSBinFormatMachO() && Target.isOSDarwin()) {
     Triple TVT(M.getDarwinTargetVariantTriple());
     OutStreamer->emitVersionForTarget(
@@ -547,7 +554,7 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   // On AIX, emit bytes for llvm.commandline metadata after .file so that the
   // C_INFO symbol is preserved if any csect is kept by the linker.
-  if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+  if (Target.isOSBinFormatXCOFF()) {
     emitModuleCommandLines(M);
     // Now we can generate section information.
     OutStreamer->switchSection(
@@ -586,9 +593,8 @@ bool AsmPrinter::doInitialization(Module &M) {
     bool EmitCodeView = M.getCodeViewFlag();
     // On Windows targets, emit minimal CodeView compiler info even when debug
     // info is disabled.
-    if ((TM.getTargetTriple().isOSWindows() &&
-         M.getNamedMetadata("llvm.dbg.cu")) ||
-        (TM.getTargetTriple().isUEFI() && EmitCodeView))
+    if ((Target.isOSWindows() && M.getNamedMetadata("llvm.dbg.cu")) ||
+        (Target.isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -1411,7 +1417,7 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 
 static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
-                    bool HasCalls) {
+                    bool HasCalls, const CFGProfile *FuncCFGProfile) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
@@ -1433,17 +1439,17 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+  bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
-        "BB entries info is required for BBFreq and BrProb "
-        "features");
+        "BB entries info is required for BBFreq and BrProb features");
   }
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
-          static_cast<bool>(EmitBBHash), false};
+          static_cast<bool>(EmitBBHash), PostLinkCfgEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1451,6 +1457,14 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
   bool HasCalls = !CurrentFnCallsiteEndSymbols.empty();
+
+  const BasicBlockSectionsProfileReader *BBSPR = nullptr;
+  if (auto *BBSPRPass =
+          getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
+    BBSPR = &BBSPRPass->getBBSPR();
+  const CFGProfile *FuncCFGProfile = nullptr;
+  if (BBSPR)
+    FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1460,8 +1474,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls);
-  OutStreamer->emitInt8(Features.encode());
+  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls,
+                                      FuncCFGProfile);
+  OutStreamer->emitInt16(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
     OutStreamer->AddComment("number of basic block ranges");
@@ -1565,6 +1580,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
           OutStreamer->AddComment("basic block frequency");
           OutStreamer->emitULEB128IntValue(
               MBFI->getBlockFreq(&MBB).getFrequency());
+          if (Features.PostLinkCfg) {
+            OutStreamer->AddComment("basic block frequency (propeller)");
+            OutStreamer->emitULEB128IntValue(
+                FuncCFGProfile->getBlockCount(*MBB.getBBID()));
+          }
         }
         if (Features.BrProb) {
           unsigned SuccCount = MBB.succ_size();
@@ -1576,6 +1596,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
             OutStreamer->AddComment("successor branch probability");
             OutStreamer->emitULEB128IntValue(
                 MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator());
+            if (Features.PostLinkCfg) {
+              OutStreamer->AddComment("successor branch frequency (propeller)");
+              OutStreamer->emitULEB128IntValue(FuncCFGProfile->getEdgeCount(
+                  *MBB.getBBID(), *SuccMBB->getBBID()));
+            }
           }
         }
       }
@@ -2681,6 +2706,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
+  const Triple &Target = TM.getTargetTriple();
 
   std::vector<GlobalVariable *> GlobalsToTag;
   for (GlobalVariable &G : M.globals()) {
@@ -2720,7 +2746,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     MCSymbol *Name = getSymbol(&F);
     // Function getSymbol gives us the function descriptor symbol for XCOFF.
 
-    if (!TM.getTargetTriple().isOSBinFormatXCOFF()) {
+    if (!Target.isOSBinFormatXCOFF()) {
       GlobalValue::VisibilityTypes V = F.getVisibility();
       if (V == GlobalValue::DefaultVisibility)
         continue;
@@ -2753,7 +2779,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   TLOF.emitModuleMetadata(*OutStreamer, M);
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (Target.isOSBinFormatELF()) {
     MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
 
     // Output stubs for external and common global variables.
@@ -2771,7 +2797,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     }
   }
 
-  if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+  if (Target.isOSBinFormatCOFF()) {
     MachineModuleInfoCOFF &MMICOFF =
         MMI->getObjFileInfo<MachineModuleInfoCOFF>();
 
@@ -2884,7 +2910,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // Emit bytes for llvm.commandline metadata.
   // The command line metadata is emitted earlier on XCOFF.
-  if (!TM.getTargetTriple().isOSBinFormatXCOFF())
+  if (!Target.isOSBinFormatXCOFF())
     emitModuleCommandLines(M);
 
   // Emit .note.GNU-split-stack and .note.GNU-no-split-stack sections if
@@ -2919,7 +2945,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   }
 
   // Emit symbol partition specifications (ELF only).
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (Target.isOSBinFormatELF()) {
     unsigned UniqueID = 0;
     for (const GlobalValue &GV : M.global_values()) {
       if (!GV.hasPartition() || GV.isDeclarationForLinker() ||
@@ -3473,7 +3499,7 @@ void AsmPrinter::emitXXStructorList(const DataLayout &DL, const Constant *List,
   if (!TM.Options.UseInitArray)
     std::reverse(Structors.begin(), Structors.end());
 
-  const Align Align = DL.getPointerPrefAlignment();
+  const Align Align = DL.getPointerPrefAlignment(DL.getProgramAddressSpace());
   for (Structor &S : Structors) {
     const TargetLoweringObjectFile &Obj = getObjFileLowering();
     const MCSymbol *KeySym = nullptr;

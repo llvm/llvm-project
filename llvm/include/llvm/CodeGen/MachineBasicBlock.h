@@ -130,7 +130,9 @@ public:
     LaneBitmask LaneMask;
 
     RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
-        : PhysReg(PhysReg), LaneMask(LaneMask) {}
+        : PhysReg(PhysReg), LaneMask(LaneMask) {
+      assert(PhysReg.isPhysical());
+    }
 
     bool operator==(const RegisterMaskPair &other) const {
       return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
@@ -986,13 +988,6 @@ public:
   /// return instruction.
   bool isEHScopeReturnBlock() const {
     return !empty() && back().isEHScopeReturn();
-  }
-
-  /// Convenience function that returns true if the block exits the function
-  /// without returning.
-  bool isNoReturnBlock() const {
-    return !empty() && succ_empty() && !back().isReturn() &&
-           !back().isIndirectBranch();
   }
 
   /// Split a basic block into 2 pieces at \p SplitPoint. A new block will be

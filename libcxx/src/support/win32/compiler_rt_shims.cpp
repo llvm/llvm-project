@@ -14,6 +14,8 @@
 #include <cmath>
 #include <complex>
 
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes") // See comment above
+
 template <class T>
 static std::__complex_t<T> mul_impl(T a, T b, T c, T d) {
   T __ac = a * c;

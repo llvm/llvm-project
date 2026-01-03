@@ -586,6 +586,11 @@ public:
   /// Generate the compact unwind encoding from the CFI directives.
   uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
+    // MTE-tagged frames must use DWARF unwinding because compact unwind
+    // doesn't handle MTE tags
+    if (FI->IsMTETaggedFrame)
+      return CU::UNWIND_ARM64_MODE_DWARF;
+
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty())
       return CU::UNWIND_ARM64_MODE_FRAMELESS;
