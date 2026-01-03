@@ -336,3 +336,53 @@ struct MemberFunctionPointer {
 };
 
 } // namespace Keep
+
+namespace UnionMemberAccess {
+  // Test case from GitHub issue #174269
+  // Union with pointer member returning non-const reference
+  struct UnionWithPointer {
+    union { int* resource; };
+    int& get() { return *resource; }  // Should NOT trigger warning
+    const int& get() const { return *resource; }
+  };
+
+  // Union with pointer - single method variant
+  struct UnionWithPointerSingle {
+    union { int* resource; };
+    int& get() { return *resource; }  // Should NOT trigger warning
+  };
+  
+  // Union with value type - should still suggest const where appropriate
+  struct UnionWithValue {
+    union { int value; };
+    int get() { return value; }  
+    // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: method 'get' can be made const
+    // CHECK-FIXES: int get() const { return value; }
+  };
+  
+  // Union with multiple pointer members
+  struct UnionMultiplePointers {
+    union {
+      int* int_ptr;
+      double* double_ptr;
+    };
+    int& getInt() { return *int_ptr; }  // Should NOT trigger warning
+    double& getDouble() { return *double_ptr; }  // Should NOT trigger warning
+  };
+  
+  // Named union member access
+  struct NamedUnion {
+    union Inner {
+      int* resource;
+    } inner;
+    int& get() { return *inner.resource; }  // Should NOT trigger warning
+  };
+  
+  // Regular struct for comparison - this SHOULD work as before
+  struct RegularStruct {
+  private:
+    int* ptr;
+  public:
+    int& get() { return *ptr; }  // Should NOT trigger warning (private non-const access)
+  };
+} // namespace UnionMemberAccess

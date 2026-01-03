@@ -657,6 +657,10 @@ Changes in existing checks
   by not enforcing parameter name consistency between a variadic parameter pack
   in the primary template and specific parameters in its specializations.
 
+- Improved :doc:`readability-make-member-function-const
+  <clang-tidy/checks/readability/make-member-function-const>` check by fixing
+  false positives when accessing pointer or reference members inside unions.
+
 - Improved :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check by correctly
   diagnosing operator precedence issues inside parenthesized expressions.
