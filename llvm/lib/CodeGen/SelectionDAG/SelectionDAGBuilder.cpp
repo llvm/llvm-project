@@ -2447,7 +2447,7 @@ static bool InBlock(const Value *V, const BasicBlock *BB) {
   return true;
 }
 
-static bool AreFCmpOperandsNonNaN(const Instruction *Inst,
+static bool areFCmpOperandsNonNaN(const Instruction *Inst,
                                   const SelectionDAG &DAG) {
   assert(
       (isa<FCmpInst>(Inst) || isa<ConstrainedFPCmpIntrinsic>(Inst) ||
@@ -2500,7 +2500,7 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
         FCmpInst::Predicate Pred =
             InvertCond ? FC->getInversePredicate() : FC->getPredicate();
         Condition = getFCmpCondCode(Pred);
-        if (AreFCmpOperandsNonNaN(FC, DAG))
+        if (areFCmpOperandsNonNaN(FC, DAG))
           Condition = getFCmpCodeWithoutNaN(Condition);
       }
 
@@ -3815,7 +3815,7 @@ void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
 
   ISD::CondCode Condition = getFCmpCondCode(predicate);
   auto *FPMO = cast<FPMathOperator>(&I);
-  if (AreFCmpOperandsNonNaN(&I, DAG))
+  if (areFCmpOperandsNonNaN(&I, DAG))
     Condition = getFCmpCodeWithoutNaN(Condition);
 
   SDNodeFlags Flags;
@@ -8563,7 +8563,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case ISD::STRICT_FSETCCS: {
     auto *FPCmp = dyn_cast<ConstrainedFPCmpIntrinsic>(&FPI);
     ISD::CondCode Condition = getFCmpCondCode(FPCmp->getPredicate());
-    if (AreFCmpOperandsNonNaN(FPCmp, DAG))
+    if (areFCmpOperandsNonNaN(FPCmp, DAG))
       Condition = getFCmpCodeWithoutNaN(Condition);
     Opers.push_back(DAG.getCondCode(Condition));
     break;
@@ -8847,7 +8847,7 @@ void SelectionDAGBuilder::visitVPCmp(const VPCmpIntrinsic &VPIntrin) {
   bool IsFP = VPIntrin.getOperand(0)->getType()->isFPOrFPVectorTy();
   if (IsFP) {
     Condition = getFCmpCondCode(CondCode);
-    if (AreFCmpOperandsNonNaN(&VPIntrin, DAG))
+    if (areFCmpOperandsNonNaN(&VPIntrin, DAG))
       Condition = getFCmpCodeWithoutNaN(Condition);
   } else {
     Condition = getICmpCondCode(CondCode);
