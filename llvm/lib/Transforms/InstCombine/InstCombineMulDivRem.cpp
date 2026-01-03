@@ -801,27 +801,6 @@ Instruction *InstCombinerImpl::foldFMul(BinaryOperator &I) {
   if (!I.hasAllowReassoc())
     return nullptr;
 
-  // (X * Y) * X => (X * X) * Y,
-  // X * (X * Y) => (X * X) * Y where Y != X
-  //  The purpose is two-fold:
-  //   1) to form a power expression (of X).
-  //   2) potentially shorten the critical path: After transformation, the
-  //  latency of the instruction Y is amortized by the expression of X*X,
-  //  and therefore Y is in a "less critical" position compared to what it
-  //  was before the transformation.
-  if (match(Op0,
-            m_OneUse(m_AllowReassoc(m_c_FMul(m_Specific(Op1), m_Value(Y))))) &&
-      Op1 != Y) {
-    Value *XX = Builder.CreateFMulFMF(Op1, Op1, &I);
-    return BinaryOperator::CreateFMulFMF(XX, Y, &I);
-  }
-  if (match(Op1,
-            m_OneUse(m_AllowReassoc(m_c_FMul(m_Specific(Op0), m_Value(Y))))) &&
-      Op0 != Y) {
-    Value *XX = Builder.CreateFMulFMF(Op0, Op0, &I);
-    return BinaryOperator::CreateFMulFMF(XX, Y, &I);
-  }
-
   // Reassociate constant RHS with another constant to form constant
   // expression.
   if (match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP() &&
@@ -962,6 +941,27 @@ Instruction *InstCombinerImpl::foldFMul(BinaryOperator &I) {
       Value *Exp2 = Builder.CreateUnaryIntrinsic(Intrinsic::exp2, XY, &I);
       return replaceInstUsesWith(I, Exp2);
     }
+  }
+
+  // (X * Y) * X => (X * X) * Y,
+  // X * (X * Y) => (X * X) * Y where Y != X
+  //  The purpose is two-fold:
+  //   1) to form a power expression (of X).
+  //   2) potentially shorten the critical path: After transformation, the
+  //  latency of the instruction Y is amortized by the expression of X*X,
+  //  and therefore Y is in a "less critical" position compared to what it
+  //  was before the transformation.
+  if (match(Op0,
+            m_OneUse(m_AllowReassoc(m_c_FMul(m_Specific(Op1), m_Value(Y))))) &&
+      Op1 != Y) {
+    Value *XX = Builder.CreateFMulFMF(Op1, Op1, &I);
+    return BinaryOperator::CreateFMulFMF(XX, Y, &I);
+  }
+  if (match(Op1,
+            m_OneUse(m_AllowReassoc(m_c_FMul(m_Specific(Op0), m_Value(Y))))) &&
+      Op0 != Y) {
+    Value *XX = Builder.CreateFMulFMF(Op0, Op0, &I);
+    return BinaryOperator::CreateFMulFMF(XX, Y, &I);
   }
 
   return nullptr;
