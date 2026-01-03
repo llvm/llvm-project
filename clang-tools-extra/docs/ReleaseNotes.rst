@@ -381,6 +381,11 @@ Changes in existing checks
   new option `IgnoreMacros` to suppress warnings within macro
   expansions.
 
+- Improved :doc:`bugprone-dynamic-static-initializers
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check by
+  avoiding false positives for ``constexpr`` variables whose
+  initializers are value-dependent.
+
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
   correcting a spelling mistake on its option
