@@ -3047,7 +3047,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 #ifndef NDEBUG
   InstsEmitted = 0;
-  auto CheckMISize = make_scope_exit([&]() {
+  llvm::scope_exit CheckMISize([&]() {
     assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
   });
 #endif

@@ -677,16 +677,16 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
   if (!dyld_process)
     return false;
 
-  auto cleanup_process_on_exit =
-      llvm::make_scope_exit([&]() { dyld_process_dispose(dyld_process); });
+  llvm::scope_exit cleanup_process_on_exit(
+      [&]() { dyld_process_dispose(dyld_process); });
 
   dyld_process_snapshot_t snapshot =
       dyld_process_snapshot_create_for_process(dyld_process, nullptr);
   if (!snapshot)
     return false;
 
-  auto cleanup_snapshot_on_exit =
-      llvm::make_scope_exit([&]() { dyld_process_snapshot_dispose(snapshot); });
+  llvm::scope_exit cleanup_snapshot_on_exit(
+      [&]() { dyld_process_snapshot_dispose(snapshot); });
 
   dyld_shared_cache_t shared_cache =
       dyld_process_snapshot_get_shared_cache(snapshot);

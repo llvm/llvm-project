@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
           std::make_unique<lldb_private::SystemInitializerCommon>(nullptr)))
     exitWithError(std::move(err));
 
-  auto cleanup = make_scope_exit([] { g_debugger_lifetime->Terminate(); });
+  llvm::scope_exit cleanup([] { g_debugger_lifetime->Terminate(); });
 
   IOObjectSP input_sp = std::make_shared<NativeFile>(
       fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);

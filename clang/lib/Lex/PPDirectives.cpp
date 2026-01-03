@@ -2973,7 +2973,7 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
   LexUnexpandedToken(Tok);
 
   // Ensure we consume the rest of the macro body if errors occur.
-  auto _ = llvm::make_scope_exit([&]() {
+  llvm::scope_exit _([&]() {
     // The flag indicates if we are still waiting for 'eod'.
     if (CurLexer->ParsingPreprocessorDirective)
       DiscardUntilEndOfDirective();

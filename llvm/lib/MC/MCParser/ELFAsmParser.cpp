@@ -720,8 +720,7 @@ bool ELFAsmParser::parseDirectiveType(StringRef, SMLoc) {
   if (!AllowAt &&
       !getContext().getAsmInfo()->getCommentString().starts_with("@"))
     getLexer().setAllowAtInIdentifier(true);
-  auto _ =
-      make_scope_exit([&]() { getLexer().setAllowAtInIdentifier(AllowAt); });
+  llvm::scope_exit _([&]() { getLexer().setAllowAtInIdentifier(AllowAt); });
 
   // NOTE the comma is optional in all cases.  It is only documented as being
   // optional in the first case, however, GAS will silently treat the comma as

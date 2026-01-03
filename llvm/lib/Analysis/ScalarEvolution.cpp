@@ -11879,8 +11879,8 @@ bool ScalarEvolution::isImpliedCond(CmpPredicate Pred, const SCEV *LHS,
   if (!PendingLoopPredicates.insert(FoundCondValue).second)
     return false;
 
-  auto ClearOnExit =
-      make_scope_exit([&]() { PendingLoopPredicates.erase(FoundCondValue); });
+  llvm::scope_exit ClearOnExit(
+      [&]() { PendingLoopPredicates.erase(FoundCondValue); });
 
   // Recursively handle And and Or conditions.
   const Value *Op0, *Op1;
@@ -12427,7 +12427,7 @@ bool ScalarEvolution::isImpliedViaMerge(CmpPredicate Pred, const SCEV *LHS,
                                         const SCEV *FoundRHS, unsigned Depth) {
   const PHINode *LPhi = nullptr, *RPhi = nullptr;
 
-  auto ClearOnExit = make_scope_exit([&]() {
+  llvm::scope_exit ClearOnExit([&]() {
     if (LPhi) {
       bool Erased = PendingMerges.erase(LPhi);
       assert(Erased && "Failed to erase LPhi!");

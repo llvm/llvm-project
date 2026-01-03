@@ -80,8 +80,8 @@ TestAST::TestAST(const TestInputs &In) {
   Clang = std::make_unique<CompilerInstance>();
   // If we don't manage to finish parsing, create CompilerInstance components
   // anyway so that the test will see an empty AST instead of crashing.
-  auto RecoverFromEarlyExit =
-      llvm::make_scope_exit([&] { createMissingComponents(*Clang); });
+  llvm::scope_exit RecoverFromEarlyExit(
+      [&] { createMissingComponents(*Clang); });
 
   std::string Filename = In.FileName;
   if (Filename.empty())

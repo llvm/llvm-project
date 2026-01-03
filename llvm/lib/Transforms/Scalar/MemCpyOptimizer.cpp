@@ -1160,7 +1160,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   IRBuilder<> Builder(M);
   auto *CopySource = MDep->getSource();
   Instruction *NewCopySource = nullptr;
-  auto CleanupOnRet = llvm::make_scope_exit([&] {
+  llvm::scope_exit CleanupOnRet([&] {
     if (NewCopySource && NewCopySource->use_empty())
       // Safety: It's safe here because we will only allocate more instructions
       // after finishing all BatchAA queries, but we have to be careful if we

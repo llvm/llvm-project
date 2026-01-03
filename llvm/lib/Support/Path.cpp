@@ -1196,7 +1196,7 @@ Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
 
   // Install a handler to truncate the buffer to the correct size on exit.
   size_t Size = Buffer.size();
-  auto TruncateOnExit = make_scope_exit([&]() { Buffer.truncate(Size); });
+  llvm::scope_exit TruncateOnExit([&]() { Buffer.truncate(Size); });
 
   // Read into Buffer until we hit EOF.
   for (;;) {

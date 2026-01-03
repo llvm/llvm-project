@@ -191,7 +191,7 @@ void DirectoryWatcherLinux::InotifyPollingLoop() {
     StopWork();
     return;
   }
-  auto EpollFDGuard = llvm::make_scope_exit([EpollFD]() { close(EpollFD); });
+  llvm::scope_exit EpollFDGuard([EpollFD]() { close(EpollFD); });
 
   struct epoll_event EventSpec;
   EventSpec.events = EPOLLIN;

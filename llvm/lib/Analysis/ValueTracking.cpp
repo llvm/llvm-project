@@ -4999,7 +4999,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   // assume this from flags/attributes.
   InterestedClasses &= ~KnownNotFromFlags;
 
-  auto ClearClassesFromFlags = make_scope_exit([=, &Known] {
+  llvm::scope_exit ClearClassesFromFlags([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
     if (!Known.SignBit && AssumedClasses.SignBit) {
       if (*AssumedClasses.SignBit)

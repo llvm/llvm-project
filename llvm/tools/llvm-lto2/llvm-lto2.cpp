@@ -284,7 +284,7 @@ static int run(int argc, char **argv) {
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
-  auto TimeTraceScopeExit = make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (TimeTrace) {
       check(timeTraceProfilerWrite(TimeTraceFile, OutputFilename),
             "timeTraceProfilerWrite failed");

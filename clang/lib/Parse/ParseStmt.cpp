@@ -2379,8 +2379,7 @@ StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
 
   Actions.ActOnStartOfDeferStmt(DeferLoc, getCurScope());
 
-  auto OnError = llvm::make_scope_exit(
-      [&] { Actions.ActOnDeferStmtError(getCurScope()); });
+  llvm::scope_exit OnError([&] { Actions.ActOnDeferStmtError(getCurScope()); });
 
   StmtResult Res = ParseStatement(TrailingElseLoc);
   if (!Res.isUsable())

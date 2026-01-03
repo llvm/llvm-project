@@ -284,11 +284,11 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   assert(FD != -1);
 
   sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
-  auto CloseFile = make_scope_exit([&]() { sys::fs::closeFile(File); });
+  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(File); });
 
   if (std::error_code EC = lockFileThreadSafe(FD, sys::fs::LockKind::Exclusive))
     return createFileError(PathBuf, EC);
-  auto UnlockFD = make_scope_exit([&]() { unlockFileThreadSafe(FD); });
+  llvm::scope_exit UnlockFD([&]() { unlockFileThreadSafe(FD); });
 
   SmallString<8> Bytes;
   if (Error E = sys::fs::readNativeFileToEOF(File, Bytes))
@@ -332,7 +332,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
             PathBuf, LockFD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
       return createFileError(PathBuf, EC);
     sys::fs::file_t LockFile = sys::fs::convertFDToNativeFile(LockFD);
-    auto CloseLock = make_scope_exit([&]() { sys::fs::closeFile(LockFile); });
+    llvm::scope_exit CloseLock([&]() { sys::fs::closeFile(LockFile); });
     if (std::error_code EC = tryLockFileThreadSafe(LockFD)) {
       if (EC == std::errc::no_lock_available)
         return createFileError(
@@ -340,7 +340,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
             "CAS validation requires exclusive access but CAS was in use");
       return createFileError(PathBuf, EC);
     }
-    auto UnlockFD = make_scope_exit([&]() { unlockFileThreadSafe(LockFD); });
+    llvm::scope_exit UnlockFD([&]() { unlockFileThreadSafe(LockFD); });
 
     auto DBDirs = getAllDBDirs(RootPath);
     if (!DBDirs)
@@ -519,7 +519,7 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
 
   if (LockFD == -1)
     return Error::success(); // already closed.
-  auto CloseLock = make_scope_exit([&]() {
+  llvm::scope_exit CloseLock([&]() {
     assert(LockFD >= 0);
     sys::fs::file_t LockFile = sys::fs::convertFDToNativeFile(LockFD);
     sys::fs::closeFile(LockFile);
@@ -547,7 +547,7 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
       return Error::success(); // couldn't get exclusive lock, give up.
     return createFileError(RootPath, EC);
   }
-  auto UnlockFile = make_scope_exit([&]() { unlockFileThreadSafe(LockFD); });
+  llvm::scope_exit UnlockFile([&]() { unlockFileThreadSafe(LockFD); });
 
   // Managed to get an exclusive lock which means there are no other open
   // \p UnifiedOnDiskCache instances for the same path, so we can safely start a

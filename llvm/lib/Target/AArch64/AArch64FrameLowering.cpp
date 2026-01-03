@@ -2017,7 +2017,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
 
     Register X0Scratch;
-    auto RestoreX0 = make_scope_exit([&] {
+    llvm::scope_exit RestoreX0([&] {
       if (X0Scratch != AArch64::NoRegister)
         BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X0)
             .addReg(X0Scratch)

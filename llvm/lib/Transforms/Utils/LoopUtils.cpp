@@ -66,7 +66,7 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
   auto RewriteExit = [&](BasicBlock *BB) {
     assert(InLoopPredecessors.empty() &&
            "Must start with an empty predecessors list!");
-    auto Cleanup = make_scope_exit([&] { InLoopPredecessors.clear(); });
+    llvm::scope_exit Cleanup([&] { InLoopPredecessors.clear(); });
 
     // See if there are any non-loop predecessors of this exit block and
     // keep track of the in-loop predecessors.

@@ -100,7 +100,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
   HANDLE stdout_handle = GetStdioHandle(launch_info, STDOUT_FILENO);
   HANDLE stderr_handle = GetStdioHandle(launch_info, STDERR_FILENO);
-  auto close_handles = llvm::make_scope_exit([&] {
+  llvm::scope_exit close_handles([&] {
     if (stdin_handle)
       ::CloseHandle(stdin_handle);
     if (stdout_handle)
@@ -116,15 +116,15 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   startupinfoex.lpAttributeList =
       static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(malloc(attributelist_size));
-  auto free_attributelist =
-      llvm::make_scope_exit([&] { free(startupinfoex.lpAttributeList); });
+  llvm::scope_exit free_attributelist(
+      [&] { free(startupinfoex.lpAttributeList); });
   if (!InitializeProcThreadAttributeList(startupinfoex.lpAttributeList,
                                          /*dwAttributeCount=*/1, /*dwFlags=*/0,
                                          &attributelist_size)) {
     error = Status(::GetLastError(), eErrorTypeWin32);
     return HostProcess();
   }
-  auto delete_attributelist = llvm::make_scope_exit(
+  llvm::scope_exit delete_attributelist(
       [&] { DeleteProcThreadAttributeList(startupinfoex.lpAttributeList); });
 
   std::vector<HANDLE> inherited_handles;

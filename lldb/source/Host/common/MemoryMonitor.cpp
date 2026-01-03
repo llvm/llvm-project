@@ -42,7 +42,7 @@ public:
       return {};
     fds.events = POLLPRI;
 
-    auto cleanup = llvm::make_scope_exit([&]() { close(fds.fd); });
+    llvm::scope_exit cleanup([&]() { close(fds.fd); });
 
     // Detect a 50ms stall in a 2 second time window.
     const char trig[] = "some 50000 2000000";

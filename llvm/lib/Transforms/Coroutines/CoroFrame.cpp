@@ -341,7 +341,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
   SmallVector<AllocaSetType, 4> NonOverlapedAllocas;
 
   // We need to add field for allocas at the end of this function.
-  auto AddFieldForAllocasAtExit = make_scope_exit([&]() {
+  llvm::scope_exit AddFieldForAllocasAtExit([&]() {
     for (auto AllocaList : NonOverlapedAllocas) {
       auto *LargestAI = *AllocaList.begin();
       FieldIDType Id = addFieldForAlloca(LargestAI);

@@ -675,7 +675,7 @@ int main(int argc, char *argv[]) {
     memory_monitor->Start();
 
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger = llvm::make_scope_exit([&] {
+  llvm::scope_exit terminate_debugger([&] {
     if (memory_monitor)
       memory_monitor->Stop();
     lldb::SBDebugger::Terminate();
