@@ -175,6 +175,26 @@ constexpr bool test_swap_ref() {
   }
   return true;
 }
+
+struct ADLSwap {
+  static inline bool called_adl_swap{false};
+
+  friend void swap(ADLSwap&, ADLSwap&) noexcept { called_adl_swap = true; }
+};
+
+// LWG4439: Verify that an ADL-found swap is not selected when calling optional<T&>::swap()
+void test_ref_swap_adl() {
+  ADLSwap t1{};
+  ADLSwap t2{};
+
+  std::optional<ADLSwap&> o{t1};
+  std::optional<ADLSwap&> o2{t2};
+
+  o.swap(o2);
+
+  assert(!ADLSwap::called_adl_swap);
+}
+
 #endif
 
 int main(int, char**)
@@ -185,6 +205,7 @@ int main(int, char**)
     static_assert(test_swap_ref<double>());
     test_swap_ref<int>();
     test_swap_ref<double>();
+    test_ref_swap_adl();
 #endif
     {
         optional<int> opt1;

@@ -237,7 +237,7 @@
 "`LWG4434 <https://wg21.link/LWG4434>`__","``meta::is_accessible`` does not need to consider incomplete *D*","2025-11 (Kona)","","","`#171399 <https://github.com/llvm/llvm-project/issues/171399>`__",""
 "`LWG4435 <https://wg21.link/LWG4435>`__","``meta::has_identifier`` doesn't handle all types","2025-11 (Kona)","","","`#171400 <https://github.com/llvm/llvm-project/issues/171400>`__",""
 "`LWG4438 <https://wg21.link/LWG4438>`__","Bad expression in [exec.when.all]","2025-11 (Kona)","","","`#171401 <https://github.com/llvm/llvm-project/issues/171401>`__",""
-"`LWG4439 <https://wg21.link/LWG4439>`__","``std::optional<T&>::swap`` possibly selects ADL-found ``swap``","2025-11 (Kona)","","","`#171402 <https://github.com/llvm/llvm-project/issues/171402>`__",""
+"`LWG4439 <https://wg21.link/LWG4439>`__","``std::optional<T&>::swap`` possibly selects ADL-found ``swap``","2025-11 (Kona)","|Complete|","22","`#171402 <https://github.com/llvm/llvm-project/issues/171402>`__",""
 "`LWG4440 <https://wg21.link/LWG4440>`__","Forward declarations of entities need also in entries","2025-11 (Kona)","","","`#171403 <https://github.com/llvm/llvm-project/issues/171403>`__",""
 "`LWG4441 <https://wg21.link/LWG4441>`__","``ranges::rotate`` do not handle sized-but-not-sized-sentinel ranges correctly","2025-11 (Kona)","","","`#171404 <https://github.com/llvm/llvm-project/issues/171404>`__",""
 "`LWG4442 <https://wg21.link/LWG4442>`__","Clarify ``expr`` and ``fn`` for ``meta::reflect_object`` and ``meta::reflect_function``","2025-11 (Kona)","","","`#171405 <https://github.com/llvm/llvm-project/issues/171405>`__",""
