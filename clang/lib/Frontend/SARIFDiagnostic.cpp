@@ -54,18 +54,6 @@ SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
   DiagOpts.ShowCarets = false;
 }
 
-// helper function
-namespace {
-template <class NodeType, class IterateFuncType, class ApplyFuncType>
-void RecursiveFor(NodeType &&Node, IterateFuncType &&IterateFunc,
-                  ApplyFuncType &&ApplyFunc) {
-  for (auto &&Child : IterateFunc(Node)) {
-    ApplyFunc(*Child);
-    RecursiveFor(*Child, IterateFunc, ApplyFunc);
-  }
-}
-} // namespace
-
 SARIFDiagnostic::~SARIFDiagnostic() {
   // clang-format off
   for (auto& TopLevelDiagnosticsPtr : Root.getChildrenPtrs()) { // For each top-level error/warnings.
@@ -95,7 +83,7 @@ SARIFDiagnostic::~SARIFDiagnostic() {
       .setDiagnosticMessage(TopLevelDiagnosticsPtr->getDiagnosticMessage())
       .addLocations(TopLevelDiagnosticsPtr->getLocations())
       .addRelatedLocations(TopLevelDiagnosticsPtr->getRelatedLocations());
-    RecursiveFor(*TopLevelDiagnosticsPtr, [] (Node& Node) -> auto& { return Node.getChildrenPtrs(); }, [&] (Node& Node) { // For each (recursive) ChildResults.
+    TopLevelDiagnosticsPtr->recursiveForEach([&] (Node& Node) { // For each (recursive) ChildResults.
       Result.addRelatedLocations({
         SarifChildResult::create()
           .setDiagnosticMessage(Node.getDiagnosticMessage())
@@ -181,6 +169,14 @@ SARIFDiagnostic::Node &
 SARIFDiagnostic::Node::addRelatedLocation(Location Location) {
   RelatedLocations.push_back(std::move(Location));
   return *this;
+}
+
+template <class Func>
+void SARIFDiagnostic::Node::recursiveForEach(Func&& Function) {
+  for (auto &&ChildPtr : getChildrenPtrs()) {
+    Function(*ChildPtr);
+    ChildPtr->recursiveForEach(std::forward<Func&&>(Function));
+  }
 }
 
 unsigned SARIFDiagnostic::Node::getDiagID() {

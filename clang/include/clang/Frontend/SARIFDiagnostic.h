@@ -93,6 +93,8 @@ private:
     Node &addChildResult(Result);
     Node &addLocation(Location);
     Node &addRelatedLocation(Location);
+    template <class Func>
+    void recursiveForEach(Func&&);
 
     // Methods to access underlying data for other llvm-components to read from
     // it. Arguments and results are all in llvm-style.
