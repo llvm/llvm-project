@@ -42,3 +42,24 @@ int foo3() {
   static int p = 7 + 83; // no warning
   return p;
 }
+
+namespace std {
+  template <typename T>
+  struct numeric_limits {
+    static constexpr T min() { return 0; }
+    static constexpr T max() { return 1000; }
+  };
+}
+
+template <typename T>
+void template_func() {
+  static constexpr T local_kMin{std::numeric_limits<T>::min()}; // no warning
+}
+
+template <int n>
+struct TemplateStruct {
+  static constexpr int xn{n}; // no warning
+};
+
+template <typename T>
+constexpr T kGlobalMin{std::numeric_limits<T>::min()}; // no warning
