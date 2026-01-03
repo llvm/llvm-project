@@ -13787,7 +13787,7 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 }
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
-  auto ResetDeclForInitializer = llvm::make_scope_exit([this]() {
+  llvm::scope_exit ResetDeclForInitializer([this]() {
     if (this->ExprEvalContexts.empty())
       this->ExprEvalContexts.back().DeclForInitializer = nullptr;
   });

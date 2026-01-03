@@ -5874,8 +5874,7 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
 /// are permitted with aggregate result, including noop aggregate casts, and
 /// cast from scalar to union.
 LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
-  auto RestoreCurCast =
-      llvm::make_scope_exit([this, Prev = CurCast] { CurCast = Prev; });
+  llvm::scope_exit RestoreCurCast([this, Prev = CurCast] { CurCast = Prev; });
   CurCast = E;
   switch (E->getCastKind()) {
   case CK_ToVoid:
@@ -6172,7 +6171,7 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     CallOrInvoke = &CallOrInvokeStorage;
   }
 
-  auto AddCoroElideSafeOnExit = llvm::make_scope_exit([&] {
+  llvm::scope_exit AddCoroElideSafeOnExit([&] {
     if (E->isCoroElideSafe()) {
       auto *I = *CallOrInvoke;
       if (I)

@@ -152,7 +152,7 @@ private:
             break;
         } while (Backoff.waitForNextAttempt());
 
-        auto SlotReleaser = llvm::make_scope_exit(
+        llvm::scope_exit SlotReleaser(
             [&] { TheJobserver->release(std::move(Slot)); });
 
         while (true) {

@@ -3872,8 +3872,8 @@ void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
   }
   os << "{" << newLine;
   if (!region.empty()) {
-    auto restoreDefaultDialect =
-        llvm::make_scope_exit([&]() { defaultDialectStack.pop_back(); });
+    llvm::scope_exit restoreDefaultDialect(
+        [&]() { defaultDialectStack.pop_back(); });
     if (auto iface = dyn_cast<OpAsmOpInterface>(region.getParentOp()))
       defaultDialectStack.push_back(iface.getDefaultDialect());
     else

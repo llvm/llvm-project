@@ -1468,23 +1468,23 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
         CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if (FAILED(HR))
       break;
-    auto Uninitialize = make_scope_exit([] { CoUninitialize(); });
+    llvm::scope_exit Uninitialize([] { CoUninitialize(); });
     IFileOperation *FileOp = NULL;
     HR = CoCreateInstance(CLSID_FileOperation, NULL, CLSCTX_ALL,
                           IID_PPV_ARGS(&FileOp));
     if (FAILED(HR))
       break;
-    auto FileOpRelease = make_scope_exit([&FileOp] { FileOp->Release(); });
+    llvm::scope_exit FileOpRelease([&FileOp] { FileOp->Release(); });
     HR = FileOp->SetOperationFlags(FOF_NO_UI | FOFX_NOCOPYHOOKS);
     if (FAILED(HR))
       break;
     PIDLIST_ABSOLUTE PIDL = ILCreateFromPathW(Path16.data());
-    auto FreePIDL = make_scope_exit([&PIDL] { ILFree(PIDL); });
+    llvm::scope_exit FreePIDL([&PIDL] { ILFree(PIDL); });
     IShellItem *ShItem = NULL;
     HR = SHCreateItemFromIDList(PIDL, IID_PPV_ARGS(&ShItem));
     if (FAILED(HR))
       break;
-    auto ShItemRelease = make_scope_exit([&ShItem] { ShItem->Release(); });
+    llvm::scope_exit ShItemRelease([&ShItem] { ShItem->Release(); });
     HR = FileOp->DeleteItem(ShItem, NULL);
     if (FAILED(HR))
       break;

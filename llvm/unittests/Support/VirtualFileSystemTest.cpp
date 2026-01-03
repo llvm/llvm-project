@@ -545,8 +545,7 @@ TEST(VirtualFileSystemTest, PhysicalFileSystemWorkingDirFailure) {
   ASSERT_EQ(sys::fs::current_path(PrevWD), std::error_code());
   ASSERT_EQ(sys::fs::createUniqueDirectory("d1", WD), std::error_code());
   ASSERT_EQ(sys::fs::set_current_path(WD), std::error_code());
-  auto Restore =
-      llvm::make_scope_exit([&] { sys::fs::set_current_path(PrevWD); });
+  llvm::scope_exit Restore([&] { sys::fs::set_current_path(PrevWD); });
 
   // Delete the working directory to create an error.
   if (sys::fs::remove_directories(WD, /*IgnoreErrors=*/false))

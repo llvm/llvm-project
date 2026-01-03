@@ -308,7 +308,7 @@ protected:
         return;
       }
 
-      auto on_error = llvm::make_scope_exit(
+      llvm::scope_exit on_error(
           [&target_list = debugger.GetTargetList(), &target_sp]() {
             target_list.DeleteTarget(target_sp);
           });

@@ -394,7 +394,7 @@ Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
 }
 
 Error Benchmark::writeYamlTo(const LLVMState &State, raw_ostream &OS) {
-  auto Cleanup = make_scope_exit([&] { OS.flush(); });
+  llvm::scope_exit Cleanup([&] { OS.flush(); });
   yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
   YamlContext Context(State);
   Yout.beginDocuments();
