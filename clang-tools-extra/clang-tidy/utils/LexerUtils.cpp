@@ -70,12 +70,6 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
   }
 }
 
-std::optional<Token>
-findPreviousTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
-                                  const LangOptions &LangOpts) {
-  return Lexer::findPreviousToken(Start, SM, LangOpts, false);
-}
-
 SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
                                   const LangOptions &LangOpts) {
   return findNextAnyTokenKind(Start, SM, LangOpts, tok::comma, tok::semi);

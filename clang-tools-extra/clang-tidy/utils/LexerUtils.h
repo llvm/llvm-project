@@ -37,11 +37,6 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
                                      const LangOptions &LangOpts,
                                      tok::TokenKind TK);
 
-// Finds previous token that's not a comment.
-std::optional<Token>
-findPreviousTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
-                                  const LangOptions &LangOpts);
-
 SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
                                   const LangOptions &LangOpts);
 
