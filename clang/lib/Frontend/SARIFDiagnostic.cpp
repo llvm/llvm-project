@@ -103,7 +103,7 @@ void SARIFDiagnostic::emitDiagnosticMessage(
 }
 
 void SARIFDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  Current = &Current->addRelatedLocation(Node::Location{Loc, PLoc, {}});
+  Current = &Current->addRelatedLocation(Node::Location{Loc, PLoc, /*Ranges=*/{}});
 }
 
 void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
