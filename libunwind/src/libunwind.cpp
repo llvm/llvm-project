@@ -150,16 +150,19 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
           _LIBUNWIND_ABORT("PC vs frame info mismatch");
 
         // PC should have been signed with the sp, so we verify that
-        // roundtripping does not fail.
+        // roundtripping does not fail. The `ptrauth_auth_and_resign` is
+        // guaranteed to trap on authentication failure even without FPAC
+        // feature.
         pint_t pc = (pint_t)co->getReg(UNW_REG_IP);
         if (ptrauth_auth_and_resign((void *)pc, ptrauth_key_return_address, sp,
                                     ptrauth_key_return_address,
                                     sp) != (void *)pc) {
-          _LIBUNWIND_LOG("Bad unwind through arm64e (0x%zX, 0x%zX)->0x%zX\n",
-                         pc, sp,
-                         (pint_t)ptrauth_auth_data(
-                             (void *)pc, ptrauth_key_return_address, sp));
-          _LIBUNWIND_ABORT("Bad unwind through arm64e");
+          _LIBUNWIND_LOG(
+              "Bad unwind with PAuth-enabled ABI (0x%zX, 0x%zX)->0x%zX\n", pc,
+              sp,
+              (pint_t)ptrauth_auth_data((void *)pc, ptrauth_key_return_address,
+                                        sp));
+          _LIBUNWIND_ABORT("Bad unwind with PAuth-enabled ABI");
         }
       }
 #endif

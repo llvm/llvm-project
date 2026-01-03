@@ -67,7 +67,13 @@ FunctionPass *createX86PadShortFunctions();
 /// Return a pass that selectively replaces certain instructions (like add,
 /// sub, inc, dec, some shifts, and some multiplies) by equivalent LEA
 /// instructions, in order to eliminate execution delays in some processors.
-FunctionPass *createX86FixupLEAs();
+class X86FixupLEAsPass : public PassInfoMixin<X86FixupLEAsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FixupLEAsLegacyPass();
 
 /// Return a pass that replaces equivalent slower instructions with faster
 /// ones.
@@ -93,7 +99,14 @@ FunctionPass *createX86FixupSetCC();
 FunctionPass *createX86AvoidStoreForwardingBlocks();
 
 /// Return a pass that lowers EFLAGS copy pseudo instructions.
-FunctionPass *createX86FlagsCopyLoweringPass();
+class X86FlagsCopyLoweringPass
+    : public PassInfoMixin<X86FlagsCopyLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FlagsCopyLoweringLegacyPass();
 
 /// Return a pass that expands DynAlloca pseudo-instructions.
 class X86DynAllocaExpanderPass
@@ -136,7 +149,14 @@ FunctionPass *createX86AvoidTrailingCallLegacyPass();
 
 /// Return a pass that optimizes the code-size of x86 call sequences. This is
 /// done by replacing esp-relative movs with pushes.
-FunctionPass *createX86CallFrameOptimization();
+class X86CallFrameOptimizationPass
+    : public PassInfoMixin<X86CallFrameOptimizationPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86CallFrameOptimizationLegacyPass();
 
 /// Return an IR pass that inserts EH registration stack objects and explicit
 /// EH state updates. This pass must run after EH preparation, which does
@@ -242,7 +262,7 @@ FunctionPass *createX86SuppressAPXForRelocationPass();
 
 void initializeCompressEVEXPassPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
-void initializeFixupLEAPassPass(PassRegistry &);
+void initializeFixupLEAsLegacyPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningPassPass(PassRegistry &);
@@ -250,7 +270,7 @@ void initializeX86FixupVectorConstantsPassPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
-void initializeX86CallFrameOptimizationPass(PassRegistry &);
+void initializeX86CallFrameOptimizationLegacyPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
@@ -261,7 +281,7 @@ void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
 void initializeX86FastTileConfigPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
-void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
+void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
