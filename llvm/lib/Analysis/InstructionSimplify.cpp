@@ -4474,7 +4474,7 @@ static Value *simplifyWithOpsReplaced(Value *V,
           DropFlags->push_back(II);
         }
 
-        return llvm::ConstantInt::get(I->getType(), 0);
+        return ConstantInt::get(I->getType(), 0);
       }
     }
 
