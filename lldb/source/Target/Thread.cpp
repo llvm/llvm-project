@@ -739,12 +739,12 @@ bool Thread::ShouldResume(StateType resume_state) {
 
     if (need_to_resume && resume_state != eStateSuspended) {
       m_stop_info_sp.reset();
+      m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
     }
   }
 
   if (need_to_resume) {
     ClearStackFrames();
-    m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
     // Let Thread subclasses do any special work they need to prior to resuming
     WillResume(resume_state);
   }
