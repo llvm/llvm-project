@@ -66,7 +66,7 @@ void StringList::AppendList(const char **strv, int strc) {
   }
 }
 
-void StringList::AppendList(StringList strings) {
+void StringList::AppendList(const StringList &strings) {
   m_strings.reserve(m_strings.size() + strings.GetSize());
   m_strings.insert(m_strings.end(), strings.begin(), strings.end());
 }
