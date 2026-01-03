@@ -1936,7 +1936,7 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
   // If the constant divisor has an exact inverse, this is always safe. If not,
   // then we can still create a reciprocal if fast-math-flags allow it and the
   // constant is a regular number (not zero, infinite, or denormal).
-  if (!C->hasExactInverseFP() && !(I.hasAllowReciprocal() && C->isNormalFP()))
+  if (!(C->hasExactInverseFP() || (I.hasAllowReciprocal() && C->isNormalFP())))
     return nullptr;
 
   // Disallow denormal constants because we don't know what would happen
