@@ -17,9 +17,8 @@ define ptr @f(i64 %0) {
 ; CHECK-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L0$pb, %rcx
 ; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    movabsq $g@GOTOFF, %rax
-; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    cmpq $1, %rdi
-; CHECK-NEXT:    adcq $0, %rax
+; CHECK-NEXT:    adcq %rcx, %rax
 ; CHECK-NEXT:    retq
   %2 = icmp eq i64 %0, 0
   %3 = zext i1 %2 to i64
