@@ -42,6 +42,8 @@ void test() {
     allocator_traits.allocate(allocator, 1, nullptr);
   }
 
+  allocator.allocate(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
 #if TEST_STD_VER >= 23
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   allocator.allocate_at_least(1);
@@ -53,7 +55,7 @@ void test() {
 
     allocator.address(i);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     allocator.address(ci); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    allocator.allocate(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     allocator.allocate(1, nullptr);
     allocator.max_size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
