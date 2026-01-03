@@ -13,6 +13,8 @@
 #include <__chrono/duration.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__functional/hash.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -108,6 +110,15 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool year::ok() const noexcept {
 }
 
 } // namespace chrono
+
+#  if _LIBCPP_STD_VER >= 26
+
+template <>
+struct hash<chrono::year> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year& __y) noexcept { return static_cast<int>(__y); }
+};
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

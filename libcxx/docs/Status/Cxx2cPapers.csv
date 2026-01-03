@@ -1,6 +1,6 @@
 "Paper #","Paper Name","Meeting","Status","First released version","GitHub issue","Notes"
 "`P2497R0 <https://wg21.link/P2497R0>`__","Testing for success or failure of ``<charconv>`` functions","2023-06 (Varna)","|Complete|","18","`#105357 <https://github.com/llvm/llvm-project/issues/105357>`__",""
-"`P2592R3 <https://wg21.link/P2592R3>`__","Hashing support for ``std::chrono`` value classes","2023-06 (Varna)","","","`#105358 <https://github.com/llvm/llvm-project/issues/105358>`__",""
+"`P2592R3 <https://wg21.link/P2592R3>`__","Hashing support for ``std::chrono`` value classes","2023-06 (Varna)","|Complete|","22","`#105358 <https://github.com/llvm/llvm-project/issues/105358>`__",""
 "`P2587R3 <https://wg21.link/P2587R3>`__","``to_string`` or not ``to_string``","2023-06 (Varna)","","","`#105359 <https://github.com/llvm/llvm-project/issues/105359>`__",""
 "`P2562R1 <https://wg21.link/P2562R1>`__","``constexpr`` Stable Sorting","2023-06 (Varna)","|Complete|","21","`#105360 <https://github.com/llvm/llvm-project/issues/105360>`__",""
 "`P2545R4 <https://wg21.link/P2545R4>`__","Read-Copy Update (RCU)","2023-06 (Varna)","","","`#105361 <https://github.com/llvm/llvm-project/issues/105361>`__",""
