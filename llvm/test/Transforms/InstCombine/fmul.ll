@@ -552,7 +552,7 @@ define float @reassoc_common_operand1(float %x, float %y) {
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul reassoc float [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
-  %mul1 = fmul float %x, %y
+  %mul1 = fmul reassoc float %x, %y
   %mul2 = fmul reassoc float %mul1, %x
   ret float %mul2
 }
@@ -565,7 +565,7 @@ define float @reassoc_common_operand2(float %x, float %y) {
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast float [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
-  %mul1 = fmul float %y, %x
+  %mul1 = fmul fast float %y, %x
   %mul2 = fmul fast float %mul1, %x
   ret float %mul2
 }
@@ -580,7 +580,7 @@ define float @reassoc_common_operand3(float %x1, float %y) {
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
   %x = fdiv float %x1, 3.0 ; thwart complexity-based canonicalization
-  %mul1 = fmul float %x, %y
+  %mul1 = fmul reassoc float %x, %y
   %mul2 = fmul reassoc nnan float %x, %mul1
   ret float %mul2
 }
@@ -595,7 +595,7 @@ define float @reassoc_common_operand4(float %x1, float %y) {
 ; CHECK-NEXT:    ret float [[MUL2]]
 ;
   %x = fdiv float %x1, 3.0 ; thwart complexity-based canonicalization
-  %mul1 = fmul float %y, %x
+  %mul1 = fmul reassoc float %y, %x
   %mul2 = fmul reassoc ninf float %x, %mul1
   ret float %mul2
 }
@@ -626,8 +626,8 @@ define float @log2half(float %x, float %y) {
 ; CHECK-NEXT:    [[MUL:%.*]] = fsub fast float [[TMP2]], [[X]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %halfy = fmul float %y, 0.5
-  %log2 = call float @llvm.log2.f32(float %halfy)
+  %halfy = fmul reassoc float %y, 0.5
+  %log2 = call reassoc float @llvm.log2.f32(float %halfy)
   %mul = fmul fast float %log2, %x
   ret float %mul
 }
@@ -714,24 +714,22 @@ define float @fdiv_constant_numerator_fmul_extra_use(float %x) {
   ret float %mul
 }
 
-; X/C1 * C2 => X * (C2/C1) (if C2/C1 is normal FP)
-
 define float @fdiv_constant_denominator_fmul(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul(
-; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc float [[X:%.*]], 0x4008000020000000
 ; CHECK-NEXT:    ret float [[T3]]
 ;
-  %t1 = fdiv reassoc float %x, 2.0e+3
+  %t1 = fdiv arcp reassoc float %x, 2.0e+3
   %t3 = fmul reassoc float %t1, 6.0e+3
   ret float %t3
 }
 
 define <4 x float> @fdiv_constant_denominator_fmul_vec(<4 x float> %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_vec(
-; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc <4 x float> [[X:%.*]], <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc <4 x float> [[X:%.*]], <float 0x4008000020000000, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
-  %t1 = fdiv reassoc <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
+  %t1 = fdiv arcp reassoc <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
   %t3 = fmul reassoc <4 x float> %t1, <float 6.0e+3, float 6.0e+3, float 2.0e+3, float 1.0e+3>
   ret <4 x float> %t3
 }
@@ -740,11 +738,11 @@ define <4 x float> @fdiv_constant_denominator_fmul_vec(<4 x float> %x) {
 
 define <4 x float> @fdiv_constant_denominator_fmul_vec_constexpr(<4 x float> %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_vec_constexpr(
-; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc <4 x float> [[X:%.*]], <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc <4 x float> [[X:%.*]], <float 0x4008000020000000, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
   %constExprMul = bitcast i128 trunc (i160 bitcast (<5 x float> <float 6.0e+3, float 6.0e+3, float 2.0e+3, float 1.0e+3, float poison> to i160) to i128) to <4 x float>
-  %t1 = fdiv reassoc <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
+  %t1 = fdiv arcp reassoc <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
   %t3 = fmul reassoc <4 x float> %t1, %constExprMul
   ret <4 x float> %t3
 }
@@ -764,6 +762,7 @@ define float @fmul_constant_reassociation(float %x) {
   ret float %r
 }
 
+; X / C1 * C2 => X * (C2 / C1) (if C2 / C1 is normal FP)
 ; Canonicalization "X/C1 * C2 => X * (C2/C1)" still applies if C2/C1 is denormal
 ; (otherwise, we should not have allowed the reassociation in the previous test).
 ; 0x3810000000000000 == FLT_MIN
@@ -784,11 +783,11 @@ define float @fdiv_constant_denominator_fmul_denorm(float %x) {
 
 define float @fdiv_constant_denominator_fmul_denorm_try_harder(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_denorm_try_harder(
-; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float [[X:%.*]], 0x47E8000000000000
+; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc arcp float [[X:%.*]], 0x37F5555580000000
 ; CHECK-NEXT:    ret float [[T3]]
 ;
-  %t1 = fdiv reassoc float %x, 3.0
-  %t3 = fmul reassoc float %t1, 0x3810000000000000
+  %t1 = fdiv arcp reassoc float %x, 3.0
+  %t3 = fmul arcp reassoc float %t1, 0x3810000000000000
   ret float %t3
 }
 
@@ -907,11 +906,11 @@ define float @fmul_fadd_distribute_extra_use(float %x) {
 
 define double @fmul_fadd_fdiv_distribute2(double %x) {
 ; CHECK-LABEL: @fmul_fadd_fdiv_distribute2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[X:%.*]], 0x7FE8000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc double [[X:%.*]], 0x5555555555555
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc double [[TMP1]], 0x34000000000000
 ; CHECK-NEXT:    ret double [[T3]]
 ;
-  %t1 = fdiv reassoc double %x, 3.0
+  %t1 = fdiv arcp reassoc double %x, 3.0
   %t2 = fadd reassoc double %t1, 5.0
   %t3 = fmul reassoc double %t2, 0x10000000000000
   ret double %t3
@@ -922,11 +921,11 @@ define double @fmul_fadd_fdiv_distribute2(double %x) {
 
 define double @fmul_fadd_fdiv_distribute3(double %x) {
 ; CHECK-LABEL: @fmul_fadd_fdiv_distribute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[X:%.*]], 0x7FE8000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc double [[X:%.*]], 0x5555555555555
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc double [[TMP1]], 0x34000000000000
 ; CHECK-NEXT:    ret double [[T3]]
 ;
-  %t1 = fdiv reassoc double %x, 3.0
+  %t1 = fdiv arcp reassoc double %x, 3.0
   %t2 = fadd reassoc double %t1, 5.0
   %t3 = fmul reassoc double %t2, 0x10000000000000
   ret double %t3
