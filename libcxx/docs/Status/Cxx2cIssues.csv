@@ -150,7 +150,7 @@
 "`LWG3090 <https://wg21.link/LWG3090>`__","What is §[time.duration.cons]p4's ""no overflow is induced in the conversion"" intended to mean?","2025-11 (Kona)","","","`#171302 <https://github.com/llvm/llvm-project/issues/171302>`__",""
 "`LWG3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","2025-11 (Kona)","|Complete|","16","`#105356 <https://github.com/llvm/llvm-project/issues/105356>`__",""
 "`LWG3454 <https://wg21.link/LWG3454>`__","``pointer_traits::pointer_to`` should be ``constexpr``","2025-11 (Kona)","","","`#171307 <https://github.com/llvm/llvm-project/issues/171307>`__",""
-"`LWG3627 <https://wg21.link/LWG3627>`__","Inconsistent specifications for ``std::make_optional`` overloads","2025-11 (Kona)","","","`#171309 <https://github.com/llvm/llvm-project/issues/171309>`__",""
+"`LWG3627 <https://wg21.link/LWG3627>`__","Inconsistent specifications for ``std::make_optional`` overloads","2025-11 (Kona)","|Complete|","22","`#171309 <https://github.com/llvm/llvm-project/issues/171309>`__",""
 "`LWG4015 <https://wg21.link/LWG4015>`__","LWG 3973 broke const overloads of ``std::optional`` monadic operations","2025-11 (Kona)","","","`#171310 <https://github.com/llvm/llvm-project/issues/171310>`__",""
 "`LWG4020 <https://wg21.link/LWG4020>`__","``extents::index-cast`` weirdness","2025-11 (Kona)","","","`#171311 <https://github.com/llvm/llvm-project/issues/171311>`__",""
 "`LWG4136 <https://wg21.link/LWG4136>`__","Specify behavior of [linalg] Hermitian algorithms on diagonal with nonzero imaginary part","2025-11 (Kona)","","","`#171312 <https://github.com/llvm/llvm-project/issues/171312>`__",""

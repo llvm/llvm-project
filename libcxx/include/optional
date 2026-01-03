@@ -1577,7 +1577,8 @@ template <
 #    if _LIBCPP_STD_VER >= 26
     __make_optional_barrier_tag = __make_optional_barrier_tag{},
 #    endif
-    class _Tp>
+    class _Tp,
+    enable_if_t<is_constructible_v<decay_t<_Tp>, _Tp>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<decay_t<_Tp>> make_optional(_Tp&& __v) {
   return optional<decay_t<_Tp>>(std::forward<_Tp>(__v));
 }
