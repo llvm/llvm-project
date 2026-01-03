@@ -31245,6 +31245,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     };
 
     KnownBits KnownAmt = DAG.computeKnownBits(Amt).trunc(3);
+    if (KnownAmt.isZero())
+      return R;
     unsigned MinLZ = KnownAmt.countMinLeadingZeros();
     assert(MinLZ <= 2 && "Illegal shift amount");
 
