@@ -21,6 +21,8 @@
 #include <__chrono/year_month.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__functional/hash.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -329,6 +331,27 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr bool year_month_day::ok() const noexcept 
 }
 
 } // namespace chrono
+
+#  if _LIBCPP_STD_VER >= 26
+
+template <>
+struct hash<chrono::year_month_day> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_day& __ymd) noexcept {
+    return std::__hash_combine(
+        hash<chrono::year>{}(__ymd.year()),
+        std::__hash_combine(hash<chrono::month>{}(__ymd.month()), hash<chrono::day>{}(__ymd.day())));
+  }
+};
+
+template <>
+struct hash<chrono::year_month_day_last> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_day_last& __ymdl) noexcept {
+    return std::__hash_combine(
+        hash<chrono::year>{}(__ymdl.year()), hash<chrono::month_day_last>{}(__ymdl.month_day_last()));
+  }
+};
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
