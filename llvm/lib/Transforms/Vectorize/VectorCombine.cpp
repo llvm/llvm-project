@@ -1919,7 +1919,7 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     return false;
 
   DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
-  auto FailureGuard = make_scope_exit([&]() {
+  llvm::scope_exit FailureGuard([&]() {
     // If the transform is aborted, discard the ScalarizationResults.
     for (auto &Pair : NeedFreeze)
       Pair.second.discard();

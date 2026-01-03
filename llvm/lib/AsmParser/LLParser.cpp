@@ -2586,7 +2586,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   // We use syntax like memory(argmem: read), so the colon should not be
   // interpreted as a label terminator.
   Lex.setIgnoreColonInIdentifiers(true);
-  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
 
   Lex.Lex();
   if (!EatIfPresent(lltok::lparen)) {
@@ -3246,7 +3246,7 @@ bool LLParser::parseCapturesAttr(AttrBuilder &B) {
   // We use syntax like captures(ret: address, provenance), so the colon
   // should not be interpreted as a label terminator.
   Lex.setIgnoreColonInIdentifiers(true);
-  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
 
   Lex.Lex();
   if (parseToken(lltok::lparen, "expected '('"))

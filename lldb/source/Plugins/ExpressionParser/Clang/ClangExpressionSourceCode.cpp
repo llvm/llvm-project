@@ -149,9 +149,8 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
   stream << "#pragma clang diagnostic push\n";
   stream << "#pragma clang diagnostic ignored \"-Wmacro-redefined\"\n";
   stream << "#pragma clang diagnostic ignored \"-Wbuiltin-macro-redefined\"\n";
-  auto pop_warning = llvm::make_scope_exit([&stream](){
-    stream << "#pragma clang diagnostic pop\n";
-  });
+  llvm::scope_exit pop_warning(
+      [&stream]() { stream << "#pragma clang diagnostic pop\n"; });
 
   for (size_t i = 0; i < dm->GetNumMacroEntries(); i++) {
     const DebugMacroEntry &entry = dm->GetMacroEntryAtIndex(i);

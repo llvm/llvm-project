@@ -1188,7 +1188,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // DesiredStackSpace available.
   noteBottomOfStack();
 
-  auto FinishDiagnosticClient = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinishDiagnosticClient([&]() {
     if (!getFrontendOpts().MayEmitDiagnosticsAfterProcessingSourceFiles) {
       // Notify the diagnostic client that all files were processed.
       getDiagnosticClient().finish();

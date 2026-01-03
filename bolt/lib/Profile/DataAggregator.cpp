@@ -347,7 +347,7 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
 
   char Buf[7] = {0, 0, 0, 0, 0, 0, 0};
 
-  auto Close = make_scope_exit([&] { sys::fs::closeFile(*FD); });
+  llvm::scope_exit Close([&] { sys::fs::closeFile(*FD); });
   Expected<size_t> BytesRead = sys::fs::readNativeFileSlice(
       *FD, MutableArrayRef(Buf, sizeof(Buf)), 0);
   if (!BytesRead) {

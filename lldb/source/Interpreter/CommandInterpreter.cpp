@@ -3402,7 +3402,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     OverrideExecutionContext(exe_ctx);
     pushed_exe_ctx = true;
   }
-  auto finalize = llvm::make_scope_exit([this, pushed_exe_ctx]() {
+  llvm::scope_exit finalize([this, pushed_exe_ctx]() {
     if (pushed_exe_ctx)
       RestoreExecutionContext();
   });

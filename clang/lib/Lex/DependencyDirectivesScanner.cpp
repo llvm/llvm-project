@@ -904,7 +904,7 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
 
   TheLexer.seek(getOffsetAt(First), /*IsAtStartOfLine*/ true);
 
-  auto ScEx1 = make_scope_exit([&]() {
+  llvm::scope_exit ScEx1([&]() {
     /// Clear Scanner's CurDirToks before returning, in case we didn't push a
     /// new directive.
     CurDirToks.clear();
@@ -919,7 +919,7 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   // Handle preprocessing directives.
 
   TheLexer.setParsingPreprocessorDirective(true);
-  auto ScEx2 = make_scope_exit(
+  llvm::scope_exit ScEx2(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
 
   // Handle "@import".

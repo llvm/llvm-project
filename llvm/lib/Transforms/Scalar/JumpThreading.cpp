@@ -1513,7 +1513,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
     SmallPtrSet<Value *, 8> &Visited) {
   if (!Visited.insert(V).second)
     return nullptr;
-  auto _ = make_scope_exit([&Visited, V]() { Visited.erase(V); });
+  llvm::scope_exit _([&Visited, V]() { Visited.erase(V); });
 
   BasicBlock *PredBB = BB->getSinglePredecessor();
   assert(PredBB && "Expected a single predecessor");

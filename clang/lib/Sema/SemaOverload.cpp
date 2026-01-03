@@ -12723,7 +12723,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   // We prefer adding such notes at the end of the deduction failure because
   // duplicate code snippets appearing in the diagnostic would likely become
   // noisy.
-  auto _ = llvm::make_scope_exit([&] { NoteImplicitDeductionGuide(S, Fn); });
+  llvm::scope_exit _([&] { NoteImplicitDeductionGuide(S, Fn); });
 
   switch (Cand->FailureKind) {
   case ovl_fail_too_many_arguments:

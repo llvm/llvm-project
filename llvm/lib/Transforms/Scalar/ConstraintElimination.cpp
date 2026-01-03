@@ -1999,7 +1999,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   // about the constraint.
   for (auto &Row : R.ExtraInfo)
     CSToUse.addVariableRow(Row);
-  auto InfoRestorer = make_scope_exit([&]() {
+  llvm::scope_exit InfoRestorer([&]() {
     for (unsigned I = 0; I < R.ExtraInfo.size(); ++I)
       CSToUse.popLastConstraint();
   });
@@ -2170,7 +2170,7 @@ static bool checkOrAndOpImpliedByOther(
     return false;
 
   unsigned OldSize = DFSInStack.size();
-  auto InfoRestorer = make_scope_exit([&]() {
+  llvm::scope_exit InfoRestorer([&]() {
     // Remove entries again.
     while (OldSize < DFSInStack.size()) {
       StackEntry E = DFSInStack.back();

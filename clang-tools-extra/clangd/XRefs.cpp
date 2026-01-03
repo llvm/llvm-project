@@ -1097,7 +1097,7 @@ class FindControlFlow : public RecursiveASTVisitor<FindControlFlow> {
   // Traverses the subtree using Delegate() if any targets remain.
   template <typename Func>
   bool filterAndTraverse(DynTypedNode D, const Func &Delegate) {
-    auto RestoreIgnore = llvm::make_scope_exit(
+    llvm::scope_exit RestoreIgnore(
         [OldIgnore(Ignore), this] { Ignore = OldIgnore; });
     if (getFunctionBody(D))
       Ignore = All;
