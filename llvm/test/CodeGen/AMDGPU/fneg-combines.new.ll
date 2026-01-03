@@ -3509,7 +3509,7 @@ define float @v_fneg_inlineasm_f32(float %a, float %b, float %c, i32 %d) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg)
   ret float %fneg
 }
 
@@ -3530,7 +3530,7 @@ define float @v_fneg_inlineasm_multi_use_src_f32(ptr addrspace(1) %out, float %a
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg)
   ret float %mul
 }
 
