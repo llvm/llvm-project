@@ -1876,22 +1876,21 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
   return nullptr;
 }
 
-// In some cases it is beneficial to fold a select into a binary operator.
-// For example:
-//   %1 = or %in, 4
-//   %2 = select %cond, %1, %in
-//   %3 = or %2, 1
-// =>
-//   %1 = select i1 %cond, 5, 1
-//   %2 = or %1, %in
+/// In some cases it is beneficial to fold a select into a binary operator.
+/// For example:
+///   %1 = or %in, 4
+///   %2 = select %cond, %1, %in
+///   %3 = or %2, 1
+/// =>
+///   %1 = select i1 %cond, 5, 1
+///   %2 = or %1, %in
 Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
   assert(Op.isAssociative() && "The operation must be associative!");
 
   SelectInst *SI = dyn_cast<SelectInst>(Op.getOperand(0));
-  Value *PotentialConst = Op.getOperand(1);
 
   Constant *Const;
-  if (!SI || !PotentialConst || !match(PotentialConst, m_ImmConstant(Const)) ||
+  if (!SI || !match(Op.getOperand(1), m_ImmConstant(Const)) ||
       !Op.hasOneUse() || !SI->hasOneUse())
     return nullptr;
 
@@ -1899,9 +1898,6 @@ Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
   Value *FV = SI->getFalseValue();
   Value *Input, *NewTV, *NewFV;
   Constant *Const2;
-
-  if (!TV || !FV)
-    return nullptr;
 
   if (TV->hasOneUse() && match(TV, m_BinOp(Op.getOpcode(), m_Specific(FV),
                                            m_ImmConstant(Const2)))) {
