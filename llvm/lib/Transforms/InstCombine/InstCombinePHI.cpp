@@ -534,6 +534,10 @@ Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
 
 Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   GetElementPtrInst *FirstInst =cast<GetElementPtrInst>(PN.getIncomingValue(0));
+  // Because SROA cannot fully handle the select instruction, sinking the select instruction may lead to pointer escape.
+  // This approach is designed to avoid such a situation.
+  if (isa<SelectInst>(FirstInst->getPointerOperand()))
+    return nullptr;
 
   SmallVector<Value*, 16> FixedOperands(FirstInst->op_begin(),
                                         FirstInst->op_end());
@@ -552,6 +556,8 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {
     GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V);
+    if (isa<SelectInst>(GEP->getPointerOperand()))
+      return nullptr;
     if (!GEP || !GEP->hasOneUser() ||
         GEP->getSourceElementType() != FirstInst->getSourceElementType() ||
         GEP->getNumOperands() != FirstInst->getNumOperands())
