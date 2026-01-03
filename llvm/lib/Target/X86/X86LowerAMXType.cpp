@@ -996,8 +996,7 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   IRBuilder<> Builder(LD);
   Value *I8Ptr;
 
-  // To save compiling time, we create doninator tree when it is really
-  // needed.
+  // To save compiling time, we create dominator tree when it is really needed.
   if (!DT)
     DT.reset(new DominatorTree(Func));
   if (!DT->dominates(Row, LD) || !DT->dominates(Col, LD)) {
