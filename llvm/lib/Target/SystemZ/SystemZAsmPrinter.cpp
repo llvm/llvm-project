@@ -1668,17 +1668,18 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   uint8_t Flgs = static_cast<uint8_t>(PPA2Flags::CompileForBinaryFloatingPoint);
   Flgs |= static_cast<uint8_t>(PPA2Flags::CompiledWithXPLink);
 
+  bool IsASCII = true;
   if (auto *MD = M.getModuleFlag("zos_le_char_mode")) {
     const StringRef &CharMode = cast<MDString>(MD)->getString();
-    if (CharMode == "ascii") {
-      Flgs |= static_cast<uint8_t>(
-          PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
-    } else if (CharMode != "ebcdic") {
-      report_fatal_error(
-          "Only ascii or ebcdic are valid values for zos_le_char_mode "
-          "metadata");
-    }
+    if (CharMode == "ebcdic")
+      IsASCII = false;
+    else if (CharMode != "ascii")
+      OutContext.reportError(
+        {}, "Only ascii or ebcdic are allowed for zos_le_char_mode");
   }
+  if (IsASCII)
+    Flgs |= static_cast<uint8_t>(
+      PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
 
   OutStreamer->emitInt8(Flgs);
   OutStreamer->emitInt8(0x00);    // Reserved.
