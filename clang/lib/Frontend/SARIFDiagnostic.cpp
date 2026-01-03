@@ -26,23 +26,6 @@
 
 namespace clang {
 
-// In sarif mode,
-// a diagnostics 'group' have 1 top-level error/warning and several sub-level
-// notes. For example:
-//
-// error: static assertion failed.
-//   note: in instantiation of 'cat::meow'.
-//     note: because concept 'paper_tiger' would be invalid.
-// error: invalid operands to binary expression 'cat::meow' and 'dog::wolf'.
-//   note: candidate function not viable.
-//     note: no known conversion from 'tiger::meooooow' to 'cat::meow'
-//   note: candidate function ignored.
-//     note: constraints not satisfied.
-//   note: ... (candidates)
-//     note: ... (reasons)
-//   note: too many candidates.
-// error: too many errors occured, stopping now.
-
 SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                  DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
