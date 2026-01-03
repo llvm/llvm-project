@@ -464,6 +464,16 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
 }
 
 //===----------------------------------------------------------------------===//
+// RegionBranchTerminatorOpInterface
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange
+TerminatorOp::getMutableSuccessorOperands(RegionSuccessor /*point*/) {
+  // `acc.terminator` does not forward operands.
+  return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
+}
+
+//===----------------------------------------------------------------------===//
 // device_type support helpers
 //===----------------------------------------------------------------------===//
 
