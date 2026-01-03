@@ -56,11 +56,6 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
 
   SmallVector<int64_t> endLoopRangeValues = invertedMap.compose(allShapesSizes);
 
-  if (invertedMap.getNumResults() != endLoopRangeValues.size())
-    return getOperation()->emitOpError("expected each indexing_map to have ")
-           << endLoopRangeValues.size()
-           << " dim(s) to match the number of loops";
-
   // Check if given shapes match to inferred shapes.
   SmallVector<int64_t> startLoopRangeValues(endLoopRangeValues.size(), 0);
   // Verify only static cases since we can't get exact dimension sizes and
