@@ -177,7 +177,8 @@ static bool isSupportedReadLaneType(Type type) {
     return true;
 
   if (auto intType = dyn_cast<IntegerType>(type))
-    return llvm::is_contained({16, 32, 64}, (int)intType.getWidth());
+    return llvm::is_contained({16, 32, 64},
+                              static_cast<int>(intType.getWidth()));
 
   if (auto vecType = dyn_cast<VectorType>(type)) {
     Type elementType = vecType.getElementType();
