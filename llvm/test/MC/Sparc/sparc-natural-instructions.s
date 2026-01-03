@@ -1,5 +1,5 @@
-! RUN: llvm-mc %s -triple=sparc   -mcpu=v9 -show-encoding | FileCheck %s --check-prefixes=SPARC32
-! RUN: llvm-mc %s -triple=sparcv9 -mcpu=v9 -show-encoding | FileCheck %s --check-prefixes=SPARC64
+! RUN: llvm-mc %s -triple=sparc   -mcpu=v9 -mattr=+hard-quad-float -show-encoding | FileCheck %s --check-prefixes=SPARC32
+! RUN: llvm-mc %s -triple=sparcv9 -mcpu=v9 -mattr=+hard-quad-float -show-encoding | FileCheck %s --check-prefixes=SPARC64
 
 !! Solaris Natural Instructions.
 
@@ -52,3 +52,6 @@ fmovse %ncc, %f0, %f1
 ! SPARC32: fmovde %icc, %f0, %f2                   ! encoding: [0x85,0xa8,0x60,0x40]
 ! SPARC64: fmovde %xcc, %f0, %f2                   ! encoding: [0x85,0xa8,0x70,0x40]
 fmovde %ncc, %f0, %f2
+! SPARC32: fmovqe %icc, %f0, %f4                   ! encoding: [0x89,0xa8,0x60,0x60]
+! SPARC64: fmovqe %xcc, %f0, %f4                   ! encoding: [0x89,0xa8,0x70,0x60]
+fmovqe %ncc, %f0, %f4
