@@ -509,6 +509,19 @@ define nofpclass(pzero nan) float @source_is_known_zero_or_nan__nnan_result(floa
   ret float %exp
 }
 
+; Cannot eliminate the select
+define nofpclass(nan inf nnorm sub zero) float @posnormal_result_demands_negnormal_source(i1 %cond, float nofpclass(inf nan pnorm sub zero) %neg.normal, float %unknown) {
+; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @posnormal_result_demands_negnormal_source(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero sub pnorm) [[NEG_NORMAL:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[NEG_NORMAL]]
+; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp2.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[EXP]]
+;
+  %select = select i1 %cond, float %unknown, float %neg.normal
+  %exp = call float @llvm.exp2.f32(float %select)
+  ret float %exp
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
