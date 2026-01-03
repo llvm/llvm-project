@@ -13,6 +13,7 @@
 
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
 
@@ -767,4 +768,102 @@ mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
       joinResult(ConstantIntRanges::constant(APInt(width, length)));
   }
   return result.value_or(ConstantIntRanges::fromSigned(zero, typeMax));
+}
+
+//===----------------------------------------------------------------------===//
+// Affine expression inference
+//===----------------------------------------------------------------------===//
+
+ConstantIntRanges
+mlir::intrange::inferAffineExpr(AffineExpr expr,
+                                ArrayRef<ConstantIntRanges> dimRanges,
+                                ArrayRef<ConstantIntRanges> symbolRanges) {
+  switch (expr.getKind()) {
+  case AffineExprKind::Constant: {
+    auto constExpr = cast<AffineConstantExpr>(expr);
+    APInt value(indexMaxWidth, constExpr.getValue(), /*isSigned=*/true);
+    return ConstantIntRanges::constant(value);
+  }
+  case AffineExprKind::DimId: {
+    auto dimExpr = cast<AffineDimExpr>(expr);
+    unsigned pos = dimExpr.getPosition();
+    assert(pos < dimRanges.size() && "Dimension index out of bounds");
+    return dimRanges[pos];
+  }
+  case AffineExprKind::SymbolId: {
+    auto symbolExpr = cast<AffineSymbolExpr>(expr);
+    unsigned pos = symbolExpr.getPosition();
+    assert(pos < symbolRanges.size() && "Symbol index out of bounds");
+    return symbolRanges[pos];
+  }
+  case AffineExprKind::Add: {
+    auto binExpr = cast<AffineBinaryOpExpr>(expr);
+    ConstantIntRanges lhs =
+        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
+    ConstantIntRanges rhs =
+        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    return inferAdd({lhs, rhs}, OverflowFlags::Nsw);
+  }
+  case AffineExprKind::Mul: {
+    auto binExpr = cast<AffineBinaryOpExpr>(expr);
+    ConstantIntRanges lhs =
+        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
+    ConstantIntRanges rhs =
+        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    return inferMul({lhs, rhs}, OverflowFlags::Nsw);
+  }
+  case AffineExprKind::Mod: {
+    auto binExpr = cast<AffineBinaryOpExpr>(expr);
+    ConstantIntRanges lhs =
+        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
+    ConstantIntRanges rhs =
+        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    // Affine mod is Euclidean modulo: result is always in [0, rhs_max-1].
+    // This assumes RHS is positive (enforced by affine expr semantics).
+    unsigned width = rhs.smin().getBitWidth();
+    APInt zero = APInt::getZero(width);
+    APInt maxRhs = rhs.umax();
+    if (maxRhs.isZero())
+      return ConstantIntRanges::maxRange(width);
+    APInt upper = maxRhs - 1;
+    return ConstantIntRanges::fromUnsigned(zero, upper);
+  }
+  case AffineExprKind::FloorDiv: {
+    auto binExpr = cast<AffineBinaryOpExpr>(expr);
+    ConstantIntRanges lhs =
+        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
+    ConstantIntRanges rhs =
+        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    // Affine floordiv requires strictly positive divisor (> 0).
+    // Clamp divisor lower bound to 1 for tighter range inference.
+    unsigned width = rhs.smin().getBitWidth();
+    APInt one(width, 1);
+    APInt clampedUMin = rhs.umin().ult(one) ? one : rhs.umin();
+    APInt clampedSMin = rhs.smin().slt(one) ? one : rhs.smin();
+    ConstantIntRanges clampedRhs =
+        ConstantIntRanges::fromUnsigned(clampedUMin, rhs.umax())
+            .intersection(
+                ConstantIntRanges::fromSigned(clampedSMin, rhs.smax()));
+    return inferFloorDivS({lhs, clampedRhs});
+  }
+  case AffineExprKind::CeilDiv: {
+    auto binExpr = cast<AffineBinaryOpExpr>(expr);
+    ConstantIntRanges lhs =
+        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
+    ConstantIntRanges rhs =
+        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    // Affine ceildiv requires strictly positive divisor (> 0).
+    // Clamp divisor lower bound to 1 for tighter range inference.
+    unsigned width = rhs.smin().getBitWidth();
+    APInt one(width, 1);
+    APInt clampedUMin = rhs.umin().ult(one) ? one : rhs.umin();
+    APInt clampedSMin = rhs.smin().slt(one) ? one : rhs.smin();
+    ConstantIntRanges clampedRhs =
+        ConstantIntRanges::fromUnsigned(clampedUMin, rhs.umax())
+            .intersection(
+                ConstantIntRanges::fromSigned(clampedSMin, rhs.smax()));
+    return inferCeilDivS({lhs, clampedRhs});
+  }
+  }
+  llvm_unreachable("unknown affine expression kind");
 }
