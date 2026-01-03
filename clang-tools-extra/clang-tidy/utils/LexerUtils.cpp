@@ -100,7 +100,7 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
     if (Loc.isMacroID())
       return true;
 
-    std::optional<Token> Tok = Lexer::findNextToken(Loc, SM, LangOpts);
+    std::optional<Token> Tok = findNextTokenSkippingComments(Loc, SM, LangOpts);
 
     if (!Tok)
       return true;
