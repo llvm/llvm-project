@@ -321,7 +321,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
 // ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 11*/ GIMT_Encode4(196), // Rule ID 0 //
 // ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
-// ISEL-GISEL-NEXT:       // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE ?:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
+// ISEL-GISEL-NEXT:       // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:       // GIR_Coverage, 0,
@@ -329,7 +329,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     // Label 11: @196
 // ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 12*/ GIMT_Encode4(211), // Rule ID 1 //
 // ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
-// ISEL-GISEL-NEXT:       // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE ?:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
+// ISEL-GISEL-NEXT:       // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:       // GIR_Coverage, 1,
@@ -342,7 +342,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
-// ISEL-GISEL-NEXT:     // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i64] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE ?:{ *:[i64] }:$val, ?:{ *:[i64] }:$src)
+// ISEL-GISEL-NEXT:     // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i64] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i64] }:$src)
 // ISEL-GISEL-NEXT:     GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:     // GIR_Coverage, 2,
@@ -353,7 +353,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
-// ISEL-GISEL-NEXT:     // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE ?:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
+// ISEL-GISEL-NEXT:     // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:     GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE)
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:     // GIR_Coverage, 3,
@@ -482,7 +482,7 @@ def MY_LOAD_ALIAS2 : InstAlias<"also_my_load_2 $dst, $src",
 // Direct RegClassByHwMode usage
 def : Pat<
   (store XRegs_EvenIfRequired:$val, MyPtrRC:$src),
-  (MY_STORE $val, $src)
+  (MY_STORE XRegs_EvenIfRequired:$val, $src)
 >;
 
 // Wrapped in RegisterOperand
