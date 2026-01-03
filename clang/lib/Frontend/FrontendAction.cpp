@@ -836,7 +836,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If we fail, reset state since the client will not end up calling the
   // matching EndSourceFile(). All paths that return true should release this.
-  auto FailureCleanup = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FailureCleanup([&]() {
     if (HasBegunSourceFile)
       CI.getDiagnosticClient().EndSourceFile();
     CI.setASTConsumer(nullptr);
