@@ -53,7 +53,7 @@ template <typename T>
 class PyObjectRef {
 public:
   PyObjectRef(T *referrent, nanobind::object object)
-      : referrent(referrent), object(std::move(object)) {
+      : referrent(referrent), object(nanobind::cast<nanobind::typed<nanobind::object, T>>(object)) {
     assert(this->referrent &&
            "cannot construct PyObjectRef with null referrent");
     assert(this->object && "cannot construct PyObjectRef with null object");
@@ -98,7 +98,7 @@ public:
 
 private:
   T *referrent;
-  nanobind::object object;
+  nanobind::typed<nanobind::object, T> object;
 };
 
 /// Tracks an entry in the thread context stack. New entries are pushed onto
