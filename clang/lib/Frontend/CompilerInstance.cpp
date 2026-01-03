@@ -41,6 +41,7 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
+#include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1674,9 +1675,9 @@ bool CompilerInstance::loadModuleFile(
   // If -Wmodule-file-config-mismatch is mapped as an error or worse, allow the
   // ASTReader to diagnose it, since it can produce better errors that we can.
   bool ConfigMismatchIsRecoverable =
-      getDiagnostics().getDiagnosticLevel(diag::warn_module_config_mismatch,
-                                          SourceLocation())
-        <= DiagnosticsEngine::Warning;
+      getDiagnostics().getDiagnosticLevel(diag::warn_ast_file_config_mismatch,
+                                          SourceLocation()) <=
+      DiagnosticsEngine::Warning;
 
   auto Listener = std::make_unique<ReadModuleNames>(*PP);
   auto &ListenerRef = *Listener;
@@ -1696,7 +1697,8 @@ bool CompilerInstance::loadModuleFile(
 
   case ASTReader::ConfigurationMismatch:
     // Ignore unusable module files.
-    getDiagnostics().Report(SourceLocation(), diag::warn_module_config_mismatch)
+    getDiagnostics().Report(SourceLocation(),
+                            diag::warn_ast_file_config_mismatch)
         << FileName;
     // All modules provided by any files we tried and failed to load are now
     // unavailable; includes of those modules should now be handled textually.
@@ -1848,7 +1850,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
       // FIXME: We shouldn't be setting HadFatalFailure below if we only
       // produce a warning here!
       getDiagnostics().Report(SourceLocation(),
-                              diag::warn_module_config_mismatch)
+                              diag::warn_ast_file_config_mismatch)
           << ModuleFilename;
     // Fall through to error out.
     [[fallthrough]];
