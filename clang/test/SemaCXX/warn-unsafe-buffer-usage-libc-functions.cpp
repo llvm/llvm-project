@@ -108,6 +108,8 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   snprintf(q, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snprintf(cp, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
+  printf(nullptr);                         // expected-warning{{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  printf("%s", nullptr);                   // expected-warning{{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   snwprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snwprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snwprintf_s(                      // expected-warning{{function 'snwprintf_s' is unsafe}}
 	      s.data(),             // expected-note{{buffer pointer and size may not match}} // note attached to the buffer
