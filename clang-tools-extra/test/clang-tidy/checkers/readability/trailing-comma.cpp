@@ -23,9 +23,9 @@ enum E2 {
 // CHECK-FIXES-NEXT: };
 
 enum SingleLine { A1, B1, C1 };
-enum class SingleLine2 { X1, Y1, };
-// CHECK-MESSAGES: :[[@LINE-1]]:32: warning: enum should not have a trailing comma
-// CHECK-FIXES: enum class SingleLine2 { X1, Y1 };
+enum class SingleLine2 { X1, Y1 = 1, };
+// CHECK-MESSAGES: :[[@LINE-1]]:36: warning: enum should not have a trailing comma
+// CHECK-FIXES: enum class SingleLine2 { X1, Y1 = 1 };
 
 enum E3 {
   P,
@@ -48,6 +48,39 @@ enum SingleEnum4 {
 };
 
 enum Empty {};
+
+enum EnumWithAttrs {
+  E1 [[deprecated]] = 1,
+  E2 [[deprecated]]
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:20: warning: enum should have a trailing comma
+// CHECK-FIXES: enum EnumWithAttrs {
+// CHECK-FIXES-NEXT:   E1 {{\[\[}}deprecated{{\]\]}} = 1,
+// CHECK-FIXES-NEXT:   E2 {{\[\[}}deprecated{{\]\]}},
+// CHECK-FIXES-NEXT: };
+
+enum EnumWithAttrs2 {
+  E3 [[deprecated]] = 1,
+  E4 [[deprecated]] = 2
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:24: warning: enum should have a trailing comma
+// CHECK-FIXES: enum EnumWithAttrs2 {
+// CHECK-FIXES-NEXT:   E3 {{\[\[}}deprecated{{\]\]}} = 1,
+// CHECK-FIXES-NEXT:   E4 {{\[\[}}deprecated{{\]\]}} = 2,
+// CHECK-FIXES-NEXT: };
+
+enum EnumWithAttrsTrailing {
+  E5 [[deprecated]] = 1,
+  E6 [[deprecated]],
+};
+
+enum SingleLineAttrs { E7 [[deprecated]], E8 [[deprecated]] [[deprecated  ]] , };
+// CHECK-MESSAGES: :[[@LINE-1]]:78: warning: enum should not have a trailing comma
+// CHECK-FIXES: enum SingleLineAttrs { E7 {{\[\[}}deprecated{{\]\]}}, E8 {{\[\[}}deprecated{{\]\]}} {{\[\[}}deprecated  {{\]\]}}  };
+
+enum SingleLineAttrs2 { E9 [[deprecated]], E10 [[deprecated]] = 1, };
+// CHECK-MESSAGES: :[[@LINE-1]]:66: warning: enum should not have a trailing comma
+// CHECK-FIXES: enum SingleLineAttrs2 { E9 {{\[\[}}deprecated{{\]\]}}, E10 {{\[\[}}deprecated{{\]\]}} = 1 };
 
 void f() {
   int a[] = {

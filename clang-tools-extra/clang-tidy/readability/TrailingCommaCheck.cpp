@@ -64,7 +64,14 @@ TrailingCommaCheck::TrailingCommaCheck(StringRef Name,
       SingleLineCommaPolicy(
           Options.get("SingleLineCommaPolicy", CommaPolicyKind::Remove)),
       MultiLineCommaPolicy(
-          Options.get("MultiLineCommaPolicy", CommaPolicyKind::Append)) {}
+          Options.get("MultiLineCommaPolicy", CommaPolicyKind::Append)) {
+  if (SingleLineCommaPolicy == CommaPolicyKind::Ignore &&
+      MultiLineCommaPolicy == CommaPolicyKind::Ignore)
+    configurationDiag("The check '%0' will not perform any analysis because "
+                      "'SingleLineCommaPolicy' and 'MultiLineCommaPolicy' are "
+                      "both set to 'Ignore'.")
+        << Name;
+}
 
 void TrailingCommaCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "SingleLineCommaPolicy", SingleLineCommaPolicy);
@@ -108,10 +115,23 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
   assert(LastEnumerator);
 
   SourceLocation LastEnumLoc;
-  if (const Expr *Init = LastEnumerator->getInitExpr())
+  if (const Expr *Init = LastEnumerator->getInitExpr()) {
+    // InitExpr goes after attributes, so we don't need to process attributes.
     LastEnumLoc = Init->getEndLoc();
-  else
+  } else {
     LastEnumLoc = LastEnumerator->getLocation();
+    if (LastEnumerator->hasAttrs()) {
+      const Attr *LastAttr = LastEnumerator->getAttrs().back();
+      // Skip ']' tokens at the end of final attribute like '[[deprecated]]'.
+      std::optional<Token> NextTok;
+      while ((NextTok = utils::lexer::findNextTokenSkippingComments(
+                  NextTok.has_value() ? NextTok->getEndLoc()
+                                      : LastAttr->getRange().getEnd(),
+                  *Result.SourceManager, getLangOpts())) &&
+             NextTok->is(tok::r_square))
+        LastEnumLoc = NextTok->getEndLoc();
+    }
+  }
 
   if (LastEnumLoc.isInvalid())
     return;
