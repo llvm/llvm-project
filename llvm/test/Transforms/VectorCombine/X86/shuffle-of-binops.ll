@@ -59,22 +59,14 @@ define <4 x float> @shuf_fmul_v4f32_xx_swap(<4 x float> %x, <4 x float> %y, <4 x
   ret <4 x float> %r
 }
 
-; FIXME: For repeated ops, don't repeat the shuffle cost.
+; For repeated ops, don't repeat the shuffle cost.
 
 define <8 x float> @shuf_fmul_v4f32_self_mul(<4 x float> %a0, <4 x float> %a1) {
-; SSE-LABEL: define <8 x float> @shuf_fmul_v4f32_self_mul(
-; SSE-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[R:%.*]] = fmul <8 x float> [[TMP1]], [[TMP2]]
-; SSE-NEXT:    ret <8 x float> [[R]]
-;
-; AVX-LABEL: define <8 x float> @shuf_fmul_v4f32_self_mul(
-; AVX-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
-; AVX-NEXT:    [[M0:%.*]] = fmul <4 x float> [[A0]], [[A0]]
-; AVX-NEXT:    [[M1:%.*]] = fmul <4 x float> [[A1]], [[A1]]
-; AVX-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[M0]], <4 x float> [[M1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    ret <8 x float> [[R]]
+; CHECK-LABEL: define <8 x float> @shuf_fmul_v4f32_self_mul(
+; CHECK-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = fmul <8 x float> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %m0 = fmul <4 x float> %a0, %a0
   %m1 = fmul <4 x float> %a1, %a1

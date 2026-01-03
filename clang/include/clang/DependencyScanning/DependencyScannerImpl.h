@@ -106,9 +106,6 @@ std::optional<PrebuiltModulesAttrsMap>
 computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
                              SmallVector<StringRef> &StableDirs);
 
-std::unique_ptr<DependencyOutputOptions>
-takeAndUpdateDependencyOutputOptionsFrom(CompilerInstance &ScanInstance);
-
 /// Create the dependency collector that will collect the produced
 /// dependencies. May return the created ModuleDepCollector depending
 /// on the scanning format.
