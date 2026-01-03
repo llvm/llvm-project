@@ -28,9 +28,7 @@
 
 using namespace llvm;
 
-namespace {
-constexpr int BACKREF_LIMIT = 20;
-} // anonymous namespace
+constexpr static int BackrefLimit = 20;
 
 StringRef ExpressionFormat::toString() const {
   switch (Value) {
@@ -1058,11 +1056,11 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
         if (!IsNumBlock &&
             (It = VariableDefs.find(SubstStr)) != VariableDefs.end()) {
           unsigned CaptureParenGroup = It->second;
-          if (CaptureParenGroup < 1 || CaptureParenGroup > BACKREF_LIMIT) {
+          if (CaptureParenGroup < 1 || CaptureParenGroup > BackrefLimit) {
             SM.PrintMessage(SMLoc::getFromPointer(SubstStr.data()),
                             SourceMgr::DK_Error,
                             "Can't back-reference more than " +
-                                Twine(BACKREF_LIMIT) + " variables");
+                                Twine(BackrefLimit) + " variables");
             return true;
           }
           AddBackrefToRegEx(CaptureParenGroup);
@@ -1113,7 +1111,7 @@ bool Pattern::AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM) {
 }
 
 void Pattern::AddBackrefToRegEx(unsigned BackrefNum) {
-  assert(BackrefNum >= 1 && BackrefNum <= BACKREF_LIMIT &&
+  assert(BackrefNum >= 1 && BackrefNum <= BackrefLimit &&
          "Invalid backref number");
   std::string Backref;
   if (BackrefNum >= 1 && BackrefNum <= 9)
