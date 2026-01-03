@@ -1,4 +1,5 @@
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown < %s 2>&1 | FileCheck %s
+; REQUIRES: asserts
+; RUN: not --crash llc -O0 -mtriple=spirv64-unknown-unknown < %s 2>&1 | FileCheck %s
 ; CHECK: unable to translate instruction: call (in function: kernel)
 
 @bar_alias = alias void (), ptr addrspace(4) @bar

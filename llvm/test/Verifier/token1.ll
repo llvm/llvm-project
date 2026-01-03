@@ -1,4 +1,5 @@
-; RUN: not llvm-as -disable-output %s 2>&1 | FileCheck %s
+; RUN: %if !asserts %{ not llvm-as -disable-output %s 2>&1 | FileCheck %s %}
+; RUN: %if asserts %{ not --crash llvm-as -disable-output %s 2>&1 | FileCheck %s %}
 
 define void @f(token %A, token %B) {
 entry:
