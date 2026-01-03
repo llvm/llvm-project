@@ -179,7 +179,7 @@
 "`LWG4294 <https://wg21.link/LWG4294>`__","``bitset(const CharT*)`` constructor needs to be constrained","2025-11 (Kona)","","","`#171336 <https://github.com/llvm/llvm-project/issues/171336>`__",""
 "`LWG4297 <https://wg21.link/LWG4297>`__","Missing ``permutable`` constraint for iterator overloads in Parallel Range Algorithms","2025-11 (Kona)","","","`#171338 <https://github.com/llvm/llvm-project/issues/171338>`__",""
 "`LWG4299 <https://wg21.link/LWG4299>`__","Missing *Mandates:* part in ``optional<T&>::transform``","2025-11 (Kona)","","","`#171339 <https://github.com/llvm/llvm-project/issues/171339>`__",""
-"`LWG4300 <https://wg21.link/LWG4300>`__","Missing *Returns:* element in ``optional<T&>::emplace``","2025-11 (Kona)","","","`#171340 <https://github.com/llvm/llvm-project/issues/171340>`__",""
+"`LWG4300 <https://wg21.link/LWG4300>`__","Missing *Returns:* element in ``optional<T&>::emplace``","2025-11 (Kona)","|Complete|","22","`#171340 <https://github.com/llvm/llvm-project/issues/171340>`__",""
 "`LWG4301 <https://wg21.link/LWG4301>`__","``condition_variable{_any}::wait_{for, until}`` should take timeout by value","2025-11 (Kona)","","","`#171341 <https://github.com/llvm/llvm-project/issues/171341>`__",""
 "`LWG4302 <https://wg21.link/LWG4302>`__","Problematic ``vector_sum_of_squares`` wording","2025-11 (Kona)","","","`#171342 <https://github.com/llvm/llvm-project/issues/171342>`__",""
 "`LWG4304 <https://wg21.link/LWG4304>`__","``std::optional<NonReturnable&>`` is ill-formed due to ``value_or``","2025-11 (Kona)","","","`#171343 <https://github.com/llvm/llvm-project/issues/171343>`__",""
