@@ -392,6 +392,13 @@ SmallVector<NamedAttribute> getPrunedAttributeList(OpTy op) {
   return getPrunedAttributeList(op, elidedAttrs);
 }
 
+/// Creates a new I64 array attribute by dropping the element at the specified
+/// index from the input array attribute. This is useful for rank reduction
+/// operations where dimensions need to be removed from strides, dilations, etc.
+DenseIntElementsAttr dropI64ArrayAttrElem(OpBuilder &builder,
+                                          DenseIntElementsAttr attr,
+                                          unsigned index);
+
 } // namespace linalg
 } // namespace mlir
 

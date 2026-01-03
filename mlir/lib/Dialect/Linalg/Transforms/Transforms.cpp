@@ -1483,16 +1483,10 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
       rewriter, loc, output, newOutputType);
 
   // Rank-reduce strides and dilations too.
-  // TODO: dropDim 1-liner helper.
-  auto strides =
-      llvm::to_vector<4>(convOp.getStrides().template getValues<int64_t>());
-  strides.erase(strides.begin() + (removeH ? 0 : 1));
-  auto stridesAttr = rewriter.getI64VectorAttr(strides);
-
-  auto dilations =
-      llvm::to_vector<4>(convOp.getDilations().template getValues<int64_t>());
-  dilations.erase(dilations.begin() + (removeH ? 0 : 1));
-  auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
+  auto stridesAttr =
+      dropI64ArrayAttrElem(rewriter, convOp.getStrides(), removeH ? 0 : 1);
+  auto dilationsAttr =
+      dropI64ArrayAttrElem(rewriter, convOp.getDilations(), removeH ? 0 : 1);
 
   auto conv1DOp = Conv1DOp::create(
       rewriter, loc, newOutputType, ValueRange{newInput, newKernel},
@@ -1571,15 +1565,10 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
       rewriter, loc, output, newOutputType);
 
   // Rank-reduce strides and dilations too.
-  // TODO: dropDim 1-liner helper.
-  auto strides = llvm::to_vector<4>(convOp.getStrides().getValues<int64_t>());
-  strides.erase(strides.begin() + (removeH ? 0 : 1));
-  auto stridesAttr = rewriter.getI64VectorAttr(strides);
-
-  auto dilations =
-      llvm::to_vector<4>(convOp.getDilations().getValues<int64_t>());
-  dilations.erase(dilations.begin() + (removeH ? 0 : 1));
-  auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
+  auto stridesAttr =
+      dropI64ArrayAttrElem(rewriter, convOp.getStrides(), removeH ? 0 : 1);
+  auto dilationsAttr =
+      dropI64ArrayAttrElem(rewriter, convOp.getDilations(), removeH ? 0 : 1);
 
   auto conv1DOp = DepthwiseConv1DNwcWcOp::create(
       rewriter, loc, newOutputType, ValueRange{newInput, newKernel},

@@ -2573,5 +2573,13 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
   return reassociation;
 }
 
+DenseIntElementsAttr dropI64ArrayAttrElem(OpBuilder &builder,
+                                          DenseIntElementsAttr attr,
+                                          unsigned index) {
+  auto values = llvm::to_vector<4>(attr.getValues<int64_t>());
+  values.erase(values.begin() + index);
+  return builder.getI64VectorAttr(values);
+}
+
 } // namespace linalg
 } // namespace mlir
