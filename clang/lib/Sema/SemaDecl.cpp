@@ -14337,7 +14337,17 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         DeduceVariableDeclarationType(Var, false, nullptr))
       return;
 
+    Type = Var->getType();
     this->CheckAttributesOnDeducedType(RealDecl);
+
+    if (auto *Deduced = Type->getContainedDeducedType()) {
+      if (Var->isStaticDataMember() && Deduced->getDeducedType().isNull()) {
+        Diag(Var->getLocation(), diag::err_auto_var_requires_init)
+            << Var->getDeclName() << Type;
+        Var->setInvalidDecl();
+        return;
+      }
+    }
 
     // C++11 [class.static.data]p3: A static data member can be declared with
     // the constexpr specifier; if so, its declaration shall specify
