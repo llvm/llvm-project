@@ -178,7 +178,7 @@ std::string SARIFDiagnostic::Node::getDiagnosticMessage() {
 
 llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations() {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
-  std::for_each(Locations.begin(), Locations.end(), [&](Location &Location) {
+  llvm::for_each(Locations, [&](Location &Location) {
     CharSourceRanges.append(Location.getCharSourceRangesWithOption(Option_));
   });
   return CharSourceRanges;
@@ -187,7 +187,7 @@ llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations() {
 llvm::SmallVector<CharSourceRange>
 SARIFDiagnostic::Node::getRelatedLocations() {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
-  std::for_each(RelatedLocations.begin(), RelatedLocations.end(),
+  llvm::for_each(RelatedLocations,
                 [&](Location &RelatedLocation) {
                   CharSourceRanges.append(
                       RelatedLocation.getCharSourceRangesWithOption(Option_));
