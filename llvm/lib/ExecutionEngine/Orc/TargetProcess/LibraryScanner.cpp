@@ -51,7 +51,7 @@ void handleError(Error Err, StringRef context = "") {
 
 bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
   static const llvm::Triple HostTriple(llvm::sys::getProcessTriple());
-  Obj.getTripleObjectFormat();
+
   if (HostTriple.getArch() != Obj.getArch())
     return false;
 

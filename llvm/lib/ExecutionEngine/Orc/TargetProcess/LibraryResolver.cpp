@@ -301,11 +301,11 @@ void LibraryResolver::resolveSymbolsInLibrary(
           *It = CandidateVec.back();
           CandidateVec.pop_back();
 
-          // EARLY STOP — if nothing remains, stop enumeration
+          // Stop — if nothing remains, stop enumeration
           if (!BuildingFilter && CandidateVec.empty()) {
             return EnumerateResult::Stop;
           }
-          // Also stop if UnresolvedSymbols has no more unresolved symbols
+          // Also stop if SymbolQuery has no more unresolved symbols
           if (!BuildingFilter && !Query.hasUnresolved())
             return EnumerateResult::Stop;
         }
