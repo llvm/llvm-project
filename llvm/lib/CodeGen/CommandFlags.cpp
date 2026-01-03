@@ -601,11 +601,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
-  DenormalMode::DenormalModeKind DenormKind = getDenormalFPMath();
-
-  // FIXME: Should have separate input and output flags
-  Options.setFPDenormalMode(DenormalMode(DenormKind, DenormKind));
-
   Options.HonorSignDependentRoundingFPMathOption =
       getEnableHonorSignDependentRoundingFPMath();
   if (getFloatABIForCalls() != FloatABI::Default)
