@@ -1133,7 +1133,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                                                   std::move(PCHContainerOps));
 
   // Clean up on error, disengage it if the function returns successfully.
-  auto CleanOnError = llvm::make_scope_exit([&]() {
+  llvm::scope_exit CleanOnError([&]() {
     // Remove the overridden buffer we used for the preamble.
     SavedMainFileBuffer = nullptr;
 

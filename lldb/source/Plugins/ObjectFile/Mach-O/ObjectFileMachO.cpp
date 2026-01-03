@@ -2706,7 +2706,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     __block vm_offset_t vm_string_memory = 0;
     __block mach_msg_type_number_t vm_string_bytes_read = 0;
 
-    auto _ = llvm::make_scope_exit(^{
+    llvm::scope_exit _(^{
       if (vm_nlist_memory)
         vm_deallocate(mach_task_self(), vm_nlist_memory, vm_nlist_bytes_read);
       if (vm_string_memory)
