@@ -758,6 +758,9 @@ struct LessClangTidyError {
     const tooling::DiagnosticMessage &M1 = LHS.Message;
     const tooling::DiagnosticMessage &M2 = RHS.Message;
 
+    // Having DiagnosticName (i.e. the check name) last means sorting
+    // using this predicate puts duplicate diagnostics into consecutive runs, a
+    // property which removeDuplicatedDiagnosticsOfAliasCheckers() relies on.
     return std::tie(M1.FilePath, M1.FileOffset, M1.Message,
                     LHS.DiagnosticName) <
            std::tie(M2.FilePath, M2.FileOffset, M2.Message, RHS.DiagnosticName);
@@ -787,19 +790,22 @@ void ClangTidyDiagnosticConsumer::removeDuplicatedDiagnosticsOfAliasCheckers() {
   if (Errors.size() <= 1)
     return;
 
-  static constexpr auto Projection = [](const ClangTidyError &E) {
-    const tooling::DiagnosticMessage &M = E.Message;
-    return std::tie(M.FilePath, M.FileOffset, M.Message);
+  static constexpr auto AreDuplicates = [](const ClangTidyError &E1,
+                                           const ClangTidyError &E2) {
+    const tooling::DiagnosticMessage &M1 = E1.Message;
+    const tooling::DiagnosticMessage &M2 = E2.Message;
+    return std::tie(M1.FilePath, M1.FileOffset, M1.Message) ==
+           std::tie(M2.FilePath, M2.FileOffset, M2.Message);
   };
 
-  auto LastUniqueError = Errors.begin();
+  auto LastUniqueErrorIt = Errors.begin();
   for (ClangTidyError &Error : llvm::drop_begin(Errors, 1)) {
-    ClangTidyError &ExistingError = *LastUniqueError;
+    ClangTidyError &ExistingError = *LastUniqueErrorIt;
     // Unique error, we keep it and move along.
-    if (Projection(Error) != Projection(ExistingError)) {
-      ++LastUniqueError;
-      if (&*LastUniqueError != &Error)
-        *LastUniqueError = std::move(Error);
+    if (!AreDuplicates(Error, ExistingError)) {
+      ++LastUniqueErrorIt;
+      if (&*LastUniqueErrorIt != &Error) // Avoid self-moves.
+        *LastUniqueErrorIt = std::move(Error);
     } else {
       const llvm::StringMap<tooling::Replacements> &CandidateFix =
           Error.Message.Fix;
@@ -825,5 +831,5 @@ void ClangTidyDiagnosticConsumer::removeDuplicatedDiagnosticsOfAliasCheckers() {
       ExistingError.EnabledDiagnosticAliases.emplace_back(Error.DiagnosticName);
     }
   }
-  Errors.erase(LastUniqueError + 1, Errors.end());
+  Errors.erase(std::next(LastUniqueErrorIt), Errors.end());
 }
