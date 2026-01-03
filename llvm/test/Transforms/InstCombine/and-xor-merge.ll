@@ -83,10 +83,9 @@ define i32 @PR75692_3(i32 %x, i32 %y) {
 ; ((X + C) & M) ^ M --> ((M − C) − X) & M
 define i8 @add_and_xor_basic(i8 %x) {
 ; CHECK-LABEL: @add_and_xor_basic(
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[ADD:%.*]] = sub i8 10, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], 15
-; CHECK-NEXT:    ret i8 [[XOR]]
+; CHECK-NEXT:    ret i8 [[AND]]
 ;
   %add = add i8 %x, 5
   %and = and i8 %add, 15
@@ -96,10 +95,9 @@ define i8 @add_and_xor_basic(i8 %x) {
 
 define <4 x i32> @add_and_xor_vector_splat(<4 x i32> %x) {
 ; CHECK-LABEL: @add_and_xor_vector_splat(
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 10)
+; CHECK-NEXT:    [[ADD:%.*]] = sub <4 x i32> splat (i32 53), [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[ADD]], splat (i32 63)
-; CHECK-NEXT:    [[XOR:%.*]] = xor <4 x i32> [[AND]], splat (i32 63)
-; CHECK-NEXT:    ret <4 x i32> [[XOR]]
+; CHECK-NEXT:    ret <4 x i32> [[AND]]
 ;
   %add = add <4 x i32> %x, <i32 10, i32 10, i32 10, i32 10>
   %and = and <4 x i32> %add, <i32 63, i32 63, i32 63, i32 63>
@@ -109,10 +107,9 @@ define <4 x i32> @add_and_xor_vector_splat(<4 x i32> %x) {
 
 define i32 @add_and_xor_overflow_addc(i32 %x) {
 ; CHECK-LABEL: @add_and_xor_overflow_addc(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 27, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 31
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 31
-; CHECK-NEXT:    ret i32 [[XOR]]
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %add = add i32 %x, 100
   %and = and i32 %add, 31
@@ -122,10 +119,9 @@ define i32 @add_and_xor_overflow_addc(i32 %x) {
 
 define i32 @add_and_xor_negative_addc(i32 %x) {
 ; CHECK-LABEL: @add_and_xor_negative_addc(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 254
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 1, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 255
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 255
-; CHECK-NEXT:    ret i32 [[XOR]]
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %add = add i32 %x, -2
   %and = and i32 %add, 255
@@ -136,10 +132,9 @@ define i32 @add_and_xor_negative_addc(i32 %x) {
 ; This test is trasformed to 'xor(and(add x, 11), 15), 15)' and being applied.
 define i8 @add_and_xor_sub_op(i8 %x) {
 ; CHECK-LABEL: @add_and_xor_sub_op(
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X:%.*]], 11
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 4, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SUB]], 15
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], 15
-; CHECK-NEXT:    ret i8 [[XOR]]
+; CHECK-NEXT:    ret i8 [[AND]]
 ;
   %sub = sub i8 %x, 5
   %and = and i8 %sub, 15
@@ -180,8 +175,8 @@ define i8 @neg_add_and_xor_multi_use(i8 %x) {
 ; CHECK-LABEL: @neg_add_and_xor_multi_use(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], 15
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 10, [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], 15
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %add = add i8 %x, 5

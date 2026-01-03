@@ -5179,6 +5179,27 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   return nullptr;
 }
 
+// ((X + C) & M) ^ M --> ((M − C) − X) & M
+static Instruction *foldAndWithMask(BinaryOperator &I,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *InnerVal;
+  const APInt *AndMask, *XorMask, *AddC;
+
+  if (match(&I, m_Xor(m_And(m_Add(m_Value(InnerVal), m_APInt(AddC)),
+                            m_APInt(AndMask)),
+                      m_APInt(XorMask))) &&
+      *AndMask == *XorMask && AndMask->isMask()) {
+    APInt NewConst = *AndMask - *AddC;
+    Value *NewSub =
+        Builder.CreateSub(ConstantInt::get(I.getType(), NewConst), InnerVal);
+
+    return BinaryOperator::CreateAnd(NewSub,
+                                     ConstantInt::get(I.getType(), *AndMask));
+  }
+
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -5513,6 +5534,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return Res;
 
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
+    return Res;
+
+  if (Instruction *Res = foldAndWithMask(I, Builder))
     return Res;
 
   return nullptr;
