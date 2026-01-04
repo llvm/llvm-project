@@ -342,7 +342,7 @@ static bool DefersSameTypeParameters(
 // arguments.
 static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
     "__builtin_c_f_pointer", "__builtin_c_loc", "allocated", "associated",
-    "kind", "lbound", "loc", "present", "shape", "size", "ubound"};
+    "kind", "lbound", "loc", "present", "shape", "size", "sizeof", "ubound"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
