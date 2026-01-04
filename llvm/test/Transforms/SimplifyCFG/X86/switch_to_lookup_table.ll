@@ -278,7 +278,7 @@ define i32 @crud(i8 zeroext %c)  {
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i59 [[SWITCH_DOWNSHIFT]] to i1
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[SWITCH_MASKED]], [[SWITCH_LOOKUP]] ], [ false, [[SWITCH_EARLY_TEST]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[SWITCH_MASKED]], [[SWITCH_LOOKUP]] ], [ true, [[ENTRY:%.*]] ], [ false, [[SWITCH_EARLY_TEST]] ]
 ; CHECK-NEXT:    [[LOR_EXT:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[LOR_EXT]]
 ;
@@ -415,7 +415,7 @@ define i32 @large(i32 %x) {
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
