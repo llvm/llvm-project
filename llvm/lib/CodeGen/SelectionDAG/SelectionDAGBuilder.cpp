@@ -2480,8 +2480,6 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
         FCmpInst::Predicate Pred =
             InvertCond ? FC->getInversePredicate() : FC->getPredicate();
         Condition = getFCmpCondCode(Pred);
-        if (TM.Options.NoNaNsFPMath)
-          Condition = getFCmpCodeWithoutNaN(Condition);
       }
 
       CaseBlock CB(Condition, BOp->getOperand(0), BOp->getOperand(1), nullptr,
@@ -3791,8 +3789,6 @@ void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
 
   ISD::CondCode Condition = getFCmpCondCode(predicate);
   auto *FPMO = cast<FPMathOperator>(&I);
-  if (FPMO->hasNoNaNs() || TM.Options.NoNaNsFPMath)
-    Condition = getFCmpCodeWithoutNaN(Condition);
 
   SDNodeFlags Flags;
   Flags.copyFMF(*FPMO);
@@ -8534,8 +8530,6 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case ISD::STRICT_FSETCCS: {
     auto *FPCmp = dyn_cast<ConstrainedFPCmpIntrinsic>(&FPI);
     ISD::CondCode Condition = getFCmpCondCode(FPCmp->getPredicate());
-    if (TM.Options.NoNaNsFPMath)
-      Condition = getFCmpCodeWithoutNaN(Condition);
     Opers.push_back(DAG.getCondCode(Condition));
     break;
   }
@@ -8821,8 +8815,6 @@ void SelectionDAGBuilder::visitVPCmp(const VPCmpIntrinsic &VPIntrin) {
     // flags, but calls that don't return floating-point types can't be
     // FPMathOperators, like vp.fcmp. This affects constrained fcmp too.
     Condition = getFCmpCondCode(CondCode);
-    if (TM.Options.NoNaNsFPMath)
-      Condition = getFCmpCodeWithoutNaN(Condition);
   } else {
     Condition = getICmpCondCode(CondCode);
   }
