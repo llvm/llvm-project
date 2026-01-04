@@ -57,7 +57,7 @@ define i32 @switch_of_powers_two_default_reachable(i32 %arg) !prof !0 {
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 5, %[[ENTRY]] ], [ 5, %[[ENTRY_SPLIT]] ], [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ], [ 5, %[[ENTRY_SPLIT]] ], [ 5, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
@@ -104,7 +104,7 @@ define i32 @switch_of_powers_two_default_reachable_multipreds(i32 %arg, i1 %cond
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ARG]], %[[SWITCH_SPLIT]] ], [ [[ARG]], %[[SWITCH]] ], [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ], [ 0, %[[ENTRY]] ], [ [[ARG]], %[[SWITCH]] ], [ [[ARG]], %[[SWITCH_SPLIT]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
