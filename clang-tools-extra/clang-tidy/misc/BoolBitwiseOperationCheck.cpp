@@ -85,9 +85,10 @@ void BoolBitwiseOperationCheck::storeOptions(
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      binaryOperator(unless(isExpansionInSystemHeader()),
-                     unless(hasParent(binaryOperator())) // ignoring parenExpr
-                     )
+      binaryOperator(unless(hasParent(binaryOperator(hasAnyOperatorName(
+                         "|", "&", "|=", "&=")))), // ignoring parenExpr
+                     hasAnyOperatorName("|", "&", "|=", "&="),
+                     optionally(hasParent(binaryOperator().bind("p"))))
           .bind("binOpRoot"),
       this);
 }
@@ -224,6 +225,7 @@ class BinaryOperatorVisitor : public clang::DynamicRecursiveASTVisitor {
   clang::tidy::misc::BoolBitwiseOperationCheck &Check;
   const clang::SourceManager &SM;
   clang::ASTContext &Ctx;
+  const clang::BinaryOperator *const ParentRoot;
   // Stack to track parent binary operators during traversal
   std::vector<const clang::BinaryOperator *> ParentStack;
 
@@ -252,8 +254,8 @@ class BinaryOperatorVisitor : public clang::DynamicRecursiveASTVisitor {
       return true;
 
     const clang::BinaryOperator *Parent = ParentStack.back();
-    const std::array<const Expr *, 2> ParentOperands = {
-        Parent->getLHS(), Parent->getRHS()};
+    const std::array<const Expr *, 2> ParentOperands = {Parent->getLHS(),
+                                                        Parent->getRHS()};
 
     return llvm::any_of(ParentOperands, [&](const Expr *E) {
       return E->IgnoreParenImpCasts() == BinOp;
@@ -262,8 +264,9 @@ class BinaryOperatorVisitor : public clang::DynamicRecursiveASTVisitor {
 
 public:
   BinaryOperatorVisitor(clang::tidy::misc::BoolBitwiseOperationCheck &Check,
-                        const clang::SourceManager &SM, clang::ASTContext &Ctx)
-      : Check(Check), SM(SM), Ctx(Ctx) {}
+                        const clang::SourceManager &SM, clang::ASTContext &Ctx,
+                        const clang::BinaryOperator *ParentRoot)
+      : Check(Check), SM(SM), Ctx(Ctx), ParentRoot(ParentRoot) {}
 
   /// Checks if a binary operator is a bitwise operation that should be treated
   /// as a boolean operation (i.e., should use logical operators instead).
@@ -332,10 +335,10 @@ public:
       return true;
 
     const clang::BinaryOperator *ParentBinOp =
-        ParentStack.size() < 2 ? nullptr : ParentStack[ParentStack.size() - 2];
+        ParentStack.size() < 2 ? ParentRoot
+                               : ParentStack[ParentStack.size() - 2];
 
-    Check.emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM,
-                                                  Ctx);
+    Check.emitWarningAndChangeOperatorsIfPossible(BinOp, ParentBinOp, SM, Ctx);
 
     return true;
   }
@@ -344,12 +347,13 @@ public:
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
+  const auto *ParentRoot = Result.Nodes.getNodeAs<BinaryOperator>("p");
   assert(BinOpRoot);
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
-  BinaryOperatorVisitor Visitor(*this, SM, Ctx);
+  BinaryOperatorVisitor Visitor(*this, SM, Ctx, ParentRoot);
   if (Visitor.isBooleanBitwise(BinOpRoot)) {
     // TraverseStmt requires non-const pointer, but we're only reading
     Visitor.TraverseStmt(const_cast<BinaryOperator *>(BinOpRoot));
