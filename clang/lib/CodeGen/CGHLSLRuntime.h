@@ -171,6 +171,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxCoarse, ddx_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdxFine, ddx_fine)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(DdyFine, ddy_fine)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
@@ -179,16 +181,27 @@ public:
 protected:
   CodeGenModule &CGM;
 
-  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B,
+                                      const FunctionDecl *FD, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
                                       HLSLAppliedSemanticAttr *Semantic,
                                       std::optional<unsigned> Index);
+
+  void emitSystemSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                               const clang::DeclaratorDecl *Decl,
+                               HLSLAppliedSemanticAttr *Semantic,
+                               std::optional<unsigned> Index);
 
   llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
                                         const FunctionDecl *FD,
                                         llvm::Type *Type,
                                         const clang::DeclaratorDecl *Decl,
                                         HLSLAppliedSemanticAttr *Semantic);
+
+  void handleScalarSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                                 llvm::Value *Source,
+                                 const clang::DeclaratorDecl *Decl,
+                                 HLSLAppliedSemanticAttr *Semantic);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleStructSemanticLoad(
@@ -197,11 +210,23 @@ protected:
       specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> end);
 
+  specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
+      llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
+      const clang::DeclaratorDecl *Decl,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
+
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+
+  specific_attr_iterator<HLSLAppliedSemanticAttr>
+  handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                      llvm::Value *Source, const clang::DeclaratorDecl *Decl,
+                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -235,6 +260,7 @@ public:
   std::optional<LValue>
   emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  CodeGenFunction &CGF);
+  bool emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr, CodeGenFunction &CGF);
 
   std::optional<LValue> emitBufferArraySubscriptExpr(
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
@@ -256,6 +282,7 @@ private:
                                    HLSLResourceBindingAttr *RBA);
 
   llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         const clang::DeclaratorDecl *Decl,
                                          HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
@@ -266,10 +293,23 @@ private:
                                     HLSLAppliedSemanticAttr *Semantic,
                                     std::optional<unsigned> Index);
 
+  void emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                  const clang::DeclaratorDecl *Decl,
+                                  HLSLAppliedSemanticAttr *Semantic,
+                                  std::optional<unsigned> Index);
+  void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                 HLSLAppliedSemanticAttr *Semantic,
+                                 std::optional<unsigned> Index);
+  void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                             const clang::DeclaratorDecl *Decl,
+                             HLSLAppliedSemanticAttr *Semantic,
+                             std::optional<unsigned> Index);
+
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
   unsigned SPIRVLastAssignedInputSemanticLocation = 0;
+  unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
 };
 
 } // namespace CodeGen

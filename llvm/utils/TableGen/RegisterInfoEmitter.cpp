@@ -616,7 +616,7 @@ public:
   void print(raw_ostream &OS) { printBitVectorAsHex(OS, Values, 8); }
 };
 
-static void printSimpleValueType(raw_ostream &OS, MVT::SimpleValueType VT) {
+static void printSimpleValueType(raw_ostream &OS, MVT VT) {
   OS << getEnumName(VT);
 }
 
@@ -703,8 +703,7 @@ void RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   SmallVector<unsigned, 4> RowMap;
   SmallVector<SmallVector<const CodeGenSubRegIndex *, 4>, 4> Rows;
 
-  auto SubRegIndicesSize =
-      std::distance(SubRegIndices.begin(), SubRegIndices.end());
+  size_t SubRegIndicesSize = llvm::size(SubRegIndices);
   for (const auto &Idx : SubRegIndices) {
     unsigned Found = ~0u;
     for (unsigned r = 0, re = Rows.size(); r != re; ++r) {
@@ -1133,7 +1132,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << RegBank.getNumNativeRegUnits() << ", " << TargetName << "RegDiffLists, "
      << TargetName << "LaneMaskLists, " << TargetName << "RegStrings, "
      << TargetName << "RegClassStrings, " << TargetName << "SubRegIdxLists, "
-     << (std::distance(SubRegIndices.begin(), SubRegIndices.end()) + 1) << ",\n"
+     << (llvm::size(SubRegIndices) + 1) << ",\n"
      << TargetName << "RegEncodingTable);\n\n";
 
   EmitRegMapping(OS, Regs, false);
@@ -1261,14 +1260,14 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   unsigned NumModes = CGH.getNumModeIds();
 
   // Build a shared array of value types.
-  SequenceToOffsetTable<std::vector<MVT::SimpleValueType>> VTSeqs(
+  SequenceToOffsetTable<std::vector<MVT>> VTSeqs(
       /*Terminator=*/MVT::Other);
   for (unsigned M = 0; M < NumModes; ++M) {
     for (const auto &RC : RegisterClasses) {
-      std::vector<MVT::SimpleValueType> S;
+      std::vector<MVT> S;
       for (const ValueTypeByHwMode &VVT : RC.VTs)
         if (VVT.hasDefault() || VVT.hasMode(M))
-          S.push_back(VVT.get(M).SimpleTy);
+          S.push_back(VVT.get(M));
       VTSeqs.add(S);
     }
   }
@@ -1329,10 +1328,10 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
         const RegSizeInfo &RI = RC.RSI.get(M);
         OS << "  { " << RI.RegSize << ", " << RI.SpillSize << ", "
            << RI.SpillAlignment;
-        std::vector<MVT::SimpleValueType> VTs;
+        std::vector<MVT> VTs;
         for (const ValueTypeByHwMode &VVT : RC.VTs)
           if (VVT.hasDefault() || VVT.hasMode(M))
-            VTs.push_back(VVT.get(M).SimpleTy);
+            VTs.push_back(VVT.get(M));
         OS << ", /*VTLists+*/" << VTSeqs.get(VTs) << " },    // "
            << RC.getName() << '\n';
       }
@@ -1527,8 +1526,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   std::string ClassName = Target.getName().str() + "GenRegisterInfo";
 
-  auto SubRegIndicesSize =
-      std::distance(SubRegIndices.begin(), SubRegIndices.end());
+  size_t SubRegIndicesSize = llvm::size(SubRegIndices);
 
   if (!SubRegIndices.empty()) {
     emitComposeSubRegIndices(OS, ClassName);

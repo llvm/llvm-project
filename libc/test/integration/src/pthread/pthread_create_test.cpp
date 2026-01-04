@@ -27,6 +27,7 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/threads/thread.h"
 
 #include "test/IntegrationTest/test.h"

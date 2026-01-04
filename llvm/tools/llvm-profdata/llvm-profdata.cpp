@@ -779,7 +779,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // we have more non-fatal errors from InstrProfReader in the future. How
   // should this interact with different -failure-mode?
   std::optional<std::pair<Error, std::string>> ReaderWarning;
-  auto ReaderWarningScope = llvm::make_scope_exit([&] {
+  llvm::scope_exit ReaderWarningScope([&] {
     // If we hit a different error we may still have an error in ReaderWarning.
     // Consume it now to avoid an assert
     if (ReaderWarning)
@@ -2929,9 +2929,9 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       continue;
     }
 
-    for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
-      FuncMax = std::max(FuncMax, Func.Counts[I]);
-      FuncSum += Func.Counts[I];
+    for (uint64_t Count : Func.Counts) {
+      FuncMax = std::max(FuncMax, Count);
+      FuncSum += Count;
     }
 
     if (FuncMax < ShowValueCutoff) {

@@ -2233,13 +2233,10 @@ NeonEmitter::areRangeChecksCompatible(const ArrayRef<ImmCheck> ChecksA,
   // the same. The element types may differ as they will be resolved
   // per-intrinsic as overloaded types by SemaArm.cpp, though the vector sizes
   // are not and so must be the same.
-  bool compat =
-      std::equal(ChecksA.begin(), ChecksA.end(), ChecksB.begin(), ChecksB.end(),
-                 [](const auto &A, const auto &B) {
-                   return A.getImmArgIdx() == B.getImmArgIdx() &&
-                          A.getKind() == B.getKind() &&
-                          A.getVecSizeInBits() == B.getVecSizeInBits();
-                 });
+  bool compat = llvm::equal(ChecksA, ChecksB, [](const auto &A, const auto &B) {
+    return A.getImmArgIdx() == B.getImmArgIdx() && A.getKind() == B.getKind() &&
+           A.getVecSizeInBits() == B.getVecSizeInBits();
+  });
 
   return compat;
 }

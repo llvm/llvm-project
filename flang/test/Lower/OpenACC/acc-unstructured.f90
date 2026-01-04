@@ -54,7 +54,7 @@ subroutine test_unstructured2(a, b, c)
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured2
 ! CHECK: acc.parallel
-! CHECK: acc.loop combined(parallel) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) {
+! CHECK: acc.loop combined(parallel) private(%{{.*}} : !fir.ref<i32>) {
 ! CHECK: fir.call @_FortranAStopStatementText
 ! CHECK: acc.yield
 ! CHECK: acc.yield

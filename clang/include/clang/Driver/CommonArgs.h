@@ -291,16 +291,6 @@ void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
 void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs);
 
-// Parse -mprefer-vector-width=. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
-                                        const llvm::opt::ArgList &Args);
-
-// Parse -mrecip. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
-                            const llvm::opt::ArgList &Args);
-
 // Convert ComplexRangeKind to a string that can be passed as a frontend option.
 std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
 
