@@ -87,7 +87,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
-  initializeX86DomainReassignmentPass(PR);
+  initializeX86DomainReassignmentLegacyPass(PR);
   initializeX86AvoidSFBLegacyPass(PR);
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
@@ -533,7 +533,7 @@ void X86PassConfig::addPreRegAlloc() {
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
-  addPass(createX86DomainReassignmentPass());
+  addPass(createX86DomainReassignmentLegacyPass());
   TargetPassConfig::addMachineSSAOptimization();
 }
 
