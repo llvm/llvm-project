@@ -785,7 +785,7 @@ public:
   typedef _Tp value_type;
   typedef _Tp __result_type;
 
-  using iteraor        = _Tp*;
+  using iterator       = _Tp*;
   using const_iterator = const _Tp*;
 
 private:
