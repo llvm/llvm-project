@@ -2321,7 +2321,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 
     assert(LoadTaskLB != nullptr && "Expected value for LoadTaskLB");
     assert(LoadTaskUB != nullptr && "Expected value for LoadTaskUB");
-    Value *TripCountMinusOne = Builder.CreateSub(LoadTaskUB, LoadTaskLB);
+    Value *TripCountMinusOne =
+        Builder.CreateSDiv(Builder.CreateSub(LoadTaskUB, LoadTaskLB), FakeStep);
     Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One, "trip_cnt");
     Value *CastedTripCount = Builder.CreateIntCast(TripCount, IVTy, true);
     Value *CastedTaskLB = Builder.CreateIntCast(LoadTaskLB, IVTy, true);
