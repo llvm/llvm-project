@@ -2,10 +2,16 @@
 //
 // RUN: %clangxx_asan %s -o %t && %env_asan_opts=handle_sigill=0 not --crash %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
 // RUN: %clangxx_asan %s -o %t && %env_asan_opts=handle_sigill=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1
-// REQUIRES: x86-target-arch
+// REQUIRES: x86-target-arch && (!MSVC || asan-32-bits)
 
 #ifdef _WIN32
 #include <windows.h>
+#endif
+
+// note: test is limited to i386 only ("asan-32-bits") when using "real" MSVC
+//  see the requires clause above
+#if defined(_MSC_VER) && !defined(__clang__)
+#  define __builtin_trap() __asm ud2;
 #endif
 
 int main(int argc, char **argv) {

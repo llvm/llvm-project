@@ -10,28 +10,15 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H
 
 #include "GDBRemoteCommunicationHistory.h"
-
-#include <condition_variable>
-#include <future>
-#include <mutex>
-#include <queue>
-#include <string>
-#include <vector>
-
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/HostThread.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/Listener.h"
-#include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
-#include "lldb/lldb-public.h"
+#include <mutex>
+#include <string>
 
 namespace lldb_private {
-namespace repro {
-class PacketRecorder;
-}
 namespace process_gdb_remote {
 
 enum GDBStoppointType {
@@ -147,28 +134,17 @@ public:
 
   std::chrono::seconds GetPacketTimeout() const { return m_packet_timeout; }
 
-  // Get the debugserver path and check that it exist.
-  FileSpec GetDebugserverPath(Platform *platform);
-
   // Start a debugserver instance on the current host using the
   // supplied connection URL.
-  Status StartDebugserverProcess(
-      const char *url,
-      Platform *platform, // If non nullptr, then check with the platform for
-                          // the GDB server binary if it can't be located
-      ProcessLaunchInfo &launch_info, uint16_t *port, const Args *inferior_args,
-      shared_fd_t pass_comm_fd); // Communication file descriptor to pass during
-                                 // fork/exec to avoid having to connect/accept
+  static Status
+  StartDebugserverProcess(std::variant<llvm::StringRef, shared_fd_t> comm,
+                          ProcessLaunchInfo &launch_info,
+                          const Args *inferior_args);
 
   void DumpHistory(Stream &strm);
 
-  void SetPacketRecorder(repro::PacketRecorder *recorder);
-
-  static llvm::Error ConnectLocally(GDBRemoteCommunication &client,
-                                    GDBRemoteCommunication &server);
-
   /// Expand GDB run-length encoding.
-  static std::string ExpandRLE(std::string);
+  static std::optional<std::string> ExpandRLE(std::string);
 
 protected:
   std::chrono::seconds m_packet_timeout;
@@ -213,21 +189,8 @@ protected:
   // on m_bytes.  The checksum was for the compressed packet.
   bool DecompressPacket();
 
-  Status StartListenThread(const char *hostname = "127.0.0.1",
-                           uint16_t port = 0);
-
-  bool JoinListenThread();
-
-  lldb::thread_result_t ListenThread();
-
 private:
-  // Promise used to grab the port number from listening thread
-  std::promise<uint16_t> m_port_promise;
-
-  HostThread m_listen_thread;
-  std::string m_listen_url;
-
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;
 #endif

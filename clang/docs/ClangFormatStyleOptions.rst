@@ -126,6 +126,9 @@ clang-format is turned off or back on.
   // clang-format on
   void formatted_code_again;
 
+In addition, the ``OneLineFormatOffRegex`` option gives you a concise way to
+disable formatting for all of the lines that match the regular expression.
+
 
 Configuring Style in Code
 =========================
@@ -194,57 +197,29 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlignAfterOpenBracket:
 
-**AlignAfterOpenBracket** (``BracketAlignmentStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlignAfterOpenBracket>`
+**AlignAfterOpenBracket** (``Boolean``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlignAfterOpenBracket>`
   If ``true``, horizontally aligns arguments after an open bracket.
+
+
+  .. code-block:: c++
+
+    true:                         vs.   false
+    someLongFunction(argument1,         someLongFunction(argument1,
+                     argument2);            argument2);
+
+
+  .. note::
+
+    As of clang-format 22 this option is a bool with the previous
+    option of ``Align`` replaced with ``true``, ``DontAlign`` replaced
+    with ``false``, and the options of ``AlwaysBreak`` and ``BlockIndent``
+    replaced with ``true`` and with setting of new style options using
+    ``BreakAfterOpenBracketBracedList``, ``BreakAfterOpenBracketFunction``,
+    ``BreakAfterOpenBracketIf``, ``BreakBeforeCloseBracketBracedList``,
+    ``BreakBeforeCloseBracketFunction``, and ``BreakBeforeCloseBracketIf``.
 
   This applies to round brackets (parentheses), angle brackets and square
   brackets.
-
-  Possible values:
-
-  * ``BAS_Align`` (in configuration: ``Align``)
-    Align parameters on the open bracket, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(argument1,
-                       argument2);
-
-  * ``BAS_DontAlign`` (in configuration: ``DontAlign``)
-    Don't align, instead use ``ContinuationIndentWidth``, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(argument1,
-          argument2);
-
-  * ``BAS_AlwaysBreak`` (in configuration: ``AlwaysBreak``)
-    Always break after an open bracket, if the parameters don't fit
-    on a single line, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(
-          argument1, argument2);
-
-  * ``BAS_BlockIndent`` (in configuration: ``BlockIndent``)
-    Always break after an open bracket, if the parameters don't fit
-    on a single line. Closing brackets will be placed on a new line.
-    E.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(
-          argument1, argument2
-      )
-
-
-    .. note::
-
-     This currently only applies to braced initializer lists (when
-     ``Cpp11BracedListStyle`` is ``true``) and parentheses.
-
-
 
 .. _AlignArrayOfStructures:
 
@@ -1554,9 +1529,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      #define A                                                                      \
-        int aaaa;                                                                    \
-        int b;                                                                       \
+      #define A                                                            \
+        int aaaa;                                                          \
+        int b;                                                             \
         int dddddddddd;
 
 
@@ -1698,13 +1673,23 @@ the configuration (without a prefix: ``Auto``).
 
       int abcdef; // but this isn't
 
+  * ``bool AlignPPAndNotPP`` If comments following preprocessor directive should be aligned with
+    comments that don't.
+
+    .. code-block:: c++
+
+      true:                               false:
+      #define A  // Comment   vs.         #define A  // Comment
+      #define AB // Aligned               #define AB // Aligned
+      int i;     // Aligned               int i; // Not aligned
+
 
 .. _AllowAllArgumentsOnNextLine:
 
 **AllowAllArgumentsOnNextLine** (``Boolean``) :versionbadge:`clang-format 9` :ref:`¶ <AllowAllArgumentsOnNextLine>`
-  If a function call or braced initializer list doesn't fit on a
-  line, allow putting all arguments onto the next line, even if
-  ``BinPackArguments`` is ``false``.
+  If a function call or braced initializer list doesn't fit on a line, allow
+  putting all arguments onto the next line, even if ``BinPackArguments`` is
+  ``false``.
 
   .. code-block:: c++
 
@@ -1791,6 +1776,13 @@ the configuration (without a prefix: ``Auto``).
                    noexcept(baz(arg2)));
 
 
+
+.. _AllowBreakBeforeQtProperty:
+
+**AllowBreakBeforeQtProperty** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <AllowBreakBeforeQtProperty>`
+  Allow breaking before ``Q_Property`` keywords ``READ``, ``WRITE``, etc. as
+  if they were preceded by a comma (``,``). This allows them to be formatted
+  according to ``BinPackParameters``.
 
 .. _AllowShortBlocksOnASingleLine:
 
@@ -1912,7 +1904,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
     Only merge functions defined inside a class. Same as ``inline``,
-    except it does not implies ``empty``: i.e. top level empty functions
+    except it does not imply ``empty``: i.e. top level empty functions
     are not merged either.
 
     .. code-block:: c++
@@ -2181,6 +2173,24 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaa,
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
+
+.. _BinPackLongBracedList:
+
+**BinPackLongBracedList** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BinPackLongBracedList>`
+  If ``BinPackLongBracedList`` is ``true`` it overrides
+  ``BinPackArguments`` if there are 20 or more items in a braced
+  initializer list.
+
+  .. code-block:: c++
+
+     BinPackLongBracedList: false  vs.    BinPackLongBracedList: true
+     vector<int> x{                       vector<int> x{1, 2, ...,
+                                                        20, 21};
+                 1,
+                 2,
+                 ...,
+                 20,
+                 21};
 
 .. _BinPackParameters:
 
@@ -2564,9 +2574,9 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BracedInitializerIndentWidth:
 
-**BracedInitializerIndentWidth** (``Unsigned``) :versionbadge:`clang-format 17` :ref:`¶ <BracedInitializerIndentWidth>`
+**BracedInitializerIndentWidth** (``Integer``) :versionbadge:`clang-format 17` :ref:`¶ <BracedInitializerIndentWidth>`
   The number of columns to use to indent the contents of braced init lists.
-  If unset, ``ContinuationIndentWidth`` is used.
+  If unset or negative, ``ContinuationIndentWidth`` is used.
 
   .. code-block:: c++
 
@@ -2717,6 +2727,67 @@ the configuration (without a prefix: ``Auto``).
      @Partial                       vs.     @Partial @Mock DataLoad loader;
      @Mock
      DataLoad loader;
+
+.. _BreakAfterOpenBracketBracedList:
+
+**BreakAfterOpenBracketBracedList** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketBracedList>`
+  Force break after the left bracket of a braced initializer list (when
+  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    vector<int> x {         vs.       vector<int> x {1,
+       1, 2, 3}                            2, 3}
+
+.. _BreakAfterOpenBracketFunction:
+
+**BreakAfterOpenBracketFunction** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketFunction>`
+  Force break after the left parenthesis of a function (declaration,
+  definition, call) when the parameters exceed the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    foo (                   vs.       foo (a,
+       a , b)                              b)
+
+.. _BreakAfterOpenBracketIf:
+
+**BreakAfterOpenBracketIf** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketIf>`
+  Force break after the left parenthesis of an if control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    if constexpr (          vs.       if constexpr (a ||
+       a || b)                                      b)
+
+.. _BreakAfterOpenBracketLoop:
+
+**BreakAfterOpenBracketLoop** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketLoop>`
+  Force break after the left parenthesis of a loop control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    while (                  vs.      while (a &&
+       a && b) {                             b) {
+
+.. _BreakAfterOpenBracketSwitch:
+
+**BreakAfterOpenBracketSwitch** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketSwitch>`
+  Force break after the left parenthesis of a switch control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    switch (                 vs.      switch (a +
+       a + b) {                               b) {
 
 .. _BreakAfterReturnType:
 
@@ -3355,6 +3426,79 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeCloseBracketBracedList:
+
+**BreakBeforeCloseBracketBracedList** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketBracedList>`
+  Force break before the right bracket of a braced initializer list (when
+  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  limit. The break before the right bracket is only made if there is a
+  break after the opening bracket.
+
+  .. code-block:: c++
+
+    true:                             false:
+    vector<int> x {         vs.       vector<int> x {
+       1, 2, 3                           1, 2, 3}
+    }
+
+.. _BreakBeforeCloseBracketFunction:
+
+**BreakBeforeCloseBracketFunction** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketFunction>`
+  Force break before the right parenthesis of a function (declaration,
+  definition, call) when the parameters exceed the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    foo (                   vs.       foo (
+       a , b                             a , b)
+    )
+
+.. _BreakBeforeCloseBracketIf:
+
+**BreakBeforeCloseBracketIf** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketIf>`
+  Force break before the right parenthesis of an if control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    if constexpr (          vs.       if constexpr (
+       a || b                            a || b )
+    )
+
+.. _BreakBeforeCloseBracketLoop:
+
+**BreakBeforeCloseBracketLoop** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketLoop>`
+  Force break before the right parenthesis of a loop control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    while (                  vs.      while (
+       a && b                            a && b) {
+    ) {
+
+.. _BreakBeforeCloseBracketSwitch:
+
+**BreakBeforeCloseBracketSwitch** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketSwitch>`
+  Force break before the right parenthesis of a switch control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    switch (                 vs.      switch (
+       a + b                             a + b) {
+    ) {
+
 .. _BreakBeforeConceptDeclarations:
 
 **BreakBeforeConceptDeclarations** (``BreakBeforeConceptDeclarationsStyle``) :versionbadge:`clang-format 12` :ref:`¶ <BreakBeforeConceptDeclarations>`
@@ -3421,6 +3565,35 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeTemplateCloser:
+
+**BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
+  If ``true``, break before a template closing bracket (``>``) when there is
+  a line break after the matching opening bracket (``<``).
+
+  .. code-block:: c++
+
+     true:
+     template <typename Foo, typename Bar>
+
+     template <typename Foo,
+               typename Bar>
+
+     template <
+         typename Foo,
+         typename Bar
+     >
+
+     false:
+     template <typename Foo, typename Bar>
+
+     template <typename Foo,
+               typename Bar>
+
+     template <
+         typename Foo,
+         typename Bar>
+
 .. _BreakBeforeTernaryOperators:
 
 **BreakBeforeTernaryOperators** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BreakBeforeTernaryOperators>`
@@ -3441,7 +3614,7 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakBinaryOperations:
 
 **BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
-  The break constructor initializers style to use.
+  The break binary operations style to use.
 
   Possible values:
 
@@ -3759,28 +3932,72 @@ the configuration (without a prefix: ``Auto``).
 
 .. _Cpp11BracedListStyle:
 
-**Cpp11BracedListStyle** (``Boolean``) :versionbadge:`clang-format 3.4` :ref:`¶ <Cpp11BracedListStyle>`
-  If ``true``, format braced lists as best suited for C++11 braced
-  lists.
+**Cpp11BracedListStyle** (``BracedListStyle``) :versionbadge:`clang-format 3.4` :ref:`¶ <Cpp11BracedListStyle>`
+  The style to handle braced lists.
 
-  Important differences:
-  * No spaces inside the braced list.
-  * No line break before the closing brace.
-  * Indentation with the continuation indent, not with the block indent.
+  Possible values:
 
-  Fundamentally, C++11 braced lists are formatted exactly like function
-  calls would be formatted in their place. If the braced list follows a name
-  (e.g. a type or variable name), clang-format formats as if the ``{}`` were
-  the parentheses of a function call with that name. If there is no name,
-  a zero-length name is assumed.
+  * ``BLS_Block`` (in configuration: ``Block``)
+    Best suited for pre C++11 braced lists.
 
-  .. code-block:: c++
+    * Spaces inside the braced list.
+    * Line break before the closing brace.
+    * Indentation with the block indent.
 
-     true:                                  false:
-     vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
-     vector<T> x{{}, {}, {}, {}};           vector<T> x{ {}, {}, {}, {} };
-     f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
-     new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
+
+    .. code-block:: c++
+
+       vector<int> x{ 1, 2, 3, 4 };
+       vector<T> x{ {}, {}, {}, {} };
+       f(MyMap[{ composite, key }]);
+       new int[3]{ 1, 2, 3 };
+       Type name{ // Comment
+                  value
+       };
+
+  * ``BLS_FunctionCall`` (in configuration: ``FunctionCall``)
+    Best suited for C++11 braced lists.
+
+    * No spaces inside the braced list.
+    * No line break before the closing brace.
+    * Indentation with the continuation indent.
+
+    Fundamentally, C++11 braced lists are formatted exactly like function
+    calls would be formatted in their place. If the braced list follows a
+    name (e.g. a type or variable name), clang-format formats as if the
+    ``{}`` were the parentheses of a function call with that name. If there
+    is no name, a zero-length name is assumed.
+
+    .. code-block:: c++
+
+       vector<int> x{1, 2, 3, 4};
+       vector<T> x{{}, {}, {}, {}};
+       f(MyMap[{composite, key}]);
+       new int[3]{1, 2, 3};
+       Type name{ // Comment
+           value};
+
+  * ``BLS_AlignFirstComment`` (in configuration: ``AlignFirstComment``)
+    Same as ``FunctionCall``, except for the handling of a comment at the
+    begin, it then aligns everything following with the comment.
+
+    * No spaces inside the braced list. (Even for a comment at the first
+      position.)
+    * No line break before the closing brace.
+    * Indentation with the continuation indent, except when followed by a
+      line comment, then it uses the block indent.
+
+
+    .. code-block:: c++
+
+       vector<int> x{1, 2, 3, 4};
+       vector<T> x{{}, {}, {}, {}};
+       f(MyMap[{composite, key}]);
+       new int[3]{1, 2, 3};
+       Type name{// Comment
+                 value};
+
+
 
 .. _DeriveLineEnding:
 
@@ -3925,6 +4142,47 @@ the configuration (without a prefix: ``Auto``).
 
       protected:
       };
+
+
+
+.. _EnumTrailingComma:
+
+**EnumTrailingComma** (``EnumTrailingCommaStyle``) :versionbadge:`clang-format 21` :ref:`¶ <EnumTrailingComma>`
+  Insert a comma (if missing) or remove the comma at the end of an ``enum``
+  enumerator list.
+
+  .. warning::
+
+   Setting this option to any value other than ``Leave`` could lead to
+   incorrect code formatting due to clang-format's lack of complete semantic
+   information. As such, extra care should be taken to review code changes
+   made by this option.
+
+  Possible values:
+
+  * ``ETC_Leave`` (in configuration: ``Leave``)
+    Don't insert or remove trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c, };
+      enum Color { red, green, blue };
+
+  * ``ETC_Insert`` (in configuration: ``Insert``)
+    Insert trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c, };
+      enum Color { red, green, blue, };
+
+  * ``ETC_Remove`` (in configuration: ``Remove``)
+    Remove trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c };
+      enum Color { red, green, blue };
 
 
 
@@ -4112,8 +4370,8 @@ the configuration (without a prefix: ``Auto``).
   * ``""`` means "arbitrary suffix"
   * ``"$"`` means "no suffix"
 
-  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
-  as the "main" include in both a.cc and a_test.cc.
+  For example, if configured to ``"(_test)?$"``, then a header a.h would be
+  seen as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
 
@@ -4211,6 +4469,21 @@ the configuration (without a prefix: ``Auto``).
      default:                                 default:
        plop();                                  plop();
      }                                      }
+
+.. _IndentExportBlock:
+
+**IndentExportBlock** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <IndentExportBlock>`
+  If ``true``, clang-format will indent the body of an ``export { ... }``
+  block. This doesn't affect the formatting of anything else related to
+  exported declarations.
+
+  .. code-block:: c++
+
+     true:                     false:
+     export {          vs.     export {
+       void foo();             void foo();
+       void bar();             void bar();
+     }                         }
 
 .. _IndentExternBlock:
 
@@ -4318,6 +4591,21 @@ the configuration (without a prefix: ``Auto``).
            #include <foo>
          #endif
        #endif
+
+  * ``PPDIS_Leave`` (in configuration: ``Leave``)
+    Leaves indentation of directives as-is.
+
+    .. note::
+
+     Ignores ``PPIndentWidth``.
+
+    .. code-block:: c++
+
+      #if FOO
+        #if BAR
+      #include <foo>
+        #endif
+      #endif
 
 
 
@@ -4477,9 +4765,21 @@ the configuration (without a prefix: ``Auto``).
       Decimal: 3
       Hex: -1
 
-  You can also specify a minimum number of digits (``BinaryMinDigits``,
-  ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
-  have in order for the separators to be inserted.
+  You can also specify a minimum number of digits
+  (``BinaryMinDigitsInsert``, ``DecimalMinDigitsInsert``, and
+  ``HexMinDigitsInsert``) the integer literal must have in order for the
+  separators to be inserted, and a maximum number of digits
+  (``BinaryMaxDigitsRemove``, ``DecimalMaxDigitsRemove``, and
+  ``HexMaxDigitsRemove``) until the separators are removed. This divides the
+  literals in 3 regions, always without separator (up until including
+  ``xxxMaxDigitsRemove``), maybe with, or without separators (up until
+  excluding ``xxxMinDigitsInsert``), and finally always with separators.
+
+  .. note::
+
+   ``BinaryMinDigits``, ``DecimalMinDigits``, and ``HexMinDigits`` are
+   deprecated and renamed to ``BinaryMinDigitsInsert``,
+   ``DecimalMinDigitsInsert``, and ``HexMinDigitsInsert``, respectively.
 
   * ``int8_t Binary`` Format separators in binary literals.
 
@@ -4490,14 +4790,27 @@ the configuration (without a prefix: ``Auto``).
       /*  3: */ b = 0b100'111'101'101;
       /*  4: */ b = 0b1001'1110'1101;
 
-  * ``int8_t BinaryMinDigits`` Format separators in binary literals with a minimum number of digits.
+  * ``int8_t BinaryMinDigitsInsert`` Format separators in binary literals with a minimum number of digits.
 
     .. code-block:: text
 
       // Binary: 3
-      // BinaryMinDigits: 7
+      // BinaryMinDigitsInsert: 7
       b1 = 0b101101;
       b2 = 0b1'101'101;
+
+  * ``int8_t BinaryMaxDigitsRemove`` Remove separators in binary literals with a maximum number of digits.
+
+    .. code-block:: text
+
+      // Binary: 3
+      // BinaryMinDigitsInsert: 7
+      // BinaryMaxDigitsRemove: 4
+      b0 = 0b1011; // Always removed.
+      b1 = 0b101101; // Not added.
+      b2 = 0b1'01'101; // Not removed, not corrected.
+      b3 = 0b1'101'101; // Always added.
+      b4 = 0b10'1101; // Corrected to 0b101'101.
 
   * ``int8_t Decimal`` Format separators in decimal literals.
 
@@ -4507,14 +4820,27 @@ the configuration (without a prefix: ``Auto``).
       /*  0: */ d = 184467'440737'0'95505'92ull;
       /*  3: */ d = 18'446'744'073'709'550'592ull;
 
-  * ``int8_t DecimalMinDigits`` Format separators in decimal literals with a minimum number of digits.
+  * ``int8_t DecimalMinDigitsInsert`` Format separators in decimal literals with a minimum number of digits.
 
     .. code-block:: text
 
       // Decimal: 3
-      // DecimalMinDigits: 5
+      // DecimalMinDigitsInsert: 5
       d1 = 2023;
       d2 = 10'000;
+
+  * ``int8_t DecimalMaxDigitsRemove`` Remove separators in decimal literals with a maximum number of digits.
+
+    .. code-block:: text
+
+      // Decimal: 3
+      // DecimalMinDigitsInsert: 7
+      // DecimalMaxDigitsRemove: 4
+      d0 = 2023; // Always removed.
+      d1 = 123456; // Not added.
+      d2 = 1'23'456; // Not removed, not corrected.
+      d3 = 5'000'000; // Always added.
+      d4 = 1'23'45; // Corrected to 12'345.
 
   * ``int8_t Hex`` Format separators in hexadecimal literals.
 
@@ -4524,15 +4850,29 @@ the configuration (without a prefix: ``Auto``).
       /*  0: */ h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;
       /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
 
-  * ``int8_t HexMinDigits`` Format separators in hexadecimal literals with a minimum number of
+  * ``int8_t HexMinDigitsInsert`` Format separators in hexadecimal literals with a minimum number of
     digits.
 
     .. code-block:: text
 
       // Hex: 2
-      // HexMinDigits: 6
+      // HexMinDigitsInsert: 6
       h1 = 0xABCDE;
       h2 = 0xAB'CD'EF;
+
+  * ``int8_t HexMaxDigitsRemove`` Remove separators in hexadecimal literals with a maximum number of
+    digits.
+
+    .. code-block:: text
+
+      // Hex: 2
+      // HexMinDigitsInsert: 6
+      // HexMaxDigitsRemove: 4
+      h0 = 0xAFFE; // Always removed.
+      h1 = 0xABCDE; // Not added.
+      h2 = 0xABC'DE; // Not removed, not corrected.
+      h3 = 0xAB'CD'EF; // Always added.
+      h4 = 0xABCD'E; // Corrected to 0xA'BC'DE.
 
 
 .. _JavaImportGroups:
@@ -4719,15 +5059,24 @@ the configuration (without a prefix: ``Auto``).
 .. _Language:
 
 **Language** (``LanguageKind``) :versionbadge:`clang-format 3.5` :ref:`¶ <Language>`
-  Language, this format style is targeted at.
+  The language that this format style targets.
+
+  .. note::
+
+   You can specify the language (``C``, ``Cpp``, or ``ObjC``) for ``.h``
+   files by adding a ``// clang-format Language:`` line before the first
+   non-comment (and non-empty) line, e.g. ``// clang-format Language: Cpp``.
 
   Possible values:
 
   * ``LK_None`` (in configuration: ``None``)
     Do not use.
 
+  * ``LK_C`` (in configuration: ``C``)
+    Should be used for C.
+
   * ``LK_Cpp`` (in configuration: ``Cpp``)
-    Should be used for C, C++.
+    Should be used for C++.
 
   * ``LK_CSharp`` (in configuration: ``CSharp``)
     Should be used for C#.
@@ -4862,6 +5211,12 @@ the configuration (without a prefix: ``Auto``).
      A(z); -> z;
      A(a, b); // will not be expanded.
 
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
+
 .. _MainIncludeChar:
 
 **MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
@@ -4956,6 +5311,113 @@ the configuration (without a prefix: ``Auto``).
     }
 
   For example: TESTSUITE
+
+.. _NumericLiteralCase:
+
+**NumericLiteralCase** (``NumericLiteralCaseStyle``) :versionbadge:`clang-format 22` :ref:`¶ <NumericLiteralCase>`
+  Capitalization style for numeric literals.
+
+  Nested configuration flags:
+
+  Separate control for each numeric literal component.
+
+  For example, the config below will leave exponent letters alone, reformat
+  hexadecimal digits in lowercase, reformat numeric literal prefixes in
+  uppercase, and reformat suffixes in lowercase.
+
+  .. code-block:: c++
+
+    NumericLiteralCase:
+      ExponentLetter: Leave
+      HexDigit: Lower
+      Prefix: Upper
+      Suffix: Lower
+
+  * ``NumericLiteralComponentStyle ExponentLetter``
+    Format floating point exponent separator letter case.
+
+    .. code-block:: c++
+
+      float a = 6.02e23 + 1.0E10; // Leave
+      float a = 6.02E23 + 1.0E10; // Upper
+      float a = 6.02e23 + 1.0e10; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle HexDigit``
+    Format hexadecimal digit case.
+
+    .. code-block:: c++
+
+      a = 0xaBcDeF; // Leave
+      a = 0xABCDEF; // Upper
+      a = 0xabcdef; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle Prefix``
+    Format integer prefix case.
+
+    .. code-block:: c++
+
+       a = 0XF0 | 0b1; // Leave
+       a = 0XF0 | 0B1; // Upper
+       a = 0xF0 | 0b1; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle Suffix``
+    Format suffix case. This option excludes case-sensitive reserved
+    suffixes, such as ``min`` in C++.
+
+    .. code-block:: c++
+
+      a = 1uLL; // Leave
+      a = 1ULL; // Upper
+      a = 1ull; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
 
 .. _ObjCBinPackProtocolList:
 
@@ -5082,6 +5544,29 @@ the configuration (without a prefix: ``Auto``).
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
 
+.. _OneLineFormatOffRegex:
+
+**OneLineFormatOffRegex** (``String``) :versionbadge:`clang-format 21` :ref:`¶ <OneLineFormatOffRegex>`
+  A regular expression that describes markers for turning formatting off for
+  one line. If it matches a comment that is the only token of a line,
+  clang-format skips the comment and the next line. Otherwise, clang-format
+  skips lines containing a matched token.
+
+  .. code-block:: c++
+
+     // OneLineFormatOffRegex: ^(// NOLINT|logger$)
+     // results in the output below:
+     int a;
+     int b ;  // NOLINT
+     int c;
+      // NOLINTNEXTLINE
+     int d ;
+     int e;
+     s = "// NOLINT";
+      logger() ;
+     logger2();
+     my_logger();
+
 .. _PPIndentWidth:
 
 **PPIndentWidth** (``Integer``) :versionbadge:`clang-format 13` :ref:`¶ <PPIndentWidth>`
@@ -5181,6 +5666,11 @@ the configuration (without a prefix: ``Auto``).
 
 **PenaltyBreakBeforeFirstCallParameter** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakBeforeFirstCallParameter>`
   The penalty for breaking a function call after ``call(``.
+
+.. _PenaltyBreakBeforeMemberAccess:
+
+**PenaltyBreakBeforeMemberAccess** (``Unsigned``) :versionbadge:`clang-format 20` :ref:`¶ <PenaltyBreakBeforeMemberAccess>`
+  The penalty for breaking before a member access operator (``.``, ``->``).
 
 .. _PenaltyBreakComment:
 
@@ -5387,8 +5877,7 @@ the configuration (without a prefix: ``Auto``).
 .. _ReferenceAlignment:
 
 **ReferenceAlignment** (``ReferenceAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <ReferenceAlignment>`
-  Reference alignment style (overrides ``PointerAlignment`` for
-  references).
+  Reference alignment style (overrides ``PointerAlignment`` for references).
 
   Possible values:
 
@@ -5849,41 +6338,35 @@ the configuration (without a prefix: ``Auto``).
 **SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 3.8` :ref:`¶ <SortIncludes>`
   Controls if and how clang-format will sort ``#includes``.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``SI_Never`` (in configuration: ``Never``)
-    Includes are never sorted.
+  Includes sorting options.
 
-    .. code-block:: c++
+  * ``bool Enabled`` If ``true``, includes are sorted based on the other suboptions below.
+    (``Never`` is deprecated by ``Enabled: false``.)
 
-       #include "B/A.h"
-       #include "A/B.h"
-       #include "a/b.h"
-       #include "A/b.h"
-       #include "B/a.h"
-
-  * ``SI_CaseSensitive`` (in configuration: ``CaseSensitive``)
-    Includes are sorted in an ASCIIbetical or case sensitive fashion.
+  * ``bool IgnoreCase`` Whether or not includes are sorted in a case-insensitive fashion.
+    (``CaseSensitive`` and ``CaseInsensitive`` are deprecated by
+    ``IgnoreCase: false`` and ``IgnoreCase: true``, respectively.)
 
     .. code-block:: c++
 
-       #include "A/B.h"
-       #include "A/b.h"
-       #include "B/A.h"
-       #include "B/a.h"
-       #include "a/b.h"
+       true:                      false:
+       #include "A/B.h"    vs.    #include "A/B.h"
+       #include "A/b.h"           #include "A/b.h"
+       #include "a/b.h"           #include "B/A.h"
+       #include "B/A.h"           #include "B/a.h"
+       #include "B/a.h"           #include "a/b.h"
 
-  * ``SI_CaseInsensitive`` (in configuration: ``CaseInsensitive``)
-    Includes are sorted in an alphabetical or case insensitive fashion.
+  * ``bool IgnoreExtension`` When sorting includes in each block, only take file extensions into
+    account if two includes compare equal otherwise.
 
     .. code-block:: c++
 
-       #include "A/B.h"
-       #include "A/b.h"
-       #include "a/b.h"
-       #include "B/A.h"
-       #include "B/a.h"
-
+       true:                          false:
+       # include "A.h"         vs.    # include "A-util.h"
+       # include "A.inc"              # include "A.h"
+       # include "A-util.h"           # include "A.inc"
 
 
 .. _SortJavaStaticImport:
@@ -5985,6 +6468,16 @@ the configuration (without a prefix: ``Auto``).
 
      true:                                  false:
      ! someExpression();            vs.     !someExpression();
+
+.. _SpaceAfterOperatorKeyword:
+
+**SpaceAfterOperatorKeyword** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <SpaceAfterOperatorKeyword>`
+  If ``true``, a space will be inserted after the ``operator`` keyword.
+
+  .. code-block:: c++
+
+     true:                                false:
+     bool operator ==(int a);     vs.     bool operator==(int a);
 
 .. _SpaceAfterTemplateKeyword:
 
@@ -6250,6 +6743,14 @@ the configuration (without a prefix: ``Auto``).
        IF (...)                        vs.    IF(...)
          <conditional-body>                     <conditional-body>
 
+  * ``bool AfterNot`` If ``true``, put a space between alternative operator ``not`` and the
+    opening parenthesis.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       return not (a || b);            vs.    return not(a || b);
+
   * ``bool AfterOverloadedOperator`` If ``true``, put a space between operator overloading and opening
     parentheses.
 
@@ -6325,13 +6826,51 @@ the configuration (without a prefix: ``Auto``).
 .. _SpaceInEmptyBlock:
 
 **SpaceInEmptyBlock** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <SpaceInEmptyBlock>`
-  If ``true``, spaces will be inserted into ``{}``.
+  This option is **deprecated**. See ``Block`` of ``SpaceInEmptyBraces``.
 
-  .. code-block:: c++
+.. _SpaceInEmptyBraces:
 
-     true:                                false:
-     void f() { }                   vs.   void f() {}
-     while (true) { }                     while (true) {}
+**SpaceInEmptyBraces** (``SpaceInEmptyBracesStyle``) :versionbadge:`clang-format 22` :ref:`¶ <SpaceInEmptyBraces>`
+  Specifies when to insert a space in empty braces.
+
+  .. note::
+
+   This option doesn't apply to initializer braces if
+   ``Cpp11BracedListStyle`` is not ``Block``.
+
+  Possible values:
+
+  * ``SIEB_Always`` (in configuration: ``Always``)
+    Always insert a space in empty braces.
+
+    .. code-block:: c++
+
+       void f() { }
+       class Unit { };
+       auto a = [] { };
+       int x{ };
+
+  * ``SIEB_Block`` (in configuration: ``Block``)
+    Only insert a space in empty blocks.
+
+    .. code-block:: c++
+
+       void f() { }
+       class Unit { };
+       auto a = [] { };
+       int x{};
+
+  * ``SIEB_Never`` (in configuration: ``Never``)
+    Never insert a space in empty braces.
+
+    .. code-block:: c++
+
+       void f() {}
+       class Unit {};
+       auto a = [] {};
+       int x{};
+
+
 
 .. _SpaceInEmptyParentheses:
 
@@ -6750,8 +7289,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TypenameMacros:
 
 **TypenameMacros** (``List of Strings``) :versionbadge:`clang-format 9` :ref:`¶ <TypenameMacros>`
-  A vector of macros that should be interpreted as type declarations
-  instead of as function calls.
+  A vector of macros that should be interpreted as type declarations instead
+  of as function calls.
 
   These are expected to be macros of the form:
 
@@ -6857,7 +7396,7 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       namespace N1 {
-      namespace N2
+      namespace N2 {
       function();
       }
       }

@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -23,24 +26,36 @@ using namespace llvm;
 
 namespace {
 
-class SILateBranchLowering : public MachineFunctionPass {
+class SILateBranchLowering {
 private:
-  const SIRegisterInfo *TRI = nullptr;
-  const SIInstrInfo *TII = nullptr;
-  MachineDominatorTree *MDT = nullptr;
+  const GCNSubtarget &ST;
+  const SIInstrInfo *TII;
+  const SIRegisterInfo *TRI;
+  MachineDominatorTree *MDT;
+  const AMDGPU::LaneMaskConstants &LMC;
 
-  void expandChainCall(MachineInstr &MI);
+  void expandChainCall(MachineInstr &MI, const GCNSubtarget &ST,
+                       bool DynamicVGPR);
   void earlyTerm(MachineInstr &MI, MachineBasicBlock *EarlyExitBlock);
 
 public:
+  SILateBranchLowering(const GCNSubtarget &ST, MachineDominatorTree *MDT)
+      : ST(ST), TII(ST.getInstrInfo()), TRI(&TII->getRegisterInfo()), MDT(MDT),
+        LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
+
+  bool run(MachineFunction &MF);
+};
+
+class SILateBranchLoweringLegacy : public MachineFunctionPass {
+public:
   static char ID;
+  SILateBranchLoweringLegacy() : MachineFunctionPass(ID) {}
 
-  unsigned MovOpc;
-  Register ExecReg;
-
-  SILateBranchLowering() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    return SILateBranchLowering(ST, MDT).run(MF);
+  }
 
   StringRef getPassName() const override {
     return "SI Final Branch Preparation";
@@ -55,15 +70,15 @@ public:
 
 } // end anonymous namespace
 
-char SILateBranchLowering::ID = 0;
+char SILateBranchLoweringLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(SILateBranchLowering, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SILateBranchLoweringLegacy, DEBUG_TYPE,
                       "SI insert s_cbranch_execz instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(SILateBranchLowering, DEBUG_TYPE,
+INITIALIZE_PASS_END(SILateBranchLoweringLegacy, DEBUG_TYPE,
                     "SI insert s_cbranch_execz instructions", false, false)
 
-char &llvm::SILateBranchLoweringPassID = SILateBranchLowering::ID;
+char &llvm::SILateBranchLoweringPassID = SILateBranchLoweringLegacy::ID;
 
 static void generateEndPgm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, DebugLoc DL,
@@ -116,16 +131,62 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   MDT->applyUpdates(DTUpdates);
 }
 
-void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
+static void copyOpWithoutRegFlags(MachineInstrBuilder &MIB,
+                                  MachineOperand &Op) {
+  if (Op.isReg())
+    MIB.addReg(Op.getReg());
+  else
+    MIB.add(Op);
+}
+
+void SILateBranchLowering::expandChainCall(MachineInstr &MI,
+                                           const GCNSubtarget &ST,
+                                           bool DynamicVGPR) {
   // This is a tail call that needs to be expanded into at least
   // 2 instructions, one for setting EXEC and one for the actual tail call.
-  constexpr unsigned ExecIdx = 3;
+  int ExecIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::exec);
+  assert(ExecIdx != -1 && "Missing EXEC operand");
+  const DebugLoc &DL = MI.getDebugLoc();
+  if (DynamicVGPR) {
+    // We have 3 extra operands and we need to:
+    // * Try to change the VGPR allocation
+    // * Select the callee based on the result of the reallocation attempt
+    // * Select the EXEC mask based on the result of the reallocation attempt
+    // If any of the register operands of the chain pseudo is used in more than
+    // one of these instructions, we need to make sure that the kill flags
+    // aren't copied along.
+    auto AllocMI =
+        BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::S_ALLOC_VGPR));
+    copyOpWithoutRegFlags(AllocMI,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::numvgprs));
 
-  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(MovOpc), ExecReg)
-      ->addOperand(MI.getOperand(ExecIdx));
-  MI.removeOperand(ExecIdx);
+    auto SelectCallee =
+        BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::S_CSELECT_B64))
+            .addDef(TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg());
+    copyOpWithoutRegFlags(SelectCallee,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::src0));
+    copyOpWithoutRegFlags(SelectCallee,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::fbcallee));
 
-  MI.setDesc(TII->get(AMDGPU::SI_TCRETURN));
+    auto SelectExec = BuildMI(*MI.getParent(), MI, DL, TII->get(LMC.CSelectOpc))
+                          .addDef(LMC.ExecReg);
+
+    copyOpWithoutRegFlags(SelectExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
+    copyOpWithoutRegFlags(SelectExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::fbexec));
+  } else {
+    auto SetExec =
+        BuildMI(*MI.getParent(), MI, DL, TII->get(LMC.MovOpc), LMC.ExecReg);
+    copyOpWithoutRegFlags(SetExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
+  }
+
+  for (int OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx; --OpIdx)
+    MI.removeOperand(OpIdx);
+
+  MI.setDesc(TII->get(AMDGPU::SI_TCRETURN_CHAIN));
 }
 
 void SILateBranchLowering::earlyTerm(MachineInstr &MI,
@@ -144,15 +205,19 @@ void SILateBranchLowering::earlyTerm(MachineInstr &MI,
   MDT->insertEdge(&MBB, EarlyExitBlock);
 }
 
-bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses
+llvm::SILateBranchLoweringPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  TII = ST.getInstrInfo();
-  TRI = &TII->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  if (!SILateBranchLowering(ST, MDT).run(MF))
+    return PreservedAnalyses::all();
 
-  MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-  ExecReg = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserve<MachineDominatorTreeAnalysis>();
+}
 
+bool SILateBranchLowering::run(MachineFunction &MF) {
   SmallVector<MachineInstr *, 4> EarlyTermInstrs;
   SmallVector<MachineInstr *, 1> EpilogInstrs;
   bool MadeChange = false;
@@ -172,7 +237,12 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
 
       case AMDGPU::SI_CS_CHAIN_TC_W32:
       case AMDGPU::SI_CS_CHAIN_TC_W64:
-        expandChainCall(MI);
+        expandChainCall(MI, ST, /*DynamicVGPR=*/false);
+        MadeChange = true;
+        break;
+      case AMDGPU::SI_CS_CHAIN_TC_W32_DVGPR:
+      case AMDGPU::SI_CS_CHAIN_TC_W64_DVGPR:
+        expandChainCall(MI, ST, /*DynamicVGPR=*/true);
         MadeChange = true;
         break;
 
@@ -196,8 +266,8 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
     DebugLoc DL;
 
     MF.insert(MF.end(), EarlyExitBlock);
-    BuildMI(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII->get(MovOpc),
-            ExecReg)
+    BuildMI(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII->get(LMC.MovOpc),
+            LMC.ExecReg)
         .addImm(0);
     generateEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII, MF);
 

@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfoImpl.h"
+#include "CodeGenModule.h"
+#include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
+#include "clang/AST/Type.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Type.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -24,11 +29,26 @@ public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
-  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const override;
+  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T,
+                          const CGHLSLOffsetInfo &OffsetInfo) const override;
+
+  llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                             CharUnits NumBytes) const override {
+    unsigned Size = NumBytes.getQuantity();
+    return llvm::TargetExtType::get(CGM.getLLVMContext(), "dx.Padding", {},
+                                    {Size});
+  }
+
+  bool isHLSLPadding(llvm::Type *Ty) const override {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(Ty))
+      return TET->getName() == "dx.Padding";
+    return false;
+  }
 };
 
-llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
-                                                  const Type *Ty) const {
+llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
+    CodeGenModule &CGM, const Type *Ty,
+    const CGHLSLOffsetInfo &OffsetInfo) const {
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;
@@ -44,21 +64,37 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
       return nullptr;
 
     // convert element type
-    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
 
     llvm::StringRef TypeName =
         ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";
     SmallVector<unsigned, 3> Ints = {/*IsWriteable*/ ResAttrs.ResourceClass ==
                                          llvm::dxil::ResourceClass::UAV,
                                      /*IsROV*/ ResAttrs.IsROV};
-    if (!ResAttrs.RawBuffer)
-      Ints.push_back(/*IsSigned*/ ContainedTy->isSignedIntegerType());
+    if (!ResAttrs.RawBuffer) {
+      const clang::Type *ElemType = ContainedTy->getUnqualifiedDesugaredType();
+      if (ElemType->isVectorType())
+        ElemType = cast<clang::VectorType>(ElemType)
+                       ->getElementType()
+                       ->getUnqualifiedDesugaredType();
+      Ints.push_back(/*IsSigned*/ ElemType->isSignedIntegerType());
+    }
 
     return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }
-  case llvm::dxil::ResourceClass::CBuffer:
-    llvm_unreachable("dx.CBuffer handles are not implemented yet");
-    break;
+  case llvm::dxil::ResourceClass::CBuffer: {
+    QualType ContainedTy = ResType->getContainedType();
+    if (ContainedTy.isNull() || !ContainedTy->isStructureType())
+      return nullptr;
+
+    llvm::StructType *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM).layOutStruct(
+            ContainedTy->getAsCanonical<RecordType>(), OffsetInfo);
+    if (!BufferLayoutTy)
+      return nullptr;
+
+    return llvm::TargetExtType::get(Ctx, "dx.CBuffer", {BufferLayoutTy});
+  }
   case llvm::dxil::ResourceClass::Sampler:
     llvm_unreachable("dx.Sampler handles are not implemented yet");
     break;

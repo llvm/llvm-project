@@ -11,7 +11,10 @@ include "llvm/Target/Target.td"
 include "SPIRVRegisterInfo.td"
 include "SPIRVRegisterBanks.td"
 include "SPIRVInstrInfo.td"
+include "SPIRVCombine.td"
 include "SPIRVBuiltins.td"
+
+defm : RemapAllTargetPseudoPointerOperands<pID>;
 
 def SPIRVInstrInfo : InstrInfo;
 

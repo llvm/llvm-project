@@ -151,7 +151,7 @@ std::vector<std::string> match(const SymbolIndex &I,
 std::vector<std::string> lookup(const SymbolIndex &I,
                                 llvm::ArrayRef<SymbolID> IDs) {
   LookupRequest Req;
-  Req.IDs.insert(IDs.begin(), IDs.end());
+  Req.IDs.insert_range(IDs);
   std::vector<std::string> Results;
   I.lookup(Req, [&](const Symbol &Sym) {
     Results.push_back(getQualifiedName(Sym));
