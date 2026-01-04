@@ -54,3 +54,20 @@
 // These are allowed for now..
 #define MAYBE1            *12.34
 #define MAYBE2            <<3
+#define MAYBE3            a < b * c
+
+#define CAST1(type, p)    (reinterpret_cast<type*>(p))
+#define CAST2(type, p)    (static_cast<type*>(p))
+#define CAST3(type, p)    (const_cast<type*>(p))
+#define CAST4(type, p)    (dynamic_cast<type*>(p))
+#define CAST5(type, p)    (static_cast<type&>(p))
+#define CAST6(type, p)    (static_cast<type&&>(p))
+#define CAST7(type, p)    (static_cast<const type*>(p))
+#define CAST8(type, p)    (static_cast<volatile type*>(p))
+#define CAST9(type, p)    (static_cast<type const*>(p))
+#define CAST10(type, p)   (reinterpret_cast<type * const &>(p))
+
+#define TEMPLATE1(T)      (std::vector<T*>)
+#define TEMPLATE2(T)      (std::vector<T&>)
+#define TEMPLATE3(T)      (std::vector<const T*>)
+#define TEMPLATE4(T)      (std::map<T*, T*>)
