@@ -32,6 +32,14 @@
 </div> 
 {{/ParamComments}}
 {{/HasParamComments}}
+{{#HasTParamComments}}
+<h3>Template Parameters</h3>
+{{#TParamComments}}
+<div>
+    <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{TextComment}}{{/Children}}
+</div> 
+{{/#TParamComments}}
+{{/HasTParamComments}}
 {{#HasReturnComments}}
 <h3>Returns</h3>
 {{#ReturnComments}}

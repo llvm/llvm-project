@@ -1081,6 +1081,8 @@ public:
   bool Pre(const parser::SaveStmt &);
   bool Pre(const parser::BasedPointer &);
   void Post(const parser::BasedPointer &);
+  bool Pre(const parser::CUFKernelDoConstruct &);
+  void Post(const parser::CUFKernelDoConstruct &);
 
   void PointerInitialization(
       const parser::Name &, const parser::InitialDataTarget &);
@@ -3663,6 +3665,7 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
     currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
+
   useModuleScope_ = nullptr;
 }
 
@@ -9287,6 +9290,16 @@ void DeclarationVisitor::LegacyDataInitialization(const parser::Name &name,
       ultimate.set_size(oldSize);
     }
   }
+}
+
+bool DeclarationVisitor::Pre(const parser::CUFKernelDoConstruct &x) {
+  // Treat CUDA kernel do construct as OpenACC construct.
+  PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  return true;
+}
+
+void DeclarationVisitor::Post(const parser::CUFKernelDoConstruct &x) {
+  PopScope();
 }
 
 void ResolveNamesVisitor::HandleCall(

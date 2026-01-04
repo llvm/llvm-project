@@ -64,6 +64,20 @@ static APSInt popToAPSInt(InterpState &S, QualType T) {
   return popToAPSInt(S.Stk, *S.getContext().classify(T));
 }
 
+/// Check for common reasons a pointer can't be read from, which
+/// are usually not diagnosed in a builtin function.
+static bool isReadable(const Pointer &P) {
+  if (P.isDummy())
+    return false;
+  if (!P.isBlockPointer())
+    return false;
+  if (!P.isLive())
+    return false;
+  if (P.isOnePastEnd())
+    return false;
+  return true;
+}
+
 /// Pushes \p Val on the stack as the type given by \p QT.
 static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(QT->isSignedIntegerOrEnumerationType() ||
@@ -1794,8 +1808,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Can't read from dummy pointers.
-  if (DestPtr.isDummy() || SrcPtr.isDummy())
+  if (!isReadable(DestPtr) || !isReadable(SrcPtr))
     return false;
 
   if (DestPtr.getType()->isIncompleteType()) {
@@ -2065,6 +2078,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  if (!Ptr.isBlockPointer())
+    return false;
+
   QualType ElemTy = Ptr.getFieldDesc()->isArray()
                         ? Ptr.getFieldDesc()->getElemQualType()
                         : Ptr.getFieldDesc()->getType();
@@ -2077,6 +2093,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
         << S.getASTContext().BuiltinInfo.getQuotedName(ID) << ElemTy;
     return false;
   }
+
+  if (!isReadable(Ptr))
+    return false;
 
   if (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr) {
     int64_t DesiredTrunc;
