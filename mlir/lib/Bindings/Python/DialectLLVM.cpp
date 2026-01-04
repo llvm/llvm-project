@@ -42,13 +42,16 @@ struct StructType : PyConcreteType<StructType> {
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_literal",
-        [](const std::vector<MlirType> &elements, bool packed, MlirLocation loc,
+        [](const std::vector<PyType> &elements, bool packed, MlirLocation loc,
            DefaultingPyMlirContext context) {
           python::CollectDiagnosticsToStringScope scope(
               mlirLocationGetContext(loc));
+          std::vector<MlirType> elements_(elements.size());
+          std::transform(elements.begin(), elements.end(), elements_.begin(),
+                         [](const PyType &elem) { return elem; });
 
           MlirType type = mlirLLVMStructTypeLiteralGetChecked(
-              loc, elements.size(), elements.data(), packed);
+              loc, elements.size(), elements_.data(), packed);
           if (mlirTypeIsNull(type)) {
             throw nb::value_error(scope.takeMessage().c_str());
           }
@@ -59,12 +62,16 @@ struct StructType : PyConcreteType<StructType> {
 
     c.def_static(
         "get_literal_unchecked",
-        [](const std::vector<MlirType> &elements, bool packed,
+        [](const std::vector<PyType> &elements, bool packed,
            DefaultingPyMlirContext context) {
           python::CollectDiagnosticsToStringScope scope(context.get()->get());
 
+          std::vector<MlirType> elements_(elements.size());
+          std::transform(elements.begin(), elements.end(), elements_.begin(),
+                         [](const PyType &elem) { return elem; });
+
           MlirType type = mlirLLVMStructTypeLiteralGet(
-              context.get()->get(), elements.size(), elements.data(), packed);
+              context.get()->get(), elements.size(), elements_.data(), packed);
           if (mlirTypeIsNull(type)) {
             throw nb::value_error(scope.takeMessage().c_str());
           }
@@ -95,9 +102,13 @@ struct StructType : PyConcreteType<StructType> {
 
     c.def(
         "set_body",
-        [](MlirType self, const std::vector<MlirType> &elements, bool packed) {
+        [](const StructType &self, const std::vector<PyType> &elements,
+           bool packed) {
+          std::vector<MlirType> elements_(elements.size());
+          std::transform(elements.begin(), elements.end(), elements_.begin(),
+                         [](const PyType &elem) { return elem; });
           MlirLogicalResult result = mlirLLVMStructTypeSetBody(
-              self, elements.size(), elements.data(), packed);
+              self, elements.size(), elements_.data(), packed);
           if (!mlirLogicalResultIsSuccess(result)) {
             throw nb::value_error(
                 "Struct body already set to different content.");
@@ -107,26 +118,30 @@ struct StructType : PyConcreteType<StructType> {
 
     c.def_static(
         "new_identified",
-        [](const std::string &name, const std::vector<MlirType> &elements,
+        [](const std::string &name, const std::vector<PyType> &elements,
            bool packed, DefaultingPyMlirContext context) {
+          std::vector<MlirType> elements_(elements.size());
+          std::transform(elements.begin(), elements.end(), elements_.begin(),
+                         [](const PyType &elem) { return elem; });
           return StructType(context->getRef(),
                             mlirLLVMStructTypeIdentifiedNewGet(
                                 context.get()->get(),
                                 mlirStringRefCreate(name.data(), name.length()),
-                                elements.size(), elements.data(), packed));
+                                elements.size(), elements_.data(), packed));
         },
         "name"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
         "context"_a = nb::none());
 
-    c.def_prop_ro("name", [](PyType type) -> std::optional<std::string> {
-      if (mlirLLVMStructTypeIsLiteral(type))
-        return std::nullopt;
+    c.def_prop_ro(
+        "name", [](const StructType &type) -> std::optional<std::string> {
+          if (mlirLLVMStructTypeIsLiteral(type))
+            return std::nullopt;
 
-      MlirStringRef stringRef = mlirLLVMStructTypeGetIdentifier(type);
-      return StringRef(stringRef.data, stringRef.length).str();
-    });
+          MlirStringRef stringRef = mlirLLVMStructTypeGetIdentifier(type);
+          return StringRef(stringRef.data, stringRef.length).str();
+        });
 
-    c.def_prop_ro("body", [](PyType type) -> nb::object {
+    c.def_prop_ro("body", [](const StructType &type) -> nb::object {
       // Don't crash in absence of a body.
       if (mlirLLVMStructTypeIsOpaque(type))
         return nb::none();
@@ -139,11 +154,13 @@ struct StructType : PyConcreteType<StructType> {
       return body;
     });
 
-    c.def_prop_ro("packed",
-                  [](PyType type) { return mlirLLVMStructTypeIsPacked(type); });
+    c.def_prop_ro("packed", [](const StructType &type) {
+      return mlirLLVMStructTypeIsPacked(type);
+    });
 
-    c.def_prop_ro("opaque",
-                  [](PyType type) { return mlirLLVMStructTypeIsOpaque(type); });
+    c.def_prop_ro("opaque", [](const StructType &type) {
+      return mlirLLVMStructTypeIsOpaque(type);
+    });
   }
 };
 
@@ -174,7 +191,7 @@ struct PointerType : PyConcreteType<PointerType> {
         },
         "address_space"_a = nb::none(), nb::kw_only(),
         "context"_a = nb::none());
-    c.def_prop_ro("address_space", [](PyType type) {
+    c.def_prop_ro("address_space", [](const PointerType &type) {
       return mlirLLVMPointerTypeGetAddressSpace(type);
     });
   }
@@ -186,12 +203,9 @@ static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
 
   m.def(
       "translate_module_to_llvmir",
-      [](MlirOperation module) {
+      [](const PyOperation &module) {
         return mlirTranslateModuleToLLVMIRToString(module);
       },
-      // clang-format off
-      nb::sig("def translate_module_to_llvmir(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> str"),
-      // clang-format on
       "module"_a, nb::rv_policy::take_ownership);
 }
 } // namespace llvm

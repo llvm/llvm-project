@@ -97,7 +97,7 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
 
   m.def(
       "export_smtlib",
-      [&exportSMTLIB](MlirOperation module, bool inlineSingleUseValues,
+      [&exportSMTLIB](const PyOperation &module, bool inlineSingleUseValues,
                       bool indentLetBody) {
         return exportSMTLIB(module, inlineSingleUseValues, indentLetBody);
       },
@@ -105,9 +105,9 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
       "indent_let_body"_a = false);
   m.def(
       "export_smtlib",
-      [&exportSMTLIB](MlirModule module, bool inlineSingleUseValues,
+      [&exportSMTLIB](PyModule &module, bool inlineSingleUseValues,
                       bool indentLetBody) {
-        return exportSMTLIB(mlirModuleGetOperation(module),
+        return exportSMTLIB(mlirModuleGetOperation(module.get()),
                             inlineSingleUseValues, indentLetBody);
       },
       "module"_a, "inline_single_use_values"_a = false,

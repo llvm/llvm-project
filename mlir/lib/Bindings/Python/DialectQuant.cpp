@@ -14,6 +14,8 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
+#include <mlir/Bindings/Python/IRAttributes.h>
+
 namespace nb = nanobind;
 using namespace llvm;
 using namespace mlir::python::nanobind_adaptors;
@@ -54,48 +56,52 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         nb::arg("is_signed"), nb::arg("integral_width"));
     c.def_prop_ro(
         "expressed_type",
-        [](PyType type) {
+        [](QuantizedType &type) {
           return PyType(type.getContext(),
                         mlirQuantizedTypeGetExpressedType(type));
         },
         "Type expressed by this quantized type.");
     c.def_prop_ro(
         "flags",
-        [](const PyType &type) { return mlirQuantizedTypeGetFlags(type); },
+        [](const QuantizedType &type) {
+          return mlirQuantizedTypeGetFlags(type);
+        },
         "Flags of this quantized type (named accessors should be preferred to "
         "this)");
     c.def_prop_ro(
         "is_signed",
-        [](const PyType &type) { return mlirQuantizedTypeIsSigned(type); },
+        [](const QuantizedType &type) {
+          return mlirQuantizedTypeIsSigned(type);
+        },
         "Signedness of this quantized type.");
     c.def_prop_ro(
         "storage_type",
-        [](PyType type) {
+        [](QuantizedType &type) {
           return PyType(type.getContext(),
                         mlirQuantizedTypeGetStorageType(type));
         },
         "Storage type backing this quantized type.");
     c.def_prop_ro(
         "storage_type_min",
-        [](const PyType &type) {
+        [](const QuantizedType &type) {
           return mlirQuantizedTypeGetStorageTypeMin(type);
         },
         "The minimum value held by the storage type of this quantized type.");
     c.def_prop_ro(
         "storage_type_max",
-        [](const PyType &type) {
+        [](const QuantizedType &type) {
           return mlirQuantizedTypeGetStorageTypeMax(type);
         },
         "The maximum value held by the storage type of this quantized type.");
     c.def_prop_ro(
         "storage_type_integral_width",
-        [](const PyType &type) {
+        [](const QuantizedType &type) {
           return mlirQuantizedTypeGetStorageTypeIntegralWidth(type);
         },
         "The bitwidth of the storage type of this quantized type.");
     c.def(
         "is_compatible_expressed_type",
-        [](const PyType &type, const PyType &candidate) {
+        [](const QuantizedType &type, const PyType &candidate) {
           return mlirQuantizedTypeIsCompatibleExpressedType(type, candidate);
         },
         "Checks whether the candidate type can be expressed by this quantized "
@@ -103,14 +109,14 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         nb::arg("candidate"));
     c.def_prop_ro(
         "quantized_element_type",
-        [](PyType type) {
+        [](QuantizedType &type) {
           return PyType(type.getContext(),
                         mlirQuantizedTypeGetQuantizedElementType(type));
         },
         "Element type of this quantized type expressed as quantized type.");
     c.def(
         "cast_from_storage_type",
-        [](PyType type, const PyType &candidate) {
+        [](QuantizedType &type, const PyType &candidate) {
           MlirType castResult =
               mlirQuantizedTypeCastFromStorageType(type, candidate);
           if (!mlirTypeIsNull(castResult))
@@ -125,10 +131,10 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         nb::arg("candidate"));
     c.def_static(
         "cast_to_storage_type",
-        [](const PyType &type) {
+        [](QuantizedType &type) {
           MlirType castResult = mlirQuantizedTypeCastToStorageType(type);
           if (!mlirTypeIsNull(castResult))
-            return castResult;
+            return PyType(type.getContext(), castResult);
           throw nb::type_error("Invalid cast.");
         },
         "Casts from a type based on a quantized type to a corresponding type "
@@ -137,7 +143,7 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         nb::arg("type"));
     c.def(
         "cast_from_expressed_type",
-        [](PyType type, const PyType &candidate) {
+        [](QuantizedType &type, const PyType &candidate) {
           MlirType castResult =
               mlirQuantizedTypeCastFromExpressedType(type, candidate);
           if (!mlirTypeIsNull(castResult))
@@ -151,10 +157,10 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         nb::arg("candidate"));
     c.def_static(
         "cast_to_expressed_type",
-        [](const PyType &type) {
+        [](QuantizedType &type) {
           MlirType castResult = mlirQuantizedTypeCastToExpressedType(type);
           if (!mlirTypeIsNull(castResult))
-            return castResult;
+            return PyType(type.getContext(), castResult);
           throw nb::type_error("Invalid cast.");
         },
         "Casts from a type based on a quantized type to a corresponding type "
@@ -164,7 +170,7 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         nb::arg("type"));
     c.def(
         "cast_expressed_to_storage_type",
-        [](PyType type, const PyType &candidate) {
+        [](QuantizedType &type, const PyType &candidate) {
           MlirType castResult =
               mlirQuantizedTypeCastExpressedToStorageType(type, candidate);
           if (!mlirTypeIsNull(castResult))
@@ -238,21 +244,21 @@ struct UniformQuantizedType
         nb::arg("storage_type_max"), nb::arg("context") = nb::none());
     c.def_prop_ro(
         "scale",
-        [](const PyType &type) {
+        [](const UniformQuantizedType &type) {
           return mlirUniformQuantizedTypeGetScale(type);
         },
         "The scale designates the difference between the real values "
         "corresponding to consecutive quantized values differing by 1.");
     c.def_prop_ro(
         "zero_point",
-        [](const PyType &type) {
+        [](const UniformQuantizedType &type) {
           return mlirUniformQuantizedTypeGetZeroPoint(type);
         },
         "The storage value corresponding to the real value 0 in the affine "
         "equation.");
     c.def_prop_ro(
         "is_fixed_point",
-        [](const PyType &type) {
+        [](const UniformQuantizedType &type) {
           return mlirUniformQuantizedTypeIsFixedPoint(type);
         },
         "Fixed point values are real numbers divided by a scale.");
@@ -298,7 +304,7 @@ struct UniformQuantizedPerAxisType
         nb::arg("storage_type_max"), nb::arg("context") = nb::none());
     c.def_prop_ro(
         "scales",
-        [](const PyType &type) {
+        [](const UniformQuantizedPerAxisType &type) {
           intptr_t nDim = mlirUniformQuantizedPerAxisTypeGetNumDims(type);
           std::vector<double> scales;
           scales.reserve(nDim);
@@ -313,7 +319,7 @@ struct UniformQuantizedPerAxisType
         "scale corresponds to the ith slice in the quantized_dimension.");
     c.def_prop_ro(
         "zero_points",
-        [](const PyType &type) {
+        [](const UniformQuantizedPerAxisType &type) {
           intptr_t nDim = mlirUniformQuantizedPerAxisTypeGetNumDims(type);
           std::vector<int64_t> zeroPoints;
           zeroPoints.reserve(nDim);
@@ -329,14 +335,14 @@ struct UniformQuantizedPerAxisType
         "quantized_dimension.");
     c.def_prop_ro(
         "quantized_dimension",
-        [](const PyType &type) {
+        [](const UniformQuantizedPerAxisType &type) {
           return mlirUniformQuantizedPerAxisTypeGetQuantizedDimension(type);
         },
         "Specifies the dimension of the shape that the scales and zero points "
         "correspond to.");
     c.def_prop_ro(
         "is_fixed_point",
-        [](const PyType &type) {
+        [](const UniformQuantizedPerAxisType &type) {
           return mlirUniformQuantizedPerAxisTypeIsFixedPoint(type);
         },
         "Fixed point values are real numbers divided by a scale.");
@@ -379,7 +385,7 @@ struct UniformQuantizedSubChannelType
         nb::arg("context") = nb::none());
     c.def_prop_ro(
         "quantized_dimensions",
-        [](const PyType &type) {
+        [](const UniformQuantizedSubChannelType &type) {
           intptr_t nDim =
               mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(type);
           std::vector<int32_t> quantizedDimensions;
@@ -399,7 +405,7 @@ struct UniformQuantizedSubChannelType
         "i-th block size from block_sizes method.");
     c.def_prop_ro(
         "block_sizes",
-        [](const PyType &type) {
+        [](const UniformQuantizedSubChannelType &type) {
           intptr_t nDim =
               mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(type);
           std::vector<int64_t> blockSizes;
@@ -417,14 +423,18 @@ struct UniformQuantizedSubChannelType
         "in the list returned by quantized_dimensions method.");
     c.def_prop_ro(
         "scales",
-        [](const PyType &type) -> MlirAttribute {
-          return mlirUniformQuantizedSubChannelTypeGetScales(type);
+        [](UniformQuantizedSubChannelType &type) {
+          return PyDenseElementsAttribute(
+              type.getContext(),
+              mlirUniformQuantizedSubChannelTypeGetScales(type));
         },
         "The scales of the quantized type.");
     c.def_prop_ro(
         "zero_points",
-        [](const PyType &type) -> MlirAttribute {
-          return mlirUniformQuantizedSubChannelTypeGetZeroPoints(type);
+        [](UniformQuantizedSubChannelType &type) {
+          return PyDenseElementsAttribute(
+              type.getContext(),
+              mlirUniformQuantizedSubChannelTypeGetZeroPoints(type));
         },
         "The zero points of the quantized type.");
   }

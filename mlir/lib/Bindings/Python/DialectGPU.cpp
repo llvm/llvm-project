@@ -13,6 +13,8 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
+#include <mlir/Bindings/Python/IRAttributes.h>
+
 namespace nb = nanobind;
 using namespace nanobind::literals;
 using namespace mlir::python::nanobind_adaptors;
@@ -54,9 +56,9 @@ struct ObjectAttr : PyConcreteAttribute<ObjectAttr> {
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](MlirAttribute target, uint32_t format, const nb::bytes &object,
-           std::optional<MlirAttribute> mlirObjectProps,
-           std::optional<MlirAttribute> mlirKernelsAttr,
+        [](const PyAttribute &target, uint32_t format, const nb::bytes &object,
+           std::optional<PyDictAttribute> mlirObjectProps,
+           std::optional<PyAttribute> mlirKernelsAttr,
            DefaultingPyMlirContext context) {
           MlirStringRef objectStrRef = mlirStringRefCreate(
               static_cast<char *>(const_cast<void *>(object.data())),
@@ -74,26 +76,30 @@ struct ObjectAttr : PyConcreteAttribute<ObjectAttr> {
         "kernels"_a = nb::none(), "context"_a = nb::none(),
         "Gets a gpu.object from parameters.");
 
-    c.def_prop_ro("target", [](MlirAttribute self) {
-      return mlirGPUObjectAttrGetTarget(self);
+    c.def_prop_ro("target", [](ObjectAttr &self) {
+      return PyAttribute(self.getContext(), mlirGPUObjectAttrGetTarget(self));
     });
-    c.def_prop_ro("format", [](MlirAttribute self) {
+    c.def_prop_ro("format", [](const ObjectAttr &self) {
       return mlirGPUObjectAttrGetFormat(self);
     });
-    c.def_prop_ro("object", [](MlirAttribute self) {
+    c.def_prop_ro("object", [](const ObjectAttr &self) {
       MlirStringRef stringRef = mlirGPUObjectAttrGetObject(self);
       return nb::bytes(stringRef.data, stringRef.length);
     });
-    c.def_prop_ro("properties", [](MlirAttribute self) -> nb::object {
-      if (mlirGPUObjectAttrHasProperties(self))
-        return nb::cast(mlirGPUObjectAttrGetProperties(self));
-      return nb::none();
-    });
-    c.def_prop_ro("kernels", [](MlirAttribute self) -> nb::object {
-      if (mlirGPUObjectAttrHasKernels(self))
-        return nb::cast(mlirGPUObjectAttrGetKernels(self));
-      return nb::none();
-    });
+    c.def_prop_ro(
+        "properties", [](ObjectAttr &self) -> std::optional<PyDictAttribute> {
+          if (mlirGPUObjectAttrHasProperties(self))
+            return PyDictAttribute(self.getContext(),
+                                   mlirGPUObjectAttrGetProperties(self));
+          return std::nullopt;
+        });
+    c.def_prop_ro("kernels",
+                  [](ObjectAttr &self) -> std::optional<PyAttribute> {
+                    if (mlirGPUObjectAttrHasKernels(self))
+                      return PyAttribute(self.getContext(),
+                                         mlirGPUObjectAttrGetKernels(self));
+                    return std::nullopt;
+                  });
   }
 };
 } // namespace gpu

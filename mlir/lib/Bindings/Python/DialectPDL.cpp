@@ -87,7 +87,7 @@ struct RangeType : PyConcreteType<RangeType> {
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyType &elementType, DefaultingPyMlirContext context) {
+        [](const PyType &elementType, DefaultingPyMlirContext context) {
           return RangeType(context->getRef(), mlirPDLRangeTypeGet(elementType));
         },
         "Gets an instance of RangeType in the same context as the provided "
@@ -95,12 +95,10 @@ struct RangeType : PyConcreteType<RangeType> {
         nb::arg("element_type"), nb::arg("context").none() = nb::none());
     c.def_prop_ro(
         "element_type",
-        [](PyType &type) {
+        [](RangeType &type) {
           return PyType(type.getContext(),
                         mlirPDLRangeTypeGetElementType(type));
         },
-        nb::sig(
-            "def element_type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")),
         "Get the element type.");
   }
 };

@@ -118,7 +118,7 @@ struct OperationType : PyConcreteType<OperationType> {
         nb::arg("operation_name"), nb::arg("context").none() = nb::none());
     c.def_prop_ro(
         "operation_name",
-        [](const PyType &type) {
+        [](const OperationType &type) {
           MlirStringRef operationName =
               mlirTransformOperationTypeGetOperationName(type);
           return nb::str(operationName.data, operationName.length);
@@ -149,7 +149,7 @@ struct ParamType : PyConcreteType<ParamType> {
         nb::arg("type"), nb::arg("context").none() = nb::none());
     c.def_prop_ro(
         "type",
-        [](PyType type) {
+        [](ParamType type) {
           return PyType(type.getContext(), mlirTransformParamTypeGetType(type));
         },
         "Get the type this ParamType is associated with.");

@@ -52,10 +52,10 @@ struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
     c.def_static(
         "get",
         [](std::vector<MlirSparseTensorLevelType> lvlTypes,
-           std::optional<MlirAffineMap> dimToLvl,
-           std::optional<MlirAffineMap> lvlToDim, int posWidth, int crdWidth,
-           std::optional<MlirAttribute> explicitVal,
-           std::optional<MlirAttribute> implicitVal,
+           std::optional<PyAffineMap> dimToLvl,
+           std::optional<PyAffineMap> lvlToDim, int posWidth, int crdWidth,
+           std::optional<PyAttribute> explicitVal,
+           std::optional<PyAttribute> implicitVal,
            DefaultingPyMlirContext context) {
           return EncodingAttr(
               context->getRef(),
@@ -93,7 +93,7 @@ struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
         nb::arg("n") = 0, nb::arg("m") = 0,
         "Builds a sparse_tensor.encoding.level_type from parameters.");
 
-    c.def_prop_ro("lvl_types", [](MlirAttribute self) {
+    c.def_prop_ro("lvl_types", [](const EncodingAttr &self) {
       const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
       std::vector<MlirSparseTensorLevelType> ret;
       ret.reserve(lvlRank);
@@ -103,53 +103,53 @@ struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
     });
 
     c.def_prop_ro(
-        "dim_to_lvl", [](MlirAttribute self) -> std::optional<MlirAffineMap> {
+        "dim_to_lvl", [](EncodingAttr &self) -> std::optional<PyAffineMap> {
           MlirAffineMap ret = mlirSparseTensorEncodingAttrGetDimToLvl(self);
           if (mlirAffineMapIsNull(ret))
             return {};
-          return ret;
+          return PyAffineMap(self.getContext(), ret);
         });
 
     c.def_prop_ro(
-        "lvl_to_dim", [](MlirAttribute self) -> std::optional<MlirAffineMap> {
+        "lvl_to_dim", [](EncodingAttr &self) -> std::optional<PyAffineMap> {
           MlirAffineMap ret = mlirSparseTensorEncodingAttrGetLvlToDim(self);
           if (mlirAffineMapIsNull(ret))
             return {};
-          return ret;
+          return PyAffineMap(self.getContext(), ret);
         });
 
     c.def_prop_ro("pos_width", mlirSparseTensorEncodingAttrGetPosWidth);
     c.def_prop_ro("crd_width", mlirSparseTensorEncodingAttrGetCrdWidth);
 
     c.def_prop_ro(
-        "explicit_val", [](MlirAttribute self) -> std::optional<MlirAttribute> {
+        "explicit_val", [](EncodingAttr &self) -> std::optional<PyAttribute> {
           MlirAttribute ret = mlirSparseTensorEncodingAttrGetExplicitVal(self);
           if (mlirAttributeIsNull(ret))
             return {};
-          return ret;
+          return PyAttribute(self.getContext(), ret);
         });
 
     c.def_prop_ro(
-        "implicit_val", [](MlirAttribute self) -> std::optional<MlirAttribute> {
+        "implicit_val", [](EncodingAttr &self) -> std::optional<PyAttribute> {
           MlirAttribute ret = mlirSparseTensorEncodingAttrGetImplicitVal(self);
           if (mlirAttributeIsNull(ret))
             return {};
-          return ret;
+          return PyAttribute(self.getContext(), ret);
         });
 
-    c.def_prop_ro("structured_n", [](MlirAttribute self) -> unsigned {
+    c.def_prop_ro("structured_n", [](const EncodingAttr &self) -> unsigned {
       const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
       return mlirSparseTensorEncodingAttrGetStructuredN(
           mlirSparseTensorEncodingAttrGetLvlType(self, lvlRank - 1));
     });
 
-    c.def_prop_ro("structured_m", [](MlirAttribute self) -> unsigned {
+    c.def_prop_ro("structured_m", [](const EncodingAttr &self) -> unsigned {
       const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
       return mlirSparseTensorEncodingAttrGetStructuredM(
           mlirSparseTensorEncodingAttrGetLvlType(self, lvlRank - 1));
     });
 
-    c.def_prop_ro("lvl_formats_enum", [](MlirAttribute self) {
+    c.def_prop_ro("lvl_formats_enum", [](const EncodingAttr &self) {
       const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
       std::vector<PySparseTensorLevelFormat> ret;
       ret.reserve(lvlRank);
