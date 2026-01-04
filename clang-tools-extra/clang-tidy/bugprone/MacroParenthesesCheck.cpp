@@ -130,19 +130,19 @@ void MacroParenthesesPPCallbacks::replacementList(const Token &MacroNameTok,
       // Heuristic for macros that are clearly not intended to be enclosed in
       // parentheses, macro starts with operator. For example:
       // #define X     *10
-      if (TI == MI->tokens_begin() && (TI + 1) != TE &&
+      if (TI == MI->tokens_begin() && std::next(TI) != TE &&
           !Tok.isOneOf(tok::plus, tok::minus))
         return;
       // Don't warn about this macro if the last token is a star. For example:
       // #define X    void *
-      if ((TE - 1)->is(tok::star))
+      if (std::prev(TE)->is(tok::star))
         return;
 
       Loc = Tok.getLocation();
     }
   }
   if (Loc.isValid()) {
-    const Token &Last = *(MI->tokens_end() - 1);
+    const Token &Last = *std::prev(MI->tokens_end());
     Check->diag(Loc, "macro replacement list should be enclosed in parentheses")
         << FixItHint::CreateInsertion(MI->tokens_begin()->getLocation(), "(")
         << FixItHint::CreateInsertion(Last.getLocation().getLocWithOffset(
@@ -165,11 +165,11 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
       continue;
 
     // Last token.
-    if ((TI + 1) == MI->tokens_end())
+    if (std::next(TI) == MI->tokens_end())
       continue;
 
-    const Token &Prev = *(TI - 1);
-    const Token &Next = *(TI + 1);
+    const Token &Prev = *std::prev(TI);
+    const Token &Next = *std::next(TI);
 
     const Token &Tok = *TI;
 
@@ -228,7 +228,8 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
 
     // Cast.
     if (Prev.is(tok::l_paren) && Next.is(tok::star) &&
-        TI + 2 != MI->tokens_end() && (TI + 2)->is(tok::r_paren))
+        std::next(TI, 2) != MI->tokens_end() &&
+        std::next(TI, 2)->is(tok::r_paren))
       continue;
 
     // Assignment/return, i.e. '=x;' or 'return x;'.
@@ -237,7 +238,7 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
 
     // C++ template parameters.
     if (PP->getLangOpts().CPlusPlus && Prev.isOneOf(tok::comma, tok::less)) {
-      const auto *NextIt = TI + 1;
+      const auto *NextIt = std::next(TI);
       while (NextIt != MI->tokens_end() &&
              NextIt->isOneOf(tok::star, tok::amp, tok::ampamp, tok::kw_const,
                              tok::kw_volatile))

@@ -71,3 +71,19 @@
 #define TEMPLATE2(T)      (std::vector<T&>)
 #define TEMPLATE3(T)      (std::vector<const T*>)
 #define TEMPLATE4(T)      (std::map<T*, T*>)
+
+#define BAD_TEMPLATE1(T)  (std::vector<T*2>)
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE2(T)  (std::map<T*2, int>)
+// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE3(T)  (std::map<int, T*2>)
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE4(T)  (std::vector<T+1>)
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_TEMPLATE5(T)  (std::vector<T*T>)
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+// CHECK-MESSAGES: :[[@LINE-2]]:42: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_CAST1(T)      (reinterpret_cast<T*2>(0))
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_CAST2(T)      (reinterpret_cast<T+1>(0))
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
