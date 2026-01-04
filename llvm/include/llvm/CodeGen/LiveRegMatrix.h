@@ -56,7 +56,7 @@ class LiveRegMatrix {
 
   // Cached register mask interference info.
   unsigned RegMaskTag = 0;
-  unsigned RegMaskVirtReg = 0;
+  Register RegMaskVirtReg;
   BitVector RegMaskUsable;
 
   LiveRegMatrix()
@@ -165,7 +165,9 @@ public:
 
   /// Directly access the live interval unions per regunit.
   /// This returns an array indexed by the regunit number.
-  LiveIntervalUnion *getLiveUnions() { return &Matrix[0]; }
+  LiveIntervalUnion *getLiveUnions() {
+    return &Matrix[static_cast<MCRegUnit>(0)];
+  }
 
   Register getOneVReg(unsigned PhysReg) const;
 };

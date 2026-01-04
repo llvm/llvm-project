@@ -4,8 +4,8 @@
 define void @wide_phi_2_predecessors(ptr noalias %A, ptr noalias %B, i32 %c, i1 %cond) {
 ; CHECK-LABEL: define void @wide_phi_2_predecessors(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[C:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -14,18 +14,18 @@ define void @wide_phi_2_predecessors(ptr noalias %A, ptr noalias %B, i32 %c, i1 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[BROADCAST_SPLAT]], <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[BROADCAST_SPLAT]], <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    br label %[[INNER_HEADER1:.*]]
 ; CHECK:       [[INNER_HEADER1]]:
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_LATCH4:.*]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_LATCH4]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_LATCH3:.*]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_LATCH3]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[B]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[THEN3:.*]], label %[[INNER_LATCH4]]
-; CHECK:       [[THEN3]]:
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[TMP1]], i32 8, <4 x i1> splat (i1 true), <4 x i64> poison)
-; CHECK-NEXT:    br label %[[INNER_LATCH4]]
-; CHECK:       [[INNER_LATCH4]]:
-; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ [[WIDE_MASKED_GATHER]], %[[THEN3]] ], [ zeroinitializer, %[[INNER_HEADER1]] ]
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN2:.*]], label %[[INNER_LATCH3]]
+; CHECK:       [[THEN2]]:
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[TMP1]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; CHECK-NEXT:    br label %[[INNER_LATCH3]]
+; CHECK:       [[INNER_LATCH3]]:
+; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ [[WIDE_MASKED_GATHER]], %[[THEN2]] ], [ zeroinitializer, %[[INNER_HEADER1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[VEC_PHI5]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP3]] = add nsw <4 x i64> [[TMP2]], [[VEC_PHI2]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1)
@@ -33,19 +33,18 @@ define void @wide_phi_2_predecessors(ptr noalias %A, ptr noalias %B, i32 %c, i1 
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[INNER_HEADER1]]
 ; CHECK:       [[VECTOR_LATCH]]:
-; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i64> [ [[TMP3]], %[[INNER_LATCH4]] ]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[VEC_PHI6]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP3]], %[[INNER_LATCH3]] ]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[TMP10]], <4 x ptr> align 8 [[TMP0]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 1000, %[[SCALAR_PH]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OUTER_IV]]
 ; CHECK-NEXT:    store i32 [[C]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
@@ -113,8 +112,8 @@ exit:
 define void @wide_phi_2_predecessors_phi_ops_swapped(ptr noalias %A, ptr noalias %B, i32 %c, i1 %cond) {
 ; CHECK-LABEL: define void @wide_phi_2_predecessors_phi_ops_swapped(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[C:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -123,18 +122,18 @@ define void @wide_phi_2_predecessors_phi_ops_swapped(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[BROADCAST_SPLAT]], <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[BROADCAST_SPLAT]], <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    br label %[[INNER_HEADER1:.*]]
 ; CHECK:       [[INNER_HEADER1]]:
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_LATCH4:.*]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_LATCH4]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_LATCH3:.*]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_LATCH3]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[B]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[THEN3:.*]], label %[[INNER_LATCH4]]
-; CHECK:       [[THEN3]]:
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[TMP1]], i32 8, <4 x i1> splat (i1 true), <4 x i64> poison)
-; CHECK-NEXT:    br label %[[INNER_LATCH4]]
-; CHECK:       [[INNER_LATCH4]]:
-; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ [[WIDE_MASKED_GATHER]], %[[THEN3]] ], [ zeroinitializer, %[[INNER_HEADER1]] ]
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN2:.*]], label %[[INNER_LATCH3]]
+; CHECK:       [[THEN2]]:
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[TMP1]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; CHECK-NEXT:    br label %[[INNER_LATCH3]]
+; CHECK:       [[INNER_LATCH3]]:
+; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ [[WIDE_MASKED_GATHER]], %[[THEN2]] ], [ zeroinitializer, %[[INNER_HEADER1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[VEC_PHI5]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP3]] = add nsw <4 x i64> [[TMP2]], [[VEC_PHI2]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1)
@@ -142,19 +141,18 @@ define void @wide_phi_2_predecessors_phi_ops_swapped(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[INNER_HEADER1]]
 ; CHECK:       [[VECTOR_LATCH]]:
-; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i64> [ [[TMP3]], %[[INNER_LATCH4]] ]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[VEC_PHI6]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP3]], %[[INNER_LATCH3]] ]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[TMP10]], <4 x ptr> align 8 [[TMP0]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 1000, %[[SCALAR_PH]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OUTER_IV]]
 ; CHECK-NEXT:    store i32 [[C]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]

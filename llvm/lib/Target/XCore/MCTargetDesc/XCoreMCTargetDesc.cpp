@@ -21,6 +21,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -125,7 +126,8 @@ static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeXCoreTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(getTheXCoreTarget(), createXCoreMCAsmInfo);
 

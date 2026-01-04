@@ -47,7 +47,7 @@ public:
   /// instruction operands should be used to manipulate StackPtr and FramePtr.
   bool Uses64BitFramePtr;
 
-  unsigned StackPtr;
+  Register StackPtr;
 
   /// Emit target stack probe code. This is required for all
   /// large stack allocations on Windows. The caller is required to materialize
@@ -288,7 +288,7 @@ private:
   /// Aligns the stack pointer by ANDing it with -MaxAlign.
   void BuildStackAlignAND(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                          unsigned Reg, uint64_t MaxAlign) const;
+                          Register Reg, uint64_t MaxAlign) const;
 
   /// Make small positive stack adjustments using POPs.
   bool adjustStackWithPops(MachineBasicBlock &MBB,

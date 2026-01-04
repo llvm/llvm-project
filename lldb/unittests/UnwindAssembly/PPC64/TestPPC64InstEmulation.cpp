@@ -97,14 +97,14 @@ TEST_F(TestPPC64InstEmulation, TestSimpleFunction) {
 
   // 0: CFA=sp+0
   row = unwind_plan.GetRowForFunctionOffset(0);
-  EXPECT_EQ(0ull, row->GetOffset());
+  EXPECT_EQ(0, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
   // 1: CFA=sp+0 => fp=[CFA-8]
   row = unwind_plan.GetRowForFunctionOffset(16);
-  EXPECT_EQ(16ull, row->GetOffset());
+  EXPECT_EQ(16, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
@@ -115,7 +115,7 @@ TEST_F(TestPPC64InstEmulation, TestSimpleFunction) {
 
   // 2: CFA=sp+0 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(20);
-  EXPECT_EQ(20ull, row->GetOffset());
+  EXPECT_EQ(20, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
@@ -126,7 +126,7 @@ TEST_F(TestPPC64InstEmulation, TestSimpleFunction) {
 
   // 3: CFA=sp+112 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(24);
-  EXPECT_EQ(24ull, row->GetOffset());
+  EXPECT_EQ(24, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(112, row->GetCFAValue().GetOffset());
@@ -141,7 +141,7 @@ TEST_F(TestPPC64InstEmulation, TestSimpleFunction) {
 
   // 4: CFA=r31+112 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(28);
-  EXPECT_EQ(28ull, row->GetOffset());
+  EXPECT_EQ(28, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r31_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(112, row->GetCFAValue().GetOffset());
@@ -156,7 +156,7 @@ TEST_F(TestPPC64InstEmulation, TestSimpleFunction) {
 
   // 5: CFA=sp+0 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(40);
-  EXPECT_EQ(40ull, row->GetOffset());
+  EXPECT_EQ(40, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
@@ -209,14 +209,14 @@ TEST_F(TestPPC64InstEmulation, TestMediumFunction) {
 
   // 0: CFA=sp+0
   row = unwind_plan.GetRowForFunctionOffset(0);
-  EXPECT_EQ(0ull, row->GetOffset());
+  EXPECT_EQ(0, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
   // 1: CFA=sp+0 => fp=[CFA-8]
   row = unwind_plan.GetRowForFunctionOffset(8);
-  EXPECT_EQ(8ull, row->GetOffset());
+  EXPECT_EQ(8, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
@@ -227,7 +227,7 @@ TEST_F(TestPPC64InstEmulation, TestMediumFunction) {
 
   // 2: CFA=sp+0 => fp=[CFA-8] lr=[CFA+16]
   row = unwind_plan.GetRowForFunctionOffset(12);
-  EXPECT_EQ(12ull, row->GetOffset());
+  EXPECT_EQ(12, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
@@ -238,20 +238,20 @@ TEST_F(TestPPC64InstEmulation, TestMediumFunction) {
 
   // 3: CFA=r30
   row = unwind_plan.GetRowForFunctionOffset(16);
-  EXPECT_EQ(16ull, row->GetOffset());
+  EXPECT_EQ(16, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r30_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
   row = unwind_plan.GetRowForFunctionOffset(32);
-  EXPECT_EQ(16ull, row->GetOffset());
+  EXPECT_EQ(16, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r30_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());
 
   // 4: CFA=sp+0
   row = unwind_plan.GetRowForFunctionOffset(36);
-  EXPECT_EQ(36ull, row->GetOffset());
+  EXPECT_EQ(36, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_r1_ppc64le);
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row->GetCFAValue().GetOffset());

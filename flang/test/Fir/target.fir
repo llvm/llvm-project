@@ -26,7 +26,7 @@ func.func @gen4() -> complex<f32> {
   return %6 : complex<f32>
 }
 
-// I32-LABEL: define void @gen8(ptr sret({ double, double }) align 4 captures(none) %
+// I32-LABEL: define void @gen8(ptr noalias sret({ double, double }) align 4 captures(none) %
 // X64-LABEL: define { double, double } @gen8()
 // AARCH64-LABEL: define { double, double } @gen8()
 // PPC-LABEL: define { double, double } @gen8()
@@ -68,7 +68,7 @@ func.func @call4() {
   // AARCH64: = call { float, float } @gen4()
   // PPC: = call { float, float } @gen4()
   %1 = fir.call @gen4() : () -> complex<f32>
-  // I32: call void @sink4(ptr %
+  // I32: call void @sink4(ptr byval({ float, float }) align 4 %
   // X64: call void @sink4(<2 x float> %
   // AARCH64: call void @sink4([2 x float] %
   // PPC: call void @sink4(float %{{.*}}, float %{{.*}})
@@ -80,12 +80,12 @@ func.func @call4() {
 // X64-LABEL: define void @call8()
 // AARCH64-LABEL: define void @call8()
 func.func @call8() {
-  // I32: call void @gen8(ptr %
+  // I32: call void @gen8(ptr sret({ double, double }) align 4 %
   // X64: = call { double, double } @gen8()
   // AARCH64: = call { double, double } @gen8()
   // PPC: = call { double, double } @gen8()
   %1 = fir.call @gen8() : () -> complex<f64>
-  // I32: call void @sink8(ptr %
+  // I32: call void @sink8(ptr byval({ double, double }) align 4 %
   // X64: call void @sink8(double %{{[0-9]*}}, double %{{[0-9]*}})
   // AARCH64: call void @sink8([2 x double] %
   // PPC: call void @sink8(double %{{.*}}, double %{{.*}})
@@ -93,9 +93,9 @@ func.func @call8() {
   return
 }
 
-// I32-LABEL: define i64 @char1lensum(ptr captures(none) %0, ptr captures(none) %1, i32 %2, i32 %3)
-// X64-LABEL: define i64 @char1lensum(ptr captures(none) %0, ptr captures(none) %1, i64 %2, i64 %3)
-// PPC-LABEL: define i64 @char1lensum(ptr captures(none) %0, ptr captures(none) %1, i64 %2, i64 %3)
+// I32-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i32 %2, i32 %3)
+// X64-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i64 %2, i64 %3)
+// PPC-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i64 %2, i64 %3)
 func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
   // X64-DAG: %[[p0:.*]] = insertvalue { ptr, i64 } undef, ptr %1, 0
   // X64-DAG: = insertvalue { ptr, i64 } %[[p0]], i64 %3, 1

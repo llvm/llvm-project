@@ -81,6 +81,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::exp:
   case Intrinsic::exp10:
   case Intrinsic::exp2:
+  case Intrinsic::frexp:
+  case Intrinsic::ldexp:
   case Intrinsic::log:
   case Intrinsic::log10:
   case Intrinsic::log2:
@@ -89,6 +91,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
   case Intrinsic::modf:
   case Intrinsic::copysign:
   case Intrinsic::floor:
@@ -106,6 +110,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::canonicalize:
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
+  case Intrinsic::lround:
+  case Intrinsic::llround:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
   case Intrinsic::ucmp:
@@ -124,10 +130,7 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 
-  // TODO: Move frexp to isTriviallyVectorizable.
-  // https://github.com/llvm/llvm-project/issues/112408
   switch (ID) {
-  case Intrinsic::frexp:
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::ssub_with_overflow:
@@ -147,6 +150,10 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
 
+  // Vector predication intrinsics have the EVL as the last operand.
+  if (VPIntrinsic::getVectorLengthParamPos(ID) == ScalarOpdIdx)
+    return true;
+
   switch (ID) {
   case Intrinsic::abs:
   case Intrinsic::vp_abs:
@@ -157,12 +164,15 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
   case Intrinsic::powi:
+  case Intrinsic::vector_extract:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
     return (ScalarOpdIdx == 2);
+  case Intrinsic::experimental_vp_splice:
+    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
   default:
     return false;
   }
@@ -181,12 +191,15 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   switch (ID) {
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
+  case Intrinsic::lround:
+  case Intrinsic::llround:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
   case Intrinsic::vp_lrint:
   case Intrinsic::vp_llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
+  case Intrinsic::vector_extract:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:
@@ -195,6 +208,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;
   case Intrinsic::powi:
+  case Intrinsic::ldexp:
     return OpdIdx == -1 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
@@ -232,6 +246,57 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
   return Intrinsic::not_intrinsic;
 }
 
+unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_interleave2:
+    return 2;
+  case Intrinsic::vector_interleave3:
+    return 3;
+  case Intrinsic::vector_interleave4:
+    return 4;
+  case Intrinsic::vector_interleave5:
+    return 5;
+  case Intrinsic::vector_interleave6:
+    return 6;
+  case Intrinsic::vector_interleave7:
+    return 7;
+  case Intrinsic::vector_interleave8:
+    return 8;
+  default:
+    return 0;
+  }
+}
+
+unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_deinterleave2:
+    return 2;
+  case Intrinsic::vector_deinterleave3:
+    return 3;
+  case Intrinsic::vector_deinterleave4:
+    return 4;
+  case Intrinsic::vector_deinterleave5:
+    return 5;
+  case Intrinsic::vector_deinterleave6:
+    return 6;
+  case Intrinsic::vector_deinterleave7:
+    return 7;
+  case Intrinsic::vector_deinterleave8:
+    return 8;
+  default:
+    return 0;
+  }
+}
+
+VectorType *llvm::getDeinterleavedVectorType(IntrinsicInst *DI) {
+  [[maybe_unused]] unsigned Factor =
+      getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  ArrayRef<Type *> DISubtypes = DI->getType()->subtypes();
+  assert(Factor && Factor == DISubtypes.size() &&
+         "unexpected deinterleave factor or result type");
+  return cast<VectorType>(DISubtypes[0]);
+}
+
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.
@@ -250,9 +315,9 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 
   if (InsertElementInst *III = dyn_cast<InsertElementInst>(V)) {
     // If this is an insert to a variable element, we don't know what it is.
-    if (!isa<ConstantInt>(III->getOperand(2)))
+    uint64_t IIElt;
+    if (!match(III->getOperand(2), m_ConstantInt(IIElt)))
       return nullptr;
-    unsigned IIElt = cast<ConstantInt>(III->getOperand(2))->getZExtValue();
 
     // If this is an insert to the element we are looking for, return the
     // inserted value.
@@ -427,7 +492,7 @@ bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
   for (auto [i, M] : enumerate(Mask)) {
     if (M < 0)
       continue;
-    int Src = M >= (int)NumElts;
+    int Src = M >= NumElts;
     int Diff = (int)i - (M % NumElts);
     bool Match = false;
     for (int j = 0; j < 2; j++) {
@@ -746,9 +811,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   // to ensure no extra casts would need to be inserted, so every DAG
   // of connected values must have the same minimum bitwidth.
   EquivalenceClasses<Value *> ECs;
-  SmallVector<Value *, 16> Worklist;
-  SmallPtrSet<Value *, 4> Roots;
-  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<Instruction *, 16> Worklist;
+  SmallPtrSet<Instruction *, 4> Roots;
+  SmallPtrSet<Instruction *, 16> Visited;
   DenseMap<Value *, uint64_t> DBits;
   SmallPtrSet<Instruction *, 4> InstructionSet;
   MapVector<Instruction *, uint64_t> MinBWs;
@@ -782,16 +847,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
   // Now proceed breadth-first, unioning values together.
   while (!Worklist.empty()) {
-    Value *Val = Worklist.pop_back_val();
-    Value *Leader = ECs.getOrInsertLeaderValue(Val);
+    Instruction *I = Worklist.pop_back_val();
+    Value *Leader = ECs.getOrInsertLeaderValue(I);
 
-    if (!Visited.insert(Val).second)
+    if (!Visited.insert(I).second)
       continue;
-
-    // Non-instructions terminate a chain successfully.
-    if (!isa<Instruction>(Val))
-      continue;
-    Instruction *I = cast<Instruction>(Val);
 
     // If we encounter a type that is larger than 64 bits, we can't represent
     // it so bail out.
@@ -823,13 +883,19 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (isa<PHINode>(I))
       continue;
 
+    // Don't modify the types of operands of a call, as doing that would cause a
+    // signature mismatch.
+    if (isa<CallBase>(I))
+      continue;
+
     if (DBits[Leader] == ~0ULL)
       // All bits demanded, no point continuing.
       continue;
 
-    for (Value *O : cast<User>(I)->operands()) {
+    for (Value *O : I->operands()) {
       ECs.unionSets(Leader, O);
-      Worklist.push_back(O);
+      if (auto *OI = dyn_cast<Instruction>(O))
+        Worklist.push_back(OI);
     }
   }
 
@@ -841,9 +907,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       if (U->getType()->isIntegerTy() && DBits.count(U) == 0)
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
 
-  for (auto I = ECs.begin(), E = ECs.end(); I != E; ++I) {
+  for (const auto &E : ECs) {
+    if (!E->isLeader())
+      continue;
     uint64_t LeaderDemandedBits = 0;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(*E))
       LeaderDemandedBits |= DBits[M];
 
     uint64_t MinBW = llvm::bit_width(LeaderDemandedBits);
@@ -855,7 +923,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // indvars.
     // If we are required to shrink a PHI, abandon this entire equivalence class.
     bool Abort = false;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(*E))
       if (isa<PHINode>(M) && MinBW < M->getType()->getScalarSizeInBits()) {
         Abort = true;
         break;
@@ -863,12 +931,12 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (Abort)
       continue;
 
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end())) {
+    for (Value *M : ECs.members(*E)) {
       auto *MI = dyn_cast<Instruction>(M);
       if (!MI)
         continue;
       Type *Ty = M->getType();
-      if (Roots.count(M))
+      if (Roots.count(MI))
         Ty = MI->getOperand(0)->getType();
 
       if (MinBW >= Ty->getScalarSizeInBits())
@@ -876,7 +944,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
       // If any of M's operands demand more bits than MinBW then M cannot be
       // performed safely in MinBW.
-      if (any_of(MI->operands(), [&DB, MinBW](Use &U) {
+      auto *Call = dyn_cast<CallBase>(MI);
+      auto Ops = Call ? Call->args() : MI->operands();
+      if (any_of(Ops, [&DB, MinBW](Use &U) {
             auto *CI = dyn_cast<ConstantInt>(U);
             // For constants shift amounts, check if the shift would result in
             // poison.
@@ -980,19 +1050,42 @@ MDNode *llvm::intersectAccessGroups(const Instruction *Inst1,
   return MDNode::get(Ctx, Intersection);
 }
 
+/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
+/// vectorization.
+void llvm::getMetadataToPropagate(
+    Instruction *Inst,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata) {
+  Inst->getAllMetadataOtherThanDebugLoc(Metadata);
+  static const unsigned SupportedIDs[] = {
+      LLVMContext::MD_tbaa,         LLVMContext::MD_alias_scope,
+      LLVMContext::MD_noalias,      LLVMContext::MD_fpmath,
+      LLVMContext::MD_nontemporal,  LLVMContext::MD_invariant_load,
+      LLVMContext::MD_access_group, LLVMContext::MD_mmra};
+
+  // Remove any unsupported metadata kinds from Metadata.
+  for (unsigned Idx = 0; Idx != Metadata.size();) {
+    if (is_contained(SupportedIDs, Metadata[Idx].first)) {
+      ++Idx;
+    } else {
+      // Swap element to end and remove it.
+      std::swap(Metadata[Idx], Metadata.back());
+      Metadata.pop_back();
+    }
+  }
+}
+
 /// \returns \p I after propagating metadata from \p VL.
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   if (VL.empty())
     return Inst;
-  Instruction *I0 = cast<Instruction>(VL[0]);
-  SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
-  I0->getAllMetadataOtherThanDebugLoc(Metadata);
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+  getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
-  for (auto Kind : {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-                    LLVMContext::MD_noalias, LLVMContext::MD_fpmath,
-                    LLVMContext::MD_nontemporal, LLVMContext::MD_invariant_load,
-                    LLVMContext::MD_access_group, LLVMContext::MD_mmra}) {
-    MDNode *MD = I0->getMetadata(Kind);
+  for (auto &[Kind, MD] : Metadata) {
+    // Skip MMRA metadata if the instruction cannot have it.
+    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Inst))
+      continue;
+
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
@@ -1034,7 +1127,7 @@ Constant *
 llvm::createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
                            const InterleaveGroup<Instruction> &Group) {
   // All 1's means mask is not needed.
-  if (Group.getNumMembers() == Group.getFactor())
+  if (Group.isFull())
     return nullptr;
 
   // TODO: support reversed access.
@@ -1296,9 +1389,9 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       // wrap around the address space we would do a memory access at nullptr
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
-      int64_t Stride =
-        getPtrStride(PSE, ElementTy, Ptr, TheLoop, Strides,
-                     /*Assume=*/true, /*ShouldCheckWrap=*/false).value_or(0);
+      int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
+                                    /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                           .value_or(0);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1552,8 +1645,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
-    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true).value_or(0))
+    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
+                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+            .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                       << FirstOrLast
@@ -1580,7 +1674,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // load would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
+    if (Group->isFull())
       continue;
 
     // Case 2: If first and last members of the group don't wrap this implies
@@ -1615,7 +1709,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // store would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
+    if (Group->isFull())
       continue;
 
     // Interleave-store-group with gaps is implemented using masked wide store.
@@ -1678,9 +1772,7 @@ void InterleaveGroup<InstT>::addMetadata(InstT *NewInst) const {
 namespace llvm {
 template <>
 void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
-  SmallVector<Value *, 4> VL;
-  std::transform(Members.begin(), Members.end(), std::back_inserter(VL),
-                 [](std::pair<int, Instruction *> p) { return p.second; });
+  SmallVector<Value *, 4> VL(make_second_range(Members));
   propagateMetadata(NewInst, VL);
 }
 } // namespace llvm

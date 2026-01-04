@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=mips-elf < %s | FileCheck %s -check-prefix=O32
 ; RUN: llc -mtriple=mips64-elf -target-abi=n32 < %s | FileCheck %s -check-prefix=N32
 ; RUN: llc -mtriple=mips64-elf < %s | FileCheck %s -check-prefix=N64
+; RUN: llc -mtriple=mipsel-windows-gnu < %s | FileCheck %s -check-prefix=MIPSEL
 
 ; We only use the '$' prefix on O32. The others use the ELF convention.
 ; O32: $JTI0_0
@@ -11,6 +12,63 @@
 ; O32: $BB0_2:
 ; N32: .LBB0_2:
 ; N64: .LBB0_2:
+
+; MIPSEL-LABEL: _Z3fooi:
+; MIPSEL:       # %bb.0: # %entry
+; MIPSEL-NEXT:    addiu $sp, $sp, -16
+; MIPSEL-NEXT:    sltiu	$1, $4, 7
+; MIPSEL-NEXT:    beqz $1, .LBB0_6
+; MIPSEL-NEXT:    sw $4, 4($sp)
+; MIPSEL-NEXT:  # %bb.1: # %entry
+; MIPSEL-NEXT:    sll $1, $4, 2
+; MIPSEL-NEXT:    lui $2, %hi($JTI0_0)
+; MIPSEL-NEXT:    addu $1, $1, $2
+; MIPSEL-NEXT:    lw $1, %lo($JTI0_0)($1)
+; MIPSEL-NEXT:    jr $1
+; MIPSEL-NEXT:    nop
+; MIPSEL-NEXT:  .LBB0_2: # %sw.bb
+; MIPSEL-NEXT:    lui $1, %hi($.str)
+; MIPSEL-NEXT:    addiu	$1, $1, %lo($.str)
+; MIPSEL-NEXT:    j .LBB0_10
+; MIPSEL-NEXT:    sw $1, 8($sp)
+; MIPSEL-NEXT:  .LBB0_3: # %sw.bb4
+; MIPSEL-NEXT:    lui $1, %hi($.str.4)
+; MIPSEL-NEXT:    addiu	$1, $1, %lo($.str.4)
+; MIPSEL-NEXT:    j .LBB0_10
+; MIPSEL-NEXT:    sw $1, 8($sp)
+; MIPSEL-NEXT:  .LBB0_4: # %sw.bb2
+; MIPSEL-NEXT:    lui $1, %hi($.str.2)
+; MIPSEL-NEXT:    addiu	$1, $1, %lo($.str.2)
+; MIPSEL-NEXT:    j .LBB0_10
+; MIPSEL-NEXT:    sw $1, 8($sp)
+; MIPSEL-NEXT:  .LBB0_5: # %sw.bb3
+; MIPSEL-NEXT:    lui $1, %hi($.str.3)
+; MIPSEL-NEXT:    addiu	$1, $1, %lo($.str.3)
+; MIPSEL-NEXT:    j .LBB0_10
+; MIPSEL-NEXT:    sw $1, 8($sp)
+; MIPSEL-NEXT:  .LBB0_6: # %sw.epilog
+; MIPSEL-NEXT:    lui $1, %hi($.str.7)
+; MIPSEL-NEXT:    addiu	$1, $1, %lo($.str.7)
+; MIPSEL-NEXT:    j .LBB0_10
+; MIPSEL-NEXT:    sw $1, 8($sp)
+; MIPSEL-NEXT:  .LBB0_7: # %sw.bb1
+; MIPSEL-NEXT:    lui $1, %hi($.str.1)
+; MIPSEL-NEXT:    addiu	$1, $1, %lo($.str.1)
+; MIPSEL-NEXT:    j .LBB0_10
+; MIPSEL-NEXT:    sw $1, 8($sp)
+; MIPSEL-NEXT:  .LBB0_8: # %sw.bb5
+; MIPSEL-NEXT:    lui $1, %hi($.str.5)
+; MIPSEL-NEXT:    addiu	$1, $1, %lo($.str.5)
+; MIPSEL-NEXT:    j .LBB0_10
+; MIPSEL-NEXT:    sw $1, 8($sp)
+; MIPSEL-NEXT:  .LBB0_9: # %sw.bb6
+; MIPSEL-NEXT:    lui $1, %hi($.str.6)
+; MIPSEL-NEXT:    addiu	$1, $1, %lo($.str.6)
+; MIPSEL-NEXT:    sw $1, 8($sp)
+; MIPSEL-NEXT:  .LBB0_10: # %return
+; MIPSEL-NEXT:    lw $2, 8($sp)
+; MIPSEL-NEXT:    jr $ra
+; MIPSEL-NEXT:    addiu	$sp, $sp, 16
 
 @.str = private unnamed_addr constant [2 x i8] c"A\00", align 1
 @.str.1 = private unnamed_addr constant [2 x i8] c"B\00", align 1

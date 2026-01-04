@@ -9,19 +9,15 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace llvm;
 using namespace llvm::object;
 
 static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
-}
-
-static Error validationFailed(const Twine &Msg) {
-  return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
 }
 
 template <typename T>
@@ -100,8 +96,8 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  RootSignature = DirectX::RootSignature();
-  if (Error Err = RootSignature->parse(Part))
+  RootSignature = DirectX::RootSignature(Part);
+  if (Error Err = RootSignature->parse())
     return Err;
   return Error::success();
 }
@@ -246,22 +242,16 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Offset = Offset;
 }
 
-Error DirectX::RootSignature::parse(StringRef Data) {
-  const char *Current = Data.begin();
+Error DirectX::RootSignature::parse() {
+  const char *Current = PartData.begin();
 
   // Root Signature headers expects 6 integers to be present.
-  if (Data.size() < 6 * sizeof(uint32_t))
+  if (PartData.size() < 6 * sizeof(uint32_t))
     return parseFailed(
         "Invalid root signature, insufficient space for header.");
 
-  uint32_t VValue =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
-
-  if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
-    return validationFailed("unsupported root signature version read: " +
-                            llvm::Twine(VValue));
-  Version = VValue;
 
   NumParameters =
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -279,14 +269,20 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  uint32_t FValue =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
-    return validationFailed("unsupported root signature flag value read: " +
-                            llvm::Twine(FValue));
-  Flags = FValue;
+  ParametersHeaders.Data = PartData.substr(
+      RootParametersOffset,
+      NumParameters * sizeof(dxbc::RTS0::v1::RootParameterHeader));
+
+  StaticSamplers.Stride = (Version <= 2)
+                              ? sizeof(dxbc::RTS0::v1::StaticSampler)
+                              : sizeof(dxbc::RTS0::v3::StaticSampler);
+
+  StaticSamplers.Data = PartData.substr(StaticSamplersOffset,
+                                        static_cast<size_t>(NumStaticSamplers) *
+                                            StaticSamplers.Stride);
 
   return Error::success();
 }
@@ -522,4 +518,184 @@ uint8_t DirectX::PSVRuntimeInfo::getSigPatchOrPrimCount() const {
   if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))
     return P->SigPatchOrPrimElements;
   return 0;
+}
+
+class DXNotSupportedError : public ErrorInfo<DXNotSupportedError> {
+public:
+  static char ID;
+
+  DXNotSupportedError(StringRef S) : FeatureString(S) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "DXContainer does not support " << FeatureString;
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return inconvertibleErrorCode();
+  }
+
+private:
+  StringRef FeatureString;
+};
+
+char DXNotSupportedError::ID = 0;
+
+Expected<section_iterator>
+DXContainerObjectFile::getSymbolSection(DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol sections");
+}
+
+Expected<StringRef> DXContainerObjectFile::getSymbolName(DataRefImpl) const {
+  return make_error<DXNotSupportedError>("Symbol names");
+}
+
+Expected<uint64_t>
+DXContainerObjectFile::getSymbolAddress(DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol addresses");
+}
+
+uint64_t DXContainerObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
+  llvm_unreachable("DXContainer does not support symbols");
+}
+uint64_t
+DXContainerObjectFile::getCommonSymbolSizeImpl(DataRefImpl Symb) const {
+  llvm_unreachable("DXContainer does not support symbols");
+}
+
+Expected<SymbolRef::Type>
+DXContainerObjectFile::getSymbolType(DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol types");
+}
+
+void DXContainerObjectFile::moveSectionNext(DataRefImpl &Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  if (It == Parts.end())
+    return;
+
+  ++It;
+  Sec.p = reinterpret_cast<uintptr_t>(It);
+}
+
+Expected<StringRef>
+DXContainerObjectFile::getSectionName(DataRefImpl Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  return StringRef(It->Part.getName());
+}
+
+uint64_t DXContainerObjectFile::getSectionAddress(DataRefImpl Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  return It->Offset;
+}
+
+uint64_t DXContainerObjectFile::getSectionIndex(DataRefImpl Sec) const {
+  return (Sec.p - reinterpret_cast<uintptr_t>(Parts.begin())) /
+         sizeof(PartIterator);
+}
+
+uint64_t DXContainerObjectFile::getSectionSize(DataRefImpl Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  return It->Data.size();
+}
+Expected<ArrayRef<uint8_t>>
+DXContainerObjectFile::getSectionContents(DataRefImpl Sec) const {
+  PartIterator It = reinterpret_cast<PartIterator>(Sec.p);
+  return ArrayRef<uint8_t>(It->Data.bytes_begin(), It->Data.size());
+}
+
+uint64_t DXContainerObjectFile::getSectionAlignment(DataRefImpl Sec) const {
+  return 1;
+}
+
+bool DXContainerObjectFile::isSectionCompressed(DataRefImpl Sec) const {
+  return false;
+}
+
+bool DXContainerObjectFile::isSectionText(DataRefImpl Sec) const {
+  return false;
+}
+
+bool DXContainerObjectFile::isSectionData(DataRefImpl Sec) const {
+  return false;
+}
+
+bool DXContainerObjectFile::isSectionBSS(DataRefImpl Sec) const {
+  return false;
+}
+
+bool DXContainerObjectFile::isSectionVirtual(DataRefImpl Sec) const {
+  return false;
+}
+
+relocation_iterator
+DXContainerObjectFile::section_rel_begin(DataRefImpl Sec) const {
+  return relocation_iterator(RelocationRef());
+}
+
+relocation_iterator
+DXContainerObjectFile::section_rel_end(DataRefImpl Sec) const {
+  return relocation_iterator(RelocationRef());
+}
+
+void DXContainerObjectFile::moveRelocationNext(DataRefImpl &Rel) const {
+  llvm_unreachable("DXContainer does not support relocations");
+}
+
+uint64_t DXContainerObjectFile::getRelocationOffset(DataRefImpl Rel) const {
+  llvm_unreachable("DXContainer does not support relocations");
+}
+
+symbol_iterator
+DXContainerObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
+  return symbol_iterator(SymbolRef());
+}
+
+uint64_t DXContainerObjectFile::getRelocationType(DataRefImpl Rel) const {
+  llvm_unreachable("DXContainer does not support relocations");
+}
+
+void DXContainerObjectFile::getRelocationTypeName(
+    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
+  llvm_unreachable("DXContainer does not support relocations");
+}
+
+section_iterator DXContainerObjectFile::section_begin() const {
+  DataRefImpl Sec;
+  Sec.p = reinterpret_cast<uintptr_t>(Parts.begin());
+  return section_iterator(SectionRef(Sec, this));
+}
+section_iterator DXContainerObjectFile::section_end() const {
+  DataRefImpl Sec;
+  Sec.p = reinterpret_cast<uintptr_t>(Parts.end());
+  return section_iterator(SectionRef(Sec, this));
+}
+
+uint8_t DXContainerObjectFile::getBytesInAddress() const { return 4; }
+
+StringRef DXContainerObjectFile::getFileFormatName() const {
+  return "DirectX Container";
+}
+
+Triple::ArchType DXContainerObjectFile::getArch() const { return Triple::dxil; }
+
+Expected<SubtargetFeatures> DXContainerObjectFile::getFeatures() const {
+  return SubtargetFeatures();
+}
+
+Error DXContainerObjectFile::printSymbolName(raw_ostream &OS,
+                                             DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol names");
+}
+
+Expected<uint32_t>
+DXContainerObjectFile::getSymbolFlags(DataRefImpl Symb) const {
+  return make_error<DXNotSupportedError>("Symbol flags");
+}
+
+Expected<std::unique_ptr<DXContainerObjectFile>>
+ObjectFile::createDXContainerObjectFile(MemoryBufferRef Object) {
+  auto ExC = DXContainer::create(Object);
+  if (!ExC)
+    return ExC.takeError();
+  std::unique_ptr<DXContainerObjectFile> Obj(new DXContainerObjectFile(*ExC));
+  return std::move(Obj);
 }

@@ -445,9 +445,6 @@ public:
 
   Function *CalculateSymbolContextFunction() override;
 
-  /// DEPRECATED: Use GetAddressRanges instead.
-  const AddressRange &GetAddressRange() { return m_range; }
-
   AddressRanges GetAddressRanges() { return m_block.GetRanges(); }
 
   /// Return the address of the function (its entry point). This address is also
@@ -472,12 +469,12 @@ public:
   ///
   /// \param[out] line_no
   ///     The line number.
-  void GetStartLineSourceInfo(lldb::SupportFileSP &source_file_sp,
+  void GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                               uint32_t &line_no);
 
   using SourceRange = Range<uint32_t, uint32_t>;
   /// Find the file and line number range of the function.
-  llvm::Expected<std::pair<lldb::SupportFileSP, SourceRange>> GetSourceInfo();
+  llvm::Expected<std::pair<SupportFileNSP, SourceRange>> GetSourceInfo();
 
   /// Get the outgoing call edges from this function, sorted by their return
   /// PC addresses (in increasing order).
@@ -657,11 +654,6 @@ protected:
 
   /// All lexical blocks contained in this function.
   Block m_block;
-
-  /// The function address range that covers the widest range needed to contain
-  /// all blocks. DEPRECATED: do not use this field in new code as the range may
-  /// include addresses belonging to other functions.
-  AddressRange m_range;
 
   /// The address (entry point) of the function.
   Address m_address;

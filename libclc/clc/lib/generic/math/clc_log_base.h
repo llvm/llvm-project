@@ -1,24 +1,10 @@
-/*
- * Copyright (c) 2014,2015 Advanced Micro Devices, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_fabs.h>
 #include <clc/math/clc_fma.h>
@@ -156,21 +142,21 @@ __clc_log(float x)
             __clc_as_float(0x3f000000 | (xin & MANTBITS_SP32));
 
   indx = indx >> 16;
-  r = f * USE_TABLE(log_inv_tbl, indx);
+  r = f * __CLC_USE_TABLE(log_inv_tbl, indx);
 
   // 1/3,  1/2
   float poly = __clc_mad(__clc_mad(r, 0x1.555556p-2f, 0.5f), r * r, r);
 
 #if defined(COMPILING_LOG2)
-  float2 tv = USE_TABLE(log2_tbl, indx);
+  float2 tv = __CLC_USE_TABLE(log2_tbl, indx);
   z1 = tv.s0 + mf;
   z2 = __clc_mad(poly, -LOG2E, tv.s1);
 #elif defined(COMPILING_LOG10)
-  float2 tv = USE_TABLE(log10_tbl, indx);
+  float2 tv = __CLC_USE_TABLE(log10_tbl, indx);
   z1 = __clc_mad(mf, LOG10_2_HEAD, tv.s0);
   z2 = __clc_mad(poly, -LOG10E, mf * LOG10_2_TAIL) + tv.s1;
 #else
-  float2 tv = USE_TABLE(log_tbl, indx);
+  float2 tv = __CLC_USE_TABLE(log_tbl, indx);
   z1 = __clc_mad(mf, LOG2_HEAD, tv.s0);
   z2 = __clc_mad(mf, LOG2_TAIL, -poly) + tv.s1;
 #endif
@@ -275,9 +261,8 @@ __clc_log(double x)
   int index = __clc_as_int2(ux).hi >> 13;
   index = ((0x80 | (index & 0x7e)) >> 1) + (index & 0x1);
 
-  double2 tv = USE_TABLE(ln_tbl, index - 64);
-  double z1 = tv.s0;
-  double q = tv.s1;
+  double z1 = __CLC_USE_TABLE(ln_tbl_lo, index - 64);
+  double q = __CLC_USE_TABLE(ln_tbl_hi, index - 64);
 
   double f1 = index * 0x1.0p-7;
   double f2 = f - f1;

@@ -9,7 +9,9 @@
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/CIRGenerator.h"
+#include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -59,14 +61,17 @@ class CIRGenConsumer : public clang::ASTConsumer {
   ASTContext *Context{nullptr};
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> Gen;
+  const FrontendOptions &FEOptions;
+  CodeGenOptions &CGO;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
-                 std::unique_ptr<raw_pwrite_stream> OS)
+                 CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS)
       : Action(Action), CI(CI), OutputStream(std::move(OS)),
         FS(&CI.getVirtualFileSystem()),
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
-                                           CI.getCodeGenOpts())) {}
+                                           CI.getCodeGenOpts())),
+        FEOptions(CI.getFrontendOpts()), CGO(CGO) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
@@ -79,9 +84,46 @@ public:
     return true;
   }
 
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
+    Gen->HandleCXXStaticMemberVarInstantiation(VD);
+  }
+
+  void HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                     const OpenACCRoutineDecl *RD) override {
+    Gen->HandleOpenACCRoutineReference(FD, RD);
+  }
+
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override {
+    Gen->HandleInlineFunctionDefinition(D);
+  }
+
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
+
+    if (!FEOptions.ClangIRDisableCIRVerifier) {
+      if (!Gen->verifyModule()) {
+        CI.getDiagnostics().Report(
+            diag::err_cir_verification_failed_pre_passes);
+        llvm::report_fatal_error(
+            "CIR codegen: module verification error before running CIR passes");
+        return;
+      }
+    }
+
     mlir::ModuleOp MlirModule = Gen->getModule();
+    mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
+
+    if (!FEOptions.ClangIRDisablePasses) {
+      // Setup and run CIR pipeline.
+      if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
+                            !FEOptions.ClangIRDisableCIRVerifier,
+                            CGO.OptimizationLevel > 0)
+              .failed()) {
+        CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+        return;
+      }
+    }
+
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (OutputStream && MlirModule) {
@@ -106,6 +148,23 @@ public:
     }
     }
   }
+
+  void HandleTagDeclDefinition(TagDecl *D) override {
+    PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
+                                   Context->getSourceManager(),
+                                   "CIR generation of declaration");
+    Gen->HandleTagDeclDefinition(D);
+  }
+
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+    Gen->HandleTagDeclRequiredDefinition(D);
+  }
+
+  void CompleteTentativeDefinition(VarDecl *D) override {
+    Gen->CompleteTentativeDefinition(D);
+  }
+
+  void HandleVTable(CXXRecordDecl *RD) override { Gen->HandleVTable(RD); }
 };
 } // namespace cir
 
@@ -141,8 +200,8 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (!Out)
     Out = getOutputStream(CI, InFile, Action);
 
-  auto Result =
-      std::make_unique<cir::CIRGenConsumer>(Action, CI, std::move(Out));
+  auto Result = std::make_unique<cir::CIRGenConsumer>(
+      Action, CI, CI.getCodeGenOpts(), std::move(Out));
 
   return Result;
 }

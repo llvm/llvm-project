@@ -98,7 +98,7 @@ static void annotateGridSizeLoadWithRangeMD(LoadInst *Load,
 }
 
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
-  Function *F = CI->getParent()->getParent();
+  Function *F = CI->getFunction();
 
   auto *MD = F->getMetadata("reqd_work_group_size");
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
@@ -107,7 +107,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     F->getFnAttribute("uniform-work-group-size").getValueAsBool();
 
   SmallVector<unsigned> MaxNumWorkgroups =
-      AMDGPU::getIntegerVecAttribute(*F, "amdgpu-max-num-workgroups", 3);
+      AMDGPU::getIntegerVecAttribute(*F, "amdgpu-max-num-workgroups",
+                                     /*Size=*/3, /*DefaultVal=*/0);
 
   if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize &&
       none_of(MaxNumWorkgroups, [](unsigned X) { return X != 0; }))
