@@ -2268,8 +2268,6 @@ public:
   SmallVector<llvm::Value *>
   createGEPsToPrivateVars(llvm::Value *altStructPtr) const;
 
-  llvm::Value *isAllocated();
-
   /// De-allocate the task context structure.
   void freeStructPtr();
 
@@ -2358,26 +2356,13 @@ void TaskContextStructManager::createGEPsToPrivateVars() {
   llvmPrivateVarGEPs = createGEPsToPrivateVars(structPtr);
 }
 
-llvm::Value *TaskContextStructManager::isAllocated() {
-  if (!structPtr)
-    return nullptr;
-
-  return builder.CreateIsNotNull(structPtr);
-}
-
 void TaskContextStructManager::freeStructPtr() {
   if (!structPtr)
     return;
 
   llvm::IRBuilderBase::InsertPointGuard guard{builder};
-  llvm::BasicBlock *currentBlock = builder.GetInsertBlock();
-  if (currentBlock->getTerminator()) {
-    // Ensure we don't put the call to free() after the terminator
-    builder.SetInsertPoint(currentBlock->getTerminator());
-  } else {
-    // Insert the call to free() at the end of the current block
-    builder.SetInsertPoint(currentBlock);
-  }
+  // Ensure we don't put the call to free() after the terminator
+  builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
   builder.CreateFree(structPtr);
 }
 
@@ -2651,6 +2636,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   // Allocate and initialize private variables
   builder.SetInsertPoint(initBlock->getTerminator());
 
+  // TODO: don't allocate if the loop has zero iterations.
   taskStructMgr.generateTaskContextStruct();
   taskStructMgr.createGEPsToPrivateVars();
 
@@ -2770,15 +2756,25 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     auto continuationBlockOrError =
         convertOmpOpRegions(taskloopOp.getRegion(), "omp.taskloop.region",
                             builder, moduleTranslation);
-    ;
+
     if (failed(handleError(continuationBlockOrError, opInst)))
       return llvm::make_error<PreviouslyReportedError>();
 
     builder.SetInsertPoint(continuationBlockOrError.get()->getTerminator());
 
-    // dummy check to ensure that the task context structure is accessed inside
-    // the outlined fn.
-    [[maybe_unused]] llvm::Value *cond = taskStructMgr.isAllocated();
+    // This is freeing the private variables as mapped inside of the task: these
+    // will be per-task private copies possibly after task duplication. This is
+    // handled transparently by how these are passed to the structure passed
+    // into the outlined function. When the task is duplicated, that structure
+    // is duplicated too.
+    if (failed(cleanupPrivateVars(builder, moduleTranslation,
+                                  taskloopOp.getLoc(), llvmFirstPrivateVars,
+                                  privateVarsInfo.privatizers)))
+      return llvm::make_error<PreviouslyReportedError>();
+    // Similarly, the task context structure freed inside the task is the
+    // per-task copy after task duplication.
+    taskStructMgr.freeStructPtr();
+
     return llvm::Error::success();
   };
 
@@ -2879,20 +2875,6 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   builder.restoreIP(*afterIP);
-
-  // freeing the task context structure in exit block of taskloop.
-  if (failed(cleanupPrivateVars(builder, moduleTranslation, taskloopOp.getLoc(),
-                                llvmFirstPrivateVars,
-                                privateVarsInfo.privatizers)))
-    return failure();
-
-  // Note: This free is valid because end_taskgroup waits until all generated
-  // tasks are complete before returning. In the presence of Nogroup clause,
-  // @__kmpc_taskgroup(..)/@__kmpc_end_taskgroup(..) is not called, have to
-  // ensure that this freeStructPtr() is not called until every thread has
-  // completed execution
-  taskStructMgr.freeStructPtr();
-
   return success();
 }
 
