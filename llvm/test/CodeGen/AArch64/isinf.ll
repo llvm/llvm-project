@@ -27,9 +27,8 @@ define i32 @replace_isinf_call_f32(float %x) {
 ; CHECK-LABEL: replace_isinf_call_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-NEXT:    and w9, w9, #0x7fffffff
-; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    mov w8, #-16777216 // =0xff000000
+; CHECK-NEXT:    cmp w8, w9, lsl #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %abs = tail call float @llvm.fabs.f32(float %x)
@@ -43,9 +42,8 @@ define i32 @replace_isinf_call_f64(double %x) {
 ; CHECK-LABEL: replace_isinf_call_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NEXT:    and x9, x9, #0x7fffffffffffffff
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    mov x8, #-9007199254740992 // =0xffe0000000000000
+; CHECK-NEXT:    cmp x8, x9, lsl #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %abs = tail call double @llvm.fabs.f64(double %x)

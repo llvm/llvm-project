@@ -8,13 +8,16 @@ add_flang_library(flangFrontendTool
 
   LINK_LIBS
   flangFrontend
-  MLIRPass
 
   LINK_COMPONENTS
   Option
   Support
 
+  MLIR_LIBS
+  MLIRPass
+
   CLANG_LIBS
   clangBasic
+  clangOptions
   clangDriver
 )

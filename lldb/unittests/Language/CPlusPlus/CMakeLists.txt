@@ -3,4 +3,5 @@ add_lldb_unittest(LanguageCPlusPlusTests
 
   LINK_LIBS
     lldbPluginCPlusPlusLanguage
+    LLVMTestingSupport
   )

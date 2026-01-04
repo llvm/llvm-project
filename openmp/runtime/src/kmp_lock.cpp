@@ -712,16 +712,9 @@ static int __kmp_test_ticket_lock_with_checks(kmp_ticket_lock_t *lck,
 }
 
 int __kmp_release_ticket_lock(kmp_ticket_lock_t *lck, kmp_int32 gtid) {
-  kmp_uint32 distance = std::atomic_load_explicit(&lck->lk.next_ticket,
-                                                  std::memory_order_relaxed) -
-                        std::atomic_load_explicit(&lck->lk.now_serving,
-                                                  std::memory_order_relaxed);
-
   std::atomic_fetch_add_explicit(&lck->lk.now_serving, 1U,
                                  std::memory_order_release);
 
-  KMP_YIELD(distance >
-            (kmp_uint32)(__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc));
   return KMP_LOCK_RELEASED;
 }
 
@@ -3242,6 +3235,8 @@ static void __kmp_destroy_indirect_lock(kmp_dyna_lock_t *lock) {
   kmp_uint32 gtid = __kmp_entry_gtid();
   kmp_indirect_lock_t *l =
       __kmp_lookup_indirect_lock((void **)lock, "omp_destroy_lock");
+  if (l == nullptr)
+    return; // avoid segv if lock already destroyed
   KMP_I_LOCK_FUNC(l, destroy)(l->lock);
   kmp_indirect_locktag_t tag = l->type;
 
@@ -3458,6 +3453,7 @@ void __kmp_cleanup_indirect_user_locks() {
       }
       __kmp_free(ptr->table[row]);
     }
+    __kmp_free(ptr->table);
     kmp_indirect_lock_table_t *next_table = ptr->next_table;
     if (ptr != &__kmp_i_lock_table)
       __kmp_free(ptr);

@@ -28,7 +28,7 @@ end
 
 !CHECK-LABEL: sub_loop
 subroutine sub_loop()
-!CHECK: omp.wsloop {
+!CHECK: omp.wsloop private({{.*}}) {
 !CHECK-NEXT: omp.loop_nest {{.*}} {
   !$omp do
   do i=1,10

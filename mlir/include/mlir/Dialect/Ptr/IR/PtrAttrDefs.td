@@ -10,7 +10,9 @@
 #define PTR_ATTRDEFS
 
 include "mlir/Dialect/Ptr/IR/PtrDialect.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 
 // All of the attributes will extend this class.
 class Ptr_Attr<string name, string attrMnemonic,
@@ -18,6 +20,85 @@ class Ptr_Attr<string name, string attrMnemonic,
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<Ptr_Dialect, name, traits, baseCppClass> {
   let mnemonic = attrMnemonic;
+}
+
+//===----------------------------------------------------------------------===//
+// AddressAttr
+//===----------------------------------------------------------------------===//
+
+def Ptr_AddressAttr : Ptr_Attr<"Address", "address", [
+    DeclareAttrInterfaceMethods<TypedAttrInterface>
+  ]> {
+  let summary = "Address attribute";
+  let description = [{
+    The `address` attribute represents a raw memory address, expressed in bytes.
+
+    Example:
+
+    ```mlir
+      #ptr.address<0x1000> : !ptr.ptr<#ptr.generic_space>
+    ```
+  }];
+  let parameters = (ins AttributeSelfTypeParameter<"", "PtrType">:$type,
+                        APIntParameter<"">:$value);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "PtrType":$type,
+                                        "const llvm::APInt &":$value), [{
+      return $_get(type.getContext(), type, value);
+    }]>
+  ];
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// GenericSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def Ptr_GenericSpaceAttr :
+    Ptr_Attr<"GenericSpace", "generic_space", [
+      DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+    ]> {
+  let summary = "Generic memory space";
+  let description = [{
+    The `generic_space` attribute defines a memory space attribute with the
+    following properties:
+    - Load and store operations are always valid, regardless of the type.
+    - Atomic operations are always valid, regardless of the type.
+    - Cast operations to `generic_space` are always valid.
+
+    Example:
+
+    ```mlir
+      #ptr.generic_space : !ptr.ptr<#ptr.generic_space>
+    ```
+  }];
+  let assemblyFormat = "";
+}
+
+//===----------------------------------------------------------------------===//
+// NullAttr
+//===----------------------------------------------------------------------===//
+
+def Ptr_NullAttr : Ptr_Attr<"Null", "null", [
+    DeclareAttrInterfaceMethods<TypedAttrInterface>
+  ]> {
+  let summary = "Null pointer attribute";
+  let description = [{
+    The `null` attribute represents a null pointer.
+
+    Example:
+
+    ```mlir
+      #ptr.null
+    ```
+  }];
+  let parameters = (ins AttributeSelfTypeParameter<"", "PtrType">:$type);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "PtrType":$type), [{
+      return $_get(type.getContext(), type);
+    }]>
+  ];
+  let assemblyFormat = "";
 }
 
 //===----------------------------------------------------------------------===//
@@ -35,7 +116,7 @@ def Ptr_SpecAttr : Ptr_Attr<"Spec", "spec"> {
      - [Optional] index: bitwidth that should be used when performing index
      computations for the type. Setting the field to `kOptionalSpecValue`, means
      the field is optional.
-    
+
     Furthermore, the attribute will verify that all present values are divisible
     by 8 (number of bits in a byte), and that `preferred` > `abi`.
 

@@ -12,9 +12,6 @@
 
 #include "mlir/Conversion/TensorToLinalg/TensorToLinalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/AffineMap.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tensor-to-linalg-pattern"
 

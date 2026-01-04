@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer fusion-maximal}))' %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer maximal}))' %s | FileCheck %s
 
 // Test fusion of affine nests inside other region-holding ops (scf.for in the
 // test case below).
@@ -90,13 +90,13 @@ func.func @fusion_inner_multiple_nests() {
   // CHECK:      affine.for %{{.*}} = 0 to 4 {
   // Everything inside fused into two nests (the second will be DCE'd).
   // CHECK-NEXT:   memref.alloc() : memref<4xi8>
-  // CHECK-NEXT:   memref.alloc() : memref<1xi8>
-  // CHECK-NEXT:   memref.alloc() : memref<1xi8>
   // CHECK-NEXT:   memref.alloc() : memref<8x4xi8>
   // CHECK-NEXT:   memref.alloc() : memref<4xi8>
-  // CHECK-NEXT:   affine.for %{{.*}} = 0 to 2 {
+  // CHECK-NEXT:   affine.for %{{.*}} = 0 to 4 {
   // CHECK:        }
-  // CHECK:        affine.for %{{.*}} = 0 to 4 {
+  // CHECK-NEXT:   affine.for %{{.*}} = 0 to 2 {
+  // CHECK:          arith.muli
+  // CHECK-NEXT:     arith.extsi
   // CHECK:        }
   // CHECK-NEXT:   memref.dealloc
   // CHECK-NEXT: }

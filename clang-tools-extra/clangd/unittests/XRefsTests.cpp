@@ -5,14 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "Annotations.h"
 #include "AST.h"
+#include "Annotations.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "TestWorkspace.h"
 #include "XRefs.h"
 #include "index/MemIndex.h"
 #include "clang/AST/Decl.h"
@@ -95,7 +96,7 @@ TEST(HighlightsTest, All) {
       )cpp",
 
       R"cpp(// Function
-        int [[^foo]](int) {}
+        int [[^foo]](int) { return 0; }
         int main() {
           [[foo]]([[foo]](42));
           auto *X = &[[foo]];
@@ -311,6 +312,7 @@ MATCHER_P3(sym, Name, Decl, DefOrNone, "") {
 MATCHER_P(sym, Name, "") { return arg.Name == Name; }
 
 MATCHER_P(rangeIs, R, "") { return arg.Loc.range == R; }
+MATCHER_P(fileIs, F, "") { return arg.Loc.uri.file() == F; }
 MATCHER_P(containerIs, C, "") {
   return arg.Loc.containerName.value_or("") == C;
 }
@@ -409,6 +411,85 @@ TEST(LocateSymbol, FindOverrides) {
   EXPECT_THAT(locateSymbolAt(AST, Code.point(), TU.index().get()),
               UnorderedElementsAre(sym("foo", Code.range("1"), std::nullopt),
                                    sym("foo", Code.range("2"), std::nullopt)));
+}
+
+TEST(LocateSymbol, FindOverridesFromDefObjC) {
+  auto Code = Annotations(R"objc(
+    @protocol Fooey
+    - (void)foo;
+    @end
+    @interface Base
+    - (void)foo;
+    @end
+    @interface Foo : Base<Fooey>
+    - (void)$1[[foo]];
+    @end
+
+    @interface Bar : Foo
+    - (void)$2[[foo]];
+    @end
+    @implementation Bar
+    - (void)$3[[fo^o]] {}
+    @end
+  )objc");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("1"), std::nullopt),
+                           sym("foo", Code.range("2"), Code.range("3"))));
+}
+
+TEST(LocateSymbol, NoOverridesFromDeclObjC) {
+  auto Code = Annotations(R"objc(
+    @protocol Fooey
+    - (void)foo;
+    @end
+    @interface Base
+    - (void)foo;
+    @end
+    @interface Foo : Base<Fooey>
+    - (void)foo;
+    @end
+
+    @interface Bar : Foo
+    - (void)$2[[fo^o]];
+    @end
+    @implementation Bar
+    - (void)$3[[foo]] {}
+    @end
+  )objc");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("2"), Code.range("3"))));
+}
+
+TEST(LocateSymbol, ObjCNoOverridesOnUsage) {
+  auto Code = Annotations(R"objc(
+    @interface Foo
+    - (void)foo;
+    @end
+
+    @interface Bar : Foo
+    - (void)$1[[foo]];
+    @end
+    @implementation Bar
+    - (void)$2[[foo]] {}
+    @end
+    void doSomething(Bar *bar) {
+      [bar fo^o];
+    }
+  )objc");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point(), TU.index().get()),
+      UnorderedElementsAre(sym("foo", Code.range("1"), Code.range("2"))));
 }
 
 TEST(LocateSymbol, WithIndexPreferredLocation) {
@@ -845,11 +926,19 @@ TEST(LocateSymbol, All) {
         }
       )cpp",
 
+      R"cpp(// auto with dependent type
+        template <typename>
+        struct [[A]] {};
+        template <typename T>
+        void foo(A<T> a) {
+          ^auto copy = a;
+        }
+      )cpp",
+
       R"cpp(// Override specifier jumps to overridden method
         class Y { virtual void $decl[[a]]() = 0; };
         class X : Y { void a() ^override {} };
       )cpp",
-
       R"cpp(// Final specifier jumps to overridden method
         class Y { virtual void $decl[[a]]() = 0; };
         class X : Y { void a() ^final {} };
@@ -1012,7 +1101,7 @@ TEST(LocateSymbol, All) {
       )objc",
       R"cpp(
         struct PointerIntPairInfo {
-          static void *getPointer(void *Value);
+          static void *$decl[[getPointer]](void *Value);
         };
 
         template <typename Info = PointerIntPairInfo> struct PointerIntPair {
@@ -1834,6 +1923,41 @@ TEST(FindImplementations, Inheritance) {
   }
 }
 
+TEST(FindImplementations, InheritanceObjC) {
+  llvm::StringRef Test = R"objc(
+    @interface $base^Base
+    - (void)fo$foo^o;
+    @end
+    @protocol Protocol
+    - (void)$protocol^protocol;
+    @end
+    @interface $ChildDecl[[Child]] : Base <Protocol>
+    - (void)concrete;
+    - (void)$fooDecl[[foo]];
+    @end
+    @implementation $ChildDef[[Child]]
+    - (void)concrete {}
+    - (void)$fooDef[[foo]] {}
+    - (void)$protocolDef[[protocol]] {}
+    @end
+  )objc";
+
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-xobjective-c++");
+  auto AST = TU.build();
+  auto Index = TU.index();
+  EXPECT_THAT(findImplementations(AST, Code.point("base"), Index.get()),
+              UnorderedElementsAre(sym("Child", Code.range("ChildDecl"),
+                                       Code.range("ChildDef"))));
+  EXPECT_THAT(findImplementations(AST, Code.point("foo"), Index.get()),
+              UnorderedElementsAre(
+                  sym("foo", Code.range("fooDecl"), Code.range("fooDef"))));
+  EXPECT_THAT(findImplementations(AST, Code.point("protocol"), Index.get()),
+              UnorderedElementsAre(sym("protocol", Code.range("protocolDef"),
+                                       Code.range("protocolDef"))));
+}
+
 TEST(FindImplementations, CaptureDefinition) {
   llvm::StringRef Test = R"cpp(
     struct Base {
@@ -1963,6 +2087,7 @@ void checkFindRefs(llvm::StringRef Test, bool UseIndex = false) {
   Annotations T(Test);
   auto TU = TestTU::withCode(T.code());
   TU.ExtraArgs.push_back("-std=c++20");
+  TU.ExtraArgs.push_back("-xobjective-c++");
 
   auto AST = TU.build();
   std::vector<Matcher<ReferencesResult::Reference>> ExpectedLocations;
@@ -2025,7 +2150,7 @@ TEST(FindReferences, WithinAST) {
       )cpp",
 
       R"cpp(// Function
-        int $def[[foo]](int) {}
+        int $def[[foo]](int) { return 0; }
         int main() {
           auto *X = &$(main)[[^foo]];
           $(main)[[foo]](42);
@@ -2045,7 +2170,7 @@ TEST(FindReferences, WithinAST) {
 
       R"cpp(// Method call
         struct Foo { int $decl(Foo)[[foo]](); };
-        int Foo::$def(Foo)[[foo]]() {}
+        int Foo::$def(Foo)[[foo]]() { return 0; }
         int main() {
           Foo f;
           f.$(main)[[^foo]]();
@@ -2143,7 +2268,7 @@ TEST(FindReferences, WithinAST) {
       )cpp",
       R"cpp(// Dependent code
         template <typename T> void $decl[[foo]](T t);
-        template <typename T> void bar(T t) { $(bar)[[foo]](t); } // foo in bar is uninstantiated. 
+        template <typename T> void bar(T t) { $(bar)[[foo]](t); } // foo in bar is uninstantiated.
         void baz(int x) { $(baz)[[f^oo]](x); }
       )cpp",
       R"cpp(
@@ -2188,7 +2313,23 @@ TEST(FindReferences, WithinAST) {
         bool $decl[[operator]]"" _u^dl(unsigned long long value);
         bool x = $(x)[[1_udl]];
       )cpp",
-  };
+      R"cpp(
+        struct S {
+        public:
+          static void $decl(S)[[operator]] delete(void *);
+          static void deleteObject(S *S) {
+            $(S::deleteObject)[[de^lete]] S;
+          }
+        };
+      )cpp",
+      // Array designators
+      R"cpp(
+        const int $def[[F^oo]] = 0;
+        int Bar[] = {
+          [$(Bar)[[F^oo]]...$(Bar)[[Fo^o]] + 1] = 0,
+          [$(Bar)[[^Foo]] + 2] = 1
+        };
+      )cpp"};
   for (const char *Test : Tests)
     checkFindRefs(Test);
 }
@@ -2260,6 +2401,25 @@ TEST(FindReferences, IncludeOverrides) {
   checkFindRefs(Test, /*UseIndex=*/true);
 }
 
+TEST(FindReferences, IncludeOverridesObjC) {
+  llvm::StringRef Test =
+      R"objc(
+        @interface Base
+        - (void)$decl(Base)[[f^unc]];
+        @end
+        @interface Derived : Base
+        - (void)$overridedecl(Derived::func)[[func]];
+        @end
+        @implementation Derived
+        - (void)$overridedef[[func]] {}
+        @end
+        void test(Derived *derived, Base *base) {
+          [derived func];  // No references to the overrides.
+          [base $(test)[[func]]];
+        })objc";
+  checkFindRefs(Test, /*UseIndex=*/true);
+}
+
 TEST(FindReferences, RefsToBaseMethod) {
   llvm::StringRef Test =
       R"cpp(
@@ -2281,6 +2441,27 @@ TEST(FindReferences, RefsToBaseMethod) {
           B->$(test)[[func]]();
           D->$(test)[[fu^nc]]();
         })cpp";
+  checkFindRefs(Test, /*UseIndex=*/true);
+}
+
+TEST(FindReferences, RefsToBaseMethodObjC) {
+  llvm::StringRef Test =
+      R"objc(
+        @interface BaseBase
+        - (void)$(BaseBase)[[func]];
+        @end
+        @interface Base : BaseBase
+        - (void)$(Base)[[func]];
+        @end
+        @interface Derived : Base
+        - (void)$decl(Derived)[[fu^nc]];
+        @end
+        void test(BaseBase *bb, Base *b, Derived *d) {
+          // refs to overridden methods in complete type hierarchy are reported.
+          [bb $(test)[[func]]];
+          [b $(test)[[func]]];
+          [d $(test)[[fu^nc]]];
+        })objc";
   checkFindRefs(Test, /*UseIndex=*/true);
 }
 
@@ -2353,6 +2534,7 @@ TEST(FindReferences, ExplicitSymbols) {
         X $def(test)[[a]];
         $(test)[[a]].operator bool();
         if ($(test)[[a^]]) {} // ignore implicit conversion-operator AST node
+        return 0;
       }
     )cpp",
   };
@@ -2388,7 +2570,7 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
       #define BAR 5
       int bar1();
       int bar2();
-      class Bar {};            
+      class Bar {};
     )cpp");
     TU.AdditionalFiles["system/vector"] = guard(R"cpp(
       namespace std {
@@ -2405,7 +2587,7 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
     std::vector<Matcher<ReferencesResult::Reference>> ExpectedLocations;
     for (const auto &R : T.ranges())
       ExpectedLocations.push_back(AllOf(rangeIs(R), attrsAre(0u)));
-    for (const auto &P : T.points()) 
+    for (const auto &P : T.points())
       EXPECT_THAT(findReferences(AST, P, 0).References,
                   UnorderedElementsAreArray(ExpectedLocations))
           << "Failed for Refs at " << P << "\n"
@@ -2480,6 +2662,7 @@ TEST(FindReferences, NeedsIndexForMacro) {
   Annotations IndexedMain(R"cpp(
     int indexed_main() {
       int a = [[MACRO]](1);
+      return 0;
     }
   )cpp");
 
@@ -2530,6 +2713,140 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
     else
       EXPECT_EQ(Rec.RefIDs, std::nullopt) << T.AnnotatedCode;
   }
+}
+
+TEST(FindReferences, ConstructorForwardingInAST) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+
+    struct Test {
+      $Constructor[[T^est]](){}
+    };
+
+    int main() {
+      auto a = std::$Caller[[make_unique]]<Test>();
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller"))));
+}
+
+TEST(FindReferences, ConstructorForwardingInASTChained) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique2(Args &&...args) {
+      return make_unique<T>(forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique3(Args &&...args) {
+      return make_unique2<T>(forward<Args>(args)...);
+    }
+    }
+
+    struct Test {
+      $Constructor[[T^est]](){}
+    };
+
+    int main() {
+      auto a = std::$Caller[[make_unique3]]<Test>();
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller"))));
+}
+
+TEST(FindReferences, ConstructorForwardingInIndex) {
+  Annotations Header(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+    struct Test {
+      [[T^est]](){}
+    };
+  )cpp");
+  Annotations Main(R"cpp(
+    #include "header.hpp"
+    int main() {
+      auto a = std::[[make_unique]]<Test>();
+    }
+  )cpp");
+  TestWorkspace TW;
+  TW.addSource("header.hpp", Header.code());
+  TW.addMainFile("main.cpp", Main.code());
+  auto AST = TW.openFile("header.hpp").value();
+  auto Index = TW.index();
+
+  EXPECT_THAT(
+      findReferences(AST, Header.point(), 0, Index.get(),
+                     /*AddContext*/ true)
+          .References,
+      ElementsAre(
+          AllOf(rangeIs(Header.range()), fileIs(testPath("header.hpp"))),
+          AllOf(rangeIs(Main.range()), fileIs(testPath("main.cpp")))));
+}
+
+TEST(FindReferences, TemplatedConstructorForwarding) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+
+    struct Waldo {
+      template <typename T>
+      $Constructor[[W$Waldo^aldo]](T);
+    };
+    template <typename T>
+    struct Waldo2 {
+      $Constructor2[[W$Waldo2^aldo2]](int);
+    };
+    struct S {};
+
+    int main() {
+      S s;
+      Waldo $Caller[[w]](s);
+      std::$ForwardedCaller[[make_unique]]<Waldo>(s);
+
+      Waldo2<int> $Caller2[[w2]](42);
+      std::$ForwardedCaller2[[make_unique]]<Waldo2<int>>(42);
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point("Waldo"), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller")),
+                          rangeIs(Main.range("ForwardedCaller"))));
+
+  EXPECT_THAT(findReferences(AST, Main.point("Waldo2"), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor2")),
+                          rangeIs(Main.range("Caller2")),
+                          rangeIs(Main.range("ForwardedCaller2"))));
 }
 
 TEST(GetNonLocalDeclRefs, All) {
@@ -2611,14 +2928,24 @@ TEST(GetNonLocalDeclRefs, All) {
 
 TEST(DocumentLinks, All) {
   Annotations MainCpp(R"cpp(
+      #define HEADER_AA "faa.h"
+      #define HEADER_BB "fbb.h"
+      #define GET_HEADER(X) HEADER_ ## X 
+
       #/*comments*/include /*comments*/ $foo[["foo.h"]] //more comments
       int end_of_preamble = 0;
       #include $bar[[<bar.h>]]
+      #include $AA[[GET_HEADER]](AA) // Some comment !
+      # /* What about */ \
+      include /* multiple line */ \
+      $BB[[GET_HEADER]]( /* statements ? */ \
+      BB /* :) */ )
     )cpp");
 
   TestTU TU;
   TU.Code = std::string(MainCpp.code());
-  TU.AdditionalFiles = {{"foo.h", ""}, {"bar.h", ""}};
+  TU.AdditionalFiles = {
+      {"faa.h", ""}, {"fbb.h", ""}, {"foo.h", ""}, {"bar.h", ""}};
   TU.ExtraArgs = {"-isystem."};
   auto AST = TU.build();
 
@@ -2628,7 +2955,11 @@ TEST(DocumentLinks, All) {
           DocumentLink({MainCpp.range("foo"),
                         URIForFile::canonicalize(testPath("foo.h"), "")}),
           DocumentLink({MainCpp.range("bar"),
-                        URIForFile::canonicalize(testPath("bar.h"), "")})));
+                        URIForFile::canonicalize(testPath("bar.h"), "")}),
+          DocumentLink({MainCpp.range("AA"),
+                        URIForFile::canonicalize(testPath("faa.h"), "")}),
+          DocumentLink({MainCpp.range("BB"),
+                        URIForFile::canonicalize(testPath("fbb.h"), "")})));
 }
 
 } // namespace

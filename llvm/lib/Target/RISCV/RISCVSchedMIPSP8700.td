@@ -125,11 +125,8 @@ def : WriteRes<WriteCSR, [p8700ALQ]>;
 
 // Handle CTI Pipeline.
 def : WriteRes<WriteJmp, [p8700IssueCTI]>;
-def : WriteRes<WriteJalr, [p8700IssueCTI]>;
-let Latency = 2 in {
 def : WriteRes<WriteJal, [p8700IssueCTI]>;
 def : WriteRes<WriteJalr, [p8700IssueCTI]>;
-}
 
 // Handle FPU Pipelines.
 def p8700FPQ : ProcResource<3> { let BufferSize = 16; }
@@ -266,6 +263,7 @@ def : ReadAdvance<ReadIRem, 0>;
 def : ReadAdvance<ReadIRem32, 0>;
 
 // Unsupported extensions.
+defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbs;
@@ -275,7 +273,6 @@ defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedZfhmin;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedZabha;
-defm : UnsupportedSchedXsfvcp;
 defm : UnsupportedSchedZvk;
-defm : UnsupportedSchedZvkned;
+defm : UnsupportedSchedXsf;
 }

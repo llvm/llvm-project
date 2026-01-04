@@ -10,7 +10,7 @@ define <vscale x 2 x i64> @masked_zload_nxv2i8(ptr %src, <vscale x 2 x i1> %mask
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   %ext = zext <vscale x 2 x i8> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -20,7 +20,7 @@ define <vscale x 2 x i64> @masked_zload_nxv2i16(ptr %src, <vscale x 2 x i1> %mas
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  %load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i16> poison)
   %ext = zext <vscale x 2 x i16> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -30,7 +30,7 @@ define <vscale x 2 x i64> @masked_zload_nxv2i32(ptr %src, <vscale x 2 x i1> %mas
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
+  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i32> poison)
   %ext = zext <vscale x 2 x i32> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -40,7 +40,7 @@ define <vscale x 4 x i32> @masked_zload_nxv4i8(ptr %src, <vscale x 4 x i1> %mask
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %src, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
+  %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %src, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
   %ext = zext <vscale x 4 x i8> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }
@@ -50,7 +50,7 @@ define <vscale x 4 x i32> @masked_zload_nxv4i16(ptr %src, <vscale x 4 x i1> %mas
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %src, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i16> undef)
+  %load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %src, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i16> poison)
   %ext = zext <vscale x 4 x i16> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }
@@ -60,7 +60,7 @@ define <vscale x 8 x i16> @masked_zload_nxv8i8(ptr %src, <vscale x 8 x i1> %mask
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %src, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> undef)
+  %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %src, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> poison)
   %ext = zext <vscale x 8 x i8> %load to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ext
 }
@@ -89,7 +89,7 @@ define <vscale x 8 x i64> @masked_zload_nxv8i16(ptr %a, <vscale x 8 x i1> %mask)
 ; CHECK-NEXT:    uunpklo z2.d, z3.s
 ; CHECK-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %a, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> undef)
+  %load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %a, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> poison)
   %ext = zext <vscale x 8 x i16> %load to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %ext
 }
@@ -102,7 +102,7 @@ define <vscale x 2 x double> @masked_zload_2i16_2f64(ptr noalias %in, <vscale x 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
-  %wide.load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %in, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  %wide.load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %in, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> poison)
   %zext = zext <vscale x 2 x i16> %wide.load to <vscale x 2 x i32>
   %res = uitofp <vscale x 2 x i32> %zext to <vscale x 2 x double>
   ret <vscale x 2 x double> %res
@@ -252,6 +252,30 @@ define <vscale x 8 x i64> @masked_zload_x2_8i8_8i64(ptr %a, ptr %b, <vscale x 8 
   ret <vscale x 8 x i64> %res
 }
 
+define <vscale x 2 x i64> @masked_load_frozen_before_zext(ptr %src, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_load_frozen_before_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
+  %load.frozen = freeze <vscale x 2 x i8> %load
+  %ext = zext <vscale x 2 x i8> %load.frozen to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %ext
+}
+
+; A multi-use freeze effectively means the load is also multi-use.
+define <vscale x 2 x i64> @masked_load_frozen_before_zext_multiuse(ptr %src, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_load_frozen_before_zext_multiuse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %src, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
+  %load.frozen = freeze <vscale x 2 x i8> %load
+  %ext = zext <vscale x 2 x i8> %load.frozen to <vscale x 2 x i64>
+  call void (...) @llvm.fake.use(<vscale x 2 x i8> %load.frozen)
+  ret <vscale x 2 x i64> %ext
+}
 
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
 declare <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)

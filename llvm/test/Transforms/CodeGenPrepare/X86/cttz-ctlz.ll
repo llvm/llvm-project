@@ -4,7 +4,6 @@
 ; RUN: opt -S -passes="require<profile-summary>,function(codegenprepare)" -mattr=+lzcnt < %s | FileCheck %s --check-prefix=FAST_LZ
 
 ; RUN: opt -S -enable-debugify -passes="require<profile-summary>,function(codegenprepare)" < %s | FileCheck %s --check-prefix=DEBUGINFO
-; RUN: opt -S -enable-debugify -passes="require<profile-summary>,function(codegenprepare)" --try-experimental-debuginfo-iterators < %s | FileCheck %s --check-prefix=DEBUGINFO
 
 target triple = "x86_64-unknown-unknown"
 target datalayout = "e-n32:64"

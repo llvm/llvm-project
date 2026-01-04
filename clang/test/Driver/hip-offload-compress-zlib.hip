@@ -13,8 +13,8 @@
 // RUN: 2>&1 | FileCheck %s
 
 // CHECK: clang-offload-bundler{{.*}} -type=bc
-// CHECK-SAME: -targets={{.*}}hip-amdgcn-amd-amdhsa-gfx1100,hip-amdgcn-amd-amdhsa-gfx1101
-// CHECK-SAME: -compress -verbose -compression-level=9
+// CHECK-SAME: -targets={{.*}}hip-amdgcn-amd-amdhsa-unknown-gfx1100,hip-amdgcn-amd-amdhsa-unknown-gfx1101
+// CHECK-SAME: --compress --verbose --compression-level=9
 // CHECK: Compressed bundle format
 
 // Test uncompress of bundled bitcode.
@@ -26,7 +26,7 @@
 // RUN: 2>&1 | FileCheck -check-prefix=UNBUNDLE %s
 
 // UNBUNDLE: clang-offload-bundler{{.*}} "-type=bc"
-// UNBUNDLE-SAME: -targets={{.*}}hip-amdgcn-amd-amdhsa-gfx1100,hip-amdgcn-amd-amdhsa-gfx1101
+// UNBUNDLE-SAME: -targets={{.*}}hip-amdgcn-amd-amdhsa-unknown-gfx1100,hip-amdgcn-amd-amdhsa-unknown-gfx1101
 // UNBUNDLE-SAME: -unbundle
 // UNBUNDLE-SAME: -verbose
 
@@ -41,4 +41,4 @@
 
 // CO: clang-offload-bundler{{.*}} "-type=o"
 // CO-SAME: -targets={{.*}}hipv4-amdgcn-amd-amdhsa--gfx1100,hipv4-amdgcn-amd-amdhsa--gfx1101
-// CO-SAME: "-compress" "-verbose"
+// CO-SAME: "--compress" "--verbose"

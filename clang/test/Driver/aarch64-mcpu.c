@@ -84,6 +84,14 @@
 // CORTEX-A520: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a520"
 // RUN: %clang --target=aarch64 -mcpu=cortex-a520ae -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A520AE %s
 // CORTEX-A520AE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a520ae"
+// RUN: %clang --target=aarch64 -mcpu=c1-nano -### -c %s 2>&1 | FileCheck -check-prefix=C1-NANO %s
+// C1-NANO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-nano"
+// RUN: %clang --target=aarch64 -mcpu=c1-pro -### -c %s 2>&1 | FileCheck -check-prefix=C1-PRO %s
+// C1-PRO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-pro"
+// RUN: %clang --target=aarch64 -mcpu=c1-premium -### -c %s 2>&1 | FileCheck -check-prefix=C1-PREMIUM %s
+// C1-PREMIUM: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-premium"
+// RUN: %clang --target=aarch64 -mcpu=c1-ultra -### -c %s 2>&1 | FileCheck -check-prefix=C1-ULTRA %s
+// C1-ULTRA: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-ultra"
 
 // RUN: %clang --target=aarch64 -mcpu=cortex-r82  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXR82 %s
 // CORTEXR82: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-r82"
@@ -92,7 +100,7 @@
 // COBALT-100: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n2"
 
 // RUN: %clang --target=aarch64 -mcpu=grace -### -c %s 2>&1 | FileCheck -check-prefix=GRACE %s
-// GRACE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v2"
+// GRACE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "grace"
 
 // ================== Check whether -mcpu and -mtune accept mixed-case values.
 // RUN: %clang --target=aarch64 -mcpu=Cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=CASE-INSENSITIVE-CA53 %s

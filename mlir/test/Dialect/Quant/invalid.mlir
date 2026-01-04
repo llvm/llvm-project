@@ -256,3 +256,71 @@ func.func @scast_per_axis_invalid_rank(%arg0: tensor<2x3x4xi8>) {
   return
 }
 
+// -----
+
+!qalias = !quant.uniform<u8:f32:{0:1,1:2},
+    {{2.000000e+02:120,9.987200e-01:127}, {2.000000e+02,9.987200e-01}}>
+func.func @qcast_sub_channel_scalar(%arg0: f32) {
+  // expected-error@+1 {{scalar types may not use sub-channel quantization}}
+  %0 = quant.qcast %arg0 : f32 to !qalias
+  return
+}
+
+// -----
+
+!qalias = !quant.uniform<u8:f32:{0:1,1:2},
+    {{2.000000e+02:120,9.987200e-01:127}, {2.000000e+02,9.987200e-01}}>
+func.func @qcast_sub_channel_unranked(%arg0: tensor<*xf32>) {
+  // expected-error@+1 {{tensor containing the sub-channel quantized type must be ranked}}
+  %0 = quant.qcast %arg0 : tensor<*xf32> to tensor<*x!qalias>
+  return
+}
+
+// -----
+
+!qalias = !quant.uniform<u8:f32:{0:1,3:2},
+    {{2.000000e+02:120,9.987200e-01:127}, {2.000000e+02,9.987200e-01}}>
+func.func @qcast_sub_channel_invalid_quantized_dimension(%arg0: tensor<2x4xf32>) {
+  // expected-error@+1 {{quantized dimension 3 must be less than tensor rank 2}}
+  %0 = quant.qcast %arg0 : tensor<2x4xf32> to tensor<2x4x!qalias>
+  return
+}
+
+// -----
+
+!qalias = !quant.uniform<u8:f32:{0:1,1:3},
+    {{2.000000e+02:120,9.987200e-01:127}, {2.000000e+02,9.987200e-01}}>
+func.func @qcast_sub_channel_invalid_tensor_dim_size(%arg0: tensor<2x4xf32>) {
+  // expected-error@+1 {{tensor dimension size 4 at axis 1 must be divisible by the corresponding block size 3}}
+  %0 = quant.qcast %arg0 : tensor<2x4xf32> to tensor<2x4x!qalias>
+  return
+}
+
+// -----
+
+!qalias = !quant.uniform<u8:f32:{1:2},
+    {{2.000000e+02:120,9.987200e-01:127}, {2.000000e+02,9.987200e-01}}>
+func.func @qcast_sub_channel_invalid_zero_tensor_dim_size(%arg0: tensor<0x4xf32>) {
+  // expected-error@+1 {{tensor dimension size of zero is not allowed with sub-channel quantization}}
+  %0 = quant.qcast %arg0 : tensor<0x4xf32> to tensor<0x4x!qalias>
+  return
+}
+
+// -----
+
+!qalias = !quant.uniform<u8:f32:{0:1,1:2},
+    {{2.000000e+02:120}, {2.000000e+02}}>
+func.func @qcast_sub_channel_invalid_scale_dim_size(%arg0: tensor<2x4xf32>) {
+  // expected-error@+1 {{dimension size 2 of scales tensor at axis 1 should match (tensor dimension at axis / block sizes at axis) = 2}}
+  %0 = quant.qcast %arg0 : tensor<2x4xf32> to tensor<2x4x!qalias>
+  return
+}
+
+// -----
+
+!qalias = !quant.uniform<u8:f32:{},{{{2.000000e+02:120}}}>
+func.func @qcast_sub_channel_invalid_scale_dim_size(%arg0: tensor<?x?xf32>) {
+  // expected-error@+1 {{Rank of scales 3 must match the rank of the tensor 2}}
+  %0 = quant.qcast %arg0 : tensor<?x?xf32> to tensor<?x?x!qalias>
+  return
+}

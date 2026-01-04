@@ -735,6 +735,7 @@ variables is defined below.
     * ``LIBOMPTARGET_STACK_SIZE=<Num>``
     * ``LIBOMPTARGET_SHARED_MEMORY_SIZE=<Num>``
     * ``LIBOMPTARGET_MAP_FORCE_ATOMIC=[TRUE/FALSE] (default TRUE)``
+    * ``LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS=[TRUE/FALSE] (default FALSE)``
     * ``LIBOMPTARGET_JIT_OPT_LEVEL={0,1,2,3} (default 3)``
     * ``LIBOMPTARGET_JIT_SKIP_OPT=[TRUE/FALSE] (default FALSE)``
     * ``LIBOMPTARGET_JIT_REPLACEMENT_OBJECT=<in:Filename> (object file)``
@@ -1087,6 +1088,23 @@ this option. To disable forced atomic map clauses use "false"/"FALSE" as the
 value of the ``LIBOMPTARGET_MAP_FORCE_ATOMIC`` environment variable.
 The default behavior of LLVM 14 is to force atomic maps clauses, prior versions
 of LLVM did not.
+
+LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS
+"""""""""""""""""""""""""""""""""""""""""
+
+By default, OpenMP attach operations only perform pointer attachment
+when mapping an expression with a base-pointer/base-referring-pointer,
+when either the pointer or the pointee was newly allocated on a
+map-entering directive (aka ``attach(auto)`` as per OpenMP 6.1 TR14).
+
+When  ``LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS`` is set to ``true``,
+ATTACH map entries without the ALWAYS flag are implicitly treated as if
+the ALWAYS flag was set. This forces pointer attachments to occur even when
+the pointee/pointer were not newly allocated (similar to OpenMP 6.1
+TR14's ``attach(always)`` map-type-modifier), thereby treating
+``attach(auto))`` as ``attach(always)``. This can be used for
+experimentation, or as a workaround for programs compiled without
+``-fopenmp-version=61``.
 
 .. _libomptarget_jit_opt_level:
 
@@ -1521,4 +1539,4 @@ debugging features are supported.
 
     * Enable debugging assertions in the device. ``0x01``
     * Enable diagnosing common problems during offloading . ``0x4``
-    * Enable device malloc statistics (amdgpu only). ``0x8``
+    * Dump device PGO counters (only if PGO on GPU is enabled). ``0x10``
