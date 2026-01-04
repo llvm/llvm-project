@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 
 namespace mlir {
+class RewriterBase;
 namespace dataflow {
 
 /// This lattice element represents the integer value range of an SSA value.
@@ -47,7 +48,7 @@ class IntegerRangeAnalysis
 public:
   using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
-  /// At an entry point, we cannot reason about interger value ranges.
+  /// At an entry point, we cannot reason about integer value ranges.
   void setToEntryState(IntegerValueRangeLattice *lattice) override {
     propagateIfChanged(lattice, lattice->join(IntegerValueRange::getMaxRange(
                                     lattice->getAnchor())));
@@ -82,6 +83,9 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op);
 /// Note, the results of this query may not be accurate for `index` if you plan
 /// to use a non-64-bit index.
 LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v);
+
+LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
+                                       RewriterBase &rewriter, Value value);
 
 } // end namespace dataflow
 } // end namespace mlir

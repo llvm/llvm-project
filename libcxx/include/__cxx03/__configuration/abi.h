@@ -116,7 +116,7 @@
 #  endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
-#  if defined(__FreeBSD__) && __FreeBSD__ < 14
+#  if defined(__FreeBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
 #endif

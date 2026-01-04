@@ -49,9 +49,14 @@ extern "C" {
 
 // Map a set of Fortran ieee_arithmetic module exceptions to a libm fenv.h
 // excepts value.
-uint32_t RTNAME(MapException)(uint32_t excepts) {
+uint32_t RTDEF(MapException)(uint32_t excepts) {
   Terminator terminator{__FILE__, __LINE__};
 
+#if defined(RT_DEVICE_COMPILATION)
+  terminator.Crash(
+      "not implemented yet: raising IEEE FP exception in device code: %d",
+      excepts);
+#else
   static constexpr uint32_t v{FE_INVALID};
   static constexpr uint32_t s{__FE_DENORM};
   static constexpr uint32_t z{FE_DIVBYZERO};
@@ -74,6 +79,61 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
   }
   uint32_t except_value = map[excepts];
   return except_value;
+#endif
+}
+
+// The following exception processing routines have a libm call component,
+// and where available, an additional component for handling the nonstandard
+// ieee_denorm exception. The denorm component does not subsume the libm
+// component; both are needed.
+
+void RTNAME(feclearexcept)(uint32_t excepts) {
+  feclearexcept(excepts);
+#if defined(_MM_EXCEPT_DENORM)
+  _mm_setcsr(_mm_getcsr() & ~(excepts & _MM_EXCEPT_MASK));
+#endif
+}
+void RTDEF(feraiseexcept)(uint32_t excepts) {
+#if !defined(RT_DEVICE_COMPILATION)
+  feraiseexcept(excepts);
+#if defined(_MM_EXCEPT_DENORM)
+  _mm_setcsr(_mm_getcsr() | (excepts & _MM_EXCEPT_MASK));
+#endif
+#endif
+}
+uint32_t RTNAME(fetestexcept)(uint32_t excepts) {
+#if defined(_MM_EXCEPT_DENORM)
+  return (_mm_getcsr() & _MM_EXCEPT_MASK & excepts) | fetestexcept(excepts);
+#else
+  return fetestexcept(excepts);
+#endif
+}
+void RTNAME(fedisableexcept)(uint32_t excepts) {
+#ifdef __USE_GNU
+  fedisableexcept(excepts);
+#endif
+#if defined(_MM_EXCEPT_DENORM)
+  _mm_setcsr(_mm_getcsr() | ((excepts & _MM_EXCEPT_MASK) << 7));
+#endif
+}
+void RTNAME(feenableexcept)(uint32_t excepts) {
+#ifdef __USE_GNU
+  feenableexcept(excepts);
+#endif
+#if defined(_MM_EXCEPT_DENORM)
+  _mm_setcsr(_mm_getcsr() & ~((excepts & _MM_EXCEPT_MASK) << 7));
+#endif
+}
+uint32_t RTNAME(fegetexcept)() {
+  uint32_t excepts = 0;
+#ifdef __USE_GNU
+  excepts = fegetexcept();
+#endif
+#if defined(_MM_EXCEPT_DENORM)
+  return (63 - ((_mm_getcsr() >> 7) & _MM_EXCEPT_MASK)) | excepts;
+#else
+  return excepts;
+#endif
 }
 
 // Check if the processor has the ability to control whether to halt or
@@ -81,17 +141,17 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
 bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #ifdef __USE_GNU
   except = RTNAME(MapException)(except);
-  int currentSet = fegetexcept(), flipSet, ok;
+  int currentSet = RTNAME(fegetexcept)(), flipSet;
   if (currentSet & except) {
-    ok = fedisableexcept(except);
-    flipSet = fegetexcept();
-    ok |= feenableexcept(except);
+    RTNAME(fedisableexcept)(except);
+    flipSet = RTNAME(fegetexcept)();
+    RTNAME(feenableexcept)(except);
   } else {
-    ok = feenableexcept(except);
-    flipSet = fegetexcept();
-    ok |= fedisableexcept(except);
+    RTNAME(feenableexcept)(except);
+    flipSet = RTNAME(fegetexcept)();
+    RTNAME(fedisableexcept)(except);
   }
-  return ok != -1 && currentSet != flipSet;
+  return currentSet != flipSet;
 #else
   return false;
 #endif

@@ -9,6 +9,12 @@
 #ifndef SCUDO_SECONDARY_H_
 #define SCUDO_SECONDARY_H_
 
+#ifndef __STDC_FORMAT_MACROS
+// Ensure PRId64 macro is available
+#define __STDC_FORMAT_MACROS 1
+#endif
+#include <inttypes.h>
+
 #include "chunk.h"
 #include "common.h"
 #include "list.h"
@@ -19,6 +25,7 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
+#include "tracing.h"
 #include "vector.h"
 
 namespace scudo {
@@ -118,7 +125,7 @@ public:
   bool canCache(UNUSED uptr Size) { return false; }
   void disable() {}
   void enable() {}
-  void releaseToOS() {}
+  void releaseToOS(ReleaseToOS) {}
   void disableMemoryTagging() {}
   void unmapTestOnly() {}
   bool setOption(Option O, UNUSED sptr Value) {
@@ -206,11 +213,13 @@ public:
     computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
                       &Fractional);
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
-    Str->append(
-        "Stats: MapAllocatorCache: EntriesCount: %zu, "
-        "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsIntervalMs = %d\n",
-        LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
-        atomic_load_relaxed(&MaxEntrySize), Interval >= 0 ? Interval : -1);
+    Str->append("Stats: MapAllocatorCache: EntriesCount: %zu, "
+                "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsSkips: "
+                "%zu, ReleaseToOsIntervalMs = %d\n",
+                LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
+                atomic_load_relaxed(&MaxEntrySize),
+                atomic_load_relaxed(&ReleaseToOsSkips),
+                Interval >= 0 ? Interval : -1);
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
@@ -218,9 +227,17 @@ public:
 
     for (CachedBlock &Entry : LRUEntries) {
       Str->append("  StartBlockAddress: 0x%zx, EndBlockAddress: 0x%zx, "
-                  "BlockSize: %zu %s\n",
+                  "BlockSize: %zu%s",
                   Entry.CommitBase, Entry.CommitBase + Entry.CommitSize,
-                  Entry.CommitSize, Entry.Time == 0 ? "[R]" : "");
+                  Entry.CommitSize, Entry.Time == 0 ? " [R]" : "");
+#if SCUDO_LINUX
+      // getResidentPages only works on linux systems currently.
+      Str->append(", Resident Pages: %" PRId64 "/%zu\n",
+                  getResidentPages(Entry.CommitBase, Entry.CommitSize),
+                  Entry.CommitSize / getPageSizeCached());
+#else
+      Str->append("\n");
+#endif
     }
   }
 
@@ -246,6 +263,7 @@ public:
 
     LRUEntries.clear();
     LRUEntries.init(Entries, sizeof(Entries));
+    OldestPresentEntry = nullptr;
 
     AvailEntries.clear();
     AvailEntries.init(Entries, sizeof(Entries));
@@ -267,7 +285,8 @@ public:
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
 
-    if (useMemoryTagging<Config>(Options)) {
+    bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
+    if (MemoryTaggingEnabled) {
       if (Interval == 0 && !SCUDO_FUCHSIA) {
         // Release the memory and make it inaccessible at the same time by
         // creating a new MAP_NOACCESS mapping on top of the existing mapping.
@@ -300,7 +319,7 @@ public:
       if (Entry.Time != 0)
         Entry.Time = Time;
 
-      if (useMemoryTagging<Config>(Options) && QuarantinePos == -1U) {
+      if (MemoryTaggingEnabled && !useMemoryTagging<Config>(Options)) {
         // If we get here then memory tagging was disabled in between when we
         // read Options and when we locked Mutex. We can't insert our entry into
         // the quarantine or the cache because the permissions would be wrong so
@@ -308,7 +327,8 @@ public:
         unmapCallBack(Entry.MemMap);
         break;
       }
-      if (Config::getQuarantineSize() && useMemoryTagging<Config>(Options)) {
+
+      if (!Config::getQuarantineDisabled() && Config::getQuarantineSize()) {
         QuarantinePos =
             (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
         if (!Quarantine[QuarantinePos].isValid()) {
@@ -317,8 +337,6 @@ public:
         }
         CachedBlock PrevEntry = Quarantine[QuarantinePos];
         Quarantine[QuarantinePos] = Entry;
-        if (OldestTime == 0)
-          OldestTime = Entry.Time;
         Entry = PrevEntry;
       }
 
@@ -334,17 +352,23 @@ public:
       }
 
       insert(Entry);
-
-      if (OldestTime == 0)
-        OldestTime = Entry.Time;
     } while (0);
 
     for (MemMapT &EvictMemMap : EvictionMemMaps)
       unmapCallBack(EvictMemMap);
 
     if (Interval >= 0) {
-      // TODO: Add ReleaseToOS logic to LRU algorithm
-      releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+      // It is very likely that multiple threads trying to do a release at the
+      // same time will not actually release any extra elements. Therefore,
+      // let any other thread continue, skipping the release.
+      if (Mutex.tryLock()) {
+        SCUDO_SCOPED_TRACE(
+            GetSecondaryReleaseToOSTraceName(ReleaseToOS::Normal));
+
+        releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+        Mutex.unlock();
+      } else
+        atomic_fetch_add(&ReleaseToOsSkips, 1U, memory_order_relaxed);
     }
   }
 
@@ -488,20 +512,30 @@ public:
     return true;
   }
 
-  void releaseToOS() { releaseOlderThan(UINT64_MAX); }
+  void releaseToOS([[maybe_unused]] ReleaseToOS ReleaseType) EXCLUDES(Mutex) {
+    SCUDO_SCOPED_TRACE(GetSecondaryReleaseToOSTraceName(ReleaseType));
+
+    // Since this is a request to release everything, always wait for the
+    // lock so that we guarantee all entries are released after this call.
+    ScopedLock L(Mutex);
+    releaseOlderThan(UINT64_MAX);
+  }
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
-      if (Quarantine[I].isValid()) {
-        MemMapT &MemMap = Quarantine[I].MemMap;
-        unmapCallBack(MemMap);
-        Quarantine[I].invalidate();
+    if (!Config::getQuarantineDisabled()) {
+      for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
+        if (Quarantine[I].isValid()) {
+          MemMapT &MemMap = Quarantine[I].MemMap;
+          unmapCallBack(MemMap);
+          Quarantine[I].invalidate();
+        }
       }
+      QuarantinePos = -1U;
     }
+
     for (CachedBlock &Entry : LRUEntries)
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
-    QuarantinePos = -1U;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }
@@ -510,6 +544,11 @@ public:
 
   void unmapTestOnly() { empty(); }
 
+  void releaseOlderThanTestOnly(u64 ReleaseTime) {
+    ScopedLock L(Mutex);
+    releaseOlderThan(ReleaseTime);
+  }
+
 private:
   void insert(const CachedBlock &Entry) REQUIRES(Mutex) {
     CachedBlock *AvailEntry = AvailEntries.front();
@@ -517,10 +556,16 @@ private:
 
     *AvailEntry = Entry;
     LRUEntries.push_front(AvailEntry);
+    if (OldestPresentEntry == nullptr && AvailEntry->Time != 0)
+      OldestPresentEntry = AvailEntry;
   }
 
   void remove(CachedBlock *Entry) REQUIRES(Mutex) {
     DCHECK(Entry->isValid());
+    if (OldestPresentEntry == Entry) {
+      OldestPresentEntry = LRUEntries.getPrev(Entry);
+      DCHECK(OldestPresentEntry == nullptr || OldestPresentEntry->Time != 0);
+    }
     LRUEntries.remove(Entry);
     Entry->invalidate();
     AvailEntries.push_front(Entry);
@@ -535,6 +580,7 @@ private:
       for (CachedBlock &Entry : LRUEntries)
         MapInfo[N++] = Entry.MemMap;
       LRUEntries.clear();
+      OldestPresentEntry = nullptr;
     }
     for (uptr I = 0; I < N; I++) {
       MemMapT &MemMap = MapInfo[I];
@@ -542,42 +588,53 @@ private:
     }
   }
 
-  void releaseIfOlderThan(CachedBlock &Entry, u64 Time) REQUIRES(Mutex) {
-    if (!Entry.isValid() || !Entry.Time)
-      return;
-    if (Entry.Time > Time) {
-      if (OldestTime == 0 || Entry.Time < OldestTime)
-        OldestTime = Entry.Time;
-      return;
-    }
-    Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
-    Entry.Time = 0;
-  }
+  void releaseOlderThan(u64 ReleaseTime) REQUIRES(Mutex) {
+    SCUDO_SCOPED_TRACE(GetSecondaryReleaseOlderThanTraceName());
 
-  void releaseOlderThan(u64 Time) EXCLUDES(Mutex) {
-    ScopedLock L(Mutex);
-    if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
-      return;
-    OldestTime = 0;
-    for (uptr I = 0; I < Config::getQuarantineSize(); I++)
-      releaseIfOlderThan(Quarantine[I], Time);
-    for (uptr I = 0; I < Config::getEntriesArraySize(); I++)
-      releaseIfOlderThan(Entries[I], Time);
+    if (!Config::getQuarantineDisabled()) {
+      for (uptr I = 0; I < Config::getQuarantineSize(); I++) {
+        auto &Entry = Quarantine[I];
+        if (!Entry.isValid() || Entry.Time == 0 || Entry.Time > ReleaseTime)
+          continue;
+        Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
+                                             Entry.CommitSize);
+        Entry.Time = 0;
+      }
+    }
+
+    for (CachedBlock *Entry = OldestPresentEntry; Entry != nullptr;
+         Entry = LRUEntries.getPrev(Entry)) {
+      DCHECK(Entry->isValid());
+      DCHECK(Entry->Time != 0);
+
+      if (Entry->Time > ReleaseTime) {
+        // All entries are newer than this, so no need to keep scanning.
+        OldestPresentEntry = Entry;
+        return;
+      }
+
+      Entry->MemMap.releaseAndZeroPagesToOS(Entry->CommitBase,
+                                            Entry->CommitSize);
+      Entry->Time = 0;
+    }
+    OldestPresentEntry = nullptr;
   }
 
   HybridMutex Mutex;
   u32 QuarantinePos GUARDED_BY(Mutex) = 0;
   atomic_u32 MaxEntriesCount = {};
   atomic_uptr MaxEntrySize = {};
-  u64 OldestTime GUARDED_BY(Mutex) = 0;
   atomic_s32 ReleaseToOsIntervalMs = {};
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;
+  atomic_uptr ReleaseToOsSkips = {};
 
   CachedBlock Entries[Config::getEntriesArraySize()] GUARDED_BY(Mutex) = {};
   NonZeroLengthArray<CachedBlock, Config::getQuarantineSize()>
       Quarantine GUARDED_BY(Mutex) = {};
 
+  // The oldest entry in the LRUEntries that has Time non-zero.
+  CachedBlock *OldestPresentEntry GUARDED_BY(Mutex) = nullptr;
   // Cached blocks stored in LRU order
   DoublyLinkedList<CachedBlock> LRUEntries GUARDED_BY(Mutex);
   // The unused Entries
@@ -649,7 +706,7 @@ public:
 
   bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 
-  void releaseToOS() { Cache.releaseToOS(); }
+  void releaseToOS(ReleaseToOS ReleaseType) { Cache.releaseToOS(ReleaseType); }
 
   void disableMemoryTagging() { Cache.disableMemoryTagging(); }
 

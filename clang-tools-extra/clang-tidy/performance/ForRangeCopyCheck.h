@@ -1,4 +1,4 @@
-//===--- ForRangeCopyCheck.h - clang-tidy------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,11 +16,11 @@ namespace clang::tidy::performance {
 /// A check that detects copied loop variables and suggests using const
 /// references.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/for-range-copy.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/for-range-copy.html
 class ForRangeCopyCheck : public ClangTidyCheck {
 public:
   ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context);
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override{
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;

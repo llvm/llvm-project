@@ -159,6 +159,29 @@ func.func @no_loops(%lb : index, %ub : index, %step : index) {
 
 // -----
 
+func.func @collapse_size(%lb : index, %ub : index, %step : index) {
+  omp.wsloop {
+    // expected-error@+1 {{collapse value is larger than the number of loops}}
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) collapse(4) {
+      omp.yield
+    }
+  }
+}
+
+// -----
+
+func.func @tiles_length(%lb : index, %ub : index, %step : index) {
+  omp.wsloop {
+    // expected-error@+1 {{op too few canonical loops for tile dimensions}}
+    omp.loop_nest (%iv) : index =  (%lb) to (%ub) step (%step) tiles(2, 4) {
+      omp.yield
+    }
+  }
+}
+
+
+// -----
+
 func.func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{expected '{'}}
   omp.wsloop nowait inclusive {
@@ -476,6 +499,39 @@ func.func @omp_simd_pretty_simdlen_safelen(%lb : index, %ub : index, %step : ind
     }
   }
   return
+}
+
+// -----
+
+func.func @omp_simd_bad_privatizer(%lb : index, %ub : index, %step : index) {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  // expected-error @below {{Cannot find privatizer '@not_defined'}}
+  omp.simd private(@not_defined %1 -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%arg2) : index = (%lb) to (%ub) inclusive step (%step) {
+      omp.yield
+    }
+  }
+}
+
+// -----
+
+omp.private {type = firstprivate} @_QFEp_firstprivate_i32 : i32 copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+func.func @omp_simd_firstprivate(%lb : index, %ub : index, %step : index) {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  // expected-error @below {{FIRSTPRIVATE cannot be used with SIMD}}
+  omp.simd private(@_QFEp_firstprivate_i32 %1 -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%arg2) : index = (%lb) to (%ub) inclusive step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
 }
 
 // -----
@@ -1711,6 +1767,14 @@ func.func @omp_task(%mem: memref<1xf32>) {
 // -----
 
 func.func @omp_cancel() {
+  // expected-error @below {{Orphaned cancel construct}}
+  omp.cancel cancellation_construct_type(parallel)
+  return
+}
+
+// -----
+
+func.func @omp_cancel() {
   omp.sections {
     // expected-error @below {{cancel parallel must appear inside a parallel region}}
     omp.cancel cancellation_construct_type(parallel)
@@ -1738,6 +1802,18 @@ func.func @omp_cancel2() {
   omp.sections {
     // expected-error @below {{cancel loop must appear inside a worksharing-loop region}}
     omp.cancel cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_cancel_taskloop() {
+  omp.sections {
+    // expected-error @below {{cancel taskgroup must appear inside a task region}}
+    omp.cancel cancellation_construct_type(taskgroup)
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -1790,6 +1866,14 @@ func.func @omp_cancel5() -> () {
 // -----
 
 func.func @omp_cancellationpoint() {
+  // expected-error @below {{Orphaned cancellation point}}
+  omp.cancellation_point cancellation_construct_type(parallel)
+  return
+}
+
+// -----
+
+func.func @omp_cancellationpoint() {
   omp.sections {
     // expected-error @below {{cancellation point parallel must appear inside a parallel region}}
     omp.cancellation_point cancellation_construct_type(parallel)
@@ -1817,6 +1901,18 @@ func.func @omp_cancellationpoint2() {
   omp.sections {
     // expected-error @below {{cancellation point loop must appear inside a worksharing-loop region}}
     omp.cancellation_point cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_cancellationpoint_taskgroup() {
+  omp.sections {
+    // expected-error @below {{cancellation point taskgroup must appear inside a task region}}
+    omp.cancellation_point cancellation_construct_type(taskgroup)
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -2320,7 +2416,7 @@ func.func @omp_target_host_eval_parallel(%x : i32) {
 // -----
 
 func.func @omp_target_host_eval_loop1(%x : i32) {
-  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when representing target SPMD or Generic-SPMD}}
+  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when trip count must be evaluated in the host}}
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.wsloop {
       omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
@@ -2335,7 +2431,7 @@ func.func @omp_target_host_eval_loop1(%x : i32) {
 // -----
 
 func.func @omp_target_host_eval_loop2(%x : i32) {
-  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when representing target SPMD or Generic-SPMD}}
+  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when trip count must be evaluated in the host}}
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.teams {
     ^bb0:
@@ -2391,7 +2487,7 @@ func.func @omp_distribute_allocate(%data_var : memref<i32>, %lb : i32, %ub : i32
 // -----
 
 func.func @omp_distribute_nested_wrapper(%lb: index, %ub: index, %step: index) -> () {
-  // expected-error @below {{an 'omp.wsloop' nested wrapper is only allowed when 'omp.parallel' is the direct parent}}
+  // expected-error @below {{an 'omp.wsloop' nested wrapper is only allowed when a composite 'omp.parallel' is the direct parent}}
   omp.distribute {
     "omp.wsloop"() ({
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
@@ -2424,6 +2520,22 @@ func.func @omp_distribute_nested_wrapper3(%lb: index, %ub: index, %step: index) 
         "omp.yield"() : () -> ()
       }
     }) {omp.composite} : () -> ()
+  }
+}
+
+// -----
+
+func.func @omp_distribute_nested_wrapper4(%lb: index, %ub: index, %step: index) -> () {
+  omp.parallel {
+    // expected-error @below {{an 'omp.wsloop' nested wrapper is only allowed when a composite 'omp.parallel' is the direct parent}}
+    omp.distribute {
+      "omp.wsloop"() ({
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          "omp.yield"() : () -> ()
+        }
+      }) {omp.composite} : () -> ()
+    } {omp.composite}
+    omp.terminator
   }
 }
 
@@ -2623,15 +2735,13 @@ func.func @masked_arg_count_mismatch(%arg0: i32, %arg1: i32) {
 
 // -----
 func.func @omp_parallel_missing_composite(%lb: index, %ub: index, %step: index) -> () {
-  // expected-error@+1 {{'omp.composite' attribute missing from composite operation}}
+  // expected-error @below {{'omp.composite' attribute missing from composite operation}}
   omp.parallel {
     omp.distribute {
-      omp.wsloop {
-        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
-          omp.yield
-        }
-      } {omp.composite}
-    } {omp.composite}
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
     omp.terminator
   }
   return
@@ -2653,9 +2763,32 @@ func.func @omp_parallel_invalid_composite(%lb: index, %ub: index, %step: index) 
 
 // -----
 func.func @omp_parallel_invalid_composite2(%lb: index, %ub: index, %step: index) -> () {
-  // expected-error @below {{unexpected OpenMP operation inside of composite 'omp.parallel'}}
+  // expected-error @below {{unexpected OpenMP operation inside of composite 'omp.parallel': omp.barrier}}
   omp.parallel {
     omp.barrier
+    omp.distribute {
+      omp.wsloop {
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+      } {omp.composite}
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
+  return
+}
+
+// -----
+func.func @omp_parallel_invalid_composite3(%lb: index, %ub: index, %step: index) -> () {
+  // expected-error @below {{multiple 'omp.distribute' nested inside of 'omp.parallel'}}
+  omp.parallel {
+    omp.distribute {
+      omp.wsloop {
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+      } {omp.composite}
+    } {omp.composite}
     omp.distribute {
       omp.wsloop {
         omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
@@ -2787,7 +2920,7 @@ func.func @omp_taskloop_invalid_composite(%lb: index, %ub: index, %step: index) 
 
 func.func @omp_loop_invalid_nesting(%lb : index, %ub : index, %step : index) {
 
-  // expected-error @below {{`omp.loop` expected to be a standalone loop wrapper}}
+  // expected-error @below {{'omp.loop' op expected to be a standalone loop wrapper}}
   omp.loop {
     omp.simd {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
@@ -2804,7 +2937,7 @@ func.func @omp_loop_invalid_nesting(%lb : index, %ub : index, %step : index) {
 func.func @omp_loop_invalid_nesting2(%lb : index, %ub : index, %step : index) {
 
   omp.simd {
-    // expected-error @below {{`omp.loop` expected to be a standalone loop wrapper}}
+    // expected-error @below {{'omp.loop' op expected to be a standalone loop wrapper}}
     omp.loop {
       omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
         omp.yield
@@ -2831,7 +2964,7 @@ func.func @omp_loop_invalid_binding(%lb : index, %ub : index, %step : index) {
 // -----
 func.func @nested_wrapper(%idx : index) {
   omp.workshare {
-    // expected-error @below {{cannot be composite}}
+    // expected-error @below {{'omp.workshare.loop_wrapper' op expected to be a standalone loop wrapper}}
     omp.workshare.loop_wrapper {
       omp.simd {
         omp.loop_nest (%iv) : index = (%idx) to (%idx) step (%idx) {
@@ -2876,10 +3009,133 @@ func.func @missing_workshare(%idx : index) {
 
 // -----
 llvm.func @invalid_mapper(%0 : !llvm.ptr) {
-  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) mapper(@my_mapper) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
   // expected-error @below {{invalid mapper id}}
+  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(to) capture(ByRef) mapper(@my_mapper) -> !llvm.ptr {name = ""}
   omp.target_data map_entries(%1 : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
+}
+
+// -----
+func.func @invalid_allocate_align_1(%arg0 : memref<i32>) -> () {
+  // expected-error @below {{failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  omp.allocate_dir (%arg0 : memref<i32>) align(-1)
+
+  return
+}
+
+// -----
+func.func @invalid_allocate_align_2(%arg0 : memref<i32>) -> () {
+  // expected-error @below {{must be power of 2}}
+  omp.allocate_dir (%arg0 : memref<i32>) align(3)
+
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_empty_region() -> () {
+  omp.teams {
+    // expected-error @below {{region cannot be empty}}
+    omp.workdistribute {
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_no_terminator() -> () {
+  omp.teams {
+    // expected-error @below {{region must be terminated with omp.terminator}}
+    omp.workdistribute {
+      %c0 = arith.constant 0 : i32
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_wrong_terminator() -> () {
+  omp.teams {
+    // expected-error @below {{region must be terminated with omp.terminator}}
+    omp.workdistribute {
+      %c0 = arith.constant 0 : i32
+      func.return
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_multiple_terminators() -> () {
+  omp.teams {
+    // expected-error @below {{region must have exactly one terminator}}
+    omp.workdistribute {
+      %cond = arith.constant true
+      cf.cond_br %cond, ^bb1, ^bb2
+    ^bb1:
+      omp.terminator
+    ^bb2:
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_with_barrier() -> () {
+  omp.teams {
+    // expected-error @below {{explicit barriers are not allowed in workdistribute region}}
+    omp.workdistribute {
+      %c0 = arith.constant 0 : i32
+      omp.barrier
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute_nested_parallel() -> () {
+  omp.teams {
+    // expected-error @below {{nested parallel constructs not allowed in workdistribute}}
+    omp.workdistribute {
+      omp.parallel {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+// Test: nested teams not allowed in workdistribute
+func.func @invalid_workdistribute_nested_teams() -> () {
+  omp.teams {
+    // expected-error @below {{nested teams constructs not allowed in workdistribute}}
+    omp.workdistribute {
+      omp.teams {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+func.func @invalid_workdistribute() -> () {
+// expected-error @below {{workdistribute must be nested under teams}}
+  omp.workdistribute {
+    omp.terminator
+  }
+  return
 }

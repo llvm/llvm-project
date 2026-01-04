@@ -104,12 +104,19 @@ define <2 x i32> @sext_extract_zext_idx0(<4 x i16> %vec) nounwind {
 
 ; Negative test, combine should not fire if sign extension is for a different width.
 define <2 x i32> @sext_extract_zext_idx0_negtest(<4 x i16> %vec) nounwind {
-; CHECK-LABEL: sext_extract_zext_idx0_negtest:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    shl v0.2s, v0.2s, #17
-; CHECK-NEXT:    sshr v0.2s, v0.2s, #17
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sext_extract_zext_idx0_negtest:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    shl v0.2s, v0.2s, #17
+; CHECK-SD-NEXT:    sshr v0.2s, v0.2s, #17
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sext_extract_zext_idx0_negtest:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    shl v0.2s, v0.2s, #17
+; CHECK-GI-NEXT:    sshr v0.2s, v0.2s, #17
+; CHECK-GI-NEXT:    ret
   %zext = zext <4 x i16> %vec to <4 x i32>
   %extract = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %zext, i64 0)
   %sext_inreg_step0 = shl <2 x i32> %extract, <i32 17, i32 17>

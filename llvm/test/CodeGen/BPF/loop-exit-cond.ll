@@ -35,14 +35,14 @@ define dso_local i32 @test(i32 %len, ptr %data) #0 {
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_BODY:%.*]], label [[IF_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[D]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[D]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[DATA]], align 1, !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TOBOOL_NOT]], i8 48, i8 [[TMP1]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = sext i8 [[NARROW]] to i64
 ; CHECK-NEXT:    store i64 [[CONV2]], ptr [[D]], align 8, !tbaa [[TBAA6:![0-9]+]]
 ; CHECK-NEXT:    call void @foo(ptr nonnull @.str, i32 [[I_05]], ptr nonnull [[D]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[D]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[D]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[IF_END]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -61,7 +61,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.start.p0(ptr %i) #3
   store i32 1, ptr %i, align 4, !tbaa !3
   br label %for.cond
 
@@ -73,11 +73,11 @@ for.cond:                                         ; preds = %for.inc, %if.then
 
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.end.p0(ptr %i) #3
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start.p0(i64 8, ptr %d) #3
+  call void @llvm.lifetime.start.p0(ptr %d) #3
   %3 = load ptr, ptr %data.addr, align 8, !tbaa !7
   %4 = load i8, ptr %3, align 1, !tbaa !9
   %conv = sext i8 %4 to i32
@@ -96,7 +96,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
   store i64 %conv2, ptr %d, align 8, !tbaa !10
   %5 = load i32, ptr %i, align 4, !tbaa !3
   call void @foo(ptr @.str, i32 %5, ptr %d)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %d) #3
+  call void @llvm.lifetime.end.p0(ptr %d) #3
   br label %for.inc
 
 for.inc:                                          ; preds = %cond.end
@@ -113,12 +113,12 @@ if.end:                                           ; preds = %for.end, %entry
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 declare dso_local void @foo(ptr, i32, ptr) #2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

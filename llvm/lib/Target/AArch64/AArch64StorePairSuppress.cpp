@@ -38,9 +38,7 @@ class AArch64StorePairSuppress : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64StorePairSuppress() : MachineFunctionPass(ID) {
-    initializeAArch64StorePairSuppressPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64StorePairSuppress() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return STPSUPPRESS_PASS_NAME; }
 
@@ -135,7 +133,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.enableStorePairSuppress())
     return false;
 
-  TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);

@@ -156,15 +156,18 @@ public:
     // FIXME: We could have obtained these two constants from RISCVSubtarget
     // but in order to get that from TargetMachine, we need a Function.
     const MCSubtargetInfo &STI = State.getSubtargetInfo();
-    ELEN = STI.checkFeatures("+zve64x") ? 64 : 32;
+    ELEN = STI.hasFeature(RISCV::FeatureStdExtZve64x) ? 64 : 32;
 
-    std::string ZvlQuery;
-    for (unsigned Size = 32; Size <= 65536; Size *= 2) {
-      ZvlQuery = "+zvl";
-      raw_string_ostream SS(ZvlQuery);
-      SS << Size << "b";
-      if (STI.checkFeatures(SS.str()) && ZvlVLen < Size)
-        ZvlVLen = Size;
+    const unsigned ZvlFeatures[] = {
+        RISCV::FeatureStdExtZvl32b,    RISCV::FeatureStdExtZvl64b,
+        RISCV::FeatureStdExtZvl128b,   RISCV::FeatureStdExtZvl256b,
+        RISCV::FeatureStdExtZvl512b,   RISCV::FeatureStdExtZvl1024b,
+        RISCV::FeatureStdExtZvl2048b,  RISCV::FeatureStdExtZvl4096b,
+        RISCV::FeatureStdExtZvl8192b,  RISCV::FeatureStdExtZvl16384b,
+        RISCV::FeatureStdExtZvl32768b, RISCV::FeatureStdExtZvl65536b};
+    for (auto [Idx, Feature] : enumerate(ZvlFeatures)) {
+      if (STI.hasFeature(Feature))
+        ZvlVLen = std::max(ZvlVLen, 1u << (Idx + 5));
     }
   }
 
@@ -648,8 +651,10 @@ static std::vector<MCInst> loadFP64RegBits32(const MCSubtargetInfo &STI,
   }
 
   std::vector<MCInst> Instrs = loadIntReg(STI, ScratchIntReg, Bits);
-  Instrs.push_back(
-      MCInstBuilder(RISCV::FCVT_D_W).addReg(Reg).addReg(ScratchIntReg));
+  Instrs.push_back(MCInstBuilder(RISCV::FCVT_D_W)
+                       .addReg(Reg)
+                       .addReg(ScratchIntReg)
+                       .addImm(RISCVFPRndMode::RNE));
   return Instrs;
 }
 
@@ -814,6 +819,15 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
 
   assert(MemOp.isReg() && "Memory operand expected to be register");
 
+  unsigned Opcode = I.getOpcode();
+  if (Opcode == RISCV::C_LDSP || Opcode == RISCV::C_LWSP ||
+      Opcode == RISCV::C_SDSP || Opcode == RISCV::C_SWSP) {
+    IT.getValueFor(I.Operands[0]) = MCOperand::createReg(RISCV::X2);
+    // Force base register to SP (X2)
+    IT.getValueFor(MemOp) = MCOperand::createReg(RISCV::X2);
+    return;
+  }
+
   IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
 }
 
@@ -850,10 +864,17 @@ Error ExegesisRISCVTarget::randomizeTargetMCOperand(
     // 5-bit unsigned immediate value.
     AssignedValue = MCOperand::createImm(randomIndex(31));
     break;
+  case RISCVOp::OPERAND_SIMM12_LO:
+  case RISCVOp::OPERAND_UIMM20_LUI:
+  case RISCVOp::OPERAND_UIMM20_AUIPC:
+  case RISCVOp::OPERAND_BARE_SIMM32:
+    AssignedValue = MCOperand::createImm(0);
+    break;
   default:
     if (OperandType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
         OperandType <= RISCVOp::OPERAND_LAST_RISCV_IMM)
       AssignedValue = MCOperand::createImm(0);
+    break;
   }
   return Error::success();
 }

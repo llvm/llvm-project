@@ -1,4 +1,4 @@
-//===--- UpgradeDurationConversionsCheck.h - clang-tidy ---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,10 +16,11 @@
 
 namespace clang::tidy::abseil {
 
-/// Finds deprecated uses of `absl::Duration` arithmetic operators and factories.
+/// Finds deprecated uses of `absl::Duration` arithmetic operators and
+/// factories.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/upgrade-duration-conversions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/upgrade-duration-conversions.html
 class UpgradeDurationConversionsCheck : public ClangTidyCheck {
 public:
   UpgradeDurationConversionsCheck(StringRef Name, ClangTidyContext *Context)

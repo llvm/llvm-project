@@ -9,7 +9,7 @@ program r
 
   ! CHECK:     fir.if %true{{[_0-9]*}} {
   if (ieee_support_rounding(ieee_down)) then
-    ! CHECK:       %[[V_63:[0-9]+]] = fir.coordinate_of %[[V_57]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
+    ! CHECK:       %[[V_63:[0-9]+]] = fir.coordinate_of %[[V_57]]#0, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
     ! CHECK:       %[[V_64:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
     ! CHECK:       %[[V_65:[0-9]+]] = fir.convert %[[V_64]] : (i32) -> i8
     ! CHECK:       fir.store %[[V_65]] to %[[V_63]] : !fir.ref<i8>
@@ -17,7 +17,7 @@ program r
 
     ! CHECK:       %[[V_66:[0-9]+]] = fir.address_of(@_QQro._QM__fortran_builtinsT__builtin_ieee_round_type.0) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>
     ! CHECK:       %[[V_67:[0-9]+]]:2 = hlfir.declare %[[V_66]]
-    ! CHECK:       %[[V_69:[0-9]+]] = fir.coordinate_of %[[V_67]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
+    ! CHECK:       %[[V_69:[0-9]+]] = fir.coordinate_of %[[V_67]]#0, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
     ! CHECK:       %[[V_70:[0-9]+]] = fir.load %[[V_69]] : !fir.ref<i8>
     ! CHECK:       %[[V_71:[0-9]+]] = arith.shli %c-1{{.*}}, %c2{{.*}} : i8
     ! CHECK:       %[[V_72:[0-9]+]] = arith.andi %[[V_70]], %[[V_71]] : i8
@@ -28,7 +28,7 @@ program r
     call ieee_set_rounding_mode(ieee_down)
     print*, 'ok'
 
-    ! CHECK:       %[[V_86:[0-9]+]] = fir.coordinate_of %[[V_57]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
+    ! CHECK:       %[[V_86:[0-9]+]] = fir.coordinate_of %[[V_57]]#0, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
     ! CHECK:       %[[V_87:[0-9]+]] = fir.load %[[V_86]] : !fir.ref<i8>
     ! CHECK:       %[[V_88:[0-9]+]] = arith.shli %c-1{{.*}}, %c2{{.*}} : i8
     ! CHECK:       %[[V_89:[0-9]+]] = arith.andi %[[V_87]], %[[V_88]] : i8

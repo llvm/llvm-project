@@ -35,11 +35,12 @@ body:             |
 
     ; CHECK-LABEL: name: v4s32_gpr
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(<4 x s32>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 0
-    ; CHECK: [[EVEC:%[0-9]+]]:fpr(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<4 x s32>), [[C]](s64)
-    ; CHECK: $s0 = COPY [[EVEC]](s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:fpr(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<4 x s32>), [[C]](s64)
+    ; CHECK-NEXT: $s0 = COPY [[EVEC]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(<4 x s32>) = COPY $q0
     %2:_(s64) = G_CONSTANT i64 0
     %1:_(s32) = G_EXTRACT_VECTOR_ELT %0(<4 x s32>), %2(s64)
@@ -62,11 +63,12 @@ body:             |
 
     ; CHECK-LABEL: name: v2s64_fpr
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(<2 x s64>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 2
-    ; CHECK: [[EVEC:%[0-9]+]]:fpr(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[C]](s64)
-    ; CHECK: $d0 = COPY [[EVEC]](s64)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:fpr(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[C]](s64)
+    ; CHECK-NEXT: $d0 = COPY [[EVEC]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %2:_(s64) = G_CONSTANT i64 2
     %1:_(s64) = G_EXTRACT_VECTOR_ELT %0(<2 x s64>), %2(s64)
@@ -89,11 +91,12 @@ body:             |
 
     ; CHECK-LABEL: name: v4s16_fpr
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr(<4 x s16>) = COPY $d0
-    ; CHECK: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 1
-    ; CHECK: [[EVEC:%[0-9]+]]:fpr(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<4 x s16>), [[C]](s64)
-    ; CHECK: $h0 = COPY [[EVEC]](s16)
-    ; CHECK: RET_ReallyLR implicit $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:fpr(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<4 x s16>), [[C]](s64)
+    ; CHECK-NEXT: $h0 = COPY [[EVEC]](s16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:_(<4 x s16>) = COPY $d0
     %2:_(s64) = G_CONSTANT i64 1
     %1:_(s16) = G_EXTRACT_VECTOR_ELT %0(<4 x s16>), %2(s64)

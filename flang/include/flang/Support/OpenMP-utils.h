@@ -34,6 +34,7 @@ struct EntryBlockArgsEntry {
 /// Structure holding the information needed to create and bind entry block
 /// arguments associated to all clauses that can define them.
 struct EntryBlockArgs {
+  EntryBlockArgsEntry hasDeviceAddr;
   llvm::ArrayRef<mlir::Value> hostEvalVars;
   EntryBlockArgsEntry inReduction;
   EntryBlockArgsEntry map;
@@ -44,21 +45,21 @@ struct EntryBlockArgs {
   EntryBlockArgsEntry useDevicePtr;
 
   bool isValid() const {
-    return inReduction.isValid() && map.isValid() && priv.isValid() &&
-        reduction.isValid() && taskReduction.isValid() &&
+    return hasDeviceAddr.isValid() && inReduction.isValid() && map.isValid() &&
+        priv.isValid() && reduction.isValid() && taskReduction.isValid() &&
         useDeviceAddr.isValid() && useDevicePtr.isValid();
   }
 
   auto getSyms() const {
-    return llvm::concat<const semantics::Symbol *const>(inReduction.syms,
-        map.syms, priv.syms, reduction.syms, taskReduction.syms,
-        useDeviceAddr.syms, useDevicePtr.syms);
+    return llvm::concat<const semantics::Symbol *const>(hasDeviceAddr.syms,
+        inReduction.syms, map.syms, priv.syms, reduction.syms,
+        taskReduction.syms, useDeviceAddr.syms, useDevicePtr.syms);
   }
 
   auto getVars() const {
-    return llvm::concat<const mlir::Value>(hostEvalVars, inReduction.vars,
-        map.vars, priv.vars, reduction.vars, taskReduction.vars,
-        useDeviceAddr.vars, useDevicePtr.vars);
+    return llvm::concat<const mlir::Value>(hasDeviceAddr.vars, hostEvalVars,
+        inReduction.vars, map.vars, priv.vars, reduction.vars,
+        taskReduction.vars, useDeviceAddr.vars, useDevicePtr.vars);
   }
 };
 
