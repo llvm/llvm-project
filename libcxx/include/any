@@ -112,6 +112,8 @@ namespace std {
 #  include <version>
 
 // standard-mandated includes
+
+// [any.synop]
 #  include <initializer_list>
 #  include <typeinfo>
 

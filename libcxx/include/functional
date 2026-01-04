@@ -574,6 +574,12 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 
 #  include <version>
 
+// standard-mandated includes
+
+// [functional.syn]
+#  include <initializer_list>
+#  include <typeinfo>
+
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
@@ -605,10 +611,6 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 23
 #    include <__vector/vector.h>
 #  endif
-
-// standard-mandated includes
-#  include <initializer_list>
-#  include <typeinfo>
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
