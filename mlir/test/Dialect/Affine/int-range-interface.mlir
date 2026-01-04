@@ -111,3 +111,38 @@ func.func @affine_apply_mul_constant() -> index {
   %1 = test.reflect_bounds %0 : index
   func.return %1 : index
 }
+
+// CHECK-LABEL: func @affine_apply_mod_small_range
+// CHECK: test.reflect_bounds {smax = 2 : index, smin = 1 : index, umax = 2 : index, umin = 1 : index}
+func.func @affine_apply_mod_small_range() -> index {
+  %d0 = test.with_bounds { umin = 5 : index, umax = 6 : index,
+                           smin = 5 : index, smax = 6 : index } : index
+  // Small range optimization: 5 mod 4 = 1, 6 mod 4 = 2, so [1, 2]
+  %0 = affine.apply affine_map<(d0) -> (d0 mod 4)>(%d0)
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}
+
+// CHECK-LABEL: func @affine_apply_mod_already_in_range
+// CHECK: test.reflect_bounds {smax = 7 : index, smin = 5 : index, umax = 7 : index, umin = 5 : index}
+func.func @affine_apply_mod_already_in_range() -> index {
+  %d0 = test.with_bounds { umin = 5 : index, umax = 7 : index,
+                           smin = 5 : index, smax = 7 : index } : index
+  // Dividend [5, 7] already in [0, 10), result equals dividend: [5, 7]
+  %0 = affine.apply affine_map<(d0) -> (d0 mod 10)>(%d0)
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}
+
+// CHECK-LABEL: func @affine_apply_mod_variable_divisor
+// CHECK: test.reflect_bounds {smax = 4 : index, smin = 0 : index, umax = 4 : index, umin = 0 : index}
+func.func @affine_apply_mod_variable_divisor() -> index {
+  %d0 = test.with_bounds { umin = 10 : index, umax = 20 : index,
+                           smin = 10 : index, smax = 20 : index } : index
+  %s0 = test.with_bounds { umin = 3 : index, umax = 5 : index,
+                           smin = 3 : index, smax = 5 : index } : index
+  // s0 can be 3, 4, or 5, so result is [0, max(s0)-1] = [0, 4]
+  %0 = affine.apply affine_map<(d0)[s0] -> (d0 mod s0)>(%d0)[%s0]
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}

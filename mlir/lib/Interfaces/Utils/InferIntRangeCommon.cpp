@@ -818,15 +818,44 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    // Affine mod is Euclidean modulo: result is always in [0, rhs_max-1].
+    // Affine mod is Euclidean modulo: result is always in [0, rhs-1].
     // This assumes RHS is positive (enforced by affine expr semantics).
-    unsigned width = rhs.smin().getBitWidth();
+    const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax();
+    const APInt &rhsMin = rhs.smin(), &rhsMax = rhs.smax();
+    unsigned width = rhsMin.getBitWidth();
     APInt zero = APInt::getZero(width);
-    APInt maxRhs = rhs.umax();
-    if (maxRhs.isZero())
+
+    // Guard against division by zero.
+    if (rhsMax.isZero())
       return ConstantIntRanges::maxRange(width);
-    APInt upper = maxRhs - 1;
-    return ConstantIntRanges::fromUnsigned(zero, upper);
+
+    // For Euclidean mod, result is in [0, max(rhs)-1].
+    APInt umin = zero;
+    APInt umax = rhsMax - 1;
+
+    // Special case: if dividend is already in [0, min(rhs)), result equals
+    // dividend. We use rhsMin to ensure this is safe for all possible divisor
+    // values.
+    if (rhsMin.isStrictlyPositive() && lhsMin.isNonNegative() &&
+        lhsMax.ult(rhsMin)) {
+      umin = lhsMin;
+      umax = lhsMax;
+    }
+    // Special case: sweeping out a contiguous range with constant divisor.
+    // Only applies when dividend is non-negative to ensure result range is
+    // contiguous.
+    else if (rhsMin == rhsMax && lhsMin.isNonNegative() &&
+             (lhsMax - lhsMin).ult(rhsMax)) {
+      // For non-negative dividends, Euclidean mod is same as unsigned
+      // remainder.
+      umin = lhsMin.urem(rhsMax);
+      umax = lhsMax.urem(rhsMax);
+      // Result should be contiguous since we're not wrapping around.
+      assert(umin.ule(umax) &&
+             "Range should be contiguous for non-negative dividend");
+    }
+
+    return ConstantIntRanges::fromUnsigned(umin, umax);
   }
   case AffineExprKind::FloorDiv: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
