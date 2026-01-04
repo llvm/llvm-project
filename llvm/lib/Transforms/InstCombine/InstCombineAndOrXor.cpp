@@ -5185,10 +5185,11 @@ static Instruction *foldAndWithMask(BinaryOperator &I,
   Value *InnerVal;
   const APInt *AndMask, *XorMask, *AddC;
 
-  if (match(&I, m_Xor(m_And(m_Add(m_Value(InnerVal), m_APInt(AddC)),
-                            m_APInt(AndMask)),
+  if (match(&I, m_Xor(m_OneUse(m_And(
+                          m_OneUse(m_Add(m_Value(InnerVal), m_APInt(AddC))),
+                          m_LowBitMask(AndMask))),
                       m_APInt(XorMask))) &&
-      *AndMask == *XorMask && AndMask->isMask()) {
+      *AndMask == *XorMask) {
     APInt NewConst = *AndMask - *AddC;
     Value *NewSub =
         Builder.CreateSub(ConstantInt::get(I.getType(), NewConst), InnerVal);

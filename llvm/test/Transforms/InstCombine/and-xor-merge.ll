@@ -175,8 +175,8 @@ define i8 @neg_add_and_xor_multi_use(i8 %x) {
 ; CHECK-LABEL: @neg_add_and_xor_multi_use(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 10, [[X]]
-; CHECK-NEXT:    [[XOR:%.*]] = and i8 [[TMP1]], 15
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[AND]], 15
 ; CHECK-NEXT:    ret i8 [[XOR]]
 ;
   %add = add i8 %x, 5
