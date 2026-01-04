@@ -4077,6 +4077,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
+  if (Instruction *FoldedLogic = foldBinOpSelectBinOp(I))
+    return FoldedLogic;
+
   if (Instruction *BitOp = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
                                                   /*MatchBitReversals*/ true))
     return BitOp;
@@ -5381,6 +5384,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   }
 
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
+    return FoldedLogic;
+
+  if (Instruction *FoldedLogic = foldBinOpSelectBinOp(I))
     return FoldedLogic;
 
   // Y ^ (X | Y) --> X & ~Y

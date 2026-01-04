@@ -668,6 +668,8 @@ public:
                                 bool FoldWithMultiUse = false,
                                 bool SimplifyBothArms = false);
 
+  Instruction *foldBinOpSelectBinOp(BinaryOperator &Op);
+
   /// This is a convenience wrapper function for the above two functions.
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
 
