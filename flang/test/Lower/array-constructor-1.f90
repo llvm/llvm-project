@@ -44,3 +44,4 @@ end
 ! CHECK: fir.global internal @_QFzeroECa constant : !fir.array<0xcomplex<f32>>
 ! CHECK:   %0 = fir.undefined !fir.array<0xcomplex<f32>>
 ! CHECK:   fir.has_value %0 : !fir.array<0xcomplex<f32>>
+
