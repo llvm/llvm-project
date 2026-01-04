@@ -1435,8 +1435,8 @@ bool X86FastISel::X86FastEmitCompare(const Value *Op0, const Value *Op1, EVT VT,
 }
 
 #define GET_SETCC                                                              \
-  ((Subtarget->hasZU() && !Subtarget->preferSetCC()) ? X86::SETZUCCr           \
-                                                     : X86::SETCCr)
+  ((!Subtarget->hasZU() || Subtarget->preferSetCC()) ? X86::SETCCr             \
+                                                     : X86::SETZUCCr)
 
 bool X86FastISel::X86SelectCmp(const Instruction *I) {
   const CmpInst *CI = cast<CmpInst>(I);
