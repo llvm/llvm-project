@@ -210,7 +210,7 @@ public:
   /// Get integer from a mlir::Value that is an int constant or a constant op.
   static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
     auto constOp = val.getDefiningOp<cir::ConstantOp>();
-    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
+    assert(constOp && "getSExtIntValueFromConstOp call with non ConstantOp");
     return constOp.getIntValue().getSExtValue();
   }
 
@@ -218,8 +218,7 @@ public:
   /// constant op.
   static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
     auto constOp = val.getDefiningOp<cir::ConstantOp>();
-    assert(constOp &&
-           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
+    assert(constOp && "getZExtIntValueFromConstOp call with non ConstantOp");
     return constOp.getIntValue().getZExtValue();
   }
 
