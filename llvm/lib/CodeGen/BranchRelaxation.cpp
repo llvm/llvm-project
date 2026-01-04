@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -44,7 +45,7 @@ STATISTIC(NumUnconditionalRelaxed, "Number of unconditional branches relaxed");
 
 namespace {
 
-class BranchRelaxation : public MachineFunctionPass {
+class BranchRelaxation {
   /// BasicBlockInfo - Information about the offset and size of a single
   /// basic block.
   struct BasicBlockInfo {
@@ -116,22 +117,30 @@ class BranchRelaxation : public MachineFunctionPass {
   void verify();
 
 public:
+  bool run(MachineFunction &MF);
+};
+
+class BranchRelaxationLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  BranchRelaxation() : MachineFunctionPass(ID) {}
+  BranchRelaxationLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return BranchRelaxation().run(MF);
+  }
 
   StringRef getPassName() const override { return BRANCH_RELAX_NAME; }
 };
 
 } // end anonymous namespace
 
-char BranchRelaxation::ID = 0;
+char BranchRelaxationLegacy::ID = 0;
 
-char &llvm::BranchRelaxationPassID = BranchRelaxation::ID;
+char &llvm::BranchRelaxationPassID = BranchRelaxationLegacy::ID;
 
-INITIALIZE_PASS(BranchRelaxation, DEBUG_TYPE, BRANCH_RELAX_NAME, false, false)
+INITIALIZE_PASS(BranchRelaxationLegacy, DEBUG_TYPE, BRANCH_RELAX_NAME, false,
+                false)
 
 /// verify - check BBOffsets, BBSizes, alignment of islands
 void BranchRelaxation::verify() {
@@ -482,6 +491,20 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
       return true;
     }
     if (FBB) {
+      // If we get here with a MBB which ends like this:
+      //
+      // bb.1:
+      // successors: %bb.2;
+      // ...
+      // BNE $x1, $x0, %bb.2
+      // PseudoBR %bb.2
+      //
+      // Just remove conditional branch.
+      if (TBB == FBB) {
+        removeBranch(MBB);
+        insertUncondBranch(MBB, TBB);
+        return true;
+      }
       // We need to split the basic block here to obtain two long-range
       // unconditional branches.
       NewBB = createNewBlockAfter(*MBB);
@@ -550,7 +573,6 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
 
 bool BranchRelaxation::fixupUnconditionalBranch(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
-  SmallVector<MachineOperand, 4> Cond;
   unsigned OldBrSize = TII->getInstSizeInBytes(MI);
   MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI);
 
@@ -744,7 +766,16 @@ bool BranchRelaxation::relaxBranchInstructions() {
   return Changed;
 }
 
-bool BranchRelaxation::runOnMachineFunction(MachineFunction &mf) {
+PreservedAnalyses
+BranchRelaxationPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  if (!BranchRelaxation().run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool BranchRelaxation::run(MachineFunction &mf) {
   MF = &mf;
 
   LLVM_DEBUG(dbgs() << "***** BranchRelaxation *****\n");

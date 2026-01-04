@@ -22,7 +22,7 @@ define void @f16_arg(half %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    .cfi_offset w30, -16
 ; NOFP16-NEXT:    and w0, w0, #0xffff
 ; NOFP16-NEXT:    mov x19, x1
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    str w0, [x19]
 ; NOFP16-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; NOFP16-NEXT:    ret
@@ -44,10 +44,10 @@ define void @v2f16_arg(<2 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    and w0, w0, #0xffff
 ; NOFP16-NEXT:    mov x19, x2
 ; NOFP16-NEXT:    mov w20, w1
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w21, w0
 ; NOFP16-NEXT:    and w0, w20, #0xffff
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    stp w21, w0, [x19]
 ; NOFP16-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; NOFP16-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
@@ -73,14 +73,14 @@ define void @v3f16_arg(<3 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    and w0, w1, #0xffff
 ; NOFP16-NEXT:    mov x19, x3
 ; NOFP16-NEXT:    mov w20, w2
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w22, w0
 ; NOFP16-NEXT:    and w0, w21, #0xffff
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w8, w0
 ; NOFP16-NEXT:    and w0, w20, #0xffff
 ; NOFP16-NEXT:    orr x21, x8, x22, lsl #32
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    str x21, [x19]
 ; NOFP16-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
 ; NOFP16-NEXT:    str w0, [x19, #8]
@@ -110,16 +110,16 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    mov w20, w3
 ; NOFP16-NEXT:    mov w21, w2
 ; NOFP16-NEXT:    mov w22, w1
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w23, w0
 ; NOFP16-NEXT:    and w0, w22, #0xffff
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w22, w0
 ; NOFP16-NEXT:    and w0, w21, #0xffff
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    mov w21, w0
 ; NOFP16-NEXT:    and w0, w20, #0xffff
-; NOFP16-NEXT:    bl __gnu_h2f_ieee
+; NOFP16-NEXT:    bl __extendhfsf2
 ; NOFP16-NEXT:    stp w21, w0, [x19, #8]
 ; NOFP16-NEXT:    stp w23, w22, [x19]
 ; NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -137,7 +137,7 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; NOFP16-NEXT:    .cfi_def_cfa_offset 16
 ; NOFP16-NEXT:    .cfi_offset w30, -16
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; NOFP16-NEXT:    ret
    %fptrunc = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -155,10 +155,10 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    .cfi_offset w30, -32
 ; NOFP16-NEXT:    mov w19, w0
 ; NOFP16-NEXT:    mov w0, w1
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w20, w0
 ; NOFP16-NEXT:    mov w0, w19
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w1, w20
 ; NOFP16-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; NOFP16-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
@@ -180,13 +180,13 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    mov w20, w0
 ; NOFP16-NEXT:    mov w0, w2
 ; NOFP16-NEXT:    mov w19, w1
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w21, w0
 ; NOFP16-NEXT:    mov w0, w19
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w19, w0
 ; NOFP16-NEXT:    mov w0, w20
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w1, w19
 ; NOFP16-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; NOFP16-NEXT:    mov w2, w21
@@ -212,16 +212,16 @@ define void @v4f16_arg(<4 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    mov w0, w3
 ; NOFP16-NEXT:    mov w19, w2
 ; NOFP16-NEXT:    mov w20, w1
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w22, w0
 ; NOFP16-NEXT:    mov w0, w19
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w19, w0
 ; NOFP16-NEXT:    mov w0, w20
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w20, w0
 ; NOFP16-NEXT:    mov w0, w21
-; NOFP16-NEXT:    bl __gnu_f2h_ieee
+; NOFP16-NEXT:    bl __truncsfhf2
 ; NOFP16-NEXT:    mov w1, w20
 ; NOFP16-NEXT:    mov w2, w19
 ; NOFP16-NEXT:    mov w3, w22

@@ -13,6 +13,7 @@
 #include "RISCVCallingConv.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
@@ -323,7 +324,7 @@ static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
 // Implements the RISC-V calling convention. Returns true upon failure.
 bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State, bool IsFixed, bool IsRet, Type *OrigTy) {
+                    CCState &State, bool IsRet, Type *OrigTy) {
   const MachineFunction &MF = State.getMachineFunction();
   const DataLayout &DL = MF.getDataLayout();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -332,10 +333,24 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned XLen = Subtarget.getXLen();
   MVT XLenVT = Subtarget.getXLenVT();
 
-  // Static chain parameter must not be passed in normal argument registers,
-  // so we assign t2 for it as done in GCC's __builtin_call_with_static_chain
   if (ArgFlags.isNest()) {
-    if (MCRegister Reg = State.AllocateReg(RISCV::X7)) {
+    // Static chain parameter must not be passed in normal argument registers,
+    // so we assign t2/t3 for it as done in GCC's
+    // __builtin_call_with_static_chain
+    bool HasCFBranch =
+        Subtarget.hasStdExtZicfilp() &&
+        MF.getFunction().getParent()->getModuleFlag("cf-protection-branch");
+
+    // Normal: t2, Branch control flow protection: t3
+    const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;
+
+    RISCVABI::ABI ABI = Subtarget.getTargetABI();
+    if (HasCFBranch &&
+        (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E))
+      reportFatalUsageError(
+          "Nested functions with control flow protection are not "
+          "usable with ILP32E or LP64E ABI.");
+    if (MCRegister Reg = State.AllocateReg(StaticChainReg)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -364,12 +379,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     break;
   case RISCVABI::ABI_ILP32F:
   case RISCVABI::ABI_LP64F:
-    UseGPRForF16_F32 = !IsFixed;
+    UseGPRForF16_F32 = ArgFlags.isVarArg();
     break;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
-    UseGPRForF16_F32 = !IsFixed;
-    UseGPRForF64 = !IsFixed;
+    UseGPRForF16_F32 = ArgFlags.isVarArg();
+    UseGPRForF64 = ArgFlags.isVarArg();
     break;
   }
 
@@ -450,7 +465,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   // currently if we are using ILP32E calling convention. This behavior may be
   // changed when RV32E/ILP32E is ratified.
   unsigned TwoXLenInBytes = (2 * XLen) / 8;
-  if (!IsFixed && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
+  if (ArgFlags.isVarArg() && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes &&
       ABI != RISCVABI::ABI_ILP32E) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
@@ -605,8 +620,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 // benchmark. But theoretically, it may have benefit for some cases.
 bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
                            CCValAssign::LocInfo LocInfo,
-                           ISD::ArgFlagsTy ArgFlags, CCState &State,
-                           bool IsFixed, bool IsRet, Type *OrigTy) {
+                           ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsRet,
+                           Type *OrigTy) {
   const MachineFunction &MF = State.getMachineFunction();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
@@ -726,7 +741,7 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 bool llvm::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                        CCState &State) {
+                        Type *OrigTy, CCState &State) {
   if (ArgFlags.isNest()) {
     report_fatal_error(
         "Attribute 'nest' is not supported in GHC calling convention");

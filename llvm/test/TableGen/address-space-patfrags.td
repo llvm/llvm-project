@@ -49,7 +49,7 @@ def inst_d : Instruction {
 // SDAG: case 0: {
 // SDAG-NEXT: // Predicate_pat_frag_b
 // SDAG-NEXT: // Predicate_truncstorei16_addrspace
-// SDAG-NEXT: SDNode *N = Node;
+// SDAG-NEXT: SDNode *N = Op.getNode();
 // SDAG-NEXT: (void)N;
 // SDAG-NEXT: unsigned AddrSpace = cast<MemSDNode>(N)->getAddressSpace();
 // SDAG-NEXT: if (AddrSpace != 123 && AddrSpace != 455)
@@ -71,7 +71,7 @@ def : Pat <
 
 // SDAG: case 4: {
 // SDAG: // Predicate_pat_frag_a
-// SDAG-NEXT: SDNode *N = Node;
+// SDAG-NEXT: SDNode *N = Op.getNode();
 // SDAG-NEXT: (void)N;
 // SDAG-NEXT: if (cast<MemSDNode>(N)->getAlign() < Align(2))
 // SDAG-NEXT: return false;

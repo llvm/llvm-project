@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+
+import argparse
+import datetime
+import functools
+import os
+import pathlib
+import re
+import statistics
+import subprocess
+import sys
+
+import git
+import pandas
+import tqdm
+
+@functools.total_ordering
+class Commit:
+    """
+    This class represents a commit inside a given Git repository.
+    """
+
+    def __init__(self, git_repo, sha):
+        self._git_repo = git_repo
+        self._sha = sha
+
+    def __eq__(self, other):
+        """
+        Return whether two commits refer to the same commit.
+
+        This doesn't take into account the content of the Git tree at those commits, only the
+        'identity' of the commits themselves.
+        """
+        return self.fullrev == other.fullrev
+
+    def __lt__(self, other):
+        """
+        Return whether a commit is an ancestor of another commit in the Git repository.
+        """
+        # Is self._sha an ancestor of other._sha?
+        res = subprocess.run(['git', '-C', self._git_repo, 'merge-base', '--is-ancestor', self._sha, other._sha])
+        if res.returncode not in (0, 1):
+            raise RuntimeError(f'Error when trying to obtain the commit order for {self._sha} and {other._sha}')
+        return res.returncode == 0
+
+    def __hash__(self):
+        """
+        Return the full revision for this commit.
+        """
+        return hash(self.fullrev)
+
+    @functools.cache
+    def show(self, include_diff=False):
+        """
+        Return the commit information equivalent to `git show` associated to this commit.
+        """
+        cmd = ['git', '-C', self._git_repo, 'show', self._sha]
+        if not include_diff:
+            cmd.append('--no-patch')
+        return subprocess.check_output(cmd, text=True)
+
+    @functools.cached_property
+    def shortrev(self):
+        """
+        Return the shortened version of the given SHA.
+        """
+        return subprocess.check_output(['git', '-C', self._git_repo, 'rev-parse', '--short', self._sha], text=True).strip()
+
+    @functools.cached_property
+    def fullrev(self):
+        """
+        Return the full SHA associated to this commit.
+        """
+        return subprocess.check_output(['git', '-C', self._git_repo, 'rev-parse', self._sha], text=True).strip()
+
+    @functools.cached_property
+    def commit_date(self):
+        """
+        Return the date of the commit as a `datetime.datetime` object.
+        """
+        repo = git.Repo(self._git_repo)
+        return datetime.datetime.fromtimestamp(repo.commit(self._sha).committed_date)
+
+    def prefetch(self):
+        """
+        Prefetch cached properties associated to this commit object.
+
+        This makes it possible to control when time is spent recovering that information from Git for
+        e.g. better reporting to the user.
+        """
+        self.commit_date
+        self.fullrev
+        self.shortrev
+        self.show()
+
+    def __str__(self):
+        return self._sha
+
+def directory_path(string):
+    if os.path.isdir(string):
+        return pathlib.Path(string)
+    else:
+        raise NotADirectoryError(string)
+
+def parse_lnt(lines, aggregate=statistics.median):
+    """
+    Parse lines in LNT format and return a list of dictionnaries of the form:
+
+        [
+            {
+                'benchmark': <benchmark1>,
+                <metric1>: [float],
+                <metric2>: [float],
+                'data_points': int,
+                ...
+            },
+            {
+                'benchmark': <benchmark2>,
+                <metric1>: [float],
+                <metric2>: [float],
+                'data_points': int,
+                ...
+            },
+            ...
+        ]
+
+    If a metric has multiple values associated to it, they are aggregated into a single
+    value using the provided aggregation function.
+    """
+    results = {}
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        (identifier, value) = line.split(' ')
+        (benchmark, metric) = identifier.split('.')
+        if benchmark not in results:
+            results[benchmark] = {'benchmark': benchmark}
+
+        entry = results[benchmark]
+        if metric not in entry:
+            entry[metric] = []
+        entry[metric].append(float(value))
+
+    for (bm, entry) in results.items():
+        metrics = [key for key in entry if isinstance(entry[key], list)]
+        min_data_points = min(len(entry[metric]) for metric in metrics)
+        for metric in metrics:
+            entry[metric] = aggregate(entry[metric])
+        entry['data_points'] = min_data_points
+
+    return list(results.values())
+
+def sorted_revlist(git_repo, commits):
+    """
+    Return the list of commits sorted by their chronological order (from oldest to newest) in the
+    provided Git repository. Items earlier in the list are older than items later in the list.
+    """
+    revlist_cmd = ['git', '-C', git_repo, 'rev-list', '--no-walk'] + list(commits)
+    revlist = subprocess.check_output(revlist_cmd, text=True).strip().splitlines()
+    return list(reversed(revlist))
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='find-rerun-candidates',
+        description='Find benchmarking data points that are good candidates for additional runs, to reduce noise.')
+    parser.add_argument('directory', type=directory_path,
+        help='Path to a valid directory containing benchmark data in LNT format, each file being named <commit>.lnt. '
+             'This is also the format generated by the `benchmark-historical` utility.')
+    parser.add_argument('--metric', type=str, default='execution_time',
+        help='The metric to analyze. LNT data may contain multiple metrics (e.g. code size, execution time, etc) -- '
+             'this option allows selecting which metric is analyzed for rerun candidates. The default is "execution_time".')
+    parser.add_argument('--filter', type=str, required=False,
+        help='An optional regular expression used to filter the benchmarks included in the analysis. '
+             'Only benchmarks whose names match the regular expression will be analyzed.')
+    parser.add_argument('--outlier-threshold', metavar='FLOAT', type=float, default=0.1,
+        help='Relative difference from the previous points for considering a data point as an outlier. This threshold is '
+             'expressed as a floating point number, e.g. 0.25 will detect points that differ by more than 25%% from their '
+             'previous result.')
+    parser.add_argument('--data-points-threshold', type=int, required=False,
+        help='Number of data points above which an outlier is not considered an outlier. If an outlier has more than '
+             'that number of data points yet its relative difference is above the threshold, it is not considered an '
+             'outlier. This can be used to re-run noisy data points until we have at least N samples, at which point '
+             'we consider the data to be accurate, even if the result is beyond the threshold. By default, there is '
+             'no limit on the number of data points.')
+    parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
+        help='Path to the git repository to use for ordering commits in time. '
+             'By default, the current working directory is used.')
+    args = parser.parse_args(argv)
+
+    # Extract benchmark data from the directory.
+    data = {}
+    files = [f for f in args.directory.glob('*.lnt')]
+    for file in tqdm.tqdm(files, desc='Parsing LNT files'):
+        rows = parse_lnt(file.read_text().splitlines())
+        (commit, _) = os.path.splitext(os.path.basename(file))
+        commit = Commit(args.git_repo, commit)
+        data[commit] = rows
+
+    # Obtain commit information which is then cached throughout the program. Do this
+    # eagerly so we can provide a progress bar.
+    for commit in tqdm.tqdm(data.keys(), desc='Prefetching Git information'):
+        commit.prefetch()
+
+    # Create a dataframe from the raw data and add some columns to it:
+    # - 'commit' represents the Commit object associated to the results in that row
+    # - `revlist_order` represents the order of the commit within the Git repository.
+    revlist = sorted_revlist(args.git_repo, [c.fullrev for c in data.keys()])
+    data = pandas.DataFrame([row | {'commit': c} for (c, rows) in data.items() for row in rows])
+    data = data.join(pandas.DataFrame([{'revlist_order': revlist.index(c.fullrev)} for c in data['commit']]))
+
+    # Filter the benchmarks if needed.
+    if args.filter is not None:
+        keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]
+        data = data[data['benchmark'].isin(keeplist)]
+
+    # Detect outliers by selecting all benchmarks whose change percentage is beyond the threshold.
+    # If we have a max number of points, also take that into account.
+    if args.data_points_threshold is not None:
+        print(f'Generating outliers with more than {args.outlier_threshold * 100}% relative difference and less than {args.data_points_threshold} data points')
+    else:
+        print(f'Generating outliers with more than {args.outlier_threshold * 100}% relative difference')
+
+    overall = set()
+    for (benchmark, series) in data.sort_values(by='revlist_order').groupby('benchmark'):
+        pct_change = series[args.metric].pct_change()
+        outliers = series[pct_change.abs() > args.outlier_threshold]
+        if args.data_points_threshold is not None:
+            outliers = outliers[outliers['data_points'] < args.data_points_threshold]
+        outliers = set(outliers['commit'])
+        overall |= outliers
+        if len(outliers) > 0:
+            print(f'{benchmark}: {" ".join(c.shortrev for c in outliers)}')
+
+    if len(overall) > 0:
+        print(f'Summary: {" ".join(c.shortrev for c in overall)}')
+    else:
+        print(f'No outliers')
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

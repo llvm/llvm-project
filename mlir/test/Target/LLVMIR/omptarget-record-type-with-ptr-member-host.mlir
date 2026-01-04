@@ -25,7 +25,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %14 = llvm.sub %11, %2  : i64
     %15 = omp.map.bounds lower_bound(%7 : i64) upper_bound(%14 : i64) extent(%11 : i64) stride(%13 : i64) start_idx(%9 : i64) {stride_in_bytes = true}
     %16 = llvm.getelementptr %3[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-    %17 = omp.map.info var_ptr(%3 : !llvm.ptr, f32) var_ptr_ptr(%16 : !llvm.ptr) map_clauses(tofrom) capture(ByRef) bounds(%15) -> !llvm.ptr {name = "full_arr"}
+    %17 = omp.map.info var_ptr(%3 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%16 : !llvm.ptr) bounds(%15) -> !llvm.ptr {name = "full_arr"}
     %18 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) members(%17 : [0] : !llvm.ptr) -> !llvm.ptr {name = "full_arr"}
     %19 = llvm.getelementptr %6[0, 7, %7, 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
     %20 = llvm.load %19 : !llvm.ptr -> i64
@@ -37,10 +37,10 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %26 = llvm.sub %0, %20  : i64
     %27 = omp.map.bounds lower_bound(%25 : i64) upper_bound(%26 : i64) extent(%22 : i64) stride(%24 : i64) start_idx(%20 : i64) {stride_in_bytes = true}
     %28 = llvm.getelementptr %6[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-    %29 = omp.map.info var_ptr(%6 : !llvm.ptr, i32) var_ptr_ptr(%28 : !llvm.ptr) map_clauses(tofrom) capture(ByRef) bounds(%27) -> !llvm.ptr {name = "sect_arr(2:5)"}
+    %29 = omp.map.info var_ptr(%6 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%28 : !llvm.ptr) bounds(%27) -> !llvm.ptr {name = "sect_arr(2:5)"}
     %30 = omp.map.info var_ptr(%6 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) members(%29 : [0] : !llvm.ptr) -> !llvm.ptr {name = "sect_arr(2:5)"}
     %31 = llvm.getelementptr %5[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-    %32 = omp.map.info var_ptr(%5 : !llvm.ptr, f32) var_ptr_ptr(%31 : !llvm.ptr) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "scalar"}
+    %32 = omp.map.info var_ptr(%5 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%31 : !llvm.ptr) -> !llvm.ptr {name = "scalar"}
     %33 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%32 : [0] : !llvm.ptr) -> !llvm.ptr {name = "scalar"}
     omp.target map_entries(%17 -> %arg0, %18 -> %arg1, %29 -> %arg2, %30 -> %arg3, %32 -> %arg4, %33 -> %arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.terminator
@@ -59,15 +59,15 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // CHECK: @[[FULL_ARR_GLOB:.*]] = internal global { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } undef
 // CHECK: @[[ARR_SECT_GLOB:.*]] = internal global { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } undef
-// CHECK: @.offload_sizes = private unnamed_addr constant [12 x i64] [i64 0, i64 48, i64 8, i64 0, i64 0, i64 48, i64 8, i64 0, i64 0, i64 24, i64 8, i64 0]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [12 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 32, i64 1407374883553283, i64 1407374883553283, i64 1407374883553299, i64 32, i64 2533274790395907, i64 2533274790395907, i64 2533274790395923]
-// CHECK: @.offload_mapnames = private constant [12 x ptr] [ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}]
+// CHECK: @.offload_sizes = private unnamed_addr constant [15 x i64] [i64 0, i64 0, i64 0, i64 8, i64 0, i64 0, i64 0, i64 0, i64 8, i64 0, i64 0, i64 0, i64 0, i64 8, i64 0]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [15 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 32, i64 1688849860263939, i64 1688849860263939, i64 1688849860263939, i64 1688849860263955, i64 32, i64 3096224743817219, i64 3096224743817219, i64 3096224743817219, i64 3096224743817235]
+// CHECK: @.offload_mapnames = private constant [15 x ptr] [ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}]
 
 // CHECK: define void @main()
 // CHECK: %[[SCALAR_ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1, align 8
-// CHECK: %[[FULL_ARR_SIZE5:.*]] = load i64, ptr getelementptr ({ ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @[[FULL_ARR_GLOB]], i32 0, i32 7, i64 0, i32 1), align 4
+// CHECK: %[[FULL_ARR_SIZE5:.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @[[FULL_ARR_GLOB]], i64 32), align 4
 // CHECK: %[[FULL_ARR_SIZE4:.*]] = sub i64 %[[FULL_ARR_SIZE5]], 1
-// CHECK: %[[ARR_SECT_OFFSET3:.*]] = load i64, ptr getelementptr ({ ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @[[ARR_SECT_GLOB]], i32 0, i32 7, i64 0, i32 0), align 4
+// CHECK: %[[ARR_SECT_OFFSET3:.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @[[ARR_SECT_GLOB]], i64 24), align 4
 // CHECK: %[[ARR_SECT_OFFSET2:.*]] = sub i64 2, %[[ARR_SECT_OFFSET3]]
 // CHECK: %[[ARR_SECT_SIZE4:.*]] = sub i64 5, %[[ARR_SECT_OFFSET3]]
 // CHECK: %[[SCALAR_BASE:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8 }, ptr %[[SCALAR_ALLOCA]], i32 0, i32 0
@@ -81,79 +81,101 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[ARR_SECT_SIZE:.*]] = mul i64 %[[ARR_SECT_SIZE1]], 4
 // CHECK: %[[LFULL_ARR:.*]] = load ptr, ptr @full_arr, align 8
 // CHECK: %[[FULL_ARR_PTR:.*]] = getelementptr inbounds float, ptr %[[LFULL_ARR]], i64 0
-// CHECK: %[[ARR_SECT_OFFSET1:.*]] = mul i64 %[[ARR_SECT_OFFSET2]], 1
 // CHECK: %[[LARR_SECT:.*]] = load ptr, ptr @sect_arr, align 8
-// CHECK: %[[ARR_SECT_PTR:.*]] = getelementptr inbounds i32, ptr %[[LARR_SECT]], i64 %[[ARR_SECT_OFFSET1]]
+// CHECK: %[[ARR_SECT_PTR:.*]] = getelementptr inbounds i32, ptr %[[LARR_SECT]], i64 %[[ARR_SECT_OFFSET2]]
 // CHECK: %[[SCALAR_PTR_LOAD:.*]] = load ptr, ptr %[[SCALAR_BASE]], align 8
-// CHECK: %[[FULL_ARR_DESC_SIZE:.*]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr ({ ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @full_arr, i32 1) to i64), i64 ptrtoint (ptr @full_arr to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK: %[[FULL_ARR_SIZE_CMP:.*]] = icmp eq ptr %[[FULL_ARR_PTR]], null
-// CHECK: %[[FULL_ARR_SIZE_SEL:.*]] = select i1 %[[FULL_ARR_SIZE_CMP]], i64 0, i64 %[[FULL_ARR_SIZE]]
-// CHECK: %[[ARR_SECT_DESC_SIZE:.*]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr ({ ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @sect_arr, i32 1) to i64), i64 ptrtoint (ptr @sect_arr to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK: %[[ARR_SECT_SIZE_CMP:.*]] = icmp eq ptr %[[ARR_SECT_PTR]], null
-// CHECK: %[[ARR_SECT_SIZE_SEL:.*]] = select i1 %[[ARR_SECT_SIZE_CMP]], i64 0, i64 %[[ARR_SECT_SIZE]]
+// CHECK: %[[FULL_ARR_DESC_SIZE:.*]] = sdiv exact i64 48, ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK: %[[FULL_ARR_SZ:.*]] = sdiv exact i64 40, ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK: %[[NULL_CMP:.*]] = icmp eq ptr %[[FULL_ARR_PTR]], null
+// CHECK: %[[IS_NULL:.*]] = select i1 %[[NULL_CMP]], i64 0, i64 %[[FULL_ARR_SIZE]]
+// CHECK: %[[ARR_SECT_DESC_SIZE:.*]] = sdiv exact i64 48, ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK: %[[ARR_SECT_SZ:.*]] = sdiv exact i64 40, ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK: %[[NULL_CMP2:.*]] = icmp eq ptr %[[ARR_SECT_PTR]], null
+// CHECK: %[[IS_NULL2:.*]] = select i1 %[[NULL_CMP2]], i64 0, i64 %[[ARR_SECT_SIZE]]
 // CHECK: %[[SCALAR_DESC_SZ4:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8 }, ptr %[[SCALAR_ALLOCA]], i32 1
 // CHECK: %[[SCALAR_DESC_SZ3:.*]] = ptrtoint ptr %[[SCALAR_DESC_SZ4]] to i64
 // CHECK: %[[SCALAR_DESC_SZ2:.*]] = ptrtoint ptr %[[SCALAR_ALLOCA]] to i64
 // CHECK: %[[SCALAR_DESC_SZ1:.*]] = sub i64 %[[SCALAR_DESC_SZ3]], %[[SCALAR_DESC_SZ2]]
 // CHECK: %[[SCALAR_DESC_SZ:.*]] = sdiv exact i64 %[[SCALAR_DESC_SZ1]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+// CHECK: %[[SCALAR_BASE_2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8 }, ptr %[[SCALAR_ALLOCA]], i32 1
+// CHECK: %[[SCALAR_BASE_OFF:.*]] = getelementptr ptr, ptr %[[SCALAR_BASE]], i32 1
+// CHECK: %[[SCALAR_BASE_OFF_SZ1:.*]] = ptrtoint ptr %[[SCALAR_BASE_2]] to i64
+// CHECK: %[[SCALAR_BASE_OFF_SZ2:.*]] = ptrtoint ptr %[[SCALAR_BASE_OFF]] to i64
+// CHECK: %[[SCALAR_BASE_OFF_SZ3:.*]] = sub i64 %[[SCALAR_BASE_OFF_SZ1]], %[[SCALAR_BASE_OFF_SZ2]]
+// CHECK: %[[SCALAR_BASE_OFF_SZ4:.*]] = sdiv exact i64 %[[SCALAR_BASE_OFF_SZ3]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr @full_arr, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 // CHECK: store ptr @full_arr, ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [12 x i64], ptr %.offload_sizes, i32 0, i32 0
+// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [15 x i64], ptr %.offload_sizes, i32 0, i32 0
 // CHECK: store i64 %[[FULL_ARR_DESC_SIZE]], ptr %[[OFFLOADSIZES]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK: store ptr @full_arr, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 1
 // CHECK: store ptr @full_arr, ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
 // CHECK: store ptr @full_arr, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr @full_arr, i64 8), ptr %[[OFFLOADPTRS]], align 8
+// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [15 x i64], ptr %.offload_sizes, i32 0, i32 2
+// CHECK: store i64 %[[FULL_ARR_SZ]], ptr %[[OFFLOADSIZES]], align 8
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 3
+// CHECK: store ptr @full_arr, ptr %[[OFFLOADBASEPTRS]], align 8
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 3
 // CHECK: store ptr @full_arr, ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 3
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
 // CHECK: store ptr @full_arr, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 3
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 4
 // CHECK: store ptr %[[FULL_ARR_PTR]], ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [12 x i64], ptr %.offload_sizes, i32 0, i32 3
-// CHECK: store i64 %[[FULL_ARR_SIZE_SEL]], ptr %[[OFFLOADSIZES]], align 8
-
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
+// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [15 x i64], ptr %.offload_sizes, i32 0, i32 4
+// CHECK: store i64 %[[IS_NULL]], ptr %[[OFFLOADSIZES]], align 8
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 5
 // CHECK: store ptr @sect_arr, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 4
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 5
 // CHECK: store ptr @sect_arr, ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [12 x i64], ptr %.offload_sizes, i32 0, i32 4
+// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [15 x i64], ptr %.offload_sizes, i32 0, i32 5
 // CHECK: store i64 %[[ARR_SECT_DESC_SIZE]], ptr %[[OFFLOADSIZES]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 5
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 6
 // CHECK: store ptr @sect_arr, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 5
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 6
 // CHECK: store ptr @sect_arr, ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 6
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 7
 // CHECK: store ptr @sect_arr, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 6
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 7
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr @sect_arr, i64 8), ptr %[[OFFLOADPTRS]], align 8
+// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [15 x i64], ptr %.offload_sizes, i32 0, i32 7
+// CHECK: store i64 %[[ARR_SECT_SZ]], ptr %[[OFFLOADSIZES]], align 8
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 8
+// CHECK: store ptr @sect_arr, ptr %[[OFFLOADBASEPTRS]], align 8
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 8
 // CHECK: store ptr @sect_arr, ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 7
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 9
 // CHECK: store ptr @sect_arr, ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 7
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 9
 // CHECK: store ptr %[[ARR_SECT_PTR]], ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [12 x i64], ptr %.offload_sizes, i32 0, i32 7
-// CHECK: store i64 %[[ARR_SECT_SIZE_SEL]], ptr %[[OFFLOADSIZES]], align 8
-
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 8
+// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [15 x i64], ptr %.offload_sizes, i32 0, i32 9
+// CHECK: store i64 %[[IS_NULL2]], ptr %[[OFFLOADSIZES]], align 8
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 10
 // CHECK: store ptr %[[SCALAR_ALLOCA]], ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 8
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 10
 // CHECK: store ptr %[[SCALAR_ALLOCA]], ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [12 x i64], ptr %.offload_sizes, i32 0, i32 8
+// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [15 x i64], ptr %.offload_sizes, i32 0, i32 10
 // CHECK: store i64 %[[SCALAR_DESC_SZ]], ptr %[[OFFLOADSIZES]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 9
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 11
 // CHECK: store ptr %[[SCALAR_ALLOCA]], ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 9
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 11
 // CHECK: store ptr %[[SCALAR_ALLOCA]], ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 10
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 12
 // CHECK: store ptr %[[SCALAR_ALLOCA]], ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 10
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 12
+// CHECK: store ptr %[[SCALAR_BASE_OFF]], ptr %[[OFFLOADPTRS]], align 8
+// CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [15 x i64], ptr %.offload_sizes, i32 0, i32 12
+// CHECK: store i64 %[[SCALAR_BASE_OFF_SZ4]], ptr %[[OFFLOADSIZES]], align 8
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 13
+// CHECK: store ptr %[[SCALAR_ALLOCA]], ptr %[[OFFLOADBASEPTRS]], align 8
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 13
 // CHECK: store ptr %[[SCALAR_BASE]], ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 11
+// CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_baseptrs, i32 0, i32 14
 // CHECK: store ptr %[[SCALAR_BASE]], ptr %[[OFFLOADBASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 11
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [15 x ptr], ptr %.offload_ptrs, i32 0, i32 14
 // CHECK: store ptr %[[SCALAR_PTR_LOAD]], ptr %[[OFFLOADPTRS]], align 8

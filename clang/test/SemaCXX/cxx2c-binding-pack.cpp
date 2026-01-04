@@ -1,10 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++26 %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++26 %s -verify -fexperimental-new-constant-interpreter
 
 template <typename T>
 struct type_ { };
 
 template <typename ...T>
-auto sum(T... t) { return (t + ...); }
+constexpr auto sum(T... t) { return (t + ...); }
 
 struct my_struct {
   int a;
@@ -17,7 +18,7 @@ struct fake_tuple {
   int arr[4] = {1, 2, 3, 6};
 
   template <unsigned i>
-  int get() {
+  constexpr int& get() {
     return arr[i];
   }
 };
@@ -59,6 +60,7 @@ template <typename T>
 void decompose_struct() {
   T obj{1, 2, 3, 6};
   auto [x, ...rest, y] = obj;
+  static_assert(sizeof...(rest) == 2);
 
   auto [...empty] = type_<int>{};
   static_assert(sizeof...(empty) == 0);
@@ -80,7 +82,7 @@ void decompose_array() {
   static_assert(sizeof...(b) == 0);
   auto [...c] = arr1;
   static_assert(sizeof...(c) == 1);
-  auto [a1, ...b1, c1] = arr1; // expected-error{{decomposes into 1 element, but 3 names were provided}}
+  auto [a1, ...b1, c1] = arr1; // expected-error{{binds to 1 element, but 3 names were provided}}
 }
 
 // Test case by Younan Zhang.
@@ -124,6 +126,14 @@ void lambda_capture() {
   [&x...] { (void)sum(x...); }();
 }
 
+struct S2 {
+    int a, b, c;
+};
+
+auto X = [] <typename = void> () {
+    auto [...pack] = S2{};
+};
+
 int main() {
   decompose_array<int>();
   decompose_tuple<fake_tuple>();
@@ -133,6 +143,8 @@ int main() {
   lambda_capture<int[5]>();
   lambda_capture<fake_tuple>();
   lambda_capture<my_struct>();
+  X();
+
 }
 
 // P1061R10 Stuff
@@ -148,7 +160,7 @@ void now_i_know_my() {
   static_assert(sizeof...(e) == 2);
   auto [h, i, j, ...k] = C(); // OK, the pack k is empty
   static_assert(sizeof...(e) == 0);
-  auto [l, m, n, o, ...p] = C(); // expected-error{{{decomposes into 3 elements, but 5 names were provided}}}
+  auto [l, m, n, o, ...p] = C(); // expected-error{{{binds to 3 elements, but 5 names were provided}}}
 }
 }  // namespace
 
@@ -188,3 +200,62 @@ void other_main() {
   static_assert(f<int>() == 2);
 }
 }  // namespace
+
+namespace {
+struct S {
+  int a,b,c;
+};
+
+clsss S2 { // expected-error{{{unknown type name 'clsss'}}}
+public:
+  int a,b,c;
+};
+
+// Should not crash.
+auto X = [] <typename = void> () {
+    auto [...pack,a,b,c] = S{};
+    auto [x,y,z,...pack2] = S{};
+    auto [...pack3] = S2{};
+    static_assert(sizeof...(pack3) == 5);
+};
+}  // namespace
+
+namespace GH125165 {
+
+template <typename = void>
+auto f(auto t) {
+    const auto& [...pack] = t;
+    // expected-error@-1 {{cannot bind non-class, non-array type 'char const'}}
+    (pack, ...);
+};
+
+void g() {
+    f('x'); // expected-note {{in instantiation}}
+}
+
+}
+
+namespace constant_interpreter {
+using Arr = int[2];
+struct Triple { int x, y, z = 3; };
+
+constexpr int ref_to_same_obj(auto&& arg) {
+  auto& [...xs] = arg;
+  auto& [...ys] = arg;
+  (..., (xs += 2));
+  return sum(ys...);
+}
+static_assert(ref_to_same_obj(Arr{}) == 4);
+static_assert(ref_to_same_obj(fake_tuple{}) == 20);
+static_assert(ref_to_same_obj(Triple{}) == 9);
+
+constexpr int copy_obj(auto&& arg) {
+  auto& [...xs] = arg;
+  auto [...ys] = arg;
+  (..., (xs += 2));
+  return sum(ys...);
+}
+static_assert(copy_obj(Arr{}) == 0);
+static_assert(copy_obj(fake_tuple{}) == 12);
+static_assert(copy_obj(Triple{}) == 3);
+}

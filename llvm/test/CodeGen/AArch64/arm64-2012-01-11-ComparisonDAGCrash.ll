@@ -5,12 +5,12 @@
 ; cycles in DAGs, and eventually crashes.  This is the testcase for
 ; one of those crashes. (rdar://10653656)
 
-define void @test(i1 zeroext %IsArrow) nounwind ssp align 2 {
+define void @test(i1 zeroext %IsArrow, i1 %arg) nounwind ssp align 2 {
 entry:
-  br i1 undef, label %return, label %lor.lhs.false
+  br i1  %arg, label %return, label %lor.lhs.false
 
 lor.lhs.false:
-  br i1 undef, label %return, label %if.end
+  br i1  %arg, label %return, label %if.end
 
 if.end:
   %tmp.i = load i64, ptr undef, align 8
@@ -18,7 +18,7 @@ if.end:
   br i1 %IsArrow, label %if.else_crit_edge, label %if.end32
 
 if.else_crit_edge:
-  br i1 undef, label %if.end32, label %return
+  br i1  %arg, label %if.end32, label %return
 
 if.end32:
   %0 = icmp ult i32 undef, 3
@@ -27,7 +27,7 @@ if.end32:
   %.pn = shl i320 %1, %.pn.v
   %ins346392 = or i320 %.pn, 0
   store i320 %ins346392, ptr undef, align 8
-  br i1 undef, label %sw.bb.i.i, label %exit
+  br i1  %arg, label %sw.bb.i.i, label %exit
 
 sw.bb.i.i:
   unreachable

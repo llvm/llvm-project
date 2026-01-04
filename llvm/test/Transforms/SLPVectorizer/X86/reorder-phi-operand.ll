@@ -103,10 +103,10 @@ define void @test2(ptr %p1, ptr %p2) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> <double 4.000000e+00, double 4.100000e+00>, [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP9]], <double 2.000000e+00, double 2.100000e+00>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP10]], <double 3.000000e+00, double 3.100000e+00>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x double> [ [[TMP11]], [[BB1]] ], [ [[TMP16:%.*]], [[BB6:%.*]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x double> [ [[TMP12]], [[BB1]] ], [ [[TMP15:%.*]], [[BB6:%.*]] ]
 ; CHECK-NEXT:    [[X0:%.*]] = getelementptr inbounds double, ptr [[P2:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x double>, ptr [[X0]], align 8
 ; CHECK-NEXT:    br i1 poison, label [[BB3:%.*]], label [[BB6]]
@@ -117,8 +117,7 @@ define void @test2(ptr %p1, ptr %p2) {
 ; CHECK:       bb5:
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x double> [ [[TMP13]], [[BB2]] ], [ [[TMP14]], [[BB4]] ], [ [[TMP14]], [[BB5]] ]
-; CHECK-NEXT:    [[TMP16]] = shufflevector <2 x double> [[TMP15]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP15]] = phi <2 x double> [ [[TMP13]], [[BB2]] ], [ [[TMP14]], [[BB4]] ], [ [[TMP14]], [[BB5]] ]
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 entry:

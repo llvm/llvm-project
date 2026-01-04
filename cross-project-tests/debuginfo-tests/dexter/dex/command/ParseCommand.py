@@ -35,6 +35,8 @@ from dex.command.commands.DexLimitSteps import DexLimitSteps
 from dex.command.commands.DexFinishTest import DexFinishTest
 from dex.command.commands.DexUnreachable import DexUnreachable
 from dex.command.commands.DexWatch import DexWatch
+from dex.command.commands.DexStepFunction import DexStepFunction
+from dex.command.commands.DexContinue import DexContinue
 from dex.utils import Timer
 from dex.utils.Exceptions import CommandParseError, DebuggerException
 
@@ -59,6 +61,8 @@ def _get_valid_commands():
         DexFinishTest.get_name(): DexFinishTest,
         DexUnreachable.get_name(): DexUnreachable,
         DexWatch.get_name(): DexWatch,
+        DexStepFunction.get_name(): DexStepFunction,
+        DexContinue.get_name(): DexContinue,
     }
 
 

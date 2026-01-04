@@ -9,7 +9,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; YAML-NEXT:  Function:        foo
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-3'
+; YAML-NEXT:    - Cost:            '-4'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '10'
 ; YAML-NEXT:  ...

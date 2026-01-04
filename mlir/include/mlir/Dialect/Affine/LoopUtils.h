@@ -61,7 +61,7 @@ LogicalResult loopUnrollUpToFactor(AffineForOp forOp, uint64_t unrollFactor);
 
 /// Returns true if `loops` is a perfectly nested loop nest, where loops appear
 /// in it from outermost to innermost.
-bool LLVM_ATTRIBUTE_UNUSED isPerfectlyNested(ArrayRef<AffineForOp> loops);
+[[maybe_unused]] bool isPerfectlyNested(ArrayRef<AffineForOp> loops);
 
 /// Get perfectly nested sequence of loops starting at root of loop nest
 /// (the first op being another AffineFor, and the second op - a terminator).
@@ -97,12 +97,6 @@ void promoteSingleIterationLoops(func::FuncOp f);
 /// loops when possible.
 LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
                                   bool unrollPrologueEpilogue = false);
-
-/// Identify valid and profitable bands of loops to tile. This is currently just
-/// a temporary placeholder to test the mechanics of tiled code generation.
-/// Returns all maximal outermost perfect loop nests to tile.
-void getTileableBands(func::FuncOp f,
-                      std::vector<SmallVector<AffineForOp, 6>> *bands);
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
 /// and intra-tile loops. A band is a contiguous set of loops. This utility

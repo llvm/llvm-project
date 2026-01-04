@@ -434,3 +434,66 @@ v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[6:37], v38, v39 clamp
 
 // GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[6:37], v38, v39 clamp
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_f32_fp6 v[0:31], s[32:37], v6
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_f32_bf6 v[0:31], s[32:37], v6
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_f16_fp6 v[0:15], s[20:25], v8
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_bf16_fp6 v[0:15], s[20:25], v8
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_f16_bf6 v[0:15], s[20:25], v8
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_bf16_bf6 v[0:15], s[20:25], v8
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_fp6_f16 v[18:23], s[0:15], v16
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_bf6_f16 v[18:23], s[0:15], v16
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_fp6_bf16 v[18:23], s[0:15], v16
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_pk32_bf6_bf16 v[18:23], s[0:15], v16
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_bf6_bf16 v[20:25], s[0:15], v16, v17
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_bf6_f16 v[20:25], s[0:15], v16, v17
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid or unsupported register size
+v_cvt_scalef32_sr_pk32_bf6_f32 v[36:41], s[0:31], v32, v33
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_fp6_bf16 v[20:25], s[0:15], v16, v17
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk32_fp6_f16 v[20:25], s[0:15], v16, v17
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid or unsupported register size
+v_cvt_scalef32_sr_pk32_fp6_f32 v[36:41], s[0:31], v32, v33
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_2xpk16_fp6_f32 v[0:5], s[0:15], v[6:21], v16
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_2xpk16_fp6_f32 v[0:5], v[6:21], s[0:15], v16
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_2xpk16_bf6_f32 v[0:5], s[0:15], v[6:21], v16
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_2xpk16_bf6_f32 v[0:5], v[6:21], s[0:15], v16
+
+// GFX950: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+v_cvt_scalef32_sr_pk_fp4_f32 v0, s[2:3], v4, v5

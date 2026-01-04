@@ -40,8 +40,6 @@ class CGNVCUDARuntime : public CGCUDARuntime {
 
   /// The prefix used for function calls and section names (CUDA, HIP, LLVM)
   StringRef Prefix;
-  /// TODO: We should transition the OpenMP section to LLVM/Offload
-  StringRef SectionPrefix;
 
 private:
   llvm::IntegerType *IntTy, *SizeTy;
@@ -96,7 +94,7 @@ private:
   /// where the C code specifies const char*.
   llvm::Constant *makeConstantString(const std::string &Str,
                                      const std::string &Name = "") {
-    return CGM.GetAddrOfConstantCString(Str, Name.c_str()).getPointer();
+    return CGM.GetAddrOfConstantCString(Str, Name).getPointer();
   }
 
   /// Helper function which generates an initialized constant array from Str,
@@ -232,15 +230,14 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   IntTy = CGM.IntTy;
   SizeTy = CGM.SizeTy;
   VoidTy = CGM.VoidTy;
-  PtrTy = CGM.UnqualPtrTy;
+  PtrTy = CGM.DefaultPtrTy;
 
-  if (CGM.getLangOpts().OffloadViaLLVM) {
+  if (CGM.getLangOpts().OffloadViaLLVM)
     Prefix = "llvm";
-    SectionPrefix = "omp";
-  } else if (CGM.getLangOpts().HIP)
-    SectionPrefix = Prefix = "hip";
+  else if (CGM.getLangOpts().HIP)
+    Prefix = "hip";
   else
-    SectionPrefix = Prefix = "cuda";
+    Prefix = "cuda";
 }
 
 llvm::FunctionCallee CGNVCUDARuntime::getSetupArgumentFn() const {
@@ -640,7 +637,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
         KernelHandles[I.Kernel->getName()],
         KernelName,
         KernelName,
-        llvm::ConstantInt::get(IntTy, -1),
+        llvm::ConstantInt::getAllOnesValue(IntTy),
         NullPtr,
         NullPtr,
         NullPtr,
@@ -1134,7 +1131,7 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
     // Builtin surfaces and textures and their template arguments are
     // also registered with CUDA runtime.
     const auto *TD = cast<ClassTemplateSpecializationDecl>(
-        D->getType()->castAs<RecordType>()->getDecl());
+        D->getType()->castAsCXXRecordDecl());
     const TemplateArgumentList &Args = TD->getTemplateArgs();
     if (TD->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>()) {
       assert(Args.size() == 2 &&
@@ -1197,18 +1194,19 @@ void CGNVCUDARuntime::transformManagedVars() {
 // registered. The linker will provide a pointer to this section so we can
 // register the symbols with the linked device image.
 void CGNVCUDARuntime::createOffloadingEntries() {
-  SmallVector<char, 32> Out;
-  StringRef Section = (SectionPrefix + "_offloading_entries").toStringRef(Out);
   llvm::object::OffloadKind Kind = CGM.getLangOpts().HIP
                                        ? llvm::object::OffloadKind::OFK_HIP
                                        : llvm::object::OffloadKind::OFK_Cuda;
+  // For now, just spoof this as OpenMP because that's the runtime it uses.
+  if (CGM.getLangOpts().OffloadViaLLVM)
+    Kind = llvm::object::OffloadKind::OFK_OpenMP;
 
   llvm::Module &M = CGM.getModule();
   for (KernelInfo &I : EmittedKernels)
     llvm::offloading::emitOffloadingEntry(
         M, Kind, KernelHandles[I.Kernel->getName()],
         getDeviceSideName(cast<NamedDecl>(I.D)), /*Flags=*/0, /*Data=*/0,
-        llvm::offloading::OffloadGlobalEntry, Section);
+        llvm::offloading::OffloadGlobalEntry);
 
   for (VarInfo &I : DeviceVars) {
     uint64_t VarSize =
@@ -1233,23 +1231,23 @@ void CGNVCUDARuntime::createOffloadingEntries() {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalManagedEntry | Flags,
-            /*Data=*/I.Var->getAlignment(), Section, ManagedVar);
+            /*Data=*/I.Var->getAlignment(), ManagedVar);
       } else {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalEntry | Flags,
-            /*Data=*/0, Section);
+            /*Data=*/0);
       }
     } else if (I.Flags.getKind() == DeviceVarFlags::Surface) {
       llvm::offloading::emitOffloadingEntry(
           M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
           llvm::offloading::OffloadGlobalSurfaceEntry | Flags,
-          I.Flags.getSurfTexType(), Section);
+          I.Flags.getSurfTexType());
     } else if (I.Flags.getKind() == DeviceVarFlags::Texture) {
       llvm::offloading::emitOffloadingEntry(
           M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
           llvm::offloading::OffloadGlobalTextureEntry | Flags,
-          I.Flags.getSurfTexType(), Section);
+          I.Flags.getSurfTexType());
     }
   }
 }

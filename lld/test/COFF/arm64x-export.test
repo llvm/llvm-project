@@ -14,7 +14,7 @@ RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s 
 # A command-line export applies only to EC exports.
 
 RUN: lld-link -machine:arm64x -dll -out:out-cmd.dll arm64ec-func.obj arm64-func.obj \
-RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -noentry -export:func
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -noentry -export:func -output-def:out.def
 
 RUN: llvm-objdump -d out-cmd.dll | FileCheck --check-prefix=DISASM-EC %s
 DISASM-EC:      Disassembly of section .text:
@@ -73,6 +73,10 @@ IMPLIB-EC-NEXT: Symbol: __imp_func
 IMPLIB-EC-NEXT: Symbol: func
 IMPLIB-EC-NEXT: Symbol: __imp_aux_func
 IMPLIB-EC-NEXT: Symbol: #func
+
+RUN: FileCheck --check-prefix=OUT-DEF %s < out.def
+OUT-DEF:      EXPORTS
+OUT-DEF-NEXT:     func @1
 
 
 # Export using the EC .drectve section.

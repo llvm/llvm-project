@@ -17,8 +17,6 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
-#include "llvm/CodeGen/MacroFusion.h"
-#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -62,14 +60,20 @@ static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     "riscv-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
-static cl::opt<bool>
-    UseMIPSLoadStorePairsOpt("mips-riscv-load-store-pairs",
-                             cl::desc("RISCV: Optimize for load-store bonding"),
-                             cl::init(false), cl::Hidden);
+static cl::opt<bool> UseMIPSLoadStorePairsOpt(
+    "use-riscv-mips-load-store-pairs",
+    cl::desc("Enable the load/store pair optimization pass"), cl::init(false),
+    cl::Hidden);
 
-static cl::opt<bool>
-    UseCCMovInsn("riscv-ccmov", cl::desc("RISCV: Use 'mips.ccmov' instruction"),
-                 cl::init(true), cl::Hidden);
+static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
+                                      cl::desc("Use 'mips.ccmov' instruction"),
+                                      cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnablePExtSIMDCodeGen(
+    "riscv-enable-p-ext-simd-codegen",
+    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
+             "where only partial codegen is currently supported)"),
+    cl::init(false), cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
 
@@ -84,6 +88,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
   if (TuneCPU.empty())
     TuneCPU = CPU;
+  if (TuneCPU == "generic")
+    TuneCPU = Is64Bit ? "generic-rv64" : "generic-rv32";
 
   TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo(TuneCPU);
   // If there is no TuneInfo for this CPU, we fail back to generic.
@@ -103,10 +109,11 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                unsigned RVVVectorBitsMax,
                                const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
+      IsLittleEndian(TT.isLittleEndian()), RVVVectorBitsMin(RVVVectorBitsMin),
+      RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+      InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<RISCVSelectionDAGInfo>();
 }
 
@@ -145,6 +152,10 @@ const RISCVRegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
 
 bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
+}
+
+bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
+  return HasStdExtP && EnablePExtSIMDCodeGen;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
@@ -218,7 +229,7 @@ unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
 }
 
 void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                         unsigned NumRegionInstrs) const {
+                                         const SchedRegion &Region) const {
   // Do bidirectional scheduling since it provides a more balanced scheduling
   // leading to better performance. This will increase compile time.
   Policy.OnlyTopDown = false;
@@ -233,8 +244,8 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.ShouldTrackPressure = true;
 }
 
-void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                               unsigned NumRegionInstrs) const {
+void RISCVSubtarget::overridePostRASchedPolicy(
+    MachineSchedPolicy &Policy, const SchedRegion &Region) const {
   MISched::Direction PostRASchedDirection = getPostRASchedDirection();
   if (PostRASchedDirection == MISched::TopDown) {
     Policy.OnlyTopDown = true;
@@ -248,6 +259,10 @@ void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
   }
 }
 
-bool RISCVSubtarget::useCCMovInsn() const {
-  return UseCCMovInsn && HasVendorXMIPSCMove;
+bool RISCVSubtarget::useMIPSLoadStorePairs() const {
+  return UseMIPSLoadStorePairsOpt && HasVendorXMIPSLSP;
+}
+
+bool RISCVSubtarget::useMIPSCCMovInsn() const {
+  return UseMIPSCCMovInsn && HasVendorXMIPSCMov;
 }

@@ -59,19 +59,34 @@ Serial          : 0000000000000000
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(CortexA9ProcCpuinfo),
             "cortex-a9");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100c090, ArrayRef<uint64_t>{0x4100c090, 0x4100c090}),
+            "cortex-a9");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xc0f"),
+            "cortex-a15");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x4100c0f0,
+                                              ArrayRef<uint64_t>{0x4100c0f0}),
             "cortex-a15");
   // Verify that both CPU implementer and CPU part are checked:
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x40\n"
                                               "CPU part        : 0xc0f"),
             "generic");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x4000c0f0,
+                                              ArrayRef<uint64_t>{0x4000c0f0}),
+            "generic");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x06f"),
+            "krait");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x510006f0,
+                                              ArrayRef<uint64_t>{0x510006f0}),
             "krait");
 }
 
 TEST(getLinuxHostCPUName, AArch64) {
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8f"),
+            "cortex-a320");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd03"),
             "cortex-a53");
@@ -119,6 +134,32 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd48"),
             "cortex-x2");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd85\n"
+                                              "CPU part        : 0xd87"),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100d850, ArrayRef<uint64_t>{0x4100d850, 0x4100d870}),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd87\n"
+                                              "CPU part        : 0xd85"),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100d870, ArrayRef<uint64_t>{0x4100d870, 0x4100d850}),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8a"),
+            "c1-nano");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd90"),
+            "c1-premium");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8b"),
+            "c1-pro");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8c"),
+            "c1-ultra");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0xc00"),
             "falkor");
@@ -189,15 +230,24 @@ CPU architecture: 8
                                               "CPU variant     : 0xc\n"
                                               "CPU part        : 0xafe"),
             "exynos-m3");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53c0afe0, ArrayRef<uint64_t>{0x53c0afe0, 0x5300d050}),
+            "exynos-m3");
   // Verify Exynos M3.
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
                                               "CPU variant     : 0x1\n"
                                               "CPU part        : 0x002"),
             "exynos-m3");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53100020, ArrayRef<uint64_t>{0x53100020, 0x5300d050}),
+            "exynos-m3");
   // Verify Exynos M4.
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
                                               "CPU variant     : 0x1\n"
                                               "CPU part        : 0x003"),
+            "exynos-m4");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53100030, ArrayRef<uint64_t>{0x53100030, 0x5300d050}),
             "exynos-m4");
 
   const std::string ThunderX2T99ProcCpuInfo = R"(
@@ -305,6 +355,14 @@ CPU revision    : 0
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(CarmelProcCpuInfo), "carmel");
 
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x10"),
+            "olympus");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x010"),
+            "olympus");
+
   // Snapdragon mixed implementer quirk
   const std::string Snapdragon865ProcCPUInfo = R"(
 processor       : 0
@@ -340,7 +398,7 @@ TEST(getLinuxHostCPUName, s390x) {
 
   // Model Id: 9175
   ExpectedCPUs.push_back("zEC12");
-  ExpectedCPUs.push_back("arch15");
+  ExpectedCPUs.push_back("z17");
 
   // Model Id: 3931
   ExpectedCPUs.push_back("zEC12");
@@ -405,6 +463,19 @@ uarch           : sifive,u74-mc
   EXPECT_EQ(
       sys::detail::getHostCPUNameForRISCV("uarch           : sifive,bullet0\n"),
       "sifive-u74");
+
+  const StringRef SifiveP550MCProcCPUInfo = R"(
+processor       : 0
+hart            : 2
+isa             : rv64imafdch_zicsr_zifencei_zba_zbb_sscofpmf
+mmu             : sv48
+uarch           : eswin,eic770x
+)";
+  EXPECT_EQ(sys::detail::getHostCPUNameForRISCV(SifiveP550MCProcCPUInfo),
+            "sifive-p550");
+  EXPECT_EQ(
+      sys::detail::getHostCPUNameForRISCV("uarch           : eswin,eic770x\n"),
+      "sifive-p550");
 }
 
 static bool runAndGetCommandOutput(

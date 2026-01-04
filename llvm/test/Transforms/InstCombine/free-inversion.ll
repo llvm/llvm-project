@@ -563,10 +563,10 @@ define i1 @test_inv_free(i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK:       b2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       b3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[C3:%.*]], [[C4:%.*]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[VAL_NOT:%.*]] = phi i1 [ false, [[B1]] ], [ true, [[B2]] ], [ [[C3:%.*]], [[B3]] ]
-; CHECK-NEXT:    [[COND_NOT:%.*]] = and i1 [[VAL_NOT]], [[C4:%.*]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = phi i1 [ false, [[B1]] ], [ [[C4]], [[B2]] ], [ [[TMP0]], [[B3]] ]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[B5:%.*]], label [[B4:%.*]]
 ; CHECK:       b4:
 ; CHECK-NEXT:    ret i1 true
@@ -739,4 +739,24 @@ exit:
   br i1 %cond, label %exit, label %b4
 b4:
   ret i1 true
+}
+
+define i64 @PR71390(i64 %v) {
+; CHECK-LABEL: @PR71390(
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[V:%.*]], 9187201950435737471
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i64 -72340172838076674, [[AND]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[AND]], 6872316419617283935
+; CHECK-NEXT:    [[OR_NOT:%.*]] = and i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[NOT5:%.*]] = or i64 [[V]], [[OR_NOT]]
+; CHECK-NEXT:    ret i64 [[NOT5]]
+;
+  %and = and i64 %v, 9187201950435737471
+  %add = add nuw i64 %and, 72340172838076673
+  %add2 = add nuw i64 %and, 6872316419617283935
+  %not = xor i64 %v, -1
+  %not3 = xor i64 %add2, -1
+  %or = or i64 %add, %not3
+  %and4 = and i64 %not, %or
+  %not5 = xor i64 %and4, -1
+  ret i64 %not5
 }

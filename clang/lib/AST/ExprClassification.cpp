@@ -129,7 +129,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // FIXME: Is this wise? Should they get their own kind?
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
-  case Expr::TypoExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CXXDependentScopeMemberExprClass:
   case Expr::DependentScopeDeclRefExprClass:
@@ -259,6 +258,9 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
         return ClassifyInternal(Ctx, Base);
     }
     return Cl::CL_LValue;
+
+  case Expr::MatrixSingleSubscriptExprClass:
+    return ClassifyInternal(Ctx, cast<MatrixSingleSubscriptExpr>(E)->getBase());
 
   // Subscripting matrix types behaves like member accesses.
   case Expr::MatrixSubscriptExprClass:
@@ -451,13 +453,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::PackExpansionExprClass:
     return ClassifyInternal(Ctx, cast<PackExpansionExpr>(E)->getPattern());
 
-  case Expr::ResolvedUnexpandedPackExprClass: {
-    if (cast<ResolvedUnexpandedPackExpr>(E)->getNumExprs() > 0)
-      return ClassifyInternal(
-          Ctx, cast<ResolvedUnexpandedPackExpr>(E)->getExpansion(0));
-    return Cl::CL_LValue;
-  }
-
   case Expr::MaterializeTemporaryExprClass:
     return cast<MaterializeTemporaryExpr>(E)->isBoundToLvalueReference()
               ? Cl::CL_LValue
@@ -609,6 +604,13 @@ static Cl::Kinds ClassifyMemberExpr(ASTContext &Ctx, const MemberExpr *E) {
 static Cl::Kinds ClassifyBinaryOp(ASTContext &Ctx, const BinaryOperator *E) {
   assert(Ctx.getLangOpts().CPlusPlus &&
          "This is only relevant for C++.");
+
+  // For binary operators which are unknown due to type dependence, the
+  // convention is to classify them as a prvalue. This does not matter much, but
+  // it needs to agree with how they are created.
+  if (E->getType() == Ctx.DependentTy)
+    return Cl::CL_PRValue;
+
   // C++ [expr.ass]p1: All [...] return an lvalue referring to the left operand.
   // Except we override this for writes to ObjC properties.
   if (E->isAssignmentOp())

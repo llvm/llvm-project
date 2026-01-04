@@ -69,6 +69,14 @@ static cl::opt<bool>
 static cl::opt<bool> UseTBAA("use-tbaa-in-sched-mi", cl::Hidden,
     cl::init(true), cl::desc("Enable use of TBAA during MI DAG construction"));
 
+static cl::opt<bool>
+    EnableSchedModel("schedmodel", cl::Hidden, cl::init(true),
+                     cl::desc("Use TargetSchedModel for latency lookup"));
+
+static cl::opt<bool>
+    EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
+                     cl::desc("Use InstrItineraryData for latency lookup"));
+
 // Note: the two options below might be used in tuning compile time vs
 // output quality. Setting HugeRegion so large that it will never be
 // reached means best-effort, but may be slow.
@@ -121,7 +129,7 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
-  SchedModel.init(&ST);
+  SchedModel.init(&ST, EnableSchedModel, EnableSchedItins);
 }
 
 /// If this machine instr has memory reference information and it can be
@@ -209,13 +217,25 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
   ExitSU.setInstr(ExitMI);
   // Add dependencies on the defs and uses of the instruction.
   if (ExitMI) {
+    const MCInstrDesc &MIDesc = ExitMI->getDesc();
     for (const MachineOperand &MO : ExitMI->all_uses()) {
+      unsigned OpIdx = MO.getOperandNo();
       Register Reg = MO.getReg();
       if (Reg.isPhysical()) {
+        // addPhysRegDataDeps uses the provided operand index to retrieve
+        // the operand use cycle from the scheduling model. If the operand
+        // is "fake" (e.g., an operand of a call instruction used to pass
+        // an argument to the called function.), the scheduling model may not
+        // have an entry for it. If this is the case, pass -1 as operand index,
+        // which will cause addPhysRegDataDeps to add an artificial dependency.
+        // FIXME: Using hasImplicitUseOfPhysReg here is inaccurate as it misses
+        //  aliases. When fixing, make sure to update addPhysRegDataDeps, too.
+        bool IsRealUse = OpIdx < MIDesc.getNumOperands() ||
+                         MIDesc.hasImplicitUseOfPhysReg(Reg);
         for (MCRegUnit Unit : TRI->regunits(Reg))
-          Uses.insert(PhysRegSUOper(&ExitSU, -1, Unit));
+          Uses.insert(PhysRegSUOper(&ExitSU, IsRealUse ? OpIdx : -1, Unit));
       } else if (Reg.isVirtual() && MO.readsReg()) {
-        addVRegUseDeps(&ExitSU, MO.getOperandNo());
+        addVRegUseDeps(&ExitSU, OpIdx);
       }
     }
   }
@@ -1531,14 +1551,10 @@ LLVM_DUMP_METHOD void ILPValue::dump() const {
   dbgs() << *this << '\n';
 }
 
-namespace llvm {
-
-LLVM_ATTRIBUTE_UNUSED
-raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val) {
+[[maybe_unused]]
+raw_ostream &llvm::operator<<(raw_ostream &OS, const ILPValue &Val) {
   Val.print(OS);
   return OS;
 }
-
-} // end namespace llvm
 
 #endif

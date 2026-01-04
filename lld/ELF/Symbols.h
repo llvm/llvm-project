@@ -48,7 +48,7 @@ enum {
   NEEDS_COPY = 1 << 3,
   NEEDS_TLSDESC = 1 << 4,
   NEEDS_TLSGD = 1 << 5,
-  NEEDS_TLSGD_TO_IE = 1 << 6,
+  // 1 << 6 unused
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
   NEEDS_GOT_AUTH = 1 << 9,
@@ -105,6 +105,9 @@ public:
   uint8_t partition;
 
   // True if this symbol is preemptible at load time.
+  //
+  // Primarily set in two locations, (a) parseVersionAndComputeIsPreemptible and
+  // (b) demoteSymbolsAndComputeIsPreemptible.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t isPreemptible : 1;
 
@@ -131,15 +134,8 @@ public:
   // - If -shared or --export-dynamic is specified, any symbol in an object
   //   file/bitcode sets this property, unless suppressed by LTO
   //   canBeOmittedFromSymbolTable().
-  //
-  // Primarily set in two locations, (a) after parseSymbolVersion and
-  // (b) during demoteSymbols.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t isExported : 1;
-
-  // Used to compute isExported. Set when defined or referenced by a SharedFile.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t exportDynamic : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   uint8_t ltoCanOmit : 1;
@@ -159,7 +155,6 @@ public:
     stOther = (stOther & ~3) | visibility;
   }
 
-  bool includeInDynsym(Ctx &) const;
   uint8_t computeBinding(Ctx &) const;
   bool isGlobal() const { return binding == llvm::ELF::STB_GLOBAL; }
   bool isWeak() const { return binding == llvm::ELF::STB_WEAK; }
@@ -247,8 +242,8 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k), exportDynamic(false),
-        ltoCanOmit(false), archSpecificBit(false) {}
+        binding(binding), stOther(stOther), symbolKind(k), ltoCanOmit(false),
+        archSpecificBit(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)
@@ -318,6 +313,8 @@ public:
   // represents the Verdef index within the input DSO, which will be converted
   // to a Verneed index in the output. Otherwise, this represents the Verdef
   // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
+  // VER_NDX_LOCAL indicates a defined symbol that has been localized by a
+  // version script's local: directive or --exclude-libs.
   uint16_t versionId;
   LLVM_PREFERRED_TYPE(bool)
   uint8_t versionScriptAssigned : 1;
@@ -348,14 +345,14 @@ public:
     flags.fetch_or(bits, std::memory_order_relaxed);
   }
   bool hasFlag(uint16_t bit) const {
-    assert(bit && (bit & (bit - 1)) == 0 && "bit must be a power of 2");
+    assert(llvm::has_single_bit(bit) && "bit must be a power of 2");
     return flags.load(std::memory_order_relaxed) & bit;
   }
 
   bool needsDynReloc() const {
     return flags.load(std::memory_order_relaxed) &
            (NEEDS_COPY | NEEDS_GOT | NEEDS_PLT | NEEDS_TLSDESC | NEEDS_TLSGD |
-            NEEDS_TLSGD_TO_IE | NEEDS_GOT_DTPREL | NEEDS_TLSIE);
+            NEEDS_GOT_DTPREL | NEEDS_TLSIE);
   }
   void allocateAux(Ctx &ctx) {
     assert(auxIdx == 0);

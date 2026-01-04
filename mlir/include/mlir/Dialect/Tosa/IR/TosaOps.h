@@ -16,6 +16,7 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/Dialect/Traits.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -28,17 +29,29 @@
 // TOSA dialect and structs includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaEnums.h.inc"
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
+#include "mlir/Transforms/DialectConversion.h"
+
+//===----------------------------------------------------------------------===//
+// TOSA operation validation includes.
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Tosa/IR/TosaAvailability.h.inc"
 
 namespace mlir {
 class PatternRewriter;
 
 namespace tosa {
 
-ParseResult parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
-                            Attribute &attr);
-void printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
-                     Attribute attr);
+ParseResult parseVariableOpTypeOrInitialValue(OpAsmParser &parser,
+                                              DenseElementsAttr &varShapeAttr,
+                                              TypeAttr &typeAttr,
+                                              Attribute &initialValueAttr);
+void printVariableOpTypeOrInitialValue(OpAsmPrinter &p, Operation *op,
+                                       DenseElementsAttr varShapeAttr,
+                                       TypeAttr typeAttr,
+                                       Attribute initialValueAttr);
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.h.inc"
 
@@ -151,5 +164,25 @@ bool isa_tosa_shape_type(mlir::Type t);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.h.inc"
+
+namespace mlir {
+namespace tosa {
+
+// Create a rank-1 const tensor for zero point of the source tensor.
+std::optional<Value> createZeroPointTensor(OpBuilder &builder, Location loc,
+                                           Type srcElemType, int64_t zp = 0);
+
+// Create a pad-const const tensor with value of `val` of required data-type
+Value createPadConstTensor(OpBuilder &builder, Location loc, Value src,
+                           int32_t val = 0);
+
+// returns type of variable op
+RankedTensorType getVariableType(VariableOp variableOp);
+
+// Returns the bitwidth of a TOSA tensor element type
+unsigned getBitWidth(Type type);
+
+} // namespace tosa
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_IR_TOSAOPS_H

@@ -1,4 +1,5 @@
 # RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -verify-machineinstrs | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64 -passes="require<profile-summary>,function(machine-function(branch-folder<enable-tail-merge>))" -verify-machineinstrs | FileCheck %s
 # Check that BranchFolding pass is able to hoist a common instruction into a block with a single branch instruction.
 name: func
 tracksRegLiveness: true
