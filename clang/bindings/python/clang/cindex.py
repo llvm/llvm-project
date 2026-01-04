@@ -3051,18 +3051,6 @@ SPELLING_CACHE = {
 }
 
 
-def _convert_screaming_caps_to_pascal_case(kind: str):
-    """
-    Converting the new enum names (full upper-case, underscore separated)
-    to the old ones (separated by capitalization), e.g. RESULT_TYPE -> ResultType
-    """
-    # Remove underscores
-    components = kind.split("_")
-    # Upper-camel case each split component
-    components = [component.lower().capitalize() for component in components]
-    return "".join(components)
-
-
 class CompletionChunk:
     class Kind:
         def __init__(self, name: str):
@@ -3179,9 +3167,9 @@ class CompletionString(ClangObject):
         return conf.lib.clang_getCompletionPriority(self.obj)  # type: ignore [no-any-return]
 
     @property
-    def availability(self) -> AvailabilityKind:
+    def availability(self) -> AvailabilityKindCompat:
         res = conf.lib.clang_getCompletionAvailability(self.obj)
-        return AvailabilityKind.from_id(res)
+        return AvailabilityKindCompat.from_id(res)
 
     @property
     def briefComment(self) -> str:
@@ -3193,10 +3181,44 @@ class CompletionString(ClangObject):
             + " || Priority: "
             + str(self.priority)
             + " || Availability: "
-            + _convert_screaming_caps_to_pascal_case(self.availability.name)
+            + str(self.availability)
             + " || Brief comment: "
             + str(self.briefComment)
         )
+
+# AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__
+# This is a temporary measure to keep the string representation the same
+# until we unify the return of CompletionString.availability to be AvailabilityKind
+# Note that deriving from AvailabilityKind directly is not possible
+class AvailabilityKindCompat(BaseEnumeration):
+    """
+    Describes the availability of an entity.
+    """
+
+    # Ensure AvailabilityKindCompat is comparable with AvailabilityKind
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, AvailabilityKind):
+            return self.value == other.value
+        else:
+            return NotImplemented
+
+    def __str__(self) -> str:
+        """
+        Returns the common enum names (full upper-case, underscore separated)
+        to the old format (separated by capitalization), e.g. NOT_ACCESSIBLE -> NotAccessible
+        This is a temporary measure and will be changed in a future release
+        to return the same format (full upper-case, underscore separated) like other Kinds
+        """
+        # Remove underscores
+        components = self.name.split("_")
+        # Upper-camel case each split component
+        components = [component.lower().capitalize() for component in components]
+        return "".join(components)
+
+    AVAILABLE = 0
+    DEPRECATED = 1
+    NOT_AVAILABLE = 2
+    NOT_ACCESSIBLE = 3
 
 
 class CodeCompletionResult(Structure):
