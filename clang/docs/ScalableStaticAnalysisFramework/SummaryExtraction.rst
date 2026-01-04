@@ -22,9 +22,7 @@ Global Registries
 
 The framework uses `llvm::Registry\<\> <https://llvm.org/doxygen/classllvm_1_1Registry.html>`_
 as an extension point for adding new summary analyses or serialization formats.
-In short, a static object constructor will insert a note into the linked-list of the *registry*.
 Each entry in the *registry* holds a name, a description and a pointer to a constructor.
-In plain terms, a *registry* is a list of *recipes* and the *registry* is the *cookbook* if you will.
 
 **Pros**:
 
