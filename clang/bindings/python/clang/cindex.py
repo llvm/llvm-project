@@ -3155,16 +3155,6 @@ completionChunkKindMap = {
 
 
 class CompletionString(ClangObject):
-    class Availability:
-        def __init__(self, name):
-            self.name = name
-
-        def __str__(self):
-            return self.name
-
-        def __repr__(self):
-            return "<Availability: %s>" % self
-
     def __len__(self) -> int:
         return self.num_chunks
 
