@@ -317,9 +317,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool emit() { return emit(false); }
 
-  _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __wrapped_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __wrapped_; }
 
-  _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __str_.get_allocator(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __str_.get_allocator(); }
 
   _LIBCPP_HIDE_FROM_ABI void set_emit_on_sync(bool __b) noexcept { __emit_on_sync_ = __b; }
 
@@ -496,9 +496,9 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __sb_.get_wrapped(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __sb_.get_wrapped(); }
 
-  _LIBCPP_HIDE_FROM_ABI syncbuf_type* rdbuf() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI syncbuf_type* rdbuf() const noexcept {
     return const_cast<syncbuf_type*>(std::addressof(__sb_));
   }
 
