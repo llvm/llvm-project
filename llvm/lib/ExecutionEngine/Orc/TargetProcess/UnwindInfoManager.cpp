@@ -20,13 +20,14 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-static orc::shared::CWrapperFunctionResult
-llvm_orc_rt_alt_UnwindInfoManager_register(const char *Data, uint64_t Size) {
+static orc::shared::CWrapperFunctionBuffer
+llvm_orc_rt_alt_UnwindInfoManager_register(const char *ArgData,
+                                           size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
                           SPSExecutorAddrRange, SPSExecutorAddrRange);
 
   return WrapperFunction<SPSSig>::handle(
-             Data, Size,
+             ArgData, ArgSize,
              [](std::vector<ExecutorAddrRange> CodeRanges, ExecutorAddr DSOBase,
                 ExecutorAddrRange DWARFRange,
                 ExecutorAddrRange CompactUnwindRange) {
@@ -36,12 +37,13 @@ llvm_orc_rt_alt_UnwindInfoManager_register(const char *Data, uint64_t Size) {
       .release();
 }
 
-static orc::shared::CWrapperFunctionResult
-llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *Data, uint64_t Size) {
+static orc::shared::CWrapperFunctionBuffer
+llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *ArgData,
+                                             size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>);
 
   return WrapperFunction<SPSSig>::handle(
-             Data, Size,
+             ArgData, ArgSize,
              [](std::vector<ExecutorAddrRange> CodeRanges) {
                return UnwindInfoManager::deregisterSections(CodeRanges);
              })

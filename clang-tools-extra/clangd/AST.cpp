@@ -18,7 +18,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
@@ -29,9 +28,10 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -102,55 +102,79 @@ getUsingNamespaceDirectives(const DeclContext *DestContext,
 // ancestor is redundant, therefore we stop at lowest common ancestor.
 // In addition to that stops early whenever IsVisible returns true. This can be
 // used to implement support for "using namespace" decls.
-std::string
-getQualification(ASTContext &Context, const DeclContext *DestContext,
-                 const DeclContext *SourceContext,
-                 llvm::function_ref<bool(NestedNameSpecifier *)> IsVisible) {
-  std::vector<const NestedNameSpecifier *> Parents;
-  bool ReachedNS = false;
+std::string getQualification(ASTContext &Context,
+                             const DeclContext *DestContext,
+                             const DeclContext *SourceContext,
+                             llvm::function_ref<bool(const Decl *)> IsVisible) {
+  std::vector<const Decl *> Parents;
+  [[maybe_unused]] bool ReachedNS = false;
   for (const DeclContext *CurContext = SourceContext; CurContext;
        CurContext = CurContext->getLookupParent()) {
     // Stop once we reach a common ancestor.
     if (CurContext->Encloses(DestContext))
       break;
 
-    NestedNameSpecifier *NNS = nullptr;
+    const Decl *CurD;
     if (auto *TD = llvm::dyn_cast<TagDecl>(CurContext)) {
       // There can't be any more tag parents after hitting a namespace.
       assert(!ReachedNS);
-      (void)ReachedNS;
-      NNS = NestedNameSpecifier::Create(Context, nullptr, false,
-                                        TD->getTypeForDecl());
+      CurD = TD;
     } else if (auto *NSD = llvm::dyn_cast<NamespaceDecl>(CurContext)) {
       ReachedNS = true;
-      NNS = NestedNameSpecifier::Create(Context, nullptr, NSD);
       // Anonymous and inline namespace names are not spelled while qualifying
       // a name, so skip those.
       if (NSD->isAnonymousNamespace() || NSD->isInlineNamespace())
         continue;
+      CurD = NSD;
     } else {
       // Other types of contexts cannot be spelled in code, just skip over
       // them.
       continue;
     }
     // Stop if this namespace is already visible at DestContext.
-    if (IsVisible(NNS))
+    if (IsVisible(CurD))
       break;
 
-    Parents.push_back(NNS);
+    Parents.push_back(CurD);
   }
 
-  // Go over name-specifiers in reverse order to create necessary qualification,
-  // since we stored inner-most parent first.
+  // Go over the declarations in reverse order, since we stored inner-most
+  // parent first.
+  NestedNameSpecifier Qualifier = std::nullopt;
+  bool IsFirst = true;
+  for (const auto *CurD : llvm::reverse(Parents)) {
+    if (auto *TD = llvm::dyn_cast<TagDecl>(CurD)) {
+      QualType T;
+      if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
+          ClassTemplateDecl *CTD =
+              RD ? RD->getDescribedClassTemplate() : nullptr) {
+        ArrayRef<TemplateArgument> Args;
+        if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+          Args = SD->getTemplateArgs().asArray();
+        else
+          Args = CTD->getTemplateParameters()->getInjectedTemplateArgs(Context);
+        T = Context.getTemplateSpecializationType(
+            ElaboratedTypeKeyword::None,
+            Context.getQualifiedTemplateName(
+                Qualifier, /*TemplateKeyword=*/!IsFirst, TemplateName(CTD)),
+            Args, /*CanonicalArgs=*/{}, Context.getCanonicalTagType(RD));
+      } else {
+        T = Context.getTagType(ElaboratedTypeKeyword::None, Qualifier, TD,
+                               /*OwnsTag=*/false);
+      }
+      Qualifier = NestedNameSpecifier(T.getTypePtr());
+    } else {
+      Qualifier =
+          NestedNameSpecifier(Context, cast<NamespaceDecl>(CurD), Qualifier);
+    }
+    IsFirst = false;
+  }
+  if (!Qualifier)
+    return "";
+
   std::string Result;
   llvm::raw_string_ostream OS(Result);
-  for (const auto *Parent : llvm::reverse(Parents)) {
-    if (Parent != *Parents.rbegin() && Parent->isDependent() &&
-        Parent->getAsRecordDecl() &&
-        Parent->getAsRecordDecl()->getDescribedClassTemplate())
-      OS << "template ";
-    Parent->print(OS, Context.getPrintingPolicy());
-  }
+  Qualifier.print(OS, Context.getPrintingPolicy());
   return OS.str();
 }
 
@@ -188,6 +212,7 @@ std::string printQualifiedName(const NamedDecl &ND) {
   // include them, but at query time it's hard to find all the inline
   // namespaces to query: the preamble doesn't have a dedicated list.
   Policy.SuppressUnwrittenScope = true;
+  Policy.SuppressScope = true;
   // (unnamed struct), not (unnamed struct at /path/to/foo.cc:42:1).
   // In clangd, context is usually available and paths are mostly noise.
   Policy.AnonymousTagLocations = false;
@@ -214,8 +239,7 @@ std::string printUsingNamespaceName(const ASTContext &Ctx,
   std::string Name;
   llvm::raw_string_ostream Out(Name);
 
-  if (auto *Qual = D.getQualifier())
-    Qual->print(Out, PP);
+  D.getQualifier().print(Out, PP);
   D.getNominatedNamespaceAsWritten()->printName(Out);
   return Out.str();
 }
@@ -230,8 +254,7 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   // Handle 'using namespace'. They all have the same name - <using-directive>.
   if (auto *UD = llvm::dyn_cast<UsingDirectiveDecl>(&ND)) {
     Out << "using namespace ";
-    if (auto *Qual = UD->getQualifier())
-      Qual->print(Out, PP);
+    UD->getQualifier().print(Out, PP);
     UD->getNominatedNamespaceAsWritten()->printName(Out);
     return Out.str();
   }
@@ -251,8 +274,7 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   }
 
   // Print nested name qualifier if it was written in the source code.
-  if (auto *Qualifier = getQualifierLoc(ND).getNestedNameSpecifier())
-    Qualifier->print(Out, PP);
+  getQualifierLoc(ND).getNestedNameSpecifier().print(Out, PP);
   // Print the name itself.
   ND.getDeclName().print(Out, PP);
   // Print template arguments.
@@ -392,12 +414,13 @@ preferredIncludeDirective(llvm::StringRef FileName, const LangOptions &LangOpts,
 }
 
 std::string printType(const QualType QT, const DeclContext &CurContext,
-                      const llvm::StringRef Placeholder) {
+                      const llvm::StringRef Placeholder, bool FullyQualify) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   PrintingPolicy PP(CurContext.getParentASTContext().getPrintingPolicy());
   PP.SuppressTagKeyword = true;
   PP.SuppressUnwrittenScope = true;
+  PP.FullyQualifiedName = FullyQualify;
 
   class PrintCB : public PrintingCallbacks {
   public:
@@ -440,7 +463,9 @@ QualType declaredType(const TypeDecl *D) {
   if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D))
     if (const auto *Args = CTSD->getTemplateArgsAsWritten())
       return Context.getTemplateSpecializationType(
-          TemplateName(CTSD->getSpecializedTemplate()), Args->arguments());
+          ElaboratedTypeKeyword::None,
+          TemplateName(CTSD->getSpecializedTemplate()), Args->arguments(),
+          /*CanonicalArgs=*/{});
   return Context.getTypeDeclType(D);
 }
 
@@ -455,10 +480,12 @@ namespace {
 /// a deduced type set. The AST should be improved to simplify this scenario.
 class DeducedTypeVisitor : public RecursiveASTVisitor<DeducedTypeVisitor> {
   SourceLocation SearchedLocation;
+  const HeuristicResolver *Resolver;
 
 public:
-  DeducedTypeVisitor(SourceLocation SearchedLocation)
-      : SearchedLocation(SearchedLocation) {}
+  DeducedTypeVisitor(SourceLocation SearchedLocation,
+                     const HeuristicResolver *Resolver)
+      : SearchedLocation(SearchedLocation), Resolver(Resolver) {}
 
   // Handle auto initializers:
   //- auto i = 1;
@@ -475,6 +502,14 @@ public:
       return true;
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
+      if (AT->isUndeducedAutoType()) {
+        if (const auto *VD = dyn_cast<VarDecl>(D)) {
+          if (Resolver && VD->hasInit()) {
+            DeducedType = Resolver->resolveExprToType(VD->getInit());
+            return true;
+          }
+        }
+      }
       DeducedType = AT->desugar();
     }
     return true;
@@ -584,10 +619,12 @@ public:
 };
 } // namespace
 
-std::optional<QualType> getDeducedType(ASTContext &ASTCtx, SourceLocation Loc) {
+std::optional<QualType> getDeducedType(ASTContext &ASTCtx,
+                                       const HeuristicResolver *Resolver,
+                                       SourceLocation Loc) {
   if (!Loc.isValid())
     return {};
-  DeducedTypeVisitor V(Loc);
+  DeducedTypeVisitor V(Loc, Resolver);
   V.TraverseAST(ASTCtx);
   if (V.DeducedType.isNull())
     return std::nullopt;
@@ -664,14 +701,13 @@ std::string getQualification(ASTContext &Context,
   auto VisibleNamespaceDecls =
       getUsingNamespaceDirectives(DestContext, InsertionPoint);
   return getQualification(
-      Context, DestContext, ND->getDeclContext(),
-      [&](NestedNameSpecifier *NNS) {
-        if (NNS->getKind() != NestedNameSpecifier::Namespace)
+      Context, DestContext, ND->getDeclContext(), [&](const Decl *D) {
+        if (D->getKind() != Decl::Namespace)
           return false;
-        const auto *CanonNSD = NNS->getAsNamespace()->getCanonicalDecl();
+        const auto *NS = cast<NamespaceDecl>(D)->getCanonicalDecl();
         return llvm::any_of(VisibleNamespaceDecls,
-                            [CanonNSD](const NamespaceDecl *NSD) {
-                              return NSD->getCanonicalDecl() == CanonNSD;
+                            [NS](const NamespaceDecl *NSD) {
+                              return NSD->getCanonicalDecl() == NS;
                             });
       });
 }
@@ -685,12 +721,11 @@ std::string getQualification(ASTContext &Context,
     (void)NS;
   }
   return getQualification(
-      Context, DestContext, ND->getDeclContext(),
-      [&](NestedNameSpecifier *NNS) {
+      Context, DestContext, ND->getDeclContext(), [&](const Decl *D) {
         return llvm::any_of(VisibleNamespaces, [&](llvm::StringRef Namespace) {
           std::string NS;
           llvm::raw_string_ostream OS(NS);
-          NNS->print(OS, Context.getPrintingPolicy());
+          D->print(OS, Context.getPrintingPolicy());
           return OS.str() == Namespace;
         });
       });
@@ -963,7 +998,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
     // Recurse on pack parameters
     size_t Depth = 0;
     const FunctionDecl *CurrentFunction = D;
-    llvm::SmallSet<const FunctionTemplateDecl *, 4> SeenTemplates;
+    llvm::SmallPtrSet<const FunctionTemplateDecl *, 4> SeenTemplates;
     if (const auto *Template = D->getPrimaryTemplate()) {
       SeenTemplates.insert(Template);
     }
@@ -1002,6 +1037,81 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
 
 bool isExpandedFromParameterPack(const ParmVarDecl *D) {
   return getUnderlyingPackType(D) != nullptr;
+}
+
+bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT) {
+  const auto *FD = FT->getTemplatedDecl();
+  const auto NumParams = FD->getNumParams();
+  // Check whether its last parameter is a parameter pack...
+  if (NumParams > 0) {
+    const auto *LastParam = FD->getParamDecl(NumParams - 1);
+    if (const auto *PET = dyn_cast<PackExpansionType>(LastParam->getType())) {
+      // ... of the type T&&... or T...
+      const auto BaseType = PET->getPattern().getNonReferenceType();
+      if (const auto *TTPT =
+              dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
+        // ... whose template parameter comes from the function directly
+        if (FT->getTemplateParameters()->getDepth() == TTPT->getDepth()) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+class ForwardingToConstructorVisitor
+    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
+public:
+  ForwardingToConstructorVisitor(
+      llvm::DenseSet<const FunctionDecl *> &SeenFunctions,
+      SmallVector<const CXXConstructorDecl *, 1> &Output)
+      : SeenFunctions(SeenFunctions), Constructors(Output) {}
+
+  bool VisitCallExpr(CallExpr *E) {
+    // Adjust if recurison not deep enough
+    if (SeenFunctions.size() >= 10)
+      return true;
+    if (auto *FD = E->getDirectCallee()) {
+      // Check if we already visited this function to prevent endless recursion
+      if (SeenFunctions.contains(FD))
+        return true;
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT && isLikelyForwardingFunction(PT)) {
+        SeenFunctions.insert(FD);
+        ForwardingToConstructorVisitor Visitor{SeenFunctions, Constructors};
+        Visitor.TraverseStmt(FD->getBody());
+        SeenFunctions.erase(FD);
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    if (auto *CE = E->getConstructExpr())
+      if (auto *Callee = CE->getConstructor()) {
+        auto *Adjusted = &adjustDeclToTemplate(*Callee);
+        if (auto *Template = dyn_cast<TemplateDecl>(Adjusted))
+          Adjusted = Template->getTemplatedDecl();
+        if (auto *Constructor = dyn_cast<CXXConstructorDecl>(Adjusted))
+          Constructors.push_back(Constructor);
+      }
+    return true;
+  }
+
+  // Stack of seen functions
+  llvm::DenseSet<const FunctionDecl *> &SeenFunctions;
+  // Output of this visitor
+  SmallVector<const CXXConstructorDecl *, 1> &Constructors;
+};
+
+SmallVector<const CXXConstructorDecl *, 1>
+searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
+  SmallVector<const CXXConstructorDecl *, 1> Result;
+  llvm::DenseSet<const FunctionDecl *> SeenFunctions{FD};
+  ForwardingToConstructorVisitor Visitor{SeenFunctions, Result};
+  Visitor.TraverseStmt(FD->getBody());
+  return Result;
 }
 
 } // namespace clangd

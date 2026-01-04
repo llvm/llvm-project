@@ -3,7 +3,7 @@
 // This tests checks that a target op inside a data op
 // We are only interested in ensuring that the -mlir-to-llmvir pass doesn't crash.
 // CHECK: {{.*}} = add i32 {{.*}}, 1
-module attributes { } {
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.mlir.global weak_odr hidden local_unnamed_addr constant @__oclc_ABI_version(400 : i32) {addr_space = 4 : i32} : i32
   llvm.func @_QQmain() attributes {fir.bindc_name = "main", omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
     %0 = llvm.mlir.constant(99 : index) : i64

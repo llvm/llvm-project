@@ -654,7 +654,9 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
       IntNo == Intrinsic::hexagon_V6_vgathermh ||
       IntNo == Intrinsic::hexagon_V6_vgathermh_128B ||
       IntNo == Intrinsic::hexagon_V6_vgathermhw ||
-      IntNo == Intrinsic::hexagon_V6_vgathermhw_128B) {
+      IntNo == Intrinsic::hexagon_V6_vgathermhw_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgather_vscattermh ||
+      IntNo == Intrinsic::hexagon_V6_vgather_vscattermh_128B) {
     SelectV65Gather(N);
     return;
   }
@@ -1640,6 +1642,15 @@ bool HexagonDAGToDAGISel::DetectUseSxtw(SDValue &N, SDValue &R) {
       R = N;
       break;
     }
+    case ISD::AssertSext: {
+      EVT T = cast<VTSDNode>(N.getOperand(1))->getVT();
+      if (T.getSizeInBits() == 32)
+        R = N.getOperand(0);
+      else
+        return false;
+      break;
+    }
+
     default:
       return false;
   }
@@ -1804,7 +1815,7 @@ struct WeightedLeaf {
   int Weight;
   int InsertionOrder;
 
-  WeightedLeaf() {}
+  WeightedLeaf() = default;
 
   WeightedLeaf(SDValue Value, int Weight, int InsertionOrder) :
     Value(Value), Weight(Weight), InsertionOrder(InsertionOrder) {
@@ -2022,8 +2033,9 @@ static bool isTargetConstant(const SDValue &V) {
 }
 
 unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
-  if (GAUsesInFunction.count(V))
-    return GAUsesInFunction[V];
+  auto [It, Inserted] = GAUsesInFunction.try_emplace(V);
+  if (!Inserted)
+    return It->second;
 
   unsigned Result = 0;
   const Function &CurF = CurDAG->getMachineFunction().getFunction();
@@ -2033,7 +2045,7 @@ unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
       ++Result;
   }
 
-  GAUsesInFunction[V] = Result;
+  It->second = Result;
 
   return Result;
 }
@@ -2436,10 +2448,7 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
         continue;
 
       // This root node has already been processed
-      if (RootWeights.count(N))
-        continue;
-
-      RootWeights[N] = -1;
+      RootWeights.try_emplace(N, -1);
     }
 
     // Balance node itself

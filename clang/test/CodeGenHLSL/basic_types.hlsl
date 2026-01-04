@@ -1,43 +1,59 @@
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - -DNAMESPACED| FileCheck %s
 
 
-// CHECK: @uint16_t_Val = external addrspace(2) global i16, align 2
-// CHECK: @int16_t_Val = external addrspace(2) global i16, align 2
-// CHECK: @uint_Val = external addrspace(2) global i32, align 4
-// CHECK: @uint64_t_Val = external addrspace(2) global i64, align 8
-// CHECK: @int64_t_Val = external addrspace(2) global i64, align 8
-// CHECK: @int16_t2_Val = external addrspace(2) global <2 x i16>, align 4
-// CHECK: @int16_t3_Val = external addrspace(2) global <3 x i16>, align 8
-// CHECK: @int16_t4_Val = external addrspace(2) global <4 x i16>, align 8
-// CHECK: @uint16_t2_Val = external addrspace(2) global <2 x i16>, align 4
-// CHECK: @uint16_t3_Val = external addrspace(2) global <3 x i16>, align 8
-// CHECK: @uint16_t4_Val = external addrspace(2) global <4 x i16>, align 8
-// CHECK: @int2_Val = external addrspace(2) global <2 x i32>, align 8
-// CHECK: @int3_Val = external addrspace(2) global <3 x i32>, align 16
-// CHECK: @int4_Val = external addrspace(2) global <4 x i32>, align 16
-// CHECK: @uint2_Val = external addrspace(2) global <2 x i32>, align 8
-// CHECK: @uint3_Val = external addrspace(2) global <3 x i32>, align 16
-// CHECK: @uint4_Val = external addrspace(2) global <4 x i32>, align 16
-// CHECK: @int64_t2_Val = external addrspace(2) global <2 x i64>, align 16
-// CHECK: @int64_t3_Val = external addrspace(2) global <3 x i64>, align 32
-// CHECK: @int64_t4_Val = external addrspace(2) global <4 x i64>, align 32
-// CHECK: @uint64_t2_Val = external addrspace(2) global <2 x i64>, align 16
-// CHECK: @uint64_t3_Val = external addrspace(2) global <3 x i64>, align 32
-// CHECK: @uint64_t4_Val = external addrspace(2) global <4 x i64>, align 32
-// CHECK: @half2_Val = external addrspace(2) global <2 x half>, align 4
-// CHECK: @half3_Val = external addrspace(2) global <3 x half>, align 8
-// CHECK: @half4_Val = external addrspace(2) global <4 x half>, align 8
-// CHECK: @float2_Val = external addrspace(2) global <2 x float>, align 8
-// CHECK: @float3_Val = external addrspace(2) global <3 x float>, align 16
-// CHECK: @float4_Val = external addrspace(2) global <4 x float>, align 16
-// CHECK: @double2_Val = external addrspace(2) global <2 x double>, align 16
-// CHECK: @double3_Val = external addrspace(2) global <3 x double>, align 32
-// CHECK: @double4_Val = external addrspace(2) global <4 x double>, align 32
+// CHECK: @uint16_t_Val = external hidden addrspace(2) global i16, align 2
+// CHECK: @int16_t_Val = external hidden addrspace(2) global i16, align 2
+// CHECK: @uint_Val = external hidden addrspace(2) global i32, align 4
+// CHECK: @uint64_t_Val = external hidden addrspace(2) global i64, align 8
+// CHECK: @int64_t_Val = external hidden addrspace(2) global i64, align 8
+// CHECK: @int16_t2_Val = external hidden addrspace(2) global <2 x i16>, align 4
+// CHECK: @int16_t3_Val = external hidden addrspace(2) global <3 x i16>, align 8
+// CHECK: @int16_t4_Val = external hidden addrspace(2) global <4 x i16>, align 8
+// CHECK: @uint16_t2_Val = external hidden addrspace(2) global <2 x i16>, align 4
+// CHECK: @uint16_t3_Val = external hidden addrspace(2) global <3 x i16>, align 8
+// CHECK: @uint16_t4_Val = external hidden addrspace(2) global <4 x i16>, align 8
+// CHECK: @int2_Val = external hidden addrspace(2) global <2 x i32>, align 8
+// CHECK: @int3_Val = external hidden addrspace(2) global <3 x i32>, align 16
+// CHECK: @int4_Val = external hidden addrspace(2) global <4 x i32>, align 16
+// CHECK: @uint2_Val = external hidden addrspace(2) global <2 x i32>, align 8
+// CHECK: @uint3_Val = external hidden addrspace(2) global <3 x i32>, align 16
+// CHECK: @uint4_Val = external hidden addrspace(2) global <4 x i32>, align 16
+// CHECK: @int64_t2_Val = external hidden addrspace(2) global <2 x i64>, align 16
+// CHECK: @int64_t3_Val = external hidden addrspace(2) global <3 x i64>, align 32
+// CHECK: @int64_t4_Val = external hidden addrspace(2) global <4 x i64>, align 32
+// CHECK: @uint64_t2_Val = external hidden addrspace(2) global <2 x i64>, align 16
+// CHECK: @uint64_t3_Val = external hidden addrspace(2) global <3 x i64>, align 32
+// CHECK: @uint64_t4_Val = external hidden addrspace(2) global <4 x i64>, align 32
+// CHECK: @half2_Val = external hidden addrspace(2) global <2 x half>, align 4
+// CHECK: @half3_Val = external hidden addrspace(2) global <3 x half>, align 8
+// CHECK: @half4_Val = external hidden addrspace(2) global <4 x half>, align 8
+// CHECK: @float2_Val = external hidden addrspace(2) global <2 x float>, align 8
+// CHECK: @float3_Val = external hidden addrspace(2) global <3 x float>, align 16
+// CHECK: @float4_Val = external hidden addrspace(2) global <4 x float>, align 16
+// CHECK: @double2_Val = external hidden addrspace(2) global <2 x double>, align 16
+// CHECK: @double3_Val = external hidden addrspace(2) global <3 x double>, align 32
+// CHECK: @double4_Val = external hidden addrspace(2) global <4 x double>, align 32
+// CHECK: @bool1x1_Val = external hidden addrspace(2) global [1 x i32], align 4
+// CHECK: @bool1x2_Val = external hidden addrspace(2) global [2 x i32], align 4
+// CHECK: @bool1x3_Val = external hidden addrspace(2) global [3 x i32], align 4
+// CHECK: @bool1x4_Val = external hidden addrspace(2) global [4 x i32], align 4
+// CHECK: @bool2x1_Val = external hidden addrspace(2) global [2 x i32], align 4
+// CHECK: @bool2x2_Val = external hidden addrspace(2) global [4 x i32], align 4
+// CHECK: @bool2x3_Val = external hidden addrspace(2) global [6 x i32], align 4
+// CHECK: @bool2x4_Val = external hidden addrspace(2) global [8 x i32], align 4
+// CHECK: @bool3x1_Val = external hidden addrspace(2) global [3 x i32], align 4
+// CHECK: @bool3x2_Val = external hidden addrspace(2) global [6 x i32], align 4
+// CHECK: @bool3x3_Val = external hidden addrspace(2) global [9 x i32], align 4
+// CHECK: @bool3x4_Val = external hidden addrspace(2) global [12 x i32], align 4
+// CHECK: @bool4x1_Val = external hidden addrspace(2) global [4 x i32], align 4
+// CHECK: @bool4x2_Val = external hidden addrspace(2) global [8 x i32], align 4
+// CHECK: @bool4x3_Val = external hidden addrspace(2) global [12 x i32], align 4
+// CHECK: @bool4x4_Val = external hidden addrspace(2) global [16 x i32], align 4
 
 #ifdef NAMESPACED
 #define TYPE_DECL(T)  hlsl::T T##_Val
@@ -93,3 +109,20 @@ TYPE_DECL( float4  );
 TYPE_DECL( double2 );
 TYPE_DECL( double3 );
 TYPE_DECL( double4 );
+
+TYPE_DECL( bool1x1 );
+TYPE_DECL( bool1x2 );
+TYPE_DECL( bool1x3 );
+TYPE_DECL( bool1x4 );
+TYPE_DECL( bool2x1 );
+TYPE_DECL( bool2x2 );
+TYPE_DECL( bool2x3 );
+TYPE_DECL( bool2x4 );
+TYPE_DECL( bool3x1 );
+TYPE_DECL( bool3x2 );
+TYPE_DECL( bool3x3 );
+TYPE_DECL( bool3x4 );
+TYPE_DECL( bool4x1 );
+TYPE_DECL( bool4x2 );
+TYPE_DECL( bool4x3 );
+TYPE_DECL( bool4x4 );

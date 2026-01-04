@@ -8,6 +8,7 @@
 
 // ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(character-conversion-warnings): -Wno-character-conversion
 // MSVC warning C4245: conversion from 'int' to 'wchar_t', signed/unsigned mismatch
 // MSVC warning C4305: truncation from 'int' to 'bool'
 // MSVC warning C4310: cast truncates constant value
@@ -31,6 +32,7 @@
 #include <vector>
 #include <type_traits>
 
+#include "sized_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
@@ -228,7 +230,8 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   types::for_each(types::integral_types(), TestIntegerPromotions());
 
-  { // Test vector<bool>::iterator optimization
+  {
+    // Test vector<bool>::iterator optimization
     std::vector<bool> vec(256 + 8);
     for (ptrdiff_t i = 8; i <= 256; i *= 2) {
       for (size_t offset = 0; offset < 8; offset += 2) {
@@ -237,6 +240,39 @@ TEST_CONSTEXPR_CXX20 bool test() {
         assert(std::find(vec.begin(), vec.end(), true) == vec.begin() + offset);
         assert(std::find(vec.begin() + offset, vec.end(), false) == vec.begin() + offset + i);
       }
+    }
+
+    // Verify that the std::vector<bool>::iterator optimization works properly for allocators with custom size types
+    // Fix https://llvm.org/PR122528
+    {
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(100, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(199, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, unsigned short, short>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+      std::vector<bool, Alloc> in(205, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+      std::vector<bool, Alloc> in(257, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
     }
   }
 

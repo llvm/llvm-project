@@ -52,17 +52,17 @@ define <vscale x 4 x bfloat> @fptrunc_nxv4f64_to_nxv4bf16(<vscale x 4 x double> 
 ; NOBF16-NEXT:    fcvtx z1.s, p0/m, z1.d
 ; NOBF16-NEXT:    fcvtx z0.s, p0/m, z0.d
 ; NOBF16-NEXT:    lsr z3.s, z1.s, #16
-; NOBF16-NEXT:    lsr z4.s, z0.s, #16
-; NOBF16-NEXT:    add z5.s, z1.s, z2.s
+; NOBF16-NEXT:    lsr z5.s, z0.s, #16
+; NOBF16-NEXT:    add z4.s, z1.s, z2.s
 ; NOBF16-NEXT:    add z2.s, z0.s, z2.s
 ; NOBF16-NEXT:    fcmuo p1.s, p0/z, z1.s, z1.s
-; NOBF16-NEXT:    fcmuo p0.s, p0/z, z0.s, z0.s
 ; NOBF16-NEXT:    orr z1.s, z1.s, #0x400000
-; NOBF16-NEXT:    orr z0.s, z0.s, #0x400000
 ; NOBF16-NEXT:    and z3.s, z3.s, #0x1
-; NOBF16-NEXT:    and z4.s, z4.s, #0x1
-; NOBF16-NEXT:    add z3.s, z3.s, z5.s
-; NOBF16-NEXT:    add z2.s, z4.s, z2.s
+; NOBF16-NEXT:    and z5.s, z5.s, #0x1
+; NOBF16-NEXT:    fcmuo p0.s, p0/z, z0.s, z0.s
+; NOBF16-NEXT:    orr z0.s, z0.s, #0x400000
+; NOBF16-NEXT:    add z3.s, z3.s, z4.s
+; NOBF16-NEXT:    add z2.s, z5.s, z2.s
 ; NOBF16-NEXT:    sel z1.s, p1, z1.s, z3.s
 ; NOBF16-NEXT:    sel z0.s, p0, z0.s, z2.s
 ; NOBF16-NEXT:    lsr z1.s, z1.s, #16
@@ -119,20 +119,20 @@ define <vscale x 8 x bfloat> @fptrunc_nxv8f64_to_nxv8bf16(<vscale x 8 x double> 
 ; NOBF16-NEXT:    add z26.s, z2.s, z4.s
 ; NOBF16-NEXT:    add z27.s, z1.s, z4.s
 ; NOBF16-NEXT:    add z4.s, z0.s, z4.s
-; NOBF16-NEXT:    fcmuo p1.s, p0/z, z3.s, z3.s
 ; NOBF16-NEXT:    and z5.s, z5.s, #0x1
 ; NOBF16-NEXT:    and z6.s, z6.s, #0x1
 ; NOBF16-NEXT:    and z7.s, z7.s, #0x1
 ; NOBF16-NEXT:    and z24.s, z24.s, #0x1
-; NOBF16-NEXT:    fcmuo p2.s, p0/z, z2.s, z2.s
-; NOBF16-NEXT:    fcmuo p3.s, p0/z, z1.s, z1.s
-; NOBF16-NEXT:    fcmuo p0.s, p0/z, z0.s, z0.s
+; NOBF16-NEXT:    fcmuo p1.s, p0/z, z3.s, z3.s
 ; NOBF16-NEXT:    orr z3.s, z3.s, #0x400000
-; NOBF16-NEXT:    orr z2.s, z2.s, #0x400000
+; NOBF16-NEXT:    fcmuo p2.s, p0/z, z2.s, z2.s
 ; NOBF16-NEXT:    add z5.s, z5.s, z25.s
 ; NOBF16-NEXT:    add z6.s, z6.s, z26.s
+; NOBF16-NEXT:    fcmuo p3.s, p0/z, z1.s, z1.s
 ; NOBF16-NEXT:    add z7.s, z7.s, z27.s
 ; NOBF16-NEXT:    add z4.s, z24.s, z4.s
+; NOBF16-NEXT:    fcmuo p0.s, p0/z, z0.s, z0.s
+; NOBF16-NEXT:    orr z2.s, z2.s, #0x400000
 ; NOBF16-NEXT:    orr z1.s, z1.s, #0x400000
 ; NOBF16-NEXT:    orr z0.s, z0.s, #0x400000
 ; NOBF16-NEXT:    sel z3.s, p1, z3.s, z5.s

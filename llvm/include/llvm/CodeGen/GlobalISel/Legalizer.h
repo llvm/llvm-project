@@ -22,9 +22,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -34,7 +35,7 @@ class MachineInstr;
 class GISelChangeObserver;
 class LostDebugLocObserver;
 
-class Legalizer : public MachineFunctionPass {
+class LLVM_ABI Legalizer : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -56,19 +57,15 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::Legalized);
+    return MachineFunctionProperties().setLegalized();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::NoPHIs)
-        .set(MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoPHIs().setNoVRegs();
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -77,7 +74,7 @@ public:
   legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
                           ArrayRef<GISelChangeObserver *> AuxObservers,
                           LostDebugLocObserver &LocObserver,
-                          MachineIRBuilder &MIRBuilder, GISelKnownBits *KB);
+                          MachineIRBuilder &MIRBuilder, GISelValueTracking *VT);
 };
 } // End namespace llvm.
 

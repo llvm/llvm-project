@@ -48,13 +48,13 @@ _start:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           66576
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:   - Type:            EXPORT
 # CHECK-NEXT:     Exports:
 # CHECK-NEXT:       - Name:            memory
@@ -97,11 +97,11 @@ _start:
 # CHECK-NEXT:         Body:            4181808080000B
 # CHECK-NEXT:   - Type:            DATA
 # CHECK-NEXT:     Segments:
-# CHECK-NEXT:       - SectionOffset:   7
+# CHECK-NEXT:       - SectionOffset:   8
 # CHECK-NEXT:         InitFlags:       0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:         Content:         '01000000'
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            name

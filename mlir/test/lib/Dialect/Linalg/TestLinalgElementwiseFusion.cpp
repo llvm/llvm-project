@@ -27,7 +27,7 @@ static void addOperands(Operation *op, SetVector<Value> &operandSet) {
   TypeSwitch<Operation *, void>(op)
       .Case<linalg::LinalgOp>([&](linalg::LinalgOp linalgOp) {
         SmallVector<Value> inputOperands = linalgOp.getDpsInputs();
-        operandSet.insert(inputOperands.begin(), inputOperands.end());
+        operandSet.insert_range(inputOperands);
       })
       .Default([&](Operation *operation) {
         operandSet.insert(operation->operand_begin(), operation->operand_end());
@@ -235,6 +235,12 @@ struct TestLinalgElementwiseFusion
           // Skip fusing the first operand.
           return fusedOperand->getOperandNumber();
         }
+        Operation *consumer = fusedOperand->getOwner();
+        if (auto collapseOp = dyn_cast<tensor::CollapseShapeOp>(consumer)) {
+          auto producerResult = dyn_cast<OpResult>(collapseOp.getSrc());
+          // skip fusing first result.
+          return producerResult.getResultNumber();
+        }
         return true;
       };
       linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns, controlFn);
@@ -246,7 +252,9 @@ struct TestLinalgElementwiseFusion
     if (fuseMultiUseProducer) {
       RewritePatternSet patterns(context);
       patterns.insert<TestMultiUseProducerFusion>(context);
-      if (failed(applyPatternsGreedily(funcOp.getBody(), std::move(patterns))))
+      if (failed(applyPatternsGreedily(
+              funcOp.getBody(), std::move(patterns),
+              GreedyRewriteConfig().setUseTopDownTraversal(true))))
         return signalPassFailure();
       return;
     }
