@@ -84,6 +84,7 @@ from ctypes import (
 import os
 import sys
 from enum import Enum
+import warnings
 
 from typing import (
     Any,
@@ -3186,6 +3187,7 @@ class CompletionString(ClangObject):
             + str(self.briefComment)
         )
 
+
 # AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__
 # This is a temporary measure to keep the string representation the same
 # until we unify the return of CompletionString.availability to be AvailabilityKind
@@ -3209,6 +3211,14 @@ class AvailabilityKindCompat(BaseEnumeration):
         This is a temporary measure and will be changed in a future release
         to return the same format (full upper-case, underscore separated) like other Kinds
         """
+
+        warnings.warn(
+            "The CompletionString.availability's return value will be changed in "
+            "a future release to be unified with other kinds. As a result, its string "
+            "representations will change to full upper-case, prefixed with the class name "
+            "(e.g. NotAvailable -> AvailabilityKind.NOT_AVAILABLE).",
+            DeprecationWarning,
+        )
         # Remove underscores
         components = self.name.split("_")
         # Upper-camel case each split component
