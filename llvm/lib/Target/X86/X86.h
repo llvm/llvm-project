@@ -184,7 +184,13 @@ public:
 FunctionPass *createX86ExpandPseudoLegacyPass();
 
 /// This pass converts X86 cmov instructions into branch when profitable.
-FunctionPass *createX86CmovConverterPass();
+class X86CmovConversionPass : public PassInfoMixin<X86CmovConversionPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86CmovConversionLegacyPass();
 
 /// Return a Machine IR pass that selectively replaces
 /// certain byte and word instructions by equivalent 32 bit instructions,
@@ -279,7 +285,7 @@ void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBLegacyPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationLegacyPass(PassRegistry &);
-void initializeX86CmovConverterPassPass(PassRegistry &);
+void initializeX86CmovConversionLegacyPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
