@@ -4,6 +4,7 @@ from pathlib import Path
 from clang.cindex import (
     AccessSpecifier,
     AvailabilityKind,
+    AvailabilityKindCompat,
     BinaryOperator,
     CursorKind,
     ExceptionSpecificationKind,
@@ -22,7 +23,10 @@ from clang.cindex import (
 
 
 class TestEnums(unittest.TestCase):
+    # Test all enum classes, except for AvailabilityKindCompat since it is
+    # just a copy of AvailabilityKind and has no corresponding C-class
     enums = BaseEnumeration.__subclasses__()
+    enums.remove(AvailabilityKindCompat)
 
     def test_from_id(self):
         """Check that kinds can be constructed from valid IDs"""
