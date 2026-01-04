@@ -5613,14 +5613,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedSrcs,
                         KnownRHS, Q, Depth + 1);
 
+    // Special case fadd x, x, which is the canonical form of fmul x, 2.
+    bool SelfAdd = Op->getOperand(0) == Op->getOperand(1) &&
+                   isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI,
+                                            Q.DT, Depth + 1);
+    if (SelfAdd)
+      KnownLHS = KnownRHS;
+
     if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
         (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) ||
         WantNegZero || Opc == Instruction::FSub) {
 
-      // RHS is canonically cheaper to compute. Skip inspecting the LHS if
-      // there's no point.
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                          KnownLHS, Q, Depth + 1);
+      if (!SelfAdd) {
+        // RHS is canonically cheaper to compute. Skip inspecting the LHS if
+        // there's no point.
+        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
+                            KnownLHS, Q, Depth + 1);
+      }
+
       // Adding positive and negative infinity produces NaN.
       // TODO: Check sign of infinities.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
@@ -5634,6 +5644,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownLHS.cannotBeOrderedLessThanZero() &&
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+        if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
+            KnownRHS.cannotBeOrderedGreaterThanZero())
+          Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+
         if (!F)
           break;
 
