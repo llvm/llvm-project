@@ -263,6 +263,10 @@ bool isYAML(const StringRef Filename) {
   return false;
 }
 
+bool isBasicOrLBRItem(APInt SymbolValue) {
+  return SymbolValue.sge(0) && SymbolValue.sle(2);
+}
+
 void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   std::optional<bool> BoltedCollection;
@@ -319,8 +323,12 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       auto [Signature, ExecCount] = Line.rsplit(' ');
       if (ExecCount.getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted execution count");
+
+      auto [Symbol, Record] = Signature.split(' ');
+      APInt SymbolValue;
+      Symbol.getAsInteger(10, SymbolValue);
       // Only LBR profile has misprediction field
-      if (!NoLBRCollection.value_or(false)) {
+      if (!NoLBRCollection.value_or(false) && isBasicOrLBRItem(SymbolValue)) {
         auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
         Signature = SignatureLBR;
         if (MispredCount.getAsInteger(10, Count.Mispred))
@@ -343,10 +351,11 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     Pool.async(ParseProfile, std::cref(Filename), std::ref(ParsedProfiles));
   Pool.wait();
 
-  ProfileTy MergedProfile;
+  std::map<StringRef, CounterTy> MergedProfile;
   for (const auto &[Thread, Profile] : ParsedProfiles)
     for (const auto &[Key, Value] : Profile) {
-      CounterTy Count = MergedProfile.lookup(Key) + Value;
+      auto It = MergedProfile.find(Key);
+      CounterTy Count = It != MergedProfile.end() ? It->second + Value : Value;
       MergedProfile.insert_or_assign(Key, Count);
     }
 
@@ -356,7 +365,10 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     output() << "no_lbr\n";
   for (const auto &[Key, Value] : MergedProfile) {
     output() << Key << " ";
-    if (!NoLBRCollection.value_or(false))
+    auto [Symbol, Record] = Key.split(' ');
+    APInt SymbolValue;
+    Symbol.getAsInteger(10, SymbolValue);
+    if (!NoLBRCollection.value_or(false) && isBasicOrLBRItem(SymbolValue))
       output() << Value.Mispred << " ";
     output() << Value.Exec << "\n";
   }
