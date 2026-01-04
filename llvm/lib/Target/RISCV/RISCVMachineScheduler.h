@@ -21,10 +21,12 @@ namespace llvm {
 
 /// A GenericScheduler implementation for RISCV pre RA scheduling.
 class RISCVPreRAMachineSchedStrategy : public GenericScheduler {
-private:
+  const RISCVSubtarget *ST;
   RISCV::RISCVVSETVLIInfoAnalysis VIA;
   RISCV::VSETVLIInfo TopVType;
   RISCV::VSETVLIInfo BottomVType;
+
+  bool enableVTypeSchedHeuristic() const;
 
   RISCV::VSETVLIInfo getVSETVLIInfo(const MachineInstr *MI) const;
   bool tryVType(RISCV::VSETVLIInfo TryVType, RISCV::VSETVLIInfo CandVtype,
@@ -33,8 +35,8 @@ private:
 
 public:
   RISCVPreRAMachineSchedStrategy(const MachineSchedContext *C)
-      : GenericScheduler(C),
-        VIA(&C->MF->getSubtarget<RISCVSubtarget>(), C->LIS) {}
+      : GenericScheduler(C), ST(&C->MF->getSubtarget<RISCVSubtarget>()),
+        VIA(ST, C->LIS) {}
 
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,

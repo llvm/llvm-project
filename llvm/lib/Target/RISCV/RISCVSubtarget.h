@@ -70,6 +70,8 @@ struct RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
+
+  bool EnableVTypeSchedHeuristic;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -431,6 +433,10 @@ public:
 
   MISched::Direction getPostRASchedDirection() const {
     return TuneInfo->PostRASchedDirection;
+  }
+
+  bool enableVTypeSchedHeuristic() const {
+    return TuneInfo->EnableVTypeSchedHeuristic;
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
