@@ -10,7 +10,7 @@ Summary Extraction
 The simplest way to think about the lifetime of a summary extraction is by following the handlers of the ``FrontendAction`` implementing it.
 There are 3 APIs that are important for us, that are invoked in this order:
 
-  - ``BeingInvocation()``: Checks the command-line arguments related to summary extraction.
+  - ``BeginInvocation()``: Checks the command-line arguments related to summary extraction.
   - ``CreateASTConsumer()``: Creates the ASTConsumers for the different summary extractors.
   - ``EndSourceFile()``: Serializes and writes the extracted summaries.
 
@@ -52,7 +52,7 @@ Example for adding a custom summary extraction
   static TUSummaryExtractorRegistry::Add<MyAnalysis>
     RegisterExtractor("MyAwesomeAnalysis", "The analysis produces some awesome results");
 
-Details of ``BeingInvocation()``
+Details of ``BeginInvocation()``
 ================================
 
 #. Processes the different fields populated from the command line. Ensure that mandatory flags are set, etc.
