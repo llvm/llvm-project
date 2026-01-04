@@ -1071,7 +1071,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             raise KeyboardInterrupt
         if proc_not_counts[i] % 2:
             if proc_not_fail_if_crash[i]:
-                res = 1 if res <= 0 else 0
+                res = int(res <= 0)
             else:
                 res = 1 if res == 0 else 0
         elif proc_not_counts[i] > 1:
