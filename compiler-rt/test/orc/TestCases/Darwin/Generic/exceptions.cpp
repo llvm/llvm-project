@@ -3,6 +3,7 @@
 //
 // REQUIRES: system-darwin && host-arch-compatible
 
+// Test that trivial throw / catch works.
 int main(int argc, char *argv[]) {
   try {
     throw 42;

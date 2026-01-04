@@ -95,7 +95,7 @@ llvm.func @foo() -> (i32) attributes { no_inline } {
   llvm.return %0 : i32
 }
 
-llvm.func @bar() -> (i32) attributes { no_inline } {
+llvm.func @bar() -> (i32) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   llvm.return %0 : i32
 }
@@ -106,7 +106,7 @@ llvm.func @callee_with_multiple_blocks(%cond: i1) -> (i32) {
   %0 = llvm.call @foo() : () -> (i32)
   llvm.br ^bb3(%0: i32)
 ^bb2:
-  %1 = llvm.call @bar() : () -> (i32)
+  %1 = llvm.call @bar() { no_inline } : () -> (i32)
   llvm.br ^bb3(%1: i32)
 ^bb3(%arg: i32):
   llvm.return %arg : i32
@@ -299,7 +299,7 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
 ^bb1:
   // Make sure the lifetime begin intrinsic has been inserted where the call
   // used to be, even though the alloca has been moved to the entry block.
-  // CHECK-NEXT: llvm.intr.lifetime.start 4, %[[PTR]]
+  // CHECK-NEXT: llvm.intr.lifetime.start %[[PTR]]
   %0 = llvm.call @static_alloca(%cond1) : (i1) -> f32
   // CHECK: llvm.cond_br %{{.+}}, ^[[BB2:.+]], ^[[BB3:.+]]
   llvm.br ^bb3(%0: f32)
@@ -307,9 +307,9 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
   // return sites of the callee.
   // CHECK: ^[[BB2]]:
   // CHECK-NEXT: llvm.load
-  // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
+  // CHECK-NEXT: llvm.intr.lifetime.end %[[PTR]]
   // CHECK: ^[[BB3]]:
-  // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
+  // CHECK-NEXT: llvm.intr.lifetime.end %[[PTR]]
 ^bb2:
   llvm.br ^bb3(%funcArg: f32)
 ^bb3(%blockArg: f32):
@@ -334,9 +334,9 @@ llvm.func @test_inline(%cond0 : i1) {
   // CHECK: "test.one_region_op"() ({
   "test.one_region_op"() ({
     %0 = llvm.call @static_alloca() : () -> f32
-    // CHECK-NEXT: llvm.intr.lifetime.start 4, %[[ALLOCA]]
+    // CHECK-NEXT: llvm.intr.lifetime.start %[[ALLOCA]]
     // CHECK-NEXT: %[[RES:.+]] = llvm.load %[[ALLOCA]]
-    // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[ALLOCA]]
+    // CHECK-NEXT: llvm.intr.lifetime.end %[[ALLOCA]]
     // CHECK-NEXT: test.region_yield %[[RES]]
     test.region_yield %0 : f32
   }) : () -> ()
@@ -368,9 +368,9 @@ llvm.func @test_inline(%cond0 : i1) {
 llvm.func @alloca_with_lifetime(%cond: i1) -> f32 {
   %0 = llvm.mlir.constant(4 : i32) : i32
   %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
-  llvm.intr.lifetime.start 4, %1 : !llvm.ptr
+  llvm.intr.lifetime.start %1 : !llvm.ptr
   %2 = llvm.load %1 : !llvm.ptr -> f32
-  llvm.intr.lifetime.end 4, %1 : !llvm.ptr
+  llvm.intr.lifetime.end %1 : !llvm.ptr
   %3 = llvm.fadd %2, %2 : f32
   llvm.return %3 : f32
 }
@@ -385,9 +385,9 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
 ^bb1:
   // Make sure the original lifetime intrinsic has been preserved, rather than
   // inserting a new one with a larger scope.
-  // CHECK: llvm.intr.lifetime.start 4, %[[PTR]]
+  // CHECK: llvm.intr.lifetime.start %[[PTR]]
   // CHECK-NEXT: llvm.load %[[PTR]]
-  // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[PTR]]
+  // CHECK-NEXT: llvm.intr.lifetime.end %[[PTR]]
   // CHECK: llvm.fadd
   // CHECK-NOT: llvm.intr.lifetime.end
   %0 = llvm.call @alloca_with_lifetime(%cond1) : (i1) -> f32
@@ -422,7 +422,7 @@ llvm.func @test_byval(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} {
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.return
 }
 
@@ -436,7 +436,7 @@ llvm.func @test_byval_read_only(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite>} {
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.return
 }
 
@@ -451,7 +451,7 @@ llvm.func @test_byval_write_only(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.return
 }
 
@@ -472,7 +472,7 @@ llvm.func @test_byval_input_aligned(%unaligned : !llvm.ptr, %aligned : !llvm.ptr
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -496,7 +496,7 @@ module attributes {
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -524,7 +524,7 @@ module attributes {
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -550,7 +550,7 @@ llvm.func @test_alignment_exceeded_anyway() {
 llvm.mlir.global private @unaligned_global(42 : i64) : i64
 llvm.mlir.global private @aligned_global(42 : i64) { alignment = 64 } : i64
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.return
 }
 
@@ -691,4 +691,21 @@ llvm.func @caller(%x : i32) -> i32 {
   // CHECK: llvm.unreachable
   %z = llvm.call @unreachable_func(%x) : (i32) -> (i32)
   llvm.return %z : i32
+}
+
+// -----
+// Check that @func is not inlined because of llvm.blocktag
+
+func.func @func(%arg0 : i32) -> i32  {
+  llvm.blocktag <id = 1>
+  llvm.return %arg0 : i32
+}
+
+// CHECK-LABEL: @llvm_ret
+func.func @llvm_ret(%arg0 : i32) -> i32 {
+  // CHECK-NOT: llvm.blocktag
+  // CHECK: %[[R:.*]] = call
+  %res = call @func(%arg0) : (i32) -> (i32)
+  // CHECK: return %[[R]]
+  return %res : i32
 }

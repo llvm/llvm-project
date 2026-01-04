@@ -10,4 +10,4 @@
 
 #include "src/math/sqrtf.h"
 
-LIST_SQRT_TESTS(float, LIBC_NAMESPACE::sqrtf)
+LIST_SQRT_TESTS(float, LIBC_NAMESPACE::sqrtf);

@@ -41,5 +41,22 @@ void fun() {}
 // CHECK-NEXT:   ret void
 void caller(void (*f)()) { f(); }
 
+// GNU:  define{{.*}} void @_Z4fun2v() #0 {
+// MSVC: define{{.*}} void @"?fun2@@YAXXZ"() #0 {
+[[clang::cfi_unchecked_callee]]
+void fun2() {}
+
+typedef void (*unchecked_t)() [[clang::cfi_unchecked_callee]];
+
+// GNU-LABEL:  define{{.*}} void @_Z7caller2PFvvE(ptr noundef %f)
+// MSVC-LABEL: define{{.*}} void @"?caller2@@YAXP6AXXZ@Z"(ptr noundef %f)
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   [[ADDR:%.*]] = alloca ptr
+// CHECK-NEXT:   store ptr %f, ptr [[ADDR]]
+// CHECK-NEXT:   [[FUNC:%.*]] = load ptr, ptr [[ADDR]]
+// CHECK-NEXT:   call void [[FUNC]]()
+// CHECK-NEXT:   ret void
+void caller2(unchecked_t f) { f(); }
+
 // GNU:  ![[FUNCSAN]] = !{i32 -1056584962, i32 905068220}
 // MSVC: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1600339357}

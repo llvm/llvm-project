@@ -17,4 +17,5 @@ the forward declaration is in a potentially wrong namespace.
   // warning : no definition found for 'A', but a definition with the same name
   // 'A' found in another namespace 'nb::'
 
-This check can only generate warnings, but it can't suggest a fix at this point.
+This check can only generate warnings, but it can't suggest a fix at this
+point.

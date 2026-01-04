@@ -27,7 +27,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
@@ -219,6 +218,19 @@ void MachineOperand::ChangeToBA(const BlockAddress *BA, int64_t Offset,
   setTargetFlags(TargetFlags);
 }
 
+void MachineOperand::ChangeToCPI(unsigned Idx, int Offset,
+                                 unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a constant pool index");
+
+  removeRegFromUses();
+
+  OpKind = MO_ConstantPoolIndex;
+  setIndex(Idx);
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
 void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an MCSymbol");
@@ -351,8 +363,9 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut: {
     // Shallow compare of the two RegMasks
-    const uint32_t *RegMask = getRegMask();
-    const uint32_t *OtherRegMask = Other.getRegMask();
+    const uint32_t *RegMask = isRegMask() ? getRegMask() : getRegLiveOut();
+    const uint32_t *OtherRegMask =
+        isRegMask() ? Other.getRegMask() : Other.getRegLiveOut();
     if (RegMask == OtherRegMask)
       return true;
 
@@ -381,6 +394,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
     return getPredicate() == Other.getPredicate();
   case MachineOperand::MO_ShuffleMask:
     return getShuffleMask() == Other.getShuffleMask();
+  case MachineOperand::MO_LaneMask:
+    return getLaneMask() == Other.getLaneMask();
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -422,7 +437,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     if (const MachineFunction *MF = getMFIfAvailable(MO)) {
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
       unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
-      const uint32_t *RegMask = MO.getRegMask();
+      const uint32_t *RegMask =
+          MO.isRegMask() ? MO.getRegMask() : MO.getRegLiveOut();
       std::vector<stable_hash> RegMaskHashes(RegMask, RegMask + RegMaskSize);
       return hash_combine(MO.getType(), MO.getTargetFlags(),
                           stable_hash_combine(RegMaskHashes));
@@ -446,18 +462,18 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getPredicate());
   case MachineOperand::MO_ShuffleMask:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getShuffleMask());
+  case MachineOperand::MO_LaneMask:
+    return hash_combine(MO.getType(), MO.getTargetFlags(),
+                        MO.getLaneMask().getAsInteger());
   }
   llvm_unreachable("Invalid machine operand type");
 }
 
-// Try to crawl up to the machine function and get TRI and IntrinsicInfo from
-// it.
+// Try to crawl up to the machine function and get TRI from it.
 static void tryToGetTargetInfo(const MachineOperand &MO,
-                               const TargetRegisterInfo *&TRI,
-                               const TargetIntrinsicInfo *&IntrinsicInfo) {
+                               const TargetRegisterInfo *&TRI) {
   if (const MachineFunction *MF = getMFIfAvailable(MO)) {
     TRI = MF->getSubtarget().getRegisterInfo();
-    IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
   }
 }
 
@@ -781,20 +797,19 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
   }
 }
 
-void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
-                           const TargetIntrinsicInfo *IntrinsicInfo) const {
-  print(OS, LLT{}, TRI, IntrinsicInfo);
+void MachineOperand::print(raw_ostream &OS,
+                           const TargetRegisterInfo *TRI) const {
+  print(OS, LLT{}, TRI);
 }
 
 void MachineOperand::print(raw_ostream &OS, LLT TypeToPrint,
-                           const TargetRegisterInfo *TRI,
-                           const TargetIntrinsicInfo *IntrinsicInfo) const {
-  tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
+                           const TargetRegisterInfo *TRI) const {
+  tryToGetTargetInfo(*this, TRI);
   ModuleSlotTracker DummyMST(nullptr);
   print(OS, DummyMST, TypeToPrint, std::nullopt, /*PrintDef=*/false,
         /*IsStandalone=*/true,
         /*ShouldPrintRegisterTies=*/true,
-        /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);
+        /*TiedOperandIdx=*/0, TRI);
 }
 
 void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
@@ -802,8 +817,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
                            bool PrintDef, bool IsStandalone,
                            bool ShouldPrintRegisterTies,
                            unsigned TiedOperandIdx,
-                           const TargetRegisterInfo *TRI,
-                           const TargetIntrinsicInfo *IntrinsicInfo) const {
+                           const TargetRegisterInfo *TRI) const {
   printTargetFlags(OS, *this);
   switch (getType()) {
   case MachineOperand::MO_Register: {
@@ -1004,19 +1018,17 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     Intrinsic::ID ID = getIntrinsicID();
     if (ID < Intrinsic::num_intrinsics)
       OS << "intrinsic(@" << Intrinsic::getBaseName(ID) << ')';
-    else if (IntrinsicInfo)
-      OS << "intrinsic(@" << IntrinsicInfo->getName(ID) << ')';
     else
       OS << "intrinsic(" << ID << ')';
     break;
   }
   case MachineOperand::MO_Predicate: {
     auto Pred = static_cast<CmpInst::Predicate>(getPredicate());
-    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred("
-       << Pred << ')';
+    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred(" << Pred
+       << ')';
     break;
   }
-  case MachineOperand::MO_ShuffleMask:
+  case MachineOperand::MO_ShuffleMask: {
     OS << "shufflemask(";
     ArrayRef<int> Mask = getShuffleMask();
     StringRef Separator;
@@ -1030,6 +1042,14 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
     OS << ')';
     break;
+  }
+  case MachineOperand::MO_LaneMask: {
+    OS << "lanemask(";
+    LaneBitmask LaneMask = getLaneMask();
+    OS << "0x" << PrintLaneMask(LaneMask);
+    OS << ')';
+    break;
+  }
   }
 }
 
@@ -1240,13 +1260,17 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
           OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
       break;
     default: {
-      const MIRFormatter *Formatter = TII->getMIRFormatter();
       // FIXME: This is not necessarily the correct MIR serialization format for
       // a custom pseudo source value, but at least it allows
       // MIR printing to work on a target with custom pseudo source
       // values.
       OS << "custom \"";
-      Formatter->printCustomPseudoSourceValue(OS, MST, *PVal);
+      if (TII) {
+        const MIRFormatter *Formatter = TII->getMIRFormatter();
+        Formatter->printCustomPseudoSourceValue(OS, MST, *PVal);
+      } else {
+        PVal->printCustom(OS);
+      }
       OS << '\"';
       break;
     }
@@ -1276,6 +1300,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (AAInfo.NoAlias) {
     OS << ", !noalias ";
     AAInfo.NoAlias->printAsOperand(OS, MST);
+  }
+  if (AAInfo.NoAliasAddrSpace) {
+    OS << ", !noalias.addrspace ";
+    AAInfo.NoAliasAddrSpace->printAsOperand(OS, MST);
   }
   if (getRanges()) {
     OS << ", !range ";

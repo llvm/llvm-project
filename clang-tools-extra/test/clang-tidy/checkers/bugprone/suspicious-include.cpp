@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-include %t -- -- -isystem %clang_tidy_headers -fmodules
+// RUN: %check_clang_tidy %s bugprone-suspicious-include %t -- \
+// RUN:   -config="{CheckOptions: {bugprone-suspicious-include.IgnoredRegex: 'moc_.*'}"} -- \
+// RUN:   -isystem %clang_tidy_headers -fmodules
 
 // clang-format off
 
@@ -22,3 +24,6 @@
 
 // CHECK-MESSAGES: [[@LINE+1]]:14: warning: suspicious #include of file with '.cxx' extension
 #  include  <c.cxx>
+
+// CHECK-MESSAGES-NOT: warning:
+#include "moc_foo.cpp"

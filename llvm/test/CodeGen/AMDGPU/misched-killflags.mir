@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs -run-pass=post-RA-sched -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -passes=post-RA-sched -o - %s | FileCheck %s
 # Make sure ScheduleDAGInstrs::fixupKills does not produce invalid kill flags.
 ---
 name: func0

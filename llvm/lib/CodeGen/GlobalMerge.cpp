@@ -198,6 +198,8 @@ public:
 
   explicit GlobalMerge() : FunctionPass(ID) {
     Opt.MaxOffset = GlobalMergeMaxOffset;
+    Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
+    Opt.MergeConstAggressive = GlobalMergeAllConst;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -560,6 +562,7 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
     MergedGV->setAlignment(MaxAlign);
     MergedGV->setSection(Globals[i]->getSection());
+    MergedGV->setComdat(Globals[i]->getComdat());
 
     LLVM_DEBUG(dbgs() << "MergedGV:  " << *MergedGV << "\n");
 
@@ -672,10 +675,11 @@ bool GlobalMergeImpl::run(Module &M) {
   if (!EnableGlobalMerge)
     return false;
 
-  IsMachO = Triple(M.getTargetTriple()).isOSBinFormatMachO();
+  IsMachO = M.getTargetTriple().isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
-  MapVector<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 0>>
+  MapVector<std::tuple<unsigned, StringRef, Comdat *>,
+            SmallVector<GlobalVariable *, 0>>
       Globals, ConstGlobals, BSSGlobals;
   bool Changed = false;
   setMustKeepGlobalVariables(M);
@@ -711,7 +715,8 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
 
     // Ignore all 'special' globals.
-    if (GV.getName().starts_with("llvm.") || GV.getName().starts_with(".llvm."))
+    if (GV.getName().starts_with("llvm.") ||
+        GV.getName().starts_with(".llvm.") || Section == "llvm.metadata")
       continue;
 
     // Ignore all "required" globals:
@@ -732,11 +737,11 @@ bool GlobalMergeImpl::run(Module &M) {
     if (CanMerge) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
-        BSSGlobals[{AddressSpace, Section}].push_back(&GV);
+        BSSGlobals[{AddressSpace, Section, GV.getComdat()}].push_back(&GV);
       else if (GV.isConstant())
-        ConstGlobals[{AddressSpace, Section}].push_back(&GV);
+        ConstGlobals[{AddressSpace, Section, GV.getComdat()}].push_back(&GV);
       else
-        Globals[{AddressSpace, Section}].push_back(&GV);
+        Globals[{AddressSpace, Section, GV.getComdat()}].push_back(&GV);
     }
     LLVM_DEBUG(dbgs() << "GV " << (CanMerge ? "" : "not ") << "to merge: " << GV
                       << "\n");
@@ -744,16 +749,16 @@ bool GlobalMergeImpl::run(Module &M) {
 
   for (auto &P : Globals)
     if (P.second.size() > 1)
-      Changed |= doMerge(P.second, M, false, P.first.first);
+      Changed |= doMerge(P.second, M, false, std::get<0>(P.first));
 
   for (auto &P : BSSGlobals)
     if (P.second.size() > 1)
-      Changed |= doMerge(P.second, M, false, P.first.first);
+      Changed |= doMerge(P.second, M, false, std::get<0>(P.first));
 
   if (Opt.MergeConstantGlobals)
     for (auto &P : ConstGlobals)
       if (P.second.size() > 1)
-        Changed |= doMerge(P.second, M, true, P.first.first);
+        Changed |= doMerge(P.second, M, true, std::get<0>(P.first));
 
   return Changed;
 }
@@ -769,6 +774,9 @@ Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
   bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
                                   ? GlobalMergeAllConst
                                   : MergeConstAggressiveByDefault;
-  return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
+  unsigned PreferOffset = GlobalMergeMaxOffset.getNumOccurrences() > 0
+                              ? GlobalMergeMaxOffset
+                              : Offset;
+  return new GlobalMerge(TM, PreferOffset, OnlyOptimizeForSize, MergeExternal,
                          MergeConstant, MergeConstAggressive);
 }

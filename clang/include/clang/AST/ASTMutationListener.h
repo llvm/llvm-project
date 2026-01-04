@@ -86,6 +86,19 @@ public:
                                       const FunctionDecl *Delete,
                                       Expr *ThisArg) {}
 
+  /// A virtual destructor's operator global delete has been resolved.
+  virtual void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                          const FunctionDecl *GlobDelete) {}
+
+  /// A virtual destructor's operator array delete has been resolved.
+  virtual void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                           const FunctionDecl *ArrayDelete) {}
+
+  /// A virtual destructor's operator global array delete has been resolved.
+  virtual void
+  ResolvedOperatorGlobArrayDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobArrayDelete) {}
+
   /// An implicit member got a definition.
   virtual void CompletedImplicitDefinition(const FunctionDecl *D) {}
 
@@ -120,6 +133,12 @@ public:
   ///
   /// \param D the declaration marked OpenMP threadprivate.
   virtual void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) {}
+
+  /// A declaration is marked as OpenMP groupprivate which was not
+  /// previously marked as groupprivate.
+  ///
+  /// \param D the declaration marked OpenMP groupprivate.
+  virtual void DeclarationMarkedOpenMPGroupPrivate(const Decl *D) {}
 
   /// A declaration is marked as OpenMP declaretarget which was not
   /// previously marked as declaretarget.

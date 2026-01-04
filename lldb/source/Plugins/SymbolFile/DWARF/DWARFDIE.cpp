@@ -23,8 +23,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 namespace {
 
@@ -44,7 +44,7 @@ class ElaboratingDIEIterator
   // Container sizes are optimized for the case of following DW_AT_specification
   // and DW_AT_abstract_origin just once.
   llvm::SmallVector<DWARFDIE, 2> m_worklist;
-  llvm::SmallSet<DWARFDebugInfoEntry *, 3> m_seen;
+  llvm::SmallPtrSet<DWARFDebugInfoEntry *, 3> m_seen;
 
   void Next() {
     assert(!m_worklist.empty() && "Incrementing end iterator?");
@@ -622,12 +622,12 @@ std::optional<uint64_t> DWARFDIE::getLanguage() const {
 }
 
 DWARFDIE DWARFDIE::resolveReferencedType(dw_attr_t attr) const {
-  return GetReferencedDIE(attr);
+  return GetReferencedDIE(attr).resolveTypeUnitReference();
 }
 
 DWARFDIE DWARFDIE::resolveReferencedType(DWARFFormValue v) const {
   if (IsValid())
-    return v.Reference();
+    return v.Reference().resolveTypeUnitReference();
   return {};
 }
 

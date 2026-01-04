@@ -27,23 +27,23 @@ int main(int, char**)
 {
     Ptr x = nullptr;
     const Ptr cx = nullptr;
-    std::ref(no_args)();
-    std::ref(one_arg)(x);
-    std::ref(one_arg)(cx);
-    std::ref(two_args)(x, x);
-    std::ref(two_args)(x, cx);
-    std::ref(two_args)(cx, x);
-    std::ref(two_args)(cx, cx);
-    std::ref(three_args)(x, x, x);
-    std::ref(three_args)(x, x, cx);
-    std::ref(three_args)(x, cx, x);
-    std::ref(three_args)(cx, x, x);
-    std::ref(three_args)(x, cx, cx);
-    std::ref(three_args)(cx, x, cx);
-    std::ref(three_args)(cx, cx, x);
-    std::ref(three_args)(cx, cx, cx);
-    std::ref(one_arg_void)(x);
-    std::ref(one_arg_void)(cx);
+    (void)std::ref(no_args)();
+    (void)std::ref(one_arg)(x);
+    (void)std::ref(one_arg)(cx);
+    (void)std::ref(two_args)(x, x);
+    (void)std::ref(two_args)(x, cx);
+    (void)std::ref(two_args)(cx, x);
+    (void)std::ref(two_args)(cx, cx);
+    (void)std::ref(three_args)(x, x, x);
+    (void)std::ref(three_args)(x, x, cx);
+    (void)std::ref(three_args)(x, cx, x);
+    (void)std::ref(three_args)(cx, x, x);
+    (void)std::ref(three_args)(x, cx, cx);
+    (void)std::ref(three_args)(cx, x, cx);
+    (void)std::ref(three_args)(cx, cx, x);
+    (void)std::ref(three_args)(cx, cx, cx);
+    (void)std::ref(one_arg_void)(x);
+    (void)std::ref(one_arg_void)(cx);
 
     return 0;
 }

@@ -13,16 +13,10 @@
 
 namespace mlir {
 class Pass;
-
-namespace NVVM {
-
-#define GEN_PASS_DECL_NVVMOPTIMIZEFORTARGET
+namespace LLVM {
+#define GEN_PASS_DECL_NVVMOPTIMIZEFORTARGETPASS
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
-
-/// Creates a pass that optimizes LLVM IR for the NVVM target.
-std::unique_ptr<Pass> createOptimizeForTargetPass();
-
-} // namespace NVVM
+} // namespace LLVM
 } // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_OPTIMIZENVVM_H

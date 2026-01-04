@@ -14,6 +14,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -81,7 +82,7 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
     auto MethodName = safeGetName(MCE->getMethodDecl());
     if (MethodName == "swap" || MethodName == "leakRef" ||
-        MethodName == "releaseNonNull") {
+        MethodName == "releaseNonNull" || MethodName == "clear") {
       auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
       if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
         if (VarRef->getDecl() == Guardian)
@@ -165,14 +166,21 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
 class RawPtrRefLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
-  mutable BugReporter *BR;
   EnsureFunctionAnalysis EFA;
+
+protected:
+  mutable BugReporter *BR;
+  mutable std::optional<RetainTypeChecker> RTC;
 
 public:
   RawPtrRefLocalVarsChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
   virtual std::optional<bool> isUnsafePtr(const QualType T) const = 0;
+  virtual bool isSafePtr(const CXXRecordDecl *) const = 0;
+  virtual bool isSafePtrType(const QualType) const = 0;
+  virtual bool isSafeExpr(const Expr *) const { return false; }
+  virtual bool isSafeDecl(const Decl *) const { return false; }
   virtual const char *ptrKind() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -202,6 +210,12 @@ public:
         return DynamicRecursiveASTVisitor::TraverseDecl(D);
       }
 
+      bool VisitTypedefDecl(TypedefDecl *TD) override {
+        if (Checker->RTC)
+          Checker->RTC->visitTypedef(TD);
+        return true;
+      }
+
       bool VisitVarDecl(VarDecl *V) override {
         auto *Init = V->getInit();
         if (Init && V->isLocalVarDecl())
@@ -220,6 +234,14 @@ public:
       }
 
       bool TraverseIfStmt(IfStmt *IS) override {
+        if (IS->getConditionVariable()) {
+          // This code currently does not explicitly check the "else" statement
+          // since getConditionVariable returns nullptr when there is a
+          // condition defined after ";" as in "if (auto foo = ~; !foo)". If
+          // this semantics change, we should add an explicit check for "else".
+          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then))
+            return true;
+        }
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
         return true;
@@ -248,9 +270,17 @@ public:
           return DynamicRecursiveASTVisitor::TraverseCompoundStmt(CS);
         return true;
       }
+
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
+        if (isSmartPtrClass(safeGetName(Decl)))
+          return true;
+        return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
+      }
     };
 
     LocalVisitor visitor(this);
+    if (RTC)
+      RTC->visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
@@ -263,6 +293,11 @@ public:
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,
+              [&](const clang::CXXRecordDecl *Record) {
+                return isSafePtr(Record);
+              },
+              [&](const clang::QualType Type) { return isSafePtrType(Type); },
+              [&](const clang::Decl *D) { return isSafeDecl(D); },
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
                 if (!InitArgOrigin || IsSafe)
                   return true;
@@ -270,7 +305,7 @@ public:
                 if (isa<CXXThisExpr>(InitArgOrigin))
                   return true;
 
-                if (isa<CXXNullPtrLiteralExpr>(InitArgOrigin))
+                if (isNullPtr(InitArgOrigin))
                   return true;
 
                 if (isa<IntegerLiteral>(InitArgOrigin))
@@ -280,6 +315,9 @@ public:
                   return true;
 
                 if (EFA.isACallToEnsureFn(InitArgOrigin))
+                  return true;
+
+                if (isSafeExpr(InitArgOrigin))
                   return true;
 
                 if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
@@ -292,8 +330,7 @@ public:
                           MaybeGuardianArgType->getAsCXXRecordDecl();
                       if (MaybeGuardianArgCXXRecord) {
                         if (MaybeGuardian->isLocalVarDecl() &&
-                            (isRefCounted(MaybeGuardianArgCXXRecord) ||
-                             isCheckedPtr(MaybeGuardianArgCXXRecord) ||
+                            (isSafePtr(MaybeGuardianArgCXXRecord) ||
                              isRefcountedStringsHack(MaybeGuardian)) &&
                             isGuardedScopeEmbeddedInGuardianScope(
                                 V, MaybeGuardian))
@@ -318,6 +355,8 @@ public:
 
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
+    if (isa<ImplicitParamDecl>(V))
+      return true;
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 
@@ -327,7 +366,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (dyn_cast<ParmVarDecl>(V)) {
+    if (isa<ParmVarDecl>(V)) {
       Os << "Assignment to an " << ptrKind() << " parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is unsafe.";
@@ -365,6 +404,12 @@ public:
   std::optional<bool> isUnsafePtr(const QualType T) const final {
     return isUncountedPtr(T);
   }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRefCounted(Record) || isCheckedPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRefOrCheckedPtrType(type);
+  }
   const char *ptrKind() const final { return "uncounted"; }
 };
 
@@ -376,7 +421,45 @@ public:
   std::optional<bool> isUnsafePtr(const QualType T) const final {
     return isUncheckedPtr(T);
   }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRefCounted(Record) || isCheckedPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRefOrCheckedPtrType(type);
+  }
+  bool isSafeExpr(const Expr *E) const final {
+    return isExprToGetCheckedPtrCapableMember(E);
+  }
   const char *ptrKind() const final { return "unchecked"; }
+};
+
+class UnretainedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
+public:
+  UnretainedLocalVarsChecker()
+      : RawPtrRefLocalVarsChecker("Unretained raw pointer or reference not "
+                                  "provably backed by a RetainPtr") {
+    RTC = RetainTypeChecker();
+  }
+  std::optional<bool> isUnsafePtr(const QualType T) const final {
+    if (T.hasStrongOrWeakObjCLifetime())
+      return false;
+    return RTC->isUnretained(T);
+  }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRetainPtrOrOSPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRetainPtrOrOSPtrType(type);
+  }
+  bool isSafeExpr(const Expr *E) const final {
+    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
+           isa<ObjCMessageExpr>(E);
+  }
+  bool isSafeDecl(const Decl *D) const final {
+    // Treat NS/CF globals in system header as immortal.
+    return BR->getSourceManager().isInSystemHeader(D->getLocation());
+  }
+  const char *ptrKind() const final { return "unretained"; }
 };
 
 } // namespace
@@ -394,5 +477,13 @@ void ento::registerUncheckedLocalVarsChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUncheckedLocalVarsChecker(const CheckerManager &) {
+  return true;
+}
+
+void ento::registerUnretainedLocalVarsChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnretainedLocalVarsChecker>();
+}
+
+bool ento::shouldRegisterUnretainedLocalVarsChecker(const CheckerManager &) {
   return true;
 }

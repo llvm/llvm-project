@@ -20,8 +20,12 @@ define void @non_kernel_function() sanitize_address {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP3]], i32 [[TMP7]]
-; CHECK-NEXT:    [[Y:%.*]] = addrspacecast ptr addrspace(3) [[TMP8]] to ptr
-; CHECK-NEXT:    [[TMP9:%.*]] = addrspacecast ptr addrspace(3) [[TMP8]] to ptr
+; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr addrspace(3) [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP14]]
+; CHECK-NEXT:    [[TMP11:%.*]] = addrspacecast ptr addrspace(1) [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr addrspace(3) [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP12]]
+; CHECK-NEXT:    [[TMP9:%.*]] = addrspacecast ptr addrspace(1) [[TMP13]] to ptr
 ; CHECK-NEXT:    store i8 5, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    ret void
 ;

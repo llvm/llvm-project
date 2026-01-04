@@ -13,6 +13,7 @@
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -21,13 +22,17 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Host/Pipe.h"
+#include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
-#include "lldb/Host/windows/windows.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
 #include "llvm/Support/ConvertUTF.h"
@@ -80,8 +85,10 @@ namespace lldb_private {
 
 ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
                                          lldb::ListenerSP listener_sp,
-                                         const FileSpec *,
+                                         const FileSpec *crash_file_path,
                                          bool can_connect) {
+  if (crash_file_path)
+    return nullptr; // Cannot create a Windows process from a crash_file.
   return ProcessSP(new ProcessWindows(target_sp, listener_sp));
 }
 
@@ -121,22 +128,6 @@ ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
           LLDB_INVALID_BREAK_ID) {}
 
 ProcessWindows::~ProcessWindows() {}
-
-size_t ProcessWindows::GetSTDOUT(char *buf, size_t buf_size, Status &error) {
-  error = Status::FromErrorString("GetSTDOUT unsupported on Windows");
-  return 0;
-}
-
-size_t ProcessWindows::GetSTDERR(char *buf, size_t buf_size, Status &error) {
-  error = Status::FromErrorString("GetSTDERR unsupported on Windows");
-  return 0;
-}
-
-size_t ProcessWindows::PutSTDIN(const char *buf, size_t buf_size,
-                                Status &error) {
-  error = Status::FromErrorString("PutSTDIN unsupported on Windows");
-  return 0;
-}
 
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
@@ -236,9 +227,15 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
   return error;
 }
 
-Status ProcessWindows::DoResume() {
+Status ProcessWindows::DoResume(RunDirection direction) {
   Log *log = GetLog(WindowsLog::Process);
   llvm::sys::ScopedLock lock(m_mutex);
+
+  if (direction == RunDirection::eRunReverse) {
+    return Status::FromErrorStringWithFormatv(
+        "{0} does not support reverse execution of processes", GetPluginName());
+  }
+
   Status error;
 
   StateType private_state = GetPrivateState();
@@ -410,24 +407,17 @@ void ProcessWindows::RefreshStateAfterStop() {
   if (!stop_thread)
     return;
 
+  RegisterContextSP register_context = stop_thread->GetRegisterContext();
+  uint64_t pc = register_context->GetPC();
+
+  // If we're at a BreakpointSite, mark this as an Unexecuted Breakpoint.
+  // We'll clear that state if we've actually executed the breakpoint.
+  BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
+  if (site && site->IsEnabled())
+    stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
+
   switch (active_exception->GetExceptionCode()) {
   case EXCEPTION_SINGLE_STEP: {
-    RegisterContextSP register_context = stop_thread->GetRegisterContext();
-    const uint64_t pc = register_context->GetPC();
-    BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-    if (site && site->ValidForThisThread(*stop_thread)) {
-      LLDB_LOG(log,
-               "Single-stepped onto a breakpoint in process {0} at "
-               "address {1:x} with breakpoint site {2}",
-               m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
-               site->GetID());
-      stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(*stop_thread,
-                                                                 site->GetID());
-      stop_thread->SetStopInfo(stop_info);
-
-      return;
-    }
-
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
         stop_thread->GetRegisterContext().get());
     uint32_t slot_id = reg_ctx->GetTriggeredHardwareBreakpointSlotId();
@@ -452,8 +442,6 @@ void ProcessWindows::RefreshStateAfterStop() {
   }
 
   case EXCEPTION_BREAKPOINT: {
-    RegisterContextSP register_context = stop_thread->GetRegisterContext();
-
     int breakpoint_size = 1;
     switch (GetTarget().GetArchitecture().GetMachine()) {
     case llvm::Triple::aarch64:
@@ -476,9 +464,9 @@ void ProcessWindows::RefreshStateAfterStop() {
     }
 
     // The current PC is AFTER the BP opcode, on all architectures.
-    uint64_t pc = register_context->GetPC() - breakpoint_size;
+    pc = register_context->GetPC() - breakpoint_size;
 
-    BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
+    site = GetBreakpointSiteList().FindByAddress(pc);
     if (site) {
       LLDB_LOG(log,
                "detected breakpoint in process {0} at address {1:x} with "
@@ -486,6 +474,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
                site->GetID());
 
+      stop_thread->SetThreadHitBreakpointSite();
       if (site->ValidForThisThread(*stop_thread)) {
         LLDB_LOG(log,
                  "Breakpoint site {0} is valid for this thread ({1:x}), "
@@ -662,6 +651,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
   TargetSP target = CalculateTarget();
+  target->GetProcessLaunchInfo().GetPTY().Close();
   if (target) {
     ModuleSP executable_module = target->GetExecutableModule();
     ModuleList unloaded_modules;
@@ -669,7 +659,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
     target->ModulesDidUnload(unloaded_modules, true);
   }
 
-  SetProcessExitStatus(GetID(), true, 0, exit_code);
+  SetExitStatus(exit_code, /*exit_string=*/"");
   SetPrivateState(eStateExited);
 
   ProcessDebugger::OnExitProcess(exit_code);
@@ -956,5 +946,143 @@ Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   wp_sp->SetEnabled(false, notify);
 
   return error;
+}
+
+class IOHandlerProcessSTDIOWindows : public IOHandler {
+public:
+  IOHandlerProcessSTDIOWindows(Process *process, HANDLE conpty_input)
+      : IOHandler(process->GetTarget().GetDebugger(),
+                  IOHandler::Type::ProcessIO),
+        m_process(process),
+        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
+        m_write_file(conpty_input) {
+    m_pipe.CreateNew();
+  }
+
+  ~IOHandlerProcessSTDIOWindows() override = default;
+
+  void SetIsRunning(bool running) {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    SetIsDone(!running);
+    m_is_running = running;
+  }
+
+  void Run() override {
+    if (!m_read_file.IsValid() || m_write_file == INVALID_HANDLE_VALUE ||
+        !m_pipe.CanRead() || !m_pipe.CanWrite()) {
+      SetIsDone(true);
+      return;
+    }
+
+    SetIsDone(false);
+    SetIsRunning(true);
+
+    HANDLE hStdin = (HANDLE)_get_osfhandle(m_read_file.GetDescriptor());
+    HANDLE hInterrupt = (HANDLE)_get_osfhandle(m_pipe.GetReadFileDescriptor());
+    HANDLE waitHandles[2] = {hStdin, hInterrupt};
+
+    while (true) {
+      {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        if (GetIsDone())
+          goto exit_loop;
+      }
+
+      DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+      switch (result) {
+      case WAIT_FAILED:
+        goto exit_loop;
+      case WAIT_OBJECT_0: {
+        char ch = 0;
+        DWORD read = 0;
+        if (!ReadFile(hStdin, &ch, 1, &read, nullptr) || read != 1)
+          goto exit_loop;
+
+        DWORD written = 0;
+        if (!WriteFile(m_write_file, &ch, 1, &written, nullptr) || written != 1)
+          goto exit_loop;
+        break;
+      }
+      case WAIT_OBJECT_0 + 1: {
+        char ch = 0;
+        DWORD read = 0;
+        if (!ReadFile(hInterrupt, &ch, 1, &read, nullptr) || read != 1)
+          goto exit_loop;
+
+        if (ch == eControlOpQuit)
+          goto exit_loop;
+        if (ch == eControlOpInterrupt &&
+            StateIsRunningState(m_process->GetState()))
+          m_process->SendAsyncInterrupt();
+        break;
+      }
+      default:
+        goto exit_loop;
+      }
+    }
+
+  exit_loop:;
+    SetIsRunning(false);
+  }
+
+  void Cancel() override {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    SetIsDone(true);
+    if (m_is_running) {
+      char ch = eControlOpQuit;
+      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
+                       "Pipe write failed: {0}");
+      }
+    }
+  }
+
+  bool Interrupt() override {
+    if (m_active) {
+      char ch = eControlOpInterrupt;
+      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
+    }
+    if (StateIsRunningState(m_process->GetState())) {
+      m_process->SendAsyncInterrupt();
+      return true;
+    }
+    return false;
+  }
+
+  void GotEOF() override {}
+
+private:
+  Process *m_process;
+  NativeFile m_read_file; // Read from this file (usually actual STDIN for LLDB
+  HANDLE m_write_file =
+      INVALID_HANDLE_VALUE; // Write to this file (usually the primary pty for
+                            // getting io to debuggee)
+  Pipe m_pipe;
+  std::mutex m_mutex;
+  bool m_is_running = false;
+
+  enum ControlOp : char {
+    eControlOpQuit = 'q',
+    eControlOpInterrupt = 'i',
+  };
+};
+
+void ProcessWindows::SetPseudoConsoleHandle(
+    const std::shared_ptr<PseudoConsole> &pty) {
+  m_stdio_communication.SetConnection(
+      std::make_unique<ConnectionGenericFile>(pty->GetSTDOUTHandle(), false));
+  if (m_stdio_communication.IsConnected()) {
+    m_stdio_communication.SetReadThreadBytesReceivedCallback(
+        STDIOReadThreadBytesReceived, this);
+    m_stdio_communication.StartReadThread();
+
+    // Now read thread is set up, set up input reader.
+    {
+      std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
+      if (!m_process_input_reader)
+        m_process_input_reader = std::make_shared<IOHandlerProcessSTDIOWindows>(
+            this, pty->GetSTDINHandle());
+    }
+  }
 }
 } // namespace lldb_private

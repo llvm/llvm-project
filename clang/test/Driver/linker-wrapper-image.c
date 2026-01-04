@@ -1,10 +1,11 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
+// REQUIRES: spirv-registered-target
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.elf.o
 
-// RUN: clang-offload-packager -o %t.out --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
@@ -14,18 +15,18 @@
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-windows-gnu \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=OPENMP,OPENMP-COFF
 
-//      OPENMP-ELF: @__start_omp_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// OPENMP-ELF-NEXT: @__stop_omp_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// OPENMP-ELF-NEXT: @__dummy.omp_offloading_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries"
+//      OPENMP-ELF: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
+// OPENMP-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
+// OPENMP-ELF-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries"
 
-//      OPENMP-COFF: @__start_omp_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries$OA"
-// OPENMP-COFF-NEXT: @__stop_omp_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries$OZ"
+//      OPENMP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+// OPENMP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
 
 // OPENMP-REL: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading.relocatable", align 8
 
 //      OPENMP: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading", align 8
-// OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr ([[[BEGIN:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 144), ptr getelementptr ([[[END:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 144), ptr @__start_omp_offloading_entries, ptr @__stop_omp_offloading_entries }]
-// OPENMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr @__start_omp_offloading_entries, ptr @__stop_omp_offloading_entries }
+// OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr ([[[BEGIN:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 144), ptr getelementptr ([[[END:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 144), ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }]
+// OPENMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }
 // OPENMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.omp_offloading.descriptor_reg, ptr null }]
 
 //      OPENMP: define internal void @.omp_offloading.descriptor_reg() section ".text.startup" {
@@ -41,7 +42,7 @@
 // OPENMP-NEXT:   ret void
 // OPENMP-NEXT: }
 
-// RUN: clang-offload-packager -o %t.out --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
@@ -51,12 +52,12 @@
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-windows-gnu \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=CUDA,CUDA-COFF
 
-//      CUDA-ELF: @__start_cuda_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// CUDA-ELF-NEXT: @__stop_cuda_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// CUDA-ELF-NEXT: @__dummy.cuda_offloading_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries"
+//      CUDA-ELF: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
+// CUDA-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
+// CUDA-ELF-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries"
 
-//      CUDA-COFF: @__start_cuda_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries$OA"
-// CUDA-COFF-NEXT: @__stop_cuda_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries$OZ"
+//      CUDA-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+// CUDA-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
 
 //      CUDA: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".nv_fatbin"
 // CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", align 8
@@ -83,11 +84,11 @@
 //
 //      CUDA: define internal void @.cuda.globals_reg(ptr %0) section ".text.startup" {
 // CUDA-NEXT: entry:
-// CUDA-NEXT:   %1 = icmp ne ptr @__start_cuda_offloading_entries, @__stop_cuda_offloading_entries
+// CUDA-NEXT:   %1 = icmp ne ptr @__start_llvm_offload_entries, @__stop_llvm_offload_entries
 // CUDA-NEXT:   br i1 %1, label %while.entry, label %while.end
 //
 //      CUDA: while.entry:
-// CUDA-NEXT:   %entry1 = phi ptr [ @__start_cuda_offloading_entries, %entry ], [ %16, %if.end ]
+// CUDA-NEXT:   %entry1 = phi ptr [ @__start_llvm_offload_entries, %entry ], [ %16, %if.end ]
 // CUDA-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 4
 // CUDA-NEXT:   %addr = load ptr, ptr %2, align 8
 // CUDA-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 8
@@ -145,14 +146,14 @@
 //
 //      CUDA: if.end:
 // CUDA-NEXT:   %16 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 1
-// CUDA-NEXT:   %17 = icmp eq ptr %16, @__stop_cuda_offloading_entries
+// CUDA-NEXT:   %17 = icmp eq ptr %16, @__stop_llvm_offload_entries
 // CUDA-NEXT:   br i1 %17, label %while.end, label %while.entry
 //
 //      CUDA: while.end:
 // CUDA-NEXT:   ret void
 // CUDA-NEXT: }
 
-// RUN: clang-offload-packager -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
@@ -162,12 +163,12 @@
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-windows-gnu \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=HIP,HIP-COFF
 
-//      HIP-ELF: @__start_hip_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// HIP-ELF-NEXT: @__stop_hip_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// HIP-ELF-NEXT: @__dummy.hip_offloading_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries"
+//      HIP-ELF: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
+// HIP-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
+// HIP-ELF-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries"
 
-//      HIP-COFF: @__start_hip_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries$OA"
-// HIP-COFF-NEXT: @__stop_hip_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries$OZ"
+//      HIP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+// HIP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
 
 //      HIP: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".hip_fatbin"
 // HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
@@ -193,11 +194,11 @@
 //
 //      HIP: define internal void @.hip.globals_reg(ptr %0) section ".text.startup" {
 // HIP-NEXT: entry:
-// HIP-NEXT:   %1 = icmp ne ptr @__start_hip_offloading_entries, @__stop_hip_offloading_entries
+// HIP-NEXT:   %1 = icmp ne ptr @__start_llvm_offload_entries, @__stop_llvm_offload_entries
 // HIP-NEXT:   br i1 %1, label %while.entry, label %while.end
 //
 //      HIP: while.entry:
-// HIP-NEXT:   %entry1 = phi ptr [ @__start_hip_offloading_entries, %entry ], [ %16, %if.end ]
+// HIP-NEXT:   %entry1 = phi ptr [ @__start_llvm_offload_entries, %entry ], [ %16, %if.end ]
 // HIP-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 4
 // HIP-NEXT:   %addr = load ptr, ptr %2, align 8
 // HIP-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 8
@@ -220,7 +221,7 @@
 // HIP-NEXT:   %constant = lshr i32 %11, 4
 // HIP-NEXT:   %12 = and i32 %flags, 32
 // HIP-NEXT:   %normalized = lshr i32 %12, 5
-// HIP-NEXT:   %13 = icmp eq i16 %kind, 3
+// HIP-NEXT:   %13 = icmp eq i16 %kind, 4
 // HIP-NEXT:   br i1 %13, label %if.kind, label %if.end
 //
 //      HIP: if.kind:
@@ -257,9 +258,42 @@
 //
 //      HIP: if.end:
 // HIP-NEXT:   %16 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 1
-// HIP-NEXT:   %17 = icmp eq ptr %16, @__stop_hip_offloading_entries
+// HIP-NEXT:   %17 = icmp eq ptr %16, @__stop_llvm_offload_entries
 // HIP-NEXT:   br i1 %17, label %while.end, label %while.entry
 //
 //      HIP: while.end:
 // HIP-NEXT:   ret void
 // HIP-NEXT: }
+
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=sycl,triple=spirv64-unknown-unknown,arch=generic
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu -r \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL
+
+//      SYCL: %__sycl.tgt_device_image = type { i16, i8, i8, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
+// SYCL-NEXT: %__sycl.tgt_bin_desc = type { i16, i16, ptr, ptr, ptr }
+
+//      SYCL: @.sycl_offloading.target.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.opts.compile.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.opts.link.0 = internal unnamed_addr constant [1 x i8] zeroinitializer
+// SYCL-NEXT: @.sycl_offloading.0.data = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".llvm.offloading"
+// SYCL-NEXT: @.offloading.entry_name = internal unnamed_addr constant [5 x i8] c"stub\00", section ".llvm.rodata.offloading", align 1
+// SYCL-NEXT: @.offloading.entry.stub = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 8, i32 0, ptr null, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }, section "llvm_offload_entries", align 8
+// SYCL-NEXT: @.sycl_offloading.entries_arr = internal constant [1 x %struct.__tgt_offload_entry] [%struct.__tgt_offload_entry { i64 0, i16 1, i16 8, i32 0, ptr null, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }]
+// SYCL-NEXT: @.sycl_offloading.device_images = internal unnamed_addr constant [1 x %__sycl.tgt_device_image] [%__sycl.tgt_device_image { i16 3, i8 8, i8 0, ptr @.sycl_offloading.target.0, ptr @.sycl_offloading.opts.compile.0, ptr @.sycl_offloading.opts.link.0, ptr @.sycl_offloading.0.data, ptr @.sycl_offloading.0.data, ptr @.sycl_offloading.entries_arr, ptr getelementptr ([1 x %struct.__tgt_offload_entry], ptr @.sycl_offloading.entries_arr, i64 0, i64 1), ptr null, ptr null }]
+// SYCL-NEXT: @.sycl_offloading.descriptor = internal constant %__sycl.tgt_bin_desc { i16 1, i16 1, ptr @.sycl_offloading.device_images, ptr null, ptr null }
+
+//      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
+// SYCL-NEXT: entry:
+// SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.descriptor)
+// SYCL-NEXT:   ret void
+// SYCL-NEXT: }
+
+//      SYCL: define internal void @sycl.descriptor_unreg() section ".text.startup" {
+// SYCL-NEXT: entry:
+// SYCL-NEXT:   call void @__sycl_unregister_lib(ptr @.sycl_offloading.descriptor)
+// SYCL-NEXT:   ret void
+// SYCL-NEXT: }

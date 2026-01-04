@@ -44,10 +44,8 @@ define i32 @sge_i32(i32 %x) {
 ; CHECK-LABEL: sge_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-2097152 // =0xffe00000
-; CHECK-NEXT:    mov w9, #-2097153 // =0xffdfffff
-; CHECK-NEXT:    sub w8, w8, w0
-; CHECK-NEXT:    cmp w0, w9
-; CHECK-NEXT:    csel w0, w0, w8, gt
+; CHECK-NEXT:    subs w8, w8, w0
+; CHECK-NEXT:    csel w0, w0, w8, le
 ; CHECK-NEXT:    ret
   %cmp = icmp sge i32 %x, -2097152
   %sub = sub i32 -2097152, %x
@@ -72,10 +70,8 @@ define i32 @sle_i32(i32 %x) {
 ; CHECK-LABEL: sle_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-2097152 // =0xffe00000
-; CHECK-NEXT:    mov w9, #-2097151 // =0xffe00001
-; CHECK-NEXT:    sub w8, w8, w0
-; CHECK-NEXT:    cmp w0, w9
-; CHECK-NEXT:    csel w0, w0, w8, lt
+; CHECK-NEXT:    subs w8, w8, w0
+; CHECK-NEXT:    csel w0, w0, w8, ge
 ; CHECK-NEXT:    ret
   %cmp = icmp sle i32 %x, -2097152
   %sub = sub i32 -2097152, %x
@@ -128,10 +124,8 @@ define i32 @ule_i32(i32 %x) {
 ; CHECK-LABEL: ule_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-2097152 // =0xffe00000
-; CHECK-NEXT:    mov w9, #-2097151 // =0xffe00001
-; CHECK-NEXT:    sub w8, w8, w0
-; CHECK-NEXT:    cmp w0, w9
-; CHECK-NEXT:    csel w0, w0, w8, lo
+; CHECK-NEXT:    subs w8, w8, w0
+; CHECK-NEXT:    csel w0, w0, w8, hs
 ; CHECK-NEXT:    ret
   %cmp = icmp ule i32 %x, -2097152
   %sub = sub i32 -2097152, %x
