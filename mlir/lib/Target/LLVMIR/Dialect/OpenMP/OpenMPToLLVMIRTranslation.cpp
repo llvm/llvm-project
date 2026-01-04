@@ -201,12 +201,12 @@ public:
   // Allocate space for linear variabes
   void createLinearVar(llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation,
-                       llvm::Value *linearVar, int idx) {
+                       mlir::Value &linearVar, int idx) {
     linearPreconditionVars.push_back(
         builder.CreateAlloca(linearVarTypes[idx], nullptr, ".linear_var"));
     llvm::Value *linearLoopBodyTemp =
         builder.CreateAlloca(linearVarTypes[idx], nullptr, ".linear_result");
-    linearOrigVal.push_back(linearVar);
+    linearOrigVal.push_back(moduleTranslation.lookupValue(linearVar));
     linearLoopBodyTemps.push_back(linearLoopBodyTemp);
   }
 
@@ -311,16 +311,6 @@ public:
     builder.SetInsertPoint(linearExitBB->getTerminator());
     return moduleTranslation.getOpenMPBuilder()->createBarrier(
         builder.saveIP(), llvm::omp::OMPD_barrier);
-  }
-
-  // Emit stores for linear variables. Useful in case of SIMD
-  // construct.
-  void emitStoresForLinearVar(llvm::IRBuilderBase &builder) {
-    for (size_t index = 0; index < linearOrigVal.size(); index++) {
-      llvm::LoadInst *linearVarTemp =
-          builder.CreateLoad(linearVarTypes[index], linearLoopBodyTemps[index]);
-      builder.CreateStore(linearVarTemp, linearOrigVal[index]);
-    }
   }
 
   // Rewrite all uses of the original variable in `BBName`
@@ -2781,9 +2771,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       return failure();
 
     for (auto [idx, linearVar] : llvm::enumerate(wsloopOp.getLinearVars()))
-      linearClauseProcessor.createLinearVar(
-          builder, moduleTranslation, moduleTranslation.lookupValue(linearVar),
-          idx);
+      linearClauseProcessor.createLinearVar(builder, moduleTranslation,
+                                            linearVar, idx);
     for (mlir::Value linearStep : wsloopOp.getLinearStepVars())
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
@@ -3096,40 +3085,25 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocInsertPoints(builder, moduleTranslation);
 
-  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-      builder, moduleTranslation, privateVarsInfo, allocaIP);
-  if (handleError(afterAllocas, opInst).failed())
-    return failure();
-
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
 
   if (!simdOp.getLinearVars().empty()) {
-    auto linearVarTypes = simdOp.getLinearVarTypes().value();
-    for (mlir::Attribute linearVarType : linearVarTypes)
-      linearClauseProcessor.registerType(moduleTranslation, linearVarType);
-    for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars())) {
-      bool isImplicit = false;
-      for (auto [mlirPrivVar, llvmPrivateVar] : llvm::zip_equal(
-               privateVarsInfo.mlirVars, privateVarsInfo.llvmVars)) {
-        // If the linear variable is implicit, reuse the already
-        // existing llvm::Value
-        if (linearVar == mlirPrivVar) {
-          isImplicit = true;
-          linearClauseProcessor.createLinearVar(builder, moduleTranslation,
-                                                llvmPrivateVar, idx);
-          break;
-        }
-      }
-
-      if (!isImplicit)
-        linearClauseProcessor.createLinearVar(
-            builder, moduleTranslation,
-            moduleTranslation.lookupValue(linearVar), idx);
-    }
+    if (failed(linearClauseProcessor.registerTypes(
+            moduleTranslation, simdOp.getLinearVars(),
+            simdOp.getLinearVarTypes(), &opInst)))
+      return failure();
+    for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars()))
+      linearClauseProcessor.createLinearVar(builder, moduleTranslation,
+                                            linearVar, idx);
     for (mlir::Value linearStep : simdOp.getLinearStepVars())
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
+
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+      simdOp, builder, moduleTranslation, privateVarsInfo, allocaIP);
+  if (handleError(afterAllocas, opInst).failed())
+    return failure();
 
   if (failed(allocReductionVars(simdOp, reductionArgs, builder,
                                 moduleTranslation, allocaIP, reductionDecls,
@@ -3211,7 +3185,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             : nullptr,
                         order, simdlen, safelen);
 
-  linearClauseProcessor.emitStoresForLinearVar(builder);
   for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
     linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
                                          index);
