@@ -3051,13 +3051,13 @@ SPELLING_CACHE = {
 }
 
 
-def _convert_screaming_caps_to_pascal_case(kind: BaseEnumeration):
+def _convert_screaming_caps_to_pascal_case(kind: str):
     """
     Converting the new enum names (full upper-case, underscore separated)
     to the old ones (separated by capitalization), e.g. RESULT_TYPE -> ResultType
     """
     # Remove underscores
-    components = kind.name.split("_")
+    components = kind.split("_")
     # Upper-camel case each split component
     components = [component.lower().capitalize() for component in components]
     return "".join(components)
@@ -3193,7 +3193,7 @@ class CompletionString(ClangObject):
             + " || Priority: "
             + str(self.priority)
             + " || Availability: "
-            + _kind_to_old_name(self.availability)
+            + _convert_screaming_caps_to_pascal_case(self.availability.name)
             + " || Brief comment: "
             + str(self.briefComment)
         )
