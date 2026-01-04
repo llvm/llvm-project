@@ -75,21 +75,6 @@ SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
   return findNextAnyTokenKind(Start, SM, LangOpts, tok::comma, tok::semi);
 }
 
-std::optional<Token>
-findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
-                              const LangOptions &LangOpts) {
-  while (Start.isValid()) {
-    std::optional<Token> CurrentToken =
-        Lexer::findNextToken(Start, SM, LangOpts);
-    if (!CurrentToken || !CurrentToken->is(tok::comment))
-      return CurrentToken;
-
-    Start = CurrentToken->getLocation();
-  }
-
-  return std::nullopt;
-}
-
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {

@@ -74,12 +74,12 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
-  initializeCompressEVEXPassPass(PR);
+  initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationLegacyPass(PR);
-  initializeX86CmovConverterPassPass(PR);
+  initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigPass(PR);
   initializeX86FastPreTileConfigPass(PR);
   initializeX86FastTileConfigPass(PR);
@@ -499,7 +499,7 @@ bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
-  addPass(createX86CmovConverterPass());
+  addPass(createX86CmovConversionLegacyPass());
   return true;
 }
 
@@ -570,7 +570,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
   }
-  addPass(createX86CompressEVEXPass());
+  addPass(createX86CompressEVEXLegacyPass());
   addPass(createX86InsertX87waitPass());
 }
 
