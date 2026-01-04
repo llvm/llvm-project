@@ -31,15 +31,12 @@ class SBTargetExtensionsTestCase(TestBase):
         self.assertEqual(target.module["a.out"], module)
         self.assertEqual(target.module[module.file.fullpath], module)
 
-        # UUID strings on Linux might not be standard UUIDs (they are Build IDs).
-        # We try to convert, but if it fails, we skip the UUID object check.
         uuid_str = module.GetUUIDString()
         if uuid_str:
             try:
                 uuid_obj = uuid.UUID(uuid_str)
                 self.assertEqual(target.module[uuid_obj], module)
             except ValueError:
-                # The UUID string wasn't a standard UUID format, which is fine on Linux.
                 pass
 
         self.assertEqual(len(target.module[re.compile("a.out")]), 1)
@@ -57,7 +54,6 @@ class SBTargetExtensionsTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process.IsValid())
 
-        # SBProcess objects don't support direct equality (==), compare IDs.
         self.assertEqual(target.process.GetProcessID(), process.GetProcessID())
 
     def test_breakpoints(self):
@@ -75,10 +71,8 @@ class SBTargetExtensionsTestCase(TestBase):
         self.assertEqual(target.num_breakpoints, 1)
         self.assertEqual(len(target.breakpoints), 1)
 
-        # target.breakpoint[i] uses INDEX, not ID.
         self.assertEqual(target.breakpoint[0].GetID(), target.breakpoints[0].GetID())
 
-        # To verify ID lookup works via the standard API:
         self.assertEqual(
             target.FindBreakpointByID(breakpoint.GetID()).GetID(), breakpoint.GetID()
         )
@@ -90,17 +84,14 @@ class SBTargetExtensionsTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target.IsValid())
 
-        # 1. Set a breakpoint so the process stops and stays alive.
         breakpoint = target.BreakpointCreateBySourceRegex(
             "Set breakpoint here", lldb.SBFileSpec("main.c")
         )
         self.assertTrue(breakpoint.IsValid())
 
-        # 2. Launch the process.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process.IsValid())
 
-        # 3. Ensure we are stopped.
         self.assertEqual(process.GetState(), lldb.eStateStopped)
 
         variables = target.FindGlobalVariables("g_var", 1)
@@ -109,7 +100,6 @@ class SBTargetExtensionsTestCase(TestBase):
         global_variable = variables.GetValueAtIndex(0)
         error = lldb.SBError()
 
-        # 4. Now we can set the watchpoint.
         watchpoint = target.WatchAddress(
             global_variable.GetLoadAddress(), 4, False, True, error
         )
