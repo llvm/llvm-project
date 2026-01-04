@@ -10248,11 +10248,13 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     SDLoc SL(Op);
     auto IndexKey = DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, IndexKeyTy);
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
-                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
-                        Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
-                        IndexKey, Op.getOperand(7),
-                        Op.getOperand(8)}); // No clamp operand
+    SmallVector<SDValue> Args{
+        Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+        Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
+        IndexKey,         Op.getOperand(7), Op.getOperand(8)};
+    if (IntrinsicID == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8)
+      Args.push_back(Op.getOperand(9));
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(), Args);
   }
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
