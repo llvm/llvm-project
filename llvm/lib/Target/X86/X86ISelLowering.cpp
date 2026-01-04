@@ -29570,7 +29570,7 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
     unsigned CLZ = DAG.computeKnownBits(N0).countMinLeadingZeros();
     if (CLZ != 0)
       CLZ = std::min(CLZ, DAG.computeKnownBits(N1).countMinLeadingZeros());
-    for (unsigned Bits = 8; Bits < EltSizeInBits; Bits += Bits) {
+    for (unsigned Bits = 8; Bits < EltSizeInBits; Bits <<= 1) {
       std::optional<unsigned> Opcode;
       if (CLZ >= (EltSizeInBits - Bits)) {
         Opcode = IsMax ? ISD::UMAX : ISD::UMIN;
