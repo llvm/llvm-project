@@ -634,7 +634,11 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
   if (m_mod_time != llvm::sys::TimePoint<>()) {
     m_data_sp = FileSystem::Instance().CreateDataBuffer(
         m_support_file_nsp->GetSpecOnly());
-    m_checksum = llvm::MD5::hash(m_data_sp->GetData());
+    // Even if we have a valid modification time, reading the data might fail.
+    // Use the checksum from the line entry so we don't show a checksum
+    // mismatch.
+    m_checksum = m_data_sp ? llvm::MD5::hash(m_data_sp->GetData())
+                           : m_support_file_nsp->GetChecksum();
   }
 }
 
@@ -669,6 +673,8 @@ const char *SourceManager::File::PeekLineData(uint32_t line) {
   if (!LineIsValid(line))
     return nullptr;
 
+  assert(m_data_sp);
+
   size_t line_offset = GetLineOffset(line);
   if (line_offset < m_data_sp->GetByteSize())
     return (const char *)m_data_sp->GetBytes() + line_offset;
@@ -679,6 +685,8 @@ uint32_t SourceManager::File::GetLineLength(uint32_t line,
                                             bool include_newline_chars) {
   if (!LineIsValid(line))
     return false;
+
+  assert(m_data_sp);
 
   size_t start_offset = GetLineOffset(line);
   size_t end_offset = GetLineOffset(line + 1);
@@ -828,7 +836,7 @@ bool SourceManager::File::CalculateLineOffsets(uint32_t line) {
       return true;
 
     if (m_offsets.empty()) {
-      if (m_data_sp.get() == nullptr)
+      if (!m_data_sp)
         return false;
 
       const char *start = (const char *)m_data_sp->GetBytes();
@@ -876,6 +884,7 @@ bool SourceManager::File::GetLine(uint32_t line_no, std::string &buffer) {
   if (!LineIsValid(line_no))
     return false;
 
+  assert(m_data_sp);
   size_t start_offset = GetLineOffset(line_no);
   size_t end_offset = GetLineOffset(line_no + 1);
   if (end_offset == UINT32_MAX) {
