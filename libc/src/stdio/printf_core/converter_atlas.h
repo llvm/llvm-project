@@ -26,7 +26,11 @@
 // defines convert_float_decimal
 // defines convert_float_dec_exp
 // defines convert_float_dec_auto
+#ifdef LIBC_COPT_FLOAT_TO_STR_USE_FLOAT320
+#include "src/stdio/printf_core/float_dec_converter_limited.h"
+#else
 #include "src/stdio/printf_core/float_dec_converter.h"
+#endif
 // defines convert_float_hex_exp
 #include "src/stdio/printf_core/float_hex_converter.h"
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT

@@ -52,6 +52,13 @@ autoconf/autom4te.cache
 # CLion project configuration
 /.idea
 /cmake-build*
+# Coding assistants' stuff
+/CLAUDE.md
+.claude/
+/GEMINI.md
+.gemini/
+AGENTS.md
+.codex/
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).

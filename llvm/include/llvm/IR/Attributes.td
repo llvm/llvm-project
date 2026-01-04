@@ -180,8 +180,13 @@ def NoBuiltin : EnumAttr<"nobuiltin", IntersectPreserve, [FnAttr]>;
 /// Function cannot enter into caller's translation unit.
 def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 
-/// Function creates no aliases of pointer.
-def NoCapture : EnumAttr<"nocapture", IntersectAnd, [ParamAttr]>;
+/// Specify how the pointer may be captured.
+def Captures : IntAttr<"captures", IntersectCustom, [ParamAttr]>;
+
+/// Result will not be undef or poison if all arguments are not undef and not
+/// poison.
+def NoCreateUndefOrPoison
+    : EnumAttr<"nocreateundeforpoison", IntersectAnd, [FnAttr]>;
 
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
@@ -197,6 +202,9 @@ def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
 
 /// Argument is dead if the call unwinds.
 def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
+
+/// Argument is dead upon function return.
+def DeadOnReturn : EnumAttr<"dead_on_return", IntersectAnd, [ParamAttr]>;
 
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
@@ -291,7 +299,7 @@ def SExt : EnumAttr<"signext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Alignment of stack for function (3 bits)  stored as log2 of alignment with
 /// +1 bias 0 means unaligned (different from alignstack=(1)).
-def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr]>;
+def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr, RetAttr]>;
 
 /// Function can be speculated.
 def Speculatable : EnumAttr<"speculatable", IntersectAnd, [FnAttr]>;
@@ -338,6 +346,9 @@ def SanitizeRealtime : EnumAttr<"sanitize_realtime", IntersectPreserve, [FnAttr]
 /// RealtimeSanitizer should error if a real-time unsafe function is invoked
 /// during a real-time sanitized function (see `sanitize_realtime`).
 def SanitizeRealtimeBlocking : EnumAttr<"sanitize_realtime_blocking", IntersectPreserve, [FnAttr]>;
+
+/// Allocation token instrumentation is on.
+def SanitizeAllocToken : EnumAttr<"sanitize_alloc_token", IntersectPreserve, [FnAttr]>;
 
 /// Speculative Load Hardening is enabled.
 ///
@@ -389,17 +400,26 @@ def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", In
 /// pipeline to perform elide on the call or invoke instruction.
 def CoroElideSafe : EnumAttr<"coro_elide_safe", IntersectPreserve, [FnAttr]>;
 
+/// Function is marked for Windows Hot Patching
+def MarkedForWindowsSecureHotPatching
+    : StrBoolAttr<"marked_for_windows_hot_patching">;
+
+/// Global variable should not be accessed through a "__ref_" global variable in
+/// a hot patching function This attribute is applied to the global variable
+/// decl, not the hotpatched function.
+def AllowDirectAccessInHotPatchFunction
+    : StrBoolAttr<"allow_direct_access_in_hot_patch_function">;
+
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
-def ApproxFuncFPMath : StrBoolAttr<"approx-func-fp-math">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
-def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
 def ProfileSampleAccurate : StrBoolAttr<"profile-sample-accurate">;
 def UseSampleProfile : StrBoolAttr<"use-sample-profile">;
+def LoaderReplaceable : StrBoolAttr<"loader-replaceable">;
 
 def DenormalFPMath : ComplexStrAttr<"denormal-fp-math", [FnAttr]>;
 def DenormalFPMathF32 : ComplexStrAttr<"denormal-fp-math-f32", [FnAttr]>;
@@ -457,9 +477,7 @@ class MergeRule<string F> {
 def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
 def : MergeRule<"setAND<NoInfsFPMathAttr>">;
 def : MergeRule<"setAND<NoNansFPMathAttr>">;
-def : MergeRule<"setAND<ApproxFuncFPMathAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
-def : MergeRule<"setAND<UnsafeFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;
 def : MergeRule<"setOR<ProfileSampleAccurateAttr>">;

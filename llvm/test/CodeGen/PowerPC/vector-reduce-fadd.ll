@@ -3628,15 +3628,15 @@ define dso_local ppc_fp128 @v2ppcf128_fast(<2 x ppc_fp128> %a) local_unnamed_add
 ; PWR9LE-LABEL: v2ppcf128_fast:
 ; PWR9LE:       # %bb.0: # %entry
 ; PWR9LE-NEXT:    mflr r0
-; PWR9LE-NEXT:    stdu r1, -64(r1)
-; PWR9LE-NEXT:    std r0, 80(r1)
+; PWR9LE-NEXT:    stdu r1, -48(r1)
+; PWR9LE-NEXT:    std r0, 64(r1)
 ; PWR9LE-NEXT:    bl __gcc_qadd
 ; PWR9LE-NEXT:    nop
 ; PWR9LE-NEXT:    stfd f2, 40(r1)
 ; PWR9LE-NEXT:    stfd f1, 32(r1)
 ; PWR9LE-NEXT:    lxv vs1, 32(r1)
 ; PWR9LE-NEXT:    xxswapd vs2, vs1
-; PWR9LE-NEXT:    addi r1, r1, 64
+; PWR9LE-NEXT:    addi r1, r1, 48
 ; PWR9LE-NEXT:    ld r0, 16(r1)
 ; PWR9LE-NEXT:    mtlr r0
 ; PWR9LE-NEXT:    blr
@@ -3644,15 +3644,15 @@ define dso_local ppc_fp128 @v2ppcf128_fast(<2 x ppc_fp128> %a) local_unnamed_add
 ; PWR9BE-LABEL: v2ppcf128_fast:
 ; PWR9BE:       # %bb.0: # %entry
 ; PWR9BE-NEXT:    mflr r0
-; PWR9BE-NEXT:    stdu r1, -144(r1)
-; PWR9BE-NEXT:    std r0, 160(r1)
+; PWR9BE-NEXT:    stdu r1, -128(r1)
+; PWR9BE-NEXT:    std r0, 144(r1)
 ; PWR9BE-NEXT:    bl __gcc_qadd
 ; PWR9BE-NEXT:    nop
 ; PWR9BE-NEXT:    stfd f2, 120(r1)
 ; PWR9BE-NEXT:    stfd f1, 112(r1)
 ; PWR9BE-NEXT:    lxv vs1, 112(r1)
 ; PWR9BE-NEXT:    xxswapd vs2, vs1
-; PWR9BE-NEXT:    addi r1, r1, 144
+; PWR9BE-NEXT:    addi r1, r1, 128
 ; PWR9BE-NEXT:    ld r0, 16(r1)
 ; PWR9BE-NEXT:    mtlr r0
 ; PWR9BE-NEXT:    blr
@@ -3661,13 +3661,13 @@ define dso_local ppc_fp128 @v2ppcf128_fast(<2 x ppc_fp128> %a) local_unnamed_add
 ; PWR10LE:       # %bb.0: # %entry
 ; PWR10LE-NEXT:    mflr r0
 ; PWR10LE-NEXT:    std r0, 16(r1)
-; PWR10LE-NEXT:    stdu r1, -64(r1)
+; PWR10LE-NEXT:    stdu r1, -48(r1)
 ; PWR10LE-NEXT:    bl __gcc_qadd@notoc
 ; PWR10LE-NEXT:    stfd f2, 40(r1)
 ; PWR10LE-NEXT:    stfd f1, 32(r1)
 ; PWR10LE-NEXT:    lxv vs1, 32(r1)
 ; PWR10LE-NEXT:    xxswapd vs2, vs1
-; PWR10LE-NEXT:    addi r1, r1, 64
+; PWR10LE-NEXT:    addi r1, r1, 48
 ; PWR10LE-NEXT:    ld r0, 16(r1)
 ; PWR10LE-NEXT:    mtlr r0
 ; PWR10LE-NEXT:    blr
@@ -3676,14 +3676,14 @@ define dso_local ppc_fp128 @v2ppcf128_fast(<2 x ppc_fp128> %a) local_unnamed_add
 ; PWR10BE:       # %bb.0: # %entry
 ; PWR10BE-NEXT:    mflr r0
 ; PWR10BE-NEXT:    std r0, 16(r1)
-; PWR10BE-NEXT:    stdu r1, -144(r1)
+; PWR10BE-NEXT:    stdu r1, -128(r1)
 ; PWR10BE-NEXT:    bl __gcc_qadd
 ; PWR10BE-NEXT:    nop
 ; PWR10BE-NEXT:    stfd f2, 120(r1)
 ; PWR10BE-NEXT:    stfd f1, 112(r1)
 ; PWR10BE-NEXT:    lxv vs1, 112(r1)
 ; PWR10BE-NEXT:    xxswapd vs2, vs1
-; PWR10BE-NEXT:    addi r1, r1, 144
+; PWR10BE-NEXT:    addi r1, r1, 128
 ; PWR10BE-NEXT:    ld r0, 16(r1)
 ; PWR10BE-NEXT:    mtlr r0
 ; PWR10BE-NEXT:    blr

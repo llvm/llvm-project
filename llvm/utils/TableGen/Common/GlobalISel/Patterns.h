@@ -318,7 +318,7 @@ private:
 /// instruction.
 class InstructionPattern : public Pattern {
 public:
-  virtual ~InstructionPattern() = default;
+  ~InstructionPattern() override = default;
 
   static bool classof(const Pattern *P) {
     return P->getKind() == K_CodeGenInstruction || P->getKind() == K_PatFrag ||

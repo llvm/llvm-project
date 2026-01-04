@@ -12,20 +12,18 @@
 #include "ExportTrie.h"
 #include "ICF.h"
 #include "InputFiles.h"
-#include "MachOStructs.h"
 #include "ObjC.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
 #if defined(__APPLE__)
@@ -850,8 +848,7 @@ void ObjCSelRefsHelper::initialize() {
 void ObjCSelRefsHelper::cleanup() { methnameToSelref.clear(); }
 
 ConcatInputSection *ObjCSelRefsHelper::makeSelRef(StringRef methname) {
-  auto methnameOffset =
-      in.objcMethnameSection->getStringOffset(methname).outSecOff;
+  auto methnameOffset = in.objcMethnameSection->getStringOffset(methname);
 
   size_t wordSize = target->wordSize;
   uint8_t *selrefData = bAlloc().Allocate<uint8_t>(wordSize);
@@ -949,9 +946,7 @@ uint64_t ObjCStubsSection::getSize() const {
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
   uint64_t stubOffset = 0;
-  for (size_t i = 0, n = symbols.size(); i < n; ++i) {
-    Defined *sym = symbols[i];
-
+  for (Defined *sym : symbols) {
     auto methname = getMethname(sym);
     InputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef != nullptr && "no selref for methname");
@@ -1205,18 +1200,6 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
   stabs.emplace_back(std::move(stab));
 }
 
-// Given a pointer to a function symbol, return the symbol that points to the
-// actual function body that will go in the final binary. Generally this is the
-// symbol itself, but if the symbol was folded using a thunk, we retrieve the
-// target function body from the thunk.
-Defined *SymtabSection::getFuncBodySym(Defined *originalSym) {
-  if (originalSym->identicalCodeFoldingKind == Symbol::ICFFoldKind::None ||
-      originalSym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
-    return originalSym;
-
-  return macho::getBodyForThunkFoldedSym(originalSym);
-}
-
 void SymtabSection::emitStabs() {
   if (config->omitDebugInfo)
     return;
@@ -1252,17 +1235,15 @@ void SymtabSection::emitStabs() {
       if (!file || !file->compileUnit)
         continue;
 
-      // We use 'originalIsec' to get the file id of the symbol since 'isec()'
-      // might point to the merged ICF symbol's file
-      symbolsNeedingStabs.emplace_back(
-          defined, getFuncBodySym(defined)->originalIsec->getFile()->id);
+      // We use the symbol's original InputSection to get the file id,
+      // even for ICF folded symbols, to ensure STABS entries point to the
+      // correct object file where the symbol was originally defined
+      symbolsNeedingStabs.emplace_back(defined,
+                                       defined->originalIsec->getFile()->id);
     }
   }
 
-  llvm::stable_sort(symbolsNeedingStabs,
-                    [&](const SortingPair &a, const SortingPair &b) {
-                      return a.second < b.second;
-                    });
+  llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
@@ -1270,10 +1251,12 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (SortingPair &pair : symbolsNeedingStabs) {
     Defined *defined = pair.first;
-    // We use 'originalIsec' of the symbol since we care about the actual origin
-    // of the symbol, not the canonical location returned by `isec()`.
-    Defined *funcBodySym = getFuncBodySym(defined);
-    InputSection *isec = funcBodySym->originalIsec;
+    // When emitting STABS entries for a symbol, always use the original
+    // InputSection of the defined symbol, not the section of the function body
+    // (which might be a different function entirely if ICF folded this
+    // function). This ensures STABS entries point back to the original object
+    // file.
+    InputSection *isec = defined->originalIsec;
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
@@ -1288,12 +1271,30 @@ void SymtabSection::emitStabs() {
     StabsEntry symStab;
     symStab.sect = isec->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
-    symStab.value = funcBodySym->getVA();
+
+    // When using --keep-icf-stabs, we need to use the VA of the actual function
+    // body that the linker will place in the binary. This is the function that
+    // the symbol refers to after ICF folding.
+    if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+      // For thunks, we need to get the function they point to
+      Defined *target = getBodyForThunkFoldedSym(defined);
+      symStab.value = target->getVA();
+    } else {
+      symStab.value = defined->getVA();
+    }
 
     if (isCodeSection(isec)) {
       symStab.type = N_FUN;
       stabs.emplace_back(std::move(symStab));
-      emitEndFunStab(funcBodySym);
+      // For the end function marker in STABS, we need to use the size of the
+      // actual function body that exists in the output binary
+      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+        // For thunks, we use the target's size
+        Defined *target = getBodyForThunkFoldedSym(defined);
+        emitEndFunStab(target);
+      } else {
+        emitEndFunStab(defined);
+      }
     } else {
       symStab.type = defined->isExternal() ? N_GSYM : N_STSYM;
       stabs.emplace_back(std::move(symStab));
@@ -1541,7 +1542,14 @@ StringTableSection::StringTableSection()
 
 uint32_t StringTableSection::addString(StringRef str) {
   uint32_t strx = size;
-  strings.push_back(str); // TODO: consider deduplicating strings
+  if (config->dedupSymbolStrings) {
+    llvm::CachedHashStringRef hashedStr(str);
+    auto [it, inserted] = stringMap.try_emplace(hashedStr, strx);
+    if (!inserted)
+      return it->second;
+  }
+
+  strings.push_back(str);
   size += str.size() + 1; // account for null terminator
   return strx;
 }
@@ -1676,28 +1684,7 @@ void CStringSection::writeTo(uint8_t *buf) const {
   }
 }
 
-void CStringSection::finalizeContents() {
-  uint64_t offset = 0;
-  for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      // See comment above DeduplicatedCStringSection for how alignment is
-      // handled.
-      uint32_t pieceAlign = 1
-                            << llvm::countr_zero(isec->align | piece.inSecOff);
-      offset = alignToPowerOf2(offset, pieceAlign);
-      piece.outSecOff = offset;
-      isec->isFinal = true;
-      StringRef string = isec->getStringRef(i);
-      offset += string.size() + 1; // account for null terminator
-    }
-  }
-  size = offset;
-}
-
-// Mergeable cstring literals are found under the __TEXT,__cstring section. In
-// contrast to ELF, which puts strings that need different alignments into
+// In contrast to ELF, which puts strings that need different alignments into
 // different sections, clang's Mach-O backend puts them all in one section.
 // Strings that need to be aligned have the .p2align directive emitted before
 // them, which simply translates into zero padding in the object file. In other
@@ -1732,63 +1719,129 @@ void CStringSection::finalizeContents() {
 // requires its operand addresses to be 16-byte aligned). However, there will
 // typically also be other cstrings in the same file that aren't used via SIMD
 // and don't need this alignment. They will be emitted at some arbitrary address
-// `A`, but ld64 will treat them as being 16-byte aligned with an offset of `16
-// % A`.
+// `A`, but ld64 will treat them as being 16-byte aligned with an offset of
+// `16 % A`.
+static Align getStringPieceAlignment(const CStringInputSection &isec,
+                                     const StringPiece &piece) {
+  return llvm::Align(1ULL << llvm::countr_zero(isec.align | piece.inSecOff));
+}
+
+void CStringSection::finalizeContents() {
+  size = 0;
+  priorityBuilder.forEachStringPiece(
+      inputs,
+      [&](CStringInputSection &isec, StringPiece &piece, size_t pieceIdx) {
+        piece.outSecOff = alignTo(size, getStringPieceAlignment(isec, piece));
+        StringRef string = isec.getStringRef(pieceIdx);
+        size =
+            piece.outSecOff + string.size() + 1; // account for null terminator
+      },
+      /*forceInputOrder=*/false, /*computeHash=*/true);
+  for (CStringInputSection *isec : inputs)
+    isec->isFinal = true;
+}
+
 void DeduplicatedCStringSection::finalizeContents() {
   // Find the largest alignment required for each string.
-  for (const CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
+  DenseMap<CachedHashStringRef, Align> strToAlignment;
+  // Used for tail merging only
+  std::vector<CachedHashStringRef> deduplicatedStrs;
+  priorityBuilder.forEachStringPiece(
+      inputs,
+      [&](CStringInputSection &isec, StringPiece &piece, size_t pieceIdx) {
+        auto s = isec.getCachedHashStringRef(pieceIdx);
+        assert(isec.align != 0);
+        auto align = getStringPieceAlignment(isec, piece);
+        auto [it, wasInserted] = strToAlignment.try_emplace(s, align);
+        if (config->tailMergeStrings && wasInserted)
+          deduplicatedStrs.push_back(s);
+        if (!wasInserted && it->second < align)
+          it->second = align;
+      },
+      /*forceInputOrder=*/true);
+
+  // Like lexigraphical sort, except we read strings in reverse and take the
+  // longest string first
+  // TODO: We could improve performance by implementing our own sort that avoids
+  // comparing characters we know to be the same. See
+  // StringTableBuilder::multikeySort() for details
+  llvm::sort(deduplicatedStrs, [](const auto &left, const auto &right) {
+    for (const auto &[leftChar, rightChar] :
+         llvm::zip(llvm::reverse(left.val()), llvm::reverse(right.val()))) {
+      if (leftChar == rightChar)
         continue;
-      auto s = isec->getCachedHashStringRef(i);
-      assert(isec->align != 0);
-      uint8_t trailingZeros = llvm::countr_zero(isec->align | piece.inSecOff);
-      auto it = stringOffsetMap.insert(
-          std::make_pair(s, StringOffset(trailingZeros)));
-      if (!it.second && it.first->second.trailingZeros < trailingZeros)
-        it.first->second.trailingZeros = trailingZeros;
+      return leftChar < rightChar;
     }
+    return left.size() > right.size();
+  });
+  std::optional<CachedHashStringRef> mergeCandidate;
+  DenseMap<CachedHashStringRef, std::pair<CachedHashStringRef, uint64_t>>
+      tailMergeMap;
+  for (auto &s : deduplicatedStrs) {
+    if (!mergeCandidate || !mergeCandidate->val().ends_with(s.val())) {
+      mergeCandidate = s;
+      continue;
+    }
+    uint64_t tailMergeOffset = mergeCandidate->size() - s.size();
+    // TODO: If the tail offset is incompatible with this string's alignment, we
+    // might be able to find another superstring with a compatible tail offset.
+    // The difficulty is how to do this efficiently
+    const auto &align = strToAlignment.at(s);
+    if (!isAligned(align, tailMergeOffset))
+      continue;
+    auto &mergeCandidateAlign = strToAlignment[*mergeCandidate];
+    if (align > mergeCandidateAlign)
+      mergeCandidateAlign = align;
+    tailMergeMap.try_emplace(s, *mergeCandidate, tailMergeOffset);
   }
 
-  // Assign an offset for each string and save it to the corresponding
+  // Sort the strings for performance and compression size win, and then
+  // assign an offset for each string and save it to the corresponding
   // StringPieces for easy access.
-  for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      auto s = isec->getCachedHashStringRef(i);
-      auto it = stringOffsetMap.find(s);
-      assert(it != stringOffsetMap.end());
-      StringOffset &offsetInfo = it->second;
-      if (offsetInfo.outSecOff == UINT64_MAX) {
-        offsetInfo.outSecOff =
-            alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
-        size =
-            offsetInfo.outSecOff + s.size() + 1; // account for null terminator
-      }
-      piece.outSecOff = offsetInfo.outSecOff;
+  priorityBuilder.forEachStringPiece(inputs, [&](CStringInputSection &isec,
+                                                 StringPiece &piece,
+                                                 size_t pieceIdx) {
+    auto s = isec.getCachedHashStringRef(pieceIdx);
+    // Any string can be tail merged with itself with an offset of zero
+    uint64_t tailMergeOffset = 0;
+    auto mergeIt =
+        config->tailMergeStrings ? tailMergeMap.find(s) : tailMergeMap.end();
+    if (mergeIt != tailMergeMap.end()) {
+      auto &[superString, offset] = mergeIt->second;
+      // s can be tail merged with superString. Do not layout s. Instead layout
+      // superString if we haven't already
+      assert(superString.val().ends_with(s.val()));
+      s = superString;
+      tailMergeOffset = offset;
     }
+    auto [it, wasInserted] = stringOffsetMap.try_emplace(s, /*placeholder*/ 0);
+    if (wasInserted) {
+      // Avoid computing the offset until we are sure we will need to
+      uint64_t offset = alignTo(size, strToAlignment.at(s));
+      it->second = offset;
+      size = offset + s.size() + 1; // account for null terminator
+    }
+    piece.outSecOff = it->second + tailMergeOffset;
+    if (mergeIt != tailMergeMap.end()) {
+      auto &tailMergedString = mergeIt->first;
+      stringOffsetMap[tailMergedString] = piece.outSecOff;
+      assert(isAligned(strToAlignment.at(tailMergedString), piece.outSecOff));
+    }
+  });
+  for (CStringInputSection *isec : inputs)
     isec->isFinal = true;
-  }
 }
 
 void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {
-  for (const auto &p : stringOffsetMap) {
-    StringRef data = p.first.val();
-    uint64_t off = p.second.outSecOff;
-    if (!data.empty())
-      memcpy(buf + off, data.data(), data.size());
-  }
+  for (const auto &[s, outSecOff] : stringOffsetMap)
+    if (s.size())
+      memcpy(buf + outSecOff, s.data(), s.size());
 }
 
-DeduplicatedCStringSection::StringOffset
-DeduplicatedCStringSection::getStringOffset(StringRef str) const {
+uint64_t DeduplicatedCStringSection::getStringOffset(StringRef str) const {
   // StringPiece uses 31 bits to store the hashes, so we replicate that
   uint32_t hash = xxh3_64bits(str) & 0x7fffffff;
-  auto offset = stringOffsetMap.find(CachedHashStringRef(str, hash));
-  assert(offset != stringOffsetMap.end() &&
-         "Looked-up strings should always exist in section");
-  return offset->second;
+  return stringOffsetMap.at(CachedHashStringRef(str, hash));
 }
 
 // This section is actually emitted as __TEXT,__const by ld64, but clang may
@@ -1958,7 +2011,7 @@ void InitOffsetsSection::writeTo(uint8_t *buf) const {
   // FIXME: Add function specified by -init when that argument is implemented.
   for (ConcatInputSection *isec : sections) {
     for (const Reloc &rel : isec->relocs) {
-      const Symbol *referent = rel.referent.dyn_cast<Symbol *>();
+      const Symbol *referent = cast<Symbol *>(rel.referent);
       assert(referent && "section relocation should have been rejected");
       uint64_t offset = referent->getVA() - in.header->addr;
       // FIXME: Can we handle this gracefully?

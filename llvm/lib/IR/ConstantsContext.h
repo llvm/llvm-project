@@ -322,9 +322,7 @@ template <class ConstantClass> struct ConstantAggrKeyType {
     return true;
   }
 
-  unsigned getHash() const {
-    return hash_combine_range(Operands.begin(), Operands.end());
-  }
+  unsigned getHash() const { return hash_combine_range(Operands); }
 
   using TypeClass = typename ConstantInfo<ConstantClass>::TypeClass;
 
@@ -380,7 +378,7 @@ struct InlineAsmKeyType {
   using TypeClass = ConstantInfo<InlineAsm>::TypeClass;
 
   InlineAsm *create(TypeClass *Ty) const {
-    assert(PointerType::getUnqual(FTy) == Ty);
+    assert(PointerType::getUnqual(FTy->getContext()) == Ty);
     return new InlineAsm(FTy, std::string(AsmString), std::string(Constraints),
                          HasSideEffects, IsAlignStack, AsmDialect, CanThrow);
   }
@@ -478,10 +476,8 @@ public:
   }
 
   unsigned getHash() const {
-    return hash_combine(
-        Opcode, SubclassOptionalData,
-        hash_combine_range(Ops.begin(), Ops.end()),
-        hash_combine_range(ShuffleMask.begin(), ShuffleMask.end()), ExplicitTy);
+    return hash_combine(Opcode, SubclassOptionalData, hash_combine_range(Ops),
+                        hash_combine_range(ShuffleMask), ExplicitTy);
   }
 
   using TypeClass = ConstantInfo<ConstantExpr>::TypeClass;
@@ -537,15 +533,14 @@ struct ConstantPtrAuthKeyType {
     return true;
   }
 
-  unsigned getHash() const {
-    return hash_combine_range(Operands.begin(), Operands.end());
-  }
+  unsigned getHash() const { return hash_combine_range(Operands); }
 
-  using TypeClass = typename ConstantInfo<ConstantPtrAuth>::TypeClass;
+  using TypeClass = ConstantInfo<ConstantPtrAuth>::TypeClass;
 
   ConstantPtrAuth *create(TypeClass *Ty) const {
     return new ConstantPtrAuth(Operands[0], cast<ConstantInt>(Operands[1]),
-                               cast<ConstantInt>(Operands[2]), Operands[3]);
+                               cast<ConstantInt>(Operands[2]), Operands[3],
+                               Operands[4]);
   }
 };
 

@@ -14,7 +14,6 @@
 #include "min_allocator.h"
 #include "test_allocator.h"
 
-
 template <class Map, class ValueTp, class PtrT, class CPtrT>
 void testUnorderedMap() {
   typedef typename Map::difference_type Diff;
@@ -48,13 +47,10 @@ void testUnorderedMap() {
   }
 }
 
-
 template <class Set, class ValueTp, class CPtrT>
 void testUnorderedSet() {
-  static_assert((std::is_convertible<typename Set::iterator,
-                                     typename Set::const_iterator>::value), "");
-  static_assert((std::is_convertible<typename Set::local_iterator,
-                                     typename Set::const_local_iterator>::value), "");
+  static_assert((std::is_convertible<typename Set::iterator, typename Set::const_iterator>::value), "");
+  static_assert((std::is_convertible<typename Set::local_iterator, typename Set::const_local_iterator>::value), "");
   typedef typename Set::difference_type Diff;
   {
     typedef typename Set::iterator It;
@@ -62,7 +58,6 @@ void testUnorderedSet() {
     static_assert((std::is_same<typename It::reference, ValueTp const&>::value), "");
     static_assert((std::is_same<typename It::pointer, CPtrT>::value), "");
     static_assert((std::is_same<typename It::difference_type, Diff>::value), "");
-
   }
   {
     typedef typename Set::local_iterator It;

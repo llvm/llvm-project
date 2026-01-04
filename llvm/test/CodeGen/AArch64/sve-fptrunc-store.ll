@@ -4,8 +4,8 @@
 define void @fptrunc2_f64_f32(ptr %dst, ptr %src) {
 ; CHECK-LABEL: fptrunc2_f64_f32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -19,8 +19,8 @@ entry:
 define void @fptrunc2_f64_f16(ptr %dst, ptr %src) {
 ; CHECK-LABEL: fptrunc2_f64_f16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -34,8 +34,8 @@ entry:
 define void @fptrunc4_f32_f16(ptr %dst, ptr %src) {
 ; CHECK-LABEL: fptrunc4_f32_f16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1]
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -64,20 +64,19 @@ entry:
 define void @fptrunc8_f64_f16(ptr %dst, ptr %src) {
 ; CHECK-LABEL: fptrunc8_f64_f16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z1, [x1]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1, #3, mul vl]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z2, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x1, #2, mul vl]
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
-; CHECK-NEXT:    fcvt z2.h, p0/m, z2.d
 ; CHECK-NEXT:    fcvt z1.h, p0/m, z1.d
 ; CHECK-NEXT:    fcvt z3.h, p0/m, z3.d
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    fcvt z2.h, p0/m, z2.d
 ; CHECK-NEXT:    uzp1 z0.s, z3.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
 ; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <vscale x 8 x double>, ptr %src, align 8

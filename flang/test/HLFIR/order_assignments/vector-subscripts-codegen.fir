@@ -212,3 +212,50 @@ func.func @unordered(%arg0: !fir.ref<!fir.array<100xf32>> , %arg1: !fir.ref<!fir
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+// Test vector saving subscripted LHS inside WHERE.
+!t=!fir.type<_QFwhere_vec_subscriptsTt{x:f32,vec:!fir.array<4xi64>}>
+func.func @_QPwhere_vec_subscripts(%arg0: !fir.ref<!fir.array<4x!fir.logical<4>>>, %arg1: !fir.box<!fir.array<?x!t>>) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFwhere_vec_subscriptsEa"} : (!fir.box<!fir.array<?x!t>>, !fir.dscope) -> (!fir.box<!fir.array<?x!t>>, !fir.box<!fir.array<?x!t>>)
+  %c4 = arith.constant 4 : index
+  %2 = fir.shape %c4 : (index) -> !fir.shape<1>
+  %3:2 = hlfir.declare %arg0(%2) dummy_scope %0 {uniq_name = "_QFwhere_vec_subscriptsEmask"} : (!fir.ref<!fir.array<4x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<4x!fir.logical<4>>>, !fir.ref<!fir.array<4x!fir.logical<4>>>)
+  hlfir.where {
+    hlfir.yield %3#0 : !fir.ref<!fir.array<4x!fir.logical<4>>>
+  } do {
+    hlfir.region_assign {
+      %cst = arith.constant 0.000000e+00 : f32
+      hlfir.yield %cst : f32
+    } to {
+      %c1 = arith.constant 1 : index
+      %4 = hlfir.designate %1#0 (%c1)  : (!fir.box<!fir.array<?x!t>>, index) -> !fir.ref<!t>
+      %6 = hlfir.designate %4{"vec"}   shape %2 : (!fir.ref<!t>, !fir.shape<1>) -> !fir.ref<!fir.array<4xi64>>
+      hlfir.elemental_addr %2 unordered : !fir.shape<1> {
+      ^bb0(%arg2: index):
+        %8 = hlfir.designate %6 (%arg2)  : (!fir.ref<!fir.array<4xi64>>, index) -> !fir.ref<i64>
+        %9 = fir.load %8 : !fir.ref<i64>
+        %10 = hlfir.designate %1#0 (%9)  : (!fir.box<!fir.array<?x!t>>, i64) -> !fir.ref<!t>
+        %11 = hlfir.designate %10{"x"}   : (!fir.ref<!t>) -> !fir.ref<f32>
+        hlfir.yield %11 : !fir.ref<f32>
+      }
+    }
+  }
+  return
+}
+// CHECK-LABEL:   func.func @_QPwhere_vec_subscripts(
+// CHECK:           %[[VAL_16:.*]] = fir.call @_FortranACreateDescriptorStack(
+// CHECK:           fir.do_loop {{.*}}
+// CHECK:             fir.if %{{.*}} {
+// CHECK:               fir.call @_FortranAPushDescriptor(
+// CHECK:             }
+// CHECK:           }
+// CHECK:           fir.do_loop {{.*}}
+// CHECK:             fir.if %{{.*}} {
+// CHECK:               fir.call @_FortranADescriptorAt(
+// CHECK:               hlfir.assign
+// CHECK:             }
+// CHECK:           }
+// CHECK:           fir.call @_FortranADestroyDescriptorStack(
+// CHECK:           return
+// CHECK:         }
