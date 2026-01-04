@@ -6377,8 +6377,8 @@ constantFold(Instruction *I, const DataLayout &DL,
 
 /// Try to determine the resulting constant values in phi nodes
 /// at the common destination basic block, *CommonDest, for one of the case
-/// destionations CaseDest corresponding to value CaseVal (0 for the default
-/// case), of a switch instruction SI.
+/// destinations CaseDest corresponding to value CaseVal (nullptr for the
+/// default case), of a switch instruction SI.
 static bool
 getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
                BasicBlock **CommonDest,
