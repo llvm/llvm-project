@@ -29546,6 +29546,10 @@ static SDValue LowerAVG(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
+  unsigned SizeInBits = VT.getSizeInBits();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  bool IsMax = Op.getOpcode() == ISD::SMAX || Op.getOpcode() == ISD::UMAX;
+  bool IsSigned = Op.getOpcode() == ISD::SMAX || Op.getOpcode() == ISD::SMIN;
   SDLoc DL(Op);
 
   // For AVX1 cases, split to use legal ops.
@@ -29554,6 +29558,34 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
     return splitVectorIntBinary(Op, DAG, DL);
+
+  // See if the vector elements have sufficient leading bits to allow a
+  // smaller minmax opcode to be used.
+  if (VT.isVector() && EltSizeInBits > 8) {
+    SDValue N0 = Op.getOperand(0);
+    SDValue N1 = Op.getOperand(1);
+    unsigned CLS = DAG.ComputeNumSignBits(N0);
+    if (CLS != 1)
+      CLS = std::min(CLS, DAG.ComputeNumSignBits(N1));
+    unsigned CLZ = DAG.computeKnownBits(N0).countMinLeadingZeros();
+    if (CLZ != 0)
+      CLZ = std::min(CLZ, DAG.computeKnownBits(N1).countMinLeadingZeros());
+    for (unsigned Bits = 8; Bits < EltSizeInBits; Bits <<= 1) {
+      std::optional<unsigned> Opcode;
+      if (CLZ >= (EltSizeInBits - Bits)) {
+        Opcode = IsMax ? ISD::UMAX : ISD::UMIN;
+      } else if ((IsSigned ? CLS : CLZ) > (EltSizeInBits - Bits)) {
+        Opcode = IsMax ? ISD::SMAX : ISD::SMIN;
+      }
+      if (Opcode.has_value()) {
+        MVT ReducedSVT = MVT::getIntegerVT(Bits);
+        MVT ReducedVT = MVT::getVectorVT(ReducedSVT, SizeInBits / Bits);
+        return DAG.getBitcast(VT, DAG.getNode(*Opcode, DL, ReducedVT,
+                                              DAG.getBitcast(ReducedVT, N0),
+                                              DAG.getBitcast(ReducedVT, N1)));
+      }
+    }
+  }
 
   // Default to expand.
   return SDValue();
