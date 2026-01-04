@@ -2191,7 +2191,7 @@ public:
                       FMFSource);
   }
   Value *CreatePtrToAddr(Value *V, const Twine &Name = "") {
-    return CreateCast(Instruction::PtrToInt, V,
+    return CreateCast(Instruction::PtrToAddr, V,
                       BB->getDataLayout().getAddressType(V->getType()), Name);
   }
   Value *CreatePtrToInt(Value *V, Type *DestTy,
@@ -2552,6 +2552,12 @@ public:
                                                  Value *False,
                                                  StringRef PassName,
                                                  const Twine &Name = "");
+
+  LLVM_ABI Value *CreateSelectFMFWithUnknownProfile(Value *C, Value *True,
+                                                    Value *False,
+                                                    FMFSource FMFSource,
+                                                    StringRef PassName,
+                                                    const Twine &Name = "");
 
   LLVM_ABI Value *CreateSelect(Value *C, Value *True, Value *False,
                                const Twine &Name = "",

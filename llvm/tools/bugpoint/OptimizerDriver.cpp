@@ -34,10 +34,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bugpoint"
 
-namespace llvm {
-extern cl::opt<std::string> OutputPrefix;
-}
-
 static cl::opt<std::string>
     OptCmd("opt-command", cl::init(""),
            cl::desc("Path to opt. (default: search path "

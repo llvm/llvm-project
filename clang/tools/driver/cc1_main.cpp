@@ -12,19 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Options/Options.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -269,15 +271,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        GetResourcesPath(Argv0, MainAddr);
 
   /// Create the actual file system.
-  Clang->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DiagsBuffer);
+  auto VFS = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::vfs::getRealFileSystem();
+  }();
+  Clang->createVirtualFileSystem(std::move(VFS), DiagsBuffer);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
-  if (!Clang->hasDiagnostics())
-    return 1;
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -302,15 +306,19 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
-  std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
-  if (Clang->getCodeGenOpts().TimePassesJson) {
-    *IOFile << "{\n";
-    llvm::TimerGroup::printAllJSONValues(*IOFile, "");
-    *IOFile << "\n}\n";
-  } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
-    llvm::TimerGroup::printAll(*IOFile);
+  {
+    // This isn't a formal input or output of the compiler.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
+    if (Clang->getCodeGenOpts().TimePassesJson) {
+      *IOFile << "{\n";
+      llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+      *IOFile << "\n}\n";
+    } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
+      llvm::TimerGroup::printAll(*IOFile);
+    }
+    llvm::TimerGroup::clearAll();
   }
-  llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
     if (auto profilerOutput = Clang->createOutputFile(

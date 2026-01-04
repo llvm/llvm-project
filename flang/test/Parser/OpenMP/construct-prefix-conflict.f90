@@ -79,7 +79,7 @@ end
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | bool = 'true'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
 !PARSE-TREE: | | | Variable -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | Expr -> Add
@@ -118,7 +118,7 @@ end
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | bool = 'true'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
 !PARSE-TREE: | | | Variable -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | Expr -> Add
@@ -157,7 +157,7 @@ end
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | bool = 'true'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
 !PARSE-TREE: | | | Variable -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | Expr -> Add

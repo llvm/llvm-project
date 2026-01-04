@@ -82,12 +82,10 @@ llvm::StringRef commentKindToString(CommentKind Kind) {
   llvm_unreachable("Unhandled CommentKind");
 }
 
-namespace {
-
 const SymbolID EmptySID = SymbolID();
 
 template <typename T>
-llvm::Expected<std::unique_ptr<Info>>
+static llvm::Expected<std::unique_ptr<Info>>
 reduce(std::vector<std::unique_ptr<Info>> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -102,7 +100,7 @@ reduce(std::vector<std::unique_ptr<Info>> &Values) {
 // Return the index of the matching child in the vector, or -1 if merge is not
 // necessary.
 template <typename T>
-int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
+static int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
   for (unsigned long I = 0; I < Children.size(); I++) {
     if (ChildToMerge.USR == Children[I].USR)
       return I;
@@ -111,8 +109,8 @@ int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
 }
 
 template <typename T>
-void reduceChildren(std::vector<T> &Children,
-                    std::vector<T> &&ChildrenToMerge) {
+static void reduceChildren(std::vector<T> &Children,
+                           std::vector<T> &&ChildrenToMerge) {
   for (auto &ChildToMerge : ChildrenToMerge) {
     int MergeIdx = getChildIndexIfExists(Children, ChildToMerge);
     if (MergeIdx == -1) {
@@ -122,8 +120,6 @@ void reduceChildren(std::vector<T> &Children,
     Children[MergeIdx].merge(std::move(ChildToMerge));
   }
 }
-
-} // namespace
 
 // Dispatch function.
 llvm::Expected<std::unique_ptr<Info>>
@@ -258,6 +254,7 @@ bool FriendInfo::mergeable(const FriendInfo &Other) {
 void FriendInfo::merge(FriendInfo &&Other) {
   assert(mergeable(Other));
   Ref.merge(std::move(Other.Ref));
+  SymbolInfo::merge(std::move(Other));
 }
 
 void Info::mergeBase(Info &&Other) {
@@ -372,6 +369,8 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
     IsUsing = Other.IsUsing;
   if (Underlying.Type.Name == "")
     Underlying = Other.Underlying;
+  if (!Template)
+    Template = Other.Template;
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -402,7 +401,7 @@ BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
 BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
                                bool IsVirtual, AccessSpecifier Access,
                                bool IsParent)
-    : RecordInfo(USR, Name, Path), IsVirtual(IsVirtual), Access(Access),
+    : RecordInfo(USR, Name, Path), Access(Access), IsVirtual(IsVirtual),
       IsParent(IsParent) {}
 
 llvm::SmallString<16> Info::extractName() const {
@@ -481,10 +480,11 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef RepositoryUrl,
                                  StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets,
+                                 clang::DiagnosticsEngine &Diags,
                                  bool FTimeTrace)
-    : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      FTimeTrace(FTimeTrace), OutDirectory(OutDirectory),
-      UserStylesheets(UserStylesheets), Base(Base) {
+    : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
+      SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
+      Base(Base), Diags(Diags), PublicOnly(PublicOnly), FTimeTrace(FTimeTrace) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default

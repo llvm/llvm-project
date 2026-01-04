@@ -496,6 +496,7 @@ public:
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseDbgInstrRefOperand(MachineOperand &Dest);
   bool parseCustomRegisterMaskOperand(MachineOperand &Dest);
+  bool parseLaneMaskOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                            MachineOperand &Dest,
@@ -1072,6 +1073,7 @@ bool MIParser::parse(MachineInstr *&MI) {
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
          Token.isNot(MIToken::kw_pcsections) &&
          Token.isNot(MIToken::kw_cfi_type) &&
+         Token.isNot(MIToken::kw_deactivation_symbol) &&
          Token.isNot(MIToken::kw_debug_location) &&
          Token.isNot(MIToken::kw_debug_instr_number) &&
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
@@ -1120,6 +1122,14 @@ bool MIParser::parse(MachineInstr *&MI) {
       lex();
   }
 
+  GlobalValue *DS = nullptr;
+  if (Token.is(MIToken::kw_deactivation_symbol)) {
+    lex();
+    if (parseGlobalValue(DS))
+      return true;
+    lex();
+  }
+
   unsigned InstrNum = 0;
   if (Token.is(MIToken::kw_debug_instr_number)) {
     lex();
@@ -1161,6 +1171,8 @@ bool MIParser::parse(MachineInstr *&MI) {
       MemOperands.push_back(MemOp);
       if (Token.isNewlineOrEOF())
         break;
+      if (OpCode == TargetOpcode::BUNDLE && Token.is(MIToken::lbrace))
+        break;
       if (Token.isNot(MIToken::comma))
         return error("expected ',' before the next machine memory operand");
       lex();
@@ -1194,6 +1206,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setPCSections(MF, PCSections);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
+  if (DS)
+    MI->setDeactivationSymbol(MF, DS);
   if (!MemOperands.empty())
     MI->setMemRefs(MF, MemOperands);
   if (InstrNum)
@@ -2873,6 +2887,31 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::kw_lanemask));
+
+  lex();
+  if (expectAndConsume(MIToken::lparen))
+    return true;
+
+  // Parse lanemask.
+  if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
+    return error("expected a valid lane mask value");
+  static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
+                "Use correct get-function for lane mask.");
+  LaneBitmask::Type V;
+  if (getUint64(V))
+    return true;
+  LaneBitmask LaneMask(V);
+  lex();
+
+  if (expectAndConsume(MIToken::rparen))
+    return true;
+
+  Dest = MachineOperand::CreateLaneMask(LaneMask);
+  return false;
+}
+
 bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::kw_liveout));
   uint32_t *Mask = MF.allocateRegMask();
@@ -2973,6 +3012,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     return parseIntrinsicOperand(Dest);
   case MIToken::kw_target_index:
     return parseTargetIndexOperand(Dest);
+  case MIToken::kw_lanemask:
+    return parseLaneMaskOperand(Dest);
   case MIToken::kw_liveout:
     return parseLiveoutRegisterMaskOperand(Dest);
   case MIToken::kw_floatpred:

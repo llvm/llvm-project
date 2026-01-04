@@ -731,6 +731,10 @@ namespace ZeroSizeTypes {
                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
 
+  constexpr int k2 = p1 - p1; // both-error {{constexpr variable 'k2' must be initialized by a constant expression}} \
+                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
+                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
+
   int arr[5][0];
   constexpr int f() { // both-error {{never produces a constant expression}}
     return &arr[3] - &arr[0]; // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \

@@ -19,6 +19,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/Tosa/IR/TosaInterfaces.td"
 
 include "mlir/Dialect/Tosa/IR/TosaTypesBase.td"
@@ -825,12 +826,12 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementTy
   }];
 
   let arguments = (ins
-    Tosa_Int32Tensor:$input1,
-    Tosa_Int32Tensor:$input2
+    Tosa_Int32Or64Tensor:$input1,
+    Tosa_Int32Or64Tensor:$input2
   );
 
   let results = (outs
-    Tosa_Int32Tensor:$output
+    Tosa_Int32Or64Tensor:$output
   );
 
   list<Availability> availability = [
@@ -2218,7 +2219,8 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 // Operator: transpose
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
-                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface ,
+                                           ["reifyResultShapes"]>,
                  AllElementTypesMatch<["input1", "output"]>]> {
   let summary = "Transpose operator.";
 
@@ -2269,7 +2271,7 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values,
-    Tosa_Int32Tensor2D:$indices
+    Tosa_IndexTensor2D:$indices
   );
 
   let results = (outs
@@ -2306,7 +2308,7 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 
   let arguments = (ins
     Tosa_Tensor3D:$values_in,
-    Tosa_Int32Tensor2D:$indices,
+    Tosa_IndexTensor2D:$indices,
     Tosa_Tensor3D:$input
   );
 
@@ -2462,7 +2464,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -2811,6 +2813,106 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   );
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable
+//===----------------------------------------------------------------------===//
+def Tosa_VariableOp : Tosa_Op<"variable", [Symbol]> {
+  let summary = "Defines a variable";
+
+  let description = [{
+    Defines a new TOSA variable. This is a persistent mutable value across multiple
+    TOSA graph invocations. Modifications are expressed using read/write semantics.
+  }];
+
+  let arguments = (ins
+    // Note: "sym_name" is used as opposed to "name" in the specification,
+    // since a Symbol must be named "sym_name" for it to be recognised by
+    // the containing SymbolTable.
+    SymbolNameAttr:$sym_name,
+    IndexElementsAttr:$var_shape,
+    TypeAttr:$type,
+    OptionalAttr<AnyAttr>:$initial_value
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat = [{
+    $sym_name
+    attr-dict
+    custom<VariableOpTypeOrInitialValue>($var_shape, $type, $initial_value)
+  }];
+
+  let builders = [Tosa_VariableOpBuilder];
+
+  let extraClassDeclaration = [{
+    ::llvm::StringRef getName() {
+      return getSymName();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable_write
+//===----------------------------------------------------------------------===//
+def Tosa_VariableWriteOp : Tosa_Op<"variable_write", []> {
+  let summary = "write_buffer operator";
+
+  let description = [{
+    Assigns a value to the pseudo-buffer resource holding a persistent mutable tensor.
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$name,
+    Tosa_Tensor:$input1
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
+
+  let assemblyFormat = [{
+    $name attr-dict `,` $input1 `:` type($input1)
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable_read
+//===----------------------------------------------------------------------===//
+def Tosa_VariableReadOp : Tosa_Op<"variable_read", []> {
+  let summary = "read_buffer operator";
+
+  let description = [{
+    Reads the value from a pseudo-buffer resource holding a persistent mutable tensor.
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$name
+  );
+
+  let results = (outs
+    Tosa_Tensor:$output1
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
+
+  let assemblyFormat = [{
+    $name attr-dict `:` type($output1)
+  }];
+
   let hasVerifier = 1;
 }
 

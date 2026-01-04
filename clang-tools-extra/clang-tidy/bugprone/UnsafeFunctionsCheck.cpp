@@ -19,21 +19,19 @@ using namespace llvm;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral OptionNameCustomFunctions =
-    "CustomFunctions";
-static constexpr llvm::StringLiteral OptionNameReportDefaultFunctions =
+static constexpr StringRef OptionNameCustomFunctions = "CustomFunctions";
+static constexpr StringRef OptionNameReportDefaultFunctions =
     "ReportDefaultFunctions";
-static constexpr llvm::StringLiteral OptionNameReportMoreUnsafeFunctions =
+static constexpr StringRef OptionNameReportMoreUnsafeFunctions =
     "ReportMoreUnsafeFunctions";
 
-static constexpr llvm::StringLiteral FunctionNamesWithAnnexKReplacementId =
+static constexpr StringRef FunctionNamesWithAnnexKReplacementId =
     "FunctionNamesWithAnnexKReplacement";
-static constexpr llvm::StringLiteral FunctionNamesId = "FunctionsNames";
-static constexpr llvm::StringLiteral AdditionalFunctionNamesId =
+static constexpr StringRef FunctionNamesId = "FunctionsNames";
+static constexpr StringRef AdditionalFunctionNamesId =
     "AdditionalFunctionsNames";
-static constexpr llvm::StringLiteral CustomFunctionNamesId =
-    "CustomFunctionNames";
-static constexpr llvm::StringLiteral DeclRefId = "DRE";
+static constexpr StringRef CustomFunctionNamesId = "CustomFunctionNames";
+static constexpr StringRef DeclRefId = "DRE";
 
 static std::optional<std::string>
 getAnnexKReplacementFor(StringRef FunctionName) {
@@ -141,7 +139,7 @@ parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
   std::vector<UnsafeFunctionsCheck::CheckedFunction> Result;
   Result.reserve(Functions.size());
 
-  for (StringRef Function : Functions) {
+  for (const StringRef Function : Functions) {
     if (Function.empty())
       continue;
 
@@ -169,13 +167,12 @@ static std::string serializeCheckedFunctions(
   std::vector<std::string> Result;
   Result.reserve(Functions.size());
 
-  for (const auto &Entry : Functions) {
+  for (const auto &Entry : Functions)
     if (Entry.Reason.empty())
       Result.push_back(Entry.Name + "," + Entry.Replacement);
     else
       Result.push_back(Entry.Name + "," + Entry.Replacement + "," +
                        Entry.Reason);
-  }
 
   return llvm::join(Result, ";");
 }
@@ -266,8 +263,8 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
-  const Expr *SourceExpr;
-  const FunctionDecl *FuncDecl;
+  const Expr *SourceExpr = nullptr;
+  const FunctionDecl *FuncDecl = nullptr;
 
   if (const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>(DeclRefId)) {
     SourceExpr = DeclRef;
@@ -304,11 +301,17 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
         StringRef Reason =
             Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
 
-        if (Entry.Replacement.empty()) {
+        // Omit the replacement, when a fully-custom reason is given.
+        if (Reason.consume_front(">")) {
+          diag(SourceExpr->getExprLoc(), "function %0 %1")
+              << FuncDecl << Reason.trim() << SourceExpr->getSourceRange();
+          // Do not recommend a replacement when it is not present.
+        } else if (Entry.Replacement.empty()) {
           diag(SourceExpr->getExprLoc(),
                "function %0 %1; it should not be used")
               << FuncDecl << Reason << Entry.Replacement
               << SourceExpr->getSourceRange();
+          // Otherwise, emit the replacement.
         } else {
           diag(SourceExpr->getExprLoc(),
                "function %0 %1; '%2' should be used instead")

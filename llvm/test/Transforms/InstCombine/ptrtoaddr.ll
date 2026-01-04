@@ -206,7 +206,7 @@ define ptr @gep_sub_ptrtoaddr_different_obj(ptr %p, ptr %p2, ptr %p3) {
   ret ptr %gep
 }
 
-; The use in ptrtoaddr should be replaced. The uses in ptrtoint and icmp should
+; The use in ptrtoaddr and icmp should be replaced. The use in ptrtoint should
 ; not be replaced, as the non-address bits differ. The use in the return value
 ; should not be replaced as the provenace differs.
 define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(ptr addrspace(1) %p, ptr addrspace(1) %p2, ptr addrspace(1) %p3) {
@@ -216,7 +216,7 @@ define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(ptr addrspace(
 ; CHECK-NEXT:    [[P2_ADDR:%.*]] = ptrtoaddr ptr addrspace(1) [[P2]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[P2_ADDR]], [[P_ADDR]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(1) [[P]], i32 [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[GEP]], [[P3]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[P2]], [[P3]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[GEP]] to i64
 ; CHECK-NEXT:    [[INT:%.*]] = trunc i64 [[TMP1]] to i32
@@ -236,4 +236,76 @@ define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(ptr addrspace(
   %addr = ptrtoaddr ptr addrspace(1) %gep to i32
   call void @use.i32(i32 %addr)
   ret ptr addrspace(1) %gep
+}
+
+define i64 @ptrtoaddr_of_ptrmask(ptr %p, i64 %mask) {
+; CHECK-LABEL: define i64 @ptrtoaddr_of_ptrmask(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[MASK:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[ADDR:%.*]] = and i64 [[MASK]], [[TMP1]]
+; CHECK-NEXT:    ret i64 [[ADDR]]
+;
+  %masked = call ptr @llvm.ptrmask(ptr %p, i64 %mask)
+  %addr = ptrtoaddr ptr %masked to i64
+  ret i64 %addr
+}
+
+define i32 @ptrtoaddr_of_ptrmask_addrsize(ptr addrspace(1) %p, i32 %mask) {
+; CHECK-LABEL: define i32 @ptrtoaddr_of_ptrmask_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[MASK:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr addrspace(1) [[P]] to i32
+; CHECK-NEXT:    [[ADDR:%.*]] = and i32 [[MASK]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADDR]]
+;
+  %masked = call ptr addrspace(1) @llvm.ptrmask(ptr addrspace(1) %p, i32 %mask)
+  %addr = ptrtoaddr ptr addrspace(1) %masked to i32
+  ret i32 %addr
+}
+
+define i64 @ptrtoaddr_of_gep_of_inttoptr(i64 %int, i64 %offset) {
+; CHECK-LABEL: define i64 @ptrtoaddr_of_gep_of_inttoptr(
+; CHECK-SAME: i64 [[INT:%.*]], i64 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    [[ADDR:%.*]] = add i64 [[INT]], [[OFFSET]]
+; CHECK-NEXT:    ret i64 [[ADDR]]
+;
+  %ptr = inttoptr i64 %int to ptr
+  %gep = getelementptr i8, ptr %ptr, i64 %offset
+  %addr = ptrtoaddr ptr %gep to i64
+  ret i64 %addr
+}
+
+; FIXME: This could be supported by truncating %int before performing the
+; arithmetic.
+define i32 @ptrtoaddr_of_gep_of_inttoptr_addrsize(i64 %int, i32 %offset) {
+; CHECK-LABEL: define i32 @ptrtoaddr_of_gep_of_inttoptr_addrsize(
+; CHECK-SAME: i64 [[INT:%.*]], i32 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i64 [[INT]] to ptr addrspace(1)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR]], i32 [[OFFSET]]
+; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoaddr ptr addrspace(1) [[GEP]] to i32
+; CHECK-NEXT:    ret i32 [[ADDR]]
+;
+  %ptr = inttoptr i64 %int to ptr addrspace(1)
+  %gep = getelementptr i8, ptr addrspace(1) %ptr, i32 %offset
+  %addr = ptrtoaddr ptr addrspace(1) %gep to i32
+  ret i32 %addr
+}
+
+define i64 @ptrtoaddr_of_gep_of_null(i64 %offset) {
+; CHECK-LABEL: define i64 @ptrtoaddr_of_gep_of_null(
+; CHECK-SAME: i64 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    ret i64 [[OFFSET]]
+;
+  %gep = getelementptr i8, ptr null, i64 %offset
+  %addr = ptrtoaddr ptr %gep to i64
+  ret i64 %addr
+}
+
+define i32 @ptrtoaddr_of_gep_of_null_addrsize(i32 %offset) {
+; CHECK-LABEL: define i32 @ptrtoaddr_of_gep_of_null_addrsize(
+; CHECK-SAME: i32 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    ret i32 [[OFFSET]]
+;
+  %gep = getelementptr i8, ptr addrspace(1) null, i32 %offset
+  %addr = ptrtoaddr ptr addrspace(1) %gep to i32
+  ret i32 %addr
 }

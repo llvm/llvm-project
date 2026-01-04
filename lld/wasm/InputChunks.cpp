@@ -423,8 +423,6 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
 
   bool is64 = ctx.arg.is64.value_or(false);
   bool generated = false;
-  unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
-                                   : WASM_OPCODE_I32_CONST;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
                                  : WASM_OPCODE_I32_ADD;
 
@@ -451,8 +449,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
                       << " output offset=" << offset << "\n");
 
     // Calculate the address at which to apply the relocation
-    writeU8(os, opcode_ptr_const, "CONST");
-    writeSleb128(os, offset, "offset");
+    writePtrConst(os, offset, is64, "offset");
 
     // In PIC mode we need to add the __memory_base
     if (ctx.isPic) {
@@ -466,8 +463,6 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
 
     // Now figure out what we want to store at this location
     bool is64 = relocIs64(rel.Type);
-    unsigned opcode_reloc_const =
-        is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
     unsigned opcode_reloc_add =
         is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
     unsigned opcode_reloc_store =
@@ -477,8 +472,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, sym->getGOTIndex(), "global index");
       if (rel.Addend) {
-        writeU8(os, opcode_reloc_const, "CONST");
-        writeSleb128(os, rel.Addend, "addend");
+        writePtrConst(os, rel.Addend, is64, "addend");
         writeU8(os, opcode_reloc_add, "ADD");
       }
     } else {
@@ -491,8 +485,8 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
         baseSymbol = ctx.sym.tlsBase;
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
-      writeU8(os, opcode_reloc_const, "CONST");
-      writeSleb128(os, file->calcNewValue(rel, tombstone, this), "offset");
+      writePtrConst(os, file->calcNewValue(rel, tombstone, this), is64,
+                    "offset");
       writeU8(os, opcode_reloc_add, "ADD");
     }
 

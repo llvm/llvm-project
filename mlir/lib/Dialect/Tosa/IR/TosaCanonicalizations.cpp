@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
+#include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -38,7 +39,7 @@ using namespace mlir::tosa;
 //===----------------------------------------------------------------------===//
 
 // Check that the zero point of the tensor and padding operations are aligned.
-bool checkMatchingPadConstAndZp(Value padConst, Value zp) {
+static bool checkMatchingPadConstAndZp(Value padConst, Value zp) {
   // Check that padConst is a constant value and a scalar tensor
   DenseElementsAttr padConstAttr;
   if (!matchPattern(padConst, m_Constant(&padConstAttr)) ||
@@ -539,7 +540,7 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     auto inputEType = llvm::cast<ShapedType>(input.getType()).getElementType();
     if (auto quantType =
             llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputEType)) {
-      inputEType = quantType.getStorageType();
+      inputEType = getStorageElementTypeFromQuantized(quantType);
     }
 
     Attribute newMinValAttr, newMaxValAttr;
@@ -889,8 +890,9 @@ void SliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 template <typename IntFolder, typename FloatFolder>
-DenseElementsAttr binaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
-                               RankedTensorType returnTy) {
+static DenseElementsAttr binaryFolder(DenseElementsAttr lhs,
+                                      DenseElementsAttr rhs,
+                                      RankedTensorType returnTy) {
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
     auto lETy = llvm::cast<ShapedType>(lhs.getType()).getElementType();
     auto rETy = llvm::cast<ShapedType>(rhs.getType()).getElementType();
@@ -1484,7 +1486,24 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+static bool
+mayRequireBroadcast(ValueTypeRange<mlir::OperandRange> operandTypes) {
+  const auto isDynamic = [](Type ty) {
+    const auto shapedTy = llvm::dyn_cast<ShapedType>(ty);
+    return !shapedTy || !shapedTy.hasStaticShape();
+  };
+
+  return llvm::any_of(operandTypes, isDynamic) ||
+         failed(verifyCompatibleShapes(operandTypes));
+}
+
 OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
+  // Select allows operand shapes to be broadcast to the output shape. For
+  // now, don't support folding when we cannot prove no broadcasting is
+  // involved.
+  if (mayRequireBroadcast(getOperandTypes()))
+    return {};
+
   if (getOnTrue() == getOnFalse())
     return getOnTrue();
 

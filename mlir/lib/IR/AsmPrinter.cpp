@@ -1090,9 +1090,12 @@ unsigned AliasInitializer::uniqueAliasNameIndex(
   }
   // Otherwise, we had a conflict - probe until we find a unique name.
   SmallString<64> probeAlias(alias);
+  size_t probeSize = probeAlias.size();
   // alias with trailing digit will be printed as _N
-  if (isdigit(alias.back()))
+  if (isdigit(alias.back())) {
     probeAlias.push_back('_');
+    probeSize++;
+  }
   // nameCounts start from 1 because 0 is not printed in SymbolAlias.
   if (nameCounts[probeAlias] == 0)
     nameCounts[probeAlias] = 1;
@@ -1106,7 +1109,7 @@ unsigned AliasInitializer::uniqueAliasNameIndex(
       return nameIndex;
     }
     // Reset probeAlias to the original alias for the next iteration.
-    probeAlias.resize(alias.size() + isdigit(alias.back()) ? 1 : 0);
+    probeAlias.resize(probeSize);
   }
 }
 
@@ -2032,7 +2035,7 @@ private:
 };
 
 template <typename Range>
-void printDimensionList(raw_ostream &stream, Range &&shape) {
+static void printDimensionList(raw_ostream &stream, Range &&shape) {
   llvm::interleave(
       shape, stream,
       [&stream](const auto &dimSize) {
@@ -3869,8 +3872,8 @@ void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
   }
   os << "{" << newLine;
   if (!region.empty()) {
-    auto restoreDefaultDialect =
-        llvm::make_scope_exit([&]() { defaultDialectStack.pop_back(); });
+    llvm::scope_exit restoreDefaultDialect(
+        [&]() { defaultDialectStack.pop_back(); });
     if (auto iface = dyn_cast<OpAsmOpInterface>(region.getParentOp()))
       defaultDialectStack.push_back(iface.getDefaultDialect());
     else
