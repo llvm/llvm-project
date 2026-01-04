@@ -152,8 +152,7 @@ define <4 x i16> @widemul(<4 x i16> %x, <4 x i16> %y) nounwind {
 ; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    shrn v1.4h, v0.4s, #16
 ; CHECK-NEXT:    xtn v2.4h, v0.4s
-; CHECK-NEXT:    add v1.4h, v1.4h, v1.4h
-; CHECK-NEXT:    shl v0.4h, v1.4h, #11
+; CHECK-NEXT:    shl v0.4h, v1.4h, #12
 ; CHECK-NEXT:    usra v0.4h, v2.4h, #4
 ; CHECK-NEXT:    ret
   %tmp = call <4 x i16> @llvm.umul.fix.v4i16(<4 x i16> %x, <4 x i16> %y, i32 4)

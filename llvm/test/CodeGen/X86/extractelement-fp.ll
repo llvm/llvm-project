@@ -319,7 +319,7 @@ define void @extsetcc(<4 x float> %x) {
 define <3 x double> @extvselectsetcc_crash(<2 x double> %x) {
 ; X64-LABEL: extvselectsetcc_crash:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; X64-NEXT:    vcmpeqsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; X64-NEXT:    vmovsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; X64-NEXT:    vandpd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
@@ -328,7 +328,7 @@ define <3 x double> @extvselectsetcc_crash(<2 x double> %x) {
 ;
 ; X86-LABEL: extvselectsetcc_crash:
 ; X86:       # %bb.0:
-; X86-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
+; X86-NEXT:    vcmpeqsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
 ; X86-NEXT:    vmovsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; X86-NEXT:    vandpd %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0

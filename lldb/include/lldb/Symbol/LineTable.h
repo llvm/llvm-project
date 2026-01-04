@@ -20,25 +20,11 @@
 
 namespace lldb_private {
 
-/// \class LineSequence LineTable.h "lldb/Symbol/LineTable.h" An abstract base
-/// class used during symbol table creation.
-class LineSequence {
-public:
-  LineSequence();
-
-  virtual ~LineSequence() = default;
-
-  virtual void Clear() = 0;
-
-private:
-  LineSequence(const LineSequence &) = delete;
-  const LineSequence &operator=(const LineSequence &) = delete;
-};
-
 /// \class LineTable LineTable.h "lldb/Symbol/LineTable.h"
 /// A line table class.
 class LineTable {
 public:
+  class Sequence;
   /// Construct with compile unit.
   ///
   /// \param[in] comp_unit
@@ -49,8 +35,7 @@ public:
   ///
   /// \param[in] sequences
   ///     Unsorted list of line sequences.
-  LineTable(CompileUnit *comp_unit,
-            std::vector<std::unique_ptr<LineSequence>> &&sequences);
+  LineTable(CompileUnit *comp_unit, std::vector<Sequence> &&sequences);
 
   /// Destructor.
   ~LineTable();
@@ -73,20 +58,17 @@ public:
                        bool is_start_of_basic_block, bool is_prologue_end,
                        bool is_epilogue_begin, bool is_terminal_entry);
 
-  // Used to instantiate the LineSequence helper class
-  static std::unique_ptr<LineSequence> CreateLineSequenceContainer();
-
   // Append an entry to a caller-provided collection that will later be
   // inserted in this line table.
-  static void AppendLineEntryToSequence(LineSequence *sequence, lldb::addr_t file_addr,
-                                 uint32_t line, uint16_t column,
-                                 uint16_t file_idx, bool is_start_of_statement,
-                                 bool is_start_of_basic_block,
-                                 bool is_prologue_end, bool is_epilogue_begin,
-                                 bool is_terminal_entry);
+  static void
+  AppendLineEntryToSequence(Sequence &sequence, lldb::addr_t file_addr,
+                            uint32_t line, uint16_t column, uint16_t file_idx,
+                            bool is_start_of_statement,
+                            bool is_start_of_basic_block, bool is_prologue_end,
+                            bool is_epilogue_begin, bool is_terminal_entry);
 
   // Insert a sequence of entries into this line table.
-  void InsertSequence(LineSequence *sequence);
+  void InsertSequence(Sequence sequence);
 
   /// Dump all line entries in this line table to the stream \a s.
   ///
@@ -101,6 +83,20 @@ public:
             Address::DumpStyle fallback_style, bool show_line_ranges);
 
   void GetDescription(Stream *s, Target *target, lldb::DescriptionLevel level);
+
+  /// Returns the index of the first line entry which ends after the given
+  /// address (i.e., the first entry which contains the given address or it
+  /// comes after it). Returns <tt>GetSize()</tt> if there is no such entry.
+  uint32_t lower_bound(const Address &so_addr) const;
+
+  /// Returns the (half-open) range of line entry indexes which overlap the
+  /// given address range. Line entries partially overlapping the range (on
+  /// either side) are included as well. Returns an empty range
+  /// (<tt>first==second</tt>) pointing to the "right" place in the list if
+  /// there are no such line entries. Empty input ranges always result in an
+  /// empty output range.
+  std::pair<uint32_t, uint32_t>
+  GetLineEntryIndexRange(const AddressRange &range) const;
 
   /// Find a line entry that contains the section offset address \a so_addr.
   ///
@@ -260,17 +256,6 @@ public:
       return 0;
     }
 
-    class LessThanBinaryPredicate {
-    public:
-      LessThanBinaryPredicate(LineTable *line_table);
-      bool operator()(const LineTable::Entry &, const LineTable::Entry &) const;
-      bool operator()(const std::unique_ptr<LineSequence> &,
-                      const std::unique_ptr<LineSequence> &) const;
-
-    protected:
-      LineTable *m_line_table;
-    };
-
     static bool EntryAddressLessThan(const Entry &lhs, const Entry &rhs) {
       return lhs.file_addr < rhs.file_addr;
     }
@@ -302,6 +287,35 @@ public:
     uint16_t file_idx = 0;
   };
 
+  class Sequence {
+  public:
+    Sequence() = default;
+    // Moving clears moved-from object so it can be used anew. Copying is
+    // generally an error. C++ doesn't guarantee that a moved-from vector is
+    // empty(), so we clear it explicitly.
+    Sequence(Sequence &&rhs) : m_entries(std::exchange(rhs.m_entries, {})) {}
+    Sequence &operator=(Sequence &&rhs) {
+      m_entries = std::exchange(rhs.m_entries, {});
+      return *this;
+    }
+    Sequence(const Sequence &) = delete;
+    Sequence &operator=(const Sequence &) = delete;
+
+  private:
+    std::vector<Entry> m_entries;
+    friend class LineTable;
+  };
+
+  class LessThanBinaryPredicate {
+  public:
+    LessThanBinaryPredicate(LineTable *line_table) : m_line_table(line_table) {}
+    bool operator()(const LineTable::Entry &, const LineTable::Entry &) const;
+    bool operator()(const Sequence &, const Sequence &) const;
+
+  protected:
+    LineTable *m_line_table;
+  };
+
 protected:
   struct EntrySearchInfo {
     LineTable *line_table;
@@ -319,19 +333,6 @@ protected:
       *m_comp_unit; ///< The compile unit that this line table belongs to.
   entry_collection
       m_entries; ///< The collection of line entries in this line table.
-
-  // Helper class
-  class LineSequenceImpl : public LineSequence {
-  public:
-    LineSequenceImpl() = default;
-
-    ~LineSequenceImpl() override = default;
-
-    void Clear() override;
-
-    entry_collection
-        m_entries; ///< The collection of line entries in this sequence.
-  };
 
   bool ConvertEntryAtIndexToLineEntry(uint32_t idx, LineEntry &line_entry);
 

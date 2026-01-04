@@ -10,18 +10,22 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <memory>
+#include <optional>
 #include <random>
 
 using namespace llvm;
@@ -69,9 +73,31 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
   }
 }
 
-static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
-                             const ProfileSummaryInfo *PSI,
-                             OptimizationRemarkEmitter &ORE) {
+static bool lowerAllowChecks(Function &F, FunctionAnalysisManager &AM,
+                             const LowerAllowCheckPass::Options &Opts) {
+  // Lazy analysis getters.
+  auto GetBFI = [&AM, &F, BFI = (BlockFrequencyInfo *)nullptr]() mutable
+      -> const BlockFrequencyInfo & {
+    if (!BFI)
+      BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+    return *BFI;
+  };
+  auto GetPSI = [&AM, &F, PSI = std::optional<ProfileSummaryInfo *>()]() mutable
+      -> const ProfileSummaryInfo * {
+    if (!PSI.has_value()) {
+      auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+      PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    }
+    return *PSI;
+  };
+  auto GetORE = [&AM, &F, ORE = (OptimizationRemarkEmitter *)nullptr]() mutable
+      -> OptimizationRemarkEmitter & {
+    if (!ORE)
+      ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    return *ORE;
+  };
+
+  // List of intrinsics and the constant value they should be lowered to.
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
@@ -81,10 +107,26 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     return *Rng;
   };
 
-  auto ShouldRemoveHot = [&](const BasicBlock &BB) {
-    return HotPercentileCutoff.getNumOccurrences() && PSI &&
-           PSI->isHotCountNthPercentile(
-               HotPercentileCutoff, BFI.getBlockProfileCount(&BB).value_or(0));
+  auto GetCutoff = [&](const IntrinsicInst *II) -> unsigned {
+    if (HotPercentileCutoff.getNumOccurrences())
+      return HotPercentileCutoff;
+    else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
+      auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
+      if (Kind->getZExtValue() < Opts.cutoffs.size())
+        return Opts.cutoffs[Kind->getZExtValue()];
+    } else if (II->getIntrinsicID() == Intrinsic::allow_runtime_check) {
+      return Opts.runtime_check;
+    }
+
+    return 0;
+  };
+
+  auto ShouldRemoveHot = [&](const BasicBlock &BB, unsigned int cutoff) {
+    if (cutoff == 1000000)
+      return true;
+    const ProfileSummaryInfo *PSI = GetPSI();
+    return PSI && PSI->isHotCountNthPercentile(
+                      cutoff, GetBFI().getBlockProfileCount(&BB).value_or(0));
   };
 
   auto ShouldRemoveRandom = [&]() {
@@ -92,39 +134,54 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
            !std::bernoulli_distribution(RandomRate)(GetRng());
   };
 
-  auto ShouldRemove = [&](const BasicBlock &BB) {
-    return ShouldRemoveRandom() || ShouldRemoveHot(BB);
+  auto ShouldRemove = [&](const IntrinsicInst *II) {
+    unsigned int cutoff = GetCutoff(II);
+    return ShouldRemoveRandom() || ShouldRemoveHot(*(II->getParent()), cutoff);
   };
 
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (!II)
-        continue;
-      auto ID = II->getIntrinsicID();
-      switch (ID) {
-      case Intrinsic::allow_ubsan_check:
-      case Intrinsic::allow_runtime_check: {
-        ++NumChecksTotal;
+  for (Instruction &I : instructions(F)) {
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
+      continue;
+    auto ID = II->getIntrinsicID();
+    switch (ID) {
+    case Intrinsic::allow_ubsan_check:
+    case Intrinsic::allow_runtime_check: {
+      bool ToRemove = ShouldRemove(II);
 
-        bool ToRemove = ShouldRemove(BB);
-        ReplaceWithValue.push_back({
-            II,
-            ToRemove,
-        });
-        if (ToRemove)
-          ++NumChecksRemoved;
-        emitRemark(II, ORE, ToRemove);
-        break;
-      }
-      default:
-        break;
-      }
+      ReplaceWithValue.push_back({
+          II,
+          !ToRemove,
+      });
+      emitRemark(II, GetORE(), ToRemove);
+      break;
+    }
+    case Intrinsic::allow_sanitize_address:
+      ReplaceWithValue.push_back(
+          {II, F.hasFnAttribute(Attribute::SanitizeAddress)});
+      break;
+    case Intrinsic::allow_sanitize_thread:
+      ReplaceWithValue.push_back(
+          {II, F.hasFnAttribute(Attribute::SanitizeThread)});
+      break;
+    case Intrinsic::allow_sanitize_memory:
+      ReplaceWithValue.push_back(
+          {II, F.hasFnAttribute(Attribute::SanitizeMemory)});
+      break;
+    case Intrinsic::allow_sanitize_hwaddress:
+      ReplaceWithValue.push_back(
+          {II, F.hasFnAttribute(Attribute::SanitizeHWAddress)});
+      break;
+    default:
+      break;
     }
   }
 
   for (auto [I, V] : ReplaceWithValue) {
-    I->replaceAllUsesWith(ConstantInt::getBool(I->getType(), !V));
+    ++NumChecksTotal;
+    if (!V) // If the final value is false, the check is considered removed.
+      ++NumChecksRemoved;
+    I->replaceAllUsesWith(ConstantInt::getBool(I->getType(), V));
     I->eraseFromParent();
   }
 
@@ -135,18 +192,40 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
   if (F.isDeclaration())
     return PreservedAnalyses::all();
-  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  ProfileSummaryInfo *PSI =
-      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  BlockFrequencyInfo &BFI = AM.getResult<BlockFrequencyAnalysis>(F);
-  OptimizationRemarkEmitter &ORE =
-      AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI, ORE) ? PreservedAnalyses::none()
-                                            : PreservedAnalyses::all();
+  return lowerAllowChecks(F, AM, Opts)
+             // We do not change the CFG, we only replace the intrinsics with
+             // true or false.
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }
 
 bool LowerAllowCheckPass::IsRequested() {
   return RandomRate.getNumOccurrences() ||
          HotPercentileCutoff.getNumOccurrences();
+}
+
+void LowerAllowCheckPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LowerAllowCheckPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+
+  // Format is <cutoffs[0,1,2]=70000;cutoffs[5,6,8]=90000>
+  // but it's equally valid to specify
+  //   cutoffs[0]=70000;cutoffs[1]=70000;cutoffs[2]=70000;cutoffs[5]=90000;...
+  // and that's what we do here. It is verbose but valid and easy to verify
+  // correctness.
+  // TODO: print shorter output by combining adjacent runs, etc.
+  int i = 0;
+  ListSeparator LS(";");
+  for (unsigned int cutoff : Opts.cutoffs) {
+    if (cutoff > 0)
+      OS << LS << "cutoffs[" << i << "]=" << cutoff;
+    i++;
+  }
+  if (Opts.runtime_check)
+    OS << LS << "runtime_check=" << Opts.runtime_check;
+
+  OS << '>';
 }

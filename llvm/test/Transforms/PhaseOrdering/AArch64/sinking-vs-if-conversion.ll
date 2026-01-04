@@ -10,7 +10,7 @@ target triple = "arm64-apple-macosx"
 
 define void @test_find_min(ptr noundef nonnull align 8 dereferenceable(24) %this) {
 ; CHECK-LABEL: define void @test_find_min(
-; CHECK-SAME: ptr nocapture noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noundef nonnull align 8 captures(none) dereferenceable(24) [[THIS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NUM_:%.*]] = getelementptr inbounds nuw i8, ptr [[THIS]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NUM_]], align 8
@@ -138,7 +138,7 @@ for.end:                                          ; preds = %for.cond.cleanup
 
 define void @cond_select_loop(ptr noalias nocapture noundef readonly %a, ptr noalias nocapture noundef readonly %b, ptr noalias nocapture noundef writeonly %c) {
 ; CHECK-LABEL: define void @cond_select_loop(
-; CHECK-SAME: ptr noalias nocapture noundef readonly [[A:%.*]], ptr noalias nocapture noundef readonly [[B:%.*]], ptr noalias nocapture noundef writeonly [[C:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noalias noundef readonly captures(none) [[A:%.*]], ptr noalias noundef readonly captures(none) [[B:%.*]], ptr noalias noundef writeonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

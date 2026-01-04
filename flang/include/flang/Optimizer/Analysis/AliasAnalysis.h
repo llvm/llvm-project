@@ -45,7 +45,7 @@ struct AliasAnalysis {
              Unknown);
 
   /// Attributes of the memory source object.
-  ENUM_CLASS(Attribute, Target, Pointer, IntentIn);
+  ENUM_CLASS(Attribute, Target, Pointer, IntentIn, CrayPointer, CrayPointee);
 
   // See
   // https://discourse.llvm.org/t/rfc-distinguish-between-data-and-non-data-in-fir-alias-analysis/78759/1
@@ -155,6 +155,21 @@ struct AliasAnalysis {
     /// Return true, if Target or Pointer attribute is set.
     bool isTargetOrPointer() const;
 
+    /// Return true, if Target attribute is set.
+    bool isTarget() const;
+
+    /// Return true, if Pointer attribute is set.
+    bool isPointer() const;
+
+    /// Return true, if CrayPointer attribute is set.
+    bool isCrayPointer() const;
+
+    /// Return true, if CrayPointee attribute is set.
+    bool isCrayPointee() const;
+
+    /// Return true, if CrayPointer or CrayPointee attribute is set.
+    bool isCrayPointerOrPointee() const;
+
     bool isDummyArgument() const;
     bool isData() const;
     bool isBoxData() const;
@@ -211,14 +226,14 @@ struct AliasAnalysis {
   fir::AliasAnalysis::Source getSource(mlir::Value,
                                        bool getLastInstantiationPoint = false);
 
+  /// Return true, if `ty` is a reference type to a boxed
+  /// POINTER object or a raw fir::PointerType.
+  static bool isPointerReference(mlir::Type ty);
+
 private:
   /// Return true, if `ty` is a reference type to an object of derived type
   /// that contains a component with POINTER attribute.
   static bool isRecordWithPointerComponent(mlir::Type ty);
-
-  /// Return true, if `ty` is a reference type to a boxed
-  /// POINTER object or a raw fir::PointerType.
-  static bool isPointerReference(mlir::Type ty);
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

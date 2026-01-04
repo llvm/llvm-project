@@ -1,0 +1,37 @@
+functions:
+  wait:
+    in-latest-posix: ''
+  waitid:
+    in-latest-posix: ''
+  waitpid:
+    in-latest-posix: ''
+
+macros:
+  WCONTINUED:
+    in-latest-posix: ''
+  WEXITED:
+    in-latest-posix: ''
+  WEXITSTATUS:
+    in-latest-posix: ''
+  WIFCONTINUED:
+    in-latest-posix: ''
+  WIFEXITED:
+    in-latest-posix: ''
+  WIFSIGNALED:
+    in-latest-posix: ''
+  WIFSTOPPED:
+    in-latest-posix: ''
+  WNOHANG:
+    in-latest-posix: ''
+  WNOWAIT:
+    in-latest-posix: ''
+  WSTOPPED:
+    in-latest-posix: ''
+  WSTOPSIG:
+    in-latest-posix: ''
+  WTERMSIG:
+    in-latest-posix: ''
+  WUNTRACED:
+    in-latest-posix: ''
+  WCORE_DUMPED:
+    in-latest-posix: ''

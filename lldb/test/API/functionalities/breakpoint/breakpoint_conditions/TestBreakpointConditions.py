@@ -19,6 +19,16 @@ class BreakpointConditionsTestCase(TestBase):
         self.build()
         self.breakpoint_conditions(inline=True)
 
+    def test_breakpoint_condition_and_run_command_language(self):
+        """Exercise breakpoint condition with 'breakpoint modify -c <expr> id'."""
+        self.build()
+        self.breakpoint_conditions(cpp=True)
+
+    def test_breakpoint_condition_inline_and_run_command_language(self):
+        """Exercise breakpoint condition inline with 'breakpoint set'."""
+        self.build()
+        self.breakpoint_conditions(inline=True, cpp=True)
+
     @add_test_categories(["pyapi"])
     def test_breakpoint_condition_and_python_api(self):
         """Use Python APIs to set breakpoint conditions."""
@@ -42,17 +52,24 @@ class BreakpointConditionsTestCase(TestBase):
             "main.c", "// Find the line number of c's parent call here."
         )
 
-    def breakpoint_conditions(self, inline=False):
+    def breakpoint_conditions(self, inline=False, cpp=False):
         """Exercise breakpoint condition with 'breakpoint modify -c <expr> id'."""
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        if cpp:
+            condition = "&val != nullptr && val == 3"
+            cmd_args = " -c '{}' -Y c++".format(condition)
+        else:
+            condition = "val == 3"
+            cmd_args = "-c '{}'".format(condition)
 
         if inline:
             # Create a breakpoint by function name 'c' and set the condition.
             lldbutil.run_break_set_by_symbol(
                 self,
                 "c",
-                extra_options="-c 'val == 3'",
+                extra_options=cmd_args,
                 num_expected_locations=1,
                 sym_exact=True,
             )
@@ -63,7 +80,7 @@ class BreakpointConditionsTestCase(TestBase):
             )
 
             # And set a condition on the breakpoint to stop on when 'val == 3'.
-            self.runCmd("breakpoint modify -c 'val == 3' 1")
+            self.runCmd("breakpoint modify " + cmd_args + " 1")
 
         # Now run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -82,7 +99,11 @@ class BreakpointConditionsTestCase(TestBase):
         self.expect(
             "breakpoint list -f",
             BREAKPOINT_HIT_ONCE,
-            substrs=["resolved = 1", "Condition: val == 3", "hit count = 1"],
+            substrs=[
+                "resolved = 1",
+                "Condition: {}".format(condition),
+                "hit count = 1",
+            ],
         )
 
         # The frame #0 should correspond to main.c:36, the executable statement

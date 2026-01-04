@@ -30,6 +30,8 @@
 %"class.std::complex" = type { { double, double } }
 %class.anon = type { i32, ptr addrspace(4), [2 x [2 x %"class.std::complex"]] }
 
+@G = global ptr addrspace(4) null
+
 define weak_odr dso_local spir_kernel void @foo(i32 noundef %_arg_N, ptr addrspace(1) noundef align 8 %_arg_p) {
 entry:
   %Kernel = alloca %class.anon, align 8
@@ -38,5 +40,6 @@ entry:
   %r0 = addrspacecast ptr addrspace(1) %_arg_p to ptr addrspace(4)
   store ptr addrspace(4) %r0, ptr %p, align 8
   %r3 = load ptr addrspace(4), ptr %p, align 8
+  store ptr addrspace(4) %r3, ptr @G
   ret void
 }

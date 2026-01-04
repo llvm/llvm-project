@@ -1,7 +1,5 @@
 ; RUN: opt %s -passes='require<profile-summary>,function(select-optimize)' -o - -S \
 ; RUN: | FileCheck %s
-; RUN: opt %s --try-experimental-debuginfo-iterators -passes='require<profile-summary>,function(select-optimize)' -o - -S \
-; RUN: | FileCheck %s
 
 ;; Check that the dbg.value is moved into the start of the end-block of the
 ;; inserted if-block.

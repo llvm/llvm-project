@@ -318,6 +318,41 @@ void test_svwrite_hor_za64_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn
   SME_ACLE_FUNC(svwrite_hor_za64, _u64, _m)(7, slice, pg, zn);
 }
 
+// CHECK-C-LABEL: define dso_local void @test_svwrite_hor_za8_mf8(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.write.horiz.nxv16i8(i32 0, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z24test_svwrite_hor_za8_mf8ju10__SVBool_tu13__SVMfloat8_t(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.horiz.nxv16i8(i32 0, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-CXX-NEXT:    ret void
+//
+void test_svwrite_hor_za8_mf8(uint32_t slice_base, svbool_t pg, svmfloat8_t zn) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svwrite_hor_za8, _mf8, _m)(0, slice_base, pg, zn);
+}
+
+// CHECK-C-LABEL: define dso_local void @test_svwrite_hor_za8_mf8_1(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 15
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.write.horiz.nxv16i8(i32 0, i32 [[ADD]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z26test_svwrite_hor_za8_mf8_1ju10__SVBool_tu13__SVMfloat8_t(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 15
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.horiz.nxv16i8(i32 0, i32 [[ADD]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-CXX-NEXT:    ret void
+//
+void test_svwrite_hor_za8_mf8_1(uint32_t slice_base, svbool_t pg, svmfloat8_t zn) __arm_streaming __arm_inout("za") {
+   uint32_t slice = slice_base + 15;
+  SME_ACLE_FUNC(svwrite_hor_za8, _mf8, _m)(0, slice, pg, zn);
+}
+
 // CHECK-C-LABEL: define dso_local void @test_svwrite_hor_za16_f16(
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 8 x half> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
@@ -752,6 +787,39 @@ void test_svwrite_hor_za128_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn)
 //
 void test_svwrite_hor_za128_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn) __arm_streaming __arm_inout("za") {
   SME_ACLE_FUNC(svwrite_hor_za128, _u64, _m)(15, slice_base, pg, zn);
+}
+
+
+// CHECK-C-LABEL: define dso_local void @test_svwrite_hor_za128_mf8(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.writeq.horiz.nxv16i8(i32 0, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z26test_svwrite_hor_za128_mf8ju10__SVBool_tu13__SVMfloat8_t(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.writeq.horiz.nxv16i8(i32 0, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-CXX-NEXT:    ret void
+//
+void test_svwrite_hor_za128_mf8(uint32_t slice_base, svbool_t pg, svmfloat8_t zn) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svwrite_hor_za128, _mf8, _m)(0, slice_base, pg, zn);
+}
+
+// CHECK-C-LABEL: define dso_local void @test_svwrite_hor_za128_mf8_1(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.writeq.horiz.nxv16i8(i32 15, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z28test_svwrite_hor_za128_mf8_1ju10__SVBool_tu13__SVMfloat8_t(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.writeq.horiz.nxv16i8(i32 15, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-CXX-NEXT:    ret void
+//
+void test_svwrite_hor_za128_mf8_1(uint32_t slice_base, svbool_t pg, svmfloat8_t zn) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svwrite_hor_za128, _mf8, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: define dso_local void @test_svwrite_hor_za128_f16(
@@ -1200,6 +1268,41 @@ void test_svwrite_ver_za64_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn) 
 void test_svwrite_ver_za64_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn) __arm_streaming __arm_inout("za") {
   uint32_t slice = slice_base + 1;
   SME_ACLE_FUNC(svwrite_ver_za64, _u64, _m)(7, slice, pg, zn);
+}
+
+// CHECK-C-LABEL: define dso_local void @test_svwrite_ver_za8_mf8(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.write.vert.nxv16i8(i32 0, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z24test_svwrite_ver_za8_mf8ju10__SVBool_tu13__SVMfloat8_t(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.vert.nxv16i8(i32 0, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-CXX-NEXT:    ret void
+//
+void test_svwrite_ver_za8_mf8(uint32_t slice_base, svbool_t pg, svmfloat8_t zn) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svwrite_ver_za8, _mf8, _m)(0, slice_base, pg, zn);
+}
+
+// CHECK-C-LABEL: define dso_local void @test_svwrite_ver_za8_mf8_1(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 15
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.write.vert.nxv16i8(i32 0, i32 [[ADD]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z26test_svwrite_ver_za8_mf8_1ju10__SVBool_tu13__SVMfloat8_t(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 15
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.vert.nxv16i8(i32 0, i32 [[ADD]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-CXX-NEXT:    ret void
+//
+void test_svwrite_ver_za8_mf8_1(uint32_t slice_base, svbool_t pg, svmfloat8_t zn) __arm_streaming __arm_inout("za") {
+  uint32_t slice = slice_base + 15;
+  SME_ACLE_FUNC(svwrite_ver_za8, _mf8, _m)(0, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: define dso_local void @test_svwrite_ver_za16_f16(
@@ -1654,6 +1757,38 @@ void test_svwrite_ver_za128_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t z
 //
 void test_svwrite_ver_za128_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn) __arm_streaming __arm_inout("za") {
   SME_ACLE_FUNC(svwrite_ver_za128, _f16, _m)(0, slice_base, pg, zn);
+}
+
+// CHECK-C-LABEL: define dso_local void @test_svwrite_ver_za128_mf8(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.writeq.vert.nxv16i8(i32 0, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z26test_svwrite_ver_za128_mf8ju10__SVBool_tu13__SVMfloat8_t(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.writeq.vert.nxv16i8(i32 0, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-CXX-NEXT:    ret void
+//
+void test_svwrite_ver_za128_mf8(uint32_t slice_base, svbool_t pg, svmfloat8_t zn) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svwrite_ver_za128, _mf8, _m)(0, slice_base, pg, zn);
+}
+
+// CHECK-C-LABEL: define dso_local void @test_svwrite_ver_za128_mf8_1(
+// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-C-NEXT:  entry:
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.writeq.vert.nxv16i8(i32 15, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-C-NEXT:    ret void
+//
+// CHECK-CXX-LABEL: define dso_local void @_Z28test_svwrite_ver_za128_mf8_1ju10__SVBool_tu13__SVMfloat8_t(
+// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-NEXT:  entry:
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.writeq.vert.nxv16i8(i32 15, i32 [[SLICE_BASE]], <vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[ZN]])
+// CHECK-CXX-NEXT:    ret void
+//
+void test_svwrite_ver_za128_mf8_1(uint32_t slice_base, svbool_t pg, svmfloat8_t zn) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svwrite_ver_za128, _mf8, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: define dso_local void @test_svwrite_ver_za128_f16_1(

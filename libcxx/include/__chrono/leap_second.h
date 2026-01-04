@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  include <__chrono/duration.h>
 #  include <__chrono/system_clock.h>
@@ -22,6 +22,8 @@
 #  include <__compare/ordering.h>
 #  include <__compare/three_way_comparable.h>
 #  include <__config>
+#  include <__cstddef/size_t.h>
+#  include <__functional/hash.h>
 #  include <__utility/private_constructor_tag.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -122,10 +124,21 @@ private:
 
 } // namespace chrono
 
+#    if _LIBCPP_STD_VER >= 26
+
+template <>
+struct hash<chrono::leap_second> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::leap_second& __lp) noexcept {
+    return std::__hash_combine(hash<chrono::sys_seconds>{}(__lp.date()), hash<chrono::seconds>{}(__lp.value()));
+  }
+};
+
+#    endif // _LIBCPP_STD_VER >= 26
+
 #  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #endif // _LIBCPP___CHRONO_LEAP_SECOND_H

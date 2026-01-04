@@ -2589,7 +2589,7 @@ blake3_compress_xof_avx512:
         add     rsp, 72
         ret
 
-.section .rodata
+.section .rdata
 .p2align  6
 INDEX0:
         .long    0,  1,  2,  3, 16, 17, 18, 19

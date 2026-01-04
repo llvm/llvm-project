@@ -24,10 +24,10 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -69,7 +69,7 @@ static void printDie(const DWARFDie &DIE) {
 }
 
 /// Lazily parse DWARF DIE and print it out.
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
   uint64_t OriginalOffsets = DIEOffset;
   uint64_t NextCUOffset = DU.getNextUnitOffset();
@@ -500,13 +500,11 @@ static void emitDWOBuilder(const std::string &DWOName,
          SplitCU.getContext().dwo_info_section_units()) {
       if (!CU->isTypeUnit())
         continue;
-      emitUnit(DWODIEBuilder, *Streamer, *CU.get());
+      emitUnit(DWODIEBuilder, *Streamer, *CU);
     }
     emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
-    for (std::unique_ptr<llvm::DWARFUnit> &CU :
-         SplitCU.getContext().dwo_compile_units())
-      emitUnit(DWODIEBuilder, *Streamer, *CU.get());
+    emitUnit(DWODIEBuilder, *Streamer, SplitCU);
 
     // emit debug_types sections for dwarf4
     for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector())
@@ -685,8 +683,8 @@ void DWARFRewriter::updateDebugInfo() {
     DebugLocWriter &DebugLocWriter =
         *LocListWritersByCU[LocListWritersIndexByCU[Unit.getOffset()]].get();
     DebugRangesSectionWriter &RangesSectionWriter =
-        Unit.getVersion() >= 5 ? *RangeListsSectionWriter.get()
-                               : *LegacyRangesSectionWriter.get();
+        Unit.getVersion() >= 5 ? *RangeListsSectionWriter
+                               : *LegacyRangesSectionWriter;
     DebugAddrWriter &AddressWriter =
         *AddressWritersByCU[Unit.getOffset()].get();
     if (Unit.getVersion() >= 5)
@@ -698,7 +696,7 @@ void DWARFRewriter::updateDebugInfo() {
       if (!SplitCU)
         StrOffstsWriter->finalizeSection(Unit, DIEBlder);
     } else if (SplitCU) {
-      RangesBase = LegacyRangesSectionWriter.get()->getSectionOffset();
+      RangesBase = LegacyRangesSectionWriter->getSectionOffset();
     }
 
     updateUnitDebugInfo(Unit, DIEBlder, DebugLocWriter, RangesSectionWriter,
@@ -750,7 +748,7 @@ void DWARFRewriter::updateDebugInfo() {
       auto DWODIEBuilderPtr = std::make_unique<DIEBuilder>(
           BC, &(**SplitCU).getContext(), DebugNamesTable, CU);
       DIEBuilder &DWODIEBuilder =
-          *DWODIEBuildersByCU.emplace_back(std::move(DWODIEBuilderPtr)).get();
+          *DWODIEBuildersByCU.emplace_back(std::move(DWODIEBuilderPtr));
       if (CU->getVersion() >= 5)
         StrOffstsWriter->finalizeSection(*CU, DIEBlder);
       // Important to capture CU and SplitCU by value here, otherwise when the
@@ -1403,7 +1401,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAssembler &Asm) {
       continue;
 
     std::optional<uint64_t> StmtOffset =
-        GetStatementListValue(CU.get()->getUnitDIE());
+        GetStatementListValue(CU->getUnitDIE());
     if (!StmtOffset)
       continue;
 
@@ -1479,13 +1477,13 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
   for (std::unique_ptr<llvm::DWARFUnit> &CU : BC.DwCtx->info_section_units()) {
     if (!CU->isTypeUnit())
       continue;
-    updateLineTable(*CU.get());
-    emitUnit(DIEBlder, Streamer, *CU.get());
+    updateLineTable(*CU);
+    emitUnit(DIEBlder, Streamer, *CU);
     uint32_t StartOffset = CUOffset;
-    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU.get());
-    CUOffset += CU.get()->getHeaderSize();
+    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU);
+    CUOffset += CU->getHeaderSize();
     CUOffset += UnitDIE->getSize();
-    CUMap[CU.get()->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
+    CUMap[CU->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
   }
 
   // Emit Type Unit of DWARF 4 to .debug_type section
@@ -1725,6 +1723,75 @@ StringRef getSectionName(const SectionRef &Section) {
   return Name;
 }
 
+/// Extracts the slice of the .debug_str.dwo section for a given CU from a DWP
+/// file, based on the .debug_str_offsets.dwo section. This helps address DWO
+/// bloat that may occur after updates.
+///
+/// A slice of .debug_str.dwo may be composed of several non-contiguous
+/// fragments. These non-contiguous string views will be written out
+/// sequentially, avoiding the copying overhead caused by assembling them.
+///
+/// The .debug_str_offsets for the first CU often does not need to be updated,
+/// so copying is only performed when .debug_str_offsets requires updating.
+static void UpdateStrAndStrOffsets(StringRef StrDWOContent,
+                                   StringRef StrOffsetsContent,
+                                   SmallVectorImpl<StringRef> &StrDWOOutData,
+                                   std::string &StrOffsetsOutData,
+                                   unsigned DwarfVersion, bool IsLittleEndian) {
+  const llvm::endianness Endian =
+      IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
+  const uint64_t HeaderOffset = (DwarfVersion >= 5) ? 8 : 0;
+  constexpr size_t SizeOfOffset = sizeof(int32_t);
+  const uint64_t NumOffsets =
+      (StrOffsetsContent.size() - HeaderOffset) / SizeOfOffset;
+
+  DataExtractor Extractor(StrOffsetsContent, IsLittleEndian, 0);
+  uint64_t ExtractionOffset = HeaderOffset;
+
+  using StringFragment = DWARFUnitIndex::Entry::SectionContribution;
+  const auto getStringLength = [](StringRef Content,
+                                  uint64_t Offset) -> uint64_t {
+    size_t NullPos = Content.find('\0', Offset);
+    return (NullPos != StringRef::npos) ? (NullPos - Offset + 1) : 0;
+  };
+  const auto isContiguous = [](const StringFragment &Fragment,
+                               uint64_t NextOffset) -> bool {
+    return NextOffset == Fragment.getOffset() + Fragment.getLength();
+  };
+  std::optional<StringFragment> CurrentFragment;
+  uint64_t AccumulatedStrLen = 0;
+  for (uint64_t I = 0; I < NumOffsets; ++I) {
+    const uint64_t StrOffset = Extractor.getU32(&ExtractionOffset);
+    const uint64_t StringLength = getStringLength(StrDWOContent, StrOffset);
+    if (!CurrentFragment) {
+      // First init.
+      CurrentFragment = StringFragment(StrOffset, StringLength);
+    } else {
+      if (isContiguous(*CurrentFragment, StrOffset)) {
+        // Expanding the current fragment.
+        CurrentFragment->setLength(CurrentFragment->getLength() + StringLength);
+      } else {
+        // Saving the current fragment and start a new one.
+        StrDWOOutData.push_back(StrDWOContent.substr(
+            CurrentFragment->getOffset(), CurrentFragment->getLength()));
+        CurrentFragment = StringFragment(StrOffset, StringLength);
+      }
+    }
+    if (AccumulatedStrLen != StrOffset) {
+      // Updating str offsets.
+      if (StrOffsetsOutData.empty())
+        StrOffsetsOutData = StrOffsetsContent.str();
+      llvm::support::endian::write32(
+          &StrOffsetsOutData[HeaderOffset + I * SizeOfOffset],
+          static_cast<uint32_t>(AccumulatedStrLen), Endian);
+    }
+    AccumulatedStrLen += StringLength;
+  }
+  if (CurrentFragment)
+    StrDWOOutData.push_back(StrDWOContent.substr(CurrentFragment->getOffset(),
+                                                 CurrentFragment->getLength()));
+}
+
 // Exctracts an appropriate slice if input is DWP.
 // Applies patches or overwrites the section.
 std::optional<StringRef> updateDebugData(
@@ -1761,7 +1828,7 @@ std::optional<StringRef> updateDebugData(
     auto Iter = OverridenSections.find(Kind);
     if (Iter == OverridenSections.end()) {
       errs()
-          << "BOLT-WARNING: [internal-dwarf-error]: Could not find overriden "
+          << "BOLT-WARNING: [internal-dwarf-error]: Could not find overridden "
              "section for: "
           << Twine::utohexstr(DWOId) << ".\n";
       return std::nullopt;
@@ -1774,6 +1841,8 @@ std::optional<StringRef> updateDebugData(
       errs() << "BOLT-WARNING: unsupported debug section: " << SectionName
              << "\n";
     if (StrWriter.isInitialized()) {
+      if (CUDWOEntry)
+        return StrWriter.getBufferStr();
       OutputBuffer = StrWriter.releaseBuffer();
       return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                        OutputBuffer->size());
@@ -1788,6 +1857,8 @@ std::optional<StringRef> updateDebugData(
   }
   case DWARFSectionKind::DW_SECT_STR_OFFSETS: {
     if (StrOffstsWriter.isFinalized()) {
+      if (CUDWOEntry)
+        return StrOffstsWriter.getBufferStr();
       OutputBuffer = StrOffstsWriter.releaseBuffer();
       return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                        OutputBuffer->size());
@@ -1846,15 +1917,16 @@ void DWARFRewriter::writeDWOFiles(
   }
 
   std::string CompDir = CU.getCompilationDir();
+  SmallString<16> AbsolutePath(DWOName);
 
   if (!opts::DwarfOutputPath.empty())
     CompDir = opts::DwarfOutputPath.c_str();
   else if (!opts::CompDirOverride.empty())
     CompDir = opts::CompDirOverride;
-
-  SmallString<16> AbsolutePath;
-  sys::path::append(AbsolutePath, CompDir);
-  sys::path::append(AbsolutePath, DWOName);
+  else if (!sys::fs::exists(CompDir))
+    CompDir = ".";
+  // Prevent failures when DWOName is already an absolute path.
+  sys::path::make_absolute(CompDir, AbsolutePath);
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> TempOut =
@@ -1889,6 +1961,10 @@ void DWARFRewriter::writeDWOFiles(
     }
   }
 
+  StringRef StrDWOContent;
+  StringRef StrOffsetsContent;
+  llvm::SmallVector<StringRef, 3> StrDWOOutData;
+  std::string StrOffsetsOutData;
   for (const SectionRef &Section : File->sections()) {
     std::unique_ptr<DebugBufferVector> OutputData;
     StringRef SectionName = getSectionName(Section);
@@ -1896,11 +1972,50 @@ void DWARFRewriter::writeDWOFiles(
       continue;
     Expected<StringRef> ContentsExp = Section.getContents();
     assert(ContentsExp && "Invalid contents.");
+    if (IsDWP && SectionName == "debug_str.dwo") {
+      if (StrWriter.isInitialized())
+        StrDWOContent = StrWriter.getBufferStr();
+      else
+        StrDWOContent = *ContentsExp;
+      continue;
+    }
     if (std::optional<StringRef> OutData = updateDebugData(
             (*DWOCU)->getContext(), SectionName, *ContentsExp, KnownSections,
             *Streamer, *this, CUDWOEntry, DWOId, OutputData, RangeListssWriter,
-            LocWriter, StrOffstsWriter, StrWriter, OverridenSections))
+            LocWriter, StrOffstsWriter, StrWriter, OverridenSections)) {
+      if (IsDWP && SectionName == "debug_str_offsets.dwo") {
+        StrOffsetsContent = *OutData;
+        continue;
+      }
       Streamer->emitBytes(*OutData);
+    }
+  }
+
+  if (IsDWP) {
+    // Handling both .debug_str.dwo and .debug_str_offsets.dwo concurrently. In
+    // the original DWP, .debug_str is a deduplicated global table, and the
+    // .debug_str.dwo slice for a single CU needs to be extracted according to
+    // .debug_str_offsets.dwo.
+    UpdateStrAndStrOffsets(StrDWOContent, StrOffsetsContent, StrDWOOutData,
+                           StrOffsetsOutData, CU.getVersion(),
+                           (*DWOCU)->getContext().isLittleEndian());
+    auto SectionIter = KnownSections.find("debug_str.dwo");
+    if (SectionIter != KnownSections.end()) {
+      Streamer->switchSection(SectionIter->second.first);
+      for (size_t i = 0; i < StrDWOOutData.size(); ++i) {
+        StringRef OutData = StrDWOOutData[i];
+        if (!OutData.empty())
+          Streamer->emitBytes(OutData);
+      }
+    }
+    SectionIter = KnownSections.find("debug_str_offsets.dwo");
+    if (SectionIter != KnownSections.end()) {
+      Streamer->switchSection(SectionIter->second.first);
+      if (!StrOffsetsOutData.empty())
+        Streamer->emitBytes(StrOffsetsOutData);
+      else
+        Streamer->emitBytes(StrOffsetsContent);
+    }
   }
   Streamer->finish();
   TempOut->keep();
@@ -1992,7 +2107,7 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     }
   }
 
-  // HighPC was conveted into DW_AT_ranges.
+  // HighPC was converted into DW_AT_ranges.
   // For DWARF5 we only access ranges through index.
 
   DIEBldr.replaceValue(&Die, HighPCAttrInfo.getAttribute(), dwarf::DW_AT_ranges,

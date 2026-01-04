@@ -16,9 +16,6 @@
 #include "DWARF.h"
 #include "InputSection.h"
 #include "Symbols.h"
-#include "lld/Common/Memory.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
-#include "llvm/Object/ELFObjectFile.h"
 
 using namespace llvm;
 using namespace llvm::object;
