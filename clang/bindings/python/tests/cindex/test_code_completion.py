@@ -143,8 +143,8 @@ void f(P x, Q y) {
         # Compare with regular kind
         for compatKind in AvailabilityKindCompat:
             commonKind = AvailabilityKind.from_id(compatKind.value)
-            nextKindId = (compatKind.value+1) % numKinds
-            commonKindUnequal= AvailabilityKind.from_id(nextKindId)
+            nextKindId = (compatKind.value + 1) % numKinds
+            commonKindUnequal = AvailabilityKind.from_id(nextKindId)
             self.assertEqual(commonKind, compatKind)
             self.assertEqual(compatKind, commonKind)
             self.assertNotEqual(commonKindUnequal, compatKind)
@@ -153,7 +153,7 @@ void f(P x, Q y) {
         # Compare two compat kinds
         for compatKind in AvailabilityKindCompat:
             compatKind2 = AvailabilityKindCompat.from_id(compatKind.value)
-            nextKindId = (compatKind.value+1) % numKinds
+            nextKindId = (compatKind.value + 1) % numKinds
             compatKind2Unequal = AvailabilityKind.from_id(nextKindId)
             self.assertEqual(compatKind, compatKind2)
             self.assertEqual(compatKind2, compatKind)
