@@ -15,10 +15,10 @@
 #include "char-block.h"
 #include "char-set.h"
 #include "provenance.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
+#include "flang/Support/Fortran-features.h"
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
@@ -35,6 +35,7 @@ namespace Fortran::parser {
 // and severity of a message or attachment.
 enum class Severity {
   Error, // fatal error that prevents code and module file generation
+  ErrorUnlessDeadCode,
   Warning, // likely problem
   Portability, // nonstandard or obsolete features
   Because, // for AttachTo(), explanatory attachment to support another message
@@ -42,6 +43,15 @@ enum class Severity {
   Todo, // a feature that's not yet implemented, a fatal error
   None // everything else, common for attachments with source locations
 };
+
+inline constexpr bool IsFatalSeverity(Severity severity) {
+  return severity == Severity::Error ||
+      severity == Severity::ErrorUnlessDeadCode || severity == Severity::Todo;
+}
+
+inline constexpr bool IsWarningSeverity(Severity severity) {
+  return severity == Severity::Warning || severity == Severity::Portability;
+}
 
 class MessageFixedText {
 public:
@@ -61,9 +71,9 @@ public:
     severity_ = severity;
     return *this;
   }
-  bool IsFatal() const {
-    return severity_ == Severity::Error || severity_ == Severity::Todo;
-  }
+  bool IsFatal() const { return IsFatalSeverity(severity_); }
+
+  static const MessageFixedText endOfFileMessage; // "end of file"_err_en_US
 
 private:
   CharBlock text_;
@@ -74,6 +84,10 @@ inline namespace literals {
 constexpr MessageFixedText operator""_err_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::Error};
+}
+constexpr MessageFixedText operator""_errUnlessDead_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::ErrorUnlessDeadCode};
 }
 constexpr MessageFixedText operator""_warn_en_US(
     const char str[], std::size_t n) {
@@ -113,9 +127,7 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool IsFatal() const {
-    return severity_ == Severity::Error || severity_ == Severity::Todo;
-  }
+  bool IsFatal() const { return IsFatalSeverity(severity_); }
   Severity severity() const { return severity_; }
   MessageFormattedText &set_severity(Severity severity) {
     severity_ = severity;
@@ -292,7 +304,8 @@ public:
   std::optional<ProvenanceRange> GetProvenanceRange(
       const AllCookedSources &) const;
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
-      bool echoSourceLine = true) const;
+      bool echoSourceLine = true,
+      const common::LanguageFeatureControl *hintFlags = nullptr) const;
 
   // If this Message or any of its attachments locates itself via a CharBlock,
   // replace its location with the corresponding ProvenanceRange.
@@ -304,9 +317,9 @@ public:
   bool Merge(const Message &);
   bool operator==(const Message &that) const;
   bool operator!=(const Message &that) const { return !(*this == that); }
+  bool AtSameLocation(const Message &) const;
 
 private:
-  bool AtSameLocation(const Message &) const;
   std::variant<ProvenanceRange, CharBlock> location_;
   std::variant<MessageFixedText, MessageFormattedText, MessageExpectedText>
       text_;
@@ -334,13 +347,23 @@ public:
   }
 
   template <typename... A>
-  Message &Say(common::LanguageFeature feature, A &&...args) {
-    return Say(std::forward<A>(args)...).set_languageFeature(feature);
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      common::LanguageFeature feature, A &&...args) {
+    if (!isInModuleFile && control.ShouldWarn(feature)) {
+      return &AddWarning(feature, std::forward<A>(args)...);
+    }
+    return nullptr;
   }
 
   template <typename... A>
-  Message &Say(common::UsageWarning warning, A &&...args) {
-    return Say(std::forward<A>(args)...).set_usageWarning(warning);
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      common::UsageWarning warning, A &&...args) {
+    if (!isInModuleFile && control.ShouldWarn(warning)) {
+      return &AddWarning(warning, std::forward<A>(args)...);
+    }
+    return nullptr;
   }
 
   void Annex(Messages &&that) {
@@ -352,11 +375,21 @@ public:
   void Copy(const Messages &);
   void ResolveProvenances(const AllCookedSources &);
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
-      bool echoSourceLines = true) const;
+      bool echoSourceLines = true,
+      const common::LanguageFeatureControl *hintFlags = nullptr,
+      std::size_t maxErrorsToEmit = 0, bool warningsAreErrors = false) const;
   void AttachTo(Message &, std::optional<Severity> = std::nullopt);
-  bool AnyFatalError() const;
+  bool AnyFatalError(bool warningsAreErrors = false) const;
 
 private:
+  template <typename... A>
+  Message &AddWarning(common::UsageWarning warning, A &&...args) {
+    return messages_.emplace_back(warning, std::forward<A>(args)...);
+  }
+  template <typename... A>
+  Message &AddWarning(common::LanguageFeature feature, A &&...args) {
+    return messages_.emplace_back(feature, std::forward<A>(args)...);
+  }
   std::list<Message> messages_;
 };
 
@@ -419,24 +452,6 @@ public:
     return Say(at.value_or(at_), std::forward<A>(args)...);
   }
 
-  template <typename... A>
-  Message *Say(common::LanguageFeature feature, A &&...args) {
-    Message *msg{Say(std::forward<A>(args)...)};
-    if (msg) {
-      msg->set_languageFeature(feature);
-    }
-    return msg;
-  }
-
-  template <typename... A>
-  Message *Say(common::UsageWarning warning, A &&...args) {
-    Message *msg{Say(std::forward<A>(args)...)};
-    if (msg) {
-      msg->set_usageWarning(warning);
-    }
-    return msg;
-  }
-
   Message *Say(Message &&msg) {
     if (messages_ != nullptr) {
       if (contextMessage_) {
@@ -446,6 +461,39 @@ public:
     } else {
       return nullptr;
     }
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      FeatureOrUsageWarning feature, CharBlock at, A &&...args) {
+    if (messages_ != nullptr) {
+      if (Message *
+          msg{messages_->Warn(isInModuleFile, control, feature, at,
+              std::forward<A>(args)...)}) {
+        if (contextMessage_) {
+          msg->SetContext(contextMessage_.get());
+        }
+        return msg;
+      }
+    }
+    return nullptr;
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      FeatureOrUsageWarning feature, A &&...args) {
+    return Warn(
+        isInModuleFile, control, feature, at_, std::forward<A>(args)...);
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  Message *Warn(bool isInModuleFile,
+      const common::LanguageFeatureControl &control,
+      FeatureOrUsageWarning feature, std::optional<CharBlock> at, A &&...args) {
+    return Warn(isInModuleFile, control, feature, at.value_or(at_),
+        std::forward<A>(args)...);
   }
 
 private:

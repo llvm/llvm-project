@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/MLIRContext.h"
 
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
@@ -71,13 +71,10 @@ public:
               return llvm::Type::getX86_AMXTy(context);
             })
             .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
-                  LLVM::LLVMPointerType, LLVM::LLVMStructType,
-                  LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType,
-                  VectorType, LLVM::LLVMTargetExtType>(
+                  LLVM::LLVMPointerType, LLVM::LLVMStructType, VectorType,
+                  LLVM::LLVMTargetExtType, PtrLikeTypeInterface>(
                 [this](auto type) { return this->translate(type); })
-            .Default([](Type t) -> llvm::Type * {
-              llvm_unreachable("unknown LLVM dialect type");
-            });
+            .DefaultUnreachable("unknown LLVM dialect type");
 
     // Cache the result of the conversion and return.
     knownTranslations.try_emplace(type, translated);
@@ -143,24 +140,21 @@ private:
                                       type.getNumElements());
   }
 
-  /// Translates the given fixed-vector type.
-  llvm::Type *translate(LLVM::LLVMFixedVectorType type) {
-    return llvm::FixedVectorType::get(translateType(type.getElementType()),
-                                      type.getNumElements());
-  }
-
-  /// Translates the given scalable-vector type.
-  llvm::Type *translate(LLVM::LLVMScalableVectorType type) {
-    return llvm::ScalableVectorType::get(translateType(type.getElementType()),
-                                         type.getMinNumElements());
-  }
-
   /// Translates the given target extension type.
   llvm::Type *translate(LLVM::LLVMTargetExtType type) {
     SmallVector<llvm::Type *> typeParams;
     translateTypes(type.getTypeParams(), typeParams);
     return llvm::TargetExtType::get(context, type.getExtTypeName(), typeParams,
                                     type.getIntParams());
+  }
+
+  /// Translates the given ptr type.
+  llvm::Type *translate(PtrLikeTypeInterface type) {
+    auto memSpace =
+        dyn_cast<LLVM::LLVMAddrSpaceAttrInterface>(type.getMemorySpace());
+    assert(memSpace && "expected pointer with an LLVM address space");
+    assert(!type.hasPtrMetadata() && "expected pointer without metadata");
+    return llvm::PointerType::get(context, memSpace.getAddressSpace());
   }
 
   /// Translates a list of types.

@@ -230,7 +230,6 @@ exit:
 define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
@@ -239,7 +238,8 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %edx
-; CHECK-NEXT:    leal -1(%rsi), %r8d
+; CHECK-NEXT:    movl %esi, %r8d
+; CHECK-NEXT:    decl %r8d
 ; CHECK-NEXT:    jmp .LBB4_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_3: # %if.false
@@ -297,30 +297,30 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl $buf, %ecx
-; CHECK-NEXT:    movl $32, %edx
-; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl $buf, %edx
+; CHECK-NEXT:    movl $32, %esi
 ; CHECK-NEXT:    jmp .LBB5_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_3: # %if.false
 ; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
-; CHECK-NEXT:    decl %esi
+; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:  .LBB5_4: # %loop.bb2
 ; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
-; CHECK-NEXT:    leal (%rdi,%rsi), %r8d
+; CHECK-NEXT:    leal (%rdi,%rax), %r8d
 ; CHECK-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    cmpw $7, %si
+; CHECK-NEXT:    cmpw $7, %ax
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tilezero %tmm0
-; CHECK-NEXT:    tilestored %tmm0, (%rcx,%rdx)
+; CHECK-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; CHECK-NEXT:    jne .LBB5_5
 ; CHECK-NEXT:  .LBB5_1: # %loop.bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne .LBB5_3
 ; CHECK-NEXT:  # %bb.2: # %if.true
 ; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
-; CHECK-NEXT:    incl %esi
+; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    jmp .LBB5_4
 ; CHECK-NEXT:  .LBB5_5: # %exit
 ; CHECK-NEXT:    tilerelease

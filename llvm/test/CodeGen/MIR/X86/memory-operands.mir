@@ -183,7 +183,7 @@
 
   define ptr @undef_value() {
   entry:
-    %0 = load ptr, ptr undef, align 8
+    %0 = load ptr, ptr poison, align 8
     ret ptr %0
   }
 
@@ -515,8 +515,8 @@ tracksRegLiveness: true
 body: |
   bb.0.entry:
   ; CHECK-LABEL: name: undef_value
-  ; CHECK: $rax = MOV64rm undef $rax, 1, $noreg, 0, $noreg :: (load (s64) from `ptr undef`)
-    $rax = MOV64rm undef $rax, 1, _, 0, _ :: (load (s64) from `ptr undef`)
+  ; CHECK: $rax = MOV64rm undef $rax, 1, $noreg, 0, $noreg :: (load (s64) from `ptr poison`)
+    $rax = MOV64rm undef $rax, 1, _, 0, _ :: (load (s64) from `ptr poison`)
     RET64 $rax
 ...
 ---

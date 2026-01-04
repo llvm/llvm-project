@@ -292,14 +292,17 @@ public:
   /// Relies on a ptr map to fetch the previous instruction and then retrieve
   /// state. WARNING: Watch out for invalidated pointers. Do not use this
   /// function if you invalidated pointers after the analysis has been completed
-  ErrorOr<const StateTy &> getStateBefore(const MCInst &Point) {
-    return getStateAt(PrevPoint[&Point]);
+  ErrorOr<const StateTy &> getStateBefore(const MCInst &Point) const {
+    auto It = PrevPoint.find(&Point);
+    if (It == PrevPoint.end())
+      return make_error_code(std::errc::result_out_of_range);
+    return getStateAt(It->getSecond());
   }
 
-  ErrorOr<const StateTy &> getStateBefore(ProgramPoint Point) {
+  ErrorOr<const StateTy &> getStateBefore(ProgramPoint Point) const {
     if (Point.isBB())
       return getStateAt(*Point.getBB());
-    return getStateAt(PrevPoint[Point.getInst()]);
+    return getStateBefore(*Point.getInst());
   }
 
   /// Remove any state annotations left by this analysis

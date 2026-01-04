@@ -42,7 +42,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _OutIt, class _CharT>
   requires output_iterator<_OutIt, const _CharT&>
-class _LIBCPP_TEMPLATE_VIS basic_format_context;
+class basic_format_context;
 
 #  if _LIBCPP_HAS_LOCALIZATION
 /**
@@ -72,30 +72,25 @@ using wformat_context = basic_format_context< back_insert_iterator<__format::__o
 
 template <class _OutIt, class _CharT>
   requires output_iterator<_OutIt, const _CharT&>
-class
-    // clang-format off
-    _LIBCPP_TEMPLATE_VIS
-    _LIBCPP_PREFERRED_NAME(format_context)
-    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context))
-    // clang-format on
-    basic_format_context {
+class _LIBCPP_PREFERRED_NAME(format_context)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context)) basic_format_context {
 public:
   using iterator  = _OutIt;
   using char_type = _CharT;
   template <class _Tp>
   using formatter_type = formatter<_Tp, _CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
     return __args_.get(__id);
   }
 #  if _LIBCPP_HAS_LOCALIZATION
-  _LIBCPP_HIDE_FROM_ABI std::locale locale() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::locale locale() {
     if (!__loc_)
       __loc_ = std::locale{};
     return *__loc_;
   }
 #  endif
-  _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
   _LIBCPP_HIDE_FROM_ABI void advance_to(iterator __it) { __out_it_ = std::move(__it); }
 
 private:
@@ -153,7 +148,7 @@ public:
 // Here the width of an element in input is determined dynamically.
 // Note when the top-level element has no width the retargeting is not needed.
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS basic_format_context<typename __format::__retarget_buffer<_CharT>::__iterator, _CharT> {
+class basic_format_context<typename __format::__retarget_buffer<_CharT>::__iterator, _CharT> {
 public:
   using iterator  = typename __format::__retarget_buffer<_CharT>::__iterator;
   using char_type = _CharT;
@@ -180,13 +175,13 @@ public:
                   __format::__determine_arg_t<basic_format_context, decltype(__arg)>(),
                   __basic_format_arg_value<basic_format_context>(__arg)};
           };
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  if _LIBCPP_STD_VER >= 26
           return static_cast<_Context*>(__c)->arg(__id).visit(std::move(__visitor));
 #  else
           _LIBCPP_SUPPRESS_DEPRECATED_PUSH
           return std::visit_format_arg(std::move(__visitor), static_cast<_Context*>(__c)->arg(__id));
           _LIBCPP_SUPPRESS_DEPRECATED_POP
-#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  endif // _LIBCPP_STD_VER >= 26
         }) {
   }
 

@@ -7,21 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "UEFI.h"
-#include "CommonArgs.h"
-#include "Darwin.h"
-#include "clang/Basic/CharInfo.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -31,7 +24,9 @@ using namespace clang;
 using namespace llvm::opt;
 
 UEFI::UEFI(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
-    : ToolChain(D, Triple, Args) {}
+    : ToolChain(D, Triple, Args) {
+  getProgramPaths().push_back(getDriver().Dir);
+}
 
 Tool *UEFI::buildLinker() const { return new tools::uefi::Linker(*this); }
 
@@ -64,37 +59,49 @@ void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   assert((Output.isFilename() || Output.isNothing()) && "invalid output");
   if (Output.isFilename())
     CmdArgs.push_back(
-        Args.MakeArgString(std::string("-out:") + Output.getFilename()));
+        Args.MakeArgString(std::string("/out:") + Output.getFilename()));
 
-  CmdArgs.push_back("-nologo");
-
-  // TODO: Other UEFI binary subsystems that are currently unsupported:
-  // efi_boot_service_driver, efi_rom, efi_runtime_driver.
-  CmdArgs.push_back("-subsystem:efi_application");
+  CmdArgs.push_back("/nologo");
 
   // Default entry function name according to the TianoCore reference
-  // implementation is EfiMain.
-  // TODO: Provide a flag to override the entry function name.
-  CmdArgs.push_back("-entry:EfiMain");
+  // implementation is EfiMain.  -Wl,/subsystem:... or -Wl,/entry:... can
+  // override these since they will be added later in AddLinkerInputs.
+  CmdArgs.push_back("/subsystem:efi_application");
+  CmdArgs.push_back("/entry:EfiMain");
 
   // "Terminal Service Aware" flag is not needed for UEFI applications.
-  CmdArgs.push_back("-tsaware:no");
-
-  // EFI_APPLICATION to be linked as DLL by default.
-  CmdArgs.push_back("-dll");
+  CmdArgs.push_back("/tsaware:no");
 
   if (Args.hasArg(options::OPT_g_Group, options::OPT__SLASH_Z7))
-    CmdArgs.push_back("-debug");
+    CmdArgs.push_back("/debug");
 
   Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
+  // Sample these options first so they are claimed even under -nostdlib et al.
+  bool NoLibc = Args.hasArg(options::OPT_nolibc);
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
+                   options::OPT_r)) {
+    addSanitizerRuntimes(TC, Args, CmdArgs);
+
+    addXRayRuntime(TC, Args, CmdArgs);
+
+    TC.addProfileRTLibs(Args, CmdArgs);
+
+    // TODO: When compiler-rt/lib/builtins is ready, enable this call:
+    // AddRunTimeLibs(TC, TC.getDriver(), CmdArgs, Args);
+
+    if (!NoLibc) {
+      // TODO: When there is a libc ready, add it here.
+    }
+  }
+
   // This should ideally be handled by ToolChain::GetLinkerPath but we need
   // to special case some linker paths. In the case of lld, we need to
   // translate 'lld' into 'lld-link'.
-  StringRef Linker =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER);
+  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ,
+                                          TC.getDriver().getPreferredLinker());
   if (Linker.empty() || Linker == "lld")
     Linker = "lld-link";
 

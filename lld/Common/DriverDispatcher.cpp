@@ -30,10 +30,10 @@ static void err(const Twine &s) { llvm::errs() << s << "\n"; }
 
 static Flavor getFlavor(StringRef s) {
   return StringSwitch<Flavor>(s)
-      .CasesLower("ld", "ld.lld", "gnu", Gnu)
-      .CasesLower("wasm", "ld-wasm", Wasm)
+      .CasesLower({"ld", "ld.lld", "gnu"}, Gnu)
+      .CasesLower({"wasm", "ld-wasm"}, Wasm)
       .CaseLower("link", WinLink)
-      .CasesLower("ld64", "ld64.lld", "darwin", Darwin)
+      .CasesLower({"ld64", "ld64.lld", "darwin"}, Darwin)
       .Default(Invalid);
 }
 
@@ -45,7 +45,7 @@ static cl::TokenizerCallback getDefaultQuotingStyle() {
 
 static bool isPETargetName(StringRef s) {
   return s == "i386pe" || s == "i386pep" || s == "thumb2pe" || s == "arm64pe" ||
-         s == "arm64ecpe";
+         s == "arm64ecpe" || s == "arm64xpe" || s == "mipspe";
 }
 
 static std::optional<bool> isPETarget(llvm::ArrayRef<const char *> args) {

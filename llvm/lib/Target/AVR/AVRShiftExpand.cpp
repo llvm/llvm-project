@@ -52,7 +52,8 @@ bool AVRShiftExpand::runOnFunction(Function &F) {
     if (!I.isShift())
       // Only expand shift instructions (shl, lshr, ashr).
       continue;
-    if (I.getType() == Type::getInt8Ty(Ctx) || I.getType() == Type::getInt16Ty(Ctx))
+    if (I.getType() == Type::getInt8Ty(Ctx) ||
+        I.getType() == Type::getInt16Ty(Ctx))
       // Only expand non-8-bit and non-16-bit shifts, since those are expanded
       // directly during isel.
       continue;

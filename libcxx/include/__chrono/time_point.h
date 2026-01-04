@@ -14,6 +14,8 @@
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__functional/hash.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
@@ -31,7 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace chrono {
 
 template <class _Clock, class _Duration = typename _Clock::duration>
-class _LIBCPP_TEMPLATE_VIS time_point {
+class time_point {
   static_assert(__is_duration_v<_Duration>, "Second template parameter of time_point must be a std::chrono::duration");
 
 public:
@@ -58,6 +60,19 @@ public:
 
   // arithmetic
 
+#if _LIBCPP_STD_VER >= 20
+  _LIBCPP_HIDE_FROM_ABI constexpr time_point& operator++() {
+    ++__d_;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr time_point operator++(int) { return time_point{__d_++}; }
+  _LIBCPP_HIDE_FROM_ABI constexpr time_point& operator--() {
+    --__d_;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr time_point operator--(int) { return time_point{__d_--}; }
+#endif // _LIBCPP_STD_VER >= 20
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 time_point& operator+=(const duration& __d) {
     __d_ += __d;
     return *this;
@@ -76,14 +91,13 @@ public:
 } // namespace chrono
 
 template <class _Clock, class _Duration1, class _Duration2>
-struct _LIBCPP_TEMPLATE_VIS
-common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_Clock, _Duration2> > {
+struct common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_Clock, _Duration2> > {
   typedef chrono::time_point<_Clock, typename common_type<_Duration1, _Duration2>::type> type;
 };
 
 namespace chrono {
 
-template <class _ToDuration, class _Clock, class _Duration>
+template <class _ToDuration, class _Clock, class _Duration, __enable_if_t<__is_duration_v<_ToDuration>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 time_point<_Clock, _ToDuration>
 time_point_cast(const time_point<_Clock, _Duration>& __t) {
   return time_point<_Clock, _ToDuration>(chrono::duration_cast<_ToDuration>(__t.time_since_epoch()));
@@ -211,6 +225,18 @@ operator-(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock, 
 }
 
 } // namespace chrono
+
+#if _LIBCPP_STD_VER >= 26
+
+template <class _Clock, class _Duration>
+  requires __has_enabled_hash<_Duration>::value
+struct hash<chrono::time_point<_Clock, _Duration>> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::time_point<_Clock, _Duration>& __tp) {
+    return hash<_Duration>{}(__tp.time_since_epoch());
+  }
+};
+
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
