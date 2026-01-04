@@ -21,7 +21,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/LinkAllIR.h"
 #include "llvm/LinkAllPasses.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
+#include "llvm/Support/AlwaysTrue.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
@@ -89,7 +90,7 @@ public:
     D.addPass(std::string(PI->getPassArgument()));
   }
 };
-}
+} // namespace
 
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
   initializeInstCombine(Registry);
   initializeTarget(Registry);
 
-  if (std::getenv("bar") == (char*) -1) {
+  if (!llvm::getNonFoldableAlwaysTrue()) {
     InitializeAllTargets();
     InitializeAllTargetMCs();
     InitializeAllAsmPrinters();

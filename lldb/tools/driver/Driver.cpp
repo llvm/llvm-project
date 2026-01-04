@@ -19,14 +19,23 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Host/Config.h"
-
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
+#include "lldb/Utility/Status.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
 
 #include <algorithm>
 #include <atomic>
@@ -50,6 +59,9 @@
 
 using namespace lldb;
 using namespace llvm;
+using lldb_private::MainLoop;
+using lldb_private::MainLoopBase;
+using lldb_private::Status;
 
 namespace {
 using namespace llvm::opt;
@@ -275,6 +287,12 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (args.hasArg(OPT_wait_for)) {
+    if (!args.hasArg(OPT_attach_name)) {
+      error.SetErrorStringWithFormat(
+          "--wait-for requires a name (--attach-name)");
+      return error;
+    }
+
     m_option_data.m_wait_for = true;
   }
 
@@ -414,6 +432,90 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
 
   return error;
 }
+
+#ifdef _WIN32
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
+/// Returns the full path to the lldb.exe executable.
+inline std::wstring GetPathToExecutableW() {
+  // Iterate until we reach the Windows API maximum path length (32,767).
+  std::vector<WCHAR> buffer;
+  buffer.resize(MAX_PATH /*=260*/);
+  while (buffer.size() < 32767) {
+    if (GetModuleFileNameW(NULL, buffer.data(), buffer.size()) < buffer.size())
+      return std::wstring(buffer.begin(), buffer.end());
+    buffer.resize(buffer.size() * 2);
+  }
+  return L"";
+}
+
+/// \brief Resolve the full path of the directory defined by
+/// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL
+/// search directories.
+/// \return `true` if the library was added to the search path.
+/// `false` otherwise.
+bool AddPythonDLLToSearchPath() {
+  std::wstring modulePath = GetPathToExecutableW();
+  if (modulePath.empty())
+    return false;
+
+  SmallVector<char, MAX_PATH> utf8Path;
+  if (sys::windows::UTF16ToUTF8(modulePath.c_str(), modulePath.length(),
+                                utf8Path))
+    return false;
+  sys::path::remove_filename(utf8Path);
+  sys::path::append(utf8Path, LLDB_PYTHON_DLL_RELATIVE_PATH);
+  sys::fs::make_absolute(utf8Path);
+
+  SmallVector<wchar_t, 1> widePath;
+  if (sys::windows::widenPath(utf8Path.data(), widePath))
+    return false;
+
+  if (sys::fs::exists(utf8Path))
+    return SetDllDirectoryW(widePath.data());
+  return false;
+}
+#endif
+
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+/// Returns true if `python3x.dll` can be loaded.
+bool IsPythonDLLInPath() {
+#define WIDEN2(x) L##x
+#define WIDEN(x) WIDEN2(x)
+  HMODULE h = LoadLibraryW(WIDEN(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME));
+  if (!h)
+    return false;
+  FreeLibrary(h);
+  return true;
+#undef WIDEN2
+#undef WIDEN
+}
+#endif
+
+/// Try to setup the DLL search path for the Python Runtime Library
+/// (python3xx.dll).
+///
+/// If `LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME` is set, we first check if
+/// python3xx.dll is in the search path. If it's not, we try to add it and
+/// check for it a second time.
+/// If only `LLDB_PYTHON_DLL_RELATIVE_PATH` is set, we try to add python3xx.dll
+/// to the search path python.dll is already in the search path or not.
+void SetupPythonRuntimeLibrary() {
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+  if (IsPythonDLLInPath())
+    return;
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
+  if (AddPythonDLLToSearchPath() && IsPythonDLLInPath())
+    return;
+#endif
+  WithColor::error() << "unable to find '"
+                     << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << "'.\n";
+  return;
+#elif defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
+  if (!AddPythonDLLToSearchPath())
+    WithColor::error() << "unable to find the Python runtime library.\n";
+#endif
+}
+#endif
 
 std::string EscapeString(std::string arg) {
   std::string::size_type pos = 0;
@@ -636,15 +738,12 @@ void Driver::UpdateWindowSize() {
   }
 }
 
-void sigwinch_handler(int signo) {
-  if (g_driver != nullptr)
-    g_driver->UpdateWindowSize();
-}
-
 void sigint_handler(int signo) {
-#ifdef _WIN32 // Restore handler as it is not persistent on Windows
+#ifdef _WIN32
+  // Restore handler as it is not persistent on Windows.
   signal(SIGINT, sigint_handler);
 #endif
+
   static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
   if (g_driver != nullptr) {
     if (!g_interrupt_sent.test_and_set()) {
@@ -656,31 +755,6 @@ void sigint_handler(int signo) {
 
   _exit(signo);
 }
-
-#ifndef _WIN32
-static void sigtstp_handler(int signo) {
-  if (g_driver != nullptr)
-    g_driver->GetDebugger().SaveInputTerminalState();
-
-  // Unblock the signal and remove our handler.
-  sigset_t set;
-  sigemptyset(&set);
-  sigaddset(&set, signo);
-  pthread_sigmask(SIG_UNBLOCK, &set, nullptr);
-  signal(signo, SIG_DFL);
-
-  // Now re-raise the signal. We will immediately suspend...
-  raise(signo);
-  // ... and resume after a SIGCONT.
-
-  // Now undo the modifications.
-  pthread_sigmask(SIG_BLOCK, &set, nullptr);
-  signal(signo, sigtstp_handler);
-
-  if (g_driver != nullptr)
-    g_driver->GetDebugger().RestoreInputTerminalState();
-}
-#endif
 
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
@@ -745,6 +819,10 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
+#ifdef _WIN32
+  SetupPythonRuntimeLibrary();
+#endif
+
   // Parse arguments.
   LLDBOptTable T;
   unsigned MissingArgIndex;
@@ -787,11 +865,53 @@ int main(int argc, char const *argv[]) {
   // Setup LLDB signal handlers once the debugger has been initialized.
   SBDebugger::PrintDiagnosticsOnError();
 
+  //  FIXME: Migrate the SIGINT handler to be handled by the signal loop below.
   signal(SIGINT, sigint_handler);
 #if !defined(_WIN32)
   signal(SIGPIPE, SIG_IGN);
-  signal(SIGWINCH, sigwinch_handler);
-  signal(SIGTSTP, sigtstp_handler);
+
+  // Handle signals in a MainLoop running on a separate thread.
+  MainLoop signal_loop;
+  Status signal_status;
+
+  auto sigwinch_handler = signal_loop.RegisterSignal(
+      SIGWINCH,
+      [&](MainLoopBase &) {
+        if (g_driver)
+          g_driver->UpdateWindowSize();
+      },
+      signal_status);
+  assert(sigwinch_handler && signal_status.Success());
+
+  auto sigtstp_handler = signal_loop.RegisterSignal(
+      SIGTSTP,
+      [&](MainLoopBase &) {
+        if (g_driver)
+          g_driver->GetDebugger().SaveInputTerminalState();
+
+        struct sigaction old_action;
+        struct sigaction new_action = {};
+        new_action.sa_handler = SIG_DFL;
+        sigemptyset(&new_action.sa_mask);
+        sigaddset(&new_action.sa_mask, SIGTSTP);
+
+        int ret = sigaction(SIGTSTP, &new_action, &old_action);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        raise(SIGTSTP);
+
+        ret = sigaction(SIGTSTP, &old_action, nullptr);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        if (g_driver)
+          g_driver->GetDebugger().RestoreInputTerminalState();
+      },
+      signal_status);
+  assert(sigtstp_handler && signal_status.Success());
+
+  std::thread signal_thread([&] { signal_loop.Run(); });
 #endif
 
   int exit_code = 0;
@@ -823,6 +943,13 @@ int main(int argc, char const *argv[]) {
 
     future.wait();
   }
+
+#if !defined(_WIN32)
+  // Try to interrupt the signal thread.  If that succeeds, wait for it to exit.
+  if (signal_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    signal_thread.join();
+#endif
 
   return exit_code;
 }

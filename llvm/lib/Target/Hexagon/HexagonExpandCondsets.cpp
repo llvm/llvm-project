@@ -85,6 +85,7 @@
 // however, is that finding the locations where the implicit uses need
 // to be added, and updating the live ranges will be more involved.
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "llvm/ADT/DenseMap.h"
@@ -128,13 +129,6 @@ static cl::opt<unsigned> OptTfrLimit("expand-condsets-tfr-limit",
 static cl::opt<unsigned> OptCoaLimit("expand-condsets-coa-limit",
   cl::init(~0U), cl::Hidden, cl::desc("Max number of segment coalescings"));
 
-namespace llvm {
-
-  void initializeHexagonExpandCondsetsPass(PassRegistry&);
-  FunctionPass *createHexagonExpandCondsets();
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonExpandCondsets : public MachineFunctionPass {
@@ -146,7 +140,6 @@ namespace {
         CoaLimitActive = true, CoaLimit = OptCoaLimit;
       if (OptTfrLimit.getPosition())
         TfrLimitActive = true, TfrLimit = OptTfrLimit;
-      initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
     }
 
     StringRef getPassName() const override { return "Hexagon Expand Condsets"; }
@@ -245,12 +238,7 @@ namespace {
 } // end anonymous namespace
 
 char HexagonExpandCondsets::ID = 0;
-
-namespace llvm {
-
-  char &HexagonExpandCondsetsID = HexagonExpandCondsets::ID;
-
-} // end namespace llvm
+char &llvm::HexagonExpandCondsetsID = HexagonExpandCondsets::ID;
 
 INITIALIZE_PASS_BEGIN(HexagonExpandCondsets, "expand-condsets",
   "Hexagon Expand Condsets", false, false)
@@ -394,15 +382,14 @@ void HexagonExpandCondsets::updateDeadsInRange(Register Reg, LaneBitmask LM,
         return true;
     }
     MachineBasicBlock *Entry = &Dest->getParent()->front();
-    SetVector<MachineBasicBlock*> Work(Dest->pred_begin(), Dest->pred_end());
+    SetVector<MachineBasicBlock *> Work(llvm::from_range, Dest->predecessors());
     for (unsigned i = 0; i < Work.size(); ++i) {
       MachineBasicBlock *B = Work[i];
       if (Defs.count(B))
         continue;
       if (B == Entry)
         return false;
-      for (auto *P : B->predecessors())
-        Work.insert(P);
+      Work.insert_range(B->predecessors());
     }
     return true;
   };
@@ -720,7 +707,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
     }
   }
 
-  // First, create the two invididual conditional transfers, and add each
+  // First, create the two individual conditional transfers, and add each
   // of them to the live intervals information. Do that first and then remove
   // the old instruction from live intervals.
   MachineInstr *TfrT =

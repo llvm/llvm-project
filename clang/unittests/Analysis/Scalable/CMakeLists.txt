@@ -1,0 +1,23 @@
+add_distinct_clang_unittest(ClangScalableAnalysisTests
+  ASTEntityMappingTest.cpp
+  BuildNamespaceTest.cpp
+  EntityIdTest.cpp
+  EntityIdTableTest.cpp
+  EntityNameTest.cpp
+  SummaryNameTest.cpp
+
+  CLANG_LIBS
+  clangAnalysisScalable
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangFrontend
+  clangSerialization
+  clangTooling
+  LINK_LIBS
+  clangTesting
+  LLVMTestingSupport
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
+  )

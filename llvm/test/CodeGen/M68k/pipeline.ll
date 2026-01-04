@@ -2,8 +2,7 @@
 ; CHECK:  ModulePass Manager
 ; CHECK-NEXT:    Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:    FunctionPass Manager
-; CHECK-NEXT:      Expand large div/rem
-; CHECK-NEXT:      Expand large fp convert
+; CHECK-NEXT:      Expand IR instructions
 ; CHECK-NEXT:      Expand Atomic instructions
 ; CHECK-NEXT:      Module Verifier
 ; CHECK-NEXT:      Dominator Tree Construction
@@ -31,6 +30,9 @@
 ; CHECK-NEXT:      Block Frequency Analysis
 ; CHECK-NEXT:      Constant Hoisting
 ; CHECK-NEXT:      Replace intrinsics with calls to vector library
+; CHECK-NEXT:      Lazy Branch Probability Analysis
+; CHECK-NEXT:      Lazy Block Frequency Analysis
+; CHECK-NEXT:      Optimization Remark Emitter
 ; CHECK-NEXT:      Partially inline calls to library functions
 ; CHECK-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:      Scalarize Masked Memory Intrinsics

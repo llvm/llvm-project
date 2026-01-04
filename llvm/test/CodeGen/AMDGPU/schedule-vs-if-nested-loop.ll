@@ -81,12 +81,12 @@ ENDIF:                                            ; preds = %ENDIF16, %LOOP, %ma
   %68 = extractelement <4 x float> %67, i32 3
   %69 = fmul float %68, %3
   %70 = fadd float %69, %54
-  %71 = insertelement <4 x float> undef, float %58, i32 0
+  %71 = insertelement <4 x float> poison, float %58, i32 0
   %72 = insertelement <4 x float> %71, float %62, i32 1
   %73 = insertelement <4 x float> %72, float %66, i32 2
   %74 = insertelement <4 x float> %73, float %70, i32 3
   call void @llvm.r600.store.swizzle(<4 x float> %74, i32 60, i32 1)
-  %75 = insertelement <4 x float> undef, float %temp.0, i32 0
+  %75 = insertelement <4 x float> poison, float %temp.0, i32 0
   %76 = insertelement <4 x float> %75, float %temp1.0, i32 1
   %77 = insertelement <4 x float> %76, float %temp2.0, i32 2
   %78 = insertelement <4 x float> %77, float %temp3.0, i32 3

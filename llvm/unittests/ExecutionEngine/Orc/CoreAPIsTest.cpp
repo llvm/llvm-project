@@ -15,7 +15,6 @@
 #include "llvm/Testing/Support/Error.h"
 
 #include <deque>
-#include <set>
 #include <thread>
 
 using namespace llvm;
@@ -1559,16 +1558,11 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 #if LLVM_ENABLE_THREADS
 
   std::mutex WorkThreadsMutex;
-  std::vector<std::thread> WorkThreads;
+  SmallVector<std::thread, 0> WorkThreads;
   DispatchOverride = [&](std::unique_ptr<Task> T) {
-    std::promise<void> WaitP;
     std::lock_guard<std::mutex> Lock(WorkThreadsMutex);
     WorkThreads.push_back(
-        std::thread([T = std::move(T), WaitF = WaitP.get_future()]() mutable {
-          WaitF.get();
-          T->run();
-        }));
-    WaitP.set_value();
+        std::thread([T = std::move(T)]() mutable { T->run(); }));
   };
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
@@ -1580,8 +1574,15 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
   EXPECT_EQ(FooLookupResult.getFlags(), FooSym.getFlags())
       << "lookup returned incorrect flags";
 
-  for (auto &WT : WorkThreads)
+  std::unique_lock<std::mutex> Lock(WorkThreadsMutex);
+  // This works because every child thread that is allowed to use WorkThreads
+  // must either be in WorkThreads or its parent must be in WorkThreads.
+  while (!WorkThreads.empty()) {
+    auto WT = WorkThreads.pop_back_val();
+    Lock.unlock();
     WT.join();
+    Lock.lock();
+  }
 #endif
 }
 
@@ -1590,8 +1591,6 @@ TEST_F(CoreAPIsStandardTest, TestGetRequestedSymbolsAndReplace) {
   // have pending queries, and test that MaterializationResponsibility's
   // replace method can be used to return definitions to the JITDylib in a new
   // MaterializationUnit.
-  SymbolNameSet Names({Foo, Bar});
-
   bool FooMaterialized = false;
   bool BarMaterialized = false;
 
@@ -1719,7 +1718,7 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // form a tree.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1761,7 +1760,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // contain a diamond.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1785,7 +1784,7 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // contain a cycle.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");

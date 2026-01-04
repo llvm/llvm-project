@@ -11,7 +11,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStdcFirstTrailingOneUiTest, ALL) {
-  EXPECT_EQ(LIBC_NAMESPACE::stdc_first_trailing_one_ui(UINT_MAX), 0U);
+  EXPECT_EQ(LIBC_NAMESPACE::stdc_first_trailing_one_ui(UINT_MAX), 1U);
 }
 
 TEST(LlvmLibcStdcFirstTrailingOneUiTest, OneHot) {

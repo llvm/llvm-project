@@ -52,9 +52,8 @@ public:
     uint64_t MispredictedCount; /// number of branches mispredicted
 
     bool operator<(const BinaryBranchInfo &Other) const {
-      return (Count < Other.Count) ||
-             (Count == Other.Count &&
-              MispredictedCount < Other.MispredictedCount);
+      return std::tie(Count, MispredictedCount) <
+             std::tie(Other.Count, Other.MispredictedCount);
     }
   };
 
@@ -890,6 +889,8 @@ public:
 
   /// Needed by graph traits.
   BinaryFunction *getParent() const { return getFunction(); }
+
+  bool hasParent() const { return getParent() != nullptr; }
 
   /// Return true if the containing function is in CFG state.
   bool hasCFG() const;

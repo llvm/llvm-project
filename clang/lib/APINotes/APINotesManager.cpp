@@ -15,9 +15,7 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceMgrAdapter.h"
-#include "clang/Basic/Version.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -51,12 +49,13 @@ public:
 } // namespace
 
 APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
-    : SM(SM), ImplicitAPINotes(LangOpts.APINotes) {}
+    : SM(SM), ImplicitAPINotes(LangOpts.APINotes),
+      VersionIndependentSwift(LangOpts.SwiftVersionIndependentAPINotes) {}
 
 APINotesManager::~APINotesManager() {
   // Free the API notes readers.
   for (const auto &Entry : Readers) {
-    if (auto Reader = Entry.second.dyn_cast<APINotesReader *>())
+    if (auto Reader = dyn_cast_if_present<APINotesReader *>(Entry.second))
       delete Reader;
   }
 
@@ -381,7 +380,7 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
       }
 
       // We have the answer.
-      if (auto Reader = Known->second.dyn_cast<APINotesReader *>())
+      if (auto Reader = dyn_cast_if_present<APINotesReader *>(Known->second))
         Results.push_back(Reader);
       break;
     }

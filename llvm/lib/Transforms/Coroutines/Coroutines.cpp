@@ -61,71 +61,60 @@ CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
   return CallInst::Create(Fn, {Arg, IndexVal}, "", InsertPt->getIterator());
 }
 
-// NOTE: Must be sorted!
-static const char *const CoroIntrinsics[] = {
-    "llvm.coro.align",
-    "llvm.coro.alloc",
-    "llvm.coro.async.context.alloc",
-    "llvm.coro.async.context.dealloc",
-    "llvm.coro.async.resume",
-    "llvm.coro.async.size.replace",
-    "llvm.coro.await.suspend.bool",
-    "llvm.coro.await.suspend.handle",
-    "llvm.coro.await.suspend.void",
-    "llvm.coro.begin",
-    "llvm.coro.begin.custom.abi",
-    "llvm.coro.destroy",
-    "llvm.coro.done",
-    "llvm.coro.end",
-    "llvm.coro.end.async",
-    "llvm.coro.frame",
-    "llvm.coro.free",
-    "llvm.coro.id",
-    "llvm.coro.id.async",
-    "llvm.coro.id.retcon",
-    "llvm.coro.id.retcon.once",
-    "llvm.coro.noop",
-    "llvm.coro.prepare.async",
-    "llvm.coro.prepare.retcon",
-    "llvm.coro.promise",
-    "llvm.coro.resume",
-    "llvm.coro.save",
-    "llvm.coro.size",
-    "llvm.coro.subfn.addr",
-    "llvm.coro.suspend",
-    "llvm.coro.suspend.async",
-    "llvm.coro.suspend.retcon",
+// We can only efficiently check for non-overloaded intrinsics.
+// The following intrinsics are absent for that reason:
+// coro_align, coro_size, coro_suspend_async, coro_suspend_retcon
+static Intrinsic::ID NonOverloadedCoroIntrinsics[] = {
+    Intrinsic::coro_alloc,
+    Intrinsic::coro_async_context_alloc,
+    Intrinsic::coro_async_context_dealloc,
+    Intrinsic::coro_async_resume,
+    Intrinsic::coro_async_size_replace,
+    Intrinsic::coro_await_suspend_bool,
+    Intrinsic::coro_await_suspend_handle,
+    Intrinsic::coro_await_suspend_void,
+    Intrinsic::coro_begin,
+    Intrinsic::coro_begin_custom_abi,
+    Intrinsic::coro_destroy,
+    Intrinsic::coro_done,
+    Intrinsic::coro_end,
+    Intrinsic::coro_end_async,
+    Intrinsic::coro_frame,
+    Intrinsic::coro_free,
+    Intrinsic::coro_id,
+    Intrinsic::coro_id_async,
+    Intrinsic::coro_id_retcon,
+    Intrinsic::coro_id_retcon_once,
+    Intrinsic::coro_noop,
+    Intrinsic::coro_prepare_async,
+    Intrinsic::coro_prepare_retcon,
+    Intrinsic::coro_promise,
+    Intrinsic::coro_resume,
+    Intrinsic::coro_save,
+    Intrinsic::coro_subfn_addr,
+    Intrinsic::coro_suspend,
+    Intrinsic::coro_is_in_ramp,
 };
-
-#ifndef NDEBUG
-static bool isCoroutineIntrinsicName(StringRef Name) {
-  return llvm::binary_search(CoroIntrinsics, Name);
-}
-#endif
 
 bool coro::isSuspendBlock(BasicBlock *BB) {
   return isa<AnyCoroSuspendInst>(BB->front());
 }
 
 bool coro::declaresAnyIntrinsic(const Module &M) {
-  for (StringRef Name : CoroIntrinsics) {
-    if (M.getNamedValue(Name))
-      return true;
-  }
-
-  return false;
+  return declaresIntrinsics(M, NonOverloadedCoroIntrinsics);
 }
 
-// Verifies if a module has named values listed. Also, in debug mode verifies
-// that names are intrinsic names.
-bool coro::declaresIntrinsics(const Module &M,
-                              const std::initializer_list<StringRef> List) {
-  for (StringRef Name : List) {
-    assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");
-    if (M.getNamedValue(Name))
-      return true;
-  }
+// Checks whether the module declares any of the listed intrinsics.
+bool coro::declaresIntrinsics(const Module &M, ArrayRef<Intrinsic::ID> List) {
+#ifndef NDEBUG
+  for (Intrinsic::ID ID : List)
+    assert(!Intrinsic::isOverloaded(ID) &&
+           "Only non-overloaded intrinsics supported");
+#endif
 
+  for (Intrinsic::ID ID : List)
+    if (Intrinsic::getDeclarationIfExists(&M, ID))
+      return true;
   return false;
 }
 
@@ -192,7 +181,8 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 // Collect "interesting" coroutine intrinsics.
 void coro::Shape::analyze(Function &F,
                           SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
+                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
+                          CoroPromiseInst *&CoroPromise) {
   clear();
 
   bool HasFinalSuspend = false;
@@ -286,6 +276,14 @@ void coro::Shape::analyze(Function &F,
           }
         }
         break;
+      case Intrinsic::coro_is_in_ramp:
+        CoroIsInRampInsts.push_back(cast<CoroIsInRampInst>(II));
+        break;
+      case Intrinsic::coro_promise:
+        assert(CoroPromise == nullptr &&
+               "CoroEarly must ensure coro.promise unique");
+        CoroPromise = cast<CoroPromiseInst>(II);
+        break;
       }
     }
   }
@@ -362,9 +360,9 @@ void coro::Shape::invalidateCoroutine(
     // present.
     for (AnyCoroSuspendInst *CS : CoroSuspends) {
       CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
-      CS->eraseFromParent();
       if (auto *CoroSave = CS->getCoroSave())
         CoroSave->eraseFromParent();
+      CS->eraseFromParent();
     }
     CoroSuspends.clear();
 
@@ -477,7 +475,7 @@ void coro::AnyRetconABI::init() {
 
 void coro::Shape::cleanCoroutine(
     SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
+    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves, CoroPromiseInst *PI) {
   // The coro.frame intrinsic is always lowered to the result of coro.begin.
   for (CoroFrameInst *CF : CoroFrames) {
     CF->replaceAllUsesWith(CoroBegin);
@@ -489,6 +487,13 @@ void coro::Shape::cleanCoroutine(
   for (CoroSaveInst *CoroSave : UnusedCoroSaves)
     CoroSave->eraseFromParent();
   UnusedCoroSaves.clear();
+
+  if (PI) {
+    PI->replaceAllUsesWith(PI->isFromPromise()
+                               ? cast<Value>(CoroBegin)
+                               : cast<Value>(getPromiseAlloca()));
+    PI->eraseFromParent();
+  }
 }
 
 static void propagateCallAttrsFromCallee(CallInst *Call, Function *Callee) {

@@ -7,13 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/tolower.h"
-#include "src/__support/ctype_utils.h"
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, tolower, (int c)) { return internal::tolower(c); }
+LLVM_LIBC_FUNCTION(int, tolower, (int c)) {
+  if (c < cpp::numeric_limits<char>::min() ||
+      c > cpp::numeric_limits<char>::max()) {
+    return c;
+  }
+  return static_cast<int>(internal::tolower(static_cast<char>(c)));
+}
 
 } // namespace LIBC_NAMESPACE_DECL

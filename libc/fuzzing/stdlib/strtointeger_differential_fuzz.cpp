@@ -44,6 +44,10 @@
 // greater than 50% chance for each character to end the string, making the odds
 // of getting long numbers very low.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+  if (size < 2) // Needs at least one byte for the base and one byte for the
+                // string.
+    return 0;
+
   uint8_t *container = new uint8_t[size + 1];
   if (!container)
     __builtin_trap();

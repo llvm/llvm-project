@@ -61,6 +61,8 @@ include "MSP430CallingConv.td"
 
 include "MSP430InstrInfo.td"
 
+defm : RemapAllTargetPseudoPointerOperands<GR16>;
+
 def MSP430InstrInfo : InstrInfo;
 
 //===---------------------------------------------------------------------===//

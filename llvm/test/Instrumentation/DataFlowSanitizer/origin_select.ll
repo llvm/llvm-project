@@ -48,7 +48,7 @@ define <4 x i8> @select8v(<4 x i1> %c, <4 x i8> %t, <4 x i8> %f) {
   ; TRACK_CONTROL_FLOW: [[CO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
   ; TRACK_CONTROL_FLOW: [[FO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
   ; TRACK_CONTROL_FLOW: [[TO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-  ; TRACK_CONTROL_FLOW: [[FS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
+  ; TRACK_CONTROL_FLOW: [[FS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
   ; TRACK_CONTROL_FLOW: [[CS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; TRACK_CONTROL_FLOW: [[FS_NE:%.*]] = icmp ne i8 [[FS]], 0
   ; TRACK_CONTROL_FLOW: [[FTO:%.*]] = select i1 [[FS_NE]], i32 [[FO]], i32 [[TO]]
@@ -59,7 +59,7 @@ define <4 x i8> @select8v(<4 x i1> %c, <4 x i8> %t, <4 x i8> %f) {
   ; NO_TRACK_CONTROL_FLOW: @select8v.dfsan
   ; NO_TRACK_CONTROL_FLOW: [[FO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
   ; NO_TRACK_CONTROL_FLOW: [[TO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-  ; NO_TRACK_CONTROL_FLOW: [[FS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
+  ; NO_TRACK_CONTROL_FLOW: [[FS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
   ; NO_TRACK_CONTROL_FLOW: [[FS_NE:%.*]] = icmp ne i8 [[FS]], 0
   ; NO_TRACK_CONTROL_FLOW: [[FTO:%.*]] = select i1 [[FS_NE]], i32 [[FO]], i32 [[TO]]
   ; NO_TRACK_CONTROL_FLOW: store i32 [[FTO]], ptr @__dfsan_retval_origin_tls, align 4

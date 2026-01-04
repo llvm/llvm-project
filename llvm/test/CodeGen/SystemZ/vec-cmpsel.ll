@@ -43,8 +43,7 @@ define <16 x i16> @fun3(<16 x i8> %val1, <16 x i8> %val2, <16 x i16> %val3, <16 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vceqb %v0, %v24, %v26
 ; CHECK-DAG:     vuphb [[REG0:%v[0-9]+]], %v0
-; CHECK-DAG:     vmrlg [[REG1:%v[0-9]+]], %v0, %v0
-; CHECK-DAG:     vuphb [[REG1]], [[REG1]]
+; CHECK-DAG:     vuplb [[REG1:%v[0-9]+]], %v0
 ; CHECK-NEXT:    vsel %v24, %v28, %v25, [[REG0]]
 ; CHECK-NEXT:    vsel %v26, %v30, %v27, [[REG1]]
 ; CHECK-NEXT:    br %r14
@@ -129,8 +128,7 @@ define <8 x i32> @fun10(<8 x i16> %val1, <8 x i16> %val2, <8 x i32> %val3, <8 x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vceqh %v0, %v24, %v26
 ; CHECK-DAG:     vuphh [[REG0:%v[0-9]+]], %v0
-; CHECK-DAG:     vmrlg [[REG1:%v[0-9]+]], %v0, %v0
-; CHECK-DAG:     vuphh [[REG1]], [[REG1]]
+; CHECK-DAG:     vuplhw [[REG1:%v[0-9]+]], %v0
 ; CHECK-NEXT:    vsel %v24, %v28, %v25, [[REG0]]
 ; CHECK-NEXT:    vsel %v26, %v30, %v27, [[REG1]]
 ; CHECK-NEXT:    br %r14
@@ -228,8 +226,7 @@ define <4 x i64> @fun18(<4 x i32> %val1, <4 x i32> %val2, <4 x i64> %val3, <4 x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vceqf %v0, %v24, %v26
 ; CHECK-DAG:     vuphf [[REG0:%v[0-9]+]], %v0
-; CHECK-DAG:     vmrlg [[REG1:%v[0-9]+]], %v0, %v0
-; CHECK-DAG:     vuphf [[REG1]], [[REG1]]
+; CHECK-DAG:     vuplf [[REG1]], %v0
 ; CHECK-NEXT:    vsel %v24, %v28, %v25, [[REG0]]
 ; CHECK-NEXT:    vsel %v26, %v30, %v27, [[REG1]]
 ; CHECK-NEXT:    br %r14
@@ -428,8 +425,7 @@ define <4 x double> @fun29(<4 x float> %val1, <4 x float> %val2, <4 x double> %v
 ; CHECK-NEXT:    vldeb %v2, %v2
 ; CHECK-NEXT:    vfchdb %v1, %v2, %v1
 ; CHECK-NEXT:    vpkg [[REG0:%v[0-9]+]], %v1, %v0
-; CHECK-DAG:     vmrlg [[REG1:%v[0-9]+]], [[REG0]], [[REG0]]
-; CHECK-DAG:     vuphf [[REG1]], [[REG1]]
+; CHECK-DAG:     vuplf [[REG1:%v[0-9]+]], [[REG0]]
 ; CHECK-DAG:     vuphf [[REG2:%v[0-9]+]], [[REG0]]
 ; CHECK-NEXT:    vsel %v24, %v28, %v25, [[REG2]]
 ; CHECK-NEXT:    vsel %v26, %v30, %v27, [[REG1]]
@@ -439,8 +435,7 @@ define <4 x double> @fun29(<4 x float> %val1, <4 x float> %val2, <4 x double> %v
 ; CHECK-Z14:       # %bb.0:
 ; CHECK-Z14-NEXT:    vfchsb  %v0, %v24, %v26
 ; CHECK-Z14-DAG:     vuphf   [[REG0:%v[0-9]+]], %v0
-; CHECK-Z14-DAG:     vmrlg   [[REG1:%v[0-9]+]], %v0, %v0
-; CHECK-Z14-DAG:     vuphf   [[REG1]], [[REG1]]
+; CHECK-Z14-DAG:     vuplf   [[REG1:%v[0-9]+]], %v0
 ; CHECK-Z14-NEXT:    vsel    %v24, %v28, %v25, [[REG0]]
 ; CHECK-Z14-NEXT:    vsel    %v26, %v30, %v27, [[REG1]]
 ; CHECK-Z14-NEXT:    br %r14

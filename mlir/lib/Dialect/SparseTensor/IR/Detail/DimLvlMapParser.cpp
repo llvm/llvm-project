@@ -231,7 +231,9 @@ ParseResult DimLvlMapParser::parseLvlSpecList() {
   const auto loc = parser.getCurrentLocation();
   const auto res = parser.parseCommaSeparatedList(
       mlir::OpAsmParser::Delimiter::Paren,
-      [=]() -> ParseResult { return parseLvlSpec(requireLvlVarBinding); },
+      [this, requireLvlVarBinding]() -> ParseResult {
+        return parseLvlSpec(requireLvlVarBinding);
+      },
       " in level-specifier list");
   FAILURE_IF_FAILED(res)
   const auto specLvlRank = lvlSpecs.size();
