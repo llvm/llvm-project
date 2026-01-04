@@ -164,7 +164,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_ArmOut:                                                  \
   case ParsedAttr::AT_ArmInOut:                                                \
   case ParsedAttr::AT_ArmAgnostic:                                             \
-  case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
+  case ParsedAttr::AT_NoCallerSavedRegisters:                                  \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
     CALLING_CONV_ATTRS_CASELIST
 
@@ -7935,7 +7935,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
   }
 
-  if (attr.getKind() == ParsedAttr::AT_AnyX86NoCallerSavedRegisters) {
+  if (attr.getKind() == ParsedAttr::AT_NoCallerSavedRegisters) {
     if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
       return true;
 

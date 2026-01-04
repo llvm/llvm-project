@@ -2514,7 +2514,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !CodeGenOpts.NullPointerIsValid)
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
-    if (TargetDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())
+    if (TargetDecl->hasAttr<NoCallerSavedRegistersAttr>())
       FuncAttrs.addAttribute("no_caller_saved_registers");
     if (TargetDecl->hasAttr<AnyX86NoCfCheckAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoCfCheck);

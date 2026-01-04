@@ -3938,8 +3938,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   if (OldTypeInfo.getNoCallerSavedRegs() !=
       NewTypeInfo.getNoCallerSavedRegs()) {
     if (NewTypeInfo.getNoCallerSavedRegs()) {
-      AnyX86NoCallerSavedRegistersAttr *Attr =
-        New->getAttr<AnyX86NoCallerSavedRegistersAttr>();
+      NoCallerSavedRegistersAttr *Attr =
+        New->getAttr<NoCallerSavedRegistersAttr>();
       Diag(New->getLocation(), diag::err_function_attribute_mismatch) << Attr;
       Diag(OldLocation, diag::note_previous_declaration);
       return true;
@@ -16928,6 +16928,12 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
 
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
+
+  if (getASTContext().getTargetInfo().getTriple().isPPC() &&
+            FD && FD->hasAttr<NoCallerSavedRegistersAttr>() &&
+            !FD->getReturnType()->isVoidType()) {
+      Diag(FD->getBeginLoc(), diag::err_anyppc_return_regsave);
+  }
 
   return dcl;
 }

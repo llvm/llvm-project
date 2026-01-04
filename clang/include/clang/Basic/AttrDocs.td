@@ -5993,7 +5993,7 @@ non-GPR registers.
     }];
 }
 
-def AnyX86NoCallerSavedRegistersDocs : Documentation {
+def NoCallerSavedRegistersDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 Use this attribute to indicate that the specified function has no
@@ -6007,9 +6007,12 @@ The user can call functions specified with the 'no_caller_saved_registers'
 attribute from an interrupt handler without saving and restoring all
 call-clobbered registers.
 
-Functions specified with the 'no_caller_saved_registers' attribute should only
+On X86, functions specified with the 'no_caller_saved_registers' attribute should only
 call other functions with the 'no_caller_saved_registers' attribute, or should be
 compiled with the '-mgeneral-regs-only' flag to avoid saving unused non-GPR registers.
+
+On PowerPC, functions specified with the 'no_caller_saved_registers' attribute may not
+return a value as the return register will be restored and thus cannot hold a value.
 
 Note that 'no_caller_saved_registers' attribute is not a calling convention.
 In fact, it only overrides the decision of which registers should be saved by

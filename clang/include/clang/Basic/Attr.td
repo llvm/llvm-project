@@ -476,6 +476,7 @@ def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetM68k : TargetArch<["m68k"]>;
+def TargetPowerPC : TargetArch<["ppc", "ppcle", "ppc64", "ppc64le"]>;
 def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetX86_64 : TargetArch<["x86_64"]>;
@@ -3897,10 +3898,12 @@ def AnyX86Interrupt : InheritableAttr, TargetSpecificAttr<TargetAnyX86> {
   let Documentation = [AnyX86InterruptDocs];
 }
 
-def AnyX86NoCallerSavedRegisters : InheritableAttr,
-                                   TargetSpecificAttr<TargetAnyX86> {
+def NoCallerSavedRegisters
+    : InheritableAttr,
+      TargetSpecificAttr<
+          TargetArch<!listconcat(TargetX86.Arches, TargetPowerPC.Arches)>> {
   let Spellings = [GCC<"no_caller_saved_registers">];
-  let Documentation = [AnyX86NoCallerSavedRegistersDocs];
+  let Documentation = [NoCallerSavedRegistersDocs];
   let SimpleHandler = 1;
 }
 

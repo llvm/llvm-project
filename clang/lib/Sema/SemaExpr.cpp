@@ -6961,12 +6961,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   // save and restore the non-GPR state.
   if (auto *Caller = getCurFunctionDecl()) {
     if (Caller->hasAttr<AnyX86InterruptAttr>() ||
-        Caller->hasAttr<AnyX86NoCallerSavedRegistersAttr>()) {
+        Caller->hasAttr<NoCallerSavedRegistersAttr>()) {
       const TargetInfo &TI = Context.getTargetInfo();
       bool HasNonGPRRegisters =
           TI.hasFeature("sse") || TI.hasFeature("x87") || TI.hasFeature("mmx");
       if (HasNonGPRRegisters &&
-          (!FDecl || !FDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())) {
+          (!FDecl || !FDecl->hasAttr<NoCallerSavedRegistersAttr>())) {
         Diag(Fn->getExprLoc(), diag::warn_anyx86_excessive_regsave)
             << (Caller->hasAttr<AnyX86InterruptAttr>() ? 0 : 1);
         if (FDecl)

@@ -199,6 +199,27 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_64_AllRegs_SaveList;
   }
 
+  // No caller saved registers.
+  if (MF->getFunction().hasFnAttribute("no_caller_saved_registers")) {
+      if (Subtarget.isAIXABI())
+        report_fatal_error("NoCallerSavedRegisters unimplemented on AIX.");
+      if (TM.isPPC64()) {
+        if (Subtarget.pairedVectorMemops())
+          return CSR_SVR64_SaveAll_VSRP_SaveList;
+        if (Subtarget.hasAltivec())
+          return CSR_SVR64_SaveAll_Altivec_SaveList;
+        return CSR_SVR64_SaveAll_SaveList;
+      }
+      // 32-bit targets.
+      if (Subtarget.pairedVectorMemops())
+        return CSR_SVR32_SaveAll_VSRP_SaveList;
+      if (Subtarget.hasAltivec())
+        return CSR_SVR32_SaveAll_Altivec_SaveList;
+      if (Subtarget.hasSPE())
+        return CSR_SVR32_SaveAll_SPE_SaveList;
+      return CSR_SVR32_SaveAll_SaveList;
+  }
+
   // On PPC64, we might need to save r2 (but only if it is not reserved).
   // We do not need to treat R2 as callee-saved when using PC-Relative calls
   // because any direct uses of R2 will cause it to be reserved. If the function

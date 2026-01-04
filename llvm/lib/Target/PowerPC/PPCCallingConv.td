@@ -343,6 +343,35 @@ def CSR_PPC64_R2_Altivec : CalleeSavedRegs<(add CSR_PPC64_Altivec, X2)>;
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
+def CSR_ALL_VSRP : CalleeSavedRegs<(sequence "VSRp%u", 0, 31)>;
+
+def CSR_VSRP :
+  CalleeSavedRegs<(add VSRp26, VSRp27, VSRp28, VSRp29, VSRp30, VSRp31)>;
+
+// NoCallerSavedRegisters attribute marks ALL registers as non-volatile EXCEPT for r1.
+def CSR_SVR32_SaveAll_Common : CalleeSavedRegs<(add R0, (sequence "R%u", 3, 31),
+                                                (sequence "CR%u", 0, 7))>;
+
+def CSR_SVR32_SaveAll : CalleeSavedRegs<(add CSR_SVR32_SaveAll_Common,
+                                        (sequence "F%u", 0, 31))>;
+
+def CSR_SVR32_SaveAll_Altivec : CalleeSavedRegs<(add CSR_SVR32_SaveAll,
+                                                (sequence "V%u", 0, 31))>;
+
+def CSR_SVR32_SaveAll_SPE : CalleeSavedRegs<(add CSR_SVR32_SaveAll_Common,
+                                            (sequence "S%u", 0, 31))>;
+
+def CSR_SVR32_SaveAll_VSRP : CalleeSavedRegs<(add CSR_SVR32_SaveAll, CSR_ALL_VSRP)>;
+
+def CSR_SVR64_SaveAll : CalleeSavedRegs<(add R0, (sequence "X%u", 3, 31),
+                                        (sequence "F%u", 0, 31),
+                                        (sequence "CR%u", 0, 7))>;
+
+def CSR_SVR64_SaveAll_VSRP : CalleeSavedRegs<(add CSR_SVR64_SaveAll, CSR_ALL_VSRP)>;
+
+def CSR_SVR64_SaveAll_Altivec : CalleeSavedRegs<(add CSR_SVR64_SaveAll,
+                                                    (sequence "V%u", 0, 31))>;
+
 // coldcc calling convection marks most registers as non-volatile.
 // Do not include r1 since the stack pointer is never considered a CSR.
 // Do not include r2, since it is the TOC register and is added depending
@@ -396,11 +425,6 @@ def CSR_64_AllRegs_VSX : CalleeSavedRegs<(add CSR_64_AllRegs_Altivec,
 
 def CSR_64_AllRegs_AIX_Dflt_VSX : CalleeSavedRegs<(add CSR_64_AllRegs_Altivec,
                                          (sequence "VSL%u", 0, 19))>;
-
-def CSR_ALL_VSRP : CalleeSavedRegs<(sequence "VSRp%u", 0, 31)>;
-
-def CSR_VSRP :
-  CalleeSavedRegs<(add VSRp26, VSRp27, VSRp28, VSRp29, VSRp30, VSRp31)>;
 
 def CSR_SVR432_VSRP : CalleeSavedRegs<(add CSR_SVR432_Altivec, CSR_VSRP)>;
 

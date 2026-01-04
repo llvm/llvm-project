@@ -403,6 +403,9 @@ def warn_anyx86_excessive_regsave : Warning<
   " with attribute 'no_caller_saved_registers'"
   " or be compiled with '-mgeneral-regs-only'">,
   InGroup<DiagGroup<"excessive-regsave">>;
+def err_anyppc_return_regsave : Error<
+  "cannot save regs if function returns value as "
+  "the return value gets clobbered during restore">;
 def warn_arm_interrupt_vfp_clobber : Warning<
   "interrupt service routine with vfp enabled may clobber the "
   "interruptee's vfp state; "
