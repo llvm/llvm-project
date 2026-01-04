@@ -132,7 +132,7 @@ class SBTargetExtensionsTestCase(TestBase):
         self.assertIsNotNone(target.arch_name)
 
         self.assertTrue(target.data_byte_size > 0)
-        self.assertGreater(target.data_byte_size > 0)
-        self.assertGreater(target.code_byte_size > 0)
+        self.assertGreater(target.data_byte_size, 0)
+        self.assertGreater(target.code_byte_size, 0)
 
         self.assertTrue(target.platform.IsValid())
