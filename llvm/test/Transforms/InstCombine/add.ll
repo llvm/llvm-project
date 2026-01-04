@@ -4273,4 +4273,265 @@ define i32 @fold_zext_nneg_add_const_fail2(i8 %x) {
 }
 
 declare void @llvm.assume(i1)
+declare i32 @llvm.ctlz.i32(i32, i1)
+
+; Ceiling division by power-of-2: (x >> log2(N)) + ((x & (N-1)) != 0) -> (x + (N-1)) >> log2(N)
+; This is only valid when x + (N-1) doesn't overflow
+
+; Test with known range that prevents overflow
+define i32 @ceil_div_by_8_known_range(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_by_8_known_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
+; Test with the exact IR from the original testcase
+define i32 @ceil_div_from_clz(i32 %v) {
+; CHECK-LABEL: @ceil_div_from_clz(
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[V:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i32 39, [[CTLZ]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ctlz = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %v, i1 false)
+  %sub = sub nuw nsw i32 32, %ctlz
+  %shr = lshr i32 %sub, 3
+  %and = and i32 %sub, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add nuw nsw i32 %shr, %ext
+  ret i32 %r
+}
+
+; Vector version with known range
+define <2 x i32> @ceil_div_by_8_vec_range(<2 x i32> range(i32 0, 1000) %x) {
+; CHECK-LABEL: @ceil_div_by_8_vec_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw <2 x i32> [[X:%.*]], splat (i32 7)
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> [[TMP1]], splat (i32 3)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shr = lshr <2 x i32> %x, <i32 3, i32 3>
+  %and = and <2 x i32> %x, <i32 7, i32 7>
+  %cmp = icmp ne <2 x i32> %and, <i32 0, i32 0>
+  %ext = zext <2 x i1> %cmp to <2 x i32>
+  %r = add <2 x i32> %shr, %ext
+  ret <2 x i32> %r
+}
+
+; Ceiling division by 16 with known range
+define i16 @ceil_div_by_16_i16(i16 range(i16 0, 1000) %x) {
+; CHECK-LABEL: @ceil_div_by_16_i16(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[X:%.*]], 15
+; CHECK-NEXT:    [[R:%.*]] = lshr i16 [[TMP1]], 4
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shr = lshr i16 %x, 4
+  %and = and i16 %x, 15
+  %cmp = icmp ne i16 %and, 0
+  %ext = zext i1 %cmp to i16
+  %r = add i16 %shr, %ext
+  ret i16 %r
+}
+
+; Negative test: no overflow guarantee - should NOT optimize
+define i32 @ceil_div_by_8_no_overflow_info(i32 %x) {
+; CHECK-LABEL: @ceil_div_by_8_no_overflow_info(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
+; Negative test: nuw on final add doesn't help
+define i32 @ceil_div_by_8_only_nuw_on_add(i32 %x) {
+; CHECK-LABEL: @ceil_div_by_8_only_nuw_on_add(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add nuw i32 %shr, %ext  ; nuw here doesn't prove x+7 won't overflow
+  ret i32 %r
+}
+
+; Negative test: wrong mask
+define i32 @ceil_div_wrong_mask(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_wrong_mask(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 6  ; Wrong mask: should be 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
+; Negative test: wrong shift amount
+define i32 @ceil_div_wrong_shift(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_wrong_shift(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 4  ; Shift by 4, but mask is 7 (should be 15)
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
+; Negative test: wrong comparison
+define i32 @ceil_div_wrong_cmp(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_wrong_cmp(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 7
+  %cmp = icmp eq i32 %and, 0  ; Wrong: should be ne
+  %ext = zext i1 %cmp to i32
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
+; Multi-use test: all intermediate values have uses
+define i32 @ceil_div_multi_use(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_multi_use(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use_i32(i32 [[SHR]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    call void @use_i32(i32 [[AND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[EXT]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  call void @use_i32(i32 %shr)
+  %and = and i32 %x, 7
+  call void @use_i32(i32 %and)
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  call void @use_i32(i32 %ext)
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
+; Commuted test: add operands are swapped  
+define i32 @ceil_div_commuted(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add i32 %ext, %shr  ; Operands swapped
+  ret i32 %r
+}
+
+; Commuted with multi-use
+define i32 @ceil_div_commuted_multi_use(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_commuted_multi_use(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use_i32(i32 [[SHR]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[EXT]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  call void @use_i32(i32 %shr)
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  call void @use_i32(i32 %ext)
+  %r = add i32 %ext, %shr  ; Operands swapped
+  ret i32 %r
+}
+
+; Multi-use test where only zext has multiple uses - should still optimize
+define i32 @ceil_div_zext_multi_use(i32 range(i32 0, 100) %x) {
+; CHECK-LABEL: @ceil_div_zext_multi_use(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[EXT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[X]], 7
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 3
+  %and = and i32 %x, 7
+  %cmp = icmp ne i32 %and, 0
+  %ext = zext i1 %cmp to i32
+  call void @use_i32(i32 %ext)
+  %r = add i32 %shr, %ext
+  ret i32 %r
+}
+
+; Multi-use with vector type
+define <2 x i32> @ceil_div_vec_multi_use(<2 x i32> range(i32 0, 1000) %x) {
+; CHECK-LABEL: @ceil_div_vec_multi_use(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 3)
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[SHR]])
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X]], splat (i32 7)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> [[CMP]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i32> [[SHR]], [[EXT]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shr = lshr <2 x i32> %x, <i32 3, i32 3>
+  call void @use_vec(<2 x i32> %shr)
+  %and = and <2 x i32> %x, <i32 7, i32 7>
+  %cmp = icmp ne <2 x i32> %and, <i32 0, i32 0>
+  %ext = zext <2 x i1> %cmp to <2 x i32>
+  %r = add <2 x i32> %shr, %ext
+  ret <2 x i32> %r
+}
+
+declare void @use_i32(i32)
+declare void @use_vec(<2 x i32>)
 declare void @fake_func(i32)

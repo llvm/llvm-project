@@ -4,8 +4,20 @@
 ; RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK-SCALAR %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
+declare half @llvm.sqrt.f16(half)
 declare float @llvm.sqrt.f32(float)
 declare float @sqrtf(float)
+
+; Check register square root.
+define half @f0(half %val) {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: sqebr %f0, %f0
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.sqrt.f16(half %val)
+  ret half %res
+}
 
 ; Check register square root.
 define float @f1(float %val) {

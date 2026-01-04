@@ -16,11 +16,11 @@
 #include "Quality.h"
 #include "Selection.h"
 #include "SourceCode.h"
-#include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/Index.h"
 #include "index/Merge.h"
+#include "index/Ref.h"
 #include "index/Relation.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolID.h"
@@ -42,7 +42,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -56,9 +55,9 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -66,6 +65,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -372,6 +372,15 @@ void enhanceLocatedSymbolsFromIndex(llvm::MutableArrayRef<LocatedSymbol> Result,
   });
 }
 
+bool objcMethodIsTouched(const SourceManager &SM, const ObjCMethodDecl *OMD,
+                         SourceLocation Loc) {
+  unsigned NumSels = OMD->getNumSelectorLocs();
+  for (unsigned I = 0; I < NumSels; ++I)
+    if (SM.getSpellingLoc(OMD->getSelectorLoc(I)) == Loc)
+      return true;
+  return false;
+}
+
 // Decls are more complicated.
 // The AST contains at least a declaration, maybe a definition.
 // These are up-to-date, and so generally preferred over index results.
@@ -427,6 +436,26 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         // We may be overridding multiple methods - offer them all.
         for (const NamedDecl *ND : CMD->overridden_methods())
           AddResultDecl(ND);
+        continue;
+      }
+    }
+    // Special case: - (void)^method {} should jump to overrides, but the decl
+    // shouldn't, only the definition. Note that an Objective-C method can
+    // override a parent class or protocol.
+    //
+    // FIXME: Support jumping from a protocol decl to overrides on go-to
+    // definition.
+    if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D)) {
+      if (OMD->isThisDeclarationADefinition() && TouchedIdentifier &&
+          objcMethodIsTouched(SM, OMD, TouchedIdentifier->location())) {
+        llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+        OMD->getOverriddenMethods(Overrides);
+        if (!Overrides.empty()) {
+          for (const auto *Override : Overrides)
+            AddResultDecl(Override);
+          LocateASTReferentMetric.record(1, "objc-overriden-method");
+        }
+        AddResultDecl(OMD);
         continue;
       }
     }
@@ -777,7 +806,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
       // go-to-definition on auto should find the definition of the deduced
       // type, if possible
-      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+      if (auto Deduced =
+              getDeducedType(AST.getASTContext(), AST.getHeuristicResolver(),
+                             Tok.location())) {
         auto LocSym = locateSymbolForType(AST, *Deduced, Index);
         if (!LocSym.empty())
           return LocSym;
@@ -830,17 +861,47 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (Inc.Resolved.empty())
       continue;
+
+    // Get the location of the # symbole of the "#include ..." statement
     auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
+
+    // get the # Token itself, std::next to get the "include" token and the
+    // first token after (aka "File Token")
     const auto *HashTok = AST.getTokens().spelledTokenContaining(HashLoc);
     assert(HashTok && "got inclusion at wrong offset");
     const auto *IncludeTok = std::next(HashTok);
     const auto *FileTok = std::next(IncludeTok);
-    // FileTok->range is not sufficient here, as raw lexing wouldn't yield
-    // correct tokens for angled filenames. Hence we explicitly use
-    // Inc.Written's length.
-    auto FileRange =
-        syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
-            .toCharRange(SM);
+
+    // The File Token can either be of kind :
+    // "less" if using the "#include <h-char-sequence> new-line" syntax
+    // "string_literal" if using the "#include "q-char-sequence" new-line"
+    // syntax something else (most likely "identifier") if using the "#include
+    // pp-tokens new-line" syntax (#include with macro argument)
+
+    CharSourceRange FileRange;
+
+    if (FileTok->kind() == tok::TokenKind::less) {
+      // FileTok->range would only include the '<' char. Hence we explicitly use
+      // Inc.Written's length.
+      FileRange =
+          syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
+              .toCharRange(SM);
+    } else if (FileTok->kind() == tok::TokenKind::string_literal) {
+      // FileTok->range includes the quotes for string literals so just return
+      // it.
+      FileRange = FileTok->range(SM).toCharRange(SM);
+    } else {
+      // FileTok is the first Token of a macro spelling
+
+      // Report the range of the first token (as it should be the macro
+      // identifier)
+      // We could use the AST to find the last spelled token of the macro and
+      // report a range spanning the full macro expression, but it would require
+      // using token-buffers that are deemed too unstable and crash-prone
+      // due to optimizations in cland
+
+      FileRange = FileTok->range(SM).toCharRange(SM);
+    }
 
     Result.push_back(
         DocumentLink({halfOpenToRange(SM, FileRange),
@@ -865,12 +926,15 @@ public:
     }
   };
 
-  ReferenceFinder(const ParsedAST &AST,
+  ReferenceFinder(ParsedAST &AST,
                   const llvm::ArrayRef<const NamedDecl *> Targets,
                   bool PerToken)
       : PerToken(PerToken), AST(AST) {
-    for (const NamedDecl *ND : Targets)
+    for (const NamedDecl *ND : Targets) {
       TargetDecls.insert(ND->getCanonicalDecl());
+      if (auto *Constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(ND))
+        TargetConstructors.insert(Constructor);
+    }
   }
 
   std::vector<Reference> take() && {
@@ -880,15 +944,43 @@ public:
       return std::tie(LTok, L.Role) < std::tie(RTok, R.Role);
     });
     // We sometimes see duplicates when parts of the AST get traversed twice.
-    References.erase(std::unique(References.begin(), References.end(),
-                                 [](const Reference &L, const Reference &R) {
-                                   auto LTok = L.SpelledTok.location();
-                                   auto RTok = R.SpelledTok.location();
-                                   return std::tie(LTok, L.Role) ==
-                                          std::tie(RTok, R.Role);
-                                 }),
+    References.erase(llvm::unique(References,
+                                  [](const Reference &L, const Reference &R) {
+                                    auto LTok = L.SpelledTok.location();
+                                    auto RTok = R.SpelledTok.location();
+                                    return std::tie(LTok, L.Role) ==
+                                           std::tie(RTok, R.Role);
+                                  }),
                      References.end());
     return std::move(References);
+  }
+
+  bool forwardsToConstructor(const Decl *D) {
+    if (TargetConstructors.empty())
+      return false;
+    auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+    if (FD == nullptr || !FD->isTemplateInstantiation())
+      return false;
+
+    SmallVector<const CXXConstructorDecl *, 1> *Constructors = nullptr;
+    if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
+        Entry != AST.ForwardingToConstructorCache.end())
+      Constructors = &Entry->getSecond();
+    if (Constructors == nullptr) {
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT == nullptr || !isLikelyForwardingFunction(PT))
+        return false;
+
+      SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
+          searchConstructorsInForwardingFunction(FD);
+      auto Iter = AST.ForwardingToConstructorCache.try_emplace(
+          FD, std::move(FoundConstructors));
+      Constructors = &Iter.first->getSecond();
+    }
+    for (auto *Constructor : *Constructors)
+      if (TargetConstructors.contains(Constructor))
+        return true;
+    return false;
   }
 
   bool
@@ -896,7 +988,8 @@ public:
                        llvm::ArrayRef<index::SymbolRelation> Relations,
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    if (!TargetDecls.contains(D->getCanonicalDecl()))
+    if (!TargetDecls.contains(D->getCanonicalDecl()) &&
+        !forwardsToConstructor(ASTNode.OrigD))
       return true;
     const SourceManager &SM = AST.getSourceManager();
     if (!isInsideMainFile(Loc, SM))
@@ -936,8 +1029,10 @@ public:
 private:
   bool PerToken; // If true, report 3 references for split ObjC selector names.
   std::vector<Reference> References;
-  const ParsedAST &AST;
+  ParsedAST &AST;
   llvm::DenseSet<const Decl *> TargetDecls;
+  // Constructors need special handling since they can be hidden behind forwards
+  llvm::DenseSet<const CXXConstructorDecl *> TargetConstructors;
 };
 
 std::vector<ReferenceFinder::Reference>
@@ -1002,7 +1097,7 @@ class FindControlFlow : public RecursiveASTVisitor<FindControlFlow> {
   // Traverses the subtree using Delegate() if any targets remain.
   template <typename Func>
   bool filterAndTraverse(DynTypedNode D, const Func &Delegate) {
-    auto RestoreIgnore = llvm::make_scope_exit(
+    llvm::scope_exit RestoreIgnore(
         [OldIgnore(Ignore), this] { Ignore = OldIgnore; });
     if (getFunctionBody(D))
       Ignore = All;
@@ -1047,11 +1142,11 @@ public:
     return true;
   }
   bool VisitBreakStmt(BreakStmt *B) {
-    found(Break, B->getBreakLoc());
+    found(Break, B->getKwLoc());
     return true;
   }
   bool VisitContinueStmt(ContinueStmt *C) {
-    found(Continue, C->getContinueLoc());
+    found(Continue, C->getKwLoc());
     return true;
   }
   bool VisitSwitchCase(SwitchCase *C) {
@@ -1283,6 +1378,12 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
     } else if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
       IDs.insert(getSymbolID(RD));
       QueryKind = RelationKind::BaseOf;
+    } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(ND)) {
+      IDs.insert(getSymbolID(OMD));
+      QueryKind = RelationKind::OverriddenBy;
+    } else if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(ND)) {
+      IDs.insert(getSymbolID(ID));
+      QueryKind = RelationKind::BaseOf;
     }
   }
   return findImplementors(std::move(IDs), QueryKind, Index, AST.tuPath());
@@ -1296,6 +1397,21 @@ void getOverriddenMethods(const CXXMethodDecl *CMD,
   if (!CMD)
     return;
   for (const CXXMethodDecl *Base : CMD->overridden_methods()) {
+    if (auto ID = getSymbolID(Base))
+      OverriddenMethods.insert(ID);
+    getOverriddenMethods(Base, OverriddenMethods);
+  }
+}
+
+// Recursively finds all the overridden methods of `OMD` in complete type
+// hierarchy.
+void getOverriddenMethods(const ObjCMethodDecl *OMD,
+                          llvm::DenseSet<SymbolID> &OverriddenMethods) {
+  if (!OMD)
+    return;
+  llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+  OMD->getOverriddenMethods(Overrides);
+  for (const ObjCMethodDecl *Base : Overrides) {
     if (auto ID = getSymbolID(Base))
       OverriddenMethods.insert(ID);
     getOverriddenMethods(Base, OverriddenMethods);
@@ -1438,6 +1554,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
             getOverriddenMethods(CMD, OverriddenMethods);
           }
         }
+        // Special case: Objective-C methods can override a parent class or
+        // protocol, we should be sure to report references to those.
+        if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(ND)) {
+          OverriddenBy.Subjects.insert(getSymbolID(OMD));
+          getOverriddenMethods(OMD, OverriddenMethods);
+        }
       }
     }
 
@@ -1446,12 +1568,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     // We may get multiple refs with the same location and different Roles, as
     // cross-reference is only interested in locations, we deduplicate them
     // by the location to avoid emitting duplicated locations.
-    MainFileRefs.erase(std::unique(MainFileRefs.begin(), MainFileRefs.end(),
-                                   [](const ReferenceFinder::Reference &L,
-                                      const ReferenceFinder::Reference &R) {
-                                     return L.SpelledTok.location() ==
-                                            R.SpelledTok.location();
-                                   }),
+    MainFileRefs.erase(llvm::unique(MainFileRefs,
+                                    [](const ReferenceFinder::Reference &L,
+                                       const ReferenceFinder::Reference &R) {
+                                      return L.SpelledTok.location() ==
+                                             R.SpelledTok.location();
+                                    }),
                        MainFileRefs.end());
     for (const auto &Ref : MainFileRefs) {
       ReferencesResult::Reference Result;
@@ -1790,7 +1912,7 @@ static void fillSubTypes(const SymbolID &ID,
   });
 }
 
-using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
+using RecursionProtectionSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
 // Extracts parents from AST and populates the type hierarchy item.
 static void fillSuperTypes(const CXXRecordDecl &CXXRD, llvm::StringRef TUPath,
@@ -1879,7 +2001,8 @@ std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
 
 // Return the type most associated with an AST node.
 // This isn't precisely defined: we want "go to type" to do something useful.
-static QualType typeForNode(const SelectionTree::Node *N) {
+static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
+                            const SelectionTree::Node *N) {
   // If we're looking at a namespace qualifier, walk up to what it's qualifying.
   // (If we're pointing at a *class* inside a NNS, N will be a TypeLoc).
   while (N && N->ASTNode.get<NestedNameSpecifierLoc>())
@@ -1891,7 +2014,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
   if (const TypeLoc *TL = N->ASTNode.get<TypeLoc>()) {
     if (llvm::isa<DeducedType>(TL->getTypePtr()))
       if (auto Deduced = getDeducedType(
-              N->getDeclContext().getParentASTContext(), TL->getBeginLoc()))
+              N->getDeclContext().getParentASTContext(), H, TL->getBeginLoc()))
         return *Deduced;
     // Exception: an alias => underlying type.
     if (llvm::isa<TypedefType>(TL->getTypePtr()))
@@ -1913,10 +2036,13 @@ static QualType typeForNode(const SelectionTree::Node *N) {
 
   if (const Decl *D = N->ASTNode.get<Decl>()) {
     struct Visitor : ConstDeclVisitor<Visitor, QualType> {
+      const ASTContext &Ctx;
+      Visitor(const ASTContext &Ctx) : Ctx(Ctx) {}
+
       QualType VisitValueDecl(const ValueDecl *D) { return D->getType(); }
       // Declaration of a type => that type.
       QualType VisitTypeDecl(const TypeDecl *D) {
-        return QualType(D->getTypeForDecl(), 0);
+        return Ctx.getTypeDeclType(D);
       }
       // Exception: alias declaration => the underlying type, not the alias.
       QualType VisitTypedefNameDecl(const TypedefNameDecl *D) {
@@ -1926,7 +2052,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
       QualType VisitTemplateDecl(const TemplateDecl *D) {
         return Visit(D->getTemplatedDecl());
       }
-    } V;
+    } V(Ctx);
     return V.Visit(D);
   }
 
@@ -2070,7 +2196,9 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
     // information about the type you may have not known before
     // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
-    for (const QualType& Type : unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
+    for (const QualType &Type : unwrapFindType(
+             typeForNode(AST.getASTContext(), AST.getHeuristicResolver(), N),
+             AST.getHeuristicResolver()))
       llvm::copy(locateSymbolForType(AST, Type, Index),
                  std::back_inserter(LocatedSymbols));
 
@@ -2231,7 +2359,8 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
         Decl->getKind() != Decl::Kind::FunctionTemplate &&
         !(Decl->getKind() == Decl::Kind::Var &&
           !cast<VarDecl>(Decl)->isLocalVarDecl()) &&
-        Decl->getKind() != Decl::Kind::Field)
+        Decl->getKind() != Decl::Kind::Field &&
+        Decl->getKind() != Decl::Kind::EnumConstant)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath()))
       Result.emplace_back(std::move(*CHI));
@@ -2255,51 +2384,64 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // to an AST node isn't cheap, particularly when the declaration isn't
   // in the main file.
   // FIXME: Consider also using AST information when feasible.
-  RefsRequest Request;
-  Request.IDs.insert(*ID);
-  Request.WantContainer = true;
-  // We could restrict more specifically to calls by introducing a new RefKind,
-  // but non-call references (such as address-of-function) can still be
-  // interesting as they can indicate indirect calls.
-  Request.Filter = RefKind::Reference;
-  // Initially store the ranges in a map keyed by SymbolID of the caller.
-  // This allows us to group different calls with the same caller
-  // into the same CallHierarchyIncomingCall.
-  llvm::DenseMap<SymbolID, std::vector<Location>> CallsIn;
-  // We can populate the ranges based on a refs request only. As we do so, we
-  // also accumulate the container IDs into a lookup request.
-  LookupRequest ContainerLookup;
-  Index->refs(Request, [&](const Ref &R) {
-    auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
-    if (!Loc) {
-      elog("incomingCalls failed to convert location: {0}", Loc.takeError());
-      return;
-    }
-    CallsIn[R.Container].push_back(*Loc);
-
-    ContainerLookup.IDs.insert(R.Container);
-  });
-  // Perform the lookup request and combine its results with CallsIn to
-  // get complete CallHierarchyIncomingCall objects.
-  Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
-    auto It = CallsIn.find(Caller.ID);
-    assert(It != CallsIn.end());
-    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
-      std::vector<Range> FromRanges;
-      for (const Location &L : It->second) {
-        if (L.uri != CHI->uri) {
-          // Call location not in same file as caller.
-          // This can happen in some edge cases. There's not much we can do,
-          // since the protocol only allows returning ranges interpreted as
-          // being in the caller's file.
-          continue;
-        }
-        FromRanges.push_back(L.range);
+  auto QueryIndex = [&](llvm::DenseSet<SymbolID> IDs, bool MightNeverCall) {
+    RefsRequest Request;
+    Request.IDs = std::move(IDs);
+    Request.WantContainer = true;
+    // We could restrict more specifically to calls by introducing a new
+    // RefKind, but non-call references (such as address-of-function) can still
+    // be interesting as they can indicate indirect calls.
+    Request.Filter = RefKind::Reference;
+    // Initially store the ranges in a map keyed by SymbolID of the caller.
+    // This allows us to group different calls with the same caller
+    // into the same CallHierarchyIncomingCall.
+    llvm::DenseMap<SymbolID, std::vector<Location>> CallsIn;
+    // We can populate the ranges based on a refs request only. As we do so, we
+    // also accumulate the container IDs into a lookup request.
+    LookupRequest ContainerLookup;
+    Index->refs(Request, [&](const Ref &R) {
+      auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
+      if (!Loc) {
+        elog("incomingCalls failed to convert location: {0}", Loc.takeError());
+        return;
       }
-      Results.push_back(
-          CallHierarchyIncomingCall{std::move(*CHI), std::move(FromRanges)});
-    }
-  });
+      CallsIn[R.Container].push_back(*Loc);
+
+      ContainerLookup.IDs.insert(R.Container);
+    });
+    // Perform the lookup request and combine its results with CallsIn to
+    // get complete CallHierarchyIncomingCall objects.
+    Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
+      auto It = CallsIn.find(Caller.ID);
+      assert(It != CallsIn.end());
+      if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+        std::vector<Range> FromRanges;
+        for (const Location &L : It->second) {
+          if (L.uri != CHI->uri) {
+            // Call location not in same file as caller.
+            // This can happen in some edge cases. There's not much we can do,
+            // since the protocol only allows returning ranges interpreted as
+            // being in the caller's file.
+            continue;
+          }
+          FromRanges.push_back(L.range);
+        }
+        Results.push_back(CallHierarchyIncomingCall{
+            std::move(*CHI), std::move(FromRanges), MightNeverCall});
+      }
+    });
+  };
+  QueryIndex({ID.get()}, false);
+  // In the case of being a virtual function we also want to return
+  // potential calls through the base function.
+  if (Item.kind == SymbolKind::Method) {
+    llvm::DenseSet<SymbolID> IDs;
+    RelationsRequest Req{{ID.get()}, RelationKind::OverriddenBy, std::nullopt};
+    Index->reverseRelations(Req, [&](const SymbolID &, const Symbol &Caller) {
+      IDs.insert(Caller.ID);
+    });
+    QueryIndex(std::move(IDs), true);
+  }
   // Sort results by name of container.
   llvm::sort(Results, [](const CallHierarchyIncomingCall &A,
                          const CallHierarchyIncomingCall &B) {
@@ -2324,7 +2466,7 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // Initially store the ranges in a map keyed by SymbolID of the callee.
   // This allows us to group different calls to the same function
   // into the same CallHierarchyOutgoingCall.
-  llvm::DenseMap<SymbolID, std::vector<Range>> CallsOut;
+  llvm::DenseMap<SymbolID, std::vector<Location>> CallsOut;
   // We can populate the ranges based on a refs request only. As we do so, we
   // also accumulate the callee IDs into a lookup request.
   LookupRequest CallsOutLookup;
@@ -2334,8 +2476,8 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       elog("outgoingCalls failed to convert location: {0}", Loc.takeError());
       return;
     }
-    auto It = CallsOut.try_emplace(R.Symbol, std::vector<Range>{}).first;
-    It->second.push_back(Loc->range);
+    auto It = CallsOut.try_emplace(R.Symbol, std::vector<Location>{}).first;
+    It->second.push_back(*Loc);
 
     CallsOutLookup.IDs.insert(R.Symbol);
   });
@@ -2355,9 +2497,22 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
 
     auto It = CallsOut.find(Callee.ID);
     assert(It != CallsOut.end());
-    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file()))
+    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file())) {
+      std::vector<Range> FromRanges;
+      for (const Location &L : It->second) {
+        if (L.uri != Item.uri) {
+          // Call location not in same file as the item that outgoingCalls was
+          // requested for. This can happen when Item is a declaration separate
+          // from the implementation. There's not much we can do, since the
+          // protocol only allows returning ranges interpreted as being in
+          // Item's file.
+          continue;
+        }
+        FromRanges.push_back(L.range);
+      }
       Results.push_back(
-          CallHierarchyOutgoingCall{std::move(*CHI), std::move(It->second)});
+          CallHierarchyOutgoingCall{std::move(*CHI), std::move(FromRanges)});
+    }
   });
   // Sort results by name of the callee.
   llvm::sort(Results, [](const CallHierarchyOutgoingCall &A,

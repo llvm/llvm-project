@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/XRay/FDRTraceExpander.h"
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace llvm::xray;
 
 void TraceExpander::resetCurrentRecord() {
   if (BuildingRecord)
@@ -126,6 +126,3 @@ Error TraceExpander::flush() {
   resetCurrentRecord();
   return Error::success();
 }
-
-} // namespace xray
-} // namespace llvm

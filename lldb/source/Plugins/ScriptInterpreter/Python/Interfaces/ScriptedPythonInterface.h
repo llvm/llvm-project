@@ -41,7 +41,7 @@ public:
     eValid
   };
 
-  struct AbstrackMethodCheckerPayload {
+  struct AbstractMethodCheckerPayload {
 
     struct InvalidArgumentCountPayload {
       InvalidArgumentCountPayload(size_t required, size_t actual)
@@ -55,13 +55,69 @@ public:
     std::variant<std::monostate, InvalidArgumentCountPayload> payload;
   };
 
-  llvm::Expected<std::map<llvm::StringLiteral, AbstrackMethodCheckerPayload>>
+  llvm::Expected<FileSpec> GetScriptedModulePath() override {
+    using namespace python;
+    using Locker = ScriptInterpreterPythonImpl::Locker;
+
+    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
+                   Locker::FreeLock);
+
+    if (!m_object_instance_sp)
+      return llvm::createStringError("scripted Interface has invalid object");
+
+    PythonObject py_obj =
+        PythonObject(PyRefType::Borrowed,
+                     static_cast<PyObject *>(m_object_instance_sp->GetValue()));
+
+    if (!py_obj.IsAllocated())
+      return llvm::createStringError(
+          "scripted Interface has invalid python object");
+
+    PythonObject py_obj_class = py_obj.GetAttributeValue("__class__");
+    if (!py_obj_class.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object is missing '__class__' attribute");
+
+    PythonObject py_obj_module = py_obj_class.GetAttributeValue("__module__");
+    if (!py_obj_module.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object '__class__' is missing "
+          "'__module__' attribute");
+
+    PythonString py_obj_module_str = py_obj_module.Str();
+    if (!py_obj_module_str.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object '__class__.__module__' attribute "
+          "is not a string");
+
+    llvm::StringRef py_obj_module_str_ref = py_obj_module_str.GetString();
+    PythonModule py_module = PythonModule::AddModule(py_obj_module_str_ref);
+    if (!py_module.IsValid())
+      return llvm::createStringError("failed to import '%s' module",
+                                     py_obj_module_str_ref.data());
+
+    PythonObject py_module_file = py_module.GetAttributeValue("__file__");
+    if (!py_module_file.IsValid())
+      return llvm::createStringError(
+          "module '%s' is missing '__file__' attribute",
+          py_obj_module_str_ref.data());
+
+    PythonString py_module_file_str = py_module_file.Str();
+    if (!py_module_file_str.IsValid())
+      return llvm::createStringError(
+          "module '%s.__file__' attribute is not a string",
+          py_obj_module_str_ref.data());
+
+    return FileSpec(py_module_file_str.GetString());
+  }
+
+  llvm::Expected<std::map<llvm::StringLiteral, AbstractMethodCheckerPayload>>
   CheckAbstractMethodImplementation(
       const python::PythonDictionary &class_dict) const {
 
     using namespace python;
 
-    std::map<llvm::StringLiteral, AbstrackMethodCheckerPayload> checker;
+    std::map<llvm::StringLiteral, AbstractMethodCheckerPayload> checker;
 #define SET_CASE_AND_CONTINUE(method_name, case)                               \
   {                                                                            \
     checker[method_name] = {case, {}};                                         \
@@ -74,7 +130,8 @@ public:
       if (!class_dict.HasKey(method_name))
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotImplemented)
-      auto callable_or_err = class_dict.GetItem(method_name);
+      llvm::Expected<PythonObject> callable_or_err =
+          class_dict.GetItem(method_name);
       if (!callable_or_err) {
         llvm::consumeError(callable_or_err.takeError());
         SET_CASE_AND_CONTINUE(method_name,
@@ -102,7 +159,7 @@ public:
       } else {
         checker[method_name] = {
             AbstractMethodCheckerCases::eInvalidArgumentCount,
-            AbstrackMethodCheckerPayload::InvalidArgumentCountPayload(
+            AbstractMethodCheckerPayload::InvalidArgumentCountPayload(
                 requirement.min_arg_count, arg_info.max_positional_args)};
       }
     }
@@ -188,8 +245,13 @@ public:
       // This addresses the cases where the embedded interpreter session
       // dictionary is passed to the extension initializer which is not used
       // most of the time.
+      // Note, though none of our API's suggest defining the interfaces with
+      // varargs, we have some extant clients that were doing that.  To keep
+      // from breaking them, we just say putting a varargs in these signatures
+      // turns off argument checking.
       size_t num_args = sizeof...(Args);
-      if (num_args != arg_info->max_positional_args) {
+      if (arg_info->max_positional_args != PythonCallable::ArgInfo::UNBOUNDED &&
+          num_args != arg_info->max_positional_args) {
         if (num_args != arg_info->max_positional_args - 1)
           return create_error("Passed arguments ({0}) doesn't match the number "
                               "of expected arguments ({1}).",
@@ -286,7 +348,7 @@ public:
       case AbstractMethodCheckerCases::eInvalidArgumentCount: {
         auto &payload_variant = method_checker.second.payload;
         if (!std::holds_alternative<
-                AbstrackMethodCheckerPayload::InvalidArgumentCountPayload>(
+                AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
                 payload_variant)) {
           abstract_method_errors = llvm::joinErrors(
               std::move(abstract_method_errors),
@@ -295,7 +357,7 @@ public:
                   obj_class_name.GetString(), method_checker.first)));
         } else {
           auto payload = std::get<
-              AbstrackMethodCheckerPayload::InvalidArgumentCountPayload>(
+              AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
               payload_variant);
           abstract_method_errors = llvm::joinErrors(
               std::move(abstract_method_errors),
@@ -325,6 +387,112 @@ public:
     return m_object_instance_sp;
   }
 
+  /// Call a static method on a Python class without creating an instance.
+  ///
+  /// This method resolves a Python class by name and calls a static method
+  /// on it, returning the result. This is useful for calling class-level
+  /// methods that don't require an instance.
+  ///
+  /// \param class_name The fully-qualified name of the Python class.
+  /// \param method_name The name of the static method to call.
+  /// \param error Output parameter to receive error information if the call
+  /// fails.
+  /// \param args Arguments to pass to the static method.
+  ///
+  /// \return The return value of the static method call, or an error value.
+  template <typename T = StructuredData::ObjectSP, typename... Args>
+  T CallStaticMethod(llvm::StringRef class_name, llvm::StringRef method_name,
+                     Status &error, Args &&...args) {
+    using namespace python;
+    using Locker = ScriptInterpreterPythonImpl::Locker;
+
+    std::string caller_signature =
+        llvm::Twine(LLVM_PRETTY_FUNCTION + llvm::Twine(" (") +
+                    llvm::Twine(class_name) + llvm::Twine(".") +
+                    llvm::Twine(method_name) + llvm::Twine(")"))
+            .str();
+
+    if (class_name.empty())
+      return ErrorWithMessage<T>(caller_signature, "missing script class name",
+                                 error);
+
+    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
+                   Locker::FreeLock);
+
+    // Get the interpreter dictionary.
+    auto dict =
+        PythonModule::MainModule().ResolveName<python::PythonDictionary>(
+            m_interpreter.GetDictionaryName());
+    if (!dict.IsAllocated())
+      return ErrorWithMessage<T>(
+          caller_signature,
+          llvm::formatv("could not find interpreter dictionary: {0}",
+                        m_interpreter.GetDictionaryName())
+              .str(),
+          error);
+
+    // Resolve the class.
+    auto class_obj =
+        PythonObject::ResolveNameWithDictionary<python::PythonCallable>(
+            class_name, dict);
+    if (!class_obj.IsAllocated())
+      return ErrorWithMessage<T>(
+          caller_signature,
+          llvm::formatv("could not find script class: {0}", class_name).str(),
+          error);
+
+    // Get the static method from the class.
+    if (!class_obj.HasAttribute(method_name))
+      return ErrorWithMessage<T>(
+          caller_signature,
+          llvm::formatv("class {0} does not have method {1}", class_name,
+                        method_name)
+              .str(),
+          error);
+
+    PythonCallable method =
+        class_obj.GetAttributeValue(method_name).AsType<PythonCallable>();
+    if (!method.IsAllocated())
+      return ErrorWithMessage<T>(caller_signature,
+                                 llvm::formatv("method {0}.{1} is not callable",
+                                               class_name, method_name)
+                                     .str(),
+                                 error);
+
+    // Transform the arguments.
+    std::tuple<Args...> original_args = std::forward_as_tuple(args...);
+    auto transformed_args = TransformArgs(original_args);
+
+    // Call the static method.
+    llvm::Expected<PythonObject> expected_return_object =
+        llvm::make_error<llvm::StringError>("Not initialized.",
+                                            llvm::inconvertibleErrorCode());
+    std::apply(
+        [&method, &expected_return_object](auto &&...args) {
+          llvm::consumeError(expected_return_object.takeError());
+          expected_return_object = method(args...);
+        },
+        transformed_args);
+
+    if (llvm::Error e = expected_return_object.takeError()) {
+      error = Status::FromError(std::move(e));
+      return ErrorWithMessage<T>(
+          caller_signature, "python static method could not be called", error);
+    }
+
+    PythonObject py_return = std::move(expected_return_object.get());
+
+    // Re-assign reference and pointer arguments if needed.
+    if (sizeof...(Args) > 0)
+      if (!ReassignPtrsOrRefsArgs(original_args, transformed_args))
+        return ErrorWithMessage<T>(
+            caller_signature,
+            "couldn't re-assign reference and pointer arguments", error);
+
+    // Extract value from Python object (handles unallocated case).
+    return ExtractValueFromPythonObject<T>(py_return, error);
+  }
+
 protected:
   template <typename T = StructuredData::ObjectSP>
   T ExtractValueFromPythonObject(python::PythonObject &p, Status &error) {
@@ -341,7 +509,7 @@ protected:
                     llvm::Twine(method_name) + llvm::Twine(")"))
             .str();
     if (!m_object_instance_sp)
-      return ErrorWithMessage<T>(caller_signature, "Python object ill-formed",
+      return ErrorWithMessage<T>(caller_signature, "python object ill-formed",
                                  error);
 
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
@@ -353,7 +521,7 @@ protected:
     if (!implementor.IsAllocated())
       return llvm::is_contained(GetAbstractMethods(), method_name)
                  ? ErrorWithMessage<T>(caller_signature,
-                                       "Python implementor not allocated.",
+                                       "python implementor not allocated",
                                        error)
                  : T{};
 
@@ -374,20 +542,20 @@ protected:
     if (llvm::Error e = expected_return_object.takeError()) {
       error = Status::FromError(std::move(e));
       return ErrorWithMessage<T>(caller_signature,
-                                 "Python method could not be called.", error);
+                                 "python method could not be called", error);
     }
 
     PythonObject py_return = std::move(expected_return_object.get());
 
     // Now that we called the python method with the transformed arguments,
-    // we need to interate again over both the original and transformed
+    // we need to iterate again over both the original and transformed
     // parameter pack, and transform back the parameter that were passed in
     // the original parameter pack as references or pointers.
     if (sizeof...(Args) > 0)
       if (!ReassignPtrsOrRefsArgs(original_args, transformed_args))
         return ErrorWithMessage<T>(
             caller_signature,
-            "Couldn't re-assign reference and pointer arguments.", error);
+            "couldn't re-assign reference and pointer arguments", error);
 
     if (!py_return.IsAllocated())
       return {};
@@ -432,7 +600,23 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::BreakpointSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::BreakpointLocationSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ProcessSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::ThreadSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::StackFrameListSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
@@ -452,18 +636,29 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(const SymbolContext &arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::StreamSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg.get());
+  }
+
+  python::PythonObject Transform(lldb::StackFrameSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
   python::PythonObject Transform(lldb::DataExtractorSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::DescriptionLevel arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
-    return;
   }
 
   template <typename T>
@@ -557,14 +752,34 @@ Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
     python::PythonObject &p, Status &error);
 
 template <>
+SymbolContext
+ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
+    python::PythonObject &p, Status &error);
+
+template <>
 lldb::StreamSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::ThreadSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::StackFrameSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameSP>(
     python::PythonObject &p, Status &error);
 
 template <>
 lldb::BreakpointSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
     python::PythonObject &p, Status &error);
+
+template <>
+lldb::BreakpointLocationSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::BreakpointLocationSP>(python::PythonObject &p, Status &error);
 
 template <>
 lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
@@ -588,6 +803,16 @@ template <>
 lldb::ExecutionContextRefSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     lldb::ExecutionContextRefSP>(python::PythonObject &p, Status &error);
+
+template <>
+lldb::DescriptionLevel
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::StackFrameListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
+    python::PythonObject &p, Status &error);
 
 } // namespace lldb_private
 

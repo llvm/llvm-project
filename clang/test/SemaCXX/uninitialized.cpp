@@ -2,6 +2,25 @@
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++1z -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++20 -verify %s
 
+#if defined(BE_THE_HEADER)
+
+// Wuninitialized-explicit-init should warn in system headers (std::construct_at...) too.
+
+#pragma clang system_header
+namespace std {
+template <class T, class... U>
+constexpr T* construct_at(T* ptr, U&&... args) {
+  return ::new (static_cast<void*>(ptr)) T(static_cast<U&&>(args)...);  // #FIELD_EMBED2_CONSTRUCT_AT
+}
+}
+
+#else
+
+#define BE_THE_HEADER
+#include __FILE__
+
+void* operator new(__SIZE_TYPE__, void*);
+
 // definitions for std::move
 namespace std {
 inline namespace foo {
@@ -166,6 +185,10 @@ void test_const_ptr() {
   const int *ptr2;
   foo(ptr); // expected-warning {{variable 'ptr' is uninitialized when used here}}
   foobar(&ptr2);
+  int *ptr3; // expected-note {{initialize the variable 'ptr3' to silence this warning}}
+  const int *ptr4; // expected-note {{initialize the variable 'ptr4' to silence this warning}}
+  bar(ptr3); // expected-warning {{variable 'ptr3' is uninitialized when used here}}
+  bar(ptr4); // expected-warning {{variable 'ptr4' is uninitialized when used here}}
 }
 }
 
@@ -890,6 +913,11 @@ namespace lambdas {
       return a1.x;
     });
     A a2([&] { return a2.x; }); // ok
+    A a3([=] { return a3.x; }()); // expected-warning{{variable 'a3' is uninitialized when used within its own initialization}}
+    A a4([&] { return a4.x; }()); // expected-warning{{variable 'a4' is uninitialized when used within its own initialization}}
+    A a5([&] { return a5; }()); // expected-warning{{variable 'a5' is uninitialized when used within its own initialization}}
+    A a6([&] { return a5.x; }()); // ok
+    A a7 = [&a7] { return a7; }(); // expected-warning{{variable 'a7' is uninitialized when used within its own initialization}}
   }
 }
 
@@ -1501,7 +1529,7 @@ struct InheritWithExplicit<Special> {
 void aggregate() {
   struct NonAgg {
     NonAgg() { }
-    [[clang::require_explicit_initialization]] int na;  // expected-warning {{'require_explicit_initialization' attribute is ignored in non-aggregate type 'NonAgg'}}
+    [[clang::require_explicit_initialization]] int na;  // expected-warning {{'clang::require_explicit_initialization' attribute is ignored in non-aggregate type 'NonAgg'}}
   };
   NonAgg nonagg;  // no-warning
   (void)nonagg;
@@ -1540,9 +1568,85 @@ void aggregate() {
     };
   };
 
+  struct CopyAndMove {
+    CopyAndMove() = default;
+    CopyAndMove(const CopyAndMove &) {}
+    CopyAndMove(CopyAndMove &&) {}
+  };
+  struct Embed {
+    int embed1;  // #FIELD_EMBED1
+    int embed2 [[clang::require_explicit_initialization]];  // #FIELD_EMBED2
+    CopyAndMove force_separate_move_ctor;
+  };
+  struct EmbedDerived : Embed {};
+  struct F {
+    Embed f1;
+    // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[1]) : f1() {
+      // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1);
+      // expected-warning@#FIELD_EMBED2_CONSTRUCT_AT {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@+1 {{in instantiation of function template specialization 'std::construct_at<Embed>' requested here}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      std::construct_at(&f1);
+#if __cplusplus >= 202002L
+      // expected-warning@#FIELD_EMBED2_CONSTRUCT_AT {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@+1 {{in instantiation of function template specialization 'std::construct_at<Embed, int>' requested here}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      std::construct_at(&f1, 1);
+#endif
+      // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1){1};
+    }
+#if __cplusplus >= 202002L
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[2]) : f1(1) {}
+#else
+    explicit F(const char(&)[2]) : f1{1, 2} { }
+#endif
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[3]) : f1{} {}
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[4]) : f1{1} {}
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[5]) : f1{.embed1 = 1} {}
+  };
+  F ctors[] = {
+      F(""),
+      F("_"),
+      F("__"),
+      F("___"),
+      F("____")
+  };
+
+  struct MoveOrCopy {
+    Embed e;
+    EmbedDerived ed;
+    F f;
+    // no-error
+    MoveOrCopy(const MoveOrCopy &c) : e(c.e), ed(c.ed), f(c.f) {}
+    // no-error
+    MoveOrCopy(MoveOrCopy &&c)
+        : e(std::move(c.e)), ed(std::move(c.ed)), f(std::move(c.f)) {}
+  };
+  F copy1(ctors[0]); // no-error
+  (void)copy1;
+  F move1(std::move(ctors[0])); // no-error
+  (void)move1;
+  F copy2{ctors[0]}; // no-error
+  (void)copy2;
+  F move2{std::move(ctors[0])}; // no-error
+  (void)move2;
+  F copy3 = ctors[0]; // no-error
+  (void)copy3;
+  F move3 = std::move(ctors[0]); // no-error
+  (void)move3;
+  F copy4 = {ctors[0]}; // no-error
+  (void)copy4;
+  F move4 = {std::move(ctors[0])}; // no-error
+  (void)move4;
+
   S::foo(S{1, 2, 3, 4});
   S::foo(S{.s1 = 100, .s4 = 100});
   S::foo(S{.s1 = 100}); // expected-warning {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
+
+  (void)sizeof(S{}); // no warning -- unevaluated operand
 
   S s{.s1 = 100, .s4 = 100};
   (void)s;
@@ -1636,7 +1740,7 @@ void aggregate() {
   InheritWithExplicit<> agg;  // expected-warning {{field in 'InheritWithExplicit<>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G2 {{'g2' declared here}}
   (void)agg;
 
-  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'require_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
+  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'clang::require_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
   (void)polymorphic;
 
   Inherit<Special> specialized_explicit;  // expected-warning {{field in 'Inherit<Special>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G3 {{'g3' declared here}}
@@ -1645,3 +1749,5 @@ void aggregate() {
   InheritWithExplicit<Special> specialized_implicit;  // no-warning
   (void)specialized_implicit;
 }
+
+#endif

@@ -27,7 +27,7 @@ subroutine trans_test(store, word)
     real :: word
     store = transfer(word, store)
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QPtrans_test2(
   ! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.array<3xi32>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
   ! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
@@ -69,13 +69,13 @@ subroutine trans_test(store, word)
   ! CHECK:         fir.freemem %[[VAL_25]]
   ! CHECK:         return
   ! CHECK:       }
-  
+
   subroutine trans_test2(store, word)
     integer :: store(3)
     real :: word
     store = transfer(word, store, 3)
   end subroutine
-  
+
   integer function trans_test3(p)
     ! CHECK-LABEL: func @_QPtrans_test3(
     ! CHECK-SAME:                       %[[VAL_0:.*]]: !fir.ref<i32>{{.*}}) -> i32 {
@@ -106,8 +106,7 @@ subroutine trans_test(store, word)
     ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
     ! CHECK:         fir.call @_FortranAAssign(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
     ! CHECK:         fir.freemem %[[VAL_17]]
-    ! CHECK:         %[[VAL_25:.*]] = fir.field_index x, !fir.type<_QFtrans_test3Tobj{x:i32}>
-    ! CHECK:         %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_25]] : (!fir.ref<!fir.type<_QFtrans_test3Tobj{x:i32}>>, !fir.field) -> !fir.ref<i32>
+    ! CHECK:         %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_3]], x : (!fir.ref<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.ref<i32>
     ! CHECK:         %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<i32>
     ! CHECK:         fir.store %[[VAL_27]] to %[[VAL_4]] : !fir.ref<i32>
     ! CHECK:         %[[VAL_28:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>

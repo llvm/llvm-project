@@ -36,6 +36,8 @@ class MyVarInst<MyMemOperand memory_op> : Instruction {
     (operand "$dst", 4),
     // Testing operand referencing with a certain bit range.
     (slice "$dst", 3, 1),
+    // Testing slice hi/lo swap.
+    (slice "$dst", 1, 3),
     // Testing custom encoder
     (operand "$dst", 2, (encoder "myCustomEncoder"))
   );
@@ -57,9 +59,9 @@ def FOO16 : MyVarInst<MemOp16<"src">>;
 def FOO32 : MyVarInst<MemOp32<"src">>;
 
 // The fixed bits part
-// CHECK: {/*NumBits*/41,
+// CHECK: {/*NumBits*/44,
 // CHECK-SAME: // FOO16
-// CHECK: {/*NumBits*/57,
+// CHECK: {/*NumBits*/60,
 // CHECK-SAME: // FOO32
 // CHECK: UINT64_C(46848), // FOO16
 // CHECK: UINT64_C(46848), // FOO32
@@ -78,9 +80,12 @@ def FOO32 : MyVarInst<MemOp32<"src">>;
 // 2nd dst
 // CHECK: getMachineOpValue(MI, MI.getOperand(0), /*Pos=*/36, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(3, 1), 36);
+// Slice hi/lo swap
+// CHECK: getMachineOpValue(MI, MI.getOperand(0), /*Pos=*/39, Scratch, Fixups, STI);
+// CHECK: Inst.insertBits(Scratch.extractBits(3, 1), 39);
 // dst w/ custom encoder
-// CHECK: myCustomEncoder(MI, /*OpIdx=*/0, /*Pos=*/39, Scratch, Fixups, STI);
-// CHECK: Inst.insertBits(Scratch.extractBits(2, 0), 39);
+// CHECK: myCustomEncoder(MI, /*OpIdx=*/0, /*Pos=*/42, Scratch, Fixups, STI);
+// CHECK: Inst.insertBits(Scratch.extractBits(2, 0), 42);
 
 // CHECK-LABEL: case ::FOO32: {
 // CHECK: Scratch.getBitWidth() < 32
@@ -96,6 +101,9 @@ def FOO32 : MyVarInst<MemOp32<"src">>;
 // 2nd dst
 // CHECK: getMachineOpValue(MI, MI.getOperand(0), /*Pos=*/52, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(3, 1), 52);
+// Slice hi/lo swap
+// CHECK: getMachineOpValue(MI, MI.getOperand(0), /*Pos=*/55, Scratch, Fixups, STI);
+// CHECK: Inst.insertBits(Scratch.extractBits(3, 1), 55);
 // dst w/ custom encoder
-// CHECK: myCustomEncoder(MI, /*OpIdx=*/0, /*Pos=*/55, Scratch, Fixups, STI);
-// CHECK: Inst.insertBits(Scratch.extractBits(2, 0), 55);
+// CHECK: myCustomEncoder(MI, /*OpIdx=*/0, /*Pos=*/58, Scratch, Fixups, STI);
+// CHECK: Inst.insertBits(Scratch.extractBits(2, 0), 58);

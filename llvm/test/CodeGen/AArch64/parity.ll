@@ -159,7 +159,7 @@ define i32 @parity_64_trunc(i64 %x) {
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-NEXT:    addv b0, v0.8b
-; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;

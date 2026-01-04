@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputPerf.h"
+#include "PerfTest.h"
 #include "src/math/fmaxf.h"
 #include "src/math/fmaxf16.h"
 #include "src/math/fmaximum_numf.h"
@@ -35,41 +35,40 @@ float16 placeholder_binaryf16(float16 x, float16 y) { return x; }
 float placeholder_binaryf(float x, float y) { return x; }
 
 int main() {
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float16, float16, LIBC_NAMESPACE::fmaxf16,
-                                  placeholder_binaryf16, FLOAT16_ROUNDS,
-                                  "fmaxf16_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float16, float16, LIBC_NAMESPACE::fminf16,
-                                  placeholder_binaryf16, FLOAT16_ROUNDS,
-                                  "fminf16_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float16, float16, LIBC_NAMESPACE::fmaximumf16,
-                                  placeholder_binaryf16, FLOAT16_ROUNDS,
-                                  "fmaximumf16_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float16, float16, LIBC_NAMESPACE::fminimumf16,
-                                  placeholder_binaryf16, FLOAT16_ROUNDS,
-                                  "fminimumf16_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float16, float16, LIBC_NAMESPACE::fmaxf16,
+                                     placeholder_binaryf16, FLOAT16_ROUNDS,
+                                     "fmaxf16_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float16, float16, LIBC_NAMESPACE::fminf16,
+                                     placeholder_binaryf16, FLOAT16_ROUNDS,
+                                     "fminf16_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(
+      float16, float16, LIBC_NAMESPACE::fmaximumf16, placeholder_binaryf16,
+      FLOAT16_ROUNDS, "fmaximumf16_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(
+      float16, float16, LIBC_NAMESPACE::fminimumf16, placeholder_binaryf16,
+      FLOAT16_ROUNDS, "fminimumf16_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(
       float16, float16, LIBC_NAMESPACE::fmaximum_numf16, placeholder_binaryf16,
       FLOAT16_ROUNDS, "fmaximum_numf16_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(
       float16, float16, LIBC_NAMESPACE::fminimum_numf16, placeholder_binaryf16,
       FLOAT16_ROUNDS, "fminimum_numf16_perf.log")
 
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fmaxf, ::fmaxf,
-                                  FLOAT_ROUNDS, "fmaxf_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fminf, ::fminf,
-                                  FLOAT_ROUNDS, "fminf_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fmaximumf,
-                                  placeholder_binaryf, FLOAT_ROUNDS,
-                                  "fmaximumf_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fminimumf,
-                                  placeholder_binaryf, FLOAT_ROUNDS,
-                                  "fminimumf_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fmaximum_numf,
-                                  placeholder_binaryf, FLOAT_ROUNDS,
-                                  "fmaximum_numf_perf.log")
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fminimum_numf,
-                                  placeholder_binaryf, FLOAT_ROUNDS,
-                                  "fminimum_numf_perf.log")
-
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fmaxf,
+                                     ::fmaxf, FLOAT_ROUNDS, "fmaxf_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fminf,
+                                     ::fminf, FLOAT_ROUNDS, "fminf_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fmaximumf,
+                                     placeholder_binaryf, FLOAT_ROUNDS,
+                                     "fmaximumf_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float, float, LIBC_NAMESPACE::fminimumf,
+                                     placeholder_binaryf, FLOAT_ROUNDS,
+                                     "fminimumf_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(
+      float, float, LIBC_NAMESPACE::fmaximum_numf, placeholder_binaryf,
+      FLOAT_ROUNDS, "fmaximum_numf_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(
+      float, float, LIBC_NAMESPACE::fminimum_numf, placeholder_binaryf,
+      FLOAT_ROUNDS, "fminimum_numf_perf.log")
   return 0;
 }

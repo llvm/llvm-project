@@ -33,7 +33,7 @@ which is defined as follows:
   };
 
 To represent the range and resolution of ``timespec``, we need to (A) have
-nanosecond resolution, and (B) use more than 64 bits (assuming a 64 bit ``time_t``).
+nanosecond resolution, and (B) use more than 64 bits (assuming a 64-bit ``time_t``).
 
 As the standard requires us to use the ``chrono`` interface, we have to define
 our own filesystem clock which specifies the period and representation of
@@ -207,7 +207,7 @@ code in some way:
 
   // Overflow during creation bug.
   file_time_type timespec_to_file_time_type(struct timespec ts) {
-    // woops! chrono::seconds and chrono::nanoseconds use a 64 bit representation
+    // woops! chrono::seconds and chrono::nanoseconds use a 64-bit representation
     // this may overflow before it's converted to a file_time_type.
     auto dur = seconds(ts.tv_sec) + nanoseconds(ts.tv_nsec);
     return file_time_type(dur);
@@ -272,7 +272,7 @@ look like.
 
 The first thing to notice is that we can't construct ``fs_timespec_rep`` like
 a ``timespec`` by passing ``{secs, nsecs}``. Instead we're limited to
-constructing it from a single 64 bit integer.
+constructing it from a single 64-bit integer.
 
 We also can't allow the user to inspect the ``tv_sec`` or ``tv_nsec`` values
 directly. A ``chrono::duration`` represents its value as a tick period and a
@@ -350,12 +350,12 @@ Though the above example may appear silly, I think it follows from the incorrect
 notion that using a ``timespec`` rep in chrono actually makes it act as if it
 were an actual ``timespec``.
 
-Interactions with 32 bit ``time_t``
+Interactions with 32-bit ``time_t``
 -----------------------------------
 
 Up until now we've only be considering cases where ``time_t`` is 64 bits, but what
-about 32 bit systems/builds where ``time_t`` is 32 bits? (this is the common case
-for 32 bit builds).
+about 32-bit systems/builds where ``time_t`` is 32 bits? (this is the common case
+for 32-bit builds).
 
 When ``time_t`` is 32 bits, we can implement ``file_time_type`` simply using 64-bit
 ``long long``. There is no need to get either ``__int128_t`` or ``timespec`` emulation
@@ -431,11 +431,11 @@ Pros:
 
 Cons:
 
-* It isn't always available (but on 64 bit machines, it normally is).
+* It isn't always available (but on 64-bit machines, it normally is).
 * It causes ``file_time_type`` to have a larger range than ``timespec``.
 * It doesn't always act the same as other builtin integer types. For example
   with ``cout`` or ``to_string``.
-* Allows implicit truncation to 64 bit integers.
+* Allows implicit truncation to 64-bit integers.
 * It can be implicitly converted to a builtin integer type by the user,
   truncating its value.
 

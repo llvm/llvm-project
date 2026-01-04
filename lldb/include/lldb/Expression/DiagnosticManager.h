@@ -12,7 +12,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
-#include "lldb/Utility/DiagnosticsRendering.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
@@ -107,7 +107,8 @@ public:
     m_fixed_expression.clear();
   }
 
-  const DiagnosticList &Diagnostics() { return m_diagnostics; }
+  const DiagnosticList &Diagnostics() const { return m_diagnostics; }
+  DiagnosticList &Diagnostics() { return m_diagnostics; }
 
   bool HasFixIts() const {
     return llvm::any_of(m_diagnostics,

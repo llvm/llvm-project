@@ -237,12 +237,12 @@ class NamespaceTestCase(TestBase):
 
         self.expect(
             "expression myanonfunc",
-            patterns=["\(anonymous namespace\)::myanonfunc\(int\)"],
+            patterns=[r"\(anonymous namespace\)::myanonfunc\(int\)"],
         )
 
         self.expect(
             "expression variadic_sum",
-            patterns=["\(anonymous namespace\)::variadic_sum\(int, ...\)"],
+            patterns=[r"\(anonymous namespace\)::variadic_sum\(int, ...\)"],
         )
 
         self.expect_expr("::B::Bar b; b.x()", result_type="int", result_value="42")

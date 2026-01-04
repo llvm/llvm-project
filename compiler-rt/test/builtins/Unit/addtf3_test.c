@@ -4,13 +4,13 @@
 #include <fenv.h>
 #include <stdio.h>
 
+#include "fp_test.h"
+#include "int_lib.h"
+
 // The testcase currently assumes IEEE TF format, once that has been
 // fixed the defined(CRT_HAS_IEEE_TF) guard can be removed to enable it for
 // IBM 128 floats as well.
 #if defined(CRT_HAS_IEEE_TF)
-
-#  include "fp_test.h"
-#  include "int_lib.h"
 
 // Returns: a + b
 COMPILER_RT_ABI tf_float __addtf3(tf_float a, tf_float b);
@@ -62,7 +62,13 @@ int main() {
       defined(i386) || defined(__x86_64__) ||                                  \
       (defined(__loongarch__) && __loongarch_frlen != 0)
   // Rounding mode tests on supported architectures
-  const tf_float m = 1234.0L, n = 0.01L;
+  // Use explicit values because the binary representation of long double
+  // is platform dependent. Intended values:
+  // m = 1234.0L, n = 0.01L (where L is a literal for 128 bit long double)
+  const tf_float m =
+      fromRep128(UINT64_C(0x4009348000000000), UINT64_C(0x0000000000000000));
+  const tf_float n =
+      fromRep128(UINT64_C(0x3FF847AE147AE147), UINT64_C(0xAE147AE147AE147B));
 
   fesetround(FE_UPWARD);
   if (test__addtf3(m, n, UINT64_C(0x40093480a3d70a3d),

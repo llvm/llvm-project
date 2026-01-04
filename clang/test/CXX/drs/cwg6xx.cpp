@@ -407,14 +407,14 @@ namespace cwg638 { // cwg638: no
 
   class X {
     typedef int type;
-    template<class T> friend struct A<T>::B; 
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    template<class T> friend struct A<T>::B;
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::f();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::g();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::C::h();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C' for friend class declaration is not supported; turning off access control for 'X'}}
   };
 
   template<> struct A<int> {
@@ -895,12 +895,12 @@ namespace cwg666 { // cwg666: 2.8
   template<int> int f();
   template<typename T> int f() {
     T::type *p = 0;
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
     //   expected-note@#cwg666-f-Y {{in instantiation of function template specialization 'cwg666::f<cwg666::Y>' requested here}}
     int a(T::type);
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
     return f<T::type>();
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
   }
   struct X { static const int type = 0; };
   struct Y { typedef int type; };
@@ -1078,7 +1078,7 @@ namespace cwg677 { // cwg677: no
   struct A {
     void *operator new(std::size_t);
     void operator delete(void*) = delete; // #cwg677-A-delete
-    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}} 
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
   };
   struct B {
     void *operator new(std::size_t);
@@ -1241,7 +1241,7 @@ namespace cwg686 { // cwg686: 3.0
 #endif
     struct N {
       operator struct O{}(){};
-      // expected-error@-1 {{'N::O' cannot be defined in a type specifier}}
+      // expected-error@-1 {{'cwg686::f()::N::O' cannot be defined in a type specifier}}
     };
     try {}
     catch (struct P *) {}

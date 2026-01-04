@@ -2,6 +2,7 @@
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 
@@ -29,29 +30,6 @@ using DeallocHelperMap = llvm::DenseMap<Operation *, func::FuncOp>;
 
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
-
-/// Creates an instance of the BufferDeallocation pass to free all allocated
-/// buffers.
-std::unique_ptr<Pass> createBufferDeallocationPass();
-
-/// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
-/// allocated buffers.
-std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
-    DeallocationOptions options = DeallocationOptions());
-
-/// Creates a pass that finds all temporary allocations
-/// and attempts to move the deallocation after the last user/dependency
-/// of the allocation, thereby optimizing allocation liveness.
-std::unique_ptr<Pass> createOptimizeAllocationLivenessPass();
-
-/// Creates a pass that optimizes `bufferization.dealloc` operations. For
-/// example, it reduces the number of alias checks needed at runtime using
-/// static alias analysis.
-std::unique_ptr<Pass> createBufferDeallocationSimplificationPass();
-
-/// Creates an instance of the LowerDeallocations pass to lower
-/// `bufferization.dealloc` operations to the `memref` dialect.
-std::unique_ptr<Pass> createLowerDeallocationsPass();
 
 /// Adds the conversion pattern of the `bufferization.dealloc` operation to the
 /// given pattern set for use in other transformation passes.
@@ -141,20 +119,11 @@ void populateBufferizationDeallocLoweringPattern(
 func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
-/// Run buffer deallocation.
-LogicalResult deallocateBuffers(Operation *op);
-
 /// Run the ownership-based buffer deallocation.
-LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
-                                              DeallocationOptions options);
-
-/// Creates a pass that moves allocations upwards to reduce the number of
-/// required copies that are inserted during the BufferDeallocation pass.
-std::unique_ptr<Pass> createBufferHoistingPass();
-
-/// Creates a pass that moves allocations upwards out of loops. This avoids
-/// reallocations inside of loops.
-std::unique_ptr<Pass> createBufferLoopHoistingPass();
+LogicalResult
+deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                DeallocationOptions options,
+                                SymbolTableCollection &symbolTables);
 
 // Options struct for BufferResultsToOutParams pass.
 // Note: defined only here, not in tablegen.
@@ -162,8 +131,8 @@ struct BufferResultsToOutParamsOpts {
   /// Allocator function: Generate a memref allocation with the given type.
   /// Since `promoteBufferResultsToOutParams` doesn't allow dynamically shaped
   /// results, we don't allow passing a range of values for dynamic dims.
-  using AllocationFn =
-      std::function<FailureOr<Value>(OpBuilder &, Location, MemRefType)>;
+  using AllocationFn = std::function<FailureOr<Value>(OpBuilder &, Location,
+                                                      MemRefType, ValueRange)>;
 
   /// Memcpy function: Generate a memcpy between two memrefs.
   using MemCpyFn =
@@ -178,15 +147,16 @@ struct BufferResultsToOutParamsOpts {
   /// Allocation function; used to allocate a memref.
   /// Default memref.alloc is used
   AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
-                                 MemRefType type) {
-    return builder.create<memref::AllocOp>(loc, type).getResult();
+                                 MemRefType type, ValueRange dynamicSizes) {
+    return memref::AllocOp::create(builder, loc, type, dynamicSizes)
+        .getResult();
   };
 
   /// Memcpy function; used to create a copy between two memrefs.
   /// Default memref.copy is used.
   MemCpyFn memCpyFn = [](OpBuilder &builder, Location loc, Value from,
                          Value to) {
-    builder.create<memref::CopyOp>(loc, from, to);
+    memref::CopyOp::create(builder, loc, from, to);
     return success();
   };
 
@@ -197,11 +167,14 @@ struct BufferResultsToOutParamsOpts {
   /// If true, the pass eliminates the memref.alloc and memcpy if the returned
   /// memref is allocated in the current function.
   bool hoistStaticAllocs = false;
-};
 
-/// Creates a pass that converts memref function results to out-params.
-std::unique_ptr<Pass> createBufferResultsToOutParamsPass(
-    const BufferResultsToOutParamsOpts &options = {});
+  /// If true, the pass eliminates the memref.alloc and memcpy if the returned
+  /// memref is allocated in the current function and has dynamic shape.
+  bool hoistDynamicAllocs = false;
+
+  /// If true, the pass modifies the function signatures of public functions.
+  bool modifyPublicFunctions = false;
+};
 
 /// Replace buffers that are returned from a function with an out parameter.
 /// Also update all call sites.
@@ -209,40 +182,13 @@ LogicalResult
 promoteBufferResultsToOutParams(ModuleOp module,
                                 const BufferResultsToOutParamsOpts &options);
 
-/// Creates a pass that drops memref function results that are equivalent to a
-/// function argument.
-std::unique_ptr<Pass> createDropEquivalentBufferResultsPass();
-
-/// Create a pass that rewrites tensor.empty to bufferization.alloc_tensor.
-std::unique_ptr<Pass> createEmptyTensorToAllocTensorPass();
-
 /// Drop all memref function results that are equivalent to a function argument.
 LogicalResult dropEquivalentBufferResults(ModuleOp module);
-
-/// Create a pass that bufferizes all ops that implement BufferizableOpInterface
-/// with One-Shot Bufferize.
-std::unique_ptr<Pass> createOneShotBufferizePass();
-
-/// Create a pass that bufferizes all ops that implement BufferizableOpInterface
-/// with One-Shot Bufferize and the specified bufferization options.
-std::unique_ptr<Pass>
-createOneShotBufferizePass(const OneShotBufferizationOptions &options);
-
-/// Creates a pass that promotes heap-based allocations to stack-based ones.
-/// Only buffers smaller than the provided size are promoted.
-/// Dynamic shaped buffers are promoted up to the given rank.
-std::unique_ptr<Pass>
-createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
-                                unsigned maxRankOfAllocatedMemRef = 1);
 
 /// Creates a pass that promotes heap-based allocations to stack-based ones.
 /// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.
 std::unique_ptr<Pass>
 createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
-
-/// Create a pass that tries to eliminate tensor.empty ops that are anchored on
-/// insert_slice ops.
-std::unique_ptr<Pass> createEmptyTensorEliminationPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

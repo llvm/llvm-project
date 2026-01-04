@@ -24,7 +24,7 @@
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 4 x i32> [[DATA:%.*]] to <vscale x 4 x i16>
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i16.p0(<vscale x 4 x i16> [[TMP1]], ptr [[BASE:%.*]], i32 1, <vscale x 4 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i16.p0(<vscale x 4 x i16> [[TMP1]], ptr align 1 [[BASE:%.*]], <vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void test_svst1h_s32(svbool_t pg, int16_t *base, svint32_t data) MODE_ATTR
@@ -36,7 +36,7 @@ void test_svst1h_s32(svbool_t pg, int16_t *base, svint32_t data) MODE_ATTR
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 2 x i64> [[DATA:%.*]] to <vscale x 2 x i16>
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> [[TMP1]], ptr [[BASE:%.*]], i32 1, <vscale x 2 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> [[TMP1]], ptr align 1 [[BASE:%.*]], <vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void test_svst1h_s64(svbool_t pg, int16_t *base, svint64_t data) MODE_ATTR
@@ -48,7 +48,7 @@ void test_svst1h_s64(svbool_t pg, int16_t *base, svint64_t data) MODE_ATTR
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 4 x i32> [[DATA:%.*]] to <vscale x 4 x i16>
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i16.p0(<vscale x 4 x i16> [[TMP1]], ptr [[BASE:%.*]], i32 1, <vscale x 4 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i16.p0(<vscale x 4 x i16> [[TMP1]], ptr align 1 [[BASE:%.*]], <vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void test_svst1h_u32(svbool_t pg, uint16_t *base, svuint32_t data) MODE_ATTR
@@ -60,7 +60,7 @@ void test_svst1h_u32(svbool_t pg, uint16_t *base, svuint32_t data) MODE_ATTR
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 2 x i64> [[DATA:%.*]] to <vscale x 2 x i16>
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> [[TMP1]], ptr [[BASE:%.*]], i32 1, <vscale x 2 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> [[TMP1]], ptr align 1 [[BASE:%.*]], <vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void test_svst1h_u64(svbool_t pg, uint16_t *base, svuint64_t data) MODE_ATTR
@@ -76,7 +76,7 @@ void test_svst1h_u64(svbool_t pg, uint16_t *base, svuint64_t data) MODE_ATTR
 // CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP4:%.*]] = trunc <vscale x 4 x i32> [[DATA:%.*]] to <vscale x 4 x i16>
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i16.p0(<vscale x 4 x i16> [[TMP4]], ptr [[TMP3]], i32 1, <vscale x 4 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i16.p0(<vscale x 4 x i16> [[TMP4]], ptr align 1 [[TMP3]], <vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void test_svst1h_vnum_s32(svbool_t pg, int16_t *base, int64_t vnum, svint32_t data) MODE_ATTR
@@ -92,7 +92,7 @@ void test_svst1h_vnum_s32(svbool_t pg, int16_t *base, int64_t vnum, svint32_t da
 // CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP4:%.*]] = trunc <vscale x 2 x i64> [[DATA:%.*]] to <vscale x 2 x i16>
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> [[TMP4]], ptr [[TMP3]], i32 1, <vscale x 2 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> [[TMP4]], ptr align 1 [[TMP3]], <vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void test_svst1h_vnum_s64(svbool_t pg, int16_t *base, int64_t vnum, svint64_t data) MODE_ATTR
@@ -108,7 +108,7 @@ void test_svst1h_vnum_s64(svbool_t pg, int16_t *base, int64_t vnum, svint64_t da
 // CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP4:%.*]] = trunc <vscale x 4 x i32> [[DATA:%.*]] to <vscale x 4 x i16>
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i16.p0(<vscale x 4 x i16> [[TMP4]], ptr [[TMP3]], i32 1, <vscale x 4 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i16.p0(<vscale x 4 x i16> [[TMP4]], ptr align 1 [[TMP3]], <vscale x 4 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void test_svst1h_vnum_u32(svbool_t pg, uint16_t *base, int64_t vnum, svuint32_t data) MODE_ATTR
@@ -124,7 +124,7 @@ void test_svst1h_vnum_u32(svbool_t pg, uint16_t *base, int64_t vnum, svuint32_t 
 // CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP4:%.*]] = trunc <vscale x 2 x i64> [[DATA:%.*]] to <vscale x 2 x i16>
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> [[TMP4]], ptr [[TMP3]], i32 1, <vscale x 2 x i1> [[TMP0]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i16.p0(<vscale x 2 x i16> [[TMP4]], ptr align 1 [[TMP3]], <vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void test_svst1h_vnum_u64(svbool_t pg, uint16_t *base, int64_t vnum, svuint64_t data) MODE_ATTR

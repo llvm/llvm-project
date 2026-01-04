@@ -73,6 +73,7 @@ add_header_library(
   HDRS
     kernel_statx.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

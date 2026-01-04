@@ -82,7 +82,7 @@ define internal void @static_symb_backslash_b() #0 {
 ; INSTR_CHECK: Binary Function "main"
 ; INSTR_CHECK: Exec Count  : 1
 ; INSTR_CHECK: {{([[:xdigit:]]+)}}:   callq   "symb whitespace" # Count: 1
-; INSTR_CHECK: {{([[:xdigit:]]+)}}:   callq   "symb backslash\" # Count: 2
+; INSTR_CHECK: {{([[:xdigit:]]+)}}:   callq   "symb backslash\\" # Count: 2
 ; INSTR_CHECK: Binary Function "static symb backslash\/1(*2)"
 ; INSTR_CHECK: Exec Count  : 1
 ; INSTR_CHECK: {{([[:xdigit:]]+)}}:   callq   "symb whitespace" # Count: 1
