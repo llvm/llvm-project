@@ -179,8 +179,8 @@ public:
   void swap(strstreambuf& __rhs);
 
   void freeze(bool __freezefl = true);
-  char* str();
-  int pcount() const;
+  [[__nodiscard__]] char* str();
+  [[__nodiscard__]] int pcount() const;
 
 protected:
   int_type overflow(int_type __c = EOF) override;
@@ -264,8 +264,8 @@ public:
     __sb_.swap(__rhs.__sb_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI strstreambuf* rdbuf() const { return const_cast<strstreambuf*>(&__sb_); }
-  _LIBCPP_HIDE_FROM_ABI char* str() { return __sb_.str(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI strstreambuf* rdbuf() const { return const_cast<strstreambuf*>(&__sb_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char* str() { return __sb_.str(); }
 
 private:
   strstreambuf __sb_;
@@ -297,10 +297,10 @@ public:
     __sb_.swap(__rhs.__sb_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI strstreambuf* rdbuf() const { return const_cast<strstreambuf*>(&__sb_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI strstreambuf* rdbuf() const { return const_cast<strstreambuf*>(&__sb_); }
   _LIBCPP_HIDE_FROM_ABI void freeze(bool __freezefl = true) { __sb_.freeze(__freezefl); }
-  _LIBCPP_HIDE_FROM_ABI char* str() { return __sb_.str(); }
-  _LIBCPP_HIDE_FROM_ABI int pcount() const { return __sb_.pcount(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char* str() { return __sb_.str(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int pcount() const { return __sb_.pcount(); }
 
 private:
   strstreambuf __sb_; // exposition only
@@ -340,10 +340,10 @@ public:
   }
 
   // Members:
-  _LIBCPP_HIDE_FROM_ABI strstreambuf* rdbuf() const { return const_cast<strstreambuf*>(&__sb_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI strstreambuf* rdbuf() const { return const_cast<strstreambuf*>(&__sb_); }
   _LIBCPP_HIDE_FROM_ABI void freeze(bool __freezefl = true) { __sb_.freeze(__freezefl); }
-  _LIBCPP_HIDE_FROM_ABI int pcount() const { return __sb_.pcount(); }
-  _LIBCPP_HIDE_FROM_ABI char* str() { return __sb_.str(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int pcount() const { return __sb_.pcount(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char* str() { return __sb_.str(); }
 
 private:
   strstreambuf __sb_; // exposition only
