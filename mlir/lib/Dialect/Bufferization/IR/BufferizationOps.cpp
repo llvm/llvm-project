@@ -252,9 +252,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
 LogicalResult AllocTensorOp::verify() {
   if (getCopy() && !getDynamicSizes().empty())
     return emitError("dynamic sizes not needed when copying a tensor");
-  if (!getCopy() &&
-      failed(verifyDynamicDimensionCount(getOperation(), getType(),
-                                         getDynamicSizes())))
+  if (!getCopy() && failed(verifyDynamicDimensionCount(
+                        getOperation(), getType(), getDynamicSizes())))
     return failure();
   if (getCopy() && getCopy().getType() != getType())
     return emitError("expected that `copy` and return type match");

@@ -53,9 +53,8 @@ LogicalResult mlir::verifyRankEquals(Operation *op, ShapedType type,
 
   int64_t actualRank = type.getRank();
   if (actualRank != expectedRank) {
-    return op->emitOpError()
-           << typeName << " must have rank " << expectedRank << ", but has "
-           << actualRank;
+    return op->emitOpError() << typeName << " must have rank " << expectedRank
+                             << ", but has " << actualRank;
   }
   return success();
 }
@@ -95,9 +94,8 @@ LogicalResult mlir::verifyDimensionIndicesInRange(Operation *op,
                                                   StringRef context) {
   for (int64_t index : indices) {
     if (index < 0 || index >= maxDim) {
-      return op->emitOpError()
-             << context << " must be in the range [0, " << (maxDim - 1)
-             << "], but got " << index;
+      return op->emitOpError() << context << " must be in the range [0, "
+                               << (maxDim - 1) << "], but got " << index;
     }
   }
   return success();
@@ -195,8 +193,8 @@ LogicalResult mlir::verifyAllElementTypesMatch(Operation *op, ValueRange values,
       return op->emitOpError()
              << context << " must all have the same element type, but "
              << context << "[0] has element type " << firstElementType
-             << " while " << context << "[" << (idx + 1) << "] has element type "
-             << type.getElementType();
+             << " while " << context << "[" << (idx + 1)
+             << "] has element type " << type.getElementType();
     }
   }
   return success();
@@ -227,9 +225,8 @@ LogicalResult mlir::verifyElementCountsMatch(Operation *op, ShapedType type1,
   int64_t count1 = type1.getNumElements();
   int64_t count2 = type2.getNumElements();
   if (count1 != count2) {
-    return op->emitOpError()
-           << name1 << " has " << count1 << " elements, but " << name2
-           << " has " << count2 << " elements";
+    return op->emitOpError() << name1 << " has " << count1 << " elements, but "
+                             << name2 << " has " << count2 << " elements";
   }
   return success();
 }
