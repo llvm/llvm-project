@@ -2641,12 +2641,11 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   taskStructMgr.createGEPsToPrivateVars();
 
   llvmFirstPrivateVars.resize(privateVarsInfo.blockArgs.size());
-  int index = 0;
 
-  for (auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVarAlloc] :
-       llvm::zip_equal(privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
-                       privateVarsInfo.blockArgs,
-                       taskStructMgr.getLLVMPrivateVarGEPs())) {
+  for (auto [i, zip] : llvm::enumerate(llvm::zip_equal(
+           privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
+           privateVarsInfo.blockArgs, taskStructMgr.getLLVMPrivateVarGEPs()))) {
+    auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVarAlloc] = zip;
     // To be handled inside the taskloop.
     if (!privDecl.readsFromMold())
       continue;
@@ -2659,7 +2658,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     if (!privateVarOrErr)
       return handleError(privateVarOrErr, *taskloopOp.getOperation());
 
-    llvmFirstPrivateVars[index++] = privateVarOrErr.get();
+    llvmFirstPrivateVars[i] = privateVarOrErr.get();
 
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
@@ -2720,8 +2719,6 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
         return privateVarOrError.takeError();
       moduleTranslation.mapValue(blockArg, privateVarOrError.get());
       privateVarsInfo.llvmVars[i] = privateVarOrError.get();
-      // Add private var to  llvmFirstPrivateVars
-      llvmFirstPrivateVars[index++] = privateVarOrError.get();
     }
 
     taskStructMgr.createGEPsToPrivateVars();
@@ -2768,7 +2765,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     // into the outlined function. When the task is duplicated, that structure
     // is duplicated too.
     if (failed(cleanupPrivateVars(builder, moduleTranslation,
-                                  taskloopOp.getLoc(), llvmFirstPrivateVars,
+                                  taskloopOp.getLoc(), privateVarsInfo.llvmVars,
                                   privateVarsInfo.privatizers)))
       return llvm::make_error<PreviouslyReportedError>();
     // Similarly, the task context structure freed inside the task is the
