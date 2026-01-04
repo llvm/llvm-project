@@ -198,7 +198,13 @@ FunctionPass *createX86DomainReassignmentPass();
 
 /// This pass compress instructions from EVEX space to legacy/VEX/EVEX space when
 /// possible in order to reduce code size or facilitate HW decoding.
-FunctionPass *createX86CompressEVEXPass();
+class X86CompressEVEXPass : public PassInfoMixin<X86CompressEVEXPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86CompressEVEXLegacyPass();
 
 /// This pass creates the thunks for the retpoline feature.
 FunctionPass *createX86IndirectThunksPass();
@@ -268,7 +274,7 @@ FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
 FunctionPass *createX86ArgumentStackSlotPass();
 FunctionPass *createX86SuppressAPXForRelocationPass();
 
-void initializeCompressEVEXPassPass(PassRegistry &);
+void initializeCompressEVEXLegacyPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
