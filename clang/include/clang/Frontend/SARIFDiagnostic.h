@@ -68,22 +68,17 @@ private:
       DiagOrStoredDiag Diag;
     };
 
-    struct Option {
-      const LangOptions *LangOptsPtr;
-      const DiagnosticOptions *DiagnosticOptsPtr;
-    };
-
     struct Location {
       FullSourceLoc Loc;
       PresumedLoc PLoc;
       llvm::SmallVector<CharSourceRange> Ranges;
 
       // Methods to construct a llvm-style location.
-      llvm::SmallVector<CharSourceRange> getCharSourceRangesWithOption(Option);
+      llvm::SmallVector<CharSourceRange> getCharSourceRangesWithOption(SARIFDiagnostic&);
     };
 
     // Constructor
-    Node(Result Result_, Option Option_, int Nesting);
+    Node(Result Result_, int Nesting);
 
     // Operations on building a node-tree.
     // Arguments and results are all in node-style.
@@ -101,15 +96,14 @@ private:
     unsigned getDiagID();
     DiagnosticsEngine::Level getLevel();
     std::string getDiagnosticMessage();
-    llvm::SmallVector<CharSourceRange> getLocations();
-    llvm::SmallVector<CharSourceRange> getRelatedLocations();
+    llvm::SmallVector<CharSourceRange> getLocations(SARIFDiagnostic&);
+    llvm::SmallVector<CharSourceRange> getRelatedLocations(SARIFDiagnostic&);
     int getNesting();
 
   private:
     Result Result_;
     llvm::SmallVector<Location> Locations;
     llvm::SmallVector<Location> RelatedLocations;
-    Option Option_;
     int Nesting;
     Node *ParentPtr = nullptr;
     llvm::SmallVector<std::unique_ptr<Node>> ChildrenPtrs = {};
@@ -117,6 +111,7 @@ private:
 
   Node Root;
   Node *Current = &Root;
+  const LangOptions* LangOptsPtr;
   SarifDocumentWriter
       *Writer; // Shared between SARIFDiagnosticPrinter and this renderer.
 };

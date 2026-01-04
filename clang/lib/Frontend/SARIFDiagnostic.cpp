@@ -30,9 +30,11 @@ SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                  DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
     : DiagnosticRenderer(LangOpts, DiagOpts),
-      Root(Node::Result(), Node::Option{&LangOpts, &DiagOpts},
+      Root(Node::Result(),
            /*Nesting=*/-1), // The root does not represents a diagnostic.
-      Current(&Root), Writer(Writer) {
+      Current(&Root), 
+      LangOptsPtr(&LangOpts),
+      Writer(Writer) {
   // Don't print 'X warnings and Y errors generated'.
   DiagOpts.ShowCarets = false;
 }
@@ -64,16 +66,16 @@ SARIFDiagnostic::~SARIFDiagnostic() {
 
     SarifResult Result = SarifResult::create(RuleIndex)
       .setDiagnosticMessage(TopLevelDiagnosticsPtr->getDiagnosticMessage())
-      .addLocations(TopLevelDiagnosticsPtr->getLocations())
-      .addRelatedLocations(TopLevelDiagnosticsPtr->getRelatedLocations());
+      .addLocations(TopLevelDiagnosticsPtr->getLocations(*this))
+      .addRelatedLocations(TopLevelDiagnosticsPtr->getRelatedLocations(*this));
     TopLevelDiagnosticsPtr->recursiveForEach([&] (Node& Node) { // For each (recursive) ChildResults.
       Result.addRelatedLocations({
         SarifChildResult::create()
           .setDiagnosticMessage(Node.getDiagnosticMessage())
-          .addLocations(Node.getLocations())
+          .addLocations(Node.getLocations(*this))
           .setNesting(Node.getNesting())
       });
-      Result.addRelatedLocations(Node.getRelatedLocations());
+      Result.addRelatedLocations(Node.getRelatedLocations(*this));
     });
     Writer->appendResult(Result); // Write into Writer
   }
@@ -111,8 +113,8 @@ void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
   Current = &Current->addRelatedLocation(Node::Location{Loc, PLoc, {}});
 }
 
-SARIFDiagnostic::Node::Node(Result Result_, Option Option_, int Nesting)
-    : Result_(std::move(Result_)), Option_(std::move(Option_)),
+SARIFDiagnostic::Node::Node(Result Result_, int Nesting)
+    : Result_(std::move(Result_)),
       Nesting(Nesting) {}
 
 SARIFDiagnostic::Node &SARIFDiagnostic::Node::getParent() {
@@ -137,8 +139,7 @@ SARIFDiagnostic::Node::getChildrenPtrs() {
 SARIFDiagnostic::Node &
 SARIFDiagnostic::Node::addChildResult(Result ChildResult) {
   ChildrenPtrs.push_back(
-      std::make_unique<Node>(Node::Result(std::move(ChildResult)),
-                             Node::Option(std::move(Option_)), Nesting + 1));
+      std::make_unique<Node>(Node::Result(std::move(ChildResult)), Nesting + 1));
   ChildrenPtrs.back()->ParentPtr = this; // I am the parent of this new child.
   return *ChildrenPtrs.back();
 }
@@ -176,21 +177,21 @@ std::string SARIFDiagnostic::Node::getDiagnosticMessage() {
   return Result_.Message;
 }
 
-llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations() {
+llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations(SARIFDiagnostic& SARIFDiag) {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
   llvm::for_each(Locations, [&](Location &Location) {
-    CharSourceRanges.append(Location.getCharSourceRangesWithOption(Option_));
+    CharSourceRanges.append(Location.getCharSourceRangesWithOption(SARIFDiag));
   });
   return CharSourceRanges;
 }
 
 llvm::SmallVector<CharSourceRange>
-SARIFDiagnostic::Node::getRelatedLocations() {
+SARIFDiagnostic::Node::getRelatedLocations(SARIFDiagnostic& SARIFDiag) {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
   llvm::for_each(RelatedLocations,
                 [&](Location &RelatedLocation) {
                   CharSourceRanges.append(
-                      RelatedLocation.getCharSourceRangesWithOption(Option_));
+                      RelatedLocation.getCharSourceRangesWithOption(SARIFDiag));
                 });
   return CharSourceRanges;
 }
@@ -198,7 +199,7 @@ SARIFDiagnostic::Node::getRelatedLocations() {
 int SARIFDiagnostic::Node::getNesting() { return Nesting; }
 
 llvm::SmallVector<CharSourceRange>
-SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(Option Option) {
+SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(SARIFDiagnostic& SARIFDiag) {
   SmallVector<CharSourceRange> Locations = {};
 
   if (PLoc.isInvalid()) {
@@ -231,7 +232,7 @@ SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(Option Option) {
     // tokens.
     unsigned TokSize = 0;
     if (IsTokenRange)
-      TokSize = Lexer::MeasureTokenLength(E, SM, *Option.LangOptsPtr);
+      TokSize = Lexer::MeasureTokenLength(E, SM, *SARIFDiag.LangOptsPtr);
 
     FullSourceLoc BF(B, SM), EF(E, SM);
     SourceLocation BeginLoc = SM.translateLineCol(
@@ -249,8 +250,8 @@ SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(Option Option) {
   auto FID = PLoc.getFileID();
   // Visual Studio 2010 or earlier expects column number to be off by one.
   unsigned int ColNo =
-      (Option.LangOptsPtr->MSCompatibilityVersion &&
-       !Option.LangOptsPtr->isCompatibleWithMSVC(LangOptions::MSVC2012))
+      (SARIFDiag.LangOptsPtr->MSCompatibilityVersion &&
+       !SARIFDiag.LangOptsPtr->isCompatibleWithMSVC(LangOptions::MSVC2012))
           ? PLoc.getColumn() - 1
           : PLoc.getColumn();
   SourceLocation DiagLoc = SM.translateLineCol(FID, PLoc.getLine(), ColNo);
