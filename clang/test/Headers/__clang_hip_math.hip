@@ -349,7 +349,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    [[CMP_NOT_I36_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // CHECK-NEXT:    br i1 [[CMP_NOT_I36_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I25_I]], !llvm.loop [[LOOP12]]
 // CHECK:       [[_ZL15__MAKE_MANTISSAPKC_EXIT]]:
-// CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I]], %[[IF_THEN_I30_I]] ], [ 0, %[[WHILE_BODY_I25_I]] ], [ [[SUB_I21_I]], %[[IF_THEN_I17_I]] ], [ 0, %[[WHILE_BODY_I14_I]] ], [ [[__R_1_I_I]], %[[IF_END31_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ]
+// CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I14_I]] ], [ [[SUB_I34_I]], %[[IF_THEN_I30_I]] ], [ 0, %[[IF_THEN_I]] ], [ 0, %[[WHILE_BODY_I25_I]] ], [ [[SUB_I21_I]], %[[IF_THEN_I17_I]] ], [ [[__R_1_I_I]], %[[IF_END31_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ]
 // CHECK-NEXT:    ret i64 [[RETVAL_0_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test___make_mantissa(
@@ -441,7 +441,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[__R_1_I35_I]] = select i1 [[OR_COND_I28_I]], i64 [[SUB_I32_I]], i64 [[__R_0_I25_I]]
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I28_I]], label %[[WHILE_COND_I23_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[_ZL15__MAKE_MANTISSAPKC_EXIT]]:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[WHILE_BODY_I15_I]] ], [ [[__R_0_I_I]], %[[WHILE_COND_I_I]] ], [ [[__R_1_I_I]], %[[IF_END31_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ], [ 0, %[[WHILE_BODY_I27_I]] ], [ [[__R_0_I25_I]], %[[WHILE_COND_I23_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[__R_1_I_I]], %[[IF_END31_I_I]] ], [ [[__R_0_I_I]], %[[WHILE_COND_I_I]] ], [ 0, %[[WHILE_BODY_I15_I]] ], [ 0, %[[IF_ELSE17_I_I]] ], [ 0, %[[WHILE_BODY_I27_I]] ], [ [[__R_0_I25_I]], %[[WHILE_COND_I23_I]] ]
 // AMDGCNSPIRV-NEXT:    ret i64 [[RETVAL_0_I]]
 //
 extern "C" __device__ uint64_t test___make_mantissa(const char *p) {
@@ -4459,7 +4459,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // DEFAULT-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // DEFAULT-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // DEFAULT:       [[_ZL4NANFPKC_EXIT]]:
-// DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+// DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
 // DEFAULT-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // DEFAULT-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // DEFAULT-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4561,7 +4561,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // APPROX-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // APPROX-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // APPROX:       [[_ZL4NANFPKC_EXIT]]:
-// APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+// APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
 // APPROX-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // APPROX-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // APPROX-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4658,7 +4658,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // NCRDIV-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // NCRDIV:       [[_ZL4NANFPKC_EXIT]]:
-// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // NCRDIV-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // NCRDIV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4754,7 +4754,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-NEXT:    [[__R_1_I35_I_I]] = select i1 [[OR_COND_I28_I_I]], i64 [[SUB_I32_I_I]], i64 [[__R_0_I25_I_I]]
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I28_I_I]], label %[[WHILE_COND_I23_I_I]], label %[[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[_ZL4NANFPKC_EXIT]]:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[WHILE_BODY_I15_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I27_I_I]] ], [ [[__R_0_I25_I_I]], %[[WHILE_COND_I23_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ 0, %[[WHILE_BODY_I15_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I27_I_I]] ], [ [[__R_0_I25_I_I]], %[[WHILE_COND_I23_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // AMDGCNSPIRV-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // AMDGCNSPIRV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4855,7 +4855,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // DEFAULT-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // DEFAULT-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // DEFAULT:       [[_ZL3NANPKC_EXIT]]:
-// DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+// DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
 // DEFAULT-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // DEFAULT-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // DEFAULT-NEXT:    [[TMP13:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -4956,7 +4956,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // APPROX-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // APPROX-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // APPROX:       [[_ZL3NANPKC_EXIT]]:
-// APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+// APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
 // APPROX-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // APPROX-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // APPROX-NEXT:    [[TMP13:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -5052,7 +5052,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // NCRDIV-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // NCRDIV:       [[_ZL3NANPKC_EXIT]]:
-// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
 // NCRDIV-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // NCRDIV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // NCRDIV-NEXT:    [[TMP13:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -5147,7 +5147,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-NEXT:    [[__R_1_I35_I_I]] = select i1 [[OR_COND_I28_I_I]], i64 [[SUB_I32_I_I]], i64 [[__R_0_I25_I_I]]
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I28_I_I]], label %[[WHILE_COND_I23_I_I]], label %[[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[_ZL3NANPKC_EXIT]]:
-// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[WHILE_BODY_I15_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I27_I_I]] ], [ [[__R_0_I25_I_I]], %[[WHILE_COND_I23_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ 0, %[[WHILE_BODY_I15_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I27_I_I]] ], [ [[__R_0_I25_I_I]], %[[WHILE_COND_I23_I_I]] ]
 // AMDGCNSPIRV-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // AMDGCNSPIRV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // AMDGCNSPIRV-NEXT:    [[TMP11:%.*]] = bitcast i64 [[BF_SET9_I]] to double

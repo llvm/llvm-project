@@ -989,7 +989,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x64_iu8_signedA(<8 x i32> %A, <8 x i32
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 1, <8 x i32> %A, i1 0, <8 x i32> %B, <8 x i32> %C, i1 false, i1 false, i1 false)
+  %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 1, <8 x i32> %A, i1 0, <8 x i32> %B, <8 x i32> %C, i1 false, i1 false)
   store <8 x i32> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1013,7 +1013,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x64_iu8_signedB(<8 x i32> %A, <8 x i32
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 0, <8 x i32> %A, i1 1, <8 x i32> %B, <8 x i32> %C, i1 false, i1 false, i1 false)
+  %res = call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 0, <8 x i32> %A, i1 1, <8 x i32> %B, <8 x i32> %C, i1 false, i1 false)
   store <8 x i32> %res, ptr addrspace(1) %out
   ret void
 }
@@ -2538,7 +2538,7 @@ declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x64.fp8.fp8.v8f16.v8i32(<8 x i32>,
 declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x64.fp8.bf8.v8f16.v8i32(<8 x i32>, <8 x i32>, i16, <8 x half>, i1, i1)
 declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x64.bf8.fp8.v8f16.v8i32(<8 x i32>, <8 x i32>, i16, <8 x half>, i1, i1)
 declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x64.bf8.bf8.v8f16.v8i32(<8 x i32>, <8 x i32>, i16, <8 x half>, i1, i1)
-declare <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 immarg, <8 x i32>, i1 immarg, <8 x i32>, <8 x i32>, i1, i1, i1)
+declare <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 immarg, <8 x i32>, i1 immarg, <8 x i32>, <8 x i32>, i1, i1)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1, <16 x half>, i1, <16 x half>, i16, <8 x float>, i1, i1)
 declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1, <16 x half>, i1, <16 x half>, i16, <8 x half>, i1, i1)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>)
