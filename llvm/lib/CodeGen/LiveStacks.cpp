@@ -62,8 +62,8 @@ LiveStacks::getOrCreateInterval(int Slot, const TargetRegisterClass *RC) {
     S2RCMap.insert(std::make_pair(Slot, RC));
   } else {
     // Use the largest common subclass register class.
-    const TargetRegisterClass *OldRC = S2RCMap[Slot];
-    S2RCMap[Slot] = TRI->getCommonSubClass(OldRC, RC);
+    const TargetRegisterClass *&OldRC = S2RCMap[Slot];
+    OldRC = TRI->getCommonSubClass(OldRC, RC);
   }
   return I->second;
 }

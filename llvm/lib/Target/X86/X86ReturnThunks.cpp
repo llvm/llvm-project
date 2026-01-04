@@ -68,7 +68,7 @@ bool X86ReturnThunks::runOnMachineFunction(MachineFunction &MF) {
     return Modified;
 
   const auto &ST = MF.getSubtarget<X86Subtarget>();
-  const bool Is64Bit = ST.getTargetTriple().getArch() == Triple::x86_64;
+  const bool Is64Bit = ST.getTargetTriple().isX86_64();
   const unsigned RetOpc = Is64Bit ? X86::RET64 : X86::RET32;
   SmallVector<MachineInstr *, 16> Rets;
 

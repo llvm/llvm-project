@@ -1,4 +1,4 @@
-; REQUIRES: x86, shell
+; REQUIRES: x86
 
 ; RUN: rm -rf %t; split-file %s %t
 ; RUN: opt -module-hash -module-summary %t/foo.ll -o %t/foo.o
@@ -19,13 +19,17 @@
 ;; Get the total size of created cache files.
 ; RUN: cd %t
 ; RUN: %lld -cache_path_lto %t --thinlto-cache-policy=prune_interval=0s:cache_size_bytes=32k %t/foo.o %t/bar.o -o %t/test 2>&1
-; RUN: %python -c "import os, sys; print(sum(os.path.getsize(filename) for filename in os.listdir('.') if os.path.isfile(filename) and filename.startswith('llvmcache-')))" > %t.size.txt
+; RUN: %python -c "import os, sys; size=sum(os.path.getsize(filename) for filename in os.listdir('.') if os.path.isfile(filename) and filename.startswith('llvmcache-')); print(size+5); print(size-5)" > %t.size.txt
 
 ;; Case 2: If the total size of the cache files created by the current link job is less than the maximum size for the cache directory in bytes, there is no warning.
-; RUN: %lld -v -cache_path_lto %t --thinlto-cache-policy=prune_interval=0s:cache_size_bytes=$(($(cat %t.size.txt) + 5)) %t/foo.o %t/bar.o -o %t/test 2>&1 | FileCheck %s --implicit-check-not=warning:
+; RUN: echo -n "--thinlto-cache-policy=prune_interval=0s:cache_size_bytes=" > %t.response
+; RUN: head -1 %t.size.txt >> %t.response
+; RUN: %lld -v -cache_path_lto %t @%t.response %t/foo.o %t/bar.o -o %t/test 2>&1 | FileCheck %s --implicit-check-not=warning:
 
 ;; Case 3: If the total size of the cache files created by the current link job exceeds the maximum size for the cache directory in bytes, a warning is given.
-; RUN: %lld -v -cache_path_lto %t --thinlto-cache-policy=prune_interval=0s:cache_size_bytes=$(($(cat %t.size.txt) - 5)) %t/foo.o %t/bar.o -o %t/test 2>&1 | FileCheck %s --check-prefixes=SIZE,WARN
+; RUN: echo -n "--thinlto-cache-policy=prune_interval=0s:cache_size_bytes=" > %t.response
+; RUN: tail -1 %t.size.txt >> %t.response
+; RUN: %lld -v -cache_path_lto %t @%t.response %t/foo.o %t/bar.o -o %t/test 2>&1 | FileCheck %s --check-prefixes=SIZE,WARN
 
 ;; Check emit two warnings if pruning happens due to reach both the size and number limits.
 ; RUN: %lld -cache_path_lto %t --thinlto-cache-policy=prune_interval=0s:cache_size_files=1:cache_size_bytes=1 %t/foo.o %t/bar.o -o %t/test 2>&1 | FileCheck %s --check-prefixes=NUM,SIZE,WARN

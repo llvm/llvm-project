@@ -37,5 +37,7 @@ lpad:
 ; CHECK: Personality routine
 ; CHECK: LSDA location
 ; Check that the exception table is emitted into .lsda section.
-; CHECK: .section ".gcc_exception_table.test1"
+; CHECK:  stdin#C CSECT
+; CHECK:  C_WSA64 CATTR ALIGN(2),FILL(0),NOTEXECUTABLE,RMODE(64),PART(.gcc_exception_table.test1)
+; CHECK:  .gcc_exception_table.test1 XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 ; CHECK: GCC_except_table0:

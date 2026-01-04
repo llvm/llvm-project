@@ -327,7 +327,6 @@ define <vscale x 2 x i64> @mul_imm_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 define <vscale x 16 x i8> @sabd_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: sabd_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sabd z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sabd.u.nxv16i8(<vscale x 16 x i1> %pg,
@@ -339,7 +338,6 @@ define <vscale x 16 x i8> @sabd_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a
 define <vscale x 8 x i16> @sabd_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: sabd_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    sabd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sabd.u.nxv8i16(<vscale x 8 x i1> %pg,
@@ -351,7 +349,6 @@ define <vscale x 8 x i16> @sabd_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a
 define <vscale x 4 x i32> @sabd_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: sabd_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sabd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sabd.u.nxv4i32(<vscale x 4 x i1> %pg,
@@ -363,7 +360,6 @@ define <vscale x 4 x i32> @sabd_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a
 define <vscale x 2 x i64> @sabd_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: sabd_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sabd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sabd.u.nxv2i64(<vscale x 2 x i1> %pg,
@@ -883,7 +879,6 @@ define <vscale x 2 x i64> @subr_imm_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64
 define <vscale x 16 x i8> @uabd_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: uabd_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uabd z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uabd.u.nxv16i8(<vscale x 16 x i1> %pg,
@@ -895,7 +890,6 @@ define <vscale x 16 x i8> @uabd_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a
 define <vscale x 8 x i16> @uabd_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: uabd_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uabd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uabd.u.nxv8i16(<vscale x 8 x i1> %pg,
@@ -907,7 +901,6 @@ define <vscale x 8 x i16> @uabd_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a
 define <vscale x 4 x i32> @uabd_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: uabd_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uabd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uabd.u.nxv4i32(<vscale x 4 x i1> %pg,
@@ -919,7 +912,6 @@ define <vscale x 4 x i32> @uabd_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a
 define <vscale x 2 x i64> @uabd_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: uabd_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uabd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uabd.u.nxv2i64(<vscale x 2 x i1> %pg,

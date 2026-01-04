@@ -54,7 +54,7 @@ void test_replace_int_p() {
 
     replace_int_p(std::inout_ptr(uPtr, std::move(del)));
     assert(*uPtr == 84);
-    assert(uPtr.get_deleter().wasMoveInitilized == true);
+    assert(uPtr.get_deleter().wasMoveInitialized == true);
   }
 
   // pointer-like ConstructiblePtr

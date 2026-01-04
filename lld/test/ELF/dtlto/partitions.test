@@ -1,0 +1,40 @@
+# REQUIRES: x86
+
+## Test that DTLTO works with more than one LTO partition.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: sed 's/@f/@t1/g' f.ll > t1.ll
+RUN: sed 's/@f/@t2/g' f.ll > t2.ll
+
+## Generate bitcode.
+RUN: opt f.ll -o full.bc
+RUN: opt -thinlto-bc t1.ll -o thin1.bc
+RUN: opt -thinlto-bc t2.ll -o thin2.bc
+
+## Generate object files for mock.py to return.
+RUN: llc t1.ll --filetype=obj -o thin1.o
+RUN: llc t2.ll --filetype=obj -o thin2.o
+
+## Link with 3 LTO partitions.
+RUN: ld.lld full.bc thin1.bc thin2.bc \
+RUN:   --thinlto-distributor=%python \
+RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
+RUN:   --thinlto-distributor-arg=thin1.o \
+RUN:   --thinlto-distributor-arg=thin2.o \
+RUN:   --save-temps \
+RUN:   --lto-partitions=3
+
+## DTLTO temporary object files include the task number and a PID component. The
+## task number should incorporate the LTO partition number.
+RUN: ls | sort | FileCheck %s
+CHECK: {{^}}thin1.3.[[PID:[a-zA-Z0-9_]+]].native.o{{$}}
+CHECK: {{^}}thin2.4.[[PID]].native.o{{$}}
+
+#--- f.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @f() {
+  ret void
+}

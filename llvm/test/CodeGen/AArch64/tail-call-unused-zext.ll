@@ -6,10 +6,10 @@
 ; the attributes of the caller and the callee match.
 
 declare zeroext i1 @zcallee()
-define void @zcaller() {
+define void @zcaller(i1 %arg) {
 ; CHECK-LABEL: name: zcaller
 entry:
-  br i1 undef, label %calllabel, label %retlabel
+  br i1 %arg, label %calllabel, label %retlabel
 calllabel:
 ; CHECK: bb.1.calllabel:
 ; CHECK-NOT: BL @zcallee
@@ -21,10 +21,10 @@ retlabel:
 }
 
 declare signext i1 @scallee()
-define void @scaller() {
+define void @scaller(i1 %arg) {
 ; CHECK-LABEL: name: scaller
 entry:
-  br i1 undef, label %calllabel, label %retlabel
+  br i1 %arg, label %calllabel, label %retlabel
 calllabel:
 ; CHECK: bb.1.calllabel:
 ; CHECK-NOT: BL @scallee

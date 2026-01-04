@@ -1,0 +1,51 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Check insertion of runtime checks in host side only
+
+module section_test
+
+contains
+
+  subroutine foo(a)
+    real, device, dimension(:,:) :: a
+  end subroutine
+
+  subroutine test_host()
+    real, device, allocatable, dimension(:,:) :: a
+    allocate(a(10,10))
+    call foo(a(1:10,1:10:2))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMsection_testPtest_host()
+! CHECK: fir.call @_FortranACUFDescriptorCheckSection
+! CHECK: fir.call @_QMsection_testPfoo
+
+  attributes(device) subroutine zoo(a)
+    real, device, dimension(:,:) :: a
+  end subroutine
+
+  attributes(global) subroutine test_device()
+    real, device, allocatable, dimension(:,:) :: a
+    allocate(a(10,10))
+    call zoo(a(1:10,1:10:2))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMsection_testPtest_device()
+! CHECK-NOT: fir.call @_FortranACUFDescriptorCheckSection
+! CHECK: fir.call @_QMsection_testPzoo
+
+  subroutine ignore(a)
+    real, device, dimension(:,:) :: a
+    !dir$ ignore_tkr(c) a
+  end subroutine
+
+  subroutine test_host2()
+    real, device, allocatable, dimension(:,:) :: a
+    allocate(a(10,10))
+    call ignore(a(1:10,1:10:2))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMsection_testPtest_host2()
+! CHECK-NOT: fir.call @_FortranACUFDescriptorCheckSection
+! CHECK: fir.call @_QMsection_testPignore
+end module

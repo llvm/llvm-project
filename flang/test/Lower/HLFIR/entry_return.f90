@@ -9,28 +9,28 @@ end function
 ! CHECK-LABEL:   func.func @_QPf1() -> complex<f32> {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca complex<f32> {bindc_name = "f1", uniq_name = "_QFf1Ef1"}
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFf1Ef1"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#1 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf1Ee1"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_4:.*]] = arith.constant false
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_5]] to %[[VAL_3]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_1]]#1 : !fir.ref<complex<f32>>
+! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<complex<f32>>
 ! CHECK:           return %[[VAL_6]] : complex<f32>
 ! CHECK:         }
 
 ! // CHECK-LABEL:   func.func @_QPe1() -> !fir.logical<4> {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca complex<f32> {bindc_name = "f1", uniq_name = "_QFf1Ef1"}
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFf1Ef1"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#1 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf1Ee1"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_4:.*]] = arith.constant false
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_5]] to %[[VAL_3]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           return %[[VAL_6]] : !fir.logical<4>
 ! CHECK:         }
 
@@ -42,7 +42,7 @@ end function
 ! CHECK-LABEL:   func.func @_QPf2() -> !fir.logical<4> {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca complex<f32> {bindc_name = "e2", uniq_name = "_QFf2Ee2"}
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFf2Ee2"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#1 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf2Ef2"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
@@ -50,22 +50,22 @@ end function
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 2.000000e+00 : f32
 ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_4]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
 ! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
-! CHECK:           %[[VAL_8:.*]] = fir.call @_QPcomplex(%[[VAL_6]]#1, %[[VAL_7]]#1) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f32>) -> f32
-! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<f32>, i1
-! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<f32>, i1
+! CHECK:           %[[VAL_8:.*]] = fir.call @_QPcomplex(%[[VAL_6]]#0, %[[VAL_7]]#0) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f32>) -> f32
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           %[[VAL_10:.*]] = fir.undefined complex<f32>
 ! CHECK:           %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[VAL_8]], [0 : index] : (complex<f32>, f32) -> complex<f32>
 ! CHECK:           %[[VAL_12:.*]] = fir.insert_value %[[VAL_11]], %[[VAL_9]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 ! CHECK:           hlfir.assign %[[VAL_12]] to %[[VAL_1]]#0 : complex<f32>, !fir.ref<complex<f32>>
-! CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.logical<4>>
+! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<f32>, i1
+! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<f32>, i1
+! CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:           return %[[VAL_13]] : !fir.logical<4>
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QPe2() -> complex<f32> {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca complex<f32> {bindc_name = "e2", uniq_name = "_QFf2Ee2"}
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFf2Ee2"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#1 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
+! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.logical<4>>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFf2Ef2"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           cf.br ^bb1
 ! CHECK:         ^bb1:
@@ -73,14 +73,14 @@ end function
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 2.000000e+00 : f32
 ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_4]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
 ! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
-! CHECK:           %[[VAL_8:.*]] = fir.call @_QPcomplex(%[[VAL_6]]#1, %[[VAL_7]]#1) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f32>) -> f32
-! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<f32>, i1
-! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<f32>, i1
+! CHECK:           %[[VAL_8:.*]] = fir.call @_QPcomplex(%[[VAL_6]]#0, %[[VAL_7]]#0) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f32>) -> f32
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           %[[VAL_10:.*]] = fir.undefined complex<f32>
 ! CHECK:           %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[VAL_8]], [0 : index] : (complex<f32>, f32) -> complex<f32>
 ! CHECK:           %[[VAL_12:.*]] = fir.insert_value %[[VAL_11]], %[[VAL_9]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 ! CHECK:           hlfir.assign %[[VAL_12]] to %[[VAL_1]]#0 : complex<f32>, !fir.ref<complex<f32>>
-! CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_1]]#1 : !fir.ref<complex<f32>>
+! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<f32>, i1
+! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<f32>, i1
+! CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<complex<f32>>
 ! CHECK:           return %[[VAL_13]] : complex<f32>
 ! CHECK:         }

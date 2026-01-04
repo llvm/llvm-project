@@ -6,6 +6,9 @@ on:
       - "Check code formatting"
       - "Check for private emails used in PRs"
       - "PR Request Release Note"
+      - "Code lint"
+      - "CI Checks"
+      - "Test Issue Write"
     types:
       - completed
 
@@ -14,7 +17,7 @@ permissions:
 
 jobs:
   pr-comment:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     if: >
@@ -25,7 +28,7 @@ jobs:
       )
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           sparse-checkout: |
             .github/workflows/unprivileged-download-artifact/action.yml
@@ -38,18 +41,23 @@ jobs:
           artifact-name: workflow-args
 
       - name: 'Comment on PR'
-        if: steps.download-artifact.outputs.artifact-id != ''
-        uses: actions/github-script@v3
+        if: steps.download-artifact.outputs.artifact-ids != ''
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             var fs = require('fs');
-            const comments = JSON.parse(fs.readFileSync('./comments'));
+            var comments = []
+            for (local_file of fs.readdirSync('.')) {
+              if (local_file.startsWith("comments")) {
+                comments.push(...JSON.parse(fs.readFileSync(local_file)))
+              }
+            }
             if (!comments || comments.length == 0) {
               return;
             }
 
-            let runInfo = await github.actions.getWorkflowRun({
+            let runInfo = await github.rest.actions.getWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
               run_id: context.payload.workflow_run.id
@@ -122,7 +130,7 @@ jobs:
                 // Security check: Ensure that this comment was created by
                 // the github-actions bot, so a malicious input won't overwrite
                 // a user's comment.
-                github.issues.getComment({
+                github.rest.issues.getComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   comment_id: comment.id
@@ -132,7 +140,7 @@ jobs:
                     console.log("Invalid comment id: " + comment.id);
                     return;
                   }
-                  github.issues.updateComment({
+                  github.rest.issues.updateComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: pr_number,
@@ -141,7 +149,7 @@ jobs:
                   });
                 });
               } else {
-                github.issues.createComment({
+                github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: pr_number,
@@ -153,5 +161,5 @@ jobs:
       - name: Dump comments file
         if: >-
           always() &&
-          steps.download-artifact.outputs.artifact-id != ''
-        run: cat comments
+          steps.download-artifact.outputs.artifact-ids != ''
+        run: cat comments*

@@ -112,11 +112,15 @@ void EHScopeStack::deallocate(size_t Size) {
   StartOfData += llvm::alignTo(Size, ScopeStackAlignment);
 }
 
-bool EHScopeStack::containsOnlyLifetimeMarkers(
+bool EHScopeStack::containsOnlyNoopCleanups(
     EHScopeStack::stable_iterator Old) const {
   for (EHScopeStack::iterator it = begin(); stabilize(it) != Old; it++) {
     EHCleanupScope *cleanup = dyn_cast<EHCleanupScope>(&*it);
-    if (!cleanup || !cleanup->isLifetimeMarker())
+    // If this is anything other than a lifetime marker or fake use cleanup,
+    // then the scope stack does not contain only noop cleanups.
+    if (!cleanup)
+      return false;
+    if (!cleanup->isLifetimeMarker() && !cleanup->isFakeUse())
       return false;
   }
 
@@ -154,6 +158,7 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   bool IsNormalCleanup = Kind & NormalCleanup;
   bool IsEHCleanup = Kind & EHCleanup;
   bool IsLifetimeMarker = Kind & LifetimeMarker;
+  bool IsFakeUse = Kind & FakeUse;
 
   // Per C++ [except.terminate], it is implementation-defined whether none,
   // some, or all cleanups are called before std::terminate. Thus, when
@@ -176,6 +181,8 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
     InnermostEHScope = stable_begin();
   if (IsLifetimeMarker)
     Scope->setLifetimeMarker();
+  if (IsFakeUse)
+    Scope->setFakeUse();
 
   // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
   // If exceptions are disabled/ignored and SEH is not in use, then there is no
@@ -955,8 +962,8 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
 
       // Append the prepared cleanup prologue from above.
       llvm::BasicBlock *NormalExit = Builder.GetInsertBlock();
-      for (unsigned I = 0, E = InstsToAppend.size(); I != E; ++I)
-        InstsToAppend[I]->insertInto(NormalExit, NormalExit->end());
+      for (llvm::Instruction *Inst : InstsToAppend)
+        Inst->insertInto(NormalExit, NormalExit->end());
 
       // Optimistically hope that any fixups will continue falling through.
       for (unsigned I = FixupDepth, E = EHStack.getNumBranchFixups();
@@ -1111,6 +1118,7 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
 
   // Create the branch.
   llvm::BranchInst *BI = Builder.CreateBr(Dest.getBlock());
+  addInstToCurrentSourceAtom(BI, nullptr);
 
   // Calculate the innermost active normal cleanup.
   EHScopeStack::stable_iterator
