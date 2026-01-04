@@ -147,6 +147,27 @@ int main(int argc, const char **argv) {
   llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 4>
       failingCommands;
 
+  for (const auto &job : c->getJobs()) {
+    const auto *cmd = llvm::dyn_cast<clang::driver::Command>(&job);
+    if (!cmd)
+      continue;
+      
+    for (const clang::driver::InputInfo &inputInfo : cmd->getInputInfos()) {
+      clang::driver::types::ID type = inputInfo.getType();
+      
+      if (type == clang::driver::types::TY_Asm ||
+          type == clang::driver::types::TY_PP_Asm) {
+        
+        diags.Report(diags.getCustomDiagID(
+            clang::DiagnosticsEngine::Error,
+            "flang does not accept assembly code"))
+            << inputInfo.getAsString();
+            
+        return 1;
+      }
+    }
+  }
+
   // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain all
   // the compiler options. This is intended for the frontend driver,
   // flang -fc1, to enable the implementation of the COMPILER_OPTIONS
