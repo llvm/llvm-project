@@ -697,6 +697,9 @@ static bool canCreateThunkFor(Function *F) {
   if (F->isVarArg())
     return false;
 
+  if (F->hasKernelCallingConv())
+    return false;
+
   // Don't merge tiny functions using a thunk, since it can just end up
   // making the function larger.
   if (F->size() == 1) {
