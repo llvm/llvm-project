@@ -20,13 +20,14 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
 namespace llvm {
-cl::opt<bool> ShouldPreserveAllAttributes(
+LLVM_ABI cl::opt<bool> ShouldPreserveAllAttributes(
     "assume-preserve-all", cl::init(false), cl::Hidden,
     cl::desc("enable preservation of all attributes. even those that are "
              "unlikely to be useful"));
@@ -114,12 +115,12 @@ struct AssumeBuilderState {
       : M(M), InstBeingModified(I), AC(AC), DT(DT) {}
 
   bool tryToPreserveWithoutAddingAssume(RetainedKnowledge RK) {
-    if (!InstBeingModified || !RK.WasOn)
+    if (!InstBeingModified || !RK.WasOn || !AC)
       return false;
     bool HasBeenPreserved = false;
     Use* ToUpdate = nullptr;
     getKnowledgeForValue(
-        RK.WasOn, {RK.AttrKind}, AC,
+        RK.WasOn, {RK.AttrKind}, *AC,
         [&](RetainedKnowledge RKOther, Instruction *Assume,
             const CallInst::BundleOpInfo *Bundle) {
           if (!isValidAssumeForContext(Assume, InstBeingModified, DT))

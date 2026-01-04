@@ -1,12 +1,16 @@
 static_library("Analysis") {
   output_name = "LLVMAnalysis"
   public_deps = [
+    # Must be a public_dep because Analysis's headers include
+    # TargetLibraryInfo.inc.
+    "//llvm/include/llvm/Analysis:TargetLibraryInfo",
     # Must be a public_dep because Analysis's headers include llvm-config.h.
     "//llvm/include/llvm/Config:llvm-config",
   ]
   deps = [
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Frontend/HLSL",
     "//llvm/lib/IR",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
@@ -51,10 +55,14 @@ static_library("Analysis") {
     "DomPrinter.cpp",
     "DomTreeUpdater.cpp",
     "DominanceFrontier.cpp",
+    "EphemeralValuesCache.cpp",
+    "FloatingPointPredicateUtils.cpp",
     "FunctionPropertiesAnalysis.cpp",
     "GlobalsModRef.cpp",
     "GuardUtils.cpp",
+    "HashRecognize.cpp",
     "HeatUtils.cpp",
+    "IR2Vec.cpp",
     "IRSimilarityIdentifier.cpp",
     "IVDescriptors.cpp",
     "IVUsers.cpp",
@@ -63,7 +71,6 @@ static_library("Analysis") {
     "InlineAdvisor.cpp",
     "InlineCost.cpp",
     "InlineOrder.cpp",
-    "InlineSizeEstimatorAnalysis.cpp",
     "InstCount.cpp",
     "InstructionPrecedenceTracking.cpp",
     "InstructionSimplify.cpp",
@@ -111,6 +118,7 @@ static_library("Analysis") {
     "RegionPass.cpp",
     "RegionPrinter.cpp",
     "ReplayInlineAdvisor.cpp",
+    "RuntimeLibcallInfo.cpp",
     "ScalarEvolution.cpp",
     "ScalarEvolutionAliasAnalysis.cpp",
     "ScalarEvolutionDivision.cpp",
@@ -118,6 +126,7 @@ static_library("Analysis") {
     "ScopedNoAliasAA.cpp",
     "StackLifetime.cpp",
     "StackSafetyAnalysis.cpp",
+    "StaticDataProfileInfo.cpp",
     "StructuralHash.cpp",
     "SyntheticCountsUtils.cpp",
     "TFLiteUtils.cpp",

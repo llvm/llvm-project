@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -34,8 +33,13 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     ShapedType weightType = cast<ShapedType>(weight.getType());
     ShapedType resultType = cast<ShapedType>(op.getOutput().getType());
 
-    if (!(inputType.hasStaticShape() && weightType.hasStaticShape() &&
-          resultType.hasStaticShape())) {
+    // Any dimensions other than batchSize cannot be dynamic for input/output
+    for (unsigned int i = 1; i < 4; ++i) {
+      if (inputType.isDynamicDim(i) || resultType.isDynamicDim(i))
+        return failure();
+    }
+
+    if (!weightType.hasStaticShape()) {
       return failure();
     }
 
@@ -48,6 +52,31 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       return failure();
     }
 
+    Type inputETy = inputType.getElementType();
+    Type weightETy = weightType.getElementType();
+    if (!inputETy.isIntOrFloat() || !weightETy.isIntOrFloat())
+      return rewriter.notifyMatchFailure(op, "unsupported type");
+
+    // Get and verify zero points.
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    if (failed(maybeIZp))
+      return rewriter.notifyMatchFailure(
+          op, "input zero point cannot be statically determined");
+
+    FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+    if (failed(maybeWZp))
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point cannot be statically determined");
+
+    int64_t iZp = *maybeIZp;
+    int64_t wZp = *maybeWZp;
+    if (op.verifyInputZeroPoint(iZp).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input zero point must be zero for non-int8 integer types");
+    if (op.verifyWeightZeroPoint(wZp).failed())
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point must be zero for non-int8 integer types");
+
     // Reshape input to [N, H, W, C] -> [N, H, W, C, 1].
     ArrayRef<int64_t> inputShape = inputType.getShape();
     llvm::SmallVector<int64_t, 2> revisedInputShape{
@@ -57,38 +86,21 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         dyn_cast<RankedTensorType>(input.getType()).getElementType());
     auto revisedInputShapeValue =
         getTosaConstShape(rewriter, op.getLoc(), revisedInputShape);
-    input = rewriter
-                .create<tosa::ReshapeOp>(op.getLoc(), inputType, input,
-                                         revisedInputShapeValue)
+    input = tosa::ReshapeOp::create(rewriter, op.getLoc(), inputType, input,
+                                    revisedInputShapeValue)
                 .getResult();
 
-    Type inputETy = inputType.getElementType();
-    Type weightETy = weightType.getElementType();
     Type resultETy = resultType.getElementType();
 
     if (inputETy != resultETy) {
       inputType = inputType.clone(resultETy);
-      input = rewriter.create<tosa::CastOp>(op.getLoc(), inputType, input);
+      input = tosa::CastOp::create(rewriter, op.getLoc(), inputType, input);
     }
 
     if (weightETy != resultETy) {
       weightType = weightType.clone(resultETy);
-      weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
+      weight = tosa::CastOp::create(rewriter, op.getLoc(), weightType, weight);
     }
-
-    // Get and verify zero points.
-    int64_t iZp;
-    int64_t wZp;
-
-    if (op.getInputZeroPoint(iZp).failed() ||
-        op.getWeightZeroPoint(wZp).failed())
-      return rewriter.notifyMatchFailure(
-          op, "bail out if zero points cannot statically be determined");
-
-    if (op.verifyInputZeroPoint(iZp).failed() ||
-        op.verifyWeightZeroPoint(wZp).failed())
-      return rewriter.notifyMatchFailure(
-          op, "zero point must be zero for non-int8 integer types");
 
     if (iZp != 0 || wZp != 0) {
 
@@ -101,9 +113,9 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         auto zpTy = RankedTensorType::get(shape, ety);
         auto zpAttr =
             DenseElementsAttr::get(zpTy, rewriter.getIntegerAttr(ety, zp));
-        auto zpVal = rewriter.create<tosa::ConstOp>(op.getLoc(), zpTy, zpAttr);
-        return rewriter.create<tosa::SubOp>(op.getLoc(), val.getType(), val,
-                                            zpVal);
+        auto zpVal = tosa::ConstOp::create(rewriter, op.getLoc(), zpTy, zpAttr);
+        return tosa::SubOp::create(rewriter, op.getLoc(), val.getType(), val,
+                                   zpVal);
       };
 
       input = applyZp(input, iZp);
@@ -130,10 +142,10 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       auto padTy = RankedTensorType::get({1}, inputETy);
       auto padAttr = DenseElementsAttr::get(padTy, zeroAttr);
       Value padVal =
-          rewriter.create<tosa::ConstOp>(op->getLoc(), padTy, padAttr);
+          tosa::ConstOp::create(rewriter, op->getLoc(), padTy, padAttr);
       inputType = RankedTensorType::get(newShape, inputETy);
-      input = rewriter.create<tosa::PadOp>(op->getLoc(), inputType, input,
-                                           padSizeVal, padVal);
+      input = tosa::PadOp::create(rewriter, op->getLoc(), inputType, input,
+                                  padSizeVal, padVal);
     }
 
     // Perform an elementwise mul over the reshaped input and weight.
@@ -153,10 +165,9 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     auto shiftZeroAttr = DenseElementsAttr::get(
         shiftType, rewriter.getIntegerAttr(shiftElementType, 0));
     Value constZero =
-        rewriter.create<tosa::ConstOp>(op.getLoc(), shiftType, shiftZeroAttr);
-    Value mulValue = rewriter
-                         .create<tosa::MulOp>(op.getLoc(), mulShapeType, input,
-                                              weight, constZero)
+        tosa::ConstOp::create(rewriter, op.getLoc(), shiftType, shiftZeroAttr);
+    Value mulValue = tosa::MulOp::create(rewriter, op.getLoc(), mulShapeType,
+                                         input, weight, constZero)
                          .getResult();
 
     // Reshape output to [N, H, W, C * M].
@@ -166,8 +177,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         dyn_cast<RankedTensorType>(input.getType()).getElementType());
     auto outputShapeValue =
         getTosaConstShape(rewriter, op->getLoc(), outputShape);
-    Value outputValue = rewriter.create<tosa::ReshapeOp>(
-        op.getLoc(), outputShapeType, mulValue, outputShapeValue);
+    Value outputValue = tosa::ReshapeOp::create(
+        rewriter, op.getLoc(), outputShapeType, mulValue, outputShapeValue);
 
     Value bias = op.getBias();
     if (EqualizeRanks(rewriter, op.getLoc(), outputValue, bias).failed()) {

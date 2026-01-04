@@ -254,31 +254,33 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
 
   uint8_t uval[8];
   if (process->GetAddressByteSize() == 8) {
-  for (size_t i = 0; kernel_addresses_64[i] != LLDB_INVALID_ADDRESS; i++) {
-      if (process->ReadMemoryFromInferior (kernel_addresses_64[i], uval, 8, read_err) == 8)
-      {
-          DataExtractor data (&uval, 8, process->GetByteOrder(), process->GetAddressByteSize());
-          lldb::offset_t offset = 0;
-          uint64_t addr = data.GetU64 (&offset);
-          if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
-              return addr;
-          }
+    for (size_t i = 0; kernel_addresses_64[i] != LLDB_INVALID_ADDRESS; i++) {
+      if (process->ReadMemoryFromInferior(kernel_addresses_64[i], uval, 8,
+                                          read_err) == 8) {
+        DataExtractor data(&uval, 8, process->GetByteOrder(),
+                           process->GetAddressByteSize());
+        lldb::offset_t offset = 0;
+        uint64_t addr = data.GetU64(&offset);
+        if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
+          return addr;
+        }
       }
-  }
+    }
   }
 
   if (process->GetAddressByteSize() == 4) {
-  for (size_t i = 0; kernel_addresses_32[i] != LLDB_INVALID_ADDRESS; i++) {
-      if (process->ReadMemoryFromInferior (kernel_addresses_32[i], uval, 4, read_err) == 4)
-      {
-          DataExtractor data (&uval, 4, process->GetByteOrder(), process->GetAddressByteSize());
-          lldb::offset_t offset = 0;
-          uint32_t addr = data.GetU32 (&offset);
-          if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
-              return addr;
-          }
+    for (size_t i = 0; kernel_addresses_32[i] != LLDB_INVALID_ADDRESS; i++) {
+      if (process->ReadMemoryFromInferior(kernel_addresses_32[i], uval, 4,
+                                          read_err) == 4) {
+        DataExtractor data(&uval, 4, process->GetByteOrder(),
+                           process->GetAddressByteSize());
+        lldb::offset_t offset = 0;
+        uint32_t addr = data.GetU32(&offset);
+        if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
+          return addr;
+        }
       }
-  }
+    }
   }
 
   return LLDB_INVALID_ADDRESS;
@@ -787,6 +789,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     // Search for the kext on the local filesystem via the UUID
     if (!m_module_sp && m_uuid.IsValid()) {
       ModuleSpec module_spec;
+      module_spec.SetTarget(target.shared_from_this());
       module_spec.GetUUID() = m_uuid;
       if (!m_uuid.IsValid())
         module_spec.GetArchitecture() = target.GetArchitecture();
@@ -799,9 +802,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // system.
       PlatformSP platform_sp(target.GetPlatform());
       if (platform_sp) {
-        FileSpecList search_paths = target.GetExecutableSearchPaths();
-        platform_sp->GetSharedModule(module_spec, process, m_module_sp,
-                                     &search_paths, nullptr, nullptr);
+        platform_sp->GetSharedModule(module_spec, process, m_module_sp, nullptr,
+                                     nullptr);
       }
 
       // Ask the Target to find this file on the local system, if possible.
@@ -1559,7 +1561,8 @@ void DynamicLoaderDarwinKernel::SetNotificationBreakpointIfNeeded() {
             .CreateBreakpoint(&module_spec_list, nullptr,
                               "OSKextLoadedKextSummariesUpdated",
                               eFunctionNameTypeFull, eLanguageTypeUnknown, 0,
-                              skip_prologue, internal_bp, hardware)
+                              /*offset_is_insn_count = */ false, skip_prologue,
+                              internal_bp, hardware)
             .get();
 
     bp->SetCallback(DynamicLoaderDarwinKernel::BreakpointHitCallback, this,

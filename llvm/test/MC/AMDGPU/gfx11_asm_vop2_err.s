@@ -3,11 +3,11 @@
 v_fmaak_f32 v0, 0xff32, v0, 0
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
-v_fmaak_f16 v0, 0xff32, v0, 0
+v_fmaak_f16 v0.l, 0xff32, v0.l, 0
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 v_fmamk_f32 v0, 0xff32, 1, v0
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
-v_fmamk_f16 v0, 0xff32, 1, v0
+v_fmamk_f16 v0.l, 0xff32, 1, v0.l
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed

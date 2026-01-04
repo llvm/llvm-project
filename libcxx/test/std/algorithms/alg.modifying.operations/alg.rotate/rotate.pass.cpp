@@ -15,6 +15,7 @@
 #include <cassert>
 #include <memory>
 #include <type_traits>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -420,13 +421,35 @@ struct TestUniquePtr {
 
 #endif // TEST_STD_VER >= 11
 
+template <std::size_t N>
+TEST_CONSTEXPR_CXX20 bool test_vector_bool() {
+  for (int offset = -4; offset <= 4; ++offset) {
+    std::vector<bool> a(N, false);
+    std::size_t mid = N / 2 + offset;
+    for (std::size_t i = mid; i < N; ++i)
+      a[i] = true;
+    std::rotate(a.begin(), a.begin() + mid, a.end());
+    for (std::size_t i = 0; i < N; ++i)
+      assert(a[i] == (i < N - mid));
+  }
+  return true;
+};
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<int*>(), TestIter());
 
 #if TEST_STD_VER >= 11
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
 #endif
+
+  test_vector_bool<8>();
+  test_vector_bool<19>();
+  test_vector_bool<32>();
+  test_vector_bool<49>();
+  test_vector_bool<64>();
+  test_vector_bool<199>();
+  test_vector_bool<256>();
 
   return true;
 }

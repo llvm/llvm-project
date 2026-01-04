@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MissingFrameInferrer.h"
+#include "Options.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <queue>
 #include <sys/types.h>
 
@@ -37,7 +37,8 @@ STATISTIC(TailCallMaxTailCallPath, "Length of the longest tail call path");
 static cl::opt<uint32_t>
     MaximumSearchDepth("max-search-depth", cl::init(UINT32_MAX - 1),
                        cl::desc("The maximum levels the DFS-based missing "
-                                "frame search should go with"));
+                                "frame search should go with"),
+                       cl::cat(ProfGenCategory));
 
 void MissingFrameInferrer::initialize(
     const ContextSampleCounterMap *SampleCounters) {
@@ -165,14 +166,14 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
   if (CurSearchingDepth == MaximumSearchDepth)
     return 0;
 
-
-  if (!FuncToTailCallMap.count(From))
+  auto It = FuncToTailCallMap.find(From);
+  if (It == FuncToTailCallMap.end())
     return 0;
 
   CurSearchingDepth++;
   Visiting.insert(From);
   uint64_t NumPaths = 0;
-  for (auto TailCall : FuncToTailCallMap[From]) {
+  for (auto TailCall : It->second) {
     NumPaths += computeUniqueTailCallPath(TailCall, To, Path);
     // Stop analyzing the remaining if we are already seeing more than one
     // reachable paths.

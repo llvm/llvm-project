@@ -19,6 +19,7 @@ include "TestAttrDefs.td"
 include "TestInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
 
 // All of the types will extend this class.
 class Test_Type<string name, list<Trait> traits = []>
@@ -351,6 +352,13 @@ def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
                               custom<BarString>(ref($foo)) `>` }];
 }
 
+def TestCustomStorageCtor : Test_Type<"TestCustomStorageCtor"> {
+    let mnemonic = "custom_storage_ctor_type";
+    let parameters = (ins "int":$value);
+    let assemblyFormat = "`<` $value `>`";
+    let hasStorageCustomConstructor = 1;
+}
+
 def TestTypeOptionalString : Test_Type<"TestTypeOptionalString"> {
   let parameters = (ins StringRefParameter<"description", [{"default"}]>:$str);
   let mnemonic = "optional_type_string";
@@ -401,6 +409,72 @@ def TestTypeVerification : Test_Type<"TestTypeVerification"> {
 def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
     [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAsmName", "getAlias"]>]> {
   let mnemonic = "op_asm_type_interface";
+}
+
+def TestTypeOpAsmTypeInterfaceTablegenDefault : Test_Type<"TestTypeOpAsmTypeInterfaceTablegenDefault"> {
+  let mnemonic = "op_asm_type_interface_tablegen_default";
+  let genMnemonicAlias = 1;
+}
+
+def TestTensorType : Test_Type<"TestTensor",
+    [Bufferization_TensorLikeTypeInterface, ShapedTypeInterface]> {
+  let mnemonic = "test_tensor";
+  let parameters = (ins
+    ArrayRefParameter<"int64_t">:$shape,
+    "mlir::Type":$elementType
+  );
+  let assemblyFormat = "`<` `[` $shape `]` `,` $elementType `>`";
+
+  let extraClassDeclaration = [{
+    // ShapedTypeInterface:
+    bool hasRank() const {
+      return true;
+    }
+    test::TestTensorType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape,
+                                   mlir::Type elementType) const {
+      return test::TestTensorType::get(
+        getContext(), shape.value_or(getShape()), elementType);
+    }
+
+    // TensorLikeTypeInterface:
+    ::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
+    getBufferType(const ::mlir::bufferization::BufferizationOptions& options,
+                  ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError);
+
+    ::mlir::LogicalResult verifyCompatibleBufferType(
+        ::mlir::bufferization::BufferLikeType bufferType,
+        ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError);
+  }];
+}
+
+def TestMemrefType : Test_Type<"TestMemref",
+    [Bufferization_BufferLikeTypeInterface, ShapedTypeInterface]> {
+  let mnemonic = "test_memref";
+  let parameters = (ins
+    ArrayRefParameter<"int64_t">:$shape,
+    "mlir::Type":$elementType,
+    DefaultValuedParameter<"mlir::Attribute", "nullptr">:$memSpace
+  );
+  let assemblyFormat = "`<` `[` $shape `]` `,` $elementType (`,` $memSpace^)? `>`";
+
+  let extraClassDeclaration = [{
+    // ShapedTypeInterface:
+    bool hasRank() const {
+      return true;
+    }
+    test::TestMemrefType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape,
+                                   mlir::Type elementType) const {
+      return test::TestMemrefType::get(
+        getContext(), shape.value_or(getShape()), elementType, getMemSpace());
+    }
+  }];
+}
+
+// Test implementation of an interface with methods specifying a
+// method body
+def TestBaseBody : Test_Type<"TestBaseBody",
+    [DeclareTypeInterfaceMethods<TestBaseTypeInterfacePrintTypeA>]> {
+  let mnemonic = "test_base_body";
 }
 
 #endif // TEST_TYPEDEFS

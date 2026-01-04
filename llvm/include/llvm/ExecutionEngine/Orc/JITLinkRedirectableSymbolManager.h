@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/StringSaver.h"
 
 #include <atomic>
@@ -22,7 +23,8 @@
 namespace llvm {
 namespace orc {
 
-class JITLinkRedirectableSymbolManager : public RedirectableSymbolManager {
+class LLVM_ABI JITLinkRedirectableSymbolManager
+    : public RedirectableSymbolManager {
 public:
   /// Create redirection manager that uses JITLink based implementaion.
   static Expected<std::unique_ptr<RedirectableSymbolManager>>

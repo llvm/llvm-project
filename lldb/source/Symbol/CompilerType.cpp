@@ -15,6 +15,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -238,13 +240,11 @@ bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   return false;
 }
 
-bool CompilerType::IsFloatingPointType(uint32_t &count,
-                                       bool &is_complex) const {
+bool CompilerType::IsFloatingPointType(bool &is_complex) const {
   if (IsValid()) {
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsFloatingPointType(m_type, count, is_complex);
+      return type_system_sp->IsFloatingPointType(m_type, is_complex);
   }
-  count = 0;
   is_complex = false;
   return false;
 }
@@ -329,9 +329,8 @@ bool CompilerType::IsInteger() const {
 }
 
 bool CompilerType::IsFloat() const {
-  uint32_t count = 0;
   bool is_complex = false;
-  return IsFloatingPointType(count, is_complex);
+  return IsFloatingPointType(is_complex);
 }
 
 bool CompilerType::IsEnumerationType() const {
@@ -352,12 +351,11 @@ bool CompilerType::IsSigned() const {
 }
 
 bool CompilerType::IsNullPtrType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() ==
-         lldb::eBasicTypeNullPtr;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeNullPtr;
 }
 
 bool CompilerType::IsBoolean() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
 }
 
 bool CompilerType::IsEnumerationIntegerTypeSigned() const {
@@ -372,30 +370,10 @@ bool CompilerType::IsScalarOrUnscopedEnumerationType() const {
 }
 
 bool CompilerType::IsPromotableIntegerType() const {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  if (IsUnscopedEnumerationType())
-    return true;
-
-  switch (GetCanonicalType().GetBasicTypeEnumeration()) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPromotableIntegerType(m_type);
+  return false;
 }
 
 bool CompilerType::IsPointerToVoid() const {
@@ -453,8 +431,7 @@ bool CompilerType::IsContextuallyConvertibleToBool() const {
 }
 
 bool CompilerType::IsBasicType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() !=
-         lldb::eBasicTypeInvalid;
+  return GetBasicTypeEnumeration() != lldb::eBasicTypeInvalid;
 }
 
 std::string CompilerType::TypeDescription() {
@@ -769,19 +746,20 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
 }
 // Exploring the type
 
-std::optional<uint64_t>
+llvm::Expected<uint64_t>
 CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetBitSize(m_type, exe_scope);
-  return {};
+  return llvm::createStringError("Invalid type: Cannot determine size");
 }
 
-std::optional<uint64_t>
+llvm::Expected<uint64_t>
 CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
-  if (std::optional<uint64_t> bit_size = GetBitSize(exe_scope))
-    return (*bit_size + 7) / 8;
-  return {};
+  auto bit_size_or_err = GetBitSize(exe_scope);
+  if (!bit_size_or_err)
+    return bit_size_or_err.takeError();
+  return (*bit_size_or_err + 7) / 8;
 }
 
 std::optional<size_t>
@@ -792,10 +770,10 @@ CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
   return {};
 }
 
-lldb::Encoding CompilerType::GetEncoding(uint64_t &count) const {
+lldb::Encoding CompilerType::GetEncoding() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetEncoding(m_type, count);
+      return type_system_sp->GetEncoding(m_type);
   return lldb::eEncodingInvalid;
 }
 
@@ -890,23 +868,16 @@ CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
   return CompilerDecl();
 }
 
-uint32_t CompilerType::GetIndexOfFieldWithName(
-    const char *name, CompilerType *field_compiler_type_ptr,
-    uint64_t *bit_offset_ptr, uint32_t *bitfield_bit_size_ptr,
-    bool *is_bitfield_ptr) const {
-  unsigned count = GetNumFields();
-  std::string field_name;
-  for (unsigned index = 0; index < count; index++) {
-    CompilerType field_compiler_type(
-        GetFieldAtIndex(index, field_name, bit_offset_ptr,
-                        bitfield_bit_size_ptr, is_bitfield_ptr));
-    if (strcmp(field_name.c_str(), name) == 0) {
-      if (field_compiler_type_ptr)
-        *field_compiler_type_ptr = field_compiler_type;
-      return index;
-    }
-  }
-  return UINT32_MAX;
+llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
+    ExecutionContext *exe_ctx, std::string &deref_name,
+    uint32_t &deref_byte_size, int32_t &deref_byte_offset, ValueObject *valobj,
+    uint64_t &language_flags) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetDereferencedType(
+          m_type, exe_ctx, deref_name, deref_byte_size, deref_byte_offset,
+          valobj, language_flags);
+  return CompilerType();
 }
 
 llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
@@ -1039,7 +1010,7 @@ bool CompilerType::IsMeaninglessWithoutDynamicResolution() const {
 // doesn't descend into the children, but only looks one level deep and name
 // matches can include base class names.
 
-uint32_t
+llvm::Expected<uint32_t>
 CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
                                       bool omit_empty_base_classes) const {
   if (IsValid() && !name.empty()) {
@@ -1047,7 +1018,8 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                      omit_empty_base_classes);
   }
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.str().c_str());
 }
 
 // Dumping types
@@ -1098,16 +1070,24 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
   if (IsAggregateType()) {
     return false; // Aggregate types don't have scalar values
   } else {
-    uint64_t count = 0;
-    lldb::Encoding encoding = GetEncoding(count);
+    // FIXME: check that type is scalar instead of checking encoding?
+    lldb::Encoding encoding = GetEncoding();
 
-    if (encoding == lldb::eEncodingInvalid || count != 1)
+    if (encoding == lldb::eEncodingInvalid || (GetTypeInfo() & eTypeIsComplex))
       return false;
 
-    std::optional<uint64_t> byte_size = GetByteSize(exe_scope);
+    auto byte_size_or_err = GetByteSize(exe_scope);
+    if (!byte_size_or_err) {
+      LLDB_LOG_ERRORV(
+          GetLog(LLDBLog::Types), byte_size_or_err.takeError(),
+          "Cannot get value as scalar: Cannot determine type size: {0}");
+      return false;
+    }
+    uint64_t byte_size = *byte_size_or_err;
+
     // A bit or byte size of 0 is not a bug, but it doesn't make sense to read a
     // scalar of zero size.
-    if (!byte_size || *byte_size == 0)
+    if (byte_size == 0)
       return false;
 
     lldb::offset_t offset = data_byte_offset;
@@ -1117,15 +1097,15 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     case lldb::eEncodingVector:
       break;
     case lldb::eEncodingUint:
-      if (*byte_size <= sizeof(unsigned long long)) {
-        uint64_t uval64 = data.GetMaxU64(&offset, *byte_size);
-        if (*byte_size <= sizeof(unsigned int)) {
+      if (byte_size <= sizeof(unsigned long long)) {
+        uint64_t uval64 = data.GetMaxU64(&offset, byte_size);
+        if (byte_size <= sizeof(unsigned int)) {
           value = (unsigned int)uval64;
           return true;
-        } else if (*byte_size <= sizeof(unsigned long)) {
+        } else if (byte_size <= sizeof(unsigned long)) {
           value = (unsigned long)uval64;
           return true;
-        } else if (*byte_size <= sizeof(unsigned long long)) {
+        } else if (byte_size <= sizeof(unsigned long long)) {
           value = (unsigned long long)uval64;
           return true;
         } else
@@ -1134,15 +1114,15 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
       break;
 
     case lldb::eEncodingSint:
-      if (*byte_size <= sizeof(long long)) {
-        int64_t sval64 = data.GetMaxS64(&offset, *byte_size);
-        if (*byte_size <= sizeof(int)) {
+      if (byte_size <= sizeof(long long)) {
+        int64_t sval64 = data.GetMaxS64(&offset, byte_size);
+        if (byte_size <= sizeof(int)) {
           value = (int)sval64;
           return true;
-        } else if (*byte_size <= sizeof(long)) {
+        } else if (byte_size <= sizeof(long)) {
           value = (long)sval64;
           return true;
-        } else if (*byte_size <= sizeof(long long)) {
+        } else if (byte_size <= sizeof(long long)) {
           value = (long long)sval64;
           return true;
         } else
@@ -1151,10 +1131,10 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
       break;
 
     case lldb::eEncodingIEEE754:
-      if (*byte_size <= sizeof(long double)) {
+      if (byte_size <= sizeof(long double)) {
         uint32_t u32;
         uint64_t u64;
-        if (*byte_size == sizeof(float)) {
+        if (byte_size == sizeof(float)) {
           if (sizeof(float) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((float *)&u32);
@@ -1164,7 +1144,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
             value = *((float *)&u64);
             return true;
           }
-        } else if (*byte_size == sizeof(double)) {
+        } else if (byte_size == sizeof(double)) {
           if (sizeof(double) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((double *)&u32);
@@ -1174,7 +1154,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
             value = *((double *)&u64);
             return true;
           }
-        } else if (*byte_size == sizeof(long double)) {
+        } else if (byte_size == sizeof(long double)) {
           if (sizeof(long double) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((long double *)&u32);

@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
-declare <2 x i8> @llvm.vp.load.v2i8.p0(ptr, <2 x i1>, i32)
-
 define <2 x i8> @vpload_v2i8(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v2i8:
 ; CHECK:       # %bb.0:
@@ -16,8 +14,6 @@ define <2 x i8> @vpload_v2i8(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
   ret <2 x i8> %load
 }
 
-declare <3 x i8> @llvm.vp.load.v3i8.p0(ptr, <3 x i1>, i32)
-
 define <3 x i8> @vpload_v3i8(ptr %ptr, <3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v3i8:
 ; CHECK:       # %bb.0:
@@ -27,8 +23,6 @@ define <3 x i8> @vpload_v3i8(ptr %ptr, <3 x i1> %m, i32 zeroext %evl) {
   %load = call <3 x i8> @llvm.vp.load.v3i8.p0(ptr %ptr, <3 x i1> %m, i32 %evl)
   ret <3 x i8> %load
 }
-
-declare <4 x i8> @llvm.vp.load.v4i8.p0(ptr, <4 x i1>, i32)
 
 define <4 x i8> @vpload_v4i8(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4i8:
@@ -50,8 +44,6 @@ define <4 x i8> @vpload_v4i8_allones_mask(ptr %ptr, i32 zeroext %evl) {
   ret <4 x i8> %load
 }
 
-declare <8 x i8> @llvm.vp.load.v8i8.p0(ptr, <8 x i1>, i32)
-
 define <8 x i8> @vpload_v8i8(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8i8:
 ; CHECK:       # %bb.0:
@@ -61,8 +53,6 @@ define <8 x i8> @vpload_v8i8(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
   %load = call <8 x i8> @llvm.vp.load.v8i8.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret <8 x i8> %load
 }
-
-declare <2 x i16> @llvm.vp.load.v2i16.p0(ptr, <2 x i1>, i32)
 
 define <2 x i16> @vpload_v2i16(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v2i16:
@@ -74,8 +64,6 @@ define <2 x i16> @vpload_v2i16(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
   ret <2 x i16> %load
 }
 
-declare <4 x i16> @llvm.vp.load.v4i16.p0(ptr, <4 x i1>, i32)
-
 define <4 x i16> @vpload_v4i16(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4i16:
 ; CHECK:       # %bb.0:
@@ -85,8 +73,6 @@ define <4 x i16> @vpload_v4i16(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
   %load = call <4 x i16> @llvm.vp.load.v4i16.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret <4 x i16> %load
 }
-
-declare <8 x i16> @llvm.vp.load.v8i16.p0(ptr, <8 x i1>, i32)
 
 define <8 x i16> @vpload_v8i16(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8i16:
@@ -108,8 +94,6 @@ define <8 x i16> @vpload_v8i16_allones_mask(ptr %ptr, i32 zeroext %evl) {
   ret <8 x i16> %load
 }
 
-declare <2 x i32> @llvm.vp.load.v2i32.p0(ptr, <2 x i1>, i32)
-
 define <2 x i32> @vpload_v2i32(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v2i32:
 ; CHECK:       # %bb.0:
@@ -120,8 +104,6 @@ define <2 x i32> @vpload_v2i32(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
   ret <2 x i32> %load
 }
 
-declare <4 x i32> @llvm.vp.load.v4i32.p0(ptr, <4 x i1>, i32)
-
 define <4 x i32> @vpload_v4i32(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4i32:
 ; CHECK:       # %bb.0:
@@ -131,8 +113,6 @@ define <4 x i32> @vpload_v4i32(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
   %load = call <4 x i32> @llvm.vp.load.v4i32.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret <4 x i32> %load
 }
-
-declare <6 x i32> @llvm.vp.load.v6i32.p0(ptr, <6 x i1>, i32)
 
 define <6 x i32> @vpload_v6i32(ptr %ptr, <6 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v6i32:
@@ -154,8 +134,6 @@ define <6 x i32> @vpload_v6i32_allones_mask(ptr %ptr, i32 zeroext %evl) {
   ret <6 x i32> %load
 }
 
-declare <8 x i32> @llvm.vp.load.v8i32.p0(ptr, <8 x i1>, i32)
-
 define <8 x i32> @vpload_v8i32(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8i32:
 ; CHECK:       # %bb.0:
@@ -176,8 +154,6 @@ define <8 x i32> @vpload_v8i32_allones_mask(ptr %ptr, i32 zeroext %evl) {
   ret <8 x i32> %load
 }
 
-declare <2 x i64> @llvm.vp.load.v2i64.p0(ptr, <2 x i1>, i32)
-
 define <2 x i64> @vpload_v2i64(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v2i64:
 ; CHECK:       # %bb.0:
@@ -187,8 +163,6 @@ define <2 x i64> @vpload_v2i64(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
   %load = call <2 x i64> @llvm.vp.load.v2i64.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %load
 }
-
-declare <4 x i64> @llvm.vp.load.v4i64.p0(ptr, <4 x i1>, i32)
 
 define <4 x i64> @vpload_v4i64(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4i64:
@@ -210,8 +184,6 @@ define <4 x i64> @vpload_v4i64_allones_mask(ptr %ptr, i32 zeroext %evl) {
   ret <4 x i64> %load
 }
 
-declare <8 x i64> @llvm.vp.load.v8i64.p0(ptr, <8 x i1>, i32)
-
 define <8 x i64> @vpload_v8i64(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8i64:
 ; CHECK:       # %bb.0:
@@ -221,8 +193,6 @@ define <8 x i64> @vpload_v8i64(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
   %load = call <8 x i64> @llvm.vp.load.v8i64.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %load
 }
-
-declare <2 x half> @llvm.vp.load.v2f16.p0(ptr, <2 x i1>, i32)
 
 define <2 x half> @vpload_v2f16(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v2f16:
@@ -244,8 +214,6 @@ define <2 x half> @vpload_v2f16_allones_mask(ptr %ptr, i32 zeroext %evl) {
   ret <2 x half> %load
 }
 
-declare <4 x half> @llvm.vp.load.v4f16.p0(ptr, <4 x i1>, i32)
-
 define <4 x half> @vpload_v4f16(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4f16:
 ; CHECK:       # %bb.0:
@@ -255,8 +223,6 @@ define <4 x half> @vpload_v4f16(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
   %load = call <4 x half> @llvm.vp.load.v4f16.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret <4 x half> %load
 }
-
-declare <8 x half> @llvm.vp.load.v8f16.p0(ptr, <8 x i1>, i32)
 
 define <8 x half> @vpload_v8f16(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8f16:
@@ -268,8 +234,6 @@ define <8 x half> @vpload_v8f16(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
   ret <8 x half> %load
 }
 
-declare <2 x float> @llvm.vp.load.v2f32.p0(ptr, <2 x i1>, i32)
-
 define <2 x float> @vpload_v2f32(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v2f32:
 ; CHECK:       # %bb.0:
@@ -280,8 +244,6 @@ define <2 x float> @vpload_v2f32(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
   ret <2 x float> %load
 }
 
-declare <4 x float> @llvm.vp.load.v4f32.p0(ptr, <4 x i1>, i32)
-
 define <4 x float> @vpload_v4f32(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4f32:
 ; CHECK:       # %bb.0:
@@ -291,8 +253,6 @@ define <4 x float> @vpload_v4f32(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
   %load = call <4 x float> @llvm.vp.load.v4f32.p0(ptr %ptr, <4 x i1> %m, i32 %evl)
   ret <4 x float> %load
 }
-
-declare <8 x float> @llvm.vp.load.v8f32.p0(ptr, <8 x i1>, i32)
 
 define <8 x float> @vpload_v8f32(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8f32:
@@ -314,8 +274,6 @@ define <8 x float> @vpload_v8f32_allones_mask(ptr %ptr, i32 zeroext %evl) {
   ret <8 x float> %load
 }
 
-declare <2 x double> @llvm.vp.load.v2f64.p0(ptr, <2 x i1>, i32)
-
 define <2 x double> @vpload_v2f64(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v2f64:
 ; CHECK:       # %bb.0:
@@ -325,8 +283,6 @@ define <2 x double> @vpload_v2f64(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
   %load = call <2 x double> @llvm.vp.load.v2f64.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
   ret <2 x double> %load
 }
-
-declare <4 x double> @llvm.vp.load.v4f64.p0(ptr, <4 x i1>, i32)
 
 define <4 x double> @vpload_v4f64(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4f64:
@@ -348,8 +304,6 @@ define <4 x double> @vpload_v4f64_allones_mask(ptr %ptr, i32 zeroext %evl) {
   ret <4 x double> %load
 }
 
-declare <8 x double> @llvm.vp.load.v8f64.p0(ptr, <8 x i1>, i32)
-
 define <8 x double> @vpload_v8f64(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8f64:
 ; CHECK:       # %bb.0:
@@ -359,8 +313,6 @@ define <8 x double> @vpload_v8f64(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
   %load = call <8 x double> @llvm.vp.load.v8f64.p0(ptr %ptr, <8 x i1> %m, i32 %evl)
   ret <8 x double> %load
 }
-
-declare <32 x double> @llvm.vp.load.v32f64.p0(ptr, <32 x i1>, i32)
 
 define <32 x double> @vpload_v32f64(ptr %ptr, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v32f64:
@@ -386,8 +338,6 @@ define <32 x double> @vpload_v32f64(ptr %ptr, <32 x i1> %m, i32 zeroext %evl) {
   %load = call <32 x double> @llvm.vp.load.v32f64.p0(ptr %ptr, <32 x i1> %m, i32 %evl)
   ret <32 x double> %load
 }
-
-declare <33 x double> @llvm.vp.load.v33f64.p0(ptr, <33 x i1>, i32)
 
 ; Widen to v64f64 then split into 4 x v16f64, of which 1 is empty.
 

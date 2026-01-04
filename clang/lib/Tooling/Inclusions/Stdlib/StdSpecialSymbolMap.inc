@@ -13,6 +13,9 @@ SYMBOL(consume_header, std::, <codecvt>)
 SYMBOL(generate_header, std::, <codecvt>)
 SYMBOL(little_endian, std::, <codecvt>)
 
+SYMBOL(compare_three_way, std::, <compare>)
+SYMBOL(compare_three_way, std::, <functional>)
+
 SYMBOL(mbstate_t, std::, <cwchar>)
 SYMBOL(mbstate_t, std::, <cuchar>)
 SYMBOL(size_t, std::, <cstddef>)
@@ -452,6 +455,8 @@ SYMBOL(equal_range, std::ranges::, <algorithm>)
 SYMBOL(lower_bound, std::ranges::, <algorithm>)
 SYMBOL(upper_bound, std::ranges::, <algorithm>)
 
+SYMBOL(unwrap_reference_t, std::, <type_traits>)
+
 // These are C symbols that are not under std namespace.
 SYMBOL(localtime_r, None, <ctime>)
 SYMBOL(localtime_r, None, <time.h>)
@@ -822,3 +827,27 @@ SYMBOL(SCNxMAX, None, <cinttypes>)
 SYMBOL(SCNxMAX, None, <inttypes.h>)
 SYMBOL(SCNxPTR, None, <cinttypes>)
 SYMBOL(SCNxPTR, None, <inttypes.h>)
+
+// These macros trigger ambiguity when parsing cppreference index.
+// Taken from https://en.cppreference.com/w/cpp/types/integer.
+SYMBOL(INT8_C, None, <cstdint>)
+SYMBOL(INT8_C, None, <stdint.h>)
+SYMBOL(INT16_C, None, <cstdint>)
+SYMBOL(INT16_C, None, <stdint.h>)
+SYMBOL(INT32_C, None, <cstdint>)
+SYMBOL(INT32_C, None, <stdint.h>)
+SYMBOL(INT64_C, None, <cstdint>)
+SYMBOL(INT64_C, None, <stdint.h>)
+SYMBOL(INTMAX_C, None, <cstdint>)
+SYMBOL(INTMAX_C, None, <stdint.h>)
+
+SYMBOL(UINT8_C, None, <cstdint>)
+SYMBOL(UINT8_C, None, <stdint.h>)
+SYMBOL(UINT16_C, None, <cstdint>)
+SYMBOL(UINT16_C, None, <stdint.h>)
+SYMBOL(UINT32_C, None, <cstdint>)
+SYMBOL(UINT32_C, None, <stdint.h>)
+SYMBOL(UINT64_C, None, <cstdint>)
+SYMBOL(UINT64_C, None, <stdint.h>)
+SYMBOL(UINTMAX_C, None, <cstdint>)
+SYMBOL(UINTMAX_C, None, <stdint.h>)

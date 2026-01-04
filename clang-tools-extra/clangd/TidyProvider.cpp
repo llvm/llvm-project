@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TidyProvider.h"
-#include "../clang-tidy/ClangTidyModuleRegistry.h"
+#include "../clang-tidy/ClangTidyModule.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "Config.h"
 #include "support/FileCache.h"
@@ -210,6 +210,7 @@ TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
       // Check relies on seeing ifndef/define/endif directives,
       // clangd doesn't replay those when using a preamble.
       "-llvm-header-guard", "-modernize-macro-to-enum",
+      "-cppcoreguidelines-macro-to-enum",
 
       // ----- Crashing Checks -----
 

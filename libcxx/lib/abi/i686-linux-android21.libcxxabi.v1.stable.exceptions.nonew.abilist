@@ -170,6 +170,7 @@
 {'is_defined': True, 'name': '_ZNKSt6__ndk115basic_streambufIwNS_11char_traitsIwEEE6getlocEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk115error_condition7messageEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk117moneypunct_bynameIcLb0EE11do_groupingEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk117moneypunct_bynameIcLb0EE13do_neg_formatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk117moneypunct_bynameIcLb0EE13do_pos_formatEv', 'type': 'FUNC'}
@@ -761,6 +762,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk112system_errorD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112system_errorD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112system_errorD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk113__hash_memoryEPKvj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk113basic_filebufIcNS_11char_traitsIcEEE11__read_modeEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk113basic_filebufIcNS_11char_traitsIcEEE12__write_modeEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk113basic_filebufIcNS_11char_traitsIcEEE4openEPKcj', 'type': 'FUNC'}
@@ -1149,14 +1151,10 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk117moneypunct_bynameIwLb0EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk117moneypunct_bynameIwLb1EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118__get_ostream_fileERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIcE4initERKNS_5ctypeIcEE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIcE9__analyzeEcRKNS_5ctypeIcEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIcEC1EPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIcEC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIcEC2EPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIcEC2ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIwE4initERKNS_5ctypeIwEE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIwE9__analyzeEcRKNS_5ctypeIwEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIwEC1EPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIwEC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk118__time_get_storageIwEC2EPKc', 'type': 'FUNC'}
@@ -1196,6 +1194,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk119__thread_local_dataEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk120__atomic_wait_nativeILj4EEEvPKvS2_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk120__get_collation_nameEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEEi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk120__libcpp_atomic_waitEPVKvi', 'type': 'FUNC'}
@@ -1209,6 +1208,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk121recursive_timed_mutexD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk121recursive_timed_mutexD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk122__libcpp_verbose_abortEPKcz', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk123__atomic_monitor_globalEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__cxx_atomic_notify_allEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__cxx_atomic_notify_allEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__cxx_atomic_notify_oneEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE', 'type': 'FUNC'}
@@ -1216,9 +1216,14 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__libcpp_atomic_monitorEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk126__atomic_notify_all_nativeILj4EEEvPKv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk126__atomic_notify_one_nativeILj4EEEvPKv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk126__atomic_wait_global_tableEPKvi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk127__from_chars_floating_pointIdEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk127__from_chars_floating_pointIfEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk132__atomic_notify_all_global_tableEPKv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk132__atomic_notify_one_global_tableEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk134__construct_barrier_algorithm_baseERi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13cinE', 'size': 148, 'type': 'OBJECT'}

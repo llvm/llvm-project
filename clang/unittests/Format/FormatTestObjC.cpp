@@ -763,6 +763,15 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "                  backing:NSBackingStoreBuffered\n"
       "                    defer:NO]);\n"
       "}");
+  Style.ColumnLimit = 63;
+  verifyFormat(
+      "- (void)test {\n"
+      "  if ([object\n"
+      "          respondsToSelector:@selector(\n"
+      "                                 selectorName:param1:param2:)])\n"
+      "    return;\n"
+      "}");
+  Style.ColumnLimit = PreviousColumnLimit;
   verifyFormat("[contentsContainer replaceSubview:[subviews objectAtIndex:0]\n"
                "                             with:contentsNativeView];");
 
@@ -867,6 +876,32 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
   verifyFormat("aaaaaa = [aa aa:aa\n"
                "             aa:aa];");
 
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  // When the method name and parameters are on their own lines, their positions
+  // only depend on the continuation indentation configuration, not where the
+  // square bracket is. Thus they should not move with the square bracket in the
+  // alignment step.
+  verifyFormat("aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "a      = [a //\n"
+               "    aaaaaaa:aa];");
+  verifyFormat("aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "aaaaa  = [a //\n"
+               "          a:aa\n"
+               "    aaaaaaa:aa];");
+  // When the method name is on the same line as the square bracket, the
+  // positions of the parameters depend on where the square bracket is. Thus
+  // they should move with the square bracket in the alignment step.
+  verifyFormat("aaaaa  = [a aa:aa\n"
+               "            aa:aa];\n"
+               "aaaaaa = [aa aa:aa\n"
+               "             aa:aa];\n"
+               "aaaaa  = [a aa:aa\n"
+               "    aaaaaaaaaa:aa];");
+
+  Style.AlignConsecutiveAssignments.Enabled = false;
+
   // Message receiver taking multiple lines.
   // Non-corner case.
   verifyFormat("[[object block:^{\n"
@@ -940,6 +975,12 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "[aaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    aaaaaaaaaaaaaaaaa:aaaaaaaa\n"
       "                  aaa:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa];");
+  verifyFormat("[objectName\n"
+               "    respondsToSelector:\n"
+               "        @selector(\n"
+               "            somelonglonglonglongnameeeeeeee:\n"
+               "            loooooooooanotherlonglonglonglongnametopush:\n"
+               "            otherlongnameforlimit:)];");
 
   Style = getChromiumStyle(FormatStyle::LK_ObjC);
   Style.ColumnLimit = 80;
