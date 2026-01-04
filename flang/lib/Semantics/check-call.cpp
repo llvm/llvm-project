@@ -341,11 +341,8 @@ static bool DefersSameTypeParameters(
 // List of intrinsics that are skipped when checking for device actual
 // arguments.
 static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
-    "__builtin_c_f_pointer", "__builtin_c_loc", "loc", "present"};
-// List of intrinsics that can have a device actual argument if it is an
-// allocatable or pointer.
-static const llvm::StringSet<> cudaAllowedIntrinsics = {
-    "allocated", "associated", "kind", "lbound", "shape", "size", "ubound"};
+    "__builtin_c_f_pointer", "__builtin_c_loc", "allocated", "associated",
+    "kind", "lbound", "loc", "present", "shape", "size", "ubound"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
@@ -1156,17 +1153,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = actualObject->cudaDataAttr();
       }
       if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::Device) {
-        // Allocatable or pointer with device attribute have their descriptor in
-        // managed memory. It is allowed to pass them to some inquiry
-        // intrinsics.
-        if (!actualLastSymbol || !IsAllocatableOrPointer(*actualLastSymbol) ||
-            (IsAllocatableOrPointer(*actualLastSymbol) &&
-                !cudaAllowedIntrinsics.contains(intrinsic->name))) {
-          messages.Say(
-              "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
-              actualLastSymbol ? actualLastSymbol->name() : "",
-              intrinsic->name);
-        }
+        messages.Say(
+            "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
+            actualLastSymbol ? actualLastSymbol->name() : "", intrinsic->name);
       }
     }
   }

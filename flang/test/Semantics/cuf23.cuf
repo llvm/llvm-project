@@ -69,5 +69,10 @@ subroutine intrinsic_error_skipped(ws)
   else
     p = loc(ws(1))
   end if
+end subroutine
 
+subroutine intrinsic_error_size(n)
+  integer :: n, x
+  real(8), device :: d(n,n)
+  x = size(d,dim=1) ! ok
 end subroutine
