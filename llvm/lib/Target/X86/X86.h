@@ -184,7 +184,13 @@ public:
 FunctionPass *createX86ExpandPseudoLegacyPass();
 
 /// This pass converts X86 cmov instructions into branch when profitable.
-FunctionPass *createX86CmovConverterPass();
+class X86CmovConversionPass : public PassInfoMixin<X86CmovConversionPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86CmovConversionLegacyPass();
 
 /// Return a Machine IR pass that selectively replaces
 /// certain byte and word instructions by equivalent 32 bit instructions,
@@ -194,11 +200,24 @@ FunctionPass *createX86FixupBWInsts();
 
 /// Return a Machine IR pass that reassigns instruction chains from one domain
 /// to another, when profitable.
-FunctionPass *createX86DomainReassignmentPass();
+class X86DomainReassignmentPass
+    : public PassInfoMixin<X86DomainReassignmentPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86DomainReassignmentLegacyPass();
 
 /// This pass compress instructions from EVEX space to legacy/VEX/EVEX space when
 /// possible in order to reduce code size or facilitate HW decoding.
-FunctionPass *createX86CompressEVEXPass();
+class X86CompressEVEXPass : public PassInfoMixin<X86CompressEVEXPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86CompressEVEXLegacyPass();
 
 /// This pass creates the thunks for the retpoline feature.
 FunctionPass *createX86IndirectThunksPass();
@@ -268,7 +287,7 @@ FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
 FunctionPass *createX86ArgumentStackSlotPass();
 FunctionPass *createX86SuppressAPXForRelocationPass();
 
-void initializeCompressEVEXPassPass(PassRegistry &);
+void initializeCompressEVEXLegacyPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
@@ -279,9 +298,9 @@ void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBLegacyPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationLegacyPass(PassRegistry &);
-void initializeX86CmovConverterPassPass(PassRegistry &);
+void initializeX86CmovConversionLegacyPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
-void initializeX86DomainReassignmentPass(PassRegistry &);
+void initializeX86DomainReassignmentLegacyPass(PassRegistry &);
 void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoLegacyPass(PassRegistry &);
