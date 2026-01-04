@@ -17,5 +17,7 @@ TEST(LlvmLibcStdcTrailingZerosUcTest, Zero) {
 
 TEST(LlvmLibcStdcTrailingZerosUcTest, OneHot) {
   for (unsigned i = 0U; i != UCHAR_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_trailing_zeros_uc(1U << i), i);
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_trailing_zeros_uc(
+                  static_cast<unsigned char>(1U << i)),
+              i);
 }

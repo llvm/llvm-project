@@ -40,14 +40,10 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
-  lldb::ValueObjectSP m_resume_ptr_sp;
-  lldb::ValueObjectSP m_destroy_ptr_sp;
-  lldb::ValueObjectSP m_promise_ptr_sp;
+  std::vector<lldb::ValueObjectSP> m_children;
 };
 
 SyntheticChildrenFrontEnd *

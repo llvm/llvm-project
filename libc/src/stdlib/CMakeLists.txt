@@ -73,6 +73,8 @@ add_entrypoint_object(
     strfromf.h
   DEPENDS
     .str_from_util
+    libc.src.__support.CPP.limits
+    libc.src.stdio.printf_core.error_mapper
 )
 
 add_entrypoint_object(
@@ -83,6 +85,8 @@ add_entrypoint_object(
     strfromd.h
   DEPENDS
     .str_from_util
+    libc.src.__support.CPP.limits
+    libc.src.stdio.printf_core.error_mapper
 )
 
 add_entrypoint_object(
@@ -93,6 +97,8 @@ add_entrypoint_object(
     strfroml.h
   DEPENDS
     .str_from_util
+    libc.src.__support.CPP.limits
+    libc.src.stdio.printf_core.error_mapper
 )
 
 add_header_library(
@@ -185,6 +191,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  a64l
+  SRCS
+    a64l.cpp
+  HDRS
+    a64l.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
+  l64a
+  SRCS
+    l64a.cpp
+  HDRS
+    l64a.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
   abs
   SRCS
     abs.cpp
@@ -265,8 +295,10 @@ add_header_library(
     heap_sort.h
     quick_sort.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.__support.CPP.cstddef
+    libc.src.string.memory_utils.inline_memcpy    
 )
 
 add_entrypoint_object(
@@ -277,6 +309,7 @@ add_entrypoint_object(
     qsort.h
   DEPENDS
     .qsort_util
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
 )
 
@@ -288,6 +321,7 @@ add_entrypoint_object(
     qsort_r.h
   DEPENDS
     .qsort_util
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
 )
 
@@ -321,6 +355,76 @@ add_entrypoint_object(
     srand.h
   DEPENDS
     .rand_util
+)
+
+add_entrypoint_object(
+  memalignment
+  SRCS
+    memalignment.cpp
+  HDRS
+    memalignment.h
+  DEPENDS
+    libc.src.__support.common
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  mbtowc
+  SRCS
+    mbtowc.cpp
+  HDRS
+    mbtowc.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  mbstowcs
+  SRCS
+    mbstowcs.cpp
+  HDRS
+    mbstowcs.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.mbsnrtowcs
+)
+
+add_entrypoint_object(
+  wctomb
+  SRCS
+    wctomb.cpp
+  HDRS
+    wctomb.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  wcstombs
+  SRCS
+    wcstombs.cpp
+  HDRS
+    wcstombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcsnrtombs
+    libc.src.__support.libc_errno
 )
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)

@@ -99,3 +99,49 @@ namespace regression1 {
 
   template void foo<int>(A<int>);
 } // namespace regression1
+namespace regression2 {
+  template <class> struct A {
+    template <class T> static void f() {
+      A<int>::f<T>();
+    }
+  };
+  template <> template <class T> void A<int>::f() {
+    static_assert(__is_same(T, long));
+  }
+  template void A<void>::f<long>();
+} // namespace regression2
+
+namespace GH139226 {
+
+struct FakeStream {};
+
+template <typename T>
+class BinaryTree;
+
+template <typename T>
+FakeStream& operator<<(FakeStream& os, BinaryTree<T>& b);
+
+template <typename T>
+FakeStream& operator>>(FakeStream& os, BinaryTree<T>& b) {
+  return os;
+}
+
+template <typename T>
+struct BinaryTree {
+  T* root{};
+  friend FakeStream& operator<< <T>(FakeStream& os, BinaryTree&) {
+    // expected-error@-1 {{friend function specialization cannot be defined}}
+    return os;
+  }
+
+  friend FakeStream& operator>> <T>(FakeStream& os, BinaryTree&);
+};
+
+void foo() {
+  FakeStream fakeout;
+  BinaryTree<int> a{};
+  fakeout << a;
+  fakeout >> a;
+}
+
+}

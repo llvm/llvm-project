@@ -32,10 +32,10 @@ constexpr bool test() {
     });
   });
 
-  { // Vector may or may not need to reallocate because of the assignment -- make sure to test both cases.
+  {   // Vector may or may not need to reallocate because of the assignment -- make sure to test both cases.
     { // Ensure reallocation happens. Note that `vector<bool>` typically reserves a lot of capacity.
-      constexpr int N = 255;
-      bool in[N] = {};
+      constexpr int N     = 255;
+      bool in[N]          = {};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
       assert(v.capacity() < v.size() + std::ranges::size(in));
 
@@ -44,7 +44,7 @@ constexpr bool test() {
     }
 
     { // Ensure no reallocation happens.
-      bool in[] = {1, 1, 0, 1, 1};
+      bool in[]           = {1, 1, 0, 1, 1};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
 
       v.assign_range(in);

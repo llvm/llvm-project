@@ -51,7 +51,7 @@ class raw_ostream;
 /// when walking backward/forward through a basic block.
 class LivePhysRegs {
   const TargetRegisterInfo *TRI = nullptr;
-  using RegisterSet = SparseSet<MCPhysReg, identity<MCPhysReg>>;
+  using RegisterSet = SparseSet<MCPhysReg, MCPhysReg>;
   RegisterSet LiveRegs;
 
 public:
@@ -80,18 +80,18 @@ public:
   bool empty() const { return LiveRegs.empty(); }
 
   /// Adds a physical register and all its sub-registers to the set.
-  void addReg(MCPhysReg Reg) {
+  void addReg(MCRegister Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
-    assert(Reg <= TRI->getNumRegs() && "Expected a physical register.");
+    assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
       LiveRegs.insert(SubReg);
   }
 
   /// Removes a physical register, all its sub-registers, and all its
   /// super-registers from the set.
-  void removeReg(MCPhysReg Reg) {
+  void removeReg(MCRegister Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
-    assert(Reg <= TRI->getNumRegs() && "Expected a physical register.");
+    assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
     for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R)
       LiveRegs.erase((*R).id());
   }
@@ -106,10 +106,10 @@ public:
   /// addReg() always adds all sub-registers to the set as well.
   /// Note: Returns false if just some sub registers are live, use available()
   /// when searching a free register.
-  bool contains(MCPhysReg Reg) const { return LiveRegs.count(Reg); }
+  bool contains(MCRegister Reg) const { return LiveRegs.count(Reg.id()); }
 
   /// Returns true if register \p Reg and no aliasing register is in the set.
-  bool available(const MachineRegisterInfo &MRI, MCPhysReg Reg) const;
+  bool available(const MachineRegisterInfo &MRI, MCRegister Reg) const;
 
   /// Remove defined registers and regmask kills from the set.
   void removeDefs(const MachineInstr &MI);
@@ -165,9 +165,16 @@ public:
   void dump() const;
 
 private:
+  /// Adds a register, taking the lane mask into consideration.
+  void addRegMaskPair(const MachineBasicBlock::RegisterMaskPair &Pair);
+
   /// Adds live-in registers from basic block \p MBB, taking associated
   /// lane masks into consideration.
   void addBlockLiveIns(const MachineBasicBlock &MBB);
+
+  /// Adds live-out registers from basic block \p MBB, taking associated
+  /// lane masks into consideration.
+  void addBlockLiveOuts(const MachineBasicBlock &MBB);
 
   /// Adds pristine registers. Pristine registers are callee saved registers
   /// that are unused in the function.
@@ -194,6 +201,9 @@ void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
 /// Convenience function combining computeLiveIns() and addLiveIns().
 void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                           MachineBasicBlock &MBB);
+
+/// Check if physical register \p Reg is used after \p MBI.
+bool isPhysRegUsedAfter(Register Reg, MachineBasicBlock::iterator MBI);
 
 /// Convenience function for recomputing live-in's for a MBB. Returns true if
 /// any changes were made.

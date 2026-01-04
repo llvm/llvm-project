@@ -1,0 +1,10 @@
+header: sysexits.h
+header_template: sysexits.h.def
+standards:
+  - BSDExtensions
+  - GNUExtensions
+macros: []
+types: []
+enums: []
+objects: []
+functions: []

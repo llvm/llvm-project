@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm-only -fprofile-instrument=clang -fcoverage-mcdc -Werror -Wno-unused-value %s -verify -fmcdc-max-conditions=2
+// RUN: %clang_cc1 -emit-llvm-only -fprofile-instrument=clang -fcoverage-mcdc -Werror -Wno-error=pgo-coverage -Wno-unused-value %s -verify -fmcdc-max-conditions=2
 
 int foo(int x);
 

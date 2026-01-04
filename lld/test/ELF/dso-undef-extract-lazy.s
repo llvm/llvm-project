@@ -25,6 +25,11 @@
 
 # CHECK-FETCH: GLOBAL DEFAULT {{[0-9]+}} foo
 
+## Unversioned undefined symbols also extract the archive definitions.
+# RUN: yaml2obj %t/ver.yaml -o %t4.so
+# RUN: ld.lld %t1.o %t4.so %t2.a -o %t.exe
+# RUN: llvm-readelf --dyn-symbols %t.exe | FileCheck %s --check-prefix=CHECK-FETCH
+
 #--- main.s
 .text
 .globl _start
@@ -38,3 +43,39 @@ foo:
 
 #--- shlib.s
 .global foo
+
+#--- ver.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000200210
+    AddressAlign:    0x0000000000000002
+    EntSize:         0x0000000000000002
+## Test both index 0 and 1 for unversioned undefined symbols.
+## https://sourceware.org/PR33577
+    Entries:         [ 0, 0, 1 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000200250
+    AddressAlign:    0x0000000000000004
+    Dependencies:
+      - Version:         1
+        File:            dso.so.0
+        Entries:
+          - Name:            v1
+            Hash:            1937
+            Flags:           0
+            Other:           3
+DynamicSymbols:
+  - Name:    _start
+    Binding: STB_GLOBAL
+  - Name:    foo
+    Binding: STB_GLOBAL

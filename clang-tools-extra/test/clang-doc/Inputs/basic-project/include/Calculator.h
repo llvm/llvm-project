@@ -43,4 +43,25 @@ public:
      * @throw std::invalid_argument if b is zero.
      */
     double divide(int a, int b);
+
+    /**
+     * @brief Performs the mod operation on integers.
+     *
+     * @param a First integer.
+     * @param b Second integer.
+     * @return The result of a % b.
+     */
+    static int mod(int a, int b) {
+      return a % b;
+    }
+
+    /**
+     * @brief A static value.
+     */
+    static constexpr int static_val = 10;
+
+    /**
+     * @brief Holds a public value.
+     */
+    int public_val = -1;
 };

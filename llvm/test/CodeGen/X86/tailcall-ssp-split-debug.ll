@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx %s -o - | FileCheck %s
 
-define void @foo() ssp {
+define void @foo(i1 %arg) ssp {
 ; CHECK-LABEL: foo:
   %ptr = alloca [32 x i32], align 16
-  br i1 undef, label %true, label %false
+  br i1 %arg, label %true, label %false
 
 true:
   unreachable
