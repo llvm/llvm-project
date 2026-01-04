@@ -4728,12 +4728,6 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   return Intrinsic::not_intrinsic;
 }
 
-static bool outputDenormalIsIEEEOrPosZero(const Function &F, const Type *Ty) {
-  Ty = Ty->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
-  return Mode.Output == DenormalMode::IEEE ||
-         Mode.Output == DenormalMode::PositiveZero;
-}
 /// Given an exploded icmp instruction, return true if the comparison only
 /// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
 /// the result of the comparison is true when the input value is signed.
@@ -4999,7 +4993,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   // assume this from flags/attributes.
   InterestedClasses &= ~KnownNotFromFlags;
 
-  auto ClearClassesFromFlags = make_scope_exit([=, &Known] {
+  llvm::scope_exit ClearClassesFromFlags([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
     if (!Known.SignBit && AssumedClasses.SignBit) {
       if (*AssumedClasses.SignBit)
@@ -5651,7 +5645,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
              KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
             // Make sure output negative denormal can't flush to -0
-            outputDenormalIsIEEEOrPosZero(*F, Op->getType()))
+            (Mode.Output == DenormalMode::IEEE ||
+             Mode.Output == DenormalMode::PositiveZero))
           Known.knownNot(fcNegZero);
       } else {
         if (!F)
@@ -5665,7 +5660,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
              KnownRHS.isKnownNeverLogicalPosZero(Mode)) &&
             // Make sure output negative denormal can't flush to -0
-            outputDenormalIsIEEEOrPosZero(*F, Op->getType()))
+            (Mode.Output == DenormalMode::IEEE ||
+             Mode.Output == DenormalMode::PositiveZero))
           Known.knownNot(fcNegZero);
       }
     }

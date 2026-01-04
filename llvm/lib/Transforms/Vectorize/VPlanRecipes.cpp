@@ -744,8 +744,19 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     Value *Start = State.get(getOperand(1), true);
     Value *Sentinel = getOperand(2)->getLiveInIRValue();
-    return createFindLastIVReduction(Builder, ReducedPartRdx, RK, Start,
-                                     Sentinel);
+
+    // Reduce the vector to a scalar.
+    bool IsFindLast = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK);
+    Value *ReducedIV =
+        ReducedPartRdx->getType()->isVectorTy()
+            ? (IsFindLast
+                   ? Builder.CreateIntMaxReduce(ReducedPartRdx, IsSigned)
+                   : Builder.CreateIntMinReduce(ReducedPartRdx, IsSigned))
+            : ReducedPartRdx;
+    // Correct the final reduction result back to the start value if the
+    // reduction result is the sentinel value.
+    Value *Cmp = Builder.CreateICmpNE(ReducedIV, Sentinel, "rdx.select.cmp");
+    return Builder.CreateSelect(Cmp, ReducedIV, Start, "rdx.select");
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -978,19 +989,25 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         Ctx.CostKind, {TTI::OK_AnyValue, TTI::OP_None},
         {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
   }
-  case Instruction::BitCast:
-    return 0;
+  case Instruction::BitCast: {
+    Type *ScalarTy = Ctx.Types.inferScalarType(this);
+    if (ScalarTy->isPointerTy())
+      return 0;
+    [[fallthrough]];
+  }
   case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::FPToUI:
   case Instruction::FPToSI:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::SIToFP:
   case Instruction::UIToFP:
   case Instruction::Trunc:
-  case Instruction::FPTrunc: {
+  case Instruction::FPTrunc:
+  case Instruction::AddrSpaceCast: {
     // Computes the CastContextHint from a recipe that may access memory.
     auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
       if (isa<VPInterleaveBase>(R))
@@ -3225,6 +3242,11 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return InstructionCost::getInvalid();
 
   switch (UI->getOpcode()) {
+  case Instruction::Alloca:
+    if (VF.isScalable())
+      return InstructionCost::getInvalid();
+    return Ctx.TTI.getArithmeticInstrCost(
+        Instruction::Mul, Ctx.Types.inferScalarType(this), Ctx.CostKind);
   case Instruction::GetElementPtr:
     // We mark this instruction as zero-cost because the cost of GEPs in
     // vectorized code depends on whether the corresponding memory instruction
@@ -3379,11 +3401,13 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::FPToSI:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::SIToFP:
   case Instruction::UIToFP:
   case Instruction::Trunc:
-  case Instruction::FPTrunc: {
+  case Instruction::FPTrunc:
+  case Instruction::AddrSpaceCast: {
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
