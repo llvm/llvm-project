@@ -43,7 +43,7 @@ public:
   bool run(MachineFunction &MF);
 
 private:
-  using NSA_Status = enum {
+  enum NSA_Status {
     NOT_NSA,        // Not an NSA instruction
     FIXED,          // NSA which we cannot modify
     NON_CONTIGUOUS, // NSA with non-sequential address which we can try
@@ -251,7 +251,9 @@ bool GCNNSAReassignImpl::run(MachineFunction &MF) {
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MaxNumVGPRs = ST->getMaxNumVGPRs(MF);
-  MaxNumVGPRs = std::min(ST->getMaxNumVGPRs(MFI->getOccupancy()), MaxNumVGPRs);
+  MaxNumVGPRs = std::min(
+      ST->getMaxNumVGPRs(MFI->getOccupancy(), MFI->getDynamicVGPRBlockSize()),
+      MaxNumVGPRs);
   CSRegs = MRI->getCalleeSavedRegs();
 
   using Candidate = std::pair<const MachineInstr*, bool>;

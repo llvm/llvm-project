@@ -8,8 +8,10 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "gtest/gtest.h"
+#include <initializer_list>
 
 using namespace llvm;
 
@@ -20,7 +22,7 @@ template <typename T>
 class BitVectorTest : public ::testing::Test { };
 
 // Test both BitVector and SmallBitVector with the same suite of tests.
-typedef ::testing::Types<BitVector, SmallBitVector> BitVectorTestTypes;
+using BitVectorTestTypes = ::testing::Types<BitVector, SmallBitVector>;
 TYPED_TEST_SUITE(BitVectorTest, BitVectorTestTypes, );
 
 TYPED_TEST(BitVectorTest, TrivialOperation) {
@@ -834,19 +836,27 @@ TYPED_TEST(BitVectorTest, BinOps) {
   A.resize(65);
   EXPECT_FALSE(A.anyCommon(B));
   EXPECT_FALSE(B.anyCommon(B));
+  EXPECT_TRUE(A.subsetOf(B));
+  EXPECT_TRUE(B.subsetOf(A));
 
   B.resize(64);
   A.set(64);
   EXPECT_FALSE(A.anyCommon(B));
   EXPECT_FALSE(B.anyCommon(A));
+  EXPECT_FALSE(A.subsetOf(B));
+  EXPECT_TRUE(B.subsetOf(A));
 
   B.set(63);
   EXPECT_FALSE(A.anyCommon(B));
   EXPECT_FALSE(B.anyCommon(A));
+  EXPECT_FALSE(A.subsetOf(B));
+  EXPECT_FALSE(B.subsetOf(A));
 
   A.set(63);
   EXPECT_TRUE(A.anyCommon(B));
   EXPECT_TRUE(B.anyCommon(A));
+  EXPECT_FALSE(A.subsetOf(B));
+  EXPECT_TRUE(B.subsetOf(A));
 
   B.resize(70);
   B.set(64);
@@ -854,9 +864,90 @@ TYPED_TEST(BitVectorTest, BinOps) {
   A.resize(64);
   EXPECT_FALSE(A.anyCommon(B));
   EXPECT_FALSE(B.anyCommon(A));
+  EXPECT_FALSE(A.subsetOf(B));
+  EXPECT_FALSE(B.subsetOf(A));
+
+  B.set(63);
+  B.reset(64);
+  EXPECT_TRUE(A.anyCommon(B));
+  EXPECT_TRUE(B.anyCommon(A));
+  EXPECT_TRUE(A.subsetOf(B));
+  EXPECT_TRUE(B.subsetOf(A));
 }
 
-typedef std::vector<std::pair<int, int>> RangeList;
+template <typename VecType>
+static inline VecType
+createBitVectorFromBits(uint32_t Size, std::initializer_list<int> SetBits) {
+  VecType V;
+  V.resize(Size);
+  for (int BitIndex : SetBits)
+    V.set(BitIndex);
+  return V;
+}
+
+TYPED_TEST(BitVectorTest, BinOpsLiteral) {
+  // More tests of binary operations with more focus on the semantics and
+  // less focus on mutability.
+
+  auto AnyCommon = [](uint32_t SizeLHS, std::initializer_list<int> SetBitsLHS,
+                      uint32_t SizeRHS, std::initializer_list<int> SetBitsRHS) {
+    auto LHS = createBitVectorFromBits<TypeParam>(SizeLHS, SetBitsLHS);
+    auto RHS = createBitVectorFromBits<TypeParam>(SizeRHS, SetBitsRHS);
+    return LHS.anyCommon(RHS);
+  };
+  auto SubsetOf = [](uint32_t SizeLHS, std::initializer_list<int> SetBitsLHS,
+                     uint32_t SizeRHS, std::initializer_list<int> SetBitsRHS) {
+    auto LHS = createBitVectorFromBits<TypeParam>(SizeLHS, SetBitsLHS);
+    auto RHS = createBitVectorFromBits<TypeParam>(SizeRHS, SetBitsRHS);
+    return LHS.subsetOf(RHS);
+  };
+
+  // clang-format off
+
+  // Test small-sized vectors.
+  EXPECT_TRUE (AnyCommon(10, {1, 2, 3}, 10, {3, 4, 5}));
+  EXPECT_FALSE(AnyCommon(10, {1, 2, 3}, 10, {4, 5}));
+
+  EXPECT_FALSE(SubsetOf(10, {1, 2, 3}, 10, {2, 3, 4}));
+  EXPECT_TRUE (SubsetOf(10, {2, 3},    10, {2, 3, 4}));
+  EXPECT_FALSE(SubsetOf(10, {1, 2, 3}, 10, {2, 3}));
+  EXPECT_TRUE (SubsetOf(10, {1, 2, 3}, 10, {1, 2, 3}));
+
+  // Test representations of empty sets of various sizes.
+  EXPECT_FALSE(AnyCommon(10,  {}, 10,  {}));
+  EXPECT_FALSE(AnyCommon(10,  {}, 123, {}));
+  EXPECT_FALSE(AnyCommon(123, {}, 10,  {}));
+  EXPECT_FALSE(AnyCommon(123, {}, 123, {}));
+  EXPECT_TRUE(SubsetOf(10,  {}, 10,  {}));
+  EXPECT_TRUE(SubsetOf(10,  {}, 123, {}));
+  EXPECT_TRUE(SubsetOf(123, {}, 10,  {}));
+  EXPECT_TRUE(SubsetOf(123, {}, 123, {}));
+
+  // Test handling of the remainder words.
+  EXPECT_FALSE(AnyCommon(10,  {1, 2},  123, {5, 70}));
+  EXPECT_TRUE (AnyCommon(10,  {1, 2},  123, {1, 70}));
+  EXPECT_FALSE(AnyCommon(123, {5, 70}, 10,  {1, 2}));
+  EXPECT_TRUE (AnyCommon(123, {1, 70}, 10,  {1, 2}));
+
+  EXPECT_FALSE(AnyCommon(10,  {1, 2}, 123, {5}));
+  EXPECT_TRUE (AnyCommon(10,  {1, 2}, 123, {1}));
+  EXPECT_FALSE(AnyCommon(123, {5},    10,  {1, 2}));
+  EXPECT_TRUE (AnyCommon(123, {1},    10,  {1, 2}));
+
+  EXPECT_FALSE(SubsetOf(10,  {1, 2},     123, {2, 70}));
+  EXPECT_TRUE (SubsetOf(10,  {1, 2},     123, {1, 2, 70}));
+  EXPECT_FALSE(SubsetOf(123, {2, 70},    10,  {1, 2}));
+  EXPECT_FALSE(SubsetOf(123, {1, 2, 70}, 10,  {1, 2}));
+
+  EXPECT_FALSE(SubsetOf(10,  {1, 2}, 123, {2}));
+  EXPECT_TRUE (SubsetOf(10,  {1, 2}, 123, {1, 2}));
+  EXPECT_TRUE (SubsetOf(123, {2},    10,  {1, 2}));
+  EXPECT_TRUE (SubsetOf(123, {1, 2}, 10,  {1, 2}));
+
+  // clang-format on
+}
+
+using RangeList = std::vector<std::pair<int, int>>;
 
 template <typename VecType>
 static inline VecType createBitVector(uint32_t Size,
@@ -1175,6 +1266,98 @@ TYPED_TEST(BitVectorTest, Iterators) {
   unsigned i = 0;
   for (unsigned Bit : ToFill.set_bits())
     EXPECT_EQ(List[i++], Bit);
+}
+
+TYPED_TEST(BitVectorTest, BidirectionalIterator) {
+  // Test decrement operators.
+  TypeParam Vec(100, false);
+  Vec.set(10);
+  Vec.set(20);
+  Vec.set(30);
+  Vec.set(40);
+
+  // Test that we can decrement from end().
+  auto EndIt = Vec.set_bits_end();
+  auto LastIt = EndIt;
+  --LastIt;
+  EXPECT_EQ(*LastIt, 40U);
+
+  // Test post-decrement.
+  auto It = Vec.set_bits_end();
+  auto PrevIt = It--;
+  EXPECT_EQ(PrevIt, Vec.set_bits_end());
+  EXPECT_EQ(*It, 40U);
+
+  // Test pre-decrement.
+  --It;
+  EXPECT_EQ(*It, 30U);
+
+  // Test full backward iteration.
+  std::vector<unsigned> BackwardBits;
+  for (auto RIt = Vec.set_bits_end(); RIt != Vec.set_bits_begin();) {
+    --RIt;
+    BackwardBits.push_back(*RIt);
+  }
+  EXPECT_EQ(BackwardBits.size(), 4U);
+  EXPECT_EQ(BackwardBits[0], 40U);
+  EXPECT_EQ(BackwardBits[1], 30U);
+  EXPECT_EQ(BackwardBits[2], 20U);
+  EXPECT_EQ(BackwardBits[3], 10U);
+}
+
+TYPED_TEST(BitVectorTest, ReverseIteration) {
+  // Test using llvm::reverse.
+  TypeParam Vec(100, false);
+  Vec.set(5);
+  Vec.set(15);
+  Vec.set(25);
+  Vec.set(35);
+  Vec.set(45);
+
+  std::vector<unsigned> ReversedBits;
+  for (unsigned Bit : llvm::reverse(Vec.set_bits())) {
+    ReversedBits.push_back(Bit);
+  }
+
+  EXPECT_EQ(ReversedBits.size(), 5U);
+  EXPECT_EQ(ReversedBits[0], 45U);
+  EXPECT_EQ(ReversedBits[1], 35U);
+  EXPECT_EQ(ReversedBits[2], 25U);
+  EXPECT_EQ(ReversedBits[3], 15U);
+  EXPECT_EQ(ReversedBits[4], 5U);
+}
+
+TYPED_TEST(BitVectorTest, BidirectionalIteratorEdgeCases) {
+  // Test empty BitVector.
+  TypeParam Empty;
+  EXPECT_EQ(Empty.set_bits_begin(), Empty.set_bits_end());
+
+  // Decrementing end() on empty should give -1 (no bits set).
+  auto EmptyEndIt = Empty.set_bits_end();
+  --EmptyEndIt;
+  // After decrement on empty, iterator should still be at "no bit" position.
+  EXPECT_EQ(*EmptyEndIt, static_cast<unsigned>(-1));
+
+  // Test single bit.
+  TypeParam Single(10, false);
+  Single.set(5);
+
+  auto SingleIt = Single.set_bits_end();
+  --SingleIt;
+  EXPECT_EQ(*SingleIt, 5U);
+  // After decrementing past the first element, the iterator is in an
+  // undefined state (before begin), so we don't test this case.
+
+  // Test all bits set.
+  TypeParam AllSet(10, true);
+  std::vector<unsigned> AllBitsReverse;
+  for (unsigned Bit : llvm::reverse(AllSet.set_bits())) {
+    AllBitsReverse.push_back(Bit);
+  }
+  EXPECT_EQ(AllBitsReverse.size(), 10U);
+  for (unsigned i = 0; i < 10; ++i) {
+    EXPECT_EQ(AllBitsReverse[i], 9 - i);
+  }
 }
 
 TYPED_TEST(BitVectorTest, PushBack) {

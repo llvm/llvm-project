@@ -44,6 +44,7 @@ namespace {
 
 class AMDGPUWaitSGPRHazards {
 public:
+  const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
@@ -54,7 +55,7 @@ public:
   bool CullSGPRHazardsAtMemWait;
   unsigned CullSGPRHazardsMemWaitThreshold;
 
-  AMDGPUWaitSGPRHazards() {}
+  AMDGPUWaitSGPRHazards() = default;
 
   // Return the numeric ID 0-127 for a given SGPR.
   static std::optional<unsigned> sgprNumber(Register Reg,
@@ -164,6 +165,46 @@ public:
       BuildMI(MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::DS_NOP));
   }
 
+  unsigned mergeMasks(unsigned Mask1, unsigned Mask2) {
+    unsigned Mask = AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST);
+    Mask = AMDGPU::DepCtr::encodeFieldSaSdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldSaSdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaVcc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVcc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaVcc(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVmVsrc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVmVsrc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVmVsrc(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaSdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaSdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaSdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaVdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaVdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldHoldCnt(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldHoldCnt(Mask1),
+                       AMDGPU::DepCtr::decodeFieldHoldCnt(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaSsrc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaSsrc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaSsrc(Mask2)));
+    return Mask;
+  }
+
+  bool mergeConsecutiveWaitAlus(MachineBasicBlock::instr_iterator &MI,
+                                unsigned Mask) {
+    auto MBB = MI->getParent();
+    if (MI == MBB->instr_begin())
+      return false;
+
+    auto It = prev_nodbg(MI, MBB->instr_begin());
+    if (It->getOpcode() != AMDGPU::S_WAITCNT_DEPCTR)
+      return false;
+
+    It->getOperand(0).setImm(mergeMasks(Mask, It->getOperand(0).getImm()));
+    return true;
+  }
+
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
     enum { WA_VALU = 0x1, WA_SALU = 0x2, WA_VCC = 0x4 };
 
@@ -192,7 +233,9 @@ public:
         State.ActiveFlat = true;
 
       // SMEM or VMEM clears hazards
-      if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isSMRD(*MI)) {
+      // FIXME: adapt to add FLAT without VALU (so !isLDSDMA())?
+      if ((SIInstrInfo::isVMEM(*MI) && !SIInstrInfo::isFLAT(*MI)) ||
+          SIInstrInfo::isSMRD(*MI)) {
         State.VCCHazard = HazardState::None;
         State.SALUHazards.reset();
         State.VALUHazards.reset();
@@ -315,10 +358,8 @@ public:
 
       // Only consider implicit VCC specified by instruction descriptor.
       const bool HasImplicitVCC =
-          llvm::any_of(MI->getDesc().implicit_uses(),
-                       [](MCPhysReg Reg) { return isVCC(Reg); }) ||
-          llvm::any_of(MI->getDesc().implicit_defs(),
-                       [](MCPhysReg Reg) { return isVCC(Reg); });
+          llvm::any_of(MI->getDesc().implicit_uses(), isVCC) ||
+          llvm::any_of(MI->getDesc().implicit_defs(), isVCC);
 
       if (IsSetPC) {
         // All SGPR writes before a call/return must be flushed as the
@@ -347,7 +388,7 @@ public:
 
       // Apply wait
       if (Wait) {
-        unsigned Mask = 0xffff;
+        unsigned Mask = AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST);
         if (Wait & WA_VCC) {
           State.VCCHazard &= ~HazardState::VALU;
           Mask = AMDGPU::DepCtr::encodeFieldVaVcc(Mask, 0);
@@ -362,10 +403,12 @@ public:
           Mask = AMDGPU::DepCtr::encodeFieldVaSdst(Mask, 0);
         }
         if (Emit) {
-          auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
-                               TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-                           .addImm(Mask);
-          updateGetPCBundle(NewMI);
+          if (!mergeConsecutiveWaitAlus(MI, Mask)) {
+            auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
+                                 TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+                             .addImm(Mask);
+            updateGetPCBundle(NewMI);
+          }
           Emitted = true;
         }
       }
@@ -396,8 +439,8 @@ public:
   }
 
   bool run(MachineFunction &MF) {
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (!ST.hasVALUReadSGPRHazard())
+    ST = &MF.getSubtarget<GCNSubtarget>();
+    if (!ST->hasVALUReadSGPRHazard())
       return false;
 
     // Parse settings
@@ -425,10 +468,10 @@ public:
     if (!EnableSGPRHazardWaits)
       return false;
 
-    TII = ST.getInstrInfo();
-    TRI = ST.getRegisterInfo();
+    TII = ST->getInstrInfo();
+    TRI = ST->getRegisterInfo();
     MRI = &MF.getRegInfo();
-    DsNopCount = ST.isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
+    DsNopCount = ST->isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
 
     auto CallingConv = MF.getFunction().getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CallingConv) &&
@@ -513,6 +556,6 @@ PreservedAnalyses
 AMDGPUWaitSGPRHazardsPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   if (AMDGPUWaitSGPRHazards().run(MF))
-    return PreservedAnalyses::none();
+    return getMachineFunctionPassPreservedAnalyses();
   return PreservedAnalyses::all();
 }

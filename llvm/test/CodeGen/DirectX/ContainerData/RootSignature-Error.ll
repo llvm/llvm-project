@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid format for Root Signature Definition. Pairs of function, root signature expected.
+; CHECK: error: Invalid Root Signature metadata - expected function, signature, and version.
 ; CHECK-NOT: Root Signature Definitions
 
 

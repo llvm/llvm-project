@@ -376,8 +376,6 @@ void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
   if (SpillMode)
     LICalc[1].reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
                     &LIS.getVNInfoAllocator());
-
-  Edit->anyRematerializable();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -588,10 +586,40 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
   return Def;
 }
 
+bool SplitEditor::rematWillIncreaseRestriction(const MachineInstr *DefMI,
+                                               MachineBasicBlock &MBB,
+                                               SlotIndex UseIdx) const {
+  const MachineInstr *UseMI = LIS.getInstructionFromIndex(UseIdx);
+  if (!UseMI)
+    return false;
+
+  // Currently code assumes rematerialization only happens for a def at 0.
+  const unsigned DefOperandIdx = 0;
+  // We want to compute the static register class constraint for the instruction
+  // def. If it is a smaller subclass than getLargestLegalSuperClass at the use
+  // site, then rematerializing it will increase the constraints.
+  const TargetRegisterClass *DefConstrainRC =
+      DefMI->getRegClassConstraint(DefOperandIdx, &TII, &TRI);
+  if (!DefConstrainRC)
+    return false;
+
+  const TargetRegisterClass *RC = MRI.getRegClass(Edit->getReg());
+
+  // We want to find the register class that can be inflated to after the split
+  // occurs in recomputeRegClass
+  const TargetRegisterClass *SuperRC =
+      TRI.getLargestLegalSuperClass(RC, *MBB.getParent());
+
+  Register DefReg = DefMI->getOperand(DefOperandIdx).getReg();
+  const TargetRegisterClass *UseConstrainRC =
+      UseMI->getRegClassConstraintEffectForVReg(DefReg, SuperRC, &TII, &TRI,
+                                                /*ExploreBundle=*/true);
+  return UseConstrainRC->hasSubClass(DefConstrainRC);
+}
+
 VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
                                    SlotIndex UseIdx, MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I) {
-  SlotIndex Def;
   LiveInterval *LI = &LIS.getInterval(Edit->get(RegIdx));
 
   // We may be trying to avoid interference that ends at a deleted instruction,
@@ -604,37 +632,44 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(UseIdx);
 
   Register Reg = LI->reg();
-  bool DidRemat = false;
   if (OrigVNI) {
     LiveRangeEdit::Remat RM(ParentVNI);
     RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
-    if (Edit->canRematerializeAt(RM, OrigVNI, UseIdx, true)) {
-      Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
-      ++NumRemats;
-      DidRemat = true;
+    if (RM.OrigMI && TII.isAsCheapAsAMove(*RM.OrigMI) &&
+        Edit->canRematerializeAt(RM, UseIdx)) {
+      if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
+        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
+        ++NumRemats;
+        // Define the value in Reg.
+        return defValue(RegIdx, ParentVNI, Def, false);
+      }
+      LLVM_DEBUG(
+          dbgs() << "skipping rematerialize of " << printReg(Reg) << " at "
+                 << UseIdx
+                 << " since it will increase register class restrictions\n");
     }
   }
-  if (!DidRemat) {
-    LaneBitmask LaneMask;
-    if (OrigLI.hasSubRanges()) {
-      LaneMask = LaneBitmask::getNone();
-      for (LiveInterval::SubRange &S : OrigLI.subranges()) {
-        if (S.liveAt(UseIdx))
-          LaneMask |= S.LaneMask;
-      }
-    } else {
-      LaneMask = LaneBitmask::getAll();
-    }
 
-    if (LaneMask.none()) {
-      const MCInstrDesc &Desc = TII.get(TargetOpcode::IMPLICIT_DEF);
-      MachineInstr *ImplicitDef = BuildMI(MBB, I, DebugLoc(), Desc, Reg);
-      SlotIndexes &Indexes = *LIS.getSlotIndexes();
-      Def = Indexes.insertMachineInstrInMaps(*ImplicitDef, Late).getRegSlot();
-    } else {
-      ++NumCopies;
-      Def = buildCopy(Edit->getReg(), Reg, LaneMask, MBB, I, Late, RegIdx);
+  LaneBitmask LaneMask;
+  if (OrigLI.hasSubRanges()) {
+    LaneMask = LaneBitmask::getNone();
+    for (LiveInterval::SubRange &S : OrigLI.subranges()) {
+      if (S.liveAt(UseIdx))
+        LaneMask |= S.LaneMask;
     }
+  } else {
+    LaneMask = LaneBitmask::getAll();
+  }
+
+  SlotIndex Def;
+  if (LaneMask.none()) {
+    const MCInstrDesc &Desc = TII.get(TargetOpcode::IMPLICIT_DEF);
+    MachineInstr *ImplicitDef = BuildMI(MBB, I, DebugLoc(), Desc, Reg);
+    SlotIndexes &Indexes = *LIS.getSlotIndexes();
+    Def = Indexes.insertMachineInstrInMaps(*ImplicitDef, Late).getRegSlot();
+  } else {
+    ++NumCopies;
+    Def = buildCopy(Edit->getReg(), Reg, LaneMask, MBB, I, Late, RegIdx);
   }
 
   // Define the value in Reg.
@@ -814,7 +849,7 @@ SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
   return VNI->def;
 }
 
-static bool hasTiedUseOf(MachineInstr &MI, unsigned Reg) {
+static bool hasTiedUseOf(MachineInstr &MI, Register Reg) {
   return any_of(MI.defs(), [Reg](const MachineOperand &MO) {
     return MO.isReg() && MO.isTied() && MO.getReg() == Reg;
   });
@@ -1405,7 +1440,8 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     assert(LI.hasSubRanges());
 
     LiveIntervalCalc SubLIC;
-    Register Reg = EP.MO.getReg(), Sub = EP.MO.getSubReg();
+    Register Reg = EP.MO.getReg();
+    unsigned Sub = EP.MO.getSubReg();
     LaneBitmask LM = Sub != 0 ? TRI.getSubRegIndexLaneMask(Sub)
                               : MRI.getMaxLaneMaskForVReg(Reg);
     for (LiveInterval::SubRange &S : LI.subranges()) {
@@ -1473,16 +1509,14 @@ void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
   }
 
   // Trace value through phis.
-  SmallPtrSet<const VNInfo *, 8> Visited; ///< whether VNI was/is in worklist.
-  SmallVector<const VNInfo *, 4> WorkList;
-  Visited.insert(&ParentVNI);
-  WorkList.push_back(&ParentVNI);
+  ///< whether VNI was/is in worklist.
+  SmallPtrSet<const VNInfo *, 8> Visited = {&ParentVNI};
+  SmallVector<const VNInfo *, 4> WorkList = {&ParentVNI};
 
   const LiveInterval &ParentLI = Edit->getParent();
   const SlotIndexes &Indexes = *LIS.getSlotIndexes();
   do {
-    const VNInfo &VNI = *WorkList.back();
-    WorkList.pop_back();
+    const VNInfo &VNI = *WorkList.pop_back_val();
     for (unsigned I = 0, E = Edit->size(); I != E; ++I)
       forceRecompute(I, VNI);
     if (!VNI.isPHIDef())

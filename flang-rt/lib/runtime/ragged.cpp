@@ -40,7 +40,7 @@ RT_API_ATTRS RaggedArrayHeader *RaggedArrayAllocate(RaggedArrayHeader *header,
     std::size_t bytes{static_cast<std::size_t>(elementSize * size)};
     header->bufferPointer = AllocateMemoryOrCrash(terminator, bytes);
     if (header->bufferPointer) {
-      std::memset(header->bufferPointer, 0, bytes);
+      runtime::memset(header->bufferPointer, 0, bytes);
     }
     return header;
   } else {

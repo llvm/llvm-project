@@ -1,4 +1,4 @@
-//===-- Baremetal implementation of getchar -------------------------------===//
+//===-- Implementation of getchar for baremetal -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,19 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/getchar.h"
-#include "src/__support/OSUtil/io.h"
-#include "src/__support/macros/config.h"
 
 #include "hdr/stdio_macros.h" // for EOF.
+#include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+#include "src/stdio/baremetal/file_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getchar, ()) {
-  char buf[1];
-  auto result = read_from_stdin(buf, sizeof(buf));
-  if (result < 0)
+  unsigned char c;
+  auto result = read_internal(reinterpret_cast<char *>(&c), 1, stdin);
+  if (result.has_error())
+    libc_errno = result.error;
+
+  if (result.value != 1)
     return EOF;
-  return buf[0];
+  return c;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

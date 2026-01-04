@@ -21,6 +21,7 @@
 
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -41,17 +42,19 @@ typedef enum {
 /* Verifies that a module is valid, taking the specified action if not.
    Optionally returns a human-readable description of any invalid constructs.
    OutMessage must be disposed with LLVMDisposeMessage. */
-LLVMBool LLVMVerifyModule(LLVMModuleRef M, LLVMVerifierFailureAction Action,
-                          char **OutMessage);
+LLVM_C_ABI LLVMBool LLVMVerifyModule(LLVMModuleRef M,
+                                     LLVMVerifierFailureAction Action,
+                                     char **OutMessage);
 
 /* Verifies that a single function is valid, taking the specified action. Useful
    for debugging. */
-LLVMBool LLVMVerifyFunction(LLVMValueRef Fn, LLVMVerifierFailureAction Action);
+LLVM_C_ABI LLVMBool LLVMVerifyFunction(LLVMValueRef Fn,
+                                       LLVMVerifierFailureAction Action);
 
 /* Open up a ghostview window that displays the CFG of the current function.
    Useful for debugging. */
-void LLVMViewFunctionCFG(LLVMValueRef Fn);
-void LLVMViewFunctionCFGOnly(LLVMValueRef Fn);
+LLVM_C_ABI void LLVMViewFunctionCFG(LLVMValueRef Fn);
+LLVM_C_ABI void LLVMViewFunctionCFGOnly(LLVMValueRef Fn);
 
 /**
  * @}

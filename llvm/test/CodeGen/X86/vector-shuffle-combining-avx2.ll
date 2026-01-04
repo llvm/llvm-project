@@ -435,7 +435,7 @@ define <8 x float> @combine_pshufb_as_vzmovl_32(<8 x float> %a0) {
 ; CHECK-LABEL: combine_pshufb_as_vzmovl_32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = bitcast <8 x float> %a0 to <32 x i8>
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
@@ -775,6 +775,108 @@ define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
   ret <32 x i8> %4
 }
 
+define <4 x i32> @extract_vpermd(<8 x i32> %a0) {
+; CHECK-LABEL: extract_vpermd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,3,0]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a0, <8 x i32> <i32 1, i32 1, i32 3, i32 0, i32 1, i32 0, i32 7, i32 6>)
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %2
+}
+
+; Not beneficial to concatenate both inputs just to create a 256-bit vpaddb
+define <32 x i8> @concat_add_unnecessary(<16 x i8> %a0, <16 x i8> noundef %a1, <16 x i8> %a2) nounwind {
+; CHECK-LABEL: concat_add_unnecessary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = add <16 x i8> %a0, %a1
+  %hi = add <16 x i8> %a0, %a2
+  %res = shufflevector <16 x i8> %lo, <16 x i8> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i8> %res
+}
+
+; Not beneficial to concatenate both inputs just to create a 256-bit vpmullw
+define <16 x i16> @concat_mul_unnecessary(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2) nounwind {
+; CHECK-LABEL: concat_mul_unnecessary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmullw %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = mul <8 x i16> %a0, %a1
+  %hi = mul <8 x i16> %a0, %a2
+  %res = shufflevector <8 x i16> %lo, <8 x i16> %hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i16> %res
+}
+
+; Not beneficial to concatenate both inputs just to create a 256-bit palignr
+define <32 x i8> @concat_alignr_unnecessary(<16 x i8> %a0, <16 x i8> noundef %a1, <16 x i8> %a2) nounwind {
+; CHECK-LABEL: concat_alignr_unnecessary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[3,4,5,6,7,8,9,10,11,12,13,14,15],xmm0[0,1,2]
+; CHECK-NEXT:    vpalignr {{.*#+}} xmm0 = xmm2[3,4,5,6,7,8,9,10,11,12,13,14,15],xmm0[0,1,2]
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = shufflevector <16 x i8> %a1, <16 x i8> %a0, <16 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18>
+  %hi = shufflevector <16 x i8> %a2, <16 x i8> %a0, <16 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18>
+  %res = shufflevector <16 x i8> %lo, <16 x i8> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i8> %res
+}
+
+; Not beneficial to concatenate both inputs just to create a 256-bit packss
+define <32 x i8> @concat_packss_unnecessary(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2) nounwind {
+; CHECK-LABEL: concat_packss_unnecessary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpacksswb %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = tail call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a0, <8 x i16> %a1)
+  %hi = tail call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a0, <8 x i16> %a2)
+  %res = shufflevector <16 x i8> %lo, <16 x i8> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i8> %res
+}
+declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>)
+
+; Not beneficial to concatenate both inputs just to create a 256-bit pshufb
+define <32 x i8> @concat_pshufb_unnecessary(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) nounwind {
+; CHECK-LABEL: concat_pshufb_unnecessary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshufb %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> %a1)
+  %hi = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> %a2)
+  %res = shufflevector <16 x i8> %lo, <16 x i8> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i8> %res
+}
+
+define <8 x float> @demandedelts_vpermps(<8 x float> %a0, <8 x float> %a1) {
+; AVX2-LABEL: demandedelts_vpermps:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,1,1,0]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: demandedelts_vpermps:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [3,1,1,0,20,21,22,23]
+; AVX512-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    ret{{[l|q]}}
+  %lo = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> <i32 3, i32 1, i32 1, i32 0, i32 0, i32 0, i32 7, i32 7>)
+  %hi = shufflevector <8 x float> %lo, <8 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+  ret <8 x float> %hi
+}
+
 define <8 x i32> @constant_fold_permd() {
 ; AVX2-LABEL: constant_fold_permd:
 ; AVX2:       # %bb.0:
@@ -829,6 +931,16 @@ entry:
   %tmp5 = extractelement <2 x i32> %tmp4, i32 1
   %tmp6 = add i32 %tmp1, %tmp5
   ret i32 %tmp6
+}
+
+define <8 x float> @freeze_permps(<8 x float> %a0) {
+; CHECK-LABEL: freeze_permps:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret{{[l|q]}}
+  %s0 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>)
+  %f0 = freeze <8 x float> %s0
+  %s1 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %f0, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>)
+  ret <8 x float> %s1
 }
 
 define <32 x i8> @PR27320(<8 x i32> %a0) {
@@ -989,4 +1101,220 @@ define void @packss_zext_v8i1() {
   %tmp11 = tail call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> undef, <8 x i32> %tmp10)
   store <16 x i16> %tmp11, ptr undef, align 2
   ret void
+}
+
+define <32 x i16> @PR158415(<8 x i8> %arg) {
+; X86-AVX2-LABEL: PR158415:
+; X86-AVX2:       # %bb.0: # %entry
+; X86-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u],zero,xmm0[u,u,u,0,2,u,u,u,u,u,u,u,4]
+; X86-AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,0,2,1]
+; X86-AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X86-AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,24],zero,ymm0[25],zero,ymm0[30],zero,ymm0[31],zero,ymm0[u,u,u,u,u,u,u,u]
+; X86-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; X86-AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,2,3]
+; X86-AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[12,13,14,15],zero,zero,ymm1[4,5,u,u,u,u,u,u,u,u,28,29,30,31],zero,zero,ymm1[20,21],zero,zero,ymm1[26,27,28,29,30,31]
+; X86-AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,3,0,2]
+; X86-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; X86-AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
+; X86-AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
+; X86-AVX2-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,xmm2[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+; X86-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpbroadcastw %xmm1, %ymm3
+; X86-AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm3[2],ymm0[3,4,5,6,7,8,9],ymm3[10],ymm0[11,12,13,14,15]
+; X86-AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X86-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0,1,2,3],ymm0[4,5,6,7]
+; X86-AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,xmm2[14,15],zero,zero,zero,zero,xmm2[u,u],zero,zero
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X86-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; X86-AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4,5],xmm1[6],xmm2[7]
+; X86-AVX2-NEXT:    retl
+;
+; X86-AVX512-LABEL: PR158415:
+; X86-AVX512:       # %bb.0: # %entry
+; X86-AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u],zero,xmm0[u,u,u,0,2,u,u,u,u,u,u,u,4]
+; X86-AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,0,2,1]
+; X86-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X86-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; X86-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X86-AVX512-NEXT:    vpunpckhqdq {{.*#+}} ymm1 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X86-AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X86-AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; X86-AVX512-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; X86-AVX512-NEXT:    vpbroadcastd %xmm0, %ymm0
+; X86-AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; X86-AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
+; X86-AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X86-AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; X86-AVX512-NEXT:    vpsrld $16, %xmm2, %xmm2
+; X86-AVX512-NEXT:    vpalignr {{.*#+}} xmm2 = xmm0[8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7]
+; X86-AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,3]
+; X86-AVX512-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
+; X86-AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X86-AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; X86-AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX2-LABEL: PR158415:
+; X64-AVX2:       # %bb.0: # %entry
+; X64-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u],zero,xmm0[u,u,u,0,2,u,u,u,u,u,u,u,4]
+; X64-AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,0,2,1]
+; X64-AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X64-AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,24],zero,ymm0[25],zero,ymm0[30],zero,ymm0[31],zero,ymm0[u,u,u,u,u,u,u,u]
+; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; X64-AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,2,3]
+; X64-AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[12,13,14,15],zero,zero,ymm1[4,5,u,u,u,u,u,u,u,u,28,29,30,31],zero,zero,ymm1[20,21],zero,zero,ymm1[26,27,28,29,30,31]
+; X64-AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,3,0,2]
+; X64-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; X64-AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
+; X64-AVX2-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,xmm2[0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+; X64-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpbroadcastw %xmm1, %ymm3
+; X64-AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm3[2],ymm0[3,4,5,6,7,8,9],ymm3[10],ymm0[11,12,13,14,15]
+; X64-AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0,1,2,3],ymm0[4,5,6,7]
+; X64-AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,xmm2[14,15],zero,zero,zero,zero,xmm2[u,u],zero,zero
+; X64-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X64-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; X64-AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4,5],xmm1[6],xmm2[7]
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512-LABEL: PR158415:
+; X64-AVX512:       # %bb.0: # %entry
+; X64-AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u],zero,xmm0[u,u,u,0,2,u,u,u,u,u,u,u,4]
+; X64-AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,0,2,1]
+; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X64-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; X64-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X64-AVX512-NEXT:    vpunpckhqdq {{.*#+}} ymm1 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; X64-AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; X64-AVX512-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; X64-AVX512-NEXT:    vpbroadcastd %xmm0, %ymm0
+; X64-AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; X64-AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; X64-AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X64-AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; X64-AVX512-NEXT:    vpsrld $16, %xmm2, %xmm2
+; X64-AVX512-NEXT:    vpalignr {{.*#+}} xmm2 = xmm0[8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7]
+; X64-AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,2,3]
+; X64-AVX512-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
+; X64-AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; X64-AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; X64-AVX512-NEXT:    retq
+entry:
+  %shuffle2 = shufflevector <8 x i8> %arg, <8 x i8> zeroinitializer, <32 x i32> <i32 2, i32 2, i32 9, i32 3, i32 1, i32 0, i32 0, i32 2, i32 0, i32 5, i32 9, i32 6, i32 5, i32 4, i32 7, i32 2, i32 7, i32 9, i32 4, i32 0, i32 9, i32 2, i32 4, i32 3, i32 3, i32 2, i32 2, i32 3, i32 9, i32 0, i32 6, i32 4>
+  %conv3 = zext <32 x i8> %shuffle2 to <32 x i16>
+  %shuffle4 = shufflevector <32 x i16> zeroinitializer, <32 x i16> %conv3, <32 x i32> <i32 5, i32 3, i32 4, i32 47, i32 5, i32 5, i32 3, i32 63, i32 4, i32 4, i32 60, i32 2, i32 2, i32 5, i32 4, i32 0, i32 38, i32 1, i32 0, i32 3, i32 59, i32 2, i32 3, i32 1, i32 1, i32 0, i32 3, i32 34, i32 0, i32 0, i32 62, i32 5>
+  %not = xor <32 x i16> %shuffle4, splat (i16 1)
+  %shuffle5 = shufflevector <32 x i16> zeroinitializer, <32 x i16> %not, <32 x i32> <i32 3, i32 9, i32 3, i32 1, i32 9, i32 8, i32 9, i32 2, i32 0, i32 8, i32 48, i32 8, i32 35, i32 3, i32 0, i32 4, i32 4, i32 7, i32 4, i32 39, i32 9, i32 0, i32 59, i32 6, i32 0, i32 4, i32 9, i32 1, i32 1, i32 2, i32 8, i32 9>
+  ret <32 x i16> %shuffle5
+}
+
+define <9 x i16> @PR172010(<4 x i64> %a0) {
+; AVX2-LABEL: PR172010:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[1,1,1,1]
+; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,1,1,3]
+; AVX2-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,15,4,5,8,9,0,1],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: PR172010:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[0,1,0,1,2,3,6,7]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,2,1]
+; AVX512-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,4,6,7]
+; AVX512-NEXT:    vprolq $16, %zmm0, %zmm0
+; AVX512-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-NEXT:    ret{{[l|q]}}
+  %shuffle = shufflevector <4 x i64> %a0, <4 x i64> zeroinitializer, <16 x i32> <i32 5, i32 3, i32 0, i32 5, i32 2, i32 2, i32 1, i32 1, i32 4, i32 6, i32 5, i32 3, i32 1, i32 7, i32 2, i32 1>
+  %trunc = trunc nuw <16 x i64> %shuffle to <16 x i16>
+  %result = shufflevector <16 x i16> zeroinitializer, <16 x i16> %trunc, <9 x i32> <i32 31, i32 18, i32 28, i32 20, i32 7, i32 5, i32 8, i32 4, i32 7>
+  ret <9 x i16> %result
+}
+
+define <8 x float> @PR173030(i8 %a0, i16 %a1, i32 %a2) {
+; X86-LABEL: PR173030:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx def $ecx
+; X86-NEXT:    incb %cl
+; X86-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; X86-NEXT:    vpmovsxbd %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovd %ecx, %xmm1
+; X86-NEXT:    incl %ecx
+; X86-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
+; X86-NEXT:    vpmovsxwd %xmm1, %xmm1
+; X86-NEXT:    vmovd %eax, %xmm2
+; X86-NEXT:    incl %eax
+; X86-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X86-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
+; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X86-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; X86-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; X86-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR173030:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 1(%rdi), %eax
+; X64-NEXT:    vmovd %edi, %xmm0
+; X64-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpmovsxbd %xmm0, %xmm0
+; X64-NEXT:    vmovd %esi, %xmm1
+; X64-NEXT:    incl %esi
+; X64-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
+; X64-NEXT:    vpmovsxwd %xmm1, %xmm1
+; X64-NEXT:    vmovd %edx, %xmm2
+; X64-NEXT:    incl %edx
+; X64-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
+; X64-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm1
+; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; X64-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; X64-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; X64-NEXT:    retq
+  %i = add i8 %a0, 1
+  %i1 = insertelement <2 x i8> poison, i8 %a0, i64 0
+  %i2 = insertelement <2 x i8> %i1, i8 %i, i64 1
+  %i3 = sitofp <2 x i8> %i2 to <2 x float>
+  %i4 = add i16 %a1, 1
+  %i5 = insertelement <2 x i16> poison, i16 %a1, i64 0
+  %i6 = insertelement <2 x i16> %i5, i16 %i4, i64 1
+  %i7 = sitofp <2 x i16> %i6 to <2 x float>
+  %i8 = add i32 %a2, 1
+  %i9 = insertelement <2 x i32> poison, i32 %a2, i64 0
+  %i10 = insertelement <2 x i32> %i9, i32 %i8, i64 1
+  %i11 = sitofp <2 x i32> %i10 to <2 x float>
+  %i12 = shufflevector <2 x float> %i3, <2 x float> %i7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+  %i13 = shufflevector <2 x float> %i11, <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %i14 = shufflevector <8 x float> %i12, <8 x float> %i13, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
+  %i15 = shufflevector <8 x float> %i14, <8 x float> <float poison, float poison, float poison, float poison, float poison, float poison, float 1.000000e+00, float 1.000000e+00>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 14, i32 15>
+  ret <8 x float> %i15
 }

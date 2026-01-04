@@ -21,16 +21,17 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Runtime/io-api-consts.h"
+#include "flang/Runtime/io-api.h"
 #include "flang/Runtime/reduce.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstdint>
 #include <functional>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
 typedef std::uint32_t pid_t;
 #endif
@@ -250,6 +251,33 @@ constexpr TypeBuilderFunc getModel<void (*)(int)>() {
         mlir::FunctionType::get(context, /*inputs=*/{}, /*results*/ {}));
   };
 }
+template <>
+constexpr TypeBuilderFunc
+getModel<void *(*)(void *, const void *, unsigned long)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto voidPtrTy =
+        fir::LLVMPointerType::get(context, mlir::IntegerType::get(context, 8));
+    auto unsignedLongTy =
+        mlir::IntegerType::get(context, 8 * sizeof(unsigned long));
+    auto funcTy = mlir::FunctionType::get(
+        context, {voidPtrTy, voidPtrTy, unsignedLongTy}, {voidPtrTy});
+    return fir::LLVMPointerType::get(context, funcTy);
+  };
+}
+#ifdef _MSC_VER
+template <>
+constexpr TypeBuilderFunc
+getModel<void *(*)(void *, const void *, unsigned __int64)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto voidPtrTy =
+        fir::LLVMPointerType::get(context, mlir::IntegerType::get(context, 8));
+    auto uint64Ty = mlir::IntegerType::get(context, 64);
+    auto funcTy = mlir::FunctionType::get(
+        context, {voidPtrTy, voidPtrTy, uint64Ty}, {voidPtrTy});
+    return fir::LLVMPointerType::get(context, funcTy);
+  };
+}
+#endif
 template <>
 constexpr TypeBuilderFunc getModel<void **>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
@@ -824,31 +852,23 @@ static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
   return getRuntimeFunc<E>(loc, builder, /*isIO=*/true);
 }
 
-namespace helper {
-template <int N, typename A>
-void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
-                     fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::FunctionType fTy, A arg) {
-  result.emplace_back(builder.createConvert(loc, fTy.getInput(N), arg));
+inline llvm::SmallVector<mlir::Value>
+createArguments(fir::FirOpBuilder &builder, mlir::Location loc,
+                mlir::FunctionType fTy, llvm::ArrayRef<mlir::Value> args) {
+  return llvm::map_to_vector(llvm::zip_equal(fTy.getInputs(), args),
+                             [&](const auto &pair) -> mlir::Value {
+                               auto [type, argument] = pair;
+                               return builder.createConvertWithVolatileCast(
+                                   loc, type, argument);
+                             });
 }
-
-template <int N, typename A, typename... As>
-void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
-                     fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::FunctionType fTy, A arg, As... args) {
-  result.emplace_back(builder.createConvert(loc, fTy.getInput(N), arg));
-  createArguments<N + 1>(result, builder, loc, fTy, args...);
-}
-} // namespace helper
 
 /// Create a SmallVector of arguments for a runtime call.
 template <typename... As>
 llvm::SmallVector<mlir::Value>
 createArguments(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::FunctionType fTy, As... args) {
-  llvm::SmallVector<mlir::Value> result;
-  helper::createArguments<0>(result, builder, loc, fTy, args...);
-  return result;
+  return createArguments(builder, loc, fTy, {args...});
 }
 
 } // namespace fir::runtime

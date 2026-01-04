@@ -7,53 +7,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "EventHelper.h"
-#include "JSONUtils.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
 
+using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
-// "modulesRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Modules request; value of command field is
-//                     'modules'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "modules" ]
-//       },
-//     },
-//     "required": [ "command" ]
-//   }]
-// },
-// "modulesResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'modules' request.",
-//     "properties": {
-//       "body": {
-//         "description": "Response to 'modules' request. Array of
-//                         module objects."
-//       }
-//     }
-//   }]
-// }
-void ModulesRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
+/// Modules can be retrieved from the debug adapter with this request which can
+/// either return all modules or a range of modules to support paging.
+///
+/// Clients should only call this request if the corresponding capability
+/// `supportsModulesRequest` is true.
+llvm::Expected<ModulesResponseBody>
+ModulesRequestHandler::Run(const std::optional<ModulesArguments> &args) const {
+  ModulesResponseBody response;
 
-  llvm::json::Array modules;
-  for (size_t i = 0; i < dap.target.GetNumModules(); i++) {
+  std::vector<Module> &modules = response.modules;
+  std::lock_guard<std::mutex> guard(dap.modules_mutex);
+  const uint32_t total_modules = dap.target.GetNumModules();
+  response.totalModules = total_modules;
+
+  modules.reserve(total_modules);
+  for (uint32_t i = 0; i < total_modules; i++) {
     lldb::SBModule module = dap.target.GetModuleAtIndex(i);
-    modules.emplace_back(CreateModule(dap.target, module));
+
+    std::optional<Module> result = CreateModule(dap.target, module);
+    if (result && !result->id.empty()) {
+      dap.modules.insert(result->id);
+      modules.emplace_back(std::move(result).value());
+    }
   }
 
-  llvm::json::Object body;
-  body.try_emplace("modules", std::move(modules));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return response;
 }
 
 } // namespace lldb_dap

@@ -22,6 +22,7 @@ typedef float V2f __attribute__((vector_size(8)));
 // 128-bit
 typedef char V16c __attribute__((vector_size(16)));
 typedef signed short V8s __attribute__((vector_size(16)));
+typedef unsigned short V8u __attribute__((vector_size(16)));
 typedef signed int V4i __attribute__((vector_size(16)));
 #ifndef OPENCL
 typedef signed long long V2LLi __attribute__((vector_size(16)));
@@ -99,6 +100,7 @@ void f0(void) {
   // 128-bit
   V16c   tmp_V16c;
   V8s    tmp_V8s;
+  V8u    tmp_V8u;
   V4i    tmp_V4i;
   V2LLi  tmp_V2LLi;
   V4f    tmp_V4f;
@@ -192,7 +194,7 @@ void f0(void) {
   tmp_V16c = __builtin_ia32_packsswb128(tmp_V8s, tmp_V8s);
   tmp_V8s = __builtin_ia32_packssdw128(tmp_V4i, tmp_V4i);
   tmp_V16c = __builtin_ia32_packuswb128(tmp_V8s, tmp_V8s);
-  tmp_V8s = __builtin_ia32_pmulhuw128(tmp_V8s, tmp_V8s);
+  tmp_V8u = __builtin_ia32_pmulhuw128(tmp_V8u, tmp_V8u);
   tmp_V4f = __builtin_ia32_addsubps(tmp_V4f, tmp_V4f);
   tmp_V2d = __builtin_ia32_addsubpd(tmp_V2d, tmp_V2d);
   tmp_V4f = __builtin_ia32_haddps(tmp_V4f, tmp_V4f);
@@ -280,8 +282,6 @@ void f0(void) {
   tmp_V4f = __builtin_ia32_rcpss(tmp_V4f);
   tmp_V4f = __builtin_ia32_rsqrtps(tmp_V4f);
   tmp_V4f = __builtin_ia32_rsqrtss(tmp_V4f);
-  tmp_V4f = __builtin_ia32_sqrtps(tmp_V4f);
-  tmp_V4f = __builtin_ia32_sqrtss(tmp_V4f);
   (void) __builtin_ia32_maskmovdqu(tmp_V16c, tmp_V16c, tmp_cp);
   tmp_i = __builtin_ia32_movmskpd(tmp_V2d);
   tmp_i = __builtin_ia32_pmovmskb128(tmp_V16c);
@@ -290,8 +290,6 @@ void f0(void) {
   (void) __builtin_ia32_movnti64(tmp_LLip, tmp_LLi);
 #endif
   tmp_V2LLi = __builtin_ia32_psadbw128(tmp_V16c, tmp_V16c);
-  tmp_V2d = __builtin_ia32_sqrtpd(tmp_V2d);
-  tmp_V2d = __builtin_ia32_sqrtsd(tmp_V2d);
   tmp_V2LLi = __builtin_ia32_cvtpd2dq(tmp_V2d);
   tmp_V4f = __builtin_ia32_cvtpd2ps(tmp_V2d);
   tmp_V4i = __builtin_ia32_cvttpd2dq(tmp_V2d);
@@ -398,8 +396,6 @@ void f0(void) {
   tmp_V4d = __builtin_ia32_vperm2f128_pd256(tmp_V4d, tmp_V4d, 0x7);
   tmp_V8f = __builtin_ia32_vperm2f128_ps256(tmp_V8f, tmp_V8f, 0x7);
   tmp_V8i = __builtin_ia32_vperm2f128_si256(tmp_V8i, tmp_V8i, 0x7);
-  tmp_V4d = __builtin_ia32_sqrtpd256(tmp_V4d);
-  tmp_V8f = __builtin_ia32_sqrtps256(tmp_V8f);
   tmp_V8f = __builtin_ia32_rsqrtps256(tmp_V8f);
   tmp_V8f = __builtin_ia32_rcpps256(tmp_V8f);
   tmp_V4d = __builtin_ia32_roundpd256(tmp_V4d, 0x1);

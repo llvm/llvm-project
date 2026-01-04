@@ -8,6 +8,7 @@ unittest("ClangAnalysisTests") {
     "//clang/lib/Analysis",
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
+    "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
   ]
@@ -17,6 +18,7 @@ unittest("ClangAnalysisTests") {
     "CloneDetectionTest.cpp",
     "ExprMutationAnalyzerTest.cpp",
     "IntervalPartitionTest.cpp",
+    "LifetimeSafetyTest.cpp",
     "MacroExpansionContextTest.cpp",
     "UnsafeBufferUsageTest.cpp",
   ]

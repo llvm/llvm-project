@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+zvfbfmin,+v \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV64
 
-declare <vscale x 1 x i8> @llvm.vp.gather.nxv1i8.nxv1p0(<vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i8> @vpgather_nxv1i8(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv1i8:
 ; RV32:       # %bb.0:
@@ -27,8 +25,6 @@ define <vscale x 1 x i8> @vpgather_nxv1i8(<vscale x 1 x ptr> %ptrs, <vscale x 1 
   %v = call <vscale x 1 x i8> @llvm.vp.gather.nxv1i8.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i8> %v
 }
-
-declare <vscale x 2 x i8> @llvm.vp.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i8> @vpgather_nxv2i8(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv2i8:
@@ -174,8 +170,6 @@ define <vscale x 2 x i64> @vpgather_nxv2i8_zextload_nxv2i64(<vscale x 2 x ptr> %
   ret <vscale x 2 x i64> %ev
 }
 
-declare <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i8> @vpgather_nxv4i8(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv4i8:
 ; RV32:       # %bb.0:
@@ -211,8 +205,6 @@ define <vscale x 4 x i8> @vpgather_truemask_nxv4i8(<vscale x 4 x ptr> %ptrs, i32
   %v = call <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x i8> %v
 }
-
-declare <vscale x 8 x i8> @llvm.vp.gather.nxv8i8.nxv8p0(<vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i8> @vpgather_nxv8i8(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv8i8:
@@ -252,8 +244,6 @@ define <vscale x 8 x i8> @vpgather_baseidx_nxv8i8(ptr %base, <vscale x 8 x i8> %
   %v = call <vscale x 8 x i8> @llvm.vp.gather.nxv8i8.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i8> %v
 }
-
-declare <vscale x 32 x i8> @llvm.vp.gather.nxv32i8.nxv32p0(<vscale x 32 x ptr>, <vscale x 32 x i1>, i32)
 
 define <vscale x 32 x i8> @vpgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8> %idxs, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_baseidx_nxv32i8:
@@ -344,8 +334,6 @@ define <vscale x 32 x i8> @vpgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8
   ret <vscale x 32 x i8> %v
 }
 
-declare <vscale x 1 x i16> @llvm.vp.gather.nxv1i16.nxv1p0(<vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i16> @vpgather_nxv1i16(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv1i16:
 ; RV32:       # %bb.0:
@@ -363,8 +351,6 @@ define <vscale x 1 x i16> @vpgather_nxv1i16(<vscale x 1 x ptr> %ptrs, <vscale x 
   %v = call <vscale x 1 x i16> @llvm.vp.gather.nxv1i16.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i16> %v
 }
-
-declare <vscale x 2 x i16> @llvm.vp.gather.nxv2i16.nxv2p0(<vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i16> @vpgather_nxv2i16(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv2i16:
@@ -468,8 +454,6 @@ define <vscale x 2 x i64> @vpgather_nxv2i16_zextload_nxv2i64(<vscale x 2 x ptr> 
   ret <vscale x 2 x i64> %ev
 }
 
-declare <vscale x 4 x i16> @llvm.vp.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i16> @vpgather_nxv4i16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv4i16:
 ; RV32:       # %bb.0:
@@ -505,8 +489,6 @@ define <vscale x 4 x i16> @vpgather_truemask_nxv4i16(<vscale x 4 x ptr> %ptrs, i
   %v = call <vscale x 4 x i16> @llvm.vp.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x i16> %v
 }
-
-declare <vscale x 8 x i16> @llvm.vp.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i16> @vpgather_nxv8i16(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv8i16:
@@ -616,8 +598,6 @@ define <vscale x 8 x i16> @vpgather_baseidx_nxv8i16(ptr %base, <vscale x 8 x i16
   ret <vscale x 8 x i16> %v
 }
 
-declare <vscale x 1 x i32> @llvm.vp.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i32> @vpgather_nxv1i32(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv1i32:
 ; RV32:       # %bb.0:
@@ -634,8 +614,6 @@ define <vscale x 1 x i32> @vpgather_nxv1i32(<vscale x 1 x ptr> %ptrs, <vscale x 
   %v = call <vscale x 1 x i32> @llvm.vp.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i32> %v
 }
-
-declare <vscale x 2 x i32> @llvm.vp.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i32> @vpgather_nxv2i32(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv2i32:
@@ -696,8 +674,6 @@ define <vscale x 2 x i64> @vpgather_nxv2i32_zextload_nxv2i64(<vscale x 2 x ptr> 
   ret <vscale x 2 x i64> %ev
 }
 
-declare <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i32> @vpgather_nxv4i32(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv4i32:
 ; RV32:       # %bb.0:
@@ -731,8 +707,6 @@ define <vscale x 4 x i32> @vpgather_truemask_nxv4i32(<vscale x 4 x ptr> %ptrs, i
   %v = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x i32> %v
 }
-
-declare <vscale x 8 x i32> @llvm.vp.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i32> @vpgather_nxv8i32(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv8i32:
@@ -911,8 +885,6 @@ define <vscale x 8 x i32> @vpgather_baseidx_nxv8i32(ptr %base, <vscale x 8 x i32
   ret <vscale x 8 x i32> %v
 }
 
-declare <vscale x 1 x i64> @llvm.vp.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i64> @vpgather_nxv1i64(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv1i64:
 ; RV32:       # %bb.0:
@@ -930,14 +902,12 @@ define <vscale x 1 x i64> @vpgather_nxv1i64(<vscale x 1 x ptr> %ptrs, <vscale x 
   ret <vscale x 1 x i64> %v
 }
 
-declare <vscale x 2 x i64> @llvm.vp.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i64> @vpgather_nxv2i64(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vluxei32.v v10, (zero), v8, v0.t
-; RV32-NEXT:    vmv.v.v v8, v10
+; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_nxv2i64:
@@ -949,14 +919,12 @@ define <vscale x 2 x i64> @vpgather_nxv2i64(<vscale x 2 x ptr> %ptrs, <vscale x 
   ret <vscale x 2 x i64> %v
 }
 
-declare <vscale x 4 x i64> @llvm.vp.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i64> @vpgather_nxv4i64(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv4i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vluxei32.v v12, (zero), v8, v0.t
-; RV32-NEXT:    vmv.v.v v8, v12
+; RV32-NEXT:    vmv2r.v v12, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_nxv4i64:
@@ -972,8 +940,8 @@ define <vscale x 4 x i64> @vpgather_truemask_nxv4i64(<vscale x 4 x ptr> %ptrs, i
 ; RV32-LABEL: vpgather_truemask_nxv4i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vluxei32.v v12, (zero), v8
-; RV32-NEXT:    vmv.v.v v8, v12
+; RV32-NEXT:    vmv2r.v v12, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v12
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_truemask_nxv4i64:
@@ -985,14 +953,12 @@ define <vscale x 4 x i64> @vpgather_truemask_nxv4i64(<vscale x 4 x ptr> %ptrs, i
   ret <vscale x 4 x i64> %v
 }
 
-declare <vscale x 8 x i64> @llvm.vp.gather.nxv8i64.nxv8p0(<vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i64> @vpgather_nxv8i64(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv8i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vluxei32.v v16, (zero), v8, v0.t
-; RV32-NEXT:    vmv.v.v v8, v16
+; RV32-NEXT:    vmv4r.v v16, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v16, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_nxv8i64:
@@ -1231,8 +1197,6 @@ define <vscale x 8 x i64> @vpgather_baseidx_nxv8i64(ptr %base, <vscale x 8 x i64
   ret <vscale x 8 x i64> %v
 }
 
-declare <vscale x 1 x bfloat> @llvm.vp.gather.nxv1bf16.nxv1p0(<vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x bfloat> @vpgather_nxv1bf16(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv1bf16:
 ; RV32:       # %bb.0:
@@ -1251,8 +1215,6 @@ define <vscale x 1 x bfloat> @vpgather_nxv1bf16(<vscale x 1 x ptr> %ptrs, <vscal
   ret <vscale x 1 x bfloat> %v
 }
 
-declare <vscale x 2 x bfloat> @llvm.vp.gather.nxv2bf16.nxv2p0(<vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x bfloat> @vpgather_nxv2bf16(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv2bf16:
 ; RV32:       # %bb.0:
@@ -1270,8 +1232,6 @@ define <vscale x 2 x bfloat> @vpgather_nxv2bf16(<vscale x 2 x ptr> %ptrs, <vscal
   %v = call <vscale x 2 x bfloat> @llvm.vp.gather.nxv2bf16.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x bfloat> %v
 }
-
-declare <vscale x 4 x bfloat> @llvm.vp.gather.nxv4bf16.nxv4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x bfloat> @vpgather_nxv4bf16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv4bf16:
@@ -1308,8 +1268,6 @@ define <vscale x 4 x bfloat> @vpgather_truemask_nxv4bf16(<vscale x 4 x ptr> %ptr
   %v = call <vscale x 4 x bfloat> @llvm.vp.gather.nxv4bf16.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x bfloat> %v
 }
-
-declare <vscale x 8 x bfloat> @llvm.vp.gather.nxv8bf16.nxv8p0(<vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x bfloat> @vpgather_nxv8bf16(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv8bf16:
@@ -1419,8 +1377,6 @@ define <vscale x 8 x bfloat> @vpgather_baseidx_nxv8bf16(ptr %base, <vscale x 8 x
   ret <vscale x 8 x bfloat> %v
 }
 
-declare <vscale x 1 x half> @llvm.vp.gather.nxv1f16.nxv1p0(<vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x half> @vpgather_nxv1f16(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv1f16:
 ; RV32:       # %bb.0:
@@ -1439,8 +1395,6 @@ define <vscale x 1 x half> @vpgather_nxv1f16(<vscale x 1 x ptr> %ptrs, <vscale x
   ret <vscale x 1 x half> %v
 }
 
-declare <vscale x 2 x half> @llvm.vp.gather.nxv2f16.nxv2p0(<vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x half> @vpgather_nxv2f16(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv2f16:
 ; RV32:       # %bb.0:
@@ -1458,8 +1412,6 @@ define <vscale x 2 x half> @vpgather_nxv2f16(<vscale x 2 x ptr> %ptrs, <vscale x
   %v = call <vscale x 2 x half> @llvm.vp.gather.nxv2f16.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x half> %v
 }
-
-declare <vscale x 4 x half> @llvm.vp.gather.nxv4f16.nxv4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x half> @vpgather_nxv4f16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv4f16:
@@ -1496,8 +1448,6 @@ define <vscale x 4 x half> @vpgather_truemask_nxv4f16(<vscale x 4 x ptr> %ptrs, 
   %v = call <vscale x 4 x half> @llvm.vp.gather.nxv4f16.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x half> %v
 }
-
-declare <vscale x 8 x half> @llvm.vp.gather.nxv8f16.nxv8p0(<vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x half> @vpgather_nxv8f16(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv8f16:
@@ -1607,8 +1557,6 @@ define <vscale x 8 x half> @vpgather_baseidx_nxv8f16(ptr %base, <vscale x 8 x i1
   ret <vscale x 8 x half> %v
 }
 
-declare <vscale x 1 x float> @llvm.vp.gather.nxv1f32.nxv1p0(<vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x float> @vpgather_nxv1f32(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv1f32:
 ; RV32:       # %bb.0:
@@ -1626,8 +1574,6 @@ define <vscale x 1 x float> @vpgather_nxv1f32(<vscale x 1 x ptr> %ptrs, <vscale 
   ret <vscale x 1 x float> %v
 }
 
-declare <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x float> @vpgather_nxv2f32(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv2f32:
 ; RV32:       # %bb.0:
@@ -1644,8 +1590,6 @@ define <vscale x 2 x float> @vpgather_nxv2f32(<vscale x 2 x ptr> %ptrs, <vscale 
   %v = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x float> %v
 }
-
-declare <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x float> @vpgather_nxv4f32(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv4f32:
@@ -1680,8 +1624,6 @@ define <vscale x 4 x float> @vpgather_truemask_nxv4f32(<vscale x 4 x ptr> %ptrs,
   %v = call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x float> %v
 }
-
-declare <vscale x 8 x float> @llvm.vp.gather.nxv8f32.nxv8p0(<vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x float> @vpgather_nxv8f32(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv8f32:
@@ -1860,8 +1802,6 @@ define <vscale x 8 x float> @vpgather_baseidx_nxv8f32(ptr %base, <vscale x 8 x i
   ret <vscale x 8 x float> %v
 }
 
-declare <vscale x 1 x double> @llvm.vp.gather.nxv1f64.nxv1p0(<vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x double> @vpgather_nxv1f64(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv1f64:
 ; RV32:       # %bb.0:
@@ -1879,14 +1819,12 @@ define <vscale x 1 x double> @vpgather_nxv1f64(<vscale x 1 x ptr> %ptrs, <vscale
   ret <vscale x 1 x double> %v
 }
 
-declare <vscale x 2 x double> @llvm.vp.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x double> @vpgather_nxv2f64(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vluxei32.v v10, (zero), v8, v0.t
-; RV32-NEXT:    vmv.v.v v8, v10
+; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_nxv2f64:
@@ -1898,14 +1836,12 @@ define <vscale x 2 x double> @vpgather_nxv2f64(<vscale x 2 x ptr> %ptrs, <vscale
   ret <vscale x 2 x double> %v
 }
 
-declare <vscale x 4 x double> @llvm.vp.gather.nxv4f64.nxv4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x double> @vpgather_nxv4f64(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv4f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vluxei32.v v12, (zero), v8, v0.t
-; RV32-NEXT:    vmv.v.v v8, v12
+; RV32-NEXT:    vmv2r.v v12, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_nxv4f64:
@@ -1921,8 +1857,8 @@ define <vscale x 4 x double> @vpgather_truemask_nxv4f64(<vscale x 4 x ptr> %ptrs
 ; RV32-LABEL: vpgather_truemask_nxv4f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vluxei32.v v12, (zero), v8
-; RV32-NEXT:    vmv.v.v v8, v12
+; RV32-NEXT:    vmv2r.v v12, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v12
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_truemask_nxv4f64:
@@ -1934,14 +1870,12 @@ define <vscale x 4 x double> @vpgather_truemask_nxv4f64(<vscale x 4 x ptr> %ptrs
   ret <vscale x 4 x double> %v
 }
 
-declare <vscale x 6 x double> @llvm.vp.gather.nxv6f64.nxv6p0(<vscale x 6 x ptr>, <vscale x 6 x i1>, i32)
-
 define <vscale x 6 x double> @vpgather_nxv6f64(<vscale x 6 x ptr> %ptrs, <vscale x 6 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv6f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vluxei32.v v16, (zero), v8, v0.t
-; RV32-NEXT:    vmv.v.v v8, v16
+; RV32-NEXT:    vmv4r.v v16, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v16, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_nxv6f64:
@@ -2180,14 +2114,12 @@ define <vscale x 6 x double> @vpgather_baseidx_nxv6f64(ptr %base, <vscale x 6 x 
   ret <vscale x 6 x double> %v
 }
 
-declare <vscale x 8 x double> @llvm.vp.gather.nxv8f64.nxv8p0(<vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x double> @vpgather_nxv8f64(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv8f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vluxei32.v v16, (zero), v8, v0.t
-; RV32-NEXT:    vmv.v.v v8, v16
+; RV32-NEXT:    vmv4r.v v16, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v16, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_nxv8f64:
@@ -2425,8 +2357,6 @@ define <vscale x 8 x double> @vpgather_baseidx_nxv8f64(ptr %base, <vscale x 8 x 
   %v = call <vscale x 8 x double> @llvm.vp.gather.nxv8f64.nxv8p0(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x double> %v
 }
-
-declare <vscale x 16 x double> @llvm.vp.gather.nxv16f64.nxv16p0(<vscale x 16 x ptr>, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x double> @vpgather_nxv16f64(<vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_nxv16f64:

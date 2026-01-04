@@ -201,14 +201,13 @@ public:
   ///    The User resume state for this thread.
   lldb::StateType GetResumeState() const { return m_resume_state; }
 
-  /// This function is called on all the threads before "ShouldResume" and
-  /// "WillResume" in case a thread needs to change its state before the
-  /// ThreadList polls all the threads to figure out which ones actually will
-  /// get to run and how.
+  // This function is called to determine whether the thread needs to
+  // step over a breakpoint and if so, push a step-over-breakpoint thread
+  // plan.
   ///
   /// \return
   ///    True if we pushed a ThreadPlanStepOverBreakpoint
-  bool SetupForResume();
+  bool SetupToStepOverBreakpointIfNeeded(lldb::RunDirection direction);
 
   // Do not override this function, it is for thread plan logic only
   bool ShouldResume(lldb::StateType resume_state);
@@ -479,6 +478,11 @@ public:
 
   bool SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
                                       Stream &output_stream);
+
+  /// Resets the selected frame index of this object.
+  void ClearSelectedFrameIndex() {
+    return GetStackFrameList()->ClearSelectedFrameIndex();
+  }
 
   void SetDefaultFileAndLineToSelectedFrame() {
     GetStackFrameList()->SetDefaultFileAndLineToSelectedFrame();
@@ -1291,6 +1295,17 @@ public:
   ///     an empty std::optional is returned in that case.
   std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
 
+  lldb::StackFrameListSP GetStackFrameList();
+
+  llvm::Error
+  LoadScriptedFrameProvider(const ScriptedFrameProviderDescriptor &descriptor);
+
+  void ClearScriptedFrameProvider();
+
+  lldb::SyntheticFrameProviderSP GetFrameProvider() const {
+    return m_frame_provider_sp;
+  }
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1331,8 +1346,6 @@ protected:
   virtual lldb_private::StructuredData::ObjectSP FetchThreadExtendedInfo() {
     return StructuredData::ObjectSP();
   }
-
-  lldb::StackFrameListSP GetStackFrameList();
 
   void SetTemporaryResumeState(lldb::StateType new_state) {
     m_temporary_resume_state = new_state;
@@ -1395,6 +1408,9 @@ protected:
 
   /// The Thread backed by this thread, if any.
   lldb::ThreadWP m_backed_thread;
+
+  /// The Scripted Frame Provider, if any.
+  lldb::SyntheticFrameProviderSP m_frame_provider_sp;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info

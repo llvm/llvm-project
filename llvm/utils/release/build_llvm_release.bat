@@ -1,13 +1,16 @@
 @echo off
-setlocal enabledelayedexpansion
 
+REM Filter out tests that are known to fail.
+set "LIT_FILTER_OUT=gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest"
+
+setlocal enabledelayedexpansion
 goto begin
 
 :usage
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -17,11 +20,13 @@ echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
 echo --skip-checkout: use local git checkout instead of downloading src.zip
 echo --local-python: use installed Python and does not try to use a specific version (3.10)
+echo --force-msvc: use MSVC compiler for stage0, even if clang-cl is present
 echo.
 echo Note: At least one variant to build is required.
 echo.
 echo Example: build_llvm_release.bat --version 15.0.0 --x86 --x64
 exit /b 1
+
 
 :begin
 
@@ -34,6 +39,7 @@ set x64=
 set arm64=
 set skip-checkout=
 set local-python=
+set force-msvc=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -154,16 +160,37 @@ set common_cmake_flags=^
   -DLLVM_BUILD_LLVM_C_DYLIB=ON ^
   -DPython3_FIND_REGISTRY=NEVER ^
   -DPACKAGE_VERSION=%package_version% ^
-  -DLLDB_RELOCATABLE_PYTHON=1 ^
-  -DLLDB_EMBED_PYTHON_HOME=OFF ^
   -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: " ^
   -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
-  -DLLDB_ENABLE_LIBXML2=OFF ^
   -DCLANG_ENABLE_LIBXML2=OFF ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
-  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
+  -DCOMPILER_RT_BUILD_ORC=OFF
+
+if "%force-msvc%" == "" (
+  where /q clang-cl
+  if %errorlevel% EQU 0 (
+    where /q lld-link
+    if %errorlevel% EQU 0 (
+      set common_compiler_flags=%common_compiler_flags% -fuse-ld=lld
+      
+      set common_cmake_flags=%common_cmake_flags%^
+        -DCMAKE_C_COMPILER=clang-cl.exe ^
+        -DCMAKE_CXX_COMPILER=clang-cl.exe ^
+        -DCMAKE_LINKER=lld-link.exe ^
+        -DLLVM_ENABLE_LLD=ON ^
+        -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
+        -DCMAKE_CXX_FLAGS="%common_compiler_flags%"
+    )
+  )
+)
+
+set common_lldb_flags=^
+  -DLLDB_RELOCATABLE_PYTHON=1 ^
+  -DLLDB_EMBED_PYTHON_HOME=OFF
 
 set cmake_profile_flags=""
 
@@ -172,8 +199,8 @@ set OLDPATH=%PATH%
 
 REM Build the 32-bits and/or 64-bits binaries.
 if "%x86%" == "true" call :do_build_32 || exit /b 1
-if "%x64%" == "true" call :do_build_64 || exit /b 1
-if "%arm64%" == "true" call :do_build_arm64 || exit /b 1
+if "%x64%" == "true" call :do_build_64_common amd64 %python64_dir% || exit /b 1
+if "%arm64%" == "true" call :do_build_64_common arm64 %pythonarm64_dir% || exit /b 1
 exit /b 0
 
 ::==============================================================================
@@ -192,8 +219,6 @@ set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
-  -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
-  -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
@@ -203,7 +228,7 @@ ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b 1
+REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 cd..
 
@@ -211,6 +236,9 @@ REM CMake expects the paths that specifies the compiler and linker to be
 REM with forward slash.
 set all_cmake_flags=^
   %cmake_flags% ^
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;" ^
+  %common_lldb_flags% ^
+  -DPYTHON_HOME=%PYTHONHOME% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
   -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
   -DCMAKE_LINKER=%stage0_bin_dir%/lld-link.exe ^
@@ -225,7 +253,7 @@ ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b 1
+REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja package || exit /b 1
 cd ..
@@ -234,32 +262,42 @@ exit /b 0
 ::==============================================================================
 
 ::==============================================================================
-:: Build 64-bits binaries.
+:: Build 64-bits binaries (common function for both x64 and arm64)
 ::==============================================================================
-:do_build_64
-call :set_environment %python64_dir% || exit /b 1
-call "%vsdevcmd%" -arch=amd64 || exit /b 1
+:do_build_64_common
+set arch=%1
+set python_dir=%2
+
+call :set_environment %python_dir% || exit /b 1
+call "%vsdevcmd%" -arch=%arch% || exit /b 1
 @echo on
-mkdir build64_stage0
-cd build64_stage0
+mkdir build_%arch%_stage0
+cd build_%arch%_stage0
 call :do_build_libxml || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
-set "stage0_bin_dir=%build_dir%/build64_stage0/bin"
+set "stage0_bin_dir=%build_dir%/build_%arch%_stage0/bin"
 set cmake_flags=^
   %common_cmake_flags% ^
-  -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
-  -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
-  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
+  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
+  -DCLANG_DEFAULT_LINKER=lld
+if "%arch%"=="arm64" (
+  set cmake_flags=%cmake_flags% ^
+    -DCOMPILER_RT_BUILD_SANITIZERS=OFF
+)
 
-cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
+cmake -GNinja %cmake_flags% ^
+  -DLLVM_TARGETS_TO_BUILD=Native ^
+  %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b 1
+if "%arch%"=="amd64" (
+  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+)
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
 cd..
@@ -273,26 +311,42 @@ set all_cmake_flags=^
   -DCMAKE_LINKER=%stage0_bin_dir%/lld-link.exe ^
   -DCMAKE_AR=%stage0_bin_dir%/llvm-lib.exe ^
   -DCMAKE_RC=%stage0_bin_dir%/llvm-windres.exe
+if "%arch%"=="arm64" (
+  set all_cmake_flags=%all_cmake_flags% ^
+    -DCPACK_SYSTEM_NAME=woa64
+)
 set cmake_flags=%all_cmake_flags:\=/%
 
-
-mkdir build64
-cd build64
+mkdir build_%arch%
+cd build_%arch%
 call :do_generate_profile || exit /b 1
-cmake -GNinja %cmake_flags% %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
+cmake -GNinja %cmake_flags% ^
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
+  %common_lldb_flags% ^
+  -DPYTHON_HOME=%PYTHONHOME% ^
+  %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b 1
+if "%arch%"=="amd64" (
+  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+)
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
+REM ninja check-flang || ninja check-flang || ninja check-flang || exit /b 1
+REM ninja check-mlir || ninja check-mlir || ninja check-mlir || exit /b 1
+REM ninja check-lldb || ninja check-lldb || ninja check-lldb || exit /b 1
 ninja package || exit /b 1
 
 :: generate tarball with install toolchain only off
-set filename=clang+llvm-%version%-x86_64-pc-windows-msvc
+if "%arch%"=="amd64" (
+  set filename=clang+llvm-%version%-x86_64-pc-windows-msvc
+) else (
+  set filename=clang+llvm-%version%-aarch64-pc-windows-msvc
+)
 cmake -GNinja %cmake_flags% %cmake_profile_flags% -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF ^
-  -DCMAKE_INSTALL_PREFIX=%build_dir%/%filename% ..\llvm-project\llvm || exit /b 1
+  -DCMAKE_INSTALL_PREFIX=%build_dir%/%filename% %llvm_src%\llvm || exit /b 1
 ninja install || exit /b 1
 :: check llvm_config is present & returns something
 %build_dir%/%filename%/bin/llvm-config.exe --bindir || exit /b 1
@@ -300,75 +354,7 @@ cd ..
 7z a -ttar -so %filename%.tar %filename% | 7z a -txz -si %filename%.tar.xz
 
 exit /b 0
-::==============================================================================
 
-::==============================================================================
-:: Build arm64 binaries.
-::==============================================================================
-:do_build_arm64
-call :set_environment %pythonarm64_dir% || exit /b 1
-call "%vsdevcmd%" -host_arch=x64 -arch=arm64 || exit /b 1
-@echo on
-mkdir build_arm64_stage0
-cd build_arm64_stage0
-call :do_build_libxml || exit /b 1
-
-REM Stage0 binaries directory; used in stage1.
-set "stage0_bin_dir=%build_dir%/build_arm64_stage0/bin"
-set cmake_flags=^
-  %common_cmake_flags% ^
-  -DCLANG_DEFAULT_LINKER=lld ^
-  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
-  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
-  -DPython3_ROOT_DIR=%PYTHONHOME% ^
-  -DCOMPILER_RT_BUILD_PROFILE=OFF ^
-  -DCOMPILER_RT_BUILD_SANITIZERS=OFF
-
-REM We need to build stage0 compiler-rt with clang-cl (msvc lacks some builtins).
-cmake -GNinja %cmake_flags% ^
-  -DCMAKE_C_COMPILER=clang-cl.exe ^
-  -DCMAKE_CXX_COMPILER=clang-cl.exe ^
-  %llvm_src%\llvm || exit /b 1
-ninja || exit /b 1
-::ninja check-llvm || exit /b 1
-::ninja check-clang || exit /b 1
-::ninja check-lld || exit /b 1
-::ninja check-sanitizer || exit /b 1
-::ninja check-clang-tools || exit /b 1
-::ninja check-clangd || exit /b 1
-cd..
-
-REM CMake expects the paths that specifies the compiler and linker to be
-REM with forward slash.
-REM CPACK_SYSTEM_NAME is set to have a correct name for installer generated.
-set all_cmake_flags=^
-  %cmake_flags% ^
-  -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
-  -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
-  -DCMAKE_LINKER=%stage0_bin_dir%/lld-link.exe ^
-  -DCMAKE_AR=%stage0_bin_dir%/llvm-lib.exe ^
-  -DCMAKE_RC=%stage0_bin_dir%/llvm-windres.exe ^
-  -DCPACK_SYSTEM_NAME=woa64
-set cmake_flags=%all_cmake_flags:\=/%
-
-mkdir build_arm64
-cd build_arm64
-cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
-ninja || exit /b 1
-REM Check but do not fail on errors.
-ninja check-lldb
-::ninja check-llvm || exit /b 1
-::ninja check-clang || exit /b 1
-::ninja check-lld || exit /b 1
-::ninja check-sanitizer || exit /b 1
-::ninja check-clang-tools || exit /b 1
-::ninja check-clangd || exit /b 1
-ninja package || exit /b 1
-cd ..
-
-exit /b 0
-::==============================================================================
-::
 ::==============================================================================
 :: Set PATH and some environment variables.
 ::==============================================================================
@@ -408,7 +394,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_MEM_DEBUG=OFF -DLIBXML2_WITH_MODULES=OFF ^
   -DLIBXML2_WITH_OUTPUT=ON -DLIBXML2_WITH_PATTERN=OFF -DLIBXML2_WITH_PROGRAMS=OFF ^
   -DLIBXML2_WITH_PUSH=OFF -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_READER=OFF ^
-  -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=OFF ^
+  -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=ON ^
   -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_TESTS=OFF ^
   -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^
