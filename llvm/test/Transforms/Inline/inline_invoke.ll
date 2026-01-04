@@ -194,8 +194,8 @@ eh.resume:
 ; CHECK:      ret void
 
 ; CHECK:    [[LPAD]]:
-; CHECK-NEXT: [[X:%.*]] = phi i32 [ 0, %entry ], [ 0, {{%.*}} ], [ 1, %cont ], [ 1, {{%.*}} ]
-; CHECK-NEXT: [[Y:%.*]] = phi i32 [ 1, %entry ], [ 1, {{%.*}} ], [ 4, %cont ], [ 4, {{%.*}} ]
+; CHECK-NEXT: [[X:%.*]] = phi i32 [ 0, {{%.*}} ], [ 1, {{%.*}} ], [ 0, %entry ], [ 1, %cont ]
+; CHECK-NEXT: [[Y:%.*]] = phi i32 [ 1, {{%.*}} ], [ 4, {{%.*}} ], [ 1, %entry ], [ 4, %cont ]
 ; CHECK-NEXT: [[LPADVAL:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:   catch ptr @_ZTIi
 ; CHECK-NEXT: br label %[[LPAD_JOIN2]]
