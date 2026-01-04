@@ -802,7 +802,7 @@ func.func @reduce_input_vs_init_dimension_mismatch(
 
 func.func @reduce_dimensions_out_of_range(%input: tensor<16x32x64xf32>,
     %init: tensor<16x64xf32>)  -> tensor<16x64xf32> {
-  // expected-error @+1 {{'linalg.reduce' op dimensions for reduction should be in the range [0, 2].}}
+  // expected-error @+1 {{'linalg.reduce' op reduction dimensions must be in the range [0, 2], but got 3}}
   %reduce = linalg.reduce
       ins(%input:tensor<16x32x64xf32>)
       outs(%init:tensor<16x64xf32>)
@@ -922,7 +922,7 @@ func.func @reduce_wrong_block_argument_output_type(
 func.func @reduce_different_input_shapes(%input1: tensor<16x32x64xf32>,
     %init1: tensor<16x64xf32>, %input2: tensor<17x32x64xf32>,
     %init2: tensor<17x64xf32>)  -> (tensor<16x64xf32>, tensor<17x64xf32>) {
-  // expected-error @+1{{'linalg.reduce' op expects all inputs to have the same shapes. Shape at input-index 1 is not equal to the shape at input-index 0.}}
+  // expected-error @+1{{'linalg.reduce' op inputs must all have the same shape, but inputs[0] has shape [16, 32, 64] while inputs[1] has shape [17, 32, 64]}}
   %reduce, %reduce2 = linalg.reduce
       ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<17x32x64xf32>)
       outs(%init1, %init2 : tensor<16x64xf32>, tensor<17x64xf32>)
@@ -940,7 +940,7 @@ func.func @reduce_different_input_shapes(%input1: tensor<16x32x64xf32>,
 func.func @reduce_different_output_shapes(%input1: tensor<16x32x64xf32>,
     %init1: tensor<16x64xf32>, %input2: tensor<16x32x64xf32>,
     %init2: tensor<17x64xf32>)  -> (tensor<16x64xf32>, tensor<17x64xf32>) {
-  // expected-error @+1{{'linalg.reduce' op expects all outputs to have the same shapes. Shape at output-index 1 is not equal to the shape at output-index 0.}}
+  // expected-error @+1{{'linalg.reduce' op inits must all have the same shape, but inits[0] has shape [16, 64] while inits[1] has shape [17, 64]}}
   %reduce, %reduce2 = linalg.reduce
       ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<16x32x64xf32>)
       outs(%init1, %init2 : tensor<16x64xf32>, tensor<17x64xf32>)

@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
@@ -1075,11 +1076,8 @@ void EmptyOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult EmptyOp::verify() {
-  if (getType().getNumDynamicDims() != getDynamicSizes().size())
-    return emitOpError("incorrect number of dynamic sizes, has ")
-           << getDynamicSizes().size() << ", expected "
-           << getType().getNumDynamicDims();
-  return success();
+  return verifyDynamicDimensionCount(getOperation(), getType(),
+                                     getDynamicSizes());
 }
 
 LogicalResult
@@ -1354,9 +1352,8 @@ void ExtractOp::getAsmResultNames(
 LogicalResult ExtractOp::verify() {
   // Verify the # indices match if we have a ranked type.
   auto tensorType = llvm::cast<RankedTensorType>(getTensor().getType());
-  if (tensorType.getRank() != static_cast<int64_t>(getIndices().size()))
-    return emitOpError("incorrect number of indices for extract_element");
-  return success();
+  return verifyIndexCountMatchesRank(getOperation(), tensorType.getRank(),
+                                     getIndices().size());
 }
 
 /// If we have an ExtractOp consuming an InsertOp with the same
@@ -4039,11 +4036,8 @@ void SplatOp::getAsmResultNames(
 }
 
 LogicalResult SplatOp::verify() {
-  if (getType().getNumDynamicDims() != getDynamicSizes().size())
-    return emitOpError("incorrect number of dynamic sizes, has ")
-           << getDynamicSizes().size() << ", expected "
-           << getType().getNumDynamicDims();
-  return success();
+  return verifyDynamicDimensionCount(getOperation(), getType(),
+                                     getDynamicSizes());
 }
 
 LogicalResult
