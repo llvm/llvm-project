@@ -2125,7 +2125,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     parseAssemblyFn = *dialectHook;
   }
   getState().defaultDialectStack.push_back(defaultDialect);
-  auto restoreDefaultDialect = llvm::make_scope_exit(
+  llvm::scope_exit restoreDefaultDialect(
       [&]() { getState().defaultDialectStack.pop_back(); });
 
   // If the custom op parser crashes, produce some indication to help
@@ -2271,7 +2271,7 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
 
   // Parse the first block directly to allow for it to be unnamed.
   auto owningBlock = std::make_unique<Block>();
-  auto failureCleanup = llvm::make_scope_exit([&] {
+  llvm::scope_exit failureCleanup([&] {
     if (owningBlock) {
       // If parsing failed, as indicated by the fact that `owningBlock` still
       // owns the block, drop all forward references from preceding operations
@@ -2376,7 +2376,7 @@ ParseResult OperationParser::parseBlock(Block *&block) {
   // only in the case of a successful parse. This ensures that the Block
   // allocated is released if the parse fails and control returns early.
   std::unique_ptr<Block> inflightBlock;
-  auto cleanupOnFailure = llvm::make_scope_exit([&] {
+  llvm::scope_exit cleanupOnFailure([&] {
     if (inflightBlock)
       inflightBlock->dropAllDefinedValueUses();
   });

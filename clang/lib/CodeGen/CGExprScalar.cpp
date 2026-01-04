@@ -2507,8 +2507,8 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
 // have to handle a more broad range of conversions than explicit casts, as they
 // handle things like function to ptr-to-function decay etc.
 Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
-  auto RestoreCurCast =
-      llvm::make_scope_exit([this, Prev = CGF.CurCast] { CGF.CurCast = Prev; });
+  llvm::scope_exit RestoreCurCast(
+      [this, Prev = CGF.CurCast] { CGF.CurCast = Prev; });
   CGF.CurCast = CE;
 
   Expr *E = CE->getSubExpr();

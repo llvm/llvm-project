@@ -2093,7 +2093,7 @@ struct TestTypeConversionDriver
           }
 
           conversionCallStack.push_back(type);
-          auto popConversionCallStack = llvm::make_scope_exit(
+          llvm::scope_exit popConversionCallStack(
               [&conversionCallStack]() { conversionCallStack.pop_back(); });
 
           // If the type is on the call stack more than once (it is there at

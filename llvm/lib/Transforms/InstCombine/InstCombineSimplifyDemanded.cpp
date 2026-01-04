@@ -2159,7 +2159,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
         // exp(+/- smallest_normal) = 1
         // exp(+/- largest_denormal) = 1
         // exp(+/- smallest_denormal) = 1
-        SrcDemandedMask |= fcPosNormal | fcSubnormal | fcZero;
+        // exp(-1) = pos normal
+        SrcDemandedMask |= fcNormal | fcSubnormal | fcZero;
       }
 
       // exp(inf), exp(largest_normal) = inf

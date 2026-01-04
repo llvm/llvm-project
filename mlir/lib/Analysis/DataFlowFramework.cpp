@@ -112,10 +112,10 @@ Location LatticeAnchor::getLoc() const {
 LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   // Enable enqueue to the worklist.
   isRunning = true;
-  auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
+  llvm::scope_exit guard([&]() { isRunning = false; });
 
   bool isInterprocedural = config.isInterprocedural();
-  auto restoreInterprocedural = llvm::make_scope_exit(
+  llvm::scope_exit restoreInterprocedural(
       [&]() { config.setInterprocedural(isInterprocedural); });
   if (isInterprocedural && !top->hasTrait<OpTrait::SymbolTable>())
     config.setInterprocedural(false);
