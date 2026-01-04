@@ -97,7 +97,7 @@ declare <vscale x 4 x float> @llvm.powi.f32.i32(<vscale x 4 x float>, i32) #0
 TEST_F(ReplaceWithVecLibTest, TestValidMapping) {
   VecDesc CorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvu_powi",
                        ElementCount::getScalable(4), /*Masked*/ true,
-                       "_ZGVsMxvu"};
+                       "_ZGVsMxvu", /* CC = */ std::nullopt};
   EXPECT_EQ(run(CorrectVD, IR),
             "Intrinsic calls replaced with vector libraries: 1");
 }
@@ -107,7 +107,7 @@ TEST_F(ReplaceWithVecLibTest, TestValidMapping) {
 TEST_F(ReplaceWithVecLibTest, TestInvalidMapping) {
   VecDesc IncorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvv_powi",
                          ElementCount::getScalable(4), /*Masked*/ true,
-                         "_ZGVsMxvv"};
+                         "_ZGVsMxvv", /* CC = */ std::nullopt};
   EXPECT_EQ(run(IncorrectVD, IR),
             "replace-with-veclib: Will not replace: llvm.powi.f32.i32. Wrong "
             "type at index 1: i32");

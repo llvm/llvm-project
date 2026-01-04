@@ -27,7 +27,7 @@ def AffineDataCopyGeneration : Pass<"affine-data-copy-generate", "func::FuncOp">
            /*default=*/"1",
            "Fast memory space identifier for copy generation (default: 1)">,
     Option<"generateDma", "generate-dma", "bool",
-           /*default=*/"true", "Generate DMA instead of point-wise copy">,
+           /*default=*/"false", "Generate DMA instead of point-wise copy">,
     Option<"minDmaTransferSize", "min-dma-transfer", "int",
            /*default=*/"1024",
            "Minimum DMA transfer size supported by the target in bytes">,
@@ -203,12 +203,11 @@ def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"
   let summary = "Unroll affine loops";
   let constructor = "mlir::affine::createLoopUnrollPass()";
   let options = [
-    Option<"unrollFactor", "unroll-factor", "unsigned", /*default=*/"4",
-           "Use this unroll factor for all loops being unrolled">,
+    Option<"unrollFactor", "unroll-factor", "int64_t", /*default=*/"4",
+           "Use this unroll factor for all loops being unrolled, "
+           "set it to -1, and it will fully unroll.">,
     Option<"unrollUpToFactor", "unroll-up-to-factor", "bool",
            /*default=*/"false", "Allow unrolling up to the factor specified">,
-    Option<"unrollFull", "unroll-full", "bool", /*default=*/"false",
-           "Fully unroll loops">,
     Option<"numRepetitions", "unroll-num-reps", "unsigned", /*default=*/"1",
            "Unroll innermost loops repeatedly this many times">,
     Option<"unrollFullThreshold", "unroll-full-threshold", "unsigned",
@@ -396,10 +395,39 @@ def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
   let dependentDialects = ["affine::AffineDialect","arith::ArithDialect"];
 }
 
+def RaiseMemrefDialect : Pass<"affine-raise-from-memref", "func::FuncOp"> {
+  let summary = "Turn some memref operators to affine operators where supported";
+  let description = [{
+    Raise memref.load and memref.store to affine.store and affine.load, inferring
+    the affine map of those operators if needed. This allows passes like --affine-scalrep
+    to optimize those loads and stores (forwarding them or eliminating them).
+    They can be turned back to memref dialect ops with --lower-affine.
+  }];
+  let constructor = "mlir::affine::createRaiseMemrefToAffine()";
+  let dependentDialects = ["affine::AffineDialect"];
+}
+
 def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {
   let summary = "Simplify affine expressions in maps/sets and normalize "
                 "memrefs";
   let constructor = "mlir::affine::createSimplifyAffineStructuresPass()";
+}
+
+def SimplifyAffineMinMaxPass : InterfacePass<"affine-simplify-min-max", "FunctionOpInterface"> {
+  let summary = "Simplify affine min/max/apply";
+  let description = [{
+    Apply the SimplifyAffineMaxOp, SimplifyAffineMinOp and SimplifyAffineApplyOp
+    patterns in addition to AffineMin/Max canonicalization patterns until a
+    fixed point is reached.
+    These patterns apply ValueBoundsOp interface on AffineMin/Max ops and
+    additional simplifications such as:
+    ```
+       min(x, y, cst) / cst -> 1
+    ```
+    when x, y, cst are all >= 0.
+    This is typically useful to extract more static informationfrom IR after
+    tiling but can also come at a cost due to Presburger-style analysis.
+  }];
 }
 
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
@@ -410,6 +438,17 @@ def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
 def AffineExpandIndexOpsAsAffine : Pass<"affine-expand-index-ops-as-affine"> {
   let summary = "Lower affine operations operating on indices into affine.apply operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsAsAffinePass()";
+}
+
+def AffineFoldMemRefAliasOps : Pass<"affine-fold-memref-alias-ops"> {
+  let summary = "Fold memref alias ops into affine memory ops";
+  let description = [{
+    The pass folds memref.subview, memref.expand_shape, and memref.collapse_shape
+    operations into affine memory operations (currently only `affine.load` and
+    `affine.store`) . This is similar to the `fold-memref-alias-ops` pass in the
+    `memref` dialect but adds handling specific to affine operations.
+  }];
+  let dependentDialects = ["memref::MemRefDialect"];
 }
 
 #endif // MLIR_DIALECT_AFFINE_PASSES

@@ -1,9 +1,6 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s --check-prefix %if target-byteorder-big-endian %{ CHECK-BE %} %else %{ CHECK-LE %}
 
-; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s --check-prefix %if target-byteorder-big-endian %{ CHECK-BE %} %else %{ CHECK-LE %}
-
 ; Check for a variant part that has two members, one of which has a
 ; discriminant value.
 

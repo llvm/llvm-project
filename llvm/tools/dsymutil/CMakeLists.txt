@@ -7,12 +7,15 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   AsmPrinter
+  BitReader
+  BitStreamReader
   CodeGen
   CodeGenTypes
   DWARFLinker
   DWARFLinkerClassic
   DWARFLinkerParallel
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
   Object
   Option
@@ -32,6 +35,7 @@ add_llvm_tool(dsymutil
   MachOUtils.cpp
   Reproducer.cpp
   RelocationMap.cpp
+  SwiftModule.cpp
 
   DEPENDS
   intrinsics_gen

@@ -3,8 +3,6 @@
 ; SafeStack for unsafe byval arguments.
 ; RUN: llc -mtriple=x86_64-unknown-unknown --experimental-debug-variable-locations=false -stop-after finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK,NORMAL
 ; RUN: llc -mtriple=x86_64-unknown-unknown --experimental-debug-variable-locations -stop-after finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK,INSTRREF
-; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-unknown-unknown --experimental-debug-variable-locations=false -stop-after finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK,NORMAL
-; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-unknown-unknown --experimental-debug-variable-locations -stop-after finalize-isel %s -o - | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
 ; This was built by compiling the following source with SafeStack and
 ; simplifying the result a little.
@@ -50,7 +48,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #2
 
-attributes #0 = { norecurse nounwind readonly safestack uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind readonly safestack uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { argmemonly nounwind }
 

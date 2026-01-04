@@ -2,12 +2,12 @@
 
 import gc
 import io
-import itertools
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
-from mlir.dialects import arith
+from mlir.dialects import arith, func, scf, shape
 from mlir.dialects._ods_common import _cext
+from mlir.extras import types as T
 
 
 def run(f):
@@ -43,8 +43,12 @@ def testTraverseOpRegionBlockIterators():
     )
     op = module.operation
     assert op.context is ctx
+    # Note, __nb_signature__ stores the fully-qualified signature - the actual type stub emitted is
+    # class RegionSequence(Sequence[Region])
+    # CHECK: class RegionSequence(collections.abc.Sequence[mlir._mlir_libs._mlir.ir.Region])
+    print(RegionSequence.__nb_signature__)
     # Get the block using iterators off of the named collections.
-    regions = list(op.regions)
+    regions = list(op.regions[:])
     blocks = list(regions[0].blocks)
     # CHECK: MODULE REGIONS=1 BLOCKS=1
     print(f"MODULE REGIONS={len(regions)} BLOCKS={len(blocks)}")
@@ -86,8 +90,24 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
     # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
     print("   Region iter:", iter(op.regions))
-    print("    Block iter:", iter(op.regions[0]))
-    print("Operation iter:", iter(op.regions[0].blocks[0]))
+    print("    Block iter:", iter(op.regions[-1]))
+    print("Operation iter:", iter(op.regions[-1].blocks[-1]))
+
+    try:
+        op.regions[-42]
+    except IndexError as e:
+        # CHECK: Region OOB: index out of range
+        print("Region OOB:", e)
+    try:
+        op.regions[0].blocks[-42]
+    except IndexError as e:
+        # CHECK: attempt to access out of bounds block
+        print(e)
+    try:
+        op.regions[0].blocks[0].operations[-42]
+    except IndexError as e:
+        # CHECK: attempt to access out of bounds operation
+        print(e)
 
 
 # Verify index based traversal of the op/region/block hierarchy.
@@ -170,8 +190,8 @@ def testBlockArgumentList():
     """,
             ctx,
         )
-        func = module.body.operations[0]
-        entry_block = func.regions[0].blocks[0]
+        func_op = module.body.operations[0]
+        entry_block = func_op.regions[0].blocks[0]
         assert len(entry_block.arguments) == 3
         # CHECK: Argument 0, type i32
         # CHECK: Argument 1, type f64
@@ -186,6 +206,21 @@ def testBlockArgumentList():
         # CHECK: Argument 2, type i24
         for arg in entry_block.arguments:
             print(f"Argument {arg.arg_number}, type {arg.type}")
+
+        # CHECK: Matched Arg 0, type i8
+        # CHECK: Matched Arg 1, type i16
+        # CHECK: Matched Arg 2, type i24
+        match func_op:
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1])])):
+                assert False
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1, a2, a3])])):
+                assert False
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1, a2])])):
+                print(f"Matched Arg 0, type {a0.type}")
+                print(f"Matched Arg 1, type {a1.type}")
+                print(f"Matched Arg 2, type {a2.type}")
+            case _:
+                assert False
 
         # Check that slicing works for block argument lists.
         # CHECK: Argument 1, type i16
@@ -230,14 +265,33 @@ def testOperationOperands():
         return
       }"""
         )
-        func = module.body.operations[0]
-        entry_block = func.regions[0].blocks[0]
+        func_op = module.body.operations[0]
+        entry_block = func_op.regions[0].blocks[0]
         consumer = entry_block.operations[1]
         assert len(consumer.operands) == 2
         # CHECK: Operand 0, type i32
         # CHECK: Operand 1, type i64
         for i, operand in enumerate(consumer.operands):
             print(f"Operand {i}, type {operand.type}")
+
+        match module.body.operations:
+            case [
+                func.FuncOp(
+                    body=Region(
+                        blocks=[
+                            Block(
+                                operations=[
+                                    _,
+                                    OpView(operands=[o1, o2]) as matched_consumer,
+                                    *_,
+                                ],
+                            ),
+                        ],
+                    ),
+                ),
+            ]:
+                print(f"Matched Operand 0, type {o1.type}")
+                print(f"Matched Operand 1, type {o2.type}")
 
 
 # CHECK-LABEL: TEST: testOperationOperandsSlice
@@ -460,6 +514,26 @@ def testOperationResultList():
     for res in call.results:
         print(f"Result {res.result_number}, type {res.type}")
 
+    # CHECK: Matched Result r0, type i32
+    # CHECK: Matched Result r1, type f64
+    # CHECK: Matched Result r2, type index
+    match caller:
+        case func.FuncOp(
+            body=Region(
+                blocks=[
+                    Block(
+                        operations=[OpView(results=[r0, r1, r2]) as matched_call, *_],
+                    ),
+                ],
+            ),
+        ):
+            assert matched_call == call
+            print(f"Matched Result r0, type {r0.type}")
+            print(f"Matched Result r1, type {r1.type}")
+            print(f"Matched Result r2, type {r2.type}")
+        case _:
+            assert False
+
     # CHECK: Result type i32
     # CHECK: Result type f64
     # CHECK: Result type index
@@ -553,12 +627,30 @@ def testOperationAttributes():
     # CHECK: Attribute value b'text'
     print(f"Attribute value {sattr.value_bytes}")
 
+    # Python dict-style iteration
     # We don't know in which order the attributes are stored.
-    # CHECK-DAG: NamedAttribute(dependent="text")
-    # CHECK-DAG: NamedAttribute(other.attribute=3.000000e+00 : f64)
-    # CHECK-DAG: NamedAttribute(some.attribute=1 : i8)
-    for attr in op.attributes:
-        print(str(attr))
+    # CHECK-DAG: dependent
+    # CHECK-DAG: other.attribute
+    # CHECK-DAG: some.attribute
+    for name in op.attributes:
+        print(name)
+
+    # Basic dict-like introspection
+    # CHECK: True
+    print("some.attribute" in op.attributes)
+    # CHECK: False
+    print("missing" in op.attributes)
+    # CHECK: Keys: ['dependent', 'other.attribute', 'some.attribute']
+    print("Keys:", sorted(op.attributes.keys()))
+    # CHECK: Values count 3
+    print("Values count", len(op.attributes.values()))
+    # CHECK: Items count 3
+    print("Items count", len(op.attributes.items()))
+
+    # Dict() conversion test
+    d = {k: v.value for k, v in dict(op.attributes).items()}
+    # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
+    print("Dict mapping", d)
 
     # Check that exceptions are raised as expected.
     try:
@@ -643,6 +735,8 @@ def testOperationPrint():
     # Test print local_scope.
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
     module.operation.print(enable_debug_info=True, use_local_scope=True)
+    # CHECK: %nom = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(use_name_loc_as_prefix=True, use_local_scope=True)
 
     # Test printing using state.
     state = AsmState(module.operation)
@@ -667,6 +761,16 @@ def testOperationPrint():
     module.body.operations[0].print(
         skip_regions=True,
     )
+
+    # Test print with large_resource_limit.
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK-NOT: resource1: "0x08
+    module.operation.print(large_resource_limit=2)
+
+    # Test large_elements_limit has no effect on resource string
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK: resource1: "0x08
+    module.operation.print(large_elements_limit=2)
 
 
 # CHECK-LABEL: TEST: testKnownOpView
@@ -726,6 +830,21 @@ def testKnownOpView():
         constant = module.body.operations[3]
         # CHECK: <__main__.testKnownOpView.<locals>.ConstantOp object
         print(repr(constant))
+
+
+# CHECK-LABEL: TEST: testFailedGenericOperationCreationReportsError
+@run
+def testFailedGenericOperationCreationReportsError():
+    with Context(), Location.unknown():
+        c0 = shape.const_shape([])
+        c1 = shape.const_shape([1, 2, 3])
+        try:
+            shape.MeetOp.build_generic(operands=[c0, c1])
+        except MLIRError as e:
+            # CHECK: unequal shape cardinality
+            print(e)
+        else:
+            assert False, "Expected exception"
 
 
 # CHECK-LABEL: TEST: testSingleResultProperty
@@ -880,7 +999,13 @@ def testCapsuleConversions():
         m_capsule = m._CAPIPtr
         assert '"mlir.ir.Operation._CAPIPtr"' in repr(m_capsule)
         m2 = Operation._CAPICreate(m_capsule)
-        assert m2 is m
+        assert m2 is not m
+        assert m2 == m
+        # Gc and verify destructed.
+        m = None
+        m_capsule = None
+        m2 = None
+        gc.collect()
 
 
 # CHECK-LABEL: TEST: testOperationErase
@@ -936,6 +1061,13 @@ def testOperationLoc():
         assert op.location == loc
         assert op.operation.location == loc
 
+        another_loc = Location.name("another_loc")
+        op.location = another_loc
+        assert op.location == another_loc
+        assert op.operation.location == another_loc
+        # CHECK: loc("another_loc")
+        print(op.location)
+
 
 # CHECK-LABEL: TEST: testModuleMerge
 @run
@@ -951,8 +1083,12 @@ def testModuleMerge():
         foo = m1.body.operations[0]
         bar = m2.body.operations[0]
         qux = m2.body.operations[1]
+        assert bar.is_before_in_block(qux)
         bar.move_before(foo)
+        assert bar.is_before_in_block(foo)
         qux.move_after(foo)
+        assert bar.is_before_in_block(qux)
+        assert foo.is_before_in_block(qux)
 
         # CHECK: module
         # CHECK: func private @bar
@@ -990,6 +1126,8 @@ def testDetachFromParent():
     with Context():
         m1 = Module.parse("func.func private @foo()")
         func = m1.body.operations[0].detach_from_parent()
+        # CHECK: func.attached=False
+        print(f"{func.attached=}")
 
         try:
             func.detach_from_parent()
@@ -1011,6 +1149,12 @@ def testOperationHash():
     with ctx, Location.unknown():
         op = Operation.create("custom.op1")
         assert hash(op) == hash(op.operation)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            op2 = Operation.create("custom.op2")
+            custom_op2 = module.body.operations[0]
+            assert hash(op2) == hash(custom_op2)
 
 
 # CHECK-LABEL: TEST: testOperationParse
@@ -1116,3 +1260,71 @@ def testOpWalk():
         module.operation.walk(callback)
     except RuntimeError:
         print("Exception raised")
+
+
+# CHECK-LABEL: TEST: testOpReplaceUsesWith
+@run
+def testOpReplaceUsesWith():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        m = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(m.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            value2 = Operation.create("custom.op2", results=[i32]).results[0]
+            op = Operation.create("custom.op3", operands=[value])
+            op2 = Operation.create("custom.op4", operands=[value])
+            op.replace_uses_of_with(value, value2)
+
+    assert len(list(value.uses)) == 1
+
+    # CHECK: Use owner: "custom.op4"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    assert len(list(value2.uses)) == 1
+
+    # CHECK: Use owner: "custom.op3"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+
+# CHECK-LABEL: TEST: testGetOwnerConcreteOpview
+@run
+def testGetOwnerConcreteOpview():
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            a = arith.ConstantOp(value=42, result=IntegerType.get_signless(32))
+            r = arith.AddIOp(a, a, overflowFlags=arith.IntegerOverflowFlags.nsw)
+            for u in a.result.uses:
+                assert isinstance(u.owner, arith.AddIOp)
+
+
+# CHECK-LABEL: TEST: testIndexSwitch
+@run
+def testIndexSwitch():
+    with Context() as ctx, Location.unknown():
+        i32 = T.i32()
+        module = Module.create()
+        with InsertionPoint(module.body):
+
+            @func.FuncOp.from_py_func(T.index())
+            def index_switch(index):
+                c1 = arith.constant(i32, 1)
+                switch_op = scf.IndexSwitchOp(results=[i32], arg=index, cases=range(3))
+
+                assert len(switch_op.regions) == 4
+                assert len(switch_op.regions[2:]) == 2
+                assert len([i for i in switch_op.regions[2:]]) == 2
+                assert len(switch_op.caseRegions) == 3
+                assert len([i for i in switch_op.caseRegions]) == 3
+                assert len(switch_op.caseRegions[1:]) == 2
+                assert len([i for i in switch_op.caseRegions[1:]]) == 2

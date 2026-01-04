@@ -249,17 +249,9 @@
 # INTEL: vcvtph2ibs ymm2, ymm3
 0x62,0xf5,0x7c,0x28,0x69,0xd3
 
-# ATT:   vcvtph2ibs {rn-sae}, %ymm3, %ymm2
-# INTEL: vcvtph2ibs ymm2, ymm3, {rn-sae}
-0x62,0xf5,0x78,0x18,0x69,0xd3
-
 # ATT:   vcvtph2ibs %ymm3, %ymm2 {%k7}
 # INTEL: vcvtph2ibs ymm2 {k7}, ymm3
 0x62,0xf5,0x7c,0x2f,0x69,0xd3
-
-# ATT:   vcvtph2ibs {rz-sae}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vcvtph2ibs ymm2 {k7} {z}, ymm3, {rz-sae}
-0x62,0xf5,0x78,0xff,0x69,0xd3
 
 # ATT:   vcvtph2ibs  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcvtph2ibs xmm2, xmmword ptr [esp + 8*esi + 268435456]
@@ -365,17 +357,9 @@
 # INTEL: vcvtph2iubs ymm2, ymm3
 0x62,0xf5,0x7c,0x28,0x6b,0xd3
 
-# ATT:   vcvtph2iubs {rn-sae}, %ymm3, %ymm2
-# INTEL: vcvtph2iubs ymm2, ymm3, {rn-sae}
-0x62,0xf5,0x78,0x18,0x6b,0xd3
-
 # ATT:   vcvtph2iubs %ymm3, %ymm2 {%k7}
 # INTEL: vcvtph2iubs ymm2 {k7}, ymm3
 0x62,0xf5,0x7c,0x2f,0x6b,0xd3
-
-# ATT:   vcvtph2iubs {rz-sae}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vcvtph2iubs ymm2 {k7} {z}, ymm3, {rz-sae}
-0x62,0xf5,0x78,0xff,0x6b,0xd3
 
 # ATT:   vcvtph2iubs  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcvtph2iubs xmm2, xmmword ptr [esp + 8*esi + 268435456]
@@ -481,17 +465,9 @@
 # INTEL: vcvtps2ibs ymm2, ymm3
 0x62,0xf5,0x7d,0x28,0x69,0xd3
 
-# ATT:   vcvtps2ibs {rn-sae}, %ymm3, %ymm2
-# INTEL: vcvtps2ibs ymm2, ymm3, {rn-sae}
-0x62,0xf5,0x79,0x18,0x69,0xd3
-
 # ATT:   vcvtps2ibs %ymm3, %ymm2 {%k7}
 # INTEL: vcvtps2ibs ymm2 {k7}, ymm3
 0x62,0xf5,0x7d,0x2f,0x69,0xd3
-
-# ATT:   vcvtps2ibs {rz-sae}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vcvtps2ibs ymm2 {k7} {z}, ymm3, {rz-sae}
-0x62,0xf5,0x79,0xff,0x69,0xd3
 
 # ATT:   vcvtps2ibs  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcvtps2ibs xmm2, xmmword ptr [esp + 8*esi + 268435456]
@@ -597,17 +573,9 @@
 # INTEL: vcvtps2iubs ymm2, ymm3
 0x62,0xf5,0x7d,0x28,0x6b,0xd3
 
-# ATT:   vcvtps2iubs {rn-sae}, %ymm3, %ymm2
-# INTEL: vcvtps2iubs ymm2, ymm3, {rn-sae}
-0x62,0xf5,0x79,0x18,0x6b,0xd3
-
 # ATT:   vcvtps2iubs %ymm3, %ymm2 {%k7}
 # INTEL: vcvtps2iubs ymm2 {k7}, ymm3
 0x62,0xf5,0x7d,0x2f,0x6b,0xd3
-
-# ATT:   vcvtps2iubs {rz-sae}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vcvtps2iubs ymm2 {k7} {z}, ymm3, {rz-sae}
-0x62,0xf5,0x79,0xff,0x6b,0xd3
 
 # ATT:   vcvtps2iubs  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcvtps2iubs xmm2, xmmword ptr [esp + 8*esi + 268435456]
@@ -929,17 +897,9 @@
 # INTEL: vcvttph2ibs ymm2, ymm3
 0x62,0xf5,0x7c,0x28,0x68,0xd3
 
-# ATT:   vcvttph2ibs {sae}, %ymm3, %ymm2
-# INTEL: vcvttph2ibs ymm2, ymm3, {sae}
-0x62,0xf5,0x78,0x18,0x68,0xd3
-
 # ATT:   vcvttph2ibs %ymm3, %ymm2 {%k7}
 # INTEL: vcvttph2ibs ymm2 {k7}, ymm3
 0x62,0xf5,0x7c,0x2f,0x68,0xd3
-
-# ATT:   vcvttph2ibs {sae}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vcvttph2ibs ymm2 {k7} {z}, ymm3, {sae}
-0x62,0xf5,0x78,0x9f,0x68,0xd3
 
 # ATT:   vcvttph2ibs  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcvttph2ibs xmm2, xmmword ptr [esp + 8*esi + 268435456]
@@ -1045,17 +1005,9 @@
 # INTEL: vcvttph2iubs ymm2, ymm3
 0x62,0xf5,0x7c,0x28,0x6a,0xd3
 
-# ATT:   vcvttph2iubs {sae}, %ymm3, %ymm2
-# INTEL: vcvttph2iubs ymm2, ymm3, {sae}
-0x62,0xf5,0x78,0x18,0x6a,0xd3
-
 # ATT:   vcvttph2iubs %ymm3, %ymm2 {%k7}
 # INTEL: vcvttph2iubs ymm2 {k7}, ymm3
 0x62,0xf5,0x7c,0x2f,0x6a,0xd3
-
-# ATT:   vcvttph2iubs {sae}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vcvttph2iubs ymm2 {k7} {z}, ymm3, {sae}
-0x62,0xf5,0x78,0x9f,0x6a,0xd3
 
 # ATT:   vcvttph2iubs  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcvttph2iubs xmm2, xmmword ptr [esp + 8*esi + 268435456]
@@ -1161,17 +1113,9 @@
 # INTEL: vcvttps2ibs ymm2, ymm3
 0x62,0xf5,0x7d,0x28,0x68,0xd3
 
-# ATT:   vcvttps2ibs {sae}, %ymm3, %ymm2
-# INTEL: vcvttps2ibs ymm2, ymm3, {sae}
-0x62,0xf5,0x79,0x18,0x68,0xd3
-
 # ATT:   vcvttps2ibs %ymm3, %ymm2 {%k7}
 # INTEL: vcvttps2ibs ymm2 {k7}, ymm3
 0x62,0xf5,0x7d,0x2f,0x68,0xd3
-
-# ATT:   vcvttps2ibs {sae}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vcvttps2ibs ymm2 {k7} {z}, ymm3, {sae}
-0x62,0xf5,0x79,0x9f,0x68,0xd3
 
 # ATT:   vcvttps2ibs  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcvttps2ibs xmm2, xmmword ptr [esp + 8*esi + 268435456]
@@ -1277,17 +1221,9 @@
 # INTEL: vcvttps2iubs ymm2, ymm3
 0x62,0xf5,0x7d,0x28,0x6a,0xd3
 
-# ATT:   vcvttps2iubs {sae}, %ymm3, %ymm2
-# INTEL: vcvttps2iubs ymm2, ymm3, {sae}
-0x62,0xf5,0x79,0x18,0x6a,0xd3
-
 # ATT:   vcvttps2iubs %ymm3, %ymm2 {%k7}
 # INTEL: vcvttps2iubs ymm2 {k7}, ymm3
 0x62,0xf5,0x7d,0x2f,0x6a,0xd3
-
-# ATT:   vcvttps2iubs {sae}, %ymm3, %ymm2 {%k7} {z}
-# INTEL: vcvttps2iubs ymm2 {k7} {z}, ymm3, {sae}
-0x62,0xf5,0x79,0x9f,0x6a,0xd3
 
 # ATT:   vcvttps2iubs  268435456(%esp,%esi,8), %xmm2
 # INTEL: vcvttps2iubs xmm2, xmmword ptr [esp + 8*esi + 268435456]

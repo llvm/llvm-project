@@ -29,8 +29,8 @@ TEST(WrapperFunctionUtilsTest, DefaultWrapperFunctionResult) {
 }
 
 TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromCStruct) {
-  orc_rt_CWrapperFunctionResult CR =
-      orc_rt_CreateCWrapperFunctionResultFromString(TestString);
+  orc_rt_WrapperFunctionResult CR =
+      orc_rt_CreateWrapperFunctionResultFromString(TestString);
   WrapperFunctionResult R(CR);
   EXPECT_EQ(R.size(), strlen(TestString) + 1);
   EXPECT_TRUE(strcmp(R.data(), TestString) == 0);
@@ -74,13 +74,13 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionCCallCreateEmpty) {
 
 static void voidNoop() {}
 
-static orc_rt_CWrapperFunctionResult voidNoopWrapper(const char *ArgData,
-                                                     size_t ArgSize) {
+static orc_rt_WrapperFunctionResult voidNoopWrapper(const char *ArgData,
+                                                    size_t ArgSize) {
   return WrapperFunction<void()>::handle(ArgData, ArgSize, voidNoop).release();
 }
 
-static orc_rt_CWrapperFunctionResult addWrapper(const char *ArgData,
-                                                size_t ArgSize) {
+static orc_rt_WrapperFunctionResult addWrapper(const char *ArgData,
+                                               size_t ArgSize) {
   return WrapperFunction<int32_t(int32_t, int32_t)>::handle(
              ArgData, ArgSize,
              [](int32_t X, int32_t Y) -> int32_t { return X + Y; })
@@ -89,11 +89,11 @@ static orc_rt_CWrapperFunctionResult addWrapper(const char *ArgData,
 
 extern "C" __orc_rt_Opaque __orc_rt_jit_dispatch_ctx{};
 
-extern "C" orc_rt_CWrapperFunctionResult
+extern "C" orc_rt_WrapperFunctionResult
 __orc_rt_jit_dispatch(__orc_rt_Opaque *Ctx, const void *FnTag,
                       const char *ArgData, size_t ArgSize) {
   using WrapperFunctionType =
-      orc_rt_CWrapperFunctionResult (*)(const char *, size_t);
+      orc_rt_WrapperFunctionResult (*)(const char *, size_t);
 
   return reinterpret_cast<WrapperFunctionType>(const_cast<void *>(FnTag))(
       ArgData, ArgSize);
@@ -120,8 +120,8 @@ private:
   int32_t X;
 };
 
-static orc_rt_CWrapperFunctionResult addMethodWrapper(const char *ArgData,
-                                                      size_t ArgSize) {
+static orc_rt_WrapperFunctionResult addMethodWrapper(const char *ArgData,
+                                                     size_t ArgSize) {
   return WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::handle(
              ArgData, ArgSize, makeMethodWrapperHandler(&AddClass::addMethod))
       .release();
@@ -136,8 +136,8 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionMethodCallAndHandleRet) {
   EXPECT_EQ(Result, (int32_t)3);
 }
 
-static orc_rt_CWrapperFunctionResult sumArrayWrapper(const char *ArgData,
-                                                     size_t ArgSize) {
+static orc_rt_WrapperFunctionResult sumArrayWrapper(const char *ArgData,
+                                                    size_t ArgSize) {
   return WrapperFunction<int8_t(SPSExecutorAddrRange)>::handle(
              ArgData, ArgSize,
              [](ExecutorAddrRange R) {

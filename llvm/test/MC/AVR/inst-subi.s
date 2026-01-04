@@ -15,7 +15,6 @@ foo:
 ; CHECK: subi r16, 144                 ; encoding: [0x00,0x59]
 
 ; CHECK: subi    r20, EXTERN_SYMBOL+0  ; encoding: [0x40'A',0x50]
-; CHECK:                               ;   fixup A - offset: 0, value: EXTERN_SYMBOL+0, kind: fixup_ldi
 
 ; CHECK-INST: subi r22, 82
 ; CHECK-INST: subi r27, 39

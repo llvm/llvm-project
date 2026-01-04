@@ -39,7 +39,7 @@ using namespace bolt;
 
 namespace opts {
 
-cl::OptionCategory BatDumpCategory("BAT dump options");
+static cl::OptionCategory BatDumpCategory("BAT dump options");
 
 static cl::OptionCategory *BatDumpCategories[] = {&BatDumpCategory};
 
@@ -71,16 +71,6 @@ static void report_error(StringRef Message, Error E) {
   errs() << ToolName << ": '" << Message << "': " << toString(std::move(E))
          << ".\n";
   exit(1);
-}
-
-static std::string GetExecutablePath(const char *Argv0) {
-  SmallString<256> ExecutablePath(Argv0);
-  // Do a PATH lookup if Argv0 isn't a valid path.
-  if (!llvm::sys::fs::exists(ExecutablePath))
-    if (llvm::ErrorOr<std::string> P =
-            llvm::sys::findProgramByName(ExecutablePath))
-      ExecutablePath = *P;
-  return std::string(ExecutablePath);
 }
 
 void dumpBATFor(llvm::object::ELFObjectFileBase *InputFile) {
@@ -163,7 +153,6 @@ int main(int argc, char **argv) {
     report_error(opts::InputFilename, errc::no_such_file_or_directory);
 
   ToolName = argv[0];
-  std::string ToolPath = GetExecutablePath(argv[0]);
   Expected<llvm::object::OwningBinary<llvm::object::Binary>> BinaryOrErr =
       llvm::object::createBinary(opts::InputFilename);
   if (Error E = BinaryOrErr.takeError())
