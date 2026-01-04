@@ -130,6 +130,12 @@ C++ Specific Potentially Breaking Changes
 - ``VarTemplateSpecializationDecl::getTemplateArgsAsWritten()`` method now
   returns ``nullptr`` for implicitly instantiated declarations.
 
+- ``__builtin_is_replaceable``, ``trivially_relocable_if_eligible``, and ``replaceable_if_eligible``
+  have been removed as `P2786 <https://wg21.link/P2786>`_ have been removed from C++2c.
+  ``__builtin_is_cpp_trivially_relocatable`` and ``__builtin_trivially_relocate`` have been kept back,
+  with the `P2786 <https://wg21.link/P2786>`_ semantics, except there is no longer a way
+  to explicitly specify a type is relocatable.
+
 ABI Changes in This Version
 ---------------------------
 - Fix AArch64 argument passing for C++ empty classes with large explicitly specified alignment.
@@ -197,7 +203,7 @@ C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Started the implementation of `P2686R5 <https://wg21.link/P2686R5>`_ Constexpr structured bindings.
-  At this timem, references to constexpr and decomposition of *tuple-like* types are not supported
+  At this time, references to constexpr and decomposition of *tuple-like* types are not supported
   (only arrays and aggregates are).
 
 C++23 Feature Support
