@@ -1904,7 +1904,7 @@ define void @insert_v16i8_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v16i8_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    andi $2, $2, 15
 ; N64-NEXT:    ld $1, %got_disp(v16i8)($1)
 ; N64-NEXT:    daddu $1, $1, $2
@@ -1953,7 +1953,7 @@ define void @insert_v8i16_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v8i16_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    andi $2, $2, 7
 ; N64-NEXT:    ld $1, %got_disp(v8i16)($1)
 ; N64-NEXT:    dlsa $1, $2, $1, 1
@@ -2002,7 +2002,7 @@ define void @insert_v4i32_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v4i32_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    andi $2, $2, 3
 ; N64-NEXT:    ld $1, %got_disp(v4i32)($1)
 ; N64-NEXT:    dlsa $1, $2, $1, 2
@@ -2053,7 +2053,7 @@ define void @insert_v2i64_vidx(i64 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v2i64_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    andi $2, $2, 1
 ; N64-NEXT:    ld $1, %got_disp(v2i64)($1)
 ; N64-NEXT:    dlsa $1, $2, $1, 3
@@ -2066,46 +2066,38 @@ define void @insert_v2i64_vidx(i64 signext %a) nounwind {
   ret void
 }
 
-; TODO: What code should be emitted?
-define void @truncstore() nounwind {
-; O32-LABEL: truncstore:
+; After legalizing shorter vectors with legal element sizes, this test is
+; no longer called truncstore.
+define void @store_i8_32bit() nounwind {
+; O32-LABEL: store_i8_32bit:
 ; O32:       # %bb.0:
 ; O32-NEXT:    lui $2, %hi(_gp_disp)
 ; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O32-NEXT:    addu $1, $2, $25
 ; O32-NEXT:    lw $1, %got(v4i8)($1)
-; O32-NEXT:    addiu $2, $zero, 255
-; O32-NEXT:    sb $2, 3($1)
-; O32-NEXT:    sb $2, 2($1)
-; O32-NEXT:    sb $2, 1($1)
+; O32-NEXT:    addiu $2, $zero, -1
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    sb $2, 0($1)
+; O32-NEXT:    sw $2, 0($1)
 ;
-; N32-LABEL: truncstore:
+; N32-LABEL: store_i8_32bit:
 ; N32:       # %bb.0:
-; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(truncstore)))
+; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(store_i8_32bit)))
 ; N32-NEXT:    addu $1, $1, $25
-; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(truncstore)))
+; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(store_i8_32bit)))
 ; N32-NEXT:    lw $1, %got_disp(v4i8)($1)
-; N32-NEXT:    addiu $2, $zero, 255
-; N32-NEXT:    sb $2, 3($1)
-; N32-NEXT:    sb $2, 2($1)
-; N32-NEXT:    sb $2, 1($1)
+; N32-NEXT:    addiu $2, $zero, -1
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    sb $2, 0($1)
+; N32-NEXT:    sw $2, 0($1)
 ;
-; N64-LABEL: truncstore:
+; N64-LABEL: store_i8_32bit:
 ; N64:       # %bb.0:
-; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(truncstore)))
+; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(store_i8_32bit)))
 ; N64-NEXT:    daddu $1, $1, $25
-; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(truncstore)))
+; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(store_i8_32bit)))
 ; N64-NEXT:    ld $1, %got_disp(v4i8)($1)
-; N64-NEXT:    addiu $2, $zero, 255
-; N64-NEXT:    sb $2, 3($1)
-; N64-NEXT:    sb $2, 2($1)
-; N64-NEXT:    sb $2, 1($1)
+; N64-NEXT:    addiu $2, $zero, -1
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    sb $2, 0($1)
+; N64-NEXT:    sw $2, 0($1)
   store volatile <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>, ptr @v4i8
   ret void
 }

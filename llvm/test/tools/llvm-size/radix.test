@@ -109,19 +109,20 @@
 
 ## Case 9: Bad values.
 # RUN: not llvm-size %t1.o --radix=0 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=0
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DFILE1=%t1.o -DNUM=0
 # RUN: not llvm-size %t1.o --radix=1 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=1
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DFILE1=%t1.o -DNUM=1
 # RUN: not llvm-size %t1.o --radix=2 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=2
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DFILE1=%t1.o -DNUM=2
 # RUN: not llvm-size %t1.o --radix=32 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=32
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DFILE1=%t1.o -DNUM=32
 # RUN: not llvm-size %t1.o --radix=-1 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=-1
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DFILE1=%t1.o -DNUM=-1
 # RUN: not llvm-size %t1.o --radix=bad 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=bad
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DFILE1=%t1.o -DNUM=bad
 
 # BAD-VAL: {{.*}}llvm-size{{.*}}: error: --radix value should be one of: 8, 10, 16
+# BAD-VAL:       1       2       4       7       7 [[FILE1]]
 
 --- !ELF
 FileHeader:

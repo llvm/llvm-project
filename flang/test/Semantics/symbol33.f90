@@ -3,7 +3,7 @@
 ! array element reference still applies implicit typing, &c.
 !DEF: /subr (Subroutine) Subprogram
 subroutine subr
-  !DEF: /subr/moo (Implicit) ObjectEntity INTEGER(4)
+  !DEF: /subr/moo (Implicit, InCommonBlock) ObjectEntity INTEGER(4)
   common //moo(1)
   !DEF: /subr/a ObjectEntity REAL(4)
   !REF: /subr/moo

@@ -161,8 +161,8 @@ entry:
   ret i32 %conv6
 }
 
-define i32 @utesth_f16i32(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i32:
+define i32 @utest_f16i32(half %x) nounwind {
+; CHECK-LABEL: utest_f16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
@@ -360,8 +360,8 @@ entry:
   ret i16 %conv6
 }
 
-define i16 @utesth_f16i16(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i16:
+define i16 @utest_f16i16(half %x) nounwind {
+; CHECK-LABEL: utest_f16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
@@ -566,8 +566,8 @@ entry:
   ret i64 %conv6
 }
 
-define i64 @utesth_f16i64(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i64:
+define i64 @utest_f16i64(half %x) nounwind {
+; CHECK-LABEL: utest_f16i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixunshfti@PLT
@@ -762,8 +762,8 @@ entry:
   ret i32 %conv6
 }
 
-define i32 @utesth_f16i32_mm(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i32_mm:
+define i32 @utest_f16i32_mm(half %x) nounwind {
+; CHECK-LABEL: utest_f16i32_mm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
@@ -946,8 +946,8 @@ entry:
   ret i16 %conv6
 }
 
-define i16 @utesth_f16i16_mm(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i16_mm:
+define i16 @utest_f16i16_mm(half %x) nounwind {
+; CHECK-LABEL: utest_f16i16_mm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
@@ -1131,8 +1131,8 @@ entry:
   ret i64 %conv6
 }
 
-define i64 @utesth_f16i64_mm(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i64_mm:
+define i64 @utest_f16i64_mm(half %x) nounwind {
+; CHECK-LABEL: utest_f16i64_mm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixunshfti@PLT
@@ -1168,6 +1168,27 @@ entry:
   %spec.store.select7 = call i128 @llvm.smax.i128(i128 %spec.store.select, i128 0)
   %conv6 = trunc i128 %spec.store.select7 to i64
   ret i64 %conv6
+}
+
+; i32 non saturate
+
+define i32 @ustest_f16i32_nsat(half %x) nounwind {
+; CHECK-LABEL: ustest_f16i32_nsat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    andl %ecx, %eax
+; CHECK-NEXT:    cmovlel %edx, %eax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+  %conv = fptosi half %x to i32
+  %spec.store.select = call i32 @llvm.smin.i32(i32 0, i32 %conv)
+  %spec.store.select7 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 0)
+  ret i32 %spec.store.select7
 }
 
 declare i32 @llvm.smin.i32(i32, i32)

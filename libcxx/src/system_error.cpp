@@ -21,10 +21,6 @@
 
 #include "include/config_elast.h"
 
-#if defined(__ANDROID__)
-#  include <android/api-level.h>
-#endif
-
 #if defined(_LIBCPP_WIN32API)
 #  include <windows.h>
 #  include <winerror.h>
@@ -99,6 +95,8 @@ std::optional<errc> __win_err_to_errc(int err) {
     return errc::no_lock_available;
   case ERROR_NEGATIVE_SEEK:
     return errc::invalid_argument;
+  case ERROR_NETNAME_DELETED:
+    return errc::no_such_file_or_directory;
   case ERROR_NOACCESS:
     return errc::permission_denied;
   case ERROR_NOT_ENOUGH_MEMORY:

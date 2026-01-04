@@ -5,8 +5,8 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 
 define void @reg_plus_offset(ptr %a) {
-; CHECK:        ldu.global.u32  %r{{[0-9]+}}, [%rd{{[0-9]+}}+32];
-; CHECK:        ldu.global.u32  %r{{[0-9]+}}, [%rd{{[0-9]+}}+36];
+; CHECK:        ldu.global.b32  %r{{[0-9]+}}, [%rd{{[0-9]+}}+32];
+; CHECK:        ldu.global.b32  %r{{[0-9]+}}, [%rd{{[0-9]+}}+36];
   %p2 = getelementptr i32, ptr %a, i32 8
   %t1 = call i32 @llvm.nvvm.ldu.global.i.i32.p0(ptr %p2, i32 4)
   %p3 = getelementptr i32, ptr %a, i32 9

@@ -69,11 +69,9 @@ public:
       return false;
     }
     if (auto recTy = mlir::dyn_cast<RecordType>(ty)) {
-      auto visited = visitedTypes.find(ty);
-      if (visited != visitedTypes.end())
+      auto [visited, inserted] = visitedTypes.try_emplace(ty, false);
+      if (!inserted)
         return visited->second;
-      [[maybe_unused]] auto newIt = visitedTypes.try_emplace(ty, false);
-      assert(newIt.second && "expected ty to not be in the map");
       bool wasAlreadyVisitingRecordType = needConversionIsVisitingRecordType;
       needConversionIsVisitingRecordType = true;
       bool result = false;
@@ -167,6 +165,7 @@ public:
           cs.emplace_back(t.first, t.second);
       }
       rec.finalize(ps, cs);
+      rec.pack(ty.isPacked());
       return rec;
     });
     addConversion([&](TypeDescType ty) {
@@ -181,8 +180,8 @@ public:
                                           mlir::ValueRange inputs,
                                           mlir::Location loc) {
     assert(inputs.size() == 1);
-    return builder.create<ConvertOp>(loc, unwrapRefType(type.getEleTy()),
-                                     inputs[0]);
+    return ConvertOp::create(builder, loc, unwrapRefType(type.getEleTy()),
+                             inputs[0]);
   }
 
   void setLocation(mlir::Location location) { loc = location; }
@@ -271,21 +270,29 @@ public:
             // Create the thunk.
             auto module = embox->getParentOfType<mlir::ModuleOp>();
             FirOpBuilder builder(rewriter, module);
+            const auto triple{fir::getTargetTriple(module)};
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
-            mlir::Type buffTy = SequenceType::get({32}, i8Ty);
-            auto buffer = builder.create<AllocaOp>(loc, buffTy);
+            // For PPC32 and PPC64, the thunk is populated by a call to
+            // __trampoline_setup, which is defined in
+            // compiler-rt/lib/builtins/trampoline_setup.c and requires the
+            // thunk size greater than 32 bytes.  For AArch64, RISCV and x86_64,
+            // the thunk setup doesn't go through __trampoline_setup and fits in
+            // 32 bytes.
+            fir::SequenceType::Extent thunkSize = triple.getTrampolineSize();
+            mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
+            auto buffer = AllocaOp::create(builder, loc, buffTy);
             mlir::Value closure =
                 builder.createConvert(loc, i8Ptr, embox.getHost());
             mlir::Value tramp = builder.createConvert(loc, i8Ptr, buffer);
             mlir::Value func =
                 builder.createConvert(loc, i8Ptr, embox.getFunc());
-            builder.create<fir::CallOp>(
-                loc, factory::getLlvmInitTrampoline(builder),
+            fir::CallOp::create(
+                builder, loc, factory::getLlvmInitTrampoline(builder),
                 llvm::ArrayRef<mlir::Value>{tramp, func, closure});
-            auto adjustCall = builder.create<fir::CallOp>(
-                loc, factory::getLlvmAdjustTrampoline(builder),
+            auto adjustCall = fir::CallOp::create(
+                builder, loc, factory::getLlvmAdjustTrampoline(builder),
                 llvm::ArrayRef<mlir::Value>{tramp});
             rewriter.replaceOpWithNewOp<ConvertOp>(embox, toTy,
                                                    adjustCall.getResult(0));
@@ -341,8 +348,9 @@ public:
             rewriter.setInsertionPoint(coor);
             auto toTy = typeConverter.convertType(ty);
             auto toBaseTy = typeConverter.convertType(baseTy);
-            rewriter.replaceOpWithNewOp<CoordinateOp>(coor, toTy, coor.getRef(),
-                                                      coor.getCoor(), toBaseTy);
+            rewriter.replaceOpWithNewOp<CoordinateOp>(
+                coor, toTy, coor.getRef(), coor.getCoor(), toBaseTy,
+                coor.getFieldIndicesAttr());
             opIsValid = false;
           }
         } else if (auto index = mlir::dyn_cast<FieldIndexOp>(op)) {

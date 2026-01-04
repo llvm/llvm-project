@@ -57,6 +57,22 @@ llvm.func @fold_extractvalue() -> i32 {
 
 // -----
 
+// CHECK-LABEL: fold_extractvalue(
+//  CHECK-SAME:     %[[arg1:.*]]: i32, %[[arg2:.*]]: i32, %[[arg3:.*]]: i32)
+//  CHECK-NEXT:   llvm.return %[[arg1]] : i32
+llvm.func @fold_extractvalue(%arg1: i32, %arg2: i32, %arg3: i32) -> i32{
+  %3 = llvm.mlir.undef : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  %5 = llvm.mlir.undef : !llvm.struct<(i32, i32, i32)>
+  %6 = llvm.insertvalue %arg1, %5[0] : !llvm.struct<(i32, i32, i32)>
+  %7 = llvm.insertvalue %arg1, %6[1] : !llvm.struct<(i32, i32, i32)>
+  %8 = llvm.insertvalue %arg1, %7[2] : !llvm.struct<(i32, i32, i32)>
+  %11 = llvm.insertvalue %8, %3[0] : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  %13 = llvm.extractvalue %11[0, 0] : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  llvm.return %13 : i32
+}
+
+// -----
+
 // CHECK-LABEL: no_fold_extractvalue
 llvm.func @no_fold_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %f0 = arith.constant 0.0 : f32
@@ -82,6 +98,133 @@ llvm.func @fold_unrelated_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %2 = llvm.insertvalue %f0, %arr[0] : !llvm.array<4 x f32>
   %3 = llvm.extractvalue %2[1] : !llvm.array<4 x f32>
   llvm.return %3 : f32
+}
+
+// -----
+// CHECK-LABEL: fold_extract_extractvalue
+llvm.func @fold_extract_extractvalue(%arr: !llvm.struct<(i64, array<1 x ptr<1>>)>) -> !llvm.ptr<1> {
+  // CHECK: llvm.extractvalue %{{.*}}[1, 0] 
+  // CHECK-NOT: extractvalue
+  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)> 
+  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>> 
+  llvm.return %b : !llvm.ptr<1>
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_const_array
+// CHECK-NOT: extractvalue
+// CHECK:  llvm.mlir.constant(5.000000e-01 : f64)
+llvm.func @fold_extract_const_array() -> f64 {
+  %a = llvm.mlir.constant(dense<[-8.900000e+01, 5.000000e-01]> : tensor<2xf64>) : !llvm.array<2 x f64>
+  %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
+  llvm.return %b : f64
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_const_struct
+llvm.func @fold_extract_const_struct() -> i32 {
+  // CHECK-NOT: extractvalue
+  // CHECK: llvm.mlir.constant(2 : i32)
+  %a = llvm.mlir.constant([1 : i16, 2 : i32]) : !llvm.struct<(i16, i32)>
+  %b = llvm.extractvalue %a[1] : !llvm.struct<(i16, i32)>
+  llvm.return %b : i32
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_splat
+// CHECK-NOT: extractvalue
+// CHECK: llvm.mlir.constant(-8.900000e+01 : f64)
+llvm.func @fold_extract_splat() -> f64 {
+  %a = llvm.mlir.constant(dense<-8.900000e+01> : tensor<2xf64>) : !llvm.array<2 x f64>
+  %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
+  llvm.return %b : f64
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_splat_nested
+llvm.func @fold_extract_splat_nested() -> i32 {
+  // CHECK-NOT: extractvalue
+  // CHECK: llvm.mlir.constant(1 : i32)
+  %a = llvm.mlir.constant(dense<(0, 1)> : tensor<2xcomplex<i32>>) : !llvm.array<2 x !llvm.struct<(i32, i32)>>
+  %b = llvm.extractvalue %a[1, 1] : !llvm.array<2 x !llvm.struct<(i32, i32)>>
+  llvm.return %b : i32
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_sparse
+llvm.func @fold_extract_sparse() -> f32 {
+  // CHECK-NOT: extractvalue
+  // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0.000000e+00 : f32)
+  // CHECK-DAG: %[[C42:.*]] = llvm.mlir.constant(4.200000e+01 : f32)
+  %0 = llvm.mlir.constant(sparse<[0], [4.2e+01]> : tensor<4xf32>) : !llvm.array<4 x f32>
+  %1 = llvm.extractvalue %0[0] : !llvm.array<4 x f32>
+  %2 = llvm.extractvalue %0[1] : !llvm.array<4 x f32>
+  // CHECK: llvm.fadd %[[C42]], %[[C0]]
+  %3 = llvm.fadd %1, %2 : f32
+  llvm.return %3 : f32
+}
+
+// -----
+
+// CHECK-LABEL: fold_zero
+llvm.func @fold_zero() -> i32 {
+  // CHECK-NOT: insertvalue
+  // CHECK-NOT: extractvalue
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.zero : i32
+  %0 = llvm.mlir.zero : !llvm.struct<(i16, i32)>
+
+  %1 = llvm.mlir.undef : !llvm.array<2 x !llvm.struct<(i16, i32)>>
+  %2 = llvm.insertvalue %0, %1[0] : !llvm.array<2 x !llvm.struct<(i16, i32)>>
+  %3 = llvm.extractvalue %2[0, 1] : !llvm.array<2 x !llvm.struct<(i16, i32)>>
+  // CHECK: llvm.return %[[ZERO]]
+  llvm.return %3 : i32
+}
+
+// -----
+
+llvm.func @use_struct(!llvm.struct<(i16, i32)>)
+
+// CHECK-LABEL: fold_undef
+llvm.func @fold_undef() -> i32 {
+  // CHECK-NOT: insertvalue
+  // CHECK-NOT: extractvalue
+  // CHECK-DAG: %[[UNDEF_I32:.*]] = llvm.mlir.undef : i32
+  // CHECK-DAG: %[[UNDEF_STRUCT:.*]] = llvm.mlir.undef : !llvm.struct<(i16, i32)>
+  %0 = llvm.mlir.undef : !llvm.struct<(i8, !llvm.struct<(i16, i32)>)>
+
+  %1 = llvm.extractvalue %0[1] : !llvm.struct<(i8, !llvm.struct<(i16, i32)>)>
+  // CHECK: llvm.call @use_struct(%[[UNDEF_STRUCT]])
+  llvm.call @use_struct(%1) : (!llvm.struct<(i16, i32)>) -> ()
+
+  %2 = llvm.extractvalue %0[1, 1] : !llvm.struct<(i8, !llvm.struct<(i16, i32)>)>
+  // CHECK: llvm.return %[[UNDEF_I32]]
+  llvm.return %2 : i32
+}
+
+// -----
+
+llvm.func @use_array(!llvm.array<8 x f32>)
+
+// CHECK-LABEL: fold_poison
+llvm.func @fold_poison() -> f32 {
+  // CHECK-NOT: insertvalue
+  // CHECK-NOT: extractvalue
+  // CHECK-DAG: %[[POISON_F32:.*]] = llvm.mlir.poison : f32
+  // CHECK-DAG: %[[POISON_ARRAY:.*]] = llvm.mlir.poison : !llvm.array<8 x f32>
+  %0 = llvm.mlir.poison : !llvm.array<2 x !llvm.array<8 x f32>>
+
+  %1 = llvm.extractvalue %0[1] : !llvm.array<2 x !llvm.array<8 x f32>>
+  // CHECK: llvm.call @use_array(%[[POISON_ARRAY]])
+  llvm.call @use_array(%1) : (!llvm.array<8 x f32>) -> ()
+
+  %2 = llvm.extractvalue %0[1, 1] : !llvm.array<2 x !llvm.array<8 x f32>>
+  // CHECK: llvm.return %[[POISON_F32]]
+  llvm.return %2 : f32
 }
 
 // -----
@@ -183,6 +326,17 @@ llvm.func @fold_gep_canon(%x : !llvm.ptr) -> !llvm.ptr {
   %c2 = arith.constant 2 : i32
   %c = llvm.getelementptr %x[%c2] : (!llvm.ptr, i32) -> !llvm.ptr, i8
   llvm.return %c : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: fold_shufflevector
+// CHECK-SAME: %[[ARG1:[[:alnum:]]+]]: vector<1xf32>, %[[ARG2:[[:alnum:]]+]]: vector<1xf32>
+llvm.func @fold_shufflevector(%v1 : vector<1xf32>, %v2 : vector<1xf32>) -> vector<1xf32> {
+  // CHECK-NOT: llvm.shufflevector
+  %c = llvm.shufflevector %v1, %v2 [0] : vector<1xf32>
+  // CHECK: llvm.return %[[ARG1]]
+  llvm.return %c : vector<1xf32>
 }
 
 // -----

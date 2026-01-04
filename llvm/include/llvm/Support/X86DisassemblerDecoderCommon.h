@@ -18,8 +18,7 @@
 
 #include "llvm/Support/DataTypes.h"
 
-namespace llvm {
-namespace X86Disassembler {
+namespace llvm::X86Disassembler {
 
 #define INSTRUCTIONS_SYM x86DisassemblerInstrSpecifiers
 #define CONTEXTS_SYM x86DisassemblerContexts
@@ -122,6 +121,7 @@ enum attributeBits {
              "The Dynamic Duo!  Prefer over all else because this changes "    \
              "most operands' meaning")                                         \
   ENUM_ENTRY(IC_64BIT_REX2, 2, "requires a REX2 prefix")                       \
+  ENUM_ENTRY(IC_64BIT_REX2_REXW, 3, "requires a REX2 and the W prefix")        \
   ENUM_ENTRY(IC_VEX, 1, "requires a VEX prefix")                               \
   ENUM_ENTRY(IC_VEX_XS, 2, "requires VEX and the XS prefix")                   \
   ENUM_ENTRY(IC_VEX_XD, 2, "requires VEX and the XD prefix")                   \
@@ -511,7 +511,6 @@ enum OperandEncoding { ENCODINGS ENCODING_max };
   ENUM_ENTRY(TYPE_VK, "mask register")                                         \
   ENUM_ENTRY(TYPE_VK_PAIR, "mask register pair")                               \
   ENUM_ENTRY(TYPE_TMM, "tile")                                                 \
-  ENUM_ENTRY(TYPE_TMM_PAIR, "tile pair")                                       \
   ENUM_ENTRY(TYPE_SEGMENTREG, "Segment register operand")                      \
   ENUM_ENTRY(TYPE_DEBUGREG, "Debug register operand")                          \
   ENUM_ENTRY(TYPE_CONTROLREG, "Control register operand")                      \
@@ -541,7 +540,6 @@ static const unsigned X86_MAX_OPERANDS = 6;
 /// respectively.
 enum DisassemblerMode { MODE_16BIT, MODE_32BIT, MODE_64BIT };
 
-} // namespace X86Disassembler
-} // namespace llvm
+} // namespace llvm::X86Disassembler
 
 #endif

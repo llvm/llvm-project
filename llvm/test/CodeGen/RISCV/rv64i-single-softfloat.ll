@@ -5,9 +5,6 @@
 ; The test cases check that we use the si versions of the conversions from
 ; double.
 
-declare i32 @llvm.experimental.constrained.fptoui.i32.f32(float, metadata)
-declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata)
-
 define i32 @strict_fp32_to_ui32(float %a) nounwind strictfp {
 ; RV64I-LABEL: strict_fp32_to_ui32:
 ; RV64I:       # %bb.0: # %entry

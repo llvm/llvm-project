@@ -23,8 +23,12 @@ namespace Fortran::parser {
 // R905 char-variable -> variable
 // "char-variable" is attempted first since it's not type constrained but
 // syntactically ambiguous with "file-unit-number", which is constrained.
+// Note, "file-unit-number" is replaced by "expr" to allow for better
+// error messages.
 TYPE_PARSER(construct<IoUnit>(variable / lookAhead(space / ",);\n"_ch)) ||
-    construct<IoUnit>(fileUnitNumber) || construct<IoUnit>(star))
+    construct<IoUnit>(
+        indirect(expr) / (lookAhead(space >> ",)"_ch) || atEndOfStmt)) ||
+    construct<IoUnit>(star))
 
 // R1202 file-unit-number -> scalar-int-expr
 TYPE_PARSER(construct<FileUnitNumber>(
@@ -227,7 +231,12 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
         construct<IoControlSpec::CharExpr>(
             pure(IoControlSpec::CharExpr::Kind::Sign), scalarDefaultCharExpr)),
     construct<IoControlSpec>(
-        "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable))))
+        "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable)),
+    lookAhead(keyword) >>
+        construct<IoControlSpec>(recovery(
+            fail<ErrorRecovery>(
+                "invalid or unknown I/O control specification"_err_en_US),
+            keyword >> "="_tok >> expr >> construct<ErrorRecovery>()))))
 
 // R1211 write-stmt -> WRITE ( io-control-spec-list ) [output-item-list]
 constexpr auto outputItemList{
