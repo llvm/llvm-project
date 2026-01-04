@@ -3025,9 +3025,44 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
+
+  std::vector<mlir::Attribute> typeAttrs;
+  // If attributes from explicit `linear(...)` clause are present,
+  // carry them forward.
+  if (simdClauseOps.linearVarTypes && !simdClauseOps.linearVarTypes.empty())
+    typeAttrs.assign(simdClauseOps.linearVarTypes.begin(),
+                     simdClauseOps.linearVarTypes.end());
+
+  for (auto [loopVar, loopStep] : llvm::zip(iv, loopNestClauseOps.loopSteps)) {
+    const mlir::Value variable = converter.getSymbolAddress(*loopVar);
+
+    // If the loop variable is already linearized (through an explicit
+    // `linear()` clause, skip.
+    if (std::find(simdClauseOps.linearVars.begin(),
+                  simdClauseOps.linearVars.end(),
+                  variable) != simdClauseOps.linearVars.end())
+      continue;
+
+    // TODO: Implicit linearization is skipped if iv is a pointer
+    // or an allocatable, due to potential mismatch between the linear
+    // variable type (example !fir.ref<!fir.box<!fir.heap<i32>>>)
+    // and the linear step size (example: i64). Handle this type mismatch
+    // gracefully.
+    if (loopVar->test(Fortran::semantics::Symbol::Flag::OmpLinear) &&
+        !(Fortran::semantics::IsAllocatableOrPointer(*loopVar) ||
+          Fortran::semantics::IsAllocatableOrPointer(loopVar->GetUltimate()))) {
+      mlir::Type ty = converter.genType(*loopVar);
+      typeAttrs.push_back(mlir::TypeAttr::get(ty));
+      simdClauseOps.linearVars.push_back(variable);
+      simdClauseOps.linearStepVars.push_back(loopStep);
+    }
+  }
+  if (!typeAttrs.empty())
+    simdClauseOps.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
+
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
-
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{simdOp, simdArgs}},
                 llvm::omp::Directive::OMPD_simd, dsp);
