@@ -1103,7 +1103,7 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
   return sb_frame;
 }
 
-lldb::SBFrameList SBThread::GetFrames() {
+lldb::SBFrameList SBThread::GetFrames() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBFrameList sb_frame_list;
