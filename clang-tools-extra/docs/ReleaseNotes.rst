@@ -417,7 +417,7 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/std-namespace-modification>`. It now:
 
   - No longer diagnoses simply opening subnamespaces of ``std::``
-    such as ``std::chrono``.
+    such as ``std::ranges``.
 
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by adding
