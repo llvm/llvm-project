@@ -78,4 +78,4 @@ Details of ``EndSourceFile()``
 
   #. Create the directory structure for the enabled analyses.
   #. Serialize ``entities``, ``entity_linkage``, etc. Achieve by calling the matching virtual functions, dispatching to the concrete implementation.
-  #. The same goes for each enabled analysis, take the ``EntityID`` to ``TUSummaryData`` mapping and serialize them using the analysis-provided ``Serialize`` function pointer.
+  #. The same goes for each enabled analysis, serialize the ``EntityID`` to ``TUSummaryData`` mapping using the analysis-provided ``Serialize`` function pointer.
