@@ -1689,9 +1689,11 @@ static Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes) {
 }
 
 /// Fold an unsigned minimum of trailing or leading zero bits counts:
-///   umin(cttz(CtOp, ZeroUndef), ConstOp) --> cttz(CtOp | (1 << ConstOp))
-///   umin(ctlz(CtOp, ZeroUndef), ConstOp) --> ctlz(CtOp | (SignedMin
+///   umin(cttz(CtOp1, ZeroUndef), ConstOp) --> cttz(CtOp1 | (1 << ConstOp))
+///   umin(ctlz(CtOp1, ZeroUndef), ConstOp) --> ctlz(CtOp1 | (SignedMin
 ///                                              >> ConstOp))
+///   umin(cttz(CtOp1), cttz(CtOp2))        --> cttz(CtOp1 | CtOp2)
+///   umin(ctlz(CtOp1), ctlz(CtOp2))        --> ctlz(CtOp1 | CtOp2)
 template <Intrinsic::ID IntrID>
 static Value *
 foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
@@ -1700,11 +1702,17 @@ foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
   static_assert(IntrID == Intrinsic::cttz || IntrID == Intrinsic::ctlz,
                 "This helper only supports cttz and ctlz intrinsics");
 
-  Value *CtOp;
-  Value *ZeroUndef;
-  if (!match(I0,
-             m_OneUse(m_Intrinsic<IntrID>(m_Value(CtOp), m_Value(ZeroUndef)))))
+  Value *CtOp1, *CtOp2;
+  Value *ZeroUndef1, *ZeroUndef2;
+  if (!match(I0, m_OneUse(
+                     m_Intrinsic<IntrID>(m_Value(CtOp1), m_Value(ZeroUndef1)))))
     return nullptr;
+
+  if (match(I1,
+            m_OneUse(m_Intrinsic<IntrID>(m_Value(CtOp2), m_Value(ZeroUndef2)))))
+    return Builder.CreateBinaryIntrinsic(
+        IntrID, Builder.CreateOr(CtOp1, CtOp2),
+        Builder.CreateOr(ZeroUndef1, ZeroUndef2));
 
   unsigned BitWidth = I1->getType()->getScalarSizeInBits();
   auto LessBitWidth = [BitWidth](auto &C) { return C.ult(BitWidth); };
@@ -1721,8 +1729,8 @@ foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
           : ConstantInt::get(Ty, APInt::getSignedMinValue(BitWidth)),
       cast<Constant>(I1), DL);
   return Builder.CreateBinaryIntrinsic(
-      IntrID, Builder.CreateOr(CtOp, NewConst),
-      ConstantInt::getTrue(ZeroUndef->getType()));
+      IntrID, Builder.CreateOr(CtOp1, NewConst),
+      ConstantInt::getTrue(ZeroUndef1->getType()));
 }
 
 /// Return whether "X LOp (Y ROp Z)" is always equal to

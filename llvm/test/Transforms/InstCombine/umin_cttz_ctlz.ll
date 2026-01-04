@@ -384,9 +384,8 @@ define i16 @umin_ctlz_i16_negative_two_uses(i16 %X) {
 define i32 @umin_cttz_i32_zero_undef(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define i32 @umin_cttz_i32_zero_undef(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CTTZ_X:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 false)
-; CHECK-NEXT:    [[CTTZ_Y:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.umin.i32(i32 [[CTTZ_X]], i32 [[CTTZ_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %cttz_X = call i32 @llvm.cttz.i32(i32 %X, i1 false)
@@ -398,9 +397,8 @@ define i32 @umin_cttz_i32_zero_undef(i32 %X, i32 %Y) {
 define i32 @umin_cttz_i32_zero_def(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define i32 @umin_cttz_i32_zero_def(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CTTZ_X:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[CTTZ_Y:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.umin.i32(i32 [[CTTZ_X]], i32 [[CTTZ_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %cttz_X = call i32 @llvm.cttz.i32(i32 %X, i1 true)
@@ -412,9 +410,8 @@ define i32 @umin_cttz_i32_zero_def(i32 %X, i32 %Y) {
 define i32 @umin_cttz_i32_zero_def_undef(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define i32 @umin_cttz_i32_zero_def_undef(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CTTZ_X:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[CTTZ_Y:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Y]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.umin.i32(i32 [[CTTZ_X]], i32 [[CTTZ_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %cttz_X = call i32 @llvm.cttz.i32(i32 %X, i1 true)
@@ -426,9 +423,8 @@ define i32 @umin_cttz_i32_zero_def_undef(i32 %X, i32 %Y) {
 define i32 @umin_ctlz_i32_zero_undef(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define i32 @umin_ctlz_i32_zero_undef(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CTLZ_X:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 false)
-; CHECK-NEXT:    [[CTLZ_Y:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[Y]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.umin.i32(i32 [[CTLZ_X]], i32 [[CTLZ_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %ctlz_X = call i32 @llvm.ctlz.i32(i32 %X, i1 false)
@@ -440,9 +436,8 @@ define i32 @umin_ctlz_i32_zero_undef(i32 %X, i32 %Y) {
 define i32 @umin_ctlz_i32_zero_def(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define i32 @umin_ctlz_i32_zero_def(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CTLZ_X:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[CTLZ_Y:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[Y]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.umin.i32(i32 [[CTLZ_X]], i32 [[CTLZ_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %ctlz_X = call i32 @llvm.ctlz.i32(i32 %X, i1 true)
@@ -454,9 +449,8 @@ define i32 @umin_ctlz_i32_zero_def(i32 %X, i32 %Y) {
 define i32 @umin_ctlz_i32_zero_def_undef(i32 %X, i32 %Y) {
 ; CHECK-LABEL: define i32 @umin_ctlz_i32_zero_def_undef(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CTLZ_X:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[CTLZ_Y:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[Y]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.umin.i32(i32 [[CTLZ_X]], i32 [[CTLZ_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %ctlz_X = call i32 @llvm.ctlz.i32(i32 %X, i1 true)
