@@ -142,7 +142,7 @@ define i32 @switch_dup_exit(i32 %val) {
 ; SIMPLIFY-CFG:       [[DEFAULT]]:
 ; SIMPLIFY-CFG-NEXT:    br label %[[EXIT]]
 ; SIMPLIFY-CFG:       [[EXIT]]:
-; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = phi i32 [ 0, %[[DEFAULT]] ], [ 3, %[[BB1]] ], [ 1, %[[ENTRY]] ], [ 1, %[[ENTRY]] ]
+; SIMPLIFY-CFG-NEXT:    [[RET:%.*]] = phi i32 [ 0, %[[DEFAULT]] ], [ 1, %[[ENTRY]] ], [ 3, %[[BB1]] ], [ 1, %[[ENTRY]] ]
 ; SIMPLIFY-CFG-NEXT:    ret i32 [[RET]]
 ;
 entry:
