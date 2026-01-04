@@ -1537,6 +1537,12 @@ void CodeGenFunction::maybeCreateMCDCCondBitmap() {
     MCDCCondBitmapAddr = CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
   }
 }
+bool CodeGenFunction::isMCDCDecisionExpr(const Expr *E) const {
+  return PGO->isMCDCDecisionExpr(E);
+}
+bool CodeGenFunction::isMCDCBranchExpr(const Expr *E) const {
+  return PGO->isMCDCBranchExpr(E);
+}
 void CodeGenFunction::maybeResetMCDCCondBitmap(const Expr *E) {
   if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
     PGO->emitMCDCCondBitmapReset(Builder, E, MCDCCondBitmapAddr);

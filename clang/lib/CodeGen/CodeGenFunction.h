@@ -1678,10 +1678,8 @@ public:
     return (BOp && BOp->isLogicalOp());
   }
 
-  bool isMCDCDecisionExpr(const Expr *E) const {
-    return PGO.isMCDCDecisionExpr(E);
-  }
-  bool isMCDCBranchExpr(const Expr *E) const { return PGO.isMCDCBranchExpr(E); }
+  bool isMCDCDecisionExpr(const Expr *E) const;
+  bool isMCDCBranchExpr(const Expr *E) const;
 
   /// Zero-init the MCDC temp value.
   void maybeResetMCDCCondBitmap(const Expr *E);
