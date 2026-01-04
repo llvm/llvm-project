@@ -779,7 +779,7 @@ bool CompilerInstanceWithContext::computeDependencies(
 
   // We create this cleanup object because computeDependencies may exit
   // early with errors.
-  auto CleanUp = llvm::make_scope_exit([&]() {
+  llvm::scope_exit CleanUp([&]() {
     CI.clearDependencyCollectors();
     // The preprocessor may not be created at the entry of this method,
     // but it must have been created when this method returns, whether

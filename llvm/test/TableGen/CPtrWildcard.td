@@ -3,7 +3,7 @@
 // Create an intrinsic that uses cPTR to overload on capability pointer types,
 // and verify that we can match it correct in SelectionDAG.
 
-// CHECK:        static const unsigned char MatcherTable[] = {
+// CHECK:        static const uint8_t MatcherTable[] = {
 // CHECK-NEXT: /*     0*/ OPC_CheckOpcode, TARGET_VAL(ISD::INTRINSIC_WO_CHAIN),
 // CHECK-NEXT:/*     3*/ OPC_CheckChild0Integer, [[#]],
 // CHECK-NEXT:/*     5*/ OPC_RecordChild1, // #0 = $src
@@ -19,7 +19,7 @@
 // CHECK-NEXT:                /*MVT::i64*/8, 1/*#Ops*/, 0,
 // CHECK-NEXT:            // Src: (intrinsic_wo_chain:{ *:[i64] } [[#]]:{ *:[iPTR] }, c128:{ *:[c128] }:$src) - Complexity = 8
 // CHECK-NEXT:            // Dst: (C128_TO_I64:{ *:[i64] } ?:{ *:[c128] }:$src)
-// CHECK-NEXT:/*    27*/ 0, /*End of Scope*/
+// CHECK-NEXT:/*    27*/ 0, // End of Scope
 // CHECK-NEXT:    0
 // CHECK-NEXT:  }; // Total Array size is 29 bytes
 
