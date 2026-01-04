@@ -25163,6 +25163,263 @@ static unsigned getFPSubregForVT(EVT VT) {
   }
 }
 
+/// Checks if a scalar opcode has a legal vector equivalent for the given
+/// vector type on this target.
+static bool hasLegalVectorOp(unsigned ScalarOpc, EVT VecVT,
+                             const TargetLowering &TLI) {
+  // Only handle simple vector types
+  if (!VecVT.isSimple() || !VecVT.isVector())
+    return false;
+
+  // Check if the same opcode is legal for the vector type
+  // Most arithmetic/logical ops have the same opcode for scalar and vector
+  return TLI.isOperationLegalOrCustom(ScalarOpc, VecVT);
+}
+
+/// Identifies "vector escape points" - operations where vector values
+/// become scalars. Returns the source vector if this is an escape point.
+static SDValue getVectorEscapeSource(SDNode *N) {
+  switch (N->getOpcode()) {
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+    return N->getOperand(0);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return N->getOperand(0);
+  default:
+    return SDValue();
+  }
+}
+
+/// Information about a scalar value that originated from a vector
+struct VectorEscapeInfo {
+  SDNode *EscapeNode;     // The node where vector became scalar
+  SDValue SourceVector;   // The source vector
+  unsigned LaneIndex;     // Lane index for EXTRACT_VECTOR_ELT, 0 for reductions
+
+  VectorEscapeInfo(SDNode *N, SDValue V, unsigned Lane = 0)
+      : EscapeNode(N), SourceVector(V), LaneIndex(Lane) {}
+};
+
+/// Information about a chain of scalar operations that originated from vectors
+/// and flows into a store.
+struct VectorEscapeChain {
+  SmallVector<VectorEscapeInfo, 4> EscapePoints;
+  SmallVector<SDNode *, 8> ScalarOps;
+  SDNode *RootNode;  // The store or final node
+  bool HasNot;       // Whether there's a NOT operation at the end
+
+  VectorEscapeChain() : RootNode(nullptr), HasNot(false) {}
+  bool empty() const { return EscapePoints.empty(); }
+};
+
+/// Walks backward from a store value to find vector escape points.
+/// Returns true if the chain can potentially be re-vectorized.
+static bool detectVectorEscapeChain(SDValue Value, VectorEscapeChain &Chain,
+                                    const TargetLowering &TLI) {
+  SmallVector<SDValue, 16> Worklist;
+  SmallPtrSet<SDNode *, 16> Visited;
+
+  Worklist.push_back(Value);
+
+  while (!Worklist.empty()) {
+    SDValue V = Worklist.pop_back_val();
+    SDNode *N = V.getNode();
+
+    if (!N || !Visited.insert(N).second)
+      continue;
+
+    // Check if this is a vector escape point
+    if (SDValue SrcVec = getVectorEscapeSource(N)) {
+      unsigned Lane = 0;
+      if (N->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+        if (auto *IdxNode = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+          Lane = IdxNode->getZExtValue();
+        else
+          return false; // Non-constant index, can't handle
+      }
+      Chain.EscapePoints.emplace_back(N, SrcVec, Lane);
+      continue;
+    }
+
+    // Check if this is a constant - constants are fine
+    if (isa<ConstantSDNode>(N))
+      continue;
+
+    // Check if this is a scalar operation with a vector equivalent
+    EVT VT = V.getValueType();
+    if (!VT.isScalarInteger())
+      return false;
+
+    // Check legality against a reasonable vector type (v8i8 or v16i8)
+    if (!hasLegalVectorOp(N->getOpcode(), MVT::v8i8, TLI) &&
+        !hasLegalVectorOp(N->getOpcode(), MVT::v16i8, TLI))
+      return false;
+
+    Chain.ScalarOps.push_back(N);
+
+    // Add operands to worklist
+    for (const SDValue &Op : N->op_values()) {
+      // Skip non-value operands
+      if (Op.getValueType() == MVT::Other || Op.getValueType() == MVT::Glue)
+        continue;
+      Worklist.push_back(Op);
+    }
+  }
+
+  return !Chain.EscapePoints.empty();
+}
+
+/// Attempt to re-vectorize a scalar computation chain that originated from
+/// vectors. This avoids cross-domain transfers between vector and scalar
+/// register files.
+///
+/// Patterns detected:
+///   store(scalar_op(...(vecreduce(vector))...))
+///   store(scalar_op(...(extract_vector_elt(vector))...))
+///
+/// Transformed to keep operations in vector domain where profitable.
+///
+static SDValue combineStoreOfVectorEscapeChain(StoreSDNode *ST,
+                                               SelectionDAG &DAG,
+                                               const AArch64Subtarget *Subtarget) {
+  if (!Subtarget->isNeonAvailable())
+    return SDValue();
+
+  SDValue Value = ST->getValue();
+  EVT MemVT = ST->getMemoryVT();
+
+  // Only handle small integer stores (i8, i16, i32)
+  if (!MemVT.isScalarInteger() || MemVT.getSizeInBits() > 32)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  VectorEscapeChain Chain;
+  Chain.RootNode = ST;
+
+  // Check for NOT (xor with -1) at the root
+  SDValue StoreVal = Value;
+  if (StoreVal.getOpcode() == ISD::XOR) {
+    if (auto *C = dyn_cast<ConstantSDNode>(StoreVal.getOperand(1))) {
+      if (C->isAllOnes()) {
+        Chain.HasNot = true;
+        StoreVal = StoreVal.getOperand(0);
+      }
+    }
+  }
+
+  if (!detectVectorEscapeChain(StoreVal, Chain, TLI))
+    return SDValue();
+
+  // Need at least 2 escape points to benefit from vectorization
+  if (Chain.EscapePoints.size() < 2)
+    return SDValue();
+
+  // Profitability check: Only apply this optimization when there's a clear benefit.
+  // - Reduction escape points benefit from staying in vector domain (avoid fmov)
+  // - HasNot means we can apply NOT to the vector instead of scalar
+  // Pure extract chains without these are better handled by existing optimizations
+  // (e.g., folding to simple load+store for byte shuffles).
+  bool HasReduction = false;
+  for (const auto &EP : Chain.EscapePoints) {
+    if (EP.EscapeNode->getOpcode() != ISD::EXTRACT_VECTOR_ELT) {
+      HasReduction = true;
+      break;
+    }
+  }
+  if (!HasReduction && !Chain.HasNot)
+    return SDValue();
+
+  // For now, handle cases where we're packing bytes into a larger integer
+  // Check if all escape points produce byte-sized results that get packed
+  unsigned NumBytes = MemVT.getSizeInBits() / 8;
+  if (Chain.EscapePoints.size() != NumBytes)
+    return SDValue();
+
+  // Verify all escape points are reductions or extracts of compatible types
+  EVT ExpectedVecEltVT = MVT::i8;
+  for (const auto &EP : Chain.EscapePoints) {
+    SDNode *N = EP.EscapeNode;
+
+    // For reductions, the input should be v8i8
+    if (N->getOpcode() == ISD::VECREDUCE_ADD) {
+      if (EP.SourceVector.getValueType() != MVT::v8i8)
+        return SDValue();
+    }
+    // For extracts, element type should be i8
+    else if (N->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      if (EP.SourceVector.getValueType().getVectorElementType() != ExpectedVecEltVT)
+        return SDValue();
+    }
+    else {
+      return SDValue(); // Unsupported escape type
+    }
+  }
+
+  SDLoc DL(ST);
+
+  // Build vector of results from escape points
+  // Each escape point produces a byte, we pack them into a vector
+  SmallVector<SDValue, 4> Elements;
+  for (const auto &EP : Chain.EscapePoints) {
+    SDNode *N = EP.EscapeNode;
+    SDValue EltVal;
+
+    if (N->getOpcode() == ISD::VECREDUCE_ADD) {
+      // Recreate the reduction
+      SDValue Reduced = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32,
+                                    EP.SourceVector);
+      EltVal = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Reduced);
+    } else if (N->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      // Recreate the extract
+      EltVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                           EP.SourceVector,
+                           DAG.getConstant(EP.LaneIndex, DL, MVT::i64));
+    } else {
+      return SDValue();
+    }
+    Elements.push_back(EltVal);
+  }
+
+  // Use INSERT_VECTOR_ELT to build the vector (will become ZIP/INS)
+  SDValue Vec = DAG.getUNDEF(MVT::v8i8);
+  for (unsigned i = 0; i < Elements.size(); ++i) {
+    Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v8i8, Vec,
+                      Elements[i], DAG.getConstant(i, DL, MVT::i64));
+  }
+
+  // Apply NOT if needed - operate on the vector
+  if (Chain.HasNot) {
+    Vec = DAG.getNOT(DL, Vec, MVT::v8i8);
+  }
+
+  // Extract the packed value as the store type
+  SDValue Result;
+  if (MemVT == MVT::i8) {
+    Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Vec,
+                         DAG.getConstant(0, DL, MVT::i64));
+  } else if (MemVT == MVT::i16) {
+    SDValue Vec16 = DAG.getBitcast(MVT::v4i16, Vec);
+    Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, Vec16,
+                         DAG.getConstant(0, DL, MVT::i64));
+  } else if (MemVT == MVT::i32) {
+    SDValue Vec32 = DAG.getBitcast(MVT::v2i32, Vec);
+    Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Vec32,
+                         DAG.getConstant(0, DL, MVT::i64));
+  } else {
+    return SDValue();
+  }
+
+  // Create the new store
+  return DAG.getStore(ST->getChain(), DL, Result, ST->getBasePtr(),
+                      ST->getMemOperand());
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -25177,6 +25434,10 @@ static SDValue performSTORECombine(SDNode *N,
   SDLoc DL(ST);
 
   if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
+    return Res;
+
+  // Try to re-vectorize scalar chains that originated from vectors
+  if (SDValue Res = combineStoreOfVectorEscapeChain(ST, DAG, Subtarget))
     return Res;
 
   auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
