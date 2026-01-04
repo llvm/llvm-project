@@ -282,7 +282,12 @@ INTERCEPTOR(int, pthread_create, void* thread, void* attr,
 #    endif
     asanThreadArgRetval().Create(detached, {start_routine, arg}, [&]() -> uptr {
       result = REAL(pthread_create)(thread, attr, asan_thread_start, t);
+// AIX pthread_t is unsigned int.
+#    if SANITIZER_AIX
+      return result ? 0 : *(unsigned*)(thread);
+#    else
       return result ? 0 : *(uptr*)(thread);
+#    endif
     });
   }
   if (result != 0) {
@@ -439,10 +444,12 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t* oucp, struct ucontext_t* ucp) {
 #    define siglongjmp __siglongjmp14
 #  endif
 
+#  if ASAN_INTERCEPT_LONGJMP
 INTERCEPTOR(void, longjmp, void* env, int val) {
   __asan_handle_no_return();
   REAL(longjmp)(env, val);
 }
+#  endif
 
 #  if ASAN_INTERCEPT__LONGJMP
 INTERCEPTOR(void, _longjmp, void* env, int val) {
@@ -867,7 +874,9 @@ void InitializeAsanInterceptors() {
 #  endif
 
   // Intercept jump-related functions.
+#  if ASAN_INTERCEPT_LONGJMP
   ASAN_INTERCEPT_FUNC(longjmp);
+#  endif
 
 #  if ASAN_INTERCEPT_SWAPCONTEXT
   ASAN_INTERCEPT_FUNC(swapcontext);
