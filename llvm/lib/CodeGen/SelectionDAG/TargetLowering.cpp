@@ -7554,19 +7554,6 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     Cost = NegatibleCost::Neutral;
     return CFP;
   }
-  case ISD::SPLAT_VECTOR: {
-    SDValue X = Op.getOperand(0);
-    if (!isOperationLegal(ISD::SPLAT_VECTOR, VT))
-      break;
-
-    NegatibleCost CostX = NegatibleCost::Expensive;
-    SDValue NegX =
-        getNegatedExpression(X, DAG, LegalOps, OptForSize, CostX, Depth);
-    if (!NegX || CostX >= NegatibleCost::Neutral)
-      break;
-    Cost = CostX;
-    return DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, NegX);
-  }
   case ISD::BUILD_VECTOR: {
     // Only permit BUILD_VECTOR of constants.
     if (llvm::any_of(Op->op_values(), [&](SDValue N) {
