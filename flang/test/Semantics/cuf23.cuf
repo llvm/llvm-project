@@ -75,4 +75,5 @@ subroutine intrinsic_error_size(n)
   integer :: n, x
   real(8), device :: d(n,n)
   x = size(d,dim=1) ! ok
+  x = sizeof(d) ! ok
 end subroutine

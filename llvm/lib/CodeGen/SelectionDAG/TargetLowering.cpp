@@ -10799,6 +10799,28 @@ SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
   SDLoc DL(Node);
 
+  // If both sign bits are zero, flip UMIN/UMAX <-> SMIN/SMAX if legal.
+  unsigned AltOpcode;
+  switch (Opcode) {
+  case ISD::SMIN:
+    AltOpcode = ISD::UMIN;
+    break;
+  case ISD::SMAX:
+    AltOpcode = ISD::UMAX;
+    break;
+  case ISD::UMIN:
+    AltOpcode = ISD::SMIN;
+    break;
+  case ISD::UMAX:
+    AltOpcode = ISD::SMAX;
+    break;
+  default:
+    llvm_unreachable("Unknown MINMAX opcode");
+  }
+  if (isOperationLegal(AltOpcode, VT) && DAG.SignBitIsZero(Op0) &&
+      DAG.SignBitIsZero(Op1))
+    return DAG.getNode(AltOpcode, DL, VT, Op0, Op1);
+
   // umax(x,1) --> sub(x,cmpeq(x,0)) iff cmp result is allbits
   if (Opcode == ISD::UMAX && llvm::isOneOrOneSplat(Op1, true) && BoolVT == VT &&
       getBooleanContents(VT) == ZeroOrNegativeOneBooleanContent) {

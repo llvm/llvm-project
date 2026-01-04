@@ -72,3 +72,14 @@ namespace TypeidPtrRegression {
   }
 }
 
+namespace GH173950 {
+  struct A {
+    virtual void f();
+  };
+
+  static A &a = *new A;
+  extern A &a;
+
+  // This used to crash with: Assertion `IsInitialized' failed in invokeDtor()
+  const std::type_info &a_ti = typeid(a);
+}
