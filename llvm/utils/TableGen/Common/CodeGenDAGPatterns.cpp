@@ -102,7 +102,7 @@ ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode() const {
 
   for (const auto &I : *this) {
     MVT T = I.second.empty() ? MVT::Other : *I.second.begin();
-    VVT.getOrCreateTypeForMode(I.first, T);
+    VVT.insertTypeForMode(I.first, T);
   }
   return VVT;
 }
@@ -1862,7 +1862,7 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
 
 bool TreePatternNode::ContainsUnresolvedType(TreePattern &TP) const {
   for (const TypeSetByHwMode &Type : Types)
-    if (!TP.getInfer().isConcrete(Type, true))
+    if (!Type.isValueTypeByHwMode(/*AllowEmpty=*/true))
       return true;
   for (const TreePatternNode &Child : children())
     if (Child.ContainsUnresolvedType(TP))
@@ -2585,10 +2585,10 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       // Int inits are always integers. :)
       bool MadeChange = TP.getInfer().EnforceInteger(Types[0]);
 
-      if (!TP.getInfer().isConcrete(Types[0], false))
+      if (!Types[0].isValueTypeByHwMode(/*AllowEmpty=*/false))
         return MadeChange;
 
-      ValueTypeByHwMode VVT = TP.getInfer().getConcrete(Types[0], false);
+      ValueTypeByHwMode VVT = Types[0].getValueTypeByHwMode();
       for (auto &P : VVT) {
         MVT VT = P.second;
         // Can only check for types of a known size
@@ -4349,7 +4349,8 @@ static bool ForceArbitraryInstResultType(TreePatternNode &N, TreePattern &TP) {
   // anything.
   TypeInfer &TI = TP.getInfer();
   for (unsigned i = 0, e = N.getNumTypes(); i != e; ++i) {
-    if (N.getExtType(i).empty() || TI.isConcrete(N.getExtType(i), false))
+    if (N.getExtType(i).empty() ||
+        N.getExtType(i).isValueTypeByHwMode(/*AllowEmpty=*/false))
       continue;
 
     // Otherwise, force its type to an arbitrary choice.
