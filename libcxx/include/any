@@ -545,7 +545,7 @@ template <class _ValueType>
 }
 
 template <class _ValueType>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast([[maybe_unused]] any* __any) _NOEXCEPT {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any* __any) _NOEXCEPT {
   using __any_imp::_Action;
   static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
   static_assert(!is_reference<_ValueType>::value, "_ValueType may not be a reference.");
