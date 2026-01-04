@@ -8428,10 +8428,8 @@ def err_bad_dynamic_cast_not_ptr : Error<"cannot use dynamic_cast to convert fro
 def err_bad_dynamic_cast_not_polymorphic : Error<"%0 is not polymorphic">;
 
 // Other C++ expressions
-def err_need_header_or_std_before_typeid : Error<
-  "you need to include <typeinfo> or import std before using the 'typeid' operator">;
 def err_need_header_before_typeid : Error<
-  "you need to include <typeinfo> before using the 'typeid' operator">;
+  "you need to include <typeinfo>%select{| or import std}0 before using the 'typeid' operator">;
 def err_need_header_before_placement_new : Error<
   "no matching %0 function for non-allocating placement new expression; "
   "include <new>">;

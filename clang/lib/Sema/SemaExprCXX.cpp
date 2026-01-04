@@ -644,11 +644,9 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   }
 
   // Find the std::type_info type.
-  if (!getStdNamespace()){
-    auto DiagID = getLangOpts().CPlusPlus20
-                      ? diag::err_need_header_or_std_before_typeid
-                      : diag::err_need_header_before_typeid;
-    return ExprError(Diag(OpLoc, DiagID));
+  if (!getStdNamespace()) {
+    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                     << (getLangOpts().CPlusPlus20 ? 1 : 0));
   }
 
   if (!CXXTypeInfoDecl) {
@@ -663,7 +661,8 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
       CXXTypeInfoDecl = R.getAsSingle<RecordDecl>();
     }
     if (!CXXTypeInfoDecl)
-      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                       << (getLangOpts().CPlusPlus20 ? 1 : 0));
   }
 
   if (!getLangOpts().RTTI) {
