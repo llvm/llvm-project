@@ -10291,6 +10291,7 @@ td_library(
         ":AtomicInterfacesTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
     ],
 )
 
