@@ -412,6 +412,14 @@ const LiveInterval::SubRange &getSubRangeForMaskExact(LaneBitmask LM,
   return getSubrangeImpl(LM, LI);
 }
 
+static LiveInterval::SubRange *getPtrOfSubRangeForMaskExact(LaneBitmask LM,
+                                                            LiveInterval &LI) {
+  for (LiveInterval::SubRange &S : LI.subranges())
+    if (S.LaneMask == LM)
+      return &S;
+  return nullptr;
+}
+
 /// Find a subrange corresponding to the lane mask @p LM, or a superset of it,
 /// in the live interval @p LI. The interval @p LI is assumed to contain such
 /// a subrange.  This function is used to find corresponding subranges between
@@ -1333,8 +1341,12 @@ void SplitEditor::extendPHIKillRanges() {
         continue;
       unsigned RegIdx = RegAssign.lookup(V->def);
       LiveInterval &LI = LIS.getInterval(Edit->get(RegIdx));
-      LiveInterval::SubRange &S = getSubRangeForMaskExact(PS.LaneMask, LI);
-      if (removeDeadSegment(V->def, S))
+      LiveInterval::SubRange *S = getPtrOfSubRangeForMaskExact(PS.LaneMask, LI);
+      // The SubRange maybe empty and removed by removeEmptySubRanges.
+      // Skip if we can't find the exact subrange
+      if (!S)
+        continue;
+      if (removeDeadSegment(V->def, *S))
         continue;
 
       MachineBasicBlock &B = *LIS.getMBBFromIndex(V->def);
@@ -1342,7 +1354,7 @@ void SplitEditor::extendPHIKillRanges() {
                    &LIS.getVNInfoAllocator());
       Undefs.clear();
       LI.computeSubRangeUndefs(Undefs, PS.LaneMask, MRI, *LIS.getSlotIndexes());
-      extendPHIRange(B, SubLIC, S, PS.LaneMask, Undefs);
+      extendPHIRange(B, SubLIC, *S, PS.LaneMask, Undefs);
     }
   }
 }
