@@ -500,6 +500,7 @@ def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
 def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntBitCountUnaryOp>;
 def cttz       : SDNode<"ISD::CTTZ"       , SDTIntBitCountUnaryOp>;
 def ctpop      : SDNode<"ISD::CTPOP"      , SDTIntBitCountUnaryOp>;
+def ctls       : SDNode<"ISD::CTLS"       , SDTIntBitCountUnaryOp>;
 def ctlz_zero_undef : SDNode<"ISD::CTLZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
 def cttz_zero_undef : SDNode<"ISD::CTTZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
 def sext       : SDNode<"ISD::SIGN_EXTEND", SDTIntExtendOp>;

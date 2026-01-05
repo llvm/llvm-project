@@ -70,6 +70,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTLZ:        Res = PromoteIntRes_CTLZ(N); break;
+  case ISD::CTLS:        Res = PromoteIntRes_CTLS(N); break;
   case ISD::PARITY:
   case ISD::VP_CTPOP:
   case ISD::CTPOP:       Res = PromoteIntRes_CTPOP_PARITY(N); break;
@@ -770,6 +771,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
     return DAG.getNode(CtlzOpcode, dl, NVT, Op, Mask, EVL);
   }
   llvm_unreachable("Invalid CTLZ Opcode");
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_CTLS(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  SDLoc dl(N);
+
+  SDValue ExtractLeadingBits = DAG.getConstant(
+      NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits(), dl, NVT);
+
+  SDValue Op = SExtPromotedInteger(N->getOperand(0));
+  return DAG.getNode(ISD::SUB, dl, NVT, DAG.getNode(ISD::CTLS, dl, NVT, Op),
+                     ExtractLeadingBits);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CTPOP_PARITY(SDNode *N) {
