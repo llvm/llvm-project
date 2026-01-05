@@ -1564,23 +1564,44 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
 ///
 /// This is profitable because vector select on wider types produces fewer
 /// select/cndmask instructions than scalar selects on each element.
+
+/// Find a vector select on SrcVec with the given condition in the same block.
+static SelectInst *findCompatibleVecSel(Value *SrcVec, Value *Cond,
+                                        BasicBlock *BB) {
+  for (User *U : SrcVec->users()) {
+    auto *SI = dyn_cast<SelectInst>(U);
+    if (SI && SI->getParent() == BB && SI->getCondition() == Cond &&
+        SI->getTrueValue() == SrcVec && match(SI->getFalseValue(), m_Zero()))
+      return SI;
+  }
+  return nullptr;
+}
+
+/// Find a bitcast of the select to the destination vector type in the same
+/// block.
+static BitCastInst *findCompatibleBitCast(Value *Sel, BasicBlock *BB,
+                                          FixedVectorType *DstVecTy) {
+  for (User *U : Sel->users()) {
+    auto *BCI = dyn_cast<BitCastInst>(U);
+    if (BCI && BCI->getParent() == BB && BCI->getDestTy() == DstVecTy)
+      return BCI;
+  }
+  return nullptr;
+}
+
 bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
-  // Match: select i1 %cond, iN %extractelement, iN 0
-  Value *Cond, *Ext;
-  if (!match(&I, m_Select(m_Value(Cond), m_Value(Ext), m_Zero())))
+  // Match: select i1 %cond, (extractelement (bitcast <N x T> to <M x iK>),
+  // idx), 0
+  Value *Cond, *Idx;
+  BitCastInst *BC;
+  using MatchBitcast = PatternMatch::bind_ty<BitCastInst>;
+  if (!match(&I,
+             m_Select(m_Value(Cond),
+                      m_ExtractElt(MatchBitcast(BC), m_Value(Idx)), m_Zero())))
     return false;
 
   // Condition must be scalar i1
   if (!Cond->getType()->isIntegerTy(1))
-    return false;
-
-  // True value must be an extractelement from a bitcast
-  auto *ExtInst = dyn_cast<ExtractElementInst>(Ext);
-  if (!ExtInst)
-    return false;
-
-  auto *BC = dyn_cast<BitCastInst>(ExtInst->getVectorOperand());
-  if (!BC)
     return false;
 
   auto *SrcVecTy = dyn_cast<FixedVectorType>(BC->getSrcTy());
@@ -1603,27 +1624,12 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
 
   // Check if a compatible vector select already exists in this block.
   // If so, we can reuse it and only create the extract.
-  BasicBlock *BB = BC->getParent();
   Value *SrcVec = BC->getOperand(0);
-  SelectInst *ExistingVecSel = nullptr;
-  BitCastInst *ExistingBC = nullptr;
-
-  for (User *U : SrcVec->users()) {
-    auto *SI = dyn_cast<SelectInst>(U);
-    if (SI && SI->getParent() == BB && SI->getCondition() == Cond &&
-        SI->getTrueValue() == SrcVec && match(SI->getFalseValue(), m_Zero())) {
-      ExistingVecSel = SI;
-      // Also look for an existing bitcast of this select
-      for (User *SU : SI->users()) {
-        auto *BCI = dyn_cast<BitCastInst>(SU);
-        if (BCI && BCI->getParent() == BB && BCI->getDestTy() == DstVecTy) {
-          ExistingBC = BCI;
-          break;
-        }
-      }
-      break;
-    }
-  }
+  BasicBlock *BB = BC->getParent();
+  SelectInst *ExistingVecSel = findCompatibleVecSel(SrcVec, Cond, BB);
+  BitCastInst *ExistingBC =
+      ExistingVecSel ? findCompatibleBitCast(ExistingVecSel, BB, DstVecTy)
+                     : nullptr;
 
   // If we already have a vector select, this transformation is always
   // beneficial - we just extract from it instead of doing a scalar select.
@@ -1682,8 +1688,7 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
   }
 
   // Extract the element from the new bitcast
-  Value *NewExt =
-      Builder.CreateExtractElement(NewBC, ExtInst->getIndexOperand());
+  Value *NewExt = Builder.CreateExtractElement(NewBC, Idx);
   replaceValue(I, *NewExt);
 
   LLVM_DEBUG(dbgs() << "VectorCombine: folded select into vector select\n");
