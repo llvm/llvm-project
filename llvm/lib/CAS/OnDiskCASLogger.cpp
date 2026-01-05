@@ -1,8 +1,18 @@
-//===- OnDiskCASLogger.cpp ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// This file implements OnDiskCASLogger. The logger will write the timestamp
+/// and events to a log file using filestream. The logger should be thread-safe
+/// and process-safe because each write is small enough to atomically update the
+/// file.
+///
+/// The logger can be enabled via `LLVM_CAS_LOG` environmental variable.
 //
 //===----------------------------------------------------------------------===//
 
