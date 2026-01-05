@@ -1515,7 +1515,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     DebugInfo = nullptr;
   }
   // Finalize function debug info on exit.
-  auto Cleanup = llvm::make_scope_exit([this] {
+  llvm::scope_exit Cleanup([this] {
     if (CGDebugInfo *DI = getDebugInfo())
       DI->completeFunction();
   });

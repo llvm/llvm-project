@@ -93,7 +93,8 @@ static const unsigned ZvfbfaVPOps[] = {
 static const unsigned ZvfbfaOps[] = {
     ISD::FNEG,        ISD::FABS,        ISD::FCOPYSIGN, ISD::FADD,
     ISD::FSUB,        ISD::FMUL,        ISD::FMINNUM,   ISD::FMAXNUM,
-    ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,  ISD::FMAXIMUM};
+    ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,  ISD::FMAXIMUM,
+    ISD::FMA};
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
@@ -449,6 +450,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
   }
 
+  if (Subtarget.hasStdExtP()) {
+    setOperationAction(ISD::CTLS, XLenVT, Legal);
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::CTLS, MVT::i32, Custom);
+  }
+
   if (Subtarget.hasStdExtP() ||
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
@@ -469,8 +476,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SADDSAT, MVT::i32, Legal);
     setOperationAction(ISD::USUBSAT, MVT::i32, Legal);
     setOperationAction(ISD::SSUBSAT, MVT::i32, Legal);
-    setOperationAction(ISD::SSHLSAT, MVT::i32, Legal);
     setOperationAction(ISD::USHLSAT, MVT::i32, Legal);
+  }
+
+  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXqcia()) &&
+      !Subtarget.is64Bit()) {
+    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
+    // pssha.w and extracting.
+    setOperationAction(ISD::SSHLSAT, MVT::i32, Legal);
   }
 
   static const unsigned FPLegalNodeTypes[] = {
@@ -1103,7 +1116,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: Make more of these ops legal.
     static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
-                                                ISD::FMA,
                                                 ISD::FSQRT,
                                                 ISD::FCEIL,
                                                 ISD::FTRUNC,
@@ -15047,16 +15059,29 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLS: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
 
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
-    bool IsCTZ =
-        N->getOpcode() == ISD::CTTZ || N->getOpcode() == ISD::CTTZ_ZERO_UNDEF;
+    unsigned Opc;
+    switch (N->getOpcode()) {
+    default: llvm_unreachable("Unexpected opcode");
+    case ISD::CTTZ:
+    case ISD::CTTZ_ZERO_UNDEF:
+      Opc = RISCVISD::CTZW;
+      break;
+    case ISD::CTLZ:
+    case ISD::CTLZ_ZERO_UNDEF:
+      Opc = RISCVISD::CLZW;
+      break;
+    case ISD::CTLS:
+      Opc = RISCVISD::CLSW;
+      break;
+    }
 
-    unsigned Opc = IsCTZ ? RISCVISD::CTZW : RISCVISD::CLZW;
     SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
     return;
@@ -17912,7 +17937,8 @@ struct NodeExtensionHelper {
   }
 
   bool isSupportedBF16Extend(MVT NarrowEltVT, const RISCVSubtarget &Subtarget) {
-    return NarrowEltVT == MVT::bf16 && Subtarget.hasStdExtZvfbfwma();
+    return NarrowEltVT == MVT::bf16 &&
+           (Subtarget.hasStdExtZvfbfwma() || Subtarget.hasVInstructionsBF16());
   }
 
   /// Helper method to set the various fields of this struct based on the
@@ -18130,7 +18156,8 @@ struct NodeExtensionHelper {
   /// \see CombineResult::materialize.
   /// If the related CombineToTry function returns std::nullopt, that means the
   /// combine didn't match.
-  static SmallVector<CombineToTry> getSupportedFoldings(const SDNode *Root);
+  static SmallVector<CombineToTry>
+  getSupportedFoldings(const SDNode *Root, const RISCVSubtarget &Subtarget);
 };
 
 /// Helper structure that holds all the necessary information to materialize a
@@ -18345,7 +18372,8 @@ canFoldToVW_SU(SDNode *Root, const NodeExtensionHelper &LHS,
 }
 
 SmallVector<NodeExtensionHelper::CombineToTry>
-NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
+NodeExtensionHelper::getSupportedFoldings(const SDNode *Root,
+                                          const RISCVSubtarget &Subtarget) {
   SmallVector<CombineToTry> Strategies;
   switch (Root->getOpcode()) {
   case ISD::ADD:
@@ -18367,7 +18395,12 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   case RISCVISD::VFNMADD_VL:
   case RISCVISD::VFNMSUB_VL:
     Strategies.push_back(canFoldToVWWithSameExtension);
-    if (Root->getOpcode() == RISCVISD::VFMADD_VL)
+    if (Subtarget.hasStdExtZvfbfa() && Root->getOpcode() != RISCVISD::FMUL_VL)
+      // TODO: Once other widen operations are supported we can merge
+      // canFoldToVWWithSameExtension and canFoldToVWWithSameExtBF16.
+      Strategies.push_back(canFoldToVWWithSameExtBF16);
+    else if (Subtarget.hasStdExtZvfbfwma() &&
+             Root->getOpcode() == RISCVISD::VFMADD_VL)
       Strategies.push_back(canFoldToVWWithSameExtBF16);
     break;
   case ISD::MUL:
@@ -18484,7 +18517,7 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
       return SDValue();
 
     SmallVector<NodeExtensionHelper::CombineToTry> FoldingStrategies =
-        NodeExtensionHelper::getSupportedFoldings(Root);
+        NodeExtensionHelper::getSupportedFoldings(Root, Subtarget);
 
     assert(!FoldingStrategies.empty() && "Nothing to be folded");
     bool Matched = false;

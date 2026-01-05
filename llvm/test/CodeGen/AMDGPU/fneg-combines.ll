@@ -6876,7 +6876,7 @@ define amdgpu_kernel void @v_fneg_inlineasm_f32(ptr addrspace(1) %out, ptr addrs
   %c = load volatile float, ptr addrspace(1) %c.gep
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg)
   store volatile float %fneg, ptr addrspace(1) %out.gep
   ret void
 }
@@ -6961,7 +6961,7 @@ define amdgpu_kernel void @v_fneg_inlineasm_multi_use_src_f32(ptr addrspace(1) %
   %c = load volatile float, ptr addrspace(1) %c.gep
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg)
   store volatile float %mul, ptr addrspace(1) %out.gep
   ret void
 }
