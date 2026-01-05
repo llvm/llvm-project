@@ -74,7 +74,7 @@ Operands are ordered just like they would be in a MachineInstr: the defs (outs)
 come first, then the uses (ins).
 
 Patterns are generally grouped into another DAG datatype with a dummy operator
-such as ``match``, ``apply`` or ``pattern``.
+such as ``match``, ``apply``, ``combine`` or ``pattern``.
 
 Finally, any DAG datatype in TableGen can be named. This also holds for
 patterns. e.g. the following is valid: ``(G_FOO $root, (i32 0):$cst):$mypat``.
@@ -369,6 +369,42 @@ The following expansions are available for MIR patterns:
     (defs root:$root),
     (match (G_ZEXT $root, $src):$mi),
     (apply "foobar(${root}.getReg(), ${src}.getReg(), ${mi}->hasImplicitDef())")>;
+
+``combine`` Operator
+~~~~~~~~~~~~~~~~~~~~
+
+``GICombineRule`` also supports a single ``combine`` pattern, which is a shorter way to
+declare patterns that just match one or more instructions, then defer all remaining matching
+and rewriting logic to C++ code.
+
+.. code-block:: text
+  :caption: Example usage of the combine operator.
+
+  // match + apply
+  def FooLong : GICombineRule<
+    (defs root:$root),
+    (match (G_ZEXT $root, $src):$mi, "return matchFoo(${mi});"),
+    (apply "applyFoo(${mi});")>;
+
+  // combine
+  def FooShort : GICombineRule<
+    (defs root:$root),
+    (combine (G_ZEXT $root, $src):$mi, "return combineFoo(${mi});")>;
+
+This has a couple of advantages:
+
+* We only need one C++ function, not two.
+* We no longer need to use ``GIDefMatchData`` to pass information between the match/apply functions.
+
+As described above, this is syntactic sugar for the match+apply form. In a ``combine`` pattern:
+
+* Everything except C++ code is considered the ``match`` part.
+* The C++ code is the ``apply`` part. C++ code is emitted in order of appearance.
+
+.. note::
+
+  The C++ code **must** return true if it changed any instruction. Returning false when changing
+  instructions is undefined behavior.
 
 Common Pattern #1: Replace a Register with Another
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -639,4 +639,18 @@ entry:
   ret i32 %shr
 }
 
+define i64 @test__mspabi_divull(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: test__mspabi_divull:
+; CHECK: call #__mspabi_divull
+  %result = udiv i64 %a, %b
+  ret i64 %result
+}
+
+define i64 @test__mspabi_remull(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: test__mspabi_remull:
+; CHECK: call #__mspabi_remull
+  %result = urem i64 %a, %b
+  ret i64 %result
+}
+
 attributes #0 = { nounwind }

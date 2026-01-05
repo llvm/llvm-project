@@ -3,7 +3,7 @@
 ; Function Attrs: nofree noinline nosync nounwind memory(argmem: readwrite)
 define fastcc void @fred(ptr noalias nocapture align 128 %a0, ptr noalias nocapture readonly align 128 %a1) #0 {
 ; CHECK-LABEL: define fastcc void @fred
-; CHECK-SAME: (ptr noalias nocapture align 128 [[A0:%.*]], ptr noalias nocapture readonly align 128 [[A1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias align 128 captures(none) [[A0:%.*]], ptr noalias readonly align 128 captures(none) [[A1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V0:%.*]] = load <128 x i8>, ptr [[A1]], align 128
 ; CHECK-NEXT:    store <128 x i8> [[V0]], ptr [[A0]], align 128

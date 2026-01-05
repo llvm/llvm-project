@@ -7,30 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBReproducer.h"
-#include "lldb/API/LLDB.h"
-#include "lldb/API/SBAddress.h"
-#include "lldb/API/SBAttachInfo.h"
-#include "lldb/API/SBBlock.h"
-#include "lldb/API/SBBreakpoint.h"
-#include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandInterpreterRunOptions.h"
-#include "lldb/API/SBData.h"
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBDeclaration.h"
-#include "lldb/API/SBError.h"
-#include "lldb/API/SBFileSpec.h"
-#include "lldb/API/SBHostOS.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Instrumentation.h"
-#include "lldb/Version/Version.h"
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::repro;
 
-SBReplayOptions::SBReplayOptions() {}
+SBReplayOptions::SBReplayOptions() = default;
 
-SBReplayOptions::SBReplayOptions(const SBReplayOptions &rhs) {}
+SBReplayOptions::SBReplayOptions(const SBReplayOptions &rhs) = default;
 
 SBReplayOptions::~SBReplayOptions() = default;
 

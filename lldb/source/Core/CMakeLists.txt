@@ -16,8 +16,7 @@ if (LLDB_ENABLE_CURSES)
   endif()
 endif()
 
-# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
-add_lldb_library(lldbCore
+add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   Address.cpp
   AddressRange.cpp
   AddressRangeListImpl.cpp
@@ -28,6 +27,7 @@ add_lldb_library(lldbCore
   Debugger.cpp
   DebuggerEvents.cpp
   Declaration.cpp
+  DemangledNameInfo.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
   DumpRegisterValue.cpp
@@ -46,19 +46,28 @@ add_lldb_library(lldbCore
   Opcode.cpp
   PluginManager.cpp
   Progress.cpp
+  ProtocolServer.cpp
+  Statusline.cpp
   RichManglingContext.cpp
   SearchFilter.cpp
   Section.cpp
   SourceLocationSpec.cpp
   SourceManager.cpp
   StreamAsynchronousIO.cpp
+  Telemetry.cpp
   ThreadedCommunication.cpp
   UserSettingsController.cpp
   Value.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Core
   DEPENDS
     clang-tablegen-targets
-
+  LINK_COMPONENTS
+    Support
+    Demangle
+    TargetParser
+    Telemetry
   LINK_LIBS
     lldbBreakpoint
     lldbDataFormatters
@@ -69,17 +78,11 @@ add_lldb_library(lldbCore
     lldbTarget
     lldbUtility
     lldbValueObject
-    lldbPluginCPlusPlusLanguage
-    lldbPluginObjCLanguage
+    lldbVersion
     ${LLDB_CURSES_LIBS}
 
   CLANG_LIBS
     clangDriver
-
-  LINK_COMPONENTS
-    Support
-    Demangle
-    TargetParser
   )
 
 add_dependencies(lldbCore

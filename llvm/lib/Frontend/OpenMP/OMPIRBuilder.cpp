@@ -38,6 +38,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -49,6 +51,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -134,6 +137,8 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   case OMPScheduleType::NomergeOrderedRuntime:
   case OMPScheduleType::NomergeOrderedAuto:
   case OMPScheduleType::NomergeOrderedTrapezoidal:
+  case OMPScheduleType::OrderedDistributeChunked:
+  case OMPScheduleType::OrderedDistribute:
     break;
   default:
     return false;
@@ -149,6 +154,18 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
 }
 #endif
 
+/// This is wrapper over IRBuilderBase::restoreIP that also restores the current
+/// debug location to the last instruction in the specified basic block if the
+/// insert point points to the end of the block.
+static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
+                                 llvm::IRBuilderBase::InsertPoint IP) {
+  Builder.restoreIP(IP);
+  llvm::BasicBlock *BB = Builder.GetInsertBlock();
+  llvm::BasicBlock::iterator I = Builder.GetInsertPoint();
+  if (!BB->empty() && I == BB->end())
+    Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
+}
+
 static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   if (T.isAMDGPU()) {
     StringRef Features =
@@ -159,6 +176,8 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   }
   if (T.isNVPTX())
     return omp::NVPTXGridValues;
+  if (T.isSPIRV())
+    return omp::SPIRVGridValues;
   llvm_unreachable("No grid value available for this architecture!");
 }
 
@@ -166,7 +185,7 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
 /// arguments.
 static OMPScheduleType
 getOpenMPBaseScheduleType(llvm::omp::ScheduleKind ClauseKind, bool HasChunks,
-                          bool HasSimdModifier) {
+                          bool HasSimdModifier, bool HasDistScheduleChunks) {
   // Currently, the default schedule it static.
   switch (ClauseKind) {
   case OMP_SCHEDULE_Default:
@@ -183,6 +202,9 @@ getOpenMPBaseScheduleType(llvm::omp::ScheduleKind ClauseKind, bool HasChunks,
   case OMP_SCHEDULE_Runtime:
     return HasSimdModifier ? OMPScheduleType::BaseRuntimeSimd
                            : OMPScheduleType::BaseRuntime;
+  case OMP_SCHEDULE_Distribute:
+    return HasDistScheduleChunks ? OMPScheduleType::BaseDistributeChunked
+                                 : OMPScheduleType::BaseDistribute;
   }
   llvm_unreachable("unhandled schedule clause argument");
 }
@@ -251,9 +273,10 @@ getOpenMPMonotonicityScheduleType(OMPScheduleType ScheduleType,
 static OMPScheduleType
 computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
                           bool HasSimdModifier, bool HasMonotonicModifier,
-                          bool HasNonmonotonicModifier, bool HasOrderedClause) {
-  OMPScheduleType BaseSchedule =
-      getOpenMPBaseScheduleType(ClauseKind, HasChunks, HasSimdModifier);
+                          bool HasNonmonotonicModifier, bool HasOrderedClause,
+                          bool HasDistScheduleChunks) {
+  OMPScheduleType BaseSchedule = getOpenMPBaseScheduleType(
+      ClauseKind, HasChunks, HasSimdModifier, HasDistScheduleChunks);
   OMPScheduleType OrderedSchedule =
       getOpenMPOrderingScheduleType(BaseSchedule, HasOrderedClause);
   OMPScheduleType Result = getOpenMPMonotonicityScheduleType(
@@ -286,23 +309,37 @@ static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
 }
 
 void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
-                    bool CreateBranch) {
+                    bool CreateBranch, DebugLoc DL) {
   assert(New->getFirstInsertionPt() == New->begin() &&
          "Target BB must not have PHI nodes");
 
   // Move instructions to new block.
   BasicBlock *Old = IP.getBlock();
-  New->splice(New->begin(), Old, IP.getPoint(), Old->end());
+  // If the `Old` block is empty then there are no instructions to move. But in
+  // the new debug scheme, it could have trailing debug records which will be
+  // moved to `New` in `spliceDebugInfoEmptyBlock`. We dont want that for 2
+  // reasons:
+  // 1. If `New` is also empty, `BasicBlock::splice` crashes.
+  // 2. Even if `New` is not empty, the rationale to move those records to `New`
+  // (in `spliceDebugInfoEmptyBlock`) does not apply here. That function
+  // assumes that `Old` is optimized out and is going away. This is not the case
+  // here. The `Old` block is still being used e.g. a branch instruction is
+  // added to it later in this function.
+  // So we call `BasicBlock::splice` only when `Old` is not empty.
+  if (!Old->empty())
+    New->splice(New->begin(), Old, IP.getPoint(), Old->end());
 
-  if (CreateBranch)
-    BranchInst::Create(New, Old);
+  if (CreateBranch) {
+    auto *NewBr = BranchInst::Create(New, Old);
+    NewBr->setDebugLoc(DL);
+  }
 }
 
 void llvm::spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
   BasicBlock *Old = Builder.GetInsertBlock();
 
-  spliceBB(Builder.saveIP(), New, CreateBranch);
+  spliceBB(Builder.saveIP(), New, CreateBranch, DebugLoc);
   if (CreateBranch)
     Builder.SetInsertPoint(Old->getTerminator());
   else
@@ -314,12 +351,12 @@ void llvm::spliceBB(IRBuilder<> &Builder, BasicBlock *New, bool CreateBranch) {
 }
 
 BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
-                          llvm::Twine Name) {
+                          DebugLoc DL, llvm::Twine Name) {
   BasicBlock *Old = IP.getBlock();
   BasicBlock *New = BasicBlock::Create(
       Old->getContext(), Name.isTriviallyEmpty() ? Old->getName() : Name,
       Old->getParent(), Old->getNextNode());
-  spliceBB(IP, New, CreateBranch);
+  spliceBB(IP, New, CreateBranch, DL);
   New->replaceSuccessorsPhiUsesWith(Old, New);
   return New;
 }
@@ -327,7 +364,7 @@ BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
-  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
+  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   else
@@ -341,7 +378,7 @@ BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilder<> &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
-  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, Name);
+  BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
     Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
   else
@@ -498,9 +535,15 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
   Value *Version = Builder.getInt32(OMP_KERNEL_ARG_VERSION);
   Value *PointerNum = Builder.getInt32(KernelArgs.NumTargetItems);
   auto Int32Ty = Type::getInt32Ty(Builder.getContext());
-  constexpr const size_t MaxDim = 3;
+  constexpr size_t MaxDim = 3;
   Value *ZeroArray = Constant::getNullValue(ArrayType::get(Int32Ty, MaxDim));
-  Value *Flags = Builder.getInt64(KernelArgs.HasNoWait);
+
+  Value *HasNoWaitFlag = Builder.getInt64(KernelArgs.HasNoWait);
+
+  Value *DynCGroupMemFallbackFlag =
+      Builder.getInt64(static_cast<uint64_t>(KernelArgs.DynCGroupMemFallback));
+  DynCGroupMemFallbackFlag = Builder.CreateShl(DynCGroupMemFallbackFlag, 2);
+  Value *Flags = Builder.CreateOr(HasNoWaitFlag, DynCGroupMemFallbackFlag);
 
   assert(!KernelArgs.NumTeams.empty() && !KernelArgs.NumThreads.empty());
 
@@ -529,7 +572,7 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
                 Flags,
                 NumTeams3D,
                 NumThreads3D,
-                KernelArgs.DynCGGroupMem};
+                KernelArgs.DynCGroupMem};
 }
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
@@ -607,7 +650,7 @@ OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
     }
-
+    Fn->setCallingConv(Config.getRuntimeCC());
     // Add information if the runtime function takes a callback function
     if (FnID == OMPRTL___kmpc_fork_call || FnID == OMPRTL___kmpc_fork_teams) {
       if (!Fn->hasMetadata(LLVMContext::MD_callback)) {
@@ -639,6 +682,47 @@ OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
   return {FnTy, Fn};
 }
 
+Expected<BasicBlock *>
+OpenMPIRBuilder::FinalizationInfo::getFiniBB(IRBuilderBase &Builder) {
+  if (!FiniBB) {
+    Function *ParentFunc = Builder.GetInsertBlock()->getParent();
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    FiniBB = BasicBlock::Create(Builder.getContext(), ".fini", ParentFunc);
+    Builder.SetInsertPoint(FiniBB);
+    // FiniCB adds the branch to the exit stub.
+    if (Error Err = FiniCB(Builder.saveIP()))
+      return Err;
+  }
+  return FiniBB;
+}
+
+Error OpenMPIRBuilder::FinalizationInfo::mergeFiniBB(IRBuilderBase &Builder,
+                                                     BasicBlock *OtherFiniBB) {
+  // Simple case: FiniBB does not exist yet: re-use OtherFiniBB.
+  if (!FiniBB) {
+    FiniBB = OtherFiniBB;
+
+    Builder.SetInsertPoint(FiniBB->getFirstNonPHIIt());
+    if (Error Err = FiniCB(Builder.saveIP()))
+      return Err;
+
+    return Error::success();
+  }
+
+  // Move instructions from FiniBB to the start of OtherFiniBB.
+  auto EndIt = FiniBB->end();
+  if (FiniBB->size() >= 1)
+    if (auto Prev = std::prev(EndIt); Prev->isTerminator())
+      EndIt = Prev;
+  OtherFiniBB->splice(OtherFiniBB->getFirstNonPHIIt(), FiniBB, FiniBB->begin(),
+                      EndIt);
+
+  FiniBB->replaceAllUsesWith(OtherFiniBB);
+  FiniBB->eraseFromParent();
+  FiniBB = OtherFiniBB;
+  return Error::success();
+}
+
 Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
   FunctionCallee RTLFn = getOrCreateRuntimeFunction(M, FnID);
   auto *Fn = dyn_cast<llvm::Function>(RTLFn.getCallee());
@@ -646,12 +730,20 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
   return Fn;
 }
 
+CallInst *OpenMPIRBuilder::createRuntimeFunctionCall(FunctionCallee Callee,
+                                                     ArrayRef<Value *> Args,
+                                                     StringRef Name) {
+  CallInst *Call = Builder.CreateCall(Callee, Args, Name);
+  Call->setCallingConv(Config.getRuntimeCC());
+  return Call;
+}
+
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
 static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
                                                      Function *Function) {
   BasicBlock &EntryBlock = Function->getEntryBlock();
-  Instruction *MoveLocInst = EntryBlock.getFirstNonPHI();
+  BasicBlock::iterator MoveLocInst = EntryBlock.getFirstNonPHIIt();
 
   // Loop over blocks looking for constant allocas, skipping the entry block
   // as any allocas there are already in the desired location.
@@ -755,8 +847,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         Instruction &I = *It;
         It++;
 
-        if (I.isTerminator())
+        if (I.isTerminator()) {
+          // Absorb any debug value that terminator may have
+          if (OI.EntryBB->getTerminator())
+            OI.EntryBB->getTerminator()->adoptDbgRecords(
+                &ArtificialEntry, I.getIterator(), false);
           continue;
+        }
 
         I.moveBeforePreserving(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
       }
@@ -765,7 +862,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
       ArtificialEntry.eraseFromParent();
     }
     assert(&OutlinedFn->getEntryBlock() == OI.EntryBB);
-    assert(OutlinedFn && OutlinedFn->getNumUses() == 1);
+    assert(OutlinedFn && OutlinedFn->hasNUses(1));
 
     // Run a user callback, e.g. to add attributes.
     if (OI.PostOutlineCB)
@@ -813,7 +910,11 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
     emitUsed("llvm.compiler.used", LLVMCompilerUsed);
   }
+
+  IsFinalized = true;
 }
+
+bool OpenMPIRBuilder::isFinalized() { return IsFinalized; }
 
 OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
@@ -828,6 +929,38 @@ GlobalValue *OpenMPIRBuilder::createGlobalFlag(unsigned Value, StringRef Name) {
   GV->setVisibility(GlobalValue::HiddenVisibility);
 
   return GV;
+}
+
+void OpenMPIRBuilder::emitUsed(StringRef Name, ArrayRef<WeakTrackingVH> List) {
+  if (List.empty())
+    return;
+
+  // Convert List to what ConstantArray needs.
+  SmallVector<Constant *, 8> UsedArray;
+  UsedArray.resize(List.size());
+  for (unsigned I = 0, E = List.size(); I != E; ++I)
+    UsedArray[I] = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+        cast<Constant>(&*List[I]), Builder.getPtrTy());
+
+  if (UsedArray.empty())
+    return;
+  ArrayType *ATy = ArrayType::get(Builder.getPtrTy(), UsedArray.size());
+
+  auto *GV = new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
+                                ConstantArray::get(ATy, UsedArray), Name);
+
+  GV->setSection("llvm.metadata");
+}
+
+GlobalVariable *
+OpenMPIRBuilder::emitKernelExecutionMode(StringRef KernelName,
+                                         OMPTgtExecModeFlags Mode) {
+  auto *Int8Ty = Builder.getInt8Ty();
+  auto *GVMode = new GlobalVariable(
+      M, Int8Ty, /*isConstant=*/true, GlobalValue::WeakAnyLinkage,
+      ConstantInt::get(Int8Ty, Mode), Twine(KernelName, "_exec_mode"));
+  GVMode->setVisibility(GlobalVariable::ProtectedVisibility);
+  return GVMode;
 }
 
 Constant *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
@@ -845,6 +978,13 @@ Constant *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
                              ConstantInt::get(Int32, uint32_t(LocFlags)),
                              ConstantInt::get(Int32, Reserve2Flags),
                              ConstantInt::get(Int32, SrcLocStrSize), SrcLocStr};
+
+    size_t SrcLocStrArgIdx = 4;
+    if (OpenMPIRBuilder::Ident->getElementType(SrcLocStrArgIdx)
+            ->getPointerAddressSpace() !=
+        IdentData[SrcLocStrArgIdx]->getType()->getPointerAddressSpace())
+      IdentData[SrcLocStrArgIdx] = ConstantExpr::getAddrSpaceCast(
+          SrcLocStr, OpenMPIRBuilder::Ident->getElementType(SrcLocStrArgIdx));
     Constant *Initializer =
         ConstantStruct::get(OpenMPIRBuilder::Ident, IdentData);
 
@@ -885,8 +1025,9 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr,
           GV.getInitializer() == Initializer)
         return SrcLocStr = ConstantExpr::getPointerCast(&GV, Int8Ptr);
 
-    SrcLocStr = Builder.CreateGlobalString(LocStr, /* Name */ "",
-                                           /* AddressSpace */ 0, &M);
+    SrcLocStr = Builder.CreateGlobalString(
+        LocStr, /*Name=*/"", M.getDataLayout().getDefaultGlobalsAddressSpace(),
+        &M);
   }
   return SrcLocStr;
 }
@@ -939,7 +1080,7 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(const LocationDescription &Loc,
 }
 
 Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
-  return Builder.CreateCall(
+  return createRuntimeFunctionCall(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_global_thread_num), Ident,
       "omp_global_thread_num");
 }
@@ -984,11 +1125,11 @@ OpenMPIRBuilder::createBarrier(const LocationDescription &Loc, Directive Kind,
   bool UseCancelBarrier =
       !ForceSimpleCall && isLastFinalizationInfoCancellable(OMPD_parallel);
 
-  Value *Result =
-      Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
-                             UseCancelBarrier ? OMPRTL___kmpc_cancel_barrier
-                                              : OMPRTL___kmpc_barrier),
-                         Args);
+  Value *Result = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(UseCancelBarrier
+                                        ? OMPRTL___kmpc_cancel_barrier
+                                        : OMPRTL___kmpc_barrier),
+      Args);
 
   if (UseCancelBarrier && CheckCancelFlag)
     if (Error Err = emitCancelationCheckImpl(Result, OMPD_parallel))
@@ -1008,8 +1149,20 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   auto *UI = Builder.CreateUnreachable();
 
   Instruction *ThenTI = UI, *ElseTI = nullptr;
-  if (IfCondition)
+  if (IfCondition) {
     SplitBlockAndInsertIfThenElse(IfCondition, UI, &ThenTI, &ElseTI);
+
+    // Even if the if condition evaluates to false, this should count as a
+    // cancellation point
+    Builder.SetInsertPoint(ElseTI);
+    auto ElseIP = Builder.saveIP();
+
+    InsertPointOrErrorTy IPOrErr = createCancellationPoint(
+        LocationDescription{ElseIP, Loc.DL}, CanceledDirective);
+    if (!IPOrErr)
+      return IPOrErr;
+  }
+
   Builder.SetInsertPoint(ThenTI);
 
   Value *CancelKind = nullptr;
@@ -1027,23 +1180,50 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
-  Value *Result = Builder.CreateCall(
+  Value *Result = createRuntimeFunctionCall(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancel), Args);
-  auto ExitCB = [this, CanceledDirective, Loc](InsertPointTy IP) -> Error {
-    if (CanceledDirective == OMPD_parallel) {
-      IRBuilder<>::InsertPointGuard IPG(Builder);
-      Builder.restoreIP(IP);
-      return createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
-                           omp::Directive::OMPD_unknown,
-                           /* ForceSimpleCall */ false,
-                           /* CheckCancelFlag */ false)
-          .takeError();
-    }
-    return Error::success();
-  };
 
   // The actual cancel logic is shared with others, e.g., cancel_barriers.
-  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective, ExitCB))
+  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective))
+    return Err;
+
+  // Update the insertion point and remove the terminator we introduced.
+  Builder.SetInsertPoint(UI->getParent());
+  UI->eraseFromParent();
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createCancellationPoint(const LocationDescription &Loc,
+                                         omp::Directive CanceledDirective) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // LLVM utilities like blocks with terminators.
+  auto *UI = Builder.CreateUnreachable();
+  Builder.SetInsertPoint(UI);
+
+  Value *CancelKind = nullptr;
+  switch (CanceledDirective) {
+#define OMP_CANCEL_KIND(Enum, Str, DirectiveEnum, Value)                       \
+  case DirectiveEnum:                                                          \
+    CancelKind = Builder.getInt32(Value);                                      \
+    break;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  default:
+    llvm_unreachable("Unknown cancel kind!");
+  }
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
+  Value *Result = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancellationpoint), Args);
+
+  // The actual cancel logic is shared with others, e.g., cancel_barriers.
+  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective))
     return Err;
 
   // Update the insertion point and remove the terminator we introduced.
@@ -1063,7 +1243,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
   Builder.restoreIP(AllocaIP);
   auto *KernelArgsPtr =
       Builder.CreateAlloca(OpenMPIRBuilder::KernelArgs, nullptr, "kernel_args");
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   for (unsigned I = 0, Size = KernelArgs.size(); I != Size; ++I) {
     llvm::Value *Arg =
@@ -1076,7 +1256,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
   SmallVector<Value *> OffloadingArgs{Ident,      DeviceID, NumTeams,
                                       NumThreads, HostPtr,  KernelArgsPtr};
 
-  Return = Builder.CreateCall(
+  Return = createRuntimeFunctionCall(
       getOrCreateRuntimeFunction(M, OMPRTL___tgt_target_kernel),
       OffloadingArgs);
 
@@ -1091,7 +1271,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitKernelLaunch(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Builder.restoreIP(Loc.IP);
   // On top of the arrays that were filled up, the target offloading call
   // takes as arguments the device id as well as the host pointer. The host
   // pointer is used by the runtime library to identify the current target
@@ -1148,8 +1327,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitKernelLaunch(
 }
 
 Error OpenMPIRBuilder::emitCancelationCheckImpl(
-    Value *CancelFlag, omp::Directive CanceledDirective,
-    FinalizeCallbackTy ExitCB) {
+    Value *CancelFlag, omp::Directive CanceledDirective) {
   assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
          "Unexpected cancellation!");
 
@@ -1176,13 +1354,12 @@ Error OpenMPIRBuilder::emitCancelationCheckImpl(
 
   // From the cancellation block we finalize all variables and go to the
   // post finalization block that is known to the FiniCB callback.
-  Builder.SetInsertPoint(CancellationBlock);
-  if (ExitCB)
-    if (Error Err = ExitCB(Builder.saveIP()))
-      return Err;
   auto &FI = FinalizationStack.back();
-  if (Error Err = FI.FiniCB(Builder.saveIP()))
-    return Err;
+  Expected<BasicBlock *> FiniBBOrErr = FI.getFiniBB(Builder);
+  if (!FiniBBOrErr)
+    return FiniBBOrErr.takeError();
+  Builder.SetInsertPoint(CancellationBlock);
+  Builder.CreateBr(*FiniBBOrErr);
 
   // The continuation block is where code generation continues.
   Builder.SetInsertPoint(NonCancellationBlock, NonCancellationBlock->begin());
@@ -1192,7 +1369,7 @@ Error OpenMPIRBuilder::emitCancelationCheckImpl(
 // Callback used to create OpenMP runtime calls to support
 // omp parallel clause for the device.
 // We need to use this callback to replace call to the OutlinedFn in OuterFn
-// by the call to the OpenMP DeviceRTL runtime function (kmpc_parallel_51)
+// by the call to the OpenMP DeviceRTL runtime function (kmpc_parallel_60)
 static void targetParallelCallback(
     OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn, Function *OuterFn,
     BasicBlock *OuterAllocaBB, Value *Ident, Value *IfCondition,
@@ -1230,7 +1407,7 @@ static void targetParallelCallback(
     Args = Builder.CreatePointerCast(ArgsAlloca, PtrTy);
   Builder.restoreIP(CurrentIP);
 
-  // Store captured vars which are used by kmpc_parallel_51
+  // Store captured vars which are used by kmpc_parallel_60
   for (unsigned Idx = 0; Idx < NumCapturedVars; Idx++) {
     Value *V = *(CI->arg_begin() + 2 + Idx);
     Value *StoreAddress = Builder.CreateConstInBoundsGEP2_64(
@@ -1242,25 +1419,25 @@ static void targetParallelCallback(
       IfCondition ? Builder.CreateSExtOrTrunc(IfCondition, OMPIRBuilder->Int32)
                   : Builder.getInt32(1);
 
-  // Build kmpc_parallel_51 call
-  Value *Parallel51CallArgs[] = {
+  // Build kmpc_parallel_60 call
+  Value *Parallel60CallArgs[] = {
       /* identifier*/ Ident,
       /* global thread num*/ ThreadID,
       /* if expression */ Cond,
       /* number of threads */ NumThreads ? NumThreads : Builder.getInt32(-1),
       /* Proc bind */ Builder.getInt32(-1),
-      /* outlined function */
-      Builder.CreateBitCast(&OutlinedFn, OMPIRBuilder->ParallelTaskPtr),
+      /* outlined function */ &OutlinedFn,
       /* wrapper function */ NullPtrValue,
       /* arguments of the outlined funciton*/ Args,
-      /* number of arguments */ Builder.getInt64(NumCapturedVars)};
+      /* number of arguments */ Builder.getInt64(NumCapturedVars),
+      /* strict for number of threads */ Builder.getInt32(0)};
 
   FunctionCallee RTLFn =
-      OMPIRBuilder->getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_parallel_51);
+      OMPIRBuilder->getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_parallel_60);
 
-  Builder.CreateCall(RTLFn, Parallel51CallArgs);
+  OMPIRBuilder->createRuntimeFunctionCall(RTLFn, Parallel60CallArgs);
 
-  LLVM_DEBUG(dbgs() << "With kmpc_parallel_51 placed: "
+  LLVM_DEBUG(dbgs() << "With kmpc_parallel_60 placed: "
                     << *Builder.GetInsertBlock()->getParent() << "\n");
 
   // Initialize the local TID stack location with the argument value.
@@ -1324,9 +1501,8 @@ hostParallelCallback(OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn,
   Builder.SetInsertPoint(CI);
 
   // Build call __kmpc_fork_call[_if](Ident, n, microtask, var1, .., varn);
-  Value *ForkCallArgs[] = {
-      Ident, Builder.getInt32(NumCapturedVars),
-      Builder.CreateBitCast(&OutlinedFn, OMPIRBuilder->ParallelTaskPtr)};
+  Value *ForkCallArgs[] = {Ident, Builder.getInt32(NumCapturedVars),
+                           &OutlinedFn};
 
   SmallVector<Value *, 16> RealArgs;
   RealArgs.append(std::begin(ForkCallArgs), std::end(ForkCallArgs));
@@ -1343,10 +1519,8 @@ hostParallelCallback(OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn,
     Value *NullPtrValue = Constant::getNullValue(PtrTy);
     RealArgs.push_back(NullPtrValue);
   }
-  if (IfCondition && RealArgs.back()->getType() != PtrTy)
-    RealArgs.back() = Builder.CreateBitCast(RealArgs.back(), PtrTy);
 
-  Builder.CreateCall(RTLFn, RealArgs);
+  OMPIRBuilder->createRuntimeFunctionCall(RTLFn, RealArgs);
 
   LLVM_DEBUG(dbgs() << "With fork_call placed: "
                     << *Builder.GetInsertBlock()->getParent() << "\n");
@@ -1392,7 +1566,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     Value *Args[] = {
         Ident, ThreadID,
         Builder.CreateIntCast(NumThreads, Int32, /*isSigned*/ false)};
-    Builder.CreateCall(
+    createRuntimeFunctionCall(
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_threads), Args);
   }
 
@@ -1401,7 +1575,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     Value *Args[] = {
         Ident, ThreadID,
         ConstantInt::get(Int32, unsigned(ProcBind), /*isSigned=*/true)};
-    Builder.CreateCall(
+    createRuntimeFunctionCall(
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_proc_bind), Args);
   }
 
@@ -1429,12 +1603,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     // Add additional casts to enforce pointers in zero address space
     TIDAddr = new AddrSpaceCastInst(
         TIDAddrAlloca, PointerType ::get(M.getContext(), 0), "tid.addr.ascast");
-    TIDAddr->insertAfter(TIDAddrAlloca);
+    TIDAddr->insertAfter(TIDAddrAlloca->getIterator());
     ToBeDeleted.push_back(TIDAddr);
     ZeroAddr = new AddrSpaceCastInst(ZeroAddrAlloca,
                                      PointerType ::get(M.getContext(), 0),
                                      "zero.addr.ascast");
-    ZeroAddr->insertAfter(ZeroAddrAlloca);
+    ZeroAddr->insertAfter(ZeroAddrAlloca->getIterator());
     ToBeDeleted.push_back(ZeroAddr);
   }
 
@@ -1536,14 +1710,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
   OI.collectBlocks(ParallelRegionBlockSet, Blocks);
-
-  // Ensure a single exit node for the outlined region by creating one.
-  // We might have multiple incoming edges to the exit now due to finalizations,
-  // e.g., cancel calls that cause the control flow to leave the region.
-  BasicBlock *PRegOutlinedExitBB = PRegExitBB;
-  PRegExitBB = SplitBlock(PRegExitBB, &*PRegExitBB->getFirstInsertionPt());
-  PRegOutlinedExitBB->setName("omp.par.outlined.exit");
-  Blocks.push_back(PRegOutlinedExitBB);
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
@@ -1683,8 +1849,18 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
 
   InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
-  if (Error Err = FiniCB(PreFiniIP))
-    return Err;
+  Expected<BasicBlock *> FiniBBOrErr = FiniInfo.getFiniBB(Builder);
+  if (!FiniBBOrErr)
+    return FiniBBOrErr.takeError();
+  {
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    Builder.restoreIP(PreFiniIP);
+    Builder.CreateBr(*FiniBBOrErr);
+    // There's currently a branch to omp.par.exit. Delete it. We will get there
+    // via the fini block
+    if (Instruction *Term = Builder.GetInsertBlock()->getTerminator())
+      Term->eraseFromParent();
+  }
 
   // Register the outlined info.
   addOutlineInfo(std::move(OI));
@@ -1701,7 +1877,8 @@ void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc) {
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Value *Args[] = {getOrCreateIdent(SrcLocStr, SrcLocStrSize)};
 
-  Builder.CreateCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush), Args);
+  createRuntimeFunctionCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush),
+                            Args);
 }
 
 void OpenMPIRBuilder::createFlush(const LocationDescription &Loc) {
@@ -1719,8 +1896,8 @@ void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
   Value *Args[] = {Ident, getOrCreateThreadID(Ident)};
 
   // Ignore return result until untied tasks are supported.
-  Builder.CreateCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskwait),
-                     Args);
+  createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskwait), Args);
 }
 
 void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc) {
@@ -1737,8 +1914,8 @@ void OpenMPIRBuilder::emitTaskyieldImpl(const LocationDescription &Loc) {
   Constant *I32Null = ConstantInt::getNullValue(Int32);
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), I32Null};
 
-  Builder.CreateCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskyield),
-                     Args);
+  createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskyield), Args);
 }
 
 void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
@@ -1787,6 +1964,8 @@ static Value *emitTaskDependencies(
   Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
   DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
 
+  Builder.restoreIP(OldIP);
+
   for (const auto &[DepIdx, Dep] : enumerate(Dependencies)) {
     Value *Base =
         Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, DepIdx);
@@ -1811,14 +1990,14 @@ static Value *emitTaskDependencies(
                          static_cast<unsigned int>(Dep.DepKind)),
         Flags);
   }
-  Builder.restoreIP(OldIP);
   return DepArray;
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    SmallVector<DependData> Dependencies, bool Mergeable, Value *EventHandle) {
+    SmallVector<DependData> Dependencies, bool Mergeable, Value *EventHandle,
+    Value *Priority) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -1864,10 +2043,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                      Mergeable, EventHandle, TaskAllocaBB,
+                      Mergeable, Priority, EventHandle, TaskAllocaBB,
                       ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
-    assert(OutlinedFn.getNumUses() == 1 &&
+    assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
 
@@ -1892,6 +2071,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     // Task is not final iff (Flags & 2) == 0.
     // Task is mergeable iff (Flags & 4) == 4.
     // Task is not mergeable iff (Flags & 4) == 0.
+    // Task is priority iff (Flags & 32) == 32.
+    // Task is not priority iff (Flags & 32) == 0.
     // TODO: Handle the other flags.
     Value *Flags = Builder.getInt32(Tied);
     if (Final) {
@@ -1902,6 +2083,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
 
     if (Mergeable)
       Flags = Builder.CreateOr(Builder.getInt32(4), Flags);
+    if (Priority)
+      Flags = Builder.CreateOr(Builder.getInt32(32), Flags);
 
     // Argument - `sizeof_kmp_task_t` (TaskSize)
     // Tasksize refers to the size in bytes of kmp_task_t data structure
@@ -1930,7 +2113,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
     // variables must be copied before the task is run (TaskData)
-    CallInst *TaskData = Builder.CreateCall(
+    CallInst *TaskData = createRuntimeFunctionCall(
         TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
@@ -1942,7 +2125,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Function *TaskDetachFn = getOrCreateRuntimeFunctionPtr(
           OMPRTL___kmpc_task_allow_completion_event);
       llvm::Value *EventVal =
-          Builder.CreateCall(TaskDetachFn, {Ident, ThreadID, TaskData});
+          createRuntimeFunctionCall(TaskDetachFn, {Ident, ThreadID, TaskData});
       llvm::Value *EventHandleAddr =
           Builder.CreatePointerBitCastOrAddrSpaceCast(EventHandle,
                                                       Builder.getPtrTy(0));
@@ -1958,46 +2141,34 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
                            SharedsSize);
     }
 
-    Value *DepArray = nullptr;
-    if (Dependencies.size()) {
-      InsertPointTy OldIP = Builder.saveIP();
-      Builder.SetInsertPoint(
-          &OldIP.getBlock()->getParent()->getEntryBlock().back());
-
-      Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
-      DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
-
-      unsigned P = 0;
-      for (const DependData &Dep : Dependencies) {
-        Value *Base =
-            Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, P);
-        // Store the pointer to the variable
-        Value *Addr = Builder.CreateStructGEP(
-            DependInfo, Base,
-            static_cast<unsigned int>(RTLDependInfoFields::BaseAddr));
-        Value *DepValPtr =
-            Builder.CreatePtrToInt(Dep.DepVal, Builder.getInt64Ty());
-        Builder.CreateStore(DepValPtr, Addr);
-        // Store the size of the variable
-        Value *Size = Builder.CreateStructGEP(
-            DependInfo, Base,
-            static_cast<unsigned int>(RTLDependInfoFields::Len));
-        Builder.CreateStore(Builder.getInt64(M.getDataLayout().getTypeStoreSize(
-                                Dep.DepValueType)),
-                            Size);
-        // Store the dependency kind
-        Value *Flags = Builder.CreateStructGEP(
-            DependInfo, Base,
-            static_cast<unsigned int>(RTLDependInfoFields::Flags));
-        Builder.CreateStore(
-            ConstantInt::get(Builder.getInt8Ty(),
-                             static_cast<unsigned int>(Dep.DepKind)),
-            Flags);
-        ++P;
-      }
-
-      Builder.restoreIP(OldIP);
+    if (Priority) {
+      //
+      // The return type of "__kmpc_omp_task_alloc" is "kmp_task_t *",
+      // we populate the priority information into the "kmp_task_t" here
+      //
+      // The struct "kmp_task_t" definition is available in kmp.h
+      // kmp_task_t = { shareds, routine, part_id, data1, data2 }
+      // data2 is used for priority
+      //
+      Type *Int32Ty = Builder.getInt32Ty();
+      Constant *Zero = ConstantInt::get(Int32Ty, 0);
+      // kmp_task_t* => { ptr }
+      Type *TaskPtr = StructType::get(VoidPtr);
+      Value *TaskGEP =
+          Builder.CreateInBoundsGEP(TaskPtr, TaskData, {Zero, Zero});
+      // kmp_task_t => { ptr, ptr, i32, ptr, ptr }
+      Type *TaskStructType = StructType::get(
+          VoidPtr, VoidPtr, Builder.getInt32Ty(), VoidPtr, VoidPtr);
+      Value *PriorityData = Builder.CreateInBoundsGEP(
+          TaskStructType, TaskGEP, {Zero, ConstantInt::get(Int32Ty, 4)});
+      // kmp_cmplrdata_t => { ptr, ptr }
+      Type *CmplrStructType = StructType::get(VoidPtr, VoidPtr);
+      Value *CmplrData = Builder.CreateInBoundsGEP(CmplrStructType,
+                                                   PriorityData, {Zero, Zero});
+      Builder.CreateStore(Priority, CmplrData);
     }
+
+    Value *DepArray = emitTaskDependencies(*this, Dependencies);
 
     // In the presence of the `if` clause, the following IR is generated:
     //    ...
@@ -2031,7 +2202,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       if (Dependencies.size()) {
         Function *TaskWaitFn =
             getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
-        Builder.CreateCall(
+        createRuntimeFunctionCall(
             TaskWaitFn,
             {Ident, ThreadID, Builder.getInt32(Dependencies.size()), DepArray,
              ConstantInt::get(Builder.getInt32Ty(), 0),
@@ -2041,21 +2212,21 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
       Function *TaskCompleteFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_complete_if0);
-      Builder.CreateCall(TaskBeginFn, {Ident, ThreadID, TaskData});
+      createRuntimeFunctionCall(TaskBeginFn, {Ident, ThreadID, TaskData});
       CallInst *CI = nullptr;
       if (HasShareds)
-        CI = Builder.CreateCall(&OutlinedFn, {ThreadID, TaskData});
+        CI = createRuntimeFunctionCall(&OutlinedFn, {ThreadID, TaskData});
       else
-        CI = Builder.CreateCall(&OutlinedFn, {ThreadID});
+        CI = createRuntimeFunctionCall(&OutlinedFn, {ThreadID});
       CI->setDebugLoc(StaleCI->getDebugLoc());
-      Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
+      createRuntimeFunctionCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
       Builder.SetInsertPoint(ThenTI);
     }
 
     if (Dependencies.size()) {
       Function *TaskFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_with_deps);
-      Builder.CreateCall(
+      createRuntimeFunctionCall(
           TaskFn,
           {Ident, ThreadID, TaskData, Builder.getInt32(Dependencies.size()),
            DepArray, ConstantInt::get(Builder.getInt32Ty(), 0),
@@ -2064,7 +2235,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     } else {
       // Emit the @__kmpc_omp_task runtime call to spawn the task
       Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
-      Builder.CreateCall(TaskFn, {Ident, ThreadID, TaskData});
+      createRuntimeFunctionCall(TaskFn, {Ident, ThreadID, TaskData});
     }
 
     StaleCI->eraseFromParent();
@@ -2101,7 +2272,7 @@ OpenMPIRBuilder::createTaskgroup(const LocationDescription &Loc,
   // Emit the @__kmpc_taskgroup runtime call to start the taskgroup
   Function *TaskgroupFn =
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskgroup);
-  Builder.CreateCall(TaskgroupFn, {Ident, ThreadID});
+  createRuntimeFunctionCall(TaskgroupFn, {Ident, ThreadID});
 
   BasicBlock *TaskgroupExitBB = splitBB(Builder, true, "taskgroup.exit");
   if (Error Err = BodyGenCB(AllocaIP, Builder.saveIP()))
@@ -2111,7 +2282,7 @@ OpenMPIRBuilder::createTaskgroup(const LocationDescription &Loc,
   // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup
   Function *EndTaskgroupFn =
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_taskgroup);
-  Builder.CreateCall(EndTaskgroupFn, {Ident, ThreadID});
+  createRuntimeFunctionCall(EndTaskgroupFn, {Ident, ThreadID});
 
   return Builder.saveIP();
 }
@@ -2125,27 +2296,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  auto FiniCBWrapper = [&](InsertPointTy IP) {
-    if (IP.getBlock()->end() != IP.getPoint())
-      return FiniCB(IP);
-    // This must be done otherwise any nested constructs using FinalizeOMPRegion
-    // will fail because that function requires the Finalization Basic Block to
-    // have a terminator, which is already removed by EmitOMPRegionBody.
-    // IP is currently at cancelation block.
-    // We need to backtrack to the condition block to fetch
-    // the exit block and create a branch from cancelation
-    // to exit block.
-    IRBuilder<>::InsertPointGuard IPG(Builder);
-    Builder.restoreIP(IP);
-    auto *CaseBB = IP.getBlock()->getSinglePredecessor();
-    auto *CondBB = CaseBB->getSinglePredecessor()->getSinglePredecessor();
-    auto *ExitBB = CondBB->getTerminator()->getSuccessor(1);
-    Instruction *I = Builder.CreateBr(ExitBB);
-    IP = InsertPointTy(I->getParent(), I->getIterator());
-    return FiniCB(IP);
-  };
-
-  FinalizationStack.push_back({FiniCBWrapper, OMPD_sections, IsCancellable});
+  FinalizationStack.push_back({FiniCB, OMPD_sections, IsCancellable});
 
   // Each section is emitted as a switch case
   // Each finalization callback is handled from clang.EmitOMPSectionDirective()
@@ -2198,23 +2349,21 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSections(
     return LoopInfo.takeError();
 
   InsertPointOrErrorTy WsloopIP =
-      applyStaticWorkshareLoop(Loc.DL, *LoopInfo, AllocaIP, !IsNowait);
+      applyStaticWorkshareLoop(Loc.DL, *LoopInfo, AllocaIP,
+                               WorksharingLoopType::ForStaticLoop, !IsNowait);
   if (!WsloopIP)
     return WsloopIP.takeError();
   InsertPointTy AfterIP = *WsloopIP;
+
+  BasicBlock *LoopFini = AfterIP.getBlock()->getSinglePredecessor();
+  assert(LoopFini && "Bad structure of static workshare loop finalization");
 
   // Apply the finalization callback in LoopAfterBB
   auto FiniInfo = FinalizationStack.pop_back_val();
   assert(FiniInfo.DK == OMPD_sections &&
          "Unexpected finalization stack state!");
-  if (FinalizeCallbackTy &CB = FiniInfo.FiniCB) {
-    Builder.restoreIP(AfterIP);
-    BasicBlock *FiniBB =
-        splitBBWithSuffix(Builder, /*CreateBranch=*/true, "sections.fini");
-    if (Error Err = CB(Builder.saveIP()))
-      return Err;
-    AfterIP = {FiniBB, FiniBB->begin()};
-  }
+  if (Error Err = FiniInfo.mergeFiniBB(Builder, LoopFini))
+    return Err;
 
   return AfterIP;
 }
@@ -2260,37 +2409,15 @@ static OpenMPIRBuilder::InsertPointTy getInsertPointAfterInstr(Instruction *I) {
   return OpenMPIRBuilder::InsertPointTy(I->getParent(), IT);
 }
 
-void OpenMPIRBuilder::emitUsed(StringRef Name,
-                               std::vector<WeakTrackingVH> &List) {
-  if (List.empty())
-    return;
-
-  // Convert List to what ConstantArray needs.
-  SmallVector<Constant *, 8> UsedArray;
-  UsedArray.resize(List.size());
-  for (unsigned I = 0, E = List.size(); I != E; ++I)
-    UsedArray[I] = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-        cast<Constant>(&*List[I]), Builder.getPtrTy());
-
-  if (UsedArray.empty())
-    return;
-  ArrayType *ATy = ArrayType::get(Builder.getPtrTy(), UsedArray.size());
-
-  auto *GV = new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                                ConstantArray::get(ATy, UsedArray), Name);
-
-  GV->setSection("llvm.metadata");
-}
-
 Value *OpenMPIRBuilder::getGPUThreadID() {
-  return Builder.CreateCall(
+  return createRuntimeFunctionCall(
       getOrCreateRuntimeFunction(M,
                                  OMPRTL___kmpc_get_hardware_thread_id_in_block),
       {});
 }
 
 Value *OpenMPIRBuilder::getGPUWarpSize() {
-  return Builder.CreateCall(
+  return createRuntimeFunctionCall(
       getOrCreateRuntimeFunction(M, OMPRTL___kmpc_get_warp_size), {});
 }
 
@@ -2349,13 +2476,14 @@ Value *OpenMPIRBuilder::createRuntimeShuffleFunction(InsertPointTy AllocaIP,
   Value *WarpSizeCast =
       Builder.CreateIntCast(WarpSize, Builder.getInt16Ty(), /*isSigned=*/true);
   Value *ShuffleCall =
-      Builder.CreateCall(ShuffleFunc, {ElemCast, Offset, WarpSizeCast});
+      createRuntimeFunctionCall(ShuffleFunc, {ElemCast, Offset, WarpSizeCast});
   return castValueToType(AllocaIP, ShuffleCall, CastTy);
 }
 
 void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
                                       Value *DstAddr, Type *ElemType,
-                                      Value *Offset, Type *ReductionArrayTy) {
+                                      Value *Offset, Type *ReductionArrayTy,
+                                      bool IsByRefElem) {
   uint64_t Size = M.getDataLayout().getTypeStoreSize(ElemType);
   // Create the loop over the big sized data.
   // ptr = (void*)Elem;
@@ -2437,10 +2565,10 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
   }
 }
 
-void OpenMPIRBuilder::emitReductionListCopy(
+Error OpenMPIRBuilder::emitReductionListCopy(
     InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
     ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
-    CopyOptionsTy CopyOptions) {
+    ArrayRef<bool> IsByRef, CopyOptionsTy CopyOptions) {
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   Value *RemoteLaneOffset = CopyOptions.RemoteLaneOffset;
@@ -2450,6 +2578,7 @@ void OpenMPIRBuilder::emitReductionListCopy(
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
     Value *SrcElementAddr = nullptr;
+    AllocaInst *DestAlloca = nullptr;
     Value *DestElementAddr = nullptr;
     Value *DestElementPtrAddr = nullptr;
     // Should we shuffle in an element from a remote lane?
@@ -2469,14 +2598,18 @@ void OpenMPIRBuilder::emitReductionListCopy(
     DestElementPtrAddr = Builder.CreateInBoundsGEP(
         ReductionArrayTy, DestBase,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
+    bool IsByRefElem = (!IsByRef.empty() && IsByRef[En.index()]);
     switch (Action) {
     case CopyAction::RemoteLaneToThread: {
       InsertPointTy CurIP = Builder.saveIP();
       Builder.restoreIP(AllocaIP);
-      AllocaInst *DestAlloca = Builder.CreateAlloca(RI.ElementType, nullptr,
-                                                    ".omp.reduction.element");
+
+      Type *DestAllocaType =
+          IsByRefElem ? RI.ByRefAllocatedType : RI.ElementType;
+      DestAlloca = Builder.CreateAlloca(DestAllocaType, nullptr,
+                                        ".omp.reduction.element");
       DestAlloca->setAlignment(
-          M.getDataLayout().getPrefTypeAlign(RI.ElementType));
+          M.getDataLayout().getPrefTypeAlign(DestAllocaType));
       DestElementAddr = DestAlloca;
       DestElementAddr =
           Builder.CreateAddrSpaceCast(DestElementAddr, Builder.getPtrTy(),
@@ -2496,8 +2629,57 @@ void OpenMPIRBuilder::emitReductionListCopy(
     // Now that all active lanes have read the element in the
     // Reduce list, shuffle over the value from the remote lane.
     if (ShuffleInElement) {
-      shuffleAndStore(AllocaIP, SrcElementAddr, DestElementAddr, RI.ElementType,
-                      RemoteLaneOffset, ReductionArrayTy);
+      Type *ShuffleType = RI.ElementType;
+      Value *ShuffleSrcAddr = SrcElementAddr;
+      Value *ShuffleDestAddr = DestElementAddr;
+      AllocaInst *LocalStorage = nullptr;
+
+      if (IsByRefElem) {
+        assert(RI.ByRefElementType && "Expected by-ref element type to be set");
+        assert(RI.ByRefAllocatedType &&
+               "Expected by-ref allocated type to be set");
+        // For by-ref reductions, we need to copy from the remote lane the
+        // actual value of the partial reduction computed by that remote lane;
+        // rather than, for example, a pointer to that data or, even worse, a
+        // pointer to the descriptor of the by-ref reduction element.
+        ShuffleType = RI.ByRefElementType;
+
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(), ShuffleSrcAddr, ShuffleSrcAddr);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
+        ShuffleSrcAddr = Builder.CreateLoad(Builder.getPtrTy(), ShuffleSrcAddr);
+
+        {
+          InsertPointTy OldIP = Builder.saveIP();
+          Builder.restoreIP(AllocaIP);
+
+          LocalStorage = Builder.CreateAlloca(ShuffleType);
+          Builder.restoreIP(OldIP);
+          ShuffleDestAddr = LocalStorage;
+        }
+      }
+
+      shuffleAndStore(AllocaIP, ShuffleSrcAddr, ShuffleDestAddr, ShuffleType,
+                      RemoteLaneOffset, ReductionArrayTy, IsByRefElem);
+
+      if (IsByRefElem) {
+        Value *GEP;
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(),
+                             Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                 DestAlloca, Builder.getPtrTy(), ".ascast"),
+                             GEP);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
+        Builder.CreateStore(Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                LocalStorage, Builder.getPtrTy(), ".ascast"),
+                            GEP);
+      }
     } else {
       switch (RI.EvaluationKind) {
       case EvalKind::Scalar: {
@@ -2548,11 +2730,13 @@ void OpenMPIRBuilder::emitReductionListCopy(
       Builder.CreateStore(CastDestAddr, DestElementPtrAddr);
     }
   }
+
+  return Error::success();
 }
 
 Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
     const LocationDescription &Loc, ArrayRef<ReductionInfo> ReductionInfos,
-    AttributeList FuncAttrs) {
+    AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   InsertPointTy SavedIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
@@ -2633,7 +2817,9 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
     // memory.
     //
     const ReductionInfo &RI = En.value();
-    unsigned RealTySize = M.getDataLayout().getTypeAllocSize(RI.ElementType);
+    bool IsByRefElem = !IsByRef.empty() && IsByRef[En.index()];
+    unsigned RealTySize = M.getDataLayout().getTypeAllocSize(
+        IsByRefElem ? RI.ByRefElementType : RI.ElementType);
     for (unsigned TySize = 4; TySize > 0 && RealTySize > 0; TySize /= 2) {
       Type *CType = Builder.getIntNTy(TySize * 8);
 
@@ -2696,6 +2882,17 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
                                      ConstantInt::get(IndexTy, En.index())});
       // elemptr = ((CopyType*)(elemptrptr)) + I
       Value *ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtrPtr);
+
+      if (IsByRefElem) {
+        InsertPointOrErrorTy GenRes =
+            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+
+        if (!GenRes)
+          return GenRes.takeError();
+
+        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+      }
+
       if (NumIters > 1)
         ElemPtr = Builder.CreateGEP(Builder.getInt32Ty(), ElemPtr, Cnt);
 
@@ -2751,6 +2948,17 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
       Value *TargetElemPtrVal =
           Builder.CreateLoad(Builder.getPtrTy(), TargetElemPtrPtr);
       Value *TargetElemPtr = TargetElemPtrVal;
+
+      if (IsByRefElem) {
+        InsertPointOrErrorTy GenRes =
+            RI.DataPtrPtrGen(Builder.saveIP(), TargetElemPtr, TargetElemPtr);
+
+        if (!GenRes)
+          return GenRes.takeError();
+
+        TargetElemPtr = Builder.CreateLoad(Builder.getPtrTy(), TargetElemPtr);
+      }
+
       if (NumIters > 1)
         TargetElemPtr =
             Builder.CreateGEP(Builder.getInt32Ty(), TargetElemPtr, Cnt);
@@ -2785,9 +2993,9 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   return WcFunc;
 }
 
-Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
+Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
-    AttributeList FuncAttrs) {
+    AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy =
       FunctionType::get(Builder.getVoidTy(),
@@ -2866,9 +3074,13 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   // This loop iterates through the list of reduce elements and copies,
   // element by element, from a remote lane in the warp to RemoteReduceList,
   // hosted on the thread's stack.
-  emitReductionListCopy(
+  Error EmitRedLsCpRes = emitReductionListCopy(
       AllocaIP, CopyAction::RemoteLaneToThread, RedListArrayTy, ReductionInfos,
-      ReduceList, RemoteListAddrCast, {RemoteLaneOffset, nullptr, nullptr});
+      ReduceList, RemoteListAddrCast, IsByRef,
+      {RemoteLaneOffset, nullptr, nullptr});
+
+  if (EmitRedLsCpRes)
+    return EmitRedLsCpRes;
 
   // The actions to be performed on the Remote Reduce list is dependent
   // on the algorithm version.
@@ -2915,7 +3127,7 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
       ReduceList, Builder.getPtrTy());
   Value *RemoteReduceListPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
       RemoteListAddrCast, Builder.getPtrTy());
-  Builder.CreateCall(ReduceFn, {LocalReduceListPtr, RemoteReduceListPtr})
+  createRuntimeFunctionCall(ReduceFn, {LocalReduceListPtr, RemoteReduceListPtr})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateBr(MergeBB);
 
@@ -2936,8 +3148,14 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   Builder.CreateCondBr(CondCopy, CpyThenBB, CpyElseBB);
 
   emitBlock(CpyThenBB, Builder.GetInsertBlock()->getParent());
-  emitReductionListCopy(AllocaIP, CopyAction::ThreadCopy, RedListArrayTy,
-                        ReductionInfos, RemoteListAddrCast, ReduceList);
+
+  EmitRedLsCpRes = emitReductionListCopy(
+      AllocaIP, CopyAction::ThreadCopy, RedListArrayTy, ReductionInfos,
+      RemoteListAddrCast, ReduceList, IsByRef);
+
+  if (EmitRedLsCpRes)
+    return EmitRedLsCpRes;
+
   Builder.CreateBr(CpyMergeBB);
 
   emitBlock(CpyElseBB, Builder.GetInsertBlock()->getParent());
@@ -2950,9 +3168,9 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   return SarFunc;
 }
 
-Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
+Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
-    AttributeList FuncAttrs) {
+    AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
@@ -3022,7 +3240,21 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
 
     switch (RI.EvaluationKind) {
     case EvalKind::Scalar: {
-      Value *TargetElement = Builder.CreateLoad(RI.ElementType, ElemPtr);
+      Value *TargetElement;
+
+      if (IsByRef.empty() || !IsByRef[En.index()]) {
+        TargetElement = Builder.CreateLoad(RI.ElementType, ElemPtr);
+      } else {
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
+        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+        TargetElement = Builder.CreateLoad(RI.ByRefElementType, ElemPtr);
+      }
+
       Builder.CreateStore(TargetElement, GlobVal);
       break;
     }
@@ -3060,9 +3292,9 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
   return LtGCFunc;
 }
 
-Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
+Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
-    Type *ReductionsBufferTy, AttributeList FuncAttrs) {
+    Type *ReductionsBufferTy, AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
@@ -3101,6 +3333,8 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
   Value *LocalReduceList =
       Builder.CreateAlloca(RedListArrayTy, nullptr, ".omp.reduction.red_list");
 
+  InsertPointTy AllocaIP{EntryBlock, EntryBlock->begin()};
+
   Value *BufferArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
       BufferArgAlloca, Builder.getPtrTy(),
       BufferArgAlloca->getName() + ".ascast");
@@ -3122,6 +3356,20 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
+    const ReductionInfo &RI = En.value();
+    Value *ByRefAlloc;
+
+    if (!IsByRef.empty() && IsByRef[En.index()]) {
+      InsertPointTy OldIP = Builder.saveIP();
+      Builder.restoreIP(AllocaIP);
+
+      ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
+      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
+
+      Builder.restoreIP(OldIP);
+    }
+
     Value *TargetElementPtrPtr = Builder.CreateInBoundsGEP(
         RedListArrayTy, LocalReduceListAddrCast,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
@@ -3130,45 +3378,59 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
     // Global = Buffer.VD[Idx];
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
         ReductionsBufferTy, BufferVD, 0, En.index());
-    Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
+
+    if (!IsByRef.empty() && IsByRef[En.index()]) {
+      Value *ByRefDataPtr;
+
+      InsertPointOrErrorTy GenResult =
+          RI.DataPtrPtrGen(Builder.saveIP(), ByRefAlloc, ByRefDataPtr);
+
+      if (!GenResult)
+        return GenResult.takeError();
+
+      Builder.CreateStore(GlobValPtr, ByRefDataPtr);
+      Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
+    } else {
+      Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
+    }
   }
 
   // Call reduce_function(GlobalReduceList, ReduceList)
   Value *ReduceList =
       Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
-  Builder.CreateCall(ReduceFn, {LocalReduceListAddrCast, ReduceList})
+  createRuntimeFunctionCall(ReduceFn, {LocalReduceListAddrCast, ReduceList})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
   Builder.restoreIP(OldIP);
   return LtGRFunc;
 }
 
-Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
+Expected<Function *> OpenMPIRBuilder::emitGlobalToListCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
-    AttributeList FuncAttrs) {
+    AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
       {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getPtrTy()},
       /* IsVarArg */ false);
-  Function *LtGCFunc =
+  Function *GtLCFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_global_to_list_copy_func", &M);
-  LtGCFunc->setAttributes(FuncAttrs);
-  LtGCFunc->addParamAttr(0, Attribute::NoUndef);
-  LtGCFunc->addParamAttr(1, Attribute::NoUndef);
-  LtGCFunc->addParamAttr(2, Attribute::NoUndef);
+  GtLCFunc->setAttributes(FuncAttrs);
+  GtLCFunc->addParamAttr(0, Attribute::NoUndef);
+  GtLCFunc->addParamAttr(1, Attribute::NoUndef);
+  GtLCFunc->addParamAttr(2, Attribute::NoUndef);
 
-  BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGCFunc);
+  BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", GtLCFunc);
   Builder.SetInsertPoint(EntryBlock);
 
   // Buffer: global reduction buffer.
-  Argument *BufferArg = LtGCFunc->getArg(0);
+  Argument *BufferArg = GtLCFunc->getArg(0);
   // Idx: index of the buffer.
-  Argument *IdxArg = LtGCFunc->getArg(1);
+  Argument *IdxArg = GtLCFunc->getArg(1);
   // ReduceList: thread local Reduce list.
-  Argument *ReduceListArg = LtGCFunc->getArg(2);
+  Argument *ReduceListArg = GtLCFunc->getArg(2);
 
   Value *BufferArgAlloca = Builder.CreateAlloca(Builder.getPtrTy(), nullptr,
                                                 BufferArg->getName() + ".addr");
@@ -3212,7 +3474,20 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
 
     switch (RI.EvaluationKind) {
     case EvalKind::Scalar: {
-      Value *TargetElement = Builder.CreateLoad(RI.ElementType, GlobValPtr);
+      Type *ElemType = RI.ElementType;
+
+      if (!IsByRef.empty() && IsByRef[En.index()]) {
+        ElemType = RI.ByRefElementType;
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
+        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+      }
+
+      Value *TargetElement = Builder.CreateLoad(ElemType, GlobValPtr);
       Builder.CreateStore(TargetElement, ElemPtr);
       break;
     }
@@ -3248,35 +3523,35 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
 
   Builder.CreateRetVoid();
   Builder.restoreIP(OldIP);
-  return LtGCFunc;
+  return GtLCFunc;
 }
 
-Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
+Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
-    Type *ReductionsBufferTy, AttributeList FuncAttrs) {
+    Type *ReductionsBufferTy, AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   auto *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
       {Builder.getPtrTy(), Builder.getInt32Ty(), Builder.getPtrTy()},
       /* IsVarArg */ false);
-  Function *LtGRFunc =
+  Function *GtLRFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_global_to_list_reduce_func", &M);
-  LtGRFunc->setAttributes(FuncAttrs);
-  LtGRFunc->addParamAttr(0, Attribute::NoUndef);
-  LtGRFunc->addParamAttr(1, Attribute::NoUndef);
-  LtGRFunc->addParamAttr(2, Attribute::NoUndef);
+  GtLRFunc->setAttributes(FuncAttrs);
+  GtLRFunc->addParamAttr(0, Attribute::NoUndef);
+  GtLRFunc->addParamAttr(1, Attribute::NoUndef);
+  GtLRFunc->addParamAttr(2, Attribute::NoUndef);
 
-  BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGRFunc);
+  BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", GtLRFunc);
   Builder.SetInsertPoint(EntryBlock);
 
   // Buffer: global reduction buffer.
-  Argument *BufferArg = LtGRFunc->getArg(0);
+  Argument *BufferArg = GtLRFunc->getArg(0);
   // Idx: index of the buffer.
-  Argument *IdxArg = LtGRFunc->getArg(1);
+  Argument *IdxArg = GtLRFunc->getArg(1);
   // ReduceList: thread local Reduce list.
-  Argument *ReduceListArg = LtGRFunc->getArg(2);
+  Argument *ReduceListArg = GtLRFunc->getArg(2);
 
   Value *BufferArgAlloca = Builder.CreateAlloca(Builder.getPtrTy(), nullptr,
                                                 BufferArg->getName() + ".addr");
@@ -3291,6 +3566,8 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
   // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
   Value *LocalReduceList =
       Builder.CreateAlloca(RedListArrayTy, nullptr, ".omp.reduction.red_list");
+
+  InsertPointTy AllocaIP{EntryBlock, EntryBlock->begin()};
 
   Value *BufferArgAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
       BufferArgAlloca, Builder.getPtrTy(),
@@ -3313,6 +3590,20 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
+    const ReductionInfo &RI = En.value();
+    Value *ByRefAlloc;
+
+    if (!IsByRef.empty() && IsByRef[En.index()]) {
+      InsertPointTy OldIP = Builder.saveIP();
+      Builder.restoreIP(AllocaIP);
+
+      ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
+      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
+
+      Builder.restoreIP(OldIP);
+    }
+
     Value *TargetElementPtrPtr = Builder.CreateInBoundsGEP(
         RedListArrayTy, ReductionList,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
@@ -3321,17 +3612,29 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
         Builder.CreateInBoundsGEP(ReductionsBufferTy, BufferVal, Idxs);
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
         ReductionsBufferTy, BufferVD, 0, En.index());
-    Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
+
+    if (!IsByRef.empty() && IsByRef[En.index()]) {
+      Value *ByRefDataPtr;
+      InsertPointOrErrorTy GenResult =
+          RI.DataPtrPtrGen(Builder.saveIP(), ByRefAlloc, ByRefDataPtr);
+      if (!GenResult)
+        return GenResult.takeError();
+
+      Builder.CreateStore(GlobValPtr, ByRefDataPtr);
+      Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
+    } else {
+      Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
+    }
   }
 
   // Call reduce_function(ReduceList, GlobalReduceList)
   Value *ReduceList =
       Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
-  Builder.CreateCall(ReduceFn, {ReduceList, ReductionList})
+  createRuntimeFunctionCall(ReduceFn, {ReduceList, ReductionList})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
   Builder.restoreIP(OldIP);
-  return LtGRFunc;
+  return GtLRFunc;
 }
 
 std::string OpenMPIRBuilder::getReductionFuncName(StringRef Name) const {
@@ -3342,7 +3645,8 @@ std::string OpenMPIRBuilder::getReductionFuncName(StringRef Name) const {
 
 Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
-    ReductionGenCBKind ReductionGenCBKind, AttributeList FuncAttrs) {
+    ArrayRef<bool> IsByRef, ReductionGenCBKind ReductionGenCBKind,
+    AttributeList FuncAttrs) {
   auto *FuncTy = FunctionType::get(Builder.getVoidTy(),
                                    {Builder.getPtrTy(), Builder.getPtrTy()},
                                    /* IsVarArg */ false);
@@ -3403,8 +3707,14 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
       LHSPtrs.emplace_back(LHSPtr);
       RHSPtrs.emplace_back(RHSPtr);
     } else {
-      Value *LHS = Builder.CreateLoad(RI.ElementType, LHSPtr);
-      Value *RHS = Builder.CreateLoad(RI.ElementType, RHSPtr);
+      Value *LHS = LHSPtr;
+      Value *RHS = RHSPtr;
+
+      if (!IsByRef.empty() && !IsByRef[En.index()]) {
+        LHS = Builder.CreateLoad(RI.ElementType, LHSPtr);
+        RHS = Builder.CreateLoad(RI.ElementType, RHSPtr);
+      }
+
       Value *Reduced;
       InsertPointOrErrorTy AfterIP =
           RI.ReductionGen(Builder.saveIP(), LHS, RHS, Reduced);
@@ -3412,7 +3722,11 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
         return AfterIP.takeError();
       if (!Builder.GetInsertBlock())
         return ReductionFunc;
-      Builder.CreateStore(Reduced, LHSPtr);
+
+      Builder.restoreIP(*AfterIP);
+
+      if (!IsByRef.empty() && !IsByRef[En.index()])
+        Builder.CreateStore(Reduced, LHSPtr);
     }
   }
 
@@ -3465,7 +3779,7 @@ checkReductionInfos(ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
-    bool IsNoWait, bool IsTeamsReduction, bool HasDistribute,
+    ArrayRef<bool> IsByRef, bool IsNoWait, bool IsTeamsReduction,
     ReductionGenCBKind ReductionGenCBKind, std::optional<omp::GV> GridValue,
     unsigned ReductionBufNum, Value *SrcLocInfo) {
   if (!updateToLocation(Loc))
@@ -3484,6 +3798,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   if (ReductionInfos.size() == 0)
     return Builder.saveIP();
 
+  BasicBlock *ContinuationBlock = nullptr;
+  if (ReductionGenCBKind != ReductionGenCBKind::Clang) {
+    // Copied code from createReductions
+    BasicBlock *InsertBlock = Loc.IP.getBlock();
+    ContinuationBlock =
+        InsertBlock->splitBasicBlock(Loc.IP.getPoint(), "reduce.finalize");
+    InsertBlock->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
+  }
+
   Function *CurFunc = Builder.GetInsertBlock()->getParent();
   AttributeList FuncAttrs;
   AttrBuilder AttrBldr(Ctx);
@@ -3493,9 +3817,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   FuncAttrs = FuncAttrs.addFnAttributes(Ctx, AttrBldr);
 
   CodeGenIP = Builder.saveIP();
-  Expected<Function *> ReductionResult =
-      createReductionFunction(Builder.GetInsertBlock()->getParent()->getName(),
-                              ReductionInfos, ReductionGenCBKind, FuncAttrs);
+  Expected<Function *> ReductionResult = createReductionFunction(
+      Builder.GetInsertBlock()->getParent()->getName(), ReductionInfos, IsByRef,
+      ReductionGenCBKind, FuncAttrs);
   if (!ReductionResult)
     return ReductionResult.takeError();
   Function *ReductionFunc = *ReductionResult;
@@ -3516,7 +3840,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // 1. Build a list of reduction variables.
   // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
   auto Size = ReductionInfos.size();
-  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *PtrTy = PointerType::get(Ctx, Config.getDefaultTargetAS());
+  Type *FuncPtrTy =
+      Builder.getPtrTy(M.getDataLayout().getProgramAddressSpace());
   Type *RedArrayTy = ArrayType::get(PtrTy, Size);
   CodeGenIP = Builder.saveIP();
   Builder.restoreIP(AllocaIP);
@@ -3532,15 +3858,25 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     Value *ElemPtr = Builder.CreateInBoundsGEP(
         RedArrayTy, ReductionList,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
+
+    Value *PrivateVar = RI.PrivateVariable;
+    bool IsByRefElem = !IsByRef.empty() && IsByRef[En.index()];
+    if (IsByRefElem)
+      PrivateVar = Builder.CreateLoad(RI.ElementType, PrivateVar);
+
     Value *CastElem =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(RI.PrivateVariable, PtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(PrivateVar, PtrTy);
     Builder.CreateStore(CastElem, ElemPtr);
   }
   CodeGenIP = Builder.saveIP();
-  Function *SarFunc =
-      emitShuffleAndReduceFunction(ReductionInfos, ReductionFunc, FuncAttrs);
+  Expected<Function *> SarFunc = emitShuffleAndReduceFunction(
+      ReductionInfos, ReductionFunc, FuncAttrs, IsByRef);
+
+  if (!SarFunc)
+    return SarFunc.takeError();
+
   Expected<Function *> CopyResult =
-      emitInterWarpCopyFunction(Loc, ReductionInfos, FuncAttrs);
+      emitInterWarpCopyFunction(Loc, ReductionInfos, FuncAttrs, IsByRef);
   if (!CopyResult)
     return CopyResult.takeError();
   Function *WcFunc = *CopyResult;
@@ -3554,54 +3890,70 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     auto Size = M.getDataLayout().getTypeStoreSize(En.value().ElementType);
     if (Size > MaxDataSize)
       MaxDataSize = Size;
-    ReductionTypeArgs.emplace_back(En.value().ElementType);
+    Type *RedTypeArg = (!IsByRef.empty() && IsByRef[En.index()])
+                           ? En.value().ByRefElementType
+                           : En.value().ElementType;
+    ReductionTypeArgs.emplace_back(RedTypeArg);
   }
   Value *ReductionDataSize =
       Builder.getInt64(MaxDataSize * ReductionInfos.size());
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(SarFunc, PtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(*SarFunc, FuncPtrTy);
     Value *WcFuncCast =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, PtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, FuncPtrTy);
     Value *Args[] = {SrcLocInfo, ReductionDataSize, RL, SarFuncCast,
                      WcFuncCast};
     Function *Pv2Ptr = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2);
-    Res = Builder.CreateCall(Pv2Ptr, Args);
+    Res = createRuntimeFunctionCall(Pv2Ptr, Args);
   } else {
     CodeGenIP = Builder.saveIP();
     StructType *ReductionsBufferTy = StructType::create(
         Ctx, ReductionTypeArgs, "struct._globalized_locals_ty");
-    Function *RedFixedBuferFn = getOrCreateRuntimeFunctionPtr(
+    Function *RedFixedBufferFn = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_reduction_get_fixed_buffer);
-    Function *LtGCFunc = emitListToGlobalCopyFunction(
-        ReductionInfos, ReductionsBufferTy, FuncAttrs);
-    Function *LtGRFunc = emitListToGlobalReduceFunction(
-        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs);
-    Function *GtLCFunc = emitGlobalToListCopyFunction(
-        ReductionInfos, ReductionsBufferTy, FuncAttrs);
-    Function *GtLRFunc = emitGlobalToListReduceFunction(
-        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs);
+
+    Expected<Function *> LtGCFunc = emitListToGlobalCopyFunction(
+        ReductionInfos, ReductionsBufferTy, FuncAttrs, IsByRef);
+    if (!LtGCFunc)
+      return LtGCFunc.takeError();
+
+    Expected<Function *> LtGRFunc = emitListToGlobalReduceFunction(
+        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs, IsByRef);
+    if (!LtGRFunc)
+      return LtGRFunc.takeError();
+
+    Expected<Function *> GtLCFunc = emitGlobalToListCopyFunction(
+        ReductionInfos, ReductionsBufferTy, FuncAttrs, IsByRef);
+    if (!GtLCFunc)
+      return GtLCFunc.takeError();
+
+    Expected<Function *> GtLRFunc = emitGlobalToListReduceFunction(
+        ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs, IsByRef);
+    if (!GtLRFunc)
+      return GtLRFunc.takeError();
+
     Builder.restoreIP(CodeGenIP);
 
-    Value *KernelTeamsReductionPtr = Builder.CreateCall(
-        RedFixedBuferFn, {}, "_openmp_teams_reductions_buffer_$_$ptr");
+    Value *KernelTeamsReductionPtr = createRuntimeFunctionCall(
+        RedFixedBufferFn, {}, "_openmp_teams_reductions_buffer_$_$ptr");
 
     Value *Args3[] = {SrcLocInfo,
                       KernelTeamsReductionPtr,
                       Builder.getInt32(ReductionBufNum),
                       ReductionDataSize,
                       RL,
-                      SarFunc,
+                      *SarFunc,
                       WcFunc,
-                      LtGCFunc,
-                      LtGRFunc,
-                      GtLCFunc,
-                      GtLRFunc};
+                      *LtGCFunc,
+                      *LtGRFunc,
+                      *GtLCFunc,
+                      *GtLRFunc};
 
     Function *TeamsReduceFn = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2);
-    Res = Builder.CreateCall(TeamsReduceFn, Args3);
+    Res = createRuntimeFunctionCall(TeamsReduceFn, Args3);
   }
 
   // 5. Build if (res == 1)
@@ -3619,7 +3971,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
-    Value *LHS = RI.Variable;
+    Type *ValueType = RI.ElementType;
+    Value *RedValue = RI.Variable;
     Value *RHS =
         Builder.CreatePointerBitCastOrAddrSpaceCast(RI.PrivateVariable, PtrTy);
 
@@ -3630,7 +3983,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
       // Fix the CallBack code genereated to use the correct Values for the LHS
       // and RHS
-      LHSPtr->replaceUsesWithIf(LHS, [ReductionFunc](const Use &U) {
+      LHSPtr->replaceUsesWithIf(RedValue, [ReductionFunc](const Use &U) {
         return cast<Instruction>(U.getUser())->getParent()->getParent() ==
                ReductionFunc;
       });
@@ -3639,11 +3992,28 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
                ReductionFunc;
       });
     } else {
-      assert(false && "Unhandled ReductionGenCBKind");
+      if (IsByRef.empty() || !IsByRef[En.index()]) {
+        RedValue = Builder.CreateLoad(ValueType, RI.Variable,
+                                      "red.value." + Twine(En.index()));
+      }
+      Value *PrivateRedValue = Builder.CreateLoad(
+          ValueType, RHS, "red.private.value" + Twine(En.index()));
+      Value *Reduced;
+      InsertPointOrErrorTy AfterIP =
+          RI.ReductionGen(Builder.saveIP(), RedValue, PrivateRedValue, Reduced);
+      if (!AfterIP)
+        return AfterIP.takeError();
+      Builder.restoreIP(*AfterIP);
+
+      if (!IsByRef.empty() && !IsByRef[En.index()])
+        Builder.CreateStore(Reduced, RI.Variable);
     }
   }
   emitBlock(ExitBB, CurFunc);
-
+  if (ContinuationBlock) {
+    Builder.CreateBr(ContinuationBlock);
+    Builder.SetInsertPoint(ContinuationBlock);
+  }
   Config.setEmitLLVMUsed();
 
   return Builder.saveIP();
@@ -3658,26 +4028,94 @@ static Function *getFreshReductionFunc(Module &M) {
                           ".omp.reduction.func", &M);
 }
 
-OpenMPIRBuilder::InsertPointOrErrorTy
-OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
-                                  InsertPointTy AllocaIP,
-                                  ArrayRef<ReductionInfo> ReductionInfos,
-                                  ArrayRef<bool> IsByRef, bool IsNoWait) {
-  assert(ReductionInfos.size() == IsByRef.size());
-  for (const ReductionInfo &RI : ReductionInfos) {
-    (void)RI;
-    assert(RI.Variable && "expected non-null variable");
-    assert(RI.PrivateVariable && "expected non-null private variable");
-    assert(RI.ReductionGen && "expected non-null reduction generator callback");
-    assert(RI.Variable->getType() == RI.PrivateVariable->getType() &&
-           "expected variables and their private equivalents to have the same "
-           "type");
-    assert(RI.Variable->getType()->isPointerTy() &&
-           "expected variables to be pointers");
+static Error populateReductionFunction(
+    Function *ReductionFunc,
+    ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
+    IRBuilder<> &Builder, ArrayRef<bool> IsByRef, bool IsGPU) {
+  Module *Module = ReductionFunc->getParent();
+  BasicBlock *ReductionFuncBlock =
+      BasicBlock::Create(Module->getContext(), "", ReductionFunc);
+  Builder.SetInsertPoint(ReductionFuncBlock);
+  Value *LHSArrayPtr = nullptr;
+  Value *RHSArrayPtr = nullptr;
+  if (IsGPU) {
+    // Need to alloca memory here and deal with the pointers before getting
+    // LHS/RHS pointers out
+    //
+    Argument *Arg0 = ReductionFunc->getArg(0);
+    Argument *Arg1 = ReductionFunc->getArg(1);
+    Type *Arg0Type = Arg0->getType();
+    Type *Arg1Type = Arg1->getType();
+
+    Value *LHSAlloca =
+        Builder.CreateAlloca(Arg0Type, nullptr, Arg0->getName() + ".addr");
+    Value *RHSAlloca =
+        Builder.CreateAlloca(Arg1Type, nullptr, Arg1->getName() + ".addr");
+    Value *LHSAddrCast =
+        Builder.CreatePointerBitCastOrAddrSpaceCast(LHSAlloca, Arg0Type);
+    Value *RHSAddrCast =
+        Builder.CreatePointerBitCastOrAddrSpaceCast(RHSAlloca, Arg1Type);
+    Builder.CreateStore(Arg0, LHSAddrCast);
+    Builder.CreateStore(Arg1, RHSAddrCast);
+    LHSArrayPtr = Builder.CreateLoad(Arg0Type, LHSAddrCast);
+    RHSArrayPtr = Builder.CreateLoad(Arg1Type, RHSAddrCast);
+  } else {
+    LHSArrayPtr = ReductionFunc->getArg(0);
+    RHSArrayPtr = ReductionFunc->getArg(1);
   }
+
+  unsigned NumReductions = ReductionInfos.size();
+  Type *RedArrayTy = ArrayType::get(Builder.getPtrTy(), NumReductions);
+
+  for (auto En : enumerate(ReductionInfos)) {
+    const OpenMPIRBuilder::ReductionInfo &RI = En.value();
+    Value *LHSI8PtrPtr = Builder.CreateConstInBoundsGEP2_64(
+        RedArrayTy, LHSArrayPtr, 0, En.index());
+    Value *LHSI8Ptr = Builder.CreateLoad(Builder.getPtrTy(), LHSI8PtrPtr);
+    Value *LHSPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        LHSI8Ptr, RI.Variable->getType());
+    Value *LHS = Builder.CreateLoad(RI.ElementType, LHSPtr);
+    Value *RHSI8PtrPtr = Builder.CreateConstInBoundsGEP2_64(
+        RedArrayTy, RHSArrayPtr, 0, En.index());
+    Value *RHSI8Ptr = Builder.CreateLoad(Builder.getPtrTy(), RHSI8PtrPtr);
+    Value *RHSPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        RHSI8Ptr, RI.PrivateVariable->getType());
+    Value *RHS = Builder.CreateLoad(RI.ElementType, RHSPtr);
+    Value *Reduced;
+    OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+        RI.ReductionGen(Builder.saveIP(), LHS, RHS, Reduced);
+    if (!AfterIP)
+      return AfterIP.takeError();
+
+    Builder.restoreIP(*AfterIP);
+    // TODO: Consider flagging an error.
+    if (!Builder.GetInsertBlock())
+      return Error::success();
+
+    // store is inside of the reduction region when using by-ref
+    if (!IsByRef[En.index()])
+      Builder.CreateStore(Reduced, LHSPtr);
+  }
+  Builder.CreateRetVoid();
+  return Error::success();
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
+    const LocationDescription &Loc, InsertPointTy AllocaIP,
+    ArrayRef<ReductionInfo> ReductionInfos, ArrayRef<bool> IsByRef,
+    bool IsNoWait, bool IsTeamsReduction) {
+  assert(ReductionInfos.size() == IsByRef.size());
+  if (Config.isGPU())
+    return createReductionsGPU(Loc, AllocaIP, Builder.saveIP(), ReductionInfos,
+                               IsByRef, IsNoWait, IsTeamsReduction);
+
+  checkReductionInfos(ReductionInfos, /*IsGPU*/ false);
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
+
+  if (ReductionInfos.size() == 0)
+    return Builder.saveIP();
 
   BasicBlock *InsertBlock = Loc.IP.getBlock();
   BasicBlock *ContinuationBlock =
@@ -3703,6 +4141,8 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
 
   // Emit a call to the runtime function that orchestrates the reduction.
   // Declare the reduction function in the process.
+  Type *IndexTy = Builder.getIndexTy(
+      M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   Function *Func = Builder.GetInsertBlock()->getParent();
   Module *Module = Func->getParent();
   uint32_t SrcLocStrSize;
@@ -3718,17 +4158,17 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   Constant *NumVariables = Builder.getInt32(NumReductions);
   const DataLayout &DL = Module->getDataLayout();
   unsigned RedArrayByteSize = DL.getTypeStoreSize(RedArrayTy);
-  Constant *RedArraySize = Builder.getInt64(RedArrayByteSize);
+  Constant *RedArraySize = ConstantInt::get(IndexTy, RedArrayByteSize);
   Function *ReductionFunc = getFreshReductionFunc(*Module);
   Value *Lock = getOMPCriticalRegionLock(".reduction");
   Function *ReduceFunc = getOrCreateRuntimeFunctionPtr(
       IsNoWait ? RuntimeFunction::OMPRTL___kmpc_reduce_nowait
                : RuntimeFunction::OMPRTL___kmpc_reduce);
   CallInst *ReduceCall =
-      Builder.CreateCall(ReduceFunc,
-                         {Ident, ThreadId, NumVariables, RedArraySize, RedArray,
-                          ReductionFunc, Lock},
-                         "reduce");
+      createRuntimeFunctionCall(ReduceFunc,
+                                {Ident, ThreadId, NumVariables, RedArraySize,
+                                 RedArray, ReductionFunc, Lock},
+                                "reduce");
 
   // Create final reduction entry blocks for the atomic and non-atomic case.
   // Emit IR that dispatches control flow to one of the blocks based on the
@@ -3775,7 +4215,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   Function *EndReduceFunc = getOrCreateRuntimeFunctionPtr(
       IsNoWait ? RuntimeFunction::OMPRTL___kmpc_end_reduce_nowait
                : RuntimeFunction::OMPRTL___kmpc_end_reduce);
-  Builder.CreateCall(EndReduceFunc, {Ident, ThreadId, Lock});
+  createRuntimeFunctionCall(EndReduceFunc, {Ident, ThreadId, Lock});
   Builder.CreateBr(ContinuationBlock);
 
   // Populate the atomic reduction using the atomic elementwise reduction
@@ -3800,38 +4240,13 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   // Populate the outlined reduction function using the elementwise reduction
   // function. Partial values are extracted from the type-erased array of
   // pointers to private variables.
-  BasicBlock *ReductionFuncBlock =
-      BasicBlock::Create(Module->getContext(), "", ReductionFunc);
-  Builder.SetInsertPoint(ReductionFuncBlock);
-  Value *LHSArrayPtr = ReductionFunc->getArg(0);
-  Value *RHSArrayPtr = ReductionFunc->getArg(1);
+  Error Err = populateReductionFunction(ReductionFunc, ReductionInfos, Builder,
+                                        IsByRef, /*isGPU=*/false);
+  if (Err)
+    return Err;
 
-  for (auto En : enumerate(ReductionInfos)) {
-    const ReductionInfo &RI = En.value();
-    Value *LHSI8PtrPtr = Builder.CreateConstInBoundsGEP2_64(
-        RedArrayTy, LHSArrayPtr, 0, En.index());
-    Value *LHSI8Ptr = Builder.CreateLoad(Builder.getPtrTy(), LHSI8PtrPtr);
-    Value *LHSPtr = Builder.CreateBitCast(LHSI8Ptr, RI.Variable->getType());
-    Value *LHS = Builder.CreateLoad(RI.ElementType, LHSPtr);
-    Value *RHSI8PtrPtr = Builder.CreateConstInBoundsGEP2_64(
-        RedArrayTy, RHSArrayPtr, 0, En.index());
-    Value *RHSI8Ptr = Builder.CreateLoad(Builder.getPtrTy(), RHSI8PtrPtr);
-    Value *RHSPtr =
-        Builder.CreateBitCast(RHSI8Ptr, RI.PrivateVariable->getType());
-    Value *RHS = Builder.CreateLoad(RI.ElementType, RHSPtr);
-    Value *Reduced;
-    InsertPointOrErrorTy AfterIP =
-        RI.ReductionGen(Builder.saveIP(), LHS, RHS, Reduced);
-    if (!AfterIP)
-      return AfterIP.takeError();
-    Builder.restoreIP(*AfterIP);
-    if (!Builder.GetInsertBlock())
-      return InsertPointTy();
-    // store is inside of the reduction region when using by-ref
-    if (!IsByRef[En.index()])
-      Builder.CreateStore(Reduced, LHSPtr);
-  }
-  Builder.CreateRetVoid();
+  if (!Builder.GetInsertBlock())
+    return InsertPointTy();
 
   Builder.SetInsertPoint(ContinuationBlock);
   return Builder.saveIP();
@@ -3852,10 +4267,10 @@ OpenMPIRBuilder::createMaster(const LocationDescription &Loc,
   Value *Args[] = {Ident, ThreadId};
 
   Function *EntryRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_master);
-  Instruction *EntryCall = Builder.CreateCall(EntryRTLFn, Args);
+  Instruction *EntryCall = createRuntimeFunctionCall(EntryRTLFn, Args);
 
   Function *ExitRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_master);
-  Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
+  Instruction *ExitCall = createRuntimeFunctionCall(ExitRTLFn, Args);
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
                               /*Conditional*/ true, /*hasFinalize*/ true);
@@ -3877,15 +4292,349 @@ OpenMPIRBuilder::createMasked(const LocationDescription &Loc,
   Value *ArgsEnd[] = {Ident, ThreadId};
 
   Function *EntryRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_masked);
-  Instruction *EntryCall = Builder.CreateCall(EntryRTLFn, Args);
+  Instruction *EntryCall = createRuntimeFunctionCall(EntryRTLFn, Args);
 
   Function *ExitRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_masked);
-  Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, ArgsEnd);
+  Instruction *ExitCall = createRuntimeFunctionCall(ExitRTLFn, ArgsEnd);
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
+static llvm::CallInst *emitNoUnwindRuntimeCall(IRBuilder<> &Builder,
+                                               llvm::FunctionCallee Callee,
+                                               ArrayRef<llvm::Value *> Args,
+                                               const llvm::Twine &Name) {
+  llvm::CallInst *Call = Builder.CreateCall(
+      Callee, Args, SmallVector<llvm::OperandBundleDef, 1>(), Name);
+  Call->setDoesNotThrow();
+  return Call;
+}
+
+// Expects input basic block is dominated by BeforeScanBB.
+// Once Scan directive is encountered, the code after scan directive should be
+// dominated by AfterScanBB. Scan directive splits the code sequence to
+// scan and input phase. Based on whether inclusive or exclusive
+// clause is used in the scan directive and whether input loop or scan loop
+// is lowered, it adds jumps to input and scan phase. First Scan loop is the
+// input loop and second is the scan loop. The code generated handles only
+// inclusive scans now.
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createScan(
+    const LocationDescription &Loc, InsertPointTy AllocaIP,
+    ArrayRef<llvm::Value *> ScanVars, ArrayRef<llvm::Type *> ScanVarsType,
+    bool IsInclusive, ScanInfo *ScanRedInfo) {
+  if (ScanRedInfo->OMPFirstScanLoop) {
+    llvm::Error Err = emitScanBasedDirectiveDeclsIR(AllocaIP, ScanVars,
+                                                    ScanVarsType, ScanRedInfo);
+    if (Err)
+      return Err;
+  }
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  llvm::Value *IV = ScanRedInfo->IV;
+
+  if (ScanRedInfo->OMPFirstScanLoop) {
+    // Emit buffer[i] = red; at the end of the input phase.
+    for (size_t i = 0; i < ScanVars.size(); i++) {
+      Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]];
+      Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
+      Type *DestTy = ScanVarsType[i];
+      Value *Val = Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
+      Value *Src = Builder.CreateLoad(DestTy, ScanVars[i]);
+
+      Builder.CreateStore(Src, Val);
+    }
+  }
+  Builder.CreateBr(ScanRedInfo->OMPScanLoopExit);
+  emitBlock(ScanRedInfo->OMPScanDispatch,
+            Builder.GetInsertBlock()->getParent());
+
+  if (!ScanRedInfo->OMPFirstScanLoop) {
+    IV = ScanRedInfo->IV;
+    // Emit red = buffer[i]; at the entrance to the scan phase.
+    // TODO: if exclusive scan, the red = buffer[i-1] needs to be updated.
+    for (size_t i = 0; i < ScanVars.size(); i++) {
+      Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]];
+      Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
+      Type *DestTy = ScanVarsType[i];
+      Value *SrcPtr =
+          Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
+      Value *Src = Builder.CreateLoad(DestTy, SrcPtr);
+      Builder.CreateStore(Src, ScanVars[i]);
+    }
+  }
+
+  // TODO: Update it to CreateBr and remove dead blocks
+  llvm::Value *CmpI = Builder.getInt1(true);
+  if (ScanRedInfo->OMPFirstScanLoop == IsInclusive) {
+    Builder.CreateCondBr(CmpI, ScanRedInfo->OMPBeforeScanBlock,
+                         ScanRedInfo->OMPAfterScanBlock);
+  } else {
+    Builder.CreateCondBr(CmpI, ScanRedInfo->OMPAfterScanBlock,
+                         ScanRedInfo->OMPBeforeScanBlock);
+  }
+  emitBlock(ScanRedInfo->OMPAfterScanBlock,
+            Builder.GetInsertBlock()->getParent());
+  Builder.SetInsertPoint(ScanRedInfo->OMPAfterScanBlock);
+  return Builder.saveIP();
+}
+
+Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
+    InsertPointTy AllocaIP, ArrayRef<Value *> ScanVars,
+    ArrayRef<Type *> ScanVarsType, ScanInfo *ScanRedInfo) {
+
+  Builder.restoreIP(AllocaIP);
+  // Create the shared pointer at alloca IP.
+  for (size_t i = 0; i < ScanVars.size(); i++) {
+    llvm::Value *BuffPtr =
+        Builder.CreateAlloca(Builder.getPtrTy(), nullptr, "vla");
+    (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]] = BuffPtr;
+  }
+
+  // Allocate temporary buffer by master thread
+  auto BodyGenCB = [&](InsertPointTy AllocaIP,
+                       InsertPointTy CodeGenIP) -> Error {
+    Builder.restoreIP(CodeGenIP);
+    Value *AllocSpan =
+        Builder.CreateAdd(ScanRedInfo->Span, Builder.getInt32(1));
+    for (size_t i = 0; i < ScanVars.size(); i++) {
+      Type *IntPtrTy = Builder.getInt32Ty();
+      Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
+      Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
+      Value *Buff = Builder.CreateMalloc(IntPtrTy, ScanVarsType[i], Allocsize,
+                                         AllocSpan, nullptr, "arr");
+      Builder.CreateStore(Buff, (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]]);
+    }
+    return Error::success();
+  };
+  // TODO: Perform finalization actions for variables. This has to be
+  // called for variables which have destructors/finalizers.
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { return llvm::Error::success(); };
+
+  Builder.SetInsertPoint(ScanRedInfo->OMPScanInit->getTerminator());
+  llvm::Value *FilterVal = Builder.getInt32(0);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
+
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+  BasicBlock *InputBB = Builder.GetInsertBlock();
+  if (InputBB->getTerminator())
+    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+  AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+
+  return Error::success();
+}
+
+Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
+    ArrayRef<ReductionInfo> ReductionInfos, ScanInfo *ScanRedInfo) {
+  auto BodyGenCB = [&](InsertPointTy AllocaIP,
+                       InsertPointTy CodeGenIP) -> Error {
+    Builder.restoreIP(CodeGenIP);
+    for (ReductionInfo RedInfo : ReductionInfos) {
+      Value *PrivateVar = RedInfo.PrivateVariable;
+      Value *OrigVar = RedInfo.Variable;
+      Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[PrivateVar];
+      Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
+
+      Type *SrcTy = RedInfo.ElementType;
+      Value *Val = Builder.CreateInBoundsGEP(SrcTy, Buff, ScanRedInfo->Span,
+                                             "arrayOffset");
+      Value *Src = Builder.CreateLoad(SrcTy, Val);
+
+      Builder.CreateStore(Src, OrigVar);
+      Builder.CreateFree(Buff);
+    }
+    return Error::success();
+  };
+  // TODO: Perform finalization actions for variables. This has to be
+  // called for variables which have destructors/finalizers.
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { return llvm::Error::success(); };
+
+  if (ScanRedInfo->OMPScanFinish->getTerminator())
+    Builder.SetInsertPoint(ScanRedInfo->OMPScanFinish->getTerminator());
+  else
+    Builder.SetInsertPoint(ScanRedInfo->OMPScanFinish);
+
+  llvm::Value *FilterVal = Builder.getInt32(0);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
+
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+  BasicBlock *InputBB = Builder.GetInsertBlock();
+  if (InputBB->getTerminator())
+    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+  AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+  return Error::success();
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
+    const LocationDescription &Loc,
+    ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
+    ScanInfo *ScanRedInfo) {
+
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+  auto BodyGenCB = [&](InsertPointTy AllocaIP,
+                       InsertPointTy CodeGenIP) -> Error {
+    Builder.restoreIP(CodeGenIP);
+    Function *CurFn = Builder.GetInsertBlock()->getParent();
+    // for (int k = 0; k <= ceil(log2(n)); ++k)
+    llvm::BasicBlock *LoopBB =
+        BasicBlock::Create(CurFn->getContext(), "omp.outer.log.scan.body");
+    llvm::BasicBlock *ExitBB =
+        splitBB(Builder, false, "omp.outer.log.scan.exit");
+    llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
+        Builder.GetInsertBlock()->getModule(),
+        (llvm::Intrinsic::ID)llvm::Intrinsic::log2, Builder.getDoubleTy());
+    llvm::BasicBlock *InputBB = Builder.GetInsertBlock();
+    llvm::Value *Arg =
+        Builder.CreateUIToFP(ScanRedInfo->Span, Builder.getDoubleTy());
+    llvm::Value *LogVal = emitNoUnwindRuntimeCall(Builder, F, Arg, "");
+    F = llvm::Intrinsic::getOrInsertDeclaration(
+        Builder.GetInsertBlock()->getModule(),
+        (llvm::Intrinsic::ID)llvm::Intrinsic::ceil, Builder.getDoubleTy());
+    LogVal = emitNoUnwindRuntimeCall(Builder, F, LogVal, "");
+    LogVal = Builder.CreateFPToUI(LogVal, Builder.getInt32Ty());
+    llvm::Value *NMin1 = Builder.CreateNUWSub(
+        ScanRedInfo->Span,
+        llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
+    Builder.SetInsertPoint(InputBB);
+    Builder.CreateBr(LoopBB);
+    emitBlock(LoopBB, CurFn);
+    Builder.SetInsertPoint(LoopBB);
+
+    PHINode *Counter = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+    // size pow2k = 1;
+    PHINode *Pow2K = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+    Counter->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 0),
+                         InputBB);
+    Pow2K->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 1),
+                       InputBB);
+    // for (size i = n - 1; i >= 2 ^ k; --i)
+    //   tmp[i] op= tmp[i-pow2k];
+    llvm::BasicBlock *InnerLoopBB =
+        BasicBlock::Create(CurFn->getContext(), "omp.inner.log.scan.body");
+    llvm::BasicBlock *InnerExitBB =
+        BasicBlock::Create(CurFn->getContext(), "omp.inner.log.scan.exit");
+    llvm::Value *CmpI = Builder.CreateICmpUGE(NMin1, Pow2K);
+    Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
+    emitBlock(InnerLoopBB, CurFn);
+    Builder.SetInsertPoint(InnerLoopBB);
+    PHINode *IVal = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+    IVal->addIncoming(NMin1, LoopBB);
+    for (ReductionInfo RedInfo : ReductionInfos) {
+      Value *ReductionVal = RedInfo.PrivateVariable;
+      Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[ReductionVal];
+      Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
+      Type *DestTy = RedInfo.ElementType;
+      Value *IV = Builder.CreateAdd(IVal, Builder.getInt32(1));
+      Value *LHSPtr =
+          Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
+      Value *OffsetIval = Builder.CreateNUWSub(IV, Pow2K);
+      Value *RHSPtr =
+          Builder.CreateInBoundsGEP(DestTy, Buff, OffsetIval, "arrayOffset");
+      Value *LHS = Builder.CreateLoad(DestTy, LHSPtr);
+      Value *RHS = Builder.CreateLoad(DestTy, RHSPtr);
+      llvm::Value *Result;
+      InsertPointOrErrorTy AfterIP =
+          RedInfo.ReductionGen(Builder.saveIP(), LHS, RHS, Result);
+      if (!AfterIP)
+        return AfterIP.takeError();
+      Builder.CreateStore(Result, LHSPtr);
+    }
+    llvm::Value *NextIVal = Builder.CreateNUWSub(
+        IVal, llvm::ConstantInt::get(Builder.getInt32Ty(), 1));
+    IVal->addIncoming(NextIVal, Builder.GetInsertBlock());
+    CmpI = Builder.CreateICmpUGE(NextIVal, Pow2K);
+    Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
+    emitBlock(InnerExitBB, CurFn);
+    llvm::Value *Next = Builder.CreateNUWAdd(
+        Counter, llvm::ConstantInt::get(Counter->getType(), 1));
+    Counter->addIncoming(Next, Builder.GetInsertBlock());
+    // pow2k <<= 1;
+    llvm::Value *NextPow2K = Builder.CreateShl(Pow2K, 1, "", /*HasNUW=*/true);
+    Pow2K->addIncoming(NextPow2K, Builder.GetInsertBlock());
+    llvm::Value *Cmp = Builder.CreateICmpNE(Next, LogVal);
+    Builder.CreateCondBr(Cmp, LoopBB, ExitBB);
+    Builder.SetInsertPoint(ExitBB->getFirstInsertionPt());
+    return Error::success();
+  };
+
+  // TODO: Perform finalization actions for variables. This has to be
+  // called for variables which have destructors/finalizers.
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { return llvm::Error::success(); };
+
+  llvm::Value *FilterVal = Builder.getInt32(0);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
+
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+  AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+  Error Err = emitScanBasedDirectiveFinalsIR(ReductionInfos, ScanRedInfo);
+  if (Err)
+    return Err;
+
+  return AfterIP;
+}
+
+Error OpenMPIRBuilder::emitScanBasedDirectiveIR(
+    llvm::function_ref<Error()> InputLoopGen,
+    llvm::function_ref<Error(LocationDescription Loc)> ScanLoopGen,
+    ScanInfo *ScanRedInfo) {
+
+  {
+    // Emit loop with input phase:
+    // for (i: 0..<num_iters>) {
+    //   <input phase>;
+    //   buffer[i] = red;
+    // }
+    ScanRedInfo->OMPFirstScanLoop = true;
+    Error Err = InputLoopGen();
+    if (Err)
+      return Err;
+  }
+  {
+    // Emit loop with scan phase:
+    // for (i: 0..<num_iters>) {
+    //   red = buffer[i];
+    //   <scan phase>;
+    // }
+    ScanRedInfo->OMPFirstScanLoop = false;
+    Error Err = ScanLoopGen(Builder.saveIP());
+    if (Err)
+      return Err;
+  }
+  return Error::success();
+}
+
+void OpenMPIRBuilder::createScanBBs(ScanInfo *ScanRedInfo) {
+  Function *Fun = Builder.GetInsertBlock()->getParent();
+  ScanRedInfo->OMPScanDispatch =
+      BasicBlock::Create(Fun->getContext(), "omp.inscan.dispatch");
+  ScanRedInfo->OMPAfterScanBlock =
+      BasicBlock::Create(Fun->getContext(), "omp.after.scan.bb");
+  ScanRedInfo->OMPBeforeScanBlock =
+      BasicBlock::Create(Fun->getContext(), "omp.before.scan.bb");
+  ScanRedInfo->OMPScanLoopExit =
+      BasicBlock::Create(Fun->getContext(), "omp.scan.loop.exit");
+}
 CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
     DebugLoc DL, Value *TripCount, Function *F, BasicBlock *PreInsertBefore,
     BasicBlock *PostInsertBefore, const Twine &Name) {
@@ -3983,10 +4732,79 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
   return CL;
 }
 
-Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
+Expected<ScanInfo *> OpenMPIRBuilder::scanInfoInitialize() {
+  ScanInfos.emplace_front();
+  ScanInfo *Result = &ScanInfos.front();
+  return Result;
+}
+
+Expected<SmallVector<llvm::CanonicalLoopInfo *>>
+OpenMPIRBuilder::createCanonicalScanLoops(
     const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
     Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
-    InsertPointTy ComputeIP, const Twine &Name) {
+    InsertPointTy ComputeIP, const Twine &Name, ScanInfo *ScanRedInfo) {
+  LocationDescription ComputeLoc =
+      ComputeIP.isSet() ? LocationDescription(ComputeIP, Loc.DL) : Loc;
+  updateToLocation(ComputeLoc);
+
+  SmallVector<CanonicalLoopInfo *> Result;
+
+  Value *TripCount = calculateCanonicalLoopTripCount(
+      ComputeLoc, Start, Stop, Step, IsSigned, InclusiveStop, Name);
+  ScanRedInfo->Span = TripCount;
+  ScanRedInfo->OMPScanInit = splitBB(Builder, true, "scan.init");
+  Builder.SetInsertPoint(ScanRedInfo->OMPScanInit);
+
+  auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
+    Builder.restoreIP(CodeGenIP);
+    ScanRedInfo->IV = IV;
+    createScanBBs(ScanRedInfo);
+    BasicBlock *InputBlock = Builder.GetInsertBlock();
+    Instruction *Terminator = InputBlock->getTerminator();
+    assert(Terminator->getNumSuccessors() == 1);
+    BasicBlock *ContinueBlock = Terminator->getSuccessor(0);
+    Terminator->setSuccessor(0, ScanRedInfo->OMPScanDispatch);
+    emitBlock(ScanRedInfo->OMPBeforeScanBlock,
+              Builder.GetInsertBlock()->getParent());
+    Builder.CreateBr(ScanRedInfo->OMPScanLoopExit);
+    emitBlock(ScanRedInfo->OMPScanLoopExit,
+              Builder.GetInsertBlock()->getParent());
+    Builder.CreateBr(ContinueBlock);
+    Builder.SetInsertPoint(
+        ScanRedInfo->OMPBeforeScanBlock->getFirstInsertionPt());
+    return BodyGenCB(Builder.saveIP(), IV);
+  };
+
+  const auto &&InputLoopGen = [&]() -> Error {
+    Expected<CanonicalLoopInfo *> LoopInfo = createCanonicalLoop(
+        Builder.saveIP(), BodyGen, Start, Stop, Step, IsSigned, InclusiveStop,
+        ComputeIP, Name, true, ScanRedInfo);
+    if (!LoopInfo)
+      return LoopInfo.takeError();
+    Result.push_back(*LoopInfo);
+    Builder.restoreIP((*LoopInfo)->getAfterIP());
+    return Error::success();
+  };
+  const auto &&ScanLoopGen = [&](LocationDescription Loc) -> Error {
+    Expected<CanonicalLoopInfo *> LoopInfo =
+        createCanonicalLoop(Loc, BodyGen, Start, Stop, Step, IsSigned,
+                            InclusiveStop, ComputeIP, Name, true, ScanRedInfo);
+    if (!LoopInfo)
+      return LoopInfo.takeError();
+    Result.push_back(*LoopInfo);
+    Builder.restoreIP((*LoopInfo)->getAfterIP());
+    ScanRedInfo->OMPScanFinish = Builder.GetInsertBlock();
+    return Error::success();
+  };
+  Error Err = emitScanBasedDirectiveIR(InputLoopGen, ScanLoopGen, ScanRedInfo);
+  if (Err)
+    return Err;
+  return Result;
+}
+
+Value *OpenMPIRBuilder::calculateCanonicalLoopTripCount(
+    const LocationDescription &Loc, Value *Start, Value *Stop, Value *Step,
+    bool IsSigned, bool InclusiveStop, const Twine &Name) {
 
   // Consider the following difficulties (assuming 8-bit signed integers):
   //  * Adding \p Step to the loop counter which passes \p Stop may overflow:
@@ -3999,9 +4817,7 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
   assert(IndVarTy == Stop->getType() && "Stop type mismatch");
   assert(IndVarTy == Step->getType() && "Step type mismatch");
 
-  LocationDescription ComputeLoc =
-      ComputeIP.isSet() ? LocationDescription(ComputeIP, Loc.DL) : Loc;
-  updateToLocation(ComputeLoc);
+  updateToLocation(Loc);
 
   ConstantInt *Zero = ConstantInt::get(IndVarTy, 0);
   ConstantInt *One = ConstantInt::get(IndVarTy, 1);
@@ -4041,17 +4857,53 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
     Value *OneCmp = Builder.CreateICmp(CmpInst::ICMP_ULE, Span, Incr);
     CountIfLooping = Builder.CreateSelect(OneCmp, One, CountIfTwo);
   }
-  Value *TripCount = Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping,
-                                          "omp_" + Name + ".tripcount");
+
+  return Builder.CreateSelect(ZeroCmp, Zero, CountIfLooping,
+                              "omp_" + Name + ".tripcount");
+}
+
+Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
+    const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
+    Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
+    InsertPointTy ComputeIP, const Twine &Name, bool InScan,
+    ScanInfo *ScanRedInfo) {
+  LocationDescription ComputeLoc =
+      ComputeIP.isSet() ? LocationDescription(ComputeIP, Loc.DL) : Loc;
+
+  Value *TripCount = calculateCanonicalLoopTripCount(
+      ComputeLoc, Start, Stop, Step, IsSigned, InclusiveStop, Name);
 
   auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
     Builder.restoreIP(CodeGenIP);
     Value *Span = Builder.CreateMul(IV, Step);
     Value *IndVar = Builder.CreateAdd(Span, Start);
+    if (InScan)
+      ScanRedInfo->IV = IndVar;
     return BodyGenCB(Builder.saveIP(), IndVar);
   };
-  LocationDescription LoopLoc = ComputeIP.isSet() ? Loc.IP : Builder.saveIP();
+  LocationDescription LoopLoc =
+      ComputeIP.isSet()
+          ? Loc
+          : LocationDescription(Builder.saveIP(),
+                                Builder.getCurrentDebugLocation());
   return createCanonicalLoop(LoopLoc, BodyGen, TripCount, Name);
+}
+
+// Returns an LLVM function to call for initializing loop bounds using OpenMP
+// static scheduling for composite `distribute parallel for` depending on
+// `type`. Only i32 and i64 are supported by the runtime. Always interpret
+// integers as unsigned similarly to CanonicalLoopInfo.
+static FunctionCallee
+getKmpcDistForStaticInitForType(Type *Ty, Module &M,
+                                OpenMPIRBuilder &OMPBuilder) {
+  unsigned Bitwidth = Ty->getIntegerBitWidth();
+  if (Bitwidth == 32)
+    return OMPBuilder.getOrCreateRuntimeFunction(
+        M, omp::RuntimeFunction::OMPRTL___kmpc_dist_for_static_init_4u);
+  if (Bitwidth == 64)
+    return OMPBuilder.getOrCreateRuntimeFunction(
+        M, omp::RuntimeFunction::OMPRTL___kmpc_dist_for_static_init_8u);
+  llvm_unreachable("unknown OpenMP loop iterator bitwidth");
 }
 
 // Returns an LLVM function to call for initializing loop bounds using OpenMP
@@ -4070,10 +4922,10 @@ static FunctionCallee getKmpcForStaticInitForType(Type *Ty, Module &M,
   llvm_unreachable("unknown OpenMP loop iterator bitwidth");
 }
 
-OpenMPIRBuilder::InsertPointOrErrorTy
-OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                          InsertPointTy AllocaIP,
-                                          bool NeedsBarrier) {
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
+    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+    WorksharingLoopType LoopType, bool NeedsBarrier, bool HasDistSchedule,
+    OMPScheduleType DistScheduleSchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
   assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
          "Require dedicated allocate IP");
@@ -4089,7 +4941,10 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   // Declare useful OpenMP runtime functions.
   Value *IV = CLI->getIndVar();
   Type *IVTy = IV->getType();
-  FunctionCallee StaticInit = getKmpcForStaticInitForType(IVTy, M, *this);
+  FunctionCallee StaticInit =
+      LoopType == WorksharingLoopType::DistributeForStaticLoop
+          ? getKmpcDistForStaticInitForType(IVTy, M, *this)
+          : getKmpcForStaticInitForType(IVTy, M, *this);
   FunctionCallee StaticFini =
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
@@ -4101,6 +4956,7 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
   Value *PUpperBound = Builder.CreateAlloca(IVTy, nullptr, "p.upperbound");
   Value *PStride = Builder.CreateAlloca(IVTy, nullptr, "p.stride");
+  CLI->setLastIter(PLastIter);
 
   // At the end of the preheader, prepare for calling the "init" function by
   // storing the current loop bounds into the allocated space. A canonical loop
@@ -4116,14 +4972,38 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
 
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
 
-  Constant *SchedulingType = ConstantInt::get(
-      I32Type, static_cast<int>(OMPScheduleType::UnorderedStatic));
+  OMPScheduleType SchedType =
+      (LoopType == WorksharingLoopType::DistributeStaticLoop)
+          ? OMPScheduleType::OrderedDistribute
+          : OMPScheduleType::UnorderedStatic;
+  Constant *SchedulingType =
+      ConstantInt::get(I32Type, static_cast<int>(SchedType));
 
   // Call the "init" function and update the trip count of the loop with the
   // value it produced.
-  Builder.CreateCall(StaticInit,
-                     {SrcLoc, ThreadNum, SchedulingType, PLastIter, PLowerBound,
-                      PUpperBound, PStride, One, Zero});
+  auto BuildInitCall = [LoopType, SrcLoc, ThreadNum, PLastIter, PLowerBound,
+                        PUpperBound, IVTy, PStride, One, Zero, StaticInit,
+                        this](Value *SchedulingType, auto &Builder) {
+    SmallVector<Value *, 10> Args({SrcLoc, ThreadNum, SchedulingType, PLastIter,
+                                   PLowerBound, PUpperBound});
+    if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
+      Value *PDistUpperBound =
+          Builder.CreateAlloca(IVTy, nullptr, "p.distupperbound");
+      Args.push_back(PDistUpperBound);
+    }
+    Args.append({PStride, One, Zero});
+    createRuntimeFunctionCall(StaticInit, Args);
+  };
+  BuildInitCall(SchedulingType, Builder);
+  if (HasDistSchedule &&
+      LoopType != WorksharingLoopType::DistributeStaticLoop) {
+    Constant *DistScheduleSchedType = ConstantInt::get(
+        I32Type, static_cast<int>(omp::OMPScheduleType::OrderedDistribute));
+    // We want to emit a second init function call for the dist_schedule clause
+    // to the Distribute construct. This should only be done however if a
+    // Workshare Loop is nested within a Distribute Construct
+    BuildInitCall(DistScheduleSchedType, Builder);
+  }
   Value *LowerBound = Builder.CreateLoad(IVTy, PLowerBound);
   Value *InclusiveUpperBound = Builder.CreateLoad(IVTy, PUpperBound);
   Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
@@ -4144,7 +5024,7 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   // In the "exit" block, call the "fini" function.
   Builder.SetInsertPoint(CLI->getExit(),
                          CLI->getExit()->getTerminator()->getIterator());
-  Builder.CreateCall(StaticFini, {SrcLoc, ThreadNum});
+  createRuntimeFunctionCall(StaticFini, {SrcLoc, ThreadNum});
 
   // Add the barrier if requested.
   if (NeedsBarrier) {
@@ -4162,14 +5042,44 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   return AfterIP;
 }
 
+static void addAccessGroupMetadata(BasicBlock *Block, MDNode *AccessGroup,
+                                   LoopInfo &LI);
+static void addLoopMetadata(CanonicalLoopInfo *Loop,
+                            ArrayRef<Metadata *> Properties);
+
+static void applyParallelAccessesMetadata(CanonicalLoopInfo *CLI,
+                                          LLVMContext &Ctx, Loop *Loop,
+                                          LoopInfo &LoopInfo,
+                                          SmallVector<Metadata *> &LoopMDList) {
+  SmallSet<BasicBlock *, 8> Reachable;
+
+  // Get the basic blocks from the loop in which memref instructions
+  // can be found.
+  // TODO: Generalize getting all blocks inside a CanonicalizeLoopInfo,
+  // preferably without running any passes.
+  for (BasicBlock *Block : Loop->getBlocks()) {
+    if (Block == CLI->getCond() || Block == CLI->getHeader())
+      continue;
+    Reachable.insert(Block);
+  }
+
+  // Add access group metadata to memory-access instructions.
+  MDNode *AccessGroup = MDNode::getDistinct(Ctx, {});
+  for (BasicBlock *BB : Reachable)
+    addAccessGroupMetadata(BB, AccessGroup, LoopInfo);
+  // TODO:  If the loop has existing parallel access metadata, have
+  // to combine two lists.
+  LoopMDList.push_back(MDNode::get(
+      Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccessGroup}));
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy
-OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
-                                                 CanonicalLoopInfo *CLI,
-                                                 InsertPointTy AllocaIP,
-                                                 bool NeedsBarrier,
-                                                 Value *ChunkSize) {
+OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
+    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+    bool NeedsBarrier, Value *ChunkSize, OMPScheduleType SchedType,
+    Value *DistScheduleChunkSize, OMPScheduleType DistScheduleSchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
-  assert(ChunkSize && "Chunk size is required");
+  assert((ChunkSize || DistScheduleChunkSize) && "Chunk size is required");
 
   LLVMContext &Ctx = CLI->getFunction()->getContext();
   Value *IV = CLI->getIndVar();
@@ -4182,6 +5092,18 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Constant *Zero = ConstantInt::get(InternalIVTy, 0);
   Constant *One = ConstantInt::get(InternalIVTy, 1);
+
+  Function *F = CLI->getFunction();
+  FunctionAnalysisManager FAM;
+  FAM.registerPass([]() { return DominatorTreeAnalysis(); });
+  FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
+  LoopAnalysis LIA;
+  LoopInfo &&LI = LIA.run(*F, FAM);
+  Loop *L = LI.getLoopFor(CLI->getHeader());
+  SmallVector<Metadata *> LoopMDList;
+  if (ChunkSize || DistScheduleChunkSize)
+    applyParallelAccessesMetadata(CLI, Ctx, L, LI, LoopMDList);
+  addLoopMetadata(CLI, LoopMDList);
 
   // Declare useful OpenMP runtime functions.
   FunctionCallee StaticInit =
@@ -4198,22 +5120,31 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   Value *PUpperBound =
       Builder.CreateAlloca(InternalIVTy, nullptr, "p.upperbound");
   Value *PStride = Builder.CreateAlloca(InternalIVTy, nullptr, "p.stride");
+  CLI->setLastIter(PLastIter);
 
   // Set up the source location value for the OpenMP runtime.
   Builder.restoreIP(CLI->getPreheaderIP());
   Builder.SetCurrentDebugLocation(DL);
 
   // TODO: Detect overflow in ubsan or max-out with current tripcount.
-  Value *CastedChunkSize =
-      Builder.CreateZExtOrTrunc(ChunkSize, InternalIVTy, "chunksize");
+  Value *CastedChunkSize = Builder.CreateZExtOrTrunc(
+      ChunkSize ? ChunkSize : Zero, InternalIVTy, "chunksize");
+  Value *CastedDistScheduleChunkSize = Builder.CreateZExtOrTrunc(
+      DistScheduleChunkSize ? DistScheduleChunkSize : Zero, InternalIVTy,
+      "distschedulechunksize");
   Value *CastedTripCount =
       Builder.CreateZExt(OrigTripCount, InternalIVTy, "tripcount");
 
-  Constant *SchedulingType = ConstantInt::get(
-      I32Type, static_cast<int>(OMPScheduleType::UnorderedStaticChunked));
+  Constant *SchedulingType =
+      ConstantInt::get(I32Type, static_cast<int>(SchedType));
+  Constant *DistSchedulingType =
+      ConstantInt::get(I32Type, static_cast<int>(DistScheduleSchedType));
   Builder.CreateStore(Zero, PLowerBound);
   Value *OrigUpperBound = Builder.CreateSub(CastedTripCount, One);
-  Builder.CreateStore(OrigUpperBound, PUpperBound);
+  Value *IsTripCountZero = Builder.CreateICmpEQ(CastedTripCount, Zero);
+  Value *UpperBound =
+      Builder.CreateSelect(IsTripCountZero, Zero, OrigUpperBound);
+  Builder.CreateStore(UpperBound, PUpperBound);
   Builder.CreateStore(One, PStride);
 
   // Call the "init" function and update the trip count of the loop with the
@@ -4222,12 +5153,26 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
-  Builder.CreateCall(StaticInit,
-                     {/*loc=*/SrcLoc, /*global_tid=*/ThreadNum,
-                      /*schedtype=*/SchedulingType, /*plastiter=*/PLastIter,
-                      /*plower=*/PLowerBound, /*pupper=*/PUpperBound,
-                      /*pstride=*/PStride, /*incr=*/One,
-                      /*chunk=*/CastedChunkSize});
+  auto BuildInitCall = [StaticInit, SrcLoc, ThreadNum, PLastIter, PLowerBound,
+                        PUpperBound, PStride, One,
+                        this](Value *SchedulingType, Value *ChunkSize,
+                              auto &Builder) {
+    createRuntimeFunctionCall(
+        StaticInit, {/*loc=*/SrcLoc, /*global_tid=*/ThreadNum,
+                     /*schedtype=*/SchedulingType, /*plastiter=*/PLastIter,
+                     /*plower=*/PLowerBound, /*pupper=*/PUpperBound,
+                     /*pstride=*/PStride, /*incr=*/One,
+                     /*chunk=*/ChunkSize});
+  };
+  BuildInitCall(SchedulingType, CastedChunkSize, Builder);
+  if (DistScheduleSchedType != OMPScheduleType::None &&
+      SchedType != OMPScheduleType::OrderedDistributeChunked &&
+      SchedType != OMPScheduleType::OrderedDistribute) {
+    // We want to emit a second init function call for the dist_schedule clause
+    // to the Distribute construct. This should only be done however if a
+    // Workshare Loop is nested within a Distribute Construct
+    BuildInitCall(DistSchedulingType, CastedDistScheduleChunkSize, Builder);
+  }
 
   // Load values written by the "init" function.
   Value *FirstChunkStart =
@@ -4243,7 +5188,11 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   // Create outer "dispatch" loop for enumerating the chunks.
   BasicBlock *DispatchEnter = splitBB(Builder, true);
   Value *DispatchCounter;
-  Expected<CanonicalLoopInfo *> LoopResult = createCanonicalLoop(
+
+  // It is safe to assume this didn't return an error because the callback
+  // passed into createCanonicalLoop is the only possible error source, and it
+  // always returns success.
+  CanonicalLoopInfo *DispatchCLI = cantFail(createCanonicalLoop(
       {Builder.saveIP(), DL},
       [&](InsertPointTy BodyIP, Value *Counter) {
         DispatchCounter = Counter;
@@ -4251,15 +5200,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
       },
       FirstChunkStart, CastedTripCount, NextChunkStride,
       /*IsSigned=*/false, /*InclusiveStop=*/false, /*ComputeIP=*/{},
-      "dispatch");
-  if (!LoopResult) {
-    // It is safe to assume this didn't return an error because the callback
-    // passed into createCanonicalLoop is the only possible error source, and it
-    // always returns success. Need to still cast the result into bool to avoid
-    // runtime errors.
-    llvm_unreachable("unexpected error creating canonical loop");
-  }
-  CanonicalLoopInfo *DispatchCLI = *LoopResult;
+      "dispatch"));
 
   // Remember the BasicBlocks of the dispatch loop we need, then invalidate to
   // not have to preserve the canonical invariant.
@@ -4303,7 +5244,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
 
   // In the "exit" block, call the "fini" function.
   Builder.SetInsertPoint(DispatchExit, DispatchExit->getFirstInsertionPt());
-  Builder.CreateCall(StaticFini, {SrcLoc, ThreadNum});
+  createRuntimeFunctionCall(StaticFini, {SrcLoc, ThreadNum});
 
   // Add the barrier if requested.
   if (NeedsBarrier) {
@@ -4365,10 +5306,11 @@ getKmpcForStaticLoopForType(Type *Ty, OpenMPIRBuilder *OMPBuilder,
 
 // Inserts a call to proper OpenMP Device RTL function which handles
 // loop worksharing.
-static void createTargetLoopWorkshareCall(
-    OpenMPIRBuilder *OMPBuilder, WorksharingLoopType LoopType,
-    BasicBlock *InsertBlock, Value *Ident, Value *LoopBodyArg,
-    Type *ParallelTaskPtr, Value *TripCount, Function &LoopBodyFn) {
+static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
+                                          WorksharingLoopType LoopType,
+                                          BasicBlock *InsertBlock, Value *Ident,
+                                          Value *LoopBodyArg, Value *TripCount,
+                                          Function &LoopBodyFn, bool NoLoop) {
   Type *TripCountTy = TripCount->getType();
   Module &M = OMPBuilder->M;
   IRBuilder<> &Builder = OMPBuilder->Builder;
@@ -4376,35 +5318,38 @@ static void createTargetLoopWorkshareCall(
       getKmpcForStaticLoopForType(TripCountTy, OMPBuilder, LoopType);
   SmallVector<Value *, 8> RealArgs;
   RealArgs.push_back(Ident);
-  RealArgs.push_back(Builder.CreateBitCast(&LoopBodyFn, ParallelTaskPtr));
+  RealArgs.push_back(&LoopBodyFn);
   RealArgs.push_back(LoopBodyArg);
   RealArgs.push_back(TripCount);
   if (LoopType == WorksharingLoopType::DistributeStaticLoop) {
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
-    Builder.CreateCall(RTLFn, RealArgs);
+    RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), 0));
+    Builder.restoreIP({InsertBlock, std::prev(InsertBlock->end())});
+    OMPBuilder->createRuntimeFunctionCall(RTLFn, RealArgs);
     return;
   }
   FunctionCallee RTLNumThreads = OMPBuilder->getOrCreateRuntimeFunction(
       M, omp::RuntimeFunction::OMPRTL_omp_get_num_threads);
   Builder.restoreIP({InsertBlock, std::prev(InsertBlock->end())});
-  Value *NumThreads = Builder.CreateCall(RTLNumThreads, {});
+  Value *NumThreads = OMPBuilder->createRuntimeFunctionCall(RTLNumThreads, {});
 
   RealArgs.push_back(
       Builder.CreateZExtOrTrunc(NumThreads, TripCountTy, "num.threads.cast"));
   RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
   if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), NoLoop));
+  } else {
+    RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), 0));
   }
 
-  Builder.CreateCall(RTLFn, RealArgs);
+  OMPBuilder->createRuntimeFunctionCall(RTLFn, RealArgs);
 }
 
-static void
-workshareLoopTargetCallback(OpenMPIRBuilder *OMPIRBuilder,
-                            CanonicalLoopInfo *CLI, Value *Ident,
-                            Function &OutlinedFn, Type *ParallelTaskPtr,
-                            const SmallVector<Instruction *, 4> &ToBeDeleted,
-                            WorksharingLoopType LoopType) {
+static void workshareLoopTargetCallback(
+    OpenMPIRBuilder *OMPIRBuilder, CanonicalLoopInfo *CLI, Value *Ident,
+    Function &OutlinedFn, const SmallVector<Instruction *, 4> &ToBeDeleted,
+    WorksharingLoopType LoopType, bool NoLoop) {
   IRBuilder<> &Builder = OMPIRBuilder->Builder;
   BasicBlock *Preheader = CLI->getPreheader();
   Value *TripCount = CLI->getTripCount();
@@ -4451,18 +5396,16 @@ workshareLoopTargetCallback(OpenMPIRBuilder *OMPIRBuilder,
   OutlinedFnCallInstruction->eraseFromParent();
 
   createTargetLoopWorkshareCall(OMPIRBuilder, LoopType, Preheader, Ident,
-                                LoopBodyArg, ParallelTaskPtr, TripCount,
-                                OutlinedFn);
+                                LoopBodyArg, TripCount, OutlinedFn, NoLoop);
 
   for (auto &ToBeDeletedItem : ToBeDeleted)
     ToBeDeletedItem->eraseFromParent();
   CLI->invalidate();
 }
 
-OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                          InsertPointTy AllocaIP,
-                                          WorksharingLoopType LoopType) {
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
+    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+    WorksharingLoopType LoopType, bool NoLoop) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
@@ -4500,8 +5443,6 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
   OI.collectBlocks(ParallelRegionBlockSet, Blocks);
-  SmallVector<BasicBlock *, 32> BlocksT(ParallelRegionBlockSet.begin(),
-                                        ParallelRegionBlockSet.end());
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks,
@@ -4517,7 +5458,7 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                           /* AggrArgsIn0AddrSpace */ true);
 
   BasicBlock *CommonExit = nullptr;
-  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  SetVector<Value *> SinkingCands, HoistingCands;
 
   // Find allocas outside the loop body region which are used inside loop
   // body
@@ -4546,8 +5487,8 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
   //
   OI.PostOutlineCB = [=, ToBeDeletedVec =
                              std::move(ToBeDeleted)](Function &OutlinedFn) {
-    workshareLoopTargetCallback(this, CLI, Ident, OutlinedFn, ParallelTaskPtr,
-                                ToBeDeletedVec, LoopType);
+    workshareLoopTargetCallback(this, CLI, Ident, OutlinedFn, ToBeDeletedVec,
+                                LoopType, NoLoop);
   };
   addOutlineInfo(std::move(OI));
   return CLI->getAfterIP();
@@ -4558,31 +5499,47 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool NeedsBarrier, omp::ScheduleKind SchedKind, Value *ChunkSize,
     bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
-    WorksharingLoopType LoopType) {
+    WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
+    Value *DistScheduleChunkSize) {
   if (Config.isTargetDevice())
-    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType);
+    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
-      HasNonmonotonicModifier, HasOrderedClause);
+      HasNonmonotonicModifier, HasOrderedClause, DistScheduleChunkSize);
 
   bool IsOrdered = (EffectiveScheduleType & OMPScheduleType::ModifierOrdered) ==
                    OMPScheduleType::ModifierOrdered;
+  OMPScheduleType DistScheduleSchedType = OMPScheduleType::None;
+  if (HasDistSchedule) {
+    DistScheduleSchedType = DistScheduleChunkSize
+                                ? OMPScheduleType::OrderedDistributeChunked
+                                : OMPScheduleType::OrderedDistribute;
+  }
   switch (EffectiveScheduleType & ~OMPScheduleType::ModifierMask) {
   case OMPScheduleType::BaseStatic:
-    assert(!ChunkSize && "No chunk size with static-chunked schedule");
-    if (IsOrdered)
+  case OMPScheduleType::BaseDistribute:
+    assert((!ChunkSize || !DistScheduleChunkSize) &&
+           "No chunk size with static-chunked schedule");
+    if (IsOrdered && !HasDistSchedule)
       return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
                                        NeedsBarrier, ChunkSize);
     // FIXME: Monotonicity ignored?
-    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier);
+    if (DistScheduleChunkSize)
+      return applyStaticChunkedWorkshareLoop(
+          DL, CLI, AllocaIP, NeedsBarrier, ChunkSize, EffectiveScheduleType,
+          DistScheduleChunkSize, DistScheduleSchedType);
+    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, LoopType, NeedsBarrier,
+                                    HasDistSchedule);
 
   case OMPScheduleType::BaseStaticChunked:
-    if (IsOrdered)
+  case OMPScheduleType::BaseDistributeChunked:
+    if (IsOrdered && !HasDistSchedule)
       return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
                                        NeedsBarrier, ChunkSize);
     // FIXME: Monotonicity ignored?
-    return applyStaticChunkedWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier,
-                                           ChunkSize);
+    return applyStaticChunkedWorkshareLoop(
+        DL, CLI, AllocaIP, NeedsBarrier, ChunkSize, EffectiveScheduleType,
+        DistScheduleChunkSize, DistScheduleSchedType);
 
   case OMPScheduleType::BaseRuntime:
   case OMPScheduleType::BaseAuto:
@@ -4688,6 +5645,7 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
   Value *PUpperBound = Builder.CreateAlloca(IVTy, nullptr, "p.upperbound");
   Value *PStride = Builder.CreateAlloca(IVTy, nullptr, "p.stride");
+  CLI->setLastIter(PLastIter);
 
   // At the end of the preheader, prepare for calling the "init" function by
   // storing the current loop bounds into the allocated space. A canonical loop
@@ -4719,9 +5677,9 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
       ConstantInt::get(I32Type, static_cast<int>(SchedType));
 
   // Call the "init" function.
-  Builder.CreateCall(DynamicInit,
-                     {SrcLoc, ThreadNum, SchedulingType, /* LowerBound */ One,
-                      UpperBound, /* step */ One, Chunk});
+  createRuntimeFunctionCall(DynamicInit, {SrcLoc, ThreadNum, SchedulingType,
+                                          /* LowerBound */ One, UpperBound,
+                                          /* step */ One, Chunk});
 
   // An outer loop around the existing one.
   BasicBlock *OuterCond = BasicBlock::Create(
@@ -4729,9 +5687,9 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
       PreHeader->getParent());
   // This needs to be 32-bit always, so can't use the IVTy Zero above.
   Builder.SetInsertPoint(OuterCond, OuterCond->getFirstInsertionPt());
-  Value *Res =
-      Builder.CreateCall(DynamicNext, {SrcLoc, ThreadNum, PLastIter,
-                                       PLowerBound, PUpperBound, PStride});
+  Value *Res = createRuntimeFunctionCall(
+      DynamicNext,
+      {SrcLoc, ThreadNum, PLastIter, PLowerBound, PUpperBound, PStride});
   Constant *Zero32 = ConstantInt::get(I32Type, 0);
   Value *MoreWork = Builder.CreateCmp(CmpInst::ICMP_NE, Res, Zero32);
   Value *LowerBound =
@@ -4768,7 +5726,7 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   if (Ordered) {
     Builder.SetInsertPoint(&Latch->back());
     FunctionCallee DynamicFini = getKmpcForDynamicFiniForType(IVTy, M, *this);
-    Builder.CreateCall(DynamicFini, {SrcLoc, ThreadNum});
+    createRuntimeFunctionCall(DynamicFini, {SrcLoc, ThreadNum});
   }
 
   // Add the barrier if requested.
@@ -4797,7 +5755,7 @@ static void redirectAllPredecessorsTo(BasicBlock *OldTarget,
 /// Determine which blocks in \p BBs are reachable from outside and remove the
 /// ones that are not reachable from the function.
 static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
-  SmallPtrSet<BasicBlock *, 6> BBsToErase{BBs.begin(), BBs.end()};
+  SmallPtrSet<BasicBlock *, 6> BBsToErase(llvm::from_range, BBs);
   auto HasRemainingUses = [&BBsToErase](BasicBlock *BB) {
     for (Use &U : BB->uses()) {
       auto *UseInst = dyn_cast<Instruction>(U.getUser());
@@ -4860,8 +5818,8 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     }
 
     // TODO: Enable UndefinedSanitizer to diagnose an overflow here.
-    CollapsedTripCount = Builder.CreateMul(CollapsedTripCount, OrigTripCount,
-                                           {}, /*HasNUW=*/true);
+    CollapsedTripCount =
+        Builder.CreateNUWMul(CollapsedTripCount, OrigTripCount);
   }
 
   // Create the collapsed loop control flow.
@@ -4996,13 +5954,13 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Compute the trip counts of the floor loops.
   Builder.SetCurrentDebugLocation(DL);
   Builder.restoreIP(OutermostLoop->getPreheaderIP());
-  SmallVector<Value *, 4> FloorCount, FloorRems;
+  SmallVector<Value *, 4> FloorCompleteCount, FloorCount, FloorRems;
   for (int i = 0; i < NumLoops; ++i) {
     Value *TileSize = TileSizes[i];
     Value *OrigTripCount = OrigTripCounts[i];
     Type *IVType = OrigTripCount->getType();
 
-    Value *FloorTripCount = Builder.CreateUDiv(OrigTripCount, TileSize);
+    Value *FloorCompleteTripCount = Builder.CreateUDiv(OrigTripCount, TileSize);
     Value *FloorTripRem = Builder.CreateURem(OrigTripCount, TileSize);
 
     // 0 if tripcount divides the tilesize, 1 otherwise.
@@ -5016,11 +5974,12 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
         Builder.CreateICmpNE(FloorTripRem, ConstantInt::get(IVType, 0));
 
     FloorTripOverflow = Builder.CreateZExt(FloorTripOverflow, IVType);
-    FloorTripCount =
-        Builder.CreateAdd(FloorTripCount, FloorTripOverflow,
+    Value *FloorTripCount =
+        Builder.CreateAdd(FloorCompleteTripCount, FloorTripOverflow,
                           "omp_floor" + Twine(i) + ".tripcount", true);
 
     // Remember some values for later use.
+    FloorCompleteCount.push_back(FloorCompleteTripCount);
     FloorCount.push_back(FloorTripCount);
     FloorRems.push_back(FloorTripRem);
   }
@@ -5075,7 +6034,7 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     Value *TileSize = TileSizes[i];
 
     Value *FloorIsEpilogue =
-        Builder.CreateICmpEQ(FloorLoop->getIndVar(), FloorCount[i]);
+        Builder.CreateICmpEQ(FloorLoop->getIndVar(), FloorCompleteCount[i]);
     Value *TileTripCount =
         Builder.CreateSelect(FloorIsEpilogue, FloorRems[i], TileSize);
 
@@ -5174,8 +6133,8 @@ static void addLoopMetadata(CanonicalLoopInfo *Loop,
 }
 
 /// Attach llvm.access.group metadata to the memref instructions of \p Block
-static void addSimdMetadata(BasicBlock *Block, MDNode *AccessGroup,
-                            LoopInfo &LI) {
+static void addAccessGroupMetadata(BasicBlock *Block, MDNode *AccessGroup,
+                                   LoopInfo &LI) {
   for (Instruction &I : *Block) {
     if (I.mayReadOrWriteMemory()) {
       // TODO: This instruction may already have access group from
@@ -5203,63 +6162,90 @@ void OpenMPIRBuilder::unrollLoopHeuristic(DebugLoc, CanonicalLoopInfo *Loop) {
 
 void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
                                       Value *IfCond, ValueToValueMapTy &VMap,
+                                      LoopAnalysis &LIA, LoopInfo &LI, Loop *L,
                                       const Twine &NamePrefix) {
   Function *F = CanonicalLoop->getFunction();
 
+  // We can't do
+  // if (cond) {
+  //   simd_loop;
+  // } else {
+  //   non_simd_loop;
+  // }
+  // because then the CanonicalLoopInfo would only point to one of the loops:
+  // leading to other constructs operating on the same loop to malfunction.
+  // Instead generate
+  // while (...) {
+  //   if (cond) {
+  //     simd_body;
+  //   } else {
+  //     not_simd_body;
+  //   }
+  // }
+  // At least for simple loops, LLVM seems able to hoist the if out of the loop
+  // body at -O3
+
   // Define where if branch should be inserted
-  Instruction *SplitBefore;
-  if (Instruction::classof(IfCond)) {
-    SplitBefore = dyn_cast<Instruction>(IfCond);
-  } else {
-    SplitBefore = CanonicalLoop->getPreheader()->getTerminator();
-  }
-
-  // TODO: We should not rely on pass manager. Currently we use pass manager
-  // only for getting llvm::Loop which corresponds to given CanonicalLoopInfo
-  // object. We should have a method  which returns all blocks between
-  // CanonicalLoopInfo::getHeader() and CanonicalLoopInfo::getAfter()
-  FunctionAnalysisManager FAM;
-  FAM.registerPass([]() { return DominatorTreeAnalysis(); });
-  FAM.registerPass([]() { return LoopAnalysis(); });
-  FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
-
-  // Get the loop which needs to be cloned
-  LoopAnalysis LIA;
-  LoopInfo &&LI = LIA.run(*F, FAM);
-  Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
+  auto SplitBeforeIt = CanonicalLoop->getBody()->getFirstNonPHIIt();
 
   // Create additional blocks for the if statement
-  BasicBlock *Head = SplitBefore->getParent();
-  Instruction *HeadOldTerm = Head->getTerminator();
-  llvm::LLVMContext &C = Head->getContext();
+  BasicBlock *Cond = SplitBeforeIt->getParent();
+  llvm::LLVMContext &C = Cond->getContext();
   llvm::BasicBlock *ThenBlock = llvm::BasicBlock::Create(
-      C, NamePrefix + ".if.then", Head->getParent(), Head->getNextNode());
+      C, NamePrefix + ".if.then", Cond->getParent(), Cond->getNextNode());
   llvm::BasicBlock *ElseBlock = llvm::BasicBlock::Create(
-      C, NamePrefix + ".if.else", Head->getParent(), CanonicalLoop->getExit());
+      C, NamePrefix + ".if.else", Cond->getParent(), CanonicalLoop->getExit());
 
   // Create if condition branch.
-  Builder.SetInsertPoint(HeadOldTerm);
+  Builder.SetInsertPoint(SplitBeforeIt);
   Instruction *BrInstr =
       Builder.CreateCondBr(IfCond, ThenBlock, /*ifFalse*/ ElseBlock);
   InsertPointTy IP{BrInstr->getParent(), ++BrInstr->getIterator()};
-  // Then block contains branch to omp loop which needs to be vectorized
-  spliceBB(IP, ThenBlock, false);
-  ThenBlock->replaceSuccessorsPhiUsesWith(Head, ThenBlock);
+  // Then block contains branch to omp loop body which needs to be vectorized
+  spliceBB(IP, ThenBlock, false, Builder.getCurrentDebugLocation());
+  ThenBlock->replaceSuccessorsPhiUsesWith(Cond, ThenBlock);
 
   Builder.SetInsertPoint(ElseBlock);
 
   // Clone loop for the else branch
   SmallVector<BasicBlock *, 8> NewBlocks;
 
-  VMap[CanonicalLoop->getPreheader()] = ElseBlock;
-  for (BasicBlock *Block : L->getBlocks()) {
+  SmallVector<BasicBlock *, 8> ExistingBlocks;
+  ExistingBlocks.reserve(L->getNumBlocks() + 1);
+  ExistingBlocks.push_back(ThenBlock);
+  ExistingBlocks.append(L->block_begin(), L->block_end());
+  // Cond is the block that has the if clause condition
+  // LoopCond is omp_loop.cond
+  // LoopHeader is omp_loop.header
+  BasicBlock *LoopCond = Cond->getUniquePredecessor();
+  BasicBlock *LoopHeader = LoopCond->getUniquePredecessor();
+  assert(LoopCond && LoopHeader && "Invalid loop structure");
+  for (BasicBlock *Block : ExistingBlocks) {
+    if (Block == L->getLoopPreheader() || Block == L->getLoopLatch() ||
+        Block == LoopHeader || Block == LoopCond || Block == Cond) {
+      continue;
+    }
     BasicBlock *NewBB = CloneBasicBlock(Block, VMap, "", F);
+
+    // fix name not to be omp.if.then
+    if (Block == ThenBlock)
+      NewBB->setName(NamePrefix + ".if.else");
+
     NewBB->moveBefore(CanonicalLoop->getExit());
     VMap[Block] = NewBB;
     NewBlocks.push_back(NewBB);
   }
   remapInstructionsInBlocks(NewBlocks, VMap);
   Builder.CreateBr(NewBlocks.front());
+
+  // The loop latch must have only one predecessor. Currently it is branched to
+  // from both the 'then' and 'else' branches.
+  L->getLoopLatch()->splitBasicBlock(
+      L->getLoopLatch()->begin(), NamePrefix + ".pre_latch", /*Before=*/true);
+
+  // Ensure that the then block is added to the loop so we add the attributes in
+  // the next step
+  L->addBasicBlockToLoop(ThenBlock, LI);
 }
 
 unsigned
@@ -5307,31 +6293,18 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
       Value *Alignment = AlignedItem.second;
       Instruction *loadInst = dyn_cast<Instruction>(AlignedPtr);
       Builder.SetInsertPoint(loadInst->getNextNode());
-      Builder.CreateAlignmentAssumption(F->getDataLayout(),
-                                        AlignedPtr, Alignment);
+      Builder.CreateAlignmentAssumption(F->getDataLayout(), AlignedPtr,
+                                        Alignment);
     }
     Builder.restoreIP(IP);
   }
 
   if (IfCond) {
     ValueToValueMapTy VMap;
-    createIfVersion(CanonicalLoop, IfCond, VMap, "simd");
-    // Add metadata to the cloned loop which disables vectorization
-    Value *MappedLatch = VMap.lookup(CanonicalLoop->getLatch());
-    assert(MappedLatch &&
-           "Cannot find value which corresponds to original loop latch");
-    assert(isa<BasicBlock>(MappedLatch) &&
-           "Cannot cast mapped latch block value to BasicBlock");
-    BasicBlock *NewLatchBlock = dyn_cast<BasicBlock>(MappedLatch);
-    ConstantAsMetadata *BoolConst =
-        ConstantAsMetadata::get(ConstantInt::getFalse(Type::getInt1Ty(Ctx)));
-    addBasicBlockMetadata(
-        NewLatchBlock,
-        {MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
-                           BoolConst})});
+    createIfVersion(CanonicalLoop, IfCond, VMap, LIA, LI, L, "simd");
   }
 
-  SmallSet<BasicBlock *, 8> Reachable;
+  SmallPtrSet<BasicBlock *, 8> Reachable;
 
   // Get the basic blocks from the loop in which memref instructions
   // can be found.
@@ -5351,15 +6324,15 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   // dependences of 'safelen' iterations are possible.
   // If clause order(concurrent) is specified then the memory instructions
   // are marked parallel even if 'safelen' is finite.
-  if ((Safelen == nullptr) || (Order == OrderKind::OMP_ORDER_concurrent)) {
-    // Add access group metadata to memory-access instructions.
-    MDNode *AccessGroup = MDNode::getDistinct(Ctx, {});
-    for (BasicBlock *BB : Reachable)
-      addSimdMetadata(BB, AccessGroup, LI);
-    // TODO:  If the loop has existing parallel access metadata, have
-    // to combine two lists.
-    LoopMDList.push_back(MDNode::get(
-        Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccessGroup}));
+  if ((Safelen == nullptr) || (Order == OrderKind::OMP_ORDER_concurrent))
+    applyParallelAccessesMetadata(CanonicalLoop, Ctx, L, LI, LoopMDList);
+
+  // FIXME: the IF clause shares a loop backedge for the SIMD and non-SIMD
+  // versions so we can't add the loop attributes in that case.
+  if (IfCond) {
+    // we can still add llvm.loop.parallel_access
+    addLoopMetadata(CanonicalLoop, LoopMDList);
+    return;
   }
 
   // Use the above access group metadata to create loop level
@@ -5405,7 +6378,7 @@ createTargetMachine(Function *F, CodeGenOptLevel OptLevel) {
 
   StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
   StringRef Features = F->getFnAttribute("target-features").getValueAsString();
-  const std::string &Triple = M->getTargetTriple();
+  const llvm::Triple &Triple = M->getTargetTriple();
 
   std::string Error;
   const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
@@ -5456,16 +6429,16 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   Loop *L = LI.getLoopFor(CLI->getHeader());
   assert(L && "Expecting CanonicalLoopInfo to be recognized as a loop");
 
-  TargetTransformInfo::UnrollingPreferences UP =
-      gatherUnrollingPreferences(L, SE, TTI,
-                                 /*BlockFrequencyInfo=*/nullptr,
-                                 /*ProfileSummaryInfo=*/nullptr, ORE, static_cast<int>(OptLevel),
-                                 /*UserThreshold=*/std::nullopt,
-                                 /*UserCount=*/std::nullopt,
-                                 /*UserAllowPartial=*/true,
-                                 /*UserAllowRuntime=*/true,
-                                 /*UserUpperBound=*/std::nullopt,
-                                 /*UserFullUnrollMaxCount=*/std::nullopt);
+  TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
+      L, SE, TTI,
+      /*BlockFrequencyInfo=*/nullptr,
+      /*ProfileSummaryInfo=*/nullptr, ORE, static_cast<int>(OptLevel),
+      /*UserThreshold=*/std::nullopt,
+      /*UserCount=*/std::nullopt,
+      /*UserAllowPartial=*/true,
+      /*UserAllowRuntime=*/true,
+      /*UserUpperBound=*/std::nullopt,
+      /*UserFullUnrollMaxCount=*/std::nullopt);
 
   UP.Force = true;
 
@@ -5634,7 +6607,7 @@ OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
   Value *Args[] = {Ident, ThreadId, BufSize, CpyBuf, CpyFn, DidItLD};
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_copyprivate);
-  Builder.CreateCall(Fn, Args);
+  createRuntimeFunctionCall(Fn, Args);
 
   return Builder.saveIP();
 }
@@ -5663,10 +6636,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSingle(
   Value *Args[] = {Ident, ThreadId};
 
   Function *EntryRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_single);
-  Instruction *EntryCall = Builder.CreateCall(EntryRTLFn, Args);
+  Instruction *EntryCall = createRuntimeFunctionCall(EntryRTLFn, Args);
 
   Function *ExitRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_single);
-  Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
+  Instruction *ExitCall = createRuntimeFunctionCall(ExitRTLFn, Args);
 
   auto FiniCBWrapper = [&](InsertPointTy IP) -> Error {
     if (Error Err = FiniCB(IP))
@@ -5738,11 +6711,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createCritical(
   } else {
     RTFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_critical);
   }
-  Instruction *EntryCall = Builder.CreateCall(RTFn, EnterArgs);
+  Instruction *EntryCall = createRuntimeFunctionCall(RTFn, EnterArgs);
 
   Function *ExitRTLFn =
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_critical);
-  Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
+  Instruction *ExitCall = createRuntimeFunctionCall(ExitRTLFn, Args);
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
                               /*Conditional*/ false, /*hasFinalize*/ true);
@@ -5766,7 +6739,7 @@ OpenMPIRBuilder::createOrderedDepend(const LocationDescription &Loc,
   Builder.restoreIP(AllocaIP);
   AllocaInst *ArgsBase = Builder.CreateAlloca(ArrI64Ty, nullptr, Name);
   ArgsBase->setAlignment(Align(8));
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   // Store the index value with offset in depend vector.
   for (unsigned I = 0; I < NumLoops; ++I) {
@@ -5790,7 +6763,7 @@ OpenMPIRBuilder::createOrderedDepend(const LocationDescription &Loc,
     RTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_doacross_post);
   else
     RTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_doacross_wait);
-  Builder.CreateCall(RTLFn, Args);
+  createRuntimeFunctionCall(RTLFn, Args);
 
   return Builder.saveIP();
 }
@@ -5813,11 +6786,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createOrderedThreadsSimd(
     Value *Args[] = {Ident, ThreadId};
 
     Function *EntryRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_ordered);
-    EntryCall = Builder.CreateCall(EntryRTLFn, Args);
+    EntryCall = createRuntimeFunctionCall(EntryRTLFn, Args);
 
     Function *ExitRTLFn =
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_ordered);
-    ExitCall = Builder.CreateCall(ExitRTLFn, Args);
+    ExitCall = createRuntimeFunctionCall(ExitRTLFn, Args);
   }
 
   return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
@@ -5859,9 +6832,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::EmitOMPInlinedRegion(
       emitCommonDirectiveExit(OMPD, FinIP, ExitCall, HasFinalize);
   if (!AfterIP)
     return AfterIP.takeError();
-  assert(FiniBB->getUniquePredecessor()->getUniqueSuccessor() == FiniBB &&
-         "Unexpected Control Flow State!");
-  MergeBlockIntoPredecessor(FiniBB);
 
   // If we are skipping the region of a non conditional, remove the exit
   // block, and clear the builder's insertion point.
@@ -5921,14 +6891,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitCommonDirectiveExit(
     FinalizationInfo Fi = FinalizationStack.pop_back_val();
     assert(Fi.DK == OMPD && "Unexpected Directive for Finalization call!");
 
-    if (Error Err = Fi.FiniCB(FinIP))
-      return Err;
+    if (Error Err = Fi.mergeFiniBB(Builder, FinIP.getBlock()))
+      return std::move(Err);
 
-    BasicBlock *FiniBB = FinIP.getBlock();
-    Instruction *FiniBBTI = FiniBB->getTerminator();
-
-    // set Builder IP for call creation
-    Builder.SetInsertPoint(FiniBBTI);
+    // Exit condition: insertion point is before the terminator of the new Fini
+    // block
+    Builder.SetInsertPoint(FinIP.getBlock()->getTerminator());
   }
 
   if (!ExitCall)
@@ -6006,7 +6974,7 @@ CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_alloc);
 
-  return Builder.CreateCall(Fn, Args, Name);
+  return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
 CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
@@ -6021,7 +6989,7 @@ CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
   Value *ThreadId = getOrCreateThreadID(Ident);
   Value *Args[] = {ThreadId, Addr, Allocator};
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_free);
-  return Builder.CreateCall(Fn, Args, Name);
+  return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
 CallInst *OpenMPIRBuilder::createOMPInteropInit(
@@ -6050,7 +7018,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropInit(
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___tgt_interop_init);
 
-  return Builder.CreateCall(Fn, Args);
+  return createRuntimeFunctionCall(Fn, Args);
 }
 
 CallInst *OpenMPIRBuilder::createOMPInteropDestroy(
@@ -6077,7 +7045,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropDestroy(
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___tgt_interop_destroy);
 
-  return Builder.CreateCall(Fn, Args);
+  return createRuntimeFunctionCall(Fn, Args);
 }
 
 CallInst *OpenMPIRBuilder::createOMPInteropUse(const LocationDescription &Loc,
@@ -6105,7 +7073,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropUse(const LocationDescription &Loc,
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___tgt_interop_use);
 
-  return Builder.CreateCall(Fn, Args);
+  return createRuntimeFunctionCall(Fn, Args);
 }
 
 CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
@@ -6125,22 +7093,24 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
   Function *Fn =
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_threadprivate_cached);
 
-  return Builder.CreateCall(Fn, Args);
+  return createRuntimeFunctionCall(Fn, Args);
 }
 
-OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
-                                  int32_t MinThreadsVal, int32_t MaxThreadsVal,
-                                  int32_t MinTeamsVal, int32_t MaxTeamsVal) {
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
+    const LocationDescription &Loc,
+    const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs) {
+  assert(!Attrs.MaxThreads.empty() && !Attrs.MaxTeams.empty() &&
+         "expected num_threads and num_teams to be specified");
+
   if (!updateToLocation(Loc))
     return Loc.IP;
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Constant *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-  Constant *IsSPMDVal = ConstantInt::getSigned(
-      Int8, IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
-  Constant *UseGenericStateMachineVal = ConstantInt::getSigned(Int8, !IsSPMD);
+  Constant *IsSPMDVal = ConstantInt::getSigned(Int8, Attrs.ExecFlags);
+  Constant *UseGenericStateMachineVal = ConstantInt::getSigned(
+      Int8, Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD);
   Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
   Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
 
@@ -6158,23 +7128,27 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
 
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
-  if (MinTeamsVal > 1 || MaxTeamsVal > 0)
-    writeTeamsForKernel(T, *Kernel, MinTeamsVal, MaxTeamsVal);
+  if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
+    writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
 
-  // For max values, < 0 means unset, == 0 means set but unknown.
+  // If MaxThreads not set, select the maximum between the default workgroup
+  // size and the MinThreads value.
+  int32_t MaxThreadsVal = Attrs.MaxThreads.front();
   if (MaxThreadsVal < 0)
     MaxThreadsVal = std::max(
-        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), MinThreadsVal);
+        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), Attrs.MinThreads);
 
   if (MaxThreadsVal > 0)
-    writeThreadBoundsForKernel(T, *Kernel, MinThreadsVal, MaxThreadsVal);
+    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
 
-  Constant *MinThreads = ConstantInt::getSigned(Int32, MinThreadsVal);
+  Constant *MinThreads = ConstantInt::getSigned(Int32, Attrs.MinThreads);
   Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
-  Constant *MinTeams = ConstantInt::getSigned(Int32, MinTeamsVal);
-  Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
-  Constant *ReductionDataSize = ConstantInt::getSigned(Int32, 0);
-  Constant *ReductionBufferLength = ConstantInt::getSigned(Int32, 0);
+  Constant *MinTeams = ConstantInt::getSigned(Int32, Attrs.MinTeams);
+  Constant *MaxTeams = ConstantInt::getSigned(Int32, Attrs.MaxTeams.front());
+  Constant *ReductionDataSize =
+      ConstantInt::getSigned(Int32, Attrs.ReductionDataSize);
+  Constant *ReductionBufferLength =
+      ConstantInt::getSigned(Int32, Attrs.ReductionBufferLength);
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
@@ -6229,8 +7203,14 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
   Value *KernelLaunchEnvironment = DebugKernelWrapper->getArg(0);
-  CallInst *ThreadKind =
-      Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
+  Type *KernelLaunchEnvParamTy = Fn->getFunctionType()->getParamType(1);
+  KernelLaunchEnvironment =
+      KernelLaunchEnvironment->getType() == KernelLaunchEnvParamTy
+          ? KernelLaunchEnvironment
+          : Builder.CreateAddrSpaceCast(KernelLaunchEnvironment,
+                                        KernelLaunchEnvParamTy);
+  CallInst *ThreadKind = createRuntimeFunctionCall(
+      Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
   Value *ExecUserCode = Builder.CreateICmpEQ(
       ThreadKind, Constant::getAllOnesValue(ThreadKind->getType()),
@@ -6272,7 +7252,7 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_deinit);
 
-  Builder.CreateCall(Fn, {});
+  createRuntimeFunctionCall(Fn, {});
 
   if (!TeamsReductionBufferLength || !TeamsReductionDataSize)
     return;
@@ -6296,45 +7276,13 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
   KernelEnvironmentGV->setInitializer(NewInitializer);
 }
 
-static MDNode *getNVPTXMDNode(Function &Kernel, StringRef Name) {
-  Module &M = *Kernel.getParent();
-  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-  for (auto *Op : MD->operands()) {
-    if (Op->getNumOperands() != 3)
-      continue;
-    auto *KernelOp = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
-    if (!KernelOp || KernelOp->getValue() != &Kernel)
-      continue;
-    auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
-    if (!Prop || Prop->getString() != Name)
-      continue;
-    return Op;
+static void updateNVPTXAttr(Function &Kernel, StringRef Name, int32_t Value,
+                            bool Min) {
+  if (Kernel.hasFnAttribute(Name)) {
+    int32_t OldLimit = Kernel.getFnAttributeAsParsedInteger(Name);
+    Value = Min ? std::min(OldLimit, Value) : std::max(OldLimit, Value);
   }
-  return nullptr;
-}
-
-static void updateNVPTXMetadata(Function &Kernel, StringRef Name, int32_t Value,
-                                bool Min) {
-  // Update the "maxntidx" metadata for NVIDIA, or add it.
-  MDNode *ExistingOp = getNVPTXMDNode(Kernel, Name);
-  if (ExistingOp) {
-    auto *OldVal = cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
-    int32_t OldLimit = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
-    ExistingOp->replaceOperandWith(
-        2, ConstantAsMetadata::get(ConstantInt::get(
-               OldVal->getValue()->getType(),
-               Min ? std::min(OldLimit, Value) : std::max(OldLimit, Value))));
-  } else {
-    LLVMContext &Ctx = Kernel.getContext();
-    Metadata *MDVals[] = {ConstantAsMetadata::get(&Kernel),
-                          MDString::get(Ctx, Name),
-                          ConstantAsMetadata::get(
-                              ConstantInt::get(Type::getInt32Ty(Ctx), Value))};
-    // Append metadata to nvvm.annotations
-    Module &M = *Kernel.getParent();
-    NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-    MD->addOperand(MDNode::get(Ctx, MDVals));
-  }
+  Kernel.addFnAttr(Name, llvm::utostr(Value));
 }
 
 std::pair<int32_t, int32_t>
@@ -6356,9 +7304,8 @@ OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
     return {LB, UB};
   }
 
-  if (MDNode *ExistingOp = getNVPTXMDNode(Kernel, "maxntidx")) {
-    auto *OldVal = cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
-    int32_t UB = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+  if (Kernel.hasFnAttribute("nvvm.maxntid")) {
+    int32_t UB = Kernel.getFnAttributeAsParsedInteger("nvvm.maxntid");
     return {0, ThreadLimit ? std::min(ThreadLimit, UB) : UB};
   }
   return {0, ThreadLimit};
@@ -6375,7 +7322,7 @@ void OpenMPIRBuilder::writeThreadBoundsForKernel(const Triple &T,
     return;
   }
 
-  updateNVPTXMetadata(Kernel, "maxntidx", UB, true);
+  updateNVPTXAttr(Kernel, "nvvm.maxntid", UB, true);
 }
 
 std::pair<int32_t, int32_t>
@@ -6388,7 +7335,7 @@ void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
                                           int32_t LB, int32_t UB) {
   if (T.isNVPTX())
     if (UB > 0)
-      updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
+      Kernel.addFnAttr("nvvm.maxclusterrank", llvm::utostr(UB));
   if (T.isAMDGPU())
     Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(LB) + ",1,1");
 
@@ -6404,6 +7351,10 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
     OutlinedFn->setVisibility(GlobalValue::ProtectedVisibility);
     if (T.isAMDGCN())
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
+    else if (T.isNVPTX())
+      OutlinedFn->setCallingConv(CallingConv::PTX_Kernel);
+    else if (T.isSPIRV())
+      OutlinedFn->setCallingConv(CallingConv::SPIR_KERNEL);
   }
 }
 
@@ -6481,12 +7432,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
     TargetDataInfo &Info, GenMapInfoCallbackTy GenMapInfoCB,
-    omp::RuntimeFunction *MapperFunc,
+    CustomMapperCallbackTy CustomMapperCB, omp::RuntimeFunction *MapperFunc,
     function_ref<InsertPointOrErrorTy(InsertPointTy CodeGenIP,
                                       BodyGenTy BodyGenType)>
         BodyGenCB,
-    function_ref<void(unsigned int, Value *)> DeviceAddrCB,
-    function_ref<Value *(unsigned int)> CustomMapperCB, Value *SrcLocInfo) {
+    function_ref<void(unsigned int, Value *)> DeviceAddrCB, Value *SrcLocInfo) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -6511,9 +7461,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
   auto BeginThenGen = [&](InsertPointTy AllocaIP,
                           InsertPointTy CodeGenIP) -> Error {
     MapInfo = &GenMapInfoCB(Builder.saveIP());
-    emitOffloadingArrays(AllocaIP, Builder.saveIP(), *MapInfo, Info,
-                         /*IsNonContiguous=*/true, DeviceAddrCB,
-                         CustomMapperCB);
+    if (Error Err = emitOffloadingArrays(
+            AllocaIP, Builder.saveIP(), *MapInfo, Info, CustomMapperCB,
+            /*IsNonContiguous=*/true, DeviceAddrCB))
+      return Err;
 
     TargetDataRTArgs RTArgs;
     emitOffloadingArraysArgument(Builder, RTArgs, Info);
@@ -6547,8 +7498,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
                                  llvm::Constant::getNullValue(VoidPtr)});
         }
 
-        Builder.CreateCall(getOrCreateRuntimeFunctionPtr(*MapperFunc),
-                           OffloadingArgs);
+        createRuntimeFunctionCall(getOrCreateRuntimeFunctionPtr(*MapperFunc),
+                                  OffloadingArgs);
 
         if (Info.HasNoWait) {
           BasicBlock *OffloadContBlock =
@@ -6561,21 +7512,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
       };
 
       bool RequiresOuterTargetTask = Info.HasNoWait;
-      if (!RequiresOuterTargetTask) {
-        Error Err = TaskBodyCB(/*DeviceID=*/nullptr, /*RTLoc=*/nullptr,
-                               /*TargetTaskAllocaIP=*/{});
-        assert(!Err && "TaskBodyCB expected to succeed");
-      } else {
-        InsertPointOrErrorTy AfterIP =
-            emitTargetTask(TaskBodyCB, DeviceID, SrcLocInfo, AllocaIP,
-                           /*Dependencies=*/{}, Info.HasNoWait);
-        assert(AfterIP && "TaskBodyCB expected to succeed");
-      }
+      if (!RequiresOuterTargetTask)
+        cantFail(TaskBodyCB(/*DeviceID=*/nullptr, /*RTLoc=*/nullptr,
+                            /*TargetTaskAllocaIP=*/{}));
+      else
+        cantFail(emitTargetTask(TaskBodyCB, DeviceID, SrcLocInfo, AllocaIP,
+                                /*Dependencies=*/{}, RTArgs, Info.HasNoWait));
     } else {
       Function *BeginMapperFunc = getOrCreateRuntimeFunctionPtr(
           omp::OMPRTL___tgt_target_data_begin_mapper);
 
-      Builder.CreateCall(BeginMapperFunc, OffloadingArgs);
+      createRuntimeFunctionCall(BeginMapperFunc, OffloadingArgs);
 
       for (auto DeviceMap : Info.DevicePtrInfoMap) {
         if (isa<AllocaInst>(DeviceMap.second.second)) {
@@ -6634,7 +7581,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     Function *EndMapperFunc =
         getOrCreateRuntimeFunctionPtr(omp::OMPRTL___tgt_target_data_end_mapper);
 
-    Builder.CreateCall(EndMapperFunc, OffloadingArgs);
+    createRuntimeFunctionCall(EndMapperFunc, OffloadingArgs);
     return Error::success();
   };
 
@@ -6661,7 +7608,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
           BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv);
       if (!AfterIP)
         return AfterIP.takeError();
-      Builder.restoreIP(*AfterIP);
+      restoreIPandDebugLoc(Builder, *AfterIP);
 
       if (IfCond)
         return emitIfClause(IfCond, EndThenGen, EndElseGen, AllocaIP);
@@ -6742,9 +7689,78 @@ FunctionCallee OpenMPIRBuilder::createDispatchDeinitFunction() {
   return getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_dispatch_deinit);
 }
 
+static void FixupDebugInfoForOutlinedFunction(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, Function *Func,
+    DenseMap<Value *, std::tuple<Value *, unsigned>> &ValueReplacementMap) {
+
+  DISubprogram *NewSP = Func->getSubprogram();
+  if (!NewSP)
+    return;
+
+  SmallDenseMap<DILocalVariable *, DILocalVariable *> RemappedVariables;
+
+  auto GetUpdatedDIVariable = [&](DILocalVariable *OldVar, unsigned arg) {
+    DILocalVariable *&NewVar = RemappedVariables[OldVar];
+    // Only use cached variable if the arg number matches. This is important
+    // so that DIVariable created for privatized variables are not discarded.
+    if (NewVar && (arg == NewVar->getArg()))
+      return NewVar;
+
+    NewVar = llvm::DILocalVariable::get(
+        Builder.getContext(), OldVar->getScope(), OldVar->getName(),
+        OldVar->getFile(), OldVar->getLine(), OldVar->getType(), arg,
+        OldVar->getFlags(), OldVar->getAlignInBits(), OldVar->getAnnotations());
+    return NewVar;
+  };
+
+  auto UpdateDebugRecord = [&](auto *DR) {
+    DILocalVariable *OldVar = DR->getVariable();
+    unsigned ArgNo = 0;
+    for (auto Loc : DR->location_ops()) {
+      auto Iter = ValueReplacementMap.find(Loc);
+      if (Iter != ValueReplacementMap.end()) {
+        DR->replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
+        ArgNo = std::get<1>(Iter->second) + 1;
+      }
+    }
+    if (ArgNo != 0)
+      DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
+  };
+
+  // The location and scope of variable intrinsics and records still point to
+  // the parent function of the target region. Update them.
+  for (Instruction &I : instructions(Func)) {
+    assert(!isa<llvm::DbgVariableIntrinsic>(&I) &&
+           "Unexpected debug intrinsic");
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      UpdateDebugRecord(&DVR);
+  }
+  // An extra argument is passed to the device. Create the debug data for it.
+  if (OMPBuilder.Config.isTargetDevice()) {
+    DICompileUnit *CU = NewSP->getUnit();
+    Module *M = Func->getParent();
+    DIBuilder DB(*M, true, CU);
+    DIType *VoidPtrTy =
+        DB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
+    DILocalVariable *Var = DB.createParameterVariable(
+        NewSP, "dyn_ptr", /*ArgNo*/ 1, NewSP->getFile(), /*LineNo=*/0,
+        VoidPtrTy, /*AlwaysPreserve=*/false, DINode::DIFlags::FlagArtificial);
+    auto Loc = DILocation::get(Func->getContext(), 0, 0, NewSP, 0);
+    DB.insertDeclare(&(*Func->arg_begin()), Var, DB.createExpression(), Loc,
+                     &(*Func->begin()));
+  }
+}
+
+static Value *removeASCastIfPresent(Value *V) {
+  if (Operator::getOpcode(V) == Instruction::AddrSpaceCast)
+    return cast<Operator>(V)->getOperand(0);
+  return V;
+}
+
 static Expected<Function *> createOutlinedFunction(
-    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
-    SmallVectorImpl<Value *> &Inputs,
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
+    StringRef FuncName, SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
   SmallVector<Type *> ParameterTypes;
@@ -6772,38 +7788,29 @@ static Expected<Function *> createOutlinedFunction(
   auto Func =
       Function::Create(FuncType, GlobalValue::InternalLinkage, FuncName, M);
 
+  // Forward target-cpu and target-features function attributes from the
+  // original function to the new outlined function.
+  Function *ParentFn = Builder.GetInsertBlock()->getParent();
+
+  auto TargetCpuAttr = ParentFn->getFnAttribute("target-cpu");
+  if (TargetCpuAttr.isStringAttribute())
+    Func->addFnAttr(TargetCpuAttr);
+
+  auto TargetFeaturesAttr = ParentFn->getFnAttribute("target-features");
+  if (TargetFeaturesAttr.isStringAttribute())
+    Func->addFnAttr(TargetFeaturesAttr);
+
+  if (OMPBuilder.Config.isTargetDevice()) {
+    Value *ExecMode =
+        OMPBuilder.emitKernelExecutionMode(FuncName, DefaultAttrs.ExecFlags);
+    OMPBuilder.emitUsed("llvm.compiler.used", {ExecMode});
+  }
+
   // Save insert point.
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  // If there's a DISubprogram associated with current function, then
-  // generate one for the outlined function.
-  if (Function *ParentFunc = BB->getParent()) {
-    if (DISubprogram *SP = ParentFunc->getSubprogram()) {
-      DICompileUnit *CU = SP->getUnit();
-      DIBuilder DB(*M, true, CU);
-      DebugLoc DL = Builder.getCurrentDebugLocation();
-      if (DL) {
-        // TODO: We are using nullopt for arguments at the moment. This will
-        // need to be updated when debug data is being generated for variables.
-        DISubroutineType *Ty =
-            DB.createSubroutineType(DB.getOrCreateTypeArray({}));
-        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
-                                          DISubprogram::SPFlagOptimized |
-                                          DISubprogram::SPFlagLocalToUnit;
-
-        DISubprogram *OutlinedSP = DB.createFunction(
-            CU, FuncName, FuncName, SP->getFile(), DL.getLine(), Ty,
-            DL.getLine(), DINode::DIFlags::FlagArtificial, SPFlags);
-
-        // Attach subprogram to the function.
-        Func->setSubprogram(OutlinedSP);
-        // Update the CurrentDebugLocation in the builder so that right scope
-        // is used for things inside outlined function.
-        Builder.SetCurrentDebugLocation(
-            DILocation::get(Func->getContext(), DL.getLine(), DL.getCol(),
-                            OutlinedSP, DL.getInlinedAt()));
-      }
-    }
-  }
+  // We will generate the entries in the outlined function but the debug
+  // location may still be pointing to the parent function. Reset it now.
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Generate the region into the function.
   BasicBlock *EntryBB = BasicBlock::Create(Builder.getContext(), "entry", Func);
@@ -6811,7 +7818,7 @@ static Expected<Function *> createOutlinedFunction(
 
   // Insert target init call in the device compilation pass.
   if (OMPBuilder.Config.isTargetDevice())
-    Builder.restoreIP(OMPBuilder.createTargetInit(Builder, /*IsSPMD*/ false));
+    Builder.restoreIP(OMPBuilder.createTargetInit(Builder, DefaultAttrs));
 
   BasicBlock *UserCodeEntryBB = Builder.GetInsertBlock();
 
@@ -6837,7 +7844,7 @@ static Expected<Function *> createOutlinedFunction(
   Builder.CreateRetVoid();
 
   // New Alloca IP at entry point of created device function.
-  Builder.SetInsertPoint(EntryBB->getFirstNonPHI());
+  Builder.SetInsertPoint(EntryBB->getFirstNonPHIIt());
   auto AllocaIP = Builder.saveIP();
 
   Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
@@ -6847,6 +7854,8 @@ static Expected<Function *> createOutlinedFunction(
       OMPBuilder.Config.isTargetDevice()
           ? make_range(Func->arg_begin() + 1, Func->arg_end())
           : Func->args();
+
+  DenseMap<Value *, std::tuple<Value *, unsigned>> ValueReplacementMap;
 
   auto ReplaceValue = [](Value *Input, Value *InputCopy, Function *Func) {
     // Things like GEP's can come in the form of Constants. Constants and
@@ -6869,8 +7878,12 @@ static Expected<Function *> createOutlinedFunction(
     if (auto *Const = dyn_cast<Constant>(Input))
       convertUsersOfConstantsToInstructions(Const, Func, false);
 
+    // Collect users before iterating over them to avoid invalidating the
+    // iteration in case a user uses Input more than once (e.g. a call
+    // instruction).
+    SetVector<User *> Users(Input->users().begin(), Input->users().end());
     // Collect all the instructions
-    for (User *User : make_early_inc_range(Input->users()))
+    for (User *User : make_early_inc_range(Users))
       if (auto *Instr = dyn_cast<Instruction>(User))
         if (Instr->getFunction() == Func)
           Instr->replaceUsesOfWith(Input, InputCopy);
@@ -6889,6 +7902,7 @@ static Expected<Function *> createOutlinedFunction(
     if (!AfterIP)
       return AfterIP.takeError();
     Builder.restoreIP(*AfterIP);
+    ValueReplacementMap[Input] = std::make_tuple(InputCopy, Arg.getArgNo());
 
     // In certain cases a Global may be set up for replacement, however, this
     // Global may be used in multiple arguments to the kernel, just segmented
@@ -6906,12 +7920,14 @@ static Expected<Function *> createOutlinedFunction(
     // preceding mapped arguments that refer to the same global that may be
     // seperate segments. To prevent this, we defer global processing until all
     // other processing has been performed.
-    if (llvm::isa<llvm::GlobalValue>(std::get<0>(InArg)) ||
-        llvm::isa<llvm::GlobalObject>(std::get<0>(InArg)) ||
-        llvm::isa<llvm::GlobalVariable>(std::get<0>(InArg))) {
+    if (llvm::isa<llvm::GlobalValue, llvm::GlobalObject, llvm::GlobalVariable>(
+            removeASCastIfPresent(Input))) {
       DeferredReplacement.push_back(std::make_pair(Input, InputCopy));
       continue;
     }
+
+    if (isa<ConstantData>(Input))
+      continue;
 
     ReplaceValue(Input, InputCopy, Func);
   }
@@ -6920,17 +7936,59 @@ static Expected<Function *> createOutlinedFunction(
   for (auto Deferred : DeferredReplacement)
     ReplaceValue(std::get<0>(Deferred), std::get<1>(Deferred), Func);
 
+  FixupDebugInfoForOutlinedFunction(OMPBuilder, Builder, Func,
+                                    ValueReplacementMap);
   return Func;
 }
+/// Given a task descriptor, TaskWithPrivates, return the pointer to the block
+/// of pointers containing shared data between the parent task and the created
+/// task.
+static LoadInst *loadSharedDataFromTaskDescriptor(OpenMPIRBuilder &OMPIRBuilder,
+                                                  IRBuilderBase &Builder,
+                                                  Value *TaskWithPrivates,
+                                                  Type *TaskWithPrivatesTy) {
 
+  Type *TaskTy = OMPIRBuilder.Task;
+  LLVMContext &Ctx = Builder.getContext();
+  Value *TaskT =
+      Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 0);
+  Value *Shareds = TaskT;
+  // TaskWithPrivatesTy can be one of the following
+  // 1. %struct.task_with_privates = type { %struct.kmp_task_ompbuilder_t,
+  //                                        %struct.privates }
+  // 2. %struct.kmp_task_ompbuilder_t ;; This is simply TaskTy
+  //
+  // In the former case, that is when  TaskWithPrivatesTy != TaskTy,
+  // its first member has to be the task descriptor. TaskTy is the type of the
+  // task descriptor. TaskT is the pointer to the task descriptor. Loading the
+  // first member of TaskT, gives us the pointer to shared data.
+  if (TaskWithPrivatesTy != TaskTy)
+    Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
+  return Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+}
 /// Create an entry point for a target task with the following.
 /// It'll have the following signature
 /// void @.omp_target_task_proxy_func(i32 %thread.id, ptr %task)
 /// This function is called from emitTargetTask once the
 /// code to launch the target kernel has been outlined already.
-static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
-                                             IRBuilderBase &Builder,
-                                             CallInst *StaleCI) {
+/// NumOffloadingArrays is the number of offloading arrays that we need to copy
+/// into the task structure so that the deferred target task can access this
+/// data even after the stack frame of the generating task has been rolled
+/// back. Offloading arrays contain base pointers, pointers, sizes etc
+/// of the data that the target kernel will access. These in effect are the
+/// non-empty arrays of pointers held by OpenMPIRBuilder::TargetDataRTArgs.
+static Function *emitTargetTaskProxyFunction(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, CallInst *StaleCI,
+    StructType *PrivatesTy, StructType *TaskWithPrivatesTy,
+    const size_t NumOffloadingArrays, const int SharedArgsOperandNo) {
+
+  // If NumOffloadingArrays is non-zero, PrivatesTy better not be nullptr.
+  // This is because PrivatesTy is the type of the structure in which
+  // we pass the offloading arrays to the deferred target task.
+  assert((!NumOffloadingArrays || PrivatesTy) &&
+         "PrivatesTy cannot be nullptr when there are offloadingArrays"
+         "to privatize");
+
   Module &M = OMPBuilder.M;
   // KernelLaunchFunction is the target launch function, i.e.
   // the function that sets up kernel arguments and calls
@@ -6939,10 +7997,11 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
   Function *KernelLaunchFunction = StaleCI->getCalledFunction();
 
   // StaleCI is the CallInst which is the call to the outlined
-  // target kernel launch function. If there are values that the
-  // outlined function uses then these are aggregated into a structure
-  // which is passed as the second argument. If not, then there's
-  // only one argument, the threadID. So, StaleCI can be
+  // target kernel launch function. If there are local live-in values
+  // that the outlined function uses then these are aggregated into a structure
+  // which is passed as the second argument. If there are no local live-in
+  // values or if all values used by the outlined kernel are global variables,
+  // then there's only one argument, the threadID. So, StaleCI can be
   //
   // %structArg = alloca { ptr, ptr }, align 8
   // %gep_ = getelementptr { ptr, ptr }, ptr %structArg, i32 0, i32 0
@@ -6956,32 +8015,49 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
   // call void @_QQmain..omp_par.1(i32 %global.tid.val6)
   OpenMPIRBuilder::InsertPointTy IP(StaleCI->getParent(),
                                     StaleCI->getIterator());
+
   LLVMContext &Ctx = StaleCI->getParent()->getContext();
+
   Type *ThreadIDTy = Type::getInt32Ty(Ctx);
   Type *TaskPtrTy = OMPBuilder.TaskPtr;
-  Type *TaskTy = OMPBuilder.Task;
+  [[maybe_unused]] Type *TaskTy = OMPBuilder.Task;
+
   auto ProxyFnTy =
       FunctionType::get(Builder.getVoidTy(), {ThreadIDTy, TaskPtrTy},
                         /* isVarArg */ false);
   auto ProxyFn = Function::Create(ProxyFnTy, GlobalValue::InternalLinkage,
                                   ".omp_target_task_proxy_func",
                                   Builder.GetInsertBlock()->getModule());
-  ProxyFn->getArg(0)->setName("thread.id");
-  ProxyFn->getArg(1)->setName("task");
+  Value *ThreadId = ProxyFn->getArg(0);
+  Value *TaskWithPrivates = ProxyFn->getArg(1);
+  ThreadId->setName("thread.id");
+  TaskWithPrivates->setName("task");
 
+  bool HasShareds = SharedArgsOperandNo > 0;
+  bool HasOffloadingArrays = NumOffloadingArrays > 0;
   BasicBlock *EntryBB =
       BasicBlock::Create(Builder.getContext(), "entry", ProxyFn);
   Builder.SetInsertPoint(EntryBB);
 
-  bool HasShareds = StaleCI->arg_size() > 1;
-  // TODO: This is a temporary assert to prove to ourselves that
-  // the outlined target launch function is always going to have
-  // atmost two arguments if there is any data shared between
-  // host and device.
-  assert((!HasShareds || (StaleCI->arg_size() == 2)) &&
-         "StaleCI with shareds should have exactly two arguments.");
+  SmallVector<Value *> KernelLaunchArgs;
+  KernelLaunchArgs.reserve(StaleCI->arg_size());
+  KernelLaunchArgs.push_back(ThreadId);
+
+  if (HasOffloadingArrays) {
+    assert(TaskTy != TaskWithPrivatesTy &&
+           "If there are offloading arrays to pass to the target"
+           "TaskTy cannot be the same as TaskWithPrivatesTy");
+    (void)TaskTy;
+    Value *Privates =
+        Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 1);
+    for (unsigned int i = 0; i < NumOffloadingArrays; ++i)
+      KernelLaunchArgs.push_back(
+          Builder.CreateStructGEP(PrivatesTy, Privates, i));
+  }
+
   if (HasShareds) {
-    auto *ArgStructAlloca = dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
+    auto *ArgStructAlloca =
+        dyn_cast<AllocaInst>(StaleCI->getArgOperand(SharedArgsOperandNo));
     assert(ArgStructAlloca &&
            "Unable to find the alloca instruction corresponding to arguments "
            "for extracted function");
@@ -6989,37 +8065,81 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
 
     AllocaInst *NewArgStructAlloca =
         Builder.CreateAlloca(ArgStructType, nullptr, "structArg");
-    Value *TaskT = ProxyFn->getArg(1);
-    Value *ThreadId = ProxyFn->getArg(0);
+
     Value *SharedsSize =
         Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
 
-    Value *Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
-    LoadInst *LoadShared =
-        Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+    LoadInst *LoadShared = loadSharedDataFromTaskDescriptor(
+        OMPBuilder, Builder, TaskWithPrivates, TaskWithPrivatesTy);
 
     Builder.CreateMemCpy(
         NewArgStructAlloca, NewArgStructAlloca->getAlign(), LoadShared,
         LoadShared->getPointerAlignment(M.getDataLayout()), SharedsSize);
-
-    Builder.CreateCall(KernelLaunchFunction, {ThreadId, NewArgStructAlloca});
+    KernelLaunchArgs.push_back(NewArgStructAlloca);
   }
+  OMPBuilder.createRuntimeFunctionCall(KernelLaunchFunction, KernelLaunchArgs);
   Builder.CreateRetVoid();
   return ProxyFn;
 }
+static Type *getOffloadingArrayType(Value *V) {
 
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
+    return GEP->getSourceElementType();
+  if (auto *Alloca = dyn_cast<AllocaInst>(V))
+    return Alloca->getAllocatedType();
+
+  llvm_unreachable("Unhandled Instruction type");
+  return nullptr;
+}
+// This function returns a struct that has at most two members.
+// The first member is always %struct.kmp_task_ompbuilder_t, that is the task
+// descriptor. The second member, if needed, is a struct containing arrays
+// that need to be passed to the offloaded target kernel. For example,
+// if .offload_baseptrs, .offload_ptrs and .offload_sizes have to be passed to
+// the target kernel and their types are [3 x ptr], [3 x ptr] and [3 x i64]
+// respectively, then the types created  by this function are
+//
+// %struct.privates = type { [3 x ptr], [3 x ptr], [3 x i64] }
+// %struct.task_with_privates = type { %struct.kmp_task_ompbuilder_t,
+//                                     %struct.privates }
+// %struct.task_with_privates is returned by this function.
+// If there aren't any offloading arrays to pass to the target kernel,
+// %struct.kmp_task_ompbuilder_t is returned.
+static StructType *
+createTaskWithPrivatesTy(OpenMPIRBuilder &OMPIRBuilder,
+                         ArrayRef<Value *> OffloadingArraysToPrivatize) {
+
+  if (OffloadingArraysToPrivatize.empty())
+    return OMPIRBuilder.Task;
+
+  SmallVector<Type *, 4> StructFieldTypes;
+  for (Value *V : OffloadingArraysToPrivatize) {
+    assert(V->getType()->isPointerTy() &&
+           "Expected pointer to array to privatize. Got a non-pointer value "
+           "instead");
+    Type *ArrayTy = getOffloadingArrayType(V);
+    assert(ArrayTy && "ArrayType cannot be nullptr");
+    StructFieldTypes.push_back(ArrayTy);
+  }
+  StructType *PrivatesStructTy =
+      StructType::create(StructFieldTypes, "struct.privates");
+  return StructType::create({OMPIRBuilder.Task, PrivatesStructTy},
+                            "struct.task_with_privates");
+}
 static Error emitTargetOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, bool IsOffloadEntry,
-    TargetRegionEntryInfo &EntryInfo, Function *&OutlinedFn,
-    Constant *&OutlinedFnID, SmallVectorImpl<Value *> &Inputs,
+    TargetRegionEntryInfo &EntryInfo,
+    const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
+    Function *&OutlinedFn, Constant *&OutlinedFnID,
+    SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
 
   OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
-      [&OMPBuilder, &Builder, &Inputs, &CBFunc,
-       &ArgAccessorFuncCB](StringRef EntryFnName) {
-        return createOutlinedFunction(OMPBuilder, Builder, EntryFnName, Inputs,
-                                      CBFunc, ArgAccessorFuncCB);
+      [&](StringRef EntryFnName) {
+        return createOutlinedFunction(OMPBuilder, Builder, DefaultAttrs,
+                                      EntryFnName, Inputs, CBFunc,
+                                      ArgAccessorFuncCB);
       };
 
   return OMPBuilder.emitTargetRegionFunction(
@@ -7031,7 +8151,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     TargetTaskBodyCallbackTy TaskBodyCB, Value *DeviceID, Value *RTLoc,
     OpenMPIRBuilder::InsertPointTy AllocaIP,
     const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
-    bool HasNoWait) {
+    const TargetDataRTArgs &RTArgs, bool HasNoWait) {
 
   // The following explains the code-gen scenario for the `target` directive. A
   // similar scneario is followed for other device-related directives (e.g.
@@ -7041,27 +8161,30 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   // When we arrive at this function, the target region itself has been
   // outlined into the function OutlinedFn.
   // So at ths point, for
-  // --------------------------------------------------
+  // --------------------------------------------------------------
   //   void user_code_that_offloads(...) {
-  //     omp target depend(..) map(from:a) map(to:b, c)
-  //        a = b + c
+  //     omp target depend(..) map(from:a) map(to:b) private(i)
+  //     do i = 1, 10
+  //        a(i) = b(i) + n
   //   }
   //
-  // --------------------------------------------------
+  // --------------------------------------------------------------
   //
   // we have
   //
-  // --------------------------------------------------
+  // --------------------------------------------------------------
   //
   //   void user_code_that_offloads(...) {
-  //     %.offload_baseptrs = alloca [3 x ptr], align 8
-  //     %.offload_ptrs = alloca [3 x ptr], align 8
-  //     %.offload_mappers = alloca [3 x ptr], align 8
+  //     %.offload_baseptrs = alloca [2 x ptr], align 8
+  //     %.offload_ptrs = alloca [2 x ptr], align 8
+  //     %.offload_mappers = alloca [2 x ptr], align 8
   //     ;; target region has been outlined and now we need to
   //     ;; offload to it via a target task.
   //   }
-  //   void outlined_device_function(ptr a, ptr b, ptr c) {
-  //     *a = *b + *c
+  //   void outlined_device_function(ptr a, ptr b, ptr n) {
+  //     n = *n_ptr;
+  //     do i = 1, 10
+  //       a(i) = b(i) +  n
   //   }
   //
   // We have to now do the following
@@ -7074,33 +8197,59 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   // (iii) Create a task with the task entry point created in (ii)
   //
   // That is we create the following
-  //
+  //   struct task_with_privates {
+  //      struct kmp_task_ompbuilder_t task_struct;
+  //      struct privates {
+  //         [2 x ptr] ; baseptrs
+  //         [2 x ptr] ; ptrs
+  //         [2 x i64] ; sizes
+  //      }
+  //   }
   //   void user_code_that_offloads(...) {
-  //     %.offload_baseptrs = alloca [3 x ptr], align 8
-  //     %.offload_ptrs = alloca [3 x ptr], align 8
-  //     %.offload_mappers = alloca [3 x ptr], align 8
+  //     %.offload_baseptrs = alloca [2 x ptr], align 8
+  //     %.offload_ptrs = alloca [2 x ptr], align 8
+  //     %.offload_sizes = alloca [2 x i64], align 8
   //
   //     %structArg = alloca { ptr, ptr, ptr }, align 8
-  //     %strucArg[0] = %.offload_baseptrs
-  //     %strucArg[1] = %.offload_ptrs
-  //     %strucArg[2] = %.offload_mappers
-  //     proxy_target_task = @__kmpc_omp_task_alloc(...,
-  //                                               @.omp_target_task_proxy_func)
-  //     memcpy(proxy_target_task->shareds, %structArg, sizeof(structArg))
+  //     %strucArg[0] = a
+  //     %strucArg[1] = b
+  //     %strucArg[2] = &n
+  //
+  //     target_task_with_privates = @__kmpc_omp_target_task_alloc(...,
+  //                                               sizeof(kmp_task_ompbuilder_t),
+  //                                               sizeof(structArg),
+  //                                               @.omp_target_task_proxy_func,
+  //                                               ...)
+  //     memcpy(target_task_with_privates->task_struct->shareds, %structArg,
+  //            sizeof(structArg))
+  //     memcpy(target_task_with_privates->privates->baseptrs,
+  //            offload_baseptrs, sizeof(offload_baseptrs)
+  //     memcpy(target_task_with_privates->privates->ptrs,
+  //            offload_ptrs, sizeof(offload_ptrs)
+  //     memcpy(target_task_with_privates->privates->sizes,
+  //            offload_sizes, sizeof(offload_sizes)
   //     dependencies_array = ...
   //     ;; if nowait not present
   //     call @__kmpc_omp_wait_deps(..., dependencies_array)
   //     call @__kmpc_omp_task_begin_if0(...)
   //     call @ @.omp_target_task_proxy_func(i32 thread_id, ptr
-  //     %proxy_target_task) call @__kmpc_omp_task_complete_if0(...)
+  //     %target_task_with_privates)
+  //     call @__kmpc_omp_task_complete_if0(...)
   //   }
   //
   //   define internal void @.omp_target_task_proxy_func(i32 %thread.id,
   //                                                     ptr %task) {
   //       %structArg = alloca {ptr, ptr, ptr}
-  //       %shared_data = load (getelementptr %task, 0, 0)
-  //       mempcy(%structArg, %shared_data, sizeof(structArg))
-  //       kernel_launch_function(%thread.id, %structArg)
+  //       %task_ptr = getelementptr(%task, 0, 0)
+  //       %shared_data = load (getelementptr %task_ptr, 0, 0)
+  //       mempcy(%structArg, %shared_data, sizeof(%structArg))
+  //
+  //       %offloading_arrays = getelementptr(%task, 0, 1)
+  //       %offload_baseptrs = getelementptr(%offloading_arrays, 0, 0)
+  //       %offload_ptrs = getelementptr(%offloading_arrays, 0, 1)
+  //       %offload_sizes = getelementptr(%offloading_arrays, 0, 2)
+  //       kernel_launch_function(%thread.id, %offload_baseptrs, %offload_ptrs,
+  //                              %offload_sizes, %structArg)
   //   }
   //
   //   We need the proxy function because the signature of the task entry point
@@ -7108,21 +8257,21 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   //   that of the kernel_launch function.
   //
   //   kernel_launch_function is generated by emitKernelLaunch and has the
-  //   always_inline attribute.
-  //   void kernel_launch_function(thread_id,
-  //                               structArg) alwaysinline {
+  //   always_inline attribute. For this example, it'll look like so:
+  //   void kernel_launch_function(%thread_id, %offload_baseptrs, %offload_ptrs,
+  //                               %offload_sizes,  %structArg) alwaysinline {
   //       %kernel_args = alloca %struct.__tgt_kernel_arguments, align 8
-  //       offload_baseptrs = load(getelementptr structArg, 0, 0)
-  //       offload_ptrs = load(getelementptr structArg, 0, 1)
-  //       offload_mappers = load(getelementptr structArg, 0, 2)
+  //       ; load aggregated data from %structArg
   //       ; setup kernel_args using offload_baseptrs, offload_ptrs and
-  //       ; offload_mappers
+  //       ; offload_sizes
   //       call i32 @__tgt_target_kernel(...,
   //                                     outlined_device_function,
   //                                     ptr %kernel_args)
   //   }
-  //   void outlined_device_function(ptr a, ptr b, ptr c) {
-  //      *a = *b + *c
+  //   void outlined_device_function(ptr a, ptr b, ptr n) {
+  //     n = *n_ptr;
+  //     do i = 1, 10
+  //       a(i) = b(i) +  n
   //   }
   //
   BasicBlock *TargetTaskBodyBB =
@@ -7143,21 +8292,75 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, AllocaIP, ToBeDeleted, TargetTaskAllocaIP, "global.tid", false));
 
+  // Generate the task body which will subsequently be outlined.
   Builder.restoreIP(TargetTaskBodyIP);
-
   if (Error Err = TaskBodyCB(DeviceID, RTLoc, TargetTaskAllocaIP))
     return Err;
 
-  OI.ExitBB = Builder.saveIP().getBlock();
-  OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, HasNoWait,
-                      DeviceID](Function &OutlinedFn) mutable {
-    assert(OutlinedFn.getNumUses() == 1 &&
+  // The outliner (CodeExtractor) extract a sequence or vector of blocks that
+  // it is given. These blocks are enumerated by
+  // OpenMPIRBuilder::OutlineInfo::collectBlocks which expects the OI.ExitBlock
+  // to be outside the region. In other words, OI.ExitBlock is expected to be
+  // the start of the region after the outlining. We used to set OI.ExitBlock
+  // to the InsertBlock after TaskBodyCB is done. This is fine in most cases
+  // except when the task body is a single basic block. In that case,
+  // OI.ExitBlock is set to the single task body block and will get left out of
+  // the outlining process. So, simply create a new empty block to which we
+  // uncoditionally branch from where TaskBodyCB left off
+  OI.ExitBB = BasicBlock::Create(Builder.getContext(), "target.task.cont");
+  emitBlock(OI.ExitBB, Builder.GetInsertBlock()->getParent(),
+            /*IsFinished=*/true);
+
+  SmallVector<Value *, 2> OffloadingArraysToPrivatize;
+  bool NeedsTargetTask = HasNoWait && DeviceID;
+  if (NeedsTargetTask) {
+    for (auto *V :
+         {RTArgs.BasePointersArray, RTArgs.PointersArray, RTArgs.MappersArray,
+          RTArgs.MapNamesArray, RTArgs.MapTypesArray, RTArgs.MapTypesArrayEnd,
+          RTArgs.SizesArray}) {
+      if (V && !isa<ConstantPointerNull, GlobalVariable>(V)) {
+        OffloadingArraysToPrivatize.push_back(V);
+        OI.ExcludeArgsFromAggregate.push_back(V);
+      }
+    }
+  }
+  OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, NeedsTargetTask,
+                      DeviceID, OffloadingArraysToPrivatize](
+                         Function &OutlinedFn) mutable {
+    assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
 
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
-    bool HasShareds = StaleCI->arg_size() > 1;
 
-    Function *ProxyFn = emitTargetTaskProxyFunction(*this, Builder, StaleCI);
+    // The first argument of StaleCI is always the thread id.
+    // The next few arguments are the pointers to offloading arrays
+    // if any. (see OffloadingArraysToPrivatize)
+    // Finally, all other local values that are live-in into the outlined region
+    // end up in a structure whose pointer is passed as the last argument. This
+    // piece of data is passed in the "shared" field of the task structure. So,
+    // we know we have to pass shareds to the task if the number of arguments is
+    // greater than OffloadingArraysToPrivatize.size() + 1 The 1 is for the
+    // thread id. Further, for safety, we assert that the number of arguments of
+    // StaleCI is exactly OffloadingArraysToPrivatize.size() + 2
+    const unsigned int NumStaleCIArgs = StaleCI->arg_size();
+    bool HasShareds = NumStaleCIArgs > OffloadingArraysToPrivatize.size() + 1;
+    assert((!HasShareds ||
+            NumStaleCIArgs == (OffloadingArraysToPrivatize.size() + 2)) &&
+           "Wrong number of arguments for StaleCI when shareds are present");
+    int SharedArgOperandNo =
+        HasShareds ? OffloadingArraysToPrivatize.size() + 1 : 0;
+
+    StructType *TaskWithPrivatesTy =
+        createTaskWithPrivatesTy(*this, OffloadingArraysToPrivatize);
+    StructType *PrivatesTy = nullptr;
+
+    if (!OffloadingArraysToPrivatize.empty())
+      PrivatesTy =
+          static_cast<StructType *>(TaskWithPrivatesTy->getElementType(1));
+
+    Function *ProxyFn = emitTargetTaskProxyFunction(
+        *this, Builder, StaleCI, PrivatesTy, TaskWithPrivatesTy,
+        OffloadingArraysToPrivatize.size(), SharedArgOperandNo);
 
     LLVM_DEBUG(dbgs() << "Proxy task entry function created: " << *ProxyFn
                       << "\n");
@@ -7176,9 +8379,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // the DeviceID to the deferred task and also since
     // @__kmpc_omp_target_task_alloc creates an untied/async task.
     Function *TaskAllocFn =
-        !HasNoWait ? getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
-                   : getOrCreateRuntimeFunctionPtr(
-                         OMPRTL___kmpc_omp_target_task_alloc);
+        !NeedsTargetTask
+            ? getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
+            : getOrCreateRuntimeFunctionPtr(
+                  OMPRTL___kmpc_omp_target_task_alloc);
 
     // Arguments - `loc_ref` (Ident) and `gtid` (ThreadID)
     // call.
@@ -7186,17 +8390,19 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
 
     // Argument - `sizeof_kmp_task_t` (TaskSize)
     // Tasksize refers to the size in bytes of kmp_task_t data structure
-    // including private vars accessed in task.
-    // TODO: add kmp_task_t_with_privates (privates)
-    Value *TaskSize =
-        Builder.getInt64(M.getDataLayout().getTypeStoreSize(Task));
+    // plus any other data to be passed to the target task, if any, which
+    // is packed into a struct. kmp_task_t and the struct so created are
+    // packed into a wrapper struct whose type is TaskWithPrivatesTy.
+    Value *TaskSize = Builder.getInt64(
+        M.getDataLayout().getTypeStoreSize(TaskWithPrivatesTy));
 
     // Argument - `sizeof_shareds` (SharedsSize)
     // SharedsSize refers to the shareds array size in the kmp_task_t data
     // structure.
     Value *SharedsSize = Builder.getInt64(0);
     if (HasShareds) {
-      auto *ArgStructAlloca = dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
+      auto *ArgStructAlloca =
+          dyn_cast<AllocaInst>(StaleCI->getArgOperand(SharedArgOperandNo));
       assert(ArgStructAlloca &&
              "Unable to find the alloca instruction corresponding to arguments "
              "for extracted function");
@@ -7227,17 +8433,40 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
         /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
         /*task_func=*/ProxyFn};
 
-    if (HasNoWait)
+    if (NeedsTargetTask) {
+      assert(DeviceID && "Expected non-empty device ID.");
       TaskAllocArgs.push_back(DeviceID);
+    }
 
-    TaskData = Builder.CreateCall(TaskAllocFn, TaskAllocArgs);
+    TaskData = createRuntimeFunctionCall(TaskAllocFn, TaskAllocArgs);
 
+    Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
     if (HasShareds) {
-      Value *Shareds = StaleCI->getArgOperand(1);
-      Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
-      Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskData);
+      Value *Shareds = StaleCI->getArgOperand(SharedArgOperandNo);
+      Value *TaskShareds = loadSharedDataFromTaskDescriptor(
+          *this, Builder, TaskData, TaskWithPrivatesTy);
       Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
                            SharedsSize);
+    }
+    if (!OffloadingArraysToPrivatize.empty()) {
+      Value *Privates =
+          Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 1);
+      for (unsigned int i = 0; i < OffloadingArraysToPrivatize.size(); ++i) {
+        Value *PtrToPrivatize = OffloadingArraysToPrivatize[i];
+        [[maybe_unused]] Type *ArrayType =
+            getOffloadingArrayType(PtrToPrivatize);
+        assert(ArrayType && "ArrayType cannot be nullptr");
+
+        Type *ElementType = PrivatesTy->getElementType(i);
+        assert(ElementType == ArrayType &&
+               "ElementType should match ArrayType");
+        (void)ArrayType;
+
+        Value *Dst = Builder.CreateStructGEP(PrivatesTy, Privates, i);
+        Builder.CreateMemCpy(
+            Dst, Alignment, PtrToPrivatize, Alignment,
+            Builder.getInt64(M.getDataLayout().getTypeStoreSize(ElementType)));
+      }
     }
 
     Value *DepArray = emitTaskDependencies(*this, Dependencies);
@@ -7250,11 +8479,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // ---------------------------------------------------------------
     // The above means that the lack of a nowait on the target construct
     // translates to '#pragma omp task if(0)'
-    if (!HasNoWait) {
+    if (!NeedsTargetTask) {
       if (DepArray) {
         Function *TaskWaitFn =
             getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
-        Builder.CreateCall(
+        createRuntimeFunctionCall(
             TaskWaitFn,
             {/*loc_ref=*/Ident, /*gtid=*/ThreadID,
              /*ndeps=*/Builder.getInt32(Dependencies.size()),
@@ -7268,17 +8497,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
       Function *TaskCompleteFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_complete_if0);
-      Builder.CreateCall(TaskBeginFn, {Ident, ThreadID, TaskData});
-      CallInst *CI = Builder.CreateCall(ProxyFn, {ThreadID, TaskData});
+      createRuntimeFunctionCall(TaskBeginFn, {Ident, ThreadID, TaskData});
+      CallInst *CI = createRuntimeFunctionCall(ProxyFn, {ThreadID, TaskData});
       CI->setDebugLoc(StaleCI->getDebugLoc());
-      Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
+      createRuntimeFunctionCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
     } else if (DepArray) {
       // HasNoWait - meaning the task may be deferred. Call
       // __kmpc_omp_task_with_deps if there are dependencies,
       // else call __kmpc_omp_task
       Function *TaskFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_with_deps);
-      Builder.CreateCall(
+      createRuntimeFunctionCall(
           TaskFn,
           {Ident, ThreadID, TaskData, Builder.getInt32(Dependencies.size()),
            DepArray, ConstantInt::get(Builder.getInt32Ty(), 0),
@@ -7286,7 +8515,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     } else {
       // Emit the @__kmpc_omp_task runtime call to spawn the task
       Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
-      Builder.CreateCall(TaskFn, {Ident, ThreadID, TaskData});
+      createRuntimeFunctionCall(TaskFn, {Ident, ThreadID, TaskData});
     }
 
     StaleCI->eraseFromParent();
@@ -7303,31 +8532,39 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   return Builder.saveIP();
 }
 
-void OpenMPIRBuilder::emitOffloadingArraysAndArgs(
+Error OpenMPIRBuilder::emitOffloadingArraysAndArgs(
     InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
-    TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo, bool IsNonContiguous,
-    bool ForEndCall, function_ref<void(unsigned int, Value *)> DeviceAddrCB,
-    function_ref<Value *(unsigned int)> CustomMapperCB) {
-  emitOffloadingArrays(AllocaIP, CodeGenIP, CombinedInfo, Info, IsNonContiguous,
-                       DeviceAddrCB, CustomMapperCB);
+    TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo,
+    CustomMapperCallbackTy CustomMapperCB, bool IsNonContiguous,
+    bool ForEndCall, function_ref<void(unsigned int, Value *)> DeviceAddrCB) {
+  if (Error Err =
+          emitOffloadingArrays(AllocaIP, CodeGenIP, CombinedInfo, Info,
+                               CustomMapperCB, IsNonContiguous, DeviceAddrCB))
+    return Err;
   emitOffloadingArraysArgument(Builder, RTArgs, Info, ForEndCall);
+  return Error::success();
 }
 
-static void
-emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-               OpenMPIRBuilder::InsertPointTy AllocaIP, Function *OutlinedFn,
-               Constant *OutlinedFnID, ArrayRef<int32_t> NumTeams,
-               ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Args,
-               OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB,
-               SmallVector<llvm::OpenMPIRBuilder::DependData> Dependencies = {},
-               bool HasNoWait = false) {
+static void emitTargetCall(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    OpenMPIRBuilder::InsertPointTy AllocaIP,
+    OpenMPIRBuilder::TargetDataInfo &Info,
+    const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
+    const OpenMPIRBuilder::TargetKernelRuntimeAttrs &RuntimeAttrs,
+    Value *IfCond, Function *OutlinedFn, Constant *OutlinedFnID,
+    SmallVectorImpl<Value *> &Args,
+    OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB,
+    OpenMPIRBuilder::CustomMapperCallbackTy CustomMapperCB,
+    const SmallVector<llvm::OpenMPIRBuilder::DependData> &Dependencies,
+    bool HasNoWait, Value *DynCGroupMem,
+    OMPDynGroupprivateFallbackType DynCGroupMemFallback) {
   // Generate a function call to the host fallback implementation of the target
   // region. This is called by the host when no offload entry was generated for
   // the target region and when the offloading call fails at runtime.
   auto &&EmitTargetCallFallbackCB = [&](OpenMPIRBuilder::InsertPointTy IP)
       -> OpenMPIRBuilder::InsertPointOrErrorTy {
     Builder.restoreIP(IP);
-    Builder.CreateCall(OutlinedFn, Args);
+    OMPBuilder.createRuntimeFunctionCall(OutlinedFn, Args);
     return Builder.saveIP();
   };
 
@@ -7339,7 +8576,9 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   auto TaskBodyCB =
       [&](Value *DeviceID, Value *RTLoc,
           IRBuilderBase::InsertPoint TargetTaskAllocaIP) -> Error {
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = [&]() {
+    // Assume no error was returned because EmitTargetCallFallbackCB doesn't
+    // produce any.
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail([&]() {
       // emitKernelLaunch makes the necessary runtime call to offload the
       // kernel. We then outline all that code into a separate function
       // ('kernel_launch_function' in the pseudo code above). This function is
@@ -7347,105 +8586,170 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
       // '@.omp_target_task_proxy_func' in the pseudo code above)
       // "@.omp_target_task_proxy_func' is generated by
       // emitTargetTaskProxyFunction.
-      if (OutlinedFnID)
+      if (OutlinedFnID && DeviceID)
         return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
                                            EmitTargetCallFallbackCB, KArgs,
                                            DeviceID, RTLoc, TargetTaskAllocaIP);
+
+      // We only need to do the outlining if `DeviceID` is set to avoid calling
+      // `emitKernelLaunch` if we want to code-gen for the host; e.g. if we are
+      // generating the `else` branch of an `if` clause.
+      //
       // When OutlinedFnID is set to nullptr, then it's not an offloading call.
       // In this case, we execute the host implementation directly.
       return EmitTargetCallFallbackCB(OMPBuilder.Builder.saveIP());
-    }();
+    }());
 
-    if (!AfterIP)
-      return AfterIP.takeError();
-
-    OMPBuilder.Builder.restoreIP(*AfterIP);
+    OMPBuilder.Builder.restoreIP(AfterIP);
     return Error::success();
   };
 
-  // If we don't have an ID for the target region, it means an offload entry
-  // wasn't created. In this case we just run the host fallback directly.
-  if (!OutlinedFnID) {
-    OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = [&]() {
+  auto &&EmitTargetCallElse =
+      [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
+          OpenMPIRBuilder::InsertPointTy CodeGenIP) -> Error {
+    // Assume no error was returned because EmitTargetCallFallbackCB doesn't
+    // produce any.
+    OpenMPIRBuilder::InsertPointTy AfterIP = cantFail([&]() {
       if (RequiresOuterTargetTask) {
         // Arguments that are intended to be directly forwarded to an
         // emitKernelLaunch call are pased as nullptr, since
         // OutlinedFnID=nullptr results in that call not being done.
+        OpenMPIRBuilder::TargetDataRTArgs EmptyRTArgs;
         return OMPBuilder.emitTargetTask(TaskBodyCB, /*DeviceID=*/nullptr,
                                          /*RTLoc=*/nullptr, AllocaIP,
-                                         Dependencies, HasNoWait);
+                                         Dependencies, EmptyRTArgs, HasNoWait);
       }
       return EmitTargetCallFallbackCB(Builder.saveIP());
-    }();
+    }());
 
-    // Assume no error was returned because EmitTargetCallFallbackCB doesn't
-    // produce any. The 'if' check enables accessing the returned value.
-    if (AfterIP)
-      Builder.restoreIP(*AfterIP);
+    Builder.restoreIP(AfterIP);
+    return Error::success();
+  };
+
+  auto &&EmitTargetCallThen =
+      [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
+          OpenMPIRBuilder::InsertPointTy CodeGenIP) -> Error {
+    Info.HasNoWait = HasNoWait;
+    OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(Builder.saveIP());
+    OpenMPIRBuilder::TargetDataRTArgs RTArgs;
+    if (Error Err = OMPBuilder.emitOffloadingArraysAndArgs(
+            AllocaIP, Builder.saveIP(), Info, RTArgs, MapInfo, CustomMapperCB,
+            /*IsNonContiguous=*/true,
+            /*ForEndCall=*/false))
+      return Err;
+
+    SmallVector<Value *, 3> NumTeamsC;
+    for (auto [DefaultVal, RuntimeVal] :
+         zip_equal(DefaultAttrs.MaxTeams, RuntimeAttrs.MaxTeams))
+      NumTeamsC.push_back(RuntimeVal ? RuntimeVal
+                                     : Builder.getInt32(DefaultVal));
+
+    // Calculate number of threads: 0 if no clauses specified, otherwise it is
+    // the minimum between optional THREAD_LIMIT and NUM_THREADS clauses.
+    auto InitMaxThreadsClause = [&Builder](Value *Clause) {
+      if (Clause)
+        Clause = Builder.CreateIntCast(Clause, Builder.getInt32Ty(),
+                                       /*isSigned=*/false);
+      return Clause;
+    };
+    auto CombineMaxThreadsClauses = [&Builder](Value *Clause, Value *&Result) {
+      if (Clause)
+        Result =
+            Result ? Builder.CreateSelect(Builder.CreateICmpULT(Result, Clause),
+                                          Result, Clause)
+                   : Clause;
+    };
+
+    // If a multi-dimensional THREAD_LIMIT is set, it is the OMPX_BARE case, so
+    // the NUM_THREADS clause is overriden by THREAD_LIMIT.
+    SmallVector<Value *, 3> NumThreadsC;
+    Value *MaxThreadsClause =
+        RuntimeAttrs.TeamsThreadLimit.size() == 1
+            ? InitMaxThreadsClause(RuntimeAttrs.MaxThreads)
+            : nullptr;
+
+    for (auto [TeamsVal, TargetVal] : zip_equal(
+             RuntimeAttrs.TeamsThreadLimit, RuntimeAttrs.TargetThreadLimit)) {
+      Value *TeamsThreadLimitClause = InitMaxThreadsClause(TeamsVal);
+      Value *NumThreads = InitMaxThreadsClause(TargetVal);
+
+      CombineMaxThreadsClauses(TeamsThreadLimitClause, NumThreads);
+      CombineMaxThreadsClauses(MaxThreadsClause, NumThreads);
+
+      NumThreadsC.push_back(NumThreads ? NumThreads : Builder.getInt32(0));
+    }
+
+    unsigned NumTargetItems = Info.NumberOfPtrs;
+    // TODO: Use correct device ID
+    Value *DeviceID = Builder.getInt64(OMP_DEVICEID_UNDEF);
+    uint32_t SrcLocStrSize;
+    Constant *SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
+    Value *RTLoc = OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize,
+                                               llvm::omp::IdentFlag(0), 0);
+
+    Value *TripCount = RuntimeAttrs.LoopTripCount
+                           ? Builder.CreateIntCast(RuntimeAttrs.LoopTripCount,
+                                                   Builder.getInt64Ty(),
+                                                   /*isSigned=*/false)
+                           : Builder.getInt64(0);
+
+    // Request zero groupprivate bytes by default.
+    if (!DynCGroupMem)
+      DynCGroupMem = Builder.getInt32(0);
+
+    KArgs = OpenMPIRBuilder::TargetKernelArgs(
+        NumTargetItems, RTArgs, TripCount, NumTeamsC, NumThreadsC, DynCGroupMem,
+        HasNoWait, DynCGroupMemFallback);
+
+    // Assume no error was returned because TaskBodyCB and
+    // EmitTargetCallFallbackCB don't produce any.
+    OpenMPIRBuilder::InsertPointTy AfterIP = cantFail([&]() {
+      // The presence of certain clauses on the target directive require the
+      // explicit generation of the target task.
+      if (RequiresOuterTargetTask)
+        return OMPBuilder.emitTargetTask(TaskBodyCB, DeviceID, RTLoc, AllocaIP,
+                                         Dependencies, KArgs.RTArgs,
+                                         Info.HasNoWait);
+
+      return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
+                                         EmitTargetCallFallbackCB, KArgs,
+                                         DeviceID, RTLoc, AllocaIP);
+    }());
+
+    Builder.restoreIP(AfterIP);
+    return Error::success();
+  };
+
+  // If we don't have an ID for the target region, it means an offload entry
+  // wasn't created. In this case we just run the host fallback directly and
+  // ignore any potential 'if' clauses.
+  if (!OutlinedFnID) {
+    cantFail(EmitTargetCallElse(AllocaIP, Builder.saveIP()));
     return;
   }
 
-  OpenMPIRBuilder::TargetDataInfo Info(
-      /*RequiresDevicePointerInfo=*/false,
-      /*SeparateBeginEndCalls=*/true);
+  // If there's no 'if' clause, only generate the kernel launch code path.
+  if (!IfCond) {
+    cantFail(EmitTargetCallThen(AllocaIP, Builder.saveIP()));
+    return;
+  }
 
-  OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(Builder.saveIP());
-  OpenMPIRBuilder::TargetDataRTArgs RTArgs;
-  OMPBuilder.emitOffloadingArraysAndArgs(AllocaIP, Builder.saveIP(), Info,
-                                         RTArgs, MapInfo,
-                                         /*IsNonContiguous=*/true,
-                                         /*ForEndCall=*/false);
-
-  SmallVector<Value *, 3> NumTeamsC;
-  SmallVector<Value *, 3> NumThreadsC;
-  for (auto V : NumTeams)
-    NumTeamsC.push_back(llvm::ConstantInt::get(Builder.getInt32Ty(), V));
-  for (auto V : NumThreads)
-    NumThreadsC.push_back(llvm::ConstantInt::get(Builder.getInt32Ty(), V));
-
-  unsigned NumTargetItems = Info.NumberOfPtrs;
-  // TODO: Use correct device ID
-  Value *DeviceID = Builder.getInt64(OMP_DEVICEID_UNDEF);
-  uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
-  Value *RTLoc = OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize,
-                                             llvm::omp::IdentFlag(0), 0);
-  // TODO: Use correct NumIterations
-  Value *NumIterations = Builder.getInt64(0);
-  // TODO: Use correct DynCGGroupMem
-  Value *DynCGGroupMem = Builder.getInt32(0);
-
-  KArgs = OpenMPIRBuilder::TargetKernelArgs(
-      NumTargetItems, RTArgs, NumIterations, NumTeamsC, NumThreadsC,
-      DynCGGroupMem, HasNoWait);
-
-  // The presence of certain clauses on the target directive require the
-  // explicit generation of the target task.
-  OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = [&]() {
-    if (RequiresOuterTargetTask)
-      return OMPBuilder.emitTargetTask(TaskBodyCB, DeviceID, RTLoc, AllocaIP,
-                                       Dependencies, HasNoWait);
-
-    return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
-                                       EmitTargetCallFallbackCB, KArgs,
-                                       DeviceID, RTLoc, AllocaIP);
-  }();
-
-  // Assume no error was returned because TaskBodyCB and
-  // EmitTargetCallFallbackCB don't produce any. The 'if' check enables
-  // accessing the returned value.
-  if (AfterIP)
-    Builder.restoreIP(*AfterIP);
+  cantFail(OMPBuilder.emitIfClause(IfCond, EmitTargetCallThen,
+                                   EmitTargetCallElse, AllocaIP));
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
     const LocationDescription &Loc, bool IsOffloadEntry, InsertPointTy AllocaIP,
-    InsertPointTy CodeGenIP, TargetRegionEntryInfo &EntryInfo,
-    ArrayRef<int32_t> NumTeams, ArrayRef<int32_t> NumThreads,
-    SmallVectorImpl<Value *> &Args, GenMapInfoCallbackTy GenMapInfoCB,
+    InsertPointTy CodeGenIP, TargetDataInfo &Info,
+    TargetRegionEntryInfo &EntryInfo,
+    const TargetKernelDefaultAttrs &DefaultAttrs,
+    const TargetKernelRuntimeAttrs &RuntimeAttrs, Value *IfCond,
+    SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
     OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
-    SmallVector<DependData> Dependencies, bool HasNowait) {
+    CustomMapperCallbackTy CustomMapperCB,
+    const SmallVector<DependData> &Dependencies, bool HasNowait,
+    Value *DynCGroupMem, OMPDynGroupprivateFallbackType DynCGroupMemFallback) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -7458,16 +8762,18 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
   // the target region itself is generated using the callbacks CBFunc
   // and ArgAccessorFuncCB
   if (Error Err = emitTargetOutlinedFunction(
-          *this, Builder, IsOffloadEntry, EntryInfo, OutlinedFn, OutlinedFnID,
-          Args, CBFunc, ArgAccessorFuncCB))
+          *this, Builder, IsOffloadEntry, EntryInfo, DefaultAttrs, OutlinedFn,
+          OutlinedFnID, Inputs, CBFunc, ArgAccessorFuncCB))
     return Err;
 
   // If we are not on the target device, then we need to generate code
   // to make a remote call (offload) to the previously outlined function
   // that represents the target region. Do that now.
   if (!Config.isTargetDevice())
-    emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
-                   NumThreads, Args, GenMapInfoCB, Dependencies, HasNowait);
+    emitTargetCall(*this, Builder, AllocaIP, Info, DefaultAttrs, RuntimeAttrs,
+                   IfCond, OutlinedFn, OutlinedFnID, Inputs, GenMapInfoCB,
+                   CustomMapperCB, Dependencies, HasNowait, DynCGroupMem,
+                   DynCGroupMemFallback);
   return Builder.saveIP();
 }
 
@@ -7490,9 +8796,8 @@ OpenMPIRBuilder::createPlatformSpecificName(ArrayRef<StringRef> Parts) const {
                                                 Config.separator());
 }
 
-GlobalVariable *
-OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
-                                             unsigned AddressSpace) {
+GlobalVariable *OpenMPIRBuilder::getOrCreateInternalVariable(
+    Type *Ty, const StringRef &Name, std::optional<unsigned> AddressSpace) {
   auto &Elem = *InternalVars.try_emplace(Name, nullptr).first;
   if (Elem.second) {
     assert(Elem.second->getValueType() == Ty &&
@@ -7502,16 +8807,25 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
-    auto Linkage = this->M.getTargetTriple().rfind("wasm32") == 0
+    const DataLayout &DL = M.getDataLayout();
+    // TODO: Investigate why AMDGPU expects AS 0 for globals even though the
+    // default global AS is 1.
+    // See double-target-call-with-declare-target.f90 and
+    // declare-target-vars-in-target-region.f90 libomptarget
+    // tests.
+    unsigned AddressSpaceVal = AddressSpace ? *AddressSpace
+                               : M.getTargetTriple().isAMDGPU()
+                                   ? 0
+                                   : DL.getDefaultGlobalsAddressSpace();
+    auto Linkage = this->M.getTargetTriple().getArch() == Triple::wasm32
                        ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
                                   Constant::getNullValue(Ty), Elem.first(),
                                   /*InsertBefore=*/nullptr,
-                                  GlobalValue::NotThreadLocal, AddressSpace);
-    const DataLayout &DL = M.getDataLayout();
+                                  GlobalValue::NotThreadLocal, AddressSpaceVal);
     const llvm::Align TypeAlign = DL.getABITypeAlign(Ty);
-    const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpace);
+    const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpaceVal);
     GV->setAlignment(std::max(TypeAlign, PtrAlign));
     Elem.second = GV;
   }
@@ -7564,7 +8878,7 @@ void OpenMPIRBuilder::createMapperAllocas(const LocationDescription &Loc,
                                           ".offload_ptrs");
   AllocaInst *ArgSizes = Builder.CreateAlloca(
       ArrI64Ty, /* ArraySize = */ nullptr, ".offload_sizes");
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
   MapperAllocas.ArgsBase = ArgsBase;
   MapperAllocas.Args = Args;
   MapperAllocas.ArgSizes = ArgSizes;
@@ -7591,10 +8905,10 @@ void OpenMPIRBuilder::emitMapperCall(const LocationDescription &Loc,
                                 {Builder.getInt32(0), Builder.getInt32(0)});
   Value *NullPtr =
       Constant::getNullValue(PointerType::getUnqual(Int8Ptr->getContext()));
-  Builder.CreateCall(MapperFunc,
-                     {SrcLocInfo, Builder.getInt64(DeviceID),
-                      Builder.getInt32(NumOperands), ArgsBaseGEP, ArgsGEP,
-                      ArgSizesGEP, MaptypesArg, MapnamesArg, NullPtr});
+  createRuntimeFunctionCall(MapperFunc, {SrcLocInfo, Builder.getInt64(DeviceID),
+                                         Builder.getInt32(NumOperands),
+                                         ArgsBaseGEP, ArgsGEP, ArgSizesGEP,
+                                         MaptypesArg, MapnamesArg, NullPtr});
 }
 
 void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
@@ -7787,17 +9101,16 @@ void OpenMPIRBuilder::emitUDMapperArrayInitOrDel(
   // data structure.
   Value *OffloadingArgs[] = {MapperHandle, Base,       Begin,
                              ArraySize,    MapTypeArg, MapName};
-  Builder.CreateCall(
+  createRuntimeFunctionCall(
       getOrCreateRuntimeFunction(M, OMPRTL___tgt_push_mapper_component),
       OffloadingArgs);
 }
 
-Function *OpenMPIRBuilder::emitUserDefinedMapper(
-    function_ref<MapInfosTy &(InsertPointTy CodeGenIP, llvm::Value *PtrPHI,
-                              llvm::Value *BeginArg)>
+Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
+    function_ref<MapInfosOrErrorTy(InsertPointTy CodeGenIP, llvm::Value *PtrPHI,
+                                   llvm::Value *BeginArg)>
         GenMapInfoCB,
-    Type *ElemTy, StringRef FuncName,
-    function_ref<bool(unsigned int, Function **)> CustomMapperCB) {
+    Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB) {
   SmallVector<Type *> Params;
   Params.emplace_back(Builder.getPtrTy());
   Params.emplace_back(Builder.getPtrTy());
@@ -7839,7 +9152,7 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
   // Convert the size in bytes into the number of array elements.
   TypeSize ElementSize = M.getDataLayout().getTypeStoreSize(ElemTy);
   Size = Builder.CreateExactUDiv(Size, Builder.getInt64(ElementSize));
-  Value *PtrBegin = Builder.CreateBitCast(BeginIn, Builder.getPtrTy());
+  Value *PtrBegin = BeginIn;
   Value *PtrEnd = Builder.CreateGEP(ElemTy, PtrBegin, Size);
 
   // Emit array initiation if this is an array section and \p MapType indicates
@@ -7868,32 +9181,32 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
   PtrPHI->addIncoming(PtrBegin, HeadBB);
 
   // Get map clause information. Fill up the arrays with all mapped variables.
-  MapInfosTy &Info = GenMapInfoCB(Builder.saveIP(), PtrPHI, BeginIn);
+  MapInfosOrErrorTy Info = GenMapInfoCB(Builder.saveIP(), PtrPHI, BeginIn);
+  if (!Info)
+    return Info.takeError();
 
   // Call the runtime API __tgt_mapper_num_components to get the number of
   // pre-existing components.
   Value *OffloadingArgs[] = {MapperHandle};
-  Value *PreviousSize = Builder.CreateCall(
+  Value *PreviousSize = createRuntimeFunctionCall(
       getOrCreateRuntimeFunction(M, OMPRTL___tgt_mapper_num_components),
       OffloadingArgs);
   Value *ShiftedPreviousSize =
       Builder.CreateShl(PreviousSize, Builder.getInt64(getFlagMemberOffset()));
 
   // Fill up the runtime mapper handle for all components.
-  for (unsigned I = 0; I < Info.BasePointers.size(); ++I) {
-    Value *CurBaseArg =
-        Builder.CreateBitCast(Info.BasePointers[I], Builder.getPtrTy());
-    Value *CurBeginArg =
-        Builder.CreateBitCast(Info.Pointers[I], Builder.getPtrTy());
-    Value *CurSizeArg = Info.Sizes[I];
-    Value *CurNameArg = Info.Names.size()
-                            ? Info.Names[I]
+  for (unsigned I = 0; I < Info->BasePointers.size(); ++I) {
+    Value *CurBaseArg = Info->BasePointers[I];
+    Value *CurBeginArg = Info->Pointers[I];
+    Value *CurSizeArg = Info->Sizes[I];
+    Value *CurNameArg = Info->Names.size()
+                            ? Info->Names[I]
                             : Constant::getNullValue(Builder.getPtrTy());
 
     // Extract the MEMBER_OF field from the map type.
     Value *OriMapType = Builder.getInt64(
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-            Info.Types[I]));
+            Info->Types[I]));
     Value *MemberMapType =
         Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
 
@@ -7975,14 +9288,18 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
 
     Value *OffloadingArgs[] = {MapperHandle, CurBaseArg, CurBeginArg,
                                CurSizeArg,   CurMapType, CurNameArg};
-    Function *ChildMapperFn = nullptr;
-    if (CustomMapperCB && CustomMapperCB(I, &ChildMapperFn)) {
+
+    auto ChildMapperFn = CustomMapperCB(I);
+    if (!ChildMapperFn)
+      return ChildMapperFn.takeError();
+    if (*ChildMapperFn) {
       // Call the corresponding mapper function.
-      Builder.CreateCall(ChildMapperFn, OffloadingArgs)->setDoesNotThrow();
+      createRuntimeFunctionCall(*ChildMapperFn, OffloadingArgs)
+          ->setDoesNotThrow();
     } else {
       // Call the runtime API __tgt_push_mapper_component to fill up the runtime
       // data structure.
-      Builder.CreateCall(
+      createRuntimeFunctionCall(
           getOrCreateRuntimeFunction(M, OMPRTL___tgt_push_mapper_component),
           OffloadingArgs);
     }
@@ -8012,18 +9329,18 @@ Function *OpenMPIRBuilder::emitUserDefinedMapper(
   return MapperFn;
 }
 
-void OpenMPIRBuilder::emitOffloadingArrays(
+Error OpenMPIRBuilder::emitOffloadingArrays(
     InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
-    TargetDataInfo &Info, bool IsNonContiguous,
-    function_ref<void(unsigned int, Value *)> DeviceAddrCB,
-    function_ref<Value *(unsigned int)> CustomMapperCB) {
+    TargetDataInfo &Info, CustomMapperCallbackTy CustomMapperCB,
+    bool IsNonContiguous,
+    function_ref<void(unsigned int, Value *)> DeviceAddrCB) {
 
   // Reset the array information.
   Info.clearArrayInfo();
   Info.NumberOfPtrs = CombinedInfo.BasePointers.size();
 
   if (Info.NumberOfPtrs == 0)
-    return;
+    return Error::success();
 
   Builder.restoreIP(AllocaIP);
   // Detect if we have any capture size requiring runtime evaluation of the
@@ -8068,7 +9385,7 @@ void OpenMPIRBuilder::emitOffloadingArrays(
     ArrayType *SizeArrayType = ArrayType::get(Int64Ty, Info.NumberOfPtrs);
     Info.RTArgs.SizesArray = Builder.CreateAlloca(
         SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
-    Builder.restoreIP(CodeGenIP);
+    restoreIPandDebugLoc(Builder, CodeGenIP);
   } else {
     auto *SizesArrayInit = ConstantArray::get(
         ArrayType::get(Int64Ty, ConstSizes.size()), ConstSizes);
@@ -8087,7 +9404,7 @@ void OpenMPIRBuilder::emitOffloadingArrays(
       AllocaInst *Buffer = Builder.CreateAlloca(
           SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
       Buffer->setAlignment(OffloadSizeAlign);
-      Builder.restoreIP(CodeGenIP);
+      restoreIPandDebugLoc(Builder, CodeGenIP);
       Builder.CreateMemCpy(
           Buffer, M.getDataLayout().getPrefTypeAlign(Buffer->getType()),
           SizesArrayGbl, OffloadSizeAlign,
@@ -8097,7 +9414,7 @@ void OpenMPIRBuilder::emitOffloadingArrays(
 
       Info.RTArgs.SizesArray = Buffer;
     }
-    Builder.restoreIP(CodeGenIP);
+    restoreIPandDebugLoc(Builder, CodeGenIP);
   }
 
   // The map types are always constant so we don't need to generate code to
@@ -8113,9 +9430,8 @@ void OpenMPIRBuilder::emitOffloadingArrays(
 
   // The information types are only built if provided.
   if (!CombinedInfo.Names.empty()) {
-    std::string MapnamesName = createPlatformSpecificName({"offload_mapnames"});
-    auto *MapNamesArrayGbl =
-        createOffloadMapnames(CombinedInfo.Names, MapnamesName);
+    auto *MapNamesArrayGbl = createOffloadMapnames(
+        CombinedInfo.Names, createPlatformSpecificName({"offload_mapnames"}));
     Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
     Info.EmitDebug = true;
   } else {
@@ -8187,9 +9503,13 @@ void OpenMPIRBuilder::emitOffloadingArrays(
     // Fill up the mapper array.
     unsigned IndexSize = M.getDataLayout().getIndexSizeInBits(0);
     Value *MFunc = ConstantPointerNull::get(PtrTy);
-    if (CustomMapperCB)
-      if (Value *CustomMFunc = CustomMapperCB(I))
-        MFunc = Builder.CreatePointerCast(CustomMFunc, PtrTy);
+
+    auto CustomMFunc = CustomMapperCB(I);
+    if (!CustomMFunc)
+      return CustomMFunc.takeError();
+    if (*CustomMFunc)
+      MFunc = Builder.CreatePointerCast(*CustomMFunc, PtrTy);
+
     Value *MAddr = Builder.CreateInBoundsGEP(
         MappersArray->getAllocatedType(), MappersArray,
         {Builder.getIntN(IndexSize, 0), Builder.getIntN(IndexSize, I)});
@@ -8199,8 +9519,9 @@ void OpenMPIRBuilder::emitOffloadingArrays(
 
   if (!IsNonContiguous || CombinedInfo.NonContigInfo.Offsets.empty() ||
       Info.NumberOfPtrs == 0)
-    return;
+    return Error::success();
   emitNonContiguousDescriptor(AllocaIP, CodeGenIP, CombinedInfo, Info);
+  return Error::success();
 }
 
 void OpenMPIRBuilder::emitBranch(BasicBlock *Target) {
@@ -8340,7 +9661,7 @@ bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
                                   AtomicOpValue &X, AtomicOpValue &V,
-                                  AtomicOrdering AO) {
+                                  AtomicOrdering AO, InsertPointTy AllocaIP) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -8363,12 +9684,11 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     // target does not support `atomicrmw` of the size of the struct
     LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
     OldVal->setAtomic(AO);
-    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
-    unsigned LoadSize =
-        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+    const DataLayout &DL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize = DL.getTypeStoreSize(XElemTy);
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
-        OldVal->getAlign(), true /* UseLibcall */, X.Var);
+        OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X.Var);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
     XRead = AtomicLoadRes.first;
     OldVal->eraseFromParent();
@@ -8393,7 +9713,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
                                    AtomicOpValue &X, Value *Expr,
-                                   AtomicOrdering AO) {
+                                   AtomicOrdering AO, InsertPointTy AllocaIP) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -8401,12 +9721,21 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
          "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
   assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy()) &&
+          XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
          "OMP atomic write expected a scalar type");
 
   if (XElemTy->isIntegerTy()) {
     StoreInst *XSt = Builder.CreateStore(Expr, X.Var, X.IsVolatile);
     XSt->setAtomic(AO);
+  } else if (XElemTy->isStructTy()) {
+    LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
+    const DataLayout &DL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize = DL.getTypeStoreSize(XElemTy);
+    OpenMPIRBuilder::AtomicInfo atomicInfo(
+        &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
+        OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X.Var);
+    atomicInfo.EmitAtomicStoreLibcall(AO, Expr);
+    OldVal->eraseFromParent();
   } else {
     // We need to bitcast and perform atomic op as integers
     IntegerType *IntCastTy =
@@ -8424,7 +9753,8 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
     const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
     Value *Expr, AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
-    AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr) {
+    AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr,
+    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
   assert(!isConflictIP(Loc.IP, AllocaIP) && "IPs must not be ambiguous");
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -8442,9 +9772,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
            "OpenMP atomic does not support LT or GT operations");
   });
 
-  Expected<std::pair<Value *, Value *>> AtomicResult =
-      emitAtomicUpdate(AllocaIP, X.Var, X.ElemTy, Expr, AO, RMWOp, UpdateOp,
-                       X.IsVolatile, IsXBinopExpr);
+  Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
+      AllocaIP, X.Var, X.ElemTy, Expr, AO, RMWOp, UpdateOp, X.IsVolatile,
+      IsXBinopExpr, IsIgnoreDenormalMode, IsFineGrainedMemory, IsRemoteMemory);
   if (!AtomicResult)
     return AtomicResult.takeError();
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Update);
@@ -8477,6 +9807,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -8489,7 +9821,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
 Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
-    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr) {
+    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr,
+    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
   // TODO: handle the case where XElemTy is not byte-sized or not a power of 2
   // or a complex datatype.
   bool emitRMWOp = false;
@@ -8512,7 +9845,20 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
 
   std::pair<Value *, Value *> Res;
   if (emitRMWOp) {
-    Res.first = Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
+    AtomicRMWInst *RMWInst =
+        Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
+    if (T.isAMDGPU()) {
+      if (IsIgnoreDenormalMode)
+        RMWInst->setMetadata("amdgpu.ignore.denormal.mode",
+                             llvm::MDNode::get(Builder.getContext(), {}));
+      if (!IsFineGrainedMemory)
+        RMWInst->setMetadata("amdgpu.no.fine.grained.memory",
+                             llvm::MDNode::get(Builder.getContext(), {}));
+      if (!IsRemoteMemory)
+        RMWInst->setMetadata("amdgpu.no.remote.memory",
+                             llvm::MDNode::get(Builder.getContext(), {}));
+    }
+    Res.first = RMWInst;
     // not needed except in case of postfix captures. Generate anyway for
     // consistency with the else part. Will be removed with any DCE pass.
     // AtomicRMWInst::Xchg does not have a coressponding instruction.
@@ -8531,7 +9877,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
 
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
-        OldVal->getAlign(), true /* UseLibcall */, X);
+        OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
     BasicBlock *CurBB = Builder.GetInsertBlock();
     Instruction *CurBBTI = CurBB->getTerminator();
@@ -8579,7 +9925,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     OldVal->setAtomic(AO);
     // CurBB
     // |     /---\
-		// ContBB    |
+    // ContBB    |
     // |     \---/
     // ExitBB
     BasicBlock *CurBB = Builder.GetInsertBlock();
@@ -8644,7 +9990,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
     AtomicOpValue &V, Value *Expr, AtomicOrdering AO,
     AtomicRMWInst::BinOp RMWOp, AtomicUpdateCallbackTy &UpdateOp,
-    bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr) {
+    bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr,
+    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -8663,9 +10010,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',
   // 'x' is simply atomically rewritten with 'expr'.
   AtomicRMWInst::BinOp AtomicOp = (UpdateExpr ? RMWOp : AtomicRMWInst::Xchg);
-  Expected<std::pair<Value *, Value *>> AtomicResult =
-      emitAtomicUpdate(AllocaIP, X.Var, X.ElemTy, Expr, AO, AtomicOp, UpdateOp,
-                       X.IsVolatile, IsXBinopExpr);
+  Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
+      AllocaIP, X.Var, X.ElemTy, Expr, AO, AtomicOp, UpdateOp, X.IsVolatile,
+      IsXBinopExpr, IsIgnoreDenormalMode, IsFineGrainedMemory, IsRemoteMemory);
   if (!AtomicResult)
     return AtomicResult.takeError();
   Value *CapturedVal =
@@ -8940,7 +10287,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
       ThreadLimit = Builder.getInt32(0);
 
     Value *ThreadNum = getOrCreateThreadID(Ident);
-    Builder.CreateCall(
+    createRuntimeFunctionCall(
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams_51),
         {Ident, ThreadNum, NumTeamsLower, NumTeamsUpper, ThreadLimit});
   }
@@ -8968,7 +10315,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     // The stale call instruction will be replaced with a new call instruction
     // for runtime call with the outlined function.
 
-    assert(OutlinedFn.getNumUses() == 1 &&
+    assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
     ToBeDeleted.push_back(StaleCI);
@@ -8991,9 +10338,10 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
         Ident, Builder.getInt32(StaleCI->arg_size() - 2), &OutlinedFn};
     if (HasShared)
       Args.push_back(StaleCI->getArgOperand(2));
-    Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
-                           omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
-                       Args);
+    createRuntimeFunctionCall(
+        getOrCreateRuntimeFunctionPtr(
+            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
+        Args);
 
     for (Instruction *I : llvm::reverse(ToBeDeleted))
       I->eraseFromParent();
@@ -9004,6 +10352,48 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
 
   addOutlineInfo(std::move(OI));
 
+  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createDistribute(const LocationDescription &Loc,
+                                  InsertPointTy OuterAllocaIP,
+                                  BodyGenCallbackTy BodyGenCB) {
+  if (!updateToLocation(Loc))
+    return InsertPointTy();
+
+  BasicBlock *OuterAllocaBB = OuterAllocaIP.getBlock();
+
+  if (OuterAllocaBB == Builder.GetInsertBlock()) {
+    BasicBlock *BodyBB =
+        splitBB(Builder, /*CreateBranch=*/true, "distribute.entry");
+    Builder.SetInsertPoint(BodyBB, BodyBB->begin());
+  }
+  BasicBlock *ExitBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.exit");
+  BasicBlock *BodyBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.body");
+  BasicBlock *AllocaBB =
+      splitBB(Builder, /*CreateBranch=*/true, "distribute.alloca");
+
+  // Generate the body of distribute clause
+  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
+  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
+  if (Error Err = BodyGenCB(AllocaIP, CodeGenIP))
+    return Err;
+
+  // When using target we use different runtime functions which require a
+  // callback.
+  if (Config.isTargetDevice()) {
+    OutlineInfo OI;
+    OI.OuterAllocaBB = OuterAllocaIP.getBlock();
+    OI.EntryBB = AllocaBB;
+    OI.ExitBB = ExitBB;
+
+    addOutlineInfo(std::move(OI));
+  }
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
 
   return Builder.saveIP();
@@ -9028,19 +10418,21 @@ OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
 void OpenMPIRBuilder::initializeTypes(Module &M) {
   LLVMContext &Ctx = M.getContext();
   StructType *T;
+  unsigned DefaultTargetAS = Config.getDefaultTargetAS();
+  unsigned ProgramAS = M.getDataLayout().getProgramAddressSpace();
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
-  VarName##PtrTy = PointerType::getUnqual(VarName##Ty);
+  VarName##PtrTy = PointerType::get(Ctx, DefaultTargetAS);
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
-  VarName##Ptr = PointerType::getUnqual(VarName);
+  VarName##Ptr = PointerType::get(Ctx, ProgramAS);
 #define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)                      \
   T = StructType::getTypeByName(Ctx, StructName);                              \
   if (!T)                                                                      \
     T = StructType::create(Ctx, {__VA_ARGS__}, StructName, Packed);            \
   VarName = T;                                                                 \
-  VarName##Ptr = PointerType::getUnqual(T);
+  VarName##Ptr = PointerType::get(Ctx, DefaultTargetAS);
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 }
 
@@ -9067,8 +10459,8 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          StringRef Name) {
   if (!Config.isGPU()) {
     llvm::offloading::emitOffloadingEntry(
-        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
-        "omp_offloading_entries");
+        M, object::OffloadKind::OFK_OpenMP, ID,
+        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0);
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -9077,20 +10469,8 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
   if (!Fn)
     return;
 
-  Module &M = *(Fn->getParent());
-  LLVMContext &Ctx = M.getContext();
-
-  // Get "nvvm.annotations" metadata node.
-  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-
-  Metadata *MDVals[] = {
-      ConstantAsMetadata::get(Fn), MDString::get(Ctx, "kernel"),
-      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), 1))};
-  // Append metadata to nvvm.annotations.
-  MD->addOperand(MDNode::get(Ctx, MDVals));
-
   // Add a function attribute for the kernel.
-  Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
+  Fn->addFnAttr("kernel");
   if (T.isAMDGCN())
     Fn->addFnAttr("uniform-work-group-size", "true");
   Fn->addFnAttr(Attribute::MustProgress);
@@ -9254,10 +10634,11 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
   //       entries should be redesigned to better suit this use-case.
   if (Config.hasRequiresFlags() && !Config.isTargetDevice())
     offloading::emitOffloadingEntry(
-        M, Constant::getNullValue(PointerType::getUnqual(M.getContext())),
-        /*Name=*/"",
-        /*Size=*/0, OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
-        Config.getRequiresFlags(), "omp_offloading_entries");
+        M, object::OffloadKind::OFK_OpenMP,
+        Constant::getNullValue(PointerType::getUnqual(M.getContext())),
+        ".requires", /*Size=*/0,
+        OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
+        Config.getRequiresFlags());
 }
 
 void TargetRegionEntryInfo::getTargetRegionEntryFnName(
@@ -9280,17 +10661,21 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
 
 TargetRegionEntryInfo
 OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
+                                          vfs::FileSystem &VFS,
                                           StringRef ParentName) {
-  sys::fs::UniqueID ID;
+  sys::fs::UniqueID ID(0xdeadf17e, 0);
   auto FileIDInfo = CallBack();
-  if (auto EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID)) {
-    report_fatal_error(("Unable to get unique ID for file, during "
-                        "getTargetEntryUniqueInfo, error message: " +
-                        EC.message())
-                           .c_str());
+  uint64_t FileID = 0;
+  if (ErrorOr<vfs::Status> Status = VFS.status(std::get<0>(FileIDInfo))) {
+    ID = Status->getUniqueID();
+    FileID = Status->getUniqueID().getFile();
+  } else {
+    // If the inode ID could not be determined, create a hash value
+    // the current file name and use that as an ID.
+    FileID = hash_value(std::get<0>(FileIDInfo));
   }
 
-  return TargetRegionEntryInfo(ParentName, ID.getDevice(), ID.getFile(),
+  return TargetRegionEntryInfo(ParentName, ID.getDevice(), FileID,
                                std::get<1>(FileIDInfo));
 }
 
@@ -9322,6 +10707,12 @@ void OpenMPIRBuilder::setCorrectMemberOfFlag(
       static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
           (Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
           omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF))
+    return;
+
+  // Entries with ATTACH are not members-of anything. They are handled
+  // separately by the runtime after other maps have been handled.
+  if (static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
+          Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH))
     return;
 
   // Reset the placeholder value to prepare the flag for the assignment of the
@@ -9513,11 +10904,12 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(Module &M) {
   }
 }
 
-void OpenMPIRBuilder::loadOffloadInfoMetadata(StringRef HostFilePath) {
+void OpenMPIRBuilder::loadOffloadInfoMetadata(vfs::FileSystem &VFS,
+                                              StringRef HostFilePath) {
   if (HostFilePath.empty())
     return;
 
-  auto Buf = MemoryBuffer::getFile(HostFilePath);
+  auto Buf = VFS.getBufferForFile(HostFilePath);
   if (std::error_code Err = Buf.getError()) {
     report_fatal_error(("error opening host file from host file path inside of "
                         "OpenMPIRBuilder: " +

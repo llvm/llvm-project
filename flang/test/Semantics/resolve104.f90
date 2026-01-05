@@ -1,11 +1,11 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test constant folding of type parameter values both a base value and a
 ! parameter name are supplied.
-! 
-! Type parameters are described in 7.5.3 and constant expressions are described 
-! in 10.1.12.  10.1.12, paragraph 4 defines whether a specification inquiry is 
-! a constant expression.  Section 10.1.11, paragraph 3, item (2) states that a 
-! type parameter inquiry is a specification inquiry.  
+!
+! Type parameters are described in 7.5.3 and constant expressions are described
+! in 10.1.12.  10.1.12, paragraph 4 defines whether a specification inquiry is
+! a constant expression.  Section 10.1.11, paragraph 3, item (2) states that a
+! type parameter inquiry is a specification inquiry.
 
 module m1
   type dtype(goodDefaultKind, badDefaultKind)

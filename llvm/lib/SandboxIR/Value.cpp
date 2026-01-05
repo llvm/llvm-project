@@ -22,7 +22,7 @@ Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
 
 Value::use_iterator Value::use_begin() {
   llvm::Use *LLVMUse = nullptr;
-  if (Val->use_begin() != Val->use_end())
+  if (!Val->uses().empty())
     LLVMUse = &*Val->use_begin();
   User *User = LLVMUse != nullptr ? cast_or_null<sandboxir::User>(Ctx.getValue(
                                         Val->use_begin()->getUser()))
@@ -51,7 +51,7 @@ void Value::replaceUsesWithIf(
   llvm::Value *OtherVal = OtherV->Val;
   // We are delegating RUWIf to LLVM IR's RUWIf.
   Val->replaceUsesWithIf(
-      OtherVal, [&ShouldReplace, this](llvm::Use &LLVMUse) -> bool {
+      OtherVal, [&ShouldReplace, this, OtherV](llvm::Use &LLVMUse) -> bool {
         User *DstU = cast_or_null<User>(Ctx.getValue(LLVMUse.getUser()));
         if (DstU == nullptr)
           return false;
@@ -59,6 +59,7 @@ void Value::replaceUsesWithIf(
         if (!ShouldReplace(UseToReplace))
           return false;
         Ctx.getTracker().emplaceIfTracking<UseSet>(UseToReplace);
+        Ctx.runSetUseCallbacks(UseToReplace, OtherV);
         return true;
       });
 }
@@ -67,8 +68,9 @@ void Value::replaceAllUsesWith(Value *Other) {
   assert(getType() == Other->getType() &&
          "Replacing with Value of different type!");
   auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking()) {
-    for (auto Use : uses())
+  for (auto Use : uses()) {
+    Ctx.runSetUseCallbacks(Use, Other);
+    if (Tracker.isTracking())
       Tracker.track(std::make_unique<UseSet>(Use));
   }
   // We are delegating RAUW to LLVM IR's RAUW.

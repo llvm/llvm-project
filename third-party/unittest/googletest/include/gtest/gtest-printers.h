@@ -510,11 +510,15 @@ GTEST_API_ void PrintTo(wchar_t wc, ::std::ostream* os);
 
 GTEST_API_ void PrintTo(char32_t c, ::std::ostream* os);
 inline void PrintTo(char16_t c, ::std::ostream* os) {
-  PrintTo(ImplicitCast_<char32_t>(c), os);
+  // FIXME: the cast from char16_t to char32_t may be incorrect
+  // for a lone surrogate
+  PrintTo(static_cast<char32_t>(c), os);
 }
 #ifdef __cpp_lib_char8_t
 inline void PrintTo(char8_t c, ::std::ostream* os) {
-  PrintTo(ImplicitCast_<char32_t>(c), os);
+  // FIXME: the cast from char8_t to char32_t may be incorrect
+  // for c > 0x7F
+  PrintTo(static_cast<char32_t>(c), os);
 }
 #endif
 

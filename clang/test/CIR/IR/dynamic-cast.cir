@@ -1,0 +1,59 @@
+// RUN: cir-opt --verify-roundtrip %s | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+!rec_Base = !cir.record<struct "Base" {!cir.vptr}>
+!rec_Derived = !cir.record<struct "Derived" {!rec_Base}>
+
+#dyn_cast_info__ZTI4Base__ZTI7Derived = #cir.dyn_cast_info<src_rtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>, dest_rtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>, runtime_func = @__dynamic_cast, bad_cast_func = @__cxa_bad_cast, offset_hint = #cir.int<0> : !s64i>
+
+// CHECK: #dyn_cast_info__ZTI4Base__ZTI7Derived = #cir.dyn_cast_info<src_rtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>, dest_rtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>, runtime_func = @__dynamic_cast, bad_cast_func = @__cxa_bad_cast, offset_hint = #cir.int<0> : !s64i>
+
+module {
+  cir.global "private" constant external @_ZTI4Base : !cir.ptr<!u8i>
+  cir.global "private" constant external @_ZTI7Derived : !cir.ptr<!u8i>
+  cir.func private @__dynamic_cast(!cir.ptr<!void>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!void>
+  cir.func private @__cxa_bad_cast()
+
+  cir.func @test_ptr_cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!rec_Derived> {
+    %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+    cir.return %0 : !cir.ptr<!rec_Derived>
+  }
+
+  // CHECK:   cir.func @test_ptr_cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!rec_Derived> {
+  // CHECK:     %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+  // CHECK:     cir.return %0 : !cir.ptr<!rec_Derived>
+  // CHECK:   }
+
+  cir.func @test_ref_cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!rec_Derived> {
+    %0 = cir.dyn_cast ref %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+    cir.return %0 : !cir.ptr<!rec_Derived>
+  }
+
+  // CHECK:   cir.func @test_ref_cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!rec_Derived> {
+  // CHECK:     %0 = cir.dyn_cast ref %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
+  // CHECK:     cir.return %0 : !cir.ptr<!rec_Derived>
+  // CHECK:   }
+
+  cir.func dso_local @test_cast_to_void(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!void> {
+   %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
+   cir.return %0 : !cir.ptr<!void>
+  }
+
+  // CHECK: cir.func dso_local @test_cast_to_void(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!void> {
+  // CHECK:     %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
+  // CHECK:     cir.return %0 : !cir.ptr<!void>
+  // CHECK:   }
+
+  cir.func dso_local @test_relative_layout_cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!void> {
+   %0 = cir.dyn_cast ptr relative_layout %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
+   cir.return %0 : !cir.ptr<!void>
+  }
+
+  // CHECK: cir.func dso_local @test_relative_layout_cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!void> {
+  // CHECK:     %0 = cir.dyn_cast ptr relative_layout %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
+  // CHECK:     cir.return %0 : !cir.ptr<!void>
+  // CHECK:   }
+}

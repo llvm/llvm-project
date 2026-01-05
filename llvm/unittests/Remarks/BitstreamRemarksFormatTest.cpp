@@ -21,7 +21,7 @@ TEST(BitstreamRemarksFormat, Magic) {
 
 // This should be updated whenever any of the tests below are modified.
 TEST(BitstreamRemarksFormat, ContainerVersion) {
-  EXPECT_EQ(remarks::CurrentContainerVersion, 0UL);
+  EXPECT_EQ(remarks::CurrentContainerVersion, 1UL);
 }
 
 // The values of the current blocks should not change over time.

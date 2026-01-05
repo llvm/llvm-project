@@ -12,42 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ParentMapContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang;
-
-ParentMapContext::ParentMapContext(ASTContext &Ctx) : ASTCtx(Ctx) {}
-
-ParentMapContext::~ParentMapContext() = default;
-
-void ParentMapContext::clear() { Parents.reset(); }
-
-const Expr *ParentMapContext::traverseIgnored(const Expr *E) const {
-  return traverseIgnored(const_cast<Expr *>(E));
-}
-
-Expr *ParentMapContext::traverseIgnored(Expr *E) const {
-  if (!E)
-    return nullptr;
-
-  switch (Traversal) {
-  case TK_AsIs:
-    return E;
-  case TK_IgnoreUnlessSpelledInSource:
-    return E->IgnoreUnlessSpelledInSource();
-  }
-  llvm_unreachable("Invalid Traversal type!");
-}
-
-DynTypedNode ParentMapContext::traverseIgnored(const DynTypedNode &N) const {
-  if (const auto *E = N.get<Expr>()) {
-    return DynTypedNode::create(*traverseIgnored(E));
-  }
-  return N;
-}
 
 template <typename T, typename... U>
 static std::tuple<bool, DynTypedNodeList, const T *, const U *...>
@@ -69,17 +40,22 @@ class ParentMapContext::ParentMap {
       for (; N > 0; --N)
         push_back(Value);
     }
-    bool contains(const DynTypedNode &Value) {
-      return Seen.contains(Value);
+    bool contains(const DynTypedNode &Value) const {
+      const void *Identity = Value.getMemoizationData();
+      assert(Identity);
+      return Dedup.contains(Identity);
     }
     void push_back(const DynTypedNode &Value) {
-      if (!Value.getMemoizationData() || Seen.insert(Value).second)
+      const void *Identity = Value.getMemoizationData();
+      if (!Identity || Dedup.insert(Identity).second) {
         Items.push_back(Value);
+      }
     }
-    llvm::ArrayRef<DynTypedNode> view() const { return Items; }
+    ArrayRef<DynTypedNode> view() const { return Items; }
+
   private:
-    llvm::SmallVector<DynTypedNode, 2> Items;
-    llvm::SmallDenseSet<DynTypedNode, 2> Seen;
+    llvm::SmallVector<DynTypedNode, 1> Items;
+    llvm::SmallPtrSet<const void *, 2> Dedup;
   };
 
   /// Maps from a node to its parents. This is used for nodes that have
@@ -103,9 +79,9 @@ class ParentMapContext::ParentMap {
 
   static DynTypedNode
   getSingleDynTypedNodeFromParentMap(ParentMapPointers::mapped_type U) {
-    if (const auto *D = U.dyn_cast<const Decl *>())
+    if (const auto *D = dyn_cast<const Decl *>(U))
       return DynTypedNode::create(*D);
-    if (const auto *S = U.dyn_cast<const Stmt *>())
+    if (const auto *S = dyn_cast<const Stmt *>(U))
       return DynTypedNode::create(*S);
     return *cast<DynTypedNode *>(U);
   }
@@ -115,9 +91,9 @@ class ParentMapContext::ParentMap {
                                                         const MapTy &Map) {
     auto I = Map.find(Node);
     if (I == Map.end()) {
-      return llvm::ArrayRef<DynTypedNode>();
+      return ArrayRef<DynTypedNode>();
     }
-    if (const auto *V = I->second.template dyn_cast<ParentVector *>()) {
+    if (const auto *V = dyn_cast<ParentVector *>(I->second)) {
       return V->view();
     }
     return getSingleDynTypedNodeFromParentMap(I->second);
@@ -268,9 +244,9 @@ public:
       auto It = PointerParents.find(E);
       if (It == PointerParents.end())
         break;
-      const auto *S = It->second.dyn_cast<const Stmt *>();
+      const auto *S = dyn_cast<const Stmt *>(It->second);
       if (!S) {
-        if (auto *Vec = It->second.dyn_cast<ParentVector *>())
+        if (auto *Vec = dyn_cast<ParentVector *>(It->second))
           return Vec->view();
         return getSingleDynTypedNodeFromParentMap(It->second);
       }
@@ -326,6 +302,36 @@ std::tuple<bool, DynTypedNodeList, const T *, const U *...>
 matchParents(const DynTypedNodeList &NodeList,
              ParentMapContext::ParentMap *ParentMap) {
   return MatchParents<T, U...>::match(NodeList, ParentMap);
+}
+
+ParentMapContext::ParentMapContext(ASTContext &Ctx) : ASTCtx(Ctx) {}
+
+ParentMapContext::~ParentMapContext() = default;
+
+void ParentMapContext::clear() { Parents.reset(); }
+
+const Expr *ParentMapContext::traverseIgnored(const Expr *E) const {
+  return traverseIgnored(const_cast<Expr *>(E));
+}
+
+Expr *ParentMapContext::traverseIgnored(Expr *E) const {
+  if (!E)
+    return nullptr;
+
+  switch (Traversal) {
+  case TK_AsIs:
+    return E;
+  case TK_IgnoreUnlessSpelledInSource:
+    return E->IgnoreUnlessSpelledInSource();
+  }
+  llvm_unreachable("Invalid Traversal type!");
+}
+
+DynTypedNode ParentMapContext::traverseIgnored(const DynTypedNode &N) const {
+  if (const auto *E = N.get<Expr>()) {
+    return DynTypedNode::create(*traverseIgnored(E));
+  }
+  return N;
 }
 
 /// Template specializations to abstract away from pointers and TypeLocs.
@@ -395,7 +401,7 @@ private:
       if (!isa<ParentVector *>(NodeOrVector)) {
         auto *Vector = new ParentVector(
             1, getSingleDynTypedNodeFromParentMap(NodeOrVector));
-        delete NodeOrVector.template dyn_cast<DynTypedNode *>();
+        delete dyn_cast<DynTypedNode *>(NodeOrVector);
         NodeOrVector = Vector;
       }
 
@@ -432,10 +438,12 @@ private:
         DeclNode, DeclNode, [&] { return VisitorBase::TraverseDecl(DeclNode); },
         &Map.PointerParents);
   }
-  bool TraverseTypeLoc(TypeLoc TypeLocNode) {
+  bool TraverseTypeLoc(TypeLoc TypeLocNode, bool TraverseQualifier = true) {
     return TraverseNode(
         TypeLocNode, DynTypedNode::create(TypeLocNode),
-        [&] { return VisitorBase::TraverseTypeLoc(TypeLocNode); },
+        [&] {
+          return VisitorBase::TraverseTypeLoc(TypeLocNode, TraverseQualifier);
+        },
         &Map.OtherParents);
   }
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) {

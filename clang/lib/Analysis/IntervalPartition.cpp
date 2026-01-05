@@ -132,7 +132,7 @@ static void fillIntervalNode(CFGIntervalGraph &Graph,
       Count += N->Nodes.size();
     Nodes.reserve(Count);
     for (auto &N : Result.Nodes)
-      Nodes.insert(Nodes.end(), N->Nodes.begin(), N->Nodes.end());
+      llvm::append_range(Nodes, N->Nodes);
     Interval.Nodes = std::move(Nodes);
   }
 }

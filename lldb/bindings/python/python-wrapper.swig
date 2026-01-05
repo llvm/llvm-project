@@ -128,8 +128,11 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
 
   PyObject *pfunc_impl = nullptr;
 
-  if (pyfunct_wrapper && *pyfunct_wrapper &&
-      PyFunction_Check(*pyfunct_wrapper)) {
+  if (pyfunct_wrapper && *pyfunct_wrapper
+#ifndef Py_LIMITED_API
+      && PyFunction_Check(*pyfunct_wrapper)
+#endif
+      ) {
     pfunc_impl = (PyObject *)(*pyfunct_wrapper);
     if (pfunc_impl->ob_refcnt == 1) {
       Py_XDECREF(pfunc_impl);
@@ -229,78 +232,6 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject
   return pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger_sp)), dict);
 }
 
-PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedBreakpointResolver(
-    const char *python_class_name, const char *session_dictionary_name,
-    const StructuredDataImpl &args_impl,
-    const lldb::BreakpointSP &breakpoint_sp) {
-
-  if (python_class_name == NULL || python_class_name[0] == '\0' ||
-      !session_dictionary_name)
-    return PythonObject();
-
-  PyErr_Cleaner py_err_cleaner(true);
-
-  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
-      session_dictionary_name);
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
-      python_class_name, dict);
-
-  if (!pfunc.IsAllocated())
-    return PythonObject();
-
-  PythonObject result =
-      pfunc(SWIGBridge::ToSWIGWrapper(breakpoint_sp), SWIGBridge::ToSWIGWrapper(args_impl), dict);
-  // FIXME: At this point we should check that the class we found supports all
-  // the methods that we need.
-
-  if (result.IsAllocated()) {
-    // Check that __callback__ is defined:
-    auto callback_func = result.ResolveName<PythonCallable>("__callback__");
-    if (callback_func.IsAllocated())
-      return result;
-  }
-  return PythonObject();
-}
-
-unsigned int lldb_private::python::SWIGBridge::LLDBSwigPythonCallBreakpointResolver(
-    void *implementor, const char *method_name,
-    lldb_private::SymbolContext *sym_ctx) {
-  PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
-  auto pfunc = self.ResolveName<PythonCallable>(method_name);
-
-  if (!pfunc.IsAllocated())
-    return 0;
-
-  PythonObject result = sym_ctx ? pfunc(SWIGBridge::ToSWIGWrapper(*sym_ctx)) : pfunc();
-
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-    return 0;
-  }
-
-  // The callback will return a bool, but we're need to also return ints
-  // so we're squirrelling the bool through as an int...  And if you return
-  // nothing, we'll continue.
-  if (strcmp(method_name, "__callback__") == 0) {
-    if (result.get() == Py_False)
-      return 0;
-    else
-      return 1;
-  }
-
-  long long ret_val = unwrapOrSetPythonException(As<long long>(result));
-
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-    return 0;
-  }
-
-  return ret_val;
-}
-
 // wrapper that calls an optional instance member of an object taking no
 // arguments
 static PyObject *LLDBSwigPython_CallOptionalMember(
@@ -384,7 +315,7 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(PyObj
   return result.release();
 }
 
-int lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
+uint32_t lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
     PyObject * implementor, const char *child_name) {
   PyErr_Cleaner py_err_cleaner(true);
 
@@ -494,6 +425,42 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject *
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBThread(PyObject * data) {
+  lldb::SBThread *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBThread, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrame(PyObject * data) {
+  lldb::SBFrame *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBFrame, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(PyObject * data) {
+  lldb::SBBreakpointLocation *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBBreakpointLocation, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject * data) {
   lldb::SBAttachInfo *sb_ptr = nullptr;
 
@@ -554,6 +521,18 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject * dat
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject * data) {
+  lldb::SBSymbolContext *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBSymbolContext, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject * data) {
   lldb::SBValue *sb_ptr = NULL;
 
@@ -585,6 +564,18 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyOb
 
   int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
                                    SWIGTYPE_p_lldb__SBExecutionContext, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
+  lldb::SBFrameList *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBFrameList, 0);
 
   if (valid_cast == -1)
     return NULL;
@@ -727,7 +718,7 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonHandleOptionArgumentCompletionFo
     dict_sp->AddBooleanItem("no-completion", true);
     return dict_sp;
   }
-    
+
 
   // Convert the return dictionary to a DictionarySP.
   StructuredData::ObjectSP result_obj_sp = result.CreateStructuredObject();
@@ -753,7 +744,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
   auto pfunc = self.ResolveName<PythonCallable>("__call__");
 
   if (!pfunc.IsAllocated()) {
-    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class");
     return false;
   }
 
@@ -966,6 +957,28 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordValue(
   return true;
 }
 
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
+    const char *python_module_name, const char *session_dictionary_name,
+    lldb::TargetSP target_sp) {
+  std::string python_function_name_string = python_module_name;
+  python_function_name_string += ".__lldb_module_added_to_target";
+  const char *python_function_name = python_function_name_string.c_str();
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
+      session_dictionary_name);
+  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
+      python_function_name, dict);
+
+  if (!pfunc.IsAllocated())
+    return true;
+
+  pfunc(SWIGBridge::ToSWIGWrapper(std::move(target_sp)), dict);
+
+  return true;
+}
+
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
     const char *python_module_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger) {
@@ -1010,6 +1023,26 @@ static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str,
     Py_XDECREF(result);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
+}
+
+// For CommandPrintCallback functions
+static CommandReturnObjectCallbackResult LLDBSwigPythonCallPythonCommandPrintCallback(SBCommandReturnObject& result, void *callback_baton) {
+  SWIG_Python_Thread_Block swig_thread_block;
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject result_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBCommandReturnObject>(result));
+  PythonCallable callable =
+      Retain<PythonCallable>(reinterpret_cast<PyObject *>(callback_baton));
+
+  if (!callable.IsValid())
+    return eCommandReturnObjectPrintCallbackSkipped;
+
+  PythonObject callback_result = callable(result_arg);
+
+  long long ret_val = unwrapOrSetPythonException(As<long long>(callback_result));
+  return (CommandReturnObjectCallbackResult)ret_val;
 }
 
 // For DebuggerTerminateCallback functions
