@@ -74,3 +74,214 @@ define i32 @extract_last_active_v4i32_no_default(<4 x i32> %a, <4 x i1> %c) {
   %res = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> %a, <4 x i1> %c, i32 poison)
   ret i32 %res
 }
+
+; Test v2i32 - smaller vector.
+define i32 @extract_last_active_v2i32(<2 x i32> %a, <2 x i1> %c) {
+; CHECK-LABEL: extract_last_active_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; CHECK-NEXT:    movq %xmm2, %rcx
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    orl %eax, %edx
+; CHECK-NEXT:    andb $1, %dl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpb $1, %dl
+; CHECK-NEXT:    sbbl %eax, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    setne %dl
+; CHECK-NEXT:    orl -24(%rsp,%rdx,4), %eax
+; CHECK-NEXT:    retq
+  %res = call i32 @llvm.experimental.vector.extract.last.active.v2i32(<2 x i32> %a, <2 x i1> %c, i32 -1)
+  ret i32 %res
+}
+
+; Test v3i32 - non-power-of-2 element count that requires mask widening
+; (v3i1 -> v4i1) via WidenVecOp_VECTOR_FIND_LAST_ACTIVE.
+define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
+; CHECK-LABEL: extract_last_active_v3i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    orl %edx, %edi
+; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpb $1, %dil
+; CHECK-NEXT:    sbbl %eax, %eax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    setne %sil
+; CHECK-NEXT:    addl %esi, %esi
+; CHECK-NEXT:    cmpb %sil, %cl
+; CHECK-NEXT:    cmoval %ecx, %esi
+; CHECK-NEXT:    movzbl %sil, %ecx
+; CHECK-NEXT:    orl -24(%rsp,%rcx,4), %eax
+; CHECK-NEXT:    retq
+  %res = call i32 @llvm.experimental.vector.extract.last.active.v3i32(<3 x i32> %a, <3 x i1> %c, i32 -1)
+  ret i32 %res
+}
+
+; Test v8i32 - larger vector where step vector type doesn't need widening.
+define i32 @extract_last_active_v8i32(<8 x i32> %a, <8 x i1> %c) {
+; CHECK-LABEL: extract_last_active_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    movd %xmm2, %edi
+; CHECK-NEXT:    pextrw $7, %xmm2, %eax
+; CHECK-NEXT:    pextrw $6, %xmm2, %edx
+; CHECK-NEXT:    pextrw $5, %xmm2, %r8d
+; CHECK-NEXT:    pextrw $4, %xmm2, %ecx
+; CHECK-NEXT:    pextrw $2, %xmm2, %esi
+; CHECK-NEXT:    pextrw $1, %xmm2, %r10d
+; CHECK-NEXT:    pextrw $3, %xmm2, %r9d
+; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    testl %r9d, %r9d
+; CHECK-NEXT:    setne %r11b
+; CHECK-NEXT:    leal (%r11,%r11,2), %r11d
+; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    testl %r10d, %r10d
+; CHECK-NEXT:    setne %bl
+; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    setne %bpl
+; CHECK-NEXT:    addl %ebp, %ebp
+; CHECK-NEXT:    cmpb %bpl, %bl
+; CHECK-NEXT:    cmoval %ebx, %ebp
+; CHECK-NEXT:    cmpb %r11b, %bpl
+; CHECK-NEXT:    cmovbel %r11d, %ebp
+; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    setne %r11b
+; CHECK-NEXT:    shll $2, %r11d
+; CHECK-NEXT:    cmpb %r11b, %bpl
+; CHECK-NEXT:    cmoval %ebp, %r11d
+; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    testl %r8d, %r8d
+; CHECK-NEXT:    setne %bl
+; CHECK-NEXT:    leal (%rbx,%rbx,4), %ebx
+; CHECK-NEXT:    cmpb %bl, %r11b
+; CHECK-NEXT:    cmovbel %ebx, %r11d
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    movl $6, %ebx
+; CHECK-NEXT:    cmovel %edx, %ebx
+; CHECK-NEXT:    cmpb %bl, %r11b
+; CHECK-NEXT:    cmoval %r11d, %ebx
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    movl $7, %r11d
+; CHECK-NEXT:    cmovel %eax, %r11d
+; CHECK-NEXT:    cmpb %r11b, %bl
+; CHECK-NEXT:    cmoval %ebx, %r11d
+; CHECK-NEXT:    andl $7, %r11d
+; CHECK-NEXT:    orl %r10d, %edi
+; CHECK-NEXT:    orl %r9d, %esi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    orl %r8d, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
+; CHECK-NEXT:    orl %esi, %ecx
+; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpb $1, %cl
+; CHECK-NEXT:    sbbl %eax, %eax
+; CHECK-NEXT:    orl -40(%rsp,%r11,4), %eax
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  %res = call i32 @llvm.experimental.vector.extract.last.active.v8i32(<8 x i32> %a, <8 x i1> %c, i32 -1)
+  ret i32 %res
+}
+
+; Test v16i32 - even larger vector.
+define i32 @extract_last_active_v16i32(<16 x i32> %a, <16 x i1> %c) {
+; CHECK-LABEL: extract_last_active_v16i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps %xmm4, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; CHECK-NEXT:    movaps %xmm4, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm3, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %dl, %al
+; CHECK-NEXT:    cmoval %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    cmpb %sil, %dl
+; CHECK-NEXT:    cmovbel %esi, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    cmpb %al, %dl
+; CHECK-NEXT:    cmovbel %eax, %edx
+; CHECK-NEXT:    andl $15, %edx
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %cl
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpb $1, %cl
+; CHECK-NEXT:    sbbl %eax, %eax
+; CHECK-NEXT:    orl -72(%rsp,%rdx,4), %eax
+; CHECK-NEXT:    retq
+  %res = call i32 @llvm.experimental.vector.extract.last.active.v16i32(<16 x i32> %a, <16 x i1> %c, i32 -1)
+  ret i32 %res
+}
