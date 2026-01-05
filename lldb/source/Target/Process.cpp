@@ -2783,7 +2783,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   // Listen and queue events that are broadcasted during the process launch.
   ListenerSP listener_sp(Listener::MakeListener("LaunchEventHijack"));
   HijackProcessEvents(listener_sp);
-  auto on_exit = llvm::make_scope_exit([this]() { RestoreProcessEvents(); });
+  llvm::scope_exit on_exit([this]() { RestoreProcessEvents(); });
 
   if (PrivateStateThreadIsValid())
     PausePrivateStateThread();
