@@ -1609,7 +1609,7 @@ define i8 @fold_add_constant_preserve_nuw(i8 %x) {
 define i32 @sdiv_to_udiv(i32 %arg0, i32 %arg1) {
 ; CHECK-LABEL: @sdiv_to_udiv(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nuw nsw i32 [[ARG0:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = add nuw i32 [[T0]], 6242048
+; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242048
 ; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[T2]], 192
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
