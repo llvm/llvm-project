@@ -19,8 +19,8 @@ class PythonInterpreterEchoTest(PExpectTest):
 
         child.sendline(command)
 
-        # Build pattern list: match whichever comes first (output or prompt)
-        # This prevents waiting for a timeout if there's no match
+        # Build pattern list: match whichever comes first (output or prompt).
+        # This prevents waiting for a timeout if there's no match.
         pattern = []
         match_expected = expected_output and len(expected_output) > 0
 
@@ -50,7 +50,7 @@ class PythonInterpreterEchoTest(PExpectTest):
 
         self.launch(use_colors=False, dimensions=(100, 100))
 
-        # enter the python interpreter
+        # Enter the python interpreter.
         self.verify_command_echo(
             "script --language python --", expected_output="Python.*\\.", is_regex=True
         )

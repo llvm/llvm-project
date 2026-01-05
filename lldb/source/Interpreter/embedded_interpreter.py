@@ -1,6 +1,8 @@
 import sys
 import builtins
 import code
+import lldb
+import traceback
 
 try:
     import readline
@@ -28,6 +30,7 @@ else:
 # in case it would be hard to correctly escape a string's contents
 
 g_run_one_line_str = None
+
 
 class LLDBExit(SystemExit):
     pass
