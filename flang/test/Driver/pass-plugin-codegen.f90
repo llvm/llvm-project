@@ -1,24 +1,34 @@
-! Verify that the static and dynamically loaded pass plugins work as expected.
+! This test checks that the plugin back-end hook is executed before the code
+! generation pipeline and can also replace the output with its own.
 
 ! UNSUPPORTED: system-windows
 
 ! REQUIRES: plugins, shell, examples
 
+! Without -last-words the pass does nothing, flang emits assembly.
 ! RUN: %flang_fc1 -S %s -o - %loadbye \
 ! RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-INACTIVE
 
+! With -last-words the pass intercepts the code generation and prints
+! "CodeGen Bye" instead.
 ! RUN: %flang_fc1 -S %s -o - %loadbye -mllvm -last-words \
 ! RUN: | FileCheck %s --check-prefix=CHECK-ACTIVE
 
+! When emitting LLVM IR, no back-end is executed and therefore no
+! back-end plugins are executed.
 ! RUN: %flang_fc1 -emit-llvm %s -o - %loadbye -mllvm -last-words \
-! RUN: | FileCheck %s --check-prefix=CHECK-LLVM
+! RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-LLVM
 
+! Bye fail and reports an error when an object file should be emitted;
+! the driver should propagate this as failing exit code and emit the
+! diagnostic from the plugin.
 ! RUN: not %flang_fc1 -emit-obj %s -o - %loadbye -mllvm -last-words \
 ! RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 
 ! CHECK-INACTIVE-NOT: Bye
 ! CHECK-INACTIVE: empty_:
 ! CHECK-ACTIVE: CodeGen Bye
+! CHECK-LLVM-NOT: Bye
 ! CHECK-LLVM: define{{.*}} void @empty_
 ! CHECK-ERR: error: last words unsupported for binary output
 

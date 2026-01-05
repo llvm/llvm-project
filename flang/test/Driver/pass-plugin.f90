@@ -1,4 +1,6 @@
 ! Verify that the static and dynamically loaded pass plugins work as expected.
+! This tests that the plugin is correctly added to and executed as part of the
+! optimization pipeline.
 
 ! UNSUPPORTED: system-windows
 
