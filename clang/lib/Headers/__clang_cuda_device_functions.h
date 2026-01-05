@@ -1580,7 +1580,7 @@ __DEVICE__ float __f16_low2float(unsigned int __a) {
 __DEVICE__ float __f16_high2float(unsigned int __a) {
   return __nv_f16_high2float(__builtin_bit_cast(_Float16x2, __a));
 }
-__DEVICE__ char __f16_half2char_rz(unsigned short __h) {
+__DEVICE__ signed char __f16_half2char_rz(unsigned short __h) {
   return __nv_f16_half2char_rz(__builtin_bit_cast(_Float16, __h));
 }
 __DEVICE__ unsigned char __f16_half2uchar_rz(unsigned short __h) {

@@ -471,7 +471,7 @@ __device__ _Float16x2 __nv_f16_floats2half2_rn(float __a, float __b);
 __device__ float __nv_f16_half2float(_Float16 __a);
 __device__ float __nv_f16_low2float(_Float16x2 __a);
 __device__ float __nv_f16_high2float(_Float16x2 __a);
-__device__ char __nv_f16_half2char_rz(_Float16 __a);
+__device__ signed char __nv_f16_half2char_rz(_Float16 __a);
 __device__ unsigned char __nv_f16_half2uchar_rz(_Float16 __a);
 __device__ short __nv_f16_half2short_rz(_Float16 __a);
 __device__ unsigned short __nv_f16_half2ushort_rz(_Float16 __a);
