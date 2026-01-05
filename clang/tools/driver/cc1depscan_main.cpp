@@ -927,10 +927,10 @@ int ScanServer::listen() {
       if (Data == -1)
         continue;
 
-      auto CloseData = llvm::make_scope_exit([&]() { ::close(Data); });
+      llvm::scope_exit CloseData([&]() { ::close(Data); });
       cc1depscand::CC1DepScanDProtocol Comms(Data);
 
-      auto StopRunning = llvm::make_scope_exit([&]() {
+      llvm::scope_exit StopRunning([&]() {
         SecondsSinceLastClose.store(
             std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now() - Start)

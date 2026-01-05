@@ -722,7 +722,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                     std::optional<std::string> ModuleName = std::nullopt) {
   CXDependencyScannerServiceOptions Opts =
       clang_experimental_DependencyScannerServiceOptions_create();
-  auto CleanupOpts = llvm::make_scope_exit([&] {
+  llvm::scope_exit CleanupOpts([&] {
     clang_experimental_DependencyScannerServiceOptions_dispose(Opts);
   });
   clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
@@ -740,7 +740,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
       clang_experimental_DependencyScannerService_create_v1(Opts);
   CXDependencyScannerWorker Worker =
       clang_experimental_DependencyScannerWorker_create_v0(Service);
-  auto DisposeWorkerAndService = llvm::make_scope_exit([&]() {
+  llvm::scope_exit DisposeWorkerAndService([&]() {
     clang_experimental_DependencyScannerWorker_dispose_v0(Worker);
     clang_experimental_DependencyScannerService_dispose_v0(Service);
   });
@@ -809,12 +809,12 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           Args.size(), Args.data(), ModuleName ? ModuleName->c_str() : nullptr,
           WorkingDirectory.c_str(), LookupOutputCB.Context,
           LookupOutputCB.Callback);
-  auto DisposeScanSettings = llvm::make_scope_exit([&]() {
+  llvm::scope_exit DisposeScanSettings([&]() {
     clang_experimental_DependencyScannerWorkerScanSettings_dispose(
         ScanSettings);
   });
   CXDepGraph Graph = nullptr;
-  auto DisposeDepGraph = llvm::make_scope_exit(
+  llvm::scope_exit DisposeDepGraph(
       [&]() { clang_experimental_DepGraph_dispose(Graph); });
   CXErrorCode Err = clang_experimental_DependencyScannerWorker_getDepGraph(
       Worker, ScanSettings, &Graph);
@@ -845,7 +845,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           clang_experimental_DepGraphModule_getFileDeps(Mod);
       CXCStringArray BuildArguments =
           clang_experimental_DepGraphModule_getBuildArguments(Mod);
-      auto Dispose = llvm::make_scope_exit(
+      llvm::scope_exit Dispose(
           [&]() { clang_experimental_DepGraphModule_dispose(Mod); });
       llvm::outs() << "  module:\n"
                    << "    name: " << Name << "\n"
@@ -917,7 +917,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           clang_experimental_DepGraphTUCommand_getBuildArguments(Cmd);
       const char *CacheKey =
           clang_experimental_DepGraphTUCommand_getCacheKey(Cmd);
-      auto Dispose = llvm::make_scope_exit(
+      llvm::scope_exit Dispose(
           [&]() { clang_experimental_DepGraphTUCommand_dispose(Cmd); });
       HandleCommand(TUContextHash, TUFileSystemRootID, TUIncludeTreeID,
                     TUModuleDeps, TUFileDeps, Args, CacheKey);
@@ -926,8 +926,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
   }
   llvm::errs() << "error: failed to get dependencies\n";
   CXDiagnosticSet Diags = clang_experimental_DepGraph_getDiagnostics(Graph);
-  auto DisposeDiagnosticSet =
-      llvm::make_scope_exit([&]() { clang_disposeDiagnosticSet(Diags); });
+  llvm::scope_exit DisposeDiagnosticSet(
+      [&]() { clang_disposeDiagnosticSet(Diags); });
   for (unsigned I = 0, N = clang_getNumDiagnosticsInSet(Diags); I < N; ++I) {
     CXDiagnostic Diag = clang_getDiagnosticInSet(Diags, I);
     CXString Spelling =
@@ -962,13 +962,12 @@ static int generateDepsReproducer(ArrayRef<const char *> Args,
           WorkingDirectory.c_str(),
           ReproLocation.empty() ? nullptr : ReproLocation.c_str(),
           /*UseUniqueReproducerName=*/ReproLocation.empty());
-  auto DisposeOpts = llvm::make_scope_exit([&] {
+  llvm::scope_exit DisposeOpts([&] {
     clang_experimental_DependencyScannerReproducerOptions_dispose(Opts);
   });
   CXString MessageString;
-  auto DisposeMessageString = llvm::make_scope_exit([&]() {
-    clang_disposeString(MessageString);
-  });
+  llvm::scope_exit DisposeMessageString(
+      [&]() { clang_disposeString(MessageString); });
   CXErrorCode ExitCode =
       clang_experimental_DependencyScanner_generateReproducer(Opts,
                                                               &MessageString);
@@ -984,7 +983,7 @@ static int uploadCachedJob(std::string CacheKey, CXCASDatabases DBs) {
   CXError Err = nullptr;
   CXCASCachedCompilation CComp = clang_experimental_cas_getCachedCompilation(
       DBs, CacheKey.c_str(), /*Globally*/ false, &Err);
-  auto CleanupCachedComp = llvm::make_scope_exit(
+  llvm::scope_exit CleanupCachedComp(
       [&] { clang_experimental_cas_CachedCompilation_dispose(CComp); });
   if (!CComp) {
     if (Err) {
@@ -999,7 +998,7 @@ static int uploadCachedJob(std::string CacheKey, CXCASDatabases DBs) {
   /// \returns true of an error occurred.
   auto invokeMakeGlobal = [&](bool Cancel) -> bool {
     CXCASCancellationToken CancelToken = nullptr;
-    auto CleanupCancelTok = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanupCancelTok([&] {
       if (Cancel)
         clang_experimental_cas_CancellationToken_dispose(CancelToken);
     });
@@ -1039,7 +1038,7 @@ static int materializeCachedJob(std::string CacheKey, CXCASDatabases DBs) {
       [&](bool Cancel, CXCASCachedCompilation &OutComp) -> bool {
     OutComp = nullptr;
     CXCASCancellationToken CancelToken = nullptr;
-    auto CleanupCancelTok = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanupCancelTok([&] {
       if (Cancel)
         clang_experimental_cas_CancellationToken_dispose(CancelToken);
     });
@@ -1079,7 +1078,7 @@ static int materializeCachedJob(std::string CacheKey, CXCASDatabases DBs) {
   };
 
   CXCASCachedCompilation CComp = nullptr;
-  auto CleanupCachedComp = llvm::make_scope_exit([&] {
+  llvm::scope_exit CleanupCachedComp([&] {
     if (CComp)
       clang_experimental_cas_CachedCompilation_dispose(CComp);
   });
@@ -1100,14 +1099,13 @@ static int materializeCachedJob(std::string CacheKey, CXCASDatabases DBs) {
       continue;
     CXString OutputID =
         clang_experimental_cas_CachedCompilation_getOutputCASIDString(CComp, I);
-    auto CleanupOutputID =
-        llvm::make_scope_exit([&] { clang_disposeString(OutputID); });
+    llvm::scope_exit CleanupOutputID([&] { clang_disposeString(OutputID); });
 
     /// \returns true of an error occurred.
     auto invokeLoadObject = [&](bool Cancel, CXCASObject &OutObj) -> bool {
       OutObj = nullptr;
       CXCASCancellationToken CancelToken = nullptr;
-      auto CleanupCancelTok = llvm::make_scope_exit([&] {
+      llvm::scope_exit CleanupCancelTok([&] {
         if (Cancel)
           clang_experimental_cas_CancellationToken_dispose(CancelToken);
       });
@@ -1147,7 +1145,7 @@ static int materializeCachedJob(std::string CacheKey, CXCASDatabases DBs) {
     };
 
     CXCASObject CASObj = nullptr;
-    auto CleanupLoadObj = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanupLoadObj([&] {
       if (CASObj)
         clang_experimental_cas_CASObject_dispose(CASObj);
     });
@@ -1174,7 +1172,7 @@ static int replayCachedJob(ArrayRef<const char *> Args,
   CXError Err = nullptr;
   CXCASCachedCompilation CComp = clang_experimental_cas_getCachedCompilation(
       DBs, CacheKey.c_str(), /*Globally*/ false, &Err);
-  auto CleanupCachedComp = llvm::make_scope_exit(
+  llvm::scope_exit CleanupCachedComp(
       [&] { clang_experimental_cas_CachedCompilation_dispose(CComp); });
   if (!CComp) {
     if (Err) {
@@ -1190,7 +1188,7 @@ static int replayCachedJob(ArrayRef<const char *> Args,
       CComp, Args.size(), Args.data(),
       WorkingDirectory.empty() ? nullptr : WorkingDirectory.c_str(),
       /*reserved*/ nullptr, &Err);
-  auto CleanupReplayRes = llvm::make_scope_exit(
+  llvm::scope_exit CleanupReplayRes(
       [&] { clang_experimental_cas_ReplayResult_dispose(ReplayRes); });
   if (!ReplayRes) {
     llvm::errs() << clang_Error_getDescription(Err) << "\n";
@@ -1548,11 +1546,11 @@ int indextest_core_main(int argc, const char **argv) {
 
   CXCASOptions CASOpts = nullptr;
   CXCASDatabases DBs = nullptr;
-  auto CleanupCASOpts = llvm::make_scope_exit([&] {
+  llvm::scope_exit CleanupCASOpts([&] {
     if (CASOpts)
       clang_experimental_cas_Options_dispose(CASOpts);
   });
-  auto CleanupCaches = llvm::make_scope_exit([&] {
+  llvm::scope_exit CleanupCaches([&] {
     if (DBs)
       clang_experimental_cas_Databases_dispose(DBs);
   });

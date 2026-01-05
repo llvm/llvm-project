@@ -203,7 +203,7 @@ public:
     CQ.Next(&got_tag, &ok);
     // The tag in this example is the memory location of the call object
     auto *call = static_cast<AsyncClientCall<GetValueResponse> *>(got_tag);
-    auto _ = llvm::make_scope_exit([&]() { delete call; });
+    llvm::scope_exit _([&]() { delete call; });
 
     if (!call->Status.ok())
       return errorFromGRPCStatus(call->Status);
@@ -252,7 +252,7 @@ public:
     CQ.Next(&got_tag, &ok);
     // The tag in this example is the memory location of the call object
     auto *call = static_cast<AsyncClientCall<PutValueResponse> *>(got_tag);
-    auto _ = llvm::make_scope_exit([&]() { delete call; });
+    llvm::scope_exit _([&]() { delete call; });
 
     if (!call->Status.ok())
       return errorFromGRPCStatus(call->Status);
@@ -302,7 +302,7 @@ public:
     CQ.Next(&got_tag, &ok);
     // The tag in this example is the memory location of the call object
     auto *call = static_cast<CASLoadBlobClientCall *>(got_tag);
-    auto _ = llvm::make_scope_exit([&]() { delete call; });
+    llvm::scope_exit _([&]() { delete call; });
 
     if (!call->Status.ok())
       return errorFromGRPCStatus(call->Status);
@@ -360,7 +360,7 @@ public:
     CQ.Next(&got_tag, &ok);
     // The tag in this example is the memory location of the call object
     auto *call = static_cast<AsyncClientCall<CASSaveResponse> *>(got_tag);
-    auto _ = llvm::make_scope_exit([&]() { delete call; });
+    llvm::scope_exit _([&]() { delete call; });
 
     if (!call->Status.ok())
       return errorFromGRPCStatus(call->Status);
@@ -411,7 +411,7 @@ public:
     CQ.Next(&got_tag, &ok);
     // The tag in this example is the memory location of the call object
     auto *call = static_cast<CASGetBlobClientCall *>(got_tag);
-    auto _ = llvm::make_scope_exit([&]() { delete call; });
+    llvm::scope_exit _([&]() { delete call; });
 
     if (!call->Status.ok())
       return errorFromGRPCStatus(call->Status);
@@ -478,7 +478,7 @@ public:
     CQ.Next(&got_tag, &ok);
     // The tag in this example is the memory location of the call object
     auto *call = static_cast<AsyncClientCall<CASPutResponse> *>(got_tag);
-    auto _ = llvm::make_scope_exit([&]() { delete call; });
+    llvm::scope_exit _([&]() { delete call; });
 
     if (!call->Status.ok())
       return errorFromGRPCStatus(call->Status);

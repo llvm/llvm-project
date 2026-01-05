@@ -303,8 +303,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     // later errors use the default handling behavior instead.
     llvm::remove_fatal_error_handler();
   };
-  auto FinishDiagnosticClientScope =
-      llvm::make_scope_exit([&]() { FinishDiagnosticClient(); });
+  llvm::scope_exit FinishDiagnosticClientScope(
+      [&]() { FinishDiagnosticClient(); });
 
   if (!Success)
     return 1;

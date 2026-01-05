@@ -623,8 +623,8 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
   // the cached diagnostics. Currently we rely on the invocation having a
   // matching -fcas-include-tree option.
 
-  auto FinishDiagnosticClient =
-      llvm::make_scope_exit([&]() { Clang.getDiagnosticClient().finish(); });
+  llvm::scope_exit FinishDiagnosticClient(
+      [&]() { Clang.getDiagnosticClient().finish(); });
 
   llvm::PrefixMapper PrefixMapper;
   llvm::SmallVector<llvm::MappedPrefix> Split;
@@ -705,8 +705,7 @@ Error ObjectStoreCachingOutputs::addNonVirtualOutputFile(StringRef FilePath) {
   auto F = llvm::sys::fs::openNativeFileForRead(FilePath);
   if (!F)
     return F.takeError();
-  auto CloseOnExit =
-      llvm::make_scope_exit([&F]() { llvm::sys::fs::closeFile(*F); });
+  llvm::scope_exit CloseOnExit([&F]() { llvm::sys::fs::closeFile(*F); });
 
   std::optional<llvm::cas::ObjectRef> ObjRef;
   if (Error E = CAS->storeFromOpenFile(*F).moveInto(ObjRef))

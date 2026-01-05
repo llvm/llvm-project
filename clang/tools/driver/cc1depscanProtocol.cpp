@@ -174,8 +174,7 @@ Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
   posix_spawnattr_t Attrs;
   if (int EC = posix_spawnattr_init(&Attrs))
     return llvm::errorCodeToError(std::error_code(EC, std::generic_category()));
-  auto Attrs_cleanup =
-      llvm::make_scope_exit([&] { posix_spawnattr_destroy(&Attrs); });
+  llvm::scope_exit Attrs_cleanup([&] { posix_spawnattr_destroy(&Attrs); });
 
 #ifdef POSIX_SPAWN_CLOEXEC_DEFAULT
   // In the spawned process, close all file descriptors that are not explicitly

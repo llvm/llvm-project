@@ -402,7 +402,7 @@ CachingOnDiskFileSystemImpl::makeEntry(
   if (!F)
     return F.takeError();
 
-  auto CloseOnExit = make_scope_exit([&F]() { sys::fs::closeFile(*F); });
+  llvm::scope_exit CloseOnExit([&F]() { sys::fs::closeFile(*F); });
   return makeFile(Parent, TreePathStorage.Path, *F, Status);
 }
 
@@ -631,7 +631,7 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
     llvm::consumeError(FD.takeError());
     return nullptr;
   }
-  auto CloseOnExit = make_scope_exit([&FD]() { sys::fs::closeFile(*FD); });
+  llvm::scope_exit CloseOnExit([&FD]() { sys::fs::closeFile(*FD); });
 
   auto F = makeFile(*State.Entry, RealTreePath, *FD, Status);
   if (F)

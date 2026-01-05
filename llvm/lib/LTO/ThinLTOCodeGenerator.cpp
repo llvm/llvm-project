@@ -480,7 +480,7 @@ struct CancellationToken {
   }
 
   [[nodiscard]] auto acquireHandle() {
-    auto ReleaseHandleOnScopeExit = llvm::make_scope_exit([this]() {
+    llvm::scope_exit ReleaseHandleOnScopeExit([this]() {
       std::unique_lock Lock(Mutex);
       --ExitBlockers;
       CondVar.notify_one();
@@ -1607,7 +1607,7 @@ void ThinLTOCodeGenerator::run() {
     ProducedBinaryFiles.resize(Modules.size());
   }
 
-  auto CleanTempDirAtExit = make_scope_exit([&]() {
+  llvm::scope_exit CleanTempDirAtExit([&]() {
     if (!TempDirectory.empty())
       llvm::sys::fs::remove_directories(TempDirectory);
   });

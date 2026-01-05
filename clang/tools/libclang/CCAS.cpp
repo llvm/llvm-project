@@ -347,7 +347,7 @@ void clang_experimental_cas_loadObjectByString_async(
               std::lock_guard<std::mutex> Guard(This->Mutex);
               This->PendingCancellables.erase(Ref);
             }
-            auto _1 = llvm::make_scope_exit([&]() { This->finishedNode(); });
+            llvm::scope_exit _1([&]() { This->finishedNode(); });
             if (!Obj) {
               This->encounteredError(Obj.takeError());
               return;
