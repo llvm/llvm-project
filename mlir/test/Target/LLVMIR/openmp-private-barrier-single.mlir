@@ -1,6 +1,10 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-// tests that no privatization barrier is added for operations inside of SINGLE
+// Tests that no privatization barrier is added for operations inside of SINGLE.
+// The specific combination here (wsloop inside of single) may not be valid
+// OpenMP. This combination was chosen so that this patch did not have to wait
+// for taskloop support. If it ever becomes a problem having a wsloop inside
+// of single, this can be updated to use taskloop.
 
 omp.private {type = private} @_QFwsloop_privateEi_private_ref_i32 : i32
 
