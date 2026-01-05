@@ -1,5 +1,5 @@
 // REQUIRES: lld
-// UNSUPPORTED: target={{.*-(ps4|ps5)}}, target={{.*}}-zos{{.*}}
+// UNSUPPORTED: target={{.*-(ps4|ps5)}}, target={{.*}}-zos{{.*}}, target={{.*}}-macosx{{.*}}, target={{.*}}-darwin{{.*}}
 
 // Swift LLVM fork downstream change start
 // lld from the Swift LLVM fork does not support linking Darwin Mach-O files
