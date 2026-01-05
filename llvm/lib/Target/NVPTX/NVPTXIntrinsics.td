@@ -2319,10 +2319,10 @@ let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
   foreach src_type = ["f16x2", "bf16x2"] in {
     foreach dst_type = ["e2m3x2", "e3m2x2"] in {
       foreach relu = ["", "_relu"] in {
-        def : Pat<(!cast<Intrinsic>("int_nvvm_" # src_type # "_to_" # dst_type #
-                                    "_rn" # relu # "_satfinite") B32:$a),
-                  (!cast<NVPTXInst>("CVT_" # dst_type # "_" # src_type # "_sf")
-                    $a, !cast<PatLeaf>("CvtRN" # !toupper(relu)))>;
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_" # dst_type # "_rn" # relu # "_satfinite");
+        defvar cvt_inst = !cast<NVPTXInst>("CVT_" # dst_type # "_" # src_type # "_sf");
+        defvar cvt_mode = !cast<PatLeaf>("CvtRN" # !toupper(relu));
+        def : Pat<(intrin B32:$a), (cvt_inst $a, cvt_mode)>;
       }
     }
   }
@@ -2343,10 +2343,10 @@ let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
 let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
   foreach src_type = ["f16x2", "bf16x2"] in {
     foreach relu = ["", "_relu"] in {
-      def : Pat<(!cast<Intrinsic>("int_nvvm_" # src_type # "_to_e2m1x2_rn" # relu 
-                                  # "_satfinite") B32:$a),
-                (!cast<NVPTXInst>("CVT_e2m1x2_" # src_type # "_sf") $a,
-                  !cast<PatLeaf>("CvtRN" # !toupper(relu)))>;
+      defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_e2m1x2_rn" # relu # "_satfinite");
+      defvar cvt_inst = !cast<NVPTXInst>("CVT_e2m1x2_" # src_type # "_sf");
+      defvar cvt_mode = !cast<PatLeaf>("CvtRN" # !toupper(relu));
+      def : Pat<(intrin B32:$a), (cvt_inst $a, cvt_mode)>;
     }
   }
 }
