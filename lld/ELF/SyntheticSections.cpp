@@ -613,12 +613,9 @@ void EhFrameSection::writeTo(uint8_t *buf) {
     for (EhSectionPiece *fde : rec->fdes) {
       uint64_t pc = getFdePc(buf, fde->outputOff, enc);
       uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va)) {
-        Err(ctx) << fde->sec << ": PC offset is too large: 0x"
-                 << Twine::utohexstr(pc - va);
-        continue;
-      }
-      fdes.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
+      int64_t pcRel = pc - va;
+      int64_t fdeVARel = fdeVA - va;
+      fdes.push_back({pcRel, fdeVARel});
     }
   }
 
@@ -632,23 +629,33 @@ void EhFrameSection::writeTo(uint8_t *buf) {
       llvm::unique(fdes, [](auto &a, auto &b) { return a.pcRel == b.pcRel; }),
       fdes.end());
 
-  // Write header.
-  uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
-  hdrBuf[0] = 1;                                  // version
-  hdrBuf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;   // eh_frame_ptr_enc
-  hdrBuf[2] = DW_EH_PE_udata4;                    // fde_count_enc
-  hdrBuf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4; // table_enc
-  write32(ctx, hdrBuf + 4,
-          getParent()->addr - hdr->getVA() - 4); // eh_frame_ptr
-  write32(ctx, hdrBuf + 8, fdes.size());         // fde_count
-  hdrBuf += 12;
+  // Determine encodings. Use 64-bit encodings if any entry or offset exceeds
+  // 32-bit range, which can happen with very large binaries (e.g., large code
+  // model).
+  int64_t ehFramePtrOff = getParent()->addr - hdr->getVA() - 4;
+  bool large =
+      !isInt<32>(ehFramePtrOff) || llvm::any_of(fdes, [](const FdeData &fde) {
+        return !isInt<32>(fde.pcRel) || !isInt<32>(fde.fdeVARel);
+      });
+  bool largeCount = fdes.size() > UINT32_MAX;
+  auto write = [&](uint8_t *buf, uint64_t val, bool large) {
+    large ? write64(ctx, buf, val) : write32(ctx, buf, val);
+  };
 
-  // Write binary search table. Each entry describes the starting PC and the FDE
-  // address.
+  uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
+  hdrBuf[0] = 1;
+  hdrBuf[1] = DW_EH_PE_pcrel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  hdrBuf[2] = largeCount ? DW_EH_PE_udata8 : DW_EH_PE_udata4;
+  hdrBuf[3] = DW_EH_PE_datarel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  hdrBuf += 4;
+  write(hdrBuf, ehFramePtrOff, large);
+  hdrBuf += large ? 8 : 4;
+  write(hdrBuf, fdes.size(), largeCount);
+  hdrBuf += largeCount ? 8 : 4;
   for (FdeData &fde : fdes) {
-    write32(ctx, hdrBuf, fde.pcRel);
-    write32(ctx, hdrBuf + 4, fde.fdeVARel);
-    hdrBuf += 8;
+    write(hdrBuf, fde.pcRel, large);
+    write(hdrBuf + (large ? 8 : 4), fde.fdeVARel, large);
+    hdrBuf += large ? 16 : 8;
   }
 }
 
@@ -659,13 +666,66 @@ void EhFrameHeader::writeTo(uint8_t *buf) {
   // The section content is written during EhFrameSection::writeTo.
 }
 
-size_t EhFrameHeader::getSize() const {
-  // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
-  return 12 + getPartition(ctx).ehFrame->numFdes * 8;
-}
-
 bool EhFrameHeader::isNeeded() const {
   return isLive() && getPartition(ctx).ehFrame->isNeeded();
+}
+
+bool EhFrameHeader::updateAllocSize(Ctx &) {
+  // Size is computed by EhFrameSection::updateAllocSize().
+  return false;
+}
+
+bool EhFrameSection::updateAllocSize(Ctx &ctx) {
+  if (!isLive())
+    return false;
+  EhFrameHeader *hdr = getPartition(ctx).ehFrameHdr.get();
+  if (!hdr || !hdr->getParent() || !getParent())
+    return false;
+
+  // Compute exact size by checking all FDE entries for 32-bit overflow.
+  // This mirrors the layout written in writeTo():
+  // - 4 bytes: header
+  // - 4 or 8 bytes: eh_frame_ptr (based on large)
+  // - 4 or 8 bytes: fde_count (based on numFdes > UINT32_MAX)
+  // - numFdes * (8 or 16) bytes: FDE table entries (based on large)
+  size_t oldSize = hdr->size;
+  int64_t ehFramePtrOff = getParent()->addr - hdr->getVA() - 4;
+  bool large = !isInt<32>(ehFramePtrOff);
+
+  // Check if any FDE entry values exceed 32-bit range.
+  if (!large) {
+    uint64_t hdrVA = hdr->getVA();
+    for (CieRecord *rec : cieRecords) {
+      for (EhSectionPiece *fde : rec->fdes) {
+        // Get the function symbol from the FDE's first relocation.
+        if (fde->firstRelocation == (unsigned)-1)
+          continue;
+        auto *isec = cast<EhInputSection>(fde->sec);
+        const Relocation &rel = isec->rels[fde->firstRelocation];
+        auto *d = dyn_cast<Defined>(rel.sym);
+        if (!d || d->folded || !d->section ||
+            d->section->partition != partition)
+          continue;
+
+        // Compute pcRel and fdeVARel as done in writeTo().
+        uint64_t pc = d->getVA(ctx);
+        uint64_t fdeVA = getParent()->addr + fde->outputOff;
+        int64_t pcRel = pc - hdrVA;
+        int64_t fdeVARel = fdeVA - hdrVA;
+        if (!isInt<32>(pcRel) || !isInt<32>(fdeVARel)) {
+          large = true;
+          break;
+        }
+      }
+      if (large)
+        break;
+    }
+  }
+
+  bool largeCount = numFdes > UINT32_MAX;
+  hdr->size =
+      4 + (large ? 8 : 4) + (largeCount ? 8 : 4) + numFdes * (large ? 16 : 8);
+  return hdr->size != oldSize;
 }
 
 GotSection::GotSection(Ctx &ctx)
