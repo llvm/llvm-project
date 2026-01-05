@@ -140,19 +140,6 @@ static constexpr VMEMID toVMEMID(MCRegUnit RU) {
   return static_cast<unsigned>(RU);
 }
 
-struct HardwareLimits {
-  unsigned LoadcntMax; // Corresponds to VMcnt prior to gfx12.
-  unsigned ExpcntMax;
-  unsigned DscntMax;     // Corresponds to LGKMcnt prior to gfx12.
-  unsigned StorecntMax;  // Corresponds to VScnt in gfx10/gfx11.
-  unsigned SamplecntMax; // gfx12+ only.
-  unsigned BvhcntMax;    // gfx12+ only.
-  unsigned KmcntMax;     // gfx12+ only.
-  unsigned XcntMax;      // gfx1250.
-  unsigned VaVdstMax;    // gfx12+ expert mode only.
-  unsigned VmVsrcMax;    // gfx12+ expert mode only.
-};
-
 #define AMDGPU_DECLARE_WAIT_EVENTS(DECL)                                       \
   DECL(VMEM_ACCESS) /* vmem read & write (pre-gfx10), vmem read (gfx10+) */    \
   DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */         \
@@ -314,42 +301,41 @@ protected:
   AMDGPU::IsaVersion IV;
   InstCounterType MaxCounter;
   bool OptNone;
+  const AMDGPU::HardwareLimits *Limits = nullptr;
 
 public:
   WaitcntGenerator() = default;
-  WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter)
+  WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter,
+                   const AMDGPU::HardwareLimits *Limits)
       : ST(&MF.getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
         IV(AMDGPU::getIsaVersion(ST->getCPU())), MaxCounter(MaxCounter),
         OptNone(MF.getFunction().hasOptNone() ||
-                MF.getTarget().getOptLevel() == CodeGenOptLevel::None) {}
+                MF.getTarget().getOptLevel() == CodeGenOptLevel::None),
+        Limits(Limits) {}
 
   // Return true if the current function should be compiled with no
   // optimization.
   bool isOptNone() const { return OptNone; }
 
   // Get the maximum wait count value for a given counter type.
-  // For pre-GFX12, LOAD_CNT uses vmcnt and DS_CNT uses lgkmcnt.
-  // For GFX12+, LOAD_CNT uses loadcnt and DS_CNT uses dscnt.
   unsigned getWaitCountMax(InstCounterType T) const {
     switch (T) {
     case LOAD_CNT:
-      return ST->hasExtendedWaitCounts() ? AMDGPU::getLoadcntBitMask(IV)
-                                         : AMDGPU::getVmcntBitMask(IV);
+      return Limits->LoadcntMax;
     case DS_CNT:
-      return ST->hasExtendedWaitCounts() ? AMDGPU::getDscntBitMask(IV)
-                                         : AMDGPU::getLgkmcntBitMask(IV);
+      return Limits->DscntMax;
     case EXP_CNT:
-      return AMDGPU::getExpcntBitMask(IV);
+      return Limits->ExpcntMax;
     case STORE_CNT:
-      return AMDGPU::getStorecntBitMask(IV);
+      return Limits->StorecntMax;
     case SAMPLE_CNT:
-      return AMDGPU::getSamplecntBitMask(IV);
+      return Limits->SamplecntMax;
     case BVH_CNT:
-      return AMDGPU::getBvhcntBitMask(IV);
+      return Limits->BvhcntMax;
     case KM_CNT:
-      return AMDGPU::getKmcntBitMask(IV);
+      return Limits->KmcntMax;
     case X_CNT:
-      return AMDGPU::getXcntBitMask(IV);
+      return Limits->XcntMax;
     default:
       return 0;
     }
@@ -405,7 +391,10 @@ public:
 
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
 public:
-  using WaitcntGenerator::WaitcntGenerator;
+  WaitcntGeneratorPreGFX12() = default;
+  WaitcntGeneratorPreGFX12(const MachineFunction &MF,
+                           const AMDGPU::HardwareLimits *Limits)
+      : WaitcntGenerator(MF, NUM_NORMAL_INST_CNTS, Limits) {}
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -447,8 +436,10 @@ protected:
 public:
   WaitcntGeneratorGFX12Plus() = default;
   WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
-                            InstCounterType MaxCounter, bool IsExpertMode)
-      : WaitcntGenerator(MF, MaxCounter), IsExpertMode(IsExpertMode) {}
+                            InstCounterType MaxCounter,
+                            const AMDGPU::HardwareLimits *Limits,
+                            bool IsExpertMode)
+      : WaitcntGenerator(MF, MaxCounter, Limits), IsExpertMode(IsExpertMode) {}
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -526,7 +517,7 @@ private:
   // message.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
-  HardwareLimits Limits;
+  AMDGPU::HardwareLimits Limits;
 
 public:
   SIInsertWaitcnts(MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
@@ -1770,7 +1761,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
           unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(CT) -
                                               ScoreBrackets->getScoreLB(CT),
                                           getWaitCountMax(CT) - 1);
-          emitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
+          EmitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
             AMDGPU::Waitcnt W;
             getCounterRef(W, CT) = Count;
             BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT))
@@ -1800,7 +1791,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
       unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(STORE_CNT) -
                                           ScoreBrackets->getScoreLB(STORE_CNT),
                                       getWaitCountMax(STORE_CNT) - 1);
-      emitExpandedWaitcnt(Outstanding, Wait.StoreCnt, [&](unsigned Count) {
+      EmitExpandedWaitcnt(Outstanding, Wait.StoreCnt, [&](unsigned Count) {
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
             .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
             .addImm(Count);
@@ -2155,7 +2146,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
       unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(CT) -
                                           ScoreBrackets->getScoreLB(CT),
                                       getWaitCountMax(CT) - 1);
-      emitExpandedWaitcnt(Outstanding, Count, [&](unsigned Val) {
+      EmitExpandedWaitcnt(Outstanding, Count, [&](unsigned Val) {
         BuildMI(Block, It, DL, TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(Val);
       });
@@ -3198,6 +3189,9 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
+  // Initialize hardware limits first, as they're needed by the generators.
+  Limits = AMDGPU::HardwareLimits(IV, ST->hasExtendedWaitCounts());
+
   if (ST->hasExtendedWaitCounts()) {
     IsExpertMode = ST->hasExpertSchedulingMode() &&
                    (ExpertSchedulingModeFlag.getNumOccurrences()
@@ -3206,11 +3200,11 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
                               .getFnAttribute("amdgpu-expert-scheduling-mode")
                               .getValueAsBool());
     MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
-    WCGGFX12Plus = WaitcntGeneratorGFX12Plus(MF, MaxCounter, IsExpertMode);
+    WCGGFX12Plus = WaitcntGeneratorGFX12Plus(MF, MaxCounter, &Limits, IsExpertMode);
     WCG = &WCGGFX12Plus;
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, MaxCounter);
+    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, &Limits);
     WCG = &WCGPreGFX12;
   }
 
@@ -3221,21 +3215,6 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 
   SmemAccessCounter = eventCounter(WaitEventMaskForInst, SMEM_ACCESS);
 
-  if (ST->hasExtendedWaitCounts()) {
-    Limits.LoadcntMax = AMDGPU::getLoadcntBitMask(IV);
-    Limits.DscntMax = AMDGPU::getDscntBitMask(IV);
-  } else {
-    Limits.LoadcntMax = AMDGPU::getVmcntBitMask(IV);
-    Limits.DscntMax = AMDGPU::getLgkmcntBitMask(IV);
-  }
-  Limits.ExpcntMax = AMDGPU::getExpcntBitMask(IV);
-  Limits.StorecntMax = AMDGPU::getStorecntBitMask(IV);
-  Limits.SamplecntMax = AMDGPU::getSamplecntBitMask(IV);
-  Limits.BvhcntMax = AMDGPU::getBvhcntBitMask(IV);
-  Limits.KmcntMax = AMDGPU::getKmcntBitMask(IV);
-  Limits.XcntMax = AMDGPU::getXcntBitMask(IV);
-  Limits.VaVdstMax = AMDGPU::DepCtr::getVaVdstBitMask();
-  Limits.VmVsrcMax = AMDGPU::DepCtr::getVmVsrcBitMask();
 
   BlockInfos.clear();
   bool Modified = false;
