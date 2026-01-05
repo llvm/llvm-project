@@ -97,7 +97,8 @@ SmallVector<CallsiteID>
 BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
   auto R = ProgramOptimizationProfile.find(getAliasName(FuncName));
-  return R != ProgramOptimizationProfile.end() ? R->second.PrefetchTargets : SmallVector<CallsiteID>();
+  return R != ProgramOptimizationProfile.end() ? R->second.PrefetchTargets
+                                               : SmallVector<CallsiteID>();
 }
 
 // Reads the version 1 basic block sections profile. Profile for each function
