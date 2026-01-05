@@ -910,7 +910,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # For plain negations, either 'not' without '--crash', or the shell
         # operator '!', leave them out from the command to execute and
-        # invert the result code afterwards.
+        # invert the result code afterwards. If we have a plain not, pass the
+        # args along so we can recognize it later and still fail if the
+        # executed command returns a signal.
         if not_crash:
             args = not_args + args
             not_count = 0
