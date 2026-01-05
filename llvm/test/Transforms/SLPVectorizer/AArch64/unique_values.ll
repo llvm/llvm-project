@@ -9,12 +9,15 @@ define void @foo(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 12
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[ADD_3:%.*]] = udiv i32 [[TMP2]], 2
+; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr i8, ptr [[A1:%.*]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr i8, ptr [[A1]], i64 12
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP6]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv <4 x i32> [[TMP4]], <i32 3, i32 8, i32 3, i32 2>
-; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[A1:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP1]], <i32 3, i32 8>
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[A1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX2_2]], align 4
+; CHECK-NEXT:    store i32 [[ADD_3]], ptr [[ARRAYIDX2_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
