@@ -234,6 +234,11 @@ struct KnownFPClass {
   fadd_self(const KnownFPClass &Src,
             DenormalMode Mode = DenormalMode::getDynamic());
 
+  /// Report known values for fsub
+  LLVM_ABI static KnownFPClass
+  fsub(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass
   fmul(const KnownFPClass &LHS, const KnownFPClass &RHS,

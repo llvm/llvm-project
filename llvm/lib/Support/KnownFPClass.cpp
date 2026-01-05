@@ -279,6 +279,27 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS,
+                                const KnownFPClass &KnownRHS,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+  // Adding positive and negative infinity produces NaN.
+  // TODO: Check sign of infinities.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()))
+    Known.knownNot(fcNan);
+
+  // Only fsub -0, +0 can return -0
+  if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
+       KnownRHS.isKnownNeverLogicalPosZero(Mode)) &&
+      // Make sure output negative denormal can't flush to -0
+      (Mode.Output == DenormalMode::IEEE ||
+       Mode.Output == DenormalMode::PositiveZero))
+    Known.knownNot(fcNegZero);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const KnownFPClass &KnownRHS,
                                 DenormalMode Mode) {
