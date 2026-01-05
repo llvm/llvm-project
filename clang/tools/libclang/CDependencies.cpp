@@ -171,15 +171,6 @@ void clang_experimental_DependencyScannerServiceOptions_setCacheNegativeStats(
   unwrap(Opts)->CacheNegativeStats = CacheNegativeStats;
 }
 
-CXDependencyScannerService
-clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
-  // FIXME: Pass default CASOpts now.
-  CASOptions CASOpts;
-  return wrap(new DependencyScanningService(
-      ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts,
-      /*CAS=*/nullptr, /*ActionCache=*/nullptr));
-}
-
 ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
   if (ConfiguredFormat != ScanningOutputFormat::Full)
     return ConfiguredFormat;
