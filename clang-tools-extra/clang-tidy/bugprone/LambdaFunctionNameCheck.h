@@ -21,14 +21,10 @@ namespace clang::tidy::bugprone {
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/lambda-function-name.html
 class LambdaFunctionNameCheck : public ClangTidyCheck {
 public:
-  struct SourceRangeLessThan {
-    bool operator()(const SourceRange &L, const SourceRange &R) const {
-      if (L.getBegin() == R.getBegin())
-        return L.getEnd() < R.getEnd();
-      return L.getBegin() < R.getBegin();
-    }
-  };
-  using SourceRangeSet = std::set<SourceRange, SourceRangeLessThan>;
+  // FIXME: This pair should be a SourceRange, but SourceRange doesn't have
+  // a DenseMapInfo specialization.
+  using SourceRangeSet =
+      llvm::DenseSet<std::pair<SourceLocation, SourceLocation>>;
 
   LambdaFunctionNameCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {

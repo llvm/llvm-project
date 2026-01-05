@@ -48,7 +48,7 @@ public:
       }
     }
     if (HasFile && HasLine)
-      SuppressMacroExpansions->insert(Range);
+      SuppressMacroExpansions->insert({Range.getBegin(), Range.getEnd()});
   }
 
 private:
@@ -97,8 +97,7 @@ void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
 
     auto ER =
         Result.SourceManager->getImmediateExpansionRange(E->getLocation());
-    if (SuppressMacroExpansions.find(ER.getAsRange()) !=
-        SuppressMacroExpansions.end()) {
+    if (SuppressMacroExpansions.contains({ER.getBegin(), ER.getEnd()})) {
       // This is a macro expansion for which we should not warn.
       return;
     }

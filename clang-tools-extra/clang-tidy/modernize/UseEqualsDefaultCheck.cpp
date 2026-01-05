@@ -21,9 +21,9 @@ namespace clang::tidy::modernize {
 static constexpr char SpecialFunction[] = "SpecialFunction";
 
 /// Finds all the named non-static fields of \p Record.
-static std::set<const FieldDecl *>
+static llvm::SmallPtrSet<const FieldDecl *, 0>
 getAllNamedFields(const CXXRecordDecl *Record) {
-  std::set<const FieldDecl *> Result;
+  llvm::SmallPtrSet<const FieldDecl *, 0> Result;
   for (const auto *Field : Record->fields()) {
     // Static data members are not in this range.
     if (Field->isUnnamedBitField())
@@ -35,8 +35,9 @@ getAllNamedFields(const CXXRecordDecl *Record) {
 
 /// Returns the names of the direct bases of \p Record, both virtual and
 /// non-virtual.
-static std::set<const Type *> getAllDirectBases(const CXXRecordDecl *Record) {
-  std::set<const Type *> Result;
+static llvm::SmallPtrSet<const Type *, 0>
+getAllDirectBases(const CXXRecordDecl *Record) {
+  llvm::SmallPtrSet<const Type *, 0> Result;
   for (auto Base : Record->bases()) {
     // CXXBaseSpecifier.
     const auto *BaseType = Base.getTypeSourceInfo()->getType().getTypePtr();
