@@ -8605,9 +8605,6 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
     return DAG.getVectorShuffle(VT, DL, Sub, Add, Mask);
   }
 
-  if (!HasAllowContract)
-    return SDValue();
-
   return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
 }
 
