@@ -6302,7 +6302,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     auto splitMultiRegDbgValue =
         [&](ArrayRef<std::pair<Register, TypeSize>> SplitRegs) -> bool {
       unsigned Offset = 0;
-      for (const auto [Reg, RegSizeInBits] : SplitRegs) {
+      for (const auto &[Reg, RegSizeInBits] : SplitRegs) {
         // FIXME: Scalable sizes are not supported in fragment expressions.
         if (RegSizeInBits.isScalable())
           return false;
