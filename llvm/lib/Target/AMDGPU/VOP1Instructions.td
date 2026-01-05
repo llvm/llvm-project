@@ -381,6 +381,33 @@ defm V_FREXP_EXP_I32_F32 : VOP1Inst <"v_frexp_exp_i32_f32", VOP_I32_F32, int_amd
 defm V_FREXP_MANT_F32 : VOP1Inst <"v_frexp_mant_f32", VOP_F32_F32, int_amdgcn_frexp_mant>;
 } // End isReMaterializable = 1
 
+// These i32 conversions naturally saturate.
+def : GCNPat<(i32 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i32)),
+             (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i32)),
+             (V_CVT_I32_F32_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_uint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
+             (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_sint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
+             (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_uint_sat f32:$src0, i32)), (V_CVT_U32_F32_e32 (f32 $src0))>;
+def : GCNPat<(i32 (fp_to_sint_sat f32:$src0, i32)), (V_CVT_I32_F32_e32 (f32 $src0))>;
+def : GCNPat<(i32 (fp_to_uint_sat f64:$src0, i32)), (V_CVT_U32_F64_e32 (f64 $src0))>;
+def : GCNPat<(i32 (fp_to_sint_sat f64:$src0, i32)), (V_CVT_I32_F64_e32 (f64 $src0))>;
+
+def : GCNPat<(i32 (fp_to_uint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+             (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_sint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+             (V_CVT_I32_F32_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_uint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
+             (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_sint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
+             (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_uint_sat_gi f32:$src0)), (V_CVT_U32_F32_e32 (f32 $src0))>;
+def : GCNPat<(i32 (fp_to_sint_sat_gi f32:$src0)), (V_CVT_I32_F32_e32 (f32 $src0))>;
+def : GCNPat<(i32 (fp_to_uint_sat_gi f64:$src0)), (V_CVT_U32_F64_e32 (f64 $src0))>;
+def : GCNPat<(i32 (fp_to_sint_sat_gi f64:$src0)), (V_CVT_I32_F64_e32 (f64 $src0))>;
+
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 
 // Restrict src0 to be VGPR
