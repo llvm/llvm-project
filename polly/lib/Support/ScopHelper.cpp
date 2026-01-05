@@ -368,7 +368,7 @@ private:
   const SCEV *visitConstant(const SCEVConstant *E) { return E; }
   const SCEV *visitVScale(const SCEVVScale *E) { return E; }
   const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *E) {
-    return GenSE.getPtrToAddrExpr(visit(E->getOperand()));
+    return GenSE.getPtrToAddrExpr(visit(E->getOperand()), E->getType());
   }
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
     return GenSE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
