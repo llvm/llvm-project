@@ -2220,7 +2220,7 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   assert(ST.needsAlignedVGPRs());
   static_assert(AMDGPU::VGPR0 + 1 == AMDGPU::VGPR1);
 
-  const DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   MachineBasicBlock *MBB = MI->getParent();
   MachineOperand *Src1 = TII.getNamedOperand(*MI, AMDGPU::OpName::src1);
 
