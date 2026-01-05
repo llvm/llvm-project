@@ -315,7 +315,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   bool Skipped = false;
   std::string LogValidationError;
 
-  auto Log = llvm::make_scope_exit([&] {
+  llvm::scope_exit Log([&] {
     if (!Logger)
       return;
     Logger->log_UnifiedOnDiskCache_validateIfNeeded(
