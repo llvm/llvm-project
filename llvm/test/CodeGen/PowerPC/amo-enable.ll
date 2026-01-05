@@ -30,18 +30,18 @@ define void @test_ldat(ptr noundef %ptr, i64 noundef %value, ptr nocapture %resp
 ; CHECK-LABEL: test_ldat:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr r7, r4
-; CHECK-NEXT:    ldat r6, r3, 3
+; CHECK-NEXT:    ldat r6, r3, 0
 ; CHECK-NEXT:    std r6, 0(r5)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_ldat:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mr r7, r4
-; CHECK-BE-NEXT:    ldat r6, r3, 3
+; CHECK-BE-NEXT:    ldat r6, r3, 0
 ; CHECK-BE-NEXT:    std r6, 0(r5)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = tail call i64 @llvm.ppc.amo.ldat(ptr %ptr, i64 %value, i32 3)
+  %0 = tail call i64 @llvm.ppc.amo.ldat(ptr %ptr, i64 %value, i32 0)
   store i64 %0, ptr %resp, align 8
   ret void
 }
