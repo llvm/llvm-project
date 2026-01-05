@@ -8490,6 +8490,10 @@ void CodeGenFunction::EmitOMPUseDeviceAddrClause(
 // Generate the instructions for '#pragma omp target data' directive.
 void CodeGenFunction::EmitOMPTargetDataDirective(
     const OMPTargetDataDirective &S) {
+  // Emit vtable only from host for target data directive.
+  if (!CGM.getLangOpts().OpenMPIsTargetDevice)
+    CGM.getOpenMPRuntime().registerVTable(S);
+
   CGOpenMPRuntime::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/true,
                                        /*SeparateBeginEndCalls=*/true);
 
