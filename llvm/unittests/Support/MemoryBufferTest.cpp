@@ -112,8 +112,8 @@ TEST_F(MemoryBufferTest, getOpenFile) {
   {
     Expected<sys::fs::file_t> File = sys::fs::openNativeFileForRead(TestPath);
     ASSERT_THAT_EXPECTED(File, Succeeded());
-    auto OnExit =
-        make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+    llvm::scope_exit OnExit(
+        [&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
     ErrorOr<OwningBuffer> MB = MemoryBuffer::getOpenFile(*File, TestPath, 6);
     ASSERT_NO_ERROR(MB.getError());
     EXPECT_EQ("123456", MB.get()->getBuffer());
@@ -122,8 +122,8 @@ TEST_F(MemoryBufferTest, getOpenFile) {
     Expected<sys::fs::file_t> File = sys::fs::openNativeFileForWrite(
         TestPath, sys::fs::CD_OpenExisting, sys::fs::OF_None);
     ASSERT_THAT_EXPECTED(File, Succeeded());
-    auto OnExit =
-        make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+    llvm::scope_exit OnExit(
+        [&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
     ASSERT_ERROR(MemoryBuffer::getOpenFile(*File, TestPath, 6).getError());
   }
 }
@@ -177,12 +177,12 @@ TEST_F(MemoryBufferTest, createFromPipe) {
   ASSERT_TRUE(::CreatePipe(&pipes[0], &pipes[1], nullptr, 0))
       << ::GetLastError();
 #endif
-  auto ReadCloser = make_scope_exit([&] {
+  llvm::scope_exit ReadCloser([&] {
     sys::fs::file_t F(pipes[0]);
     sys::fs::closeFile(F);
   });
   std::thread Writer([&] {
-    auto WriteCloser = make_scope_exit([&] {
+    llvm::scope_exit WriteCloser([&] {
       sys::fs::file_t F(pipes[1]);
       sys::fs::closeFile(F);
     });
@@ -430,8 +430,7 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
 
   Expected<sys::fs::file_t> File = sys::fs::openNativeFileForRead(TestPath);
   ASSERT_THAT_EXPECTED(File, Succeeded());
-  auto OnExit =
-      make_scope_exit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
+  llvm::scope_exit OnExit([&] { ASSERT_NO_ERROR(sys::fs::closeFile(*File)); });
 
   auto MBOrError = MemoryBuffer::getOpenFile(*File, TestPath,
       /*FileSize=*/-1, /*RequiresNullTerminator=*/false, /*IsVolatile=*/true);

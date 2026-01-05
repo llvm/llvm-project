@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux && target={{aarch64-.+}}
+// REQUIRES: target={{aarch64-.+}}
+// UNSUPPORTED: target={{.*-windows.*}}
 
 // Basic test for float registers number are accepted.
 

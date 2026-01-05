@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseNewMLIROpBuilderCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
-#include "clang/Tooling/Transformer/SourceCode.h"
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -53,14 +52,13 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
         return CurrentToken;
       if (CurrentToken->is(clang::tok::eof))
         return std::optional<Token>();
-      return clang::Lexer::findNextToken(CurrentToken->getLocation(), SM,
-                                         LangOpts);
+      return utils::lexer::findNextTokenSkippingComments(
+          CurrentToken->getLocation(), SM, LangOpts);
     };
     std::optional<Token> LessToken =
-        clang::Lexer::findNextToken(Begin, SM, LangOpts);
-    while (LessToken && LessToken->getKind() != clang::tok::less) {
+        utils::lexer::findNextTokenSkippingComments(Begin, SM, LangOpts);
+    while (LessToken && LessToken->getKind() != clang::tok::less)
       LessToken = NextToken(LessToken);
-    }
     if (!LessToken) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "missing '<' token");

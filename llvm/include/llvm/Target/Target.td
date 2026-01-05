@@ -61,7 +61,7 @@ class HwModeSelect<list<HwMode> Ms, int ObjectsLength> {
 // objects could be used. This is specifically applicable to selection
 // patterns.
 class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
-    : HwModeSelect<Ms, !size(Ts)>, ValueType<0, 0> {
+    : HwModeSelect<Ms, !size(Ts)>, ValueType<0, "INVALID_SIMPLE_VALUE_TYPE"> {
   // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = Ts;
 }
@@ -73,7 +73,7 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
 // patterns.
 class PtrValueTypeByHwMode<ValueTypeByHwMode scalar, int addrspace>
     : HwModeSelect<scalar.Modes, !size(scalar.Objects)>,
-      PtrValueType<ValueType<0, 0>, addrspace> {
+      PtrValueType<ValueType<0, "INVALID_SIMPLE_VALUE_TYPE">, addrspace> {
   // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = scalar.Objects;
 }
@@ -1351,6 +1351,13 @@ def COPY : StandardPseudoInstruction {
   let hasSideEffects = false;
   let isAsCheapAsAMove = true;
   let hasNoSchedulingInfo = false;
+}
+def COPY_LANEMASK : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src, unknown:$lanemask);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let isAsCheapAsAMove = true;
 }
 def BUNDLE : StandardPseudoInstruction {
   let OutOperandList = (outs);

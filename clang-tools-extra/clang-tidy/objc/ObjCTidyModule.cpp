@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AssertEqualsCheck.h"
 #include "AvoidNSErrorInitCheck.h"
 #include "DeallocInCategoryCheck.h"
@@ -23,6 +22,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace objc {
+namespace {
 
 class ObjCModule : public ClangTidyModule {
 public:
@@ -44,6 +44,8 @@ public:
     CheckFactories.registerCheck<SuperSelfCheck>("objc-super-self");
   }
 };
+
+} // namespace
 
 // Register the ObjCTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ObjCModule>

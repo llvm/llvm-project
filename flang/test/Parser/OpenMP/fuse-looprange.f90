@@ -28,7 +28,7 @@ subroutine openmp_fuse(x)
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE: OmpBeginLoopDirective
 !PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = fuse
-!PARSE-TREE: OmpClauseList -> OmpClause -> Looprange -> OmpLoopRangeClause
+!PARSE-TREE: OmpClauseList -> OmpClause -> Looprange -> OmpLooprangeClause
 !PARSE-TREE: Scalar -> Integer -> Constant -> Expr = '1_4'
 !PARSE-TREE: LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: Scalar -> Integer -> Constant -> Expr = '2_4'

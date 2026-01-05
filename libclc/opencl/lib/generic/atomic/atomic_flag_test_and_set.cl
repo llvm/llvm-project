@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_flag_test_and_set.h>
-#include <clc/opencl/atomic/atomic_flag_test_and_set.h>
 #include <clc/opencl/utils.h>
 
 #if defined(__opencl_c_atomic_order_seq_cst) &&                                \
