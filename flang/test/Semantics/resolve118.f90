@@ -17,7 +17,7 @@ module m3
   interface
     subroutine s1(x)
       use m1
-      !PORTABILITY: The same 't' is already present in this scope
+      !PORTABILITY: The same 't' is already present in this scope [-Wbenign-name-clash]
       import t
       type(t) x
     end

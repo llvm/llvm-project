@@ -112,7 +112,18 @@ let test_get_function m dibuilder file_di m_di =
   stdout_metadata int_ty_di;
   (* CHECK: [[INT32_PTR:<0x[0-9a-f]*>]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
   *)
-  let param_types = [| null_metadata; int_ty_di |] in
+  let int_ptr_ty_di =
+    Llvm_debuginfo.dibuild_create_pointer_type dibuilder
+      ~pointee_ty:int_ty_di
+      ~size_in_bits:32
+      ~align_in_bits:32
+      ~address_space:0
+      ~name:"ptrint"
+  in
+  stdout_metadata int_ptr_ty_di;
+  (* CHECK: [[PTRINT32_PTR:<0x[0-9a-f]*>]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "ptrint", baseType: [[INT32_PTR]], size: 32, align: 32, dwarfAddressSpace: 0)
+  *)
+  let param_types = [| null_metadata; int_ty_di; int_ptr_ty_di |] in
   let fty_di =
     Llvm_debuginfo.dibuild_create_subroutine_type dibuilder ~file:file_di
       ~param_types flags_zero
@@ -126,7 +137,7 @@ let test_get_function m dibuilder file_di m_di =
     Llvm_debuginfo.dibuild_get_or_create_type_array dibuilder ~data:param_types
   in
   stdout_metadata fty_di_args;
-  (* CHECK: [[FARGS_PTR:<0x[0-9a-f]*>]] = !{null, [[INT32_PTR]]}
+  (* CHECK: [[FARGS_PTR:<0x[0-9a-f]*>]] = !{null, [[INT32_PTR]], [[PTRINT32_PTR]]}
   *)
   stdout_metadata fty_di;
   (* CHECK: [[SBRTNTY_PTR:<0x[0-9a-f]*>]] = !DISubroutineType(types: [[FARGS_PTR]])
@@ -134,7 +145,8 @@ let test_get_function m dibuilder file_di m_di =
   (* Let's create the LLVM-IR function now. *)
   let name = "tfun" in
   let fty =
-    Llvm.function_type (Llvm.void_type context) [| Llvm.i32_type context |]
+    Llvm.function_type (Llvm.void_type context)
+      [| Llvm.i32_type context; Llvm.pointer_type context |]
   in
   let f = Llvm.define_function name fty m in
   let f_di =
@@ -160,11 +172,12 @@ let test_bbinstr fty f f_di file_di dibuilder =
   group "basic_block and instructions tests";
   (* Create this pattern:
    *   if (arg0 != 0) {
-   *      foo(arg0);
+   *      foo(arg0, arg1);
    *   }
    *   return;
    *)
   let arg0 = (Llvm.params f).(0) in
+  let arg1 = (Llvm.params f).(1) in
   let builder = Llvm.builder_at_end context (Llvm.entry_block f) in
   let zero = Llvm.const_int (Llvm.i32_type context) 0 in
   let cmpi = Llvm.build_icmp Llvm.Icmp.Ne zero arg0 "cmpi" builder in
@@ -185,7 +198,7 @@ let test_bbinstr fty f f_di file_di dibuilder =
       | Some file_of_f_di', Some file_of_scope' ->
           file_of_f_di' = file_di && file_of_scope' = file_di
       | _ -> false );
-    let foocall = Llvm.build_call fty foodecl [| arg0 |] "" builder in
+    let foocall = Llvm.build_call fty foodecl [| arg0; arg1 |] "" builder in
     let foocall_loc =
       Llvm_debuginfo.dibuild_create_debug_location context ~line:10 ~column:12
         ~scope
@@ -290,17 +303,17 @@ let test_variables f dibuilder file_di fun_di =
   let () = Printf.printf "%s\n" (Llvm.string_of_lldbgrecord vdi) in
   (* CHECK: dbg_declare(ptr %my_alloca, ![[#]], !DIExpression(), ![[#]])
   *)
-  let arg0 = (Llvm.params f).(0) in
+  let arg1 = (Llvm.params f).(1) in
   let arg_var = Llvm_debuginfo.dibuild_create_parameter_variable dibuilder ~scope:fun_di
     ~name:"my_arg" ~argno:1 ~file:file_di ~line:10 ~ty
     ~always_preserve:false flags_zero
   in
-  let argdi = Llvm_debuginfo.dibuild_insert_declare_before dibuilder ~storage:arg0
+  let argdi = Llvm_debuginfo.dibuild_insert_declare_before dibuilder ~storage:arg1
     ~var_info:arg_var ~expr:(Llvm_debuginfo.dibuild_expression dibuilder [||])
     ~location ~instr:entry_term
   in
   let () = Printf.printf "%s\n" (Llvm.string_of_lldbgrecord argdi) in
-  (* CHECK: dbg_declare(i32 %0, ![[#]], !DIExpression(), ![[#]])
+  (* CHECK: dbg_declare(ptr %1, ![[#]], !DIExpression(), ![[#]])
   *)
   ()
 

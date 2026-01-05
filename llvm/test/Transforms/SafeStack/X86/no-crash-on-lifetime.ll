@@ -9,9 +9,9 @@ define dso_local void @_ZN1s1tE1F(ptr byval(%class.F) %g) local_unnamed_addr saf
 entry:
   %ref.tmp.i.i.i = alloca i64, align 1
   call void undef(ptr %g)
-  call void @llvm.lifetime.start.p0(i64 3, ptr %ref.tmp.i.i.i)
+  call void @llvm.lifetime.start.p0(ptr %ref.tmp.i.i.i)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 

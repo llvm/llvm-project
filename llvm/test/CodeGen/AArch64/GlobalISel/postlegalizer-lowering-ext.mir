@@ -152,7 +152,6 @@ body:             |
     liveins: $d0, $d1
     ; Undef shuffle indices should not prevent matching G_EXT.
     ; We should get a constant 3 here.
-    ;
     ; CHECK-LABEL: name: undef_elts_should_match_1
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
@@ -178,7 +177,6 @@ body:             |
     liveins: $d0, $d1
     ; Undef shuffle indices should not prevent matching G_EXT.
     ; We should get a constant 6 here.
-    ;
     ; CHECK-LABEL: name: undef_elts_should_match_2
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
@@ -253,12 +251,12 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; We expect at least one defined element in the shuffle mask.
-    ;
     ; CHECK-LABEL: name: all_undef
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: %shuf:_(<8 x s16>) = G_REV64 %v1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<8 x s16>) = G_DUPLANE16 %v1, [[C]](s64)
     ; CHECK-NEXT: $q0 = COPY %shuf(<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<8 x s16>) = COPY $q0
@@ -301,8 +299,8 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: %v2:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %shuf:_(<2 x s64>) = G_TRN2 %v1, %v2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %shuf:_(<2 x s64>) = G_DUPLANE64 %v1, [[C]](s64)
     ; CHECK-NEXT: $q0 = COPY %shuf(<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %v1:_(<2 x s64>) = COPY $q0

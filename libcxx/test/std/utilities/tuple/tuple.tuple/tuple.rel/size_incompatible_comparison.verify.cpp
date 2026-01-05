@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Disabled in C++26 and later because tuple comparison between different sizes is constrained since P2944R3.
+// UNSUPPORTED: std-at-least-cxx26
+
 // <tuple>
 
 // template <class... Types> class tuple;

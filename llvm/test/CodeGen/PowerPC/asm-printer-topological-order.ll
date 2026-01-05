@@ -10,6 +10,6 @@ entry:
 }
 
 ; CHECK-LABEL: TestD:
-; CHECK: .set TestC, TestD
-; CHECK-DAG: .set TestB, TestC
-; CHECK-DAG: .set TestA, TestC
+; CHECK: TestC = TestD
+; CHECK-DAG: TestB = TestC
+; CHECK-DAG: TestA = TestC

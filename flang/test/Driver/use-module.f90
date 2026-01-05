@@ -32,14 +32,14 @@
 
 ! INCLUDED-NOT: error
 
-! MISSING_MOD2-NOT:error: Cannot read module file for module 'basictestmoduleone''
+! MISSING_MOD2-NOT:error: Cannot parse module file for module 'basictestmoduleone''
 ! MISSING_MOD2-NOT:error: Derived type 't1' not found
-! MISSING_MOD2:error: Cannot read module file for module 'basictestmoduletwo'
+! MISSING_MOD2:error: Cannot parse module file for module 'basictestmoduletwo'
 ! MISSING_MOD2:error: Derived type 't2' not found
 
-! SINGLEINCLUDE-NOT:error: Cannot read module file for module 'basictestmoduleone'
+! SINGLEINCLUDE-NOT:error: Cannot parse module file for module 'basictestmoduleone'
 ! SINGLEINCLUDE:error: Derived type 't1' not found
-! SINGLEINCLUDE-NOT:error: Cannot read module file for module 'basictestmoduletwo'
+! SINGLEINCLUDE-NOT:error: Cannot parse module file for module 'basictestmoduletwo'
 ! SINGLEINCLUDE-NOT:error: Derived type 't2' not found
 
 

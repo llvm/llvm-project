@@ -5,4 +5,12 @@ define void @memcpy() #0 {
   ret void
 }
 
+define float @acosf(float %x) {
+  ret float %x
+}
+
+define i128 @__umodti3(i128 %a, i128 %b) {
+  ret i128 %a
+}
+
 attributes #0 = { "target-features"="-bulk-memory,-bulk-memory-opt" }

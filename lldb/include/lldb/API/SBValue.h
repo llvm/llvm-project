@@ -160,30 +160,25 @@ public:
   /// members (empty base classes are omitted), and all members of the
   /// current class will then follow the base classes.
   ///
-  /// Pointers differ depending on what they point to. If the pointer
-  /// points to a simple type, the child at index zero
-  /// is the only child value available, unless \a synthetic_allowed
-  /// is \b true, in which case the pointer will be used as an array
-  /// and can create 'synthetic' child values using positive or
-  /// negative indexes. If the pointer points to an aggregate type
-  /// (an array, class, union, struct), then the pointee is
-  /// transparently skipped and any children are going to be the indexes
-  /// of the child values within the aggregate type. For example if
-  /// we have a 'Point' type and we have a SBValue that contains a
-  /// pointer to a 'Point' type, then the child at index zero will be
-  /// the 'x' member, and the child at index 1 will be the 'y' member
-  /// (the child at index zero won't be a 'Point' instance).
+  /// For array and pointers the behavior of the function depends on the value
+  /// of the \a treat_as_array argument. If \b false, the function returns
+  /// members of the array as given by the array bounds. If the value is a
+  /// pointer to a simple type, the child at index zero is the only child
+  /// value available. If the pointer points to an aggregate type (an array,
+  /// class, union, etc.), then the pointee is transparently skipped and any
+  /// children are going to be the indexes of the child values within the
+  /// aggregate type. For example if we have a 'Point' type and we have a
+  /// SBValue that contains a pointer to a 'Point' type, then the child at
+  /// index zero will be the 'x' member, and the child at index 1 will be the
+  /// 'y' member (the child at index zero won't be a 'Point' instance). If \a
+  /// treat_as_array is \b true, pointer values will be used as a (C) array and
+  /// and the function will create 'synthetic' child values using positive or
+  /// negative indexes. In case of arrays, the function will return values
+  /// which are outside of the array bounds.
   ///
   /// If you actually need an SBValue that represents the type pointed
   /// to by a SBValue for which GetType().IsPointeeType() returns true,
   /// regardless of the pointee type, you can do that with SBValue::Dereference.
-  ///
-  /// Arrays have a preset number of children that can be accessed by
-  /// index and will returns invalid child values for indexes that are
-  /// out of bounds unless the \a synthetic_allowed is \b true. In this
-  /// case the array can create 'synthetic' child values for indexes
-  /// that aren't in the array bounds using positive or negative
-  /// indexes.
   ///
   /// \param[in] idx
   ///     The index of the child value to get
@@ -193,7 +188,7 @@ public:
   ///     and also if the target can be run to figure out the dynamic
   ///     type of the child value.
   ///
-  /// \param[in] can_create_synthetic
+  /// \param[in] treat_as_array
   ///     If \b true, then allow child values to be created by index
   ///     for pointers and arrays for indexes that normally wouldn't
   ///     be allowed.
@@ -202,7 +197,7 @@ public:
   ///     A new SBValue object that represents the child member value.
   lldb::SBValue GetChildAtIndex(uint32_t idx,
                                 lldb::DynamicValueType use_dynamic,
-                                bool can_create_synthetic);
+                                bool treat_as_array);
 
   // Matches children of this object only and will match base classes and
   // member names if this is a clang typed object.
@@ -442,10 +437,12 @@ public:
 
 protected:
   friend class SBBlock;
+  friend class SBCommandReturnObject;
   friend class SBFrame;
   friend class SBModule;
   friend class SBTarget;
   friend class SBThread;
+  friend class SBType;
   friend class SBTypeStaticField;
   friend class SBTypeSummary;
   friend class SBValueList;

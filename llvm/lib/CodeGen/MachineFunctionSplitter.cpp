@@ -129,6 +129,9 @@ static bool isColdBlock(const MachineBasicBlock &MBB,
 }
 
 bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
   // Do not split functions when -basic-block-sections=all is specified.
   if (MF.getTarget().getBBSectionsType() == llvm::BasicBlockSection::All)
     return false;

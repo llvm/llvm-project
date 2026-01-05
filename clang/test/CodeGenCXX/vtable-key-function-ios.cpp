@@ -3,6 +3,8 @@
 
 // RUN: %clang_cc1 %s -triple=x86_64-pc-windows-gnu -emit-llvm -o - | FileCheck -check-prefixes=CHECK,CHECK-MINGW %s
 // RUN: %clang_cc1 %s -triple=x86_64-pc-windows-gnu -emit-llvm -o - | FileCheck -check-prefix=CHECK-LATE %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-cygwin      -emit-llvm -o - | FileCheck -check-prefixes=CHECK,CHECK-MINGW %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-cygwin      -emit-llvm -o - | FileCheck -check-prefix=CHECK-LATE %s
 
 // The 'a' variants ask for the vtable first.
 // The 'b' variants ask for the vtable second.
