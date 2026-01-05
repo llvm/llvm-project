@@ -1069,6 +1069,15 @@ void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
         PutPassName(os, details.passName());
       },
       attrs);
+  if (symbol.owner().IsDerivedType()) {
+    if (const auto &init{details.init()}) {
+      if (const Symbol *symbol{*init}) {
+        os << "=>" << symbol->name();
+      } else {
+        os << "=>NULL()";
+      }
+    }
+  }
   os << '\n';
 }
 

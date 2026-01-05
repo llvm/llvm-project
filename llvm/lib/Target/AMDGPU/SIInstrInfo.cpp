@@ -8450,7 +8450,7 @@ void SIInstrInfo::lowerSelect(SIInstrWorklist &Worklist, MachineInstr &Inst,
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineBasicBlock::iterator MII = Inst;
-  DebugLoc DL = Inst.getDebugLoc();
+  const DebugLoc &DL = Inst.getDebugLoc();
 
   MachineOperand &Dest = Inst.getOperand(0);
   MachineOperand &Src0 = Inst.getOperand(1);
@@ -8531,7 +8531,7 @@ void SIInstrInfo::lowerScalarAbs(SIInstrWorklist &Worklist,
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineBasicBlock::iterator MII = Inst;
-  DebugLoc DL = Inst.getDebugLoc();
+  const DebugLoc &DL = Inst.getDebugLoc();
 
   MachineOperand &Dest = Inst.getOperand(0);
   MachineOperand &Src = Inst.getOperand(1);
@@ -8715,7 +8715,7 @@ void SIInstrInfo::splitScalar64BitUnaryOp(SIInstrWorklist &Worklist,
 
   MachineOperand &Dest = Inst.getOperand(0);
   MachineOperand &Src0 = Inst.getOperand(1);
-  DebugLoc DL = Inst.getDebugLoc();
+  const DebugLoc &DL = Inst.getDebugLoc();
 
   MachineBasicBlock::iterator MII = Inst;
 
@@ -8949,7 +8949,7 @@ void SIInstrInfo::splitScalar64BitBinaryOp(SIInstrWorklist &Worklist,
   MachineOperand &Dest = Inst.getOperand(0);
   MachineOperand &Src0 = Inst.getOperand(1);
   MachineOperand &Src1 = Inst.getOperand(2);
-  DebugLoc DL = Inst.getDebugLoc();
+  const DebugLoc &DL = Inst.getDebugLoc();
 
   MachineBasicBlock::iterator MII = Inst;
 
@@ -10221,7 +10221,8 @@ static bool isRenamedInGFX9(int Opcode) {
 }
 
 int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
-  Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Opcode);
+  assert(Opcode == (int)SIInstrInfo::getNonSoftWaitcntOpcode(Opcode) &&
+         "SIInsertWaitcnts should have promoted soft waitcnt instructions!");
 
   unsigned Gen = subtargetEncodingFamily(ST);
 
@@ -10543,6 +10544,14 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+const MachineOperand &
+SIInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
+  if (const MachineOperand *CallAddrOp =
+          getNamedOperand(MI, AMDGPU::OpName::src0))
+    return *CallAddrOp;
+  return TargetInstrInfo::getCalleeOperand(MI);
 }
 
 InstructionUniformity

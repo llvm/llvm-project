@@ -1172,11 +1172,11 @@ PYBIND11_FEATURES = [
 filegroup(
     name = "MLIRBindingsPythonSourceFiles",
     srcs = [
+        "lib/Bindings/Python/Globals.cpp",
         "lib/Bindings/Python/IRAffine.cpp",
         "lib/Bindings/Python/IRAttributes.cpp",
         "lib/Bindings/Python/IRCore.cpp",
         "lib/Bindings/Python/IRInterfaces.cpp",
-        "lib/Bindings/Python/IRModule.cpp",
         "lib/Bindings/Python/IRTypes.cpp",
         "lib/Bindings/Python/Pass.cpp",
         "lib/Bindings/Python/Rewrite.cpp",
@@ -1309,9 +1309,11 @@ cc_binary(
     linkshared = 1,
     linkstatic = 0,
     deps = [
+        ":CAPIDebug",
         ":CAPIIR",
         ":CAPILLVM",
         ":CAPITarget",
+        ":CAPITransforms",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
@@ -1325,8 +1327,10 @@ cc_binary(
     linkshared = 1,
     linkstatic = 0,
     deps = [
+        ":CAPIDebug",
         ":CAPIIR",
         ":CAPIQuant",
+        ":CAPITransforms",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
@@ -1340,8 +1344,10 @@ cc_binary(
     linkshared = 1,
     linkstatic = 0,
     deps = [
+        ":CAPIDebug",
         ":CAPIIR",
         ":CAPISparseTensor",
+        ":CAPITransforms",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
@@ -2632,6 +2638,22 @@ cc_library(
 )
 
 cc_library(
+    name = "X86VectorUtils",
+    srcs = glob(["lib/Dialect/X86Vector/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86Vector/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":Support",
+        ":VectorDialect",
+        ":X86VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "X86VectorTransforms",
     srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
     hdrs = ["include/mlir/Dialect/X86Vector/Transforms.h"],
@@ -2643,11 +2665,14 @@ cc_library(
         ":LLVMDialect",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
         ":X86VectorDialect",
+        ":X86VectorUtils",
         "//llvm:Support",
     ],
 )
@@ -3794,6 +3819,17 @@ gentbl_cc_library(
     deps = [":XeGPUAttrTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "XeGPUOpInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/XeGPU/IR/XeGPUOpInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/XeGPU/IR/XeGPUOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/IR/XeGPUAttrs.td",
+    deps = [":XeGPUAttrTdFiles"],
+)
+
 cc_library(
     name = "XeGPUDialect",
     srcs = glob(["lib/Dialect/XeGPU/IR/*.cpp"]),
@@ -3815,6 +3851,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeGPUOpInterfaceIncGen",
         ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
@@ -4245,6 +4282,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":SCFDialect",
         ":SCFUtils",
@@ -4291,8 +4329,8 @@ cc_library(
     deps = [
         ":AMDGPUToROCDL",
         ":AffineToStandard",
+        ":ArithAndMathToAPFloat",
         ":ArithToAMDGPU",
-        ":ArithToAPFloat",
         ":ArithToArmSME",
         ":ArithToEmitC",
         ":ArithToLLVM",
@@ -5828,6 +5866,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":MemRefDialect",
         ":NVGPUDialect",
+        ":NVGPUToNVVM",
         ":NVVMDialect",
         ":ROCDLDialect",
         ":SCFDialect",
@@ -5958,6 +5997,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":NVGPUDialect",
+        ":NVGPUToNVVM",
         ":NVVMDialect",
         ":TransformUtils",
         ":VectorTransforms",
@@ -6053,10 +6093,12 @@ gentbl_cc_library(
 cc_library(
     name = "GPUToROCDLTransforms",
     srcs = [
-        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
         "lib/Conversion/GPUToROCDL/LowerGpuOpsToROCDLOps.cpp",
     ],
-    hdrs = ["include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"],
+    hdrs = [
+        "include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h",
+        "include/mlir/Conversion/GPUToROCDL/Runtimes.h",
+    ],
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",
@@ -6202,6 +6244,7 @@ cc_library(
         ":MemRefToLLVM",
         ":Pass",
         ":SPIRVCommonAttrToLLVMConversion",
+        ":SPIRVCommonConversion",
         ":SPIRVDialect",
         ":SPIRVUtils",
         ":TransformUtils",
@@ -8497,9 +8540,14 @@ cc_library(
 )
 
 cc_library(
-    name = "ArithToAPFloat",
-    srcs = glob(["lib/Conversion/ArithToAPFloat/*.cpp"]),
-    hdrs = glob(["include/mlir/Conversion/ArithToAPFloat/*.h"]),
+    name = "ArithAndMathToAPFloat",
+    srcs = glob([
+        "lib/Conversion/ArithAndMathToAPFloat/*.cpp",
+        "lib/Conversion/ArithAndMathToAPFloat/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ArithAndMathToAPFloat/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -8510,6 +8558,8 @@ cc_library(
         ":FuncDialect",
         ":FuncUtils",
         ":IR",
+        ":MathDialect",
+        ":MathTransforms",
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
@@ -10241,6 +10291,7 @@ td_library(
         ":AtomicInterfacesTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
     ],
 )
 
@@ -10411,6 +10462,8 @@ cc_library(
         ":OpenACCOpsIncGen",
         ":OpenACCPassIncGen",
         ":OpenACCTypeInterfacesIncGen",
+        ":SCFDialect",
+        ":SCFUtils",
         ":Support",
         ":TransformUtils",
         ":ViewLikeInterface",
@@ -10439,6 +10492,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
+        ":SCFDialect",
         ":Support",
         ":TransformUtils",
         ":ViewLikeInterface",
