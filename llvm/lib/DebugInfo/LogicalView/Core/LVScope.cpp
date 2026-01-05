@@ -1969,10 +1969,12 @@ void LVScopeFunction::printDebugger(raw_ostream &OS) const {
 
   // Sort all lines by their address.
   std::sort(AllLines.begin(), AllLines.end(),
-    [](const LVLine *a, const LVLine *b) -> bool {
-      return std::make_tuple(a->getAddress(), a->getIsLineDebug(), a->getID())
-        < std::make_tuple(b->getAddress(), b->getIsLineDebug(), b->getID());
-    });
+            [](const LVLine *a, const LVLine *b) -> bool {
+              return std::make_tuple(a->getAddress(), a->getIsLineDebug(),
+                                     a->getID()) <
+                     std::make_tuple(b->getAddress(), b->getIsLineDebug(),
+                                     b->getID());
+            });
 
   // Print everything out
   const bool IncludeVars = options().getPrintSymbols();

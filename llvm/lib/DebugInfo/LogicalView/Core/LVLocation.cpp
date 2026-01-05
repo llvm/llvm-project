@@ -651,10 +651,13 @@ void LVLocation::print(LVLocations *Locations, raw_ostream &OS, bool Full) {
 void LVLocationSymbol::printLocations(raw_ostream &OS) const {
   if (Entries) {
     bool CodeViewLocation = getParentSymbol()->getHasCodeViewLocation();
-    llvm::interleave(*Entries, OS, [&](LVOperation *Operation) {
-      OS << (CodeViewLocation ? Operation->getOperandsCodeViewInfo()
-        : Operation->getOperandsDWARFInfo());
-      }, ", ");
+    llvm::interleave(
+        *Entries, OS,
+        [&](LVOperation *Operation) {
+          OS << (CodeViewLocation ? Operation->getOperandsCodeViewInfo()
+                                  : Operation->getOperandsDWARFInfo());
+        },
+        ", ");
   }
 }
 
