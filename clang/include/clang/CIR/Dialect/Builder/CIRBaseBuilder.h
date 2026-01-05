@@ -500,18 +500,21 @@ public:
 
   mlir::Value createExtractElement(mlir::Location loc, mlir::Value vec,
                                    uint64_t idx) {
-    mlir::Value idxVal = getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    mlir::Value idxVal =
+        getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
     return createExtractElement(loc, vec, idxVal);
   }
 
   mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
                                   mlir::Value newElt, mlir::Value idx) {
-    return cir::VecInsertOp::create(*this, loc, vec.getType(), vec, newElt, idx);
+    return cir::VecInsertOp::create(*this, loc, vec.getType(), vec, newElt,
+                                    idx);
   }
 
   mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
                                   mlir::Value newElt, uint64_t idx) {
-    mlir::Value idxVal = getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    mlir::Value idxVal =
+        getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
     return createInsertElement(loc, vec, newElt, idxVal);
   }
 
