@@ -4116,6 +4116,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (SDValue Expanded = TLI.expandROT(Node, true /*AllowVectorOps*/, DAG))
       Results.push_back(Expanded);
     break;
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
+    if (SDValue Expanded = TLI.expandCLMUL(Node, DAG))
+      Results.push_back(Expanded);
+    break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:

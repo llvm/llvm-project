@@ -1157,6 +1157,14 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
+    if (SDValue Expanded = TLI.expandCLMUL(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::ROTL:
   case ISD::ROTR:
     if (SDValue Expanded = TLI.expandROT(Node, false /*AllowVectorOps*/, DAG)) {

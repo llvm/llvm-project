@@ -446,6 +446,10 @@ def sra_parts  : SDNode<"ISD::SRA_PARTS" , SDTIntShiftPairOp>;
 def srl_parts  : SDNode<"ISD::SRL_PARTS" , SDTIntShiftPairOp>;
 def fshl       : SDNode<"ISD::FSHL"      , SDTIntShiftDOp>;
 def fshr       : SDNode<"ISD::FSHR"      , SDTIntShiftDOp>;
+def clmul      : SDNode<"ISD::CLMUL"     , SDTIntBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
+def clmulr     : SDNode<"ISD::CLMULR"    , SDTIntBinOp, [SDNPCommutative]>;
+def clmulh     : SDNode<"ISD::CLMULH"    , SDTIntBinOp, [SDNPCommutative]>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,

@@ -1117,6 +1117,9 @@ void TargetLoweringBase::initActions() {
     // Absolute difference
     setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Expand);
 
+    // Carry-less multiply
+    setOperationAction({ISD::CLMUL, ISD::CLMULR, ISD::CLMULH}, VT, Expand);
+
     // Saturated trunc
     setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
     setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
