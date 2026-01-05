@@ -59207,7 +59207,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             return BC0 == peekThroughBitcasts(SubOp.getOperand(Op));
           }))
         return true;
+      SmallVector<SDValue> Subs;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
+        Subs.push_back(SubOps[I].getOperand(Op));
         SDValue BC = peekThroughBitcasts(SubOps[I].getOperand(Op));
         unsigned SubSize = BC.getValueSizeInBits();
         unsigned EltSize = BC.getScalarValueSizeInBits();
@@ -59216,7 +59218,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                    BC.getOperand(0).getValueSizeInBits() == VecSize &&
                    (BC.getConstantOperandVal(1) * EltSize) == (I * SubSize);
       }
-      return AllConstants || AllSubs;
+      return AllConstants || AllSubs ||
+             DAG.doesNodeExist(ISD::CONCAT_VECTORS, DAG.getVTList(VT), Subs);
     };
     auto CombineSubOperand = [&](MVT VT, ArrayRef<SDValue> SubOps, unsigned I) {
       bool AllConstants = true;
@@ -59225,7 +59228,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         AllConstants &= IsOpConstant(peekThroughBitcasts(SubOp.getOperand(I)));
         Subs.push_back(SubOp.getOperand(I));
       }
-      if (AllConstants)
+      if (AllConstants ||
+          DAG.doesNodeExist(ISD::CONCAT_VECTORS, DAG.getVTList(VT), Subs))
         return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
       return combineConcatVectorOps(DL, VT, Subs, DAG, Subtarget, Depth + 1);
     };
