@@ -72,8 +72,6 @@ namespace TypeidPtrRegression {
   }
 }
 
-
-// Regression test for assertion failure in invokeDtor(). GH-173950
 namespace GH173950 {
   struct A {
     virtual void f();

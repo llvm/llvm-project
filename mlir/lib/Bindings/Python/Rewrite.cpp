@@ -8,10 +8,10 @@
 
 #include "Rewrite.h"
 
-#include "IRModule.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRCore.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
@@ -22,9 +22,11 @@
 namespace nb = nanobind;
 using namespace mlir;
 using namespace nb::literals;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 class PyPatternRewriter {
 public:
@@ -59,6 +61,8 @@ private:
   MlirRewriterBase base;
   PyMlirContextRef ctx;
 };
+
+struct PyMlirPDLResultList : MlirPDLResultList {};
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 static nb::object objectFromPDLValue(MlirPDLValue value) {
@@ -118,7 +122,7 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(PyPatternRewriter(rewriter), results,
+              f(PyPatternRewriter(rewriter), PyMlirPDLResultList{results.ptr},
                 objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
@@ -133,7 +137,7 @@ public:
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           return logicalResultFromObject(
-              f(PyPatternRewriter(rewriter), results,
+              f(PyPatternRewriter(rewriter), PyMlirPDLResultList{results.ptr},
                 objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
@@ -223,6 +227,25 @@ private:
   MlirContext ctx;
 };
 
+enum PyGreedyRewriteStrictness : std::underlying_type_t<
+    MlirGreedyRewriteStrictness> {
+  MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP = MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP,
+  MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS =
+      MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS,
+  MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS =
+      MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS,
+};
+
+enum PyGreedySimplifyRegionLevel : std::underlying_type_t<
+    MlirGreedySimplifyRegionLevel> {
+  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED =
+      MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED,
+  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL =
+      MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL,
+  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE =
+      MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE
+};
+
 /// Owning Wrapper around a GreedyRewriteDriverConfig.
 class PyGreedyRewriteDriverConfig {
 public:
@@ -255,12 +278,14 @@ public:
     mlirGreedyRewriteDriverConfigEnableFolding(config, enable);
   }
 
-  void setStrictness(MlirGreedyRewriteStrictness strictness) {
-    mlirGreedyRewriteDriverConfigSetStrictness(config, strictness);
+  void setStrictness(PyGreedyRewriteStrictness strictness) {
+    mlirGreedyRewriteDriverConfigSetStrictness(
+        config, static_cast<MlirGreedyRewriteStrictness>(strictness));
   }
 
-  void setRegionSimplificationLevel(MlirGreedySimplifyRegionLevel level) {
-    mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(config, level);
+  void setRegionSimplificationLevel(PyGreedySimplifyRegionLevel level) {
+    mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
+        config, static_cast<MlirGreedySimplifyRegionLevel>(level));
   }
 
   void enableConstantCSE(bool enable) {
@@ -283,12 +308,14 @@ public:
     return mlirGreedyRewriteDriverConfigIsFoldingEnabled(config);
   }
 
-  MlirGreedyRewriteStrictness getStrictness() {
-    return mlirGreedyRewriteDriverConfigGetStrictness(config);
+  PyGreedyRewriteStrictness getStrictness() {
+    return static_cast<PyGreedyRewriteStrictness>(
+        mlirGreedyRewriteDriverConfigGetStrictness(config));
   }
 
-  MlirGreedySimplifyRegionLevel getRegionSimplificationLevel() {
-    return mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(config);
+  PyGreedySimplifyRegionLevel getRegionSimplificationLevel() {
+    return static_cast<PyGreedySimplifyRegionLevel>(
+        mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(config));
   }
 
   bool isConstantCSEEnabled() {
@@ -299,22 +326,19 @@ private:
   MlirGreedyRewriteDriverConfig config;
 };
 
-} // namespace
-
 /// Create the `mlir.rewrite` here.
-void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
+void populateRewriteSubmodule(nb::module_ &m) {
   // Enum definitions
-  nb::enum_<MlirGreedyRewriteStrictness>(m, "GreedyRewriteStrictness")
+  nb::enum_<PyGreedyRewriteStrictness>(m, "GreedyRewriteStrictness")
       .value("ANY_OP", MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP)
       .value("EXISTING_AND_NEW_OPS",
              MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS)
       .value("EXISTING_OPS", MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS);
 
-  nb::enum_<MlirGreedySimplifyRegionLevel>(m, "GreedySimplifyRegionLevel")
+  nb::enum_<PyGreedySimplifyRegionLevel>(m, "GreedySimplifyRegionLevel")
       .value("DISABLED", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED)
       .value("NORMAL", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL)
       .value("AGGRESSIVE", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE);
-
   //----------------------------------------------------------------------------
   // Mapping of the PatternRewriter
   //----------------------------------------------------------------------------
@@ -403,10 +427,10 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-  nb::class_<MlirPDLResultList>(m, "PDLResultList")
+  nb::class_<PyMlirPDLResultList>(m, "PDLResultList")
       .def(
           "append",
-          [](MlirPDLResultList results, const PyValue &value) {
+          [](PyMlirPDLResultList results, const PyValue &value) {
             mlirPDLResultListPushBackValue(results, value);
           },
           // clang-format off
@@ -415,7 +439,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           )
       .def(
           "append",
-          [](MlirPDLResultList results, const PyOperation &op) {
+          [](PyMlirPDLResultList results, const PyOperation &op) {
             mlirPDLResultListPushBackOperation(results, op);
           },
           // clang-format off
@@ -424,7 +448,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           )
       .def(
           "append",
-          [](MlirPDLResultList results, const PyType &type) {
+          [](PyMlirPDLResultList results, const PyType &type) {
             mlirPDLResultListPushBackType(results, type);
           },
           // clang-format off
@@ -433,7 +457,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           )
       .def(
           "append",
-          [](MlirPDLResultList results, const PyAttribute &attr) {
+          [](PyMlirPDLResultList results, const PyAttribute &attr) {
             mlirPDLResultListPushBackAttribute(results, attr);
           },
           // clang-format off
@@ -443,9 +467,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
       .def(
           "__init__",
-          [](PyPDLPatternModule &self, MlirModule module) {
-            new (&self)
-                PyPDLPatternModule(mlirPDLPatternModuleFromModule(module));
+          [](PyPDLPatternModule &self, PyModule &module) {
+            new (&self) PyPDLPatternModule(
+                mlirPDLPatternModuleFromModule(module.get()));
           },
           // clang-format off
           nb::sig("def __init__(self, module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ") -> None"),
@@ -535,41 +559,10 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
        "results.")
       .def(
           "apply_patterns_and_fold_greedily",
-          [](PyModule &module, MlirFrozenRewritePatternSet set) {
-            auto status = mlirApplyPatternsAndFoldGreedily(
-                module.get(), set, mlirGreedyRewriteDriverConfigCreate());
-            if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error(
-                  "pattern application failed to converge");
-          },
-          "module"_a, "set"_a,
-          // clang-format off
-          nb::sig("def apply_patterns_and_fold_greedily(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ", set: FrozenRewritePatternSet) -> None"),
-          // clang-format on
-          "Applys the given patterns to the given module greedily while "
-          "folding "
-          "results.")
-      .def(
-          "apply_patterns_and_fold_greedily",
           [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
             auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
                 op.getOperation(), set.get(),
                 mlirGreedyRewriteDriverConfigCreate());
-            if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error(
-                  "pattern application failed to converge");
-          },
-          "op"_a, "set"_a,
-          // clang-format off
-          nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
-          // clang-format on
-          "Applys the given patterns to the given op greedily while folding "
-          "results.")
-      .def(
-          "apply_patterns_and_fold_greedily",
-          [](PyOperationBase &op, MlirFrozenRewritePatternSet set) {
-            auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
-                op.getOperation(), set, mlirGreedyRewriteDriverConfigCreate());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");
@@ -592,3 +585,6 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           "Applies the given patterns to the given op by a fast walk-based "
           "driver.");
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
