@@ -2372,16 +2372,7 @@ def INT_FNS_iii : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base,    i32imm:$
 // Atomic Functions
 //-----------------------------------
 
-class ATOMIC_GLOBAL_CHK <dag frag>
- : PatFrag<!setdagop(frag, ops), frag, AS_match.global>;
-class ATOMIC_SHARED_CHK <dag frag>
- : PatFrag<!setdagop(frag, ops), frag, AS_match.shared>;
-class ATOMIC_SHARED_CLUSTER_CHK <dag frag>
- : PatFrag<!setdagop(frag, ops), frag, AS_match.shared_cluster>;
-class ATOMIC_GENERIC_CHK <dag frag>
- : PatFrag<!setdagop(frag, ops), frag, AS_match.generic>;
-
-multiclass F_ATOMIC_2<RegTyInfo t, string sem_str, string as_str, string op_str,
+multiclass F_ATOMIC_2_INTRINSIC<RegTyInfo t, string sem_str, string as_str, string op_str,
                       SDPatternOperator op, list<Predicate> preds> {
   defvar asm_str = "atom" # sem_str # as_str # "." # op_str;
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
@@ -2395,6 +2386,42 @@ multiclass F_ATOMIC_2<RegTyInfo t, string sem_str, string as_str, string op_str,
         [(set t.Ty:$dst, (op addr:$addr, (t.Ty t.ImmNode:$b)))]>,
       Requires<preds>;
   }
+}
+
+multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str, SDNode atomic, list<Predicate> preds = []> {
+  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # op_str;
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def _r : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.RC:$b),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      asm_str>,
+      Requires<preds>;
+    if t.SupportsImm then
+      def _i : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+        (ins ADDR:$addr, t.Imm:$b),
+        (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+        asm_str>,
+        Requires<preds>;
+  }
+
+  defvar GetSem = SDNodeXForm<atomic, [{
+    return getI32Imm(getMemOrder(cast<MemSDNode>(N)), SDLoc(N));
+  }]>;
+
+  defvar GetScope = SDNodeXForm<atomic, [{
+    return getI32Imm(getAtomicScope(cast<MemSDNode>(N)), SDLoc(N));
+  }]>;
+
+  defvar GetAddSp = SDNodeXForm<atomic, [{
+    return getI32Imm(getAddrSpace(cast<MemSDNode>(N)), SDLoc(N));
+  }]>;
+
+  def : Pat<(op:$this addr:$addr, t.Ty:$b),
+  (!cast<Instruction>(NAME # _r) ADDR:$addr, t.Ty:$b, (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+
+  if t.SupportsImm then
+    def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b)),
+      (!cast<Instruction>(NAME # _i) ADDR:$addr, (t.Ty t.ImmNode:$b), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 }
 
 multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode atomic> {
@@ -2447,55 +2474,57 @@ multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode a
         (!cast<Instruction>(NAME # _ii) ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 }
 
-multiclass F_ATOMIC_2_AS<RegTyInfo t, SDPatternOperator frag, string op_str, list<Predicate> preds = []> {
-  defvar frag_pat = (frag node:$a, node:$b);
-  defm _G : F_ATOMIC_2<t, "", ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
-  defm _S : F_ATOMIC_2<t, "", ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
-  defm _S_C : F_ATOMIC_2<t, "", ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasClusters], preds)>;
-  defm _GEN : F_ATOMIC_2<t, "", "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
-}
+defm atomic_load_fadd  : binary_atomic_op_fp<atomic_load_fadd>;
 
 // atom_add
-defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2_AS<I32RT, atomic_load_add_i32, "add.u32">;
-defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2_AS<I64RT, atomic_load_add_i64, "add.u64">;
+defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2<I32RT, atomic_load_add_i32, ".add.u32", atomic_load_add>;
+defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2<I64RT, atomic_load_add_i64, ".add.u64", atomic_load_add>;
 
-defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2_AS<F16RT, atomic_load_fadd, "add.noftz.f16", [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2_AS<BF16RT, atomic_load_fadd, "add.noftz.bf16", [hasSM<90>, hasPTX<78>]>;
-defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2_AS<F32RT, atomic_load_fadd, "add.f32">;
-defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2_AS<F64RT, atomic_load_fadd, "add.f64", [hasAtomAddF64]>;
+defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2<F16RT, atomic_load_fadd, ".add.noftz.f16", atomic_load_fadd, [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, ".add.noftz.bf16", atomic_load_fadd, [hasSM<90>, hasPTX<78>]>;
+defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, ".add.f32", atomic_load_fadd>;
+defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, ".add.f64", atomic_load_fadd, [hasAtomAddF64]>;
 
 // atom_swap
-defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2_AS<I32RT, atomic_swap_i32, "exch.b32">;
-defm INT_PTX_ATOM_SWAP_64 : F_ATOMIC_2_AS<I64RT, atomic_swap_i64, "exch.b64">;
+defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2<I32RT, atomic_swap_i32, ".exch.b32", atomic_swap>;
+defm INT_PTX_ATOM_SWAP_64 : F_ATOMIC_2<I64RT, atomic_swap_i64, ".exch.b64", atomic_swap>;
 
 // atom_max
-defm INT_PTX_ATOMIC_MAX_32 : F_ATOMIC_2_AS<I32RT, atomic_load_max_i32, "max.s32">;
-defm INT_PTX_ATOMIC_MAX_64 : F_ATOMIC_2_AS<I64RT, atomic_load_max_i64, "max.s64", [hasSM<32>]>;
-defm INT_PTX_ATOMIC_UMAX_32 : F_ATOMIC_2_AS<I32RT, atomic_load_umax_i32, "max.u32">;
-defm INT_PTX_ATOMIC_UMAX_64 : F_ATOMIC_2_AS<I64RT, atomic_load_umax_i64, "max.u64", [hasSM<32>]>;
+defm INT_PTX_ATOMIC_MAX_32 : F_ATOMIC_2<I32RT, atomic_load_max_i32, ".max.s32", atomic_load_max>;
+defm INT_PTX_ATOMIC_MAX_64 : F_ATOMIC_2<I64RT, atomic_load_max_i64, ".max.s64", atomic_load_max, [hasSM<32>]>;
+defm INT_PTX_ATOMIC_UMAX_32 : F_ATOMIC_2<I32RT, atomic_load_umax_i32, ".max.u32", atomic_load_umax>;
+defm INT_PTX_ATOMIC_UMAX_64 : F_ATOMIC_2<I64RT, atomic_load_umax_i64, ".max.u64", atomic_load_umax, [hasSM<32>]>;
 
 // atom_min
-defm INT_PTX_ATOMIC_MIN_32 : F_ATOMIC_2_AS<I32RT, atomic_load_min_i32, "min.s32">;
-defm INT_PTX_ATOMIC_MIN_64 : F_ATOMIC_2_AS<I64RT, atomic_load_min_i64, "min.s64", [hasSM<32>]>;
-defm INT_PTX_ATOMIC_UMIN_32 : F_ATOMIC_2_AS<I32RT, atomic_load_umin_i32, "min.u32">;
-defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2_AS<I64RT, atomic_load_umin_i64, "min.u64", [hasSM<32>]>;
+defm INT_PTX_ATOMIC_MIN_32 : F_ATOMIC_2<I32RT, atomic_load_min_i32, ".min.s32", atomic_load_min>;
+defm INT_PTX_ATOMIC_MIN_64 : F_ATOMIC_2<I64RT, atomic_load_min_i64, ".min.s64", atomic_load_min, [hasSM<32>]>;
+defm INT_PTX_ATOMIC_UMIN_32 : F_ATOMIC_2<I32RT, atomic_load_umin_i32, ".min.u32", atomic_load_umin>;
+defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2<I64RT, atomic_load_umin_i64, ".min.u64", atomic_load_umin, [hasSM<32>]>;
+
+// NOTE: The semantics for atomicrmw fmin (aka llvm.minnum)[1] are *slightly*
+// different from the ones from the ones for atom.min.f32[2]. However, LLVM
+// LangRef specifies that sNaNs can be treated as qNaNs. This makes the two
+// operations equivalent- as the only difference in behavior is that min(sNaN,
+// NUM) -> qNaN in LLVM, and atom.min returns min(NaN, NUM) -> NUM for all NaNs.
+// [1] https://llvm.org/docs/LangRef.html#llvm-implementation
+// [2] https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#half-precision-floating-point-instructions-min
+// [3] https://llvm.org/docs/LangRef.html#behavior-of-floating-point-nan-values 
 
 // atom_inc  atom_dec
-defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2_AS<I32RT, atomic_load_uinc_wrap_i32, "inc.u32">;
-defm INT_PTX_ATOM_DEC_32 : F_ATOMIC_2_AS<I32RT, atomic_load_udec_wrap_i32, "dec.u32">;
+defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2<I32RT, atomic_load_uinc_wrap_i32, ".inc.u32", atomic_load_uinc_wrap>;
+defm INT_PTX_ATOM_DEC_32 : F_ATOMIC_2<I32RT, atomic_load_udec_wrap_i32, ".dec.u32", atomic_load_udec_wrap>;
 
 // atom_and
-defm INT_PTX_ATOM_AND_32 : F_ATOMIC_2_AS<I32RT, atomic_load_and_i32, "and.b32">;
-defm INT_PTX_ATOM_AND_64 : F_ATOMIC_2_AS<I64RT, atomic_load_and_i64, "and.b64", [hasSM<32>]>;
+defm INT_PTX_ATOM_AND_32 : F_ATOMIC_2<I32RT, atomic_load_and_i32, ".and.b32", atomic_load_and>;
+defm INT_PTX_ATOM_AND_64 : F_ATOMIC_2<I64RT, atomic_load_and_i64, ".and.b64", atomic_load_and, [hasSM<32>]>;
 
 // atom_or
-defm INT_PTX_ATOM_OR_32 : F_ATOMIC_2_AS<I32RT, atomic_load_or_i32, "or.b32">;
-defm INT_PTX_ATOM_OR_64 : F_ATOMIC_2_AS<I64RT, atomic_load_or_i64, "or.b64", [hasSM<32>]>;
+defm INT_PTX_ATOM_OR_32 : F_ATOMIC_2<I32RT, atomic_load_or_i32, ".or.b32", atomic_load_or>;
+defm INT_PTX_ATOM_OR_64 : F_ATOMIC_2<I64RT, atomic_load_or_i64, ".or.b64", atomic_load_or, [hasSM<32>]>;
 
 // atom_xor
-defm INT_PTX_ATOM_XOR_32 : F_ATOMIC_2_AS<I32RT, atomic_load_xor_i32, "xor.b32">;
-defm INT_PTX_ATOM_XOR_64 : F_ATOMIC_2_AS<I64RT, atomic_load_xor_i64, "xor.b64", [hasSM<32>]>;
-
+defm INT_PTX_ATOM_XOR_32 : F_ATOMIC_2<I32RT, atomic_load_xor_i32, ".xor.b32", atomic_load_xor>;
+defm INT_PTX_ATOM_XOR_64 : F_ATOMIC_2<I64RT, atomic_load_xor_i64, ".xor.b64", atomic_load_xor, [hasSM<32>]>;
 
 // Define atom.cas for all combinations of size x addrspace x memory order
 // supported in PTX *and* on the hardware.
@@ -2518,7 +2547,7 @@ foreach t = [I16RT, I32RT, I64RT] in {
 multiclass ATOM2N_impl<string OpStr, string IntTypeStr, string TypeStr,
                        string ScopeStr, string SpaceStr,
                        RegTyInfo t, list<Predicate> Preds> {
-  defm "" : F_ATOMIC_2<t,
+  defm "" : F_ATOMIC_2_INTRINSIC<t,
                        as_str = !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr),
                        sem_str = !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr),
                        op_str = OpStr # "." # TypeStr,
