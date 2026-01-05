@@ -533,9 +533,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
   SOURCES
     MainModule.cpp
     IRAffine.cpp
-    IRAttributes.cpp
     IRInterfaces.cpp
-    IRTypes.cpp
     Pass.cpp
     Rewrite.cpp
 
@@ -846,8 +844,10 @@ declare_mlir_python_extension(MLIRPythonExtension.MLIRPythonSupport
   ADD_TO_PARENT MLIRPythonSources.Core
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    IRCore.cpp
     Globals.cpp
+    IRAttributes.cpp
+    IRCore.cpp
+    IRTypes.cpp
 )
 
 ################################################################################

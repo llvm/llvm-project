@@ -12,6 +12,7 @@
 #include "Standalone-c/Dialects.h"
 #include "mlir-c/Dialect/Arith.h"
 #include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRTypes.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
@@ -51,20 +52,38 @@ NB_MODULE(_standaloneDialectsNanobind, m) {
 
   standaloneM.def(
       "register_dialects",
-      [](MlirContext context, bool load) {
+      [](mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+             context,
+         bool load) {
         MlirDialectHandle arithHandle = mlirGetDialectHandle__arith__();
         MlirDialectHandle standaloneHandle =
             mlirGetDialectHandle__standalone__();
-        mlirDialectHandleRegisterDialect(arithHandle, context);
-        mlirDialectHandleRegisterDialect(standaloneHandle, context);
+        MlirContext context_ = context.get()->get();
+        mlirDialectHandleRegisterDialect(arithHandle, context_);
+        mlirDialectHandleRegisterDialect(standaloneHandle, context_);
         if (load) {
-          mlirDialectHandleLoadDialect(arithHandle, context);
-          mlirDialectHandleRegisterDialect(standaloneHandle, context);
+          mlirDialectHandleLoadDialect(arithHandle, context_);
+          mlirDialectHandleRegisterDialect(standaloneHandle, context_);
         }
       },
-      nb::arg("context").none() = nb::none(), nb::arg("load") = true,
-      // clang-format off
-      nb::sig("def register_dialects(context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", load: bool = True) -> None")
-      // clang-format on
-  );
+      nb::arg("context").none() = nb::none(), nb::arg("load") = true);
+
+  standaloneM.def(
+      "print_fp_type",
+      [](const mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyF16Type &,
+         nb::handle stderr_obj) {
+        nb::print("this is a fp16 type", /*end=*/nb::handle(), stderr_obj);
+      });
+  standaloneM.def(
+      "print_fp_type",
+      [](const mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyF32Type &,
+         nb::handle stderr_obj) {
+        nb::print("this is a fp32 type", /*end=*/nb::handle(), stderr_obj);
+      });
+  standaloneM.def(
+      "print_fp_type",
+      [](const mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyF64Type &,
+         nb::handle stderr_obj) {
+        nb::print("this is a fp64 type", /*end=*/nb::handle(), stderr_obj);
+      });
 }
