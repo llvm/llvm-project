@@ -22,7 +22,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 }
 // SPIR32: Function Attrs: convergent noinline norecurse nounwind optnone
 // SPIR32-LABEL: define dso_local spir_kernel void @device_side_enqueue(
-// SPIR32-SAME: ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META2:![0-9]+]] !kernel_arg_access_qual [[META3:![0-9]+]] !kernel_arg_type [[META4:![0-9]+]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5:![0-9]+]] {
+// SPIR32-SAME: ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META1:![0-9]+]] !kernel_arg_access_qual [[META2:![0-9]+]] !kernel_arg_type [[META3:![0-9]+]] !kernel_arg_base_type [[META3]] !kernel_arg_type_qual [[META4:![0-9]+]] {
 // SPIR32-NEXT:  [[ENTRY:.*:]]
 // SPIR32-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // SPIR32-NEXT:    [[B_ADDR:%.*]] = alloca ptr addrspace(1), align 4
@@ -39,7 +39,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 //
 // SPIR32: Function Attrs: convergent noinline norecurse nounwind optnone
 // SPIR32-LABEL: define dso_local spir_func void @__clang_ocl_kern_imp_device_side_enqueue(
-// SPIR32-SAME: ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META2]] !kernel_arg_access_qual [[META3]] !kernel_arg_type [[META4]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5]] {
+// SPIR32-SAME: ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META1]] !kernel_arg_access_qual [[META2]] !kernel_arg_type [[META3]] !kernel_arg_base_type [[META3]] !kernel_arg_type_qual [[META4]] {
 // SPIR32-NEXT:  [[ENTRY:.*:]]
 // SPIR32-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // SPIR32-NEXT:    [[B_ADDR:%.*]] = alloca ptr addrspace(1), align 4
@@ -110,7 +110,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 //
 // STRICTFP: Function Attrs: convergent noinline norecurse nounwind optnone strictfp
 // STRICTFP-LABEL: define dso_local spir_kernel void @device_side_enqueue(
-// STRICTFP-SAME: ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META2:![0-9]+]] !kernel_arg_access_qual [[META3:![0-9]+]] !kernel_arg_type [[META4:![0-9]+]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5:![0-9]+]] {
+// STRICTFP-SAME: ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META1:![0-9]+]] !kernel_arg_access_qual [[META2:![0-9]+]] !kernel_arg_type [[META3:![0-9]+]] !kernel_arg_base_type [[META3]] !kernel_arg_type_qual [[META4:![0-9]+]] {
 // STRICTFP-NEXT:  [[ENTRY:.*:]]
 // STRICTFP-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // STRICTFP-NEXT:    [[B_ADDR:%.*]] = alloca ptr addrspace(1), align 4
@@ -127,7 +127,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 //
 // STRICTFP: Function Attrs: convergent noinline norecurse nounwind optnone strictfp
 // STRICTFP-LABEL: define dso_local spir_func void @__clang_ocl_kern_imp_device_side_enqueue(
-// STRICTFP-SAME: ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META2]] !kernel_arg_access_qual [[META3]] !kernel_arg_type [[META4]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5]] {
+// STRICTFP-SAME: ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0]] !kernel_arg_addr_space [[META1]] !kernel_arg_access_qual [[META2]] !kernel_arg_type [[META3]] !kernel_arg_base_type [[META3]] !kernel_arg_type_qual [[META4]] {
 // STRICTFP-NEXT:  [[ENTRY:.*:]]
 // STRICTFP-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // STRICTFP-NEXT:    [[B_ADDR:%.*]] = alloca ptr addrspace(1), align 4
@@ -211,17 +211,15 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP: attributes #[[ATTR5]] = { convergent nounwind strictfp "uniform-work-group-size"="false" }
 // STRICTFP: attributes #[[ATTR6]] = { strictfp }
 //.
-// SPIR32: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// SPIR32: [[META1:![0-9]+]] = !{i32 2, i32 0}
-// SPIR32: [[META2]] = !{i32 1, i32 1, i32 0}
-// SPIR32: [[META3]] = !{!"none", !"none", !"none"}
-// SPIR32: [[META4]] = !{!"float*", !"float*", !"int"}
-// SPIR32: [[META5]] = !{!"", !"", !""}
+// SPIR32: [[META0:![0-9]+]] = !{i32 2, i32 0}
+// SPIR32: [[META1]] = !{i32 1, i32 1, i32 0}
+// SPIR32: [[META2]] = !{!"none", !"none", !"none"}
+// SPIR32: [[META3]] = !{!"float*", !"float*", !"int"}
+// SPIR32: [[META4]] = !{!"", !"", !""}
 //.
-// STRICTFP: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// STRICTFP: [[META1:![0-9]+]] = !{i32 2, i32 0}
-// STRICTFP: [[META2]] = !{i32 1, i32 1, i32 0}
-// STRICTFP: [[META3]] = !{!"none", !"none", !"none"}
-// STRICTFP: [[META4]] = !{!"float*", !"float*", !"int"}
-// STRICTFP: [[META5]] = !{!"", !"", !""}
+// STRICTFP: [[META0:![0-9]+]] = !{i32 2, i32 0}
+// STRICTFP: [[META1]] = !{i32 1, i32 1, i32 0}
+// STRICTFP: [[META2]] = !{!"none", !"none", !"none"}
+// STRICTFP: [[META3]] = !{!"float*", !"float*", !"int"}
+// STRICTFP: [[META4]] = !{!"", !"", !""}
 //.

@@ -1164,7 +1164,8 @@ void CodeGenModule::Release() {
   // TargetLibraryInfo.
   uint64_t WCharWidth =
       Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
-  getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
+  if (!LangOpts.OpenCL)
+    getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
 
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
