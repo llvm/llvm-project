@@ -970,7 +970,7 @@ define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr 
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_START]], %[[ENTRY]] ], [ [[COND:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV_NEXT]]
@@ -989,7 +989,7 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i64 [ -1, %entry ], [ %iv.next, %loop ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i64 [ %rdx.start, %entry ], [ %cond, %loop ]
   %iv.next = add i64 %iv, -1
   %gep.a.iv = getelementptr inbounds i8, ptr %a, i64 %iv.next

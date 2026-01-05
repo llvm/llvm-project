@@ -798,17 +798,21 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
       unsigned NumBits = Ty->getIntegerBitWidth();
       ConstantRange ValidRange = ConstantRange::getEmpty(NumBits);
       if (isFindLastIVRecurrenceKind(Kind)) {
-        APInt Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
-                                  : APInt::getMinValue(NumBits);
-        ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
+        if (IsSigned)
+          ValidRange =
+              ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits) + 1,
+                                         APInt::getSignedMinValue(NumBits));
+        else
+          ValidRange = ConstantRange::getNonEmpty(
+              APInt::getMinValue(NumBits) + 1, APInt::getMinValue(NumBits));
       } else {
         if (IsSigned)
           ValidRange =
               ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
-                                         APInt::getSignedMaxValue(NumBits) - 1);
+                                         APInt::getSignedMaxValue(NumBits));
         else
-          ValidRange = ConstantRange::getNonEmpty(
-              APInt::getMinValue(NumBits), APInt::getMaxValue(NumBits) - 1);
+          ValidRange = ConstantRange::getNonEmpty(APInt::getMinValue(NumBits),
+                                                  APInt::getMaxValue(NumBits));
       }
 
       LLVM_DEBUG(dbgs() << "LV: "
