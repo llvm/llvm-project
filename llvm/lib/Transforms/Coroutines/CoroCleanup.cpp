@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "CoroInternal.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -23,8 +24,13 @@ namespace {
 // Created on demand if CoroCleanup pass has work to do.
 struct Lowerer : coro::LowererBase {
   IRBuilder<> Builder;
+  Constant *NoopCoro = nullptr;
+
   Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
   bool lower(Function &F);
+
+private:
+  void lowerCoroNoop(IntrinsicInst *II);
 };
 }
 
@@ -41,6 +47,25 @@ static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   auto *Load = Builder.CreateLoad(FrameTy->getElementType(Index), Gep);
 
   SubFn->replaceAllUsesWith(Load);
+}
+
+static void buildDebugInfoForNoopResumeDestroyFunc(Function *NoopFn) {
+  Module &M = *NoopFn->getParent();
+  if (M.debug_compile_units().empty())
+    return;
+
+  DICompileUnit *CU = *M.debug_compile_units_begin();
+  DIBuilder DB(M, /*AllowUnresolved*/ false, CU);
+  std::array<Metadata *, 2> Params{nullptr, nullptr};
+  auto *SubroutineType =
+      DB.createSubroutineType(DB.getOrCreateTypeArray(Params));
+  StringRef Name = NoopFn->getName();
+  auto *SP = DB.createFunction(
+      CU, /*Name=*/Name, /*LinkageName=*/Name, /*File=*/CU->getFile(),
+      /*LineNo=*/0, SubroutineType, /*ScopeLine=*/0, DINode::FlagArtificial,
+      DISubprogram::SPFlagDefinition);
+  NoopFn->setSubprogram(SP);
+  DB.finalize();
 }
 
 bool Lowerer::lower(Function &F) {
@@ -71,6 +96,9 @@ bool Lowerer::lower(Function &F) {
       case Intrinsic::coro_id_retcon_once:
       case Intrinsic::coro_id_async:
         II->replaceAllUsesWith(ConstantTokenNone::get(Context));
+        break;
+      case Intrinsic::coro_noop:
+        lowerCoroNoop(II);
         break;
       case Intrinsic::coro_subfn_addr:
         lowerSubFn(Builder, cast<CoroSubFnInst>(II));
@@ -108,13 +136,50 @@ bool Lowerer::lower(Function &F) {
   return Changed;
 }
 
+void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
+  if (!NoopCoro) {
+    LLVMContext &C = Builder.getContext();
+    Module &M = *II->getModule();
+
+    // Create a noop.frame struct type.
+    auto *FnTy = FunctionType::get(Type::getVoidTy(C), Builder.getPtrTy(0),
+                                   /*isVarArg=*/false);
+    auto *FnPtrTy = Builder.getPtrTy(0);
+    StructType *FrameTy =
+        StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
+
+    // Create a Noop function that does nothing.
+    Function *NoopFn = Function::createWithDefaultAttr(
+        FnTy, GlobalValue::LinkageTypes::InternalLinkage,
+        M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
+        &M);
+    NoopFn->setCallingConv(CallingConv::Fast);
+    buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
+    auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
+    ReturnInst::Create(C, Entry);
+
+    // Create a constant struct for the frame.
+    Constant *Values[] = {NoopFn, NoopFn};
+    Constant *NoopCoroConst = ConstantStruct::get(FrameTy, Values);
+    NoopCoro = new GlobalVariable(
+        M, NoopCoroConst->getType(), /*isConstant=*/true,
+        GlobalVariable::PrivateLinkage, NoopCoroConst, "NoopCoro.Frame.Const");
+    cast<GlobalVariable>(NoopCoro)->setNoSanitizeMetadata();
+  }
+
+  Builder.SetInsertPoint(II);
+  auto *NoopCoroVoidPtr = Builder.CreateBitCast(NoopCoro, Int8Ptr);
+  II->replaceAllUsesWith(NoopCoroVoidPtr);
+}
+
 static bool declaresCoroCleanupIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
-      M, {Intrinsic::coro_alloc, Intrinsic::coro_begin,
-          Intrinsic::coro_subfn_addr, Intrinsic::coro_free, Intrinsic::coro_id,
-          Intrinsic::coro_id_retcon, Intrinsic::coro_id_async,
-          Intrinsic::coro_id_retcon_once, Intrinsic::coro_async_size_replace,
-          Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
+      M,
+      {Intrinsic::coro_alloc, Intrinsic::coro_begin, Intrinsic::coro_subfn_addr,
+       Intrinsic::coro_free, Intrinsic::coro_id, Intrinsic::coro_id_retcon,
+       Intrinsic::coro_id_async, Intrinsic::coro_id_retcon_once,
+       Intrinsic::coro_noop, Intrinsic::coro_async_size_replace,
+       Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
 }
 
 PreservedAnalyses CoroCleanupPass::run(Module &M,

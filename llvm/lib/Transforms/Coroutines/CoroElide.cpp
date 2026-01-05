@@ -35,10 +35,9 @@ namespace {
 // Created on demand if the coro-elide pass has work to do.
 class FunctionElideInfo {
 public:
-  FunctionElideInfo(Function *F) : ContainingFunction(F) {
-    this->collectPostSplitCoroIds();
-  }
+  FunctionElideInfo(Function *F);
 
+  bool elideNoopCoro();
   bool hasCoroIds() const { return !CoroIds.empty(); }
 
   const SmallVectorImpl<CoroIdInst *> &getCoroIds() const { return CoroIds; }
@@ -46,10 +45,10 @@ public:
 private:
   Function *ContainingFunction;
   SmallVector<CoroIdInst *, 4> CoroIds;
+  SmallVector<IntrinsicInst *, 1> CoroNoops;
   // Used in canCoroBeginEscape to distinguish coro.suspend switchs.
   SmallPtrSet<const SwitchInst *, 4> CoroSuspendSwitches;
 
-  void collectPostSplitCoroIds();
   friend class CoroIdElider;
 };
 
@@ -77,12 +76,64 @@ private:
 };
 } // end anonymous namespace
 
+FunctionElideInfo::FunctionElideInfo(Function *F) : ContainingFunction(F) {
+  for (auto &I : instructions(F)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
+      continue;
+
+    if (II->getIntrinsicID() == Intrinsic::coro_noop)
+      CoroNoops.push_back(II);
+
+    if (auto *CII = dyn_cast<CoroIdInst>(&I))
+      if (CII->getInfo().isPostSplit())
+        // If it is the coroutine itself, don't touch it.
+        if (CII->getCoroutine() != CII->getFunction())
+          CoroIds.push_back(CII);
+
+    // Consider case like:
+    // %0 = call i8 @llvm.coro.suspend(...)
+    // switch i8 %0, label %suspend [i8 0, label %resume
+    //                              i8 1, label %cleanup]
+    // and collect the SwitchInsts which are used by escape analysis later.
+    if (auto *CSI = dyn_cast<CoroSuspendInst>(&I))
+      if (CSI->hasOneUse() && isa<SwitchInst>(CSI->use_begin()->getUser())) {
+        SwitchInst *SWI = cast<SwitchInst>(CSI->use_begin()->getUser());
+        if (SWI->getNumCases() == 2)
+          CoroSuspendSwitches.insert(SWI);
+      }
+  }
+}
+
 // Go through the list of coro.subfn.addr intrinsics and replace them with the
 // provided constant.
 static void replaceWithConstant(Constant *Value,
                                 SmallVectorImpl<CoroSubFnInst *> &Users) {
   for (CoroSubFnInst *I : Users)
     replaceAndRecursivelySimplify(I, Value);
+}
+
+bool FunctionElideInfo::elideNoopCoro() {
+  if (CoroNoops.empty())
+    return false;
+
+  bool Changed = false;
+  for (auto *Noop : CoroNoops) {
+    for (User *U : make_early_inc_range(Noop->users())) {
+      if (auto *II = dyn_cast<CoroSubFnInst>(U)) {
+        auto *Call = cast<CallInst>(II->getUniqueUndroppableUser());
+        Call->eraseFromParent();
+        II->eraseFromParent();
+        Changed = true;
+      }
+    }
+
+    if (Noop->user_empty()) {
+      Noop->eraseFromParent();
+      Changed = true;
+    }
+  }
+  return Changed;
 }
 
 // See if any operand of the call instruction references the coroutine frame.
@@ -142,28 +193,6 @@ static std::unique_ptr<raw_fd_ostream> getOrCreateLogFile() {
   return std::make_unique<raw_fd_ostream>(2, false); // stderr.
 }
 #endif
-
-void FunctionElideInfo::collectPostSplitCoroIds() {
-  for (auto &I : instructions(this->ContainingFunction)) {
-    if (auto *CII = dyn_cast<CoroIdInst>(&I))
-      if (CII->getInfo().isPostSplit())
-        // If it is the coroutine itself, don't touch it.
-        if (CII->getCoroutine() != CII->getFunction())
-          CoroIds.push_back(CII);
-
-    // Consider case like:
-    // %0 = call i8 @llvm.coro.suspend(...)
-    // switch i8 %0, label %suspend [i8 0, label %resume
-    //                              i8 1, label %cleanup]
-    // and collect the SwitchInsts which are used by escape analysis later.
-    if (auto *CSI = dyn_cast<CoroSuspendInst>(&I))
-      if (CSI->hasOneUse() && isa<SwitchInst>(CSI->use_begin()->getUser())) {
-        SwitchInst *SWI = cast<SwitchInst>(CSI->use_begin()->getUser());
-        if (SWI->getNumCases() == 2)
-          CoroSuspendSwitches.insert(SWI);
-      }
-  }
-}
 
 CoroIdElider::CoroIdElider(CoroIdInst *CoroId, FunctionElideInfo &FEI,
                            AAResults &AA, DominatorTree &DT,
@@ -450,23 +479,21 @@ bool CoroIdElider::attemptElide() {
 
 PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &M = *F.getParent();
-  if (!coro::declaresIntrinsics(M, Intrinsic::coro_id))
+  if (!coro::declaresIntrinsics(M, {Intrinsic::coro_id, Intrinsic::coro_noop}))
     return PreservedAnalyses::all();
 
   FunctionElideInfo FEI{&F};
+  bool Changed = FEI.elideNoopCoro();
   // Elide is not necessary if there's no coro.id within the function.
-  if (!FEI.hasCoroIds())
-    return PreservedAnalyses::all();
+  if (FEI.hasCoroIds()) {
+    AAResults &AA = AM.getResult<AAManager>(F);
+    DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+    auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  AAResults &AA = AM.getResult<AAManager>(F);
-  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-
-  bool Changed = false;
-  for (auto *CII : FEI.getCoroIds()) {
-    CoroIdElider CIE(CII, FEI, AA, DT, ORE);
-    Changed |= CIE.attemptElide();
+    for (auto *CII : FEI.getCoroIds()) {
+      CoroIdElider CIE(CII, FEI, AA, DT, ORE);
+      Changed |= CIE.attemptElide();
+    }
   }
-
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

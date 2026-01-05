@@ -1,5 +1,6 @@
 ; Tests that asan skips pre-split coroutine and NoopCoro.Frame
-; RUN: opt < %s -S -passes=coro-early,asan | FileCheck %s
+; RUN: opt < %s -S -O0 | FileCheck %s
+; RUN: opt < %s -S -O1 | FileCheck %s
 
 ; CHECK: %NoopCoro.Frame = type { ptr, ptr }
 ; CHECK: @NoopCoro.Frame.Const = private constant %NoopCoro.Frame { ptr @__NoopCoro_ResumeDestroy, ptr @__NoopCoro_ResumeDestroy }

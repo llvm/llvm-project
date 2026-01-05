@@ -2174,7 +2174,9 @@ allocation elision optimization. If so, it replaces
 `coro.begin` intrinsic with an address of a coroutine frame placed on its caller
 and replaces `coro.alloc` and `coro.free` intrinsics with `false` and `null`
 respectively to remove the deallocation code.
-This pass also replaces `coro.resume` and `coro.destroy` intrinsics with direct
+This pass also eliminates the resume and destroy operation on noop coroutines and
+attempts to erase unused `coro.noop` instructions.
+Finally, this pass replaces `coro.resume` and `coro.destroy` intrinsics with direct
 calls to resume and destroy functions for a particular coroutine where possible.
 
 CoroCleanup
