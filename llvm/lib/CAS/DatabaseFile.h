@@ -89,10 +89,10 @@ private:
 /// - Sets up a MappedFileRegionArena for allocation.
 ///
 /// Top-level layout:
-/// - 8-bytes: Magic
-/// - 8-bytes: Version
-/// - 8-bytes: RootTable (16-bits: Kind; 48-bits: Offset)
-/// - 8-bytes: BumpPtr
+/// - 4-bytes: Magic
+/// - 4-bytes: Version
+/// - 8-bytes: RootTableOffset (16-bits: Kind; 48-bits: Offset)
+/// - 8-bytes: BumpPtr from MappedFileRegionArena
 class DatabaseFile {
 public:
   static constexpr uint32_t getMagic() { return 0xDA7ABA53UL; }
