@@ -192,6 +192,8 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
 
 struct AnyQuantizedType : PyConcreteType<AnyQuantizedType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAAnyQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirAnyQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "AnyQuantizedType";
   using Base::Base;
 
@@ -221,6 +223,8 @@ struct AnyQuantizedType : PyConcreteType<AnyQuantizedType, QuantizedType> {
 struct UniformQuantizedType
     : PyConcreteType<UniformQuantizedType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAUniformQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirUniformQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedType";
   using Base::Base;
 
@@ -273,6 +277,8 @@ struct UniformQuantizedPerAxisType
     : PyConcreteType<UniformQuantizedPerAxisType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsAUniformQuantizedPerAxisType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirUniformQuantizedPerAxisTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedPerAxisType";
   using Base::Base;
 
@@ -357,6 +363,8 @@ struct UniformQuantizedSubChannelType
     : PyConcreteType<UniformQuantizedSubChannelType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsAUniformQuantizedSubChannelType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirUniformQuantizedSubChannelTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedSubChannelType";
   using Base::Base;
 
@@ -448,6 +456,8 @@ struct CalibratedQuantizedType
     : PyConcreteType<CalibratedQuantizedType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsACalibratedQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirCalibratedQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "CalibratedQuantizedType";
   using Base::Base;
 

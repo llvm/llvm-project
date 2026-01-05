@@ -103,6 +103,8 @@ mlirQuantizedTypeCastExpressedToStorageType(MlirType type, MlirType candidate);
 /// Returns `true` if the given type is an AnyQuantizedType.
 MLIR_CAPI_EXPORTED bool mlirTypeIsAAnyQuantizedType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirAnyQuantizedTypeGetTypeID(void);
+
 /// Creates an instance of AnyQuantizedType with the given parameters in the
 /// same context as `storageType` and returns it. The instance is owned by the
 /// context.
@@ -118,6 +120,8 @@ MLIR_CAPI_EXPORTED MlirType mlirAnyQuantizedTypeGet(unsigned flags,
 
 /// Returns `true` if the given type is a UniformQuantizedType.
 MLIR_CAPI_EXPORTED bool mlirTypeIsAUniformQuantizedType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirUniformQuantizedTypeGetTypeID(void);
 
 /// Creates an instance of UniformQuantizedType with the given parameters in the
 /// same context as `storageType` and returns it. The instance is owned by the
@@ -141,6 +145,8 @@ MLIR_CAPI_EXPORTED bool mlirUniformQuantizedTypeIsFixedPoint(MlirType type);
 
 /// Returns `true` if the given type is a UniformQuantizedPerAxisType.
 MLIR_CAPI_EXPORTED bool mlirTypeIsAUniformQuantizedPerAxisType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirUniformQuantizedPerAxisTypeGetTypeID(void);
 
 /// Creates an instance of UniformQuantizedPerAxisType with the given parameters
 /// in the same context as `storageType` and returns it. `scales` and
@@ -179,6 +185,8 @@ mlirUniformQuantizedPerAxisTypeIsFixedPoint(MlirType type);
 /// Returns `true` if the given type is a UniformQuantizedSubChannel.
 MLIR_CAPI_EXPORTED bool
 mlirTypeIsAUniformQuantizedSubChannelType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirUniformQuantizedSubChannelTypeGetTypeID(void);
 
 /// Creates a UniformQuantizedSubChannelType with the given parameters.
 ///
@@ -219,6 +227,8 @@ mlirUniformQuantizedSubChannelTypeGetZeroPoints(MlirType type);
 
 /// Returns `true` if the given type is a CalibratedQuantizedType.
 MLIR_CAPI_EXPORTED bool mlirTypeIsACalibratedQuantizedType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirCalibratedQuantizedTypeGetTypeID(void);
 
 /// Creates an instance of CalibratedQuantizedType with the given parameters
 /// in the same context as `expressedType` and returns it. The instance is owned

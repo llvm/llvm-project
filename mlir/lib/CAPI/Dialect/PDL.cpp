@@ -32,6 +32,10 @@ bool mlirTypeIsAPDLAttributeType(MlirType type) {
   return isa<pdl::AttributeType>(unwrap(type));
 }
 
+MlirTypeID mlirPDLAttributeTypeGetTypeID(void) {
+  return wrap(pdl::AttributeType::getTypeID());
+}
+
 MlirType mlirPDLAttributeTypeGet(MlirContext ctx) {
   return wrap(pdl::AttributeType::get(unwrap(ctx)));
 }
@@ -44,6 +48,10 @@ bool mlirTypeIsAPDLOperationType(MlirType type) {
   return isa<pdl::OperationType>(unwrap(type));
 }
 
+MlirTypeID mlirPDLOperationTypeGetTypeID(void) {
+  return wrap(pdl::OperationType::getTypeID());
+}
+
 MlirType mlirPDLOperationTypeGet(MlirContext ctx) {
   return wrap(pdl::OperationType::get(unwrap(ctx)));
 }
@@ -54,6 +62,10 @@ MlirType mlirPDLOperationTypeGet(MlirContext ctx) {
 
 bool mlirTypeIsAPDLRangeType(MlirType type) {
   return isa<pdl::RangeType>(unwrap(type));
+}
+
+MlirTypeID mlirPDLRangeTypeGetTypeID(void) {
+  return wrap(pdl::RangeType::getTypeID());
 }
 
 MlirType mlirPDLRangeTypeGet(MlirType elementType) {
@@ -72,6 +84,10 @@ bool mlirTypeIsAPDLTypeType(MlirType type) {
   return isa<pdl::TypeType>(unwrap(type));
 }
 
+MlirTypeID mlirPDLTypeTypeGetTypeID(void) {
+  return wrap(pdl::TypeType::getTypeID());
+}
+
 MlirType mlirPDLTypeTypeGet(MlirContext ctx) {
   return wrap(pdl::TypeType::get(unwrap(ctx)));
 }
@@ -82,6 +98,10 @@ MlirType mlirPDLTypeTypeGet(MlirContext ctx) {
 
 bool mlirTypeIsAPDLValueType(MlirType type) {
   return isa<pdl::ValueType>(unwrap(type));
+}
+
+MlirTypeID mlirPDLValueTypeGetTypeID(void) {
+  return wrap(pdl::ValueType::getTypeID());
 }
 
 MlirType mlirPDLValueTypeGet(MlirContext ctx) {
