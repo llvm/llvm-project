@@ -3292,7 +3292,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Inverse = Builder.CreateNot(ArgValue, "not");
     Value *Tmp = Builder.CreateSelect(IsNeg, Inverse, ArgValue);
     Value *Ctlz = Builder.CreateCall(F, {Tmp, Builder.getFalse()});
-    Value *Result = Builder.CreateSub(Ctlz, llvm::ConstantInt::get(ArgType, 1));
+    Value *Result =
+        Builder.CreateNUWSub(Ctlz, llvm::ConstantInt::get(ArgType, 1));
     Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
                                    "cast");
     return RValue::get(Result);
@@ -6199,6 +6200,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_store_half:
   case Builtin::BI__builtin_store_halff: {
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(0));
     Address Address = EmitPointerWithAlignment(E->getArg(1));
     Value *HalfVal = Builder.CreateFPTrunc(Val, Builder.getHalfTy());

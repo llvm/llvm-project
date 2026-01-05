@@ -535,7 +535,7 @@ let test_global_variables () =
     let m = create_module context "temp" in
 
     insist (get_module_identifier m = "temp");
-    set_module_identifer m "temp2";
+    set_module_identifier m "temp2";
     insist (get_module_identifier m = "temp2");
 
     insist (At_end m = global_begin m);
@@ -676,6 +676,22 @@ let test_functions () =
   set_value_name "Param1" params.(0);
   set_value_name "Param2" params.(1);
   ignore (build_unreachable (builder_at_end context (entry_block fn)));
+
+  group "intrinsics";
+  insist (not (is_intrinsic fn));
+  let abs_id = lookup_intrinsic_id "llvm.abs" in
+  let abs_decl = intrinsic_declaration m abs_id [|i32_type|] in
+  insist ("llvm.abs.i8" = intrinsic_overloaded_name m abs_id [|i8_type|]);
+  insist ("llvm.abs.i32" = intrinsic_overloaded_name m abs_id [|i32_type|]);
+  let abs_i8_type = intrinsic_type context abs_id [|i8_type|] in
+  insist (TypeKind.Function = classify_type abs_i8_type);
+  insist (is_intrinsic abs_decl);
+  insist (intrinsic_is_overloaded abs_id);
+  let stackmap_id = lookup_intrinsic_id "llvm.experimental.stackmap" in
+  let stackmap_decl = intrinsic_declaration m stackmap_id [||] in
+  insist ("llvm.experimental.stackmap" = intrinsic_name stackmap_id);
+  insist (is_intrinsic stackmap_decl);
+  insist (not (intrinsic_is_overloaded stackmap_id));
 
   (* CHECK: fastcc{{.*}}Fn5
    *)
