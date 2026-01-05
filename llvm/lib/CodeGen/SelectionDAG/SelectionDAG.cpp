@@ -6061,6 +6061,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
         return false;
     return true;
   }
+  case ISD::SPLAT_VECTOR:
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
   case ISD::AssertNoFPClass: {
     FPClassTest NoFPClass =
         static_cast<FPClassTest>(Op.getConstantOperandVal(1));
