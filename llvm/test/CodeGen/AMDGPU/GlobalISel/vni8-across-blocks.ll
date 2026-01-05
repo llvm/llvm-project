@@ -272,10 +272,6 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v7, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
-; GFX906-NEXT:    global_load_dwordx4 v[5:8], v4, s[0:1] offset:16
-; GFX906-NEXT:    s_nop 0
-; GFX906-NEXT:    global_load_dwordx4 v[9:12], v4, s[0:1] offset:32
-; GFX906-NEXT:    global_load_dwordx4 v[13:16], v4, s[0:1] offset:48
 ; GFX906-NEXT:    global_load_dwordx4 v[17:20], v4, s[0:1] offset:64
 ; GFX906-NEXT:    global_load_dwordx4 v[21:24], v4, s[0:1] offset:80
 ; GFX906-NEXT:    global_load_dwordx4 v[25:28], v4, s[0:1] offset:96
@@ -288,6 +284,9 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    global_load_dwordx4 v[53:56], v4, s[0:1] offset:208
 ; GFX906-NEXT:    global_load_dwordx4 v[57:60], v4, s[0:1] offset:224
 ; GFX906-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1] offset:240
+; GFX906-NEXT:    global_load_dwordx4 v[5:8], v4, s[0:1] offset:16
+; GFX906-NEXT:    global_load_dwordx4 v[9:12], v4, s[0:1] offset:32
+; GFX906-NEXT:    global_load_dwordx4 v[13:16], v4, s[0:1] offset:48
 ; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX906-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX906-NEXT:  ; %bb.1: ; %bb.1

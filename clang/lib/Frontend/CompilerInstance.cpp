@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
@@ -23,7 +24,6 @@
 #include "clang/Frontend/ChainedDiagnosticConsumer.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LogDiagnosticPrinter.h"
 #include "clang/Frontend/SARIFDiagnosticPrinter.h"
@@ -46,6 +46,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -160,8 +161,6 @@ bool CompilerInstance::createTarget() {
 }
 
 void CompilerInstance::setFileManager(IntrusiveRefCntPtr<FileManager> Value) {
-  if (!hasVirtualFileSystem())
-    setVirtualFileSystem(Value->getVirtualFileSystemPtr());
   assert(Value == nullptr ||
          getVirtualFileSystemPtr() == Value->getVirtualFileSystemPtr());
   FileMgr = std::move(Value);
@@ -548,14 +547,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
   assert(FileMgr && "Specific module cache path requires a FileManager");
 
-  if (getHeaderSearchOpts().ModuleCachePath.empty())
-    return "";
-
   // Set up the module path, including the hash for the module-creation options.
   SmallString<256> SpecificModuleCache;
   normalizeModuleCachePath(*FileMgr, getHeaderSearchOpts().ModuleCachePath,
                            SpecificModuleCache);
-  if (!getHeaderSearchOpts().DisableModuleHash)
+  if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache, ModuleHash);
   return std::string(SpecificModuleCache);
 }
@@ -887,7 +883,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
            "File Manager is required to fix up relative path.\n");
 
     AbsPath.emplace(OutputPath);
-    FileMgr->FixupRelativePath(*AbsPath);
+    FileManager::fixupRelativePath(getFileSystemOpts(), *AbsPath);
     OutputPath = *AbsPath;
   }
 
@@ -1063,7 +1059,9 @@ void CompilerInstance::printDiagnosticStats() {
       if (!getLangOpts().CUDAIsDevice) {
         OS << " when compiling for host";
       } else {
-        OS << " when compiling for " << getTargetOpts().CPU;
+        OS << " when compiling for "
+           << (!getTargetOpts().CPU.empty() ? getTargetOpts().CPU
+                                            : getTarget().getTriple().str());
       }
     }
     OS << ".\n";
@@ -1077,6 +1075,16 @@ void CompilerInstance::LoadRequestedPlugins() {
     if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(Path.c_str(), &Error))
       getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
           << Path << Error;
+  }
+
+  // Load and store pass plugins for the back-end.
+  for (const std::string &Path : getCodeGenOpts().PassPlugins) {
+    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
+      PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
+    } else {
+      getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
+          << Path << toString(PassPlugin.takeError());
+    }
   }
 
   // Check if any of the loaded plugins replaces the main AST action
@@ -1292,7 +1300,7 @@ static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
 }
 
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
-    SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
+    SourceLocation ImportLoc, const Module *Module, StringRef ModuleFileName,
     std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   StringRef ModuleName = Module->getTopLevelModuleName();
 

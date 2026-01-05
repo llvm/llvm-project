@@ -673,10 +673,13 @@ Fortran::lower::genCallOpAndResult(
       // passed object because interface mismatch issues may have inserted a
       // cast to the operand with a different declared type, which would break
       // later type bound call resolution in the FIR to FIR pass.
+      mlir::Value passActual = caller.getInputs()[*passArg];
+      if (std::optional<mlir::Value> original = caller.getOriginalPassArg())
+        passActual = *original;
       dispatch = fir::DispatchOp::create(
           builder, loc, funcType.getResults(), builder.getStringAttr(procName),
-          caller.getInputs()[*passArg], operands,
-          builder.getI32IntegerAttr(*passArg), /*arg_attrs=*/nullptr,
+          passActual, operands, builder.getI32IntegerAttr(*passArg),
+          /*arg_attrs=*/nullptr,
           /*res_attrs=*/nullptr, procAttrs);
     } else {
       // NOPASS
@@ -700,9 +703,21 @@ Fortran::lower::genCallOpAndResult(
       callResult = dispatch.getResult(0);
   } else {
     // Standard procedure call with fir.call.
+    fir::FortranInlineEnumAttr inlineAttr;
+
+    if (caller.getCallDescription().hasNoInline())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::no_inline);
+    else if (caller.getCallDescription().hasInlineHint())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::inline_hint);
+    else if (caller.getCallDescription().hasAlwaysInline())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::always_inline);
     auto call = fir::CallOp::create(
         builder, loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
+        /*accessGroups=*/mlir::ArrayAttr{});
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
@@ -1285,10 +1300,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     Fortran::evaluate::FoldingContext &foldingContext{
         callContext.converter.getFoldingContext()};
 
-    bool suggestCopyIn = Fortran::evaluate::MayNeedCopy(
-        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/false);
-    bool suggestCopyOut = Fortran::evaluate::MayNeedCopy(
-        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/true);
+    bool suggestCopyIn = Fortran::evaluate::ActualArgNeedsCopy(
+                             arg.entity, arg.characteristics, foldingContext,
+                             /*forCopyOut=*/false)
+                             .value_or(true);
+    bool suggestCopyOut = Fortran::evaluate::ActualArgNeedsCopy(
+                              arg.entity, arg.characteristics, foldingContext,
+                              /*forCopyOut=*/true)
+                              .value_or(true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = actual.isArray() && suggestCopyOut;
   }
@@ -1620,8 +1639,12 @@ void prepareUserCallArguments(
   mlir::Location loc = callContext.loc;
   bool mustRemapActualToDummyDescriptors = false;
   fir::FirOpBuilder &builder = callContext.getBuilder();
+  std::optional<unsigned> passArg = caller.getPassArgIndex();
+  int argIndex = -1;
   for (auto [preparedActual, arg] :
        llvm::zip(loweredActuals, caller.getPassedArguments())) {
+    ++argIndex;
+    bool thisIsPassArg = passArg && argIndex == static_cast<int>(*passArg);
     mlir::Type argTy = callSiteType.getInput(arg.firArgument);
     if (!preparedActual) {
       // Optional dummy argument for which there is no actual argument.
@@ -1734,7 +1757,7 @@ void prepareUserCallArguments(
         continue;
       }
       if (fir::isPointerType(argTy) &&
-          !Fortran::evaluate::IsObjectPointer(*expr)) {
+          (!Fortran::evaluate::IsObjectPointer(*expr) || thisIsPassArg)) {
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
@@ -1742,6 +1765,8 @@ void prepareUserCallArguments(
         fir::ExtendedValue actualExv = Fortran::lower::convertToAddress(
             loc, callContext.converter, actual, callContext.stmtCtx,
             hlfir::getFortranElementType(dataTy));
+        if (thisIsPassArg)
+          caller.setOriginalPassArg(fir::getBase(actualExv));
         // If the dummy is an assumed-rank pointer, allocate a pointer
         // descriptor with the actual argument rank (if it is not assumed-rank
         // itself).

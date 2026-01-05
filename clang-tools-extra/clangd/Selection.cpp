@@ -958,6 +958,18 @@ private:
         claimRange(SourceRange(FTL.getLParenLoc(), FTL.getEndLoc()), Result);
         return;
       }
+      if (auto ATL = TL->getAs<AttributedTypeLoc>()) {
+        // For attributed function types like `int foo() [[attr]]`, the
+        // AttributedTypeLoc's range includes the function name. We want to
+        // allow the function name to be associated with the FunctionDecl
+        // rather than the AttributedTypeLoc, so we only claim the attribute
+        // range itself.
+        if (ATL.getModifiedLoc().getAs<FunctionTypeLoc>()) {
+          // Only claim the attribute's source range, not the whole type.
+          claimRange(ATL.getLocalSourceRange(), Result);
+          return;
+        }
+      }
     }
     claimRange(getSourceRange(N), Result);
   }

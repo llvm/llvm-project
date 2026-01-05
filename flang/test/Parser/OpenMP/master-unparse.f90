@@ -9,7 +9,7 @@ subroutine test_master()
   !PARSE-TREE: OmpBeginDirective
   !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = master
   !CHECK: !$omp master
-  !$omp master 
+  !$omp master
   c = c + 1
   !$omp end master
 end subroutine
@@ -19,7 +19,7 @@ subroutine test_master_taskloop_simd()
   !PARSE-TREE: OmpBeginLoopDirective
   !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = master taskloop simd
   !CHECK: !$omp master taskloop simd
-  !$omp master taskloop simd 
+  !$omp master taskloop simd
   do i=1,10
    j = j + 1
   end do
@@ -35,7 +35,7 @@ subroutine test_master_taskloop
   do i=1,10
    j = j + 1
   end do
-  !$omp end master taskloop 
+  !$omp end master taskloop
 end subroutine
 
 subroutine test_parallel_master
@@ -53,7 +53,7 @@ subroutine test_parallel_master_taskloop_simd
   !PARSE-TREE: OmpBeginLoopDirective
   !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel master taskloop simd
   !CHECK: !$omp parallel master taskloop simd
-  !$omp parallel master taskloop simd 
+  !$omp parallel master taskloop simd
   do i=1,10
    j = j + 1
   end do
@@ -69,5 +69,5 @@ subroutine test_parallel_master_taskloop
   do i=1,10
    j = j + 1
   end do
-  !$omp end parallel master taskloop 
+  !$omp end parallel master taskloop
 end subroutine

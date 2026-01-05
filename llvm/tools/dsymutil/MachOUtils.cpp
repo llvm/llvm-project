@@ -339,11 +339,11 @@ static bool createDwarfSegment(const MCAssembler& Asm,uint64_t VMAddr, uint64_t 
     if (Alignment > 1) {
       VMAddr = alignTo(VMAddr, Alignment);
       FileOffset = alignTo(FileOffset, Alignment);
-      if (FileOffset > UINT32_MAX)
-        return error("section " + Sec->getName() +
-                     "'s file offset exceeds 4GB."
-                     " Refusing to produce an invalid Mach-O file.");
     }
+    if (FileOffset > UINT32_MAX)
+      return error("section " + Sec->getName() +
+                   "'s file offset exceeds 4GB."
+                   " Refusing to produce an invalid Mach-O file.");
     Writer.writeSection(Asm, *Sec, VMAddr, FileOffset, 0, 0, 0);
 
     FileOffset += Asm.getSectionAddressSize(*Sec);

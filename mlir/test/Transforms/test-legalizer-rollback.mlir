@@ -163,3 +163,22 @@ func.func @create_unregistered_op_in_pattern() -> i32 {
   "test.return"(%0) : (i32) -> ()
 }
 }
+
+// -----
+
+// CHECK-LABEL: func @test_failed_preorder_legalization
+//       CHECK:   "test.post_order_legalization"() ({
+//       CHECK:     %[[r:.*]] = "test.illegal_op_g"() : () -> i32
+//       CHECK:     "test.return"(%[[r]]) : (i32) -> ()
+//       CHECK:   }) : () -> ()
+// expected-remark @+1 {{applyPartialConversion failed}}
+module {
+func.func @test_failed_preorder_legalization() {
+  // expected-error @+1 {{failed to legalize operation 'test.post_order_legalization' that was explicitly marked illegal}}
+  "test.post_order_legalization"() ({
+    %0 = "test.illegal_op_g"() : () -> (i32)
+    "test.return"(%0) : (i32) -> ()
+  }) : () -> ()
+  return
+}
+}

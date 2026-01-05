@@ -10,8 +10,8 @@ define void @licm_replicate_call(double %x, ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.pow.f64(double [[X]], double 3.000000e+00)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i32 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -22,7 +22,7 @@ define void @licm_replicate_call(double %x, ptr %dst) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

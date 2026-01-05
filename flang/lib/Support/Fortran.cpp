@@ -95,6 +95,9 @@ std::string AsFortran(IgnoreTKRSet tkr) {
   if (tkr.test(IgnoreTKR::Contiguous)) {
     result += 'C';
   }
+  if (tkr.test(IgnoreTKR::Pointer)) {
+    result += 'P';
+  }
   return result;
 }
 

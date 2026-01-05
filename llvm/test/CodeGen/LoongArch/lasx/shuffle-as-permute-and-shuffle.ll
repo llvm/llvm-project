@@ -32,9 +32,7 @@ define <16 x i16> @shuffle_v16i16(<16 x i16> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
 ; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI2_0)
-; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 78
-; CHECK-NEXT:    xvshuf.w $xr1, $xr2, $xr0
-; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
+; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> <i32 8, i32 9, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %shuffle
@@ -55,9 +53,7 @@ define <16 x i16> @shuffle_v16i16_same_lane(<16 x i16> %a) {
 define <8 x i32> @shuffle_v8i32(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 226
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 4, i32 5, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %shuffle
@@ -93,9 +89,7 @@ define <4 x i64> @shuffle_v4i64_same_lane(<4 x i64> %a) {
 define <8 x float> @shuffle_v8f32(<8 x float> %a) {
 ; CHECK-LABEL: shuffle_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_0)
-; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI8_0)
-; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 226
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 0, i32 1, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %shuffle

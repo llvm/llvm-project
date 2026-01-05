@@ -187,7 +187,44 @@ Status NativeProcessAIX::Signal(int signo) { return Status("unsupported"); }
 
 Status NativeProcessAIX::Interrupt() { return Status("unsupported"); }
 
-Status NativeProcessAIX::Kill() { return Status("unsupported"); }
+Status NativeProcessAIX::Kill() {
+
+  Log *log = GetLog(POSIXLog::Process);
+  LLDB_LOG(log, "pid {0}", GetID());
+
+  Status error;
+
+  switch (m_state) {
+  case StateType::eStateInvalid:
+  case StateType::eStateExited:
+  case StateType::eStateCrashed:
+  case StateType::eStateDetached:
+  case StateType::eStateUnloaded:
+    // Nothing to do - the process is already dead.
+    LLDB_LOG(log, "ignored for PID {0} due to current state: {1}", GetID(),
+             m_state);
+    return error;
+
+  case StateType::eStateConnected:
+  case StateType::eStateAttaching:
+  case StateType::eStateLaunching:
+  case StateType::eStateStopped:
+  case StateType::eStateRunning:
+  case StateType::eStateStepping:
+  case StateType::eStateSuspended:
+    // We can try to kill a process in these states.
+    break;
+  }
+
+  llvm::Expected<int> result =
+      PtraceWrapper(PT_KILL, GetID(), nullptr, nullptr, 0);
+  if (!result) {
+    std::string error_string = std::string("Kill failed for process. error: ") +
+                               llvm::toString(result.takeError());
+    error.FromErrorString(error_string.c_str());
+  }
+  return error;
+}
 
 Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                     size_t &bytes_read) {
@@ -237,6 +274,7 @@ llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
   switch (req) {
   case PT_ATTACH:
   case PT_DETACH:
+  case PT_KILL:
     ret = ptrace64(req, pid, 0, 0, nullptr);
     break;
   default:

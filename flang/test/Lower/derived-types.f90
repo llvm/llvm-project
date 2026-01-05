@@ -19,7 +19,7 @@ module d
 contains
 
 ! -----------------------------------------------------------------------------
-!            Test simple derived type symbol lowering 
+!            Test simple derived type symbol lowering
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func @_QMdPderived_dummy(
@@ -35,6 +35,8 @@ subroutine local_derived()
   ! CHECK-DAG: fir.alloca !fir.type<_QMdTr{x:f32}>
   type(r) :: some_r
   type(c2) :: some_c2
+  print *, some_c2%ch_array(1,1)
+  print *, some_r%x
 end subroutine
 
 ! CHECK-LABEL: func @_QMdPsaved_derived(
@@ -48,7 +50,7 @@ end subroutine
 
 
 ! -----------------------------------------------------------------------------
-!            Test simple derived type references 
+!            Test simple derived type references
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func @_QMdPscalar_numeric_ref(
@@ -155,7 +157,7 @@ end subroutine
 end module
 
 ! -----------------------------------------------------------------------------
-!            Test derived type with pointer/allocatable components 
+!            Test derived type with pointer/allocatable components
 ! -----------------------------------------------------------------------------
 
 module d2
@@ -172,7 +174,7 @@ end subroutine
 end module
 
 ! -----------------------------------------------------------------------------
-!            Test global derived type symbol lowering 
+!            Test global derived type symbol lowering
 ! -----------------------------------------------------------------------------
 
 module data_mod

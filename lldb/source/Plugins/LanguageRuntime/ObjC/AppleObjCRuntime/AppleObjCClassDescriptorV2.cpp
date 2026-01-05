@@ -111,7 +111,6 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
                           process->GetAddressByteSize());
 
   lldb::offset_t cursor = 0;
-
   m_flags = extractor.GetU32_unchecked(&cursor);
   m_version = extractor.GetU32_unchecked(&cursor);
   m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
@@ -119,18 +118,16 @@ bool ClassDescriptorV2::class_rw_t::Read(Process *process, lldb::addr_t addr) {
     m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
   m_method_list_ptr = extractor.GetAddress_unchecked(&cursor);
   m_properties_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_firstSubclass = extractor.GetAddress_unchecked(&cursor);
-  m_nextSiblingClass = extractor.GetAddress_unchecked(&cursor);
 
   if (m_ro_ptr & 1) {
     DataBufferHeap buffer(ptr_size, '\0');
     process->ReadMemory(m_ro_ptr ^ 1, buffer.GetBytes(), ptr_size, error);
     if (error.Fail())
       return false;
-    cursor = 0;
     DataExtractor extractor(buffer.GetBytes(), ptr_size,
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
+    lldb::offset_t cursor = 0;
     m_ro_ptr = extractor.GetAddress_unchecked(&cursor);
     if (ABISP abi_sp = process->GetABI())
       m_ro_ptr = abi_sp->FixCodeAddress(m_ro_ptr);
@@ -268,6 +265,28 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
   return true;
 }
 
+void ClassDescriptorV2::method_t::ReadNames(
+    llvm::MutableArrayRef<method_t> methods, Process &process) {
+  std::vector<lldb::addr_t> str_addresses;
+  str_addresses.reserve(2 * methods.size());
+  for (auto &method : methods)
+    str_addresses.push_back(method.m_name_ptr);
+  for (auto &method : methods)
+    str_addresses.push_back(method.m_types_ptr);
+
+  llvm::SmallVector<std::optional<std::string>> read_result =
+      process.ReadCStringsFromMemory(str_addresses);
+  auto names = llvm::MutableArrayRef(read_result).take_front(methods.size());
+  auto types = llvm::MutableArrayRef(read_result).take_back(methods.size());
+
+  for (auto [name_str, type_str, method] : llvm::zip(names, types, methods)) {
+    if (name_str)
+      method.m_name = std::move(*name_str);
+    if (type_str)
+      method.m_types = std::move(*type_str);
+  }
+}
+
 llvm::SmallVector<ClassDescriptorV2::method_t, 0>
 ClassDescriptorV2::ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
                                lldb::addr_t relative_string_base_addr,
@@ -281,28 +300,30 @@ ClassDescriptorV2::ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
   const size_t num_methods = addresses.size();
 
   llvm::SmallVector<uint8_t, 0> buffer(num_methods * size, 0);
-  llvm::DenseSet<uint32_t> failed_indices;
 
-  for (auto [idx, addr] : llvm::enumerate(addresses)) {
-    Status error;
-    process->ReadMemory(addr, buffer.data() + idx * size, size, error);
-    if (error.Fail())
-      failed_indices.insert(idx);
-  }
+  llvm::SmallVector<Range<addr_t, size_t>> mem_ranges =
+      llvm::to_vector(llvm::map_range(llvm::seq(num_methods), [&](size_t idx) {
+        return Range<addr_t, size_t>(addresses[idx], size);
+      }));
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process->ReadMemoryRanges(mem_ranges, buffer);
 
   llvm::SmallVector<method_t, 0> methods;
   methods.reserve(num_methods);
-  for (auto [idx, addr] : llvm::enumerate(addresses)) {
-    if (failed_indices.contains(idx))
+  for (auto [addr, memory] : llvm::zip(addresses, read_results)) {
+    // Ignore partial reads.
+    if (memory.size() != size)
       continue;
-    DataExtractor extractor(buffer.data() + idx * size, size,
-                            process->GetByteOrder(),
+
+    DataExtractor extractor(memory.data(), size, process->GetByteOrder(),
                             process->GetAddressByteSize());
     methods.push_back(method_t());
     methods.back().Read(extractor, process, addr, relative_string_base_addr,
                         is_small, has_direct_sel, has_relative_types);
   }
 
+  method_t::ReadNames(methods, *process);
   return methods;
 }
 
@@ -340,13 +361,7 @@ bool ClassDescriptorV2::method_t::Read(DataExtractor &extractor,
     m_imp_ptr = extractor.GetAddress_unchecked(&cursor);
   }
 
-  Status error;
-  process->ReadCStringFromMemory(m_name_ptr, m_name, error);
-  if (error.Fail())
-    return false;
-
-  process->ReadCStringFromMemory(m_types_ptr, m_types, error);
-  return error.Success();
+  return true;
 }
 
 bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {

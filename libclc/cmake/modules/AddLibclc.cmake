@@ -29,9 +29,13 @@ function(compile_to_bc)
   if( NOT ${FILE_EXT} STREQUAL ".ll" )
     # Pass '-c' when not running the preprocessor
     set( PP_OPTS -c )
+    set( EXTRA_OPTS ${ARG_EXTRA_OPTS} )
   else()
     set( PP_OPTS -E;-P )
     set( TMP_SUFFIX .tmp )
+    string( REPLACE "-Xclang;-fdeclare-opencl-builtins;-Xclang;-finclude-default-header"
+      "" EXTRA_OPTS "${ARG_EXTRA_OPTS}"
+    )
   endif()
 
   set( TARGET_ARG )
@@ -48,7 +52,7 @@ function(compile_to_bc)
     COMMAND ${clang_exe}
       ${TARGET_ARG}
       ${PP_OPTS}
-      ${ARG_EXTRA_OPTS}
+      ${EXTRA_OPTS}
       -MD -MF ${ARG_OUTPUT}.d -MT ${ARG_OUTPUT}${TMP_SUFFIX}
       # LLVM 13 enables standard includes by default - we don't want
       # those when pre-processing IR. We disable it unconditionally.
@@ -265,9 +269,8 @@ function(libclc_install)
   )
 endfunction()
 
-# Compiles a list of library source files (provided by LIB_FILES/GEN_FILES) and
-# compiles them to LLVM bytecode (or SPIR-V), links them together and optimizes
-# them.
+# Compiles a list of library source files (provided by LIB_FILES) and compiles
+# them to LLVM bytecode (or SPIR-V), links them together and optimizes them.
 #
 # For bytecode libraries, a list of ALIASES may optionally be provided to
 # produce additional symlinks.
@@ -288,8 +291,6 @@ endfunction()
 #     optimized and do not have aliases created.
 #  * LIB_FILES <string> ...
 #      List of files that should be built for this library
-#  * GEN_FILES <string> ...
-#      List of generated files (in build dir) that should be built for this library
 #  * COMPILE_FLAGS <string> ...
 #      Compilation options (for clang)
 #  * OPT_FLAGS <string> ...
@@ -304,7 +305,7 @@ function(add_libclc_builtin_set)
   cmake_parse_arguments(ARG
     "CLC_INTERNAL"
     "ARCH;TRIPLE;ARCH_SUFFIX;PARENT_TARGET"
-    "LIB_FILES;GEN_FILES;COMPILE_FLAGS;OPT_FLAGS;ALIASES;INTERNAL_LINK_DEPENDENCIES"
+    "LIB_FILES;COMPILE_FLAGS;OPT_FLAGS;ALIASES;INTERNAL_LINK_DEPENDENCIES"
     ${ARGN}
   )
 
@@ -314,32 +315,15 @@ function(add_libclc_builtin_set)
 
   set( bytecode_files )
   set( bytecode_ir_files )
-  foreach( file IN LISTS ARG_GEN_FILES ARG_LIB_FILES )
-    # We need to take each file and produce an absolute input file, as well
-    # as a unique architecture-specific output file. We deal with a mix of
-    # different input files, which makes this trickier.
-    set( input_file_dep )
-    if( ${file} IN_LIST ARG_GEN_FILES )
-      # Generated files are given just as file names, which we must make
-      # absolute to the binary directory.
-      set( input_file ${CMAKE_CURRENT_BINARY_DIR}/${file} )
-      set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.bc" )
-      # If a target exists that generates this file, add that as a dependency
-      # of the custom command.
-      if( TARGET generate-${file} )
-        set( input_file_dep generate-${file} )
-      endif()
-    else()
-      # Other files are originally relative to each SOURCE file, which are
-      # then make relative to the libclc root directory. We must normalize
-      # the path (e.g., ironing out any ".."), then make it relative to the
-      # root directory again, and use that relative path component for the
-      # binary path.
-      get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
-      file( RELATIVE_PATH root_rel_path ${CMAKE_CURRENT_SOURCE_DIR} ${abs_path} )
-      set( input_file ${CMAKE_CURRENT_SOURCE_DIR}/${file} )
-      set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.bc" )
-    endif()
+  foreach( file IN LISTS ARG_LIB_FILES )
+    # Files are originally relative to each SOURCE file, which are then make
+    # relative to the libclc root directory. We must normalize the path
+    # (e.g., ironing out any ".."), then make it relative to the root directory
+    # again, and use that relative path component for the binary path.
+    get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
+    file( RELATIVE_PATH root_rel_path ${CMAKE_CURRENT_SOURCE_DIR} ${abs_path} )
+    set( input_file ${CMAKE_CURRENT_SOURCE_DIR}/${file} )
+    set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.bc" )
 
     get_filename_component( file_dir ${file} DIRECTORY )
 
@@ -356,7 +340,6 @@ function(add_libclc_builtin_set)
       EXTRA_OPTS -nostdlib "${ARG_COMPILE_FLAGS}"
         "${file_specific_compile_options}"
         -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
-      DEPENDENCIES ${input_file_dep}
     )
 
     # Collect all files originating in LLVM IR separately
@@ -392,7 +375,7 @@ function(add_libclc_builtin_set)
   list( PREPEND bytecode_files ${bytecode_ir_files} )
 
   if( NOT bytecode_files )
-    message(FATAL_ERROR "Cannot create an empty builtins library")
+    message(FATAL_ERROR "Cannot create an empty builtins library for ${ARG_ARCH_SUFFIX}")
   endif()
 
   set( builtins_link_lib_tgt builtins.link.${ARG_ARCH_SUFFIX} )

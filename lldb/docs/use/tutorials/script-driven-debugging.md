@@ -12,7 +12,7 @@ This document will show how to do some of these things by going through an
 example, explaining how to use Python scripting to find a bug in a program
 that searches for text in a large binary tree.
 
-### The Test Program and Input
+## The Test Program and Input
 
 We have a simple C program ([dictionary.c](https://github.com/llvm/llvm-project/blob/main/lldb/examples/scripting/dictionary.c))
 that reads in a text file, and stores all the words from the file in a
@@ -24,7 +24,7 @@ the word in the tree.
 The input text file we are using to test our program contains the text
 for William Shakespeare's famous tragedy "Romeo and Juliet".
 
-### The Bug
+## The Bug
 
 When we try running our program, we find there is a problem. While it
 successfully finds some of the words we would expect to find, such as
@@ -44,7 +44,7 @@ Enter search word: ^D
 $
 ```
 
-### Using Depth First Search
+## Using Depth First Search
 
 Our first job is to determine if the word "Romeo" actually got inserted
 into the tree or not. Since "Romeo and Juliet" has thousands of words,
@@ -86,7 +86,7 @@ later explanations:
 25:             return DFS (right_child_ptr, word, cur_path)
 ```
 
-### Accessing & Manipulating Program Variables
+## Accessing & Manipulating Program Variables
 
 Before we can call any Python function on any of our program's
 variables, we need to get the variable into a form that Python can
@@ -126,7 +126,7 @@ information or children values out of SBValues. For complete information, see
 the header file SBValue.h. The `SBValue` methods that we use in our DFS function
 are `GetChildMemberWithName()`, `GetSummary()`, and `GetValue()`.
 
-### Explaining DFS Script in Detail
+## Explaining DFS Script in Detail
 
 Before diving into the details of this code, it would be best to give a
 high-level overview of what it does. The nodes in our binary search tree were
@@ -166,13 +166,13 @@ start all over. Therefore we recommend doing as we have done: Writing your
 longer, more complicated script functions in a separate file (in this case
 tree_utils.py) and then importing it into your LLDB Python interpreter.
 
-### The DFS Script in Action
+## The DFS Script in Action
 
 At this point we are ready to use the DFS function to see if the word "Romeo"
 is in our tree or not. To actually use it in LLDB on our dictionary program,
 you would do something like this:
 
-```c++
+```
 $ lldb
 (lldb) process attach -n "dictionary"
 Architecture set to: x86_64.
@@ -261,7 +261,7 @@ From this we can see that the word "Romeo" was indeed found in the tree, and
 the path from the root of the tree to the node containing "Romeo" is
 left-left-right-right-left.
 
-### Using Breakpoint Command Scripts
+## Using Breakpoint Command Scripts
 
 We are halfway to figuring out what the problem is. We know the word we are
 looking for is in the binary tree, and we know exactly where it is in the
@@ -282,7 +282,7 @@ being hit. But if the decision differs from what the path says it should be,
 then the script prints out a message and does NOT resume execution, leaving the
 user sitting at the first point where a wrong decision is being made.
 
-### Python Breakpoint Command Scripts Are Not What They Seem
+## Python Breakpoint Command Scripts Are Not What They Seem
 
 What do we mean by that? When you enter a Python breakpoint command in LLDB, it
 appears that you are entering one or more plain lines of Python. BUT LLDB then
@@ -305,7 +305,7 @@ automatically have a frame and a bp_loc variable. The variables are pre-loaded
 by LLDB with the correct context for the breakpoint. You do not have to use
 these variables, but they are there if you want them.
 
-### The Decision Point Breakpoint Commands
+## The Decision Point Breakpoint Commands
 
 This is what the Python breakpoint command script would look like for the
 decision to go right:
@@ -358,7 +358,7 @@ execution. We allow the breakpoint to remain stopped (by doing nothing), and we
 print an informational message telling the user we have found the problem, and
 what the problem is.
 
-### Actually Using The Breakpoint Commands
+## Actually Using The Breakpoint Commands
 
 Now we will look at what happens when we actually use these breakpoint commands
 on our program. Doing a source list -n find_word shows us the function
@@ -423,7 +423,7 @@ Enter your Python command(s). Type 'DONE' to end.
 >     print "Here is the problem. Going right, should go left!"
 > DONE
 ```
-```c++
+```
 (lldb) continue
 Process 696 resuming
 Here is the problem. Going right, should go left!
@@ -480,7 +480,7 @@ case conversion problem somewhere in our program (we do).
 This is the end of our example on how you might use Python scripting in LLDB to
 help you find bugs in your program.
 
-### Sources
+## Sources
 
 The complete code for the Dictionary program (with case-conversion bug), the
 DFS function and other Python script examples used for this example are

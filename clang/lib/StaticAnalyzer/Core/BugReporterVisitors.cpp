@@ -1906,7 +1906,7 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
       if (!CurStmt->getBeginLoc().isMacroID())
         return nullptr;
 
-      CFGStmtMap *Map = CurLC->getAnalysisDeclContext()->getCFGStmtMap();
+      const CFGStmtMap *Map = CurLC->getAnalysisDeclContext()->getCFGStmtMap();
       CurTerminatorStmt = Map->getBlock(CurStmt)->getTerminatorStmt();
     } else {
       return nullptr;
@@ -3253,9 +3253,6 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
 
   return true;
 }
-
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericTrueMessage;
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericFalseMessage;
 
 bool ConditionBRVisitor::isPieceMessageGeneric(
     const PathDiagnosticPiece *Piece) {

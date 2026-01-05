@@ -7,18 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "Boolean.h"
 #include "ByteCodeEmitter.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
-#include "Interp.h"
+#include "Integral.h"
 #include "InterpFrame.h"
+#include "InterpHelpers.h"
 #include "InterpStack.h"
+#include "Pointer.h"
 #include "PrimType.h"
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -292,13 +294,15 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
     if (!FieldDesc->isPrimitiveArray())
       return false;
 
-    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
       return false;
 
     unsigned N = Ptr.getNumElems();
     if (Ptr.elemSize() == 1) {
-      Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
-      return Result != N;
+      unsigned Size = N - Ptr.getIndex();
+      Result =
+          strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+      return Result != Size;
     }
 
     PrimType ElemT = FieldDesc->getPrimType();

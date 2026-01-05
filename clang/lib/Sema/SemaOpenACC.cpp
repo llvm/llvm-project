@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -2457,7 +2458,8 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
     ArrayRef<const OpenACCClause *> Clauses, SourceLocation EndLoc) {
   assert(LParenLoc.isValid());
 
-  if (FunctionDecl *FD = getFunctionFromRoutineName(FuncRef)) {
+  FunctionDecl *FD = nullptr;
+  if ((FD = getFunctionFromRoutineName(FuncRef))) {
     // OpenACC 3.3 2.15:
     // In C and C++, function static variables are not supported in functions to
     // which a routine directive applies.
@@ -2509,11 +2511,9 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
                                                         {DirLoc, BindLoc});
     FD->addAttr(RAA);
     // In case we are referencing not the 'latest' version, make sure we add
-    // the attribute to all declarations.
-    while (FD != FD->getMostRecentDecl()) {
-      FD = FD->getMostRecentDecl();
-      FD->addAttr(RAA);
-    }
+    // the attribute to all declarations after the 'found' one.
+    for (auto *CurFD : FD->redecls())
+      CurFD->addAttr(RAA->clone(getASTContext()));
   }
 
   LastRoutineDecl = OpenACCRoutineDecl::Create(
@@ -2522,7 +2522,18 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
   LastRoutineDecl->setAccess(AS_public);
   getCurContext()->addDecl(LastRoutineDecl);
 
+  if (FD) {
+    // Add this attribute to the list of annotations so that codegen can visit
+    // it later. FD doesn't necessarily exist, but that case should be
+    // diagnosed.
+    RoutineRefList.emplace_back(FD, LastRoutineDecl);
+  }
   return LastRoutineDecl;
+}
+
+void SemaOpenACC::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
+  for (auto [FD, RoutineDecl] : RoutineRefList)
+    SemaRef.Consumer.HandleOpenACCRoutineReference(FD, RoutineDecl);
 }
 
 DeclGroupRef SemaOpenACC::ActOnEndRoutineDeclDirective(
@@ -2999,11 +3010,11 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
     BinOp = BinaryOperatorKind::BO_LT;
     break;
   case OpenACCReductionOperator::And:
+    BinOp = BinaryOperatorKind::BO_LAnd;
+    break;
   case OpenACCReductionOperator::Or:
-    // We just want a 'NYI' error in the backend, so leave an empty combiner
-    // recipe, and claim success.
-    CombinerRecipes.push_back({nullptr, nullptr, nullptr});
-    return false;
+    BinOp = BinaryOperatorKind::BO_LOr;
+    break;
   }
 
   // If VarTy is an array type, at the top level only, we want to do our
@@ -3068,11 +3079,25 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
                               : CombinerFailureKind::Assignment};
     }
     case OpenACCReductionOperator::And:
-    case OpenACCReductionOperator::Or:
-      llvm_unreachable("And/Or not implemented, but should fail earlier");
+    case OpenACCReductionOperator::Or: {
+      // These are done as LHS = LHS && RHS (or LHS = LHS || RHS). So after the
+      // binop, all we have to do is the assignment.
+      if (!BinOpRes.isUsable())
+        return {BinOpRes, CombinerFailureKind::BinOp};
+
+      // Build assignment.
+      ExprResult Assignment = SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc,
+                                                 BinaryOperatorKind::BO_Assign,
+                                                 LHSDRE, BinOpRes.get(),
+                                                 /*ForFoldExpr=*/false);
+      return {Assignment, Assignment.isUsable()
+                              ? CombinerFailureKind::None
+                              : CombinerFailureKind::Assignment};
+    }
     case OpenACCReductionOperator::Invalid:
       llvm_unreachable("Invalid should have been caught above");
     }
+    llvm_unreachable("Unhandled case");
   };
 
   auto tryCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE,

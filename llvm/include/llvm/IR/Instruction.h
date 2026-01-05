@@ -762,6 +762,12 @@ public:
   /// applied to any type.
   ///
   LLVM_ABI bool isCommutative() const LLVM_READONLY;
+
+  /// Checks if the operand is commutative. In commutative operations, not all
+  /// operands might commutable, e.g. for fmuladd only 2 first operands are
+  /// commutable.
+  LLVM_ABI bool isCommutableOperand(unsigned Op) const LLVM_READONLY;
+
   static bool isCommutative(unsigned Opcode) {
     switch (Opcode) {
     case Add: case FAdd:

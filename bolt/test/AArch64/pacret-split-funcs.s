@@ -11,7 +11,7 @@
 
 # Checking that we don't see any OpNegateRAState CFIs before the insertion pass.
 # CHECK-NOT: OpNegateRAState
-# CHECK: Binary Function "foo" after insert-negate-ra-state-pass
+# CHECK: Binary Function "foo" after pointer-auth-cfi-fixup
 
 # CHECK:       paciasp
 # CHECK-NEXT:  OpNegateRAState
@@ -24,7 +24,7 @@
 # CHECK-NEXT:    OpNegateRAState
 # CHECK-NEXT:    ret
 
-# End of the insert-negate-ra-state-pass logs
+# End of the pointer-auth-cfi-fixup logs
 # CHECK: Binary Function "foo" after finalize-functions
 
   .text

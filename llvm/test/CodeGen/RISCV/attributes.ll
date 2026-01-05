@@ -125,6 +125,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCDELEG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smcntrpmf %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCNTRPMF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV32SMEPMP %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smpmpmt %s -o - | FileCheck --check-prefixes=CHECK,RV32SMPMPMT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV32SMRNMI %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFBFMIN %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvfbfa %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVFBFA %s
@@ -275,6 +276,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCDELEG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smcntrpmf %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCNTRPMF %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV64SMEPMP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smpmpmt %s -o - | FileCheck --check-prefixes=CHECK,RV64SMPMPMT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV64SMRNMI %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFBFMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvfbfa %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVFBFA %s
@@ -391,16 +393,16 @@
 ; RV32XCVMEM: .attribute 5, "rv32i2p1_xcvmem1p0"
 ; RV32XCVSIMD: .attribute 5, "rv32i2p1_xcvsimd1p0"
 ; RV32XCVBI: .attribute 5, "rv32i2p1_xcvbi1p0"
-; RV32XWCHC: .attribute 5, "rv32i2p1_zca1p0_xwchc2p2"
+; RV32XWCHC: .attribute 5, "rv32i2p1_c2p0_zca1p0_xwchc2p2"
 ; RV32ZAAMO: .attribute 5, "rv32i2p1_zaamo1p0"
 ; RV32ZALRSC: .attribute 5, "rv32i2p1_zalrsc1p0"
 ; RV32COMBINEINTOA: .attribute 5, "rv32i2p1_a2p1_zaamo1p0_zalrsc1p0"
-; RV32ZCA: .attribute 5, "rv32i2p1_zca1p0"
-; RV32ZCB: .attribute 5, "rv32i2p1_zca1p0_zcb1p0"
+; RV32ZCA: .attribute 5, "rv32i2p1_c2p0_zca1p0"
+; RV32ZCB: .attribute 5, "rv32i2p1_c2p0_zca1p0_zcb1p0"
 ; RV32ZCD: .attribute 5, "rv32i2p1_f2p2_d2p2_zicsr2p0_zca1p0_zcd1p0"
-; RV32ZCF: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zca1p0_zcf1p0"
-; RV32ZCMP: .attribute 5, "rv32i2p1_zca1p0_zcmp1p0"
-; RV32ZCMT: .attribute 5, "rv32i2p1_zicsr2p0_zca1p0_zcmt1p0"
+; RV32ZCF: .attribute 5, "rv32i2p1_f2p2_c2p0_zicsr2p0_zca1p0_zcf1p0"
+; RV32ZCMP: .attribute 5, "rv32i2p1_c2p0_zca1p0_zcmp1p0"
+; RV32ZCMT: .attribute 5, "rv32i2p1_c2p0_zicsr2p0_zca1p0_zcmt1p0"
 ; RV32ZICSR: .attribute 5, "rv32i2p1_zicsr2p0"
 ; RV32ZIFENCEI: .attribute 5, "rv32i2p1_zifencei2p0"
 ; RV32ZICNTR: .attribute 5, "rv32i2p1_zicntr2p0_zicsr2p0"
@@ -427,8 +429,8 @@
 ; RV32ZICOND: .attribute 5, "rv32i2p1_zicond1p0"
 ; RV32ZILSD: .attribute 5, "rv32i2p1_zilsd1p0"
 ; RV32ZIMOP: .attribute 5, "rv32i2p1_zimop1p0"
-; RV32ZCLSD: .attribute 5, "rv32i2p1_zilsd1p0_zca1p0_zclsd1p0"
-; RV32ZCMOP: .attribute 5, "rv32i2p1_zca1p0_zcmop1p0"
+; RV32ZCLSD: .attribute 5, "rv32i2p1_c2p0_zilsd1p0_zca1p0_zclsd1p0"
+; RV32ZCMOP: .attribute 5, "rv32i2p1_c2p0_zca1p0_zcmop1p0"
 ; RV32SMAIA: .attribute 5, "rv32i2p1_smaia1p0"
 ; RV32SSAIA: .attribute 5, "rv32i2p1_ssaia1p0"
 ; RV32SMCSRIND: .attribute 5, "rv32i2p1_smcsrind1p0"
@@ -439,6 +441,7 @@
 ; RV32SMCDELEG: .attribute 5, "rv32i2p1_smcdeleg1p0"
 ; RV32SMCNTRPMF: .attribute 5, "rv32i2p1_smcntrpmf1p0"
 ; RV32SMEPMP: .attribute 5, "rv32i2p1_smepmp1p0"
+; RV32SMPMPMT: .attribute 5, "rv32i2p1_smpmpmt0p6"
 ; RV32SMRNMI: .attribute 5, "rv32i2p1_smrnmi1p0"
 ; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
 ; RV32ZVFBFA: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0_zve32f1p0_zve32x1p0_zvfbfa0p1_zvl32b1p0"
@@ -459,7 +462,7 @@
 ; RV32SUPM: .attribute 5, "rv32i2p1_supm1p0"
 ; RV32SMCTR: .attribute 5, "rv32i2p1_smctr1p0_sscsrind1p0"
 ; RV32SSCTR: .attribute 5, "rv32i2p1_sscsrind1p0_ssctr1p0"
-; RV32P: .attribute 5, "rv32i2p1_p0p15"
+; RV32P: .attribute 5, "rv32i2p1_p0p18"
 ; RV32ZIBI: .attribute 5, "rv32i2p1_zibi0p1"
 
 ; RV64M: .attribute 5, "rv64i2p1_m2p0_zmmul1p0"
@@ -541,11 +544,11 @@
 ; RV64ZAAMO: .attribute 5, "rv64i2p1_zaamo1p0"
 ; RV64ZALRSC: .attribute 5, "rv64i2p1_zalrsc1p0"
 ; RV64COMBINEINTOA: .attribute 5, "rv64i2p1_a2p1_zaamo1p0_zalrsc1p0"
-; RV64ZCA: .attribute 5, "rv64i2p1_zca1p0"
-; RV64ZCB: .attribute 5, "rv64i2p1_zca1p0_zcb1p0"
-; RV64ZCD: .attribute 5, "rv64i2p1_f2p2_d2p2_zicsr2p0_zca1p0_zcd1p0"
-; RV64ZCMP: .attribute 5, "rv64i2p1_zca1p0_zcmp1p0"
-; RV64ZCMT: .attribute 5, "rv64i2p1_zicsr2p0_zca1p0_zcmt1p0"
+; RV64ZCA: .attribute 5, "rv64i2p1_c2p0_zca1p0"
+; RV64ZCB: .attribute 5, "rv64i2p1_c2p0_zca1p0_zcb1p0"
+; RV64ZCD: .attribute 5, "rv64i2p1_f2p2_d2p2_c2p0_zicsr2p0_zca1p0_zcd1p0"
+; RV64ZCMP: .attribute 5, "rv64i2p1_c2p0_zca1p0_zcmp1p0"
+; RV64ZCMT: .attribute 5, "rv64i2p1_c2p0_zicsr2p0_zca1p0_zcmt1p0"
 ; RV64ZICCAMOA: .attribute 5, "rv64i2p1_ziccamoa1p0"
 ; RV64ZICCAMOC: .attribute 5, "rv64i2p1_ziccamoc1p0"
 ; RV64ZICCIF: .attribute 5, "rv64i2p1_ziccif1p0"
@@ -576,7 +579,7 @@
 ; RV64ZVFH: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfhmin1p0_zve32f1p0_zve32x1p0_zvfh1p0_zvfhmin1p0_zvl32b1p0"
 ; RV64ZICOND: .attribute 5, "rv64i2p1_zicond1p0"
 ; RV64ZIMOP: .attribute 5, "rv64i2p1_zimop1p0"
-; RV64ZCMOP: .attribute 5, "rv64i2p1_zca1p0_zcmop1p0"
+; RV64ZCMOP: .attribute 5, "rv64i2p1_c2p0_zca1p0_zcmop1p0"
 ; RV64SMAIA: .attribute 5, "rv64i2p1_smaia1p0"
 ; RV64SSAIA: .attribute 5, "rv64i2p1_ssaia1p0"
 ; RV64SMCSRIND: .attribute 5, "rv64i2p1_smcsrind1p0"
@@ -587,6 +590,7 @@
 ; RV64SMCDELEG: .attribute 5, "rv64i2p1_smcdeleg1p0"
 ; RV64SMCNTRPMF: .attribute 5, "rv64i2p1_smcntrpmf1p0"
 ; RV64SMEPMP: .attribute 5, "rv64i2p1_smepmp1p0"
+; RV64SMPMPMT: .attribute 5, "rv64i2p1_smpmpmt0p6"
 ; RV64SMRNMI: .attribute 5, "rv64i2p1_smrnmi1p0"
 ; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0"
 ; RV64ZVFBFA: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0_zve32f1p0_zve32x1p0_zvfbfa0p1_zvl32b1p0"
@@ -609,7 +613,7 @@
 ; RV64SSCTR: .attribute 5, "rv64i2p1_sscsrind1p0_ssctr1p0"
 ; RV64SDEXT: .attribute 5, "rv64i2p1_sdext1p0"
 ; RV64SDTRIG: .attribute 5, "rv64i2p1_sdtrig1p0"
-; RV64P: .attribute 5, "rv64i2p1_p0p15"
+; RV64P: .attribute 5, "rv64i2p1_p0p18"
 ; RV64ZIBI: .attribute 5, "rv64i2p1_zibi0p1"
 
 ; RVI20U32: .attribute 5, "rv32i2p1"
@@ -622,7 +626,7 @@
 ; RVA23S64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_v1p0_h1p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zifencei2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_zmmul1p0_za64rs1p0_zaamo1p0_zalrsc1p0_zawrs1p0_zfa1p0_zfhmin1p0_zca1p0_zcb1p0_zcd1p0_zcmop1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0_zvbb1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvfhmin1p0_zvkb1p0_zvkt1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_sha1p0_shcounterenw1p0_shgatpa1p0_shtvala1p0_shvsatpa1p0_shvstvala1p0_shvstvecd1p0_ssccptr1p0_sscofpmf1p0_sscounterenw1p0_ssnpm1p0_ssstateen1p0_sstc1p0_sstvala1p0_sstvecd1p0_ssu64xl1p0_supm1p0_svade1p0_svbare1p0_svinval1p0_svnapot1p0_svpbmt1p0"
 ; RVB23U64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_zmmul1p0_za64rs1p0_zaamo1p0_zalrsc1p0_zawrs1p0_zfa1p0_zca1p0_zcb1p0_zcd1p0_zcmop1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0"
 ; RVB23S64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zifencei2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_zmmul1p0_za64rs1p0_zaamo1p0_zalrsc1p0_zawrs1p0_zfa1p0_zca1p0_zcb1p0_zcd1p0_zcmop1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0_ssccptr1p0_sscofpmf1p0_sscounterenw1p0_sstc1p0_sstvala1p0_sstvecd1p0_ssu64xl1p0_svade1p0_svbare1p0_svinval1p0_svnapot1p0_svpbmt1p0"
-; RVM23U32: .attribute 5, "rv32i2p1_m2p0_b1p0_zicbop1p0_zicond1p0_zicsr2p0_zihintntl1p0_zihintpause2p0_zimop1p0_zmmul1p0_zca1p0_zcb1p0_zce1p0_zcmop1p0_zcmp1p0_zcmt1p0_zba1p0_zbb1p0_zbs1p0"
+; RVM23U32: .attribute 5, "rv32i2p1_m2p0_c2p0_b1p0_zicbop1p0_zicond1p0_zicsr2p0_zihintntl1p0_zihintpause2p0_zimop1p0_zmmul1p0_zca1p0_zcb1p0_zce1p0_zcmop1p0_zcmp1p0_zcmt1p0_zba1p0_zbb1p0_zbs1p0"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1

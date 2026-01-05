@@ -27,8 +27,8 @@ mlir::Value createBound(CIRGenFunction &cgf, CIRGen::CIRGenBuilderTy &builder,
   // Stride is always 1 in C/C++.
   mlir::Value stride = cgf.createOpenACCConstantInt(boundLoc, 64, 1);
 
-  auto bound =
-      builder.create<mlir::acc::DataBoundsOp>(boundLoc, lowerBound, upperBound);
+  auto bound = mlir::acc::DataBoundsOp::create(builder, boundLoc, lowerBound,
+                                               upperBound);
   bound.getStartIdxMutable().assign(startIdx);
   if (extent)
     bound.getExtentMutable().assign(extent);
@@ -48,8 +48,8 @@ mlir::Value CIRGenFunction::emitOpenACCIntExpr(const Expr *intExpr) {
           ? mlir::IntegerType::SignednessSemantics::Signed
           : mlir::IntegerType::SignednessSemantics::Unsigned);
 
-  auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-      exprLoc, targetType, expr);
+  auto conversionOp = mlir::UnrealizedConversionCastOp::create(
+      builder, exprLoc, targetType, expr);
   return conversionOp.getResult(0);
 }
 
@@ -59,8 +59,8 @@ mlir::Value CIRGenFunction::createOpenACCConstantInt(mlir::Location loc,
   mlir::IntegerType ty =
       mlir::IntegerType::get(&getMLIRContext(), width,
                              mlir::IntegerType::SignednessSemantics::Signless);
-  auto constOp = builder.create<mlir::arith::ConstantOp>(
-      loc, builder.getIntegerAttr(ty, value));
+  auto constOp = mlir::arith::ConstantOp::create(
+      builder, loc, builder.getIntegerAttr(ty, value));
 
   return constOp;
 }
