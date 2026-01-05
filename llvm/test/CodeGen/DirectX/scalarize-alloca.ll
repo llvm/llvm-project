@@ -48,7 +48,7 @@ define void @subtype_array_test() {
   ; SCHECK:  [[alloca_val:%.*]] = alloca [8 x [4 x i32]], align 4
   ; FCHECK:  [[alloca_val:%.*]] = alloca [32 x i32], align 4
   ; CHECK: [[tid:%.*]] = tail call i32 @llvm.dx.thread.id(i32 0)
-  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [8 x [4 x i32]], ptr [[alloca_val]], i32 0, i32 [[tid]]
+  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[alloca_val]], i32 [[tid]]
   ; FCHECK: [[flatidx_mul:%.*]] = mul i32 [[tid]], 4
   ; FCHECK: [[flatidx:%.*]] = add i32 0, [[flatidx_mul]]
   ; FCHECK: [[gep:%.*]] = getelementptr inbounds nuw [32 x i32], ptr [[alloca_val]], i32 0, i32 [[flatidx]]
@@ -64,7 +64,7 @@ define void @subtype_vector_test() {
   ; SCHECK:  [[alloca_val:%.*]] = alloca [8 x [4 x i32]], align 4
   ; FCHECK:  [[alloca_val:%.*]] = alloca [32 x i32], align 4
   ; CHECK: [[tid:%.*]] = tail call i32 @llvm.dx.thread.id(i32 0)
-  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [8 x [4 x i32]], ptr [[alloca_val]], i32 0, i32 [[tid]]
+  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[alloca_val]], i32 [[tid]]
   ; FCHECK: [[flatidx_mul:%.*]] = mul i32 [[tid]], 4
   ; FCHECK: [[flatidx:%.*]] = add i32 0, [[flatidx_mul]]
   ; FCHECK: [[gep:%.*]] = getelementptr inbounds nuw [32 x i32], ptr [[alloca_val]], i32 0, i32 [[flatidx]]
@@ -80,7 +80,7 @@ define void @subtype_scalar_test() {
   ; SCHECK:  [[alloca_val:%.*]] = alloca [8 x [4 x i32]], align 4
   ; FCHECK:  [[alloca_val:%.*]] = alloca [32 x i32], align 4
   ; CHECK: [[tid:%.*]] = tail call i32 @llvm.dx.thread.id(i32 0)
-  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [8 x [4 x i32]], ptr [[alloca_val]], i32 0, i32 0, i32 [[tid]]
+  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw i32, ptr [[alloca_val]], i32 [[tid]]
   ; FCHECK: [[flatidx_mul:%.*]] = mul i32 [[tid]], 1
   ; FCHECK: [[flatidx:%.*]] = add i32 0, [[flatidx_mul]]
   ; FCHECK: [[gep:%.*]] = getelementptr inbounds nuw [32 x i32], ptr [[alloca_val]], i32 0, i32 [[flatidx]]

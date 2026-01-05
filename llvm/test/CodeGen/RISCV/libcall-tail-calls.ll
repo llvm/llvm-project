@@ -113,8 +113,6 @@ define i64 @mul64(i64 %a, i64 %b) nounwind {
 
 ; Half libcalls:
 
-declare half @llvm.sin.f16(half)
-
 define half @sin_f16(half %a) nounwind {
 ; RV32IFD-ILP32D-LABEL: sin_f16:
 ; RV32IFD-ILP32D:       # %bb.0:
@@ -233,8 +231,6 @@ define half @sin_f16(half %a) nounwind {
 
 ; Float libcalls:
 
-declare float @llvm.sin.f32(float)
-
 define float @sin_f32(float %a) nounwind {
 ; F-ABI-ALL-LABEL: sin_f32:
 ; F-ABI-ALL:       # %bb.0:
@@ -264,8 +260,6 @@ define float @sin_f32(float %a) nounwind {
   %1 = call float @llvm.sin.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.powi.f32.i32(float, i32)
 
 define float @powi_f32(float %a, i32 %b) nounwind {
 ; RV32IFD-ILP32D-LABEL: powi_f32:
@@ -322,8 +316,6 @@ define float @powi_f32(float %a, i32 %b) nounwind {
   ret float %1
 }
 
-declare i64 @llvm.llround.i64.f32(float)
-
 define i64 @llround_f32(float %a) nounwind {
 ; RV32-ALL-LABEL: llround_f32:
 ; RV32-ALL:       # %bb.0:
@@ -363,8 +355,6 @@ define i64 @llround_f32(float %a) nounwind {
 }
 
 ; Double libcalls:
-
-declare double @llvm.sin.f64(double)
 
 define double @sin_f64(double %a) nounwind {
 ; D-ABI-ALL-LABEL: sin_f64:
@@ -413,8 +403,6 @@ define double @sin_f64(double %a) nounwind {
   %1 = call double @llvm.sin.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.powi.f64.i32(double, i32)
 
 define double @powi_f64(double %a, i32 %b) nounwind {
 ; RV32IFD-ILP32D-LABEL: powi_f64:
@@ -471,8 +459,6 @@ define double @powi_f64(double %a, i32 %b) nounwind {
   %1 = call double @llvm.powi.f64.i32(double %a, i32 %b)
   ret double %1
 }
-
-declare i64 @llvm.llround.i64.f64(double)
 
 define i64 @llround_f64(double %a) nounwind {
 ; RV32-ALL-LABEL: llround_f64:

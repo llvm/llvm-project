@@ -34,7 +34,6 @@ define <vscale x 1 x bfloat> @floor_nxv1bf16(<vscale x 1 x bfloat> %x) {
   %a = call <vscale x 1 x bfloat> @llvm.floor.nxv1bf16(<vscale x 1 x bfloat> %x)
   ret <vscale x 1 x bfloat> %a
 }
-declare <vscale x 1 x bfloat> @llvm.floor.nxv1bf16(<vscale x 1 x bfloat>)
 
 define <vscale x 2 x bfloat> @floor_nxv2bf16(<vscale x 2 x bfloat> %x) {
 ; CHECK-LABEL: floor_nxv2bf16:
@@ -58,7 +57,6 @@ define <vscale x 2 x bfloat> @floor_nxv2bf16(<vscale x 2 x bfloat> %x) {
   %a = call <vscale x 2 x bfloat> @llvm.floor.nxv2bf16(<vscale x 2 x bfloat> %x)
   ret <vscale x 2 x bfloat> %a
 }
-declare <vscale x 2 x bfloat> @llvm.floor.nxv2bf16(<vscale x 2 x bfloat>)
 
 define <vscale x 4 x bfloat> @floor_nxv4bf16(<vscale x 4 x bfloat> %x) {
 ; CHECK-LABEL: floor_nxv4bf16:
@@ -82,7 +80,6 @@ define <vscale x 4 x bfloat> @floor_nxv4bf16(<vscale x 4 x bfloat> %x) {
   %a = call <vscale x 4 x bfloat> @llvm.floor.nxv4bf16(<vscale x 4 x bfloat> %x)
   ret <vscale x 4 x bfloat> %a
 }
-declare <vscale x 4 x bfloat> @llvm.floor.nxv4bf16(<vscale x 4 x bfloat>)
 
 define <vscale x 8 x bfloat> @floor_nxv8bf16(<vscale x 8 x bfloat> %x) {
 ; CHECK-LABEL: floor_nxv8bf16:
@@ -106,7 +103,6 @@ define <vscale x 8 x bfloat> @floor_nxv8bf16(<vscale x 8 x bfloat> %x) {
   %a = call <vscale x 8 x bfloat> @llvm.floor.nxv8bf16(<vscale x 8 x bfloat> %x)
   ret <vscale x 8 x bfloat> %a
 }
-declare <vscale x 8 x bfloat> @llvm.floor.nxv8bf16(<vscale x 8 x bfloat>)
 
 define <vscale x 16 x bfloat> @floor_nxv16bf16(<vscale x 16 x bfloat> %x) {
 ; CHECK-LABEL: floor_nxv16bf16:
@@ -130,7 +126,6 @@ define <vscale x 16 x bfloat> @floor_nxv16bf16(<vscale x 16 x bfloat> %x) {
   %a = call <vscale x 16 x bfloat> @llvm.floor.nxv16bf16(<vscale x 16 x bfloat> %x)
   ret <vscale x 16 x bfloat> %a
 }
-declare <vscale x 16 x bfloat> @llvm.floor.nxv16bf16(<vscale x 16 x bfloat>)
 
 define <vscale x 32 x bfloat> @floor_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; CHECK-LABEL: floor_nxv32bf16:
@@ -168,7 +163,6 @@ define <vscale x 32 x bfloat> @floor_nxv32bf16(<vscale x 32 x bfloat> %x) {
   %a = call <vscale x 32 x bfloat> @llvm.floor.nxv32bf16(<vscale x 32 x bfloat> %x)
   ret <vscale x 32 x bfloat> %a
 }
-declare <vscale x 32 x bfloat> @llvm.floor.nxv32bf16(<vscale x 32 x bfloat>)
 
 define <vscale x 1 x half> @floor_nxv1f16(<vscale x 1 x half> %x) {
 ; ZVFH-LABEL: floor_nxv1f16:
@@ -208,7 +202,6 @@ define <vscale x 1 x half> @floor_nxv1f16(<vscale x 1 x half> %x) {
   %a = call <vscale x 1 x half> @llvm.floor.nxv1f16(<vscale x 1 x half> %x)
   ret <vscale x 1 x half> %a
 }
-declare <vscale x 1 x half> @llvm.floor.nxv1f16(<vscale x 1 x half>)
 
 define <vscale x 2 x half> @floor_nxv2f16(<vscale x 2 x half> %x) {
 ; ZVFH-LABEL: floor_nxv2f16:
@@ -248,7 +241,6 @@ define <vscale x 2 x half> @floor_nxv2f16(<vscale x 2 x half> %x) {
   %a = call <vscale x 2 x half> @llvm.floor.nxv2f16(<vscale x 2 x half> %x)
   ret <vscale x 2 x half> %a
 }
-declare <vscale x 2 x half> @llvm.floor.nxv2f16(<vscale x 2 x half>)
 
 define <vscale x 4 x half> @floor_nxv4f16(<vscale x 4 x half> %x) {
 ; ZVFH-LABEL: floor_nxv4f16:
@@ -288,7 +280,6 @@ define <vscale x 4 x half> @floor_nxv4f16(<vscale x 4 x half> %x) {
   %a = call <vscale x 4 x half> @llvm.floor.nxv4f16(<vscale x 4 x half> %x)
   ret <vscale x 4 x half> %a
 }
-declare <vscale x 4 x half> @llvm.floor.nxv4f16(<vscale x 4 x half>)
 
 define <vscale x 8 x half> @floor_nxv8f16(<vscale x 8 x half> %x) {
 ; ZVFH-LABEL: floor_nxv8f16:
@@ -328,7 +319,6 @@ define <vscale x 8 x half> @floor_nxv8f16(<vscale x 8 x half> %x) {
   %a = call <vscale x 8 x half> @llvm.floor.nxv8f16(<vscale x 8 x half> %x)
   ret <vscale x 8 x half> %a
 }
-declare <vscale x 8 x half> @llvm.floor.nxv8f16(<vscale x 8 x half>)
 
 define <vscale x 16 x half> @floor_nxv16f16(<vscale x 16 x half> %x) {
 ; ZVFH-LABEL: floor_nxv16f16:
@@ -368,7 +358,6 @@ define <vscale x 16 x half> @floor_nxv16f16(<vscale x 16 x half> %x) {
   %a = call <vscale x 16 x half> @llvm.floor.nxv16f16(<vscale x 16 x half> %x)
   ret <vscale x 16 x half> %a
 }
-declare <vscale x 16 x half> @llvm.floor.nxv16f16(<vscale x 16 x half>)
 
 define <vscale x 32 x half> @floor_nxv32f16(<vscale x 32 x half> %x) {
 ; ZVFH-LABEL: floor_nxv32f16:
@@ -422,7 +411,6 @@ define <vscale x 32 x half> @floor_nxv32f16(<vscale x 32 x half> %x) {
   %a = call <vscale x 32 x half> @llvm.floor.nxv32f16(<vscale x 32 x half> %x)
   ret <vscale x 32 x half> %a
 }
-declare <vscale x 32 x half> @llvm.floor.nxv32f16(<vscale x 32 x half>)
 
 define <vscale x 1 x float> @floor_nxv1f32(<vscale x 1 x float> %x) {
 ; CHECK-LABEL: floor_nxv1f32:
@@ -442,7 +430,6 @@ define <vscale x 1 x float> @floor_nxv1f32(<vscale x 1 x float> %x) {
   %a = call <vscale x 1 x float> @llvm.floor.nxv1f32(<vscale x 1 x float> %x)
   ret <vscale x 1 x float> %a
 }
-declare <vscale x 1 x float> @llvm.floor.nxv1f32(<vscale x 1 x float>)
 
 define <vscale x 2 x float> @floor_nxv2f32(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: floor_nxv2f32:
@@ -462,7 +449,6 @@ define <vscale x 2 x float> @floor_nxv2f32(<vscale x 2 x float> %x) {
   %a = call <vscale x 2 x float> @llvm.floor.nxv2f32(<vscale x 2 x float> %x)
   ret <vscale x 2 x float> %a
 }
-declare <vscale x 2 x float> @llvm.floor.nxv2f32(<vscale x 2 x float>)
 
 define <vscale x 4 x float> @floor_nxv4f32(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: floor_nxv4f32:
@@ -482,7 +468,6 @@ define <vscale x 4 x float> @floor_nxv4f32(<vscale x 4 x float> %x) {
   %a = call <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float> %x)
   ret <vscale x 4 x float> %a
 }
-declare <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float>)
 
 define <vscale x 8 x float> @floor_nxv8f32(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: floor_nxv8f32:
@@ -502,7 +487,6 @@ define <vscale x 8 x float> @floor_nxv8f32(<vscale x 8 x float> %x) {
   %a = call <vscale x 8 x float> @llvm.floor.nxv8f32(<vscale x 8 x float> %x)
   ret <vscale x 8 x float> %a
 }
-declare <vscale x 8 x float> @llvm.floor.nxv8f32(<vscale x 8 x float>)
 
 define <vscale x 16 x float> @floor_nxv16f32(<vscale x 16 x float> %x) {
 ; CHECK-LABEL: floor_nxv16f32:
@@ -522,7 +506,6 @@ define <vscale x 16 x float> @floor_nxv16f32(<vscale x 16 x float> %x) {
   %a = call <vscale x 16 x float> @llvm.floor.nxv16f32(<vscale x 16 x float> %x)
   ret <vscale x 16 x float> %a
 }
-declare <vscale x 16 x float> @llvm.floor.nxv16f32(<vscale x 16 x float>)
 
 define <vscale x 1 x double> @floor_nxv1f64(<vscale x 1 x double> %x) {
 ; RV32ZFH-LABEL: floor_nxv1f64:
@@ -589,7 +572,6 @@ define <vscale x 1 x double> @floor_nxv1f64(<vscale x 1 x double> %x) {
   %a = call <vscale x 1 x double> @llvm.floor.nxv1f64(<vscale x 1 x double> %x)
   ret <vscale x 1 x double> %a
 }
-declare <vscale x 1 x double> @llvm.floor.nxv1f64(<vscale x 1 x double>)
 
 define <vscale x 2 x double> @floor_nxv2f64(<vscale x 2 x double> %x) {
 ; RV32ZFH-LABEL: floor_nxv2f64:
@@ -656,7 +638,6 @@ define <vscale x 2 x double> @floor_nxv2f64(<vscale x 2 x double> %x) {
   %a = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> %x)
   ret <vscale x 2 x double> %a
 }
-declare <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double>)
 
 define <vscale x 4 x double> @floor_nxv4f64(<vscale x 4 x double> %x) {
 ; RV32ZFH-LABEL: floor_nxv4f64:
@@ -723,7 +704,6 @@ define <vscale x 4 x double> @floor_nxv4f64(<vscale x 4 x double> %x) {
   %a = call <vscale x 4 x double> @llvm.floor.nxv4f64(<vscale x 4 x double> %x)
   ret <vscale x 4 x double> %a
 }
-declare <vscale x 4 x double> @llvm.floor.nxv4f64(<vscale x 4 x double>)
 
 define <vscale x 8 x double> @floor_nxv8f64(<vscale x 8 x double> %x) {
 ; RV32ZFH-LABEL: floor_nxv8f64:
@@ -790,4 +770,3 @@ define <vscale x 8 x double> @floor_nxv8f64(<vscale x 8 x double> %x) {
   %a = call <vscale x 8 x double> @llvm.floor.nxv8f64(<vscale x 8 x double> %x)
   ret <vscale x 8 x double> %a
 }
-declare <vscale x 8 x double> @llvm.floor.nxv8f64(<vscale x 8 x double>)

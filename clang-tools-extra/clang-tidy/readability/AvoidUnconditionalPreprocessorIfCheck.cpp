@@ -17,7 +17,6 @@ namespace clang::tidy::readability {
 
 namespace {
 struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
-
   explicit AvoidUnconditionalPreprocessorIfPPCallbacks(ClangTidyCheck &Check,
                                                        Preprocessor &PP)
       : Check(Check), PP(PP) {}

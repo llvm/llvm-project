@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_cosh.h>
-#include <clc/opencl/math/cosh.h>
 
 #define __CLC_FUNCTION cosh
 #define __CLC_BODY <clc/shared/unary_def.inc>

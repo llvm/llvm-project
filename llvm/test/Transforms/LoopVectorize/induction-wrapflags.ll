@@ -68,3 +68,45 @@ loop:
 exit:
   ret void
 }
+
+define i32 @induction_trunc_wrapflags(ptr %p) {
+; CHECK-LABEL: define i32 @induction_trunc_wrapflags(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 -72, i8 -68, i8 -64, i8 -60>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 326, [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -3
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[VEC_IND]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i8> [[REVERSE]], ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 16)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 324
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 326, %entry ], [ %iv.next, %loop ]
+  %ind = phi i64 [ -72, %entry ], [ %ind.next, %loop ]
+  %trunc = trunc i64 %ind to i8
+  %gep.p.iv = getelementptr i8, ptr %p, i64 %iv
+  store i8 %trunc, ptr %gep.p.iv, align 1
+  %ind.next = add nsw i64 %ind, 4
+  %iv.next = add i64 %iv, -1
+  %ec = icmp eq i64 %iv, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 0
+}

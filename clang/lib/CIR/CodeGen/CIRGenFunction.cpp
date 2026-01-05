@@ -16,6 +16,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -422,28 +423,35 @@ cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
   return nullptr;
 }
 
-void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
-                                   cir::FuncOp fn, cir::FuncType funcType,
-                                   FunctionArgList args, SourceLocation loc,
-                                   SourceLocation startLoc) {
-  assert(!curFn &&
-         "CIRGenFunction can only be used for one function at a time");
+/// An argument came in as a promoted argument; demote it back to its
+/// declared type.
+static mlir::Value emitArgumentDemotion(CIRGenFunction &cgf, const VarDecl *var,
+                                        mlir::Value value) {
+  mlir::Type ty = cgf.convertType(var->getType());
 
-  curFn = fn;
+  // This can happen with promotions that actually don't change the
+  // underlying type, like the enum promotions.
+  if (value.getType() == ty)
+    return value;
 
-  const Decl *d = gd.getDecl();
+  assert((mlir::isa<cir::IntType>(ty) || cir::isAnyFloatingPointType(ty)) &&
+         "unexpected promotion type");
 
-  didCallStackSave = false;
-  curCodeDecl = d;
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
-  curFuncDecl = d->getNonClosureContext();
+  if (mlir::isa<cir::IntType>(ty))
+    return cgf.getBuilder().CIRBaseBuilderTy::createIntCast(value, ty);
 
-  prologueCleanupDepth = ehStack.stable_begin();
+  return cgf.getBuilder().createFloatingCast(value, ty);
+}
 
-  mlir::Block *entryBB = &fn.getBlocks().front();
-  builder.setInsertionPointToStart(entryBB);
+void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
+                                        mlir::Block *entryBB,
+                                        const FunctionDecl *fd,
+                                        SourceLocation bodyBeginLoc) {
+  // Naked functions don't have prologues.
+  if (fd && fd->hasAttr<NakedAttr>()) {
+    cgm.errorNYI(bodyBeginLoc, "naked function decl");
+  }
 
-  // TODO(cir): this should live in `emitFunctionProlog
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
     const VarDecl *paramVar = std::get<0>(nameValue);
@@ -466,20 +474,64 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
     assert(!cir::MissingFeatures::constructABIArgDirectExtend());
     if (isPromoted)
-      cgm.errorNYI(fd->getSourceRange(), "Function argument demotion");
+      paramVal = emitArgumentDemotion(*this, paramVar, paramVal);
 
     // Location of the store to the param storage tracked as beginning of
     // the function body.
-    mlir::Location fnBodyBegin = getLoc(fd->getBody()->getBeginLoc());
+    mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
   }
   assert(builder.getInsertionBlock() && "Should be valid");
+}
+
+void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
+                                   cir::FuncOp fn, cir::FuncType funcType,
+                                   FunctionArgList args, SourceLocation loc,
+                                   SourceLocation startLoc) {
+  assert(!curFn &&
+         "CIRGenFunction can only be used for one function at a time");
+
+  curFn = fn;
+
+  const Decl *d = gd.getDecl();
+
+  didCallStackSave = false;
+  curCodeDecl = d;
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
+  curFuncDecl = d->getNonClosureContext();
+
+  prologueCleanupDepth = ehStack.stable_begin();
+
+  mlir::Block *entryBB = &fn.getBlocks().front();
+  builder.setInsertionPointToStart(entryBB);
+
+  // Determine the function body begin location for the prolog.
+  // If fd is null or has no body, use startLoc as fallback.
+  SourceLocation bodyBeginLoc = startLoc;
+  if (fd) {
+    if (Stmt *body = fd->getBody())
+      bodyBeginLoc = body->getBeginLoc();
+    else
+      bodyBeginLoc = fd->getLocation();
+  }
+
+  emitFunctionProlog(args, entryBB, fd, bodyBeginLoc);
 
   // When the current function is not void, create an address to store the
   // result value.
-  if (!returnType->isVoidType())
-    emitAndUpdateRetAlloca(returnType, getLoc(fd->getBody()->getEndLoc()),
+  if (!returnType->isVoidType()) {
+    // Determine the function body end location.
+    // If fd is null or has no body, use loc as fallback.
+    SourceLocation bodyEndLoc = loc;
+    if (fd) {
+      if (Stmt *body = fd->getBody())
+        bodyEndLoc = body->getEndLoc();
+      else
+        bodyEndLoc = fd->getLocation();
+    }
+    emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+  }
 
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
       cast<CXXMethodDecl>(d)->isInstance()) {
@@ -531,7 +583,48 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   }
 }
 
+void CIRGenFunction::resolveBlockAddresses() {
+  for (cir::BlockAddressOp &blockAddress : cgm.unresolvedBlockAddressToLabel) {
+    cir::LabelOp labelOp =
+        cgm.lookupBlockAddressInfo(blockAddress.getBlockAddrInfo());
+    assert(labelOp && "expected cir.labelOp to already be emitted");
+    cgm.updateResolvedBlockAddress(blockAddress, labelOp);
+  }
+  cgm.unresolvedBlockAddressToLabel.clear();
+}
+
+void CIRGenFunction::finishIndirectBranch() {
+  if (!indirectGotoBlock)
+    return;
+  llvm::SmallVector<mlir::Block *> succesors;
+  llvm::SmallVector<mlir::ValueRange> rangeOperands;
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(indirectGotoBlock);
+  for (auto &[blockAdd, labelOp] : cgm.blockAddressToLabel) {
+    succesors.push_back(labelOp->getBlock());
+    rangeOperands.push_back(labelOp->getBlock()->getArguments());
+  }
+  cir::IndirectBrOp::create(builder, builder.getUnknownLoc(),
+                            indirectGotoBlock->getArgument(0), false,
+                            rangeOperands, succesors);
+  cgm.blockAddressToLabel.clear();
+}
+
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {
+  // Resolve block address-to-label mappings, then emit the indirect branch
+  // with the corresponding targets.
+  resolveBlockAddresses();
+  finishIndirectBranch();
+
+  // If a label address was taken but no indirect goto was used, we can't remove
+  // the block argument here. Instead, we mark the 'indirectbr' op
+  // as poison so that the cleanup can be deferred to lowering, since the
+  // verifier doesn't allow the 'indirectbr' target address to be null.
+  if (indirectGotoBlock && indirectGotoBlock->hasNoPredecessors()) {
+    auto indrBr = cast<cir::IndirectBrOp>(indirectGotoBlock->front());
+    indrBr.setPoison(true);
+  }
+
   // Pop any cleanups that might have been associated with the
   // parameters.  Do this in whatever block we're currently in; it's
   // important to do this before we enter the return block or return
@@ -570,7 +663,7 @@ static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
 
 cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                                          cir::FuncType funcType) {
-  const auto funcDecl = cast<FunctionDecl>(gd.getDecl());
+  const auto *funcDecl = cast<FunctionDecl>(gd.getDecl());
   curGD = gd;
 
   if (funcDecl->isInlineBuiltinDeclaration()) {
@@ -640,6 +733,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   {
     LexicalScope lexScope(*this, fusedLoc, entryBB);
 
+    // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
     // Save parameters for coroutine function.
@@ -666,6 +760,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       // copy-constructors.
       emitImplicitAssignmentOperatorBody(args);
     } else if (body) {
+      // Emit standard function body.
       if (mlir::failed(emitFunctionBody(body))) {
         return nullptr;
       }
@@ -692,6 +787,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   assert((cgm.getTarget().getCXXABI().hasConstructorVariants() ||
           ctorType == Ctor_Complete) &&
          "can only generate complete ctor for this ABI");
+
+  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), ctor);
 
   if (ctorType == Ctor_Complete && isConstructorDelegationValid(ctor) &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
@@ -730,6 +827,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
 void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
   CXXDtorType dtorType = curGD.getDtorType();
+
+  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), dtor);
 
   // For an abstract class, non-base destructors are never used (and can't
   // be emitted in general, because vbase dtors may not have been validated
@@ -1083,6 +1182,17 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
 }
 
+void CIRGenFunction::instantiateIndirectGotoBlock() {
+  // If we already made the indirect branch for indirect goto, return its block.
+  if (indirectGotoBlock)
+    return;
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  indirectGotoBlock =
+      builder.createBlock(builder.getBlock()->getParent(), {}, {voidPtrTy},
+                          {builder.getUnknownLoc()});
+}
+
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
     mlir::Value ptrValue, QualType ty, SourceLocation loc,
     SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
@@ -1133,6 +1243,14 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
 
   assert(numElements && "Undefined elements number");
   return {numElements, elementType};
+}
+
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLAElements1D(const VariableArrayType *vla) {
+  mlir::Value vlaSize = vlaSizeMap[vla->getSizeExpr()];
+  assert(vlaSize && "no size for VLA!");
+  assert(vlaSize.getType() == sizeTy);
+  return {vlaSize, vla->getElementType()};
 }
 
 // TODO(cir): Most of this function can be shared between CIRGen

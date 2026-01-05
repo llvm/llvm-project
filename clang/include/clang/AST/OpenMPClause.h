@@ -91,8 +91,7 @@ public:
 
   child_range children();
   const_child_range children() const {
-    auto Children = const_cast<OMPClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPClause *>(this)->children();
   }
 
   /// Get the iterator range for the expressions used in the clauses. Used
@@ -100,8 +99,7 @@ public:
   /// runtime before entering the construct.
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPClause *>(this)->children();
   }
 
   static bool classof(const OMPClause *) { return true; }
@@ -315,12 +313,8 @@ public:
   unsigned varlist_size() const { return NumVars; }
   bool varlist_empty() const { return NumVars == 0; }
 
-  varlist_range varlist() {
-    return varlist_range(varlist_begin(), varlist_end());
-  }
-  varlist_const_range varlist() const {
-    return varlist_const_range(varlist_begin(), varlist_end());
-  }
+  varlist_range varlist() { return getVarRefs(); }
+  varlist_const_range varlist() const { return getVarRefs(); }
 
   varlist_iterator varlist_begin() { return getVarRefs().begin(); }
   varlist_iterator varlist_end() { return getVarRefs().end(); }
@@ -650,8 +644,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAllocateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAllocateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -758,8 +751,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPIfClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPIfClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -808,8 +800,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPFinalClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFinalClause *>(this)->used_children();
   }
 };
 /// This represents 'num_threads' clause in the '#pragma omp ...'
@@ -2256,8 +2247,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPScheduleClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPScheduleClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -2426,8 +2416,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNowaitClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNowaitClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -3411,14 +3400,10 @@ public:
   using private_copies_const_range =
       llvm::iterator_range<private_copies_const_iterator>;
 
-  private_copies_range private_copies() {
-    return private_copies_range(getPrivateCopies().begin(),
-                                getPrivateCopies().end());
-  }
+  private_copies_range private_copies() { return getPrivateCopies(); }
 
   private_copies_const_range private_copies() const {
-    return private_copies_const_range(getPrivateCopies().begin(),
-                                      getPrivateCopies().end());
+    return getPrivateCopies();
   }
 
   child_range children() {
@@ -3427,8 +3412,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPPrivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPPrivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3539,13 +3523,9 @@ public:
   using private_copies_const_range =
       llvm::iterator_range<private_copies_const_iterator>;
 
-  private_copies_range private_copies() {
-    return private_copies_range(getPrivateCopies().begin(),
-                                getPrivateCopies().end());
-  }
+  private_copies_range private_copies() { return getPrivateCopies(); }
   private_copies_const_range private_copies() const {
-    return private_copies_const_range(getPrivateCopies().begin(),
-                                      getPrivateCopies().end());
+    return getPrivateCopies();
   }
 
   using inits_iterator = MutableArrayRef<Expr *>::iterator;
@@ -3553,12 +3533,8 @@ public:
   using inits_range = llvm::iterator_range<inits_iterator>;
   using inits_const_range = llvm::iterator_range<inits_const_iterator>;
 
-  inits_range inits() {
-    return inits_range(getInits().begin(), getInits().end());
-  }
-  inits_const_range inits() const {
-    return inits_const_range(getInits().begin(), getInits().end());
-  }
+  inits_range inits() { return getInits(); }
+  inits_const_range inits() const { return getInits(); }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -3566,8 +3542,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFirstprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFirstprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3575,8 +3550,7 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPFirstprivateClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFirstprivateClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -3762,44 +3736,23 @@ public:
   /// copies of original lastprivate variables.
   void setPrivateCopies(ArrayRef<Expr *> PrivateCopies);
 
-  helper_expr_const_range private_copies() const {
-    return helper_expr_const_range(getPrivateCopies().begin(),
-                                   getPrivateCopies().end());
-  }
+  helper_expr_const_range private_copies() const { return getPrivateCopies(); }
 
-  helper_expr_range private_copies() {
-    return helper_expr_range(getPrivateCopies().begin(),
-                             getPrivateCopies().end());
-  }
+  helper_expr_range private_copies() { return getPrivateCopies(); }
 
-  helper_expr_const_range source_exprs() const {
-    return helper_expr_const_range(getSourceExprs().begin(),
-                                   getSourceExprs().end());
-  }
+  helper_expr_const_range source_exprs() const { return getSourceExprs(); }
 
-  helper_expr_range source_exprs() {
-    return helper_expr_range(getSourceExprs().begin(), getSourceExprs().end());
-  }
+  helper_expr_range source_exprs() { return getSourceExprs(); }
 
   helper_expr_const_range destination_exprs() const {
-    return helper_expr_const_range(getDestinationExprs().begin(),
-                                   getDestinationExprs().end());
+    return getDestinationExprs();
   }
 
-  helper_expr_range destination_exprs() {
-    return helper_expr_range(getDestinationExprs().begin(),
-                             getDestinationExprs().end());
-  }
+  helper_expr_range destination_exprs() { return getDestinationExprs(); }
 
-  helper_expr_const_range assignment_ops() const {
-    return helper_expr_const_range(getAssignmentOps().begin(),
-                                   getAssignmentOps().end());
-  }
+  helper_expr_const_range assignment_ops() const { return getAssignmentOps(); }
 
-  helper_expr_range assignment_ops() {
-    return helper_expr_range(getAssignmentOps().begin(),
-                             getAssignmentOps().end());
-  }
+  helper_expr_range assignment_ops() { return getAssignmentOps(); }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -3807,8 +3760,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPLastprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLastprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -3879,8 +3831,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPSharedClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPSharedClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4190,79 +4141,45 @@ public:
   using helper_flag_const_range =
       llvm::iterator_range<helper_flag_const_iterator>;
 
-  helper_expr_const_range privates() const {
-    return helper_expr_const_range(getPrivates().begin(), getPrivates().end());
-  }
+  helper_expr_const_range privates() const { return getPrivates(); }
 
-  helper_expr_range privates() {
-    return helper_expr_range(getPrivates().begin(), getPrivates().end());
-  }
+  helper_expr_range privates() { return getPrivates(); }
 
-  helper_expr_const_range lhs_exprs() const {
-    return helper_expr_const_range(getLHSExprs().begin(), getLHSExprs().end());
-  }
+  helper_expr_const_range lhs_exprs() const { return getLHSExprs(); }
 
-  helper_expr_range lhs_exprs() {
-    return helper_expr_range(getLHSExprs().begin(), getLHSExprs().end());
-  }
+  helper_expr_range lhs_exprs() { return getLHSExprs(); }
 
-  helper_expr_const_range rhs_exprs() const {
-    return helper_expr_const_range(getRHSExprs().begin(), getRHSExprs().end());
-  }
+  helper_expr_const_range rhs_exprs() const { return getRHSExprs(); }
 
-  helper_expr_range rhs_exprs() {
-    return helper_expr_range(getRHSExprs().begin(), getRHSExprs().end());
-  }
+  helper_expr_range rhs_exprs() { return getRHSExprs(); }
 
   helper_flag_const_range private_var_reduction_flags() const {
-    return helper_flag_const_range(getPrivateVariableReductionFlags().begin(),
-                                   getPrivateVariableReductionFlags().end());
+    return getPrivateVariableReductionFlags();
   }
 
   helper_flag_range private_var_reduction_flags() {
-    return helper_flag_range(getPrivateVariableReductionFlags().begin(),
-                             getPrivateVariableReductionFlags().end());
+    return getPrivateVariableReductionFlags();
   }
 
-  helper_expr_const_range reduction_ops() const {
-    return helper_expr_const_range(getReductionOps().begin(),
-                                   getReductionOps().end());
-  }
+  helper_expr_const_range reduction_ops() const { return getReductionOps(); }
 
-  helper_expr_range reduction_ops() {
-    return helper_expr_range(getReductionOps().begin(),
-                             getReductionOps().end());
-  }
+  helper_expr_range reduction_ops() { return getReductionOps(); }
 
-  helper_expr_const_range copy_ops() const {
-    return helper_expr_const_range(getInscanCopyOps().begin(),
-                                   getInscanCopyOps().end());
-  }
+  helper_expr_const_range copy_ops() const { return getInscanCopyOps(); }
 
-  helper_expr_range copy_ops() {
-    return helper_expr_range(getInscanCopyOps().begin(),
-                             getInscanCopyOps().end());
-  }
+  helper_expr_range copy_ops() { return getInscanCopyOps(); }
 
   helper_expr_const_range copy_array_temps() const {
-    return helper_expr_const_range(getInscanCopyArrayTemps().begin(),
-                                   getInscanCopyArrayTemps().end());
+    return getInscanCopyArrayTemps();
   }
 
-  helper_expr_range copy_array_temps() {
-    return helper_expr_range(getInscanCopyArrayTemps().begin(),
-                             getInscanCopyArrayTemps().end());
-  }
+  helper_expr_range copy_array_temps() { return getInscanCopyArrayTemps(); }
 
   helper_expr_const_range copy_array_elems() const {
-    return helper_expr_const_range(getInscanCopyArrayElems().begin(),
-                                   getInscanCopyArrayElems().end());
+    return getInscanCopyArrayElems();
   }
 
-  helper_expr_range copy_array_elems() {
-    return helper_expr_range(getInscanCopyArrayElems().begin(),
-                             getInscanCopyArrayElems().end());
-  }
+  helper_expr_range copy_array_elems() { return getInscanCopyArrayElems(); }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -4270,8 +4187,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4279,8 +4195,7 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPReductionClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPReductionClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -4464,39 +4379,21 @@ public:
   using helper_expr_const_range =
       llvm::iterator_range<helper_expr_const_iterator>;
 
-  helper_expr_const_range privates() const {
-    return helper_expr_const_range(getPrivates().begin(), getPrivates().end());
-  }
+  helper_expr_const_range privates() const { return getPrivates(); }
 
-  helper_expr_range privates() {
-    return helper_expr_range(getPrivates().begin(), getPrivates().end());
-  }
+  helper_expr_range privates() { return getPrivates(); }
 
-  helper_expr_const_range lhs_exprs() const {
-    return helper_expr_const_range(getLHSExprs().begin(), getLHSExprs().end());
-  }
+  helper_expr_const_range lhs_exprs() const { return getLHSExprs(); }
 
-  helper_expr_range lhs_exprs() {
-    return helper_expr_range(getLHSExprs().begin(), getLHSExprs().end());
-  }
+  helper_expr_range lhs_exprs() { return getLHSExprs(); }
 
-  helper_expr_const_range rhs_exprs() const {
-    return helper_expr_const_range(getRHSExprs().begin(), getRHSExprs().end());
-  }
+  helper_expr_const_range rhs_exprs() const { return getRHSExprs(); }
 
-  helper_expr_range rhs_exprs() {
-    return helper_expr_range(getRHSExprs().begin(), getRHSExprs().end());
-  }
+  helper_expr_range rhs_exprs() { return getRHSExprs(); }
 
-  helper_expr_const_range reduction_ops() const {
-    return helper_expr_const_range(getReductionOps().begin(),
-                                   getReductionOps().end());
-  }
+  helper_expr_const_range reduction_ops() const { return getReductionOps(); }
 
-  helper_expr_range reduction_ops() {
-    return helper_expr_range(getReductionOps().begin(),
-                             getReductionOps().end());
-  }
+  helper_expr_range reduction_ops() { return getReductionOps(); }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -4504,8 +4401,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPTaskReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPTaskReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4709,48 +4605,28 @@ public:
   using helper_expr_const_range =
       llvm::iterator_range<helper_expr_const_iterator>;
 
-  helper_expr_const_range privates() const {
-    return helper_expr_const_range(getPrivates().begin(), getPrivates().end());
-  }
+  helper_expr_const_range privates() const { return getPrivates(); }
 
-  helper_expr_range privates() {
-    return helper_expr_range(getPrivates().begin(), getPrivates().end());
-  }
+  helper_expr_range privates() { return getPrivates(); }
 
-  helper_expr_const_range lhs_exprs() const {
-    return helper_expr_const_range(getLHSExprs().begin(), getLHSExprs().end());
-  }
+  helper_expr_const_range lhs_exprs() const { return getLHSExprs(); }
 
-  helper_expr_range lhs_exprs() {
-    return helper_expr_range(getLHSExprs().begin(), getLHSExprs().end());
-  }
+  helper_expr_range lhs_exprs() { return getLHSExprs(); }
 
-  helper_expr_const_range rhs_exprs() const {
-    return helper_expr_const_range(getRHSExprs().begin(), getRHSExprs().end());
-  }
+  helper_expr_const_range rhs_exprs() const { return getRHSExprs(); }
 
-  helper_expr_range rhs_exprs() {
-    return helper_expr_range(getRHSExprs().begin(), getRHSExprs().end());
-  }
+  helper_expr_range rhs_exprs() { return getRHSExprs(); }
 
-  helper_expr_const_range reduction_ops() const {
-    return helper_expr_const_range(getReductionOps().begin(),
-                                   getReductionOps().end());
-  }
+  helper_expr_const_range reduction_ops() const { return getReductionOps(); }
 
-  helper_expr_range reduction_ops() {
-    return helper_expr_range(getReductionOps().begin(),
-                             getReductionOps().end());
-  }
+  helper_expr_range reduction_ops() { return getReductionOps(); }
 
   helper_expr_const_range taskgroup_descriptors() const {
-    return helper_expr_const_range(getTaskgroupDescriptors().begin(),
-                                   getTaskgroupDescriptors().end());
+    return getTaskgroupDescriptors();
   }
 
   helper_expr_range taskgroup_descriptors() {
-    return helper_expr_range(getTaskgroupDescriptors().begin(),
-                             getTaskgroupDescriptors().end());
+    return getTaskgroupDescriptors();
   }
 
   child_range children() {
@@ -4759,8 +4635,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInReductionClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInReductionClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -4981,52 +4856,36 @@ public:
   using privates_range = llvm::iterator_range<privates_iterator>;
   using privates_const_range = llvm::iterator_range<privates_const_iterator>;
 
-  privates_range privates() {
-    return privates_range(getPrivates().begin(), getPrivates().end());
-  }
+  privates_range privates() { return getPrivates(); }
 
-  privates_const_range privates() const {
-    return privates_const_range(getPrivates().begin(), getPrivates().end());
-  }
+  privates_const_range privates() const { return getPrivates(); }
 
   using inits_iterator = MutableArrayRef<Expr *>::iterator;
   using inits_const_iterator = ArrayRef<const Expr *>::iterator;
   using inits_range = llvm::iterator_range<inits_iterator>;
   using inits_const_range = llvm::iterator_range<inits_const_iterator>;
 
-  inits_range inits() {
-    return inits_range(getInits().begin(), getInits().end());
-  }
+  inits_range inits() { return getInits(); }
 
-  inits_const_range inits() const {
-    return inits_const_range(getInits().begin(), getInits().end());
-  }
+  inits_const_range inits() const { return getInits(); }
 
   using updates_iterator = MutableArrayRef<Expr *>::iterator;
   using updates_const_iterator = ArrayRef<const Expr *>::iterator;
   using updates_range = llvm::iterator_range<updates_iterator>;
   using updates_const_range = llvm::iterator_range<updates_const_iterator>;
 
-  updates_range updates() {
-    return updates_range(getUpdates().begin(), getUpdates().end());
-  }
+  updates_range updates() { return getUpdates(); }
 
-  updates_const_range updates() const {
-    return updates_const_range(getUpdates().begin(), getUpdates().end());
-  }
+  updates_const_range updates() const { return getUpdates(); }
 
   using finals_iterator = MutableArrayRef<Expr *>::iterator;
   using finals_const_iterator = ArrayRef<const Expr *>::iterator;
   using finals_range = llvm::iterator_range<finals_iterator>;
   using finals_const_range = llvm::iterator_range<finals_const_iterator>;
 
-  finals_range finals() {
-    return finals_range(getFinals().begin(), getFinals().end());
-  }
+  finals_range finals() { return getFinals(); }
 
-  finals_const_range finals() const {
-    return finals_const_range(getFinals().begin(), getFinals().end());
-  }
+  finals_const_range finals() const { return getFinals(); }
 
   using used_expressions_iterator = MutableArrayRef<Expr *>::iterator;
   using used_expressions_const_iterator = ArrayRef<const Expr *>::iterator;
@@ -5049,15 +4908,13 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPLinearClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLinearClause *>(this)->children();
   }
 
   child_range used_children();
 
   const_child_range used_children() const {
-    auto Children = const_cast<OMPLinearClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPLinearClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -5148,8 +5005,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAlignedClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAlignedClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5289,34 +5145,19 @@ public:
   using helper_expr_const_range =
       llvm::iterator_range<helper_expr_const_iterator>;
 
-  helper_expr_const_range source_exprs() const {
-    return helper_expr_const_range(getSourceExprs().begin(),
-                                   getSourceExprs().end());
-  }
+  helper_expr_const_range source_exprs() const { return getSourceExprs(); }
 
-  helper_expr_range source_exprs() {
-    return helper_expr_range(getSourceExprs().begin(), getSourceExprs().end());
-  }
+  helper_expr_range source_exprs() { return getSourceExprs(); }
 
   helper_expr_const_range destination_exprs() const {
-    return helper_expr_const_range(getDestinationExprs().begin(),
-                                   getDestinationExprs().end());
+    return getDestinationExprs();
   }
 
-  helper_expr_range destination_exprs() {
-    return helper_expr_range(getDestinationExprs().begin(),
-                             getDestinationExprs().end());
-  }
+  helper_expr_range destination_exprs() { return getDestinationExprs(); }
 
-  helper_expr_const_range assignment_ops() const {
-    return helper_expr_const_range(getAssignmentOps().begin(),
-                                   getAssignmentOps().end());
-  }
+  helper_expr_const_range assignment_ops() const { return getAssignmentOps(); }
 
-  helper_expr_range assignment_ops() {
-    return helper_expr_range(getAssignmentOps().begin(),
-                             getAssignmentOps().end());
-  }
+  helper_expr_range assignment_ops() { return getAssignmentOps(); }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -5324,8 +5165,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPCopyinClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPCopyinClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5453,34 +5293,19 @@ public:
   using helper_expr_const_range =
       llvm::iterator_range<helper_expr_const_iterator>;
 
-  helper_expr_const_range source_exprs() const {
-    return helper_expr_const_range(getSourceExprs().begin(),
-                                   getSourceExprs().end());
-  }
+  helper_expr_const_range source_exprs() const { return getSourceExprs(); }
 
-  helper_expr_range source_exprs() {
-    return helper_expr_range(getSourceExprs().begin(), getSourceExprs().end());
-  }
+  helper_expr_range source_exprs() { return getSourceExprs(); }
 
   helper_expr_const_range destination_exprs() const {
-    return helper_expr_const_range(getDestinationExprs().begin(),
-                                   getDestinationExprs().end());
+    return getDestinationExprs();
   }
 
-  helper_expr_range destination_exprs() {
-    return helper_expr_range(getDestinationExprs().begin(),
-                             getDestinationExprs().end());
-  }
+  helper_expr_range destination_exprs() { return getDestinationExprs(); }
 
-  helper_expr_const_range assignment_ops() const {
-    return helper_expr_const_range(getAssignmentOps().begin(),
-                                   getAssignmentOps().end());
-  }
+  helper_expr_const_range assignment_ops() const { return getAssignmentOps(); }
 
-  helper_expr_range assignment_ops() {
-    return helper_expr_range(getAssignmentOps().begin(),
-                             getAssignmentOps().end());
-  }
+  helper_expr_range assignment_ops() { return getAssignmentOps(); }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -5488,8 +5313,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPCopyprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPCopyprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5565,8 +5389,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFlushClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFlushClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5652,8 +5475,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDepobjClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDepobjClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -5806,8 +5628,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDependClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDependClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -6656,18 +6477,14 @@ public:
   using const_all_decls_iterator = ArrayRef<ValueDecl *>::iterator;
   using const_all_decls_range = llvm::iterator_range<const_all_decls_iterator>;
 
-  const_all_decls_range all_decls() const {
-    auto A = getUniqueDeclsRef();
-    return const_all_decls_range(A.begin(), A.end());
-  }
+  const_all_decls_range all_decls() const { return getUniqueDeclsRef(); }
 
   using const_all_num_lists_iterator = ArrayRef<unsigned>::iterator;
   using const_all_num_lists_range =
       llvm::iterator_range<const_all_num_lists_iterator>;
 
   const_all_num_lists_range all_num_lists() const {
-    auto A = getDeclNumListsRef();
-    return const_all_num_lists_range(A.begin(), A.end());
+    return getDeclNumListsRef();
   }
 
   using const_all_lists_sizes_iterator = ArrayRef<unsigned>::iterator;
@@ -6675,8 +6492,7 @@ public:
       llvm::iterator_range<const_all_lists_sizes_iterator>;
 
   const_all_lists_sizes_range all_lists_sizes() const {
-    auto A = getComponentListSizesRef();
-    return const_all_lists_sizes_range(A.begin(), A.end());
+    return getComponentListSizesRef();
   }
 
   using const_all_components_iterator = ArrayRef<MappableComponent>::iterator;
@@ -6684,8 +6500,7 @@ public:
       llvm::iterator_range<const_all_components_iterator>;
 
   const_all_components_range all_components() const {
-    auto A = getComponentsRef();
-    return const_all_components_range(A.begin(), A.end());
+    return getComponentsRef();
   }
 
   using mapperlist_iterator = MutableArrayRef<Expr *>::iterator;
@@ -6954,8 +6769,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPMapClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPMapClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -6965,8 +6779,7 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
   const_child_range used_children() const {
-    auto Children = const_cast<OMPMapClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPMapClause *>(this)->used_children();
   }
 
 
@@ -7052,8 +6865,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPNumTeamsClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNumTeamsClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7146,8 +6958,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPThreadLimitClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPThreadLimitClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7227,8 +7038,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPPriorityClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPPriorityClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7319,8 +7129,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPGrainsizeClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPGrainsizeClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7451,8 +7260,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNumTasksClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNumTasksClause *>(this)->used_children();
   }
 
   static bool classof(const OMPClause *T) {
@@ -7626,8 +7434,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDistScheduleClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDistScheduleClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7775,7 +7582,8 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
 
   /// Motion-modifiers for the 'to' clause.
   OpenMPMotionModifierKind MotionModifiers[NumberOfOMPMotionModifiers] = {
-      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown};
+      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown,
+      OMPC_MOTION_MODIFIER_unknown};
 
   /// Location of motion-modifiers for the 'to' clause.
   SourceLocation MotionModifiersLoc[NumberOfOMPMotionModifiers];
@@ -7847,6 +7655,9 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
     MotionModifiersLoc[I] = TLoc;
   }
 
+  void setIteratorModifier(Expr *IteratorModifier) {
+    getTrailingObjects<Expr *>()[2 * varlist_size()] = IteratorModifier;
+  }
   /// Set colon location.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
@@ -7855,7 +7666,7 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
     // There are varlist_size() of expressions, and varlist_size() of
     // user-defined mappers.
-    return 2 * varlist_size();
+    return 2 * varlist_size() + 1;
   }
   size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
     return getUniqueDeclarationsNum();
@@ -7881,15 +7692,14 @@ public:
   /// \param UDMQualifierLoc C++ nested name specifier for the associated
   /// user-defined mapper.
   /// \param MapperId The identifier of associated user-defined mapper.
-  static OMPToClause *Create(const ASTContext &C, const OMPVarListLocTy &Locs,
-                             ArrayRef<Expr *> Vars,
-                             ArrayRef<ValueDecl *> Declarations,
-                             MappableExprComponentListsRef ComponentLists,
-                             ArrayRef<Expr *> UDMapperRefs,
-                             ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-                             ArrayRef<SourceLocation> MotionModifiersLoc,
-                             NestedNameSpecifierLoc UDMQualifierLoc,
-                             DeclarationNameInfo MapperId);
+  static OMPToClause *
+  Create(const ASTContext &C, const OMPVarListLocTy &Locs,
+         ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
+         MappableExprComponentListsRef ComponentLists,
+         ArrayRef<Expr *> UDMapperRefs, Expr *IteratorModifier,
+         ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+         ArrayRef<SourceLocation> MotionModifiersLoc,
+         NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -7910,7 +7720,9 @@ public:
            "Requested modifier exceeds the total number of modifiers.");
     return MotionModifiers[Cnt];
   }
-
+  Expr *getIteratorModifier() const {
+    return getTrailingObjects<Expr *>()[2 * varlist_size()];
+  }
   /// Fetches the motion-modifier location at 'Cnt' index of array of modifiers'
   /// locations.
   ///
@@ -7940,8 +7752,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPToClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPToClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -7976,7 +7787,8 @@ class OMPFromClause final
 
   /// Motion-modifiers for the 'from' clause.
   OpenMPMotionModifierKind MotionModifiers[NumberOfOMPMotionModifiers] = {
-      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown};
+      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown,
+      OMPC_MOTION_MODIFIER_unknown};
 
   /// Location of motion-modifiers for the 'from' clause.
   SourceLocation MotionModifiersLoc[NumberOfOMPMotionModifiers];
@@ -8037,7 +7849,9 @@ class OMPFromClause final
            "Unexpected index to store motion modifier, exceeds array size.");
     MotionModifiers[I] = T;
   }
-
+  void setIteratorModifier(Expr *IteratorModifier) {
+    getTrailingObjects<Expr *>()[2 * varlist_size()] = IteratorModifier;
+  }
   /// Set location for the motion-modifier.
   ///
   /// \param I index for motion-modifier location.
@@ -8056,7 +7870,7 @@ class OMPFromClause final
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
     // There are varlist_size() of expressions, and varlist_size() of
     // user-defined mappers.
-    return 2 * varlist_size();
+    return 2 * varlist_size() + 1;
   }
   size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
     return getUniqueDeclarationsNum();
@@ -8086,7 +7900,7 @@ public:
   Create(const ASTContext &C, const OMPVarListLocTy &Locs,
          ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
          MappableExprComponentListsRef ComponentLists,
-         ArrayRef<Expr *> UDMapperRefs,
+         ArrayRef<Expr *> UDMapperRefs, Expr *IteratorExpr,
          ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
          ArrayRef<SourceLocation> MotionModifiersLoc,
          NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId);
@@ -8110,7 +7924,9 @@ public:
            "Requested modifier exceeds the total number of modifiers.");
     return MotionModifiers[Cnt];
   }
-
+  Expr *getIteratorModifier() const {
+    return getTrailingObjects<Expr *>()[2 * varlist_size()];
+  }
   /// Fetches the motion-modifier location at 'Cnt' index of array of modifiers'
   /// locations.
   ///
@@ -8140,8 +7956,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPFromClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPFromClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8275,14 +8090,10 @@ public:
   using private_copies_const_range =
       llvm::iterator_range<private_copies_const_iterator>;
 
-  private_copies_range private_copies() {
-    return private_copies_range(getPrivateCopies().begin(),
-                                getPrivateCopies().end());
-  }
+  private_copies_range private_copies() { return getPrivateCopies(); }
 
   private_copies_const_range private_copies() const {
-    return private_copies_const_range(getPrivateCopies().begin(),
-                                      getPrivateCopies().end());
+    return getPrivateCopies();
   }
 
   using inits_iterator = MutableArrayRef<Expr *>::iterator;
@@ -8290,13 +8101,9 @@ public:
   using inits_range = llvm::iterator_range<inits_iterator>;
   using inits_const_range = llvm::iterator_range<inits_const_iterator>;
 
-  inits_range inits() {
-    return inits_range(getInits().begin(), getInits().end());
-  }
+  inits_range inits() { return getInits(); }
 
-  inits_const_range inits() const {
-    return inits_const_range(getInits().begin(), getInits().end());
-  }
+  inits_const_range inits() const { return getInits(); }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -8304,8 +8111,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPUseDevicePtrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPUseDevicePtrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8408,8 +8214,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPUseDeviceAddrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPUseDeviceAddrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8511,8 +8316,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPIsDevicePtrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPIsDevicePtrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8615,8 +8419,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPHasDeviceAddrClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPHasDeviceAddrClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8702,8 +8505,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPNontemporalClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNontemporalClause *>(this)->children();
   }
 
   child_range private_refs() {
@@ -8712,8 +8514,7 @@ public:
   }
 
   const_child_range private_refs() const {
-    auto Children = const_cast<OMPNontemporalClause *>(this)->private_refs();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNontemporalClause *>(this)->private_refs();
   }
 
   child_range used_children() {
@@ -8923,8 +8724,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInitClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInitClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -8945,8 +8745,7 @@ public:
   }
 
   const_prefs_range prefs() const {
-    auto Prefs = const_cast<OMPInitClause *>(this)->prefs();
-    return const_prefs_range(Prefs.begin(), Prefs.end());
+    return const_prefs_range(const_cast<OMPInitClause *>(this)->prefs());
   }
 
   static bool classof(const OMPClause *T) {
@@ -9156,8 +8955,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNovariantsClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNovariantsClause *>(this)->used_children();
   }
 };
 
@@ -9202,8 +9000,7 @@ public:
 
   child_range used_children();
   const_child_range used_children() const {
-    auto Children = const_cast<OMPNocontextClause *>(this)->used_children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPNocontextClause *>(this)->used_children();
   }
 };
 
@@ -9297,8 +9094,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPInclusiveClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPInclusiveClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9371,8 +9167,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPExclusiveClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPExclusiveClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9593,8 +9388,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPAffinityClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPAffinityClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -9733,7 +9527,9 @@ public:
 
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class)                                         \
-  RetTy Visit##Class(PTR(Class) S) { DISPATCH(Class); }
+  RetTy Visit##Class(PTR(Class) S) {                                           \
+    return static_cast<ImplClass *>(this)->VisitOMPClause(S);                  \
+  }
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
   RetTy Visit(PTR(OMPClause) S) {
@@ -9742,7 +9538,7 @@ public:
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class)                                         \
   case llvm::omp::Clause::Enum:                                                \
-    return Visit##Class(static_cast<PTR(Class)>(S));
+    DISPATCH(Class);
 #define CLAUSE_NO_CLASS(Enum, Str)                                             \
   case llvm::omp::Clause::Enum:                                                \
     break;
@@ -10198,8 +9994,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDynGroupprivateClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDynGroupprivateClause *>(this)->children();
   }
 
   child_range used_children() {
@@ -10324,8 +10119,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<OMPDoacrossClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<OMPDoacrossClause *>(this)->children();
   }
 
   child_range used_children() {

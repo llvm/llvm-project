@@ -27,7 +27,7 @@ unsigned Program::getOrCreateNativePointer(const void *Ptr) {
   return It->second;
 }
 
-const void *Program::getNativePointer(unsigned Idx) {
+const void *Program::getNativePointer(unsigned Idx) const {
   return NativePointers[Idx];
 }
 

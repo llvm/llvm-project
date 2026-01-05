@@ -63,6 +63,8 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
+
   bool enableMachineScheduler() const override;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
