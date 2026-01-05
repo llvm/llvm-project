@@ -5350,6 +5350,107 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  // <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8
+  //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
+  //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
+  //               (<4 x i32> R%, <16 x i8> %X, <16 x i8> %Y)
+  //
+  // Note:
+  // - < 4 x *> is a 2x2 matrix
+  // - <16 x *> is a 2x8 matrix and 8x2 matrix respectively
+  //
+  // [ x0 x2 x4 x6 x8 xA xC xE ] [ y0 y1 ]
+  // [ x1 x3 x5 x7 x9 xB xD xF ] [ y2 y3 ]
+  //                             [ y4 y5 ]
+  //                             [ y6 y7 ]
+  //                             [ y8 y9 ]
+  //                             [ yA yB ]
+  //                             [ yC yD ]
+  //                             [ yE yF ]
+  //
+  // The general shadow propagation approach is:
+  // 1) get the shadows of the input matrices
+  // 2) change the shadow values to 0x1 if the corresponding value is fully
+  //    initialized, and 0x0 otherwise
+  // 3) perform a matrix multiplication on the shadows. The output will be a 2x2
+  //    matrix, where a value of 0x8 means all the inputs were clean.
+  //
+  // TODO: consider allowing multiplication of zero with an uninitialized value
+  //       to result in an initialized value.
+  //
+  // TODO: a vector cast of shadows to floating-point is required for:
+  //   case Intrinsic::aarch64_neon_bfmmla:
+  //     handleNEONMatrixMultiply(I, /*ARows=*/ 2, /*ACols=*/ 4,
+  //                                 /*BRows=*/ 4, /*BCols=*/ 2);
+  // Additionally, comparisons need to tolerate floating-point error.
+  void handleNEONMatrixMultiply(IntrinsicInst &I, unsigned int ARows,
+                                unsigned int ACols, unsigned int BRows,
+                                unsigned int BCols) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 3);
+    Value *R = I.getArgOperand(0);
+    Value *A = I.getArgOperand(1);
+    Value *B = I.getArgOperand(2);
+
+    assert(I.getType() == R->getType());
+
+    assert(isa<FixedVectorType>(R->getType()));
+    assert(isa<FixedVectorType>(A->getType()));
+    assert(isa<FixedVectorType>(B->getType()));
+
+    [[maybe_unused]] FixedVectorType *RTy = cast<FixedVectorType>(R->getType());
+    [[maybe_unused]] FixedVectorType *ATy = cast<FixedVectorType>(A->getType());
+    [[maybe_unused]] FixedVectorType *BTy = cast<FixedVectorType>(B->getType());
+
+    assert(ACols == BRows);
+    assert(ATy->getNumElements() == ARows * ACols);
+    assert(BTy->getNumElements() == BRows * BCols);
+    assert(RTy->getNumElements() == ARows * BCols);
+
+    LLVM_DEBUG(dbgs() << "### R: " << *RTy->getElementType() << "\n");
+    LLVM_DEBUG(dbgs() << "### A: " << *ATy->getElementType() << "\n");
+    if (RTy->getElementType()->isIntegerTy()) {
+      // Types are not identical e.g., <4 x i32> %R, <16 x i8> %A
+      assert(ATy->getElementType()->isIntegerTy());
+    } else {
+      assert(RTy->getElementType()->isFloatingPointTy());
+      assert(ATy->getElementType()->isFloatingPointTy());
+    }
+    assert(ATy->getElementType() == BTy->getElementType());
+
+    Value *ShadowR = getShadow(&I, 0);
+    Value *ShadowA = getShadow(&I, 1);
+    Value *ShadowB = getShadow(&I, 2);
+
+    // If the value is fully initialized, the shadow will be 000...001.
+    // Otherwise, the shadow will be all zero.
+    // (This is the opposite of how we typically handle shadows.)
+    ShadowA = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(A)),
+                             ShadowA->getType());
+    ShadowB = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(B)),
+                             ShadowB->getType());
+
+    Value *ShadowAB = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {getCleanShadow(R), ShadowA, ShadowB});
+
+    Value *FullyInit = ConstantVector::getSplat(
+        RTy->getElementCount(),
+        ConstantInt::get(cast<VectorType>(getShadowTy(R))->getElementType(),
+                         ACols));
+
+    ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
+                              ShadowAB->getType());
+
+    ShadowR = IRB.CreateSExt(IRB.CreateICmpNE(ShadowR, getCleanShadow(R)),
+                             ShadowR->getType());
+
+    setShadow(&I, IRB.CreateOr(ShadowAB, ShadowR));
+    setOriginForNaryOp(I);
+  }
+
   /// Handle intrinsics by applying the intrinsic to the shadows.
   ///
   /// The trailing arguments are passed verbatim to the intrinsic, though any
@@ -6725,6 +6826,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleNEONVectorMultiplyIntrinsic(I);
       break;
     }
+
+    case Intrinsic::aarch64_neon_smmla:
+    case Intrinsic::aarch64_neon_ummla:
+    case Intrinsic::aarch64_neon_usmmla:
+      handleNEONMatrixMultiply(I, /*ARows=*/2, /*ACols=*/8, /*BRows=*/8,
+                               /*BCols=*/2);
+      break;
 
     default:
       return false;
