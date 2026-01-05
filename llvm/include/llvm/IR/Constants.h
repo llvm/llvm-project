@@ -113,8 +113,9 @@ public:
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
   /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  // TODO: Make ImplicitTrunc default to false.
   LLVM_ABI static Constant *get(Type *Ty, uint64_t V, bool IsSigned = false,
-                                bool ImplicitTrunc = false);
+                                bool ImplicitTrunc = true);
 
   /// Return a ConstantInt with the specified integer value for the specified
   /// type. If the type is wider than 64 bits, the value will be zero-extended
@@ -122,9 +123,10 @@ public:
   /// be interpreted as a 64-bit signed integer and sign-extended to fit
   /// the type.
   /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  // TODO: Make ImplicitTrunc default to false.
   LLVM_ABI static ConstantInt *get(IntegerType *Ty, uint64_t V,
                                    bool IsSigned = false,
-                                   bool ImplicitTrunc = false);
+                                   bool ImplicitTrunc = true);
 
   /// Return a ConstantInt with the specified value for the specified type. The
   /// value V will be canonicalized to an unsigned APInt. Accessing it with
@@ -132,11 +134,12 @@ public:
   /// signed value for the type Ty.
   /// Get a ConstantInt for a specific signed value.
   /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  // TODO: Make ImplicitTrunc default to false.
   static ConstantInt *getSigned(IntegerType *Ty, int64_t V,
-                                bool ImplicitTrunc = false) {
+                                bool ImplicitTrunc = true) {
     return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
   }
-  static Constant *getSigned(Type *Ty, int64_t V, bool ImplicitTrunc = false) {
+  static Constant *getSigned(Type *Ty, int64_t V, bool ImplicitTrunc = true) {
     return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
   }
 
