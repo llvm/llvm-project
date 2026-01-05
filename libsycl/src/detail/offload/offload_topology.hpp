@@ -43,7 +43,7 @@ struct OffloadTopology {
   /// Updates backend for this topology.
   ///
   /// \param B new backend value.
-  void set_backend(ol_platform_backend_t B) { MBackend = B; }
+  void setBackend(ol_platform_backend_t B) { MBackend = B; }
 
   /// Returns all platforms associated with this topology.
   ///

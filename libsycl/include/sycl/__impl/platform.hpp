@@ -26,7 +26,7 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
-class platform_impl;
+class PlatformImpl;
 } // namespace detail
 
 /// \brief SYCL 2020 platform class (4.6.2.) encapsulating a single SYCL
@@ -70,8 +70,8 @@ public:
   static std::vector<platform> get_platforms();
 
 private:
-  platform(detail::platform_impl &Impl) : impl(&Impl) {}
-  detail::platform_impl *impl;
+  platform(detail::PlatformImpl &Impl) : impl(&Impl) {}
+  detail::PlatformImpl *impl;
 
   friend sycl::detail::ImplUtils;
 }; // class platform

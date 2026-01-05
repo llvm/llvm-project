@@ -26,24 +26,24 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-using PlatformImplUPtr = std::unique_ptr<platform_impl>;
+using PlatformImplUPtr = std::unique_ptr<PlatformImpl>;
 
-class platform_impl {
-  struct private_tag {
-    explicit private_tag() = default;
+class PlatformImpl {
+  struct PrivateTag {
+    explicit PrivateTag() = default;
   };
 
 public:
-  /// Constructs platform_impl from a platform handle.
+  /// Constructs PlatformImpl from a platform handle.
   ///
   /// \param Platform is a raw offload library handle representing platform.
   /// \param PlatformIndex is a platform index in a backend (needed for a proper
   /// indexing in device selector).
   /// All platform impls are created during first getPlatforms() call.
-  explicit platform_impl(ol_platform_handle_t Platform, size_t PlatformIndex,
-                         private_tag);
+  explicit PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
+                        PrivateTag);
 
-  ~platform_impl() = default;
+  ~PlatformImpl() = default;
 
   /// Returns the backend associated with this platform.
   ///
@@ -70,13 +70,13 @@ public:
   ///
   /// \param Platform is the offloading RT Platform handle representing the
   /// platform.
-  /// \return the platform_impl representing the offloading RT platform.
-  static platform_impl &getPlatformImpl(ol_platform_handle_t Platform);
+  /// \return the PlatformImpl representing the offloading RT platform.
+  static PlatformImpl &getPlatformImpl(ol_platform_handle_t Platform);
 
   /// Queries this platform for info.
   ///
   /// The return type depends on information being queried.
-  template <typename Param> typename Param::return_type get_info() const {
+  template <typename Param> typename Param::return_type getInfo() const {
     // For now we have only std::string properties
     static_assert(std::is_same_v<typename Param::return_type, std::string>);
 
@@ -90,12 +90,12 @@ public:
             Map::M<vendor>{OL_PLATFORM_INFO_VENDOR_NAME});
 
     size_t ExpectedSize = 0;
-    call_and_throw(olGetPlatformInfoSize, MOffloadPlatform, olInfo,
-                   &ExpectedSize);
+    callAndThrow(olGetPlatformInfoSize, MOffloadPlatform, olInfo,
+                 &ExpectedSize);
     std::string Result;
     Result.resize(ExpectedSize - 1);
-    call_and_throw(olGetPlatformInfo, MOffloadPlatform, olInfo, ExpectedSize,
-                   Result.data());
+    callAndThrow(olGetPlatformInfo, MOffloadPlatform, olInfo, ExpectedSize,
+                 Result.data());
     return Result;
   }
 

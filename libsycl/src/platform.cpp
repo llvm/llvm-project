@@ -17,7 +17,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 backend platform::get_backend() const noexcept { return impl->getBackend(); }
 
 std::vector<platform> platform::get_platforms() {
-  auto &PlatformImpls = detail::platform_impl::getPlatforms();
+  auto &PlatformImpls = detail::PlatformImpl::getPlatforms();
   std::vector<platform> Platforms;
   Platforms.reserve(PlatformImpls.size());
   for (auto &PlatformImpl : PlatformImpls) {
@@ -29,7 +29,7 @@ std::vector<platform> platform::get_platforms() {
 
 template <typename Param>
 detail::is_platform_info_desc_t<Param> platform::get_info() const {
-  return impl->get_info<Param>();
+  return impl->getInfo<Param>();
 }
 
 #define _LIBSYCL_EXPORT_GET_INFO(Desc)                                         \

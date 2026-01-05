@@ -40,13 +40,13 @@ struct ImplUtils {
   }
 
   // Helper function for creation SYCL interface objects from implementations.
-  template <typename SyclObject, typename From>
-  static SyclObject createSyclObjFromImpl(From &&from) {
+  template <typename SyclObject, typename Impl>
+  static SyclObject createSyclObjFromImpl(Impl &&ImplObj) {
     if constexpr (std::is_same_v<decltype(SyclObject::impl),
-                                 std::shared_ptr<std::decay_t<From>>>)
-      return SyclObject{from.shared_from_this()};
+                                 std::shared_ptr<std::decay_t<Impl>>>)
+      return SyclObject{ImplObj.shared_from_this()};
     else
-      return SyclObject{std::forward<From>(from)};
+      return SyclObject{std::forward<Impl>(ImplObj)};
   }
 };
 
@@ -56,9 +56,10 @@ auto getSyclObjImpl(const Obj &SyclObj)
   return ImplUtils::getSyclObjImpl(SyclObj);
 }
 
-template <typename SyclObject, typename From>
-SyclObject createSyclObjFromImpl(From &&from) {
-  return ImplUtils::createSyclObjFromImpl<SyclObject>(std::forward<From>(from));
+template <typename SyclObject, typename Impl>
+SyclObject createSyclObjFromImpl(Impl &&ImplObj) {
+  return ImplUtils::createSyclObjFromImpl<SyclObject>(
+      std::forward<Impl>(ImplObj));
 }
 
 // SYCL 2020 4.5.2. Common reference semantics (std::hash support).

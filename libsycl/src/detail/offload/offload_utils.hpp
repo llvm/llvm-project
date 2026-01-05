@@ -62,7 +62,7 @@ void checkAndThrow(ol_result_t Result) {
 ///
 /// \returns liboffload error code returned by API call.
 template <typename FunctionType, typename... ArgsT>
-ol_result_t call_nocheck(FunctionType &Function, ArgsT &&...Args) {
+ol_result_t callNoCheck(FunctionType &Function, ArgsT &&...Args) {
   return Function(std::forward<ArgsT>(Args)...);
 }
 
@@ -73,8 +73,8 @@ ol_result_t call_nocheck(FunctionType &Function, ArgsT &&...Args) {
 ///
 /// \throw sycl::runtime_exception if the call was not successful.
 template <typename FunctionType, typename... ArgsT>
-void call_and_throw(FunctionType &Function, ArgsT &&...Args) {
-  auto Err = call_nocheck(Function, std::forward<ArgsT>(Args)...);
+void callAndThrow(FunctionType &Function, ArgsT &&...Args) {
+  auto Err = callNoCheck(Function, std::forward<ArgsT>(Args)...);
   checkAndThrow(Err);
 }
 
