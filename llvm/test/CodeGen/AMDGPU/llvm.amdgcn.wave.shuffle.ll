@@ -23,13 +23,13 @@
 ; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX6-GISEL-ERR %s
 
 ; GFX6-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.bpermute
-; GFX6-GISEL-ERR: const MCInstrDesc &llvm::MCInstrInfo::get(unsigned int) const: Assertion `Opcode < NumOpcodes && "Invalid opcode!"' failed.
+; GFX6-GISEL-ERR: "Invalid opcode!"
 
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX7-SDAG-ERR %s
 ; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=null %s 2>&1 | FileCheck -check-prefixes=GFX7-GISEL-ERR %s
 
 ; GFX7-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.bpermute
-; GFX7-GISEL-ERR: const MCInstrDesc &llvm::MCInstrInfo::get(unsigned int) const: Assertion `Opcode < NumOpcodes && "Invalid opcode!"' failed.
+; GFX7-GISEL-ERR: "Invalid opcode!"
 
 
 define float @test_wave_shuffle_float(float %val, i32 %idx) {
