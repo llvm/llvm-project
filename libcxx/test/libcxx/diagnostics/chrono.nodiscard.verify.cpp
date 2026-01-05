@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
-// UNSUPPORTED: no-monotonic-clock
 
 // XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
@@ -124,10 +123,12 @@ void test() {
   }
 #endif // TEST_STD_VER >= 20
 
+#if _LIBCPP_HAS_MONOTONIC_CLOCK
   { // [time.clock.steady]
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::chrono::steady_clock::now();
   }
+#endif
 
   { // [time.clock.system]
 
