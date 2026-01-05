@@ -2760,11 +2760,6 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
-let AddedComplexity = 1 in {
-def : Pat<(add copyFromSP:$R2, (add_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
-          (ADDXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
-}
-
 
 def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
   let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];
@@ -3273,6 +3268,10 @@ def : InstAlias<"tst $src1, $src2$sh",
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
+def : Pat<(not logical_shifted_reg32:$Rm_and_shift),
+          (ORNWrs WZR, logical_shifted_reg32:$Rm_and_shift)>;
+def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
+          (ORNXrs XZR, logical_shifted_reg64:$Rm_and_shift)>;
 
 // Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
 let AddedComplexity = 6 in

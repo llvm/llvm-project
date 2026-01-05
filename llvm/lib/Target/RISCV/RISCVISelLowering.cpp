@@ -449,6 +449,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
   }
 
+  if (Subtarget.hasStdExtP()) {
+    setOperationAction(ISD::CTLS, XLenVT, Legal);
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::CTLS, MVT::i32, Custom);
+  }
+
   if (Subtarget.hasStdExtP() ||
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
@@ -469,8 +475,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SADDSAT, MVT::i32, Legal);
     setOperationAction(ISD::USUBSAT, MVT::i32, Legal);
     setOperationAction(ISD::SSUBSAT, MVT::i32, Legal);
-    setOperationAction(ISD::SSHLSAT, MVT::i32, Legal);
     setOperationAction(ISD::USHLSAT, MVT::i32, Legal);
+  }
+
+  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXqcia()) &&
+      !Subtarget.is64Bit()) {
+    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
+    // pssha.w and extracting.
+    setOperationAction(ISD::SSHLSAT, MVT::i32, Legal);
   }
 
   static const unsigned FPLegalNodeTypes[] = {
@@ -12561,7 +12573,8 @@ static SDValue widenVectorOpsToi8(SDValue N, const SDLoc &DL,
   unsigned NumVals = N->getNumValues();
 
   SDVTList VTs = DAG.getVTList(SmallVector<EVT, 4>(
-      NumVals, N.getValueType().changeVectorElementType(MVT::i8)));
+      NumVals,
+      N.getValueType().changeVectorElementType(*DAG.getContext(), MVT::i8)));
   SDValue WideN = DAG.getNode(N.getOpcode(), DL, VTs, WideOps);
   SmallVector<SDValue, 4> TruncVals;
   for (unsigned I = 0; I < NumVals; I++) {
@@ -15046,16 +15059,29 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLS: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
 
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
-    bool IsCTZ =
-        N->getOpcode() == ISD::CTTZ || N->getOpcode() == ISD::CTTZ_ZERO_UNDEF;
+    unsigned Opc;
+    switch (N->getOpcode()) {
+    default: llvm_unreachable("Unexpected opcode");
+    case ISD::CTTZ:
+    case ISD::CTTZ_ZERO_UNDEF:
+      Opc = RISCVISD::CTZW;
+      break;
+    case ISD::CTLZ:
+    case ISD::CTLZ_ZERO_UNDEF:
+      Opc = RISCVISD::CLZW;
+      break;
+    case ISD::CTLS:
+      Opc = RISCVISD::CLSW;
+      break;
+    }
 
-    unsigned Opc = IsCTZ ? RISCVISD::CTZW : RISCVISD::CLZW;
     SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
     return;
@@ -17351,7 +17377,7 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
     EVT ResultVT = EVT::getIntegerVT(C, ActiveBits).getRoundIntegerType(C);
     if (ResultVT.bitsLT(VT.getVectorElementType())) {
       N = DAG.getNode(ISD::TRUNCATE, DL,
-                      VT.changeVectorElementType(ResultVT), N);
+                      VT.changeVectorElementType(C, ResultVT), N);
       return true;
     }
   }
@@ -17384,7 +17410,7 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
     return false;
 
   EVT NewEltVT = EVT::getIntegerVT(*DAG.getContext(), NewElen);
-  EVT NewVT = SrcVT.changeVectorElementType(NewEltVT);
+  EVT NewVT = SrcVT.changeVectorElementType(*DAG.getContext(), NewEltVT);
 
   SDValue NewExt = DAG.getNode(N0->getOpcode(), DL, NewVT, N0->ops());
   SDValue NewShAmtVec = DAG.getConstant(ShAmtV, DL, NewVT);

@@ -5166,7 +5166,7 @@ ASTReader::ReadASTCore(StringRef FileName,
   assert(M && "Missing module file");
 
   bool ShouldFinalizePCM = false;
-  auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinalizeOrDropPCM([&]() {
     auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);

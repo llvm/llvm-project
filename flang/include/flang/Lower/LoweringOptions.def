@@ -79,5 +79,10 @@ ENUM_LOWERINGOPT(ComplexDivisionToRuntime, unsigned, 1, 1)
 /// of the lowering pipeline.
 ENUM_LOWERINGOPT(RegisterMLIRDiagnosticsHandler, unsigned, 1, 1)
 
+/// If true, preserve USE statement information during PFT building for
+/// debug info generation. Should be enabled when debug info level is above
+/// LineTablesOnly. Off by default.
+ENUM_LOWERINGOPT(PreserveUseDebugInfo, unsigned, 1, 0)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT
