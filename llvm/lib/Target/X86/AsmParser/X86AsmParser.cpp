@@ -4374,6 +4374,13 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     return Error(ErrorLoc, "immediate must be an integer in range [0, 15]",
                  EmptyRange, MatchingInlineAsm);
   }
+  case Match_InvalidImmUnsignedi6: {
+    SMLoc ErrorLoc = ((X86Operand &)*Operands[ErrorInfo]).getStartLoc();
+    if (ErrorLoc == SMLoc())
+      ErrorLoc = IDLoc;
+    return Error(ErrorLoc, "immediate must be an integer in range [0, 63]",
+                 EmptyRange, MatchingInlineAsm);
+  }
   case Match_MissingFeature:
     return ErrorMissingFeature(IDLoc, MissingFeatures, MatchingInlineAsm);
   case Match_InvalidOperand:
@@ -4735,6 +4742,14 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
     if (ErrorLoc == SMLoc())
       ErrorLoc = IDLoc;
     return Error(ErrorLoc, "immediate must be an integer in range [0, 15]",
+                 EmptyRange, MatchingInlineAsm);
+  }
+
+  if (llvm::count(Match, Match_InvalidImmUnsignedi6) == 1) {
+    SMLoc ErrorLoc = ((X86Operand &)*Operands[ErrorInfo]).getStartLoc();
+    if (ErrorLoc == SMLoc())
+      ErrorLoc = IDLoc;
+    return Error(ErrorLoc, "immediate must be an integer in range [0, 63]",
                  EmptyRange, MatchingInlineAsm);
   }
 
