@@ -6830,7 +6830,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::aarch64_cls:
   case Intrinsic::aarch64_cls64:
-    SDValue Res = DAG.getNode(ISD::CTLS, DL, Op.getOperand(1).getValueType(), Op.getOperand(1));
+    SDValue Res = DAG.getNode(ISD::CTLS, DL, Op.getOperand(1).getValueType(),
+                              Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
   }
 }
