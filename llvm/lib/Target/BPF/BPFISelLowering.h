@@ -163,6 +163,11 @@ private:
   MachineBasicBlock *
   EmitInstrWithCustomInserterLDimm64(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
+
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool IsVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context, const Type *RetTy) const override;
 };
 }
 
