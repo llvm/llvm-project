@@ -203,6 +203,13 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
+  if (Args.hasFlag(options::OPT_funsafe_cray_pointers,
+                   options::OPT_fno_unsafe_cray_pointers, false)) {
+    // TODO: currently passed as MLIR option
+    CmdArgs.push_back("-mmlir");
+    CmdArgs.push_back("-funsafe-cray-pointers");
+  }
+
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
 

@@ -498,11 +498,11 @@ struct TypedefInfo : public SymbolInfo {
 
   TypeInfo Underlying;
 
+  // Only type aliases can be templates.
+  std::optional<TemplateInfo> Template;
+
   // Underlying type declaration
   SmallString<16> TypeDeclaration;
-
-  /// Comment description for the typedef.
-  std::vector<CommentInfo> Description;
 
   // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
