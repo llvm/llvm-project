@@ -78,7 +78,10 @@ To build LLVM with libsycl runtime enabled the following script can be used.
         -DLLVM_INSTALL_UTILS=ON \
         -DCMAKE_INSTALL_PREFIX=$installprefix \
         -DLLVM_ENABLE_RUNTIMES="offload;openmp;libsycl" \
-        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_BUILD_TYPE=Release \
+        # must be default and configured in liboffload,
+        # requires level zero, see offload/cmake/Modules/LibomptargetGetDependencies.cmake
+        -DLIBOMPTARGET_PLUGINS_TO_BUILD=level_zero
 
   ninja -C $build_llvm install
 

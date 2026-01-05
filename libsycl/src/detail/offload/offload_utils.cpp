@@ -49,8 +49,8 @@ const char *stringifyErrorCode(ol_errc_t Error) {
 
 backend convertBackend(ol_platform_backend_t Backend) {
   switch (Backend) {
-  // case OL_PLATFORM_BACKEND_LEVEL_ZERO:
-  //   return backend::level_zero;
+  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
+    return backend::level_zero;
   case OL_PLATFORM_BACKEND_CUDA:
     return backend::cuda;
   case OL_PLATFORM_BACKEND_AMDGPU:
