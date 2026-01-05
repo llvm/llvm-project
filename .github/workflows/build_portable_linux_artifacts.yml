@@ -81,16 +81,8 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           repository: "ROCm/TheRock"
-          ref: "compiler/amd-mainline"
+          ref: ${{ secrets.THEROCK_MAINLINE_REF }}
           fetch-depth: 10
-
-      - name: SHA of TheRock
-        run: |
-             git config --global --add safe.directory /__w/llvm-project/llvm-project
-             git log -1
-             cd compiler/amd-llvm
-             git log -3
-             cd -
 
       - name: Install python deps
         run: |
@@ -129,14 +121,37 @@ jobs:
         with:
           path: compiler/amd-llvm
 
+      - name: "Checking out repository for spriv-llvm-translator"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: "ROCm/spirv-llvm-translator"
+          path: compiler/spirv-llvm-translator
+          ref: ${{ secrets.SPIRV_LLVM_TRANSLATOR_MAINLINE_REF }}
+
+      - name: "Checking out repository for hipify"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: "ROCm/hipify"
+          path: compiler/hipify
+          ref: ${{ secrets.HIPIFY_MAINLINE_REF }}
+
       - name: Apply patches
         run: |
              cp -v patches/amd-mainline/llvm-project/*.patch compiler/amd-llvm
              cd compiler/amd-llvm
-             git config --global --add safe.directory /__w/llvm-project/llvm-project
+             git log -10
+             git config --global --add safe.directory $PWD
              find . -type f -name '*.patch' -exec git apply --check {} \;
              find . -type f -name '*.patch' -exec git apply {} \;
              git log -15
+             cd -
+
+      - name: TheRock and llvm SHA
+        run: |
+             git config --global --add safe.directory $PWD
+             git log -1
+             cd compiler/amd-llvm/llvm
+             git log -3
              cd -
 
       - name: Configure Projects
