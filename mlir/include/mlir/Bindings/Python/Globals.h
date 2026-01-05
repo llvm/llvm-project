@@ -15,10 +15,11 @@
 #include <unordered_set>
 #include <vector>
 
-#include "NanobindUtils.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir/CAPI/Support.h"
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,19 +28,16 @@
 
 namespace mlir {
 namespace python {
-
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 /// Globals that are always accessible once the extension has been initialized.
 /// Methods of this class are thread-safe.
-class PyGlobals {
+class MLIR_PYTHON_API_EXPORTED PyGlobals {
 public:
   PyGlobals();
   ~PyGlobals();
 
   /// Most code should get the globals via this static accessor.
-  static PyGlobals &get() {
-    assert(instance && "PyGlobals is null");
-    return *instance;
-  }
+  static PyGlobals &get();
 
   /// Get and set the list of parent modules to search for dialect
   /// implementation classes.
@@ -119,7 +117,7 @@ public:
   std::optional<nanobind::object>
   lookupOperationClass(llvm::StringRef operationName);
 
-  class TracebackLoc {
+  class MLIR_PYTHON_API_EXPORTED TracebackLoc {
   public:
     bool locTracebacksEnabled();
 
@@ -199,7 +197,7 @@ private:
   TracebackLoc tracebackLoc;
   TypeIDAllocator typeIDAllocator;
 };
-
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
 
