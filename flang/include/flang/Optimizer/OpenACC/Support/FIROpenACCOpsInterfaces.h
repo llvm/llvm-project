@@ -18,7 +18,11 @@
 namespace fir {
 class AddrOfOp;
 class DeclareOp;
+class FieldIndexOp;
 class GlobalOp;
+class ShapeOp;
+class ShapeShiftOp;
+class ShiftOp;
 } // namespace fir
 
 namespace hlfir {
@@ -76,6 +80,15 @@ struct IndirectGlobalAccessModel
                             llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
                             mlir::SymbolTable *symbolTable) const;
 };
+
+/// External model for OutlineRematerializationOpInterface.
+/// This interface marks operations that are candidates for rematerialization
+/// during outlining. These operations produce synthetic types or values
+/// that cannot be passed as arguments to outlined regions.
+template <typename Op>
+struct OutlineRematerializationModel
+    : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
+          OutlineRematerializationModel<Op>, Op> {};
 
 } // namespace fir::acc
 

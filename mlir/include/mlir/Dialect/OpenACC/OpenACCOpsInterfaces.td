@@ -100,4 +100,19 @@ def IndirectGlobalAccessOpInterface : OpInterface<"IndirectGlobalAccessOpInterfa
   ];
 }
 
+def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations that are candidates for rematerialization
+    during outlining. These operations produce synthetic types or values
+    that cannot be passed as arguments to outlined regions and must be
+    rematerialized inside the region instead.
+
+    Operations implementing this interface are expected to be memory effect
+    free. Their results are typically used for type construction or providing
+    metadata (such as shape information for arrays).
+  }];
+}
+
 #endif // OPENACC_OPS_INTERFACES
