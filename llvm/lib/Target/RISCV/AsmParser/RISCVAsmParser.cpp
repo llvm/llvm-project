@@ -356,6 +356,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
 
   struct RegOp {
     MCRegister Reg;
+    std::optional<std::pair<MCRegister, unsigned>> RegPairNum;
     bool IsGPRAsFPR;
   };
 
@@ -1096,10 +1097,13 @@ public:
   }
 
   static std::unique_ptr<RISCVOperand>
-  createReg(MCRegister Reg, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
+  createReg(MCRegister Reg, SMLoc S, SMLoc E, bool IsGPRAsFPR = false,
+            std::optional<std::pair<MCRegister, unsigned>> RegPairNum =
+                std::nullopt) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
     Op->Reg.Reg = Reg;
     Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
+    Op->Reg.RegPairNum = RegPairNum;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -1325,6 +1329,15 @@ static MCRegister convertFPR64ToFPR256(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_Q2;
 }
 
+static int getLMUL(unsigned Kind) {
+  if (Kind == MCK_VRM2)
+    return 2;
+  else if (Kind == MCK_VRM4)
+    return 4;
+  else
+    return 8;
+}
+
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                     unsigned Kind) {
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
@@ -1380,7 +1393,14 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   // As the parser couldn't differentiate an VRM2/VRM4/VRM8 from an VR, coerce
   // the register from VR to VRM2/VRM4/VRM8 if necessary.
   if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
+    // The dest reg requires multiple registers to be combined to complete the
+    // instruction operation. In this case, it is necessary to retain the
+    // register num ​​of the dest register before the conversion to ensure
+    // that 'the destination vector register group cannot overlap the source
+    // vector register group'
     Op.Reg.Reg = convertVRToVRMx(*getContext().getRegisterInfo(), Reg, Kind);
+    auto DstGroup = std::make_pair(Reg, getLMUL(Kind));
+    Op.Reg.RegPairNum.emplace(DstGroup);
     if (!Op.Reg.Reg)
       return Match_InvalidOperand;
     return Match_Success;
@@ -3789,6 +3809,15 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgLegacyOp() const {
                                     llvm::SMLoc());
 }
 
+static MCRegister getBeforeConvertRegNum(MCParsedAsmOperand &Operand,
+                                         MCRegister defaultReg) {
+  RISCVOperand &Op = static_cast<RISCVOperand &>(Operand);
+  if (Op.Reg.RegPairNum.has_value())
+    return Op.Reg.RegPairNum->first;
+
+  return defaultReg;
+}
+
 bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
   unsigned Opcode = Inst.getOpcode();
@@ -3831,6 +3860,13 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
 
   int DestIdx = RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vd);
   MCRegister DestReg = Inst.getOperand(DestIdx).getReg();
+  MCParsedAsmOperand &VDIdx = *Operands[1];
+  RISCVOperand &Dst = static_cast<RISCVOperand &>(VDIdx);
+  unsigned Lmul = 1;
+  if (Dst.Reg.RegPairNum.has_value()) {
+    DestReg = Dst.Reg.RegPairNum->first;
+    Lmul = Dst.Reg.RegPairNum->second;
+  }
 
   // Operands[1] or Operands[2] will be the first operand, DestReg.
   const MCParsedAsmOperand *ParsedOp = Operands[1].get();
@@ -3846,10 +3882,13 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     int VS2Idx =
         RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vs2);
     assert(VS2Idx >= 0 && "No vs2 operand?");
-    MCRegister CheckReg = Inst.getOperand(VS2Idx).getReg();
-    if (DestReg == CheckReg)
-      return Error(Loc, "the destination vector register group cannot overlap"
-                        " the source vector register group");
+    MCRegister CheckReg = getBeforeConvertRegNum(
+        *Operands[2], Inst.getOperand(VS2Idx).getReg());
+    for (unsigned i = 0; i < Lmul; i++) {
+      if ((DestReg + i) == CheckReg)
+        return Error(Loc, "the destination vector register group cannot overlap"
+                          " the VS2 source vector register group");
+    }
   }
   if (MCID.TSFlags & RISCVII::VS1Constraint) {
     int VS1Idx =
@@ -3858,9 +3897,11 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     // need to check that the operand exists.
     if (VS1Idx >= 0) {
       MCRegister CheckReg = Inst.getOperand(VS1Idx).getReg();
-      if (DestReg == CheckReg)
-        return Error(Loc, "the destination vector register group cannot overlap"
-                          " the source vector register group");
+      for (unsigned i = 0; i < Lmul; i++) {
+        if ((DestReg + i) == CheckReg)
+          return Error(Loc, "the destination vector register group cannot overlap"
+                            " the VS1 source vector register group");
+      }
     }
   }
 
