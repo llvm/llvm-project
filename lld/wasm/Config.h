@@ -35,6 +35,7 @@ class Symbol;
 class DefinedData;
 class GlobalSymbol;
 class DefinedFunction;
+class UndefinedFunction;
 class UndefinedGlobal;
 class TableSymbol;
 
@@ -70,6 +71,7 @@ struct Config {
   bool importTable;
   bool importUndefined;
   std::optional<bool> is64;
+  bool isWasip3;
   bool mergeDataSegments;
   bool noinhibitExec;
   bool pie;
@@ -248,6 +250,14 @@ struct Ctx {
     // Used as an address space for function pointers, with each function that
     // is used as a function pointer being allocated a slot.
     TableSymbol *indirectFunctionTable;
+
+    // __wasm_component_model_builtin_context_set_1
+    // Function used to set TLS base in component model modules.
+    UndefinedFunction *contextSet1;
+
+    // __wasm_component_model_builtin_context_get_1
+    // Function used to get TLS base in component model modules.
+    UndefinedFunction *contextGet1;
   };
   WasmSym sym;
 

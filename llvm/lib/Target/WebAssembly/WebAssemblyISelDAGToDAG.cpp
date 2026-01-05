@@ -307,10 +307,8 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     MVT PtrVT = TLI.getPointerTy(CurDAG->getDataLayout());
     switch (IntNo) {
     case Intrinsic::wasm_tls_base: {
-      MachineSDNode *TLSBase = CurDAG->getMachineNode(
-          GlobalGetIns, DL, PtrVT, MVT::Other,
-          CurDAG->getTargetExternalSymbol("__tls_base", PtrVT),
-          Node->getOperand(0));
+      MachineSDNode *TLSBase =
+          llvm::WebAssembly::getTLSBase(*CurDAG, DL, Subtarget);
       ReplaceNode(Node, TLSBase);
       return;
     }

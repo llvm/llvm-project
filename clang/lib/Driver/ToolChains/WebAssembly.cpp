@@ -30,13 +30,14 @@ using namespace llvm::opt;
 std::string WebAssembly::getMultiarchTriple(const Driver &D,
                                             const llvm::Triple &TargetTriple,
                                             StringRef SysRoot) const {
-    return (TargetTriple.getArchName() + "-" +
-            TargetTriple.getOSAndEnvironmentName()).str();
+  return (TargetTriple.getArchName() + "-" +
+          TargetTriple.getOSAndEnvironmentName())
+      .str();
 }
 
 std::string wasm::Linker::getLinkerPath(const ArgList &Args) const {
   const ToolChain &ToolChain = getToolChain();
-  if (const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
     StringRef UseLinker = A->getValue();
     if (!UseLinker.empty()) {
       if (llvm::sys::path::is_absolute(UseLinker) &&
@@ -79,6 +80,10 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   return WantsPthread;
 }
 
+static bool WantsSharedMemory(const llvm::Triple &Triple, const ArgList &Args) {
+  return WantsPthread(Triple, Args) && !TargetBuildsComponents(Triple);
+}
+
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -90,10 +95,14 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   CmdArgs.push_back("-m");
+  std::string arch;
   if (ToolChain.getTriple().isArch64Bit())
-    CmdArgs.push_back("wasm64");
+    arch = "wasm64";
   else
-    CmdArgs.push_back("wasm32");
+    arch = "wasm32";
+  if (ToolChain.getTriple().getOSName() == "wasip3")
+    arch += "-wasip3";
+  CmdArgs.push_back(Args.MakeArgString(arch));
 
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
@@ -160,7 +169,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (WantsPthread(ToolChain.getTriple(), Args))
+  if (WantsSharedMemory(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -233,9 +242,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 /// Given a base library directory, append path components to form the
 /// LTO directory.
 static std::string AppendLTOLibDir(const std::string &Dir) {
-    // The version allows the path to be keyed to the specific version of
-    // LLVM in used, as the bitcode format is not stable.
-    return Dir + "/llvm-lto/" LLVM_VERSION_STRING;
+  // The version allows the path to be keyed to the specific version of
+  // LLVM in used, as the bitcode format is not stable.
+  return Dir + "/llvm-lto/" LLVM_VERSION_STRING;
 }
 
 WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
@@ -502,7 +511,8 @@ void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (getTriple().getOS() != llvm::Triple::UnknownOS) {
     const std::string MultiarchTriple =
         getMultiarchTriple(D, getTriple(), D.SysRoot);
-    addSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/include/" + MultiarchTriple);
+    addSystemInclude(DriverArgs, CC1Args,
+                     D.SysRoot + "/include/" + MultiarchTriple);
   }
   addSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/include");
 }
@@ -631,5 +641,6 @@ void WebAssembly::addLibStdCXXIncludePaths(
   // Second add the generic one.
   addSystemInclude(DriverArgs, CC1Args, LibPath + "/c++/" + Version);
   // Third the backward one.
-  addSystemInclude(DriverArgs, CC1Args, LibPath + "/c++/" + Version + "/backward");
+  addSystemInclude(DriverArgs, CC1Args,
+                   LibPath + "/c++/" + Version + "/backward");
 }

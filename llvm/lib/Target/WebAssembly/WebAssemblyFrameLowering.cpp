@@ -188,8 +188,7 @@ unsigned WebAssemblyFrameLowering::getFPReg(const MachineFunction &MF) {
              : WebAssembly::FP32;
 }
 
-unsigned
-WebAssemblyFrameLowering::getOpcConst(const MachineFunction &MF) {
+unsigned WebAssemblyFrameLowering::getOpcConst(const MachineFunction &MF) {
   return MF.getSubtarget<WebAssemblySubtarget>().hasAddr64()
              ? WebAssembly::CONST_I64
              : WebAssembly::CONST_I32;
@@ -213,31 +212,38 @@ unsigned WebAssemblyFrameLowering::getOpcAnd(const MachineFunction &MF) {
              : WebAssembly::AND_I32;
 }
 
-unsigned
-WebAssemblyFrameLowering::getOpcGlobGet(const MachineFunction &MF) {
+unsigned WebAssemblyFrameLowering::getOpcGlobGet(const MachineFunction &MF) {
   return MF.getSubtarget<WebAssemblySubtarget>().hasAddr64()
              ? WebAssembly::GLOBAL_GET_I64
              : WebAssembly::GLOBAL_GET_I32;
 }
 
-unsigned
-WebAssemblyFrameLowering::getOpcGlobSet(const MachineFunction &MF) {
+unsigned WebAssemblyFrameLowering::getOpcGlobSet(const MachineFunction &MF) {
   return MF.getSubtarget<WebAssemblySubtarget>().hasAddr64()
              ? WebAssembly::GLOBAL_SET_I64
              : WebAssembly::GLOBAL_SET_I32;
 }
 
-void WebAssemblyFrameLowering::writeSPToGlobal(
+void WebAssemblyFrameLowering::writeBackSP(
     unsigned SrcReg, MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator &InsertStore, const DebugLoc &DL) const {
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
-  const char *ES = "__stack_pointer";
-  auto *SPSymbol = MF.createExternalSymbolName(ES);
+  if (MF.getSubtarget<WebAssemblySubtarget>().getTargetTriple().getOSName() ==
+      "wasip3") {
+    const char *ES = "__wasm_component_model_builtin_context_set_0";
+    auto *SPSymbol = MF.createExternalSymbolName(ES);
+    BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::CALL))
+        .addExternalSymbol(SPSymbol)
+        .addReg(SrcReg);
+  } else {
+    const char *ES = "__stack_pointer";
+    auto *SPSymbol = MF.createExternalSymbolName(ES);
 
-  BuildMI(MBB, InsertStore, DL, TII->get(getOpcGlobSet(MF)))
-      .addExternalSymbol(SPSymbol)
-      .addReg(SrcReg);
+    BuildMI(MBB, InsertStore, DL, TII->get(getOpcGlobSet(MF)))
+        .addExternalSymbol(SPSymbol)
+        .addReg(SrcReg);
+  }
 }
 
 MachineBasicBlock::iterator
@@ -251,7 +257,7 @@ WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
   if (I->getOpcode() == TII->getCallFrameDestroyOpcode() &&
       needsSPWriteback(MF)) {
     DebugLoc DL = I->getDebugLoc();
-    writeSPToGlobal(getSPReg(MF), MF, MBB, I, DL);
+    writeBackSP(getSPReg(MF), MF, MBB, I, DL);
   }
   return MBB.erase(I);
 }
@@ -283,10 +289,17 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize)
     SPReg = MRI.createVirtualRegister(PtrRC);
 
-  const char *ES = "__stack_pointer";
-  auto *SPSymbol = MF.createExternalSymbolName(ES);
-  BuildMI(MBB, InsertPt, DL, TII->get(getOpcGlobGet(MF)), SPReg)
-      .addExternalSymbol(SPSymbol);
+  if (ST.getTargetTriple().getOSName() == "wasip3") {
+    const char *ES = "__wasm_component_model_builtin_context_get_0";
+    auto *SPSymbol = MF.createExternalSymbolName(ES);
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CALL), SPReg)
+        .addExternalSymbol(SPSymbol);
+  } else {
+    const char *ES = "__stack_pointer";
+    auto *SPSymbol = MF.createExternalSymbolName(ES);
+    BuildMI(MBB, InsertPt, DL, TII->get(getOpcGlobGet(MF)), SPReg)
+        .addExternalSymbol(SPSymbol);
+  }
 
   bool HasBP = hasBP(MF);
   if (HasBP) {
@@ -309,7 +322,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
     Register BitmaskReg = MRI.createVirtualRegister(PtrRC);
     Align Alignment = MFI.getMaxAlign();
     BuildMI(MBB, InsertPt, DL, TII->get(getOpcConst(MF)), BitmaskReg)
-        .addImm((int64_t) ~(Alignment.value() - 1));
+        .addImm((int64_t)~(Alignment.value() - 1));
     BuildMI(MBB, InsertPt, DL, TII->get(getOpcAnd(MF)), getSPReg(MF))
         .addReg(getSPReg(MF))
         .addReg(BitmaskReg);
@@ -322,7 +335,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(getSPReg(MF));
   }
   if (StackSize && needsSPWriteback(MF)) {
-    writeSPToGlobal(getSPReg(MF), MF, MBB, InsertPt, DL);
+    writeBackSP(getSPReg(MF), MF, MBB, InsertPt, DL);
   }
 }
 
@@ -364,7 +377,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
     SPReg = SPFPReg;
   }
 
-  writeSPToGlobal(SPReg, MF, MBB, InsertPt, DL);
+  writeBackSP(SPReg, MF, MBB, InsertPt, DL);
 }
 
 bool WebAssemblyFrameLowering::isSupportedStackID(

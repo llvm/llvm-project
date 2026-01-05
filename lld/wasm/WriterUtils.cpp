@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "WriterUtils.h"
+#include "Config.h"
+#include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -97,7 +99,7 @@ void writeSleb128(raw_ostream &os, int64_t number, const Twine &msg) {
 }
 
 void writeBytes(raw_ostream &os, const char *bytes, size_t count,
-                      const Twine &msg) {
+                const Twine &msg) {
   debugWrite(os.tell(), msg + " [data[" + Twine(count) + "]]");
   os.write(bytes, count);
 }
@@ -263,6 +265,26 @@ void writeExport(raw_ostream &os, const WasmExport &export_) {
     break;
   default:
     fatal("unsupported export type: " + Twine(export_.Kind));
+  }
+}
+
+void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
+  if (ctx.arg.isWasip3) {
+    writeU8(os, WASM_OPCODE_CALL, "call");
+    writeUleb128(os, ctx.sym.contextGet1->getFunctionIndex(), "function index");
+  } else {
+    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_SET");
+    writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
+  }
+}
+
+void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
+  if (ctx.arg.isWasip3) {
+    writeU8(os, WASM_OPCODE_CALL, "call");
+    writeUleb128(os, ctx.sym.contextSet1->getFunctionIndex(), "function index");
+  } else {
+    writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
+    writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
   }
 }
 

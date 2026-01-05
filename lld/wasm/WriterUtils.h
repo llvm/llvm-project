@@ -64,6 +64,10 @@ void writeImport(raw_ostream &os, const llvm::wasm::WasmImport &import);
 
 void writeExport(raw_ostream &os, const llvm::wasm::WasmExport &export_);
 
+struct Ctx;
+void writeGetTLSBase(const Ctx &ctx, raw_ostream &os);
+void writeSetTLSBase(const Ctx &ctx, raw_ostream &os);
+
 } // namespace wasm
 
 std::string toString(llvm::wasm::ValType type);

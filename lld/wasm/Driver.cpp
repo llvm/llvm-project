@@ -656,15 +656,16 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.exportDynamic =
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, ctx.arg.shared);
 
-  // Parse wasm32/64.
+  // Parse wasm32/64 and maybe -wasip3.
   if (auto *arg = args.getLastArg(OPT_m)) {
     StringRef s = arg->getValue();
-    if (s == "wasm32")
+    if (s.starts_with("wasm32"))
       ctx.arg.is64 = false;
-    else if (s == "wasm64")
+    else if (s.starts_with("wasm64"))
       ctx.arg.is64 = true;
     else
       error("invalid target architecture: " + s);
+    ctx.arg.isWasip3 = s.ends_with("-wasip3");
   }
 
   // --threads= takes a positive integer and provides the default value for
@@ -827,6 +828,10 @@ static void checkOptions(opt::InputArgList &args) {
     if (ctx.arg.tableBase)
       error("--table-base may not be used with -shared/-pie");
   }
+
+  if (ctx.arg.sharedMemory && ctx.arg.isWasip3) {
+    error("--shared-memory is incompatible with the wasip3 target");
+  }
 }
 
 static const char *getReproduceOption(opt::InputArgList &args) {
@@ -885,7 +890,7 @@ static void writeWhyExtract() {
 // Equivalent of demote demoteSharedAndLazySymbols() in the ELF linker
 static void demoteLazySymbols() {
   for (Symbol *sym : symtab->symbols()) {
-    if (auto* s = dyn_cast<LazySymbol>(sym)) {
+    if (auto *s = dyn_cast<LazySymbol>(sym)) {
       if (s->signature) {
         LLVM_DEBUG(llvm::dbgs()
                    << "demoting lazy func: " << s->getName() << "\n");
@@ -901,6 +906,18 @@ static UndefinedGlobal *
 createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   auto *sym = cast<UndefinedGlobal>(symtab->addUndefinedGlobal(
       name, std::nullopt, std::nullopt, WASM_SYMBOL_UNDEFINED, nullptr, type));
+  ctx.arg.allowUndefinedSymbols.insert(sym->getName());
+  sym->isUsedInRegularObj = true;
+  return sym;
+}
+
+static UndefinedFunction *
+createUndefinedFunction(StringRef name, std::optional<StringRef> importName,
+                        std::optional<StringRef> importModule,
+                        WasmSignature *signature) {
+  auto *sym = cast<UndefinedFunction>(symtab->addUndefinedFunction(
+      name, importName, importModule, WASM_SYMBOL_UNDEFINED, nullptr, signature,
+      true));
   ctx.arg.allowUndefinedSymbols.insert(sym->getName());
   sym->isUsedInRegularObj = true;
   return sym;
@@ -946,11 +963,13 @@ static void createSyntheticSymbols() {
 
   bool is64 = ctx.arg.is64.value_or(false);
 
+  auto stack_pointer_name =
+      ctx.arg.isWasip3 ? "__init_stack_pointer" : "__stack_pointer";
   if (ctx.isPic) {
     ctx.sym.stackPointer =
-        createUndefinedGlobal("__stack_pointer", ctx.arg.is64.value_or(false)
-                                                     ? &mutableGlobalTypeI64
-                                                     : &mutableGlobalTypeI32);
+        createUndefinedGlobal(stack_pointer_name, ctx.arg.is64.value_or(false)
+                                                      ? &mutableGlobalTypeI64
+                                                      : &mutableGlobalTypeI32);
     // For PIC code, we import two global variables (__memory_base and
     // __table_base) from the environment and use these as the offset at
     // which to load our static data and function table.
@@ -963,14 +982,15 @@ static void createSyntheticSymbols() {
     ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    ctx.sym.stackPointer = createGlobalVariable("__stack_pointer", true);
+    ctx.sym.stackPointer = createGlobalVariable(stack_pointer_name, true);
     ctx.sym.stackPointer->markLive();
   }
 
-  if (ctx.arg.sharedMemory) {
+  if (ctx.arg.sharedMemory || ctx.arg.isWasip3) {
     // TLS symbols are all hidden/dso-local
-    ctx.sym.tlsBase =
-        createGlobalVariable("__tls_base", true, WASM_SYMBOL_VISIBILITY_HIDDEN);
+    auto tls_base_name = ctx.arg.isWasip3 ? "__init_tls_base" : "__tls_base";
+    ctx.sym.tlsBase = createGlobalVariable(tls_base_name, true,
+                                           WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,
@@ -979,6 +999,16 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
+    static WasmSignature contextSet1Signature{{}, {ValType::I32}};
+    ctx.sym.contextSet1 = createUndefinedFunction(
+        "__wasm_component_model_builtin_context_set_1", "[context-set-1]",
+        "$root", &contextSet1Signature);
+    ctx.sym.contextSet1->markLive();
+    static WasmSignature contextGet1Signature{{ValType::I32}, {}};
+    ctx.sym.contextGet1 = createUndefinedFunction(
+        "__wasm_component_model_builtin_context_get_1", "[context-get-1]",
+        "$root", &contextGet1Signature);
+    ctx.sym.contextGet1->markLive();
   }
 }
 
@@ -1014,7 +1044,7 @@ static void createOptionalSymbols() {
   //
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
-  if (!ctx.arg.sharedMemory)
+  if (!ctx.arg.sharedMemory && !ctx.arg.isWasip3)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
@@ -1023,15 +1053,15 @@ static void processStubLibrariesPreLTO() {
   for (auto &stub_file : ctx.stubFiles) {
     LLVM_DEBUG(llvm::dbgs()
                << "processing stub file: " << stub_file->getName() << "\n");
-    for (auto [name, deps]: stub_file->symbolDependencies) {
-      auto* sym = symtab->find(name);
+    for (auto [name, deps] : stub_file->symbolDependencies) {
+      auto *sym = symtab->find(name);
       // If the symbol is not present at all (yet), or if it is present but
       // undefined, then mark the dependent symbols as used by a regular
       // object so they will be preserved and exported by the LTO process.
       if (!sym || sym->isUndefined()) {
         for (const auto dep : deps) {
-          auto* needed = symtab->find(dep);
-          if (needed ) {
+          auto *needed = symtab->find(dep);
+          if (needed) {
             needed->isUsedInRegularObj = true;
             // Like with handleLibcall we have to extract any LTO archive
             // members that might need to be exported due to stub library
@@ -1103,8 +1133,8 @@ static void processStubLibraries() {
 
       // First look for any imported symbols that directly match
       // the names of the stub imports
-      for (auto [name, deps]: stub_file->symbolDependencies) {
-        auto* sym = symtab->find(name);
+      for (auto [name, deps] : stub_file->symbolDependencies) {
+        auto *sym = symtab->find(name);
         if (sym && sym->isUndefined()) {
           depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
         } else {
