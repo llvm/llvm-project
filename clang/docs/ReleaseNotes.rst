@@ -636,10 +636,10 @@ Bug Fixes to AST Handling
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed missing diagnostics of ``diagnose_if`` on templates involved in initialization. (#GH160776)
+- Fixed a crash when applying the ``sentinel`` attribute to block variables. (#GH173820)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-- Fixed a crash when applying the ``sentinel`` attribute to block variables. (#GH173820)
 
 OpenACC Specific Changes
 ------------------------
