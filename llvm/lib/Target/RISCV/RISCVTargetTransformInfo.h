@@ -59,7 +59,8 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
                                           TTI::TargetCostKind CostKind) const;
 
   // Return the cost of generating a PC relative address
-  InstructionCost getPCRelativeAddrCost() const;
+  InstructionCost
+  getPCRelativeAddrCost(const TTI::TargetCostKind CostKind) const;
 
   /// Return the cost of accessing a constant pool entry of the specified
   /// type.

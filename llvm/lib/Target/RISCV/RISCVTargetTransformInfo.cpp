@@ -402,8 +402,18 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   llvm_unreachable("Unsupported register kind");
 }
 
-InstructionCost RISCVTTIImpl::getPCRelativeAddrCost() const {
-  return ST->hasAUIPCADDIFusion() ? 1 : 2;
+InstructionCost
+RISCVTTIImpl::getPCRelativeAddrCost(const TTI::TargetCostKind CostKind) const {
+  switch (CostKind) {
+  case TTI::TCK_CodeSize:
+  case TTI::TCK_SizeAndLatency:
+    // Always 2 instructions
+    return 2;
+  case TTI::TCK_Latency:
+  case TTI::TCK_RecipThroughput:
+    return ST->hasAUIPCADDIFusion() ? 1 : 2;
+  }
+  llvm_unreachable("Unsupported cost kind");
 }
 
 InstructionCost
@@ -412,7 +422,7 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,
   // Add a cost of address generation + the cost of the load. The address
   // is expected to be a PC relative offset to a constant pool entry
   // using auipc/addi.
-  return getPCRelativeAddrCost() +
+  return getPCRelativeAddrCost(CostKind) +
          getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
                          /*AddressSpace=*/0, CostKind);
 }
