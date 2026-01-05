@@ -98,6 +98,142 @@ define i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 %2) {
   ret i32 %8
 }
 
+define i8 @cls_i8(i8 %x) {
+; CHECK-LABEL: cls_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sext.b a0, a0
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    addi a0, a0, -24
+; CHECK-NEXT:    ret
+  %a = ashr i8 %x, 7
+  %b = xor i8 %x, %a
+  %c = call i8 @llvm.ctlz.i8(i8 %b, i1 false)
+  %d = sub i8 %c, 1
+  ret i8 %d
+}
+
+define i8 @cls_i8_2(i8 %x) {
+; CHECK-LABEL: cls_i8_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sext.b a0, a0
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    addi a0, a0, -24
+; CHECK-NEXT:    ret
+  %a = ashr i8 %x, 7
+  %b = xor i8 %x, %a
+  %c = shl i8 %b, 1
+  %d = or i8 %c, 1
+  %e = call i8 @llvm.ctlz.i8(i8 %d, i1 true)
+  ret i8 %e
+}
+
+define i16 @cls_i16(i16 %x) {
+; CHECK-LABEL: cls_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    addi a0, a0, -16
+; CHECK-NEXT:    ret
+  %a = ashr i16 %x, 15
+  %b = xor i16 %x, %a
+  %c = call i16 @llvm.ctlz.i16(i16 %b, i1 false)
+  %d = sub i16 %c, 1
+  ret i16 %d
+}
+
+define i16 @cls_i16_2(i16 %x) {
+; CHECK-LABEL: cls_i16_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    addi a0, a0, -16
+; CHECK-NEXT:    ret
+  %a = ashr i16 %x, 15
+  %b = xor i16 %x, %a
+  %c = shl i16 %b, 1
+  %d = or i16 %c, 1
+  %e = call i16 @llvm.ctlz.i16(i16 %d, i1 true)
+  ret i16 %e
+}
+
+define i32 @cls_i32(i32 %x) {
+; CHECK-LABEL: cls_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ret
+  %a = ashr i32 %x, 31
+  %b = xor i32 %x, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  ret i32 %d
+}
+
+define i32 @cls_i32_2(i32 %x) {
+; CHECK-LABEL: cls_i32_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ret
+  %a = ashr i32 %x, 31
+  %b = xor i32 %x, %a
+  %c = shl i32 %b, 1
+  %d = or i32 %c, 1
+  %e = call i32 @llvm.ctlz.i32(i32 %d, i1 true)
+  ret i32 %e
+}
+
+define i64 @cls_i64(i64 %x) {
+; CHECK-LABEL: cls_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a2, a1, 31
+; CHECK-NEXT:    bne a1, a2, .LBB15_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    clz a0, a0
+; CHECK-NEXT:    addi a1, a0, 32
+; CHECK-NEXT:    j .LBB15_3
+; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    clz a1, a1
+; CHECK-NEXT:  .LBB15_3:
+; CHECK-NEXT:    addi a0, a1, -1
+; CHECK-NEXT:    snez a1, a1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    ret
+  %a = ashr i64 %x, 63
+  %b = xor i64 %x, %a
+  %c = call i64 @llvm.ctlz.i64(i64 %b, i1 false)
+  %d = sub i64 %c, 1
+  ret i64 %d
+}
+
+define i64 @cls_i64_2(i64 %x) {
+; CHECK-LABEL: cls_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a2, a1, 31
+; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    bnez a1, .LBB16_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    clz a0, a0
+; CHECK-NEXT:    addi a0, a0, 32
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB16_2:
+; CHECK-NEXT:    clz a0, a1
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = ashr i64 %x, 63
+  %b = xor i64 %x, %a
+  %c = shl i64 %b, 1
+  %d = or i64 %c, 1
+  %e = call i64 @llvm.ctlz.i64(i64 %d, i1 true)
+  ret i64 %e
+}
+
 define i64 @slx_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: slx_i64:
 ; CHECK:       # %bb.0:
