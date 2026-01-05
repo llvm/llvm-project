@@ -65,7 +65,7 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
   /// Range ends with \c StartOfNextToken so that any whitespace after \c
   /// virtual is included.
   std::optional<Token> NextToken =
-      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
+      utils::lexer::findNextTokenSkippingComments(VirtualEndLoc, SM, LangOpts);
   if (!NextToken)
     return std::nullopt;
   const SourceLocation StartOfNextToken = NextToken->getLocation();
@@ -167,7 +167,6 @@ static FixItHint changePrivateDestructorVisibilityTo(
 
 void VirtualClassDestructorCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   const auto *MatchedClassOrStruct =
       Result.Nodes.getNodeAs<CXXRecordDecl>("ProblematicClassOrStruct");
 

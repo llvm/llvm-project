@@ -1003,6 +1003,16 @@ AArch64StringToPACKeyID(StringRef Name) {
   return std::nullopt;
 }
 
+inline static unsigned getBTIHintNum(bool CallTarget, bool JumpTarget) {
+  unsigned HintNum = 32;
+  if (CallTarget)
+    HintNum |= 2;
+  if (JumpTarget)
+    HintNum |= 4;
+  assert(HintNum != 32 && "No target kinds!");
+  return HintNum;
+}
+
 namespace AArch64 {
 // The number of bits in a SVE register is architecturally defined
 // to be a multiple of this value.  If <M x t> has this number of bits,

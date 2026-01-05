@@ -662,12 +662,15 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
   Function *Thunk = buildExitThunk(F->getFunctionType(), F->getAttributes());
   CallInst *GuardCheck = B.CreateCall(
       GuardFnType, GuardCheckLoad, {F, Thunk});
+  Value *GuardCheckDest = B.CreateExtractValue(GuardCheck, 0);
+  Value *GuardFinalDest = B.CreateExtractValue(GuardCheck, 1);
 
   // Ensure that the first argument is passed in the correct register.
   GuardCheck->setCallingConv(CallingConv::CFGuard_Check);
 
   SmallVector<Value *> Args(llvm::make_pointer_range(GuestExit->args()));
-  CallInst *Call = B.CreateCall(Arm64Ty, GuardCheck, Args);
+  OperandBundleDef OB("cfguardtarget", GuardFinalDest);
+  CallInst *Call = B.CreateCall(Arm64Ty, GuardCheckDest, Args, OB);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
 
   if (Call->getType()->isVoidTy())
@@ -767,11 +770,21 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
   CallInst *GuardCheck =
       B.CreateCall(GuardFnType, GuardCheckLoad, {CalledOperand, Thunk},
                    Bundles);
+  Value *GuardCheckDest = B.CreateExtractValue(GuardCheck, 0);
+  Value *GuardFinalDest = B.CreateExtractValue(GuardCheck, 1);
 
   // Ensure that the first argument is passed in the correct register.
   GuardCheck->setCallingConv(CallingConv::CFGuard_Check);
 
-  CB->setCalledOperand(GuardCheck);
+  // Update the call: set the callee, and add a bundle with the final
+  // destination,
+  CB->setCalledOperand(GuardCheckDest);
+  OperandBundleDef OB("cfguardtarget", GuardFinalDest);
+  auto *NewCall = CallBase::addOperandBundle(CB, LLVMContext::OB_cfguardtarget,
+                                             OB, CB->getIterator());
+  NewCall->copyMetadata(*CB);
+  CB->replaceAllUsesWith(NewCall);
+  CB->eraseFromParent();
 }
 
 bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
@@ -789,7 +802,8 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   I64Ty = Type::getInt64Ty(M->getContext());
   VoidTy = Type::getVoidTy(M->getContext());
 
-  GuardFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy}, false);
+  GuardFnType =
+      FunctionType::get(StructType::get(PtrTy, PtrTy), {PtrTy, PtrTy}, false);
   DispatchFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy, PtrTy}, false);
   GuardFnCFGlobal = M->getOrInsertGlobal("__os_arm64x_check_icall_cfg", PtrTy);
   GuardFnGlobal = M->getOrInsertGlobal("__os_arm64x_check_icall", PtrTy);

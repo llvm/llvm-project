@@ -2602,14 +2602,14 @@ foreach n=0-15 in {
 //===----------------------------------------------------------------------===//
 
 // GIC
-class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2> {
+class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg = 1> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
-  bit NeedsReg = 1;
+  bit NeedsReg = needsreg;
   string RequiresStr = [{ {AArch64::FeatureGCIE} }];
 }
 
@@ -2686,12 +2686,12 @@ def : GSB<"ack",      0b000, 0b1100, 0b0000, 0b001>;
 def : GICR<"cdia",    0b000, 0b1100, 0b0011, 0b000>;
 def : GICR<"cdnmia",  0b000, 0b1100, 0b0011, 0b001>;
 
-//                    Op1    CRn     CRm     Op2
+//                    Op1    CRn     CRm     Op2,   needsreg
 def : GIC<"cdaff",    0b000, 0b1100, 0b0001, 0b011>;
 def : GIC<"cddi",     0b000, 0b1100, 0b0010, 0b000>;
 def : GIC<"cddis",    0b000, 0b1100, 0b0001, 0b000>;
 def : GIC<"cden",     0b000, 0b1100, 0b0001, 0b001>;
-def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111>;
+def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111, 0>;
 def : GIC<"cdhm",     0b000, 0b1100, 0b0010, 0b001>;
 def : GIC<"cdpend",   0b000, 0b1100, 0b0001, 0b100>;
 def : GIC<"cdpri",    0b000, 0b1100, 0b0001, 0b010>;

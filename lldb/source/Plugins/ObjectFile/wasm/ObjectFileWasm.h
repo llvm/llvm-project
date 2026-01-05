@@ -30,10 +30,12 @@ public:
     return "WebAssembly object file reader.";
   }
 
-  static ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length);
+  static ObjectFile *CreateInstance(const lldb::ModuleSP &module_sp,
+                                    lldb::DataExtractorSP extractor_sp,
+                                    lldb::offset_t data_offset,
+                                    const FileSpec *file,
+                                    lldb::offset_t file_offset,
+                                    lldb::offset_t length);
 
   static ObjectFile *CreateMemoryInstance(const lldb::ModuleSP &module_sp,
                                           lldb::WritableDataBufferSP data_sp,
@@ -112,9 +114,10 @@ public:
   std::optional<FileSpec> GetExternalDebugInfoFileSpec();
 
 private:
-  ObjectFileWasm(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const FileSpec *file,
-                 lldb::offset_t offset, lldb::offset_t length);
+  ObjectFileWasm(const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const FileSpec *file, lldb::offset_t offset,
+                 lldb::offset_t length);
   ObjectFileWasm(const lldb::ModuleSP &module_sp,
                  lldb::WritableDataBufferSP header_data_sp,
                  const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
@@ -146,6 +149,7 @@ private:
   /// \}
 
   std::vector<section_info> m_sect_infos;
+  uint32_t m_num_imported_functions = 0;
   std::vector<Symbol> m_symbols;
   ArchSpec m_arch;
   UUID m_uuid;

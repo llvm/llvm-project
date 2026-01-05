@@ -98,6 +98,7 @@ public:
                                 unsigned DefaultCallPenalty) const override;
 
   APInt getFeatureMask(const Function &F) const override;
+  APInt getPriorityMask(const Function &F) const override;
 
   bool isMultiversionedFunction(const Function &F) const override;
 
@@ -188,15 +189,14 @@ public:
                                                   unsigned Opcode2) const;
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
-                        TTI::TargetCostKind CostKind) const override;
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
 
-  InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const override;
+  InstructionCost getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                        TTI::TargetCostKind CostKind) const;
+
+  InstructionCost getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const;
 
   bool isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
                           Type *Src) const;
@@ -324,13 +324,32 @@ public:
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned /*AddressSpace*/) const override {
+                         unsigned /*AddressSpace*/,
+                         TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) const override {
+                          unsigned /*AddressSpace*/,
+                          TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
+  }
+
+  bool isElementTypeLegalForCompressStore(Type *Ty) const {
+    return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
+           Ty->isIntegerTy(64);
+  }
+
+  bool isLegalMaskedCompressStore(Type *DataType,
+                                  Align Alignment) const override {
+    if (!ST->isSVEAvailable())
+      return false;
+
+    if (isa<FixedVectorType>(DataType) &&
+        DataType->getPrimitiveSizeInBits() < 128)
+      return false;
+
+    return isElementTypeLegalForCompressStore(DataType->getScalarType());
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
@@ -518,6 +537,10 @@ public:
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
+
+  bool enableAggressiveInterleaving(bool) const override {
+    return ST->enableAggressiveInterleaving();
+  }
   /// @}
 };
 

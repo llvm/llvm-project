@@ -26,6 +26,7 @@ extern "C" {
 extern int __unw_getcontext(unw_context_t *);
 extern int __unw_init_local(unw_cursor_t *, unw_context_t *);
 extern int __unw_step(unw_cursor_t *);
+extern int __unw_step_stage2(unw_cursor_t *);
 extern int __unw_get_reg(unw_cursor_t *, unw_regnum_t, unw_word_t *);
 extern int __unw_get_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t *);
 extern int __unw_set_reg(unw_cursor_t *, unw_regnum_t, unw_word_t);

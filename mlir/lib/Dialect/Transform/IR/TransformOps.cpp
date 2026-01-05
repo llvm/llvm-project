@@ -170,7 +170,7 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
     auto scope = state.make_region_scope(reg);
     auto clones = llvm::to_vector(
         llvm::map_range(originals, [](Operation *op) { return op->clone(); }));
-    auto deleteClones = llvm::make_scope_exit([&] {
+    llvm::scope_exit deleteClones([&] {
       for (Operation *clone : clones)
         clone->erase();
     });
@@ -2062,6 +2062,10 @@ transform::IncludeOp::apply(transform::TransformRewriter &rewriter,
 
   DiagnosedSilenceableFailure result = applySequenceBlock(
       callee.getBody().front(), getFailurePropagationMode(), state, results);
+
+  if (!result.succeeded())
+    return result;
+
   mappings.clear();
   detail::prepareValueMappings(
       mappings, callee.getBody().front().getTerminator()->getOperands(), state);

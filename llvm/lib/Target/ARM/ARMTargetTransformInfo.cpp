@@ -66,6 +66,11 @@ extern cl::opt<bool> EnableMaskedGatherScatters;
 
 extern cl::opt<unsigned> MVEMaxSupportedInterleaveFactor;
 
+static cl::opt<int> ArmForceUnrollThreshold(
+    "arm-force-unroll-threshold", cl::init(12), cl::Hidden,
+    cl::desc(
+        "Threshold for forced unrolling of small loops in Arm architecture"));
+
 /// Convert a vector load intrinsic into a simple llvm load instruction.
 /// This is beneficial when the underlying object being addressed comes
 /// from a constant, since we get constant-folding for free.
@@ -1125,7 +1130,8 @@ bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
 }
 
 bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                                   unsigned /*AddressSpace*/) const {
+                                   unsigned /*AddressSpace*/,
+                                   TTI::MaskKind /*MaskKind*/) const {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1631,20 +1637,36 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                                  unsigned AddressSpace,
+ARMTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+  switch (MICA.getID()) {
+  case Intrinsic::masked_scatter:
+  case Intrinsic::masked_gather:
+    return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
+ARMTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
+  unsigned IID = MICA.getID();
+  Type *Src = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  unsigned AddressSpace = MICA.getAddressSpace();
   if (ST->hasMVEIntegerOps()) {
-    if (Opcode == Instruction::Load &&
+    if (IID == Intrinsic::masked_load &&
         isLegalMaskedLoad(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
-    if (Opcode == Instruction::Store &&
+    if (IID == Intrinsic::masked_store &&
         isLegalMaskedStore(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
   }
   if (!isa<FixedVectorType>(Src))
-    return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                        CostKind);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
   // Scalar cost, which is currently very high due to the efficiency of the
   // generated code.
   return cast<FixedVectorType>(Src)->getNumElements() * 8;
@@ -1691,13 +1713,19 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
                                            UseMaskForCond, UseMaskForGaps);
 }
 
-InstructionCost ARMTTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
+InstructionCost
+ARMTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                   TTI::TargetCostKind CostKind) const {
+
+  Type *DataTy = MICA.getDataType();
+  const Value *Ptr = MICA.getPointer();
+  bool VariableMask = MICA.getVariableMask();
+  Align Alignment = MICA.getAlignment();
+  const Instruction *I = MICA.getInst();
+
   using namespace PatternMatch;
   if (!ST->hasMVEIntegerOps() || !EnableMaskedGatherScatters)
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   assert(DataTy->isVectorTy() && "Can't do gather/scatters on scalar!");
   auto *VTy = cast<FixedVectorType>(DataTy);
@@ -2728,7 +2756,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
-  if (Cost < 12)
+  if (Cost < ArmForceUnrollThreshold)
     UP.Force = true;
 }
 

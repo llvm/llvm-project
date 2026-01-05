@@ -1458,10 +1458,8 @@ void Preprocessor::removeCommentHandler(CommentHandler *Handler) {
 
 bool Preprocessor::HandleComment(Token &result, SourceRange Comment) {
   bool AnyPendingTokens = false;
-  for (std::vector<CommentHandler *>::iterator H = CommentHandlers.begin(),
-       HEnd = CommentHandlers.end();
-       H != HEnd; ++H) {
-    if ((*H)->HandleComment(*this, Comment))
+  for (CommentHandler *H : CommentHandlers) {
+    if (H->HandleComment(*this, Comment))
       AnyPendingTokens = true;
   }
   if (!AnyPendingTokens || getCommentRetentionState())

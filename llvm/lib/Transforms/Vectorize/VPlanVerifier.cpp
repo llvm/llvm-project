@@ -18,6 +18,7 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -43,6 +44,9 @@ class VPlanVerifier {
   /// EVL-based recipes as a last operand or VPInstruction::Add which is
   /// incoming value into EVL's recipe.
   bool verifyEVLRecipe(const VPInstruction &EVL) const;
+
+  /// Verify that \p LastActiveLane's operand is guaranteed to be a prefix-mask.
+  bool verifyLastActiveLaneRecipe(const VPInstruction &LastActiveLane) const;
 
   bool verifyVPBasicBlock(const VPBasicBlock *VPBB);
 
@@ -221,6 +225,44 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
   });
 }
 
+bool VPlanVerifier::verifyLastActiveLaneRecipe(
+    const VPInstruction &LastActiveLane) const {
+  assert(LastActiveLane.getOpcode() == VPInstruction::LastActiveLane &&
+         "must be called with VPInstruction::LastActiveLane");
+
+  if (LastActiveLane.getNumOperands() < 1) {
+    errs() << "LastActiveLane must have at least one operand\n";
+    return false;
+  }
+
+  const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
+  // All operands must be prefix-mask. Currently we check for header masks or
+  // EVL-derived masks, as those are currently the only operands in practice,
+  // but this may need updating in the future.
+  for (VPValue *Op : LastActiveLane.operands()) {
+    if (vputils::isHeaderMask(Op, Plan))
+      continue;
+
+    // Masks derived from EVL are also fine.
+    auto BroadcastOrEVL =
+        m_CombineOr(m_Broadcast(m_EVL(m_VPValue())), m_EVL(m_VPValue()));
+    if (match(Op, m_CombineOr(m_ICmp(m_StepVector(), BroadcastOrEVL),
+                              m_ICmp(BroadcastOrEVL, m_StepVector()))))
+      continue;
+
+    errs() << "LastActiveLane operand ";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    VPSlotTracker Tracker(&Plan);
+    Op->printAsOperand(errs(), Tracker);
+#endif
+    errs() << " must be prefix mask (a header mask or an "
+              "EVL-derived mask currently)\n";
+    return false;
+  }
+
+  return true;
+}
+
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
@@ -313,6 +355,10 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           return false;
         }
         break;
+      case VPInstruction::LastActiveLane:
+        if (!verifyLastActiveLaneRecipe(*VPI))
+          return false;
+        break;
       default:
         break;
       }
@@ -345,20 +391,18 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
-  if (!isa<VPIRBasicBlock>(VPB)) {
+  if (VPBB && !isa<VPIRBasicBlock>(VPB)) {
     if (VPB->getNumSuccessors() > 1 ||
-        (VPBB && VPBB->getParent() && VPBB->isExiting() &&
+        (VPBB->getParent() && VPBB->isExiting() &&
          !VPBB->getParent()->isReplicator())) {
-      if (!VPBB || !VPBB->getTerminator()) {
+      if (!VPBB->getTerminator()) {
         errs() << "Block has multiple successors but doesn't "
                   "have a proper branch recipe!\n";
         return false;
       }
-    } else {
-      if (VPBB && VPBB->getTerminator()) {
-        errs() << "Unexpected branch recipe!\n";
-        return false;
-      }
+    } else if (VPBB->getTerminator()) {
+      errs() << "Unexpected branch recipe!\n";
+      return false;
     }
   }
 
@@ -485,15 +529,17 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   if (Exiting->empty()) {
-    errs() << "VPlan vector loop exiting block must end with BranchOnCount or "
-              "BranchOnCond VPInstruction but is empty\n";
+    errs() << "VPlan vector loop exiting block must end with BranchOnCount, "
+              "BranchOnCond, or BranchOnTwoConds VPInstruction but is empty\n";
     return false;
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!match(LastInst, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()))) {
-    errs() << "VPlan vector loop exit must end with BranchOnCount or "
-              "BranchOnCond VPInstruction\n";
+  if (!match(LastInst, m_CombineOr(m_BranchOnCond(),
+                                   m_CombineOr(m_BranchOnCount(),
+                                               m_BranchOnTwoConds())))) {
+    errs() << "VPlan vector loop exit must end with BranchOnCount, "
+              "BranchOnCond, or BranchOnTwoConds VPInstruction\n";
     return false;
   }
 

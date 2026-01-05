@@ -3499,6 +3499,9 @@ bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
 
+  if (!UnmergeSrcTy.isVector())
+    return false;
+
   // Ensure we only generate legal instructions post-legalizer
   if (!IsPreLegalize &&
       !isLegal({TargetOpcode::G_CONCAT_VECTORS, {DstTy, UnmergeSrcTy}}))
@@ -7553,7 +7556,7 @@ bool CombinerHelper::matchSelectIMinMax(const MachineOperand &MO,
   Register False = Select->getFalseReg();
   LLT DstTy = MRI.getType(DstReg);
 
-  if (DstTy.isPointer())
+  if (DstTy.isPointerOrPointerVector())
     return false;
 
   // We want to fold the icmp and replace the select.

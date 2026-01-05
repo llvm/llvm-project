@@ -18,6 +18,7 @@ builtin_check_c_compiler_flag(-fno-lto              COMPILER_RT_HAS_FNO_LTO_FLAG
 builtin_check_c_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
+builtin_check_c_compiler_flag(-Wno-c2y-extensions   COMPILER_RT_HAS_WNO_C2Y_EXTENSIONS)
 builtin_check_c_compiler_flag(-Wno-pedantic         COMPILER_RT_HAS_WNO_PEDANTIC)
 builtin_check_c_compiler_flag(-nogpulib             COMPILER_RT_HAS_NOGPULIB_FLAG)
 builtin_check_c_compiler_flag(-flto                 COMPILER_RT_HAS_FLTO_FLAG)
@@ -78,7 +79,7 @@ else()
 endif()
 
 set(AMDGPU amdgcn)
-set(ARM64 aarch64 arm64ec)
+set(ARM64 aarch64 arm64ec aarch64_lfi)
 set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv7k armv8m.base armv8m.main armv8.1m.main)
 set(AVR avr)
 set(HEXAGON hexagon)
@@ -98,6 +99,7 @@ set(SPARCV9 sparcv9)
 set(WASM32 wasm32)
 set(WASM64 wasm64)
 set(VE ve)
+set(M68K m68k)
 
 if(APPLE)
   set(ARM64 arm64 arm64e)
@@ -109,7 +111,7 @@ set(ALL_BUILTIN_SUPPORTED_ARCH
   ${X86} ${X86_64} ${AMDGPU} ${ARM32} ${ARM64} ${AVR}
   ${HEXAGON} ${MIPS32} ${MIPS64} ${NVPTX} ${PPC32} ${PPC64}
   ${RISCV32} ${RISCV64} ${S390X} ${SPARC} ${SPARCV9}
-  ${WASM32} ${WASM64} ${VE} ${LOONGARCH64})
+  ${WASM32} ${WASM64} ${VE} ${LOONGARCH64} ${M68K})
 
 include(CompilerRTUtils)
 include(CompilerRTDarwinUtils)

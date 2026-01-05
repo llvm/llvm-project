@@ -105,8 +105,8 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
   return 0;
 }
 
-static int WriteOutput(const TGParser &Parser, const char *argv0,
-                       StringRef Filename, StringRef Content) {
+static int WriteOutput(const char *argv0, StringRef Filename,
+                       StringRef Content) {
   if (WriteIfChanged) {
     // Only updates the real output file if there are any differences.
     // This prevents recompilation of all the files depending on it if there
@@ -127,8 +127,7 @@ static int WriteOutput(const TGParser &Parser, const char *argv0,
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0,
-                       std::function<MultiFileTableGenMainFn> MainFn) {
+int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   RecordKeeper Records;
   TGTimer &Timer = Records.getTimer();
 
@@ -188,7 +187,7 @@ int llvm::TableGenMain(const char *argv0,
   }
 
   Timer.startTimer("Write output");
-  if (int Ret = WriteOutput(Parser, argv0, OutputFilename, OutFiles.MainFile))
+  if (int Ret = WriteOutput(argv0, OutputFilename, OutFiles.MainFile))
     return Ret;
   for (auto [Suffix, Content] : OutFiles.AdditionalFiles) {
     SmallString<128> Filename(OutputFilename);
@@ -197,7 +196,7 @@ int llvm::TableGenMain(const char *argv0,
       sys::path::replace_extension(Filename, "");
       Filename.append(Suffix);
     }
-    if (int Ret = WriteOutput(Parser, argv0, Filename, Content))
+    if (int Ret = WriteOutput(argv0, Filename, Content))
       return Ret;
   }
 
@@ -209,8 +208,7 @@ int llvm::TableGenMain(const char *argv0,
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0,
-                       std::function<TableGenMainFn> MainFn) {
+int llvm::TableGenMain(const char *argv0, TableGenMainFn MainFn) {
   return TableGenMain(argv0, [&MainFn](TableGenOutputFiles &OutFiles,
                                        const RecordKeeper &Records) {
     std::string S;
