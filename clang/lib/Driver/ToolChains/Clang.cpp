@@ -2817,8 +2817,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   for (const Arg *A : Args) {
-    auto CheckMathErrnoForVecLib =
-        llvm::make_scope_exit([&, MathErrnoBeforeArg = MathErrno] {
+    llvm::scope_exit CheckMathErrnoForVecLib(
+        [&, MathErrnoBeforeArg = MathErrno] {
           if (NoMathErrnoWasImpliedByVecLib && !MathErrnoBeforeArg && MathErrno)
             ArgThatEnabledMathErrnoAfterVecLib = A;
         });
@@ -7222,9 +7222,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
        Std->containsValue("c++20") || Std->containsValue("gnu++20") ||
        Std->containsValue("c++2b") || Std->containsValue("gnu++2b") ||
        Std->containsValue("c++23") || Std->containsValue("gnu++23") ||
-       Std->containsValue("c++2c") || Std->containsValue("gnu++2c") ||
-       Std->containsValue("c++26") || Std->containsValue("gnu++26") ||
-       Std->containsValue("c++latest") || Std->containsValue("gnu++latest"));
+       Std->containsValue("c++23preview") || Std->containsValue("c++2c") ||
+       Std->containsValue("gnu++2c") || Std->containsValue("c++26") ||
+       Std->containsValue("gnu++26") || Std->containsValue("c++latest") ||
+       Std->containsValue("gnu++latest"));
   bool HaveModules =
       RenderModulesOptions(C, D, Args, Input, Output, HaveCxx20, CmdArgs);
 

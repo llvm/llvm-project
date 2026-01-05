@@ -363,6 +363,11 @@ New check aliases
   <clang-tidy/checks/misc/multiple-inheritance>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`google-build-namespaces <clang-tidy/checks/google/build-namespaces>` to
+  :doc:`misc-anonymous-namespace-in-header 
+  <clang-tidy/checks/misc/anonymous-namespace-in-header>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`google-readability-casting <clang-tidy/checks/google/readability-casting>` to
   :doc:`modernize-avoid-c-style-cast
   <clang-tidy/checks/modernize/avoid-c-style-cast>`
@@ -375,6 +380,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/chained-comparison>` check by adding a
   new option `IgnoreMacros` to suppress warnings within macro
   expansions.
+
+- Improved :doc:`bugprone-dynamic-static-initializers
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check by
+  avoiding false positives for ``constexpr`` variables whose
+  initializers are value-dependent.
 
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by

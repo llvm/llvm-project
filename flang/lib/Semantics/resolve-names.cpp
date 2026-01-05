@@ -1081,6 +1081,8 @@ public:
   bool Pre(const parser::SaveStmt &);
   bool Pre(const parser::BasedPointer &);
   void Post(const parser::BasedPointer &);
+  bool Pre(const parser::CUFKernelDoConstruct &);
+  void Post(const parser::CUFKernelDoConstruct &);
 
   void PointerInitialization(
       const parser::Name &, const parser::InitialDataTarget &);
@@ -3663,6 +3665,7 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
     currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
+
   useModuleScope_ = nullptr;
 }
 
@@ -4871,7 +4874,13 @@ bool SubprogramVisitor::Pre(const parser::FunctionStmt &) {
   }
   return BeginAttrs();
 }
-bool SubprogramVisitor::Pre(const parser::EntryStmt &) { return BeginAttrs(); }
+bool SubprogramVisitor::Pre(const parser::EntryStmt &stmt) {
+  if (inInterfaceBlock()) {
+    Say(std::get<parser::Name>(stmt.t).source,
+        "An ENTRY statement may not appear in an interface body"_err_en_US);
+  }
+  return BeginAttrs();
+}
 
 void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   const auto &name{std::get<parser::Name>(stmt.t)};
@@ -7501,7 +7510,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
       SayAlreadyDeclared(name, *prev);
       return nullptr;
     }
-    name.symbol = nullptr;
+    // Inhibit diagnostics about an unused local symbol here, since
+    // this one may well have been declared solely to determine the
+    // type of an implied DO index.  Some compilers don't yet support
+    // an explicit "integer(k)::" in an implied DO.
+    context().NoteDefinedSymbol(*prev);
+    name.symbol = nullptr; // undo the "FindSymbol()" above
     // F'2023 19.4 p5 ambiguous rule about outer declarations
     declTypeSpec = prev->GetType();
   }
@@ -7733,7 +7747,7 @@ bool DeclarationVisitor::OkToAddComponent(
       if (msg) {
         auto &said{Say2(name, std::move(*msg), *prev,
             "Previous declaration of '%s'"_en_US)};
-        if (msg->severity() == parser::Severity::Error) {
+        if (msg->IsFatal()) {
           Resolve(name, *prev);
           return false;
         }
@@ -9276,6 +9290,16 @@ void DeclarationVisitor::LegacyDataInitialization(const parser::Name &name,
       ultimate.set_size(oldSize);
     }
   }
+}
+
+bool DeclarationVisitor::Pre(const parser::CUFKernelDoConstruct &x) {
+  // Treat CUDA kernel do construct as OpenACC construct.
+  PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  return true;
+}
+
+void DeclarationVisitor::Post(const parser::CUFKernelDoConstruct &x) {
+  PopScope();
 }
 
 void ResolveNamesVisitor::HandleCall(

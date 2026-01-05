@@ -2048,8 +2048,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
   if (!I) {
     // Handle constants and arguments
     Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth + 1);
-    Value *FoldedToConst =
-        getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+
+    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+    if (ValidResults == fcNone)
+      return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
+
+    // Do not try to replace values which are already constants (unless we are
+    // folding to poison). Doing so could promote poison elements to non-poison
+    // constants.
+    if (isa<Constant>(V))
+      return nullptr;
+
+    Value *FoldedToConst = getFPClassConstant(VTy, ValidResults);
     return FoldedToConst == V ? nullptr : FoldedToConst;
   }
 
@@ -2149,7 +2159,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
         // exp(+/- smallest_normal) = 1
         // exp(+/- largest_denormal) = 1
         // exp(+/- smallest_denormal) = 1
-        SrcDemandedMask |= fcPosNormal | fcSubnormal | fcZero;
+        // exp(-1) = pos normal
+        SrcDemandedMask |= fcNormal | fcSubnormal | fcZero;
       }
 
       // exp(inf), exp(largest_normal) = inf
@@ -2192,8 +2203,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
         Value *X = CI->getArgOperand(0);
         Value *IsPosInfOrNan = Builder.CreateFCmpFMF(
             FCmpInst::FCMP_UEQ, X, ConstantFP::getInfinity(VTy), FMF);
-        return Builder.CreateSelectFMF(IsPosInfOrNan, X,
-                                       ConstantFP::getZero(VTy), FMF);
+        // We do not know whether an infinity or a NaN is more likely here,
+        // so mark the branch weights as unkown.
+        Value *ZeroOrInf = Builder.CreateSelectFMFWithUnknownProfile(
+            IsPosInfOrNan, X, ConstantFP::getZero(VTy), FMF, DEBUG_TYPE);
+        return ZeroOrInf;
       }
 
       // Only perform nan propagation.
@@ -2266,7 +2280,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       [[fallthrough]];
     }
     default:
-      Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+      Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
       break;
     }
 
@@ -2291,6 +2305,27 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     // TODO: Handle demanded element mask
     if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
       return I;
+    break;
+  }
+  case Instruction::InsertElement: {
+    KnownFPClass KnownInserted, KnownVec;
+    if (SimplifyDemandedFPClass(I, 1, DemandedMask, KnownInserted, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 0, DemandedMask, KnownVec, Depth + 1))
+      return I;
+
+    // TODO: Use demanded elements logic from computeKnownFPClass
+    Known = KnownVec | KnownInserted;
+    break;
+  }
+  case Instruction::ShuffleVector: {
+    KnownFPClass KnownLHS, KnownRHS;
+    if (SimplifyDemandedFPClass(I, 1, DemandedMask, KnownRHS, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 0, DemandedMask, KnownLHS, Depth + 1))
+      return I;
+
+    // TODO: This is overly conservative and should consider demanded elements,
+    // and splats.
+    Known = KnownLHS | KnownRHS;
     break;
   }
   default:
