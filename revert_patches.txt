@@ -1,4 +1,3 @@
 ---
-kareem: needs downstream help
-[flang][mlir] Add support for implicit linearization in omp.simd (#150386)
+XXXXXXXXX
 ---
