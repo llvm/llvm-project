@@ -6,25 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaddset.h"
 #include "src/signal/sigemptyset.h"
 #include "src/signal/sigprocmask.h"
-
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <signal.h>
 
-class LlvmLibcSignalTest : public LIBC_NAMESPACE::testing::Test {
+class LlvmLibcSigprocmaskTest
+    : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
   sigset_t oldSet;
 
 public:
-  void SetUp() override { LIBC_NAMESPACE::sigprocmask(0, nullptr, &oldSet); }
+  void SetUp() override {
+    ErrnoCheckingTest::SetUp();
+    LIBC_NAMESPACE::sigprocmask(0, nullptr, &oldSet);
+  }
 
   void TearDown() override {
     LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &oldSet, nullptr);
+    ErrnoCheckingTest::TearDown();
   }
 };
 
@@ -32,9 +36,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 // This tests for invalid input.
-TEST_F(LlvmLibcSignalTest, SigprocmaskInvalid) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
+TEST_F(LlvmLibcSigprocmaskTest, SigprocmaskInvalid) {
   sigset_t valid;
   // 17 and -4 are out of the range for sigprocmask's how paramater.
   EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(17, &valid, nullptr), Fails(EINVAL));
@@ -49,7 +51,7 @@ TEST_F(LlvmLibcSignalTest, SigprocmaskInvalid) {
 
 // This tests that when nothing is blocked, a process gets killed and alse tests
 // that when signals are blocked they are not delivered to the process.
-TEST_F(LlvmLibcSignalTest, BlockUnblock) {
+TEST_F(LlvmLibcSigprocmaskTest, BlockUnblock) {
   sigset_t sigset;
   EXPECT_EQ(LIBC_NAMESPACE::sigemptyset(&sigset), 0);
   EXPECT_EQ(LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &sigset, nullptr), 0);

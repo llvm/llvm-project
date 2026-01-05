@@ -98,13 +98,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasBTI : 1;
 
-  enum {
-    LDREX_B = (1 << 0), /// byte (8-bit)
-    LDREX_H = (1 << 1), /// half (16-bit)
-    LDREX_W = (1 << 2), /// word (32-bit)
-    LDREX_D = (1 << 3), /// double (64-bit)
-  };
-
   uint32_t LDREX;
 
   // ACLE 6.5.1 Hardware floating point
@@ -155,6 +148,7 @@ public:
   bool isBranchProtectionSupportedArch(StringRef Arch) const override;
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
+                                const LangOptions &LO,
                                 StringRef &Err) const override;
 
   // FIXME: This should be based on Arch attributes, not CPU names.
@@ -196,7 +190,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool isCLZForZeroUndef() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
@@ -224,10 +218,12 @@ public:
 
   bool hasBitIntType() const override { return true; }
 
+  unsigned getARMLDREXMask() const override { return LDREX; }
+
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
-    return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
+    return std::make_pair(64, 64);
   }
 };
 

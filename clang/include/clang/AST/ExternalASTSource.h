@@ -51,6 +51,7 @@ class RecordDecl;
 class Selector;
 class Stmt;
 class TagDecl;
+class VarDecl;
 
 /// Abstract interface for external sources of AST nodes.
 ///
@@ -190,6 +191,10 @@ public:
   enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
 
   virtual ExtKind hasExternalDefinitions(const Decl *D);
+
+  /// True if this function declaration was a definition before in its own
+  /// module.
+  virtual bool wasThisDeclarationADefinition(const FunctionDecl *FD);
 
   /// Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.

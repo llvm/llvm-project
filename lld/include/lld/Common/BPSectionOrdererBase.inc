@@ -20,9 +20,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Utils.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,6 +36,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <optional>
+#include <set>
 
 #define DEBUG_TYPE "bp-section-orderer"
 
@@ -46,7 +48,7 @@ template <class D> struct BPOrdererTraits;
 
 template <class D> struct BPOrderer {
   using Section = typename BPOrdererTraits<D>::Section;
-  using Symbol = typename BPOrdererTraits<D>::Symbol;
+  using Defined = typename BPOrdererTraits<D>::Defined;
 
   // Compute a section order using the Balanced Partitioning algorithm.
   //
@@ -56,13 +58,17 @@ template <class D> struct BPOrderer {
   //   program startup.
   // * compressionSortStartupFunctions: if profilePath is specified, allocate
   //   extra utility vertices to prioritize nearby function similarity.
-  static auto
-  computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
-               bool forDataCompression, bool compressionSortStartupFunctions,
-               bool verbose, llvm::ArrayRef<Section *> sections,
-               const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
-                   &rootSymbolToSectionIdxs)
+  auto computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
+                    bool forDataCompression,
+                    bool compressionSortStartupFunctions, bool verbose,
+                    llvm::ArrayRef<Section *> sections,
+                    const DenseMap<CachedHashStringRef, std::set<unsigned>>
+                        &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
+
+  std::optional<StringRef> static getResolvedLinkageName(StringRef name) {
+    return {};
+  }
 };
 } // namespace lld
 
@@ -73,7 +79,7 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     ArrayRef<const typename D::Section *> sections,
     const DenseMap<const void *, uint64_t> &sectionToIdx,
     ArrayRef<unsigned> sectionIdxs,
-    DenseMap<unsigned, SmallVector<unsigned>> *duplicateSectionIdxs,
+    DenseMap<unsigned, SmallVector<unsigned, 0>> *duplicateSectionIdxs,
     BPFunctionNode::UtilityNodeT &maxUN) {
   TimeTraceScope timeScope("Build nodes for compression");
 
@@ -88,7 +94,7 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     hashes.clear();
   }
 
-  DenseMap<uint64_t, unsigned> hashFrequency;
+  MapVector<uint64_t, unsigned> hashFrequency;
   for (auto &[sectionIdx, hashes] : sectionHashes)
     for (auto hash : hashes)
       ++hashFrequency[hash];
@@ -97,10 +103,11 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     // Merge sections that are nearly identical
     SmallVector<std::pair<unsigned, SmallVector<uint64_t>>> newSectionHashes;
     DenseMap<uint64_t, unsigned> wholeHashToSectionIdx;
+    unsigned threshold = sectionHashes.size() > 10000 ? 5 : 0;
     for (auto &[sectionIdx, hashes] : sectionHashes) {
       uint64_t wholeHash = 0;
       for (auto hash : hashes)
-        if (hashFrequency[hash] > 5)
+        if (hashFrequency[hash] > threshold)
           wholeHash ^= hash;
       auto [it, wasInserted] =
           wholeHashToSectionIdx.insert(std::make_pair(wholeHash, sectionIdx));
@@ -141,22 +148,12 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
   return sectionUns;
 }
 
-/// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
-/// "yyyy" are numbers that could change between builds. We need to use the
-/// root symbol name before this suffix so these symbols can be matched with
-/// profiles which may have different suffixes.
-inline StringRef getRootSymbol(StringRef name) {
-  auto [P0, S0] = name.rsplit(".llvm.");
-  auto [P1, S1] = P0.rsplit(".__uniq.");
-  return P1;
-}
-
 template <class D>
 auto BPOrderer<D>::computeOrder(
     StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose,
     ArrayRef<Section *> sections,
-    const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
+    const DenseMap<CachedHashStringRef, std::set<unsigned>>
         &rootSymbolToSectionIdxs) -> DenseMap<const Section *, int> {
   TimeTraceScope timeScope("Setup Balanced Partitioning");
   DenseMap<const void *, uint64_t> sectionToIdx;
@@ -188,7 +185,7 @@ auto BPOrderer<D>::computeOrder(
       for (size_t timestamp = 0; timestamp < trace.size(); timestamp++) {
         auto [_, parsedFuncName] = getParsedIRPGOName(
             reader->getSymtab().getFuncOrVarName(trace[timestamp]));
-        parsedFuncName = getRootSymbol(parsedFuncName);
+        parsedFuncName = lld::utils::getRootSymbol(parsedFuncName);
 
         auto sectionIdxsIt =
             rootSymbolToSectionIdxs.find(CachedHashStringRef(parsedFuncName));
@@ -251,13 +248,13 @@ auto BPOrderer<D>::computeOrder(
       auto &uns = startupSectionIdxUNs[sectionIdx];
       uns.append(compressionUns);
       llvm::sort(uns);
-      uns.erase(std::unique(uns.begin(), uns.end()), uns.end());
+      uns.erase(llvm::unique(uns), uns.end());
     }
   }
 
   // Map a section index (order directly) to a list of duplicate section indices
   // (not ordered directly).
-  DenseMap<unsigned, SmallVector<unsigned>> duplicateSectionIdxs;
+  DenseMap<unsigned, SmallVector<unsigned, 0>> duplicateSectionIdxs;
   auto unsForFunctionCompression = getUnsForCompression<D>(
       sections, sectionToIdx, sectionIdxsForFunctionCompression,
       &duplicateSectionIdxs, maxUN);
@@ -295,45 +292,54 @@ auto BPOrderer<D>::computeOrder(
     bp.run(nodesForDataCompression);
   }
 
-  unsigned numStartupSections = 0;
-  unsigned numCodeCompressionSections = 0;
-  unsigned numDuplicateCodeSections = 0;
-  unsigned numDataCompressionSections = 0;
-  unsigned numDuplicateDataSections = 0;
+  unsigned numStartupSections = 0, startupSize = 0;
+  unsigned numCodeCompressionSections = 0, codeCompressionSize = 0;
+  unsigned numDuplicateCodeSections = 0, duplicateCodeSize = 0;
+  unsigned numDataCompressionSections = 0, dataCompressionSize = 0;
+  unsigned numDuplicateDataSections = 0, duplicateDataSize = 0;
   SetVector<const Section *> orderedSections;
   // Order startup functions,
   for (auto &node : nodesForStartup) {
     const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec))
+    if (orderedSections.insert(isec)) {
+      startupSize += D::getSize(*isec);
       ++numStartupSections;
+    }
   }
   // then functions for compression,
   for (auto &node : nodesForFunctionCompression) {
     const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec))
+    if (orderedSections.insert(isec)) {
+      codeCompressionSize += D::getSize(*isec);
       ++numCodeCompressionSections;
-
+    }
     auto It = duplicateSectionIdxs.find(node.Id);
     if (It == duplicateSectionIdxs.end())
       continue;
     for (auto dupSecIdx : It->getSecond()) {
       const auto *dupIsec = sections[dupSecIdx];
-      if (orderedSections.insert(dupIsec))
+      if (orderedSections.insert(dupIsec)) {
+        duplicateCodeSize += D::getSize(*dupIsec);
         ++numDuplicateCodeSections;
+      }
     }
   }
   // then data for compression.
   for (auto &node : nodesForDataCompression) {
     const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec))
+    if (orderedSections.insert(isec)) {
+      dataCompressionSize += D::getSize(*isec);
       ++numDataCompressionSections;
+    }
     auto It = duplicateSectionIdxs.find(node.Id);
     if (It == duplicateSectionIdxs.end())
       continue;
     for (auto dupSecIdx : It->getSecond()) {
       const auto *dupIsec = sections[dupSecIdx];
-      if (orderedSections.insert(dupIsec))
+      if (orderedSections.insert(dupIsec)) {
+        duplicateDataSize += D::getSize(*dupIsec);
         ++numDuplicateDataSections;
+      }
     }
   }
 
@@ -342,14 +348,21 @@ auto BPOrderer<D>::computeOrder(
         numStartupSections + numCodeCompressionSections +
         numDuplicateCodeSections + numDataCompressionSections +
         numDuplicateDataSections;
-    dbgs()
-        << "Ordered " << numTotalOrderedSections
-        << " sections using balanced partitioning:\n  Functions for startup: "
-        << numStartupSections
-        << "\n  Functions for compression: " << numCodeCompressionSections
-        << "\n  Duplicate functions: " << numDuplicateCodeSections
-        << "\n  Data for compression: " << numDataCompressionSections
-        << "\n  Duplicate data: " << numDuplicateDataSections << "\n";
+    unsigned totalOrderedSize = startupSize + codeCompressionSize +
+                                duplicateCodeSize + dataCompressionSize +
+                                duplicateDataSize;
+    dbgs() << "Ordered " << numTotalOrderedSections << " sections ("
+           << totalOrderedSize << " bytes) using balanced partitioning:\n";
+    dbgs() << "  Functions for startup: " << numStartupSections << " ("
+           << startupSize << " bytes)\n";
+    dbgs() << "  Functions for compression: " << numCodeCompressionSections
+           << " (" << codeCompressionSize << " bytes)\n";
+    dbgs() << "  Duplicate functions: " << numDuplicateCodeSections << " ("
+           << duplicateCodeSize << " bytes)\n";
+    dbgs() << "  Data for compression: " << numDataCompressionSections << " ("
+           << dataCompressionSize << " bytes)\n";
+    dbgs() << "  Duplicate data: " << numDuplicateDataSections << " ("
+           << duplicateDataSize << " bytes)\n";
 
     if (!profilePath.empty()) {
       // Evaluate this function order for startup
@@ -357,7 +370,7 @@ auto BPOrderer<D>::computeOrder(
       const uint64_t pageSize = (1 << 14);
       uint64_t currentAddress = 0;
       for (const auto *isec : orderedSections) {
-        for (auto *sym : D::getSymbols(*isec)) {
+        for (auto *sym : static_cast<D *>(this)->getSymbols(*isec)) {
           uint64_t startAddress = currentAddress + D::getSymValue(*sym);
           uint64_t endAddress = startAddress + D::getSymSize(*sym);
           uint64_t firstPage = startAddress / pageSize;
@@ -366,7 +379,7 @@ auto BPOrderer<D>::computeOrder(
           // 4?
           uint64_t lastPage = endAddress / pageSize;
           StringRef rootSymbol = D::getSymName(*sym);
-          rootSymbol = getRootSymbol(rootSymbol);
+          rootSymbol = lld::utils::getRootSymbol(rootSymbol);
           symbolToPageNumbers.try_emplace(rootSymbol, firstPage, lastPage);
           if (auto resolvedLinkageName = D::getResolvedLinkageName(rootSymbol))
             symbolToPageNumbers.try_emplace(resolvedLinkageName.value(),
@@ -384,7 +397,7 @@ auto BPOrderer<D>::computeOrder(
           auto traceId = trace.FunctionNameRefs[step];
           auto [Filename, ParsedFuncName] =
               getParsedIRPGOName(reader->getSymtab().getFuncOrVarName(traceId));
-          ParsedFuncName = getRootSymbol(ParsedFuncName);
+          ParsedFuncName = lld::utils::getRootSymbol(ParsedFuncName);
           auto it = symbolToPageNumbers.find(ParsedFuncName);
           if (it != symbolToPageNumbers.end()) {
             auto &[firstPage, lastPage] = it->getValue();

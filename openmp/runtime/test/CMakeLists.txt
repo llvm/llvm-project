@@ -41,7 +41,13 @@ add_library(ompt-print-callback INTERFACE)
 target_include_directories(ompt-print-callback INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/ompt)
 
 
-add_openmp_testsuite(check-libomp "Running libomp tests" ${CMAKE_CURRENT_BINARY_DIR} DEPENDS omp)
+add_custom_target(libomp-test-depends)
+add_dependencies(libomp-test-depends omp)
+if (LLVM_RUNTIMES_BUILD AND OPENMP_TEST_Fortran_COMPILER AND "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  add_dependencies(libomp-test-depends flang-rt)
+endif ()
+
+add_openmp_testsuite(check-libomp "Running libomp tests" ${CMAKE_CURRENT_BINARY_DIR} DEPENDS libomp-test-depends)
 # Add target check-ompt, but make sure to not add the tests twice to check-openmp.
 add_openmp_testsuite(check-ompt "Running OMPT tests" ${CMAKE_CURRENT_BINARY_DIR}/ompt EXCLUDE_FROM_CHECK_ALL DEPENDS omp)
 

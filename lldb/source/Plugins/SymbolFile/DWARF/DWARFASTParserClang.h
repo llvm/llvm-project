@@ -47,6 +47,11 @@ public:
 
   ~DWARFASTParserClang() override;
 
+  // LLVM RTTI support
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserClang;
+  }
+
   // DWARFASTParser interface.
   lldb::TypeSP
   ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
@@ -111,6 +116,20 @@ public:
 
   void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
                           const lldb_private::plugin::dwarf::DWARFDIE &def_die);
+
+  /// Get the object parameter DIE if one exists, otherwise returns
+  /// a default DWARFDIE.
+  ///
+  /// \param[in] subprogram DIE of function for which to get the object
+  /// parameter. \param[in] containing_decl_ctx DIE representing declaration
+  /// context of \a subprogram. If this DIE isn't a valid declaration context
+  /// for class methods, assume no object parameter exists.
+  ///
+  /// \returns DIE of object parameter if one exists.
+  ///
+  lldb_private::plugin::dwarf::DWARFDIE
+  GetObjectParameter(const lldb_private::plugin::dwarf::DWARFDIE &subprogram,
+                     const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die);
 
 protected:
   /// Protected typedefs and members.
@@ -249,10 +268,6 @@ protected:
   // module.
   lldb::ModuleSP
   GetModuleForType(const lldb_private::plugin::dwarf::DWARFDIE &die);
-
-  static bool classof(const DWARFASTParser *Parser) {
-    return Parser->GetKind() == Kind::DWARFASTParserClang;
-  }
 
 private:
   struct FieldInfo {
@@ -449,7 +464,7 @@ private:
   ///
   /// \returns true on success
   bool
-  ParseObjCMethod(const lldb_private::ObjCLanguage::MethodName &objc_method,
+  ParseObjCMethod(const lldb_private::ObjCLanguage::ObjCMethodName &objc_method,
                   const lldb_private::plugin::dwarf::DWARFDIE &die,
                   lldb_private::CompilerType clang_type,
                   const ParsedDWARFTypeAttributes &attrs, bool is_variadic);
@@ -466,7 +481,8 @@ private:
   /// \param[in] decl_ctx_die The DIE representing the DeclContext of the C++
   ///                         method being parsed.
   ///
-  /// \param[in] is_static Is true iff we're parsing a static method.
+  /// \param[in] object_parameter The DIE of this subprogram's object parameter.
+  ///                             May be an invalid DIE for C++ static methods.
   ///
   /// \param[out] ignore_containing_context Will get set to true if the caller
   ///             should treat this C++ method as-if it was not a C++ method.
@@ -481,7 +497,8 @@ private:
                  lldb_private::CompilerType clang_type,
                  const ParsedDWARFTypeAttributes &attrs,
                  const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die,
-                 bool is_static, bool &ignore_containing_context);
+                 const lldb_private::plugin::dwarf::DWARFDIE &object_parameter,
+                 bool &ignore_containing_context);
 
   lldb::TypeSP ParseArrayType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
@@ -551,7 +568,6 @@ struct ParsedDWARFTypeAttributes {
   const char *mangled_name = nullptr;
   lldb_private::ConstString name;
   lldb_private::Declaration decl;
-  lldb_private::plugin::dwarf::DWARFDIE object_pointer;
   lldb_private::plugin::dwarf::DWARFFormValue abstract_origin;
   lldb_private::plugin::dwarf::DWARFFormValue containing_type;
   lldb_private::plugin::dwarf::DWARFFormValue signature;
@@ -559,15 +575,20 @@ struct ParsedDWARFTypeAttributes {
   lldb_private::plugin::dwarf::DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
   std::optional<uint64_t> byte_size;
+  std::optional<uint64_t> data_bit_size;
   std::optional<uint64_t> alignment;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;
   uint32_t encoding = 0;
-  clang::RefQualifierKind ref_qual =
-      clang::RQ_None; ///< Indicates ref-qualifier of
-                      ///< C++ member function if present.
-                      ///< Is RQ_None otherwise.
+
+  ///< Indicates ref-qualifier of C++ member function if present.
+  ///< Is RQ_None otherwise.
+  clang::RefQualifierKind ref_qual = clang::RQ_None;
+
+  ///< Has a value if this DIE represents an enum that was declared
+  ///< with enum_extensibility.
+  std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H

@@ -20,7 +20,7 @@
 #include <iomanip>
 #include <iostream>
 
-inline void emitVulkanError(const char *api, VkResult error) {
+static inline void emitVulkanError(const char *api, VkResult error) {
   std::cerr << " failed with error code " << error << " when executing " << api;
 }
 

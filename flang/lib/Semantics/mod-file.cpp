@@ -17,6 +17,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -24,6 +25,8 @@
 #include <fstream>
 #include <set>
 #include <string_view>
+#include <type_traits>
+#include <variant>
 #include <vector>
 
 namespace Fortran::semantics {
@@ -47,15 +50,16 @@ struct ModHeader {
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
 static void CollectSymbols(
-    const Scope &, SymbolVector &, SymbolVector &, UnorderedSymbolSet &);
+    const Scope &, SymbolVector &, SymbolVector &, SourceOrderedSymbolSet &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
-    const parser::Expr *);
+    const parser::Expr *, SemanticsContext &);
 static void PutInit(llvm::raw_ostream &, const MaybeIntExpr &);
 static void PutBound(llvm::raw_ostream &, const Bound &);
 static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
 static void PutShape(
     llvm::raw_ostream &, const ArraySpec &, char open, char close);
+static void PutMapper(llvm::raw_ostream &, const Symbol &, SemanticsContext &);
 
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
 static llvm::raw_ostream &PutType(llvm::raw_ostream &, const DeclTypeSpec &);
@@ -108,15 +112,14 @@ bool ModFileWriter::WriteAll() {
 }
 
 void ModFileWriter::WriteAll(const Scope &scope) {
-  for (const auto &child : scope.children()) {
+  for (const Scope &child : scope.children()) {
     WriteOne(child);
   }
 }
 
 void ModFileWriter::WriteOne(const Scope &scope) {
   if (scope.kind() == Scope::Kind::Module) {
-    auto *symbol{scope.symbol()};
-    if (!symbol->test(Symbol::Flag::ModFile)) {
+    if (const auto *symbol{scope.symbol()}) {
       Write(*symbol);
     }
     WriteAll(scope); // write out submodules
@@ -133,7 +136,7 @@ static std::string ModFileName(const SourceName &name,
 // Write the module file for symbol, which must be a module or submodule.
 void ModFileWriter::Write(const Symbol &symbol) {
   const auto &module{symbol.get<ModuleDetails>()};
-  if (module.moduleFileHash()) {
+  if (symbol.test(Symbol::Flag::ModFile) || module.moduleFileHash()) {
     return; // already written
   }
   const auto *ancestor{module.ancestor()};
@@ -142,18 +145,22 @@ void ModFileWriter::Write(const Symbol &symbol) {
   std::string path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
 
-  UnorderedSymbolSet hermeticModules;
-  hermeticModules.insert(symbol);
+  std::set<std::string> hermeticModuleNames;
+  hermeticModuleNames.insert(symbol.name().ToString());
   UnorderedSymbolSet additionalModules;
   PutSymbols(DEREF(symbol.scope()),
       hermeticModuleFileOutput_ ? &additionalModules : nullptr);
   auto asStr{GetAsString(symbol)};
   while (!additionalModules.empty()) {
-    for (auto ref : UnorderedSymbolSet{std::move(additionalModules)}) {
-      if (hermeticModules.insert(*ref).second &&
-          !ref->owner().IsIntrinsicModules()) {
-        PutSymbols(DEREF(ref->scope()), &additionalModules);
-        asStr += GetAsString(*ref);
+    UnorderedSymbolSet nextPass{std::move(additionalModules)};
+    additionalModules.clear();
+    for (const Symbol &modSym : nextPass) {
+      if (!modSym.owner().IsIntrinsicModules() &&
+          hermeticModuleNames.find(modSym.name().ToString()) ==
+              hermeticModuleNames.end()) {
+        hermeticModuleNames.insert(modSym.name().ToString());
+        PutSymbols(DEREF(modSym.scope()), &additionalModules);
+        asStr += GetAsString(modSym);
       }
     }
   }
@@ -306,8 +313,10 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   // to their names in this scope, creating those new names when needed.
   auto &renamings{context_.moduleFileOutputRenamings()};
   for (SymbolRef s : symbolsNeeded) {
-    if (s->owner().kind() == Scope::Kind::DerivedType) {
-      continue; // component or binding: ok
+    if (s->owner().kind() != Scope::Kind::Module) {
+      // Not a USE'able name from a module's top scope;
+      // component, binding, dummy argument, &c.
+      continue;
     }
     const Scope *sMod{FindModuleContaining(s->owner())};
     if (!sMod || sMod == &scope) {
@@ -346,10 +355,44 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
     uses_ << DEREF(sMod->symbol()).name() << ",only:";
     if (rename != s->name()) {
       uses_ << rename << "=>";
-      renamings.emplace(&*s, rename);
+      renamings.emplace(&s->GetUltimate(), rename);
     }
     uses_ << s->name() << '\n';
     useExtraAttrs_ << "private::" << rename << '\n';
+  }
+}
+
+static void PutOpenMPRequirements(llvm::raw_ostream &os, const Symbol &symbol) {
+  using RequiresClauses = WithOmpDeclarative::RequiresClauses;
+  using OmpMemoryOrderType = common::OmpMemoryOrderType;
+
+  const auto [reqs, order]{common::visit(
+      [&](auto &&details)
+          -> std::pair<const RequiresClauses *, const OmpMemoryOrderType *> {
+        if constexpr (std::is_convertible_v<decltype(details),
+                          const WithOmpDeclarative &>) {
+          return {details.ompRequires(), details.ompAtomicDefaultMemOrder()};
+        } else {
+          return {nullptr, nullptr};
+        }
+      },
+      symbol.details())};
+
+  if (order) {
+    llvm::omp::Clause admo{llvm::omp::Clause::OMPC_atomic_default_mem_order};
+    os << "!$omp requires "
+       << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(admo))
+       << '(' << parser::ToLowerCaseLetters(EnumToString(*order)) << ")\n";
+  }
+  if (reqs) {
+    os << "!$omp requires";
+    reqs->IterateOverMembers([&](llvm::omp::Clause f) {
+      if (f != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
+        os << ' '
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
+      }
+    });
+    os << "\n";
   }
 }
 
@@ -361,20 +404,23 @@ void ModFileWriter::PutSymbols(
   auto &renamings{context_.moduleFileOutputRenamings()};
   auto previousRenamings{std::move(renamings)};
   PrepareRenamings(scope);
-  UnorderedSymbolSet modules;
+  SourceOrderedSymbolSet modules;
   CollectSymbols(scope, sorted, uses, modules);
   // Write module files for dependencies first so that their
   // hashes are known.
-  for (auto ref : modules) {
+  for (const Symbol &mod : modules) {
     if (hermeticModules) {
-      hermeticModules->insert(*ref);
+      hermeticModules->insert(mod);
     } else {
-      Write(*ref);
-      needs_ << ModHeader::need
-             << CheckSumString(
-                    ref->get<ModuleDetails>().moduleFileHash().value())
-             << (ref->owner().IsIntrinsicModules() ? " i " : " n ")
-             << ref->name().ToString() << '\n';
+      Write(mod);
+      // It's possible that the module's file already existed and
+      // without its own hash due to being embedded in a hermetic
+      // module file.
+      if (auto hash{mod.get<ModuleDetails>().moduleFileHash()}) {
+        needs_ << ModHeader::need << CheckSumString(*hash)
+               << (mod.owner().IsIntrinsicModules() ? " i " : " n ")
+               << mod.name().ToString() << '\n';
+      }
     }
   }
   std::string buf; // stuff after CONTAINS in derived type
@@ -387,6 +433,7 @@ void ModFileWriter::PutSymbols(
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
   }
+  PutOpenMPRequirements(decls_, DEREF(scope.symbol()));
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
         !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
@@ -603,7 +650,7 @@ void ModFileWriter::PutDECStructure(
         }
         decls_ << ref->name();
         PutShape(decls_, object->shape(), '(', ')');
-        PutInit(decls_, *ref, object->init(), nullptr);
+        PutInit(decls_, *ref, object->init(), nullptr, context_);
         emittedDECFields_.insert(*ref);
       } else if (any) {
         break; // any later use of this structure will use RECORD/str/
@@ -636,8 +683,14 @@ static void PutOpenACCDeviceTypeRoutineInfo(
   if (info.isWorker()) {
     os << " worker";
   }
-  if (info.bindName()) {
-    os << " bind(" << *info.bindName() << ")";
+  if (const std::variant<std::string, SymbolRef> *bindName{info.bindName()}) {
+    os << " bind(";
+    if (std::holds_alternative<std::string>(*bindName)) {
+      os << "\"" << std::get<std::string>(*bindName) << "\"";
+    } else {
+      os << std::get<SymbolRef>(*bindName)->name();
+    }
+    os << ")";
   }
 }
 
@@ -834,45 +887,33 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
-static inline SourceName NameInModuleFile(const Symbol &symbol) {
-  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
-    if (use->symbol().attrs().test(Attr::PRIVATE)) {
-      // Avoid the use in sorting of names created to access private
-      // specific procedures as a result of generic resolution;
-      // they're not in the cooked source.
-      return use->symbol().name();
-    }
-  }
-  return symbol.name();
-}
-
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
-    SymbolVector &uses, UnorderedSymbolSet &modules) {
+    SymbolVector &uses, SourceOrderedSymbolSet &modules) {
   SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
-  for (SymbolRef symbol : symbols) {
-    const auto *generic{symbol->detailsIf<GenericDetails>()};
+  for (const Symbol &symbol : symbols) {
+    const auto *generic{symbol.detailsIf<GenericDetails>()};
     if (generic) {
       uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
-      for (auto ref : generic->uses()) {
-        modules.insert(GetUsedModule(ref->get<UseDetails>()));
+      for (const Symbol &used : generic->uses()) {
+        modules.insert(GetUsedModule(used.get<UseDetails>()));
       }
-    } else if (const auto *use{symbol->detailsIf<UseDetails>()}) {
+    } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
       modules.insert(GetUsedModule(*use));
     }
-    if (symbol->test(Symbol::Flag::ParentComp)) {
-    } else if (symbol->has<NamelistDetails>()) {
+    if (symbol.test(Symbol::Flag::ParentComp)) {
+    } else if (symbol.has<NamelistDetails>()) {
       namelist.push_back(symbol);
     } else if (generic) {
       if (generic->specific() &&
-          &generic->specific()->owner() == &symbol->owner()) {
+          &generic->specific()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->specific());
       } else if (generic->derivedType() &&
-          &generic->derivedType()->owner() == &symbol->owner()) {
+          &generic->derivedType()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->derivedType());
       }
       generics.push_back(symbol);
@@ -880,13 +921,8 @@ void CollectSymbols(const Scope &scope, SymbolVector &sorted,
       sorted.push_back(symbol);
     }
   }
-  // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
-  // location of a symbol's name is the first "real" use.
-  auto sorter{[](SymbolRef x, SymbolRef y) {
-    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
-  }};
-  std::sort(sorted.begin(), sorted.end(), sorter);
-  std::sort(generics.begin(), generics.end(), sorter);
+  std::sort(sorted.begin(), sorted.end(), SymbolSourcePositionCompare{});
+  std::sort(generics.begin(), generics.end(), SymbolSourcePositionCompare{});
   sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
@@ -902,6 +938,8 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
           [&](const ObjectEntityDetails &) { PutObjectEntity(os, symbol); },
           [&](const ProcEntityDetails &) { PutProcEntity(os, symbol); },
           [&](const TypeParamDetails &) { PutTypeParam(os, symbol); },
+          [&](const UserReductionDetails &) { PutUserReduction(os, symbol); },
+          [&](const MapperDetails &) { PutMapper(decls_, symbol, context_); },
           [&](const auto &) {
             common::die("PutEntity: unexpected details: %s",
                 DetailsToString(symbol.details()).c_str());
@@ -959,7 +997,8 @@ void ModFileWriter::PutObjectEntity(
       getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
-  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());
+  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit(),
+      context_);
   os << '\n';
   if (auto tkr{GetIgnoreTKR(symbol)}; !tkr.empty()) {
     os << "!dir$ ignore_tkr(";
@@ -984,6 +1023,9 @@ void ModFileWriter::PutObjectEntity(
       case common::IgnoreTKR::Contiguous:
         os << 'c';
         break;
+      case common::IgnoreTKR::Pointer:
+        os << 'p';
+        break;
       }
     });
     os << ") " << symbol.name() << '\n';
@@ -993,11 +1035,9 @@ void ModFileWriter::PutObjectEntity(
         << ") " << symbol.name() << '\n';
   }
   if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
-    if (!symbol.owner().crayPointers().empty()) {
-      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
-        if (pointer == symbol) {
-          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
-        }
+    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+      if (pointer == symbol) {
+        os << "pointer(" << symbol.name() << "," << pointee << ")\n";
       }
     }
   }
@@ -1029,6 +1069,15 @@ void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
         PutPassName(os, details.passName());
       },
       attrs);
+  if (symbol.owner().IsDerivedType()) {
+    if (const auto &init{details.init()}) {
+      if (const Symbol *symbol{*init}) {
+        os << "=>" << symbol->name();
+      } else {
+        os << "=>NULL()";
+      }
+    }
+  }
   os << '\n';
 }
 
@@ -1052,12 +1101,33 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
   os << '\n';
 }
 
+void ModFileWriter::PutUserReduction(
+    llvm::raw_ostream &os, const Symbol &symbol) {
+  const auto &details{symbol.get<UserReductionDetails>()};
+  // The module content for a OpenMP Declare Reduction is the OpenMP
+  // declaration. There may be multiple declarations.
+  // Decls are pointers, so do not use a reference.
+  for (const auto *decl : details.GetDeclList()) {
+    Unparse(os, *decl, context_.langOptions());
+  }
+}
+
+static void PutMapper(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &context) {
+  const auto &details{symbol.get<MapperDetails>()};
+  // Emit each saved DECLARE MAPPER construct as-is, so that consumers of the
+  // module can reparse it and recreate the mapper symbol and semantics state.
+  for (const auto *decl : details.GetDeclList()) {
+    Unparse(os, *decl, context.langOptions());
+  }
+}
+
 void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
-    const parser::Expr *unanalyzed) {
+    const parser::Expr *unanalyzed, SemanticsContext &context) {
   if (IsNamedConstant(symbol) || symbol.owner().IsDerivedType()) {
     const char *assign{symbol.attrs().test(Attr::POINTER) ? "=>" : "="};
     if (unanalyzed) {
-      parser::Unparse(os << assign, *unanalyzed);
+      parser::Unparse(os << assign, *unanalyzed, context.langOptions());
     } else if (init) {
       init->AsFortran(os << assign);
     }
@@ -1404,6 +1474,9 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   parser::Options options;
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC)) {
+    options.features.Enable(common::LanguageFeature::OpenACC);
+  }
   options.features.Enable(common::LanguageFeature::OpenMP);
   options.features.Enable(common::LanguageFeature::CUDA);
   if (!isIntrinsic.value_or(false) && !notAModule) {
@@ -1554,6 +1627,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // created under -fhermetic-module-files?  If so, process them first in
   // their own nested scope that will be visible only to USE statements
   // within the module file.
+  Scope *previousHermetic{context_.currentHermeticModuleFileScope()};
   if (parseTree.v.size() > 1) {
     parser::Program hermeticModules{std::move(parseTree.v)};
     parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
@@ -1561,11 +1635,15 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
     context_.set_currentHermeticModuleFileScope(&hermeticScope);
     ResolveNames(context_, hermeticModules, hermeticScope);
+    for (auto &[_, ref] : hermeticScope) {
+      CHECK(ref->has<ModuleDetails>());
+      ref->set(Symbol::Flag::ModFile);
+    }
   }
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_moduleFileName(wasModuleFileName);
-  context_.set_currentHermeticModuleFileScope(nullptr);
+  context_.set_currentHermeticModuleFileScope(previousHermetic);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we
@@ -1735,6 +1813,17 @@ void SubprogramSymbolCollector::DoSymbol(
   }
   if (!scope.IsDerivedType()) {
     need_.push_back(symbol);
+  }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+      if (&*pointer == &symbol) {
+        auto iter{symbol.owner().find(pointee)};
+        CHECK(iter != symbol.owner().end());
+        DoSymbol(*iter->second);
+      }
+    }
+  } else if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+    DoSymbol(GetCrayPointer(symbol));
   }
 }
 

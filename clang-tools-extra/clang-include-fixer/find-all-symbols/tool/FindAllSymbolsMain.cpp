@@ -95,7 +95,7 @@ bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
       // Parse YAML files in parallel.
       Pool.async(
           [&AddSymbols](std::string Path) {
-            auto Buffer = llvm::MemoryBuffer::getFile(Path);
+            auto Buffer = llvm::MemoryBuffer::getFile(Path, /*IsText=*/true);
             if (!Buffer) {
               llvm::errs() << "Can't open " << Path << "\n";
               return;
@@ -114,7 +114,7 @@ bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
     }
   }
 
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_Text);
   if (EC) {
     llvm::errs() << "Can't open '" << OutputFile << "': " << EC.message()
                  << '\n';
