@@ -98,6 +98,8 @@ private:
   /// The codeview CPU type used by the translation unit.
   codeview::CPUType TheCPU;
 
+  const DICompileUnit *TheCU = nullptr;
+
   /// The AsmPrinter used for emitting compiler metadata. When only compiler
   /// info is being emitted, DebugHandlerBase::Asm may be null.
   AsmPrinter *CompilerInfoAsm = nullptr;

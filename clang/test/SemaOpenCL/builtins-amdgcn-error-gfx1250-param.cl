@@ -15,6 +15,8 @@ typedef half __attribute__((ext_vector_type(32))) half32;
 typedef float __attribute__((ext_vector_type(8))) float8;
 typedef float __attribute__((ext_vector_type(16))) float16;
 typedef float __attribute__((ext_vector_type(32))) float32;
+typedef short __attribute__((ext_vector_type(2))) short2;
+typedef unsigned short __attribute__((ext_vector_type(2))) ushort2;
 
 typedef int    v4i   __attribute__((ext_vector_type(4)));
 typedef int    v8i   __attribute__((ext_vector_type(8)));
@@ -164,4 +166,20 @@ void test_prefetch(generic void *fptr, global void *gptr, int cpol) {
 void test_cvt_f32_fp8_e5m3(global int* out, int a)
 {
   *out = __builtin_amdgcn_cvt_f32_fp8_e5m3(a, a); // expected-error {{'__builtin_amdgcn_cvt_f32_fp8_e5m3' must be a constant integer}}
+}
+
+void test_add_min_max(global int *out, int a, int b, int c, bool clamp)
+{
+  *out = __builtin_amdgcn_add_max_i32(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_add_max_i32' must be a constant integer}}
+  *out = __builtin_amdgcn_add_max_u32(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_add_max_u32' must be a constant integer}}
+  *out = __builtin_amdgcn_add_min_i32(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_add_min_i32' must be a constant integer}}
+  *out = __builtin_amdgcn_add_min_u32(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_add_min_u32' must be a constant integer}}
+}
+
+void test_pk_add_min_max(global short2 *out, global ushort2 *uout, short2 a, short2 b, short2 c, ushort2 ua, ushort2 ub, ushort2 uc, bool clamp)
+{
+  *out = __builtin_amdgcn_pk_add_max_i16(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_pk_add_max_i16' must be a constant integer}}
+  *uout = __builtin_amdgcn_pk_add_max_u16(ua, ub, uc, clamp); // expected-error {{'__builtin_amdgcn_pk_add_max_u16' must be a constant integer}}
+  *out = __builtin_amdgcn_pk_add_min_i16(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_pk_add_min_i16' must be a constant integer}}
+  *uout = __builtin_amdgcn_pk_add_min_u16(ua, ub, uc, clamp); // expected-error {{'__builtin_amdgcn_pk_add_min_u16' must be a constant integer}}
 }

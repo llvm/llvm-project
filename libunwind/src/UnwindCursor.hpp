@@ -41,7 +41,8 @@
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
 
-#if defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
+#if defined(_LIBUNWIND_TARGET_HAIKU) &&                                        \
+    (defined(_LIBUNWIND_TARGET_I386) || defined(_LIBUNWIND_TARGET_X86_64))
 #include <OS.h>
 #include <signal.h>
 #define _LIBUNWIND_CHECK_HAIKU_SIGRETURN 1
@@ -120,7 +121,9 @@ class _LIBUNWIND_HIDDEN DwarfFDECache {
   typedef typename A::pint_t pint_t;
 public:
   static constexpr pint_t kSearchAll = static_cast<pint_t>(-1);
-  static pint_t findFDE(pint_t mh, pint_t pc);
+  template <typename R>
+  static pint_t findFDE(pint_t mh, typename R::link_hardened_reg_arg_t pc);
+
   static void add(pint_t mh, pint_t ip_start, pint_t ip_end, pint_t fde);
   static void removeAllIn(pint_t mh);
   static void iterateCacheEntries(void (*func)(unw_word_t ip_start,
@@ -173,8 +176,9 @@ bool DwarfFDECache<A>::_registeredForDyldUnloads = false;
 #endif
 
 template <typename A>
-typename DwarfFDECache<A>::pint_t DwarfFDECache<A>::findFDE(pint_t mh,
-                                                            pint_t pc) {
+template <typename R>
+typename DwarfFDECache<A>::pint_t
+DwarfFDECache<A>::findFDE(pint_t mh, typename R::link_hardened_reg_arg_t pc) {
   pint_t result = 0;
   _LIBUNWIND_LOG_IF_FALSE(_lock.lock_shared());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
@@ -472,7 +476,9 @@ public:
   virtual void getInfo(unw_proc_info_t *) {
     _LIBUNWIND_ABORT("getInfo not implemented");
   }
-  virtual void jumpto() { _LIBUNWIND_ABORT("jumpto not implemented"); }
+  _LIBUNWIND_TRACE_NO_INLINE virtual void jumpto() {
+    _LIBUNWIND_ABORT("jumpto not implemented");
+  }
   virtual bool isSignalFrame() {
     _LIBUNWIND_ABORT("isSignalFrame not implemented");
   }
@@ -487,6 +493,12 @@ public:
   }
 #ifdef __arm__
   virtual void saveVFPAsX() { _LIBUNWIND_ABORT("saveVFPAsX not implemented"); }
+#endif
+
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  virtual void setWalkedFrames(unsigned) {
+    _LIBUNWIND_ABORT("setWalkedFrames not implemented");
+  }
 #endif
 
 #ifdef _AIX
@@ -965,13 +977,18 @@ public:
   virtual void        setFloatReg(int, unw_fpreg_t);
   virtual int         step(bool stage2 = false);
   virtual void        getInfo(unw_proc_info_t *);
-  virtual void        jumpto();
+  _LIBUNWIND_TRACE_NO_INLINE
+    virtual void      jumpto();
   virtual bool        isSignalFrame();
   virtual bool        getFunctionName(char *buf, size_t len, unw_word_t *off);
   virtual void        setInfoBasedOnIPRegister(bool isReturnAddress = false);
   virtual const char *getRegisterName(int num);
 #ifdef __arm__
   virtual void        saveVFPAsX();
+#endif
+
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  virtual void setWalkedFrames(unsigned);
 #endif
 
 #ifdef _AIX
@@ -1046,19 +1063,28 @@ private:
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   bool getInfoFromFdeCie(const typename CFI_Parser<A>::FDE_Info &fdeInfo,
                          const typename CFI_Parser<A>::CIE_Info &cieInfo,
-                         pint_t pc, uintptr_t dso_base);
-  bool getInfoFromDwarfSection(pint_t pc, const UnwindInfoSections &sects,
-                                            uint32_t fdeSectionOffsetHint=0);
+                         typename R::link_hardened_reg_arg_t pc,
+                         uintptr_t dso_base);
+  bool getInfoFromDwarfSection(typename R::link_hardened_reg_arg_t pc,
+                               const UnwindInfoSections &sects,
+                               uint32_t fdeSectionOffsetHint = 0);
   int stepWithDwarfFDE(bool stage2) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+    typename R::link_reg_t pc;
+    _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+    typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
     return DwarfInstructions<A, R>::stepWithDwarf(
-        _addressSpace, (pint_t)this->getReg(UNW_REG_IP),
-        (pint_t)_info.unwind_info, _registers, _isSignalFrame, stage2);
+        _addressSpace, pc, (pint_t)_info.unwind_info, _registers,
+        _isSignalFrame, stage2);
   }
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-  bool getInfoFromCompactEncodingSection(pint_t pc,
-                                            const UnwindInfoSections &sects);
+  bool getInfoFromCompactEncodingSection(typename R::link_hardened_reg_arg_t pc,
+                                         const UnwindInfoSections &sects);
   int stepWithCompactEncoding(bool stage2 = false) {
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
     if ( compactSaysUseDwarf() )
@@ -1345,8 +1371,11 @@ private:
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool             _isSigReturn = false;
+#endif
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  uint32_t _walkedFrames;
 #endif
 };
 
@@ -1359,13 +1388,13 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
                 "UnwindCursor<> does not fit in unw_cursor_t");
   static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
                 "UnwindCursor<> requires more alignment than unw_cursor_t");
-  memset(&_info, 0, sizeof(_info));
+  memset(static_cast<void *>(&_info), 0, sizeof(_info));
 }
 
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(A &as, void *)
     : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false) {
-  memset(&_info, 0, sizeof(_info));
+  memset(static_cast<void *>(&_info), 0, sizeof(_info));
   // FIXME
   // fill in _registers from thread arg
 }
@@ -1402,12 +1431,58 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
 }
 
 template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  /*
+
+  The value of `_walkedFrames` is computed in `unwind_phase2` and represents the
+  number of frames walked starting `unwind_phase2` to get to the landing pad.
+
+  ```
+    // uc is initialized by __unw_getcontext in the parent frame.
+    // The first stack frame walked is unwind_phase2.
+    unsigned framesWalked = 1;
+  ```
+
+  To that, we need to add the number of function calls in libunwind between
+  `unwind_phase2` & `__libunwind_Registers_arm64_jumpto` which performs the long
+  jump, to rebalance the execution flow.
+
+  ```
+      frame #0: libunwind.1.dylib`__libunwind_Registers_arm64_jumpto at UnwindRegistersRestore.S:646
+      frame #1: libunwind.1.dylib`libunwind::Registers_arm64::returnto at Registers.hpp:2291:3
+      frame #2: libunwind.1.dylib`libunwind::UnwindCursor<libunwind::LocalAddressSpace, libunwind::Registers_arm64>::jumpto at UnwindCursor.hpp:1474:14
+      frame #3: libunwind.1.dylib`__unw_resume at libunwind.cpp:375:7
+      frame #4: libunwind.1.dylib`__unw_resume_with_frames_walked at libunwind.cpp:363:10
+      frame #5: libunwind.1.dylib`unwind_phase2 at UnwindLevel1.c:328:9
+      frame #6: libunwind.1.dylib`_Unwind_RaiseException at UnwindLevel1.c:480:10
+      frame #7: libc++abi.dylib`__cxa_throw at cxa_exception.cpp:295:5
+      ...
+  ```
+
+  If we look at the backtrace from `__libunwind_Registers_arm64_jumpto`, we see
+  there are 5 frames on the stack to reach `unwind_phase2`. However, only 4 of
+  them will never return, since `__libunwind_Registers_arm64_jumpto` returns
+  back to the landing pad, so we need to subtract 1 to the number of
+  `_EXTRA_LIBUNWIND_FRAMES_WALKED`.
+  */
+
+  static constexpr size_t _EXTRA_LIBUNWIND_FRAMES_WALKED = 5 - 1;
+  _registers.returnto(_walkedFrames + _EXTRA_LIBUNWIND_FRAMES_WALKED);
+#else
   _registers.jumpto();
+#endif
 }
 
 #ifdef __arm__
 template <typename A, typename R> void UnwindCursor<A, R>::saveVFPAsX() {
   _registers.saveVFPAsX();
+}
+#endif
+
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+template <typename A, typename R>
+void UnwindCursor<A, R>::setWalkedFrames(unsigned walkedFrames) {
+  _walkedFrames = walkedFrames;
 }
 #endif
 
@@ -1659,11 +1734,11 @@ bool UnwindCursor<A, R>::getInfoFromEHABISection(
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromFdeCie(
     const typename CFI_Parser<A>::FDE_Info &fdeInfo,
-    const typename CFI_Parser<A>::CIE_Info &cieInfo, pint_t pc,
-    uintptr_t dso_base) {
+    const typename CFI_Parser<A>::CIE_Info &cieInfo,
+    typename R::link_hardened_reg_arg_t pc, uintptr_t dso_base) {
   typename CFI_Parser<A>::PrologInfo prolog;
-  if (CFI_Parser<A>::parseFDEInstructions(_addressSpace, fdeInfo, cieInfo, pc,
-                                          R::getArch(), &prolog)) {
+  if (CFI_Parser<A>::template parseFDEInstructions<R>(
+          _addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
     // Save off parsed FDE info
     _info.start_ip          = fdeInfo.pcStart;
     _info.end_ip            = fdeInfo.pcEnd;
@@ -1683,43 +1758,42 @@ bool UnwindCursor<A, R>::getInfoFromFdeCie(
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
-                                                const UnwindInfoSections &sects,
-                                                uint32_t fdeSectionOffsetHint) {
+bool UnwindCursor<A, R>::getInfoFromDwarfSection(
+    typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects,
+    uint32_t fdeSectionOffsetHint) {
   typename CFI_Parser<A>::FDE_Info fdeInfo;
   typename CFI_Parser<A>::CIE_Info cieInfo;
   bool foundFDE = false;
   bool foundInCache = false;
   // If compact encoding table gave offset into dwarf section, go directly there
   if (fdeSectionOffsetHint != 0) {
-    foundFDE = CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                    sects.dwarf_section_length,
-                                    sects.dwarf_section + fdeSectionOffsetHint,
-                                    &fdeInfo, &cieInfo);
+    foundFDE = CFI_Parser<A>::template findFDE<R>(
+        _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length,
+        sects.dwarf_section + fdeSectionOffsetHint, &fdeInfo, &cieInfo);
   }
 #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
   if (!foundFDE && (sects.dwarf_index_section != 0)) {
-    foundFDE = EHHeaderParser<A>::findFDE(
+    foundFDE = EHHeaderParser<A>::template findFDE<R>(
         _addressSpace, pc, sects.dwarf_index_section,
         (uint32_t)sects.dwarf_index_section_length, &fdeInfo, &cieInfo);
   }
 #endif
   if (!foundFDE) {
     // otherwise, search cache of previously found FDEs.
-    pint_t cachedFDE = DwarfFDECache<A>::findFDE(sects.dso_base, pc);
+    pint_t cachedFDE =
+        DwarfFDECache<A>::template findFDE<R>(sects.dso_base, pc);
     if (cachedFDE != 0) {
-      foundFDE =
-          CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                 sects.dwarf_section_length,
-                                 cachedFDE, &fdeInfo, &cieInfo);
+      foundFDE = CFI_Parser<A>::template findFDE<R>(
+          _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length,
+          cachedFDE, &fdeInfo, &cieInfo);
       foundInCache = foundFDE;
     }
   }
   if (!foundFDE) {
     // Still not found, do full scan of __eh_frame section.
-    foundFDE = CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                      sects.dwarf_section_length, 0,
-                                      &fdeInfo, &cieInfo);
+    foundFDE = CFI_Parser<A>::template findFDE<R>(
+        _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length, 0,
+        &fdeInfo, &cieInfo);
   }
   if (foundFDE) {
     if (getInfoFromFdeCie(fdeInfo, cieInfo, pc, sects.dso_base)) {
@@ -1743,8 +1817,8 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
-                                              const UnwindInfoSections &sects) {
+bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
+    typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects) {
   const bool log = false;
   if (log)
     fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX, mh=0x%llX)\n",
@@ -1975,6 +2049,16 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
         personalityIndex * sizeof(uint32_t));
     pint_t personalityPointer = sects.dso_base + (pint_t)personalityDelta;
     personality = _addressSpace.getP(personalityPointer);
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    // The GOT for the personality function was signed address authenticated.
+    // Resign it as a regular function pointer.
+    const auto discriminator = ptrauth_blend_discriminator(
+        &_info.handler, __ptrauth_unwind_upi_handler_disc);
+    void *signedPtr = ptrauth_auth_and_resign(
+        (void *)personality, ptrauth_key_function_pointer, personalityPointer,
+        ptrauth_key_function_pointer, discriminator);
+    personality = (__typeof(personality))signedPtr;
+#endif
     if (log)
       fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX), "
                       "personalityDelta=0x%08X, personality=0x%08llX\n",
@@ -1988,7 +2072,11 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
   _info.start_ip = funcStart;
   _info.end_ip = funcEnd;
   _info.lsda = lsda;
-  _info.handler = personality;
+  // We use memmove to copy the personality function as we have already manually
+  // re-signed the pointer, and assigning directly will attempt to incorrectly
+  // sign the already signed value.
+  memmove(reinterpret_cast<void *>(&_info.handler),
+          reinterpret_cast<void *>(&personality), sizeof(personality));
   _info.gp = 0;
   _info.flags = 0;
   _info.format = encoding;
@@ -2641,11 +2729,19 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   _isSigReturn = false;
 #endif
 
-  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+
 #if defined(_LIBUNWIND_ARM_EHABI)
   // Remove the thumb bit so the IP represents the actual instruction address.
   // This matches the behaviour of _Unwind_GetIP on arm.
-  pc &= (pint_t)~0x1;
+  rawPC &= (pint_t)~0x1;
+#endif
+
+  typename R::link_reg_t pc;
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+  pc = rawPC;
 #endif
 
   // Exit early if at the top of the stack.
@@ -2680,7 +2776,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 
   // Ask address space object to find unwind sections for this pc.
   UnwindInfoSections sects;
-  if (_addressSpace.findUnwindSections(pc, sects)) {
+  if (_addressSpace.template findUnwindSections<R>(pc, sects)) {
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
     // If there is a compact unwind encoding table, look there first.
     if (sects.compact_unwind_section != 0) {
@@ -2736,8 +2832,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   // There is no static unwind info for this pc. Look to see if an FDE was
   // dynamically registered for it.
-  pint_t cachedFDE = DwarfFDECache<A>::findFDE(DwarfFDECache<A>::kSearchAll,
-                                               pc);
+  pint_t cachedFDE =
+      DwarfFDECache<A>::template findFDE<R>(DwarfFDECache<A>::kSearchAll, pc);
   if (cachedFDE != 0) {
     typename CFI_Parser<A>::FDE_Info fdeInfo;
     typename CFI_Parser<A>::CIE_Info cieInfo;
@@ -2749,7 +2845,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   // Lastly, ask AddressSpace object about platform specific ways to locate
   // other FDEs.
   pint_t fde;
-  if (_addressSpace.findOtherFDE(pc, fde)) {
+  if (_addressSpace.template findOtherFDE<R>(pc, fde)) {
     typename CFI_Parser<A>::FDE_Info fdeInfo;
     typename CFI_Parser<A>::CIE_Info cieInfo;
     if (!CFI_Parser<A>::decodeFDE(_addressSpace, fde, &fdeInfo, &cieInfo)) {
@@ -2773,6 +2869,21 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_AARCH64)
+
+/*
+ * The linux sigreturn restorer stub will always have the form:
+ *
+ *  d2801168        movz    x8, #0x8b
+ *  d4000001        svc     #0x0
+ */
+#if defined(__AARCH64EB__)
+#define MOVZ_X8_8B 0x681180d2
+#define SVC_0 0x010000d4
+#else
+#define MOVZ_X8_8B 0xd2801168
+#define SVC_0 0xd4000001
+#endif
+
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // Look for the sigreturn trampoline. The trampoline's body is two
@@ -2797,7 +2908,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
     return false;
   auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
+  if (instructions[0] != MOVZ_X8_8B || instructions[1] != SVC_0)
     return false;
 
   _info = {};
@@ -3189,16 +3300,22 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
 template <typename A, typename R>
 void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
   if (_unwindInfoMissing)
-    memset(info, 0, sizeof(*info));
+    memset(static_cast<void *>(info), 0, sizeof(*info));
   else
     *info = _info;
 }
 
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
-                                                           unw_word_t *offset) {
-  return _addressSpace.findFunctionName((pint_t)this->getReg(UNW_REG_IP),
-                                         buf, bufLen, offset);
+                                         unw_word_t *offset) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+  typename R::link_reg_t pc;
+  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+  typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
+  return _addressSpace.template findFunctionName<R>(pc, buf, bufLen, offset);
 }
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)

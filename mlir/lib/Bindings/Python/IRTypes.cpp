@@ -7,26 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 // clang-format off
-#include "IRModule.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/IRTypes.h"
 // clang-format on
 
 #include <optional>
 
-#include "IRModule.h"
-#include "NanobindUtils.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 
 namespace nb = nanobind;
 using namespace mlir;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 using llvm::SmallVector;
 using llvm::Twine;
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 /// Checks whether the given type is an integer or float type.
 static int mlirTypeIsAIntegerOrFloat(MlirType type) {
@@ -509,10 +510,12 @@ public:
   }
 };
 
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 // Shaped Type Interface - ShapedType
-void mlir::PyShapedType::bindDerived(ClassTy &c) {
+void PyShapedType::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "element_type",
       [](PyShapedType &self) -> nb::typed<nb::object, PyType> {
@@ -617,17 +620,18 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
       "shaped types.");
 }
 
-void mlir::PyShapedType::requireHasRank() {
+void PyShapedType::requireHasRank() {
   if (!mlirShapedTypeHasRank(*this)) {
     throw nb::value_error(
         "calling this method requires that the type has a rank.");
   }
 }
 
-const mlir::PyShapedType::IsAFunctionTy mlir::PyShapedType::isaFunction =
-    mlirTypeIsAShaped;
+const PyShapedType::IsAFunctionTy PyShapedType::isaFunction = mlirTypeIsAShaped;
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 /// Vector Type subclass - VectorType.
 class PyVectorType : public PyConcreteType<PyVectorType, PyShapedType> {
@@ -1099,10 +1103,6 @@ public:
   }
 };
 
-static MlirStringRef toMlirStringRef(const std::string &s) {
-  return mlirStringRefCreate(s.data(), s.size());
-}
-
 /// Opaque Type subclass - OpaqueType.
 class PyOpaqueType : public PyConcreteType<PyOpaqueType> {
 public:
@@ -1142,9 +1142,14 @@ public:
   }
 };
 
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
-void mlir::python::populateIRTypes(nb::module_ &m) {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+void populateIRTypes(nb::module_ &m) {
   PyIntegerType::bind(m);
   PyFloatType::bind(m);
   PyIndexType::bind(m);
@@ -1176,3 +1181,6 @@ void mlir::python::populateIRTypes(nb::module_ &m) {
   PyFunctionType::bind(m);
   PyOpaqueType::bind(m);
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir

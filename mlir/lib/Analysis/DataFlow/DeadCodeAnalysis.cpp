@@ -267,8 +267,8 @@ LogicalResult DeadCodeAnalysis::initializeRecursively(Operation *op) {
     // has one. If so, update the flag to allow for resolving callables in
     // nested regions.
     bool savedHasSymbolTable = hasSymbolTable;
-    auto restoreHasSymbolTable =
-        llvm::make_scope_exit([&]() { hasSymbolTable = savedHasSymbolTable; });
+    llvm::scope_exit restoreHasSymbolTable(
+        [&]() { hasSymbolTable = savedHasSymbolTable; });
     if (!hasSymbolTable && op->hasTrait<OpTrait::SymbolTable>())
       hasSymbolTable = true;
 
@@ -501,11 +501,10 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
     return;
 
   SmallVector<RegionSuccessor> successors;
-  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
-    terminator.getSuccessorRegions(*operands, successors);
-  else
-    branch.getSuccessorRegions(op->getParentRegion(), successors);
-
+  auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
+  if (!terminator)
+    return;
+  terminator.getSuccessorRegions(*operands, successors);
   visitRegionBranchEdges(branch, op, successors);
 }
 

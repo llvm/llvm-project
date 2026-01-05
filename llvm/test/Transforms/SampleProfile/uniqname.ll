@@ -65,9 +65,9 @@ if.end:                                           ; preds = %if.then, %entry
   ret void, !dbg !31
 }
 
-declare !dbg !32 dso_local void @_Z10hoo_calleev() #3
+declare !dbg !32 dso_local void @_Z10hoo_calleev()
 
-declare !dbg !33 dso_local void @_Z10moo_calleev() #3
+declare !dbg !33 dso_local void @_Z10moo_calleev()
 
 ; Function Attrs: uwtable mustprogress
 define internal void @_ZL3noov.__uniq.334154460836426447066042049082945760258() #1 !dbg !34 {
@@ -84,12 +84,11 @@ if.end:                                           ; preds = %if.then, %entry
   ret void, !dbg !37
 }
 
-declare !dbg !38 dso_local void @_Z10noo_calleev() #3
+declare !dbg !38 dso_local void @_Z10noo_calleev()
 
-attributes #0 = { uwtable mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-sample-profile" "use-soft-float"="false" }
-attributes #1 = { uwtable mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "sample-profile-suffix-elision-policy"="selected" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-sample-profile" "use-soft-float"="false" }
-attributes #2 = { noinline uwtable mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "sample-profile-suffix-elision-policy"="selected" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-sample-profile" "use-soft-float"="false" }
-attributes #3 = { "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { uwtable mustprogress "use-sample-profile" }
+attributes #1 = { uwtable mustprogress "use-sample-profile" "sample-profile-suffix-elision-policy"="selected" }
+attributes #2 = { noinline uwtable mustprogress "use-sample-profile" "sample-profile-suffix-elision-policy"="selected" }
 
 ; CHECK: ![[PROF_ID1]] = !{!"branch_weights", i32 5931}
 ; CHECK: ![[PROF_ID2]] = !{!"branch_weights", i32 2000}

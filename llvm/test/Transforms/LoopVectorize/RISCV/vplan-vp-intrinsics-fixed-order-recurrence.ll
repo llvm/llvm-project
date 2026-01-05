@@ -8,7 +8,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
 ; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
 ;
-; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' { 
+; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
@@ -31,12 +31,12 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%A>, vp<[[ST]]
-; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
+; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds nuw ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SPLICE:%[0-9]+]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = add nsw vp<[[SPLICE]]>, ir<[[LD]]>
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%B>, vp<[[ST]]>
-; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
+; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer inbounds nuw ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[ADD]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>

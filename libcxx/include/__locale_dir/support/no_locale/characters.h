@@ -29,10 +29,6 @@ namespace __locale {
 //
 // Character manipulation functions
 //
-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t) { return std::isdigit(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t) { return std::isxdigit(__c); }
-
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t) { return std::toupper(__c); }
 

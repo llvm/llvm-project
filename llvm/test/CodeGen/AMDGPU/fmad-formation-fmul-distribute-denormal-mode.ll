@@ -284,4 +284,4 @@ define <2 x float> @unsafe_fast_fmul_fsub_ditribute_post_legalize(float %arg0, <
   ret <2 x float> %tmp1
 }
 
-attributes #0 = { "no-infs-fp-math"="true" "unsafe-fp-math"="true" }
+attributes #0 = { "no-infs-fp-math"="true" }

@@ -14,6 +14,7 @@
 
 #include "FormatStringConverter.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
@@ -245,7 +246,7 @@ FormatStringConverter::formatStringContainsUnreplaceableMacro(
   // inhibit conversion. The whole format string will appear to come from that
   // macro, as will the function call.
   std::optional<StringRef> MaybeSurroundingMacroName;
-  if (SourceLocation BeginCallLoc = Call->getBeginLoc();
+  if (const SourceLocation BeginCallLoc = Call->getBeginLoc();
       BeginCallLoc.isMacroID())
     MaybeSurroundingMacroName =
         Lexer::getImmediateMacroName(BeginCallLoc, SM, PP.getLangOpts());
@@ -283,7 +284,8 @@ FormatStringConverter::formatStringContainsUnreplaceableMacro(
 
 void FormatStringConverter::emitAlignment(const PrintfSpecifier &FS,
                                           std::string &FormatSpec) {
-  ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
+  const ConversionSpecifier::Kind ArgKind =
+      FS.getConversionSpecifier().getKind();
 
   // We only care about alignment if a field width is specified
   if (FS.getFieldWidth().getHowSpecified() != OptionalAmount::NotSpecified) {
@@ -499,7 +501,8 @@ bool FormatStringConverter::emitIntegerArgument(
 /// @returns true on success, false on failure
 bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
                                      std::string &FormatSpec) {
-  ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
+  const ConversionSpecifier::Kind ArgKind =
+      FS.getConversionSpecifier().getKind();
   switch (ArgKind) {
   case ConversionSpecifier::Kind::sArg:
     emitStringArgument(FS.getArgIndex() + ArgsOffset, Arg);
@@ -622,7 +625,6 @@ bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
                                                   const char *StartSpecifier,
                                                   unsigned SpecifierLen,
                                                   const TargetInfo &Target) {
-
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
   assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
 
@@ -699,6 +701,7 @@ void FormatStringConverter::finalizeFormatText() {
 /// Append literal parts of the format text, reinstating escapes as required.
 void FormatStringConverter::appendFormatText(const StringRef Text) {
   for (const char Ch : Text) {
+    const auto UCh = static_cast<unsigned char>(Ch);
     if (Ch == '\a')
       StandardFormatString += "\\a";
     else if (Ch == '\b')
@@ -723,10 +726,10 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
     } else if (Ch == '}') {
       StandardFormatString += "}}";
       FormatStringNeededRewriting = true;
-    } else if (Ch < 32) {
+    } else if (UCh < 32) {
       StandardFormatString += "\\x";
-      StandardFormatString += llvm::hexdigit(Ch >> 4, true);
-      StandardFormatString += llvm::hexdigit(Ch & 0xf, true);
+      StandardFormatString += llvm::hexdigit(UCh >> 4, true);
+      StandardFormatString += llvm::hexdigit(UCh & 0xf, true);
     } else
       StandardFormatString += Ch;
   }
@@ -791,15 +794,15 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // Now we need to modify the ArgFix index too so that we fix the right
     // argument. We don't need to care about the width and precision indices
     // since they never need fixing.
-    for (auto &ArgFix : ArgFixes) {
+    for (auto &ArgFix : ArgFixes)
       if (ArgFix.ArgIndex == ValueArgIndex)
         ArgFix.ArgIndex = ValueArgIndex - ArgCount;
-    }
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    SourceLocation AfterOtherSide =
-        Lexer::findNextToken(Args[ArgIndex]->getEndLoc(), SM, LangOpts)
+    const SourceLocation AfterOtherSide =
+        utils::lexer::findNextTokenSkippingComments(Args[ArgIndex]->getEndLoc(),
+                                                    SM, LangOpts)
             ->getLocation();
 
     Diag << FixItHint::CreateInsertion(Args[ArgIndex]->getBeginLoc(),

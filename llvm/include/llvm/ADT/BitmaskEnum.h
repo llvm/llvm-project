@@ -11,7 +11,6 @@
 
 #include <cassert>
 #include <type_traits>
-#include <utility>
 
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/bit.h"
@@ -106,7 +105,7 @@ struct is_bitmask_enum : std::false_type {};
 
 template <typename E>
 struct is_bitmask_enum<
-    E, std::enable_if_t<sizeof(E::LLVM_BITMASK_LARGEST_ENUMERATOR) >= 0>>
+    E, std::void_t<decltype(E::LLVM_BITMASK_LARGEST_ENUMERATOR)>>
     : std::true_type {};
 
 /// Trait class to determine bitmask enumeration largest bit.
@@ -114,7 +113,7 @@ template <typename E, typename Enable = void> struct largest_bitmask_enum_bit;
 
 template <typename E>
 struct largest_bitmask_enum_bit<
-    E, std::enable_if_t<sizeof(E::LLVM_BITMASK_LARGEST_ENUMERATOR) >= 0>> {
+    E, std::void_t<decltype(E::LLVM_BITMASK_LARGEST_ENUMERATOR)>> {
   using UnderlyingTy = std::underlying_type_t<E>;
   static constexpr UnderlyingTy value =
       static_cast<UnderlyingTy>(E::LLVM_BITMASK_LARGEST_ENUMERATOR);

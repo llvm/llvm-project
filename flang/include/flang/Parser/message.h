@@ -35,6 +35,7 @@ namespace Fortran::parser {
 // and severity of a message or attachment.
 enum class Severity {
   Error, // fatal error that prevents code and module file generation
+  ErrorUnlessDeadCode,
   Warning, // likely problem
   Portability, // nonstandard or obsolete features
   Because, // for AttachTo(), explanatory attachment to support another message
@@ -42,6 +43,15 @@ enum class Severity {
   Todo, // a feature that's not yet implemented, a fatal error
   None // everything else, common for attachments with source locations
 };
+
+inline constexpr bool IsFatalSeverity(Severity severity) {
+  return severity == Severity::Error ||
+      severity == Severity::ErrorUnlessDeadCode || severity == Severity::Todo;
+}
+
+inline constexpr bool IsWarningSeverity(Severity severity) {
+  return severity == Severity::Warning || severity == Severity::Portability;
+}
 
 class MessageFixedText {
 public:
@@ -61,9 +71,7 @@ public:
     severity_ = severity;
     return *this;
   }
-  bool IsFatal() const {
-    return severity_ == Severity::Error || severity_ == Severity::Todo;
-  }
+  bool IsFatal() const { return IsFatalSeverity(severity_); }
 
   static const MessageFixedText endOfFileMessage; // "end of file"_err_en_US
 
@@ -76,6 +84,10 @@ inline namespace literals {
 constexpr MessageFixedText operator""_err_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::Error};
+}
+constexpr MessageFixedText operator""_errUnlessDead_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::ErrorUnlessDeadCode};
 }
 constexpr MessageFixedText operator""_warn_en_US(
     const char str[], std::size_t n) {
@@ -115,9 +127,7 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool IsFatal() const {
-    return severity_ == Severity::Error || severity_ == Severity::Todo;
-  }
+  bool IsFatal() const { return IsFatalSeverity(severity_); }
   Severity severity() const { return severity_; }
   MessageFormattedText &set_severity(Severity severity) {
     severity_ = severity;

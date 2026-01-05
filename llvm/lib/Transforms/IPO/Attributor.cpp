@@ -272,6 +272,9 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
   }
 
   if (RangePtr && !RangePtr->offsetOrSizeAreUnknown()) {
+    int64_t StorageSize = DL.getTypeStoreSize(&Ty);
+    if (StorageSize != RangePtr->Size)
+      return nullptr;
     APInt Offset = APInt(64, RangePtr->Offset);
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }

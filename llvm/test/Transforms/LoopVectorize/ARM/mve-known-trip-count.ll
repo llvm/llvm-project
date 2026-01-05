@@ -249,7 +249,7 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   br label %7
 
 7:                                                ; preds = %5, %155
-  %8 = phi i32 [ %10, %155 ], [ undef, %5 ]
+  %8 = phi i32 [ %10, %155 ], [ 0, %5 ]
   %9 = phi i32 [ %156, %155 ], [ 0, %5 ]
   %10 = shl i32 %8, 4
   store i32 %10, ptr %6, align 4

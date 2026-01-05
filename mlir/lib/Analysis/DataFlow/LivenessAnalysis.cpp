@@ -137,7 +137,7 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // Populating such blocks in `blocks`.
   bool mayLive = false;
   SmallVector<Block *, 4> blocks;
-  if (isa<RegionBranchOpInterface>(op)) {
+  if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
     if (op->getNumResults() != 0) {
       // This mark value of type 1.c liveness as may live, because the region
       // branch operation has a return value, and the non-forwarded operand can
@@ -270,6 +270,30 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
   Liveness *operandLiveness = getLatticeElement(operand.get());
   LDBG() << "Marking call operand live: " << operand.get();
   propagateIfChanged(operandLiveness, operandLiveness->markLive());
+}
+
+void LivenessAnalysis::visitNonControlFlowArguments(
+    RegionSuccessor &successor, ArrayRef<BlockArgument> arguments) {
+  Operation *parentOp = successor.getSuccessor()->getParentOp();
+  LDBG() << "visitNonControlFlowArguments visit the region # "
+         << successor.getSuccessor()->getRegionNumber() << "of "
+         << OpWithFlags(parentOp, OpPrintingFlags().skipRegions());
+  auto valuesToLattices = [&](Value value) { return getLatticeElement(value); };
+  SmallVector<Liveness *> argumentLattices =
+      llvm::map_to_vector(arguments, valuesToLattices);
+  SmallVector<Liveness *> parentResultLattices =
+      llvm::map_to_vector(parentOp->getResults(), valuesToLattices);
+
+  for (Liveness *resultLattice : parentResultLattices) {
+    if (resultLattice->isLive) {
+      for (Liveness *argumentLattice : argumentLattices) {
+        LDBG() << "make lattice: " << argumentLattice << " live";
+        propagateIfChanged(argumentLattice, argumentLattice->markLive());
+      }
+      return;
+    }
+  }
+  (void)visitOperation(parentOp, argumentLattices, parentResultLattices);
 }
 
 void LivenessAnalysis::setToExitState(Liveness *lattice) {

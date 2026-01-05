@@ -406,7 +406,7 @@ private:
     auto returnOperands = popOperands(resTypes);
     if (failed(returnOperands))
       return failure();
-    builder.create<BlockReturnOp>(opLoc, *returnOperands);
+    BlockReturnOp::create(builder, opLoc, *returnOperands);
     LDBG() << "end of parsing of a block";
     return bodyParsingRes->endingByte;
   }
@@ -1000,7 +1000,7 @@ parsed_inst_t ExpressionParser::parseBlockLikeOp(OpBuilder &builder) {
       builder.createBlock(curRegion, curRegion->end(), resTypes, locations);
   builder.setInsertionPointToEnd(curBlock);
   auto blockOp =
-      builder.create<OpToCreate>(*currentOpLoc, *inputOps, successor);
+      OpToCreate::create(builder, *currentOpLoc, *inputOps, successor);
   auto *blockBody = blockOp.createBlock();
   if (failed(parseBlockContent(builder, blockBody, resTypes, *opLoc, blockOp)))
     return failure();
@@ -1047,8 +1047,8 @@ inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
   auto *successor =
       builder.createBlock(curRegion, curRegion->end(), resTypes, locations);
   builder.setInsertionPointToEnd(curBlock);
-  auto ifOp = builder.create<IfOp>(*currentOpLoc, conditionValue->front(),
-                                   *inputOps, successor);
+  auto ifOp = IfOp::create(builder, *currentOpLoc, conditionValue->front(),
+                           *inputOps, successor);
   auto *ifEntryBlock = ifOp.createIfBlock();
   constexpr auto ifElseFilter =
       ByteSequence<WasmBinaryEncoding::endByte,
@@ -1091,9 +1091,9 @@ inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
   auto branchArgs = popOperands(inputTypes);
   if (failed(branchArgs))
     return failure();
-  builder.create<BranchIfOp>(*currentOpLoc, condition->front(),
-                             builder.getUI32IntegerAttr(*level), *branchArgs,
-                             elseBlock);
+  BranchIfOp::create(builder, *currentOpLoc, condition->front(),
+                     builder.getUI32IntegerAttr(*level), *branchArgs,
+                     elseBlock);
   builder.setInsertionPointToStart(elseBlock);
   return {*branchArgs};
 }
@@ -1115,7 +1115,7 @@ ExpressionParser::parseSpecificInstruction<WasmBinaryEncoding::OpCode::call>(
   if (failed(inOperands))
     return failure();
   auto callOp =
-      builder.create<FuncCallOp>(loc, resTypes, callee.symbol, *inOperands);
+      FuncCallOp::create(builder, loc, resTypes, callee.symbol, *inOperands);
   return {callOp.getResults()};
 }
 
@@ -1391,8 +1391,8 @@ inline parsed_inst_t ExpressionParser::buildConvertOp(OpBuilder &builder,
   auto operand = popOperands(intype);
   if (failed(operand))
     return failure();
-  auto op = builder.create<opType>(*currentOpLoc, outType, operand->front(),
-                                   extraArgs...);
+  auto op = opType::create(builder, *currentOpLoc, outType, operand->front(),
+                           extraArgs...);
   LDBG() << "Built operation: " << op;
   return {{op.getResult()}};
 }
