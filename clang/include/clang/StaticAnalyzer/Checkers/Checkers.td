@@ -910,15 +910,15 @@ def DeprecatedOrUnsafeBufferHandling
           [CmdLineOption<
                String, "ReportMode",
                "Controls when warnings are reported. \"all\" reports all "
-               "unsafe "
-               "functions regardless of C standard or Annex K availability. "
-               "\"actionable\" only reports when Annex K is available (C11 "
-               "with "
-               "__STDC_LIB_EXT1__ and __STDC_WANT_LIB_EXT1__=1). \"c11-only\" "
-               "reports when C11 standard is enabled (does not take Annex K "
-               "availability into account).",
-               "c11-only", Released>,
-]>,
+               "unsafe functions regardless of C standard or Annex K "
+               "availability. \"actionable\" only reports when Annex K is "
+               "available (C11 with __STDC_LIB_EXT1__ and "
+               "__STDC_WANT_LIB_EXT1__=1). \"c11-only\" reports when C11 "
+               "standard is enabled (does not take Annex K availability into "
+               "account).",
+               "c11-only",
+               Released>,
+      ]>,
       Documentation<HasDocumentation>;
 
 def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
