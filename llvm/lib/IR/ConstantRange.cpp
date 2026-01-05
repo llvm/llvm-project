@@ -23,6 +23,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -106,7 +107,7 @@ std::pair<ConstantRange, ConstantRange> ConstantRange::splitPosNeg() const {
   return {intersectWith(PosFilter), intersectWith(NegFilter)};
 }
 
-ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
+ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
                                                    const ConstantRange &CR) {
   if (CR.isEmptySet())
     return CR;
@@ -141,6 +142,8 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
     APInt UMin(CR.getUnsignedMin());
     if (UMin.isMaxValue())
       return getEmpty(W);
+    if (Pred.hasSameSign() && CR.isAllNonNegative())
+      return ConstantRange(std::move(UMin) + 1, APInt::getSignedMinValue(W));
     return ConstantRange(std::move(UMin) + 1, APInt::getZero(W));
   }
   case CmpInst::ICMP_SGT: {
@@ -150,6 +153,8 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
     return ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W));
   }
   case CmpInst::ICMP_UGE:
+    if (Pred.hasSameSign() && CR.isAllNonNegative())
+      return getNonEmpty(CR.getUnsignedMin(), APInt::getSignedMinValue(W));
     return getNonEmpty(CR.getUnsignedMin(), APInt::getZero(W));
   case CmpInst::ICMP_SGE:
     return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
