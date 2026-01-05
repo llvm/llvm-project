@@ -1156,6 +1156,10 @@ private:
   /// The file ID for the PCH through header.
   FileID PCHThroughHeaderFileID;
 
+  /// The file ID for the predefines that come from the PCH.
+  /// This is only set when modules are in effect.
+  FileID PCHPredefinesFileID;
+
   /// Whether tokens are being skipped until a #pragma hdrstop is seen.
   bool SkippingUntilPragmaHdrStop = false;
 
@@ -1354,6 +1358,13 @@ public:
 
   /// Returns the FileID for the preprocessor predefines.
   FileID getPredefinesFileID() const { return PredefinesFileID; }
+
+  /// Returns the FileID for the predefines loaded from the PCH.
+  FileID getPCHPredefinesFileID() const {
+    assert(getLangOpts().Modules &&
+           "PCHPredefinedFileID is only set when modules is in effect!");
+    return PCHPredefinesFileID;
+  }
 
   /// \{
   /// Accessors for preprocessor callbacks.
