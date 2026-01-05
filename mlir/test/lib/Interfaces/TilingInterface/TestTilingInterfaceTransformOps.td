@@ -49,14 +49,19 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
   }];
 }
 
-def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
+def TestFuseConsumerUsingSliceOp : Op<Transform_Dialect, "test.fuse_consumer_using_slice",
        [AttrSizedOperandSegments,
         DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Fuses the consumer of the operation pointed to by the target handle
-    using the options provided as attributes.
+    For the `insert_slice`-like operations (that are typically generated through tiling),
+    within the loop nests passed in as `loops` (that are typically generated through tiling),
+    find the consumer that these slices map to (have to be the same consumer) and fuse
+    the consumer into the loop.
+
+    Returns a handle to the original consumer operation and the consumer operation after
+    fusion.
   }];
 
   let arguments = (ins 
@@ -72,6 +77,32 @@ def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
     attr-dict `:` functional-type(operands, results)
   }];
 }
+
+def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    For the `consumer` that uses the result of the outer-most loop of a loop nest passed in 
+    as `loops` (that are typically generated through tiling), fuse the consumer into the
+    loop.
+
+    Returns a handle to the consumer operation after fusion and the loops that might be
+    modified.
+  }];
+
+  let arguments = (ins 
+      TransformHandleTypeInterface:$consumer,
+      Variadic<TransformHandleTypeInterface>:$loops);
+  let results = (outs TransformHandleTypeInterface:$fused_consumer,
+      Variadic<TransformHandleTypeInterface>:$result_loops);
+
+  let assemblyFormat = [{
+    $consumer `into` `(` $loops `)`
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 
 def TestTileUsingForallOp : Op<Transform_Dialect, "test.tile_using_forall",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
@@ -147,6 +178,73 @@ def TestTileAndFuseOuterParallelPartialReductionOp : Op<
     $root_op (`reduction_dims` `=` $reduction_dims^)?
     (`tile_sizes` `=` $tile_sizes^)? (`mapping` `=` $mapping^)?
     attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def TestTileUsingCustomLoopOp : Op<
+    Transform_Dialect, "test.tile_using_custom_loop",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Test Transform op to tile an operation using custom loops.
+
+    The test just folds all the loops and into a single loop and then
+    delinearizes the indices.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root_op,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
+  let results  = (outs TransformHandleTypeInterface:$tiled_ops,
+                  Variadic<TransformHandleTypeInterface>:$loops);
+
+  let assemblyFormat = [{
+    $root_op `tile_sizes` `=` $tile_sizes
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def TestQueryProducerFusability : Op<
+    Transform_Dialect, "test.query_producer_fusability",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Test operation for the producer fusability query method in the
+    TilingInterface.
+
+    For each operation in the target handle, this looks for tensor.insert_slice
+    ops that produce operands to the tilable op. The offset/sizes from those
+    inserts is used as the arguments to `isOpFusableWithProducerSlices` and
+    emits a remark with the result of the query.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $target attr-dict `:` type($target)
+  }];
+}
+
+def TestQueryConsumerFusability
+    : Op<Transform_Dialect, "test.query_consumer_fusability",
+         [DeclareOpInterfaceMethods<TransformOpInterface>,
+          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Test operation for the consumer fusability query method in the
+    TilingInterface.
+
+    For each operation in the target handle, this looks for tensor.extract_slice
+    ops that consume results of the tilable op. The offset/sizes from those
+    extracts is used as the arguments to `isOpFusableWithConsumerSlice` and
+    emits a remark with the result of the query.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $target attr-dict `:` type($target)
   }];
 }
 

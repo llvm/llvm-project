@@ -255,6 +255,7 @@ public:
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);
   void VisitPackTemplateArgument(const TemplateArgument &TA);
 
+  void VisitLoopControlStmt(const LoopControlStmt *L);
   void VisitIfStmt(const IfStmt *Node);
   void VisitSwitchStmt(const SwitchStmt *Node);
   void VisitWhileStmt(const WhileStmt *Node);

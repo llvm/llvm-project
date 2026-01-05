@@ -8,10 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN
 
-declare <vscale x 1 x float> @llvm.vp.fma.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x float> @llvm.vp.fneg.nxv1f32(<vscale x 1 x float>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x float> @vfnmacc_vv_nxv1f32(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfnmacc_vv_nxv1f32:
 ; ZVFH:       # %bb.0:
@@ -146,10 +142,6 @@ define <vscale x 1 x float> @vfnmacc_vf_nxv1f32_unmasked(<vscale x 1 x half> %a,
   ret <vscale x 1 x float> %v
 }
 
-declare <vscale x 2 x float> @llvm.vp.fma.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x float> @llvm.vp.fneg.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2f16(<vscale x 2 x half>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x float> @vfnmacc_vv_nxv2f32(<vscale x 2 x half> %a, <vscale x 2 x half> %b, <vscale x 2 x float> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfnmacc_vv_nxv2f32:
 ; ZVFH:       # %bb.0:
@@ -283,10 +275,6 @@ define <vscale x 2 x float> @vfnmacc_vf_nxv2f32_unmasked(<vscale x 2 x half> %a,
   %v = call <vscale x 2 x float> @llvm.vp.fma.nxv2f32(<vscale x 2 x float> %nega, <vscale x 2 x float> %vbext, <vscale x 2 x float> %negc, <vscale x 2 x i1> splat (i1 -1), i32 %evl)
   ret <vscale x 2 x float> %v
 }
-
-declare <vscale x 4 x float> @llvm.vp.fma.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x float> @llvm.vp.fneg.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x float> @llvm.vp.fpext.nxv4f32.nxv4f16(<vscale x 4 x half>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x float> @vfnmacc_vv_nxv4f32(<vscale x 4 x half> %a, <vscale x 4 x half> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfnmacc_vv_nxv4f32:
@@ -424,10 +412,6 @@ define <vscale x 4 x float> @vfnmacc_vf_nxv4f32_unmasked(<vscale x 4 x half> %a,
   ret <vscale x 4 x float> %v
 }
 
-declare <vscale x 8 x float> @llvm.vp.fma.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x float> @llvm.vp.fneg.nxv8f32(<vscale x 8 x float>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x float> @llvm.vp.fpext.nxv8f32.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x float> @vfnmacc_vv_nxv8f32(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x float> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfnmacc_vv_nxv8f32:
 ; ZVFH:       # %bb.0:
@@ -563,10 +547,6 @@ define <vscale x 8 x float> @vfnmacc_vf_nxv8f32_unmasked(<vscale x 8 x half> %a,
   %v = call <vscale x 8 x float> @llvm.vp.fma.nxv8f32(<vscale x 8 x float> %nega, <vscale x 8 x float> %vbext, <vscale x 8 x float> %negc, <vscale x 8 x i1> splat (i1 -1), i32 %evl)
   ret <vscale x 8 x float> %v
 }
-
-declare <vscale x 16 x float> @llvm.vp.fma.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x float> @llvm.vp.fpext.nxv16f32.nxv16f16(<vscale x 16 x half>, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x float> @vfnmacc_vv_nxv16f32(<vscale x 16 x half> %a, <vscale x 16 x half> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfnmacc_vv_nxv16f32:
@@ -704,10 +684,6 @@ define <vscale x 16 x float> @vfnmacc_vf_nxv16f32_unmasked(<vscale x 16 x half> 
   ret <vscale x 16 x float> %v
 }
 
-declare <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x double> @llvm.vp.fneg.nxv1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x double> @llvm.vp.fpext.nxv1f64.nxv1f32(<vscale x 1 x float>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x double> @vfnmacc_vv_nxv1f64(<vscale x 1 x float> %a, <vscale x 1 x float> %b, <vscale x 1 x double> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv1f64:
 ; CHECK:       # %bb.0:
@@ -789,10 +765,6 @@ define <vscale x 1 x double> @vfnmacc_vf_nxv1f64_unmasked(<vscale x 1 x float> %
   %v = call <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double> %nega, <vscale x 1 x double> %vbext, <vscale x 1 x double> %negc, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   ret <vscale x 1 x double> %v
 }
-
-declare <vscale x 2 x double> @llvm.vp.fma.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x double> @llvm.vp.fneg.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x double> @vfnmacc_vv_nxv2f64(<vscale x 2 x float> %a, <vscale x 2 x float> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv2f64:
@@ -876,10 +848,6 @@ define <vscale x 2 x double> @vfnmacc_vf_nxv2f64_unmasked(<vscale x 2 x float> %
   ret <vscale x 2 x double> %v
 }
 
-declare <vscale x 4 x double> @llvm.vp.fma.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.fneg.nxv4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.fpext.nxv4f64.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x double> @vfnmacc_vv_nxv4f64(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x double> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -961,10 +929,6 @@ define <vscale x 4 x double> @vfnmacc_vf_nxv4f64_unmasked(<vscale x 4 x float> %
   %v = call <vscale x 4 x double> @llvm.vp.fma.nxv4f64(<vscale x 4 x double> %nega, <vscale x 4 x double> %vbext, <vscale x 4 x double> %negc, <vscale x 4 x i1> splat (i1 -1), i32 %evl)
   ret <vscale x 4 x double> %v
 }
-
-declare <vscale x 8 x double> @llvm.vp.fma.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>, <vscale x 8 x double>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x double> @llvm.vp.fpext.nxv8f64.nxv8f32(<vscale x 8 x float>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x double> @vfnmacc_vv_nxv8f64(<vscale x 8 x float> %a, <vscale x 8 x float> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv8f64:
@@ -1048,8 +1012,6 @@ define <vscale x 8 x double> @vfnmacc_vf_nxv8f64_unmasked(<vscale x 8 x float> %
   ret <vscale x 8 x double> %v
 }
 
-declare <vscale x 1 x double> @llvm.vp.fpext.nxv1f64.nxv1f16(<vscale x 1 x half>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x double> @vfnmacc_vv_nxv1f64_nxv1f16(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x double> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv1f64_nxv1f16:
 ; CHECK:       # %bb.0:
@@ -1085,8 +1047,6 @@ define <vscale x 1 x double> @vfnmacc_vv_nxv1f64_nxv1f16_unmasked(<vscale x 1 x 
   %v = call <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double> %nega, <vscale x 1 x double> %bext, <vscale x 1 x double> %negc, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   ret <vscale x 1 x double> %v
 }
-
-declare <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f16(<vscale x 2 x half>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x double> @vfnmacc_vv_nxv2f64_nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv2f64_nxv2f16:
@@ -1124,8 +1084,6 @@ define <vscale x 2 x double> @vfnmacc_vv_nxv2f64_nxv2f16_unmasked(<vscale x 2 x 
   ret <vscale x 2 x double> %v
 }
 
-declare <vscale x 4 x double> @llvm.vp.fpext.nxv4f64.nxv4f16(<vscale x 4 x half>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x double> @vfnmacc_vv_nxv4f64_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, <vscale x 4 x double> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv4f64_nxv4f16:
 ; CHECK:       # %bb.0:
@@ -1161,8 +1119,6 @@ define <vscale x 4 x double> @vfnmacc_vv_nxv4f64_nxv4f16_unmasked(<vscale x 4 x 
   %v = call <vscale x 4 x double> @llvm.vp.fma.nxv4f64(<vscale x 4 x double> %nega, <vscale x 4 x double> %bext, <vscale x 4 x double> %negc, <vscale x 4 x i1> splat (i1 -1), i32 %evl)
   ret <vscale x 4 x double> %v
 }
-
-declare <vscale x 8 x double> @llvm.vp.fpext.nxv8f64.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x double> @vfnmacc_vv_nxv8f64_nxv4f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv8f64_nxv4f16:

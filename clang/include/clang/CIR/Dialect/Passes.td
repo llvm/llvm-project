@@ -72,6 +72,27 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def GotoSolver : Pass<"cir-goto-solver"> {
+  let summary = "Replaces goto operations with branches";
+  let description = [{
+    This pass transforms CIR and replaces goto-s with branch
+    operations to the proper blocks.
+  }];
+  let constructor = "mlir::createGotoSolverPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
+def CXXABILowering : Pass<"cir-cxxabi-lowering", "mlir::ModuleOp"> {
+  let summary = "Lower abstract C++ operations to target-specific ABI form";
+  let description = [{
+    This pass lowers high-level operations that represent C++ constructs in a
+    target-independent way to concrete, target specific operations.
+  }];
+  let constructor = "mlir::createCXXABILoweringPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
+
 def LoweringPrepare : Pass<"cir-lowering-prepare"> {
   let summary = "Lower to more fine-grained CIR operations before lowering to "
     "other dialects";

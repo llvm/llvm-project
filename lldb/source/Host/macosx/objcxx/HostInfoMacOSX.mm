@@ -39,7 +39,7 @@
 #include <Foundation/Foundation.h>
 #include <mach-o/dyld.h>
 #if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && \
-  MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_0
+    MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_0
 #if __has_include(<mach-o/dyld_introspection.h>)
 #include <mach-o/dyld_introspection.h>
 #define SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS
@@ -78,8 +78,8 @@ std::optional<std::string> HostInfoMacOSX::GetOSBuildString() {
 static void ParseOSVersion(llvm::VersionTuple &version, NSString *Key) {
   @autoreleasepool {
     NSDictionary *version_info =
-      [NSDictionary dictionaryWithContentsOfFile:
-       @"/System/Library/CoreServices/SystemVersion.plist"];
+        [NSDictionary dictionaryWithContentsOfFile:
+                          @"/System/Library/CoreServices/SystemVersion.plist"];
     NSString *version_value = [version_info objectForKey: Key];
     const char *version_str = [version_value UTF8String];
     version.tryParse(version_str);
@@ -225,9 +225,9 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("~/Library/Application Support/LLDB/PlugIns");
-  FileSystem::Instance().Resolve(temp_file);
-  file_spec.SetDirectory(temp_file.GetPathAsConstString());
+  FileSpec home_dir_spec = GetUserHomeDir();
+  home_dir_spec.AppendPathComponent("Library/Application Support/LLDB/PlugIns");
+  file_spec.SetDirectory(home_dir_spec.GetPathAsConstString());
   return true;
 }
 
@@ -677,16 +677,16 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
   if (!dyld_process)
     return false;
 
-  auto cleanup_process_on_exit =
-      llvm::make_scope_exit([&]() { dyld_process_dispose(dyld_process); });
+  llvm::scope_exit cleanup_process_on_exit(
+      [&]() { dyld_process_dispose(dyld_process); });
 
   dyld_process_snapshot_t snapshot =
       dyld_process_snapshot_create_for_process(dyld_process, nullptr);
   if (!snapshot)
     return false;
 
-  auto cleanup_snapshot_on_exit =
-      llvm::make_scope_exit([&]() { dyld_process_snapshot_dispose(snapshot); });
+  llvm::scope_exit cleanup_snapshot_on_exit(
+      [&]() { dyld_process_snapshot_dispose(snapshot); });
 
   dyld_shared_cache_t shared_cache =
       dyld_process_snapshot_get_shared_cache(snapshot);

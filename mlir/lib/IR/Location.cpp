@@ -52,8 +52,8 @@ struct FileLineColRangeAttrStorage final
         FileLineColRangeAttrStorage::totalSizeToAlloc<unsigned>(locEnc - 1);
     auto *rawMem =
         allocator.allocate(byteSize, alignof(FileLineColRangeAttrStorage));
-    auto *result = ::new (rawMem) FileLineColRangeAttrStorage(
-        std::move(std::get<0>(tblgenKey)), locEnc - 1);
+    auto *result = ::new (rawMem)
+        FileLineColRangeAttrStorage(std::get<0>(tblgenKey), locEnc - 1);
     if (numInArray > 0) {
       ArrayRef<unsigned> elements = std::get<1>(tblgenKey);
       result->startLine = elements[0];

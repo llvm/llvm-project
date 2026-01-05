@@ -24,13 +24,14 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/ManagedStatic.h"
 
 // Windows includes
 #include <tlhelp32.h>
 
 using namespace lldb;
 using namespace lldb_private;
+
+using llvm::sys::windows::UTF8ToUTF16;
 
 static bool GetTripleForProcess(const FileSpec &executable,
                                 llvm::Triple &triple) {
@@ -305,63 +306,27 @@ Environment Host::GetEnvironment() {
   return env;
 }
 
-/// Manages the lifecycle of a Windows Event's Source.
-/// The destructor will call DeregisterEventSource.
-/// This class is meant to be used with \ref llvm::ManagedStatic.
-class WindowsEventLog {
-public:
-  WindowsEventLog() : handle(RegisterEventSource(nullptr, L"lldb")) {}
-
-  ~WindowsEventLog() {
-    if (handle)
-      DeregisterEventSource(handle);
-  }
-
-  HANDLE GetHandle() const { return handle; }
-
-private:
-  HANDLE handle;
-};
-
-static llvm::ManagedStatic<WindowsEventLog> event_log;
-
-static std::wstring AnsiToUtf16(const std::string &ansi) {
-  if (ansi.empty())
-    return {};
-
-  const int unicode_length =
-      MultiByteToWideChar(CP_ACP, 0, ansi.c_str(), -1, nullptr, 0);
-  if (unicode_length == 0)
-    return {};
-
-  std::wstring unicode(unicode_length, L'\0');
-  MultiByteToWideChar(CP_ACP, 0, ansi.c_str(), -1, &unicode[0], unicode_length);
-  return unicode;
-}
-
 void Host::SystemLog(Severity severity, llvm::StringRef message) {
-  HANDLE h = event_log->GetHandle();
-  if (!h)
+  if (message.empty())
     return;
 
-  std::wstring wide_message = AnsiToUtf16(message.str());
-  if (wide_message.empty())
-    return;
+  std::string log_msg;
+  llvm::raw_string_ostream stream(log_msg);
 
-  LPCWSTR msg_ptr = wide_message.c_str();
-
-  WORD event_type;
   switch (severity) {
   case lldb::eSeverityWarning:
-    event_type = EVENTLOG_WARNING_TYPE;
+    stream << "[Warning] ";
     break;
   case lldb::eSeverityError:
-    event_type = EVENTLOG_ERROR_TYPE;
+    stream << "[Error] ";
     break;
   case lldb::eSeverityInfo:
-  default:
-    event_type = EVENTLOG_INFORMATION_TYPE;
+    stream << "[Info] ";
+    break;
   }
 
-  ReportEventW(h, event_type, 0, 0, nullptr, 1, 0, &msg_ptr, nullptr);
+  stream << message;
+  stream.flush();
+
+  OutputDebugStringA(log_msg.c_str());
 }

@@ -104,7 +104,7 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
   // it is a function (avoiding a grammar ambiguity).
   bool wrapped = op->getNumResults() != 1;
   if (!wrapped && op->getResult(0).getType() &&
-      llvm::isa<FunctionType>(op->getResult(0).getType()))
+      isa<FunctionType>(op->getResult(0).getType()))
     wrapped = true;
 
   if (wrapped)
@@ -418,6 +418,21 @@ public:
   /// Returns the output stream of the printer.
   raw_ostream &getStream() { return os; }
 
+  /// Print a newline and indent the printer to the start of the current
+  /// operation/attribute/type.
+  /// Note: For attributes and types this method should only be used in
+  /// custom dialects. Usage in MLIR dialects is disallowed.
+  void printNewline() {
+    os << newLine;
+    os.indent(currentIndent);
+  }
+
+  /// Increase indentation.
+  void increaseIndent() { currentIndent += indentWidth; }
+
+  /// Decrease indentation.
+  void decreaseIndent() { currentIndent -= indentWidth; }
+
   template <typename Container, typename UnaryFunctor>
   inline void interleaveComma(const Container &c, UnaryFunctor eachFn) const {
     llvm::interleaveComma(c, os, eachFn);
@@ -532,6 +547,12 @@ protected:
 
   /// A tracker for the number of new lines emitted during printing.
   NewLineCounter newLine;
+
+  /// The number of spaces used as an indent.
+  const static unsigned indentWidth = 2;
+
+  /// This is the current indentation level for nested structures.
+  unsigned currentIndent = 0;
 };
 } // namespace mlir
 
@@ -1004,6 +1025,9 @@ private:
 
   /// The following are hooks of `DialectAsmPrinter` that are not necessary for
   /// determining potential aliases.
+  void printNewline() override {}
+  void increaseIndent() override {}
+  void decreaseIndent() override {}
   void printFloat(const APFloat &) override {}
   void printKeywordOrString(StringRef) override {}
   void printString(StringRef) override {}
@@ -1090,9 +1114,12 @@ unsigned AliasInitializer::uniqueAliasNameIndex(
   }
   // Otherwise, we had a conflict - probe until we find a unique name.
   SmallString<64> probeAlias(alias);
+  size_t probeSize = probeAlias.size();
   // alias with trailing digit will be printed as _N
-  if (isdigit(alias.back()))
+  if (isdigit(alias.back())) {
     probeAlias.push_back('_');
+    probeSize++;
+  }
   // nameCounts start from 1 because 0 is not printed in SymbolAlias.
   if (nameCounts[probeAlias] == 0)
     nameCounts[probeAlias] = 1;
@@ -1106,7 +1133,7 @@ unsigned AliasInitializer::uniqueAliasNameIndex(
       return nameIndex;
     }
     // Reset probeAlias to the original alias for the next iteration.
-    probeAlias.resize(alias.size() + isdigit(alias.back()) ? 1 : 0);
+    probeAlias.resize(probeSize);
   }
 }
 
@@ -2032,7 +2059,7 @@ private:
 };
 
 template <typename Range>
-void printDimensionList(raw_ostream &stream, Range &&shape) {
+static void printDimensionList(raw_ostream &stream, Range &&shape) {
   llvm::interleave(
       shape, stream,
       [&stream](const auto &dimSize) {
@@ -2200,10 +2227,9 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           os << '>';
         }
         os << '[';
-        interleave(
-            loc.getLocations(),
-            [&](Location loc) { printLocationInternal(loc, pretty); },
-            [&]() { os << ", "; });
+        interleaveComma(loc.getLocations(), [&](Location loc) {
+          printLocationInternal(loc, pretty);
+        });
         os << ']';
       })
       .Default([&](LocationAttr loc) {
@@ -2836,6 +2862,19 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
+      .Case<GraphType>([&](GraphType graphTy) {
+        os << '(';
+        interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
+        os << ") -> ";
+        ArrayRef<Type> results = graphTy.getResults();
+        if (results.size() == 1 && !isa<FunctionType, GraphType>(results[0])) {
+          printType(results[0]);
+        } else {
+          os << '(';
+          interleaveComma(results, [&](Type ty) { printType(ty); });
+          os << ')';
+        }
+      })
       .Default([&](Type type) { return printDialectType(type); });
 }
 
@@ -2892,6 +2931,13 @@ void AsmPrinter::Impl::printDialectAttribute(Attribute attr) {
   {
     llvm::raw_string_ostream attrNameStr(attrName);
     Impl subPrinter(attrNameStr, state);
+
+    // The values of currentIndent and newLine are assigned to the created
+    // subprinter, so that the indent level and number of printed lines can be
+    // tracked.
+    subPrinter.currentIndent = currentIndent;
+    subPrinter.newLine = newLine;
+
     DialectAsmPrinter printer(subPrinter);
     dialect.printAttribute(attr, printer);
   }
@@ -2906,6 +2952,13 @@ void AsmPrinter::Impl::printDialectType(Type type) {
   {
     llvm::raw_string_ostream typeNameStr(typeName);
     Impl subPrinter(typeNameStr, state);
+
+    // The values of currentIndent and newLine are assigned to the created
+    // subprinter, so that the indent level and number of printed lines can be
+    // tracked.
+    subPrinter.currentIndent = currentIndent;
+    subPrinter.newLine = newLine;
+
     DialectAsmPrinter printer(subPrinter);
     dialect.printType(type, printer);
   }
@@ -2944,6 +2997,21 @@ AsmPrinter::~AsmPrinter() = default;
 raw_ostream &AsmPrinter::getStream() const {
   assert(impl && "expected AsmPrinter::getStream to be overriden");
   return impl->getStream();
+}
+
+void AsmPrinter::printNewline() {
+  assert(impl && "expected AsmPrinter::printNewLine to be overriden");
+  impl->printNewline();
+}
+
+void AsmPrinter::increaseIndent() {
+  assert(impl && "expected AsmPrinter::increaseIndent to be overriden");
+  impl->increaseIndent();
+}
+
+void AsmPrinter::decreaseIndent() {
+  assert(impl && "expected AsmPrinter::decreaseIndent to be overriden");
+  impl->decreaseIndent();
 }
 
 /// Print the given floating point value in a stablized form.
@@ -3276,19 +3344,6 @@ public:
     printTrailingLocation(loc);
   }
 
-  /// Print a newline and indent the printer to the start of the current
-  /// operation.
-  void printNewline() override {
-    os << newLine;
-    os.indent(currentIndent);
-  }
-
-  /// Increase indentation.
-  void increaseIndent() override { currentIndent += indentWidth; }
-
-  /// Decrease indentation.
-  void decreaseIndent() override { currentIndent -= indentWidth; }
-
   /// Print a block argument in the usual format of:
   ///   %ssaName : type {attr1=42} loc("here")
   /// where location printing is controlled by the standard internal option.
@@ -3414,12 +3469,6 @@ private:
   // top-level we start with "builtin" as the default, so that the top-level
   // `module` operation prints as-is.
   SmallVector<StringRef> defaultDialectStack{"builtin"};
-
-  /// The number of spaces used for indenting nested operations.
-  const static unsigned indentWidth = 2;
-
-  // This is the current indentation level for nested structures.
-  unsigned currentIndent = 0;
 };
 } // namespace
 
@@ -3857,8 +3906,8 @@ void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
   }
   os << "{" << newLine;
   if (!region.empty()) {
-    auto restoreDefaultDialect =
-        llvm::make_scope_exit([&]() { defaultDialectStack.pop_back(); });
+    llvm::scope_exit restoreDefaultDialect(
+        [&]() { defaultDialectStack.pop_back(); });
     if (auto iface = dyn_cast<OpAsmOpInterface>(region.getParentOp()))
       defaultDialectStack.push_back(iface.getDefaultDialect());
     else

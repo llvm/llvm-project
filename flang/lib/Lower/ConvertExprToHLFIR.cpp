@@ -26,7 +26,6 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
-#include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -369,6 +368,8 @@ private:
 
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::Component &component) {
+    if (auto remapped = symMap.lookupComponentOverride(component))
+      return *remapped;
     if (Fortran::semantics::IsAllocatableOrPointer(component.GetLastSymbol()))
       return genWholeAllocatableOrPointerComponent(component);
     PartInfo partInfo;
@@ -478,6 +479,8 @@ private:
 
   fir::FortranVariableOpInterface genWholeAllocatableOrPointerComponent(
       const Fortran::evaluate::Component &component) {
+    if (auto remapped = symMap.lookupComponentOverride(component))
+      return *remapped;
     // Generate whole allocatable or pointer component reference. The
     // hlfir.designate result will be a pointer/allocatable.
     PartInfo partInfo;
@@ -540,7 +543,8 @@ private:
       // components need special care to deal with the array%array_comp(indices)
       // case.
       if (Fortran::semantics::IsAllocatableOrObjectPointer(
-              &component->GetLastSymbol()))
+              &component->GetLastSymbol()) ||
+          symMap.lookupComponentOverride(*component))
         baseType = visit(*component, partInfo);
       else
         baseType = hlfir::getFortranElementOrSequenceType(
@@ -683,6 +687,15 @@ private:
       partInfo.base = genWholeAllocatableOrPointerComponent(component);
       partInfo.base = hlfir::derefPointersAndAllocatables(loc, getBuilder(),
                                                           *partInfo.base);
+      hlfir::genLengthParameters(loc, getBuilder(), *partInfo.base,
+                                 partInfo.typeParams);
+      return partInfo.base->getElementOrSequenceType();
+    }
+    if (auto remapped = symMap.lookupComponentOverride(component)) {
+      // Do not generate field for the designate if the component
+      // is overridden, the override value is already addressing
+      // the component.
+      partInfo.base = *remapped;
       hlfir::genLengthParameters(loc, getBuilder(), *partInfo.base,
                                  partInfo.typeParams);
       return partInfo.base->getElementOrSequenceType();
@@ -1286,16 +1299,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    auto [lhsExv, lhsCleanUp] =
-        hlfir::translateToExtendedValue(loc, builder, lhs);
-    auto [rhsExv, rhsCleanUp] =
-        hlfir::translateToExtendedValue(loc, builder, rhs);
-    auto cmp = fir::runtime::genCharCompare(
-        builder, loc, translateSignedRelational(op.opr), lhsExv, rhsExv);
-    if (lhsCleanUp)
-      (*lhsCleanUp)();
-    if (rhsCleanUp)
-      (*rhsCleanUp)();
+    auto cmp = hlfir::CmpCharOp::create(
+        builder, loc, translateSignedRelational(op.opr), lhs, rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1822,10 +1827,8 @@ private:
     // Allocate scalar temporary that will be initialized
     // with the values specified by the constructor.
     mlir::Value storagePtr = builder.createTemporary(loc, recTy);
-    auto varOp = hlfir::EntityWithAttributes{hlfir::DeclareOp::create(
-        builder, loc, storagePtr, "ctor.temp", /*shape=*/nullptr,
-        /*typeparams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr,
-        fir::FortranVariableFlagsAttr{})};
+    auto varOp = hlfir::EntityWithAttributes{
+        hlfir::DeclareOp::create(builder, loc, storagePtr, "ctor.temp")};
 
     // Initialize any components that need initialization.
     mlir::Value box = builder.createBox(loc, fir::ExtendedValue{varOp});

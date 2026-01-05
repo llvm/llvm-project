@@ -22,4 +22,4 @@ subroutine one(a,b,c)
  ! CHECK: ^bb[[EXIT]]:
  ! CHECK-NEXT: return
 end subroutine one
-    
+

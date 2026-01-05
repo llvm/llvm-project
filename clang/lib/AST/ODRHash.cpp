@@ -913,7 +913,7 @@ public:
       return false;
 
     if (TypedefT->getDecl()->getIdentifier() !=
-        TagT->getOriginalDecl()->getIdentifier())
+        TagT->getDecl()->getIdentifier())
       return false;
 
     ID.AddInteger(TagT->getTypeClass());
@@ -1059,7 +1059,7 @@ public:
   }
 
   void VisitInjectedClassNameType(const InjectedClassNameType *T) {
-    AddDecl(T->getOriginalDecl()->getDefinitionOrSelf());
+    AddDecl(T->getDecl()->getDefinitionOrSelf());
     VisitType(T);
   }
 
@@ -1164,7 +1164,7 @@ public:
     AddNestedNameSpecifier(ElaboratedOverride
                                ? ElaboratedOverride->getQualifier()
                                : T->getQualifier());
-    AddDecl(T->getOriginalDecl()->getDefinitionOrSelf());
+    AddDecl(T->getDecl()->getDefinitionOrSelf());
     VisitType(T);
   }
 
@@ -1210,16 +1210,6 @@ public:
   void VisitDependentNameType(const DependentNameType *T) {
     AddNestedNameSpecifier(T->getQualifier());
     AddIdentifierInfo(T->getIdentifier());
-    VisitTypeWithKeyword(T);
-  }
-
-  void VisitDependentTemplateSpecializationType(
-      const DependentTemplateSpecializationType *T) {
-    Hash.AddDependentTemplateName(T->getDependentTemplateName());
-    ID.AddInteger(T->template_arguments().size());
-    for (const auto &TA : T->template_arguments()) {
-      Hash.AddTemplateArgument(TA);
-    }
     VisitTypeWithKeyword(T);
   }
 

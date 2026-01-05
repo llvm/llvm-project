@@ -202,6 +202,12 @@ void RVVType::initBuiltinStr() {
   case ScalarTypeKind::BFloat:
     BuiltinStr += "y";
     break;
+  case ScalarTypeKind::FloatE4M3:
+    BuiltinStr += "a";
+    break;
+  case ScalarTypeKind::FloatE5M2:
+    BuiltinStr += "b";
+    break;
   default:
     llvm_unreachable("ScalarType is invalid!");
   }
@@ -244,6 +250,8 @@ void RVVType::initClangBuiltinStr() {
     ClangBuiltinStr += "int";
     break;
   case ScalarTypeKind::UnsignedInteger:
+  case ScalarTypeKind::FloatE4M3:
+  case ScalarTypeKind::FloatE5M2:
     ClangBuiltinStr += "uint";
     break;
   default:
@@ -319,6 +327,8 @@ void RVVType::initTypeStr() {
     Str += getTypeString("int");
     break;
   case ScalarTypeKind::UnsignedInteger:
+  case ScalarTypeKind::FloatE4M3:
+  case ScalarTypeKind::FloatE5M2:
     Str += getTypeString("uint");
     break;
   default:
@@ -345,6 +355,12 @@ void RVVType::initShortStr() {
     break;
   case ScalarTypeKind::UnsignedInteger:
     ShortStr = "u" + utostr(ElementBitwidth);
+    break;
+  case ScalarTypeKind::FloatE4M3:
+    ShortStr = "f8e4m3";
+    break;
+  case ScalarTypeKind::FloatE5M2:
+    ShortStr = "f8e5m2";
     break;
   default:
     llvm_unreachable("Unhandled case!");
@@ -394,6 +410,14 @@ void RVVType::applyBasicType() {
   case BasicType::BFloat16:
     ElementBitwidth = 16;
     ScalarType = ScalarTypeKind::BFloat;
+    break;
+  case BasicType::F8E4M3:
+    ElementBitwidth = 8;
+    ScalarType = ScalarTypeKind::FloatE4M3;
+    break;
+  case BasicType::F8E5M2:
+    ElementBitwidth = 8;
+    ScalarType = ScalarTypeKind::FloatE5M2;
     break;
   default:
     llvm_unreachable("Unhandled type code!");
@@ -654,6 +678,9 @@ PrototypeDescriptor::parsePrototypeDescriptor(
     case 'F':
       TM |= TypeModifier::Float;
       break;
+    case 'Y':
+      TM |= TypeModifier::BFloat;
+      break;
     case 'S':
       TM |= TypeModifier::LMUL1;
       break;
@@ -704,11 +731,19 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     ElementBitwidth *= 2;
     LMUL.MulLog2LMUL(1);
     Scale = LMUL.getScale(ElementBitwidth);
+    if (ScalarType == ScalarTypeKind::BFloat)
+      ScalarType = ScalarTypeKind::Float;
+    if (ScalarType == ScalarTypeKind::FloatE4M3 ||
+        ScalarType == ScalarTypeKind::FloatE5M2)
+      ScalarType = ScalarTypeKind::BFloat;
     break;
   case VectorTypeModifier::Widening4XVector:
     ElementBitwidth *= 4;
     LMUL.MulLog2LMUL(2);
     Scale = LMUL.getScale(ElementBitwidth);
+    if (ScalarType == ScalarTypeKind::FloatE4M3 ||
+        ScalarType == ScalarTypeKind::FloatE5M2)
+      ScalarType = ScalarTypeKind::Float;
     break;
   case VectorTypeModifier::Widening8XVector:
     ElementBitwidth *= 8;
@@ -933,13 +968,13 @@ RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
 static uint64_t computeRVVTypeHashValue(BasicType BT, int Log2LMUL,
                                         PrototypeDescriptor Proto) {
   // Layout of hash value:
-  // 0               8    16          24        32          40
+  // 0               8    24          32        40          48
   // | Log2LMUL + 3  | BT  | Proto.PT | Proto.TM | Proto.VTM |
   assert(Log2LMUL >= -3 && Log2LMUL <= 3);
-  return (Log2LMUL + 3) | (static_cast<uint64_t>(BT) & 0xff) << 8 |
-         ((uint64_t)(Proto.PT & 0xff) << 16) |
-         ((uint64_t)(Proto.TM & 0xff) << 24) |
-         ((uint64_t)(Proto.VTM & 0xff) << 32);
+  return (Log2LMUL + 3) | (static_cast<uint64_t>(BT) & 0xffff) << 8 |
+         ((uint64_t)(Proto.PT & 0xff) << 24) |
+         ((uint64_t)(Proto.TM & 0xff) << 32) |
+         ((uint64_t)(Proto.VTM & 0xff) << 40);
 }
 
 std::optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
@@ -969,17 +1004,21 @@ std::optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
 //===----------------------------------------------------------------------===//
 // RVVIntrinsic implementation
 //===----------------------------------------------------------------------===//
-RVVIntrinsic::RVVIntrinsic(
-    StringRef NewName, StringRef Suffix, StringRef NewOverloadedName,
-    StringRef OverloadedSuffix, StringRef IRName, bool IsMasked,
-    bool HasMaskedOffOperand, bool HasVL, PolicyScheme Scheme,
-    bool SupportOverloading, bool HasBuiltinAlias, StringRef ManualCodegen,
-    const RVVTypes &OutInTypes, const std::vector<int64_t> &NewIntrinsicTypes,
-    unsigned NF, Policy NewPolicyAttrs, bool HasFRMRoundModeOp)
+RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
+                           StringRef NewOverloadedName,
+                           StringRef OverloadedSuffix, StringRef IRName,
+                           bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
+                           PolicyScheme Scheme, bool SupportOverloading,
+                           bool HasBuiltinAlias, StringRef ManualCodegen,
+                           const RVVTypes &OutInTypes,
+                           const std::vector<int64_t> &NewIntrinsicTypes,
+                           unsigned NF, Policy NewPolicyAttrs,
+                           bool HasFRMRoundModeOp, unsigned TWiden, bool AltFmt)
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
-      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs) {
+      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs),
+      TWiden(TWiden) {
 
   // Init BuiltinName, Name and OverloadedName
   BuiltinName = NewName.str();
@@ -994,7 +1033,7 @@ RVVIntrinsic::RVVIntrinsic(
     OverloadedName += "_" + OverloadedSuffix.str();
 
   updateNamesAndPolicy(IsMasked, hasPolicy(), Name, BuiltinName, OverloadedName,
-                       PolicyAttrs, HasFRMRoundModeOp);
+                       PolicyAttrs, HasFRMRoundModeOp, AltFmt);
 
   // Init OutputType and InputTypes
   OutputType = OutInTypes[0];
@@ -1135,9 +1174,12 @@ RVVIntrinsic::getSupportedMaskedPolicies(bool HasTailPolicy,
                    "and mask policy");
 }
 
-void RVVIntrinsic::updateNamesAndPolicy(
-    bool IsMasked, bool HasPolicy, std::string &Name, std::string &BuiltinName,
-    std::string &OverloadedName, Policy &PolicyAttrs, bool HasFRMRoundModeOp) {
+void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
+                                        std::string &Name,
+                                        std::string &BuiltinName,
+                                        std::string &OverloadedName,
+                                        Policy &PolicyAttrs,
+                                        bool HasFRMRoundModeOp, bool AltFmt) {
 
   auto appendPolicySuffix = [&](const std::string &suffix) {
     Name += suffix;
@@ -1149,6 +1191,9 @@ void RVVIntrinsic::updateNamesAndPolicy(
     Name += "_rm";
     BuiltinName += "_rm";
   }
+
+  if (AltFmt)
+    BuiltinName += "_alt";
 
   if (IsMasked) {
     if (PolicyAttrs.isTUMUPolicy())
@@ -1233,6 +1278,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << "/*HasTailPolicy=*/" << (int)Record.HasTailPolicy << ", ";
   OS << "/*HasMaskPolicy=*/" << (int)Record.HasMaskPolicy << ", ";
   OS << "/*HasFRMRoundModeOp=*/" << (int)Record.HasFRMRoundModeOp << ", ";
+  OS << "/*AltFmt=*/" << (int)Record.AltFmt << ",";
   OS << "/*IsTuple=*/" << (int)Record.IsTuple << ", ";
   OS << "/*UnMaskedPolicyScheme=*/" << (PolicyScheme)Record.UnMaskedPolicyScheme
      << ", ";

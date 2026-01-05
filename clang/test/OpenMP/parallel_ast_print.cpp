@@ -21,10 +21,18 @@
 // RUN: %clang_cc1 -DOMP60 -verify -Wno-vla -fopenmp-simd -fopenmp-version=60 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP60 %s
 // RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck -check-prefixes=CHECK,OMP60 %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -std=c++11 -verify -Wno-vla %s -ast-dump | FileCheck -check-prefixes=OMP60_DUMP %s
 // expected-no-diagnostics
 
 #ifndef HEADER
 #define HEADER
+
+#ifdef OMP60
+int global;
+int global2;
+
+void bar(int j) { };
+#endif
 
 void foo() {}
 
@@ -185,6 +193,32 @@ T tmain(T argc, T *argv) {
   return 0;
 }
 
+
+#ifdef OMP60
+// OMP60_DUMP: FunctionDecl {{.*}}mainVC {{.*}}
+// OMP60_DUMP: OMPParallelDirective {{.*}}
+// OMP60_DUMP-NEXT: OMPSharedClause{{.*}}
+// OMP60_DUMP-NEXT: {{.*}}DeclRefExpr{{.*}} 'global' 'int'{{.*}}
+// OMP60_DUMP-NEXT: OMPDefaultClause {{.*}}
+// OMP60_DUMP-NEXT: OMPFirstprivateClause{{.*}}
+// OMP60_DUMP-NEXT: {{.*}}DeclRefExpr{{.*}} 'h' 'int[20]'{{.*}}
+// OMP60_DUMP: OMPParallelDirective {{.*}}
+// OMP60_DUMP-NEXT: OMPPrivateClause{{.*}}
+// OMP60_DUMP-NEXT: {{.*}}DeclRefExpr{{.*}} 'global2' 'int'{{.*}}
+// OMP60_DUMP-NEXT: OMPDefaultClause {{.*}}
+// OMP60_DUMP-NEXT: OMPPrivateClause {{.*}}
+// OMP60_DUMP-NEXT: {{.*}}DeclRefExpr{{.*}} 'j' 'int'{{.*}}
+int mainVC(int argc, int *argv) {
+  int h[20];
+  int j;
+#pragma omp parallel shared(global) default(firstprivate: aggregate)
+  bar(h[1]), h[1] = global;
+#pragma omp parallel private(global2) default(private: scalar)
+  bar(global2), j = global2;
+  return 0;
+}
+#endif
+
 // CHECK: template <typename T, int C> T tmain(T argc, T *argv) {
 // CHECK-NEXT: T b = argc, c, d, e, f, g;
 // CHECK-NEXT: static T a;
@@ -236,6 +270,14 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo()
 // OMP60-NEXT: #pragma omp parallel if(1) num_threads(strict: s) proc_bind(close) reduction(^: e,f,arr[0:1][:argc]) reduction(default, &&: g) reduction(task, +: argc) message("msg") severity(warning)
 // OMP60-NEXT: foo()
+
+// OMP60: int mainVC(int argc, int *argv) {
+// OMP60-NEXT: int h[20];
+// OMP60-NEXT: int j;
+// OMP60-NEXT: #pragma omp parallel shared(global) default(firstprivate:aggregate)
+// OMP60-NEXT: bar(h[1]) , h[1] = global;
+// OMP60-NEXT: #pragma omp parallel private(global2) default(private:scalar)
+// OMP60-NEXT: bar(global2) , j = global2;
 
 enum Enum { };
 

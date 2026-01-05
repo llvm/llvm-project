@@ -1004,3 +1004,261 @@ TEST(ProtocolTypesTest, VariablesResponseBody) {
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }
+
+TEST(ProtocolTypesTest, CompletionItem) {
+  CompletionItem item;
+  item.label = "label";
+  item.text = "text";
+  item.sortText = "sortText";
+  item.detail = "detail";
+  item.type = eCompletionItemTypeConstructor;
+  item.start = 1;
+  item.length = 3;
+  item.selectionStart = 4;
+  item.selectionLength = 8;
+
+  const StringRef json = R"({
+  "detail": "detail",
+  "label": "label",
+  "length": 3,
+  "selectionLength": 8,
+  "selectionStart": 4,
+  "sortText": "sortText",
+  "start": 1,
+  "text": "text",
+  "type": "constructor"
+})";
+
+  EXPECT_EQ(pp(Value(item)), json);
+  EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(item)));
+}
+
+TEST(ProtocolTypesTest, CompletionsArguments) {
+  llvm::Expected<CompletionsArguments> expected =
+      parse<CompletionsArguments>(R"({
+    "column": 8,
+    "frameId": 7,
+    "line": 9,
+    "text": "abc"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->frameId, 7u);
+  EXPECT_EQ(expected->text, "abc");
+  EXPECT_EQ(expected->column, 8);
+  EXPECT_EQ(expected->line, 9);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).text"));
+  EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({"text":"abc"})"),
+                       FailedWithMessage("missing value at (root).column"));
+}
+
+TEST(ProtocolTypesTest, CompletionsResponseBody) {
+  CompletionItem item;
+  item.label = "label";
+  item.text = "text";
+  item.detail = "detail";
+  CompletionsResponseBody response{{item}};
+
+  Expected<json::Value> expected = json::parse(R"({
+      "targets": [
+        {
+          "detail": "detail",
+          "label": "label",
+          "text": "text"
+        }
+      ]
+    })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, InvalidatedEventBody) {
+  InvalidatedEventBody body;
+  body.areas = {InvalidatedEventBody::eAreaStacks,
+                InvalidatedEventBody::eAreaThreads};
+  body.stackFrameId = 1;
+  body.threadId = 20;
+  Expected<json::Value> expected = json::parse(R"({
+    "areas": [
+      "stacks",
+      "threads"
+    ],
+    "stackFrameId": 1,
+    "threadId": 20
+    })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(body));
+}
+
+TEST(ProtocolTypesTest, MemoryEventBody) {
+  MemoryEventBody body;
+  body.memoryReference = 12345;
+  body.offset = 0;
+  body.count = 4;
+  StringRef json = R"({
+  "count": 4,
+  "memoryReference": "0x3039",
+  "offset": 0
+})";
+  EXPECT_EQ(json, pp(body));
+}
+
+TEST(ProtocolTypesTest, DataBreakpointInfoArguments) {
+  llvm::Expected<DataBreakpointInfoArguments> expected =
+      parse<DataBreakpointInfoArguments>(R"({
+    "name": "data",
+    "variablesReference": 8,
+    "frameId": 9,
+    "bytes": 10,
+    "asAddress": false,
+    "mode": "source"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->name, "data");
+  EXPECT_EQ(expected->variablesReference, 8);
+  EXPECT_EQ(expected->frameId, 9u);
+  EXPECT_EQ(expected->bytes, 10);
+  EXPECT_EQ(expected->asAddress, false);
+  EXPECT_EQ(expected->mode, "source");
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<DataBreakpointInfoArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).name"));
+  EXPECT_THAT_EXPECTED(parse<DataBreakpointInfoArguments>(R"({"name":"data"})"),
+                       llvm::Succeeded());
+}
+
+TEST(ProtocolTypesTest, ExceptionBreakMode) {
+  const std::vector<std::pair<ExceptionBreakMode, llvm::StringRef>> test_cases =
+      {{ExceptionBreakMode::eExceptionBreakModeAlways, "always"},
+       {ExceptionBreakMode::eExceptionBreakModeNever, "never"},
+       {ExceptionBreakMode::eExceptionBreakModeUnhandled, "unhandled"},
+       {ExceptionBreakMode::eExceptionBreakModeUserUnhandled, "userUnhandled"}};
+
+  for (const auto [value, expected] : test_cases) {
+    json::Value const serialized = toJSON(value);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), expected);
+  }
+}
+
+TEST(ProtocolTypesTest, ExceptionDetails) {
+  ExceptionDetails details;
+
+  // Check required keys.
+  Expected<json::Value> expected = parse(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(details));
+
+  // Check optional keys.
+  details.message = "SIGABRT exception";
+  details.typeName = "signal";
+  details.fullTypeName = "SIGABRT";
+  details.evaluateName = "process handle SIGABRT";
+  details.stackTrace = "some stacktrace";
+  ExceptionDetails inner_details;
+  inner_details.message = "inner message";
+  details.innerException = {std::move(inner_details)};
+
+  Expected<json::Value> expected_opt = parse(R"({
+    "message": "SIGABRT exception",
+    "typeName": "signal",
+    "fullTypeName": "SIGABRT",
+    "evaluateName": "process handle SIGABRT",
+    "stackTrace": "some stacktrace",
+    "innerException": [{
+      "message": "inner message"
+    }]
+    })");
+
+  ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_opt), pp(details));
+}
+
+TEST(ProtocolTypesTest, StackFramePresentationHint) {
+  // Test all PresentationHint values.
+  std::vector<std::pair<StackFrame::PresentationHint, llvm::StringRef>>
+      test_cases = {{StackFrame::ePresentationHintNormal, "normal"},
+                    {StackFrame::ePresentationHintLabel, "label"},
+                    {StackFrame::ePresentationHintSubtle, "subtle"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the PresentationHint to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+  }
+}
+
+TEST(ProtocolTypesTest, StackFrameFormat) {
+  llvm::Expected<StackFrameFormat> expected = parse<StackFrameFormat>(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->parameters, false);
+  EXPECT_EQ(expected->parameterTypes, false);
+  EXPECT_EQ(expected->parameterNames, false);
+  EXPECT_EQ(expected->parameterValues, false);
+  EXPECT_EQ(expected->line, false);
+  EXPECT_EQ(expected->module, false);
+  EXPECT_EQ(expected->includeAll, false);
+
+  expected = parse<StackFrameFormat>(R"({
+    "line": true,
+    "parameterNames": true
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->parameters, false);
+  EXPECT_EQ(expected->parameterTypes, false);
+  EXPECT_EQ(expected->parameterNames, true);
+  EXPECT_EQ(expected->parameterValues, false);
+  EXPECT_EQ(expected->line, true);
+  EXPECT_EQ(expected->module, false);
+  EXPECT_EQ(expected->includeAll, false);
+}
+
+TEST(ProtocolTypesTest, StackFrame) {
+  StackFrame frame;
+  frame.id = 1;
+  frame.name = "test";
+  frame.source = Source{};
+  frame.source->name = "test.cpp";
+  frame.source->sourceReference = 23;
+  frame.line = 10;
+  frame.column = 1;
+  frame.presentationHint = StackFrame::ePresentationHintNormal;
+
+  Expected<json::Value> expected_frame = parse(R"({
+    "id": 1,
+    "name": "test",
+    "source": {
+      "name": "test.cpp",
+      "sourceReference": 23
+    },
+    "line": 10,
+    "column": 1,
+    "presentationHint": "normal"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_frame), pp(frame));
+
+  frame.id = 2;
+  frame.canRestart = true;
+  frame.source = std::nullopt;
+  frame.presentationHint = StackFrame::ePresentationHintSubtle;
+  frame.name = "foo";
+  frame.instructionPointerReference = 12345;
+  expected_frame = parse(R"({
+    "id": 2,
+    "name": "foo",
+    "line": 0,
+    "column": 0,
+    "canRestart": true,
+    "instructionPointerReference": "0x3039",
+    "presentationHint": "subtle"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_frame), pp(frame));
+}

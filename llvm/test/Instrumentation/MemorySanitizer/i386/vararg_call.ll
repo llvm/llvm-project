@@ -18,12 +18,12 @@ define dso_local i32 @test(i32 %a, i32 %b, i32 %c) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    store i32 0, ptr @__msan_va_arg_tls, align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 8), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 16), align 8
 ; CHECK-NEXT:    store i64 24, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (i32, ...) @sum(i32 3, i32 [[A]], i32 [[B]], i32 [[C]])
@@ -37,12 +37,12 @@ define dso_local i32 @test(i32 %a, i32 %b, i32 %c) local_unnamed_addr {
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
-; ORIGIN-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGIN-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; ORIGIN-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; ORIGIN-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGIN-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGIN-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_va_arg_tls, align 8
-; ORIGIN-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 8) to ptr), align 8
-; ORIGIN-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 16) to ptr), align 8
+; ORIGIN-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 8), align 8
+; ORIGIN-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 16), align 8
 ; ORIGIN-NEXT:    store i64 24, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; ORIGIN-NEXT:    [[CALL:%.*]] = tail call i32 (i32, ...) @sum(i32 3, i32 [[A]], i32 [[B]], i32 [[C]])
@@ -58,12 +58,12 @@ define dso_local i32 @test(i32 %a, i32 %b, i32 %c) local_unnamed_addr {
 ; ORIGIN2-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN2-NEXT:    call void @llvm.donothing()
 ; ORIGIN2-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
-; ORIGIN2-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGIN2-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; ORIGIN2-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; ORIGIN2-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGIN2-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGIN2-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; ORIGIN2-NEXT:    store i32 0, ptr @__msan_va_arg_tls, align 8
-; ORIGIN2-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 8) to ptr), align 8
-; ORIGIN2-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 16) to ptr), align 8
+; ORIGIN2-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 8), align 8
+; ORIGIN2-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 16), align 8
 ; ORIGIN2-NEXT:    store i64 24, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN2-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; ORIGIN2-NEXT:    [[CALL:%.*]] = tail call i32 (i32, ...) @sum(i32 3, i32 [[A]], i32 [[B]], i32 [[C]])
@@ -446,12 +446,12 @@ define dso_local i80 @test_i80(i80 %a, i80 %b, i80 %c) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; CHECK-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
+; CHECK-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
+; CHECK-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 40), align 8
 ; CHECK-NEXT:    store i80 0, ptr @__msan_va_arg_tls, align 8
-; CHECK-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 16), align 8
+; CHECK-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 32), align 8
 ; CHECK-NEXT:    store i64 48, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    store i80 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i80 (i32, ...) @sum_i80(i32 3, i80 [[A]], i80 [[B]], i80 [[C]])
@@ -465,12 +465,12 @@ define dso_local i80 @test_i80(i80 %a, i80 %b, i80 %c) local_unnamed_addr {
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
-; ORIGIN-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGIN-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; ORIGIN-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
+; ORIGIN-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGIN-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
+; ORIGIN-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 40), align 8
 ; ORIGIN-NEXT:    store i80 0, ptr @__msan_va_arg_tls, align 8
-; ORIGIN-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 16) to ptr), align 8
-; ORIGIN-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 32) to ptr), align 8
+; ORIGIN-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 16), align 8
+; ORIGIN-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 32), align 8
 ; ORIGIN-NEXT:    store i64 48, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN-NEXT:    store i80 0, ptr @__msan_retval_tls, align 8
 ; ORIGIN-NEXT:    [[CALL:%.*]] = tail call i80 (i32, ...) @sum_i80(i32 3, i80 [[A]], i80 [[B]], i80 [[C]])
@@ -486,12 +486,12 @@ define dso_local i80 @test_i80(i80 %a, i80 %b, i80 %c) local_unnamed_addr {
 ; ORIGIN2-NEXT:    [[TMP2:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN2-NEXT:    call void @llvm.donothing()
 ; ORIGIN2-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
-; ORIGIN2-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGIN2-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
-; ORIGIN2-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
+; ORIGIN2-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGIN2-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
+; ORIGIN2-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 40), align 8
 ; ORIGIN2-NEXT:    store i80 0, ptr @__msan_va_arg_tls, align 8
-; ORIGIN2-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 16) to ptr), align 8
-; ORIGIN2-NEXT:    store i80 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 32) to ptr), align 8
+; ORIGIN2-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 16), align 8
+; ORIGIN2-NEXT:    store i80 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i64 32), align 8
 ; ORIGIN2-NEXT:    store i64 48, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; ORIGIN2-NEXT:    store i80 0, ptr @__msan_retval_tls, align 8
 ; ORIGIN2-NEXT:    [[CALL:%.*]] = tail call i80 (i32, ...) @sum_i80(i32 3, i80 [[A]], i80 [[B]], i80 [[C]])

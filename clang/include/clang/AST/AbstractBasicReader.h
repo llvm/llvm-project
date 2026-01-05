@@ -173,7 +173,7 @@ public:
     llvm::SmallVector<uint64_t, 4> data;
     for (uint32_t i = 0; i != numWords; ++i)
       data.push_back(asImpl().readUInt64());
-    return llvm::APInt(bitWidth, numWords, &data[0]);
+    return llvm::APInt(bitWidth, data);
   }
 
   llvm::FixedPointSemantics readFixedPointSemantics() {
@@ -193,7 +193,7 @@ public:
     auto elemTy = origTy;
     unsigned pathLength = asImpl().readUInt32();
     for (unsigned i = 0; i < pathLength; ++i) {
-      if (elemTy->template getAs<RecordType>()) {
+      if (elemTy->isRecordType()) {
         unsigned int_ = asImpl().readUInt32();
         Decl *decl = asImpl().template readDeclAs<Decl>();
         if (auto *recordDecl = dyn_cast<CXXRecordDecl>(decl))

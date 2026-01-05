@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc_convert.h>
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
+#include <clc/math/clc_cbrt.h>
 #include <clc/math/clc_copysign.h>
 #include <clc/math/clc_fabs.h>
 #include <clc/math/clc_fma.h>

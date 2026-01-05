@@ -99,6 +99,118 @@ function(declare_mlir_python_sources name)
   endif()
 endfunction()
 
+# Function: mlir_generate_type_stubs
+# Turns on automatic type stub generation for extension modules.
+# Specifically, performs add_custom_command to run nanobind's stubgen on an extension module.
+#
+# Arguments:
+#   MODULE_NAME: The fully-qualified name of the extension module (used for importing in python).
+#   DEPENDS_TARGETS: List of targets these type stubs depend on being built; usually corresponding to the
+#     specific extension module (e.g., something like StandalonePythonModules.extension._standaloneDialectsNanobind.dso)
+#     and the core bindings extension module (e.g., something like StandalonePythonModules.extension._mlir.dso).
+#   OUTPUT_DIR: The root output directory to emit the type stubs into.
+#   OUTPUTS: List of expected outputs.
+#   DEPENDS_TARGET_SRC_DEPS: List of cpp sources for extension library (for generating a DEPFILE).
+#   IMPORT_PATHS: List of paths to add to PYTHONPATH for stubgen.
+#   PATTERN_FILE: (Optional) Pattern file (see https://nanobind.readthedocs.io/en/latest/typing.html#pattern-files).
+#   VERBOSE: Emit logging/status messages during stub generation (default: OFF).
+# Outputs:
+#   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
+function(mlir_generate_type_stubs)
+  cmake_parse_arguments(ARG
+    "VERBOSE"
+    "MODULE_NAME;OUTPUT_DIR;PATTERN_FILE"
+    "IMPORT_PATHS;DEPENDS_TARGETS;OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
+    ${ARGN})
+
+  # for people installing a distro (e.g., pip install) of nanobind
+  if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
+  elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
+    set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
+  # for people using nanobind git source tree (e.g., FetchContent_Declare and FetchContent_MakeAvailable)
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/src/stubgen.py")
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/stubgen.py")
+  else()
+    message(FATAL_ERROR "mlir_generate_type_stubs(): could not locate 'stubgen.py'!")
+  endif()
+
+  file(REAL_PATH "${NB_STUBGEN}" NB_STUBGEN)
+  set(_import_paths)
+  foreach(_import_path IN LISTS ARG_IMPORT_PATHS)
+    file(REAL_PATH "${_import_path}" _import_path)
+    list(APPEND _import_paths "-i;${_import_path}")
+  endforeach()
+  set(_nb_stubgen_cmd
+      "${Python_EXECUTABLE}"
+      "${NB_STUBGEN}"
+      --module
+      "${ARG_MODULE_NAME}"
+      "${_import_paths}"
+      --recursive
+      --include-private
+      --output-dir
+      "${ARG_OUTPUT_DIR}")
+  if(NOT ARG_VERBOSE)
+    list(APPEND _nb_stubgen_cmd "--quiet")
+  endif()
+  if(ARG_PATTERN_FILE)
+    list(APPEND _nb_stubgen_cmd "-p;${ARG_PATTERN_FILE}")
+    list(APPEND ARG_DEPENDS_TARGETS "${ARG_PATTERN_FILE}")
+  endif()
+
+  list(TRANSFORM ARG_OUTPUTS PREPEND "${ARG_OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
+  set(_depfile "${ARG_OUTPUT_DIR}/${ARG_MODULE_NAME}.d")
+  if ((NOT EXISTS ${_depfile}) AND ARG_DEPENDS_TARGET_SRC_DEPS)
+    list(JOIN ARG_DEPENDS_TARGET_SRC_DEPS " " _depfiles)
+    list(TRANSFORM _generated_type_stubs APPEND ": ${_depfiles}" OUTPUT_VARIABLE _depfiles)
+    list(JOIN _depfiles "\n" _depfiles)
+    file(GENERATE OUTPUT "${_depfile}" CONTENT "${_depfiles}")
+  endif()
+
+  if(ARG_VERBOSE)
+    message(STATUS "Generating type-stubs outputs ${_generated_type_stubs}")
+  endif()
+
+  # If PYTHONPATH is set and points to the build location of the python package then when stubgen runs, _mlir will get
+  # imported twice and bad things will happen (e.g., Assertion `!instance && “PyGlobals already constructed”’).
+  # This happens because mlir is a namespace package and the importer/loader can't distinguish between
+  # mlir._mlir_libs._mlir and _mlir_libs._mlir imported from CWD.
+  # So try to filter out any entries in PYTHONPATH that end in "MLIR_BINDINGS_PYTHON_INSTALL_PREFIX/.."
+  # (e.g., python_packages/mlir_core/).
+  set(_pythonpath "$ENV{PYTHONPATH}")
+  cmake_path(CONVERT "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.." TO_NATIVE_PATH_LIST _install_prefix NORMALIZE)
+  if(WIN32)
+    set(_path_sep ";")
+    set(_trailing_sep "\\")
+  else()
+    set(_path_sep ":")
+    set(_trailing_sep "/")
+    # `;` is the CMake list delimiter so Windows paths are automatically lists
+    # and Unix paths can be made into lists by replacing `:` with `;`
+    string(REPLACE "${_path_sep}" ";" _pythonpath "${_pythonpath}")
+  endif()
+  string(REGEX REPLACE "${_trailing_sep}$" "" _install_prefix "${_install_prefix}")
+  list(FILTER _pythonpath EXCLUDE REGEX "(${_install_prefix}|${_install_prefix}${_trailing_sep})$")
+  # Note, ${_pythonpath} is a list but "${_pythonpath}" is not a list - it's a string with ";" chars in it.
+  string(JOIN "${_path_sep}" _pythonpath ${_pythonpath})
+  add_custom_command(
+    OUTPUT ${_generated_type_stubs}
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${_pythonpath}" ${_nb_stubgen_cmd}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
+    DEPENDS "${ARG_DEPENDS_TARGETS}"
+    DEPFILE "${_depfile}"
+    COMMENT "Generating type stubs using: ${_nb_stubgen_cmd}"
+  )
+
+  list(JOIN ARG_DEPENDS_TARGETS "." _name)
+  set(_name "${_name}.${ARG_MODULE_NAME}.type_stubs")
+  add_custom_target("${_name}" DEPENDS ${_generated_type_stubs})
+  set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
+endfunction()
+
 # Function: declare_mlir_python_extension
 # Declares a buildable python extension from C++ source files. The built
 # module is considered a python source file and included as everything else.
@@ -114,33 +226,32 @@ endfunction()
 #   EMBED_CAPI_LINK_LIBS: Dependent CAPI libraries that this extension depends
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
-#   PYTHON_BINDINGS_LIBRARY: Either pybind11 or nanobind.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
-    ""
-    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
+    "_PRIVATE_SUPPORT_LIB"
+    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
   if(NOT ARG_ROOT_DIR)
     set(ARG_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
   endif()
-  set(_install_destination "src/python/${name}")
-
-  if(NOT ARG_PYTHON_BINDINGS_LIBRARY)
-    set(ARG_PYTHON_BINDINGS_LIBRARY "pybind11")
+  if(ARG__PRIVATE_SUPPORT_LIB)
+    set(SOURCES_TYPE "support")
+  else()
+    set(SOURCES_TYPE "extension")
   endif()
+  set(_install_destination "src/python/${name}")
 
   add_library(${name} INTERFACE)
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY"
-    mlir_python_SOURCES_TYPE extension
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS"
+    mlir_python_SOURCES_TYPE "${SOURCES_TYPE}"
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     mlir_python_DEPENDS ""
-    mlir_python_BINDINGS_LIBRARY "${ARG_PYTHON_BINDINGS_LIBRARY}"
   )
 
   # Set the interface source and link_libs properties of the target
@@ -191,6 +302,58 @@ function(_mlir_python_install_sources name source_root_dir destination)
   )
 endfunction()
 
+function(build_nanobind_lib)
+  cmake_parse_arguments(ARG
+    ""
+    "INSTALL_COMPONENT;INSTALL_DESTINATION;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
+    ""
+    ${ARGN})
+
+  # Only build in free-threaded mode if the Python ABI supports it.
+  # See https://github.com/wjakob/nanobind/blob/4ba51fcf795971c5d603d875ae4184bc0c9bd8e6/cmake/nanobind-config.cmake#L363-L371.
+  if (NB_ABI MATCHES "[0-9]t")
+    set(_ft "-ft")
+  endif()
+  # nanobind does a string match on the suffix to figure out whether to build
+  # the lib with free threading...
+  set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
+  set(NB_LIBRARY_TARGET_NAME "${NB_LIBRARY_TARGET_NAME}" PARENT_SCOPE)
+  nanobind_build_library(${NB_LIBRARY_TARGET_NAME} AS_SYSINCLUDE)
+  target_compile_definitions(${NB_LIBRARY_TARGET_NAME}
+    PRIVATE
+    NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+  )
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # nanobind handles this correctly for MacOS by explicitly setting -U for all the necessary Python symbols
+    # (see https://github.com/wjakob/nanobind/blob/master/cmake/darwin-ld-cpython.sym)
+    # but since we set -z,defs in llvm/cmake/modules/HandleLLVMOptions.cmake:340 for all Linux shlibs
+    # we need to negate it here (we could have our own linux-ld-cpython.sym but that would be too much
+    # maintenance).
+    target_link_options(${NB_LIBRARY_TARGET_NAME} PRIVATE "LINKER:-z,undefs")
+  endif()
+  # nanobind configures with LTO for shared build which doesn't work everywhere
+  # (see https://github.com/llvm/llvm-project/issues/139602).
+  if(NOT LLVM_ENABLE_LTO)
+    set_target_properties(${NB_LIBRARY_TARGET_NAME} PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION_RELEASE OFF
+      INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL OFF
+    )
+  endif()
+  set_target_properties(${NB_LIBRARY_TARGET_NAME} PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+    BINARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+    # Needed for windows (and doesn't hurt others).
+    RUNTIME_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+    ARCHIVE_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+  )
+  mlir_python_setup_extension_rpath(${NB_LIBRARY_TARGET_NAME})
+  install(TARGETS ${NB_LIBRARY_TARGET_NAME}
+    COMPONENT ${ARG_INSTALL_COMPONENT}
+    LIBRARY DESTINATION "${ARG_INSTALL_DESTINATION}"
+    RUNTIME DESTINATION "${ARG_INSTALL_DESTINATION}"
+  )
+endfunction()
+
 # Function: add_mlir_python_modules
 # Adds python modules to a project, building them from a list of declared
 # source groupings (see declare_mlir_python_sources and
@@ -202,6 +365,11 @@ endfunction()
 #     for non-relocatable modules or a deeper directory tree for relocatable.
 #   INSTALL_PREFIX: Prefix into the install tree for installing the package.
 #     Typically mirrors the path above but without an absolute path.
+#   MLIR_BINDINGS_PYTHON_NB_DOMAIN: nanobind (and MLIR) domain within which
+#     extensions will be compiled. This determines whether this package
+#     will share nanobind types with other bindings packages. Expected to be unique
+#     per project (and per specific set of bindings, for projects with multiple
+#     bindings packages).
 #   DECLARED_SOURCES: List of declared source groups to include. The entire
 #     DAG of source modules is included.
 #   COMMON_CAPI_LINK_LIBS: List of dylibs (typically one) to make every
@@ -209,11 +377,32 @@ endfunction()
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_PREFIX;INSTALL_PREFIX"
+    "ROOT_PREFIX;INSTALL_PREFIX;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
     "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
+
+  # TODO(max): do the same for MLIR_PYTHON_PACKAGE_PREFIX?
+  if((NOT ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN) AND MLIR_BINDINGS_PYTHON_NB_DOMAIN)
+    set(ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN})
+  endif()
+  if((NOT ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN) OR ("${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}" STREQUAL ""))
+    message(WARNING "MLIR_BINDINGS_PYTHON_NB_DOMAIN CMake var is not set - setting to a default `mlir`.\
+      It is highly recommend to set this to something unique so that your project's Python bindings do not collide with\
+      others'. You also pass explicitly to `add_mlir_python_modules`.\
+      See https://github.com/llvm/llvm-project/pull/171775 for more information.")
+    set(ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir")
+  endif()
+
+  # This call sets NB_LIBRARY_TARGET_NAME.
+  build_nanobind_lib(
+    INSTALL_COMPONENT ${name}
+    INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
+    OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+    MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+  )
+
   # Helper to process an individual target.
-  function(_process_target modules_target sources_target)
+  function(_process_target modules_target sources_target support_libs)
     get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
 
     if(_source_type STREQUAL "pure")
@@ -229,20 +418,22 @@ function(add_mlir_python_modules name)
     elseif(_source_type STREQUAL "extension")
       # Native CPP extension.
       get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
-      get_target_property(_bindings_library ${sources_target} mlir_python_BINDINGS_LIBRARY)
       # Transform relative source to based on root dir.
       set(_extension_target "${modules_target}.extension.${_module_name}.dso")
-      add_mlir_python_extension(${_extension_target} "${_module_name}"
+      add_mlir_python_extension(${_extension_target} "${_module_name}" ${NB_LIBRARY_TARGET_NAME}
         INSTALL_COMPONENT ${modules_target}
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
-        PYTHON_BINDINGS_LIBRARY ${_bindings_library}
+        MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
         LINK_LIBS PRIVATE
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
+          ${support_libs}
       )
       add_dependencies(${modules_target} ${_extension_target})
       mlir_python_setup_extension_rpath(${_extension_target})
+    elseif(_source_type STREQUAL "support")
+      # do nothing because already built
     else()
       message(SEND_ERROR "Unrecognized source type '${_source_type}' for python source target ${sources_target}")
       return()
@@ -252,8 +443,36 @@ function(add_mlir_python_modules name)
   # Build the modules target.
   add_custom_target(${name} ALL)
   _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
+
+  # Build all support libs first.
+  set(_mlir_python_support_libs)
   foreach(sources_target ${_flat_targets})
-    _process_target(${name} ${sources_target})
+    get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
+    if(_source_type STREQUAL "support")
+      get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
+      # Use a similar mechanism as nanobind to help the runtime loader pick the correct lib.
+      set(_module_name "${_module_name}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
+      set(_extension_target "${name}.extension.${_module_name}.so")
+      add_mlir_python_extension(${_extension_target} "${_module_name}" ${NB_LIBRARY_TARGET_NAME}
+        INSTALL_COMPONENT ${name}
+        INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
+        OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+        MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+        _PRIVATE_SUPPORT_LIB
+        LINK_LIBS PRIVATE
+          LLVMSupport
+          ${sources_target}
+          ${ARG_COMMON_CAPI_LINK_LIBS}
+      )
+      add_dependencies(${name} ${_extension_target})
+      mlir_python_setup_extension_rpath(${_extension_target})
+      list(APPEND _mlir_python_support_libs "${_extension_target}")
+    endif()
+  endforeach()
+
+  # Build extensions.
+  foreach(sources_target ${_flat_targets})
+    _process_target(${name} ${sources_target} "${_mlir_python_support_libs}")
   endforeach()
 
   # Create an install target.
@@ -518,7 +737,7 @@ function(add_mlir_python_common_capi_library name)
   set_target_properties(${name} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
     BINARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
-    # Needed for windows (and don't hurt others).
+    # Needed for windows (and doesn't hurt others).
     RUNTIME_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
     ARCHIVE_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
   )
@@ -638,10 +857,10 @@ endfunction()
 ################################################################################
 # Build python extension
 ################################################################################
-function(add_mlir_python_extension libname extname)
+function(add_mlir_python_extension libname extname nb_library_target_name)
   cmake_parse_arguments(ARG
-  ""
-  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;PYTHON_BINDINGS_LIBRARY"
+  "_PRIVATE_SUPPORT_LIB"
+  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
   "SOURCES;LINK_LIBS"
   ${ARGN})
   if(ARG_UNPARSED_ARGUMENTS)
@@ -649,7 +868,7 @@ function(add_mlir_python_extension libname extname)
   endif()
 
   # The extension itself must be compiled with RTTI and exceptions enabled.
-  # Also, some warning classes triggered by pybind11 are disabled.
+  # Also, some warning classes triggered by nanobind are disabled.
   set(eh_rtti_enable)
   if (MSVC)
     set(eh_rtti_enable /EHsc /GR)
@@ -657,65 +876,113 @@ function(add_mlir_python_extension libname extname)
     set(eh_rtti_enable -frtti -fexceptions)
   endif ()
 
-  # The actual extension library produces a shared-object or DLL and has
-  # sources that must be compiled in accordance with pybind11 needs (RTTI and
-  # exceptions).
-  if(NOT DEFINED ARG_PYTHON_BINDINGS_LIBRARY OR ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "pybind11")
-    pybind11_add_module(${libname}
-      ${ARG_SOURCES}
+  if(ARG__PRIVATE_SUPPORT_LIB)
+    add_library(${libname} SHARED ${ARG_SOURCES})
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      # nanobind handles this correctly for MacOS by explicitly setting -U for all the necessary Python symbols
+      # (see https://github.com/wjakob/nanobind/blob/master/cmake/darwin-ld-cpython.sym)
+      # but since we set -z,defs in llvm/cmake/modules/HandleLLVMOptions.cmake:340 for all Linux shlibs
+      # we need to negate it here (we could have our own linux-ld-cpython.sym but that would be too much
+      # maintenance).
+      target_link_options(${libname} PRIVATE "LINKER:-z,undefs")
+    endif()
+    nanobind_link_options(${libname})
+    target_compile_definitions(${libname}
+      PRIVATE
+      NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      MLIR_CAPI_BUILDING_LIBRARY=1
     )
-  elseif(ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "nanobind")
+    if(MSVC)
+      set_property(TARGET ${libname} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    endif()
+  else()
     nanobind_add_module(${libname}
-      NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       FREE_THREADED
+      NB_SHARED
       ${ARG_SOURCES}
     )
+    target_compile_definitions(${libname}
+      PRIVATE
+      MLIR_BINDINGS_PYTHON_DOMAIN=${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+    )
+  endif()
+  target_link_libraries(${libname} PRIVATE ${nb_library_target_name})
+  target_compile_definitions(${libname}
+    PRIVATE
+    MLIR_BINDINGS_PYTHON_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+  )
+  if(APPLE)
+    # In llvm/cmake/modules/HandleLLVMOptions.cmake:268 we set -Wl,-flat_namespace which breaks
+    # the default name spacing on MacOS and causes "cross-wired" symbol resolution when multiple
+    # bindings packages are loaded.
+    target_link_options(${libname} PRIVATE "LINKER:-twolevel_namespace")
+  endif()
 
-    if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
-        AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
-      # Avoid some warnings from upstream nanobind.
-      # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
-      # the super project handle compile options as it wishes.
-      get_property(NB_LIBRARY_TARGET_NAME TARGET ${libname} PROPERTY LINK_LIBRARIES)
-      target_compile_options(${NB_LIBRARY_TARGET_NAME}
-	PRIVATE
-	  -Wall -Wextra -Wpedantic
-	  -Wno-c++98-compat-extra-semi
-	  -Wno-cast-qual
-	  -Wno-covered-switch-default
-	  -Wno-nested-anon-types
-	  -Wno-unused-parameter
-	  -Wno-zero-length-array
-	  ${eh_rtti_enable})
+  if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
+      AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+    # Avoid some warnings from upstream nanobind.
+    # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
+    # the super project handle compile options as it wishes.
+    target_compile_options(${nb_library_target_name}
+      PRIVATE
+        -Wno-c++98-compat-extra-semi
+        -Wno-cast-qual
+        -Wno-covered-switch-default
+        -Wno-deprecated-literal-operator
+        -Wno-nested-anon-types
+        -Wno-unused-parameter
+        -Wno-zero-length-array
+        -Wno-missing-field-initializers
+        ${eh_rtti_enable})
 
-      target_compile_options(${libname}
-	PRIVATE
-	  -Wall -Wextra -Wpedantic
-	  -Wno-c++98-compat-extra-semi
-	  -Wno-cast-qual
-	  -Wno-covered-switch-default
-	  -Wno-nested-anon-types
-	  -Wno-unused-parameter
-	  -Wno-zero-length-array
-	  ${eh_rtti_enable})
-    endif()
+    target_compile_options(${libname}
+      PRIVATE
+        -Wno-c++98-compat-extra-semi
+        -Wno-cast-qual
+        -Wno-covered-switch-default
+        -Wno-deprecated-literal-operator
+        -Wno-nested-anon-types
+        -Wno-unused-parameter
+        -Wno-zero-length-array
+        -Wno-missing-field-initializers
+        ${eh_rtti_enable})
+  endif()
 
-    if(APPLE)
-      # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
-      # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
-      # for downstream users that do not do something like `-undefined dynamic_lookup`.
-      target_link_options(${libname} PUBLIC "LINKER:-U,_PyClassMethod_New")
-    endif()
+  if(APPLE)
+    # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
+    # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
+    # for downstream users that do not do something like `-undefined dynamic_lookup`.
+    # Same for the rest.
+    target_link_options(${libname} PUBLIC
+      "LINKER:-U,_PyClassMethod_New"
+      "LINKER:-U,_PyCode_Addr2Location"
+      "LINKER:-U,_PyFrame_GetLasti"
+    )
   endif()
 
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
 
+  # Quoting CMake:
+  #
+  # "If you use it on normal shared libraries which other targets link against, on some platforms a
+  # linker will insert a full path to the library (as specified at link time) into the dynamic section of the
+  # dependent binary. Therefore, once installed, dynamic loader may eventually fail to locate the library
+  # for the binary."
+  #
+  # So for support libs we do need an SO name but for extensions we do not (they're MODULEs anyway -
+  # i.e., can't be linked against, only loaded).
+  if (ARG__PRIVATE_SUPPORT_LIB)
+    set(_no_soname OFF)
+  else ()
+    set(_no_soname ON)
+  endif ()
   # Configure the output to match python expectations.
   set_target_properties(
     ${libname} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${ARG_OUTPUT_DIRECTORY}
     OUTPUT_NAME "${extname}"
-    NO_SONAME ON
+    NO_SONAME ${_no_soname}
   )
 
   if(WIN32)
@@ -743,11 +1010,11 @@ function(add_mlir_python_extension libname extname)
   if(WIN32)
     # On Windows, pyconfig.h (and by extension python.h) hardcode the version of the
     # python library which will be used for linkage depending on the flavor of the build.
-    # pybind11 has a workaround which depends on the definition of Py_DEBUG (if Py_DEBUG
-    # is not passed in as a compile definition, pybind11 undefs _DEBUG when including
+    # nanobind has a workaround which depends on the definition of Py_DEBUG (if Py_DEBUG
+    # is not passed in as a compile definition, nanobind undefs _DEBUG when including
     # python.h, so that the release python library would be used).
-    # Since mlir uses pybind11, we can leverage their workaround by never directly
-    # pyconfig.h or python.h and instead relying on the pybind11 headers to include the
+    # Since mlir uses nanobind, we can leverage their workaround by never directly
+    # pyconfig.h or python.h and instead relying on the nanobind headers to include the
     # necessary python headers. This results in mlir always linking against the
     # release python library via the (undocumented) cmake property Python3_LIBRARY_RELEASE.
     target_link_libraries(${libname} PRIVATE ${Python3_LIBRARY_RELEASE})

@@ -10,6 +10,17 @@
 // RUN:  -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc \
 // RUN:  -o - | FileCheck %s --check-prefix CHECK
 
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ \
+// RUN:  -triple powerpc64le-unknown-unknown \
+// RUN:  -fopenmp-targets=spirv64-intel -emit-llvm-bc %s -o \
+// RUN:  %t-ppc-host-spv.bc
+
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ \
+// RUN:  -triple spirv64-intel -DCUA \
+// RUN:  -fopenmp-targets=spirv64-intel -emit-llvm %s \
+// RUN:  -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-spv.bc \
+// RUN:  -o - | FileCheck %s --check-prefix CHECK
+
 // expected-no-diagnostics
 int foo() {
   int i;
@@ -46,9 +57,9 @@ int foo() {
 // CHECK-NEXT:         %[[VAL_244:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_232]], i64 0, i64 0
 // CHECK-NEXT:         %[[VAL_245:.*]] = getelementptr { float, float }, ptr %[[VAL_243]], i64 1
 // CHECK-NEXT:         %[[VAL_246:.*]] = load i64, ptr %[[VAL_243]], align 8
-// CHECK-NEXT:         %[[VAL_247:.*]] = call i32 @__kmpc_get_warp_size()
+// CHECK-NEXT:         %[[VAL_247:.*]] = call{{.*}}i32 @__kmpc_get_warp_size()
 // CHECK-NEXT:         %[[VAL_248:.*]] = trunc i32 %[[VAL_247]] to i16
-// CHECK-NEXT:         %[[VAL_249:.*]] = call i64 @__kmpc_shuffle_int64(i64 %[[VAL_246]], i16 %[[VAL_240]], i16 %[[VAL_248]])
+// CHECK-NEXT:         %[[VAL_249:.*]] = call{{.*}}i64 @__kmpc_shuffle_int64(i64 %[[VAL_246]], i16 %[[VAL_240]], i16 %[[VAL_248]])
 // CHECK-NEXT:         store i64 %[[VAL_249]], ptr %[[VAL_233]], align 8
 // CHECK-NEXT:         %[[VAL_250:.*]] = getelementptr i64, ptr %[[VAL_243]], i64 1
 // CHECK-NEXT:         %[[VAL_251:.*]] = getelementptr i64, ptr %[[VAL_233]], i64 1
@@ -67,7 +78,7 @@ int foo() {
 // CHECK-NEXT:         %[[VAL_263:.*]] = or i1 %[[VAL_262]], %[[VAL_261]]
 // CHECK-NEXT:         br i1 %[[VAL_263]], label %[[VAL_264:.*]], label %[[VAL_265:.*]]
 // CHECK:       then:                                             ; preds = %[[VAL_266:.*]]
-// CHECK-NEXT:         call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l{{[0-9]+}}_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr %[[VAL_238]], ptr %[[VAL_232]]) #2
+// CHECK-NEXT:         call{{.*}}void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l{{[0-9]+}}_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr %[[VAL_238]], ptr %[[VAL_232]]) #2
 // CHECK-NEXT:         br label %[[VAL_267:.*]]
 // CHECK:       else:                                             ; preds = %[[VAL_266]]
 // CHECK-NEXT:         br label %[[VAL_267]]

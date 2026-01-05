@@ -34,6 +34,13 @@ function(get_compiler_rt_path path)
       return()
     endif()
   endforeach()
+
+  # If LLVM_BUILTIN_TARGETS is specified, we still need
+  # to locate the compiler-rt runtime to be able to build builtins.
+  # This supports bootstrapping builtins without compiler-rt.
+  if (LLVM_BUILTIN_TARGETS)
+    set(${path} "${CMAKE_CURRENT_SOURCE_DIR}/../../compiler-rt" PARENT_SCOPE)
+  endif()
 endfunction()
 
 include(LLVMExternalProjectUtils)
@@ -255,7 +262,10 @@ function(runtime_default_target)
 
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")
-    list(APPEND test_targets runtimes-test-depends check-runtimes)
+    list(APPEND test_targets runtimes-test-depends check-runtimes check-builtins)
+
+    # The default runtimes target can run tests the default builtins target
+    list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-bins/")
   endif()
 
   set_enable_per_target_runtime_dir()
@@ -362,6 +372,15 @@ function(runtime_register_target name)
       list(APPEND ${name}_test_targets ${target}-${name})
       list(APPEND test_targets ${target}-${name})
     endforeach()
+
+    # If a builtins-${name} target exists, we'll test those builtins
+    # with this runtimes build
+    if(TARGET builtins-${name})
+      list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_BUILTINS_DIR=${LLVM_BINARY_DIR}/runtimes/builtins-${name}-bins/")
+      set(check-builtins-${name} check-builtins)
+      list(APPEND ${name}_test_targets check-builtins-${name})
+      list(APPEND test_targets check-builtins-${name})
+    endif()
     set(test_targets "${test_targets}" PARENT_SCOPE)
   endif()
 
@@ -427,6 +446,9 @@ function(runtime_register_target name)
   if(LLVM_INCLUDE_TESTS)
     add_dependencies(check-runtimes check-runtimes-${name})
     add_dependencies(runtimes-test-depends runtimes-test-depends-${name})
+    if(TARGET builtins-${name})
+      add_dependencies(check-builtins check-builtins-${name})
+    endif()
   endif()
   foreach(runtime_name ${runtime_names})
     if(NOT TARGET ${runtime_name})
@@ -473,7 +495,6 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
-                clang-offload-packager
                 flang
                 count
                 lld
@@ -482,11 +503,14 @@ if(build_runtimes)
                 llvm-lto
                 llvm-jitlink
                 llvm-nm
+                llvm-strip
                 llvm-objdump
                 llvm-profdata
+                llvm-readobj
                 llvm-size
                 llvm-symbolizer
                 llvm-xray
+                llvm-offload-binary
                 not
                 obj2yaml
                 opt
@@ -499,6 +523,9 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    if(WIN32)
+      list(APPEND extra_deps KillTheDoctor)
+    endif()
   endif()
 
   # Forward user-provived system configuration to runtimes for requirement introspection.
@@ -519,6 +546,18 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
+  # Tools needed by build_symbolizer.sh.
+  if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+    foreach(dep clang llvm-tblgen opt llvm-ar llvm-link)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
+  endif()
+  # Allow openmp to see the Fortran compiler
+  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    list(APPEND extra_args ENABLE_FORTRAN)
+  endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     if (${LLVM_TOOL_FLANG_BUILD})
       message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
@@ -531,7 +570,7 @@ if(build_runtimes)
       # that all .mod files are also properly build.
       list(APPEND extra_deps "flang" "module_files")
     endif()
-    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager clang-nvlink-wrapper)
+    foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
@@ -539,8 +578,8 @@ if(build_runtimes)
   endif()
   if(LLVM_LIBC_GPU_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
-    if(TARGET clang-offload-packager)
-      list(APPEND extra_deps clang-offload-packager)
+    if(TARGET llvm-offload-binary)
+      list(APPEND extra_deps llvm-offload-binary)
     endif()
     if(TARGET clang-nvlink-wrapper)
       list(APPEND extra_deps clang-nvlink-wrapper)
@@ -585,6 +624,17 @@ if(build_runtimes)
           PROPERTIES FOLDER "Runtimes"
         )
         set(test_targets "")
+
+        # NOTE: Currently, the builtins tests are run with the runtimes build,
+        # and the default runtimes target installs a check-builtins target
+        # which forwards to the default builtins build. If the default runtimes
+        # target is not used, we create a custom target which will depend on
+        # each check-builtins-${name}.
+        add_custom_target(check-builtins)
+        set_target_properties(
+          check-builtins
+          PROPERTIES FOLDER "Compiler-RT"
+        )
       endif()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
         foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})

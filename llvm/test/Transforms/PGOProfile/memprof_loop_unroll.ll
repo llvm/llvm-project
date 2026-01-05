@@ -4,24 +4,50 @@
 ;; Avoid failures on big-endian systems that can't read the profile properly
 ; REQUIRES: x86_64-linux
 
-;; TODO: Use text profile inputs once that is available for memprof.
-;; # To update the Inputs below, run Inputs/update_memprof_inputs.sh.
-;; # To generate below LLVM IR for use in matching.
-;; $ clang++ -gmlt -fdebug-info-for-profiling -S %S/Inputs/memprof_loop_unroll_b.cc -emit-llvm
+; Generate the profile and the IR.
+; RUN: split-file %s %t
 
-; RUN: llvm-profdata merge %S/Inputs/memprof_loop_unroll.memprofraw --profiled-binary %S/Inputs/memprof_loop_unroll.exe -o %t.memprofdata
+;; Generate indexed profile
+; RUN: llvm-profdata merge %t/memprof_loop_unroll.yaml -o %t.memprofdata
+
 ;; Set the minimum lifetime threshold to 0 to ensure that one context is
 ;; considered cold (the other will be notcold).
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-report-hinted-sizes -memprof-ave-lifetime-cold-threshold=0 2>&1 | FileCheck %s
+; RUN: opt < %t/memprof_loop_unroll.ll -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-report-hinted-sizes -memprof-ave-lifetime-cold-threshold=0 2>&1 | FileCheck %s
 
-;; Conservatively annotate as not cold. We get two messages as there are two
-;; unrolled copies of the allocation.
-; CHECK: MemProf hinting: Total size for full allocation context hash {{.*}} and indistinguishable alloc type notcold: 4
-; CHECK: MemProf hinting: Total size for full allocation context hash {{.*}} and indistinguishable alloc type notcold: 4
+;; Conservatively annotate as not cold.
+; CHECK: MemProf hinting: Total size for full allocation context hash {{.*}} and single alloc type notcold: 4
 ; CHECK: call {{.*}} @_Znam{{.*}} #[[ATTR:[0-9]+]]
 ; CHECK: attributes #[[ATTR]] = { builtin allocsize(0) "memprof"="notcold" }
 ; CHECK-NOT: stackIds: ()
 
+;--- memprof_loop_unroll.yaml
+---
+HeapProfileRecords:
+  - GUID:            0x7f8d88fcc70a347b
+    AllocSites:
+      - Callstack:
+          - { Function: 0x7f8d88fcc70a347b, LineOffset: 2, Column: 16, IsInlineFrame: false }
+          - { Function: 0xdb956436e78dd5fa, LineOffset: 1, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       4
+          TotalLifetime:   2
+          TotalLifetimeAccessDensity: 12500000000
+      - Callstack:
+          - { Function: 0x7f8d88fcc70a347b, LineOffset: 2, Column: 16, IsInlineFrame: false }
+          - { Function: 0xdb956436e78dd5fa, LineOffset: 1, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       4
+          TotalLifetime:   2
+          TotalLifetimeAccessDensity: 0
+  - GUID:            0xdb956436e78dd5fa
+    CallSites:
+      - Frames:
+          - { Function: 0xdb956436e78dd5fa, LineOffset: 1, Column: 5, IsInlineFrame: false }
+...
+
+;--- memprof_loop_unroll.ll
 ; ModuleID = 'memprof_loop_unroll_b.cc'
 source_filename = "memprof_loop_unroll_b.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

@@ -69,6 +69,11 @@ def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
 def TernaryBitwiseINTEL : BuiltinGroup;
 def Block2DLoadStore : BuiltinGroup;
+def Pipe : BuiltinGroup;
+def PredicatedLoadStore : BuiltinGroup;
+def ArbitraryPrecisionFixedPoint : BuiltinGroup;
+def BlockingPipes : BuiltinGroup;
+def ImageChannelDataTypes : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -633,6 +638,29 @@ defm : DemangledNativeBuiltin<"__spirv_AtomicSMax", OpenCL_std, Atomic, 4, 4, Op
 defm : DemangledNativeBuiltin<"__spirv_AtomicUMin", OpenCL_std, Atomic, 4, 4, OpAtomicUMin>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicUMax", OpenCL_std, Atomic, 4, 4, OpAtomicUMax>;
 
+// Pipe Instruction 
+defm : DemangledNativeBuiltin<"__read_pipe_2", OpenCL_std, Pipe,2, 2, OpReadPipe>;
+defm : DemangledNativeBuiltin<"__write_pipe_2", OpenCL_std, Pipe, 2, 2, OpWritePipe>;
+defm : DemangledNativeBuiltin<"__read_pipe_4", OpenCL_std, Pipe,4, 4, OpReservedReadPipe>;
+defm : DemangledNativeBuiltin<"__write_pipe_4", OpenCL_std, Pipe, 4, 4, OpReservedWritePipe>;
+defm : DemangledNativeBuiltin<"__reserve_read_pipe", OpenCL_std, Pipe, 2, 2, OpReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__reserve_write_pipe", OpenCL_std, Pipe, 2, 2, OpReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__commit_read_pipe", OpenCL_std, Pipe, 2, 2, OpCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__commit_write_pipe", OpenCL_std, Pipe, 2, 2, OpCommitWritePipe>;
+defm : DemangledNativeBuiltin<"is_valid_reserve_id", OpenCL_std, Pipe, 1, 1, OpIsValidReserveId>;
+defm : DemangledNativeBuiltin<"__get_pipe_num_packets_ro", OpenCL_std, Pipe, 1, 1, OpGetNumPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_max_packets_ro", OpenCL_std, Pipe, 1, 1, OpGetMaxPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_num_packets_wo", OpenCL_std, Pipe, 1, 1, OpGetNumPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_max_packets_wo", OpenCL_std, Pipe, 1, 1, OpGetMaxPipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_reserve_read_pipe", OpenCL_std, Pipe, 2, 2, OpGroupReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_reserve_write_pipe", OpenCL_std, Pipe, 2, 2, OpGroupReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_commit_read_pipe", OpenCL_std, Pipe, 2, 2, OpGroupCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__work_group_commit_write_pipe", OpenCL_std, Pipe, 2, 2, OpGroupCommitWritePipe>;
+defm : DemangledNativeBuiltin<"__sub_group_reserve_read_pipe", OpenCL_std, Pipe, 2, 2, OpGroupReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__sub_group_reserve_write_pipe", OpenCL_std, Pipe, 2, 2, OpGroupReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__sub_group_commit_read_pipe", OpenCL_std, Pipe, 2, 2, OpGroupCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__sub_group_commit_write_pipe", OpenCL_std, Pipe, 2, 2, OpGroupCommitWritePipe>;
+
 // Barrier builtin records:
 defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"work_group_barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
@@ -727,6 +755,10 @@ defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransposeINTEL", OpenC
 defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransformINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadTransformINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockPrefetchINTEL", OpenCL_std, Block2DLoadStore, 9, 9, OpSubgroup2DBlockPrefetchINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockStoreINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockStoreINTEL>;
+
+// SPV_INTEL_predicated_io builtin records
+defm : DemangledNativeBuiltin<"__spirv_PredicatedLoadINTEL", OpenCL_std, PredicatedLoadStore, 3, 4, OpPredicatedLoadINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_PredicatedStoreINTEL", OpenCL_std, PredicatedLoadStore, 3, 4, OpPredicatedStoreINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
@@ -1146,6 +1178,24 @@ defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock,
 defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 
+//SPV_ALTERA_blocking_pipes
+defm : DemangledNativeBuiltin<"__spirv_WritePipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpWritePipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadPipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpReadPipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadClockKHR", OpenCL_std, KernelClock, 1, 1, OpReadClockKHR>;
+
+//SPV_ALTERA_arbitrary_precision_fixed_point
+defm : DemangledNativeBuiltin<"__spirv_FixedSqrtINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedRecipINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedRecipALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedRsqrtINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedRsqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedCosINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinCosINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedCosPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinCosPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedLogINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedLogALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedExpINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedExpALTERA>;
+
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.
 //
@@ -1445,6 +1495,7 @@ defm : DemangledImageQueryBuiltin<"get_image_array_size", OpenCL_std, 3>;
 
 defm : DemangledNativeBuiltin<"get_image_num_samples", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQuerySamples>;
 defm : DemangledNativeBuiltin<"get_image_num_mip_levels", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQueryLevels>;
+defm : DemangledNativeBuiltin<"get_image_channel_data_type", OpenCL_std, ImageChannelDataTypes, 1, 1, OpImageQueryFormat>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a "convert_destType<_sat><_roundingMode>" call record for

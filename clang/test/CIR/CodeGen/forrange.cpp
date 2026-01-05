@@ -42,7 +42,7 @@ void for_range() {
 // CIR:      } step {
 // CIR:        %[[BEGIN:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:        %[[STEP:.*]] = cir.const #cir.int<1>
-// CIR:        %[[NEXT:.*]] = cir.ptr_stride(%[[BEGIN]] {{.*}}, %[[STEP]] {{.*}})
+// CIR:        %[[NEXT:.*]] = cir.ptr_stride %[[BEGIN]], %[[STEP]]
 // CIR:        cir.store{{.*}} %[[NEXT]], %[[BEGIN_ADDR]]
 // CIR:        cir.yield
 // CIR:      }
@@ -85,7 +85,7 @@ void for_range2() {
 // CIR:      } step {
 // CIR:        %[[BEGIN:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:        %[[STEP:.*]] = cir.const #cir.int<1>
-// CIR:        %[[NEXT:.*]] = cir.ptr_stride(%[[BEGIN]] {{.*}}, %[[STEP]] {{.*}})
+// CIR:        %[[NEXT:.*]] = cir.ptr_stride %[[BEGIN]], %[[STEP]]
 // CIR:        cir.store{{.*}} %[[NEXT]], %[[BEGIN_ADDR]]
 // CIR:        cir.yield
 // CIR:      }

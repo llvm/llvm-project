@@ -13,6 +13,7 @@
 #include "CIRGenModule.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
@@ -53,6 +54,7 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlirContext->loadDialect<mlir::DLTIDialect>();
   mlirContext->loadDialect<cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
+  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
   // Register extensions to integrate CIR types with OpenACC.
   mlir::DialectRegistry registry;
@@ -166,6 +168,18 @@ void CIRGenerator::HandleCXXStaticMemberVarInstantiation(VarDecl *D) {
   cgm->handleCXXStaticMemberVarInstantiation(D);
 }
 
+void CIRGenerator::HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                                 const OpenACCRoutineDecl *RD) {
+  llvm::StringRef mangledName = cgm->getMangledName(FD);
+  cir::FuncOp entry =
+      mlir::dyn_cast_if_present<cir::FuncOp>(cgm->getGlobalValue(mangledName));
+
+  // if this wasn't generated, don't force it to be.
+  if (!entry)
+    return;
+  cgm->emitOpenACCRoutineDecl(FD, entry, RD->getBeginLoc(), RD->clauses());
+}
+
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {
   if (diags.hasErrorOccurred())
     return;
@@ -177,5 +191,5 @@ void CIRGenerator::HandleVTable(CXXRecordDecl *rd) {
   if (diags.hasErrorOccurred())
     return;
 
-  cgm->errorNYI(rd->getSourceRange(), "HandleVTable");
+  cgm->emitVTable(rd);
 }

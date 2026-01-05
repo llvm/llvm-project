@@ -11,7 +11,9 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/CommentVisitor.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
@@ -44,7 +46,7 @@ static void
 populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsAnonymousNamespace);
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
+template <typename T> static void populateMemberTypeInfo(T &I, const Decl *D);
 static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
                                    const DeclaratorDecl *D,
                                    bool IsStatic = false);
@@ -175,55 +177,6 @@ static llvm::SmallString<16> getTypeAlias(const TypeAliasDecl *Alias) {
   QualType Q = Alias->getUnderlyingType();
   Q.print(Stream, Ctx.getPrintingPolicy());
 
-  return Result;
-}
-
-// extract full syntax for record declaration
-static llvm::SmallString<16> getRecordPrototype(const CXXRecordDecl *CXXRD) {
-  llvm::SmallString<16> Result;
-  LangOptions LangOpts;
-  PrintingPolicy Policy(LangOpts);
-  Policy.SuppressTagKeyword = false;
-  Policy.FullyQualifiedName = true;
-  Policy.IncludeNewlines = false;
-  llvm::raw_svector_ostream OS(Result);
-  if (const auto *TD = CXXRD->getDescribedClassTemplate()) {
-    OS << "template <";
-    bool FirstParam = true;
-    for (const auto *Param : *TD->getTemplateParameters()) {
-      if (!FirstParam)
-        OS << ", ";
-      Param->print(OS, Policy);
-      FirstParam = false;
-    }
-    OS << ">\n";
-  }
-
-  if (CXXRD->isStruct())
-    OS << "struct ";
-  else if (CXXRD->isClass())
-    OS << "class ";
-  else if (CXXRD->isUnion())
-    OS << "union ";
-
-  OS << CXXRD->getNameAsString();
-
-  // We need to make sure we have a good enough declaration to check. In the
-  // case where the class is a forward declaration, we'll fail assertions  in
-  // DeclCXX.
-  if (CXXRD->isCompleteDefinition() && CXXRD->getNumBases() > 0) {
-    OS << " : ";
-    bool FirstBase = true;
-    for (const auto &Base : CXXRD->bases()) {
-      if (!FirstBase)
-        OS << ", ";
-      if (Base.isVirtual())
-        OS << "virtual ";
-      OS << getAccessSpelling(Base.getAccessSpecifier()) << " ";
-      OS << Base.getType().getAsString(Policy);
-      FirstBase = false;
-    }
-  }
   return Result;
 }
 
@@ -384,28 +337,29 @@ static std::string getSourceCode(const Decl *D, const SourceRange &R) {
       .str();
 }
 
-template <typename T> static std::string serialize(T &I) {
+template <typename T>
+static std::string serialize(T &I, DiagnosticsEngine &Diags) {
   SmallString<2048> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  ClangDocBitcodeWriter Writer(Stream);
+  ClangDocBitcodeWriter Writer(Stream, Diags);
   Writer.emitBlock(I);
   return Buffer.str().str();
 }
 
-std::string serialize(std::unique_ptr<Info> &I) {
+std::string serialize(std::unique_ptr<Info> &I, DiagnosticsEngine &Diags) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    return serialize(*static_cast<NamespaceInfo *>(I.get()));
+    return serialize(*static_cast<NamespaceInfo *>(I.get()), Diags);
   case InfoType::IT_record:
-    return serialize(*static_cast<RecordInfo *>(I.get()));
+    return serialize(*static_cast<RecordInfo *>(I.get()), Diags);
   case InfoType::IT_enum:
-    return serialize(*static_cast<EnumInfo *>(I.get()));
+    return serialize(*static_cast<EnumInfo *>(I.get()), Diags);
   case InfoType::IT_function:
-    return serialize(*static_cast<FunctionInfo *>(I.get()));
+    return serialize(*static_cast<FunctionInfo *>(I.get()), Diags);
   case InfoType::IT_concept:
-    return serialize(*static_cast<ConceptInfo *>(I.get()));
+    return serialize(*static_cast<ConceptInfo *>(I.get()), Diags);
   case InfoType::IT_variable:
-    return serialize(*static_cast<VarInfo *>(I.get()));
+    return serialize(*static_cast<VarInfo *>(I.get()), Diags);
   case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:
@@ -778,12 +732,12 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     Mangler->mangleCXXVTable(CXXD, MangledStream);
   else
     MangledStream << D->getNameAsString();
-  if (MangledName.size() > 255)
-    // File creation fails if the mangled name is too long, so default to the
-    // USR. We should look for a better check since filesystems differ in
-    // maximum filename length
-    I.MangledName = llvm::toStringRef(llvm::toHex(I.USR));
-  else
+  // A 250 length limit was chosen since 255 is a common limit across
+  // different filesystems, with a 5 character buffer for file extensions.
+  if (MangledName.size() > 250) {
+    auto SymbolID = llvm::toStringRef(llvm::toHex(I.USR)).str();
+    I.MangledName = MangledName.substr(0, 250 - SymbolID.size()) + SymbolID;
+  } else
     I.MangledName = MangledName;
   delete Mangler;
 }
@@ -865,7 +819,9 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   }
 }
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
+// TODO: Rename this, since this doesn't populate anything besides comments and
+// isn't exclusive to members
+template <typename T> static void populateMemberTypeInfo(T &I, const Decl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
 
   ASTContext &Context = D->getASTContext();
@@ -901,9 +857,8 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
   if (!D->isThisDeclarationADefinition())
     return;
   for (const CXXBaseSpecifier &B : D->bases()) {
-    if (const RecordType *Ty = B.getType()->getAs<RecordType>()) {
-      if (const CXXRecordDecl *Base = cast_or_null<CXXRecordDecl>(
-              Ty->getOriginalDecl()->getDefinition())) {
+    if (const auto *Base = B.getType()->getAsCXXRecordDecl()) {
+      if (Base->isCompleteDefinition()) {
         // Initialized without USR and name, this will be set in the following
         // if-else stmt.
         BaseRecordInfo BI(
@@ -1015,6 +970,7 @@ static void parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
                   InfoType::IT_default, ActualDecl->getQualifiedNameAsString(),
                   getInfoRelativePath(ActualDecl));
 
+    populateMemberTypeInfo(F, ActualDecl);
     RI.Friends.push_back(std::move(F));
   }
 }
@@ -1034,7 +990,6 @@ emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
   parseFields(*RI, D, PublicOnly);
 
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
-    RI->FullName = getRecordPrototype(C);
     if (const TypedefNameDecl *TD = C->getTypedefNameForAnonDecl()) {
       RI->Name = TD->getNameAsString();
       RI->IsTypeDef = true;
@@ -1162,6 +1117,9 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
   Info.DefLoc = Loc;
   auto &LO = D->getLangOpts();
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
+  populateTemplateParameters(Info.Template, D);
+  if (Info.Template)
+    populateConstraints(Info.Template.value(), D->getDescribedTemplate());
 
   if (Info.Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
@@ -1192,6 +1150,9 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
   Info.TypeDeclaration = getTypeAlias(D);
   Info.IsUsing = true;
+  populateTemplateParameters(Info.Template, D);
+  if (Info.Template)
+    populateConstraints(Info.Template.value(), D->getDescribedAliasTemplate());
 
   extractCommentFromDecl(D, Info);
 

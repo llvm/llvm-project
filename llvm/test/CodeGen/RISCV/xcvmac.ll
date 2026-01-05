@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m -mattr=+xcvmac -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
-declare i32 @llvm.riscv.cv.mac.mac(i32, i32, i32)
-
 define i32 @test.mac(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.mac:
 ; CHECK:       # %bb.0:
@@ -13,8 +11,6 @@ define i32 @test.mac(i32 %a, i32 %b, i32 %c) {
   %1 = call i32 @llvm.riscv.cv.mac.mac(i32 %a, i32 %b, i32 %c)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.mac.msu(i32, i32, i32)
 
 define i32 @test.msu(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.msu:
@@ -26,8 +22,6 @@ define i32 @test.msu(i32 %a, i32 %b, i32 %c) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.muluN(i32, i32, i32)
-
 define i32 @test.muluN(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.muluN:
 ; CHECK:       # %bb.0:
@@ -36,8 +30,6 @@ define i32 @test.muluN(i32 %a, i32 %b) {
   %1 = call i32 @llvm.riscv.cv.mac.muluN(i32 %a, i32 %b, i32 5)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.mac.mulhhuN(i32, i32, i32)
 
 define i32 @test.mulhhuN(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.mulhhuN:
@@ -48,8 +40,6 @@ define i32 @test.mulhhuN(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.mulsN(i32, i32, i32)
-
 define i32 @test.mulsN(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.mulsN:
 ; CHECK:       # %bb.0:
@@ -58,8 +48,6 @@ define i32 @test.mulsN(i32 %a, i32 %b) {
   %1 = call i32 @llvm.riscv.cv.mac.mulsN(i32 %a, i32 %b, i32 5)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.mac.mulhhsN(i32, i32, i32)
 
 define i32 @test.mulhhsN(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.mulhhsN:
@@ -70,8 +58,6 @@ define i32 @test.mulhhsN(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.muluRN(i32, i32, i32)
-
 define i32 @test.muluRN(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.muluRN:
 ; CHECK:       # %bb.0:
@@ -80,8 +66,6 @@ define i32 @test.muluRN(i32 %a, i32 %b) {
   %1 = call i32 @llvm.riscv.cv.mac.muluRN(i32 %a, i32 %b, i32 5)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.mac.mulhhuRN(i32, i32, i32)
 
 define i32 @test.mulhhuRN(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.mulhhuRN:
@@ -92,8 +76,6 @@ define i32 @test.mulhhuRN(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.mulsRN(i32, i32, i32)
-
 define i32 @test.mulsRN(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.mulsRN:
 ; CHECK:       # %bb.0:
@@ -103,8 +85,6 @@ define i32 @test.mulsRN(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.mulhhsRN(i32, i32, i32)
-
 define i32 @test.mulhhsRN(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.mulhhsRN:
 ; CHECK:       # %bb.0:
@@ -113,8 +93,6 @@ define i32 @test.mulhhsRN(i32 %a, i32 %b) {
   %1 = call i32 @llvm.riscv.cv.mac.mulhhsRN(i32 %a, i32 %b, i32 5)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.mac.macuN(i32, i32, i32, i32)
 
 define i32 @test.macuN(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.macuN:
@@ -126,8 +104,6 @@ define i32 @test.macuN(i32 %a, i32 %b, i32 %c) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.machhuN(i32, i32, i32, i32)
-
 define i32 @test.machhuN(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.machhuN:
 ; CHECK:       # %bb.0:
@@ -137,8 +113,6 @@ define i32 @test.machhuN(i32 %a, i32 %b, i32 %c) {
   %1 = call i32 @llvm.riscv.cv.mac.machhuN(i32 %a, i32 %b, i32 %c, i32 5)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.mac.macsN(i32, i32, i32, i32)
 
 define i32 @test.macsN(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.macsN:
@@ -150,8 +124,6 @@ define i32 @test.macsN(i32 %a, i32 %b, i32 %c) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.machhsN(i32, i32, i32, i32)
-
 define i32 @test.machhsN(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.machhsN:
 ; CHECK:       # %bb.0:
@@ -161,8 +133,6 @@ define i32 @test.machhsN(i32 %a, i32 %b, i32 %c) {
   %1 = call i32 @llvm.riscv.cv.mac.machhsN(i32 %a, i32 %b, i32 %c, i32 5)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.mac.macuRN(i32, i32, i32, i32)
 
 define i32 @test.macuRN(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.macuRN:
@@ -174,8 +144,6 @@ define i32 @test.macuRN(i32 %a, i32 %b, i32 %c) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.machhuRN(i32, i32, i32, i32)
-
 define i32 @test.machhuRN(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.machhuRN:
 ; CHECK:       # %bb.0:
@@ -186,8 +154,6 @@ define i32 @test.machhuRN(i32 %a, i32 %b, i32 %c) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.mac.macsRN(i32, i32, i32, i32)
-
 define i32 @test.macsRN(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.macsRN:
 ; CHECK:       # %bb.0:
@@ -197,8 +163,6 @@ define i32 @test.macsRN(i32 %a, i32 %b, i32 %c) {
   %1 = call i32 @llvm.riscv.cv.mac.macsRN(i32 %a, i32 %b, i32 %c, i32 5)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.mac.machhsRN(i32, i32, i32, i32)
 
 define i32 @test.machhsRN(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test.machhsRN:

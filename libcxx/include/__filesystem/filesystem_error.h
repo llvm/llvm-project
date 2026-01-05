@@ -27,7 +27,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-class _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
+class _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
 public:
   _LIBCPP_HIDE_FROM_ABI filesystem_error(const string& __what, error_code __ec)
       : system_error(__ec, __what), __storage_(make_shared<_Storage>(path(), path())) {
@@ -44,15 +44,16 @@ public:
     __create_what(2);
   }
 
-  _LIBCPP_HIDE_FROM_ABI const path& path1() const noexcept { return __storage_->__p1_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const path& path1() const noexcept { return __storage_->__p1_; }
 
-  _LIBCPP_HIDE_FROM_ABI const path& path2() const noexcept { return __storage_->__p2_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const path& path2() const noexcept { return __storage_->__p2_; }
 
-  _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
   ~filesystem_error() override; // key function
 
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL
-  const char* what() const noexcept override { return __storage_->__what_.c_str(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override {
+    return __storage_->__what_.c_str();
+  }
 
   void __create_what(int __num_paths);
 
@@ -69,14 +70,12 @@ private:
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 template <class... _Args>
-[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
-__throw_filesystem_error(_Args&&... __args) {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_filesystem_error(_Args&&... __args) {
   throw filesystem_error(std::forward<_Args>(__args)...);
 }
 #  else
 template <class... _Args>
-[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
-__throw_filesystem_error(_Args&&...) {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_filesystem_error(_Args&&...) {
   _LIBCPP_VERBOSE_ABORT("filesystem_error was thrown in -fno-exceptions mode");
 }
 #  endif

@@ -59,6 +59,7 @@ protected:
   bool HasCvtPkF16F32Inst = false;
   bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool EnableD16Writes32BitVgpr = false;
   bool HasBF16TransInsts = false;
   bool HasBF16ConversionInsts = false;
   bool HasBF16PackedInsts = false;
@@ -99,6 +100,26 @@ public:
   /// \returns Subtarget's default values if explicitly requested values cannot
   /// be converted to integer, or violate subtarget's specifications.
   std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) const;
+
+  /// \returns The required size of workgroups that will be used to execute \p F
+  /// in the \p Dim dimension, if it is known (from `!reqd_work_group_size`
+  /// metadata. Otherwise, returns std::nullopt.
+  std::optional<unsigned> getReqdWorkGroupSize(const Function &F,
+                                               unsigned Dim) const;
+
+  /// \returns true if \p F will execute in a manner that leaves the X
+  /// dimensions of the workitem ID evenly tiling wavefronts - that is, if X /
+  /// wavefrontsize is uniform. This is true if either the Y and Z block
+  /// dimensions are known to always be 1 or if the X dimension will always be a
+  /// power of 2. If \p RequireUniformYZ is true, it also ensures that the Y and
+  /// Z workitem IDs will be uniform (so, while a (32, 2, 1) launch with
+  /// wavesize64 would ordinarily pass this test, it won't with
+  /// \pRequiresUniformYZ).
+  ///
+  /// This information is currently only gathered from the !reqd_work_group_size
+  /// metadata on \p F, but this may be improved in the future.
+  bool hasWavefrontsEvenlySplittingXDim(const Function &F,
+                                        bool REquiresUniformYZ = false) const;
 
   /// \returns Subtarget's default pair of minimum/maximum number of waves per
   /// execution unit for function \p F, or minimum/maximum number of waves per
@@ -203,6 +224,8 @@ public:
   // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
+
+  bool hasD16Writes32BitVgpr() const;
 
   bool hasBF16TransInsts() const { return HasBF16TransInsts; }
 

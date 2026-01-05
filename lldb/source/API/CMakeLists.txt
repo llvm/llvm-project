@@ -69,6 +69,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBFileSpecList.cpp
   SBFormat.cpp
   SBFrame.cpp
+  SBFrameList.cpp
   SBFunction.cpp
   SBHostOS.cpp
   SBInstruction.cpp
@@ -299,6 +300,13 @@ set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
 file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
 file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
 list(REMOVE_ITEM root_public_headers ${root_private_headers})
+# Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
+list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
+
+add_custom_command(
+  OUTPUT ${lldb_header_staging_dir}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_header_staging_dir}
+  COMMENT "LLDB headers: create staging directory for LLDB headers")
 
 find_program(unifdef_EXECUTABLE unifdef)
 
@@ -330,7 +338,7 @@ foreach(header
   add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums)
   add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
-    DEPENDS ${header} OUTPUT ${staged_header}
+    DEPENDS ${header} ${lldb_header_staging_dir} OUTPUT ${staged_header}
     COMMAND ${copy_command}
     COMMENT "LLDB headers: stage LLDB headers in include directory")
 

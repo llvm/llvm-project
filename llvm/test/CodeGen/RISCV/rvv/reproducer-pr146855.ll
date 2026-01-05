@@ -6,7 +6,7 @@ target triple = "riscv64-unknown-linux-gnu"
 define i32 @_ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_(<vscale x 4 x i32> %wide.load, <vscale x 4 x i1> %0, <vscale x 4 x i1> %1, <vscale x 4 x i1> %2, <vscale x 4 x i1> %3) #0 {
 ; CHECK-LABEL: _ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v10, 0
@@ -14,7 +14,7 @@ define i32 @_ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_(<vscale x 4 x i32> %wi
 ; CHECK-NEXT:    vmv.v.i v14, 0
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    vmv2r.v v16, v10
@@ -57,16 +57,8 @@ middle.block:                                     ; preds = %vector.body
   ret i32 %13
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
-declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr captures(none), i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i32>) #1
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>) #2
-
 ; uselistorder directives
 uselistorder ptr @llvm.masked.load.nxv4i32.p0, { 1, 0 }
 uselistorder ptr @llvm.vector.reduce.add.nxv4i32, { 1, 0 }
 
 attributes #0 = { "target-features"="+v" }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

@@ -70,7 +70,7 @@ int assumingUpper(int arg) {
   // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -99,7 +99,7 @@ int assumingUpperUnsigned(unsigned arg) {
   // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[(int)arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -111,7 +111,7 @@ int assumingNothing(unsigned arg) {
   int a = TenElements[arg]; // no note here, we already know that 'arg' is in bounds
   int b = TenElements[(int)arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -145,7 +145,7 @@ int assumingConvertedToIntP(struct foo f, int arg) {
   // expected-note@-1 {{Assuming byte offset is less than 5, the extent of 'f.b'}}
   int c = TenElements[arg-2];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b + c;
 }
 
