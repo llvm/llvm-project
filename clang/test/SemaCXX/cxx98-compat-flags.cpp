@@ -5,9 +5,11 @@ template<typename T> int TemplateFn(T) { return 0; }
 void LocalTemplateArg() {
   struct S {};
   TemplateFn(S()); // expected-warning {{local type 'S' as template argument is incompatible with C++98}}
+                   // expected-note@-1 {{while substituting deduced template arguments}}
 }
 struct {} obj_of_unnamed_type; // expected-note {{here}}
 int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // expected-warning {{unnamed type as template argument is incompatible with C++98}}
+                                                          // expected-note@-1 {{while substituting deduced template arguments}}
 
 namespace CopyCtorIssues {
   struct Private {

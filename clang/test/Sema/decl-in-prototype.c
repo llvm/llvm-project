@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c17 %s
 
 #define SA(n, c) int arr##n[(c) ? 1 : -1] = {}
 

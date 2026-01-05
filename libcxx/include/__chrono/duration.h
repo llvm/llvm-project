@@ -13,6 +13,8 @@
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__functional/hash.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
@@ -32,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace chrono {
 
 template <class _Rep, class _Period = ratio<1> >
-class _LIBCPP_TEMPLATE_VIS duration;
+class duration;
 
 template <class _Tp>
 inline const bool __is_duration_v = false;
@@ -52,7 +54,7 @@ inline const bool __is_duration_v<const volatile duration<_Rep, _Period> > = tru
 } // namespace chrono
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
-struct _LIBCPP_TEMPLATE_VIS common_type<chrono::duration<_Rep1, _Period1>, chrono::duration<_Rep2, _Period2> > {
+struct common_type<chrono::duration<_Rep1, _Period1>, chrono::duration<_Rep2, _Period2> > {
   typedef chrono::duration<typename common_type<_Rep1, _Rep2>::type, __ratio_gcd<_Period1, _Period2> > type;
 };
 
@@ -107,7 +109,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration duration_cast(const d
 }
 
 template <class _Rep>
-struct _LIBCPP_TEMPLATE_VIS treat_as_floating_point : is_floating_point<_Rep> {};
+struct treat_as_floating_point : is_floating_point<_Rep> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Rep>
@@ -115,7 +117,7 @@ inline constexpr bool treat_as_floating_point_v = treat_as_floating_point<_Rep>:
 #endif
 
 template <class _Rep>
-struct _LIBCPP_TEMPLATE_VIS duration_values {
+struct duration_values {
 public:
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _Rep zero() _NOEXCEPT { return _Rep(0); }
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _Rep max() _NOEXCEPT { return numeric_limits<_Rep>::max(); }
@@ -156,7 +158,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration round(const duration<
 // duration
 
 template <class _Rep, class _Period>
-class _LIBCPP_TEMPLATE_VIS duration {
+class duration {
   static_assert(!__is_duration_v<_Rep>, "A duration representation can not be a duration");
   static_assert(__is_ratio_v<_Period>, "Second template parameter of duration must be a std::ratio");
   static_assert(_Period::num > 0, "duration period must be positive");
@@ -537,6 +539,18 @@ using namespace literals::chrono_literals;
 } // namespace chrono
 
 #endif // _LIBCPP_STD_VER >= 14
+
+#if _LIBCPP_STD_VER >= 26
+
+template <class _Rep, class _Period>
+  requires __has_enabled_hash<_Rep>::value
+struct hash<chrono::duration<_Rep, _Period>> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::duration<_Rep, _Period>& __d) {
+    return hash<_Rep>{}(__d.count());
+  }
+};
+
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

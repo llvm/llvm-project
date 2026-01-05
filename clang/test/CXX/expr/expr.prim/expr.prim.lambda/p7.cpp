@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify
+// RUN: %clang_cc1 -Werror=return-type -fsyntax-only -std=c++11 %s -verify
 
 // Check that analysis-based warnings work in lambda bodies.
 void analysis_based_warnings() {
-  (void)[]() -> int { }; // expected-warning{{non-void lambda does not return a value}}
+  (void)[]() -> int { }; // expected-error{{non-void lambda does not return a value}}
 }
 
 // Check that we get the right types of captured variables (the

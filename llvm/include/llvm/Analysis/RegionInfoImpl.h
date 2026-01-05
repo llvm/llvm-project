@@ -720,16 +720,14 @@ void RegionInfoBase<Tr>::buildRegionsTree(DomTreeNodeT *N, RegionT *region) {
   while (BB == region->getExit())
     region = region->getParent();
 
-  typename BBtoRegionMap::iterator it = BBtoRegion.find(BB);
+  auto [It, Inserted] = BBtoRegion.try_emplace(BB, region);
 
   // This basic block is a start block of a region. It is already in the
   // BBtoRegion relation. Only the child basic blocks have to be updated.
-  if (it != BBtoRegion.end()) {
-    RegionT *newRegion = it->second;
+  if (!Inserted) {
+    RegionT *newRegion = It->second;
     region->addSubRegion(getTopMostParent(newRegion));
     region = newRegion;
-  } else {
-    BBtoRegion[BB] = region;
   }
 
   for (DomTreeNodeBase<BlockT> *C : *N) {

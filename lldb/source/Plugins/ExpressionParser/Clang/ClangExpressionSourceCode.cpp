@@ -149,9 +149,8 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
   stream << "#pragma clang diagnostic push\n";
   stream << "#pragma clang diagnostic ignored \"-Wmacro-redefined\"\n";
   stream << "#pragma clang diagnostic ignored \"-Wbuiltin-macro-redefined\"\n";
-  auto pop_warning = llvm::make_scope_exit([&stream](){
-    stream << "#pragma clang diagnostic pop\n";
-  });
+  llvm::scope_exit pop_warning(
+      [&stream]() { stream << "#pragma clang diagnostic pop\n"; });
 
   for (size_t i = 0; i < dm->GetNumMacroEntries(); i++) {
     const DebugMacroEntry &entry = dm->GetMacroEntryAtIndex(i);
@@ -251,8 +250,8 @@ TokenVerifier::TokenVerifier(std::string body) {
   // We only care about tokens and not their original source locations. If we
   // move the whole expression to only be in one line we can simplify the
   // following code that extracts the token contents.
-  std::replace(body.begin(), body.end(), '\n', ' ');
-  std::replace(body.begin(), body.end(), '\r', ' ');
+  llvm::replace(body, '\n', ' ');
+  llvm::replace(body, '\r', ' ');
 
   FileSystemOptions file_opts;
   FileManager file_mgr(file_opts,
@@ -260,10 +259,8 @@ TokenVerifier::TokenVerifier(std::string body) {
 
   // Let's build the actual source code Clang needs and setup some utility
   // objects.
-  llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_ids(new DiagnosticIDs());
-  llvm::IntrusiveRefCntPtr<DiagnosticOptions> diags_opts(
-      new DiagnosticOptions());
-  DiagnosticsEngine diags(diag_ids, diags_opts);
+  DiagnosticOptions diags_opts;
+  DiagnosticsEngine diags(DiagnosticIDs::create(), diags_opts);
   clang::SourceManager SM(diags, file_mgr);
   auto buf = llvm::MemoryBuffer::getMemBuffer(body);
 
@@ -385,10 +382,11 @@ bool ClangExpressionSourceCode::GetText(
             block->CalculateSymbolContext(&sc);
 
             if (sc.comp_unit) {
-              StreamString error_stream;
-
-              decl_vendor->AddModulesForCompileUnit(
-                  *sc.comp_unit, modules_for_macros, error_stream);
+              if (auto err = decl_vendor->AddModulesForCompileUnit(
+                      *sc.comp_unit, modules_for_macros))
+                LLDB_LOG_ERROR(
+                    GetLog(LLDBLog::Expressions), std::move(err),
+                    "Error while loading hand-imported modules:\n{0}");
             }
           }
         }

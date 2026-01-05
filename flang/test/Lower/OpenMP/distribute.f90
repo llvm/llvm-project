@@ -7,7 +7,7 @@ subroutine distribute_simple()
   ! CHECK: omp.teams
   !$omp teams
 
-  ! CHECK: omp.distribute {
+  ! CHECK: omp.distribute private({{.*}}) {
   !$omp distribute
 
   ! CHECK-NEXT: omp.loop_nest
@@ -104,7 +104,7 @@ subroutine distribute_allocate()
   ! CHECK-NEXT: omp.loop_nest
   do i = 1, 10
     x = i
-    ! CHECK: omp.yield 
+    ! CHECK: omp.yield
   end do
 
   !$omp end distribute

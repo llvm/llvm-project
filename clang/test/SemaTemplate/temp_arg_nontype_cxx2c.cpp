@@ -123,3 +123,14 @@ Set<float> sf;
 // expected-note@#C {{evaluated to false}}
 
 } // namespace GH84052
+
+namespace error_on_type_instantiation {
+  int f(int) = delete;
+  // expected-note@-1 {{candidate function has been explicitly deleted}}
+  template<class T, decltype(f(T()))> struct X {};
+  // expected-error@-1 {{call to deleted function 'f'}}
+  template<class T> void g() { X<T, 0> x; }
+  // expected-note@-1 {{while substituting prior template arguments into non-type template parameter [with T = int]}}
+  template void g<int>();
+  // expected-note@-1 {{in instantiation of function template specialization}}
+}

@@ -68,7 +68,7 @@ if libasan_abi_path is not None:
 
 config.suffixes = ['.c', '.cpp']
 
-if config.host_os == 'Darwin':
+if config.target_os == 'Darwin':
   config.suffixes.append('.mm')
 else:
   config.unsupported = True

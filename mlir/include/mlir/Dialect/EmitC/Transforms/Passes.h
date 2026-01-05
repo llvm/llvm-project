@@ -14,12 +14,9 @@
 namespace mlir {
 namespace emitc {
 
-//===----------------------------------------------------------------------===//
-// Passes
-//===----------------------------------------------------------------------===//
-
-/// Creates an instance of the C-style expressions forming pass.
-std::unique_ptr<Pass> createFormExpressionsPass();
+#define GEN_PASS_DECL_FORMEXPRESSIONSPASS
+#define GEN_PASS_DECL_WRAPFUNCINCLASSPASS
+#include "mlir/Dialect/EmitC/Transforms/Passes.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Registration

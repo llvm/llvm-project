@@ -12,6 +12,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-public.h"
+#include "llvm/Support/Error.h"
 
 #include <map>
 
@@ -50,8 +51,13 @@ public:
                                  ///only in the process.
   };
 
-  lldb::addr_t Malloc(size_t size, uint8_t alignment, uint32_t permissions,
-                      AllocationPolicy policy, bool zero_memory, Status &error);
+  // If 'policy' is 'eAllocationPolicyMirror' but it is impossible to allocate
+  // memory in the process, 'eAllocationPolicyHostOnly' will be used instead.
+  // The actual policy is returned via 'used_policy'.
+  llvm::Expected<lldb::addr_t> Malloc(size_t size, uint8_t alignment,
+                                      uint32_t permissions,
+                                      AllocationPolicy policy, bool zero_memory,
+                                      AllocationPolicy *used_policy = nullptr);
   void Leak(lldb::addr_t process_address, Status &error);
   void Free(lldb::addr_t process_address, Status &error);
 
@@ -59,7 +65,7 @@ public:
                    size_t size, Status &error);
   void WriteScalarToMemory(lldb::addr_t process_address, Scalar &scalar,
                            size_t size, Status &error);
-  void WritePointerToMemory(lldb::addr_t process_address, lldb::addr_t address,
+  void WritePointerToMemory(lldb::addr_t process_address, lldb::addr_t pointer,
                             Status &error);
   void ReadMemory(uint8_t *bytes, lldb::addr_t process_address, size_t size,
                   Status &error);

@@ -1,11 +1,5 @@
 # CMake policy settings shared between LLVM projects
 
-# CMP0116: Ninja generators transform `DEPFILE`s from `add_custom_command()`
-# New in CMake 3.20. https://cmake.org/cmake/help/latest/policy/CMP0116.html
-if(POLICY CMP0116)
-  cmake_policy(SET CMP0116 OLD)
-endif()
-
 # MSVC debug information format flags are selected via
 # CMAKE_MSVC_DEBUG_INFORMATION_FORMAT, instead of
 # embedding flags in e.g. CMAKE_CXX_FLAGS_RELEASE.
@@ -46,4 +40,10 @@ if(POLICY CMP0156)
   if(POLICY CMP0179)
     cmake_policy(SET CMP0179 NEW)
   endif()
+endif()
+
+# CMP0182: Create shared library archives by default on AIX.
+# New in CMake 4.0: https://cmake.org/cmake/help/latest/policy/CMP0182.html
+if(POLICY CMP0182)
+  cmake_policy(SET CMP0182 NEW)
 endif()

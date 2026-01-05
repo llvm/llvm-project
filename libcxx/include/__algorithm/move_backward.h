@@ -9,10 +9,13 @@
 #ifndef _LIBCPP___ALGORITHM_MOVE_BACKWARD_H
 #define _LIBCPP___ALGORITHM_MOVE_BACKWARD_H
 
+#include <__algorithm/copy_backward.h>
 #include <__algorithm/copy_move_common.h>
+#include <__algorithm/for_each_segment.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/min.h>
 #include <__config>
+#include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/common_type.h>
@@ -49,42 +52,26 @@ struct __move_backward_impl {
     return std::make_pair(std::move(__original_last_iter), std::move(__result));
   }
 
-  template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
+  template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator_v<_InIter>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
-    using _Traits = __segmented_iterator_traits<_InIter>;
-    auto __sfirst = _Traits::__segment(__first);
-    auto __slast  = _Traits::__segment(__last);
-    if (__sfirst == __slast) {
-      auto __iters =
-          std::__move_backward<_AlgPolicy>(_Traits::__local(__first), _Traits::__local(__last), std::move(__result));
-      return std::make_pair(__last, __iters.second);
-    }
-
-    __result =
-        std::__move_backward<_AlgPolicy>(_Traits::__begin(__slast), _Traits::__local(__last), std::move(__result))
-            .second;
-    --__slast;
-    while (__sfirst != __slast) {
-      __result =
-          std::__move_backward<_AlgPolicy>(_Traits::__begin(__slast), _Traits::__end(__slast), std::move(__result))
-              .second;
-      --__slast;
-    }
-    __result = std::__move_backward<_AlgPolicy>(_Traits::__local(__first), _Traits::__end(__slast), std::move(__result))
-                   .second;
+    using __local_iterator = typename __segmented_iterator_traits<_InIter>::__local_iterator;
+    std::__for_each_segment_backward(__first, __last, [&__result](__local_iterator __lfirst, __local_iterator __llast) {
+      __result = std::__move_backward<_AlgPolicy>(std::move(__lfirst), std::move(__llast), std::move(__result)).second;
+    });
     return std::make_pair(__last, std::move(__result));
   }
 
   template <class _InIter,
             class _OutIter,
             __enable_if_t<__has_random_access_iterator_category<_InIter>::value &&
-                              !__is_segmented_iterator<_InIter>::value && __is_segmented_iterator<_OutIter>::value,
+                              !__is_segmented_iterator_v<_InIter> && __is_segmented_iterator_v<_OutIter>,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits = __segmented_iterator_traits<_OutIter>;
-    using _DiffT  = typename common_type<__iter_diff_t<_InIter>, __iter_diff_t<_OutIter> >::type;
+    using _DiffT =
+        typename common_type<__iterator_difference_type<_InIter>, __iterator_difference_type<_OutIter> >::type;
 
     // When the range contains no elements, __result might not be a valid iterator
     if (__first == __last)
@@ -105,6 +92,14 @@ struct __move_backward_impl {
 
       __local_last = _Traits::__end(--__segment_iterator);
     }
+  }
+
+  template <class _Cp, bool _IsConst>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
+  operator()(__bit_iterator<_Cp, _IsConst> __first,
+             __bit_iterator<_Cp, _IsConst> __last,
+             __bit_iterator<_Cp, false> __result) {
+    return std::__copy_backward<_ClassicAlgPolicy>(__first, __last, __result);
   }
 
   // At this point, the iterators have been unwrapped so any `contiguous_iterator` has been unwrapped to a pointer.
