@@ -926,6 +926,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   const unsigned AMXBits = (1 << 17) | (1 << 18);
   bool HasXSave = ((ECX >> 27) & 1) && !getX86XCR0(&EAX, &EDX);
   bool HasAMXSave = HasXSave && ((EAX & AMXBits) == AMXBits);
+  bool HasAPXSave = HasXSave && ((EAX >> 19) & 1);
 
   if (HasAVXSave)
     setFeature(FEATURE_AVX);
@@ -1065,7 +1066,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_PREFETCHI);
   if (HasLeaf7Subleaf1 && ((EDX >> 15) & 1))
     setFeature(FEATURE_USERMSR);
-  if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1))
+  if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1) && HasAPXSave)
     setFeature(FEATURE_APXF);
 
   unsigned MaxLevel = 0;
@@ -1090,8 +1091,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf1E && (EAX & 0x100))
     setFeature(FEATURE_AMX_MOVRS);
 
-  bool HasLeaf24 =
-      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  bool HasLeaf24 = MaxLevel >= 0x24 &&
+                   !getX86CpuIDAndInfoEx(0x24, 0x0, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
     int AVX10Ver = EBX & 0xff;
     if (AVX10Ver >= 1)

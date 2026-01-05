@@ -407,19 +407,19 @@ _mm512_castps256_ps512(__m256 __a)
                                  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 }
 
-static __inline __m128d __DEFAULT_FN_ATTRS512
+static __inline __m128d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castpd512_pd128(__m512d __a)
 {
   return __builtin_shufflevector(__a, __a, 0, 1);
 }
 
-static __inline __m256d __DEFAULT_FN_ATTRS512
+static __inline __m256d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castpd512_pd256 (__m512d __A)
 {
   return __builtin_shufflevector(__A, __A, 0, 1, 2, 3);
 }
 
-static __inline __m128 __DEFAULT_FN_ATTRS512
+static __inline __m128 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castps512_ps128(__m512 __a)
 {
   return __builtin_shufflevector(__a, __a, 0, 1, 2, 3);
@@ -430,13 +430,13 @@ _mm512_castps512_ps256(__m512 __A) {
   return __builtin_shufflevector(__A, __A, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
-static __inline __m512 __DEFAULT_FN_ATTRS512
+static __inline __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castpd_ps (__m512d __A)
 {
   return (__m512) (__A);
 }
 
-static __inline __m512i __DEFAULT_FN_ATTRS512
+static __inline __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castpd_si512 (__m512d __A)
 {
   return (__m512i) (__A);
@@ -451,13 +451,13 @@ _mm512_castpd128_pd512 (__m128d __A)
       __B, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
-static __inline __m512d __DEFAULT_FN_ATTRS512
+static __inline __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castps_pd (__m512 __A)
 {
   return (__m512d) (__A);
 }
 
-static __inline __m512i __DEFAULT_FN_ATTRS512
+static __inline __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castps_si512 (__m512 __A)
 {
   return (__m512i) (__A);
@@ -487,19 +487,19 @@ _mm512_castsi256_si512 (__m256i __A)
    return  __builtin_shufflevector( __A, __builtin_nondeterministic_value(__A), 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
-static __inline __m512 __DEFAULT_FN_ATTRS512
+static __inline __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castsi512_ps (__m512i __A)
 {
   return (__m512) (__A);
 }
 
-static __inline __m512d __DEFAULT_FN_ATTRS512
+static __inline __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castsi512_pd (__m512i __A)
 {
   return (__m512d) (__A);
 }
 
-static __inline __m128i __DEFAULT_FN_ATTRS512
+static __inline __m128i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_castsi512_si128 (__m512i __A)
 {
   return (__m128i)__builtin_shufflevector(__A, __A , 0, 1);
@@ -5355,9 +5355,8 @@ _mm_maskz_getexp_ss (__mmask8 __U, __m128 __A, __m128 __B)
                                                (__v4sf)_mm_setzero_ps(), \
                                                (__mmask8)(U), (int)(R)))
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_kmov (__mmask16 __A)
-{
+static __inline__ __mmask16
+    __DEFAULT_FN_ATTRS_CONSTEXPR _mm512_kmov(__mmask16 __A) {
   return  __A;
 }
 

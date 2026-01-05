@@ -183,7 +183,10 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
       : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_i32_ty],
                               [IntrNoMem]>;
 
-def int_spv_resource_nonuniformindex
+  def int_spv_pushconstant_getpointer
+      : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty], [IntrNoMem]>;
+
+  def int_spv_resource_nonuniformindex
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 
   // Read a value from the image buffer. It does not translate directly to a

@@ -126,8 +126,6 @@ config.recursiveExpansionLimit = 10
 
 # Setup test format.
 config.test_format = lit.formats.ShTest(execute_external)
-if execute_external:
-    config.available_features.add("shell")
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
@@ -179,6 +177,14 @@ if config.enable_per_target_runtime_dir:
     elif config.target_arch == "sparcv9":
         config.compiler_rt_libdir = re.sub(
             r"/sparc(?=-[^/]+$)", "/sparcv9", config.compiler_rt_libdir
+        )
+    if config.target_arch == "powerpc":
+        config.compiler_rt_libdir = re.sub(
+            r"/powerpc64(?=-[^/]+$)", "/powerpc", config.compiler_rt_libdir
+        )
+    elif config.target_arch == "powerpc64":
+        config.compiler_rt_libdir = re.sub(
+            r"/powerpc(?=-[^/]+$)", "/powerpc64", config.compiler_rt_libdir
         )
 
 # Check if the test compiler resource dir matches the local build directory
@@ -452,6 +458,7 @@ elif config.target_os == "Darwin" and config.apple_platform != "osx":
     # the work.
     config.substitutions.append(("%device_rm", "{} rm ".format(run_wrapper)))
     config.compile_wrapper = compile_wrapper
+    config.darwin_run_wrapper = run_wrapper
 
     try:
         prepare_output = (
@@ -491,6 +498,7 @@ else:
     # When running locally %device_rm is a no-op.
     config.substitutions.append(("%device_rm", "echo "))
     config.compile_wrapper = ""
+    config.darwin_run_wrapper = ""
 
 # Define CHECK-%os to check for OS-dependent output.
 config.substitutions.append(("CHECK-%os", ("CHECK-" + config.target_os)))
@@ -561,27 +569,32 @@ config.substitutions.append(
 )
 
 if config.target_os == "Darwin":
-    osx_version = (10, 0, 0)
-    try:
-        osx_version = subprocess.check_output(
-            ["sw_vers", "-productVersion"], universal_newlines=True
-        )
-        osx_version = tuple(int(x) for x in osx_version.split("."))
-        if len(osx_version) == 2:
-            osx_version = (osx_version[0], osx_version[1], 0)
-        if osx_version >= (10, 11):
-            config.available_features.add("osx-autointerception")
-            config.available_features.add("osx-ld64-live_support")
-        if osx_version >= (13, 1):
-            config.available_features.add("jit-compatible-osx-swift-runtime")
-    except subprocess.CalledProcessError:
-        pass
+    if config.darwin_run_wrapper != "" and not config.apple_platform.endswith("sim"):
+        os_detection_prefix = [config.darwin_run_wrapper]
+    else:
+        # There is no simulator-specific sw_vers/sysctl, so we use the host OS version
+        os_detection_prefix = []
 
-    config.darwin_osx_version = osx_version
+    darwin_os_version = subprocess.check_output(
+        os_detection_prefix + ["sw_vers", "-productVersion"], universal_newlines=True
+    )
+    darwin_os_version = tuple(int(x) for x in darwin_os_version.split("."))
+
+    if len(darwin_os_version) == 2:
+        darwin_os_version = (darwin_os_version[0], darwin_os_version[1], 0)
+    if darwin_os_version >= (10, 11):
+        config.available_features.add("osx-autointerception")
+        config.available_features.add("osx-ld64-live_support")
+    if darwin_os_version >= (13, 1):
+        config.available_features.add("jit-compatible-osx-swift-runtime")
+
+    config.darwin_os_version = darwin_os_version
 
     # Detect x86_64h
     try:
-        output = subprocess.check_output(["sysctl", "hw.cpusubtype"])
+        output = subprocess.check_output(
+            os_detection_prefix + ["sysctl", "hw.cpusubtype"]
+        )
         output_re = re.match("^hw.cpusubtype: ([0-9]+)$", output)
         if output_re:
             cpu_subtype = int(output_re.group(1))
