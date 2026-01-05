@@ -591,10 +591,10 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    // On Windows targets, emit minimal CodeView compiler info even when debug
-    // info is disabled.
-    if ((Target.isOSWindows() && M.getNamedMetadata("llvm.dbg.cu")) ||
-        (Target.isUEFI() && EmitCodeView))
+    // On Windows and UEFI targets, emit minimal CodeView compiler info even
+    // when debug info is disabled.
+    if (EmitCodeView || ((Target.isOSWindows() || Target.isUEFI()) &&
+                         M.getNamedMetadata("llvm.dbg.cu")))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
