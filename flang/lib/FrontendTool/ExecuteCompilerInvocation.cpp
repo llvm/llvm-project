@@ -181,7 +181,8 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
   // Load and store pass plugins for the back-end.
   for (const std::string &path :
        flang->getInvocation().getCodeGenOpts().LLVMPassPlugins) {
-    if (auto passPlugin = llvm::PassPlugin::Load(path)) {
+    if (llvm::Expected<llvm::PassPlugin> passPlugin =
+            llvm::PassPlugin::Load(path)) {
       flang->addPassPlugin(std::make_unique<llvm::PassPlugin>(*passPlugin));
     } else {
       unsigned diagID = flang->getDiagnostics().getCustomDiagID(

@@ -896,10 +896,9 @@ static void generateMachineCodeOrAssemblyImpl(
 
   // Invoke pre-codegen callback from plugin, which might want to take over the
   // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins()) {
+  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
     if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
       return;
-  }
 
   // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
   // Currently only the legacy pass manager is supported.
@@ -1183,7 +1182,7 @@ public:
           clang::diag::remark_fe_backend_optimization_remark_analysis);
   }
 
-  void backendPluginHandler(const llvm::DiagnosticInfo &di) {
+  void pluginDiagnosticHandler(const llvm::DiagnosticInfo &di) {
     unsigned diagID;
     switch (di.getSeverity()) {
     case llvm::DS_Error:
@@ -1200,11 +1199,9 @@ public:
       break;
     }
     std::string msg;
-    {
-      llvm::raw_string_ostream os(msg);
-      llvm::DiagnosticPrinterRawOStream diagPrinter(os);
-      di.print(diagPrinter);
-    }
+    llvm::raw_string_ostream os(msg);
+    llvm::DiagnosticPrinterRawOStream diagPrinter(os);
+    di.print(diagPrinter);
     diags.Report(diagID) << msg;
   }
 
@@ -1233,7 +1230,7 @@ public:
           llvm::cast<llvm::MachineOptimizationRemarkAnalysis>(di));
       break;
     default:
-      backendPluginHandler(di);
+      pluginDiagnosticHandler(di);
       break;
     }
     return true;
