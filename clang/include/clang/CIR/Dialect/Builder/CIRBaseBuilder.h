@@ -501,8 +501,7 @@ public:
 
   mlir::Value createExtractElement(mlir::Location loc, mlir::Value vec,
                                    uint64_t idx) {
-    auto idxVal = getConstAPInt(loc, mlir::IntegerType::get(getContext(), 64),
-                                llvm::APInt(64, idx));
+    auto idxVal = getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
     return createExtractElement(loc, vec, idxVal);
   }
 
@@ -515,8 +514,7 @@ public:
 
   mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
                                   mlir::Value newElt, uint64_t idx) {
-    auto idxVal = getConstAPInt(loc, mlir::IntegerType::get(getContext(), 64),
-                                llvm::APInt(64, idx));
+    auto idxVal = getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
     return createInsertElement(loc, vec, newElt, idxVal);
   }
 

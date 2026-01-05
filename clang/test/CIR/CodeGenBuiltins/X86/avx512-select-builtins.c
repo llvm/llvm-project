@@ -197,7 +197,8 @@ __m512h test_selectph_512(__mmask32 k, __m512h a, __m512h b) {
 
 __m128bh test_selectsbf_128(__mmask8 k, __m128bh a, __m128bh b) {
   // CIR-LABEL: @test_selectsbf_128
-  // CIR: %[[COND:.+]] = cir.cast int_to_bool %{{.+}} : !cir.int<u, 1> -> !cir.bool
+  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[COND:.+]] = cir.cast int_to_bool %[[BIT0]] : !cir.int<u, 1> -> !cir.bool
   // CIR: cir.select if %[[COND]] then %{{.+}} else %{{.+}} : (!cir.bool, !cir.bf16, !cir.bf16) -> !cir.bf16
 
   // LLVM-LABEL: @test_selectsbf_128
@@ -311,13 +312,12 @@ __m512d test_selectpd_512(__mmask8 k, __m512d a, __m512d b) {
 
 __m128h test_selectsh_128(__mmask8 k, __m128h a, __m128h b) {
   // CIR-LABEL: @test_selectsh_128
-  // CIR: %[[I0:.+]] = cir.const #cir.int<0> : !s64i
-  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%[[I0]] : !s64i] : !cir.vector<8 x !cir.f16>
-  // CIR: %[[EB:.+]] = cir.vec.extract %{{.+}}[%[[I0]] : !s64i] : !cir.vector<8 x !cir.f16>
-  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !s64i] : !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.f16>
+  // CIR: %[[EB:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.f16>
+  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.int<u, 1>>
   // CIR: %[[COND:.+]] = cir.cast int_to_bool %[[BIT0]] : !cir.int<u, 1> -> !cir.bool
   // CIR: %[[SEL:.+]] = cir.select if %[[COND]] then %[[EA]] else %[[EB]]
-  // CIR: cir.vec.insert %[[SEL]], %{{.+}}[%[[I0]] : !s64i] : !cir.vector<8 x !cir.f16>
+  // CIR: cir.vec.insert %[[SEL]], %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.f16>
 
   // LLVM-LABEL: @test_selectsh_128
   // LLVM: %[[E1:.+]] = extractelement <8 x half> %{{.+}}, i64 0
@@ -330,8 +330,8 @@ __m128h test_selectsh_128(__mmask8 k, __m128h a, __m128h b) {
 
 __m128 test_selectss_128(__mmask8 k, __m128 a, __m128 b) {
   // CIR-LABEL: @test_selectss_128
-  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%[[I0:.+]] : !s64i] : !cir.vector<4 x !cir.float>
-  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !s64i] : !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%[[I0:.+]] : !u64i] : !cir.vector<4 x !cir.float>
+  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.int<u, 1>>
   // CIR: cir.select if %{{.+}} then %[[EA]] else %{{.+}} : (!cir.bool, !cir.float, !cir.float) -> !cir.float
 
   // LLVM-LABEL: @test_selectss_128
@@ -344,8 +344,8 @@ __m128 test_selectss_128(__mmask8 k, __m128 a, __m128 b) {
 
 __m128d test_selectsd_128(__mmask8 k, __m128d a, __m128d b) {
   // CIR-LABEL: @test_selectsd_128
-  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%[[I0:.+]] : !s64i] : !cir.vector<2 x !cir.double>
-  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !s64i] : !cir.vector<8 x !cir.int<u, 1>>
+  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%[[I0:.+]] : !u64i] : !cir.vector<2 x !cir.double>
+  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.int<u, 1>>
   // CIR: cir.select if %{{.+}} then %[[EA]] else %{{.+}} : (!cir.bool, !cir.double, !cir.double) -> !cir.double
 
   // LLVM-LABEL: @test_selectsd_128
