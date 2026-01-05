@@ -233,7 +233,7 @@ private:
 
   /// Contains the callsite indices in this block that are targets of code
   /// prefetching. The index `i` specifies the `i`th call, with zero
-  /// representing the beginning of the block and ` representing the first call.
+  /// representing the beginning of the block and 1 representing the first call.
   /// Must be in ascending order and without duplicates.
   SmallVector<unsigned> PrefetchTargetCallsiteIndexes;
 
