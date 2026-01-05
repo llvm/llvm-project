@@ -5692,39 +5692,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Op->getType()->getScalarType()->getFltSemantics();
 
     if (Op->getOpcode() == Instruction::FDiv) {
-      // Only 0/0, Inf/Inf produce NaN.
-      if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-          (KnownLHS.isKnownNeverInfinity() ||
-           KnownRHS.isKnownNeverInfinity()) &&
-          ((F &&
-            KnownLHS.isKnownNeverLogicalZero(F->getDenormalMode(FltSem))) ||
-           (F &&
-            KnownRHS.isKnownNeverLogicalZero(F->getDenormalMode(FltSem))))) {
-        Known.knownNot(fcNan);
-      }
-
-      // xor sign bit.
-      // X / -0.0 is -Inf (or NaN).
-      // +X / +X is +X
-      if ((KnownLHS.isKnownNever(fcNegative) &&
-           KnownRHS.isKnownNever(fcNegative)) ||
-          (KnownLHS.isKnownNever(fcPositive) &&
-           KnownRHS.isKnownNever(fcPositive)))
-        Known.knownNot(fcNegative);
-
-      if ((KnownLHS.isKnownNever(fcPositive) &&
-           KnownRHS.isKnownNever(fcNegative)) ||
-          (KnownLHS.isKnownNever(fcNegative) &&
-           KnownRHS.isKnownNever(fcPositive)))
-        Known.knownNot(fcPositive);
-
-      // 0 / x => 0 or nan
-      if (KnownLHS.isKnownAlways(fcZero))
-        Known.knownNot(fcSubnormal | fcNormal | fcInf);
-
-      // x / 0 => nan or inf
-      if (KnownRHS.isKnownAlways(fcZero))
-        Known.knownNot(fcFinite);
+      DenormalMode Mode =
+          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+      Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     } else {
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
