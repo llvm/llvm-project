@@ -141,7 +141,7 @@ subroutine test_iabs()
   call foo_iabs(iabs)
 end subroutine
 
-! TODO: exhaustive test of unrestricted intrinsic table 16.2 
+! TODO: exhaustive test of unrestricted intrinsic table 16.2
 
 ! TODO: improve dummy procedure types when interface is given.
 ! CHECK: func @_QPtodo3(
@@ -154,7 +154,7 @@ end subroutine
 
 ! CHECK-LABEL: func private @fir.acos.f32.ref_f32(%arg0: !fir.ref<f32>) -> f32
   !CHECK: %[[load:.*]] = fir.load %arg0
-  !CHECK: %[[res:.*]] = fir.call @acosf(%[[load]]) fastmath<contract> : (f32) -> f32
+  !CHECK: %[[res:.*]] = math.acos %[[load]] fastmath<contract> : f32
   !CHECK: return %[[res]] : f32
 
 ! CHECK-LABEL: func private @fir.atan2.f32.ref_f32.ref_f32(

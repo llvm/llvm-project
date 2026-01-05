@@ -23,10 +23,8 @@ using namespace lldb_private::formatters;
 
 bool lldb_private::formatters::CXXFunctionPointerSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  std::string destination;
   StreamString sstr;
-  AddressType func_ptr_address_type = eAddressTypeInvalid;
-  addr_t func_ptr_address = valobj.GetPointerValue(&func_ptr_address_type);
+  auto [func_ptr_address, func_ptr_address_type] = valobj.GetPointerValue();
   if (func_ptr_address != 0 && func_ptr_address != LLDB_INVALID_ADDRESS) {
     switch (func_ptr_address_type) {
     case eAddressTypeInvalid:
@@ -39,9 +37,8 @@ bool lldb_private::formatters::CXXFunctionPointerSummaryProvider(
 
       Address so_addr;
       Target *target = exe_ctx.GetTargetPtr();
-      if (target && !target->GetSectionLoadList().IsEmpty()) {
-        target->GetSectionLoadList().ResolveLoadAddress(func_ptr_address,
-                                                        so_addr);
+      if (target && target->HasLoadedSections()) {
+        target->ResolveLoadAddress(func_ptr_address, so_addr);
         if (so_addr.GetSection() == nullptr) {
           // If we have an address that doesn't correspond to any symbol,
           // it might have authentication bits.  Strip them & see if it

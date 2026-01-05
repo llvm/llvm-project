@@ -49,5 +49,5 @@ longlongvec;
 
 void test3a(longlongvec *); // expected-note{{passing argument to parameter here}}
 void test3(const unsigned *src) {
-  test3a(src);  // expected-warning {{incompatible pointer types passing 'const unsigned int *' to parameter of type 'longlongvec *'}}
+  test3a(src);  // expected-error {{incompatible pointer types passing 'const unsigned int *' to parameter of type 'longlongvec *'}}
 }

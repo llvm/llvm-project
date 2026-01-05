@@ -13,9 +13,9 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[S:%.*]] = alloca i16, align 2
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[I]])
 ; CHECK-NEXT:    store i32 0, ptr [[I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[S]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S]])
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @goo(ptr nonnull [[I]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4
 ; CHECK-NEXT:    [[STOREMERGE6:%.*]] = trunc i32 [[TMP0]] to i16
@@ -38,7 +38,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], [[UMIN1]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 40
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 24
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[CONV3]], -1
@@ -46,14 +46,10 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP6]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
-; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 [[TMP8]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i8 [[TMP5]], [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i8 [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP9]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i32 [[TMP7]], 255
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP10]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[DOTPROMOTED]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp slt i32 [[TMP15]], [[TMP14]]
@@ -69,12 +65,10 @@ define i32 @main(ptr %ptr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
-; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP18]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[TMP20]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP24]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i64 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP22]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -83,8 +77,8 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ], [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY8:%.*]]
 ; CHECK:       for.body8:
 ; CHECK-NEXT:    [[INC5:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY8]] ]
@@ -113,16 +107,16 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    br label [[FOR_END12]]
 ; CHECK:       for.end12:
 ; CHECK-NEXT:    [[CALL13:%.*]] = call i32 (ptr, ...) @foo(ptr nonnull [[S]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[S]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[I]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %i = alloca i32, align 4
   %s = alloca i16, align 2
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %i) #3
+  call void @llvm.lifetime.start.p0(ptr nonnull %i) #3
   store i32 0, ptr %i, align 4
-  call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %s) #3
+  call void @llvm.lifetime.start.p0(ptr nonnull %s) #3
   %call = call i32 (ptr, ...) @goo(ptr nonnull %i) #3
   %0 = load i32, ptr %i, align 4
   %storemerge6 = trunc i32 %0 to i16
@@ -176,17 +170,17 @@ for.cond.for.end12_crit_edge:                     ; preds = %for.inc9
 
 for.end12:                                        ; preds = %for.cond.for.end12_crit_edge, %entry
   %call13 = call i32 (ptr, ...) @foo(ptr nonnull %s) #3
-  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %s) #3
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i) #3
+  call void @llvm.lifetime.end.p0(ptr nonnull %s) #3
+  call void @llvm.lifetime.end.p0(ptr nonnull %i) #3
   ret i32 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 declare i32 @goo(...) local_unnamed_addr #2
 
 declare i32 @foo(...) local_unnamed_addr #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1

@@ -78,10 +78,10 @@ void clang::EmitClangCommentCommandInfo(const RecordKeeper &Records,
 
 static std::string MangleName(StringRef Str) {
   std::string Mangled;
-  for (unsigned i = 0, e = Str.size(); i != e; ++i) {
-    switch (Str[i]) {
+  for (char C : Str) {
+    switch (C) {
     default:
-      Mangled += Str[i];
+      Mangled += C;
       break;
     case '(':
       Mangled += "lparen";
@@ -122,9 +122,8 @@ void clang::EmitClangCommentCommandList(const RecordKeeper &Records,
      << "#endif\n";
 
   ArrayRef<const Record *> Tags = Records.getAllDerivedDefinitions("Command");
-  for (size_t i = 0, e = Tags.size(); i != e; ++i) {
-    const Record &Tag = *Tags[i];
-    std::string MangledName = MangleName(Tag.getValueAsString("Name"));
+  for (const Record *Tag : Tags) {
+    std::string MangledName = MangleName(Tag->getValueAsString("Name"));
 
     OS << "COMMENT_COMMAND(" << MangledName << ")\n";
   }

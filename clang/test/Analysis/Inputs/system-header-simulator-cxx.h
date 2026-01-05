@@ -1244,6 +1244,7 @@ template<
   class Alloc = std::allocator<Key>
 > class unordered_set {
   public:
+    unordered_set() {}
     unordered_set(initializer_list<Key> __list) {}
 
     class iterator {
@@ -1260,6 +1261,9 @@ template<
     Key *val;
     iterator begin() const { return iterator(val); }
     iterator end() const { return iterator(val + 1); }
+
+    template< class InputIt >
+    void insert( InputIt first, InputIt last );
 };
 
 template <typename T>

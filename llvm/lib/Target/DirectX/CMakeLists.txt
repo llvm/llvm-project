@@ -20,23 +20,29 @@ add_llvm_target(DirectXCodeGen
   DirectXTargetMachine.cpp
   DirectXTargetTransformInfo.cpp
   DXContainerGlobals.cpp
+  DXILCBufferAccess.cpp
   DXILDataScalarization.cpp
   DXILFinalizeLinkage.cpp
+  DXILForwardHandleAccesses.cpp
   DXILFlattenArrays.cpp
   DXILIntrinsicExpansion.cpp
+  DXILMemIntrinsics.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
+  DXILPostOptimizationValidation.cpp
   DXILPrepare.cpp
   DXILPrettyPrinter.cpp
-  DXILResource.cpp
-  DXILResourceAnalysis.cpp
   DXILResourceAccess.cpp
+  DXILResourceImplicitBinding.cpp
   DXILShaderFlags.cpp
   DXILTranslateMetadata.cpp
+  DXILRootSignature.cpp
+  DXILLegalizePass.cpp
 
   LINK_COMPONENTS
   Analysis
   AsmPrinter
+  BinaryFormat
   CodeGen
   CodeGenTypes
   Core
@@ -45,6 +51,7 @@ add_llvm_target(DirectXCodeGen
   DirectXInfo
   DirectXPointerTypeAnalysis
   FrontendHLSL
+  IPO
   MC
   ScalarOpts
   SelectionDAG

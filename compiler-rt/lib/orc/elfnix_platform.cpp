@@ -30,7 +30,6 @@ using namespace orc_rt;
 using namespace orc_rt::elfnix;
 
 // Declare function tags for functions in the JIT process.
-ORC_RT_JIT_DISPATCH_TAG(__orc_rt_reoptimize_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_push_initializers_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_symbol_lookup_tag)
 
@@ -656,7 +655,7 @@ void destroyELFNixTLVMgr(void *ELFNixTLVMgr) {
 //                             JIT entry points
 //------------------------------------------------------------------------------
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_platform_bootstrap(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -668,7 +667,7 @@ __orc_rt_elfnix_platform_bootstrap(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_platform_shutdown(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError()>::handle(
              ArgData, ArgSize,
@@ -679,7 +678,7 @@ __orc_rt_elfnix_platform_shutdown(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_register_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSString, SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -690,7 +689,7 @@ __orc_rt_elfnix_register_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_deregister_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -701,7 +700,7 @@ __orc_rt_elfnix_deregister_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_register_init_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr,
                                   SPSSequence<SPSExecutorAddrRange>)>::
@@ -714,7 +713,7 @@ __orc_rt_elfnix_register_init_sections(char *ArgData, size_t ArgSize) {
           .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_deregister_init_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr,
                                   SPSSequence<SPSExecutorAddrRange>)>::
@@ -728,7 +727,7 @@ __orc_rt_elfnix_deregister_init_sections(char *ArgData, size_t ArgSize) {
 }
 
 /// Wrapper function for registering metadata on a per-object basis.
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_register_object_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSELFNixPerObjectSectionsToRegister)>::
       handle(ArgData, ArgSize,
@@ -740,7 +739,7 @@ __orc_rt_elfnix_register_object_sections(char *ArgData, size_t ArgSize) {
 }
 
 /// Wrapper for releasing per-object metadat.
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_deregister_object_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSELFNixPerObjectSectionsToRegister)>::
       handle(ArgData, ArgSize,
@@ -776,7 +775,7 @@ ORC_RT_INTERFACE ptrdiff_t ___orc_rt_elfnix_tlsdesc_resolver_impl(
   return TLVPtr - ThreadPointer;
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_elfnix_create_pthread_key(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSExpected<uint64_t>(void)>::handle(
              ArgData, ArgSize,

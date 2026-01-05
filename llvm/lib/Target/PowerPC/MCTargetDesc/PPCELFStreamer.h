@@ -50,10 +50,10 @@ private:
 std::optional<bool> isPartOfGOTToPCRelPair(const MCInst &Inst,
                                            const MCSubtargetInfo &STI);
 
-MCELFStreamer *createPPCELFStreamer(MCContext &Context,
-                                    std::unique_ptr<MCAsmBackend> MAB,
-                                    std::unique_ptr<MCObjectWriter> OW,
-                                    std::unique_ptr<MCCodeEmitter> Emitter);
+MCStreamer *createPPCELFStreamer(const Triple &, MCContext &,
+                                 std::unique_ptr<MCAsmBackend> &&MAB,
+                                 std::unique_ptr<MCObjectWriter> &&OW,
+                                 std::unique_ptr<MCCodeEmitter> &&Emitter);
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_PPC_MCELFSTREAMER_PPCELFSTREAMER_H

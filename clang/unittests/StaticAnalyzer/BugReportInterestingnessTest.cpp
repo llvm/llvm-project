@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
+#include <memory>
 
 using namespace clang;
 using namespace ento;
@@ -114,11 +115,12 @@ public:
                                                  StringRef File) override {
     std::unique_ptr<AnalysisASTConsumer> AnalysisConsumer =
         CreateAnalysisConsumer(Compiler);
-    AnalysisConsumer->AddDiagnosticConsumer(new VerifyPathDiagnosticConsumer(
-        std::move(ExpectedDiags), Compiler.getSourceManager()));
+    AnalysisConsumer->AddDiagnosticConsumer(
+        std::make_unique<VerifyPathDiagnosticConsumer>(
+            std::move(ExpectedDiags), Compiler.getSourceManager()));
     AnalysisConsumer->AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
       Registry.addChecker<InterestingnessTestChecker>("test.Interestingness",
-                                                      "Description", "");
+                                                      "MockDescription");
     });
     Compiler.getAnalyzerOpts().CheckersAndPackages = {
         {"test.Interestingness", true}};

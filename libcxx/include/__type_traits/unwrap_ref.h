@@ -34,13 +34,13 @@ using __unwrap_ref_decay_t _LIBCPP_NODEBUG = typename __unwrap_reference<__decay
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-struct unwrap_reference : __unwrap_reference<_Tp> {};
+struct _LIBCPP_NO_SPECIALIZATIONS unwrap_reference : __unwrap_reference<_Tp> {};
 
 template <class _Tp>
 using unwrap_reference_t = typename unwrap_reference<_Tp>::type;
 
 template <class _Tp>
-struct unwrap_ref_decay : unwrap_reference<__decay_t<_Tp> > {};
+struct _LIBCPP_NO_SPECIALIZATIONS unwrap_ref_decay : unwrap_reference<__decay_t<_Tp> > {};
 
 template <class _Tp>
 using unwrap_ref_decay_t = __unwrap_ref_decay_t<_Tp>;

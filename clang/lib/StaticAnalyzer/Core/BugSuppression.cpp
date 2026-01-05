@@ -9,6 +9,8 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 using namespace ento;
@@ -115,9 +117,37 @@ private:
     }
   }
 
-  CacheInitializer(Ranges &R) : Result(R) {}
+  CacheInitializer(Ranges &R) : Result(R) {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldWalkTypesOfTypeLocs = false;
+    ShouldVisitImplicitCode = false;
+    ShouldVisitLambdaBody = true;
+  }
   Ranges &Result;
 };
+
+std::string timeScopeName(const Decl *DeclWithIssue) {
+  if (!llvm::timeTraceProfilerEnabled())
+    return "";
+  return llvm::formatv(
+             "BugSuppression::isSuppressed init suppressions cache for {0}",
+             DeclWithIssue->getDeclKindName())
+      .str();
+}
+
+llvm::TimeTraceMetadata getDeclTimeTraceMetadata(const Decl *DeclWithIssue) {
+  assert(DeclWithIssue);
+  assert(llvm::timeTraceProfilerEnabled());
+  std::string Name = "<noname>";
+  if (const auto *ND = dyn_cast<NamedDecl>(DeclWithIssue)) {
+    Name = ND->getNameAsString();
+  }
+  const auto &SM = DeclWithIssue->getASTContext().getSourceManager();
+  auto Line = SM.getPresumedLineNumber(DeclWithIssue->getBeginLoc());
+  auto Fname = SM.getFilename(DeclWithIssue->getBeginLoc());
+  return llvm::TimeTraceMetadata{std::move(Name), Fname.str(),
+                                 static_cast<int>(Line)};
+}
 
 } // end anonymous namespace
 
@@ -177,6 +207,9 @@ bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
       std::make_pair(DeclWithIssue, CachedRanges{}));
   Ranges &SuppressionRanges = InsertionResult.first->second;
   if (InsertionResult.second) {
+    llvm::TimeTraceScope TimeScope(
+        timeScopeName(DeclWithIssue),
+        [DeclWithIssue]() { return getDeclTimeTraceMetadata(DeclWithIssue); });
     // We haven't checked this declaration for suppressions yet!
     CacheInitializer::initialize(DeclWithIssue, SuppressionRanges);
   }

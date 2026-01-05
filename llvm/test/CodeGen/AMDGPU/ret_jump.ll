@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; This should end with an no-op sequence of exec mask manipulations
 ; Mask should be in original state after executed unreachable block
@@ -50,7 +50,7 @@ unreachable.bb:                                           ; preds = %else
   unreachable
 
 ret.bb:                                          ; preds = %else, %main_body
-  ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef
+  ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> poison
 }
 
 ; GCN-LABEL: {{^}}uniform_br_nontrivial_ret_divergent_br_nontrivial_unreachable:
@@ -98,12 +98,12 @@ else:                                             ; preds = %main_body
   br i1 %divergent.cond, label %ret.bb, label %unreachable.bb
 
 unreachable.bb:                                           ; preds = %else
-  store volatile i32 8, ptr addrspace(3) undef
+  store volatile i32 8, ptr addrspace(3) poison
   unreachable
 
 ret.bb:                                          ; preds = %else, %main_body
-  store volatile i32 11, ptr addrspace(1) undef
-  ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef
+  store volatile i32 11, ptr addrspace(1) poison
+  ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> poison
 }
 
 ; Function Attrs: nounwind readnone

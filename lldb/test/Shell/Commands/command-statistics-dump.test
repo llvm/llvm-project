@@ -1,0 +1,39 @@
+# This test validates that statistics generation does not force loading
+# symbol tables. In order to avoid other sources of symbol loading we
+# create the target without loading dependents and do not actually
+# run it. Running the target is a problem because there are various
+# instrumentation plugins (e.g. ASAN) that are always enabled and force
+# symbol loading. If you see this test start to fail we may have added
+# a new source of symbol loading unexpectedly.
+
+# Build a simple test executable.
+# RUN: %clang_host -g %S/Inputs/main.c -o %t-main.exe
+
+# When we enable symbol preload and dump stats there should be a non-zero
+# time for parsing symbol tables for the main module.
+# RUN: %lldb -O "settings set plugin.jit-loader.gdb.enable off" \
+# RUN:       -O "settings set target.preload-symbols true" \
+# RUN:       -o 'target create --no-dependents "%t-main.exe"' \
+# RUN:       -o "statistics dump" \
+# RUN:       -o "q" \
+# RUN:       | FileCheck %s -check-prefixes=CHECK,PRELOAD_TRUE
+
+# Find the module stats for the main executable and make sure
+# we are looking at the symbol parse time for that module.
+# CHECK: "modules": [
+# CHECK: {
+# CHECK: "path": {{.*}}-main.exe
+
+# PRELOAD_TRUE: "symbolTableParseTime":
+# PRELOAD_TRUE-SAME: {{[1-9]+}}
+
+# When we disable symbol preload and dump stats the symbol table
+# for main should not be parsed and have a time of 0.
+# RUN: %lldb -O "settings set plugin.jit-loader.gdb.enable off" \
+# RUN:       -O "settings set target.preload-symbols false" \
+# RUN:       -o 'target create --no-dependents "%t-main.exe"' \
+# RUN:       -o "statistics dump" \
+# RUN:       -o "q" \
+# RUN:       | FileCheck %s -check-prefixes=CHECK,PRELOAD_FALSE
+
+# PRELOAD_FALSE: "symbolTableParseTime": 0,

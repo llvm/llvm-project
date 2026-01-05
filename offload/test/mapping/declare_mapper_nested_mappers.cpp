@@ -42,8 +42,8 @@ int main() {
   int spp00fa = -1, spp00fb_r = -1, spp00fg1 = -1, spp00fg_r = -1;
   __intptr_t p = reinterpret_cast<__intptr_t>(&x[0]),
              p1 = reinterpret_cast<__intptr_t>(&y[0]);
-#pragma omp target map(tofrom : spp[0][0]) firstprivate(p, p1)                  \
-                   map(from: spp00fa, spp00fb_r, spp00fg1, spp00fg_r)
+#pragma omp target map(tofrom : spp[0][0]) map(alloc : spp[0])                 \
+    firstprivate(p, p1) map(from : spp00fa, spp00fb_r, spp00fg1, spp00fg_r)
   {
     spp00fa = spp[0][0].f.a;
     spp00fb_r = spp[0][0].f.b == reinterpret_cast<void *>(p) ? 1 : 0;

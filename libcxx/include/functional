@@ -214,7 +214,9 @@ template <class Predicate> // deprecated in C++17, removed in C++20
 binary_negate<Predicate> not2(const Predicate& pred);
 
 template <class F>
-constexpr unspecified not_fn(F&& f); // C++17, constexpr in C++20
+  constexpr unspecified not_fn(F&& f);     // C++17, constexpr in C++20
+template <auto f>
+  constexpr unspecified not_fn() noexcept; // C++26
 
 // [func.bind.partial], function templates bind_front and bind_back
 template<class F, class... Args>
@@ -563,6 +565,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #    include <__functional/bind_front.h>
 #    include <__functional/identity.h>
 #    include <__functional/ranges_operations.h>
+#    include <__type_traits/common_reference.h>
 #    include <__type_traits/unwrap_ref.h>
 #  endif
 
@@ -596,6 +599,10 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #    include <typeinfo>
 #    include <utility>
 #    include <vector>
+#  endif
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 23
+#    include <__vector/vector.h>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
