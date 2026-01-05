@@ -6688,6 +6688,132 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, dl, VT, Q, T);
 }
 
+/// Given an ISD::VP_SDIV node expressing a divide by constant,
+/// return a DAG expression to select that will generate the same value by
+/// multiplying by a magic number.
+/// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
+SDValue TargetLowering::BuildVPSDIV(SDNode *N, SelectionDAG &DAG,
+                                    bool IsAfterLegalization,
+                                    SmallVectorImpl<SDNode *> &Created) const {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT SVT = VT.getScalarType();
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  EVT ShSVT = ShVT.getScalarType();
+  unsigned EltBits = VT.getScalarSizeInBits();
+
+  // Check to see if we can do this.
+  if (!isTypeLegal(VT) ||
+      !isOperationLegalOrCustom(ISD::VP_MULHS, VT, IsAfterLegalization))
+    return SDValue();
+
+  bool AnyFactorOne = false;
+  bool AnyFactorNegOne = false;
+
+  SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
+
+  auto BuildSDIVPattern = [&](ConstantSDNode *C) {
+    if (C->isZero())
+      return false;
+
+    const APInt &Divisor = C->getAPIntValue();
+    SignedDivisionByConstantInfo magics =
+        SignedDivisionByConstantInfo::get(Divisor);
+    int NumeratorFactor = 0;
+    int ShiftMask = -1;
+
+    if (Divisor.isOne() || Divisor.isAllOnes()) {
+      // If d is +1/-1, we just multiply the numerator by +1/-1.
+      NumeratorFactor = Divisor.getSExtValue();
+      magics.Magic = 0;
+      magics.ShiftAmount = 0;
+      ShiftMask = 0;
+      AnyFactorOne |= Divisor.isOne();
+      AnyFactorNegOne |= Divisor.isAllOnes();
+    } else if (Divisor.isStrictlyPositive() && magics.Magic.isNegative()) {
+      // If d > 0 and m < 0, add the numerator.
+      NumeratorFactor = 1;
+      AnyFactorOne = true;
+    } else if (Divisor.isNegative() && magics.Magic.isStrictlyPositive()) {
+      // If d < 0 and m > 0, subtract the numerator.
+      NumeratorFactor = -1;
+      AnyFactorNegOne = true;
+    }
+
+    MagicFactors.push_back(DAG.getConstant(magics.Magic, DL, SVT));
+    Factors.push_back(DAG.getSignedConstant(NumeratorFactor, DL, SVT));
+    Shifts.push_back(DAG.getConstant(magics.ShiftAmount, DL, ShSVT));
+    ShiftMasks.push_back(DAG.getSignedConstant(ShiftMask, DL, SVT));
+    return true;
+  };
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue Mask = N->getOperand(2);
+  SDValue VL = N->getOperand(3);
+
+  // Collect the shifts / magic values from each element.
+  if (!ISD::matchUnaryPredicate(N1, BuildSDIVPattern))
+    return SDValue();
+
+  SDValue MagicFactor, Factor, Shift, ShiftMask;
+  if (N1.getOpcode() == ISD::BUILD_VECTOR) {
+    MagicFactor = DAG.getBuildVector(VT, DL, MagicFactors);
+    Factor = DAG.getBuildVector(VT, DL, Factors);
+    Shift = DAG.getBuildVector(ShVT, DL, Shifts);
+    ShiftMask = DAG.getBuildVector(VT, DL, ShiftMasks);
+  } else {
+    assert(N1.getOpcode() == ISD::SPLAT_VECTOR && "Expected a splat_vector");
+    assert(MagicFactors.size() == 1 && Factors.size() == 1 &&
+           Shifts.size() == 1 && ShiftMasks.size() == 1 &&
+           "Expected matchUnaryPredicate to return one element for scalable "
+           "vectors");
+    MagicFactor = DAG.getSplatVector(VT, DL, MagicFactors[0]);
+    Factor = DAG.getSplatVector(VT, DL, Factors[0]);
+    Shift = DAG.getSplatVector(ShVT, DL, Shifts[0]);
+    ShiftMask = DAG.getSplatVector(VT, DL, ShiftMasks[0]);
+  }
+
+  // Multiply the numerator (operand 0) by the magic value.
+  auto GetMULHS = [&](SDValue X, SDValue Y) {
+    return DAG.getNode(ISD::VP_MULHS, DL, VT, X, Y, Mask, VL);
+  };
+
+  SDValue Q = GetMULHS(N0, MagicFactor);
+  if (!Q)
+    return SDValue();
+
+  Created.push_back(Q.getNode());
+
+  // (Optionally) Add/subtract the numerator using Factor.
+  // FIXME: The AnyFactorOne/NegOne flags are a hack around lack of constant
+  // folding for VP_MUL/ADD.
+  if (AnyFactorOne && AnyFactorNegOne) {
+    Factor = DAG.getNode(ISD::VP_MUL, DL, VT, N0, Factor, Mask, VL);
+    Created.push_back(Factor.getNode());
+    Q = DAG.getNode(ISD::VP_ADD, DL, VT, Q, Factor, Mask, VL);
+    Created.push_back(Q.getNode());
+  } else if (AnyFactorOne) {
+    Q = DAG.getNode(ISD::VP_ADD, DL, VT, Q, N0, Mask, VL);
+    Created.push_back(Q.getNode());
+  } else if (AnyFactorNegOne) {
+    Q = DAG.getNode(ISD::VP_SUB, DL, VT, Q, N0, Mask, VL);
+    Created.push_back(Q.getNode());
+  }
+
+  // Shift right algebraic by shift value.
+  Q = DAG.getNode(ISD::VP_SRA, DL, VT, Q, Shift, Mask, VL);
+  Created.push_back(Q.getNode());
+
+  // Extract the sign bit, mask it and add it to the quotient.
+  SDValue SignShift = DAG.getConstant(EltBits - 1, DL, ShVT);
+  SDValue T = DAG.getNode(ISD::VP_SRL, DL, VT, Q, SignShift, Mask, VL);
+  Created.push_back(T.getNode());
+  T = DAG.getNode(ISD::VP_AND, DL, VT, T, ShiftMask, Mask, VL);
+  Created.push_back(T.getNode());
+  return DAG.getNode(ISD::VP_ADD, DL, VT, Q, T, Mask, VL);
+}
+
 /// Given an ISD::UDIV node expressing a divide by constant,
 /// return a DAG expression to select that will generate the same value by
 /// multiplying by a magic number.
@@ -6900,6 +7026,139 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   SDValue One = DAG.getConstant(1, dl, VT);
   SDValue IsOne = DAG.getSetCC(dl, SetCCVT, N1, One, ISD::SETEQ);
   return DAG.getSelect(dl, VT, IsOne, N0, Q);
+}
+
+/// Given an ISD::VP_UDIV node expressing a divide by constant,
+/// return a DAG expression to select that will generate the same value by
+/// multiplying by a magic number.
+/// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
+SDValue TargetLowering::BuildVPUDIV(SDNode *N, SelectionDAG &DAG,
+                                    bool IsAfterLegalization,
+                                    SmallVectorImpl<SDNode *> &Created) const {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT SVT = VT.getScalarType();
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  EVT ShSVT = ShVT.getScalarType();
+  unsigned EltBits = VT.getScalarSizeInBits();
+
+  // Check to see if we can do this.
+  if (!isTypeLegal(VT) ||
+      !isOperationLegalOrCustom(ISD::VP_MULHU, VT, IsAfterLegalization))
+    return SDValue();
+
+  bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
+
+  SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
+
+  auto BuildUDIVPattern = [&](ConstantSDNode *C) {
+    if (C->isZero())
+      return false;
+    // FIXME: We should use a narrower constant when the upper
+    // bits are known to be zero.
+    const APInt &Divisor = C->getAPIntValue();
+    SDValue PreShift, MagicFactor, NPQFactor, PostShift;
+
+    // Magic algorithm doesn't work for division by 1. We need to emit a select
+    // at the end.
+    if (Divisor.isOne()) {
+      PreShift = PostShift = DAG.getUNDEF(ShSVT);
+      MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
+    } else {
+      UnsignedDivisionByConstantInfo magics =
+          UnsignedDivisionByConstantInfo::get(Divisor);
+
+      MagicFactor = DAG.getConstant(magics.Magic, DL, SVT);
+
+      assert(magics.PreShift < Divisor.getBitWidth() &&
+             "We shouldn't generate an undefined shift!");
+      assert(magics.PostShift < Divisor.getBitWidth() &&
+             "We shouldn't generate an undefined shift!");
+      assert((!magics.IsAdd || magics.PreShift == 0) && "Unexpected pre-shift");
+      PreShift = DAG.getConstant(magics.PreShift, DL, ShSVT);
+      PostShift = DAG.getConstant(magics.PostShift, DL, ShSVT);
+      NPQFactor = DAG.getConstant(
+          magics.IsAdd ? APInt::getOneBitSet(EltBits, EltBits - 1)
+                       : APInt::getZero(EltBits),
+          DL, SVT);
+      UseNPQ |= magics.IsAdd;
+      UsePreShift |= magics.PreShift != 0;
+      UsePostShift |= magics.PostShift != 0;
+    }
+
+    PreShifts.push_back(PreShift);
+    MagicFactors.push_back(MagicFactor);
+    NPQFactors.push_back(NPQFactor);
+    PostShifts.push_back(PostShift);
+    return true;
+  };
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue Mask = N->getOperand(2);
+  SDValue VL = N->getOperand(3);
+
+  // Collect the shifts/magic values from each element.
+  if (!ISD::matchUnaryPredicate(N1, BuildUDIVPattern))
+    return SDValue();
+
+  SDValue PreShift, PostShift, MagicFactor, NPQFactor;
+  if (N1.getOpcode() == ISD::BUILD_VECTOR) {
+    PreShift = DAG.getBuildVector(ShVT, DL, PreShifts);
+    MagicFactor = DAG.getBuildVector(VT, DL, MagicFactors);
+    NPQFactor = DAG.getBuildVector(VT, DL, NPQFactors);
+    PostShift = DAG.getBuildVector(ShVT, DL, PostShifts);
+  } else {
+    assert(N1.getOpcode() == ISD::SPLAT_VECTOR && "Expected a splat_vector");
+    assert(PreShifts.size() == 1 && MagicFactors.size() == 1 &&
+           NPQFactors.size() == 1 && PostShifts.size() == 1 &&
+           "Expected matchUnaryPredicate to return one for scalable vectors");
+    PreShift = DAG.getSplatVector(ShVT, DL, PreShifts[0]);
+    MagicFactor = DAG.getSplatVector(VT, DL, MagicFactors[0]);
+    NPQFactor = DAG.getSplatVector(VT, DL, NPQFactors[0]);
+    PostShift = DAG.getSplatVector(ShVT, DL, PostShifts[0]);
+  }
+
+  SDValue Q = N0;
+  if (UsePreShift) {
+    Q = DAG.getNode(ISD::VP_SRL, DL, VT, Q, PreShift, Mask, VL);
+    Created.push_back(Q.getNode());
+  }
+
+  auto GetMULHU = [&](SDValue X, SDValue Y) {
+    return DAG.getNode(ISD::VP_MULHU, DL, VT, X, Y, Mask, VL);
+  };
+
+  // Multiply the numerator (operand 0) by the magic value.
+  Q = GetMULHU(Q, MagicFactor);
+  if (!Q)
+    return SDValue();
+
+  Created.push_back(Q.getNode());
+
+  if (UseNPQ) {
+    SDValue NPQ = DAG.getNode(ISD::VP_SUB, DL, VT, N0, Q, Mask, VL);
+    Created.push_back(NPQ.getNode());
+
+    // For vectors we might have a mix of non-NPQ/NPQ paths, so use
+    // MULHU to act as a SRL-by-1 for NPQ, else multiply by zero.
+    NPQ = GetMULHU(NPQ, NPQFactor);
+    Created.push_back(NPQ.getNode());
+
+    Q = DAG.getNode(ISD::VP_ADD, DL, VT, NPQ, Q, Mask, VL);
+    Created.push_back(Q.getNode());
+  }
+
+  if (UsePostShift) {
+    Q = DAG.getNode(ISD::VP_SRL, DL, VT, Q, PostShift, Mask, VL);
+    Created.push_back(Q.getNode());
+  }
+
+  EVT SetCCVT =
+      EVT::getVectorVT(*DAG.getContext(), MVT::i1, VT.getVectorElementCount());
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue IsOne = DAG.getSetCCVP(DL, SetCCVT, N1, One, ISD::SETEQ, Mask, VL);
+  return DAG.getNode(ISD::VP_SELECT, DL, VT, IsOne, N0, Q, VL);
 }
 
 /// If all values in Values that *don't* match the predicate are same 'splat'

@@ -5344,6 +5344,10 @@ public:
   SDValue buildSDIVPow2WithCMov(SDNode *N, const APInt &Divisor,
                                 SelectionDAG &DAG,
                                 SmallVectorImpl<SDNode *> &Created) const;
+  SDValue BuildVPSDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
+                      SmallVectorImpl<SDNode *> &Created) const;
+  SDValue BuildVPUDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
+                      SmallVectorImpl<SDNode *> &Created) const;
 
   /// Targets may override this function to provide custom SDIV lowering for
   /// power-of-2 denominators.  If the target returns an empty SDValue, LLVM

@@ -820,6 +820,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FP_TO_UINT,  ISD::VP_SETCC,       ISD::VP_SIGN_EXTEND,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,    ISD::VP_SMIN,
         ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX,
+        ISD::VP_MULHU, ISD::VP_MULHS,
         ISD::VP_ABS, ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
         ISD::VP_SADDSAT,     ISD::VP_UADDSAT,     ISD::VP_SSUBSAT,
         ISD::VP_USUBSAT,     ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
@@ -991,6 +992,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(IntegerVecReduceOps, VT, Custom);
 
       setOperationAction(IntegerVPOps, VT, Custom);
+
+      // Zve64* does not support VP_MULHU/S with nxvXi64.
+      if (VT.getVectorElementType() == MVT::i64 && !Subtarget.hasStdExtV()) {
+        setOperationAction({ISD::VP_MULHU, ISD::VP_MULHS}, VT, Expand);
+      }
 
       setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
@@ -1522,8 +1528,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
 
         // vXi64 MULHS/MULHU requires the V extension instead of Zve64*.
-        if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
+        if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV()) {
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
+        } else {
+          setOperationAction({ISD::VP_MULHS, ISD::VP_MULHU}, VT, Expand);
+        }
 
         setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
                             ISD::AVGCEILU, ISD::SADDSAT, ISD::UADDSAT,
@@ -7471,6 +7480,8 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(ADD)        // VP_ADD
   VP_CASE(SUB)        // VP_SUB
   VP_CASE(MUL)        // VP_MUL
+  VP_CASE(MULHS)      // VP_MULHS
+  VP_CASE(MULHU)      // VP_MULHU
   VP_CASE(SDIV)       // VP_SDIV
   VP_CASE(SREM)       // VP_SREM
   VP_CASE(UDIV)       // VP_UDIV
@@ -8833,6 +8844,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_ADD:
   case ISD::VP_SUB:
   case ISD::VP_MUL:
+  case ISD::VP_MULHS:
+  case ISD::VP_MULHU:
   case ISD::VP_SDIV:
   case ISD::VP_UDIV:
   case ISD::VP_SREM:
