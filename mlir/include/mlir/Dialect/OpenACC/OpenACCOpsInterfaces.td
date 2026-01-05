@@ -10,6 +10,7 @@
 #define OPENACC_OPS_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def ComputeRegionOpInterface : OpInterface<"ComputeRegionOpInterface"> {
   let cppNamespace = "::mlir::acc";
@@ -98,6 +99,27 @@ def IndirectGlobalAccessOpInterface : OpInterface<"IndirectGlobalAccessOpInterfa
       (ins "::llvm::SmallVectorImpl<::mlir::SymbolRefAttr>&":$symbols,
            "::mlir::SymbolTable *":$symbolTable)>,
   ];
+}
+
+def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations that are candidates for rematerialization
+    during outlining. These operations produce synthetic types or values
+    that cannot be passed as arguments to outlined regions and must be
+    rematerialized inside the region instead.
+
+    Operations implementing this interface are expected to be memory effect
+    free. Their results are typically used for type construction or providing
+    metadata (such as shape information for arrays).
+  }];
+
+  let verify = [{
+    if (!::mlir::isMemoryEffectFree($_op))
+      return $_op->emitOpError("must be memory effect free");
+    return ::mlir::success();
+  }];
 }
 
 #endif // OPENACC_OPS_INTERFACES
