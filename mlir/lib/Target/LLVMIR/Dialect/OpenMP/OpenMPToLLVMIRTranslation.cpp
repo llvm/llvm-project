@@ -1626,18 +1626,17 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
 /// allocateAndInitPrivateVars instead of this.
 /// This returns the private variable which has been initialized. This
 /// variable should be mapped before constructing the body of the Op.
-static llvm::Expected<llvm::Value *> initPrivateVar(
-    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
-    omp::PrivateClauseOp &privDecl, Value mlirPrivVar, BlockArgument &blockArg,
-    llvm::Value *llvmPrivateVar, llvm::BasicBlock *privInitBlock,
-    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+static llvm::Expected<llvm::Value *>
+initPrivateVar(llvm::IRBuilderBase &builder,
+               LLVM::ModuleTranslation &moduleTranslation,
+               omp::PrivateClauseOp &privDecl, llvm::Value *nonPrivateVar,
+               BlockArgument &blockArg, llvm::Value *llvmPrivateVar,
+               llvm::BasicBlock *privInitBlock,
+               llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   Region &initRegion = privDecl.getInitRegion();
   if (initRegion.empty())
     return llvmPrivateVar;
 
-  // map initialization region block arguments
-  llvm::Value *nonPrivateVar = findAssociatedValue(
-      mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
   assert(nonPrivateVar);
   moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
   moduleTranslation.mapValue(privDecl.getInitPrivateArg(), llvmPrivateVar);
@@ -1660,6 +1659,19 @@ static llvm::Expected<llvm::Value *> initPrivateVar(
   // variable in case the region is operating on arguments by-value (e.g.
   // Fortran character boxes).
   return phis[0];
+}
+
+/// Version of initPrivateVar which looks up the nonPrivateVar from mlirPrivVar.
+static llvm::Expected<llvm::Value *> initPrivateVar(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    omp::PrivateClauseOp &privDecl, Value mlirPrivVar, BlockArgument &blockArg,
+    llvm::Value *llvmPrivateVar, llvm::BasicBlock *privInitBlock,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+  return initPrivateVar(
+      builder, moduleTranslation, privDecl,
+      findAssociatedValue(mlirPrivVar, builder, moduleTranslation,
+                          mappedPrivateVars),
+      blockArg, llvmPrivateVar, privInitBlock, mappedPrivateVars);
 }
 
 static llvm::Error
@@ -1767,7 +1779,7 @@ static bool opIsInSingleThread(mlir::Operation *op) {
 static LogicalResult copyFirstPrivateVars(
     mlir::Operation *op, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation &moduleTranslation,
-    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
+    SmallVectorImpl<llvm::Value *> &moldVars,
     ArrayRef<llvm::Value *> llvmPrivateVars,
     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls, bool insertBarrier,
     llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
@@ -1785,19 +1797,15 @@ static LogicalResult copyFirstPrivateVars(
       splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
 
-  for (auto [decl, mlirVar, llvmVar] :
-       llvm::zip_equal(privateDecls, mlirPrivateVars, llvmPrivateVars)) {
+  for (auto [decl, moldVar, llvmVar] :
+       llvm::zip_equal(privateDecls, moldVars, llvmPrivateVars)) {
     if (decl.getDataSharingType() != omp::DataSharingClauseType::FirstPrivate)
       continue;
 
     // copyRegion implements `lhs = rhs`
     Region &copyRegion = decl.getCopyRegion();
 
-    // map copyRegion rhs arg
-    llvm::Value *nonPrivateVar = findAssociatedValue(
-        mlirVar, builder, moduleTranslation, mappedPrivateVars);
-    assert(nonPrivateVar);
-    moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
+    moduleTranslation.mapValue(decl.getCopyMoldArg(), moldVar);
 
     // map copyRegion lhs arg
     moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
@@ -1826,6 +1834,26 @@ static LogicalResult copyFirstPrivateVars(
   }
 
   return success();
+}
+
+static LogicalResult copyFirstPrivateVars(
+    mlir::Operation *op, llvm::IRBuilderBase &builder,
+    LLVM::ModuleTranslation &moduleTranslation,
+    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
+    ArrayRef<llvm::Value *> llvmPrivateVars,
+    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls, bool insertBarrier,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+  llvm::SmallVector<llvm::Value *> moldVars(mlirPrivateVars.size());
+  llvm::transform(mlirPrivateVars, moldVars.begin(), [&](mlir::Value mlirVar) {
+    // map copyRegion rhs arg
+    llvm::Value *moldVar = findAssociatedValue(
+        mlirVar, builder, moduleTranslation, mappedPrivateVars);
+    assert(moldVar);
+    return moldVar;
+  });
+  return copyFirstPrivateVars(op, builder, moduleTranslation, moldVars,
+                              llvmPrivateVars, privateDecls, insertBarrier,
+                              mappedPrivateVars);
 }
 
 static LogicalResult
