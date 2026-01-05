@@ -8,8 +8,8 @@
 
 #include "ProjectModules.h"
 #include "support/Logger.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 
 namespace clang::clangd {
 namespace {
@@ -36,8 +36,8 @@ public:
       std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
       const ThreadsafeFS &TFS)
       : CDB(CDB), TFS(TFS),
-        Service(tooling::dependencies::ScanningMode::CanonicalPreprocessing,
-                tooling::dependencies::ScanningOutputFormat::P1689) {}
+        Service(dependencies::ScanningMode::CanonicalPreprocessing,
+                dependencies::ScanningOutputFormat::P1689) {}
 
   /// The scanned modules dependency information for a specific source file.
   struct ModuleDependencyInfo {
@@ -48,7 +48,8 @@ public:
   };
 
   /// Scanning the single file specified by \param FilePath.
-  std::optional<ModuleDependencyInfo> scan(PathRef FilePath);
+  std::optional<ModuleDependencyInfo>
+  scan(PathRef FilePath, const ProjectModules::CommandMangler &Mangler);
 
   /// Scanning every source file in the current project to get the
   /// <module-name> to <module-unit-source> map.
@@ -57,7 +58,7 @@ public:
   /// a global module dependency scanner to monitor every file. Or we
   /// can simply require the build systems (or even the end users)
   /// to provide the map.
-  void globalScan();
+  void globalScan(const ProjectModules::CommandMangler &Mangler);
 
   /// Get the source file from the module name. Note that the language
   /// guarantees all the module names are unique in a valid program.
@@ -69,7 +70,9 @@ public:
 
   /// Return the direct required modules. Indirect required modules are not
   /// included.
-  std::vector<std::string> getRequiredModules(PathRef File);
+  std::vector<std::string>
+  getRequiredModules(PathRef File,
+                     const ProjectModules::CommandMangler &Mangler);
 
 private:
   std::shared_ptr<const clang::tooling::CompilationDatabase> CDB;
@@ -78,7 +81,7 @@ private:
   // Whether the scanner has scanned the project globally.
   bool GlobalScanned = false;
 
-  clang::tooling::dependencies::DependencyScanningService Service;
+  clang::dependencies::DependencyScanningService Service;
 
   // TODO: Add a scanning cache.
 
@@ -87,7 +90,8 @@ private:
 };
 
 std::optional<ModuleDependencyScanner::ModuleDependencyInfo>
-ModuleDependencyScanner::scan(PathRef FilePath) {
+ModuleDependencyScanner::scan(PathRef FilePath,
+                              const ProjectModules::CommandMangler &Mangler) {
   auto Candidates = CDB->getCompileCommands(FilePath);
   if (Candidates.empty())
     return std::nullopt;
@@ -97,31 +101,44 @@ ModuleDependencyScanner::scan(PathRef FilePath) {
   // DirectoryBasedGlobalCompilationDatabase::getCompileCommand.
   tooling::CompileCommand Cmd = std::move(Candidates.front());
 
-  static int StaticForMainAddr; // Just an address in this process.
-  Cmd.CommandLine.push_back("-resource-dir=" +
-                            CompilerInvocation::GetResourcesPath(
-                                "clangd", (void *)&StaticForMainAddr));
+  if (Mangler)
+    Mangler(Cmd, FilePath);
 
-  using namespace clang::tooling::dependencies;
+  using namespace clang::tooling;
 
   llvm::SmallString<128> FilePathDir(FilePath);
   llvm::sys::path::remove_filename(FilePathDir);
   DependencyScanningTool ScanningTool(Service, TFS.view(FilePathDir));
 
-  llvm::Expected<P1689Rule> ScanningResult =
-      ScanningTool.getP1689ModuleDependencyFile(Cmd, Cmd.Directory);
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  DiagnosticOptions DiagOpts;
+  DiagOpts.ShowCarets = false;
+  TextDiagnosticPrinter DiagConsumer(OS, DiagOpts);
 
-  if (auto E = ScanningResult.takeError()) {
-    elog("Scanning modules dependencies for {0} failed: {1}", FilePath,
-         llvm::toString(std::move(E)));
+  std::optional<P1689Rule> ScanningResult =
+      ScanningTool.getP1689ModuleDependencyFile(Cmd, Cmd.Directory,
+                                                DiagConsumer);
+
+  if (!ScanningResult) {
+    elog("Scanning modules dependencies for {0} failed: {1}", FilePath, S);
     return std::nullopt;
   }
 
   ModuleDependencyInfo Result;
 
   if (ScanningResult->Provides) {
-    ModuleNameToSource[ScanningResult->Provides->ModuleName] = FilePath;
     Result.ModuleName = ScanningResult->Provides->ModuleName;
+
+    auto [Iter, Inserted] = ModuleNameToSource.try_emplace(
+        ScanningResult->Provides->ModuleName, FilePath);
+
+    if (!Inserted && Iter->second != FilePath) {
+      elog("Detected multiple source files ({0}, {1}) declaring the same "
+           "module: '{2}'. "
+           "Now clangd may find the wrong source in such case.",
+           Iter->second, FilePath, ScanningResult->Provides->ModuleName);
+    }
   }
 
   for (auto &Required : ScanningResult->Requires)
@@ -130,9 +147,13 @@ ModuleDependencyScanner::scan(PathRef FilePath) {
   return Result;
 }
 
-void ModuleDependencyScanner::globalScan() {
+void ModuleDependencyScanner::globalScan(
+    const ProjectModules::CommandMangler &Mangler) {
+  if (GlobalScanned)
+    return;
+
   for (auto &File : CDB->getAllFiles())
-    scan(File);
+    scan(File, Mangler);
 
   GlobalScanned = true;
 }
@@ -150,9 +171,9 @@ PathRef ModuleDependencyScanner::getSourceForModuleName(
   return {};
 }
 
-std::vector<std::string>
-ModuleDependencyScanner::getRequiredModules(PathRef File) {
-  auto ScanningResult = scan(File);
+std::vector<std::string> ModuleDependencyScanner::getRequiredModules(
+    PathRef File, const ProjectModules::CommandMangler &Mangler) {
+  auto ScanningResult = scan(File, Mangler);
   if (!ScanningResult)
     return {};
 
@@ -177,20 +198,32 @@ public:
   ~ScanningAllProjectModules() override = default;
 
   std::vector<std::string> getRequiredModules(PathRef File) override {
-    return Scanner.getRequiredModules(File);
+    return Scanner.getRequiredModules(File, Mangler);
+  }
+
+  void setCommandMangler(CommandMangler Mangler) override {
+    this->Mangler = std::move(Mangler);
   }
 
   /// RequiredSourceFile is not used intentionally. See the comments of
   /// ModuleDependencyScanner for detail.
-  PathRef
-  getSourceForModuleName(llvm::StringRef ModuleName,
-                         PathRef RequiredSourceFile = PathRef()) override {
-    Scanner.globalScan();
-    return Scanner.getSourceForModuleName(ModuleName);
+  std::string getSourceForModuleName(llvm::StringRef ModuleName,
+                                     PathRef RequiredSourceFile) override {
+    Scanner.globalScan(Mangler);
+    return Scanner.getSourceForModuleName(ModuleName).str();
+  }
+
+  std::string getModuleNameForSource(PathRef File) override {
+    auto ScanningResult = Scanner.scan(File, Mangler);
+    if (!ScanningResult || !ScanningResult->ModuleName)
+      return {};
+
+    return *ScanningResult->ModuleName;
   }
 
 private:
   ModuleDependencyScanner Scanner;
+  CommandMangler Mangler;
 };
 
 std::unique_ptr<ProjectModules> scanningProjectModules(

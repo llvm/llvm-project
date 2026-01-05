@@ -68,7 +68,6 @@ body:             |
   bb.1.entry:
     liveins: $w0, $w1, $x2
     ; Check that we get ADDSWri when we can fold in a constant.
-    ;
     ; CHECK-LABEL: name: saddo_s32_imm
     ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
@@ -93,7 +92,6 @@ body:             |
   bb.1.entry:
     liveins: $w0, $w1, $x2
     ; Check that we get ADDSWrs when we can fold in a shift.
-    ;
     ; CHECK-LABEL: name: saddo_s32_shifted
     ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
@@ -121,7 +119,6 @@ body:             |
   bb.1.entry:
     liveins: $w0, $w1, $x2
     ; Check that we get SUBSWri when we can fold in a negative constant.
-    ;
     ; CHECK-LABEL: name: saddo_s32_neg_imm
     ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}

@@ -88,8 +88,7 @@ body:             |
     ; RV64I-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[ASSERT_SEXT]], [[ASHR]]
     ; RV64I-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD]], 32
     ; RV64I-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[SEXT_INREG]], [[ASHR]]
-    ; RV64I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[XOR]], 32
-    ; RV64I-NEXT: $x10 = COPY [[SEXT_INREG1]](s64)
+    ; RV64I-NEXT: $x10 = COPY [[XOR]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: abs_i32

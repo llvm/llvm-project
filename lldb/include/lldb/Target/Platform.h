@@ -21,6 +21,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
@@ -126,8 +127,7 @@ public:
   ///     Returns \b true if this Platform plug-in was able to find
   ///     a suitable executable, \b false otherwise.
   virtual Status ResolveExecutable(const ModuleSpec &module_spec,
-                                   lldb::ModuleSP &exe_module_sp,
-                                   const FileSpecList *module_search_paths_ptr);
+                                   lldb::ModuleSP &exe_module_sp);
 
   /// Find a symbol file given a symbol file module specification.
   ///
@@ -303,10 +303,11 @@ public:
   /// \return
   ///     The Status object for any errors found while searching for
   ///     the binary.
-  virtual Status GetSharedModule(
-      const ModuleSpec &module_spec, Process *process,
-      lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
-      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+  virtual Status
+  GetSharedModule(const ModuleSpec &module_spec, Process *process,
+                  lldb::ModuleSP &module_sp,
+                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                  bool *did_create_ptr);
 
   void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp,
@@ -960,6 +961,8 @@ public:
 
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
 
+  virtual lldb::StopInfoSP GetStopInfoFromSiginfo(Thread &thread) { return {}; }
+
   virtual Args GetExtraStartupCommands();
 
   typedef std::function<Status(const ModuleSpec &module_spec,
@@ -1036,8 +1039,8 @@ protected:
   /// predefined trap handlers, this method may be a no-op.
   virtual void CalculateTrapHandlerSymbolNames() = 0;
 
-  Status GetCachedExecutable(ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                             const FileSpecList *module_search_paths_ptr);
+  Status GetCachedExecutable(ModuleSpec &module_spec,
+                             lldb::ModuleSP &module_sp);
 
   virtual Status DownloadModuleSlice(const FileSpec &src_file_spec,
                                      const uint64_t src_offset,

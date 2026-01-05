@@ -18,8 +18,8 @@
 ; Make sure the condition test is attributed to the inline function, not the
 ; location of the test's operands within the caller.
 
-; ASM: # inline-seldag-test.c:2:0
-; ASM-NOT: .loc
+; ASM: # inline-seldag-test.c:4:0
+; ASM: .loc 1 2 0 # inline-seldag-test.c:2 @[ inline-seldag-test.c:6:7 ]
 ; ASM: testl
 
 ; Function Attrs: nounwind uwtable
@@ -41,7 +41,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

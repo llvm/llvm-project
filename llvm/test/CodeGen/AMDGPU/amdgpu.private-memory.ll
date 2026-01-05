@@ -1,10 +1,10 @@
-; RUN: llc < %s -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc < %s -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE %s
-; RUN: llc < %s -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
-; RUN: llc < %s -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA %s
-; RUN: llc < %s -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc < %s -show-mc-encoding -mattr=+promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE-VECT -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc < %s -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc < %s -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc < %s -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE %s
+; RUN: llc < %s -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
+; RUN: llc < %s -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=kaveri -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA %s
+; RUN: llc < %s -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc < %s -show-mc-encoding -mattr=+promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE-VECT -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc < %s -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
 
 ; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
 ; RUN: opt < %s -S -mtriple=amdgcn-unknown-unknown -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
@@ -258,7 +258,7 @@ entry:
 ; FUNC-LABEL: {{^}}no_overlap:
 ;
 ; A total of 5 bytes should be allocated and used.
-; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ;
+; SI-ALLOCA: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ;
 define amdgpu_kernel void @no_overlap(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1, addrspace(5)
@@ -281,6 +281,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}char_array_array:
 define amdgpu_kernel void @char_array_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i8]], addrspace(5)
@@ -294,6 +295,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}i32_array_array:
 define amdgpu_kernel void @i32_array_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i32]], addrspace(5)
@@ -306,6 +308,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}i64_array_array:
 define amdgpu_kernel void @i64_array_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i64]], addrspace(5)
@@ -319,7 +322,7 @@ entry:
 }
 
 %struct.pair32 = type { i32, i32 }
-
+; FUNC-LABEL: {{^}}struct_array_array:
 define amdgpu_kernel void @struct_array_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x %struct.pair32]], addrspace(5)
@@ -333,6 +336,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}struct_pair32_array:
 define amdgpu_kernel void @struct_pair32_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x %struct.pair32], addrspace(5)
@@ -346,6 +350,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}select_private:
 define amdgpu_kernel void @select_private(ptr addrspace(1) %out, i32 %in) nounwind {
 entry:
   %tmp = alloca [2 x i32], addrspace(5)

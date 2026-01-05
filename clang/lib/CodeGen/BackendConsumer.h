@@ -28,8 +28,8 @@ class BackendConsumer : public ASTConsumer {
   using LinkModule = CodeGenAction::LinkModule;
 
   virtual void anchor();
+  CompilerInstance &CI;
   DiagnosticsEngine &Diags;
-  const HeaderSearchOptions &HeaderSearchOpts;
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
@@ -39,11 +39,6 @@ class BackendConsumer : public ASTConsumer {
 
   llvm::Timer LLVMIRGeneration;
   unsigned LLVMIRGenerationRefCount = 0;
-
-  /// True if we've finished generating IR. This prevents us from generating
-  /// additional LLVM IR after emitting output in HandleTranslationUnit. This
-  /// can happen when Clang plugins trigger additional AST deserialization.
-  bool IRGenFinished = false;
 
   bool TimerIsEnabled = false;
 
@@ -70,7 +65,7 @@ class BackendConsumer : public ASTConsumer {
   llvm::Module *CurLinkModule = nullptr;
 
 public:
-  BackendConsumer(const CompilerInstance &CI, BackendAction Action,
+  BackendConsumer(CompilerInstance &CI, BackendAction Action,
                   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                   llvm::LLVMContext &C, SmallVector<LinkModule, 4> LinkModules,
                   StringRef InFile, std::unique_ptr<raw_pwrite_stream> OS,

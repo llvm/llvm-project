@@ -1,7 +1,7 @@
 ; Test that combined sin/cos library call is emitted when appropriate
 
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s --check-prefix=CHECK-OPT
-; RUN: llc < %s -mtriple=s390x-linux-gnu -enable-unsafe-fp-math | FileCheck %s --check-prefix=CHECK-OPT
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s --check-prefix=CHECK-OPT
 
 define float @f1(float %x) {
 ; CHECK-OPT-LABEL: f1:

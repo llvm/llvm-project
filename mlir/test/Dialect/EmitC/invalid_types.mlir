@@ -36,14 +36,6 @@ func.func @illegal_array_missing_x(
 
 // -----
 
-func.func @illegal_array_non_positive_dimenson(
-    // expected-error @+1 {{dimensions must have positive size}}
-    %arg0: !emitc.array<0xi32>
-) {
-}
-
-// -----
-
 func.func @illegal_array_missing_type(
     // expected-error @+1 {{expected non-function type}}
     %arg0: !emitc.array<10x>

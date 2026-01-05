@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
@@ -31,7 +33,7 @@ using namespace lldb_private::plugin::dwarf;
 
 class SymtabTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileMachO, SymbolFileDWARF,
-                TypeSystemClang>
+                ObjectFileELF, SymbolFileSymtab, TypeSystemClang>
       subsystem;
 };
 
@@ -717,4 +719,119 @@ LinkEditData:
                                                  Symtab::eDebugAny,
                                                  Symtab::eVisibilityAny);
   ASSERT_NE(symbol, nullptr);
+}
+
+TEST_F(SymtabTest, TestSymbolFileCreatedOnDemand) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400180
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400180
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B042500106000890425041060005DC3
+Symbols:
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400180
+    Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  // The symbol file should not be created by default.
+  Symtab *module_symtab = module_sp->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(module_symtab, nullptr);
+
+  // But it should be created on demand.
+  module_symtab = module_sp->GetSymtab(/*can_create=*/true);
+  ASSERT_NE(module_symtab, nullptr);
+
+  // And we should be able to get it again once it has been created.
+  Symtab *cached_module_symtab = module_sp->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(module_symtab, cached_module_symtab);
+}
+
+TEST_F(SymtabTest, TestSymbolTableCreatedOnDemand) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_addr_base
+              Form:            DW_FORM_sec_offset
+  debug_info:
+    - Version:         5
+      AddrSize:        4
+      UnitType:        DW_UT_compile
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x8 # Offset of the first Address past the header
+        - AbbrCode:        0x0
+  debug_addr:
+    - Version: 5
+      AddressSize: 4
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+  debug_line:
+    - Length:          42
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+)";
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+
+  SymbolFile *symbol_file = module_sp->GetSymbolFile();
+  // At this point, the symbol table is not created. This is because the above
+  // yaml data contains the necessary sections in order for
+  // SymbolFileDWARF::CalculateAbilities() to identify all abilities, saving it
+  // from calling SymbolFileDWARFDebugMap::CalculateAbilities(), which
+  // eventually loads the symbol table, which we don't want.
+
+  // The symbol table should not be created if asked not to.
+  Symtab *symtab = symbol_file->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(symtab, nullptr);
+
+  // But it should be created on demand.
+  symtab = symbol_file->GetSymtab(/*can_create=*/true);
+  ASSERT_NE(symtab, nullptr);
+
+  // And we should be able to get it again once it has been created.
+  Symtab *cached_symtab = symbol_file->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(symtab, cached_symtab);
 }

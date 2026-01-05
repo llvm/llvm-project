@@ -2,18 +2,15 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // Priority biskmasks after feature dependency expansion:
-//
 // MSB                                                    LSB
-//
-// sme2 | ls64 | sme | bf16 |       |      | fp16 | simd | fp
+// sme2 | wfxt | sme | bf16 |       |      | fp16 | simd | fp
 // -----+------+-----+------+-------+------+------+------+---
 // sme2 |      | sme | bf16 | rcpc2 | rcpc | fp16 | simd | fp
-//
 // Dependencies should not affect priorities, since a
 // feature can only depend on lower priority features:
 // https://github.com/ARM-software/acle/pull/376
 
-__attribute__((target_version("sme2+ls64"))) int fn(void);
+__attribute__((target_version("sme2+wfxt"))) int fn(void);
 __attribute__((target_version("sme2+rcpc2"))) int fn(void);
 __attribute__((target_version("default"))) int fn(void) { return 0; }
 
@@ -26,22 +23,23 @@ int call() { return fn(); }
 //
 //
 // CHECK-LABEL: define dso_local i32 @call(
-// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn()
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-LABEL: define weak_odr ptr @fn.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @fn.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 153126785511392000
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 153126785511392000
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 162133984766132992
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 162133984766132992
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
-// CHECK-NEXT:    ret ptr @fn._Mls64Msme2
+// CHECK-NEXT:    ret ptr @fn._Msme2Mwfxt
 // CHECK:       [[RESOLVER_ELSE]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 144119586269233920

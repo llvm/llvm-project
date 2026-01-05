@@ -68,10 +68,10 @@ struct B {
     // expected-note@-2 {{is not allowed in a constant expression}}
     [[clang::annotate("qdwqwd", cf, cb)]] void t() {}
     [[clang::annotate("qdwqwd", f, cb)]] void t1() {}
-    // expected-error@-1 {{'annotate' attribute requires parameter 1 to be a constant expression}}
+    // expected-error@-1 {{'clang::annotate' attribute requires parameter 1 to be a constant expression}}
     // expected-note@-2 {{is not allowed in a constant expression}}
     [[clang::annotate("jui", b, cf)]] void t2() {}
-    // expected-error@-1 {{'annotate' attribute requires parameter 1 to be a constant expression}}
+    // expected-error@-1 {{'clang::annotate' attribute requires parameter 1 to be a constant expression}}
     // expected-note@-2 {{is not allowed in a constant expression}}
     [[clang::annotate("jui", ((void)b, 0), cf)]] [[clang::annotate("jui", &b, cf, &foo::t2, str())]] void t3() {}
   };
@@ -88,7 +88,7 @@ template<int I>
 int f() {
   [[clang::annotate("test", I)]] int v = 0; // expected-note {{declared here}}
   [[clang::annotate("test", v)]] int v2 = 0;
-  // expected-error@-1 {{'annotate' attribute requires parameter 1 to be a constant expression}}
+  // expected-error@-1 {{'clang::annotate' attribute requires parameter 1 to be a constant expression}}
   // expected-note@-2 {{is not allowed in a constant expression}}
   [[clang::annotate("test", rtyui)]] int v3 = 0;
     // expected-error@-1 {{use of undeclared identifier 'rtyui'}}
@@ -104,7 +104,7 @@ void f() {
   int vla[n];
 
   [[clang::annotate("vlas are awful", sizeof(vla))]] int i = 0; // reject, the sizeof is not unevaluated
-  // expected-error@-1 {{'annotate' attribute requires parameter 1 to be a constant expression}}
+  // expected-error@-1 {{'clang::annotate' attribute requires parameter 1 to be a constant expression}}
   // expected-note@-2 {{subexpression not valid in a constant expression}}
   [[clang::annotate("_Generic selection expression should be fine", _Generic(n, int : 0, default : 1))]]
   int j = 0; // second arg should resolve to 0 fine
@@ -126,11 +126,15 @@ constexpr int foldable_but_invalid() {
 }
 
 [[clang::annotate("", foldable_but_invalid())]] void f1() {}
-// expected-error@-1 {{'annotate' attribute requires parameter 1 to be a constant expression}}
+// expected-error@-1 {{'clang::annotate' attribute requires parameter 1 to be a constant expression}}
 
 [[clang::annotate()]] void f2() {}
-// expected-error@-1 {{'annotate' attribute takes at least 1 argument}}
+// expected-error@-1 {{'clang::annotate' attribute takes at least 1 argument}}
 
 template <typename T> [[clang::annotate()]] void f2() {}
-// expected-error@-1 {{'annotate' attribute takes at least 1 argument}}
+// expected-error@-1 {{'clang::annotate' attribute takes at least 1 argument}}
+}
+
+namespace test5 {
+  void bir [[clang::annotate("B", (void)1)]] ();
 }
