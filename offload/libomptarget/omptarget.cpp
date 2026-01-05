@@ -779,6 +779,11 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
   ODBG(ODT_Mapping) << "Processing " << AttachInfo.AttachEntries.size()
                     << " deferred ATTACH map entries";
 
+  bool TreatAttachAutoAsAlways = MappingConfig::get().TreatAttachAutoAsAlways;
+  if (TreatAttachAutoAsAlways)
+    ODBG(ODT_Mapping) << "Treating ATTACH(auto) as ATTACH(always) because "
+                      << "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is true";
+
   int Ret = OFFLOAD_SUCCESS;
   bool IsFirstPointerAttachment = true;
   for (size_t EntryIdx = 0; EntryIdx < AttachInfo.AttachEntries.size();
@@ -799,7 +804,8 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
                       << ", PtrSize=" << PtrSize << ", MapType=0x"
                       << llvm::utohexstr(MapType);
 
-    const bool IsAttachAlways = MapType & OMP_TGT_MAPTYPE_ALWAYS;
+    bool IsAttachAlways =
+        (MapType & OMP_TGT_MAPTYPE_ALWAYS) || TreatAttachAutoAsAlways;
 
     // Lambda to check if a pointer was newly allocated
     auto WasNewlyAllocated = [&](void *Ptr, const char *PtrName) {
@@ -1311,7 +1317,7 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
       }
     }
   } else {
-    char *Ptr = (char *)ArgsBase + Offset;
+    void *Ptr = reinterpret_cast<void *>((char *)ArgsBase + Offset);
     ODBG(ODT_Mapping) << "Transfer of non-contiguous : host ptr " << Ptr
                       << " offset " << Offset << " len " << Size;
     Ret = targetDataContiguous(Loc, Device, ArgsBase, Ptr, Size, ArgType,

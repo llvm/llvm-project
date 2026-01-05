@@ -171,3 +171,382 @@ define i64 @test_negative_use_shl(i64 %x, i32 %y) {
   call void @use(i64 %shl)
   ret i64 %srl
 }
+
+;; ============================================================================
+;; Guarded shift patterns
+;;
+;; C/C++ code like `shift >= 32 ? 0 : x >> shift` generates a guarded shift
+;; pattern to avoid undefined behavior. PTX shr/shl instructions clamp shift
+;; amounts >= BitWidth to produce 0, making the guard redundant.
+;;
+;; Transformation 1 (ugt form):
+;;   (select (icmp ugt shift, BitWidth-1), 0, (srl x, shift))
+;;   i.e., shift > 31 ? 0 : x >> shift
+;;   -->  (srl x, shift)
+;;
+;; Transformation 2 (ult form):
+;;   (select (icmp ult shift, BitWidth), (srl x, shift), 0)
+;;   i.e., shift < 32 ? x >> shift : 0
+;;   -->  (srl x, shift)
+;;
+;; Same transformation applies to left shifts.
+;; ============================================================================
+
+;; --- i8 shr tests (negative - guard must remain) ---
+
+; Do NOT optimize - PTX uses 16-bit registers, clamping happens at 16 not 8
+define i8 @test_guarded_i8_ugt(i8 %x, i8 %shift) {
+; CHECK-LABEL: test_guarded_i8_ugt(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_guarded_i8_ugt_param_0];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_guarded_i8_ugt_param_1];
+; CHECK-NEXT:    setp.gt.u32 %p1, %r1, 7;
+; CHECK-NEXT:    shr.u16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    selp.b16 %rs3, 0, %rs2, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i8 %shift, 7
+  %shr = lshr i8 %x, %shift
+  %sel = select i1 %cmp, i8 0, i8 %shr
+  ret i8 %sel
+}
+
+; Do NOT optimize - PTX uses 16-bit registers, clamping happens at 16 not 8
+define i8 @test_guarded_i8_ult(i8 %x, i8 %shift) {
+; CHECK-LABEL: test_guarded_i8_ult(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_guarded_i8_ult_param_0];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_guarded_i8_ult_param_1];
+; CHECK-NEXT:    setp.lt.u32 %p1, %r1, 8;
+; CHECK-NEXT:    shr.u16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    selp.b16 %rs3, %rs2, 0, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i8 %shift, 8
+  %shr = lshr i8 %x, %shift
+  %sel = select i1 %cmp, i8 %shr, i8 0
+  ret i8 %sel
+}
+
+;; --- i16 shr tests ---
+
+; (select (ugt shift, 15), 0, (srl x, shift)) --> (srl x, shift)
+define i16 @test_guarded_i16_ugt(i16 %x, i16 %shift) {
+; CHECK-LABEL: test_guarded_i16_ugt(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_guarded_i16_ugt_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [test_guarded_i16_ugt_param_1];
+; CHECK-NEXT:    shr.u16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i16 %shift, 15
+  %shr = lshr i16 %x, %shift
+  %sel = select i1 %cmp, i16 0, i16 %shr
+  ret i16 %sel
+}
+
+; (select (ult shift, 16), (srl x, shift), 0) --> (srl x, shift)
+define i16 @test_guarded_i16_ult(i16 %x, i16 %shift) {
+; CHECK-LABEL: test_guarded_i16_ult(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_guarded_i16_ult_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [test_guarded_i16_ult_param_1];
+; CHECK-NEXT:    shr.u16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i16 %shift, 16
+  %shr = lshr i16 %x, %shift
+  %sel = select i1 %cmp, i16 %shr, i16 0
+  ret i16 %sel
+}
+
+;; --- i32 shr tests ---
+
+; (select (ugt shift, 31), 0, (srl x, shift)) --> (srl x, shift)
+define i32 @test_guarded_i32_ugt(i32 %x, i32 %shift) {
+; CHECK-LABEL: test_guarded_i32_ugt(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i32_ugt_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_guarded_i32_ugt_param_1];
+; CHECK-NEXT:    shr.u32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i32 %shift, 31
+  %shr = lshr i32 %x, %shift
+  %sel = select i1 %cmp, i32 0, i32 %shr
+  ret i32 %sel
+}
+
+; (select (ult shift, 32), (srl x, shift), 0) --> (srl x, shift)
+define i32 @test_guarded_i32_ult(i32 %x, i32 %shift) {
+; CHECK-LABEL: test_guarded_i32_ult(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i32_ult_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_guarded_i32_ult_param_1];
+; CHECK-NEXT:    shr.u32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i32 %shift, 32
+  %shr = lshr i32 %x, %shift
+  %sel = select i1 %cmp, i32 %shr, i32 0
+  ret i32 %sel
+}
+
+;; --- i64 shr tests ---
+
+; (select (ugt shift, 63), 0, (srl x, shift)) --> (srl x, shift)
+define i64 @test_guarded_i64_ugt(i64 %x, i64 %shift) {
+; CHECK-LABEL: test_guarded_i64_ugt(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ugt_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ugt_param_1];
+; CHECK-NEXT:    shr.u64 %rd2, %rd1, %r1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i64 %shift, 63
+  %shr = lshr i64 %x, %shift
+  %sel = select i1 %cmp, i64 0, i64 %shr
+  ret i64 %sel
+}
+
+; (select (ult shift, 64), (srl x, shift), 0) --> (srl x, shift)
+define i64 @test_guarded_i64_ult(i64 %x, i64 %shift) {
+; CHECK-LABEL: test_guarded_i64_ult(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ult_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ult_param_1];
+; CHECK-NEXT:    shr.u64 %rd2, %rd1, %r1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i64 %shift, 64
+  %shr = lshr i64 %x, %shift
+  %sel = select i1 %cmp, i64 %shr, i64 0
+  ret i64 %sel
+}
+
+;; --- i8 shl tests (negative - guard must remain) ---
+
+; Do NOT optimize - PTX uses 16-bit registers, clamping happens at 16 not 8
+define i8 @test_guarded_i8_ugt_shl(i8 %x, i8 %shift) {
+; CHECK-LABEL: test_guarded_i8_ugt_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_guarded_i8_ugt_shl_param_0];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_guarded_i8_ugt_shl_param_1];
+; CHECK-NEXT:    setp.gt.u32 %p1, %r1, 7;
+; CHECK-NEXT:    shl.b16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    selp.b16 %rs3, 0, %rs2, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i8 %shift, 7
+  %shl = shl i8 %x, %shift
+  %sel = select i1 %cmp, i8 0, i8 %shl
+  ret i8 %sel
+}
+
+; Do NOT optimize - PTX uses 16-bit registers, clamping happens at 16 not 8
+define i8 @test_guarded_i8_ult_shl(i8 %x, i8 %shift) {
+; CHECK-LABEL: test_guarded_i8_ult_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_guarded_i8_ult_shl_param_0];
+; CHECK-NEXT:    ld.param.b8 %r1, [test_guarded_i8_ult_shl_param_1];
+; CHECK-NEXT:    setp.lt.u32 %p1, %r1, 8;
+; CHECK-NEXT:    shl.b16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    selp.b16 %rs3, %rs2, 0, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i8 %shift, 8
+  %shl = shl i8 %x, %shift
+  %sel = select i1 %cmp, i8 %shl, i8 0
+  ret i8 %sel
+}
+
+;; --- i16 shl tests ---
+
+; (select (ugt shift, 15), 0, (shl x, shift)) --> (shl x, shift)
+define i16 @test_guarded_i16_ugt_shl(i16 %x, i16 %shift) {
+; CHECK-LABEL: test_guarded_i16_ugt_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_guarded_i16_ugt_shl_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [test_guarded_i16_ugt_shl_param_1];
+; CHECK-NEXT:    shl.b16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i16 %shift, 15
+  %shl = shl i16 %x, %shift
+  %sel = select i1 %cmp, i16 0, i16 %shl
+  ret i16 %sel
+}
+
+; (select (ult shift, 16), (shl x, shift), 0) --> (shl x, shift)
+define i16 @test_guarded_i16_ult_shl(i16 %x, i16 %shift) {
+; CHECK-LABEL: test_guarded_i16_ult_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_guarded_i16_ult_shl_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [test_guarded_i16_ult_shl_param_1];
+; CHECK-NEXT:    shl.b16 %rs2, %rs1, %r1;
+; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i16 %shift, 16
+  %shl = shl i16 %x, %shift
+  %sel = select i1 %cmp, i16 %shl, i16 0
+  ret i16 %sel
+}
+
+;; --- i32 shl tests ---
+
+; (select (ugt shift, 31), 0, (shl x, shift)) --> (shl x, shift)
+define i32 @test_guarded_i32_ugt_shl(i32 %x, i32 %shift) {
+; CHECK-LABEL: test_guarded_i32_ugt_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i32_ugt_shl_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_guarded_i32_ugt_shl_param_1];
+; CHECK-NEXT:    shl.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i32 %shift, 31
+  %shl = shl i32 %x, %shift
+  %sel = select i1 %cmp, i32 0, i32 %shl
+  ret i32 %sel
+}
+
+; (select (ult shift, 32), (shl x, shift), 0) --> (shl x, shift)
+define i32 @test_guarded_i32_ult_shl(i32 %x, i32 %shift) {
+; CHECK-LABEL: test_guarded_i32_ult_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i32_ult_shl_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_guarded_i32_ult_shl_param_1];
+; CHECK-NEXT:    shl.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i32 %shift, 32
+  %shl = shl i32 %x, %shift
+  %sel = select i1 %cmp, i32 %shl, i32 0
+  ret i32 %sel
+}
+
+;; --- i64 shl tests ---
+
+; (select (ugt shift, 63), 0, (shl x, shift)) --> (shl x, shift)
+define i64 @test_guarded_i64_ugt_shl(i64 %x, i64 %shift) {
+; CHECK-LABEL: test_guarded_i64_ugt_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ugt_shl_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ugt_shl_param_1];
+; CHECK-NEXT:    shl.b64 %rd2, %rd1, %r1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ugt i64 %shift, 63
+  %shl = shl i64 %x, %shift
+  %sel = select i1 %cmp, i64 0, i64 %shl
+  ret i64 %sel
+}
+
+; (select (ult shift, 64), (shl x, shift), 0) --> (shl x, shift)
+define i64 @test_guarded_i64_ult_shl(i64 %x, i64 %shift) {
+; CHECK-LABEL: test_guarded_i64_ult_shl(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ult_shl_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ult_shl_param_1];
+; CHECK-NEXT:    shl.b64 %rd2, %rd1, %r1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i64 %shift, 64
+  %shl = shl i64 %x, %shift
+  %sel = select i1 %cmp, i64 %shl, i64 0
+  ret i64 %sel
+}
+
+; Verify that the optimization does not apply when the shift in the guard is different from the shift in the shift operation.
+define i64 @test_guarded_i64_ult_shl_different_shift(i64 %x, i64 %shift1, i64 %shift2) {
+; CHECK-LABEL: test_guarded_i64_ult_shl_different_shift(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ult_shl_different_shift_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_guarded_i64_ult_shl_different_shift_param_1];
+; CHECK-NEXT:    setp.lt.u64 %p1, %rd2, 64;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ult_shl_different_shift_param_2];
+; CHECK-NEXT:    shl.b64 %rd3, %rd1, %r1;
+; CHECK-NEXT:    selp.b64 %rd4, %rd3, 0, %p1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-NEXT:    ret;
+  %cmp = icmp ult i64 %shift1, 64
+  %shl = shl i64 %x, %shift2
+  %sel = select i1 %cmp, i64 %shl, i64 0
+  ret i64 %sel
+}
