@@ -511,7 +511,7 @@ public:
 
   mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
                                   mlir::Value newElt, uint64_t idx) {
-    auto idxVal = getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    mlir::Value idxVal = getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
     return createInsertElement(loc, vec, newElt, idxVal);
   }
 
