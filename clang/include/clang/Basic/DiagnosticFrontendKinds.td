@@ -217,11 +217,8 @@ def note_incompatible_analyzer_plugin_api : Note<
 
 def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
-def err_module_interface_requires_cpp_modules : Error<
-  "module interface compilation requires '-std=c++20'">;
-def warn_module_config_mismatch : Warning<
-  "module file %0 cannot be loaded due to a configuration mismatch with the current "
-  "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
+def err_module_interface_requires_cpp_modules
+    : Error<"module interface compilation requires '-std=c++20'">;
 def err_module_map_not_found : Error<"module map file '%0' not found">,
   DefaultFatal;
 def err_missing_module_name : Error<
