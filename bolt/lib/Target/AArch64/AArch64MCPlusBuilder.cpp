@@ -428,7 +428,8 @@ public:
   }
 
   std::optional<MCPhysReg>
-  getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const override {
+  getMaterializedAddressRegForPtrAuth(MCInstReference Point) const override {
+    const MCInst &Inst = Point;
     switch (Inst.getOpcode()) {
     case AArch64::ADR:
     case AArch64::ADRP:

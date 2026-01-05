@@ -40,6 +40,11 @@ MCInstReference MCInstReference::get(const MCInst &Inst,
   llvm_unreachable("Inst is not contained in BF");
 }
 
+MCInstMutableReference MCInstMutableReference::get(MCInst &Inst,
+                                                   BinaryFunction &BF) {
+  return MCInstMutableReference(MCInstReference::get(Inst, BF));
+}
+
 uint64_t MCInstReference::computeAddress(const MCCodeEmitter *Emitter) const {
   assert(!empty() && "Taking instruction address by empty reference");
 

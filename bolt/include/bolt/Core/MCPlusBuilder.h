@@ -15,6 +15,7 @@
 #define BOLT_CORE_MCPLUSBUILDER_H
 
 #include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -675,10 +676,11 @@ public:
               // target implementation.
   }
 
-  /// Returns the register containing an address safely materialized by `Inst`
-  /// under the Pointer Authentication threat model.
+  /// Returns the register containing an address safely materialized by the
+  /// instruction referenced by `Point` under the Pointer Authentication
+  /// threat model.
   ///
-  /// Returns the register `Inst` writes to if:
+  /// Returns the register the instruction writes to if:
   /// 1. the register is a materialized address, and
   /// 2. the register has been materialized safely, i.e. cannot be attacker-
   ///    controlled, under the Pointer Authentication threat model.
@@ -689,7 +691,7 @@ public:
   /// The Pointer Authentication threat model assumes an attacker is able to
   /// modify any writable memory, but not executable code (due to W^X).
   virtual std::optional<MCPhysReg>
-  getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
+  getMaterializedAddressRegForPtrAuth(MCInstReference Point) const {
     llvm_unreachable("not implemented");
     return std::nullopt;
   }

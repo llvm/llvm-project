@@ -11,6 +11,7 @@
 
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/MCInstUtils.h"
 #include "llvm/Support/Errc.h"
 #include <optional>
 #include <queue>
@@ -207,7 +208,7 @@ protected:
 
   /// Returns the out set of an instruction given its in set.
   /// If backwards, computes the in set given its out set.
-  StateTy computeNext(const MCInst &Point, const StateTy &Cur) {
+  StateTy computeNext(MCInstReference Point, const StateTy &Cur) {
     llvm_unreachable("Unimplemented method");
     return StateTy();
   }
@@ -390,8 +391,10 @@ public:
       else
         LAST = &*BB->begin();
 
-      auto doNext = [&](MCInst &Inst, const BinaryBasicBlock &BB) {
-        StateTy CurState = derived().computeNext(Inst, *PrevState);
+      auto doNext = [&](MCInstMutableReference Point,
+                        const BinaryBasicBlock &BB) {
+        MCInst &Inst = Point;
+        StateTy CurState = derived().computeNext(Point, *PrevState);
 
         if (Backward && BC.MIB->isInvoke(Inst)) {
           BinaryBasicBlock *LBB = Func.getLandingPadBBFor(BB, Inst);
@@ -416,11 +419,11 @@ public:
       };
 
       if (!Backward)
-        for (MCInst &Inst : *BB)
-          doNext(Inst, *BB);
+        for (int64_t I = 0, E = BB->size(); I < E; ++I)
+          doNext(MCInstMutableReference(*BB, I), *BB);
       else
-        for (MCInst &Inst : llvm::reverse(*BB))
-          doNext(Inst, *BB);
+        for (int64_t I = BB->size(); --I >= 0;)
+          doNext(MCInstMutableReference(*BB, I), *BB);
 
       if (Changed) {
         if (!Backward) {
