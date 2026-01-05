@@ -150,7 +150,8 @@ struct ParamType : PyConcreteType<ParamType> {
     c.def_prop_ro(
         "type",
         [](ParamType type) {
-          return PyType(type.getContext(), mlirTransformParamTypeGetType(type));
+          return PyType(type.getContext(), mlirTransformParamTypeGetType(type))
+              .maybeDownCast();
         },
         "Get the type this ParamType is associated with.");
   }

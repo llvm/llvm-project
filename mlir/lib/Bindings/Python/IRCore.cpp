@@ -1917,7 +1917,7 @@ PyAttribute PyAttribute::createFromCapsule(const nb::object &capsule) {
       PyMlirContext::forContext(mlirAttributeGetContext(rawAttr)), rawAttr);
 }
 
-nb::object PyAttribute::maybeDownCast() {
+nb::typed<nb::object, PyAttribute> PyAttribute::maybeDownCast() {
   MlirTypeID mlirTypeID = mlirAttributeGetTypeID(this->get());
   assert(!mlirTypeIDIsNull(mlirTypeID) &&
          "mlirTypeID was expected to be non-null.");
@@ -1963,7 +1963,7 @@ PyType PyType::createFromCapsule(nb::object capsule) {
                 rawType);
 }
 
-nb::object PyType::maybeDownCast() {
+nb::typed<nb::object, PyType> PyType::maybeDownCast() {
   MlirTypeID mlirTypeID = mlirTypeGetTypeID(this->get());
   assert(!mlirTypeIDIsNull(mlirTypeID) &&
          "mlirTypeID was expected to be non-null.");
@@ -2003,7 +2003,7 @@ nb::object PyValue::getCapsule() {
   return nb::steal<nb::object>(mlirPythonValueToCapsule(get()));
 }
 
-nb::object PyValue::maybeDownCast() {
+nb::typed<nb::object, PyValue> PyValue::maybeDownCast() {
   MlirType type = mlirValueGetType(get());
   MlirTypeID mlirTypeID = mlirTypeGetTypeID(type);
   assert(!mlirTypeIDIsNull(mlirTypeID) &&

@@ -888,7 +888,7 @@ public:
   /// is taken by calling this function.
   static PyType createFromCapsule(nanobind::object capsule);
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyType> maybeDownCast();
 
 private:
   MlirType type;
@@ -1014,7 +1014,7 @@ public:
   /// is taken by calling this function.
   static PyAttribute createFromCapsule(const nanobind::object &capsule);
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyAttribute> maybeDownCast();
 
 private:
   MlirAttribute attr;
@@ -1171,7 +1171,7 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   nanobind::object getCapsule();
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyValue> maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
