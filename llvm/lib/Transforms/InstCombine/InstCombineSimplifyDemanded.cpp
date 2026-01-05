@@ -605,9 +605,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Q, Depth + 1))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
-    unsigned LHSTrailingOnes = (~DemandedMask & LHSKnown.Zero).countr_one();
+    unsigned NtzLHS = (~DemandedMask & LHSKnown.Zero).countr_one();
     APInt DemandedFromRHS = DemandedFromOps;
-    DemandedFromRHS.clearLowBits(LHSTrailingOnes);
+    DemandedFromRHS.clearLowBits(NtzLHS);
     if (ShrinkDemandedConstant(I, 1, DemandedFromRHS))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
