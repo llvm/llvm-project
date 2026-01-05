@@ -313,11 +313,6 @@ subroutine substring(x, y, i, j)
 ! CHECK:   %[[VAL_217:.*]] = fir.load %[[VAL_218]] : !fir.ref<i32>
 ! CHECK:   %[[VAL_219:.*]] = fir.convert %[[VAL_217]] : (i32) -> index
 ! CHECK:   %[[VAL_220:.*]] = fir.slice %[[VAL_210]], %[[VAL_208]], %[[VAL_210]] : (index, index, index) -> !fir.slice<1>
-! CHECK:   %[[VAL_230:.*]] = arith.subi %[[VAL_216]], %[[VAL_210]] : index
-! CHECK:   %[[VAL_234:.*]] = arith.subi %[[VAL_219]], %[[VAL_216]] : index
-! CHECK:   %[[VAL_235:.*]] = arith.addi %[[VAL_234]], %[[VAL_210]] : index
-! CHECK:   %[[VAL_236:.*]] = arith.cmpi slt, %[[VAL_235]], %[[VAL_209]] : index
-! CHECK:   %[[VAL_237:.*]] = arith.select %[[VAL_236]], %[[VAL_209]], %[[VAL_235]] : index
 ! CHECK:   cf.br ^bb1(%[[VAL_209]], %[[VAL_208]] : index, index)
 ! CHECK: ^bb1(%[[VAL_221:.*]]: index, %[[VAL_222:.*]]: index):
 ! CHECK:   %[[VAL_223:.*]] = arith.cmpi sgt, %[[VAL_222]], %[[VAL_209]] : index
@@ -327,8 +322,13 @@ subroutine substring(x, y, i, j)
 ! CHECK:   %[[VAL_226:.*]] = fir.load %[[VAL_224]] : !fir.ref<i32>
 ! CHECK:   %[[VAL_227:.*]] = fir.convert %[[VAL_226]] : (i32) -> index
 ! CHECK:   %[[VAL_228:.*]] = fir.array_coor %[[VAL_229]] {{\[}}%[[VAL_220]]] %[[VAL_227]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.slice<1>, index) -> !fir.ref<!fir.char<1,?>>
+! CHECK:   %[[VAL_230:.*]] = arith.subi %[[VAL_216]], %[[VAL_210]] : index
 ! CHECK:   %[[VAL_231:.*]] = fir.convert %[[VAL_228]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 ! CHECK:   %[[VAL_232:.*]] = fir.coordinate_of %[[VAL_231]], %[[VAL_230]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! CHECK:   %[[VAL_234:.*]] = arith.subi %[[VAL_219]], %[[VAL_216]] : index
+! CHECK:   %[[VAL_235:.*]] = arith.addi %[[VAL_234]], %[[VAL_210]] : index
+! CHECK:   %[[VAL_236:.*]] = arith.cmpi slt, %[[VAL_235]], %[[VAL_209]] : index
+! CHECK:   %[[VAL_237:.*]] = arith.select %[[VAL_236]], %[[VAL_209]], %[[VAL_235]] : index
 ! CHECK:   %[[VAL_238:.*]] = fir.convert %[[VAL_232]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_239:.*]] = fir.convert %[[VAL_237]] : (index) -> i64
 ! CHECK:   %[[VAL_240:.*]] = fir.call @_FortranAioInputAscii(%[[VAL_213]], %[[VAL_238]], %[[VAL_239]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1

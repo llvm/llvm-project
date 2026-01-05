@@ -207,7 +207,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(mlir::createCSEPass());
 
   // Run LICM after CSE, which may reduce the number of operations to hoist.
-  if (pc.OptLevel.isOptimizingForSpeed())
+  if (enableFirLICM && pc.OptLevel.isOptimizingForSpeed())
     pm.addPass(fir::createLoopInvariantCodeMotion());
 
   // Polymorphic types
