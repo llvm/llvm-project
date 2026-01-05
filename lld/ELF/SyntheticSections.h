@@ -55,6 +55,7 @@ public:
   void finalizeContents() override;
   bool isNeeded() const override { return !sections.empty(); }
   size_t getSize() const override { return size; }
+  bool updateAllocSize(Ctx &) override;
 
   static bool classof(const SectionBase *d) {
     return SyntheticSection::classof(d) && d->name == ".eh_frame";
@@ -64,8 +65,8 @@ public:
   size_t numFdes = 0;
 
   struct FdeData {
-    uint32_t pcRel;
-    uint32_t fdeVARel;
+    int64_t pcRel;
+    int64_t fdeVARel;
   };
 
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
@@ -86,8 +87,6 @@ private:
   CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
   Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
 
-  uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
-
   SmallVector<CieRecord *, 0> cieRecords;
 
   // CIE records are uniquified by their contents and personality functions.
@@ -101,8 +100,13 @@ class EhFrameHeader final : public SyntheticSection {
 public:
   EhFrameHeader(Ctx &);
   void writeTo(uint8_t *buf) override;
-  size_t getSize() const override;
+  size_t getSize() const override { return size; }
   bool isNeeded() const override;
+
+  // Cached FDE data computed by updateAllocSize, used by writeTo.
+  SmallVector<EhFrameSection::FdeData, 0> fdes;
+  bool large = false; // Whether to use sdata8 encoding.
+  size_t size = 0;
 };
 
 class GotSection final : public SyntheticSection {

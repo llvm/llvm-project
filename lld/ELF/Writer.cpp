@@ -1603,6 +1603,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.relrAuthDyn->updateAllocSize(ctx);
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
+      if (part.ehFrame)
+        changed |= part.ehFrame->updateAllocSize(ctx);
     }
 
     std::pair<const OutputSection *, const Defined *> changes =
