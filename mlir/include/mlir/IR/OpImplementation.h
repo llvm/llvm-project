@@ -130,6 +130,18 @@ public:
   /// Return the raw output stream used by this printer.
   virtual raw_ostream &getStream() const;
 
+  /// Print a newline and indent the printer to the start of the current
+  /// operation/attribute/type.
+  /// Note: For attributes and types this method should only be used in
+  /// custom dialects. Usage in upstream MLIR dialects is currently disallowed.
+  virtual void printNewline();
+
+  /// Increase indentation.
+  virtual void increaseIndent();
+
+  /// Decrease indentation.
+  virtual void decreaseIndent();
+
   /// Print the given floating point value in a stabilized form that can be
   /// roundtripped through the IR. This is the companion to the 'parseFloat'
   /// hook on the AsmParser.
@@ -447,16 +459,6 @@ public:
 
   /// Print a loc(...) specifier if printing debug info is enabled.
   virtual void printOptionalLocationSpecifier(Location loc) = 0;
-
-  /// Print a newline and indent the printer to the start of the current
-  /// operation.
-  virtual void printNewline() = 0;
-
-  /// Increase indentation.
-  virtual void increaseIndent() = 0;
-
-  /// Decrease indentation.
-  virtual void decreaseIndent() = 0;
 
   /// Print a block argument in the usual format of:
   ///   %ssaName : type {attr1=42} loc("here")
