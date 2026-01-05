@@ -523,6 +523,16 @@ def CUFComputeSharedMemoryOffsetsAndSize
   ];
 }
 
+def CUFPredefinedVarToGPU
+    : Pass<"cuf-predefined-var-to-gpu", "::mlir::func::FuncOp"> {
+  let summary = "Transform predefined variables to GPU operations";
+  let description = [{
+    Change the predefined variables injected in the device function to their
+    corresponding NVVM dialect operations.
+  }];
+  let dependentDialects = ["mlir::NVVM::NVVMDialect"];
+}
+
 def SetRuntimeCallAttributes
     : Pass<"set-runtime-call-attrs", "mlir::func::FuncOp"> {
   let summary = "Set Fortran runtime fir.call attributes targeting LLVM IR";

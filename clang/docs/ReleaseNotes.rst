@@ -833,6 +833,13 @@ Moved checkers
 Sanitizers
 ----------
 - Improved documentation for legacy ``no_sanitize`` attributes.
+- Added ``__builtin_allow_sanitize_check("name")`` that returns true if the
+  specified sanitizer is enabled for the current function (after inlining).
+  This allows for conditional code execution based on sanitizer enablement,
+  respecting ``no_sanitize`` attributes. It currently supports sanitizers:
+  "address", "kernel-address", "hwaddress", "kernel-hwaddress", "memory",
+  "kernel-memory", and "thread".
+
 
 Python Binding Changes
 ----------------------
