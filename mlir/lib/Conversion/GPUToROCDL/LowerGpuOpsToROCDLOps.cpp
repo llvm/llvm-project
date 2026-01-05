@@ -458,7 +458,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
           /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
           /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
           rocdlDialect->getKernelAttrHelper().getName(),
-          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName()});
+          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName(),
+          /*kernelClusterSizeAttributeName=*/{}});
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {
