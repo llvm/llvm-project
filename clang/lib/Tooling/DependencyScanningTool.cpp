@@ -174,12 +174,11 @@ static llvm::Error makeErrorFromDiagnosticsOS(
       DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
-static bool computeDependencies(
+bool tooling::computeDependencies(
     DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
     DependencyActionController &Controller, DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
-        nullptr) {
+    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
   const auto IsCC1Input = (CommandLine.size() >= 2 && CommandLine[1] == "-cc1");
   return IsCC1Input ? Worker.computeDependencies(WorkingDirectory, CommandLine,
                                                  Consumer, Controller,

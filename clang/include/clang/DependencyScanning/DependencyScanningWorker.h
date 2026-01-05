@@ -101,7 +101,7 @@ public:
   /// in-memory file. If no overlay file-system is provided, the Worker's
   /// dependency scanning file-system is used instead.
   ///
-  /// \returns false if clang errors occurred (with diagnostics reported to
+  /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
   bool computeDependencies(
       StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
@@ -118,7 +118,7 @@ public:
   /// in-memory file. If no overlay file-system is provided, the Worker's
   /// dependency scanning file-system is used instead.
   ///
-  /// \returns false if clang errors occurred (with diagnostics reported to
+  /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
   bool computeDependencies(
       StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
