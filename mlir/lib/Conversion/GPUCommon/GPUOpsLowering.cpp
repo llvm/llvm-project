@@ -359,6 +359,14 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     if (argAttr.empty())
       continue;
 
+    const bool isArgTypeUnchanged =
+        remapping->size == 1 &&
+        llvmFuncOp.getArgument(remapping->inputNo).getType() == argTy;
+    if (isArgTypeUnchanged) {
+      llvmFuncOp.setArgAttrs(remapping->inputNo, argAttr);
+      continue;
+    }
+
     copyAttribute(LLVM::LLVMDialect::getReturnedAttrName());
     copyAttribute(LLVM::LLVMDialect::getNoUndefAttrName());
     copyAttribute(LLVM::LLVMDialect::getInRegAttrName());
