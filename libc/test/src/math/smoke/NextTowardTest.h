@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -62,8 +64,8 @@ public:
   typedef T (*NextTowardFunc)(T, long double);
 
   void testNaN(NextTowardFunc func) {
-    ASSERT_FP_EQ(func(nan, 0), nan);
-    ASSERT_FP_EQ(func(0, to_nan), nan);
+    ASSERT_FP_EQ(func(nan, to_zero), nan);
+    ASSERT_FP_EQ(func(zero, to_nan), nan);
   }
 
   void testBoundaries(NextTowardFunc func) {

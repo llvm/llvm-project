@@ -811,8 +811,7 @@ define dso_local void @control_flow_with_mem_access() nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a32+4)
 ; LA32-NEXT:    ld.w $a1, $a0, %pc_lo12(g_a32+4)
-; LA32-NEXT:    ori $a2, $zero, 1
-; LA32-NEXT:    blt $a1, $a2, .LBB25_2
+; LA32-NEXT:    blez $a1, .LBB25_2
 ; LA32-NEXT:  # %bb.1: # %if.then
 ; LA32-NEXT:    ori $a1, $zero, 10
 ; LA32-NEXT:    st.w $a1, $a0, %pc_lo12(g_a32+4)
@@ -823,8 +822,7 @@ define dso_local void @control_flow_with_mem_access() nounwind {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(g_a32+4)
 ; LA64-NEXT:    ld.w $a1, $a0, %pc_lo12(g_a32+4)
-; LA64-NEXT:    ori $a2, $zero, 1
-; LA64-NEXT:    blt $a1, $a2, .LBB25_2
+; LA64-NEXT:    blez $a1, .LBB25_2
 ; LA64-NEXT:  # %bb.1: # %if.then
 ; LA64-NEXT:    ori $a1, $zero, 10
 ; LA64-NEXT:    st.w $a1, $a0, %pc_lo12(g_a32+4)
@@ -838,8 +836,7 @@ define dso_local void @control_flow_with_mem_access() nounwind {
 ; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a32+4)
 ; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a32+4)
 ; LA64-LARGE-NEXT:    ldx.w $a0, $a1, $a0
-; LA64-LARGE-NEXT:    ori $a1, $zero, 1
-; LA64-LARGE-NEXT:    blt $a0, $a1, .LBB25_2
+; LA64-LARGE-NEXT:    blez $a0, .LBB25_2
 ; LA64-LARGE-NEXT:  # %bb.1: # %if.then
 ; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a32+4)
 ; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a32+4)

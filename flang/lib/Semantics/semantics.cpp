@@ -160,22 +160,23 @@ private:
   SemanticsContext &context_;
 };
 
+static bool WasDefined(const SemanticsContext &context, const Symbol &symbol) {
+  return context.IsSymbolDefined(symbol) ||
+      IsInitialized(symbol, /*ignoreDataStatements=*/true,
+          /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
+}
+
 static void WarnUndefinedFunctionResult(
     SemanticsContext &context, const Scope &scope) {
-  auto WasDefined{[&context](const Symbol &symbol) {
-    return context.IsSymbolDefined(symbol) ||
-        IsInitialized(symbol, /*ignoreDataStatements=*/true,
-            /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
-  }};
   if (const Symbol * symbol{scope.symbol()}) {
     if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
       if (subp->isFunction() && !subp->isInterface() && !subp->stmtFunction()) {
-        bool wasDefined{WasDefined(subp->result())};
+        bool wasDefined{WasDefined(context, subp->result())};
         if (!wasDefined) {
           // Definitions of ENTRY result variables also count.
           for (const auto &pair : scope) {
             const Symbol &local{*pair.second};
-            if (IsFunctionResult(local) && WasDefined(local)) {
+            if (IsFunctionResult(local) && WasDefined(context, local)) {
               wasDefined = true;
               break;
             }
@@ -191,6 +192,43 @@ static void WarnUndefinedFunctionResult(
   if (!scope.IsModuleFile()) {
     for (const Scope &child : scope.children()) {
       WarnUndefinedFunctionResult(context, child);
+    }
+  }
+}
+
+static void WarnUnusedOrUndefinedLocal(
+    SemanticsContext &context, const Scope &scope) {
+  if (scope.kind() == Scope::Kind::Subprogram ||
+      scope.kind() == Scope::Kind::MainProgram ||
+      scope.kind() == Scope::Kind::BlockConstruct) {
+    for (const auto &[_, symbolRef] : scope) {
+      const Symbol &symbol{*symbolRef};
+      if ((symbol.has<semantics::ObjectEntityDetails>() ||
+              (symbol.has<semantics::ProcEntityDetails>() &&
+                  IsProcedurePointer(symbol))) &&
+          !IsFunctionResult(symbol) && !IsNamedConstant(symbol) &&
+          !IsDummy(symbol) && !FindEquivalenceSet(symbol) &&
+          !FindCommonBlockContaining(symbol)) {
+        if (context.IsSymbolUsed(symbol)) {
+          if (!WasDefined(context, symbol)) {
+            context.Warn(common::UsageWarning::UsedUndefinedVariable,
+                symbol.name(),
+                "Value of uninitialized local variable '%s' is used but never defined"_warn_en_US,
+                symbol.name());
+          }
+        } else {
+          if (!context.IsSymbolDefined(symbol)) { // ignore initialization
+            context.Warn(common::UsageWarning::UnusedVariable, symbol.name(),
+                "Value of local variable '%s' is never used"_warn_en_US,
+                symbol.name());
+          }
+        }
+      }
+    }
+  }
+  if (!scope.IsModuleFile()) {
+    for (const Scope &child : scope.children()) {
+      WarnUnusedOrUndefinedLocal(context, child);
     }
   }
 }
@@ -223,6 +261,9 @@ static bool PerformStatementSemantics(
   }
   if (!context.messages().AnyFatalError()) {
     WarnUndefinedFunctionResult(context, context.globalScope());
+  }
+  if (!context.messages().AnyFatalError()) {
+    WarnUnusedOrUndefinedLocal(context, context.globalScope());
   }
   if (!context.AnyFatalError()) {
     pass2.CompileDataInitializationsIntoInitializers();
@@ -313,15 +354,13 @@ private:
   /// Return the symbol of an initialized member if a COMMON block
   /// is initalized. Otherwise, return nullptr.
   static Symbol *CommonBlockIsInitialized(const Symbol &common) {
-    const auto &commonDetails =
-        common.get<Fortran::semantics::CommonBlockDetails>();
-
+    const auto &commonDetails{
+        common.get<Fortran::semantics::CommonBlockDetails>()};
     for (const auto &member : commonDetails.objects()) {
       if (IsInitialized(*member)) {
         return &*member;
       }
     }
-
     // Common block may be initialized via initialized variables that are in an
     // equivalence with the common block members.
     for (const Fortran::semantics::EquivalenceSet &set :
@@ -451,6 +490,15 @@ void SemanticsContext::UpdateScopeIndex(
     }
     scopeIndex_.erase(iter);
     scopeIndex_.emplace(newSource, scope);
+  }
+}
+
+void SemanticsContext::DumpScopeIndex(llvm::raw_ostream &out) const {
+  out << "scopeIndex_:\n";
+  for (const auto &[source, scope] : scopeIndex_) {
+    out << "source '" << source.ToString() << "' -> scope " << scope
+        << "... whose source range is '" << scope.sourceRange().ToString()
+        << "'\n";
   }
 }
 
@@ -770,6 +818,14 @@ void SemanticsContext::NoteDefinedSymbol(const Symbol &symbol) {
 
 bool SemanticsContext::IsSymbolDefined(const Symbol &symbol) const {
   return isDefined_.find(symbol) != isDefined_.end();
+}
+
+void SemanticsContext::NoteUsedSymbol(const Symbol &symbol) {
+  isUsed_.insert(symbol);
+}
+
+bool SemanticsContext::IsSymbolUsed(const Symbol &symbol) const {
+  return isUsed_.find(symbol) != isUsed_.end();
 }
 
 } // namespace Fortran::semantics

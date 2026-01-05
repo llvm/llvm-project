@@ -352,6 +352,24 @@ func.func @illegal_fill_tensor_with_memref_return
 
 // -----
 
+func.func @illegal_fill_element_type_truncation(%arg0 : tensor<2xf32>, %arg1 : f64) -> tensor<2xf32>
+{
+  // expected-error @+1 {{'linalg.fill' op expected fill value type ('f64') to match output element type ('f32')}}
+  %0 = linalg.fill ins(%arg1 : f64) outs(%arg0 : tensor<2xf32>) -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
+func.func @illegal_fill_element_type_extension(%arg0 : tensor<2xi32>, %arg1 : i16) -> tensor<2xi32>
+{
+  // expected-error @+1 {{'linalg.fill' op expected fill value type ('i16') to match output element type ('i32')}}
+  %0 = linalg.fill ins(%arg1 : i16) outs(%arg0 : tensor<2xi32>) -> tensor<2xi32>
+  return %0 : tensor<2xi32>
+}
+
+// -----
+
 func.func @illegal_fill_value_type(%arg0 : tensor<2x2xf32>, %arg1 : tensor<2xf32>) -> tensor<2x2xf32>
 {
   // expected-error @+1 {{expected op with scalar input}}
@@ -681,7 +699,7 @@ func.func @map_binary_wrong_yield_operands(
    %add = linalg.map
           ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
           outs(%init:tensor<64xf32>)
-          (%lhs_elem: f32, %rhs_elem: f32) {
+          (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
             %0 = arith.addf %lhs_elem, %rhs_elem: f32
             // expected-error @+1{{'linalg.yield' op expected number of yield values (2) to match the number of inits / outs operands of the enclosing LinalgOp (1)}}
             linalg.yield %0, %0: f32, f32
@@ -694,11 +712,11 @@ func.func @map_binary_wrong_yield_operands(
 func.func @map_input_mapper_arity_mismatch(
     %lhs: tensor<64xf32>, %rhs: tensor<64xf32>, %init: tensor<64xf32>)
     -> tensor<64xf32> {
-  // expected-error@+1{{'linalg.map' op expects number of operands to match the arity of mapper, but got: 2 and 3}}
+  // expected-error@+1{{'linalg.map' op expects number of operands to match the arity of mapper, but got: 3 and 4}}
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
       outs(%init:tensor<64xf32>)
-      (%lhs_elem: f32, %rhs_elem: f32, %extra_elem: f32) {
+      (%lhs_elem: f32, %rhs_elem: f32, %out: f32, %extra_elem: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f32
         linalg.yield %0: f32
       }
@@ -714,7 +732,7 @@ func.func @map_input_mapper_type_mismatch(
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
       outs(%init:tensor<64xf32>)
-      (%lhs_elem: f64, %rhs_elem: f64) {
+      (%lhs_elem: f64, %rhs_elem: f64, %out: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f64
         linalg.yield %0: f64
       }
@@ -730,7 +748,7 @@ func.func @map_input_output_shape_mismatch(
   %add = linalg.map
       ins(%lhs, %rhs : tensor<64x64xf32>, tensor<64x64xf32>)
       outs(%init:tensor<32xf32>)
-      (%lhs_elem: f32, %rhs_elem: f32) {
+      (%lhs_elem: f32, %rhs_elem: f32, %out: f32) {
         %0 = arith.addf %lhs_elem, %rhs_elem: f32
         linalg.yield %0: f32
       }
@@ -1913,6 +1931,125 @@ func.func @reduce_non_operation_name(%arg0: tensor<4xf32>, %arg1: tensor<f32>) -
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// linalg.pooling_nhwc_*
+//===----------------------------------------------------------------------===//
+
+func.func @pooling_nhwc_max_unsigned_float_type(
+    %input: tensor<1x4x4x1xf32>,
+    %filter: tensor<2x2xf32>,
+    %init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xf32>, tensor<2x2xf32>)
+      outs (%init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nhwc_max_unsigned_i1(
+    %input: tensor<1x4x4x1xi1>,
+    %filter: tensor<2x2xi1>,
+    %init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xi1>, tensor<2x2xi1>)
+      outs (%init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1>
+  return %0 : tensor<1x2x2x1xi1>
+}
+
+// -----
+
+func.func @pooling_nhwc_min_unsigned_float_type(
+    %input: tensor<1x4x4x1xf32>,
+    %filter: tensor<2x2xf32>,
+    %init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nhwc_min_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xf32>, tensor<2x2xf32>)
+      outs (%init_val: tensor<1x2x2x1xf32>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nhwc_min_unsigned_i1(
+    %input: tensor<1x4x4x1xi1>,
+    %filter: tensor<2x2xi1>,
+    %init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nhwc_min_unsigned {dilations = dense<1> : tensor<2xi64>,
+                                        strides = dense<1> : tensor<2xi64>}
+      ins (%input, %filter: tensor<1x4x4x1xi1>, tensor<2x2xi1>)
+      outs (%init_val: tensor<1x2x2x1xi1>) -> tensor<1x2x2x1xi1>
+  return %0 : tensor<1x2x2x1xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// linalg.pooling_nwc_*
+//===----------------------------------------------------------------------===//
+
+func.func @pooling_nwc_max_unsigned_float_type(
+    %input: tensor<1x4x1xf32>,
+    %filter: tensor<2xf32>,
+    %init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nwc_max_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xf32>, tensor<2xf32>)
+      outs (%init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32>
+  return %0 : tensor<1x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nwc_max_unsigned_i1(
+    %input: tensor<1x4x1xi1>,
+    %filter: tensor<2xi1>,
+    %init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned max not on uint}}
+  %0 = linalg.pooling_nwc_max_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xi1>, tensor<2xi1>)
+      outs (%init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1>
+  return %0 : tensor<1x2x1xi1>
+}
+
+// -----
+
+func.func @pooling_nwc_min_unsigned_float_type(
+    %input: tensor<1x4x1xf32>,
+    %filter: tensor<2xf32>,
+    %init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nwc_min_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xf32>, tensor<2xf32>)
+      outs (%init_val: tensor<1x2x1xf32>) -> tensor<1x2x1xf32>
+  return %0 : tensor<1x2x1xf32>
+}
+
+// -----
+
+func.func @pooling_nwc_min_unsigned_i1(
+    %input: tensor<1x4x1xi1>,
+    %filter: tensor<2xi1>,
+    %init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1> {
+  // expected-error @+1 {{unsupported operation: unsigned min not on uint}}
+  %0 = linalg.pooling_nwc_min_unsigned {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+      ins (%input, %filter: tensor<1x4x1xi1>, tensor<2xi1>)
+      outs (%init_val: tensor<1x2x1xi1>) -> tensor<1x2x1xi1>
+  return %0 : tensor<1x2x1xi1>
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // Tests for generic infrastructure for named Ops. The actual Ops used are

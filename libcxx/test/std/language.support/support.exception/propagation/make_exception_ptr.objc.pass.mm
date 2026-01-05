@@ -17,7 +17,8 @@
 // out-of-the-box.
 // REQUIRES: has-fobjc-arc && darwin
 
-// ADDITIONAL_COMPILE_FLAGS: -fobjc-arc
+// FIXME: including <Foundation/Foundation.h> seems to be currently broken with modules enabled
+// ADDITIONAL_COMPILE_FLAGS: -fobjc-arc -fno-modules
 
 #include <cassert>
 #include <exception>

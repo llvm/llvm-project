@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -verify -fno-builtin -std=c++14
+// RUN: %clang_cc1 %s -verify -fno-builtin -std=c++20 -verify=expected,cxx20
 // RUN: %clang_cc1 %s -verify -fno-builtin -std=c++14 -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -verify -fno-builtin -std=c++20 -verify=expected,cxx20 -fexperimental-new-constant-interpreter
 
 #define _diagnose_if(...) __attribute__((diagnose_if(__VA_ARGS__)))
 
@@ -664,4 +666,29 @@ void run() {
   switch (constexpr Foo i = 1) { default: break; } // expected-warning{{oh no}}
   switch (constexpr Foo i = 2) { default: break; } // expected-error{{oh no}}
 }
+}
+
+namespace GH160776 {
+
+struct ConstructorTemplate {
+  template <class T>
+  explicit ConstructorTemplate(T x)
+      _diagnose_if(sizeof(T) == sizeof(char), "oh no", "error") {} // expected-note {{diagnose_if}}
+
+  template <class T>
+#if __cplusplus >= 202002L
+  requires (sizeof(T) == 1) // cxx20-note {{evaluated to false}}
+#endif
+  operator T() _diagnose_if(sizeof(T) == sizeof(char), "oh no", "error") { // expected-note {{diagnose_if}} \
+                                                                           // cxx20-note {{constraints not satisfied}}
+    return T{};
+  }
+};
+
+void run() {
+  ConstructorTemplate x('1'); // expected-error {{oh no}}
+  char y = x; // expected-error {{oh no}}
+  int z = x; // cxx20-error {{no viable conversion}}
+}
+
 }

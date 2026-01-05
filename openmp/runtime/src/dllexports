@@ -544,6 +544,8 @@ kmp_set_disp_num_buffers                    890
     omp_get_devices_all_allocator           819
     omp_get_memspace_num_resources          820
     omp_get_submemspace                     821
+    omp_get_device_from_uid                 822
+    omp_get_uid_from_device                 823
     %ifndef stub
         __kmpc_set_default_allocator
         __kmpc_get_default_allocator

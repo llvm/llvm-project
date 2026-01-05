@@ -1668,6 +1668,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
+  case X86::VMOVSHZrr:
+    Src2Name = getRegName(MI->getOperand(2).getReg());
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    DecodeScalarMoveMask(8, false, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+
   case X86::MOVPQI2QIrr:
   case X86::MOVZPQILo2PQIrr:
   case X86::VMOVPQI2QIrr:

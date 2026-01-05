@@ -62,7 +62,7 @@ inline static RT_API_ATTRS void MatrixTransposedTimesMatrix(
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
 
-  std::memset(product, 0, rows * cols * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * cols * sizeof *product);
   for (SubscriptValue j{0}; j < cols; ++j) {
     for (SubscriptValue i{0}; i < rows; ++i) {
       for (SubscriptValue k{0}; k < n; ++k) {
@@ -132,7 +132,7 @@ inline static RT_API_ATTRS void MatrixTransposedTimesVector(
     SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
     std::size_t xColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, rows * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * sizeof *product);
   for (SubscriptValue i{0}; i < rows; ++i) {
     for (SubscriptValue k{0}; k < n; ++k) {
       ResultType x_ki;

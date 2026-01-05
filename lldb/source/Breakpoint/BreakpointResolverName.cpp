@@ -76,17 +76,16 @@ BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
                                                lldb::addr_t offset,
                                                bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
-      m_class_name(nullptr), m_regex(std::move(func_regex)),
-      m_match_type(Breakpoint::Regexp), m_language(language),
-      m_skip_prologue(skip_prologue) {}
+      m_regex(std::move(func_regex)), m_match_type(Breakpoint::Regexp),
+      m_language(language), m_skip_prologue(skip_prologue) {}
 
 BreakpointResolverName::BreakpointResolverName(
     const BreakpointResolverName &rhs)
     : BreakpointResolver(rhs.GetBreakpoint(), BreakpointResolver::NameResolver,
                          rhs.GetOffset(), rhs.GetOffsetIsInsnCount()),
-      m_lookups(rhs.m_lookups), m_class_name(rhs.m_class_name),
-      m_regex(rhs.m_regex), m_match_type(rhs.m_match_type),
-      m_language(rhs.m_language), m_skip_prologue(rhs.m_skip_prologue) {}
+      m_lookups(rhs.m_lookups), m_regex(rhs.m_regex),
+      m_match_type(rhs.m_match_type), m_language(rhs.m_language),
+      m_skip_prologue(rhs.m_skip_prologue) {}
 
 BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     const StructuredData::Dictionary &options_dict, Status &error) {
@@ -218,22 +217,23 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
 
 void BreakpointResolverName::AddNameLookup(ConstString name,
                                            FunctionNameType name_type_mask) {
-
-  Module::LookupInfo lookup(name, name_type_mask, m_language);
-  m_lookups.emplace_back(lookup);
+  std::vector<Module::LookupInfo> infos =
+      Module::LookupInfo::MakeLookupInfos(name, name_type_mask, m_language);
+  llvm::append_range(m_lookups, infos);
 
   auto add_variant_funcs = [&](Language *lang) {
     for (Language::MethodNameVariant variant :
          lang->GetMethodNameVariants(name)) {
       // FIXME: Should we be adding variants that aren't of type Full?
       if (variant.GetType() & lldb::eFunctionNameTypeFull) {
-        Module::LookupInfo variant_lookup(name, variant.GetType(),
-                                          lang->GetLanguageType());
-        variant_lookup.SetLookupName(variant.GetName());
-        m_lookups.emplace_back(variant_lookup);
+        std::vector<Module::LookupInfo> variant_lookups =
+            Module::LookupInfo::MakeLookupInfos(name, variant.GetType(),
+                                                lang->GetLanguageType(),
+                                                variant.GetName());
+        llvm::append_range(m_lookups, variant_lookups);
       }
     }
-    return true;
+    return IterationAction::Continue;
   };
 
   if (Language *lang = Language::FindPlugin(m_language)) {
@@ -256,12 +256,6 @@ Searcher::CallbackReturn
 BreakpointResolverName::SearchCallback(SearchFilter &filter,
                                        SymbolContext &context, Address *addr) {
   Log *log = GetLog(LLDBLog::Breakpoints);
-
-  if (m_class_name) {
-    if (log)
-      log->Warning("Class/method function specification not supported yet.\n");
-    return Searcher::eCallbackReturnStop;
-  }
 
   SymbolContextList func_list;
   bool filter_by_cu =
@@ -401,14 +395,22 @@ void BreakpointResolverName::GetDescription(Stream *s) {
   if (m_match_type == Breakpoint::Regexp)
     s->Printf("regex = '%s'", m_regex.GetText().str().c_str());
   else {
-    size_t num_names = m_lookups.size();
-    if (num_names == 1)
-      s->Printf("name = '%s'", m_lookups[0].GetName().GetCString());
+    // Since there may be many lookups objects for the same name breakpoint (one
+    // per language available), unique them by name, and operate on those unique
+    // names.
+    std::vector<ConstString> unique_lookups;
+    for (auto &lookup : m_lookups) {
+      if (!llvm::is_contained(unique_lookups, lookup.GetName()))
+        unique_lookups.push_back(lookup.GetName());
+    }
+    if (unique_lookups.size() == 1)
+      s->Printf("name = '%s'", unique_lookups[0].GetCString());
     else {
+      size_t num_names = unique_lookups.size();
       s->Printf("names = {");
       for (size_t i = 0; i < num_names; i++) {
         s->Printf("%s'%s'", (i == 0 ? "" : ", "),
-                  m_lookups[i].GetName().GetCString());
+                  unique_lookups[i].GetCString());
       }
       s->Printf("}");
     }

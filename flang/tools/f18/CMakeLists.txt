@@ -23,6 +23,7 @@ set(MODULES
   "iso_c_binding"
   "iso_fortran_env"
   "iso_fortran_env_impl"
+  "flang_debug"
 )
 
 # Check if 128-bit float computations can be done via long double.
@@ -143,14 +144,8 @@ if (NOT CMAKE_CROSSCOMPILING)
         ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90
       DEPENDS flang ${FLANG_INTRINSIC_MODULES_DIR}/iso_c_binding.mod ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90 ${depends}
     )
-    add_custom_command(OUTPUT ${base}.f18.mod
-      DEPENDS ${base}.mod
-      COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
-      add_custom_command(OUTPUT ${base}_kinds.f18.mod
-        DEPENDS ${base}.mod
-        COMMAND ${CMAKE_COMMAND} -E copy ${base}_kinds.mod ${base}_kinds.f18.mod)
-    list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod)
-    install(FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang" COMPONENT flang-module-interfaces)
+    list(APPEND MODULE_FILES ${base}.mod ${base}_kinds.mod)
+    install(FILES ${base}.mod ${base}_kinds.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang" COMPONENT flang-module-interfaces)
   elseif ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_RUNTIMES, assuming omp_lib.mod is built there")
   else()

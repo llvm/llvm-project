@@ -83,11 +83,11 @@ namespace DependentType {
 namespace Auto {
   template<template<int> typename T> struct TInt {}; // #TInt
   template<template<int*> typename T> struct TIntPtr {}; // #TIntPtr
-  template<template<auto> typename T> struct TAuto {};
+  template<template<auto> typename T> struct TAuto {}; // #TAuto
   template<template<auto*> typename T> struct TAutoPtr {};
-  template<template<decltype(auto)> typename T> struct TDecltypeAuto {};
+  template<template<decltype(auto)> typename T> struct TDecltypeAuto {}; // #TDecltypeAuto
   template<auto> struct Auto;
-  template<auto*> struct AutoPtr; // #AutoPtr
+  template<auto*> struct AutoPtr;
   template<decltype(auto)> struct DecltypeAuto;
   template<int> struct Int;
   template<int*> struct IntPtr;
@@ -108,7 +108,7 @@ namespace Auto {
   TIntPtr<IntPtr> ipip;
 
   TAuto<Auto> aa;
-  TAuto<AutoPtr> aap; // expected-error@#AutoPtr {{could not match 'auto *' against 'auto'}}
+  TAuto<AutoPtr> aap; // expected-error@#TAuto {{non-type template parameter '' with type 'auto *' has incompatible initializer of type 'auto'}}
                       // expected-note@-1 {{different template parameters}}
   TAuto<Int> ai; // FIXME: ill-formed (?)
   TAuto<IntPtr> aip; // FIXME: ill-formed (?)
@@ -130,7 +130,7 @@ namespace Auto {
   // parameters (such as 'user-defined-type &') that are not valid 'auto'
   // parameters.
   TDecltypeAuto<Auto> daa;
-  TDecltypeAuto<AutoPtr> daap; // expected-error@#AutoPtr {{could not match 'auto *' against 'decltype(auto)'}}
+  TDecltypeAuto<AutoPtr> daap; // expected-error@#TDecltypeAuto {{non-type template parameter '' with type 'auto *' has incompatible initializer of type 'decltype(auto)'}}
                                // expected-note@-1 {{different template parameters}}
 
   int n;

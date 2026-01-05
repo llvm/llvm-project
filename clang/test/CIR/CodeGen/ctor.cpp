@@ -49,7 +49,7 @@ void bar() {
 
 // CHECK:      cir.func{{.*}} @_ZN13VariadicStrukC1Eiz(%arg0: !cir.ptr<!rec_VariadicStruk>
 // CHECK-SAME:                                   %arg1: !s32i
-// CHECK-SAME:                                   ...) {
+// CHECK-SAME:                                   ...){{.*}} {
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
 // CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]

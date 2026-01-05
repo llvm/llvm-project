@@ -39,12 +39,12 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], -8
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START_2_DIFF]], i64 [[OFFSET_IDX2]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[NEXT_GEP3]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[TMP13]], i32 -3
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[NEXT_GEP3]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[TMP13]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP15]], i32 -3
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP15]], i64 -3
 ; CHECK-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i64> [[REVERSE]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i64> [[REVERSE4]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

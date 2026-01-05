@@ -28,6 +28,6 @@ void exit_success(int) { std::_Exit(EXIT_SUCCESS); }
 int main(int, char**) {
   std::signal(SIGABRT, exit_success);
   std::map<int, int> map;
-  map.at(1);
+  (void)map.at(1);
   return EXIT_FAILURE;
 }

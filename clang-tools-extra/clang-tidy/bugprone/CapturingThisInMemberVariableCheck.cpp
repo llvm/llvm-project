@@ -1,4 +1,4 @@
-//===--- CapturingThisInMemberVariableCheck.cpp - clang-tidy --------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,18 +44,17 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
   if (Node.hasSimpleMoveAssignment())
     return false;
 
-  for (CXXConstructorDecl const *C : Node.ctors()) {
-    if (C->isCopyOrMoveConstructor() && C->isDefaulted() && !C->isDeleted())
-      return false;
-  }
-  for (CXXMethodDecl const *M : Node.methods()) {
-    if (M->isCopyAssignmentOperator())
-      llvm::errs() << M->isDeleted() << "\n";
-    if (M->isCopyAssignmentOperator() && M->isDefaulted() && !M->isDeleted())
-      return false;
-    if (M->isMoveAssignmentOperator() && M->isDefaulted() && !M->isDeleted())
-      return false;
-  }
+  if (llvm::any_of(Node.ctors(), [](const CXXConstructorDecl *C) {
+        return C->isCopyOrMoveConstructor() && C->isDefaulted() &&
+               !C->isDeleted();
+      }))
+    return false;
+  if (llvm::any_of(Node.methods(), [](const CXXMethodDecl *M) {
+        return (M->isCopyAssignmentOperator() ||
+                M->isMoveAssignmentOperator()) &&
+               M->isDefaulted() && !M->isDeleted();
+      }))
+    return false;
   // FIXME: find ways to identifier correct handle capture this lambda
   return true;
 }

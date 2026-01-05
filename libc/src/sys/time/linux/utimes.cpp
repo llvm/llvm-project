@@ -21,24 +21,21 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#ifdef SYS_utimes
-constexpr auto UTIMES_SYSCALL_ID = SYS_utimes;
-#elif defined(SYS_utimensat)
-constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat;
-#elif defined(SYS_utimensat_time64)
-constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat_time64;
-#else
-#error "utimes, utimensat, utimensat_time64,  syscalls not available."
-#endif
-
 LLVM_LIBC_FUNCTION(int, utimes,
                    (const char *path, const struct timeval times[2])) {
   int ret;
 
 #ifdef SYS_utimes
   // No need to define a timespec struct, use the syscall directly.
-  ret = LIBC_NAMESPACE::syscall_impl<int>(UTIMES_SYSCALL_ID, path, times);
+  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
 #elif defined(SYS_utimensat) || defined(SYS_utimensat_time64)
+
+#if defined(SYS_utimensat)
+  constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat;
+#elif defined(SYS_utimensat_time64)
+  constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat_time64;
+#endif
+
   // the utimensat syscall requires a timespec struct, not timeval.
   struct timespec ts[2];
   struct timespec *ts_ptr = nullptr; // default value if times is nullptr
@@ -74,6 +71,9 @@ LLVM_LIBC_FUNCTION(int, utimes,
   // flags=0 means don't follow symlinks (like utimes)
   ret = LIBC_NAMESPACE::syscall_impl<int>(UTIMES_SYSCALL_ID, AT_FDCWD, path,
                                           ts_ptr, 0);
+
+#else
+#error "utimes, utimensat, utimensat_time64,  syscalls not available."
 #endif // SYS_utimensat
 
   if (ret < 0) {

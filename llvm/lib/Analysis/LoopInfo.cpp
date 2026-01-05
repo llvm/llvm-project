@@ -58,26 +58,14 @@ static cl::opt<bool, true>
 // Loop implementation
 //
 
-bool Loop::isLoopInvariant(const Value *V, bool HasCoroSuspendInst) const {
-  if (const Instruction *I = dyn_cast<Instruction>(V)) {
-    // FIXME: this is semantically inconsistent. We're tracking a proper fix in
-    // issue #149604.
-    // If V is a pointer to stack object and L contains a coro.suspend function
-    // call, then V may not be loop invariant because the ramp function and
-    // resume function have different stack frames.
-    if (HasCoroSuspendInst && isa<AllocaInst>(I))
-      return false;
-    else
-      return !contains(I);
-  }
+bool Loop::isLoopInvariant(const Value *V) const {
+  if (const Instruction *I = dyn_cast<Instruction>(V))
+    return !contains(I);
   return true; // All non-instructions are loop invariant
 }
 
-bool Loop::hasLoopInvariantOperands(const Instruction *I,
-                                    bool HasCoroSuspendInst) const {
-  return all_of(I->operands(), [&](Value *V) {
-    return isLoopInvariant(V, HasCoroSuspendInst);
-  });
+bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
+  return all_of(I->operands(), [&](Value *V) { return isLoopInvariant(V); });
 }
 
 bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
@@ -899,7 +887,7 @@ bool LoopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 void LoopInfo::erase(Loop *Unloop) {
   assert(!Unloop->isInvalid() && "Loop has already been erased!");
 
-  auto InvalidateOnExit = make_scope_exit([&]() { destroy(Unloop); });
+  llvm::scope_exit InvalidateOnExit([&]() { destroy(Unloop); });
 
   // First handle the special case of no parent loop to simplify the algorithm.
   if (Unloop->isOutermost()) {
@@ -998,8 +986,8 @@ PreservedAnalyses LoopPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
-
+void llvm::printLoop(const Loop &L, raw_ostream &OS,
+                     const std::string &Banner) {
   if (forcePrintModuleIR()) {
     // handling -print-module-scope
     OS << Banner << " (loop: ";

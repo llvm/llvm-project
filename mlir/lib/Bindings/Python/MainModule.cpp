@@ -24,6 +24,8 @@ using namespace mlir::python;
 
 NB_MODULE(_mlir, m) {
   m.doc() = "MLIR Python Native Extension";
+  m.attr("T") = nb::type_var("T");
+  m.attr("U") = nb::type_var("U");
 
   nb::class_<PyGlobals>(m, "_Globals")
       .def_prop_rw("dialect_search_modules",
@@ -52,9 +54,14 @@ NB_MODULE(_mlir, m) {
            [](PyGlobals &self, bool enabled) {
              self.getTracebackLoc().setLocTracebacksEnabled(enabled);
            })
+      .def("loc_tracebacks_frame_limit",
+           [](PyGlobals &self) {
+             return self.getTracebackLoc().locTracebackFramesLimit();
+           })
       .def("set_loc_tracebacks_frame_limit",
-           [](PyGlobals &self, int n) {
-             self.getTracebackLoc().setLocTracebackFramesLimit(n);
+           [](PyGlobals &self, std::optional<int> n) {
+             self.getTracebackLoc().setLocTracebackFramesLimit(
+                 n.value_or(PyGlobals::TracebackLoc::kMaxFrames));
            })
       .def("register_traceback_file_inclusion",
            [](PyGlobals &self, const std::string &filename) {
@@ -97,6 +104,10 @@ NB_MODULE(_mlir, m) {
               return opClass;
             });
       },
+      // clang-format off
+      nb::sig("def register_operation(dialect_class: type, *, replace: bool = False) "
+        "-> typing.Callable[[type[T]], type[T]]"),
+      // clang-format on
       "dialect_class"_a, nb::kw_only(), "replace"_a = false,
       "Produce a class decorator for registering an Operation class as part of "
       "a dialect");
@@ -109,6 +120,10 @@ NB_MODULE(_mlir, m) {
           return typeCaster;
         });
       },
+      // clang-format off
+      nb::sig("def register_type_caster(typeid: _mlir.ir.TypeID, *, replace: bool = False) "
+                        "-> typing.Callable[[typing.Callable[[T], U]], typing.Callable[[T], U]]"),
+      // clang-format on
       "typeid"_a, nb::kw_only(), "replace"_a = false,
       "Register a type caster for casting MLIR types to custom user types.");
   m.def(
@@ -121,6 +136,10 @@ NB_MODULE(_mlir, m) {
               return valueCaster;
             });
       },
+      // clang-format off
+      nb::sig("def register_value_caster(typeid: _mlir.ir.TypeID, *, replace: bool = False) "
+                        "-> typing.Callable[[typing.Callable[[T], U]], typing.Callable[[T], U]]"),
+      // clang-format on
       "typeid"_a, nb::kw_only(), "replace"_a = false,
       "Register a value caster for casting MLIR values to custom user values.");
 
@@ -136,7 +155,7 @@ NB_MODULE(_mlir, m) {
   populateRewriteSubmodule(rewriteModule);
 
   // Define and populate PassManager submodule.
-  auto passModule =
+  auto passManagerModule =
       m.def_submodule("passmanager", "MLIR Pass Management Bindings");
-  populatePassManagerSubmodule(passModule);
+  populatePassManagerSubmodule(passManagerModule);
 }

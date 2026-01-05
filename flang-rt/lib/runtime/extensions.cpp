@@ -12,6 +12,7 @@
 #include "flang/Runtime/extensions.h"
 #include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang/Runtime/command.h"
@@ -23,6 +24,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <limits>
 #include <signal.h>
 #include <stdlib.h>
 #include <thread>
@@ -60,7 +62,12 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 
 namespace Fortran::runtime {
 
-// Common implementation that could be used for either SECNDS() or SECNDSD(),
+#define GFC_RAND_A 16807
+#define GFC_RAND_M 2147483647
+static unsigned rand_seed = 1;
+static Lock rand_seed_lock;
+
+// Common implementation that could be used for either SECNDS() or DSECNDS(),
 // which are defined for float or double.
 template <typename T> T SecndsImpl(T *refTime) {
   static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
@@ -148,7 +155,7 @@ uid_t RTNAME(GetUID)() {
 
 void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
-      1, std::strlen(envName) + 1, const_cast<char *>(envName), 0)};
+      1, runtime::strlen(envName) + 1, const_cast<char *>(envName), 0)};
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
   RTNAME(GetEnvVariable)
@@ -163,6 +170,17 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
   Cookie cookie{IONAME(BeginFlush)(unit, __FILE__, __LINE__)};
   IONAME(EndIoStatement)(cookie);
 }
+
+void RTNAME(Flush)(int unit) {
+  // We set the `unit == -1` on the `flush()` case, so flush all units.
+  if (unit < 0) {
+    Terminator terminator{__FILE__, __LINE__};
+    IoErrorHandler handler{terminator};
+    ExternalFileUnit::FlushAll(handler);
+    return;
+  }
+  FORTRAN_PROCEDURE_NAME(flush)(unit);
+}
 } // namespace io
 
 // CALL FDATE(DATE)
@@ -172,7 +190,7 @@ void FORTRAN_PROCEDURE_NAME(fdate)(char *arg, std::int64_t length) {
   char str[26];
   // Insufficient space, fill with spaces and return.
   if (length < 24) {
-    std::memset(arg, ' ', length);
+    runtime::memset(arg, ' ', length);
     return;
   }
 
@@ -204,8 +222,8 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
   if (length >= 1 && getlogin_r(arg, length) == 0) {
-    auto loginLen{std::strlen(arg)};
-    std::memset(
+    auto loginLen{runtime::strlen(arg)};
+    runtime::memset(
         arg + loginLen, ' ', static_cast<std::size_t>(length) - loginLen);
     return;
   }
@@ -259,7 +277,7 @@ std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
   char *newName{nullptr};
   if (name[nameLength - 1] != '\0') {
     newName = static_cast<char *>(std::malloc(nameLength + 1));
-    std::memcpy(newName, name, nameLength);
+    runtime::memcpy(newName, name, nameLength);
     newName[nameLength] = '\0';
     name = newName;
   }
@@ -381,11 +399,81 @@ float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line) {
   return FORTRAN_PROCEDURE_NAME(secnds)(refTime);
 }
 
+// PGI extension function DSECNDS(refTime)
+double FORTRAN_PROCEDURE_NAME(dsecnds)(double *refTime) {
+  return SecndsImpl(refTime);
+}
+
+double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  RUNTIME_CHECK(terminator, refTime != nullptr);
+  return FORTRAN_PROCEDURE_NAME(dsecnds)(refTime);
+}
+
 // GNU extension function TIME()
 std::int64_t RTNAME(time)() { return time(nullptr); }
 
 // MCLOCK: returns accumulated CPU time in ticks
 std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
+
+static void _internal_srand(int seed) { rand_seed = seed ? seed : 123459876; }
+
+// IRAND(I)
+int RTNAME(Irand)(int *i) {
+  int j;
+  if (i)
+    j = *i;
+  else
+    j = 0;
+
+  rand_seed_lock.Take();
+  switch (j) {
+  case 0:
+    break;
+  case 1:
+    _internal_srand(0);
+    break;
+  default:
+    _internal_srand(j);
+    break;
+  }
+
+  rand_seed = GFC_RAND_A * rand_seed % GFC_RAND_M;
+  j = (int)rand_seed;
+  rand_seed_lock.Drop();
+  return j;
+}
+
+// RAND(I)
+float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
+  unsigned mask = 0;
+  constexpr int radix = std::numeric_limits<float>::radix;
+  constexpr int digits = std::numeric_limits<float>::digits;
+  if (radix == 2) {
+    mask = ~(unsigned)0u << (32 - digits + 1);
+  } else if (radix == 16) {
+    mask = ~(unsigned)0u << ((8 - digits) * 4 + 1);
+  } else {
+    Terminator terminator{sourceFile, line};
+    terminator.Crash("Radix unknown value.");
+  }
+  return ((unsigned)(RTNAME(Irand)(i) - 1) & mask) * (float)0x1.p-31f;
+}
+
+// SRAND(SEED)
+void FORTRAN_PROCEDURE_NAME(srand)(int *seed) {
+  rand_seed_lock.Take();
+  _internal_srand(*seed);
+  rand_seed_lock.Drop();
+}
+
+void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
+  if (descr) {
+    descr->Dump(stderr, /*dumpRawType=*/false);
+  } else {
+    std::fprintf(stderr, "NULL\n");
+  }
+}
 
 // Extension procedures related to I/O
 
@@ -413,6 +501,15 @@ std::int64_t RTNAME(Ftell)(int unitNumber) {
     return -1;
   }
 }
+
+std::int32_t FORTRAN_PROCEDURE_NAME(fnum)(const int &unitNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return unit->fd();
+  } else {
+    return -1;
+  }
+}
+
 } // namespace io
 
 } // extern "C"

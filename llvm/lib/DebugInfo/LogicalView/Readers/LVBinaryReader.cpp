@@ -274,9 +274,10 @@ void LVBinaryReader::mapVirtualAddress(const object::COFFObjectFile &COFFObj) {
   });
 }
 
-Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
+Error LVBinaryReader::loadGenericTargetInfo(StringRef TripleName,
                                             StringRef TheFeatures,
                                             StringRef TheCPU) {
+  Triple TheTriple(TripleName);
   std::string TargetLookupError;
   const Target *TheTarget =
       TargetRegistry::lookupTarget(TheTriple, TargetLookupError);
@@ -287,7 +288,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   MCRegisterInfo *RegisterInfo = TheTarget->createMCRegInfo(TheTriple);
   if (!RegisterInfo)
     return createStringError(errc::invalid_argument,
-                             "no register info for target " + TheTriple);
+                             "no register info for target " + TripleName);
   MRI.reset(RegisterInfo);
 
   // Assembler properties and features.
@@ -295,7 +296,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   MCAsmInfo *AsmInfo(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
     return createStringError(errc::invalid_argument,
-                             "no assembly info for target " + TheTriple);
+                             "no assembly info for target " + TripleName);
   MAI.reset(AsmInfo);
 
   // Target subtargets.
@@ -303,14 +304,14 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
       TheTarget->createMCSubtargetInfo(TheTriple, TheCPU, TheFeatures));
   if (!SubtargetInfo)
     return createStringError(errc::invalid_argument,
-                             "no subtarget info for target " + TheTriple);
+                             "no subtarget info for target " + TripleName);
   STI.reset(SubtargetInfo);
 
   // Instructions Info.
   MCInstrInfo *InstructionInfo(TheTarget->createMCInstrInfo());
   if (!InstructionInfo)
     return createStringError(errc::invalid_argument,
-                             "no instruction info for target " + TheTriple);
+                             "no instruction info for target " + TripleName);
   MII.reset(InstructionInfo);
 
   MC = std::make_unique<MCContext>(Triple(TheTriple), MAI.get(), MRI.get(),
@@ -320,7 +321,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   MCDisassembler *DisAsm(TheTarget->createMCDisassembler(*STI, *MC));
   if (!DisAsm)
     return createStringError(errc::invalid_argument,
-                             "no disassembler for target " + TheTriple);
+                             "no disassembler for target " + TripleName);
   MD.reset(DisAsm);
 
   MCInstPrinter *InstructionPrinter(TheTarget->createMCInstPrinter(
@@ -328,7 +329,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   if (!InstructionPrinter)
     return createStringError(errc::invalid_argument,
                              "no target assembly language printer for target " +
-                                 TheTriple);
+                                 TripleName);
   MIP.reset(InstructionPrinter);
   InstructionPrinter->setPrintImmHex(true);
 

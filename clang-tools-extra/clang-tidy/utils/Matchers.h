@@ -1,4 +1,4 @@
-//===--- Matchers.h - clang-tidy-------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,7 +51,7 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isPointerToConst) {
 
 // Returns QualType matcher for target char type only.
 AST_MATCHER(QualType, isSimpleChar) {
-  const auto ActualType = Node.getTypePtr();
+  const auto *ActualType = Node.getTypePtr();
   return ActualType &&
          (ActualType->isSpecificBuiltinType(BuiltinType::Char_S) ||
           ActualType->isSpecificBuiltinType(BuiltinType::Char_U));
@@ -120,9 +120,8 @@ public:
 
   private:
     MatchMode determineMatchMode(llvm::StringRef Regex) {
-      if (Regex.starts_with(":") || Regex.starts_with("^:")) {
+      if (Regex.starts_with(":") || Regex.starts_with("^:"))
         return MatchMode::MatchFullyQualified;
-      }
       return Regex.contains(":") ? MatchMode::MatchQualified
                                  : MatchMode::MatchUnqualified;
     }
@@ -162,7 +161,7 @@ struct NotIdenticalStatementsPredicate {
 // Checks if statement is identical (utils::areStatementsIdentical) to one bound
 // to ID node.
 AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
-  NotIdenticalStatementsPredicate Predicate{
+  const NotIdenticalStatementsPredicate Predicate{
       ID, ::clang::DynTypedNode::create(Node), &(Finder->getASTContext())};
   return Builder->removeBindings(Predicate);
 }

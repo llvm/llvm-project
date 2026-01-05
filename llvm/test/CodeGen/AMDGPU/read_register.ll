@@ -1,5 +1,5 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire < %s | FileCheck %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire < %s | FileCheck %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire < %s | FileCheck %s
 
 declare i32 @llvm.read_register.i32(metadata) #0
 declare i64 @llvm.read_register.i64(metadata) #0

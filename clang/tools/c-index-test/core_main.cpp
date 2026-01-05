@@ -8,6 +8,7 @@
 
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -275,12 +276,13 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
 
   HeaderSearchOptions HSOpts;
 
+  auto VFS = llvm::vfs::getRealFileSystem();
+
   auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          *DiagOpts);
+      CompilerInstance::createDiagnostics(*VFS, *DiagOpts);
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      modulePath, *pchRdr, ASTUnit::LoadASTOnly, DiagOpts, Diags,
+      modulePath, *pchRdr, ASTUnit::LoadASTOnly, VFS, DiagOpts, Diags,
       FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
       /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
       /*AllowASTWithCompilerErrors=*/true,

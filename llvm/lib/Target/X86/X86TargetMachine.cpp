@@ -50,7 +50,6 @@
 #include "llvm/Transforms/CFGuard.h"
 #include <memory>
 #include <optional>
-#include <string>
 
 using namespace llvm;
 
@@ -75,29 +74,29 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
-  initializeCompressEVEXPassPass(PR);
-  initializeFixupLEAPassPass(PR);
-  initializeFPSPass(PR);
+  initializeCompressEVEXLegacyPass(PR);
+  initializeFixupLEAsLegacyPass(PR);
+  initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
-  initializeX86CallFrameOptimizationPass(PR);
-  initializeX86CmovConverterPassPass(PR);
+  initializeX86CallFrameOptimizationLegacyPass(PR);
+  initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigPass(PR);
-  initializeX86FastPreTileConfigPass(PR);
+  initializeX86FastPreTileConfigLegacyPass(PR);
   initializeX86FastTileConfigPass(PR);
   initializeKCFIPass(PR);
   initializeX86LowerTileCopyPass(PR);
-  initializeX86ExpandPseudoPass(PR);
+  initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
-  initializeX86DomainReassignmentPass(PR);
-  initializeX86AvoidSFBPassPass(PR);
-  initializeX86AvoidTrailingCallPassPass(PR);
+  initializeX86DomainReassignmentLegacyPass(PR);
+  initializeX86AvoidSFBLegacyPass(PR);
+  initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
-  initializeX86FlagsCopyLoweringPassPass(PR);
+  initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
-  initializeX86OptimizeLEAPassPass(PR);
-  initializeX86PartialReductionPass(PR);
+  initializeX86OptimizeLEAsLegacyPass(PR);
+  initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
@@ -105,14 +104,15 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
-  initializeX86DynAllocaExpanderPass(PR);
+  initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
+  initializeX86PreLegalizerCombinerPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO()) {
-    if (TT.getArch() == Triple::x86_64)
+    if (TT.isX86_64())
       return std::make_unique<X86_64MachoTargetObjectFile>();
     return std::make_unique<TargetLoweringObjectFileMachO>();
   }
@@ -120,62 +120,14 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
 
-  if (TT.getArch() == Triple::x86_64)
+  if (TT.isX86_64())
     return std::make_unique<X86_64ELFTargetObjectFile>();
   return std::make_unique<X86ELFTargetObjectFile>();
 }
 
-static std::string computeDataLayout(const Triple &TT) {
-  // X86 is little endian
-  std::string Ret = "e";
-
-  Ret += DataLayout::getManglingComponent(TT);
-  // X86 and x32 have 32 bit pointers.
-  if (!TT.isArch64Bit() || TT.isX32())
-    Ret += "-p:32:32";
-
-  // Address spaces for 32 bit signed, 32 bit unsigned, and 64 bit pointers.
-  Ret += "-p270:32:32-p271:32:32-p272:64:64";
-
-  // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
-  // 128 bit integers are not specified in the 32-bit ABIs but are used
-  // internally for lowering f128, so we match the alignment to that.
-  if (TT.isArch64Bit() || TT.isOSWindows())
-    Ret += "-i64:64-i128:128";
-  else if (TT.isOSIAMCU())
-    Ret += "-i64:32-f64:32";
-  else
-    Ret += "-i128:128-f64:32:64";
-
-  // Some ABIs align long double to 128 bits, others to 32.
-  if (TT.isOSIAMCU())
-    ; // No f80
-  else if (TT.isArch64Bit() || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
-    Ret += "-f80:128";
-  else
-    Ret += "-f80:32";
-
-  if (TT.isOSIAMCU())
-    Ret += "-f128:32";
-
-  // The registers can hold 8, 16, 32 or, in x86-64, 64 bits.
-  if (TT.isArch64Bit())
-    Ret += "-n8:16:32:64";
-  else
-    Ret += "-n8:16:32";
-
-  // The stack is aligned to 32 bits on some ABIs and 128 bits on others.
-  if ((!TT.isArch64Bit() && TT.isOSWindows()) || TT.isOSIAMCU())
-    Ret += "-a:0:32-S32";
-  else
-    Ret += "-S128";
-
-  return Ret;
-}
-
 static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
                                            std::optional<Reloc::Model> RM) {
-  bool is64Bit = TT.getArch() == Triple::x86_64;
+  bool is64Bit = TT.isX86_64();
   if (!RM) {
     // JIT codegen should use static relocations by default, since it's
     // typically executed in process and not relocatable.
@@ -217,7 +169,7 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
 static CodeModel::Model
 getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
                          bool JIT) {
-  bool Is64Bit = TT.getArch() == Triple::x86_64;
+  bool Is64Bit = TT.isX86_64();
   if (CM) {
     if (*CM == CodeModel::Tiny)
       reportFatalUsageError("target does not support the tiny CodeModel");
@@ -236,7 +188,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, JIT, RM),
                                getEffectiveX86CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
@@ -422,6 +374,7 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
+  void addPreLegalizeMachineIR() override;
   bool addILPOpts() override;
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
@@ -450,7 +403,7 @@ char X86ExecutionDomainFix::ID;
 
 INITIALIZE_PASS_BEGIN(X86ExecutionDomainFix, "x86-execution-domain-fix",
   "X86 Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(X86ExecutionDomainFix, "x86-execution-domain-fix",
   "X86 Execution Domain Fix", false, false)
 
@@ -470,14 +423,14 @@ void X86PassConfig::addIRPasses() {
 
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
-  addPass(createX86LowerAMXIntrinsicsPass());
-  addPass(createX86LowerAMXTypePass());
+  addPass(createX86LowerAMXIntrinsicsLegacyPass());
+  addPass(createX86LowerAMXTypeLegacyPass());
 
   TargetPassConfig::addIRPasses();
 
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInterleavedAccessPass());
-    addPass(createX86PartialReductionPass());
+    addPass(createX86PartialReductionLegacyPass());
   }
 
   // Add passes that handle indirect branch removal and insertion of a retpoline
@@ -488,7 +441,7 @@ void X86PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows()) {
-    if (TT.getArch() == Triple::x86_64) {
+    if (TT.isX86_64()) {
       addPass(createCFGuardDispatchPass());
     } else {
       addPass(createCFGuardCheckPass());
@@ -536,18 +489,24 @@ bool X86PassConfig::addGlobalInstructionSelect() {
   return false;
 }
 
+void X86PassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createX86PreLegalizerCombiner());
+  }
+}
+
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
-  addPass(createX86CmovConverterPass());
+  addPass(createX86CmovConversionLegacyPass());
   return true;
 }
 
 bool X86PassConfig::addPreISel() {
   // Only add this pass for 32-bit x86 Windows.
   const Triple &TT = TM->getTargetTriple();
-  if (TT.isOSWindows() && TT.getArch() == Triple::x86)
+  if (TT.isOSWindows() && TT.isX86_32())
     addPass(createX86WinEHStatePass());
   return true;
 }
@@ -556,31 +515,31 @@ void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
     addPass(createX86FixupSetCC());
-    addPass(createX86OptimizeLEAs());
-    addPass(createX86CallFrameOptimization());
-    addPass(createX86AvoidStoreForwardingBlocks());
+    addPass(createX86OptimizeLEAsLegacyPass());
+    addPass(createX86CallFrameOptimizationLegacyPass());
+    addPass(createX86AvoidStoreForwardingBlocksLegacyPass());
   }
 
   addPass(createX86SuppressAPXForRelocationPass());
 
   addPass(createX86SpeculativeLoadHardeningPass());
-  addPass(createX86FlagsCopyLoweringPass());
-  addPass(createX86DynAllocaExpander());
+  addPass(createX86FlagsCopyLoweringLegacyPass());
+  addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
   else
-    addPass(createX86FastPreTileConfigPass());
+    addPass(createX86FastPreTileConfigLegacyPass());
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
-  addPass(createX86DomainReassignmentPass());
+  addPass(createX86DomainReassignmentLegacyPass());
   TargetPassConfig::addMachineSSAOptimization();
 }
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86LowerTileCopyPass());
-  addPass(createX86FloatingPointStackifierPass());
+  addPass(createX86FPStackifierLegacyPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
   // to using the Speculative Execution Side Effect Suppression pass for
   // mitigation. This is to prevent slow downs due to
@@ -590,7 +549,7 @@ void X86PassConfig::addPostRegAlloc() {
 }
 
 void X86PassConfig::addPreSched2() {
-  addPass(createX86ExpandPseudoPass());
+  addPass(createX86ExpandPseudoLegacyPass());
   addPass(createKCFIPass());
 }
 
@@ -607,13 +566,11 @@ void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInsts());
     addPass(createX86PadShortFunctions());
-    addPass(createX86FixupLEAs());
+    addPass(createX86FixupLEAsLegacyPass());
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
   }
-  addPass(createX86CompressEVEXPass());
-  addPass(createX86DiscriminateMemOpsPass());
-  addPass(createX86InsertPrefetchPass());
+  addPass(createX86CompressEVEXLegacyPass());
   addPass(createX86InsertX87waitPass());
 }
 
@@ -636,8 +593,8 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
-  if (TT.isOSWindows() && TT.getArch() == Triple::x86_64)
-    addPass(createX86AvoidTrailingCallPass());
+  if (TT.isOSWindows() && TT.isX86_64())
+    addPass(createX86AvoidTrailingCallLegacyPass());
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
@@ -673,7 +630,7 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
-  if (TT.isOSWindows() && (TT.getArch() == Triple::x86_64))
+  if (TT.isOSWindows() && TT.isX86_64())
     addPass(createX86WinEHUnwindV2Pass());
 }
 

@@ -37,7 +37,6 @@
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
@@ -236,13 +235,14 @@ void test::writeToMlirBytecode(DialectBytecodeWriter &writer,
 // Dynamic operations
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<DynamicOpDefinition> getDynamicGenericOp(TestDialect *dialect) {
+static std::unique_ptr<DynamicOpDefinition>
+getDynamicGenericOp(TestDialect *dialect) {
   return DynamicOpDefinition::get(
       "dynamic_generic", dialect, [](Operation *op) { return success(); },
       [](Operation *op) { return success(); });
 }
 
-std::unique_ptr<DynamicOpDefinition>
+static std::unique_ptr<DynamicOpDefinition>
 getDynamicOneOperandTwoResultsOp(TestDialect *dialect) {
   return DynamicOpDefinition::get(
       "dynamic_one_operand_two_results", dialect,
@@ -262,7 +262,7 @@ getDynamicOneOperandTwoResultsOp(TestDialect *dialect) {
       [](Operation *op) { return success(); });
 }
 
-std::unique_ptr<DynamicOpDefinition>
+static std::unique_ptr<DynamicOpDefinition>
 getDynamicCustomParserPrinterOp(TestDialect *dialect) {
   auto verifier = [](Operation *op) {
     if (op->getNumOperands() == 0 && op->getNumResults() == 0)
@@ -429,4 +429,48 @@ dialectCanonicalizationPattern(TestDialectCanonicalizerOp op,
 void TestDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
   results.add(&dialectCanonicalizationPattern);
+}
+
+//===----------------------------------------------------------------------===//
+// TestCallWithSegmentsOp
+//===----------------------------------------------------------------------===//
+// The op `test.call_with_segments` models a call-like operation whose operands
+// are divided into 3 variadic segments: `prefix`, `args`, and `suffix`.
+// Only the middle segment represents the actual call arguments. The op uses
+// the AttrSizedOperandSegments trait, so we can derive segment boundaries from
+// the generated `operandSegmentSizes` attribute. We provide custom helpers to
+// expose the logical call arguments as both a read-only range and a mutable
+// range bound to the proper segment so that insertion/erasure updates the
+// attribute automatically.
+
+// Segment layout indices in the DenseI32ArrayAttr: [prefix, args, suffix].
+static constexpr unsigned kTestCallWithSegmentsArgsSegIndex = 1;
+
+Operation::operand_range CallWithSegmentsOp::getArgOperands() {
+  // Leverage generated getters for segment sizes: slice between prefix and
+  // suffix using current operand list.
+  return getOperation()->getOperands().slice(getPrefix().size(),
+                                             getArgs().size());
+}
+
+MutableOperandRange CallWithSegmentsOp::getArgOperandsMutable() {
+  Operation *op = getOperation();
+
+  // Obtain the canonical segment size attribute name for this op.
+  auto segName =
+      CallWithSegmentsOp::getOperandSegmentSizesAttrName(op->getName());
+  auto sizesAttr = op->getAttrOfType<DenseI32ArrayAttr>(segName);
+  assert(sizesAttr && "missing operandSegmentSizes attribute on op");
+
+  // Compute the start and length of the args segment from the prefix size and
+  // args size stored in the attribute.
+  auto sizes = sizesAttr.asArrayRef();
+  unsigned start = static_cast<unsigned>(sizes[0]); // prefix size
+  unsigned len = static_cast<unsigned>(sizes[1]);   // args size
+
+  NamedAttribute segNamed(segName, sizesAttr);
+  MutableOperandRange::OperandSegment binding{kTestCallWithSegmentsArgsSegIndex,
+                                              segNamed};
+
+  return MutableOperandRange(op, start, len, {binding});
 }

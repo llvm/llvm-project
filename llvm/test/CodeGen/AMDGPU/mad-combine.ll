@@ -1049,9 +1049,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1)
 ; SI-STD:       ; %bb.0:
 ; SI-STD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-STD-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-STD-NEXT:    s_mov_b32 s3, 0xf000
+; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-STD-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-STD-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
@@ -1097,9 +1097,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1)
 ; SI-DENORM-FASTFMAF:       ; %bb.0:
 ; SI-DENORM-FASTFMAF-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-DENORM-FASTFMAF-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s3, 0xf000
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-DENORM-FASTFMAF-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-DENORM-FASTFMAF-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
@@ -1145,9 +1145,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1)
 ; SI-DENORM-SLOWFMAF:       ; %bb.0:
 ; SI-DENORM-SLOWFMAF-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-DENORM-SLOWFMAF-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s3, 0xf000
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-DENORM-SLOWFMAF-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-DENORM-SLOWFMAF-NEXT:    buffer_load_dword v3, v[0:1], s[0:3], 0 addr64 glc
@@ -1277,9 +1277,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1)
 ; SI-STD:       ; %bb.0:
 ; SI-STD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-STD-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-STD-NEXT:    s_mov_b32 s3, 0xf000
+; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-STD-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-STD-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
@@ -1325,9 +1325,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1)
 ; SI-DENORM-FASTFMAF:       ; %bb.0:
 ; SI-DENORM-FASTFMAF-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-DENORM-FASTFMAF-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s3, 0xf000
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-DENORM-FASTFMAF-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-DENORM-FASTFMAF-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
@@ -1373,9 +1373,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1)
 ; SI-DENORM-SLOWFMAF:       ; %bb.0:
 ; SI-DENORM-SLOWFMAF-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-DENORM-SLOWFMAF-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s3, 0xf000
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-DENORM-SLOWFMAF-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-DENORM-SLOWFMAF-NEXT:    buffer_load_dword v3, v[0:1], s[0:3], 0 addr64 glc
@@ -1457,9 +1457,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(ptr addrspace(1)
 ; SI-STD:       ; %bb.0:
 ; SI-STD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-STD-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-STD-NEXT:    s_mov_b32 s3, 0xf000
+; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-STD-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-STD-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
@@ -1505,9 +1505,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(ptr addrspace(1)
 ; SI-DENORM-FASTFMAF:       ; %bb.0:
 ; SI-DENORM-FASTFMAF-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-DENORM-FASTFMAF-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s3, 0xf000
+; SI-DENORM-FASTFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-FASTFMAF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-DENORM-FASTFMAF-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-DENORM-FASTFMAF-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
@@ -1553,9 +1553,9 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(ptr addrspace(1)
 ; SI-DENORM-SLOWFMAF:       ; %bb.0:
 ; SI-DENORM-SLOWFMAF-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; SI-DENORM-SLOWFMAF-NEXT:    s_load_dword s6, s[4:5], 0xd
-; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s3, 0xf000
+; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b32 s2, 0
 ; SI-DENORM-SLOWFMAF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-DENORM-SLOWFMAF-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-DENORM-SLOWFMAF-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc

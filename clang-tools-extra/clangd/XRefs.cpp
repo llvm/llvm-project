@@ -16,11 +16,11 @@
 #include "Quality.h"
 #include "Selection.h"
 #include "SourceCode.h"
-#include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/Index.h"
 #include "index/Merge.h"
+#include "index/Ref.h"
 #include "index/Relation.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolID.h"
@@ -42,7 +42,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -56,9 +55,9 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -66,6 +65,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -806,7 +806,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
       // go-to-definition on auto should find the definition of the deduced
       // type, if possible
-      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+      if (auto Deduced =
+              getDeducedType(AST.getASTContext(), AST.getHeuristicResolver(),
+                             Tok.location())) {
         auto LocSym = locateSymbolForType(AST, *Deduced, Index);
         if (!LocSym.empty())
           return LocSym;
@@ -924,12 +926,15 @@ public:
     }
   };
 
-  ReferenceFinder(const ParsedAST &AST,
+  ReferenceFinder(ParsedAST &AST,
                   const llvm::ArrayRef<const NamedDecl *> Targets,
                   bool PerToken)
       : PerToken(PerToken), AST(AST) {
-    for (const NamedDecl *ND : Targets)
+    for (const NamedDecl *ND : Targets) {
       TargetDecls.insert(ND->getCanonicalDecl());
+      if (auto *Constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(ND))
+        TargetConstructors.insert(Constructor);
+    }
   }
 
   std::vector<Reference> take() && {
@@ -950,12 +955,41 @@ public:
     return std::move(References);
   }
 
+  bool forwardsToConstructor(const Decl *D) {
+    if (TargetConstructors.empty())
+      return false;
+    auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+    if (FD == nullptr || !FD->isTemplateInstantiation())
+      return false;
+
+    SmallVector<const CXXConstructorDecl *, 1> *Constructors = nullptr;
+    if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
+        Entry != AST.ForwardingToConstructorCache.end())
+      Constructors = &Entry->getSecond();
+    if (Constructors == nullptr) {
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT == nullptr || !isLikelyForwardingFunction(PT))
+        return false;
+
+      SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
+          searchConstructorsInForwardingFunction(FD);
+      auto Iter = AST.ForwardingToConstructorCache.try_emplace(
+          FD, std::move(FoundConstructors));
+      Constructors = &Iter.first->getSecond();
+    }
+    for (auto *Constructor : *Constructors)
+      if (TargetConstructors.contains(Constructor))
+        return true;
+    return false;
+  }
+
   bool
   handleDeclOccurrence(const Decl *D, index::SymbolRoleSet Roles,
                        llvm::ArrayRef<index::SymbolRelation> Relations,
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    if (!TargetDecls.contains(D->getCanonicalDecl()))
+    if (!TargetDecls.contains(D->getCanonicalDecl()) &&
+        !forwardsToConstructor(ASTNode.OrigD))
       return true;
     const SourceManager &SM = AST.getSourceManager();
     if (!isInsideMainFile(Loc, SM))
@@ -995,8 +1029,10 @@ public:
 private:
   bool PerToken; // If true, report 3 references for split ObjC selector names.
   std::vector<Reference> References;
-  const ParsedAST &AST;
+  ParsedAST &AST;
   llvm::DenseSet<const Decl *> TargetDecls;
+  // Constructors need special handling since they can be hidden behind forwards
+  llvm::DenseSet<const CXXConstructorDecl *> TargetConstructors;
 };
 
 std::vector<ReferenceFinder::Reference>
@@ -1061,7 +1097,7 @@ class FindControlFlow : public RecursiveASTVisitor<FindControlFlow> {
   // Traverses the subtree using Delegate() if any targets remain.
   template <typename Func>
   bool filterAndTraverse(DynTypedNode D, const Func &Delegate) {
-    auto RestoreIgnore = llvm::make_scope_exit(
+    llvm::scope_exit RestoreIgnore(
         [OldIgnore(Ignore), this] { Ignore = OldIgnore; });
     if (getFunctionBody(D))
       Ignore = All;
@@ -1106,11 +1142,11 @@ public:
     return true;
   }
   bool VisitBreakStmt(BreakStmt *B) {
-    found(Break, B->getBreakLoc());
+    found(Break, B->getKwLoc());
     return true;
   }
   bool VisitContinueStmt(ContinueStmt *C) {
-    found(Continue, C->getContinueLoc());
+    found(Continue, C->getKwLoc());
     return true;
   }
   bool VisitSwitchCase(SwitchCase *C) {
@@ -1876,7 +1912,7 @@ static void fillSubTypes(const SymbolID &ID,
   });
 }
 
-using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
+using RecursionProtectionSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
 // Extracts parents from AST and populates the type hierarchy item.
 static void fillSuperTypes(const CXXRecordDecl &CXXRD, llvm::StringRef TUPath,
@@ -1965,7 +2001,7 @@ std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
 
 // Return the type most associated with an AST node.
 // This isn't precisely defined: we want "go to type" to do something useful.
-static QualType typeForNode(const ASTContext &Ctx,
+static QualType typeForNode(const ASTContext &Ctx, const HeuristicResolver *H,
                             const SelectionTree::Node *N) {
   // If we're looking at a namespace qualifier, walk up to what it's qualifying.
   // (If we're pointing at a *class* inside a NNS, N will be a TypeLoc).
@@ -1978,7 +2014,7 @@ static QualType typeForNode(const ASTContext &Ctx,
   if (const TypeLoc *TL = N->ASTNode.get<TypeLoc>()) {
     if (llvm::isa<DeducedType>(TL->getTypePtr()))
       if (auto Deduced = getDeducedType(
-              N->getDeclContext().getParentASTContext(), TL->getBeginLoc()))
+              N->getDeclContext().getParentASTContext(), H, TL->getBeginLoc()))
         return *Deduced;
     // Exception: an alias => underlying type.
     if (llvm::isa<TypedefType>(TL->getTypePtr()))
@@ -2161,7 +2197,8 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     // information about the type you may have not known before
     // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
     for (const QualType &Type : unwrapFindType(
-             typeForNode(AST.getASTContext(), N), AST.getHeuristicResolver()))
+             typeForNode(AST.getASTContext(), AST.getHeuristicResolver(), N),
+             AST.getHeuristicResolver()))
       llvm::copy(locateSymbolForType(AST, Type, Index),
                  std::back_inserter(LocatedSymbols));
 
@@ -2347,51 +2384,64 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // to an AST node isn't cheap, particularly when the declaration isn't
   // in the main file.
   // FIXME: Consider also using AST information when feasible.
-  RefsRequest Request;
-  Request.IDs.insert(*ID);
-  Request.WantContainer = true;
-  // We could restrict more specifically to calls by introducing a new RefKind,
-  // but non-call references (such as address-of-function) can still be
-  // interesting as they can indicate indirect calls.
-  Request.Filter = RefKind::Reference;
-  // Initially store the ranges in a map keyed by SymbolID of the caller.
-  // This allows us to group different calls with the same caller
-  // into the same CallHierarchyIncomingCall.
-  llvm::DenseMap<SymbolID, std::vector<Location>> CallsIn;
-  // We can populate the ranges based on a refs request only. As we do so, we
-  // also accumulate the container IDs into a lookup request.
-  LookupRequest ContainerLookup;
-  Index->refs(Request, [&](const Ref &R) {
-    auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
-    if (!Loc) {
-      elog("incomingCalls failed to convert location: {0}", Loc.takeError());
-      return;
-    }
-    CallsIn[R.Container].push_back(*Loc);
-
-    ContainerLookup.IDs.insert(R.Container);
-  });
-  // Perform the lookup request and combine its results with CallsIn to
-  // get complete CallHierarchyIncomingCall objects.
-  Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
-    auto It = CallsIn.find(Caller.ID);
-    assert(It != CallsIn.end());
-    if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
-      std::vector<Range> FromRanges;
-      for (const Location &L : It->second) {
-        if (L.uri != CHI->uri) {
-          // Call location not in same file as caller.
-          // This can happen in some edge cases. There's not much we can do,
-          // since the protocol only allows returning ranges interpreted as
-          // being in the caller's file.
-          continue;
-        }
-        FromRanges.push_back(L.range);
+  auto QueryIndex = [&](llvm::DenseSet<SymbolID> IDs, bool MightNeverCall) {
+    RefsRequest Request;
+    Request.IDs = std::move(IDs);
+    Request.WantContainer = true;
+    // We could restrict more specifically to calls by introducing a new
+    // RefKind, but non-call references (such as address-of-function) can still
+    // be interesting as they can indicate indirect calls.
+    Request.Filter = RefKind::Reference;
+    // Initially store the ranges in a map keyed by SymbolID of the caller.
+    // This allows us to group different calls with the same caller
+    // into the same CallHierarchyIncomingCall.
+    llvm::DenseMap<SymbolID, std::vector<Location>> CallsIn;
+    // We can populate the ranges based on a refs request only. As we do so, we
+    // also accumulate the container IDs into a lookup request.
+    LookupRequest ContainerLookup;
+    Index->refs(Request, [&](const Ref &R) {
+      auto Loc = indexToLSPLocation(R.Location, Item.uri.file());
+      if (!Loc) {
+        elog("incomingCalls failed to convert location: {0}", Loc.takeError());
+        return;
       }
-      Results.push_back(
-          CallHierarchyIncomingCall{std::move(*CHI), std::move(FromRanges)});
-    }
-  });
+      CallsIn[R.Container].push_back(*Loc);
+
+      ContainerLookup.IDs.insert(R.Container);
+    });
+    // Perform the lookup request and combine its results with CallsIn to
+    // get complete CallHierarchyIncomingCall objects.
+    Index->lookup(ContainerLookup, [&](const Symbol &Caller) {
+      auto It = CallsIn.find(Caller.ID);
+      assert(It != CallsIn.end());
+      if (auto CHI = symbolToCallHierarchyItem(Caller, Item.uri.file())) {
+        std::vector<Range> FromRanges;
+        for (const Location &L : It->second) {
+          if (L.uri != CHI->uri) {
+            // Call location not in same file as caller.
+            // This can happen in some edge cases. There's not much we can do,
+            // since the protocol only allows returning ranges interpreted as
+            // being in the caller's file.
+            continue;
+          }
+          FromRanges.push_back(L.range);
+        }
+        Results.push_back(CallHierarchyIncomingCall{
+            std::move(*CHI), std::move(FromRanges), MightNeverCall});
+      }
+    });
+  };
+  QueryIndex({ID.get()}, false);
+  // In the case of being a virtual function we also want to return
+  // potential calls through the base function.
+  if (Item.kind == SymbolKind::Method) {
+    llvm::DenseSet<SymbolID> IDs;
+    RelationsRequest Req{{ID.get()}, RelationKind::OverriddenBy, std::nullopt};
+    Index->reverseRelations(Req, [&](const SymbolID &, const Symbol &Caller) {
+      IDs.insert(Caller.ID);
+    });
+    QueryIndex(std::move(IDs), true);
+  }
   // Sort results by name of container.
   llvm::sort(Results, [](const CallHierarchyIncomingCall &A,
                          const CallHierarchyIncomingCall &B) {

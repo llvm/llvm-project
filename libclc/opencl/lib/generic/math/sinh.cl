@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_sinh.h>
-#include <clc/opencl/math/sinh.h>
 
-#define FUNCTION sinh
+#define __CLC_FUNCTION sinh
 #define __CLC_BODY <clc/shared/unary_def.inc>
 #include <clc/math/gentype.inc>

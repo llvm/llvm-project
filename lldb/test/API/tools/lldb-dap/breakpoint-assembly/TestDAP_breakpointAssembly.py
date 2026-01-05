@@ -2,7 +2,6 @@
 Test lldb-dap setBreakpoints request in assembly source references.
 """
 
-
 from lldbsuite.test.decorators import *
 from dap_server import Source
 import lldbdap_testcase
@@ -52,7 +51,7 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
 
         # Verify that setting a breakpoint on an invalid source reference fails
         response = self.dap_server.request_setBreakpoints(
-            Source(source_reference=-1), [1]
+            Source.build(source_reference=-1), [1]
         )
         self.assertIsNotNone(response)
         breakpoints = response["body"]["breakpoints"]
@@ -69,7 +68,7 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
 
         # Verify that setting a breakpoint on a source reference that is not created fails
         response = self.dap_server.request_setBreakpoints(
-            Source(source_reference=200), [1]
+            Source.build(source_reference=200), [1]
         )
         self.assertIsNotNone(response)
         breakpoints = response["body"]["breakpoints"]
@@ -95,9 +94,10 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
         try:
             self.dap_server.request_initialize()
             self.dap_server.request_launch(program)
+            self.dap_server.wait_for_event(["initialized"])
 
-            assmebly_func_breakpoints = self.set_function_breakpoints(["assembly_func"])
-            self.continue_to_breakpoints(assmebly_func_breakpoints)
+            assembly_func_breakpoints = self.set_function_breakpoints(["assembly_func"])
+            self.continue_to_breakpoints(assembly_func_breakpoints)
 
             assembly_func_frame = self.get_stackFrames()[0]
             source_reference = assembly_func_frame["source"]["sourceReference"]
@@ -116,7 +116,7 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
 
             persistent_breakpoint_source = self.dap_server.resolved_breakpoints[
                 persistent_breakpoint_ids[0]
-            ].source()
+            ]["source"]
             self.assertIn(
                 "adapterData",
                 persistent_breakpoint_source,
@@ -138,8 +138,10 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
         try:
             self.dap_server.request_initialize()
             self.dap_server.request_launch(program)
+            self.dap_server.wait_for_event(["initialized"])
+
             new_session_breakpoints_ids = self.set_source_breakpoints_from_source(
-                Source(raw_dict=persistent_breakpoint_source),
+                Source(persistent_breakpoint_source),
                 [persistent_breakpoint_line],
             )
 

@@ -92,16 +92,47 @@ def SDTVecLeaf:
 def SDTVecVecIntOp:
   SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>,
                        SDTCisVT<3,i32>]>;
+def SDTIntBinOpWithCarryInOut:
+  SDTypeProfile<2, 3, [SDTCisInt<0>, SDTCisVT<1, i1>, SDTCisSameAs<2, 0>,
+                       SDTCisSameAs<3, 0>, SDTCisVT<4, i1>]>;
+
+// Add with carry: (X, Y, Cin) -> (X+Y, Cout).
+def HexagonADDC: SDNode<"HexagonISD::ADDC", SDTIntBinOpWithCarryInOut>;
+
+// Sub with carry: (X, Y, Cin) -> (X+~Y+Cin, Cout).
+def HexagonSUBC: SDNode<"HexagonISD::SUBC", SDTIntBinOpWithCarryInOut>;
+
+// Same as ISD::SMUL_LOHI, but opaque to the combiner.
+// We want to legalize MULH[SU] to [SU]MUL_LOHI, but the
+// combiner will keep rewriting it back to MULH[SU].
+def HexagonSMUL_LOHI: SDNode<"HexagonISD::SMUL_LOHI", SDTIntBinHiLoOp>;
+
+// Same as ISD::UMUL_LOHI, but opaque to the combiner.
+def HexagonUMUL_LOHI: SDNode<"HexagonISD::UMUL_LOHI", SDTIntBinHiLoOp>;
+
+// Like SMUL_LOHI, but unsigned*signed.
+def HexagonUSMUL_LOHI: SDNode<"HexagonISD::USMUL_LOHI", SDTIntBinHiLoOp>;
 
 def HexagonPTRUE:      SDNode<"HexagonISD::PTRUE",      SDTVecLeaf>;
 def HexagonPFALSE:     SDNode<"HexagonISD::PFALSE",     SDTVecLeaf>;
+
+// Align two vectors (in Op0, Op1) to one that would have
+// been loaded from address in Op2.
 def HexagonVALIGN:     SDNode<"HexagonISD::VALIGN",     SDTVecVecIntOp>;
+
+// Align vector address: Op0 & -Op1, except when it is
+// an address in a vector load, then it's a no-op.
 def HexagonVALIGNADDR: SDNode<"HexagonISD::VALIGNADDR", SDTIntUnaryOp>;
+
 def HexagonMULHUS:     SDNode<"HexagonISD::MULHUS",     SDTIntBinOp>;
 
 def SDTSaturate:
   SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>, SDTCisVT<2, OtherVT>]>;
+
+// Signed saturate.
 def HexagonSSAT: SDNode<"HexagonISD::SSAT", SDTSaturate>;
+
+// Unsigned saturate.
 def HexagonUSAT: SDNode<"HexagonISD::USAT", SDTSaturate>;
 
 def ptrue:  PatFrag<(ops), (HexagonPTRUE)>;
@@ -380,6 +411,7 @@ multiclass NopCast_pat<ValueType Ty1, ValueType Ty2, RegisterClass RC> {
 def Add: pf2<add>;    def And: pf2<and>;    def Sra: pf2<sra>;
 def Sub: pf2<sub>;    def Or:  pf2<or>;     def Srl: pf2<srl>;
 def Mul: pf2<mul>;    def Xor: pf2<xor>;    def Shl: pf2<shl>;
+def Sext: pf1<sext>;  def Zext: pf1<zext>;
 
 def Smin: pf2<smin>;  def Smax: pf2<smax>;
 def Umin: pf2<umin>;  def Umax: pf2<umax>;
@@ -390,7 +422,6 @@ def Fptosi: pf1<fp_to_sint>;
 def Fptoui: pf1<fp_to_uint>;
 def Sitofp: pf1<sint_to_fp>;
 def Uitofp: pf1<uint_to_fp>;
-
 
 // --(1) Immediate -------------------------------------------------------
 //
@@ -408,9 +439,15 @@ def Imm64Hi: SDNodeXForm<imm, [{
 def SDTHexagonCONST32
   : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisPtrTy<0>]>;
 
+// Jump table.
 def HexagonJT:          SDNode<"HexagonISD::JT",          SDTIntUnaryOp>;
+
+// Constant pool.
 def HexagonCP:          SDNode<"HexagonISD::CP",          SDTIntUnaryOp>;
+
 def HexagonCONST32:     SDNode<"HexagonISD::CONST32",     SDTHexagonCONST32>;
+
+// For marking data present in GP.
 def HexagonCONST32_GP:  SDNode<"HexagonISD::CONST32_GP",  SDTHexagonCONST32>;
 
 def TruncI64ToI32: SDNodeXForm<imm, [{
@@ -474,6 +511,18 @@ def: OpR_R_pat<F2_conv_df2uw_chop, pf1<fp_to_uint>, i32, F64>;
 def: OpR_R_pat<F2_conv_sf2ud_chop, pf1<fp_to_uint>, i64, F32>;
 def: OpR_R_pat<F2_conv_df2ud_chop, pf1<fp_to_uint>, i64, F64>;
 
+def: Pat<(i32 (fp_to_bf16 F32:$v)),
+         (C2_mux (F2_sfclass F32:$v, 0x10), (A2_tfrsi(i32 0x7fff)),
+           (C2_mux
+             (C2_cmpeq
+               (A2_and F32:$v, (A2_tfrsi (i32 0x1FFFF))),
+               (A2_tfrsi (i32 0x08000))),
+             (A2_and (A2_asrh F32:$v), (A2_tfrsi (i32 65535))),
+             (A2_and
+               (A2_asrh
+                 (A2_add F32:$v, (A2_and F32:$v, (A2_tfrsi (i32 0x8000))))),
+                 (A2_tfrsi (i32 65535))))
+         )>;
 // Bitcast is different than [fp|sint|uint]_to_[sint|uint|fp].
 def: Pat<(i32 (bitconvert F32:$v)), (I32:$v)>;
 def: Pat<(f32 (bitconvert I32:$v)), (F32:$v)>;
@@ -699,35 +748,20 @@ def: OpR_RR_pat<C2_cmpgtp,    setgt,          i1,   I64>;
 def: OpR_RR_pat<C2_cmpgtup,   setugt,         i1,   I64>;
 def: OpR_RR_pat<C2_cmpgtp,    RevCmp<setlt>,  i1,   I64>;
 def: OpR_RR_pat<C2_cmpgtup,   RevCmp<setult>, i1,   I64>;
-def: OpR_RR_pat<A2_vcmpbeq,   seteq,          i1,   V8I8>;
 def: OpR_RR_pat<A2_vcmpbeq,   seteq,          v8i1, V8I8>;
-def: OpR_RR_pat<A4_vcmpbgt,   RevCmp<setlt>,  i1,   V8I8>;
 def: OpR_RR_pat<A4_vcmpbgt,   RevCmp<setlt>,  v8i1, V8I8>;
-def: OpR_RR_pat<A4_vcmpbgt,   setgt,          i1,   V8I8>;
 def: OpR_RR_pat<A4_vcmpbgt,   setgt,          v8i1, V8I8>;
-def: OpR_RR_pat<A2_vcmpbgtu,  RevCmp<setult>, i1,   V8I8>;
 def: OpR_RR_pat<A2_vcmpbgtu,  RevCmp<setult>, v8i1, V8I8>;
-def: OpR_RR_pat<A2_vcmpbgtu,  setugt,         i1,   V8I8>;
 def: OpR_RR_pat<A2_vcmpbgtu,  setugt,         v8i1, V8I8>;
-def: OpR_RR_pat<A2_vcmpheq,   seteq,          i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmpheq,   seteq,          v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmphgt,   RevCmp<setlt>,  i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmphgt,   RevCmp<setlt>,  v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmphgt,   setgt,          i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmphgt,   setgt,          v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmphgtu,  RevCmp<setult>, i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmphgtu,  RevCmp<setult>, v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmphgtu,  setugt,         i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmphgtu,  setugt,         v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmpweq,   seteq,          i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpweq,   seteq,          v2i1, V2I32>;
-def: OpR_RR_pat<A2_vcmpwgt,   RevCmp<setlt>,  i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgt,   RevCmp<setlt>,  v2i1, V2I32>;
-def: OpR_RR_pat<A2_vcmpwgt,   setgt,          i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgt,   setgt,          v2i1, V2I32>;
-def: OpR_RR_pat<A2_vcmpwgtu,  RevCmp<setult>, i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgtu,  RevCmp<setult>, v2i1, V2I32>;
-def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         v2i1, V2I32>;
 
 def: OpR_RR_pat<F2_sfcmpeq,   seteq,          i1, F32>;
@@ -1213,12 +1247,6 @@ def: OpR_RI_pat<S2_asl_i_r,  Shl, i32,   I32,   u5_0ImmPred>;
 def: OpR_RI_pat<S2_asr_i_p,  Sra, i64,   I64,   u6_0ImmPred>;
 def: OpR_RI_pat<S2_lsr_i_p,  Srl, i64,   I64,   u6_0ImmPred>;
 def: OpR_RI_pat<S2_asl_i_p,  Shl, i64,   I64,   u6_0ImmPred>;
-def: OpR_RI_pat<S2_asr_i_vh, Sra, v4i16, V4I16, u4_0ImmPred>;
-def: OpR_RI_pat<S2_lsr_i_vh, Srl, v4i16, V4I16, u4_0ImmPred>;
-def: OpR_RI_pat<S2_asl_i_vh, Shl, v4i16, V4I16, u4_0ImmPred>;
-def: OpR_RI_pat<S2_asr_i_vh, Sra, v2i32, V2I32, u5_0ImmPred>;
-def: OpR_RI_pat<S2_lsr_i_vh, Srl, v2i32, V2I32, u5_0ImmPred>;
-def: OpR_RI_pat<S2_asl_i_vh, Shl, v2i32, V2I32, u5_0ImmPred>;
 
 def: OpR_RR_pat<S2_asr_r_r, Sra, i32, I32, I32>;
 def: OpR_RR_pat<S2_lsr_r_r, Srl, i32, I32, I32>;
@@ -1451,6 +1479,7 @@ let AddedComplexity = 200 in {
 def SDTHexagonVShift
   : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisVec<0>, SDTCisVT<2, i32>]>;
 
+// Vector shifts by a scalar value
 def HexagonVASL: SDNode<"HexagonISD::VASL", SDTHexagonVShift>;
 def HexagonVASR: SDNode<"HexagonISD::VASR", SDTHexagonVShift>;
 def HexagonVLSR: SDNode<"HexagonISD::VLSR", SDTHexagonVShift>;
@@ -1611,8 +1640,11 @@ def DfMpy: OutPatFrag<(ops node:$Rs, node:$Rt),
     $Rt, $Rs),
   $Rs, $Rt)>;
 
-let Predicates = [HasV67,UseUnsafeMath], AddedComplexity = 50 in {
-  def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
+def fmul_afn : PatFrag<(ops node:$a, node:$b), (fmul node:$a, node:$b), [{
+  return N->getFlags().hasApproximateFuncs();
+}]>;
+let Predicates = [HasV67], AddedComplexity = 50 in {
+  def : Pat<(fmul_afn F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
 }
 let Predicates = [HasV67] in {
   def: OpR_RR_pat<F2_dfmin,     pf2<fminimumnum>, f64, F64>;
@@ -3309,8 +3341,12 @@ def SDT_SPCall: SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 
 def HexagonTCRet: SDNode<"HexagonISD::TC_RETURN", SDT_SPCall,
                          [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+
+// Function call.
 def callv3: SDNode<"HexagonISD::CALL", SDT_SPCall,
                    [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+
+// Function call that does not return.
 def callv3nr: SDNode<"HexagonISD::CALLnr", SDT_SPCall,
                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
@@ -3332,8 +3368,10 @@ def: Pat<(callv3nr I32:$dst),               (PS_callr_nr I32:$dst)>;
 def: Pat<(callv3nr tglobaladdr:$dst),       (PS_call_nr tglobaladdr:$dst)>;
 def: Pat<(callv3nr texternalsym:$dst),      (PS_call_nr texternalsym:$dst)>;
 
+// Return with a glue operand.
 def retglue : SDNode<"HexagonISD::RET_GLUE", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 def eh_return: SDNode<"HexagonISD::EH_RETURN", SDTNone, [SDNPHasChain]>;
 
 def: Pat<(retglue),   (PS_jmpret (i32 R31))>;
@@ -3413,7 +3451,9 @@ def HexagonALLOCA
 def: Pat<(HexagonALLOCA I32:$Rs, (i32 imm:$A)),
          (PS_alloca IntRegs:$Rs, imm:$A)>;
 
+// Memory barrier.
 def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
+
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;
@@ -3451,6 +3491,19 @@ let AddedComplexity = 100 in {
   def: Pat<(i1 (seteq (int_hexagon_S4_stored_locked I32:$Rs, I64:$Rt), 0)),
            (C2_not (S4_stored_locked I32:$Rs, I64:$Rt))>;
 }
+
+multiclass FloatClass<SDPatternOperator IntOp, InstHexagon MI,
+                      PatFrag RegPred> {
+  let AddedComplexity = 100 in {
+    def: Pat<(i1 (seteq (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
+             (C2_not (MI RegPred:$Rs, u5_0ImmPred_timm:$u5))>;
+    def: Pat<(i1 (setne (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
+             (MI RegPred:$Rs, u5_0ImmPred_timm:$u5)>;
+  }
+}
+
+defm : FloatClass<int_hexagon_F2_sfclass, F2_sfclass, F32>;
+defm : FloatClass<int_hexagon_F2_dfclass, F2_dfclass, F64>;
 
 def: Pat<(int_hexagon_instrprof_custom (HexagonAtPcrel tglobaladdr:$addr), u32_0ImmPred:$I),
          (PS_call_instrprof_custom tglobaladdr:$addr, imm:$I)>;

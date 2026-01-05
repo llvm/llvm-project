@@ -13,7 +13,6 @@
 
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/DataAccessProf.h"
@@ -543,7 +542,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 12.
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-                IndexedInstrProf::ProfVersion::Version12);
+                IndexedInstrProf::ProfVersion::Version13);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))

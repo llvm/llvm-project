@@ -9,9 +9,9 @@
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
 
-#include "src/__support/libc_errno.h"
-
 #include "test/IntegrationTest/test.h"
+
+#include <errno.h>
 #include <pthread.h>
 
 static void *simpleFunc(void *) { return nullptr; }
@@ -25,7 +25,7 @@ static void nullJoinTest() {
 }
 
 TEST_MAIN() {
-  libc_errno = 0;
+  errno = 0;
   nullJoinTest();
   return 0;
 }

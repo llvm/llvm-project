@@ -518,6 +518,20 @@ int FunctionComparator::cmpConstants(const Constant *L,
     const auto *REquiv = cast<DSOLocalEquivalent>(R);
     return cmpGlobalValues(LEquiv->getGlobalValue(), REquiv->getGlobalValue());
   }
+  case Value::ConstantPtrAuthVal: {
+    // Handle authenticated pointer constants produced by ConstantPtrAuth::get.
+    const ConstantPtrAuth *LPA = cast<ConstantPtrAuth>(L);
+    const ConstantPtrAuth *RPA = cast<ConstantPtrAuth>(R);
+    if (int Res = cmpConstants(LPA->getPointer(), RPA->getPointer()))
+      return Res;
+    if (int Res = cmpConstants(LPA->getKey(), RPA->getKey()))
+      return Res;
+    if (int Res =
+            cmpConstants(LPA->getDiscriminator(), RPA->getDiscriminator()))
+      return Res;
+    return cmpConstants(LPA->getAddrDiscriminator(),
+                        RPA->getAddrDiscriminator());
+  }
   default: // Unknown constant, abort.
     LLVM_DEBUG(dbgs() << "Looking at valueID " << L->getValueID() << "\n");
     llvm_unreachable("Constant ValueID not recognized.");
@@ -723,6 +737,12 @@ int FunctionComparator::cmpOperations(const Instruction *L,
         return Res;
     return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
                      R->getMetadata(LLVMContext::MD_range));
+  }
+  if (const SwitchInst *SI = dyn_cast<SwitchInst>(L)) {
+    for (auto [LCase, RCase] : zip(SI->cases(), cast<SwitchInst>(R)->cases()))
+      if (int Res = cmpConstants(LCase.getCaseValue(), RCase.getCaseValue()))
+        return Res;
+    return 0;
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();

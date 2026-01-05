@@ -38,7 +38,7 @@ public:
     watchOS,
     XRSimulator,
     XROS,
-    bridgeOS,
+    BridgeOS,
     Linux,
     unknown = -1
   };
@@ -86,8 +86,6 @@ public:
   Type GetType() const;
   llvm::StringRef GetString() const;
   const FileSpec &GetSysroot() const;
-  /// Whether this Xcode SDK supports Swift.
-  bool SupportsSwift() const;
 
   /// Whether LLDB feels confident importing Clang modules from this SDK.
   static bool SDKSupportsModules(Type type, llvm::VersionTuple version);

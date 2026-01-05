@@ -24,6 +24,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -392,6 +393,17 @@ private:
       DummySwitch->addCase(Builder.getInt32(DummyIdx++), BB);
       DTUpdates.push_back({DominatorTree::Insert, Preheader, BB});
       ++NumLoopExitsDeleted;
+    }
+    // We don't really need to add branch weights to DummySwitch, because all
+    // but one branches are just a temporary artifact - see the comment on top
+    // of this function. But, it's easy to estimate the weights, and it helps
+    // maintain a property of the overall compiler - that the branch weights
+    // don't "just get dropped" accidentally (i.e. profcheck)
+    if (DummySwitch->getParent()->getParent()->hasProfileData()) {
+      SmallVector<uint32_t> DummyBranchWeights(1 + DummySwitch->getNumCases());
+      // default. 100% probability, the rest are dead.
+      DummyBranchWeights[0] = 1;
+      setBranchWeights(*DummySwitch, DummyBranchWeights, /*IsExpected=*/false);
     }
 
     assert(L.getLoopPreheader() == NewPreheader && "Malformed CFG?");

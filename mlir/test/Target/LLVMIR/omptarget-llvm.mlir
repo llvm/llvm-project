@@ -622,3 +622,20 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         br label %[[VAL_40]]
 // CHECK:       omp.done:                                         ; preds = %[[VAL_68]], %[[VAL_63]], %[[VAL_32]]
 // CHECK:         ret void
+
+// -----
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPomp_target_is_device_ptr(%arg0 : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.ptr)
+        map_clauses(is_device_ptr) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target map_entries(%map -> %ptr_arg : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// CHECK: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 8]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 288]
+// CHECK-LABEL: define void @_QPomp_target_is_device_ptr

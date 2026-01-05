@@ -49,14 +49,16 @@ func.func @create_illegal_block() {
 // expected-remark@+1{{applyPartialConversion failed}}
 module {
 func.func @undo_block_arg_replace() {
-  // expected-error@+1{{failed to legalize operation 'test.block_arg_replace' that was explicitly marked illegal}}
-  "test.block_arg_replace"() ({
+  "test.legal_op"() ({
   ^bb0(%arg0: i32, %arg1: i16):
     // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK-NEXT: "test.value_replace"(%[[ARG0]], %[[ARG1]]) {trigger_rollback}
     // CHECK-NEXT: "test.return"(%[[ARG0]]) : (i32)
 
+    // expected-error@+1{{failed to legalize operation 'test.value_replace' that was explicitly marked illegal}}
+    "test.value_replace"(%arg0, %arg1) {trigger_rollback} : (i32, i16) -> ()
     "test.return"(%arg0) : (i32) -> ()
-  }) {trigger_rollback} : () -> ()
+  }) : () -> ()
   return
 }
 }
@@ -159,5 +161,24 @@ func.func @create_unregistered_op_in_pattern() -> i32 {
   // expected-error@+1 {{failed to legalize operation 'test.illegal_op_g'}}
   %0 = "test.illegal_op_g"() : () -> (i32)
   "test.return"(%0) : (i32) -> ()
+}
+}
+
+// -----
+
+// CHECK-LABEL: func @test_failed_preorder_legalization
+//       CHECK:   "test.post_order_legalization"() ({
+//       CHECK:     %[[r:.*]] = "test.illegal_op_g"() : () -> i32
+//       CHECK:     "test.return"(%[[r]]) : (i32) -> ()
+//       CHECK:   }) : () -> ()
+// expected-remark @+1 {{applyPartialConversion failed}}
+module {
+func.func @test_failed_preorder_legalization() {
+  // expected-error @+1 {{failed to legalize operation 'test.post_order_legalization' that was explicitly marked illegal}}
+  "test.post_order_legalization"() ({
+    %0 = "test.illegal_op_g"() : () -> (i32)
+    "test.return"(%0) : (i32) -> ()
+  }) : () -> ()
+  return
 }
 }

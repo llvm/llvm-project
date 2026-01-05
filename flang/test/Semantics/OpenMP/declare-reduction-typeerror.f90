@@ -23,7 +23,7 @@ contains
 
     !$omp declare reduction(dummy:kerflunk:omp_out=omp_out+omp_in)
 !CHECK: error: Derived type 'kerflunk' not found
-    
+
     !$omp declare reduction(adder:two:omp_out=add_two(omp_out,omp_in))
     !$omp simd reduction(adder:res3)
 !CHECK: error: The type of 'res3' is incompatible with the reduction operator.
