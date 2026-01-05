@@ -23,8 +23,8 @@ set(POLLY_COMPONENTS
     Analysis
     ipo
     MC
-    Extensions
     Passes
+    Plugins
     Linker
     IRReader
     Analysis

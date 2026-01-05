@@ -61,6 +61,26 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_attr_getschedparam
+  SRCS
+    pthread_attr_getschedparam.cpp
+  HDRS
+    pthread_attr_getschedparam.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_attr_setschedparam
+  SRCS
+    pthread_attr_setschedparam.cpp
+  HDRS
+    pthread_attr_setschedparam.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
   pthread_attr_getstacksize
   SRCS
     pthread_attr_getstacksize.cpp

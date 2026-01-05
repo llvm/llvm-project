@@ -26,7 +26,6 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; GFX12-ESM-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-ESM-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-ESM-NEXT:    s_wait_kmcnt 0x0
-; GFX12-ESM-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX12-ESM-NEXT:    v_perm_b32 v0, 0, v0, 0xc0c0001
 ; GFX12-ESM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-ESM-NEXT:    v_cvt_f32_f16_e32 v0, v0

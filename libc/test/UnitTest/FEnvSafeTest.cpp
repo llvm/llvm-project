@@ -6,6 +6,10 @@
 //
 //===---------------------------------------------------------------------===//
 
+#ifdef LIBC_MATH_USE_SYSTEM_FENV
+#undef LIBC_MATH_USE_SYSTEM_FENV
+#endif // LIBC_MATH_USE_SYSTEM_FENV
+
 #include "FEnvSafeTest.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
