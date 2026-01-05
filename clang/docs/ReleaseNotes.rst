@@ -504,6 +504,9 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+- "Single byte coverage" now supports branch coverage and can be used
+  together with ``-fcoverage-mcdc``.
+
 Bug Fixes in This Version
 -------------------------
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
