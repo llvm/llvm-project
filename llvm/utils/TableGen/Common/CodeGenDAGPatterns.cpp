@@ -94,13 +94,15 @@ bool TypeSetByHwMode::isValueTypeByHwMode(bool AllowEmpty) const {
   return true;
 }
 
-ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode() const {
+ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode(bool SkipEmpty) const {
   assert(isValueTypeByHwMode(true) &&
          "The type set has multiple types for at least one HW mode");
   ValueTypeByHwMode VVT;
   VVT.PtrAddrSpace = AddrSpace;
 
   for (const auto &I : *this) {
+    if (SkipEmpty && I.second.empty())
+      continue;
     MVT T = I.second.empty() ? MVT::Other : *I.second.begin();
     VVT.insertTypeForMode(I.first, T);
   }

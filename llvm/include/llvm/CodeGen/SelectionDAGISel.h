@@ -77,6 +77,8 @@ public:
   bool MatchFilterFuncName = false;
   StringRef FuncName;
 
+  unsigned HwMode;
+
   explicit SelectionDAGISel(TargetMachine &tm,
                             CodeGenOptLevel OL = CodeGenOptLevel::Default);
   virtual ~SelectionDAGISel();
