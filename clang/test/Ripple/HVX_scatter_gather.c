@@ -1,6 +1,5 @@
-// XFAIL: *
-// REQUIRES: hexagon-registered-target
-// RUN: %clang -g -S -fenable-ripple --target=hexagon -emit-llvm %s -o - -mllvm -ripple-disable-link  2>&1 | FileCheck %s
+// REQUIRES: hexagon-registered-target, has-ripple-hexagon-rtlib
+// RUN: %clang -ffreestanding -g -S -fenable-ripple --target=hexagon -emit-llvm %s -o - -mllvm -ripple-disable-link  2>&1 | FileCheck %s
 
 #include <ripple.h>
 #include "HVX_scatter_gather.h"
@@ -16,6 +15,7 @@ __attribute__((noinline)) void Ripple_scatter_32_library(unsigned int *destinati
     HVX_scatter_32(destination, source, indexes, 64, 8192);
   }
 }
+
 // CHECK: @Ripple_scatter_32_library
 // CHECK: tail call void @ripple_HVX_scatter_32
 // CHECK: ret void

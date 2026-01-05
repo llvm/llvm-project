@@ -1,5 +1,5 @@
-// REQUIRES: hexagon-registered-target
-// RUN: %clang -Os -S -fenable-ripple --target=hexagon -mv75 -mhvx  %s -o - 2>&1 | FileCheck %s
+// REQUIRES: hexagon-registered-target, has-ripple-hexagon-rtlib
+// RUN: %clang -ffreestanding -Os -S -fenable-ripple --target=hexagon -mv75 -mhvx  %s -o - 2>&1 | FileCheck %s
 // Simply sanity check that we did not crash and vectorize compares
 // CHECK: vcmpw.gtu
 

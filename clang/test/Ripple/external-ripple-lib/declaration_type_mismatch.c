@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target=hexagon{{.*}}
-// RUN: %clang -g -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
-// RUN: %clang -g -O2 -fenable-ripple -fripple-lib=%t.rlib.bc -emit-llvm -S %s 2> %t.err; FileCheck %s --input-file %t.err
+// RUN: %clang -ffreestanding -g -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
+// RUN: %clang -ffreestanding -g -O2 -fenable-ripple -fripple-lib=%t.rlib.bc -emit-llvm -S %s 2> %t.err; FileCheck %s --input-file %t.err
 
 #include <stddef.h>
 #include <ripple.h>

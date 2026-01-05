@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang --target=aarch64-unknown-linux-gnu -S -O2 -emit-llvm %s -DCOMPILE_LIB=1 -o %t.ll
-// RUN: %clang -g --target=aarch64-unknown-linux-gnu -S -O2 -emit-llvm -fenable-ripple -fripple-lib=%t.ll -mllvm -ripple-disable-link %s 2>%t.err; FileCheck %s --input-file=%t.err
+// RUN: %clang -ffreestanding --target=aarch64-unknown-linux-gnu -S -O2 -emit-llvm %s -DCOMPILE_LIB=1 -o %t.ll
+// RUN: %clang -ffreestanding -g --target=aarch64-unknown-linux-gnu -S -O2 -emit-llvm -fenable-ripple -fripple-lib=%t.ll -mllvm -ripple-disable-link %s 2>%t.err; FileCheck %s --input-file=%t.err
 
 // Checks that we get an error for externf2 usage: declaration using ripple_block_t
 

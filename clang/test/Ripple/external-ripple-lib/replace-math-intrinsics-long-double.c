@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64
-// RUN: %clang -c -O2 -emit-llvm %S/external_library.c -o %t
-// RUN: %clang -O2 -fenable-ripple -emit-llvm -S -o - -ffast-math -fripple-lib %t -mllvm -ripple-disable-link %s | FileCheck %s --implicit-check-not="warning:"
+// RUN: %clang -ffreestanding -c -O2 -emit-llvm %S/external_library.c -o %t
+// RUN: %clang -ffreestanding -O2 -fenable-ripple -emit-llvm -S -o - -ffast-math -fripple-lib %t -mllvm -ripple-disable-link %s | FileCheck %s --implicit-check-not="warning:"
 
 #include <ripple.h>
 #include <ripple_math.h>

@@ -1,6 +1,6 @@
 // This checks without "-g"
 // REQUIRES: aarch64-registered-target || x86-registered-target
-// RUN: %clang -S -O1 -emit-llvm -fenable-ripple %s 2> %t; FileCheck %s --input-file %t
+// RUN: %clang -ffreestanding -S -O1 -emit-llvm -fenable-ripple %s 2> %t; FileCheck %s --input-file %t
 
 #include <ripple.h>
 

@@ -1,5 +1,5 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -S %s -O2 -fenable-ripple -emit-llvm -o - | FileCheck %s
+// RUN: %clang -ffreestanding -S %s -O2 -fenable-ripple -emit-llvm -o - | FileCheck %s
 
 // Tests for the zip.h header-only lib
 

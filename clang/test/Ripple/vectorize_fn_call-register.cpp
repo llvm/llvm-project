@@ -1,5 +1,5 @@
 // REQUIRES: target-x86_64 || target-aarch64
-// RUN: %clang -fenable-ripple -S -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-REGISTER
+// RUN: %clang -ffreestanding -fenable-ripple -S -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-REGISTER
 
 #include <ripple.h>
 

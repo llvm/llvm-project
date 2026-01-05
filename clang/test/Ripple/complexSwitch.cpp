@@ -1,5 +1,5 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -g -S -fenable-ripple -O2 -emit-llvm %s -o - 2>&1
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -O2 -emit-llvm %s -o - 2>&1
 
 #include <ripple.h>
 

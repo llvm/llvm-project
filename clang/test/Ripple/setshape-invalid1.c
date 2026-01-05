@@ -17,9 +17,9 @@ size_t check(int n) {
 // CHECK: setshape-invalid1.c:{{.*}}: can come from here
 // CHECK: setshape-invalid1.c:{{.*}}: and here
 
-// RUN: %clang -fenable-ripple -O0 -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
-// RUN: %clang -fenable-ripple -O1 -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
-// RUN: %clang -fenable-ripple -O2 -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
-// RUN: %clang -fenable-ripple -O3 -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
-// RUN: %clang -fenable-ripple -Os -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
-// RUN: %clang -fenable-ripple -Oz -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
+// RUN: %clang -ffreestanding -fenable-ripple -O0 -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
+// RUN: %clang -ffreestanding -fenable-ripple -O1 -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
+// RUN: %clang -ffreestanding -fenable-ripple -O2 -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
+// RUN: %clang -ffreestanding -fenable-ripple -O3 -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
+// RUN: %clang -ffreestanding -fenable-ripple -Os -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t
+// RUN: %clang -ffreestanding -fenable-ripple -Oz -g -S -emit-llvm %s 2>%t; FileCheck %s --input-file=%t

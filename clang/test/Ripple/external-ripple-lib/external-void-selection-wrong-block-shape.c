@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang --target=aarch64-unknown-linux-gnu -S -O2 -emit-llvm %s -DCOMPILE_LIB=1 -o %t.ll
-// RUN: %clang --target=aarch64-unknown-linux-gnu -g -S -O2 -emit-llvm -fenable-ripple -fripple-lib=%t.ll -mllvm -ripple-disable-link %s -ferror-limit=0 2>%t.err; FileCheck %s --input-file=%t.err
+// RUN: %clang -ffreestanding --target=aarch64-unknown-linux-gnu -S -O2 -emit-llvm %s -DCOMPILE_LIB=1 -o %t.ll
+// RUN: %clang -ffreestanding --target=aarch64-unknown-linux-gnu -g -S -O2 -emit-llvm -fenable-ripple -fripple-lib=%t.ll -mllvm -ripple-disable-link %s -ferror-limit=0 2>%t.err; FileCheck %s --input-file=%t.err
 
 #ifdef COMPILE_LIB
 

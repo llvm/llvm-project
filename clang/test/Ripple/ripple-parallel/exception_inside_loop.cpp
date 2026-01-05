@@ -1,6 +1,6 @@
 // REQUIRES: asserts
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -fcxx-exceptions -Xclang -disable-llvm-passes -S -emit-llvm -Wripple -fenable-ripple -o - %s | FileCheck --implicit-check-not="warning:" %s
+// RUN: %clang -ffreestanding -fcxx-exceptions -Xclang -disable-llvm-passes -S -emit-llvm -Wripple -fenable-ripple -o - %s | FileCheck --implicit-check-not="warning:" %s
 
 #include <ripple.h>
 

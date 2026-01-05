@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -S -Wpedantic -O2 -fenable-ripple -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
-// RUN: %clang -x c++ -S -Wpedantic -O2 -fenable-ripple -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -ffreestanding -S -Wpedantic -O2 -fenable-ripple -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -ffreestanding -x c++ -S -Wpedantic -O2 -fenable-ripple -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
 #include <ripple.h>
 

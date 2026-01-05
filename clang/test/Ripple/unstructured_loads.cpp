@@ -1,5 +1,5 @@
 // REQUIRES: hexagon-registered-target || aarch64-registered-target || x86-registered-target
-// RUN: %clang -S %s -O2 -fenable-ripple -emit-llvm -Rpass=ripple -Rpass-missed=ripple -o - 2>&1 | FileCheck %s
+// RUN: %clang -ffreestanding -S %s -O2 -fenable-ripple -emit-llvm -Rpass=ripple -Rpass-missed=ripple -o - 2>&1 | FileCheck %s
 
 #include<ripple.h>
 

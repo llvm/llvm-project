@@ -1,6 +1,6 @@
 // TODO: This remain until actual bf16 calculation support
 // REQUIRES: x86-registered-target
-// RUN: %clang %s -O2 -fenable-ripple -target x86_64 -mno-amx-bf16 -mno-avx512bf16 -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang -ffreestanding %s -O2 -fenable-ripple --target=x86_64-linux-gnu -mno-amx-bf16 -mno-avx512bf16 -S -emit-llvm -o - | FileCheck %s
 
 #include <ripple.h>
 void add(__bf16 *c, __bf16 *a, __bf16 *b) {

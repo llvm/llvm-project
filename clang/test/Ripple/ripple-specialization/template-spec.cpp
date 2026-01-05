@@ -1,11 +1,11 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang++ -O0 -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
-// RUN: %clang++ -O1 -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
-// RUN: %clang++ -O2 -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
-// RUN: %clang++ -O3 -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
-// RUN: %clang++ -Og -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
-// RUN: %clang++ -Os -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
-// RUN: %clang++ -Oz -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
+// RUN: %clang++ -ffreestanding -O0 -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
+// RUN: %clang++ -ffreestanding -O1 -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
+// RUN: %clang++ -ffreestanding -O2 -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
+// RUN: %clang++ -ffreestanding -O3 -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
+// RUN: %clang++ -ffreestanding -Og -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
+// RUN: %clang++ -ffreestanding -Os -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
+// RUN: %clang++ -ffreestanding -Oz -Wall -Wextra -Wripple -S -emit-llvm -fenable-ripple %s -o - | FileCheck %s --implicit-check-not="warning:"
 
 #include <ripple.h>
 

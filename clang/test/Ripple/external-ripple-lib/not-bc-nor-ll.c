@@ -1,5 +1,5 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %S/wrong-format-lib %s 2> %t; FileCheck %s --input-file %t
+// RUN: %clang -ffreestanding -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %S/wrong-format-lib %s 2> %t; FileCheck %s --input-file %t
 
 #include "external_library.h"
 #include <stddef.h>

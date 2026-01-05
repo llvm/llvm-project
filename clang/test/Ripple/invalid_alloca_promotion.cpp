@@ -3,11 +3,11 @@
 // register before the Ripple pass
 
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: not %clang -S -g -O0 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-O0
-// RUN: %clang -S -g -O1 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
-// RUN: %clang -S -g -O2 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
-// RUN: %clang -S -g -O3 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
-// RUN: %clang -S -g -Os -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
+// RUN: not %clang -ffreestanding -S -g -O0 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-O0
+// RUN: %clang -ffreestanding -S -g -O1 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
+// RUN: %clang -ffreestanding -S -g -O2 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
+// RUN: %clang -ffreestanding -S -g -O3 -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
+// RUN: %clang -ffreestanding -S -g -Os -emit-llvm -fenable-ripple %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-Other
 
 
 #include <ripple.h>

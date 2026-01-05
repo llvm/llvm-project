@@ -1,5 +1,5 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -g -S -O2 -emit-llvm -fenable-ripple %s -o %t 2> %t2; FileCheck %s --input-file %t2
+// RUN: %clang -ffreestanding -g -S -O2 -emit-llvm -fenable-ripple %s -o %t 2> %t2; FileCheck %s --input-file %t2
 
 #include <ripple.h>
 #define VEC_LANES 0

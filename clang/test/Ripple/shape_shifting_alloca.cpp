@@ -1,7 +1,7 @@
 // REQUIRES: asserts
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -S -g -O0 -emit-llvm -fenable-ripple %s -o - | FileCheck %s
-// RUN: %clang -S -g -O1 -emit-llvm -fenable-ripple %s -o -
+// RUN: %clang -ffreestanding -S -g -O0 -emit-llvm -fenable-ripple %s -o - | FileCheck %s
+// RUN: %clang -ffreestanding -S -g -O1 -emit-llvm -fenable-ripple %s -o -
 
 #include <ripple.h>
 

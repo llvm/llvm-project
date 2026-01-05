@@ -1,7 +1,7 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang -march=armv9.2-a+sme --target=aarch64-unknown-linux-gnu -c -O2 -msve-streaming-vector-bits=512 -emit-llvm %s -DCOMPILE_LIB -o %t.bc
-// RUN: %clang -march=armv9.2-a+sme --target=aarch64-unknown-linux-gnu -O2 -fno-unroll-loops -msve-streaming-vector-bits=512 -fenable-ripple -fripple-lib=%t.bc -mllvm -ripple-disable-link %s -emit-llvm -S -o %t.ll
+// RUN: %clang -ffreestanding -march=armv9.2-a+sme --target=aarch64-unknown-linux-gnu -c -O2 -msve-streaming-vector-bits=512 -emit-llvm %s -DCOMPILE_LIB -o %t.bc
+// RUN: %clang -ffreestanding -march=armv9.2-a+sme --target=aarch64-unknown-linux-gnu -O2 -fno-unroll-loops -msve-streaming-vector-bits=512 -fenable-ripple -fripple-lib=%t.bc -mllvm -ripple-disable-link %s -emit-llvm -S -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
 
 // Unfail test once ripple accept external functions with block shape arguments.

@@ -1,4 +1,4 @@
-// RUN: %clang -Xclang -disable-llvm-passes -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -ffreestanding -Xclang -disable-llvm-passes -S -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
 
 #include <ripple.h>
 

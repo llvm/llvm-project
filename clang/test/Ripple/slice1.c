@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -S -fenable-ripple -O2 -emit-llvm %s
-// RUN: %clang -x c++ -S -fenable-ripple -O2 -emit-llvm %s
+// RUN: %clang -ffreestanding -S -fenable-ripple -O2 -emit-llvm %s
+// RUN: %clang -ffreestanding -x c++ -S -fenable-ripple -O2 -emit-llvm %s
 
 #include <ripple.h>
 #define N 1024

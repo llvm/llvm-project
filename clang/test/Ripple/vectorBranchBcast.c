@@ -1,11 +1,11 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -g -S -fenable-ripple -O0 -emit-llvm %s
-// RUN: %clang -g -S -fenable-ripple -Og -emit-llvm %s
-// RUN: %clang -g -S -fenable-ripple -O1 -emit-llvm %s
-// RUN: %clang -g -S -fenable-ripple -O2 -emit-llvm %s
-// RUN: %clang -g -S -fenable-ripple -O3 -emit-llvm %s
-// RUN: %clang -g -S -fenable-ripple -Os -emit-llvm %s
-// RUN: %clang -g -S -fenable-ripple -Oz -emit-llvm %s
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -O0 -emit-llvm %s
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -Og -emit-llvm %s
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -O1 -emit-llvm %s
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -O2 -emit-llvm %s
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -O3 -emit-llvm %s
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -Os -emit-llvm %s
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -Oz -emit-llvm %s
 
 #include <ripple.h>
 #include <stddef.h>

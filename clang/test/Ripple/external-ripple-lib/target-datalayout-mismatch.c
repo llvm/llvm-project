@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target && aarch64-registered-target
-// RUN: %clang --target=x86_64-unknown-elf -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
-// RUN: %clang --target=aarch64-linux-gnu -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %t.rlib.bc %s 2> %t; FileCheck %s --input-file %t
+// RUN: %clang -ffreestanding --target=x86_64-unknown-elf -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
+// RUN: %clang -ffreestanding --target=aarch64-linux-gnu -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %t.rlib.bc %s 2> %t; FileCheck %s --input-file %t
 
 #include "external_library.h"
 #include <stddef.h>

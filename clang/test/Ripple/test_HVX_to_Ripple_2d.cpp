@@ -1,6 +1,6 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang++ --target=hexagon-unknown-elf -mv79 -mhvx %s -O2 -fenable-ripple -E -o - | FileCheck %s
-// RUN: %clang++ --target=hexagon-unknown-elf -mv79 -mhvx -x c %s -O2 -fenable-ripple -E -o - -D__hexagon__=1 | FileCheck %s
+// RUN: %clang++ -ffreestanding --target=hexagon-unknown-elf -mv79 -mhvx %s -O2 -fenable-ripple -E -o - | FileCheck %s
+// RUN: %clang++ -ffreestanding --target=hexagon-unknown-elf -mv79 -mhvx -x c %s -O2 -fenable-ripple -E -o - -D__hexagon__=1 | FileCheck %s
 #include <ripple.h>
 #include <ripple_hvx.h>
 

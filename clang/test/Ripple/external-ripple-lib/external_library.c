@@ -1,6 +1,6 @@
 // This file should be fine for all targets
 // XFAIL: target={{.*(iu|riscv).*}}
-// RUN: %clang -g -S -O2 -emit-llvm %s
+// RUN: %clang -ffreestanding -g -S -O2 -emit-llvm %s
 
 #include <stdint.h>
 

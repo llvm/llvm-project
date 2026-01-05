@@ -1,5 +1,5 @@
 // REQUIRES: target=hexagon{{.*}} || target-x86_64 || target-aarch64
-// RUN: %clang -S -emit-llvm -O1 -fenable-ripple -save-temps %s -o - | FileCheck %s
+// RUN: %clang -ffreestanding -S -emit-llvm -O1 -fenable-ripple -save-temps %s -o - | FileCheck %s
 
 // Checking that the ripple_parallel annotation is processed with -save-temps
 // CHECK-NOT: llvm.ripple

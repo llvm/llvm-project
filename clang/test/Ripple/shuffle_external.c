@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -g -S -fenable-ripple -O2 -emit-llvm %s 2> %t; echo %t; FileCheck %s --input-file %t
-// RUN: %clang -x c++ -g -S -fenable-ripple -O2 -emit-llvm %s 2> %t; cat %t; FileCheck %s --input-file %t
+// RUN: %clang -ffreestanding -g -S -fenable-ripple -O2 -emit-llvm %s 2> %t; echo %t; FileCheck %s --input-file %t
+// RUN: %clang -ffreestanding -x c++ -g -S -fenable-ripple -O2 -emit-llvm %s 2> %t; cat %t; FileCheck %s --input-file %t
 
 // Testing that calling an external function creates a warning
 #include <ripple.h>

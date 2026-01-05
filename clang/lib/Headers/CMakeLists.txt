@@ -95,7 +95,7 @@ set(ripple_files
   __ripple_vec.h
   )
 
-set (ripple_extra_headers
+set(ripple_extra_headers
   ripple/zip.h
   )
 
@@ -470,7 +470,7 @@ endfunction(clang_generate_header)
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
            ${cuda_wrapper_utility_files} ${ppc_wrapper_files} ${openmp_wrapper_files}
            ${zos_wrapper_files} ${hlsl_files} ${llvm_libc_wrapper_files}
-           ${llvm_offload_wrapper_files})
+           ${llvm_offload_wrapper_files} ${ripple_extra_headers})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 

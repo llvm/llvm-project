@@ -1,5 +1,5 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -std=c99 -Wall -Wextra -Wpedantic -Xclang -disable-llvm-passes -fenable-ripple -S -O2 -emit-llvm %s -o - | FileCheck --implicit-check-not="warning:" %s
+// RUN: %clang -ffreestanding -std=c99 -Wall -Wextra -Wpedantic -Xclang -disable-llvm-passes -fenable-ripple -S -O2 -emit-llvm %s -o - | FileCheck --implicit-check-not="warning:" %s
 
 #include <ripple.h>
 

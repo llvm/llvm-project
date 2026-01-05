@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-CLANG %s
-// RUN: %clang -S -O1 -fenable-ripple -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-RIPPLE %s
+// RUN: %clang -ffreestanding -S -O1 -fenable-ripple -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-RIPPLE %s
 #include <ripple.h>
 
 typedef signed char sc;
