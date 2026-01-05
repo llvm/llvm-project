@@ -2531,6 +2531,7 @@ static void licm(VPlan &Plan) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
       SmallSetVector<VPBasicBlock *, 4> UserVPBBs;
+      // Check that R doesn't have any users inside a loop region.
       if (any_of(R.definedValues(), [&UserVPBBs](VPValue *V) {
             return any_of(V->users(), [&UserVPBBs](VPUser *U) {
               auto *UR = cast<VPRecipeBase>(U);
