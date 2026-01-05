@@ -402,7 +402,9 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   llvm_unreachable("Unsupported register kind");
 }
 
-InstructionCost RISCVTTIImpl::getPCRelativeAddrCost() const { return 2; }
+InstructionCost RISCVTTIImpl::getPCRelativeAddrCost() const {
+  return ST->hasAUIPCADDIFusion() ? 1 : 2;
+}
 
 InstructionCost
 RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,
