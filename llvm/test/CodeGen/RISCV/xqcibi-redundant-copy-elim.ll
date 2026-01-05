@@ -38,7 +38,6 @@ define dso_local i32 @test_beqi() nounwind {
 ; RV32IXQCIBI-NEXT:    lbu a0, 200(a0)
 ; RV32IXQCIBI-NEXT:    qc.bnei a0, 7, .LBB0_3
 ; RV32IXQCIBI-NEXT:  # %bb.2: # %if.end
-; RV32IXQCIBI-NEXT:    li a0, 7
 ; RV32IXQCIBI-NEXT:    ret
 ; RV32IXQCIBI-NEXT:  .LBB0_3: # %if.then
 ; RV32IXQCIBI-NEXT:    li a0, 1
@@ -53,7 +52,6 @@ define dso_local i32 @test_beqi() nounwind {
 ; RV32IXQCIBILI-NEXT:    lbu a0, 200(a0)
 ; RV32IXQCIBILI-NEXT:    qc.bnei a0, 7, .LBB0_3
 ; RV32IXQCIBILI-NEXT:  # %bb.2: # %if.end
-; RV32IXQCIBILI-NEXT:    li a0, 7
 ; RV32IXQCIBILI-NEXT:    ret
 ; RV32IXQCIBILI-NEXT:  .LBB0_3: # %if.then
 ; RV32IXQCIBILI-NEXT:    li a0, 1
@@ -101,7 +99,6 @@ define dso_local i32 @test_e_beqi() nounwind {
 ; RV32IXQCIBI-NEXT:    lbu a0, 200(a0)
 ; RV32IXQCIBI-NEXT:    qc.e.bnei a0, 40, .LBB1_3
 ; RV32IXQCIBI-NEXT:  # %bb.2: # %if.end
-; RV32IXQCIBI-NEXT:    li a0, 40
 ; RV32IXQCIBI-NEXT:    ret
 ; RV32IXQCIBI-NEXT:  .LBB1_3: # %if.then
 ; RV32IXQCIBI-NEXT:    li a0, 1
@@ -116,7 +113,6 @@ define dso_local i32 @test_e_beqi() nounwind {
 ; RV32IXQCIBILI-NEXT:    lbu a0, 200(a0)
 ; RV32IXQCIBILI-NEXT:    qc.e.bnei a0, 40, .LBB1_3
 ; RV32IXQCIBILI-NEXT:  # %bb.2: # %if.end
-; RV32IXQCIBILI-NEXT:    li a0, 40
 ; RV32IXQCIBILI-NEXT:    ret
 ; RV32IXQCIBILI-NEXT:  .LBB1_3: # %if.then
 ; RV32IXQCIBILI-NEXT:    li a0, 1
@@ -180,7 +176,6 @@ define dso_local i32 @test_e_beqi_li() nounwind {
 ; RV32IXQCIBILI-NEXT:    lhu a0, 400(a0)
 ; RV32IXQCIBILI-NEXT:    qc.e.bnei a0, 4000, .LBB2_3
 ; RV32IXQCIBILI-NEXT:  # %bb.2: # %if.end
-; RV32IXQCIBILI-NEXT:    qc.li a0, 4000
 ; RV32IXQCIBILI-NEXT:    ret
 ; RV32IXQCIBILI-NEXT:  .LBB2_3: # %if.then
 ; RV32IXQCIBILI-NEXT:    li a0, 1
