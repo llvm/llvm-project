@@ -18,6 +18,7 @@ builtin_check_c_compiler_flag(-fno-lto              COMPILER_RT_HAS_FNO_LTO_FLAG
 builtin_check_c_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
+builtin_check_c_compiler_flag(-Wno-c2y-extensions   COMPILER_RT_HAS_WNO_C2Y_EXTENSIONS)
 builtin_check_c_compiler_flag(-Wno-pedantic         COMPILER_RT_HAS_WNO_PEDANTIC)
 builtin_check_c_compiler_flag(-nogpulib             COMPILER_RT_HAS_NOGPULIB_FLAG)
 builtin_check_c_compiler_flag(-flto                 COMPILER_RT_HAS_FLTO_FLAG)
@@ -78,7 +79,7 @@ else()
 endif()
 
 set(AMDGPU amdgcn)
-set(ARM64 aarch64 arm64ec)
+set(ARM64 aarch64 arm64ec aarch64_lfi)
 set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv7k armv8m.base armv8m.main armv8.1m.main)
 set(AVR avr)
 set(HEXAGON hexagon)
@@ -280,14 +281,6 @@ else()
   # Architectures supported by compiler-rt libraries.
   filter_available_targets(BUILTIN_SUPPORTED_ARCH
     ${ALL_BUILTIN_SUPPORTED_ARCH})
-
-  # COMPILER_RT_HAS_${arch}_* defines that are shared between lib/builtins/ and test/builtins/
-  foreach (arch ${BUILTIN_SUPPORTED_ARCH})
-    # NOTE: The corresponding check for if(APPLE) is in CompilerRTDarwinUtils.cmake
-    check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
-                              int main(void) { return 0; }"
-                            COMPILER_RT_HAS_${arch}_FLOAT16)
-  endforeach()
 endif()
 
 if(OS_NAME MATCHES "Linux|SerenityOS" AND NOT LLVM_USE_SANITIZER AND NOT
