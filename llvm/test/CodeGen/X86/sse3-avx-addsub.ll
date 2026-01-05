@@ -46,8 +46,8 @@ define <4 x float> @test1(<4 x float> %A, <4 x float> %B) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %sub = fsub <4 x float> %A, %B
-  %add = fadd <4 x float> %A, %B
+  %sub = fsub contract <4 x float> %A, %B
+  %add = fadd contract <4 x float> %A, %B
   %vecinit6 = shufflevector <4 x float> %sub, <4 x float> %add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x float> %vecinit6
 }
@@ -63,8 +63,8 @@ define <8 x float> @test2(<8 x float> %A, <8 x float> %B) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
-  %sub = fsub <8 x float> %A, %B
-  %add = fadd <8 x float> %A, %B
+  %sub = fsub contract <8 x float> %A, %B
+  %add = fadd contract <8 x float> %A, %B
   %vecinit14 = shufflevector <8 x float> %sub, <8 x float> %add, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   ret <8 x float> %vecinit14
 }
@@ -80,8 +80,8 @@ define <4 x double> @test3(<4 x double> %A, <4 x double> %B) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
-  %sub = fsub <4 x double> %A, %B
-  %add = fadd <4 x double> %A, %B
+  %sub = fsub contract <4 x double> %A, %B
+  %add = fadd contract <4 x double> %A, %B
   %vecinit6 = shufflevector <4 x double> %sub, <4 x double> %add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x double> %vecinit6
 }
@@ -96,8 +96,8 @@ define <2 x double> @test4(<2 x double> %A, <2 x double> %B) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %add = fadd <2 x double> %A, %B
-  %sub = fsub <2 x double> %A, %B
+  %add = fadd contract <2 x double> %A, %B
+  %sub = fsub contract <2 x double> %A, %B
   %vecinit2 = shufflevector <2 x double> %sub, <2 x double> %add, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %vecinit2
 }
@@ -125,8 +125,8 @@ define <16 x float> @test5(<16 x float> %A, <16 x float> %B) {
 ; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %zmm2, %zmm0
 ; AVX512-NEXT:    retq
-  %add = fadd <16 x float> %A, %B
-  %sub = fsub <16 x float> %A, %B
+  %add = fadd contract <16 x float> %A, %B
+  %sub = fsub contract <16 x float> %A, %B
   %vecinit2 = shufflevector <16 x float> %sub, <16 x float> %add, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
   ret <16 x float> %vecinit2
 }
@@ -152,8 +152,8 @@ define <8 x double> @test6(<8 x double> %A, <8 x double> %B) {
 ; AVX512-NEXT:    vsubpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[0],zmm2[1],zmm0[2],zmm2[3],zmm0[4],zmm2[5],zmm0[6],zmm2[7]
 ; AVX512-NEXT:    retq
-  %add = fadd <8 x double> %A, %B
-  %sub = fsub <8 x double> %A, %B
+  %add = fadd contract <8 x double> %A, %B
+  %sub = fsub contract <8 x double> %A, %B
   %vecinit2 = shufflevector <8 x double> %sub, <8 x double> %add, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   ret <8 x double> %vecinit2
 }
@@ -169,8 +169,8 @@ define <4 x float> @test1b(<4 x float> %A, ptr %B) {
 ; AVX-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <4 x float>, ptr %B
-  %add = fadd <4 x float> %A, %1
-  %sub = fsub <4 x float> %A, %1
+  %add = fadd contract <4 x float> %A, %1
+  %sub = fsub contract <4 x float> %A, %1
   %vecinit6 = shufflevector <4 x float> %sub, <4 x float> %add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x float> %vecinit6
 }
@@ -187,8 +187,8 @@ define <8 x float> @test2b(<8 x float> %A, ptr %B) {
 ; AVX-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = load <8 x float>, ptr %B
-  %add = fadd <8 x float> %A, %1
-  %sub = fsub <8 x float> %A, %1
+  %add = fadd contract <8 x float> %A, %1
+  %sub = fsub contract <8 x float> %A, %1
   %vecinit14 = shufflevector <8 x float> %sub, <8 x float> %add, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   ret <8 x float> %vecinit14
 }
@@ -205,8 +205,8 @@ define <4 x double> @test3b(<4 x double> %A, ptr %B) {
 ; AVX-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = load <4 x double>, ptr %B
-  %add = fadd <4 x double> %A, %1
-  %sub = fsub <4 x double> %A, %1
+  %add = fadd contract <4 x double> %A, %1
+  %sub = fsub contract <4 x double> %A, %1
   %vecinit6 = shufflevector <4 x double> %sub, <4 x double> %add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x double> %vecinit6
 }
@@ -222,8 +222,8 @@ define <2 x double> @test4b(<2 x double> %A, ptr %B) {
 ; AVX-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x double>, ptr %B
-  %sub = fsub <2 x double> %A, %1
-  %add = fadd <2 x double> %A, %1
+  %sub = fsub contract <2 x double> %A, %1
+  %add = fadd contract <2 x double> %A, %1
   %vecinit2 = shufflevector <2 x double> %sub, <2 x double> %add, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %vecinit2
 }
@@ -239,8 +239,8 @@ define <4 x float> @test1c(<4 x float> %A, ptr %B) {
 ; AVX-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <4 x float>, ptr %B
-  %add = fadd <4 x float> %A, %1
-  %sub = fsub <4 x float> %A, %1
+  %add = fadd contract <4 x float> %A, %1
+  %sub = fsub contract <4 x float> %A, %1
   %vecinit6 = shufflevector <4 x float> %add, <4 x float> %sub, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
   ret <4 x float> %vecinit6
 }
@@ -257,8 +257,8 @@ define <8 x float> @test2c(<8 x float> %A, ptr %B) {
 ; AVX-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = load <8 x float>, ptr %B
-  %add = fadd <8 x float> %A, %1
-  %sub = fsub <8 x float> %A, %1
+  %add = fadd contract <8 x float> %A, %1
+  %sub = fsub contract <8 x float> %A, %1
   %vecinit14 = shufflevector <8 x float> %add, <8 x float> %sub, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
   ret <8 x float> %vecinit14
 }
@@ -275,8 +275,8 @@ define <4 x double> @test3c(<4 x double> %A, ptr %B) {
 ; AVX-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = load <4 x double>, ptr %B
-  %add = fadd <4 x double> %A, %1
-  %sub = fsub <4 x double> %A, %1
+  %add = fadd contract <4 x double> %A, %1
+  %sub = fsub contract <4 x double> %A, %1
   %vecinit6 = shufflevector <4 x double> %add, <4 x double> %sub, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
   ret <4 x double> %vecinit6
 }
@@ -292,8 +292,8 @@ define <2 x double> @test4c(<2 x double> %A, ptr %B) {
 ; AVX-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x double>, ptr %B
-  %sub = fsub <2 x double> %A, %1
-  %add = fadd <2 x double> %A, %1
+  %sub = fsub contract <2 x double> %A, %1
+  %add = fadd contract <2 x double> %A, %1
   %vecinit2 = shufflevector <2 x double> %add, <2 x double> %sub, <2 x i32> <i32 2, i32 1>
   ret <2 x double> %vecinit2
 }

@@ -8605,6 +8605,9 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
     return DAG.getVectorShuffle(VT, DL, Sub, Add, Mask);
   }
 
+  if (!HasAllowContract)
+    return SDValue();
+
   return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
 }
 
@@ -43509,6 +43512,9 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
   if (VT.getVectorElementType() == MVT::f16)
     return SDValue();
 
+  if (!HasAllowContract)
+    return SDValue();
+
   return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
 }
 
@@ -54628,10 +54634,8 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
   FAddOp1 = DAG.getBitcast(CVT, FAddOp1);
   unsigned NewOp = IsConj ? X86ISD::VFCMADDC : X86ISD::VFMADDC;
-  // FIXME: How do we handle when fast math flags of FADD are different from
-  // CFMUL's?
-  SDValue CFmul =
-      DAG.getNode(NewOp, SDLoc(N), CVT, MulOp0, MulOp1, FAddOp1, N->getFlags());
+  SDValue CFmul = DAG.getNode(NewOp, SDLoc(N), CVT, MulOp0, MulOp1, FAddOp1,
+                              N->getFlags() & N->getOperand(0)->getFlags());
   return DAG.getBitcast(VT, CFmul);
 }
 
@@ -55300,14 +55304,17 @@ static SDValue combineFneg(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isTypeLegal(VT))
     return SDValue();
 
+  auto Flags = N->getFlags() & Arg->getFlags();
+
   // If we're negating a FMUL node on a target with FMA, then we can avoid the
   // use of a constant by performing (-0 - A*B) instead.
   // FIXME: Check rounding control flags as well once it becomes available.
   if (Arg.getOpcode() == ISD::FMUL && (SVT == MVT::f32 || SVT == MVT::f64) &&
-      Arg->getFlags().hasNoSignedZeros() && Subtarget.hasAnyFMA()) {
+      Arg->getFlags().hasNoSignedZeros() && Subtarget.hasAnyFMA() &&
+      Flags.hasAllowContract()) {
     SDValue Zero = DAG.getConstantFP(0.0, DL, VT);
     SDValue NewNode = DAG.getNode(X86ISD::FNMSUB, DL, VT, Arg.getOperand(0),
-                                  Arg.getOperand(1), Zero);
+                                  Arg.getOperand(1), Zero, Flags);
     return DAG.getBitcast(OrigVT, NewNode);
   }
 
@@ -56601,6 +56608,10 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 // Combine FMSUBADD(A, B, FNEG(C)) -> FMADDSUB(A, B, C)
 static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
                                TargetLowering::DAGCombinerInfo &DCI) {
+  // FIXME: We should check for contract to perform this combine; but this
+  // breaks lowering of certain intrinsics that depend on this combine being
+  // perfomed (i.e.llvm.x86.avx512.mask3.vfmsubadd).
+
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();

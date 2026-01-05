@@ -18,16 +18,16 @@ define <4 x float> @test1(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
   %2 = extractelement <4 x float> %B, i32 0
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %3 = extractelement <4 x float> %A, i32 2
   %4 = extractelement <4 x float> %B, i32 2
-  %sub2 = fsub float %3, %4
+  %sub2 = fsub contract float %3, %4
   %5 = extractelement <4 x float> %A, i32 1
   %6 = extractelement <4 x float> %B, i32 1
-  %add = fadd float %5, %6
+  %add = fadd contract float %5, %6
   %7 = extractelement <4 x float> %A, i32 3
   %8 = extractelement <4 x float> %B, i32 3
-  %add2 = fadd float %7, %8
+  %add2 = fadd contract float %7, %8
   %vecinsert1 = insertelement <4 x float> undef, float %add, i32 1
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add2, i32 3
   %vecinsert3 = insertelement <4 x float> %vecinsert2, float %sub, i32 0
@@ -47,10 +47,10 @@ define <4 x float> @test2(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 2
   %2 = extractelement <4 x float> %B, i32 2
-  %sub2 = fsub float %1, %2
+  %sub2 = fsub contract float %1, %2
   %3 = extractelement <4 x float> %A, i32 3
   %4 = extractelement <4 x float> %B, i32 3
-  %add2 = fadd float %3, %4
+  %add2 = fadd contract float %3, %4
   %vecinsert1 = insertelement <4 x float> undef, float %sub2, i32 2
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add2, i32 3
   ret <4 x float> %vecinsert2
@@ -68,10 +68,10 @@ define <4 x float> @test3(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
   %2 = extractelement <4 x float> %B, i32 0
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %3 = extractelement <4 x float> %A, i32 3
   %4 = extractelement <4 x float> %B, i32 3
-  %add = fadd float %4, %3
+  %add = fadd contract float %4, %3
   %vecinsert1 = insertelement <4 x float> undef, float %sub, i32 0
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add, i32 3
   ret <4 x float> %vecinsert2
@@ -89,10 +89,10 @@ define <4 x float> @test4(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 2
   %2 = extractelement <4 x float> %B, i32 2
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %3 = extractelement <4 x float> %A, i32 1
   %4 = extractelement <4 x float> %B, i32 1
-  %add = fadd float %3, %4
+  %add = fadd contract float %3, %4
   %vecinsert1 = insertelement <4 x float> undef, float %sub, i32 2
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add, i32 1
   ret <4 x float> %vecinsert2
@@ -110,10 +110,10 @@ define <4 x float> @test5(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
   %2 = extractelement <4 x float> %B, i32 0
-  %sub2 = fsub float %1, %2
+  %sub2 = fsub contract float %1, %2
   %3 = extractelement <4 x float> %A, i32 1
   %4 = extractelement <4 x float> %B, i32 1
-  %add2 = fadd float %3, %4
+  %add2 = fadd contract float %3, %4
   %vecinsert1 = insertelement <4 x float> undef, float %sub2, i32 0
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add2, i32 1
   ret <4 x float> %vecinsert2
@@ -131,16 +131,16 @@ define <4 x float> @test6(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
   %2 = extractelement <4 x float> %B, i32 0
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %3 = extractelement <4 x float> %A, i32 2
   %4 = extractelement <4 x float> %B, i32 2
-  %sub2 = fsub float %3, %4
+  %sub2 = fsub contract float %3, %4
   %5 = extractelement <4 x float> %A, i32 1
   %6 = extractelement <4 x float> %B, i32 1
-  %add = fadd float %5, %6
+  %add = fadd contract float %5, %6
   %7 = extractelement <4 x float> %A, i32 3
   %8 = extractelement <4 x float> %B, i32 3
-  %add2 = fadd float %7, %8
+  %add2 = fadd contract float %7, %8
   %vecinsert1 = insertelement <4 x float> undef, float %add, i32 1
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add2, i32 3
   %vecinsert3 = insertelement <4 x float> %vecinsert2, float %sub, i32 0
@@ -161,16 +161,16 @@ define <4 x double> @test7(<4 x double> %A, <4 x double> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x double> %A, i32 0
   %2 = extractelement <4 x double> %B, i32 0
-  %sub = fsub double %1, %2
+  %sub = fsub contract double %1, %2
   %3 = extractelement <4 x double> %A, i32 2
   %4 = extractelement <4 x double> %B, i32 2
-  %sub2 = fsub double %3, %4
+  %sub2 = fsub contract double %3, %4
   %5 = extractelement <4 x double> %A, i32 1
   %6 = extractelement <4 x double> %B, i32 1
-  %add = fadd double %5, %6
+  %add = fadd contract double %5, %6
   %7 = extractelement <4 x double> %A, i32 3
   %8 = extractelement <4 x double> %B, i32 3
-  %add2 = fadd double %7, %8
+  %add2 = fadd contract double %7, %8
   %vecinsert1 = insertelement <4 x double> undef, double %add, i32 1
   %vecinsert2 = insertelement <4 x double> %vecinsert1, double %add2, i32 3
   %vecinsert3 = insertelement <4 x double> %vecinsert2, double %sub, i32 0
@@ -190,10 +190,10 @@ define <2 x double> @test8(<2 x double> %A, <2 x double> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %A, i32 0
   %2 = extractelement <2 x double> %B, i32 0
-  %sub = fsub double %1, %2
+  %sub = fsub contract double %1, %2
   %3 = extractelement <2 x double> %A, i32 1
   %4 = extractelement <2 x double> %B, i32 1
-  %add = fadd double %3, %4
+  %add = fadd contract double %3, %4
   %vecinsert1 = insertelement <2 x double> undef, double %sub, i32 0
   %vecinsert2 = insertelement <2 x double> %vecinsert1, double %add, i32 1
   ret <2 x double> %vecinsert2
@@ -212,28 +212,28 @@ define <8 x float> @test9(<8 x float> %A, <8 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <8 x float> %A, i32 0
   %2 = extractelement <8 x float> %B, i32 0
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %3 = extractelement <8 x float> %A, i32 2
   %4 = extractelement <8 x float> %B, i32 2
-  %sub2 = fsub float %3, %4
+  %sub2 = fsub contract float %3, %4
   %5 = extractelement <8 x float> %A, i32 1
   %6 = extractelement <8 x float> %B, i32 1
-  %add = fadd float %5, %6
+  %add = fadd contract float %5, %6
   %7 = extractelement <8 x float> %A, i32 3
   %8 = extractelement <8 x float> %B, i32 3
-  %add2 = fadd float %7, %8
+  %add2 = fadd contract float %7, %8
   %9 = extractelement <8 x float> %A, i32 4
   %10 = extractelement <8 x float> %B, i32 4
-  %sub3 = fsub float %9, %10
+  %sub3 = fsub contract float %9, %10
   %11 = extractelement <8 x float> %A, i32 6
   %12 = extractelement <8 x float> %B, i32 6
-  %sub4 = fsub float %11, %12
+  %sub4 = fsub contract float %11, %12
   %13 = extractelement <8 x float> %A, i32 5
   %14 = extractelement <8 x float> %B, i32 5
-  %add3 = fadd float %13, %14
+  %add3 = fadd contract float %13, %14
   %15 = extractelement <8 x float> %A, i32 7
   %16 = extractelement <8 x float> %B, i32 7
-  %add4 = fadd float %15, %16
+  %add4 = fadd contract float %15, %16
   %vecinsert1 = insertelement <8 x float> undef, float %add, i32 1
   %vecinsert2 = insertelement <8 x float> %vecinsert1, float %add2, i32 3
   %vecinsert3 = insertelement <8 x float> %vecinsert2, float %sub, i32 0
@@ -260,7 +260,7 @@ define <4 x float> @test10(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
   %2 = extractelement <4 x float> %B, i32 0
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %vecinsert1 = insertelement <4 x float> undef, float %sub, i32 0
   ret <4 x float> %vecinsert1
 }
@@ -291,7 +291,7 @@ define <4 x float> @test11(<4 x float> %A, <4 x float> %B) {
 ; AVX512-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 2
   %2 = extractelement <4 x float> %B, i32 2
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %vecinsert1 = insertelement <4 x float> undef, float %sub, i32 2
   ret <4 x float> %vecinsert1
 }
@@ -322,7 +322,7 @@ define <4 x float> @test12(<4 x float> %A, <4 x float> %B) {
 ; AVX512-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 1
   %2 = extractelement <4 x float> %B, i32 1
-  %add = fadd float %1, %2
+  %add = fadd contract float %1, %2
   %vecinsert1 = insertelement <4 x float> undef, float %add, i32 1
   ret <4 x float> %vecinsert1
 }
@@ -353,7 +353,7 @@ define <4 x float> @test13(<4 x float> %A, <4 x float> %B) {
 ; AVX512-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 3
   %2 = extractelement <4 x float> %B, i32 3
-  %add = fadd float %1, %2
+  %add = fadd contract float %1, %2
   %vecinsert1 = insertelement <4 x float> undef, float %add, i32 3
   ret <4 x float> %vecinsert1
 }
@@ -380,10 +380,10 @@ define <4 x float> @test14(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
   %2 = extractelement <4 x float> %B, i32 0
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %3 = extractelement <4 x float> %A, i32 2
   %4 = extractelement <4 x float> %B, i32 2
-  %sub2 = fsub float %3, %4
+  %sub2 = fsub contract float %3, %4
   %vecinsert1 = insertelement <4 x float> undef, float %sub, i32 0
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %sub2, i32 2
   ret <4 x float> %vecinsert2
@@ -427,10 +427,10 @@ define <4 x float> @test15(<4 x float> %A, <4 x float> %B) {
 ; AVX512-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 1
   %2 = extractelement <4 x float> %B, i32 1
-  %add = fadd float %1, %2
+  %add = fadd contract float %1, %2
   %3 = extractelement <4 x float> %A, i32 3
   %4 = extractelement <4 x float> %B, i32 3
-  %add2 = fadd float %3, %4
+  %add2 = fadd contract float %3, %4
   %vecinsert1 = insertelement <4 x float> undef, float %add, i32 1
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add2, i32 3
   ret <4 x float> %vecinsert2
@@ -476,16 +476,16 @@ define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
   %2 = extractelement <4 x float> %B, i32 0
-  %sub = fsub float %1, 42.0
+  %sub = fsub contract float %1, 42.0
   %3 = extractelement <4 x float> %A, i32 2
   %4 = extractelement <4 x float> %B, i32 2
-  %sub2 = fsub float %3, %4
+  %sub2 = fsub contract float %3, %4
   %5 = extractelement <4 x float> %A, i32 1
   %6 = extractelement <4 x float> %B, i32 1
-  %add = fadd float %5, 42.0
+  %add = fadd contract float %5, 42.0
   %7 = extractelement <4 x float> %A, i32 3
   %8 = extractelement <4 x float> %B, i32 3
-  %add2 = fadd float %7, %8
+  %add2 = fadd contract float %7, %8
   %vecinsert1 = insertelement <4 x float> undef, float %add, i32 1
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add2, i32 3
   %vecinsert3 = insertelement <4 x float> %vecinsert2, float %sub, i32 0
@@ -507,8 +507,8 @@ define <2 x float> @test_v2f32(<2 x float> %v0, <2 x float> %v1) {
   %v3 = extractelement <2 x float> %v1, i32 0
   %v4 = extractelement <2 x float> %v0, i32 1
   %v5 = extractelement <2 x float> %v1, i32 1
-  %sub = fsub float %v2, %v3
-  %add = fadd float %v5, %v4
+  %sub = fsub contract float %v2, %v3
+  %add = fadd contract float %v5, %v4
   %res0 = insertelement <2 x float> undef, float %sub, i32 0
   %res1 = insertelement <2 x float> %res0, float %add, i32 1
   ret <2 x float> %res1
@@ -539,52 +539,52 @@ define <16 x float> @test17(<16 x float> %A, <16 x float> %B) {
 ; AVX512-NEXT:    retq
   %1 = extractelement <16 x float> %A, i32 0
   %2 = extractelement <16 x float> %B, i32 0
-  %sub = fsub float %1, %2
+  %sub = fsub contract float %1, %2
   %3 = extractelement <16 x float> %A, i32 2
   %4 = extractelement <16 x float> %B, i32 2
-  %sub2 = fsub float %3, %4
+  %sub2 = fsub contract float %3, %4
   %5 = extractelement <16 x float> %A, i32 1
   %6 = extractelement <16 x float> %B, i32 1
-  %add = fadd float %5, %6
+  %add = fadd contract float %5, %6
   %7 = extractelement <16 x float> %A, i32 3
   %8 = extractelement <16 x float> %B, i32 3
-  %add2 = fadd float %7, %8
+  %add2 = fadd contract float %7, %8
   %9 = extractelement <16 x float> %A, i32 4
   %10 = extractelement <16 x float> %B, i32 4
-  %sub3 = fsub float %9, %10
+  %sub3 = fsub contract float %9, %10
   %11 = extractelement <16 x float> %A, i32 6
   %12 = extractelement <16 x float> %B, i32 6
-  %sub4 = fsub float %11, %12
+  %sub4 = fsub contract float %11, %12
   %13 = extractelement <16 x float> %A, i32 5
   %14 = extractelement <16 x float> %B, i32 5
-  %add3 = fadd float %13, %14
+  %add3 = fadd contract float %13, %14
   %15 = extractelement <16 x float> %A, i32 7
   %16 = extractelement <16 x float> %B, i32 7
-  %add4 = fadd float %15, %16
+  %add4 = fadd contract float %15, %16
   %17 = extractelement <16 x float> %A, i32 8
   %18 = extractelement <16 x float> %B, i32 8
-  %sub5 = fsub float %17, %18
+  %sub5 = fsub contract float %17, %18
   %19 = extractelement <16 x float> %A, i32 10
   %20 = extractelement <16 x float> %B, i32 10
-  %sub6 = fsub float %19, %20
+  %sub6 = fsub contract float %19, %20
   %21 = extractelement <16 x float> %A, i32 9
   %22 = extractelement <16 x float> %B, i32 9
-  %add5 = fadd float %21, %22
+  %add5 = fadd contract float %21, %22
   %23 = extractelement <16 x float> %A, i32 11
   %24 = extractelement <16 x float> %B, i32 11
-  %add6 = fadd float %23, %24
+  %add6 = fadd contract float %23, %24
   %25 = extractelement <16 x float> %A, i32 12
   %26 = extractelement <16 x float> %B, i32 12
-  %sub7 = fsub float %25, %26
+  %sub7 = fsub contract float %25, %26
   %27 = extractelement <16 x float> %A, i32 14
   %28 = extractelement <16 x float> %B, i32 14
-  %sub8 = fsub float %27, %28
+  %sub8 = fsub contract float %27, %28
   %29 = extractelement <16 x float> %A, i32 13
   %30 = extractelement <16 x float> %B, i32 13
-  %add7 = fadd float %29, %30
+  %add7 = fadd contract float %29, %30
   %31 = extractelement <16 x float> %A, i32 15
   %32 = extractelement <16 x float> %B, i32 15
-  %add8 = fadd float %31, %32
+  %add8 = fadd contract float %31, %32
   %vecinsert1 = insertelement <16 x float> undef, float %add, i32 1
   %vecinsert2 = insertelement <16 x float> %vecinsert1, float %add2, i32 3
   %vecinsert3 = insertelement <16 x float> %vecinsert2, float %sub, i32 0
@@ -627,28 +627,28 @@ define <8 x double> @test18(<8 x double> %A, <8 x double> %B) {
 ; AVX512-NEXT:    retq
   %1 = extractelement <8 x double> %A, i32 0
   %2 = extractelement <8 x double> %B, i32 0
-  %sub = fsub double %1, %2
+  %sub = fsub contract double %1, %2
   %3 = extractelement <8 x double> %A, i32 2
   %4 = extractelement <8 x double> %B, i32 2
-  %sub2 = fsub double %3, %4
+  %sub2 = fsub contract double %3, %4
   %5 = extractelement <8 x double> %A, i32 1
   %6 = extractelement <8 x double> %B, i32 1
-  %add = fadd double %5, %6
+  %add = fadd contract double %5, %6
   %7 = extractelement <8 x double> %A, i32 3
   %8 = extractelement <8 x double> %B, i32 3
-  %add2 = fadd double %7, %8
+  %add2 = fadd contract double %7, %8
   %9 = extractelement <8 x double> %A, i32 4
   %10 = extractelement <8 x double> %B, i32 4
-  %sub3 = fsub double %9, %10
+  %sub3 = fsub contract double %9, %10
   %11 = extractelement <8 x double> %A, i32 6
   %12 = extractelement <8 x double> %B, i32 6
-  %sub4 = fsub double %11, %12
+  %sub4 = fsub contract double %11, %12
   %13 = extractelement <8 x double> %A, i32 5
   %14 = extractelement <8 x double> %B, i32 5
-  %add3 = fadd double %13, %14
+  %add3 = fadd contract double %13, %14
   %15 = extractelement <8 x double> %A, i32 7
   %16 = extractelement <8 x double> %B, i32 7
-  %add4 = fadd double %15, %16
+  %add4 = fadd contract double %15, %16
   %vecinsert1 = insertelement <8 x double> undef, double %add, i32 1
   %vecinsert2 = insertelement <8 x double> %vecinsert1, double %add2, i32 3
   %vecinsert3 = insertelement <8 x double> %vecinsert2, double %sub, i32 0
