@@ -137,9 +137,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                     ISD::SETULT, ISD::SETULE, ISD::SETUGT, ISD::SETUGE})
       setCondCodeAction(CC, T, Expand);
     // Expand floating-point library function operators.
-    for (auto Op :
-         {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM, ISD::FMA})
+    for (auto Op : {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FMA})
       setOperationAction(Op, T, Expand);
+    setOperationAction(ISD::FREM, T, LibCall);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
     for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
@@ -3224,7 +3224,8 @@ static SDValue performBitcastCombine(SDNode *N,
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
                     {DAG.getConstant(Intrinsic::wasm_bitmask, DL, MVT::i32),
                      DAG.getSExtOrTrunc(N->getOperand(0), DL,
-                                        SrcVT.changeVectorElementType(Width))}),
+                                        SrcVT.changeVectorElementType(
+                                            *DAG.getContext(), Width))}),
         DL, VT);
   }
 
@@ -3426,8 +3427,9 @@ static SDValue performSETCCCombine(SDNode *N,
   if (!cast<ConstantSDNode>(N->getOperand(1)))
     return SDValue();
 
-  EVT VecVT = FromVT.changeVectorElementType(MVT::getIntegerVT(128 / NumElts));
   auto &DAG = DCI.DAG;
+  EVT VecVT = FromVT.changeVectorElementType(*DAG.getContext(),
+                                             MVT::getIntegerVT(128 / NumElts));
   // setcc (iN (bitcast (vNi1 X))), 0, ne
   //   ==> any_true (vNi1 X)
   if (auto Match = TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(

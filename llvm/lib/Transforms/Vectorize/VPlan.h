@@ -1054,8 +1054,17 @@ public:
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
+    // Abstract instruction that compares two values and branches. This is
+    // lowered to ICmp + BranchOnCond during VPlan to VPlan transformation.
     BranchOnCount,
     BranchOnCond,
+    // Branch with 2 boolean condition operands and 3 successors. If condition
+    // 0 is true, branches to successor 0; if condition 1 is true, branches to
+    // successor 1; otherwise branches to successor 2. Expanded after region
+    // dissolution into: (1) an OR of the two conditions branching to
+    // middle.split or successor 2, and (2) middle.split branching to successor
+    // 0 or successor 1 based on condition 0.
+    BranchOnTwoConds,
     Broadcast,
     /// Given operands of (the same) struct type, creates a struct of fixed-
     /// width vectors each containing a struct field of all operands. The
@@ -1109,6 +1118,8 @@ public:
     // Unrolling will add all copies of its original operand as additional
     // operands.
     LastActiveLane,
+    // Returns a reversed vector for the operand.
+    Reverse,
 
     // The opcodes below are used for VPInstructionWithType.
     //
@@ -1210,6 +1221,7 @@ public:
     case Instruction::Fence:
     case Instruction::AtomicRMW:
     case VPInstruction::BranchOnCond:
+    case VPInstruction::BranchOnTwoConds:
     case VPInstruction::BranchOnCount:
       return false;
     default:
@@ -3474,10 +3486,10 @@ protected:
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
 struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr, VPValue &EVL,
-                        VPValue *Mask)
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
+                        VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
-                            {Addr, S.getStoredValue(), &EVL}, S.isConsecutive(),
+                            {Addr, StoredVal, &EVL}, S.isConsecutive(),
                             S.isReverse(), S, S.getDebugLoc()) {
     setMask(Mask);
   }
@@ -4403,7 +4415,7 @@ public:
   /// latch. If there is an early exit from the vector loop, the middle block
   /// conceptully has the early exit block as third successor, split accross 2
   /// VPBBs. In that case, the second VPBB selects whether to execute the scalar
-  /// tail loop or the exit bock. If the scalar tail loop or exit block are
+  /// tail loop or the exit block. If the scalar tail loop or exit block are
   /// known to always execute, the middle block may branch directly to that
   /// block. This function cannot be called once the vector loop region has been
   /// removed.
@@ -4412,12 +4424,8 @@ public:
     assert(
         LoopRegion &&
         "cannot call the function after vector loop region has been removed");
-    auto *RegionSucc = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
-    if (RegionSucc->getSingleSuccessor() ||
-        is_contained(RegionSucc->getSuccessors(), getScalarPreheader()))
-      return RegionSucc;
-    // There is an early exit. The successor of RegionSucc is the middle block.
-    return cast<VPBasicBlock>(RegionSucc->getSuccessors()[1]);
+    // The middle block is always the last successor of the region.
+    return cast<VPBasicBlock>(LoopRegion->getSuccessors().back());
   }
 
   const VPBasicBlock *getMiddleBlock() const {

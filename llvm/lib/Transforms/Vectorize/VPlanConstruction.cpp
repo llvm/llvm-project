@@ -13,6 +13,7 @@
 
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
+#include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
@@ -428,16 +429,17 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
-  VPBlockBase *LatchExitVPB = LatchVPBB->getSingleSuccessor();
-  assert(LatchExitVPB && "Latch expected to be left with a single successor");
 
   // Create an empty region first and insert it between PreheaderVPBB and
-  // LatchExitVPB, taking care to preserve the original predecessor & successor
-  // order of blocks. Set region entry and exiting after both HeaderVPB and
-  // LatchVPBB have been disconnected from their predecessors/successors.
+  // the exit blocks, taking care to preserve the original predecessor &
+  // successor order of blocks. Set region entry and exiting after both
+  // HeaderVPB and LatchVPBB have been disconnected from their
+  // predecessors/successors.
   auto *R = Plan.createLoopRegion();
-  VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
-  VPBlockUtils::disconnectBlocks(LatchVPBB, R);
+
+  // Transfer latch's successors to the region.
+  VPBlockUtils::transferSuccessors(LatchVPBB, R);
+
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
@@ -569,15 +571,16 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 
 /// Check \p Plan's live-in and replace them with constants, if they can be
 /// simplified via SCEV.
-static void simplifyLiveInsWithSCEV(VPlan &Plan, ScalarEvolution &SE) {
+static void simplifyLiveInsWithSCEV(VPlan &Plan,
+                                    PredicatedScalarEvolution &PSE) {
   auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
-    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, SE);
+    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, PSE);
     if (auto *C = dyn_cast<SCEVConstant>(Expr))
       return Plan.getOrAddLiveIn(C->getValue());
     return nullptr;
   };
 
-  for (VPValue *LiveIn : Plan.getLiveIns()) {
+  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
     if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
       LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
   }
@@ -590,7 +593,7 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   PlainCFGBuilder Builder(TheLoop, &LI, LVer);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
-  simplifyLiveInsWithSCEV(*VPlan0, *PSE.getSE());
+  simplifyLiveInsWithSCEV(*VPlan0, PSE);
   return VPlan0;
 }
 
@@ -599,13 +602,15 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
 static VPHeaderPHIRecipe *
 createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
                            const InductionDescriptor &IndDesc, VPlan &Plan,
-                           ScalarEvolution &SE, Loop &OrigLoop, DebugLoc DL) {
+                           PredicatedScalarEvolution &PSE, Loop &OrigLoop,
+                           DebugLoc DL) {
+  [[maybe_unused]] ScalarEvolution &SE = *PSE.getSE();
   assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
          "step must be loop invariant");
   assert((Plan.getLiveIn(IndDesc.getStartValue()) == Start ||
           (SE.isSCEVable(IndDesc.getStartValue()->getType()) &&
            SE.getSCEV(IndDesc.getStartValue()) ==
-               vputils::getSCEVExprForVPValue(Start, SE))) &&
+               vputils::getSCEVExprForVPValue(Start, PSE))) &&
          "Start VPValue must match IndDesc's start value");
 
   VPValue *Step =
@@ -636,7 +641,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
 }
 
 void VPlanTransforms::createHeaderPhiRecipes(
-    VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop,
+    VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -670,7 +675,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
     auto InductionIt = Inductions.find(Phi);
     if (InductionIt != Inductions.end())
       return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
-                                        Plan, SE, OrigLoop,
+                                        Plan, PSE, OrigLoop,
                                         PhiR->getDebugLoc());
 
     assert(Reductions.contains(Phi) && "only reductions are expected now");
@@ -697,6 +702,168 @@ void VPlanTransforms::createHeaderPhiRecipes(
     PhiR->replaceAllUsesWith(HeaderPhiR);
     PhiR->eraseFromParent();
   }
+}
+
+void VPlanTransforms::createInLoopReductionRecipes(
+    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
+    const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+    ElementCount MinVF) {
+  VPTypeAnalysis TypeInfo(Plan);
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  SmallVector<VPRecipeBase *> ToDelete;
+
+  for (VPRecipeBase &R : Header->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!PhiR || !PhiR->isInLoop() || (MinVF.isScalar() && !PhiR->isOrdered()))
+      continue;
+
+    RecurKind Kind = PhiR->getRecurrenceKind();
+    assert(
+        !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+        !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+        "AnyOf and FindIV reductions are not allowed for in-loop reductions");
+
+    bool IsFPRecurrence =
+        RecurrenceDescriptor::isFloatingPointRecurrenceKind(Kind);
+    FastMathFlags FMFs =
+        IsFPRecurrence ? FastMathFlags::getFast() : FastMathFlags();
+
+    // Collect the chain of "link" recipes for the reduction starting at PhiR.
+    SetVector<VPSingleDefRecipe *> Worklist;
+    Worklist.insert(PhiR);
+    for (unsigned I = 0; I != Worklist.size(); ++I) {
+      VPSingleDefRecipe *Cur = Worklist[I];
+      for (VPUser *U : Cur->users()) {
+        auto *UserRecipe = cast<VPSingleDefRecipe>(U);
+        if (!UserRecipe->getParent()->getEnclosingLoopRegion()) {
+          assert((UserRecipe->getParent() == Plan.getMiddleBlock() ||
+                  UserRecipe->getParent() == Plan.getScalarPreheader()) &&
+                 "U must be either in the loop region, the middle block or the "
+                 "scalar preheader.");
+          continue;
+        }
+
+        // Stores using instructions will be sunk later.
+        if (match(UserRecipe, m_VPInstruction<Instruction::Store>()))
+          continue;
+        Worklist.insert(UserRecipe);
+      }
+    }
+
+    // Visit operation "Links" along the reduction chain top-down starting from
+    // the phi until LoopExitValue. We keep track of the previous item
+    // (PreviousLink) to tell which of the two operands of a Link will remain
+    // scalar and which will be reduced. For minmax by select(cmp), Link will be
+    // the select instructions. Blend recipes of in-loop reduction phi's will
+    // get folded to their non-phi operand, as the reduction recipe handles the
+    // condition directly.
+    VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
+    for (VPSingleDefRecipe *CurrentLink : drop_begin(Worklist)) {
+      if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
+        assert(Blend->getNumIncomingValues() == 2 &&
+               "Blend must have 2 incoming values");
+        unsigned PhiRIdx = Blend->getIncomingValue(0) == PhiR ? 0 : 1;
+        assert(Blend->getIncomingValue(PhiRIdx) == PhiR &&
+               "PhiR must be an operand of the blend");
+        Blend->replaceAllUsesWith(Blend->getIncomingValue(1 - PhiRIdx));
+        continue;
+      }
+
+      if (IsFPRecurrence) {
+        FastMathFlags CurFMF =
+            cast<VPRecipeWithIRFlags>(CurrentLink)->getFastMathFlags();
+        if (match(CurrentLink, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+          CurFMF |= cast<VPRecipeWithIRFlags>(CurrentLink->getOperand(0))
+                        ->getFastMathFlags();
+        FMFs &= CurFMF;
+      }
+
+      Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
+
+      // Recognize a call to the llvm.fmuladd intrinsic.
+      bool IsFMulAdd = Kind == RecurKind::FMulAdd;
+      VPValue *VecOp;
+      VPBasicBlock *LinkVPBB = CurrentLink->getParent();
+      if (IsFMulAdd) {
+        assert(RecurrenceDescriptor::isFMulAddIntrinsic(CurrentLinkI) &&
+               "Expected current VPInstruction to be a call to the "
+               "llvm.fmuladd intrinsic");
+        assert(CurrentLink->getOperand(2) == PreviousLink &&
+               "expected a call where the previous link is the added operand");
+
+        // If the instruction is a call to the llvm.fmuladd intrinsic then we
+        // need to create an fmul recipe (multiplying the first two operands of
+        // the fmuladd together) to use as the vector operand for the fadd
+        // reduction.
+        auto *FMulRecipe = new VPInstruction(
+            Instruction::FMul,
+            {CurrentLink->getOperand(0), CurrentLink->getOperand(1)},
+            CurrentLinkI->getFastMathFlags());
+        LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
+        VecOp = FMulRecipe;
+      } else if (Kind == RecurKind::AddChainWithSubs &&
+                 match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
+        Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+        auto *Zero = Plan.getConstantInt(PhiTy, 0);
+        auto *Sub = new VPInstruction(Instruction::Sub,
+                                      {Zero, CurrentLink->getOperand(1)}, {},
+                                      {}, CurrentLinkI->getDebugLoc());
+        Sub->setUnderlyingValue(CurrentLinkI);
+        LinkVPBB->insert(Sub, CurrentLink->getIterator());
+        VecOp = Sub;
+      } else {
+        // Index of the first operand which holds a non-mask vector operand.
+        unsigned IndexOfFirstOperand = 0;
+        if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
+          if (match(CurrentLink, m_Cmp(m_VPValue(), m_VPValue())))
+            continue;
+          assert(match(CurrentLink,
+                       m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
+                 "must be a select recipe");
+          IndexOfFirstOperand = 1;
+        }
+        // Note that for non-commutable operands (cmp-selects), the semantics of
+        // the cmp-select are captured in the recurrence kind.
+        unsigned VecOpId =
+            CurrentLink->getOperand(IndexOfFirstOperand) == PreviousLink
+                ? IndexOfFirstOperand + 1
+                : IndexOfFirstOperand;
+        VecOp = CurrentLink->getOperand(VecOpId);
+        assert(VecOp != PreviousLink &&
+               CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
+                                       (VecOpId - IndexOfFirstOperand)) ==
+                   PreviousLink &&
+               "PreviousLink must be the operand other than VecOp");
+      }
+
+      // Get block mask from BlockMaskCache if the block needs predication.
+      VPValue *CondOp = nullptr;
+      if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
+        CondOp = BlockMaskCache.lookup(LinkVPBB);
+
+      assert(PhiR->getVFScaleFactor() == 1 &&
+             "inloop reductions must be unscaled");
+      auto *RedRecipe = new VPReductionRecipe(
+          Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
+          getReductionStyle(/*IsInLoop=*/true, PhiR->isOrdered(), 1),
+          CurrentLinkI->getDebugLoc());
+      // Append the recipe to the end of the VPBasicBlock because we need to
+      // ensure that it comes after all of it's inputs, including CondOp.
+      // Delete CurrentLink as it will be invalid if its operand is replaced
+      // with a reduction defined at the bottom of the block in the next link.
+      if (LinkVPBB->getNumSuccessors() == 0)
+        RedRecipe->insertBefore(&*std::prev(std::prev(LinkVPBB->end())));
+      else
+        LinkVPBB->appendRecipe(RedRecipe);
+
+      CurrentLink->replaceAllUsesWith(RedRecipe);
+      ToDelete.push_back(CurrentLink);
+      PreviousLink = RedRecipe;
+    }
+  }
+
+  for (VPRecipeBase *R : ToDelete)
+    R->eraseFromParent();
 }
 
 void VPlanTransforms::handleEarlyExits(VPlan &Plan,
@@ -835,7 +1002,8 @@ void VPlanTransforms::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
     bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
-    const uint32_t *MinItersBypassWeights, DebugLoc DL, ScalarEvolution &SE) {
+    const uint32_t *MinItersBypassWeights, DebugLoc DL,
+    PredicatedScalarEvolution &PSE) {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -845,8 +1013,9 @@ void VPlanTransforms::addMinimumIterationCheck(
       RequiresScalarEpilogue ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
   // If tail is to be folded, vector loop takes care of all iterations.
   VPValue *TripCountVPV = Plan.getTripCount();
-  const SCEV *TripCount = vputils::getSCEVExprForVPValue(TripCountVPV, SE);
+  const SCEV *TripCount = vputils::getSCEVExprForVPValue(TripCountVPV, PSE);
   Type *TripCountTy = TripCount->getType();
+  ScalarEvolution &SE = *PSE.getSE();
   auto GetMinTripCount = [&]() -> const SCEV * {
     // Compute max(MinProfitableTripCount, UF * VF) and return it.
     const SCEV *VFxUF =
