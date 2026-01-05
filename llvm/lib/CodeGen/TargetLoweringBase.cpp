@@ -96,32 +96,32 @@ static cl::opt<unsigned> MinimumBitTestCmpsOverride(
              "to use bit test for switch."));
 
 static cl::opt<unsigned>
-    MaxStoresPerMemsetOverride("max-stores-per-memset", cl::init(0), cl::Hidden,
+    MaxStoresPerMemsetOverride("max-store-memset", cl::init(0), cl::Hidden,
                                cl::desc("Override target's MaxStoresPerMemset. "
                                         "Set to 0 to use the target default."));
 
 static cl::opt<unsigned> MaxStoresPerMemsetOptSizeOverride(
-    "max-stores-per-memset-optsize", cl::init(0), cl::Hidden,
+    "max-store-memset-0s", cl::init(0), cl::Hidden,
     cl::desc("Override target's MaxStoresPerMemsetOptSize. "
              "Set to 0 to use the target default."));
 
 static cl::opt<unsigned>
-    MaxStoresPerMemcpyOverride("max-stores-per-memcpy", cl::init(0), cl::Hidden,
+    MaxStoresPerMemcpyOverride("max-store-memcpy", cl::init(0), cl::Hidden,
                                cl::desc("Override target's MaxStoresPerMemcpy. "
                                         "Set to 0 to use the target default."));
 
 static cl::opt<unsigned> MaxStoresPerMemcpyOptSizeOverride(
-    "max-stores-per-memcpy-optsize", cl::init(0), cl::Hidden,
+    "max-store-memcpy-0s", cl::init(0), cl::Hidden,
     cl::desc("Override target's MaxStoresPerMemcpyOptSize. "
              "Set to 0 to use the target default."));
 
 static cl::opt<unsigned> MaxStoresPerMemmoveOverride(
-    "max-stores-per-memmove", cl::init(0), cl::Hidden,
+    "max-store-memmove", cl::init(0), cl::Hidden,
     cl::desc("Override target's MaxStoresPerMemmove. "
              "Set to 0 to use the target default."));
 
 static cl::opt<unsigned> MaxStoresPerMemmoveOptSizeOverride(
-    "max-stores-per-memmove-optsize", cl::init(0), cl::Hidden,
+    "max-store-memmove-0s", cl::init(0), cl::Hidden,
     cl::desc("Override target's MaxStoresPerMemmoveOptSize. "
              "Set to 0 to use the target default."));
 
