@@ -351,6 +351,9 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
   }];
 }
 
+// NOTE on memory effects: The allocation effect (MemAlloc) is to ensure
+// this operation is not removed by dead code elimination as a dead read
+// on the argument: the prefetch happens as a side effect.
 def fir_PrefetchOp : fir_Op<"prefetch", [MemoryEffects<[MemAlloc<DefaultResource>]>]> {
   let summary = "prefetch a memory reference";
 
