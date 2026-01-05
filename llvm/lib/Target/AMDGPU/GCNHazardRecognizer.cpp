@@ -2217,16 +2217,33 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (AmtReg != AMDGPU::VGPR255 && MRI.isPhysRegUsed(AmtReg + 1))
     return false;
 
-  MachineOperand *Src1 = TII.getNamedOperand(*MI, AMDGPU::OpName::src1);
-  bool OverlappedSrc = Src1->isReg() && TRI.regsOverlap(Src1->getReg(), AmtReg);
-  bool OverlappedDst = MI->modifiesRegister(AmtReg, &TRI);
-  bool Overlapped = OverlappedSrc || OverlappedDst;
-
-  assert(!OverlappedDst || !OverlappedSrc ||
-         Src1->getReg() == MI->getOperand(0).getReg());
   assert(ST.needsAlignedVGPRs());
   static_assert(AMDGPU::VGPR0 + 1 == AMDGPU::VGPR1);
 
+  const DebugLoc DL = MI->getDebugLoc();
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineOperand *Src1 = TII.getNamedOperand(*MI, AMDGPU::OpName::src1);
+
+  // In:
+  //
+  //    Dst = shiftrev64 Amt, Src1
+  //
+  // if  Dst!=Src1 then avoid the bug with:
+  //
+  //    Dst.sub0 = Amt
+  //    Dst = shift64 Dst.sub0, Src1
+
+  Register DstReg = MI->getOperand(0).getReg();
+  if (!Src1->isReg() || Src1->getReg() != DstReg) {
+    Register DstLo = TRI.getSubReg(DstReg, AMDGPU::sub0);
+    runOnInstruction(
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MOV_B32_e32), DstLo).add(*Amt));
+    Amt->setReg(DstLo);
+    Amt->setIsKill(true);
+    return true;
+  }
+
+  bool Overlapped = MI->modifiesRegister(AmtReg, &TRI);
   Register NewReg;
   for (MCRegister Reg : Overlapped ? AMDGPU::VReg_64_Align2RegClass
                                    : AMDGPU::VGPR_32RegClass) {
@@ -2243,8 +2260,6 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (Overlapped)
     NewAmtLo = TRI.getSubReg(NewReg, AMDGPU::sub0);
 
-  DebugLoc DL = MI->getDebugLoc();
-  MachineBasicBlock *MBB = MI->getParent();
   // Insert a full wait count because found register might be pending a wait.
   BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_WAITCNT))
       .addImm(0);
@@ -2282,9 +2297,8 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   Amt->setIsKill(false);
   // We do not update liveness, so verifier may see it as undef.
   Amt->setIsUndef();
-  if (OverlappedDst)
+  if (Overlapped) {
     MI->getOperand(0).setReg(NewReg);
-  if (OverlappedSrc) {
     Src1->setReg(NewReg);
     Src1->setIsKill(false);
     Src1->setIsUndef();

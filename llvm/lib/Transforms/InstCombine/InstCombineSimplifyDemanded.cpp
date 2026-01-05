@@ -2182,6 +2182,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       if (KnownSrc.isKnownAlways(fcZero))
         return ConstantFP::get(VTy, 1.0);
 
+      // Only perform nan propagation.
+      // Note: Dropping canonicalize / quiet of signaling nan.
+      if (KnownSrc.isKnownAlways(fcNan))
+        return CI->getArgOperand(0);
+
       // exp(0 | nan) => x == 0.0 ? 1.0 : x
       if (KnownSrc.isKnownAlways(fcZero | fcNan)) {
         IRBuilderBase::InsertPointGuard Guard(Builder);
@@ -2209,11 +2214,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
             IsPosInfOrNan, X, ConstantFP::getZero(VTy), FMF, DEBUG_TYPE);
         return ZeroOrInf;
       }
-
-      // Only perform nan propagation.
-      // Note: Dropping canonicalize / quiet of signaling nan.
-      if (KnownSrc.isKnownAlways(fcNan))
-        return CI->getArgOperand(0);
 
       Known = KnownFPClass::exp(KnownSrc);
       break;

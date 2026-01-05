@@ -50,3 +50,16 @@ class TestStringPrinter(TestBase):
         )
 
         # FIXME: make "b.data" and "c.data" work sanely
+
+        self.expect_var_path(
+            "ref",
+            summary="<no value available>",
+            children=[ValueCheck(name="&ref", summary='"Hello"')],
+        )
+
+        # FIXME: should LLDB use "&&refref" for the name here?
+        self.expect_var_path(
+            "refref",
+            summary="<no value available>",
+            children=[ValueCheck(name="&refref", summary='"Hi"')],
+        )
