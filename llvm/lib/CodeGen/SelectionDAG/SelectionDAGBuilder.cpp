@@ -2480,7 +2480,6 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
         FCmpInst::Predicate Pred =
             InvertCond ? FC->getInversePredicate() : FC->getPredicate();
         Condition = getFCmpCondCode(Pred);
-
         if (FC->hasNoNaNs() ||
             (isKnownNeverNaN(FC->getOperand(0),
                              SimplifyQuery(DAG.getDataLayout(), FC)) &&

@@ -2441,10 +2441,9 @@ define i1 @test122(double %arg1, double %arg2, double %arg3) #1 {
 ; GCN-LABEL: test122:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_nge_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cmp_nge_f64_e64 s0, v[2:3], v[4:5]
-; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
+; GCN-NEXT:    v_cmp_lt_f64_e32 vcc_lo, v[0:1], v[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ult double %arg1, %arg3
   %cmp2 = fcmp ult double %arg2, %arg3
@@ -2458,10 +2457,9 @@ define i1 @test123(double %arg1, double %arg2, double %arg3) #1 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GCN-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
 ; GCN-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cmp_gt_f64_e64 s0, v[2:3], v[4:5]
-; GCN-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
