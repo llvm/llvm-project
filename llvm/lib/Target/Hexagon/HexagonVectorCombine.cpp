@@ -2842,7 +2842,8 @@ HvxIdioms::getAlignmentImpl(Instruction &In, Value *ptr,
 }
 
 Value *HvxIdioms::processMStore(Instruction &In) const {
-  auto *InpTy = dyn_cast<VectorType>(In.getOperand(0)->getType());
+  [[maybe_unused]] auto *InpTy =
+      dyn_cast<VectorType>(In.getOperand(0)->getType());
   assert(InpTy && "Cannot handle no vector type for llvm.masked.store");
 
   LLVM_DEBUG(dbgs() << "\n[Process mstore](" << In << ")\n"
@@ -2877,7 +2878,7 @@ Value *HvxIdioms::processMStore(Instruction &In) const {
 }
 
 Value *HvxIdioms::processMLoad(Instruction &In) const {
-  auto *InpTy = dyn_cast<VectorType>(In.getType());
+  [[maybe_unused]] auto *InpTy = dyn_cast<VectorType>(In.getType());
   assert(InpTy && "Cannot handle non vector type for llvm.masked.store");
   LLVM_DEBUG(dbgs() << "\n[Process mload](" << In << ")\n"
                     << *In.getParent() << "\n");
