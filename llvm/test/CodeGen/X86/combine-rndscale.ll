@@ -214,11 +214,12 @@ define i16 @concat_roundps_cmp_v8f32(<8 x float> %x0, <8 x float> %x1, <8 x floa
 ;
 ; AVX512-LABEL: concat_roundps_cmp_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vroundps $4, %ymm0, %ymm0
-; AVX512-NEXT:    vroundps $4, %ymm1, %ymm1
-; AVX512-NEXT:    vcmpltps %ymm2, %ymm0, %k0
-; AVX512-NEXT:    vcmpltps %ymm3, %ymm1, %k1
-; AVX512-NEXT:    kunpckbw %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm3, %zmm2, %zmm2
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vrndscaleps $4, %zmm0, %zmm0
+; AVX512-NEXT:    vcmpltps %zmm2, %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-NEXT:    vzeroupper
