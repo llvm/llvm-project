@@ -55,7 +55,7 @@ public:
     mlirRewriterBaseReplaceOpWithValues(base, op, values.size(), values.data());
   }
 
-  void eraseOp(MlirOperation op) { mlirRewriterBaseEraseOp(base, op); }
+  void eraseOp(const PyOperation &op) { mlirRewriterBaseEraseOp(base, op); }
 
 private:
   MlirRewriterBase base;
@@ -342,38 +342,29 @@ void populateRewriteSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of the PatternRewriter
   //----------------------------------------------------------------------------
-  nb::
-      class_<PyPatternRewriter>(m, "PatternRewriter")
-          .def_prop_ro("ip", &PyPatternRewriter::getInsertionPoint,
-                       "The current insertion point of the PatternRewriter.")
-          .def(
-              "replace_op",
-              [](PyPatternRewriter &self, MlirOperation op,
-                 MlirOperation newOp) { self.replaceOp(op, newOp); },
-              "Replace an operation with a new operation.", nb::arg("op"),
-              nb::arg("new_op"),
-              // clang-format off
-              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", new_op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
-              // clang-format on
-              )
-          .def(
-              "replace_op",
-              [](PyPatternRewriter &self, MlirOperation op,
-                 const std::vector<MlirValue> &values) {
-                self.replaceOp(op, values);
-              },
-              "Replace an operation with a list of values.", nb::arg("op"),
-              nb::arg("values"),
-              // clang-format off
-              nb::sig("def replace_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ", values: list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Value") "]) -> None")
-              // clang-format on
-              )
-          .def("erase_op", &PyPatternRewriter::eraseOp, "Erase an operation.",
-               nb::arg("op"),
-               // clang-format off
-                nb::sig("def erase_op(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None")
-               // clang-format on
-          );
+  nb::class_<PyPatternRewriter>(m, "PatternRewriter")
+      .def_prop_ro("ip", &PyPatternRewriter::getInsertionPoint,
+                   "The current insertion point of the PatternRewriter.")
+      .def(
+          "replace_op",
+          [](PyPatternRewriter &self, PyOperationBase &op,
+             PyOperationBase &newOp) {
+            self.replaceOp(op.getOperation(), newOp.getOperation());
+          },
+          "Replace an operation with a new operation.", nb::arg("op"),
+          nb::arg("new_op"))
+      .def(
+          "replace_op",
+          [](PyPatternRewriter &self, PyOperationBase &op,
+             const std::vector<PyValue> &values) {
+            std::vector<MlirValue> values_(values.size());
+            std::copy(values.begin(), values.end(), values_.begin());
+            self.replaceOp(op.getOperation(), values_);
+          },
+          "Replace an operation with a list of values.", nb::arg("op"),
+          nb::arg("values"))
+      .def("erase_op", &PyPatternRewriter::eraseOp, "Erase an operation.",
+           nb::arg("op"));
 
   //----------------------------------------------------------------------------
   // Mapping of the RewritePatternSet
@@ -428,42 +419,21 @@ void populateRewriteSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
   nb::class_<PyMlirPDLResultList>(m, "PDLResultList")
-      .def(
-          "append",
-          [](PyMlirPDLResultList results, const PyValue &value) {
-            mlirPDLResultListPushBackValue(results, value);
-          },
-          // clang-format off
-          nb::sig("def append(self, value: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
-          // clang-format on
-          )
-      .def(
-          "append",
-          [](PyMlirPDLResultList results, const PyOperation &op) {
-            mlirPDLResultListPushBackOperation(results, op);
-          },
-          // clang-format off
-          nb::sig("def append(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
-          // clang-format on
-          )
-      .def(
-          "append",
-          [](PyMlirPDLResultList results, const PyType &type) {
-            mlirPDLResultListPushBackType(results, type);
-          },
-          // clang-format off
-          nb::sig("def append(self, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
-          // clang-format on
-          )
-      .def(
-          "append",
-          [](PyMlirPDLResultList results, const PyAttribute &attr) {
-            mlirPDLResultListPushBackAttribute(results, attr);
-          },
-          // clang-format off
-          nb::sig("def append(self, attr: " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
-          // clang-format on
-      );
+      .def("append",
+           [](PyMlirPDLResultList results, const PyValue &value) {
+             mlirPDLResultListPushBackValue(results, value);
+           })
+      .def("append",
+           [](PyMlirPDLResultList results, const PyOperation &op) {
+             mlirPDLResultListPushBackOperation(results, op);
+           })
+      .def("append",
+           [](PyMlirPDLResultList results, const PyType &type) {
+             mlirPDLResultListPushBackType(results, type);
+           })
+      .def("append", [](PyMlirPDLResultList results, const PyAttribute &attr) {
+        mlirPDLResultListPushBackAttribute(results, attr);
+      });
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
       .def(
           "__init__",
@@ -471,9 +441,6 @@ void populateRewriteSubmodule(nb::module_ &m) {
             new (&self) PyPDLPatternModule(
                 mlirPDLPatternModuleFromModule(module.get()));
           },
-          // clang-format off
-          nb::sig("def __init__(self, module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ") -> None"),
-          // clang-format on
           "module"_a, "Create a PDL module from the given module.")
       .def(
           "__init__",
@@ -481,9 +448,6 @@ void populateRewriteSubmodule(nb::module_ &m) {
             new (&self) PyPDLPatternModule(
                 mlirPDLPatternModuleFromModule(module.get()));
           },
-          // clang-format off
-          nb::sig("def __init__(self, module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ") -> None"),
-          // clang-format on
           "module"_a, "Create a PDL module from the given module.")
       .def(
           "freeze",
@@ -552,9 +516,6 @@ void populateRewriteSubmodule(nb::module_ &m) {
            throw std::runtime_error("pattern application failed to converge");
        },
        "module"_a, "set"_a,
-       // clang-format off
-       nb::sig("def apply_patterns_and_fold_greedily(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ", set: FrozenRewritePatternSet) -> None"),
-       // clang-format on
        "Applys the given patterns to the given module greedily while folding "
        "results.")
       .def(
@@ -568,9 +529,6 @@ void populateRewriteSubmodule(nb::module_ &m) {
                   "pattern application failed to converge");
           },
           "op"_a, "set"_a,
-          // clang-format off
-          nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
-          // clang-format on
           "Applys the given patterns to the given op greedily while folding "
           "results.")
       .def(
@@ -579,9 +537,6 @@ void populateRewriteSubmodule(nb::module_ &m) {
             mlirWalkAndApplyPatterns(op.getOperation(), set.get());
           },
           "op"_a, "set"_a,
-          // clang-format off
-          nb::sig("def walk_and_apply_patterns(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
-          // clang-format on
           "Applies the given patterns to the given op by a fast walk-based "
           "driver.");
 }
