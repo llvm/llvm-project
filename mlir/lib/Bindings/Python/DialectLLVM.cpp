@@ -212,5 +212,5 @@ static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
 NB_MODULE(_mlirDialectsLLVM, m) {
   m.doc() = "MLIR LLVM Dialect";
 
-  python::mlir::llvm::populateDialectLLVMSubmodule(m);
+  mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::llvm::populateDialectLLVMSubmodule(m);
 }
