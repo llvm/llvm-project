@@ -18043,7 +18043,8 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FSUB, VT))) {
     if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
       SDValue SplatN0 = N1->getOperand(0);
-      if (SplatN0.getOpcode() == ISD::FNEG && SplatN0.hasOneUse()) {
+      if (SplatN0.getOpcode() == ISD::FNEG &&
+          (TLI.isFNegFree(VT) || SplatN0.hasOneUse())) {
         SDValue Splat =
             DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0->getOperand(0));
         return DAG.getNode(ISD::FSUB, DL, VT, N0, Splat);
@@ -18296,7 +18297,8 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FADD, VT))) {
     if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
       SDValue SplatN0 = N1->getOperand(0);
-      if (SplatN0.getOpcode() == ISD::FNEG && SplatN0.hasOneUse()) {
+      if (SplatN0.getOpcode() == ISD::FNEG &&
+          (TLI.isFNegFree(VT) || SplatN0.hasOneUse())) {
         SDValue Splat =
             DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0->getOperand(0));
         return DAG.getNode(ISD::FADD, DL, VT, N0, Splat);
