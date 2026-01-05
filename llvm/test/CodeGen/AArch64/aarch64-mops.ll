@@ -6,8 +6,8 @@
 ; RUN: llc %s -o - -mtriple=aarch64     -global-isel=1 -global-isel-abort=1 -mattr=+mops       | FileCheck %s --check-prefixes=GISel-MOPS,GISel-MOPS-O3
 ; RUN: llc %s -o - -mtriple=aarch64 -O2                    | FileCheck %s --check-prefix=SDAG-WITHOUT-MOPS-O2
 ; RUN: llc %s -o - -mtriple=aarch64 -O2 -mattr=+mops       | FileCheck %s --check-prefix=SDAG-MOPS-O2
-; RUN: llc %s -o - -mtriple=aarch64 -mattr=+mops -aarch64-use-mops=false | FileCheck %s --check-prefix=MOPS-DISABLED
-; RUN: llc %s -o - -mtriple=aarch64 -mattr=+mops -aarch64-use-mops=true  | FileCheck %s --check-prefix=MOPS-ENABLED
+; RUN: llc %s -o - -mtriple=aarch64 -mattr=+mops -aarch64-use-mops=false | FileCheck %s --check-prefix=SDAG-WITHOUT-MOPS-O2
+; RUN: llc %s -o - -mtriple=aarch64 -mattr=+mops -aarch64-use-mops=true  | FileCheck %s --check-prefix=SDAG-MOPS-O2
 
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
@@ -33,14 +33,6 @@ define void @memset_0_zeroval(ptr %dst) {
 ; SDAG-MOPS-O2-LABEL: memset_0_zeroval:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_0_zeroval:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_0_zeroval:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 0, i1 false)
   ret void
@@ -62,14 +54,6 @@ define void @memset_0_zeroval_volatile(ptr %dst) {
 ; SDAG-MOPS-O2-LABEL: memset_0_zeroval_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_0_zeroval_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_0_zeroval_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 0, i1 true)
   ret void
@@ -99,18 +83,6 @@ define void @memset_10_zeroval(ptr %dst) {
 ; SDAG-MOPS-O2-NEXT:    strh wzr, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    str xzr, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_10_zeroval:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    strh wzr, [x0, #8]
-; MOPS-DISABLED-NEXT:    str xzr, [x0]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_10_zeroval:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    strh wzr, [x0, #8]
-; MOPS-ENABLED-NEXT:    str xzr, [x0]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 10, i1 false)
   ret void
@@ -140,18 +112,6 @@ define void @memset_10_zeroval_volatile(ptr %dst) {
 ; SDAG-MOPS-O2-NEXT:    strh wzr, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    str xzr, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_10_zeroval_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    strh wzr, [x0, #8]
-; MOPS-DISABLED-NEXT:    str xzr, [x0]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_10_zeroval_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    strh wzr, [x0, #8]
-; MOPS-ENABLED-NEXT:    str xzr, [x0]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 10, i1 true)
   ret void
@@ -217,25 +177,6 @@ define void @memset_10000_zeroval(ptr %dst) {
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x8!, xzr
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x8!, xzr
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_10000_zeroval:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov w1, wzr
-; MOPS-DISABLED-NEXT:    mov w2, #10000 // =0x2710
-; MOPS-DISABLED-NEXT:    bl memset
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_10000_zeroval:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #10000 // =0x2710
-; MOPS-ENABLED-NEXT:    setp [x0]!, x8!, xzr
-; MOPS-ENABLED-NEXT:    setm [x0]!, x8!, xzr
-; MOPS-ENABLED-NEXT:    sete [x0]!, x8!, xzr
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 10000, i1 false)
   ret void
@@ -301,25 +242,6 @@ define void @memset_10000_zeroval_volatile(ptr %dst) {
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x8!, xzr
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x8!, xzr
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_10000_zeroval_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov w1, wzr
-; MOPS-DISABLED-NEXT:    mov w2, #10000 // =0x2710
-; MOPS-DISABLED-NEXT:    bl memset
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_10000_zeroval_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #10000 // =0x2710
-; MOPS-ENABLED-NEXT:    setp [x0]!, x8!, xzr
-; MOPS-ENABLED-NEXT:    setm [x0]!, x8!, xzr
-; MOPS-ENABLED-NEXT:    sete [x0]!, x8!, xzr
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 10000, i1 true)
   ret void
@@ -369,24 +291,6 @@ define void @memset_size_zeroval(ptr %dst, i64 %size) {
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x1!, xzr
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x1!, xzr
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_size_zeroval:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov x2, x1
-; MOPS-DISABLED-NEXT:    mov w1, wzr
-; MOPS-DISABLED-NEXT:    bl memset
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_size_zeroval:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    setp [x0]!, x1!, xzr
-; MOPS-ENABLED-NEXT:    setm [x0]!, x1!, xzr
-; MOPS-ENABLED-NEXT:    sete [x0]!, x1!, xzr
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 %size, i1 false)
   ret void
@@ -436,24 +340,6 @@ define void @memset_size_zeroval_volatile(ptr %dst, i64 %size) {
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x1!, xzr
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x1!, xzr
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_size_zeroval_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov x2, x1
-; MOPS-DISABLED-NEXT:    mov w1, wzr
-; MOPS-DISABLED-NEXT:    bl memset
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_size_zeroval_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    setp [x0]!, x1!, xzr
-; MOPS-ENABLED-NEXT:    setm [x0]!, x1!, xzr
-; MOPS-ENABLED-NEXT:    sete [x0]!, x1!, xzr
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 %size, i1 true)
   ret void
@@ -476,14 +362,6 @@ define void @memset_0(ptr %dst, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memset_0:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_0:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_0:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 0, i1 false)
@@ -506,14 +384,6 @@ define void @memset_0_volatile(ptr %dst, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memset_0_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_0_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_0_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 0, i64 0, i1 true)
@@ -584,26 +454,6 @@ define void @memset_10(ptr %dst, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    str x8, [x0]
 ; SDAG-MOPS-O2-NEXT:    strh w8, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_10:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    // kill: def $w1 killed $w1 def $x1
-; MOPS-DISABLED-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; MOPS-DISABLED-NEXT:    and x9, x1, #0xff
-; MOPS-DISABLED-NEXT:    mul x8, x9, x8
-; MOPS-DISABLED-NEXT:    str x8, [x0]
-; MOPS-DISABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_10:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    // kill: def $w1 killed $w1 def $x1
-; MOPS-ENABLED-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; MOPS-ENABLED-NEXT:    and x9, x1, #0xff
-; MOPS-ENABLED-NEXT:    mul x8, x9, x8
-; MOPS-ENABLED-NEXT:    str x8, [x0]
-; MOPS-ENABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value_trunc, i64 10, i1 false)
@@ -674,26 +524,6 @@ define void @memset_10_volatile(ptr %dst, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    str x8, [x0]
 ; SDAG-MOPS-O2-NEXT:    strh w8, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_10_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    // kill: def $w1 killed $w1 def $x1
-; MOPS-DISABLED-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; MOPS-DISABLED-NEXT:    and x9, x1, #0xff
-; MOPS-DISABLED-NEXT:    mul x8, x9, x8
-; MOPS-DISABLED-NEXT:    str x8, [x0]
-; MOPS-DISABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_10_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    // kill: def $w1 killed $w1 def $x1
-; MOPS-ENABLED-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; MOPS-ENABLED-NEXT:    and x9, x1, #0xff
-; MOPS-ENABLED-NEXT:    mul x8, x9, x8
-; MOPS-ENABLED-NEXT:    str x8, [x0]
-; MOPS-ENABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value_trunc, i64 10, i1 true)
@@ -807,48 +637,6 @@ define void @memset_threshold(ptr %dst) {
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #448]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #480]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_threshold:
-; MOPS-DISABLED:       // %bb.0:
-; MOPS-DISABLED-NEXT:    movi v0.2d, #0000000000000000
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #32]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #64]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #96]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #128]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #160]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #192]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #224]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #256]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #288]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #320]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #352]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #384]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #416]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #448]
-; MOPS-DISABLED-NEXT:    stp q0, q0, [x0, #480]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_threshold:
-; MOPS-ENABLED:       // %bb.0:
-; MOPS-ENABLED-NEXT:    movi v0.2d, #0000000000000000
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #32]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #64]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #96]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #128]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #160]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #192]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #224]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #256]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #288]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #320]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #352]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #384]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #416]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #448]
-; MOPS-ENABLED-NEXT:    stp q0, q0, [x0, #480]
-; MOPS-ENABLED-NEXT:    ret
   call void @llvm.memset.p0.i64(ptr align 16 %dst, i8 0, i64 512, i1 false)
   ret void
 }
@@ -913,25 +701,6 @@ define void @memset_10000(ptr %dst, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x8!, x1
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x8!, x1
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_10000:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov w2, #10000 // =0x2710
-; MOPS-DISABLED-NEXT:    bl memset
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_10000:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #10000 // =0x2710
-; MOPS-ENABLED-NEXT:    // kill: def $w1 killed $w1 def $x1
-; MOPS-ENABLED-NEXT:    setp [x0]!, x8!, x1
-; MOPS-ENABLED-NEXT:    setm [x0]!, x8!, x1
-; MOPS-ENABLED-NEXT:    sete [x0]!, x8!, x1
-; MOPS-ENABLED-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value_trunc, i64 10000, i1 false)
@@ -998,25 +767,6 @@ define void @memset_10000_volatile(ptr %dst, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x8!, x1
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x8!, x1
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_10000_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov w2, #10000 // =0x2710
-; MOPS-DISABLED-NEXT:    bl memset
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_10000_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #10000 // =0x2710
-; MOPS-ENABLED-NEXT:    // kill: def $w1 killed $w1 def $x1
-; MOPS-ENABLED-NEXT:    setp [x0]!, x8!, x1
-; MOPS-ENABLED-NEXT:    setm [x0]!, x8!, x1
-; MOPS-ENABLED-NEXT:    sete [x0]!, x8!, x1
-; MOPS-ENABLED-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value_trunc, i64 10000, i1 true)
@@ -1086,26 +836,6 @@ define void @memset_size(ptr %dst, i64 %size, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x1!, x2
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x1!, x2
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_size:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov x8, x1
-; MOPS-DISABLED-NEXT:    mov w1, w2
-; MOPS-DISABLED-NEXT:    mov x2, x8
-; MOPS-DISABLED-NEXT:    bl memset
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_size:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    // kill: def $w2 killed $w2 def $x2
-; MOPS-ENABLED-NEXT:    setp [x0]!, x1!, x2
-; MOPS-ENABLED-NEXT:    setm [x0]!, x1!, x2
-; MOPS-ENABLED-NEXT:    sete [x0]!, x1!, x2
-; MOPS-ENABLED-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value_trunc, i64 %size, i1 false)
@@ -1175,26 +905,6 @@ define void @memset_size_volatile(ptr %dst, i64 %size, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    setm [x0]!, x1!, x2
 ; SDAG-MOPS-O2-NEXT:    sete [x0]!, x1!, x2
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memset_size_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov x8, x1
-; MOPS-DISABLED-NEXT:    mov w1, w2
-; MOPS-DISABLED-NEXT:    mov x2, x8
-; MOPS-DISABLED-NEXT:    bl memset
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memset_size_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    // kill: def $w2 killed $w2 def $x2
-; MOPS-ENABLED-NEXT:    setp [x0]!, x1!, x2
-; MOPS-ENABLED-NEXT:    setm [x0]!, x1!, x2
-; MOPS-ENABLED-NEXT:    sete [x0]!, x1!, x2
-; MOPS-ENABLED-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value_trunc, i64 %size, i1 true)
@@ -1218,14 +928,6 @@ define void @memcpy_0(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memcpy_0:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_0:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_0:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 false)
   ret void
@@ -1247,14 +949,6 @@ define void @memcpy_0_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memcpy_0_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_0_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_0_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 true)
   ret void
@@ -1292,22 +986,6 @@ define void @memcpy_10(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    strh w8, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    str x9, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_10:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ldrh w8, [x1, #8]
-; MOPS-DISABLED-NEXT:    ldr x9, [x1]
-; MOPS-DISABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-DISABLED-NEXT:    str x9, [x0]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_10:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ldrh w8, [x1, #8]
-; MOPS-ENABLED-NEXT:    ldr x9, [x1]
-; MOPS-ENABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-ENABLED-NEXT:    str x9, [x0]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 10, i1 false)
   ret void
@@ -1345,22 +1023,6 @@ define void @memcpy_10_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    str x8, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_10_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ldr x8, [x1]
-; MOPS-DISABLED-NEXT:    ldrh w9, [x1, #8]
-; MOPS-DISABLED-NEXT:    strh w9, [x0, #8]
-; MOPS-DISABLED-NEXT:    str x8, [x0]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_10_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ldr x8, [x1]
-; MOPS-ENABLED-NEXT:    ldrh w9, [x1, #8]
-; MOPS-ENABLED-NEXT:    strh w9, [x0, #8]
-; MOPS-ENABLED-NEXT:    str x8, [x0]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 10, i1 true)
   ret void
@@ -1422,24 +1084,6 @@ define void @memcpy_1000(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpyfm [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    cpyfe [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_1000:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov w2, #1000 // =0x3e8
-; MOPS-DISABLED-NEXT:    bl memcpy
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_1000:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #1000 // =0x3e8
-; MOPS-ENABLED-NEXT:    cpyfp [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpyfm [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpyfe [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 1000, i1 false)
   ret void
@@ -1501,24 +1145,6 @@ define void @memcpy_1000_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpyfm [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    cpyfe [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_1000_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov w2, #1000 // =0x3e8
-; MOPS-DISABLED-NEXT:    bl memcpy
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_1000_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #1000 // =0x3e8
-; MOPS-ENABLED-NEXT:    cpyfp [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpyfm [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpyfe [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 1000, i1 true)
   ret void
@@ -1556,22 +1182,6 @@ define void @memcpy_n(ptr %dst, ptr %src, i64 %size, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpyfm [x0]!, [x1]!, x2!
 ; SDAG-MOPS-O2-NEXT:    cpyfe [x0]!, [x1]!, x2!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_n:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    bl memcpy
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_n:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    cpyfp [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    cpyfm [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    cpyfe [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %size, i1 false)
   ret void
@@ -1609,22 +1219,6 @@ define void @memcpy_n_volatile(ptr %dst, ptr %src, i64 %size, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpyfm [x0]!, [x1]!, x2!
 ; SDAG-MOPS-O2-NEXT:    cpyfe [x0]!, [x1]!, x2!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_n_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    bl memcpy
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_n_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    cpyfp [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    cpyfm [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    cpyfe [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %size, i1 true)
   ret void
@@ -1647,14 +1241,6 @@ define void @memcpy_inline_0(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memcpy_inline_0:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_inline_0:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_inline_0:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 false)
   ret void
@@ -1676,14 +1262,6 @@ define void @memcpy_inline_0_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memcpy_inline_0_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_inline_0_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_inline_0_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 true)
   ret void
@@ -1721,22 +1299,6 @@ define void @memcpy_inline_10(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    strh w8, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    str x9, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_inline_10:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ldrh w8, [x1, #8]
-; MOPS-DISABLED-NEXT:    ldr x9, [x1]
-; MOPS-DISABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-DISABLED-NEXT:    str x9, [x0]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_inline_10:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ldrh w8, [x1, #8]
-; MOPS-ENABLED-NEXT:    ldr x9, [x1]
-; MOPS-ENABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-ENABLED-NEXT:    str x9, [x0]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 10, i1 false)
   ret void
@@ -1774,22 +1336,6 @@ define void @memcpy_inline_10_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    str x8, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_inline_10_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ldr x8, [x1]
-; MOPS-DISABLED-NEXT:    ldrh w9, [x1, #8]
-; MOPS-DISABLED-NEXT:    strh w9, [x0, #8]
-; MOPS-DISABLED-NEXT:    str x8, [x0]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_inline_10_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ldr x8, [x1]
-; MOPS-ENABLED-NEXT:    ldrh w9, [x1, #8]
-; MOPS-ENABLED-NEXT:    strh w9, [x0, #8]
-; MOPS-ENABLED-NEXT:    str x8, [x0]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 10, i1 true)
   ret void
@@ -2007,42 +1553,6 @@ define void @memcpy_inline_300(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpyfm [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    cpyfe [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_inline_300:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ldp q1, q0, [x1, #16]
-; MOPS-DISABLED-NEXT:    add x8, x1, #284
-; MOPS-DISABLED-NEXT:    ldr q2, [x1]
-; MOPS-DISABLED-NEXT:    stp q1, q0, [x0, #16]
-; MOPS-DISABLED-NEXT:    str q2, [x0]
-; MOPS-DISABLED-NEXT:    ldp q1, q0, [x1, #80]
-; MOPS-DISABLED-NEXT:    ldp q2, q3, [x1, #48]
-; MOPS-DISABLED-NEXT:    stp q1, q0, [x0, #80]
-; MOPS-DISABLED-NEXT:    stp q2, q3, [x0, #48]
-; MOPS-DISABLED-NEXT:    ldp q1, q0, [x1, #144]
-; MOPS-DISABLED-NEXT:    ldp q2, q3, [x1, #112]
-; MOPS-DISABLED-NEXT:    stp q1, q0, [x0, #144]
-; MOPS-DISABLED-NEXT:    stp q2, q3, [x0, #112]
-; MOPS-DISABLED-NEXT:    ldp q1, q0, [x1, #208]
-; MOPS-DISABLED-NEXT:    ldp q2, q3, [x1, #176]
-; MOPS-DISABLED-NEXT:    stp q1, q0, [x0, #208]
-; MOPS-DISABLED-NEXT:    stp q2, q3, [x0, #176]
-; MOPS-DISABLED-NEXT:    ldp q3, q1, [x1, #256]
-; MOPS-DISABLED-NEXT:    ldr q0, [x8]
-; MOPS-DISABLED-NEXT:    ldr q2, [x1, #240]
-; MOPS-DISABLED-NEXT:    add x8, x0, #284
-; MOPS-DISABLED-NEXT:    str q0, [x8]
-; MOPS-DISABLED-NEXT:    stp q3, q1, [x0, #256]
-; MOPS-DISABLED-NEXT:    str q2, [x0, #240]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_inline_300:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #300 // =0x12c
-; MOPS-ENABLED-NEXT:    cpyfp [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpyfm [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpyfe [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 300, i1 false)
   ret void
@@ -2188,58 +1698,6 @@ define void @memcpy_inline_300_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpyfm [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    cpyfe [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memcpy_inline_300_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ldr q0, [x1]
-; MOPS-DISABLED-NEXT:    ldr q1, [x1, #16]
-; MOPS-DISABLED-NEXT:    ldr q2, [x1, #32]
-; MOPS-DISABLED-NEXT:    ldr q3, [x1, #48]
-; MOPS-DISABLED-NEXT:    str q3, [x0, #48]
-; MOPS-DISABLED-NEXT:    str q2, [x0, #32]
-; MOPS-DISABLED-NEXT:    str q1, [x0, #16]
-; MOPS-DISABLED-NEXT:    str q0, [x0]
-; MOPS-DISABLED-NEXT:    ldr q0, [x1, #64]
-; MOPS-DISABLED-NEXT:    ldr q1, [x1, #80]
-; MOPS-DISABLED-NEXT:    ldr q2, [x1, #96]
-; MOPS-DISABLED-NEXT:    ldr q3, [x1, #112]
-; MOPS-DISABLED-NEXT:    str q3, [x0, #112]
-; MOPS-DISABLED-NEXT:    str q2, [x0, #96]
-; MOPS-DISABLED-NEXT:    str q1, [x0, #80]
-; MOPS-DISABLED-NEXT:    str q0, [x0, #64]
-; MOPS-DISABLED-NEXT:    ldr q0, [x1, #128]
-; MOPS-DISABLED-NEXT:    ldr q1, [x1, #144]
-; MOPS-DISABLED-NEXT:    ldr q2, [x1, #160]
-; MOPS-DISABLED-NEXT:    ldr q3, [x1, #176]
-; MOPS-DISABLED-NEXT:    str q3, [x0, #176]
-; MOPS-DISABLED-NEXT:    str q2, [x0, #160]
-; MOPS-DISABLED-NEXT:    str q1, [x0, #144]
-; MOPS-DISABLED-NEXT:    str q0, [x0, #128]
-; MOPS-DISABLED-NEXT:    ldr q0, [x1, #192]
-; MOPS-DISABLED-NEXT:    ldr q1, [x1, #208]
-; MOPS-DISABLED-NEXT:    ldr q2, [x1, #224]
-; MOPS-DISABLED-NEXT:    ldr q3, [x1, #240]
-; MOPS-DISABLED-NEXT:    str q3, [x0, #240]
-; MOPS-DISABLED-NEXT:    str q2, [x0, #224]
-; MOPS-DISABLED-NEXT:    str q1, [x0, #208]
-; MOPS-DISABLED-NEXT:    str q0, [x0, #192]
-; MOPS-DISABLED-NEXT:    ldr q0, [x1, #256]
-; MOPS-DISABLED-NEXT:    ldr q1, [x1, #272]
-; MOPS-DISABLED-NEXT:    ldr x8, [x1, #288]
-; MOPS-DISABLED-NEXT:    ldr w9, [x1, #296]
-; MOPS-DISABLED-NEXT:    str w9, [x0, #296]
-; MOPS-DISABLED-NEXT:    str x8, [x0, #288]
-; MOPS-DISABLED-NEXT:    str q1, [x0, #272]
-; MOPS-DISABLED-NEXT:    str q0, [x0, #256]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memcpy_inline_300_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #300 // =0x12c
-; MOPS-ENABLED-NEXT:    cpyfp [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpyfm [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpyfe [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 300, i1 true)
   ret void
@@ -2261,14 +1719,6 @@ define void @memmove_0(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memmove_0:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memmove_0:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memmove_0:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 false)
   ret void
@@ -2290,14 +1740,6 @@ define void @memmove_0_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-LABEL: memmove_0_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memmove_0_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memmove_0_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 true)
   ret void
@@ -2351,22 +1793,6 @@ define void @memmove_10(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    strh w8, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    str x9, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memmove_10:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ldrh w8, [x1, #8]
-; MOPS-DISABLED-NEXT:    ldr x9, [x1]
-; MOPS-DISABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-DISABLED-NEXT:    str x9, [x0]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memmove_10:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ldrh w8, [x1, #8]
-; MOPS-ENABLED-NEXT:    ldr x9, [x1]
-; MOPS-ENABLED-NEXT:    strh w8, [x0, #8]
-; MOPS-ENABLED-NEXT:    str x9, [x0]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 10, i1 false)
   ret void
@@ -2420,22 +1846,6 @@ define void @memmove_10_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #8]
 ; SDAG-MOPS-O2-NEXT:    str x8, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memmove_10_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    ldr x8, [x1]
-; MOPS-DISABLED-NEXT:    ldrh w9, [x1, #8]
-; MOPS-DISABLED-NEXT:    strh w9, [x0, #8]
-; MOPS-DISABLED-NEXT:    str x8, [x0]
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memmove_10_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    ldr x8, [x1]
-; MOPS-ENABLED-NEXT:    ldrh w9, [x1, #8]
-; MOPS-ENABLED-NEXT:    strh w9, [x0, #8]
-; MOPS-ENABLED-NEXT:    str x8, [x0]
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 10, i1 true)
   ret void
@@ -2497,24 +1907,6 @@ define void @memmove_1000(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpym [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    cpye [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memmove_1000:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov w2, #1000 // =0x3e8
-; MOPS-DISABLED-NEXT:    bl memmove
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memmove_1000:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #1000 // =0x3e8
-; MOPS-ENABLED-NEXT:    cpyp [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpym [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpye [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 1000, i1 false)
   ret void
@@ -2576,24 +1968,6 @@ define void @memmove_1000_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpym [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    cpye [x0]!, [x1]!, x8!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memmove_1000_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    mov w2, #1000 // =0x3e8
-; MOPS-DISABLED-NEXT:    bl memmove
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memmove_1000_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    mov w8, #1000 // =0x3e8
-; MOPS-ENABLED-NEXT:    cpyp [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpym [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    cpye [x0]!, [x1]!, x8!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 1000, i1 true)
   ret void
@@ -2631,22 +2005,6 @@ define void @memmove_n(ptr %dst, ptr %src, i64 %size, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpym [x0]!, [x1]!, x2!
 ; SDAG-MOPS-O2-NEXT:    cpye [x0]!, [x1]!, x2!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memmove_n:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    bl memmove
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memmove_n:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    cpyp [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    cpym [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    cpye [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %size, i1 false)
   ret void
@@ -2684,22 +2042,6 @@ define void @memmove_n_volatile(ptr %dst, ptr %src, i64 %size, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    cpym [x0]!, [x1]!, x2!
 ; SDAG-MOPS-O2-NEXT:    cpye [x0]!, [x1]!, x2!
 ; SDAG-MOPS-O2-NEXT:    ret
-;
-; MOPS-DISABLED-LABEL: memmove_n_volatile:
-; MOPS-DISABLED:       // %bb.0: // %entry
-; MOPS-DISABLED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; MOPS-DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; MOPS-DISABLED-NEXT:    .cfi_offset w30, -16
-; MOPS-DISABLED-NEXT:    bl memmove
-; MOPS-DISABLED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; MOPS-DISABLED-NEXT:    ret
-;
-; MOPS-ENABLED-LABEL: memmove_n_volatile:
-; MOPS-ENABLED:       // %bb.0: // %entry
-; MOPS-ENABLED-NEXT:    cpyp [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    cpym [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    cpye [x0]!, [x1]!, x2!
-; MOPS-ENABLED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %size, i1 true)
   ret void
