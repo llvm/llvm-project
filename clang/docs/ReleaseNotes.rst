@@ -570,6 +570,7 @@ Bug Fixes to Attribute Support
 - Fix ``cleanup`` attribute by delaying type checks until after the type is deduced. (#GH129631)
 - Fix a crash when instantiating a function template with ``constructor`` or ``destructor``
   attributes without a priority argument. (#GH169072)
+- Fix an assertion when using ``target_clones`` attribute with empty argument list. (#GH173684)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -875,6 +876,7 @@ Improvements
   including diagnosing when the array-section's base is not a named-variable.
 - Handling of ``use_device_addr`` and ``use_device_ptr`` in the presence of
   other maps with the same base-pointer/variable, was improved.
+- Preserve the initializer when variable declaration dedution fails for better error recovery.
 
 Additional Information
 ======================
