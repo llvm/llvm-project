@@ -158,8 +158,8 @@ TEST(OnDiskCASLoggerTest, MultiProcess) {
   SmallVector<ProcessInfo> PIs;
   for (int I = 0; I < 5; ++I) {
     bool ExecutionFailed;
-    auto PI = ExecuteNoWait(Executable, Argv, ArrayRef<StringRef>{}, {}, 0, &Error,
-                            &ExecutionFailed);
+    auto PI = ExecuteNoWait(Executable, Argv, ArrayRef<StringRef>{}, {}, 0,
+                            &Error, &ExecutionFailed);
     ASSERT_FALSE(ExecutionFailed) << Error;
     PIs.push_back(std::move(PI));
   }

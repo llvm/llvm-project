@@ -462,7 +462,7 @@ private:
   std::string RootPath;
 
   /// Optional on-disk store to be used for faulting-in nodes.
-  OnDiskGraphDB* UpstreamDB = nullptr;
+  OnDiskGraphDB *UpstreamDB = nullptr;
 
   /// The policy used to fault in data from upstream.
   FaultInPolicy FIPolicy;

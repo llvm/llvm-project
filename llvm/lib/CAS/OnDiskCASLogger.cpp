@@ -78,16 +78,17 @@ OnDiskCASLogger::open(const Twine &Path, bool LogAllocations) {
 }
 
 static uint64_t getTimestampMillis() {
-  #ifdef __APPLE__
-    // Using chrono is roughly 50% slower.
-    struct timeval T;
-    gettimeofday(&T, 0);
-    return T.tv_sec * 1000 + T.tv_usec / 1000;
-  #else
-    auto Time = std::chrono::system_clock::now();
-    auto Millis = std::chrono::duration_cast<std::chrono::milliseconds>(Time.time_since_epoch());
-    return Millis.count();
-  #endif
+#ifdef __APPLE__
+  // Using chrono is roughly 50% slower.
+  struct timeval T;
+  gettimeofday(&T, 0);
+  return T.tv_sec * 1000 + T.tv_usec / 1000;
+#else
+  auto Time = std::chrono::system_clock::now();
+  auto Millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+      Time.time_since_epoch());
+  return Millis.count();
+#endif
 }
 
 namespace {
