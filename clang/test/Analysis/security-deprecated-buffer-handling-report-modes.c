@@ -1,50 +1,96 @@
-// These cases should not warn
+// DEFINE: %{base_cmd} = %clang_analyze_cc1 %s \
+// DEFINE:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+
+// DEFINE: %{verify_flag} =
+
+// DEFINE: %{config_flag_unset} =
+// DEFINE: %{config_flag_all} = -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all
+// DEFINE: %{config_flag_actionable} = -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=actionable
+// DEFINE: %{config_flag_c11_only} = -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=c11-only
+// DEFINE: %{config_flag} = %{config_flag_unset}
+
+// DEFINE: %{std_flag_c99} = -std=gnu99
+// DEFINE: %{std_flag_c11} = -std=gnu11
+// DEFINE: %{std_flag} = %{std_flag_c99}
+
+// DEFINE: %{annexk_defines_unset} =
+// DEFINE: %{annexk_defines_set} = -D__STDC_LIB_EXT1__=200509L -D__STDC_WANT_LIB_EXT1__=1
+// DEFINE: %{annexk_flag} = %{annexk_defines_unset} 
+
+// DEFINE: %{run_cmd} = %{base_cmd} %{verify_flag} %{std_flag} %{annexk_flag} %{config_flag}
+
+// These cases should warn
+
+// REDEFINE: %{verify_flag} = -verify=common
+// REDEFINE: %{std_flag} = %{std_flag_c99}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_all}
+// RUN: %{run_cmd}
 
 // C99 with "all" mode
-// RUN: %clang_analyze_cc1 %s -verify=common -std=gnu99 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all
+// REDEFINE: %{verify_flag} = -verify=common
+// REDEFINE: %{std_flag} = %{std_flag_c99}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_all}
+// RUN: %{run_cmd}
 
 // C11 with default mode
-// RUN: %clang_analyze_cc1 %s -verify=common -std=gnu11 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+// REDEFINE: %{verify_flag} = -verify=common
+// REDEFINE: %{std_flag} = %{std_flag_c11}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_unset}
+// RUN: %{run_cmd}
 
 // C11 with "all" mode
-// RUN: %clang_analyze_cc1 %s -verify=common -std=gnu11 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all
+// REDEFINE: %{verify_flag} = -verify=common
+// REDEFINE: %{std_flag} = %{std_flag_c11}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_all}
+// RUN: %{run_cmd}
 
 // C11 with "c11-only" mode
-// RUN: %clang_analyze_cc1 %s -verify=common -std=gnu11 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=c11-only
+// REDEFINE: %{verify_flag} = -verify=common
+// REDEFINE: %{std_flag} = %{std_flag_c11}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_c11_only}
+// RUN: %{run_cmd}
 
 // C11 with "actionable" mode and Annex K available
-// RUN: %clang_analyze_cc1 %s -verify=common -std=gnu11 \
-// RUN:   -D__STDC_LIB_EXT1__=200509L -D__STDC_WANT_LIB_EXT1__=1 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=actionable
+// REDEFINE: %{verify_flag} = -verify=common
+// REDEFINE: %{std_flag} = %{std_flag_c11}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_set}
+// REDEFINE: %{config_flag} = %{config_flag_actionable}
+// RUN: %{run_cmd}
 
 // These cases should not warn
 
 // C99 with default mode
-// RUN: %clang_analyze_cc1 %s -verify=c99-default -std=gnu99 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+// REDEFINE: %{verify_flag} = -verify=c99-default
+// REDEFINE: %{std_flag} = %{std_flag_c99}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_unset}
+// RUN: %{run_cmd}
 
 // C99 with "actionable" mode and no Annex K
-// RUN: %clang_analyze_cc1 %s -verify=c99-actionable -std=gnu99 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=actionable
+// REDEFINE: %{verify_flag} = -verify=c99-actionable
+// REDEFINE: %{std_flag} = %{std_flag_c99}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_actionable}
+// RUN: %{run_cmd}
 
 // C99 with "c11-only" mode
-// RUN: %clang_analyze_cc1 %s -verify=c99-c11only -std=gnu99 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=c11-only
+// REDEFINE: %{verify_flag} = -verify=c99-c11only
+// REDEFINE: %{std_flag} = %{std_flag_c99}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_c11_only}
+// RUN: %{run_cmd}
 
 // C11 with "actionable" mode and no Annex K
-// RUN: %clang_analyze_cc1 %s -verify=c11-actionable-noannex -std=gnu11 \
-// RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=actionable
+// REDEFINE: %{verify_flag} = -verify=c11-actionable-noannex
+// REDEFINE: %{std_flag} = %{std_flag_c11}
+// REDEFINE: %{annexk_flag} = %{annexk_defines_unset}
+// REDEFINE: %{config_flag} = %{config_flag_actionable}
+// RUN: %{run_cmd}
 
 
 #include "Inputs/system-header-simulator.h"
