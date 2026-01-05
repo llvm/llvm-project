@@ -11460,17 +11460,17 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     return AVG;
 
   SDValue Y;
-  if (VT.getScalarSizeInBits() % 2 == 0) {
+  if (VT.getScalarSizeInBits() % 2 == 0 && N1C) {
     // Fold clmul(zext(x), zext(y)) >> (BW - 1 | BW) -> clmul(r|h)(x, y).
     unsigned HalfBW = VT.getScalarSizeInBits() / 2;
     if (sd_match(N0, m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
         X.getScalarValueSizeInBits() == HalfBW &&
         Y.getScalarValueSizeInBits() == HalfBW) {
-      if (sd_match(N1, m_SpecificInt(HalfBW - 1)))
+      if (N1C->getZExtValue() == HalfBW - 1)
         return DAG.getNode(
             ISD::ZERO_EXTEND, DL, VT,
             DAG.getNode(ISD::CLMULR, DL, X.getValueType(), X, Y));
-      if (sd_match(N1, m_SpecificInt(HalfBW)))
+      if (N1C->getZExtValue() == HalfBW)
         return DAG.getNode(
             ISD::ZERO_EXTEND, DL, VT,
             DAG.getNode(ISD::CLMULH, DL, X.getValueType(), X, Y));
@@ -11479,9 +11479,9 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
 
   // Fold bitreverse(clmul(bitreverse(x), bitreverse(y))) >> 1 ->
   // clmulh(x, y).
-  if (sd_match(N0, m_BitReverse(m_Clmul(m_BitReverse(m_Value(X)),
-                                        m_BitReverse(m_Value(Y))))) &&
-      sd_match(N1, m_SpecificInt(1)))
+  if (N1C && N1C->getZExtValue() == 1 &&
+      sd_match(N0, m_BitReverse(m_Clmul(m_BitReverse(m_Value(X)),
+                                        m_BitReverse(m_Value(Y))))))
     return DAG.getNode(ISD::CLMULH, DL, VT, X, Y);
 
   return SDValue();

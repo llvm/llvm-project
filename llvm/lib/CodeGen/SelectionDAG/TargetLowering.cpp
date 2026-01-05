@@ -8393,8 +8393,8 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   }
   case ISD::CLMULR:
   case ISD::CLMULH: {
-    EVT ExtVT =
-        VT.changeElementType(EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
+    EVT ExtVT = VT.changeElementType(
+        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
     // For example, ExtVT = i64 based operations aren't legal on a 32-bit
     // target; use bitreverse-based lowering in this case.
     if (!isOperationLegalOrCustom(ISD::ZERO_EXTEND, ExtVT) ||
