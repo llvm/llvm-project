@@ -23,7 +23,6 @@ using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 using namespace llvm::sys;
 
-
 #ifndef _WIN32 // windows doesn't support logging yet.
 
 static void writeToLog(OnDiskCASLogger *Logger, int NumOpens, int NumEntries) {
