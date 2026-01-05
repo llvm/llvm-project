@@ -500,6 +500,7 @@ Transforms/MergeFunc/inttoptr.ll
 Transforms/MergeFunc/linkonce.ll
 Transforms/MergeFunc/linkonce_odr.ll
 Transforms/MergeFunc/merge-block-address.ll
+Transforms/MergeFunc/merge-calling-conv.ll
 Transforms/MergeFunc/merge-fp-intrinsics.ll
 Transforms/MergeFunc/mergefunc-preserve-nonnull.ll
 Transforms/MergeFunc/mergefunc-preserve-vfe-intrinsics.ll
