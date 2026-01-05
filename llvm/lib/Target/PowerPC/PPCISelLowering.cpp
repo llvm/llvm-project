@@ -17164,6 +17164,51 @@ static SDValue DAGCombineAddc(SDNode *N,
   return SDValue();
 }
 
+// The following transformation is meant to optimize vector compares not equal
+// to non-zeros Ex: vec[i] != 7, where vec is a vector and the comparison is
+// element non-zero number. (and (anyext (setcc A, B, SETNE)), splat32(1))
+//  -> (zext (add (setcc A, B, SETEQ), splat16(1)))
+static SDValue combineVectorZExtCompare(SDNode *N, SelectionDAG &DAG,
+                                        const PPCSubtarget &Subtarget) {
+  if (!Subtarget.hasVSX() || N->getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  APInt SplatVal;
+  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) || SplatVal != 1)
+    std::swap(Op0, Op1);
+  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) || SplatVal != 1)
+    return SDValue();
+
+  if (Op0.getOpcode() != ISD::ANY_EXTEND_VECTOR_INREG &&
+      Op0.getOpcode() != ISD::ZERO_EXTEND_VECTOR_INREG)
+    return SDValue();
+
+  SDValue SetCC = Op0.getOperand(0);
+  if (SetCC.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
+  if (CC != ISD::SETNE)
+    return SDValue();
+
+  EVT SrcVT = SetCC.getValueType();
+  EVT EltVT = SrcVT.getVectorElementType();
+
+  //(zext (add (setcc X, Y, SETEQ), splat(1)))
+  SDValue EqCmp = DAG.getSetCC(DL, SrcVT, SetCC.getOperand(0),
+                               SetCC.getOperand(1), ISD::SETEQ);
+  SDValue OneSplat =
+      DAG.getSplatBuildVector(SrcVT, DL, DAG.getConstant(1, DL, EltVT));
+  SDValue Add = DAG.getNode(ISD::ADD, DL, SrcVT, EqCmp, OneSplat);
+
+  return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, DL, VT, Add);
+}
+
 SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17173,6 +17218,10 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ADD:
     return combineADD(N, DCI);
   case ISD::AND: {
+    // Convert (and (anyext (setcc A, B, SETNE)), splat32(1))
+    //  -> (zext (add (setcc A, B, SETEQ), splat16(1)))
+    if (SDValue V = combineVectorZExtCompare(N, DAG, Subtarget))
+      return V;
     // We don't want (and (zext (shift...)), C) if C fits in the width of the
     // original input as that will prevent us from selecting optimal rotates.
     // This only matters if the input to the extend is i32 widened to i64.

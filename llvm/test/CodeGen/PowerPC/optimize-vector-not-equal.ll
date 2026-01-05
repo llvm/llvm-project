@@ -16,13 +16,12 @@
 define i32 @cols_needed(<4 x i16> %wide.load) {
 ; POWERPC_64LE-LABEL: cols_needed:
 ; POWERPC_64LE:       # %bb.0: # %entry
-; POWERPC_64LE-NEXT:    vspltish v3, 7
+; POWERPC_64LE-NEXT:    xxlxor v3, v3, v3
+; POWERPC_64LE-NEXT:    xxleqv v4, v4, v4
 ; POWERPC_64LE-NEXT:    li r3, 0
 ; POWERPC_64LE-NEXT:    vcmpequh v2, v2, v3
-; POWERPC_64LE-NEXT:    vspltisw v3, 1
-; POWERPC_64LE-NEXT:    xxlnor v2, v2, v2
-; POWERPC_64LE-NEXT:    vmrglh v2, v2, v2
-; POWERPC_64LE-NEXT:    xxland v2, v2, v3
+; POWERPC_64LE-NEXT:    vsubuhm v2, v2, v4
+; POWERPC_64LE-NEXT:    vmrglh v2, v3, v2
 ; POWERPC_64LE-NEXT:    xxswapd v3, v2
 ; POWERPC_64LE-NEXT:    vadduwm v2, v2, v3
 ; POWERPC_64LE-NEXT:    xxspltw v3, v2, 2
@@ -32,13 +31,12 @@ define i32 @cols_needed(<4 x i16> %wide.load) {
 ;
 ; POWERPC_64-LABEL: cols_needed:
 ; POWERPC_64:       # %bb.0: # %entry
-; POWERPC_64-NEXT:    vspltish v3, 7
+; POWERPC_64-NEXT:    xxlxor v3, v3, v3
+; POWERPC_64-NEXT:    xxleqv v4, v4, v4
 ; POWERPC_64-NEXT:    li r3, 0
 ; POWERPC_64-NEXT:    vcmpequh v2, v2, v3
-; POWERPC_64-NEXT:    vspltisw v3, 1
-; POWERPC_64-NEXT:    xxlnor v2, v2, v2
-; POWERPC_64-NEXT:    vmrghh v2, v2, v2
-; POWERPC_64-NEXT:    xxland v2, v2, v3
+; POWERPC_64-NEXT:    vsubuhm v2, v2, v4
+; POWERPC_64-NEXT:    vmrghh v2, v3, v2
 ; POWERPC_64-NEXT:    xxswapd v3, v2
 ; POWERPC_64-NEXT:    vadduwm v2, v2, v3
 ; POWERPC_64-NEXT:    xxspltw v3, v2, 1
@@ -48,12 +46,11 @@ define i32 @cols_needed(<4 x i16> %wide.load) {
 ;
 ; POWERPC_32-LABEL: cols_needed:
 ; POWERPC_32:       # %bb.0: # %entry
-; POWERPC_32-NEXT:    vspltish v3, 7
+; POWERPC_32-NEXT:    xxlxor v3, v3, v3
+; POWERPC_32-NEXT:    xxleqv v4, v4, v4
 ; POWERPC_32-NEXT:    vcmpequh v2, v2, v3
-; POWERPC_32-NEXT:    vspltisw v3, 1
-; POWERPC_32-NEXT:    xxlnor v2, v2, v2
-; POWERPC_32-NEXT:    vmrghh v2, v2, v2
-; POWERPC_32-NEXT:    xxland v2, v2, v3
+; POWERPC_32-NEXT:    vsubuhm v2, v2, v4
+; POWERPC_32-NEXT:    vmrghh v2, v3, v2
 ; POWERPC_32-NEXT:    xxswapd v3, v2
 ; POWERPC_32-NEXT:    vadduwm v2, v2, v3
 ; POWERPC_32-NEXT:    xxspltw v3, v2, 1
