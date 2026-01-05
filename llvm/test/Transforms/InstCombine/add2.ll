@@ -514,8 +514,7 @@ define i32 @sub_undemanded_low_bits(i32 %x) {
 define i32 @rhs_undemanded_low_bits_exact_boundary(i32 %x) {
 ; CHECK-LABEL: @rhs_undemanded_low_bits_exact_boundary(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], 47
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], -16
+; CHECK-NEXT:    [[AND:%.*]] = add i32 [[SHL]], 32
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %shl = shl i32 %x, 4
@@ -528,8 +527,7 @@ define i32 @rhs_undemanded_low_bits_overshift_collision(i32 %x) {
 ; CHECK-LABEL: @rhs_undemanded_low_bits_overshift_collision(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], 288
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], -16
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %shl = shl i32 %x, 8
   %add = add i32 %shl, 303  ; 303 = 256 + 32 + 15
@@ -540,7 +538,7 @@ define i32 @rhs_undemanded_low_bits_overshift_collision(i32 %x) {
 define i32 @rhs_undemanded_low_bits_undershift(i32 %x) {
 ; CHECK-LABEL: @rhs_undemanded_low_bits_undershift(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], 47
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], 44
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], -16
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
@@ -553,8 +551,7 @@ define i32 @rhs_undemanded_low_bits_undershift(i32 %x) {
 define <2 x i32> @rhs_undemanded_low_bits_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @rhs_undemanded_low_bits_vector(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 4)
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[SHL]], splat (i32 47)
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[ADD]], splat (i32 -16)
+; CHECK-NEXT:    [[AND:%.*]] = add <2 x i32> [[SHL]], splat (i32 32)
 ; CHECK-NEXT:    ret <2 x i32> [[AND]]
 ;
   %shl = shl <2 x i32> %x, <i32 4, i32 4>
