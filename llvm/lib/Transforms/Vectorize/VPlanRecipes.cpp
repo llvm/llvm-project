@@ -744,8 +744,19 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     Value *Start = State.get(getOperand(1), true);
     Value *Sentinel = getOperand(2)->getLiveInIRValue();
-    return createFindLastIVReduction(Builder, ReducedPartRdx, RK, Start,
-                                     Sentinel);
+
+    // Reduce the vector to a scalar.
+    bool IsFindLast = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK);
+    Value *ReducedIV =
+        ReducedPartRdx->getType()->isVectorTy()
+            ? (IsFindLast
+                   ? Builder.CreateIntMaxReduce(ReducedPartRdx, IsSigned)
+                   : Builder.CreateIntMinReduce(ReducedPartRdx, IsSigned))
+            : ReducedPartRdx;
+    // Correct the final reduction result back to the start value if the
+    // reduction result is the sentinel value.
+    Value *Cmp = Builder.CreateICmpNE(ReducedIV, Sentinel, "rdx.select.cmp");
+    return Builder.CreateSelect(Cmp, ReducedIV, Start, "rdx.select");
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -977,6 +988,87 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         Opcode, OpTy, CmpInst::makeCmpResultType(OpTy), getPredicate(),
         Ctx.CostKind, {TTI::OK_AnyValue, TTI::OP_None},
         {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
+  }
+  case Instruction::BitCast: {
+    Type *ScalarTy = Ctx.Types.inferScalarType(this);
+    if (ScalarTy->isPointerTy())
+      return 0;
+    [[fallthrough]];
+  }
+  case Instruction::SExt:
+  case Instruction::ZExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
+  case Instruction::IntToPtr:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::Trunc:
+  case Instruction::FPTrunc:
+  case Instruction::AddrSpaceCast: {
+    // Computes the CastContextHint from a recipe that may access memory.
+    auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
+      if (isa<VPInterleaveBase>(R))
+        return TTI::CastContextHint::Interleave;
+      if (const auto *ReplicateRecipe = dyn_cast<VPReplicateRecipe>(R)) {
+        // Only compute CCH for memory operations, matching the legacy model
+        // which only considers loads/stores for cast context hints.
+        auto *UI = cast<Instruction>(ReplicateRecipe->getUnderlyingValue());
+        if (!isa<LoadInst, StoreInst>(UI))
+          return TTI::CastContextHint::None;
+        return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
+                                               : TTI::CastContextHint::Normal;
+      }
+      const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
+      if (WidenMemoryRecipe == nullptr)
+        return TTI::CastContextHint::None;
+      if (VF.isScalar())
+        return TTI::CastContextHint::Normal;
+      if (!WidenMemoryRecipe->isConsecutive())
+        return TTI::CastContextHint::GatherScatter;
+      if (WidenMemoryRecipe->isReverse())
+        return TTI::CastContextHint::Reversed;
+      if (WidenMemoryRecipe->isMasked())
+        return TTI::CastContextHint::Masked;
+      return TTI::CastContextHint::Normal;
+    };
+
+    VPValue *Operand = getOperand(0);
+    TTI::CastContextHint CCH = TTI::CastContextHint::None;
+    // For Trunc/FPTrunc, get the context from the only user.
+    if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
+      auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
+        if (R->getNumUsers() == 0 || R->hasMoreThanOneUniqueUser())
+          return nullptr;
+        return dyn_cast<VPRecipeBase>(*R->user_begin());
+      };
+      if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
+        if (match(Recipe, m_Reverse(m_VPValue())))
+          Recipe = GetOnlyUser(cast<VPInstruction>(Recipe));
+        if (Recipe)
+          CCH = ComputeCCH(Recipe);
+      }
+    }
+    // For Z/Sext, get the context from the operand.
+    else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
+             Opcode == Instruction::FPExt) {
+      if (auto *Recipe = Operand->getDefiningRecipe()) {
+        VPValue *ReverseOp;
+        if (match(Recipe, m_Reverse(m_VPValue(ReverseOp))))
+          Recipe = ReverseOp->getDefiningRecipe();
+        if (Recipe)
+          CCH = ComputeCCH(Recipe);
+      }
+    }
+
+    auto *ScalarSrcTy = Ctx.Types.inferScalarType(Operand);
+    Type *SrcTy = VF.isVector() ? toVectorTy(ScalarSrcTy, VF) : ScalarSrcTy;
+    // Arm TTI will use the underlying instruction to determine the cost.
+    return Ctx.TTI.getCastInstrCost(
+        Opcode, ResultTy, SrcTy, CCH, Ctx.CostKind,
+        dyn_cast_if_present<Instruction>(getUnderlyingValue()));
   }
   }
   llvm_unreachable("called for unsupported opcode");
@@ -2249,65 +2341,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   // reduction in a smaller type.
   if (!getUnderlyingValue())
     return 0;
-  // Computes the CastContextHint from a recipes that may access memory.
-  auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
-    if (VF.isScalar())
-      return TTI::CastContextHint::Normal;
-    if (isa<VPInterleaveBase>(R))
-      return TTI::CastContextHint::Interleave;
-    if (const auto *ReplicateRecipe = dyn_cast<VPReplicateRecipe>(R))
-      return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
-                                             : TTI::CastContextHint::Normal;
-    const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
-    if (WidenMemoryRecipe == nullptr)
-      return TTI::CastContextHint::None;
-    if (!WidenMemoryRecipe->isConsecutive())
-      return TTI::CastContextHint::GatherScatter;
-    if (WidenMemoryRecipe->isReverse())
-      return TTI::CastContextHint::Reversed;
-    if (WidenMemoryRecipe->isMasked())
-      return TTI::CastContextHint::Masked;
-    return TTI::CastContextHint::Normal;
-  };
-
-  VPValue *Operand = getOperand(0);
-  TTI::CastContextHint CCH = TTI::CastContextHint::None;
-  // For Trunc/FPTrunc, get the context from the only user.
-  if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
-    auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
-      if (R->getNumUsers() == 0 || R->hasMoreThanOneUniqueUser())
-        return nullptr;
-      return dyn_cast<VPRecipeBase>(*R->user_begin());
-    };
-
-    if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
-      if (match(Recipe, m_Reverse(m_VPValue())))
-        Recipe = GetOnlyUser(cast<VPInstruction>(Recipe));
-      if (Recipe)
-        CCH = ComputeCCH(Recipe);
-    }
-  }
-  // For Z/Sext, get the context from the operand.
-  else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
-           Opcode == Instruction::FPExt) {
-    if (Operand->isLiveIn())
-      CCH = TTI::CastContextHint::Normal;
-    else if (auto *Recipe = Operand->getDefiningRecipe()) {
-      VPValue *ReverseOp;
-      if (match(Recipe, m_Reverse(m_VPValue(ReverseOp))))
-        Recipe = ReverseOp->getDefiningRecipe();
-      if (Recipe)
-        CCH = ComputeCCH(Recipe);
-    }
-  }
-
-  auto *SrcTy =
-      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(Operand), VF));
-  auto *DestTy = cast<VectorType>(toVectorTy(getResultType(), VF));
-  // Arm TTI will use the underlying instruction to determine the cost.
-  return Ctx.TTI.getCastInstrCost(
-      Opcode, DestTy, SrcTy, CCH, Ctx.CostKind,
-      dyn_cast_if_present<Instruction>(getUnderlyingValue()));
+  return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3208,6 +3242,11 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return InstructionCost::getInvalid();
 
   switch (UI->getOpcode()) {
+  case Instruction::Alloca:
+    if (VF.isScalable())
+      return InstructionCost::getInvalid();
+    return Ctx.TTI.getArithmeticInstrCost(
+        Instruction::Mul, Ctx.Types.inferScalarType(this), Ctx.CostKind);
   case Instruction::GetElementPtr:
     // We mark this instruction as zero-cost because the cost of GEPs in
     // vectorized code depends on whether the corresponding memory instruction
@@ -3356,6 +3395,26 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return (ScalarCost * VF.getFixedValue()) +
            Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, true);
   }
+  case Instruction::SExt:
+  case Instruction::ZExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
+  case Instruction::IntToPtr:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::Trunc:
+  case Instruction::FPTrunc:
+  case Instruction::AddrSpaceCast: {
+    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                      Ctx) *
+           (isSingleScalar() ? 1 : VF.getFixedValue());
+  }
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
+    return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);
   }
 
   return Ctx.getLegacyCost(UI, VF);

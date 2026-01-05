@@ -1050,7 +1050,8 @@ mlir::LogicalResult CIRToLLVMBitClrsbOpLowering::matchAndRewrite(
       rewriter, op.getLoc(), resTy, select, /*is_zero_poison=*/false);
 
   auto one = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(), resTy, 1);
-  auto res = mlir::LLVM::SubOp::create(rewriter, op.getLoc(), clz, one);
+  auto res = mlir::LLVM::SubOp::create(rewriter, op.getLoc(), clz, one,
+                                       mlir::LLVM::IntegerOverflowFlags::nuw);
   rewriter.replaceOp(op, res);
 
   return mlir::LogicalResult::success();
