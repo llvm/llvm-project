@@ -3797,8 +3797,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Node->getOperand(0));
 
       StringRef IntrinsicName = Node->getOpcode() == ISD::STACKADDRESS
-                                      ? "llvm.stackaddress"
-                                      : "llvm.stacksave";
+                                    ? "llvm.stackaddress"
+                                    : "llvm.stacksave";
       DAG.getContext()->diagnose(DiagnosticInfoLegalizationFailure(
           Twine(IntrinsicName) + " is not supported on this target.",
           DAG.getMachineFunction().getFunction(), dl.getDebugLoc()));
