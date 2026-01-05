@@ -44,88 +44,86 @@ private:
 };
 
 int main(int, char**) {
+  std::string temp = get_temp_file_name();
+
+  bool did_overflow;
+  overflow_detecting_filebuf buf(&did_overflow);
+
+  // Set a custom buffer (of size 32, reused below)
+  char underlying_buffer[32];
+  buf.pubsetbuf(underlying_buffer, sizeof(underlying_buffer));
+
+  // (1) Open a file and insert a first character. That should overflow() and set the underlying
+  //     put area to our internal buffer set above.
   {
-    std::string temp = get_temp_file_name();
+    buf.open(temp, std::ios::out | std::ios::trunc);
+    did_overflow = false;
+    buf.sputc('c');
+    assert(did_overflow == true);
+  }
 
-    bool did_overflow;
-    overflow_detecting_filebuf buf(&did_overflow);
-
-    // Set a custom buffer (of size 32, reused below)
-    char underlying_buffer[32];
-    buf.pubsetbuf(underlying_buffer, sizeof(underlying_buffer));
-
-    // (1) Open a file and insert a first character. That should overflow() and set the underlying
-    //     put area to our internal buffer set above.
-    {
-      buf.open(temp, std::ios::out | std::ios::trunc);
-      did_overflow = false;
+  // (2) Now, confirm that we can still insert 30 more characters without calling
+  //     overflow, since we should be writing to the internal buffer.
+  {
+    did_overflow = false;
+    for (int i = 0; i != 30; ++i) {
       buf.sputc('c');
-      assert(did_overflow == true);
+      assert(did_overflow == false);
     }
+  }
 
-    // (2) Now, confirm that we can still insert 30 more characters without calling
-    //     overflow, since we should be writing to the internal buffer.
-    {
-      did_overflow = false;
-      for (int i = 0; i != 30; ++i) {
-        buf.sputc('c');
-        assert(did_overflow == false);
-      }
-    }
+  // (3) Writing the last character may or may not call overflow(), depending on whether
+  //     the library implementation wants to flush as soon as the underlying buffer is
+  //     full, or on the next attempt to insert. For libc++, it doesn't overflow yet.
+  {
+    did_overflow = false;
+    buf.sputc('c');
+    LIBCPP_ASSERT(!did_overflow);
+  }
 
-    // (3) Writing the last character may or may not call overflow(), depending on whether
-    //     the library implementation wants to flush as soon as the underlying buffer is
-    //     full, or on the next attempt to insert. For libc++, it doesn't overflow yet.
-    {
-      did_overflow = false;
+  // (4) Writing one-too-many characters will overflow (with libc++).
+  {
+    did_overflow = false;
+    buf.sputc('c');
+    LIBCPP_ASSERT(did_overflow);
+  }
+
+  // Close the stream. This should NOT unset the underlying buffer we set at the beginning
+  // Unfortunately, the only way to check that is to repeat the above tests which tries to
+  // tie the presence of our custom set buffer to whether overflow() gets called. This is
+  // not entirely portable since implementations are free to call overflow() whenever they
+  // want, but in practice this works pretty portably.
+  buf.close();
+
+  // Repeat (1)
+  {
+    buf.open(temp, std::ios::out | std::ios::trunc);
+    did_overflow = false;
+    buf.sputc('c');
+    assert(did_overflow == true);
+  }
+
+  // Repeat (2)
+  {
+    did_overflow = false;
+    for (int i = 0; i != 30; ++i) {
       buf.sputc('c');
-      LIBCPP_ASSERT(!did_overflow);
+      assert(did_overflow == false);
     }
+  }
 
-    // (4) Writing one-too-many characters will overflow (with libc++).
-    {
-      did_overflow = false;
-      buf.sputc('c');
-      LIBCPP_ASSERT(did_overflow);
-    }
+  // Repeat (3)
+  {
+    did_overflow = false;
+    buf.sputc('c');
+    LIBCPP_ASSERT(!did_overflow);
+  }
 
-    // Close the stream. This should NOT unset the underlying buffer we set at the beginning
-    // Unfortunately, the only way to check that is to repeat the above tests which tries to
-    // tie the presence of our custom set buffer to whether overflow() gets called. This is
-    // not entirely portable since implementations are free to call overflow() whenever they
-    // want, but in practice this works pretty portably.
-    buf.close();
-
-    // Repeat (1)
-    {
-      buf.open(temp, std::ios::out | std::ios::trunc);
-      did_overflow = false;
-      buf.sputc('c');
-      assert(did_overflow == true);
-    }
-
-    // Repeat (2)
-    {
-      did_overflow = false;
-      for (int i = 0; i != 30; ++i) {
-        buf.sputc('c');
-        assert(did_overflow == false);
-      }
-    }
-
-    // Repeat (3)
-    {
-      did_overflow = false;
-      buf.sputc('c');
-      LIBCPP_ASSERT(!did_overflow);
-    }
-
-    // Repeat (4)
-    {
-      did_overflow = false;
-      buf.sputc('c');
-      LIBCPP_ASSERT(did_overflow);
-    }
+  // Repeat (4)
+  {
+    did_overflow = false;
+    buf.sputc('c');
+    LIBCPP_ASSERT(did_overflow);
   }
 
   return 0;
