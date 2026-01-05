@@ -336,7 +336,7 @@ multiclass REDUX_SYNC_F<string BinOp, string abs, string NaN> {
                   (ins B32:$src, B32:$mask),
                   "redux.sync." # BinOp # abs # NaN # ".f32",
                   [(set f32:$dst, (!cast<Intrinsic>(intr_name) f32:$src, B32:$mask))]>,
-                  Requires<[hasPTX<86>, hasSM100a]>; 
+                  Requires<[hasPTX<86>, hasSM100, hasFamilySpecificFeatures]>;
 }
 
 defm REDUX_SYNC_FMIN : REDUX_SYNC_F<"min", "", "">;

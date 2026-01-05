@@ -128,6 +128,7 @@ def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
 def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
 def hasArchAccelFeatures : Predicate<"Subtarget->hasArchAccelFeatures()">;
+def hasFamilySpecificFeatures : Predicate<"Subtarget->hasFamilySpecificFeatures()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -146,6 +147,7 @@ class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
 // Explicit records for arch-accelerated SM versions
 def hasSM90a : Predicate<"Subtarget->getSmVersion() == 90 && Subtarget->hasArchAccelFeatures()">;
+def hasSM100 : Predicate<"Subtarget->getSmVersion() >= 100">;
 def hasSM100a : Predicate<"Subtarget->getSmVersion() == 100 && Subtarget->hasArchAccelFeatures()">;
 def hasSM101a : Predicate<"Subtarget->getSmVersion() == 101 && Subtarget->hasArchAccelFeatures()">;
 def hasSM120a : Predicate<"Subtarget->getSmVersion() == 120 && Subtarget->hasArchAccelFeatures()">;
