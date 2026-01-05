@@ -5,7 +5,7 @@ define i8 @foo(i8 %a) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Classifying expressions for: @foo
 ; CHECK-NEXT:    %t0 = urem i8 %a, 27
-; CHECK-NEXT:    --> ((-27 * (%a /u 27)) + %a) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-27 * (%a /u 27)) + %a) U: [0,27) S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @foo
 ;
   %t0 = urem i8 %a, 27

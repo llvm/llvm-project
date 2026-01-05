@@ -6777,6 +6777,21 @@ const ConstantRange &ScalarEvolution::getRangeRef(
   }
   case scAddExpr: {
     const SCEVAddExpr *Add = cast<SCEVAddExpr>(S);
+    // Check if this is a URem pattern: A - (A / B) * B, which is always < B.
+    const SCEV *URemLHS = nullptr, *URemRHS = nullptr;
+    if (SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED &&
+        match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), *this))) {
+      ConstantRange LHSRange = getRangeRef(URemLHS, SignHint, Depth + 1);
+      ConstantRange RHSRange = getRangeRef(URemRHS, SignHint, Depth + 1);
+      // URem result is always in [0, min(LHS, RHS - 1)] when RHS > 0.
+      if (RHSRange.getUnsignedMin().ugt(0)) {
+        APInt MaxVal = APIntOps::umin(LHSRange.getUnsignedMax(),
+                                      RHSRange.getUnsignedMax() - 1);
+        ConstantRange URemRange(APInt::getZero(BitWidth), MaxVal + 1);
+        ConservativeResult =
+            ConservativeResult.intersectWith(URemRange, RangeType);
+      }
+    }
     ConstantRange X = getRangeRef(Add->getOperand(0), SignHint, Depth + 1);
     unsigned WrapType = OBO::AnyWrap;
     if (Add->hasNoSignedWrap())

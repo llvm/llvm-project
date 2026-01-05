@@ -481,7 +481,7 @@ define void @test_trip_multiple_5(i32 %num) {
 ; CHECK-LABEL: 'test_trip_multiple_5'
 ; CHECK-NEXT:  Classifying expressions for: @test_trip_multiple_5
 ; CHECK-NEXT:    %u = urem i32 %num, 5
-; CHECK-NEXT:    --> ((-5 * (%num /u 5)) + %num) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-5 * (%num /u 5)) + %num) U: [0,5) S: full-set
 ; CHECK-NEXT:    %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %num) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.010, 1
