@@ -1724,7 +1724,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   // Helper to emit expanded waitcnt sequence for profiling.
   // Emits waitcnts from (Outstanding-1) down to Target, or just Target if
   // nothing to expand. The EmitWaitcnt callback emits a single waitcnt.
-  auto emitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
+  auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
                                  auto EmitWaitcnt) {
     if (Outstanding > Target) {
       for (unsigned i = Outstanding - 1; i >= Target && i != ~0u; --i) {
