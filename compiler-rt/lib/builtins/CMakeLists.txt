@@ -1032,8 +1032,9 @@ else ()
 
       # Write out the sources that were used to compile the builtins so that tests can be run in
       # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
+      get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
       set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
-      file(WRITE "${CMAKE_BINARY_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" "${${arch}_SOURCES}")
+      file(WRITE "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" "${${arch}_SOURCES}")
       cmake_pop_check_state()
     endif ()
   endforeach ()
