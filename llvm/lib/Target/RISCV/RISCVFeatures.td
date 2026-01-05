@@ -387,7 +387,7 @@ def FeatureStdExtZca
                      "part of the C extension, excluding compressed "
                      "floating point loads/stores">,
       RISCVExtensionBitmask<1, 2>;
-// FIXME: Update this message - Zca always implies C.
+// Note: Zca conditionally implies C (see RISCVISAInfo::updateImplication).
 def HasStdExtZca
     : Predicate<"Subtarget->hasStdExtZca()">,
       AssemblerPredicate<(any_of FeatureStdExtZca),
@@ -1497,47 +1497,46 @@ def HasVendorXqccmp
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
 def FeatureVendorXqcia
-    : RISCVExperimentalExtension<0, 7, "Qualcomm uC Arithmetic Extension">;
+    : RISCVExtension<0, 7, "Qualcomm uC Arithmetic Extension">;
 def HasVendorXqcia
     : Predicate<"Subtarget->hasVendorXqcia()">,
       AssemblerPredicate<(all_of FeatureVendorXqcia),
                          "'Xqcia' (Qualcomm uC Arithmetic Extension)">;
 
 def FeatureVendorXqciac
-    : RISCVExperimentalExtension<0, 3, "Qualcomm uC Load-Store Address Calculation Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 3, "Qualcomm uC Load-Store Address Calculation Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqciac
     : Predicate<"Subtarget->hasVendorXqciac()">,
       AssemblerPredicate<(all_of FeatureVendorXqciac),
                          "'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)">;
 
 def FeatureVendorXqcibi
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Branch Immediate Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 2, "Qualcomm uC Branch Immediate Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcibi
     : Predicate<"Subtarget->hasVendorXqcibi()">,
       AssemblerPredicate<(all_of FeatureVendorXqcibi),
                          "'Xqcibi' (Qualcomm uC Branch Immediate Extension)">;
 
 def FeatureVendorXqcibm
-    : RISCVExperimentalExtension<0, 8, "Qualcomm uC Bit Manipulation Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 8, "Qualcomm uC Bit Manipulation Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcibm
     : Predicate<"Subtarget->hasVendorXqcibm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcibm),
                          "'Xqcibm' (Qualcomm uC Bit Manipulation Extension)">;
 
 def FeatureVendorXqcicli
-    : RISCVExperimentalExtension<0, 3,
-                                 "Qualcomm uC Conditional Load Immediate Extension">;
+    : RISCVExtension<0, 3, "Qualcomm uC Conditional Load Immediate Extension">;
 def HasVendorXqcicli
     : Predicate<"Subtarget->hasVendorXqcicli()">,
       AssemblerPredicate<(all_of FeatureVendorXqcicli),
                          "'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension)">;
 
 def FeatureVendorXqcicm
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Conditional Move Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 2, "Qualcomm uC Conditional Move Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcicm
     : Predicate<"Subtarget->hasVendorXqcicm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcicm),
@@ -1546,7 +1545,7 @@ def NoVendorXqcicm
     : Predicate<"!Subtarget->hasVendorXqcicm()">;
 
 def FeatureVendorXqcics
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Conditional Select Extension">;
+    : RISCVExtension<0, 2, "Qualcomm uC Conditional Select Extension">;
 def HasVendorXqcics
     : Predicate<"Subtarget->hasVendorXqcics()">,
       AssemblerPredicate<(all_of FeatureVendorXqcics),
@@ -1555,90 +1554,100 @@ def NoVendorXqcics
     : Predicate<"!Subtarget->hasVendorXqcics()">;
 
 def FeatureVendorXqcicsr
-    : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;
+    : RISCVExtension<0, 4, "Qualcomm uC CSR Extension">;
 def HasVendorXqcicsr
     : Predicate<"Subtarget->hasVendorXqcicsr()">,
       AssemblerPredicate<(all_of FeatureVendorXqcicsr),
                          "'Xqcicsr' (Qualcomm uC CSR Extension)">;
 
 def FeatureVendorXqciint
-    : RISCVExperimentalExtension<0, 10, "Qualcomm uC Interrupts Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 10, "Qualcomm uC Interrupts Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqciint
     : Predicate<"Subtarget->hasVendorXqciint()">,
       AssemblerPredicate<(all_of FeatureVendorXqciint),
                          "'Xqciint' (Qualcomm uC Interrupts Extension)">;
 
 def FeatureVendorXqciio
-    : RISCVExperimentalExtension<0, 1, "Qualcomm uC External Input Output Extension">;
+    : RISCVExtension<0, 1, "Qualcomm uC External Input Output Extension">;
 def HasVendorXqciio
     : Predicate<"Subtarget->hasVendorXqciio()">,
       AssemblerPredicate<(all_of FeatureVendorXqciio),
                          "'Xqciio' (Qualcomm uC External Input Output Extension)">;
 
 def FeatureVendorXqcilb
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Long Branch Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 2, "Qualcomm uC Long Branch Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcilb
     : Predicate<"Subtarget->hasVendorXqcilb()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilb),
                          "'Xqcilb' (Qualcomm uC Long Branch Extension)">;
 
 def FeatureVendorXqcili
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Load Large Immediate Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 2, "Qualcomm uC Load Large Immediate Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcili
     : Predicate<"Subtarget->hasVendorXqcili()">,
       AssemblerPredicate<(all_of FeatureVendorXqcili),
                          "'Xqcili' (Qualcomm uC Load Large Immediate Extension)">;
 
 def FeatureVendorXqcilia
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Large Immediate Arithmetic Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 2, "Qualcomm uC Large Immediate Arithmetic Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcilia
     : Predicate<"Subtarget->hasVendorXqcilia()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilia),
                          "'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)">;
 
 def FeatureVendorXqcilo
-    : RISCVExperimentalExtension<0, 3, "Qualcomm uC Large Offset Load Store Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 3, "Qualcomm uC Large Offset Load Store Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcilo
     : Predicate<"Subtarget->hasVendorXqcilo()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilo),
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
 def FeatureVendorXqcilsm
-    : RISCVExperimentalExtension<0, 6,
-                                 "Qualcomm uC Load Store Multiple Extension">;
+    : RISCVExtension<0, 6, "Qualcomm uC Load Store Multiple Extension">;
 def HasVendorXqcilsm
     : Predicate<"Subtarget->hasVendorXqcilsm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilsm),
                          "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
 
 def FeatureVendorXqcisim
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Simulation Hint Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 2, "Qualcomm uC Simulation Hint Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcisim
     : Predicate<"Subtarget->hasVendorXqcisim()">,
       AssemblerPredicate<(all_of FeatureVendorXqcisim),
                          "'Xqcisim' (Qualcomm uC Simulation Hint Extension)">;
 
 def FeatureVendorXqcisls
-    : RISCVExperimentalExtension<0, 2,
-                                 "Qualcomm uC Scaled Load Store Extension">;
+    : RISCVExtension<0, 2, "Qualcomm uC Scaled Load Store Extension">;
 def HasVendorXqcisls
     : Predicate<"Subtarget->hasVendorXqcisls()">,
       AssemblerPredicate<(all_of FeatureVendorXqcisls),
                          "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
 
 def FeatureVendorXqcisync
-    : RISCVExperimentalExtension<0, 3, "Qualcomm uC Sync Delay Extension",
-                                 [FeatureStdExtZca]>;
+    : RISCVExtension<0, 3, "Qualcomm uC Sync Delay Extension",
+                     [FeatureStdExtZca]>;
 def HasVendorXqcisync
     : Predicate<"Subtarget->hasVendorXqcisync()">,
       AssemblerPredicate<(all_of FeatureVendorXqcisync),
                          "'Xqcisync' (Qualcomm uC Sync Delay Extension)">;
+
+def FeatureVendorXqci
+    : RISCVExtension<0, 13, "Qualcomm uC Extension",
+                     [FeatureVendorXqcia, FeatureVendorXqciac,
+                      FeatureVendorXqcibi, FeatureVendorXqcibm,
+                      FeatureVendorXqcicli, FeatureVendorXqcicm,
+                      FeatureVendorXqcics, FeatureVendorXqcicsr,
+                      FeatureVendorXqciint, FeatureVendorXqciio,
+                      FeatureVendorXqcilb, FeatureVendorXqcili,
+                      FeatureVendorXqcilia, FeatureVendorXqcilo,
+                      FeatureVendorXqcilsm, FeatureVendorXqcisim,
+                      FeatureVendorXqcisls, FeatureVendorXqcisync]>;
 
 // Rivos Extension(s)
 
@@ -1879,6 +1888,7 @@ def TuneNoDefaultUnroll
 // - IALU: RVI Integer instructions, plus ANDN/ORN/XNOR (Zbb/Zbkb)
 // - IMinMax: Zbb MIN(U)/MAX(U)
 // - IMul: MUL
+// - ILoad: LB(U)/LH(U)/LW(U)/LD
 //
 // We make the simplifying assumption that any microarches that implement
 // any "short forward branches" can do the IALU fusions, and can opt into
@@ -1908,6 +1918,11 @@ def TuneShortForwardBranchIMul
                        [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchIMul : Predicate<"Subtarget->hasShortForwardBranchIMul()">;
 
+def TuneShortForwardBranchILoad
+    : SubtargetFeature<"short-forward-branch-iload", "HasShortForwardBranchILoad",
+                       "true", "Enable short forward branch optimization for load instructions",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.

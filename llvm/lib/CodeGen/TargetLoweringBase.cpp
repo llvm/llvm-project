@@ -1041,6 +1041,11 @@ void TargetLoweringBase::initActions() {
     }
   }
 
+  // If f16 fma is not natively supported, the value must be promoted to an f64
+  // (and not to f32!) to prevent double rounding issues.
+  AddPromotedToType(ISD::FMA, MVT::f16, MVT::f64);
+  AddPromotedToType(ISD::STRICT_FMA, MVT::f16, MVT::f64);
+
   // Set default actions for various operations.
   for (MVT VT : MVT::all_valuetypes()) {
     // Default all indexed load / store to expand.
@@ -1120,6 +1125,7 @@ void TargetLoweringBase::initActions() {
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
                        Expand);
+    setOperationAction(ISD::CTLS, VT, Expand);
 
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
 

@@ -9,6 +9,7 @@
 #ifndef liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 #define liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
@@ -37,10 +38,6 @@ public:
   static llvm::StringRef GetPluginDescriptionStatic();
 
   ~ProcessWindows();
-
-  size_t GetSTDOUT(char *buf, size_t buf_size, Status &error) override;
-  size_t GetSTDERR(char *buf, size_t buf_size, Status &error) override;
-  size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
@@ -100,6 +97,9 @@ public:
                           bool notify = true) override;
   Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
                            bool notify = true) override;
+
+  void
+  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) override;
 
 protected:
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);

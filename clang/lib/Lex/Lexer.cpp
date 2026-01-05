@@ -44,7 +44,6 @@
 #include <limits>
 #include <optional>
 #include <string>
-#include <tuple>
 
 #ifdef __SSE4_2__
 #include <nmmintrin.h>

@@ -106,8 +106,8 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
 
   // +0.0 compares equal to -0.0, and so it does not behave as required for this
   // transform. Bail out if we can not exclude that possibility.
-  if (isa<FPMathOperator>(BO))
-    if (!BO->hasNoSignedZeros() &&
+  if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
+    if (!FPO->hasNoSignedZeros() &&
         !cannotBeNegativeZero(Y,
                               IC.getSimplifyQuery().getWithInstruction(&Sel)))
       return nullptr;
@@ -522,8 +522,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
       return nullptr;
 
     FastMathFlags FMF;
-    if (isa<FPMathOperator>(&SI))
-      FMF = SI.getFastMathFlags();
+    if (const auto *FPO = dyn_cast<FPMathOperator>(&SI))
+      FMF = FPO->getFastMathFlags();
     Constant *C = ConstantExpr::getBinOpIdentity(
         TVI->getOpcode(), TVI->getType(), true, FMF.noSignedZeros());
     Value *OOp = TVI->getOperand(2 - OpToFold);
@@ -555,8 +555,15 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
       // Examples: -inf + +inf = NaN, -inf - -inf = NaN, 0 * inf = NaN
       // Specifically, if the original select has both ninf and nnan, we can
       // safely propagate the flag.
+      // Note: This property holds for fadd, fsub, and fmul, but does not
+      // hold for fdiv (e.g. A / Inf == 0.0).
+      bool CanInferFiniteOperandsFromResult =
+          TVI->getOpcode() == Instruction::FAdd ||
+          TVI->getOpcode() == Instruction::FSub ||
+          TVI->getOpcode() == Instruction::FMul;
       NewSelFMF.setNoInfs(TVI->hasNoInfs() ||
-                          (NewSelFMF.noInfs() && NewSelFMF.noNaNs()));
+                          (CanInferFiniteOperandsFromResult &&
+                           NewSelFMF.noInfs() && NewSelFMF.noNaNs()));
       cast<Instruction>(NewSel)->setFastMathFlags(NewSelFMF);
     }
     NewSel->takeName(TVI);
@@ -3839,6 +3846,8 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
                                 InstCombinerImpl &IC) {
   Type *SelType = SI.getType();
   unsigned BitWidth = SelType->getScalarSizeInBits();
+  if (!isPowerOf2_32(BitWidth))
+    return nullptr;
 
   Value *FalseVal = SI.getFalseValue();
   Value *TrueVal = SI.getTrueValue();
