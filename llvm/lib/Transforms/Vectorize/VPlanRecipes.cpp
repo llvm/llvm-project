@@ -1069,15 +1069,16 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   }
   case Instruction::Select: {
     SelectInst *SI = cast_or_null<SelectInst>(getUnderlyingValue());
-    bool ScalarCond = getOperand(0)->isDefinedOutsideLoopRegions();
+    bool IsScalarCond = getOperand(0)->isDefinedOutsideLoopRegions();
     Type *ScalarTy = Ctx.Types.inferScalarType(this);
-    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
 
     VPValue *Op0, *Op1;
-    using namespace llvm::VPlanPatternMatch;
-    if (!ScalarCond && ScalarTy->getScalarSizeInBits() == 1 &&
-        (match(this, m_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1))) ||
-         match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1))))) {
+    bool IsLogicalAnd =
+        match(this, m_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1)));
+    bool IsLogicalOr = match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
+
+    if (!IsScalarCond && ScalarTy->getScalarSizeInBits() == 1 &&
+        (IsLogicalAnd || IsLogicalOr)) {
       // select x, y, false --> x & y
       // select x, true, y --> x | y
       const auto [Op1VK, Op1VP] = Ctx.getOperandInfo(Op0);
@@ -1086,16 +1087,14 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
       SmallVector<const Value *, 2> Operands;
       if (SI && all_of(operands(),
                        [](VPValue *Op) { return Op->getUnderlyingValue(); }))
-        Operands.append(SI->op_begin(), SI->op_end());
-      bool IsLogicalOr =
-          match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
+        append_range(Operands, SI->operands());
       return Ctx.TTI.getArithmeticInstrCost(
           IsLogicalOr ? Instruction::Or : Instruction::And, ResultTy,
           Ctx.CostKind, {Op1VK, Op1VP}, {Op2VK, Op2VP}, Operands, SI);
     }
 
     Type *CondTy = Ctx.Types.inferScalarType(getOperand(0));
-    if (!ScalarCond)
+    if (!IsScalarCond)
       CondTy = VectorType::get(CondTy, VF);
 
     llvm::CmpPredicate Pred;
@@ -1103,6 +1102,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
       if (getOperand(0)->isLiveIn())
         if (auto *Cmp = dyn_cast<CmpInst>(getOperand(0)->getLiveInIRValue()))
           Pred = Cmp->getPredicate();
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getCmpSelInstrCost(
         Instruction::Select, VectorTy, CondTy, Pred, Ctx.CostKind,
         {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, SI);
