@@ -65,12 +65,12 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
     // Attach OutlineRematerializationOpInterface to FIR operations that
     // produce synthetic types (shapes, field indices) which cannot be passed
     // as arguments to outlined regions and must be rematerialized inside.
-    fir::ShapeOp::attachInterface<
-        OutlineRematerializationModel<fir::ShapeOp>>(*ctx);
+    fir::ShapeOp::attachInterface<OutlineRematerializationModel<fir::ShapeOp>>(
+        *ctx);
     fir::ShapeShiftOp::attachInterface<
         OutlineRematerializationModel<fir::ShapeShiftOp>>(*ctx);
-    fir::ShiftOp::attachInterface<
-        OutlineRematerializationModel<fir::ShiftOp>>(*ctx);
+    fir::ShiftOp::attachInterface<OutlineRematerializationModel<fir::ShiftOp>>(
+        *ctx);
     fir::FieldIndexOp::attachInterface<
         OutlineRematerializationModel<fir::FieldIndexOp>>(*ctx);
   });
