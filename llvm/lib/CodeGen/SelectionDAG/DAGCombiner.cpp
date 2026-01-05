@@ -6234,7 +6234,6 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
     }
   }
 
-
   if (Opcode == ISD::SMIN || Opcode == ISD::SMAX)
     if (SDValue S = PerformMinMaxFpToSatCombine(
             N0, N1, N0, N1, Opcode == ISD::SMIN ? ISD::SETLT : ISD::SETGT, DAG))
