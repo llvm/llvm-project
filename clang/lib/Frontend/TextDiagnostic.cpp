@@ -835,7 +835,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
       TmpFilename = File->getName();
-      llvm::sys::fs::make_absolute(TmpFilename);
+      SM.getFileManager().makeAbsolutePath(TmpFilename);
       llvm::sys::path::native(TmpFilename);
       llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
       Filename = StringRef(TmpFilename.data(), TmpFilename.size());

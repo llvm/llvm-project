@@ -39,6 +39,12 @@ def err_ast_file_targetopt_feature_mismatch : Error<
     "not">;
 def err_ast_file_langopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
     "precompiled file '%3' but is currently %select{disabled|enabled}2">;
+def warn_ast_file_config_mismatch
+    : Warning<"precompiled file '%0' cannot be loaded due to a configuration "
+              "mismatch with the current "
+              "compilation">,
+      InGroup<DiagGroup<"module-file-config-mismatch">>,
+      DefaultError;
 def err_ast_file_langopt_value_mismatch : Error<
   "%0 differs in precompiled file '%1' vs. current file">;
 def err_ast_file_codegenopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "

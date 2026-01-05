@@ -124,7 +124,9 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
 
     auto Clang = std::make_unique<CompilerInstance>(
         std::move(CInvok), CI.getPCHContainerOperations());
-    Clang->createVirtualFileSystem();
+    // Inherit the VFS as-is: code below does not make changes to the VFS or to
+    // the VFS-affecting options.
+    Clang->setVirtualFileSystem(CI.getVirtualFileSystemPtr());
     Clang->setDiagnostics(Diags);
     Clang->setTarget(TargetInfo::CreateTargetInfo(
         Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));

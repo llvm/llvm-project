@@ -1039,7 +1039,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
                 CI.getCodeGenOpts(), CI.getTargetOpts(),
-                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                CI.getPreprocessorOpts(), CI.getHeaderSearchOpts(),
+                SpecificModuleCachePath,
                 /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;

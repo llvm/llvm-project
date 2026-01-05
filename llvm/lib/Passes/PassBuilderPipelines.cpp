@@ -2343,7 +2343,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     // pipeline.
     MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
                                         PGOOpt->ProfileRemappingFile,
-                                        ThinOrFullLTOPhase::None, nullptr,
+                                        ThinOrFullLTOPhase::None, FS,
                                         /*DisableSampleProfileInlining=*/true,
                                         /*UseFlattenedProfile=*/true));
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
