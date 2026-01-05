@@ -6690,7 +6690,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 *Barrier-executes-before* represents the order in which barrier operations will complete by relating the
 dynamic instances of operations from different threads together.
 For example, if ``A -> B`` in *barrier-executes-before*, then the execution of ``A`` must complete
-before the execution of ``B`` can complete..
+before the execution of ``B`` can complete.
 
   .. note::
 
@@ -6708,6 +6708,8 @@ Barrier operations have the following additional target-specific properties:
 
 * Barrier operations are convergent within a wave. All threads of a wavefront use the same barrier *object* when
   performing any barrier operation.
+
+  * Thus, barrier operations can only be performed in wave-uniform control flow.
 
 All barrier *objects* have the following additional target-specific properties:
 
