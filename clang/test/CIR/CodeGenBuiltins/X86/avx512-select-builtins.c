@@ -195,20 +195,6 @@ __m512h test_selectph_512(__mmask32 k, __m512h a, __m512h b) {
   return __builtin_ia32_selectph_512(k, (__v32hf)a, (__v32hf)b);
 }
 
-__m128bh test_selectsbf_128(__mmask8 k, __m128bh a, __m128bh b) {
-  // CIR-LABEL: @test_selectsbf_128
-  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[COND:.+]] = cir.cast int_to_bool %[[BIT0]] : !cir.int<u, 1> -> !cir.bool
-  // CIR: cir.select if %[[COND]] then %{{.+}} else %{{.+}} : (!cir.bool, !cir.bf16, !cir.bf16) -> !cir.bf16
-
-  // LLVM-LABEL: @test_selectsbf_128
-  // LLVM: select i1 %{{.+}}, bfloat %{{.+}}, bfloat %{{.+}}
-
-  // OGCG-LABEL: @test_selectsbf_128
-  // OGCG: select i1 %{{.+}}, bfloat %{{.+}}, bfloat %{{.+}}
-  return __builtin_ia32_selectsbf_128(k, (__v8bf)a, (__v8bf)b);
-}
-
 __m256bh test_selectpbf_256(__mmask16 k, __m256bh a, __m256bh b) {
   // CIR-LABEL: @test_selectpbf_256
   // CIR: cir.vec.ternary(%{{.+}}, %{{.+}}, %{{.+}}) : !cir.vector<16 x !cir.int<s, 1>>, !cir.vector<16 x !cir.bf16>
@@ -312,46 +298,140 @@ __m512d test_selectpd_512(__mmask8 k, __m512d a, __m512d b) {
 
 __m128h test_selectsh_128(__mmask8 k, __m128h a, __m128h b) {
   // CIR-LABEL: @test_selectsh_128
-  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.f16>
-  // CIR: %[[EB:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.f16>
-  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[COND:.+]] = cir.cast int_to_bool %[[BIT0]] : !cir.int<u, 1> -> !cir.bool
-  // CIR: %[[SEL:.+]] = cir.select if %[[COND]] then %[[EA]] else %[[EB]]
-  // CIR: cir.vec.insert %[[SEL]], %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.f16>
+  // CIR: %[[A:.+]] = cir.load align(16) %{{.+}} : !cir.ptr<!cir.vector<8 x !cir.f16>>, !cir.vector<8 x !cir.f16>
+  // CIR: %[[B:.+]] = cir.load align(16) %{{.+}} : !cir.ptr<!cir.vector<8 x !cir.f16>>, !cir.vector<8 x !cir.f16>
+  // CIR: %[[IDX0_A:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[EA:.+]] = cir.vec.extract %[[A]][%[[IDX0_A]] : !u64i] : !cir.vector<8 x !cir.f16>
+  // CIR: %[[IDX0_B:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[EB:.+]] = cir.vec.extract %[[B]][%[[IDX0_B]] : !u64i] : !cir.vector<8 x !cir.f16>
+  // CIR: %[[MASK_VEC:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[IDX0_MASK:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[BIT0:.+]] = cir.vec.extract %[[MASK_VEC]][%[[IDX0_MASK]] : !u64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[COND:.+]] = cir.cast int_to_bool %[[BIT0]] : !cir.int<s, 1> -> !cir.bool
+  // CIR: %[[SEL:.+]] = cir.select if %[[COND]] then %[[EA]] else %[[EB]] : (!cir.bool, !cir.f16, !cir.f16) -> !cir.f16
+  // CIR: %[[IDX0_INS:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %{{.+}} = cir.vec.insert %[[SEL]], %[[A]][%[[IDX0_INS]] : !u64i] : !cir.vector<8 x !cir.f16>
 
   // LLVM-LABEL: @test_selectsh_128
   // LLVM: %[[E1:.+]] = extractelement <8 x half> %{{.+}}, i64 0
-  // LLVM: select i1 %{{.+}}, half %[[E1]], half %{{.+}}
+  // LLVM: %[[E2:.+]] = extractelement <8 x half> %{{.+}}, i64 0
+  // LLVM: %[[MASK:.+]] = bitcast i8 %{{.+}} to <8 x i1>
+  // LLVM: %[[BIT:.+]] = extractelement <8 x i1> %[[MASK]], i64 0
+  // LLVM: %[[CMP:.+]] = icmp ne i1 %[[BIT]], false
+  // LLVM: %[[SEL:.+]] = select i1 %[[CMP]], half %[[E1]], half %[[E2]]
+  // LLVM: insertelement <8 x half> %{{.+}}, half %[[SEL]], i64 0
 
   // OGCG-LABEL: @test_selectsh_128
-  // OGCG: select i1 %{{.+}}, half %{{.+}}, half %{{.+}}
+  // OGCG: %[[E1:.+]] = extractelement <8 x half> %{{.+}}, i64 0
+  // OGCG: %[[E2:.+]] = extractelement <8 x half> %{{.+}}, i64 0
+  // OGCG: %[[MASK:.+]] = bitcast i8 %{{.+}} to <8 x i1>
+  // OGCG: %[[BIT:.+]] = extractelement <8 x i1> %[[MASK]], i64 0
+  // OGCG: %{{.+}} = select i1 %[[BIT]], half %[[E1]], half %[[E2]]
+  // OGCG: insertelement <8 x half> %{{.+}}, half %{{.+}}, i64 0
   return __builtin_ia32_selectsh_128(k, (__v8hf)a, (__v8hf)b);
+}
+
+__m128bh test_selectsbf_128(__mmask8 k, __m128bh a, __m128bh b) {
+  // CIR-LABEL: @test_selectsbf_128
+  // CIR: %[[A:.+]] = cir.load align(16) %{{.+}} : !cir.ptr<!cir.vector<8 x !cir.bf16>>, !cir.vector<8 x !cir.bf16>
+  // CIR: %[[B:.+]] = cir.load align(16) %{{.+}} : !cir.ptr<!cir.vector<8 x !cir.bf16>>, !cir.vector<8 x !cir.bf16>
+  // CIR: %[[IDX0_A:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[EA:.+]] = cir.vec.extract %[[A]][%[[IDX0_A]] : !u64i] : !cir.vector<8 x !cir.bf16>
+  // CIR: %[[IDX0_B:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[EB:.+]] = cir.vec.extract %[[B]][%[[IDX0_B]] : !u64i] : !cir.vector<8 x !cir.bf16>
+  // CIR: %[[MASK_VEC:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[IDX0_MASK:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[BIT0:.+]] = cir.vec.extract %[[MASK_VEC]][%[[IDX0_MASK]] : !u64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[COND:.+]] = cir.cast int_to_bool %[[BIT0]] : !cir.int<s, 1> -> !cir.bool
+  // CIR: %[[SEL:.+]] = cir.select if %[[COND]] then %[[EA]] else %[[EB]] : (!cir.bool, !cir.bf16, !cir.bf16) -> !cir.bf16
+  // CIR: %[[IDX0_INS:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %{{.+}} = cir.vec.insert %[[SEL]], %[[A]][%[[IDX0_INS]] : !u64i] : !cir.vector<8 x !cir.bf16>
+
+  // LLVM-LABEL: @test_selectsbf_128
+  // LLVM: %[[E1:.+]] = extractelement <8 x bfloat> %{{.+}}, i64 0
+  // LLVM: %[[E2:.+]] = extractelement <8 x bfloat> %{{.+}}, i64 0
+  // LLVM: %[[MASK:.+]] = bitcast i8 %{{.+}} to <8 x i1>
+  // LLVM: %[[BIT:.+]] = extractelement <8 x i1> %[[MASK]], i64 0
+  // LLVM: %[[CMP:.+]] = icmp ne i1 %[[BIT]], false
+  // LLVM: %[[SEL:.+]] = select i1 %[[CMP]], bfloat %[[E1]], bfloat %[[E2]]
+  // LLVM: insertelement <8 x bfloat> %{{.+}}, bfloat %[[SEL]], i64 0
+
+  // OGCG-LABEL: @test_selectsbf_128
+  // OGCG: %[[E1:.+]] = extractelement <8 x bfloat> %{{.+}}, i64 0
+  // OGCG: %[[E2:.+]] = extractelement <8 x bfloat> %{{.+}}, i64 0
+  // OGCG: %[[MASK:.+]] = bitcast i8 %{{.+}} to <8 x i1>
+  // OGCG: %[[BIT:.+]] = extractelement <8 x i1> %[[MASK]], i64 0
+  // OGCG: %{{.+}} = select i1 %[[BIT]], bfloat %[[E1]], bfloat %[[E2]]
+  // OGCG: insertelement <8 x bfloat> %{{.+}}, bfloat %{{.+}}, i64 0
+  return __builtin_ia32_selectsbf_128(k, (__v8bf)a, (__v8bf)b);
 }
 
 __m128 test_selectss_128(__mmask8 k, __m128 a, __m128 b) {
   // CIR-LABEL: @test_selectss_128
-  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%[[I0:.+]] : !u64i] : !cir.vector<4 x !cir.float>
-  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: cir.select if %{{.+}} then %[[EA]] else %{{.+}} : (!cir.bool, !cir.float, !cir.float) -> !cir.float
+  // CIR: %[[A:.+]] = cir.load align(16) %{{.+}} : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+  // CIR: %[[B:.+]] = cir.load align(16) %{{.+}} : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+  // CIR: %[[IDX0_A:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[EA:.+]] = cir.vec.extract %[[A]][%[[IDX0_A]] : !u64i] : !cir.vector<4 x !cir.float>
+  // CIR: %[[IDX0_B:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[EB:.+]] = cir.vec.extract %[[B]][%[[IDX0_B]] : !u64i] : !cir.vector<4 x !cir.float>
+  // CIR: %[[MASK_VEC:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[IDX0_MASK:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[BIT0:.+]] = cir.vec.extract %[[MASK_VEC]][%[[IDX0_MASK]] : !u64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[COND:.+]] = cir.cast int_to_bool %[[BIT0]] : !cir.int<s, 1> -> !cir.bool
+  // CIR: %[[SEL:.+]] = cir.select if %[[COND]] then %[[EA]] else %[[EB]] : (!cir.bool, !cir.float, !cir.float) -> !cir.float
+  // CIR: %[[IDX0_INS:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %{{.+}} = cir.vec.insert %[[SEL]], %[[A]][%[[IDX0_INS]] : !u64i] : !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_selectss_128
-  // LLVM: select i1 %{{.+}}, float %{{.+}}, float %{{.+}}
+  // LLVM: %[[E1:.+]] = extractelement <4 x float> %{{.+}}, i64 0
+  // LLVM: %[[E2:.+]] = extractelement <4 x float> %{{.+}}, i64 0
+  // LLVM: %[[MASK:.+]] = bitcast i8 %{{.+}} to <8 x i1>
+  // LLVM: %[[BIT:.+]] = extractelement <8 x i1> %[[MASK]], i64 0
+  // LLVM: %[[CMP:.+]] = icmp ne i1 %[[BIT]], false
+  // LLVM: %[[SEL:.+]] = select i1 %[[CMP]], float %[[E1]], float %[[E2]]
+  // LLVM: insertelement <4 x float> %{{.+}}, float %[[SEL]], i64 0
 
   // OGCG-LABEL: @test_selectss_128
-  // OGCG: select i1 %{{.+}}, float %{{.+}}, float %{{.+}}
+  // OGCG: %[[E1:.+]] = extractelement <4 x float> %{{.+}}, i64 0
+  // OGCG: %[[E2:.+]] = extractelement <4 x float> %{{.+}}, i64 0
+  // OGCG: %[[MASK:.+]] = bitcast i8 %{{.+}} to <8 x i1>
+  // OGCG: %[[BIT:.+]] = extractelement <8 x i1> %[[MASK]], i64 0
+  // OGCG: %{{.+}} = select i1 %[[BIT]], float %[[E1]], float %[[E2]]
+  // OGCG: insertelement <4 x float> %{{.+}}, float %{{.+}}, i64 0
   return __builtin_ia32_selectss_128(k, (__v4sf)a, (__v4sf)b);
 }
 
 __m128d test_selectsd_128(__mmask8 k, __m128d a, __m128d b) {
   // CIR-LABEL: @test_selectsd_128
-  // CIR: %[[EA:.+]] = cir.vec.extract %{{.+}}[%[[I0:.+]] : !u64i] : !cir.vector<2 x !cir.double>
-  // CIR: %[[BIT0:.+]] = cir.vec.extract %{{.+}}[%{{.+}} : !u64i] : !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: cir.select if %{{.+}} then %[[EA]] else %{{.+}} : (!cir.bool, !cir.double, !cir.double) -> !cir.double
+  // CIR: %[[A:.+]] = cir.load align(16) %{{.+}} : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
+  // CIR: %[[B:.+]] = cir.load align(16) %{{.+}} : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
+  // CIR: %[[IDX0_A:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[EA:.+]] = cir.vec.extract %[[A]][%[[IDX0_A]] : !u64i] : !cir.vector<2 x !cir.double>
+  // CIR: %[[IDX0_B:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[EB:.+]] = cir.vec.extract %[[B]][%[[IDX0_B]] : !u64i] : !cir.vector<2 x !cir.double>
+  // CIR: %[[MASK_VEC:.+]] = cir.cast bitcast %{{.+}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[IDX0_MASK:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %[[BIT0:.+]] = cir.vec.extract %[[MASK_VEC]][%[[IDX0_MASK]] : !u64i] : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[COND:.+]] = cir.cast int_to_bool %[[BIT0]] : !cir.int<s, 1> -> !cir.bool
+  // CIR: %[[SEL:.+]] = cir.select if %[[COND]] then %[[EA]] else %[[EB]] : (!cir.bool, !cir.double, !cir.double) -> !cir.double
+  // CIR: %[[IDX0_INS:.+]] = cir.const #cir.int<0> : !u64i
+  // CIR: %{{.+}} = cir.vec.insert %[[SEL]], %[[A]][%[[IDX0_INS]] : !u64i] : !cir.vector<2 x !cir.double>
 
   // LLVM-LABEL: @test_selectsd_128
-  // LLVM: select i1 %{{.+}}, double %{{.+}}, double %{{.+}}
+  // LLVM: %[[E1:.+]] = extractelement <2 x double> %{{.+}}, i64 0
+  // LLVM: %[[E2:.+]] = extractelement <2 x double> %{{.+}}, i64 0
+  // LLVM: %[[MASK:.+]] = bitcast i8 %{{.+}} to <8 x i1>
+  // LLVM: %[[BIT:.+]] = extractelement <8 x i1> %[[MASK]], i64 0
+  // LLVM: %[[CMP:.+]] = icmp ne i1 %[[BIT]], false
+  // LLVM: %[[SEL:.+]] = select i1 %[[CMP]], double %[[E1]], double %[[E2]]
+  // LLVM: insertelement <2 x double> %{{.+}}, double %[[SEL]], i64 0
 
   // OGCG-LABEL: @test_selectsd_128
-  // OGCG: select i1 %{{.+}}, double %{{.+}}, double %{{.+}}
+  // OGCG: %[[E1:.+]] = extractelement <2 x double> %{{.+}}, i64 0
+  // OGCG: %[[E2:.+]] = extractelement <2 x double> %{{.+}}, i64 0
+  // OGCG: %[[MASK:.+]] = bitcast i8 %{{.+}} to <8 x i1>
+  // OGCG: %[[BIT:.+]] = extractelement <8 x i1> %[[MASK]], i64 0
+  // OGCG: %{{.+}} = select i1 %[[BIT]], double %[[E1]], double %[[E2]]
+  // OGCG: insertelement <2 x double> %{{.+}}, double %{{.+}}, i64 0
   return __builtin_ia32_selectsd_128(k, (__v2df)a, (__v2df)b);
 }

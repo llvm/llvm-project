@@ -185,15 +185,9 @@ static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
   return cir::VecTernaryOp::create(builder, loc, mask, op0, op1);
 }
 
-static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
-                                       mlir::Location loc, mlir::Value mask,
-                                       mlir::Value op0, mlir::Value op1) {
-
-  // If the mask is all ones just return first argument.
-  if (auto c = mlir::dyn_cast_or_null<cir::ConstantOp>(mask.getDefiningOp()))
-    if (c.isAllOnesValue())
-      return op0;
-
+// Helper function to extract zero-bit from a mask as a boolean
+static mlir::Value getMaskZeroBitAsBool(CIRGenBuilderTy &builder,
+                                        mlir::Location loc, mlir::Value mask) {
   // Get the mask as a vector of i1 and extract bit 0
   auto intTy = mlir::dyn_cast<cir::IntType>(mask.getType());
   assert(intTy && "mask must be an integer type");
@@ -207,9 +201,20 @@ static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
 
   // Convert i1 to bool for select
   auto boolTy = cir::BoolType::get(builder.getContext());
-  mlir::Value cond = cir::CastOp::create(builder, loc, boolTy,
-                                         cir::CastKind::int_to_bool, bit0);
+  return cir::CastOp::create(builder, loc, boolTy, cir::CastKind::int_to_bool,
+                             bit0);
+}
 
+static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, mlir::Value mask,
+                                       mlir::Value op0, mlir::Value op1) {
+
+  // If the mask is all ones just return first argument.
+  if (auto c = mlir::dyn_cast_or_null<cir::ConstantOp>(mask.getDefiningOp()))
+    if (c.isAllOnesValue())
+      return op0;
+
+  mlir::Value cond = getMaskZeroBitAsBool(builder, loc, mask);
   return builder.createSelect(loc, cond, op0, op1);
 }
 
