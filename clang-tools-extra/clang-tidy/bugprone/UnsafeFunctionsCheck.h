@@ -35,7 +35,7 @@ public:
 
   struct CheckedFunction {
     std::string Name;
-    matchers::MatchesAnyListedNameMatcher::NameMatcher Pattern;
+    matchers::MatchesAnyListedRegexNameMatcher::NameMatcher Pattern;
     std::string Replacement;
     std::string Reason;
   };
