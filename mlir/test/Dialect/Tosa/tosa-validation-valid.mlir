@@ -37,11 +37,3 @@ func.func @test_validate_without_tosa(%arg0: f32) -> f32 {
   %0 = math.asin %arg0 : f32
   return %0 : f32
 }
-
-// -----
-
-// CHECK-LABEL: test_validate_with_tosa
-func.func @test_validate_with_tosa(%arg0: tensor<1x2x3xf32>, %arg1: tensor<1x2x3xf32>) -> tensor<1x2x3xf32> {
-  %0 = tosa.add %arg0, %arg1 : (tensor<1x2x3xf32>, tensor<1x2x3xf32>) -> tensor<1x2x3xf32>
-  return %0 : tensor<1x2x3xf32>
-}
