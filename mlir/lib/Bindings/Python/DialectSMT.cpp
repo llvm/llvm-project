@@ -121,5 +121,5 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
 NB_MODULE(_mlirDialectsSMT, m) {
   m.doc() = "MLIR SMT Dialect";
 
-  python::mlir::smt::populateDialectSMTSubmodule(m);
+  python::MLIR_BINDINGS_PYTHON_DOMAIN::smt::populateDialectSMTSubmodule(m);
 }
