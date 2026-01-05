@@ -874,10 +874,10 @@ struct LocalT {
 template <typename T, typename I, typename E> //
 struct LooprangeT {
   using Begin = E;
-  using End = E;
+  using Count = E;
 
   using TupleTrait = std::true_type;
-  std::tuple<Begin, End> t;
+  std::tuple<Begin, Count> t;
 };
 
 // V5.2: [5.8.3] `map` clause
