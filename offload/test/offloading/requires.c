@@ -17,11 +17,15 @@
 // Various definitions copied from OpenMP RTL
 
 typedef struct {
-  void *addr;
-  char *name;
-  size_t size;
-  int32_t flags;
-  int32_t data;
+  uint64_t Reserved;
+  uint16_t Version;
+  uint16_t Kind;
+  uint32_t Flags;
+  void *Address;
+  char *SymbolName;
+  uint64_t Size;
+  uint64_t Data;
+  void *AuxAddr;
 } __tgt_offload_entry;
 
 enum Flags {
@@ -55,8 +59,9 @@ void run_reg_requires() {
 
   // This is the 2nd time this function is called so it should print SUCCESS if
   // REQ is compatible with `1` and otherwise cause an error.
-  __tgt_offload_entry entries[] = {{NULL, "", 0, OMP_REGISTER_REQUIRES, 1},
-                                   {NULL, "", 0, OMP_REGISTER_REQUIRES, REQ}};
+  __tgt_offload_entry entries[] = {
+      {0, 0, 1, OMP_REGISTER_REQUIRES, NULL, "", 0, 1, NULL},
+      {0, 0, 1, OMP_REGISTER_REQUIRES, NULL, "", 0, REQ, NULL}};
   __tgt_device_image image = {NULL, NULL, &entries[0], &entries[1] + 1};
   __tgt_bin_desc bin = {1, &image, &entries[0], &entries[1] + 1};
 
@@ -78,7 +83,8 @@ int main() {
 
 // This also runs reg requires for the first time.
 #pragma omp target
-  {}
+  {
+  }
 
   return 0;
 }

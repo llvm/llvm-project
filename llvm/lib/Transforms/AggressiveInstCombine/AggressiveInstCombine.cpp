@@ -28,7 +28,12 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -37,6 +42,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
@@ -83,8 +92,8 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
     //  == (ShVal0 << ShAmt) | (ShVal1 >> (Width -ShAmt))
     if (match(V, m_OneUse(m_c_Or(
                      m_Shl(m_Value(ShVal0), m_Value(ShAmt)),
-                     m_LShr(m_Value(ShVal1),
-                            m_Sub(m_SpecificInt(Width), m_Deferred(ShAmt))))))) {
+                     m_LShr(m_Value(ShVal1), m_Sub(m_SpecificInt(Width),
+                                                   m_Deferred(ShAmt))))))) {
       return Intrinsic::fshl;
     }
 
@@ -328,15 +337,33 @@ static bool tryToRecognizePopCount(Instruction &I) {
                               m_SpecificInt(Mask33))))) {
         Value *Root, *SubOp1;
         // Matching "i - ((i >> 1) & 0x55555555...)".
+        const APInt *AndMask;
         if (match(AndOp0, m_Sub(m_Value(Root), m_Value(SubOp1))) &&
             match(SubOp1, m_And(m_LShr(m_Specific(Root), m_SpecificInt(1)),
-                                m_SpecificInt(Mask55)))) {
-          LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-          IRBuilder<> Builder(&I);
-          I.replaceAllUsesWith(
-              Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
-          ++NumPopCountRecognized;
-          return true;
+                                m_APInt(AndMask)))) {
+          auto CheckAndMask = [&]() {
+            if (*AndMask == Mask55)
+              return true;
+
+            // Exact match failed, see if any bits are known to be 0 where we
+            // expect a 1 in the mask.
+            if (!AndMask->isSubsetOf(Mask55))
+              return false;
+
+            APInt NeededMask = Mask55 & ~*AndMask;
+            return MaskedValueIsZero(cast<Instruction>(SubOp1)->getOperand(0),
+                                     NeededMask,
+                                     SimplifyQuery(I.getDataLayout()));
+          };
+
+          if (CheckAndMask()) {
+            LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+            IRBuilder<> Builder(&I);
+            I.replaceAllUsesWith(
+                Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+            ++NumPopCountRecognized;
+            return true;
+          }
         }
       }
     }
@@ -422,8 +449,7 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
        cannotBeOrderedLessThanZero(
-           Arg, 0,
-           SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
+           Arg, SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
     Value *NewSqrt =
         Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
@@ -441,29 +467,19 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
 // Check if this array of constants represents a cttz table.
 // Iterate over the elements from \p Table by trying to find/match all
 // the numbers from 0 to \p InputBits that should represent cttz results.
-static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
-                        uint64_t Shift, uint64_t InputBits) {
-  unsigned Length = Table.getNumElements();
-  if (Length < InputBits || Length > InputBits * 2)
-    return false;
-
-  APInt Mask = APInt::getBitsSetFrom(InputBits, Shift);
-  unsigned Matched = 0;
-
-  for (unsigned i = 0; i < Length; i++) {
-    uint64_t Element = Table.getElementAsInteger(i);
-    if (Element >= InputBits)
-      continue;
-
-    // Check if \p Element matches a concrete answer. It could fail for some
-    // elements that are never accessed, so we keep iterating over each element
-    // from the table. The number of matched elements should be equal to the
-    // number of potential right answers which is \p InputBits actually.
-    if ((((Mul << Element) & Mask.getZExtValue()) >> Shift) == i)
-      Matched++;
+static bool isCTTZTable(Constant *Table, const APInt &Mul, const APInt &Shift,
+                        const APInt &AndMask, Type *AccessTy,
+                        unsigned InputBits, const APInt &GEPIdxFactor,
+                        const DataLayout &DL) {
+  for (unsigned Idx = 0; Idx < InputBits; Idx++) {
+    APInt Index = (APInt(InputBits, 1).shl(Idx) * Mul).lshr(Shift) & AndMask;
+    ConstantInt *C = dyn_cast_or_null<ConstantInt>(
+        ConstantFoldLoadFromConst(Table, AccessTy, Index * GEPIdxFactor, DL));
+    if (!C || C->getValue() != Idx)
+      return false;
   }
 
-  return Matched == InputBits;
+  return true;
 }
 
 // Try to recognize table-based ctz implementation.
@@ -477,6 +493,11 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 // }
 // this can be lowered to `cttz` instruction.
 // There is also a special case when the element is 0.
+//
+// The (x & -x) sets the lowest non-zero bit to 1. The multiply is a de-bruijn
+// sequence that contains each pattern of bits in it. The shift extracts
+// the top bits after the multiply, and that index into the table should
+// represent the number of trailing zeros in the original number.
 //
 // Here are some examples or LLVM IR for a 64-bit target:
 //
@@ -519,8 +540,8 @@ static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
 //     i64 %shr
 // %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
-// All this can be lowered to @llvm.cttz.i32/64 intrinsic.
-static bool tryToRecognizeTableBasedCttz(Instruction &I) {
+// All these can be lowered to @llvm.cttz.i32/64 intrinsics.
+static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
   LoadInst *LI = dyn_cast<LoadInst>(&I);
   if (!LI)
     return false;
@@ -530,53 +551,47 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     return false;
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->isInBounds() || GEP->getNumIndices() != 2)
-    return false;
-
-  if (!GEP->getSourceElementType()->isArrayTy())
-    return false;
-
-  uint64_t ArraySize = GEP->getSourceElementType()->getArrayNumElements();
-  if (ArraySize != 32 && ArraySize != 64)
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
     return false;
 
   GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
   if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
     return false;
 
-  ConstantDataArray *ConstData =
-      dyn_cast<ConstantDataArray>(GVTable->getInitializer());
-  if (!ConstData)
+  unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
+  APInt ModOffset(BW, 0);
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
+  if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset) ||
+      VarOffsets.size() != 1 || ModOffset != 0)
     return false;
+  auto [GepIdx, GEPScale] = VarOffsets.front();
 
-  if (!match(GEP->idx_begin()->get(), m_ZeroInt()))
-    return false;
-
-  Value *Idx2 = std::next(GEP->idx_begin())->get();
   Value *X1;
-  uint64_t MulConst, ShiftConst;
-  // FIXME: 64-bit targets have `i64` type for the GEP index, so this match will
-  // probably fail for other (e.g. 32-bit) targets.
-  if (!match(Idx2, m_ZExtOrSelf(
-                       m_LShr(m_Mul(m_c_And(m_Neg(m_Value(X1)), m_Deferred(X1)),
-                                    m_ConstantInt(MulConst)),
-                              m_ConstantInt(ShiftConst)))))
+  const APInt *MulConst, *ShiftConst, *AndCst = nullptr;
+  // Check that the gep variable index is ((x & -x) * MulConst) >> ShiftConst.
+  // This might be extended to the pointer index type, and if the gep index type
+  // has been replaced with an i8 then a new And (and different ShiftConst) will
+  // be present.
+  auto MatchInner = m_LShr(
+      m_Mul(m_c_And(m_Neg(m_Value(X1)), m_Deferred(X1)), m_APInt(MulConst)),
+      m_APInt(ShiftConst));
+  if (!match(GepIdx, m_CastOrSelf(MatchInner)) &&
+      !match(GepIdx, m_CastOrSelf(m_And(MatchInner, m_APInt(AndCst)))))
     return false;
 
   unsigned InputBits = X1->getType()->getScalarSizeInBits();
-  if (InputBits != 32 && InputBits != 64)
+  if (InputBits != 16 && InputBits != 32 && InputBits != 64 && InputBits != 128)
     return false;
 
-  // Shift should extract top 5..7 bits.
-  if (InputBits - Log2_32(InputBits) != ShiftConst &&
-      InputBits - Log2_32(InputBits) - 1 != ShiftConst)
+  if (!GEPScale.isIntN(InputBits) ||
+      !isCTTZTable(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                   AndCst ? *AndCst : APInt::getAllOnes(InputBits), AccessType,
+                   InputBits, GEPScale.zextOrTrunc(InputBits), DL))
     return false;
 
-  if (!isCTTZTable(*ConstData, MulConst, ShiftConst, InputBits))
-    return false;
-
-  auto ZeroTableElem = ConstData->getElementAsInteger(0);
-  bool DefinedForZero = ZeroTableElem == InputBits;
+  ConstantInt *ZeroTableElem = cast<ConstantInt>(
+      ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
+  bool DefinedForZero = ZeroTableElem->getZExtValue() == InputBits;
 
   IRBuilder<> B(LI);
   ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
@@ -590,8 +605,15 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     // If the value in elem 0 isn't the same as InputBits, we still want to
     // produce the value from the table.
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
-    auto Select =
-        B.CreateSelect(Cmp, ConstantInt::get(XType, ZeroTableElem), Cttz);
+    auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
+
+    // The true branch of select handles the cttz(0) case, which is rare.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+        SelectI->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    }
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
@@ -612,7 +634,7 @@ struct LoadOps {
   LoadInst *RootInsert = nullptr;
   bool FoundRoot = false;
   uint64_t LoadSize = 0;
-  const APInt *Shift = nullptr;
+  uint64_t Shift = 0;
   Type *ZextType;
   AAMDNodes AATags;
 };
@@ -622,17 +644,15 @@ struct LoadOps {
 // (ZExt(L1) << shift1) | ZExt(L2) -> ZExt(L3)
 static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
                                AliasAnalysis &AA) {
-  const APInt *ShAmt2 = nullptr;
+  uint64_t ShAmt2;
   Value *X;
   Instruction *L1, *L2;
 
   // Go to the last node with loads.
-  if (match(V, m_OneUse(m_c_Or(
-                   m_Value(X),
-                   m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))),
-                                  m_APInt(ShAmt2)))))) ||
-      match(V, m_OneUse(m_Or(m_Value(X),
-                             m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))))))) {
+  if (match(V,
+            m_OneUse(m_c_Or(m_Value(X), m_OneUse(m_ShlOrSelf(
+                                            m_OneUse(m_ZExt(m_Instruction(L2))),
+                                            ShAmt2)))))) {
     if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
       // Avoid Partial chain merge.
       return false;
@@ -641,11 +661,10 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
 
   // Check if the pattern has loads
   LoadInst *LI1 = LOps.Root;
-  const APInt *ShAmt1 = LOps.Shift;
+  uint64_t ShAmt1 = LOps.Shift;
   if (LOps.FoundRoot == false &&
-      (match(X, m_OneUse(m_ZExt(m_Instruction(L1)))) ||
-       match(X, m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L1)))),
-                               m_APInt(ShAmt1)))))) {
+      match(X, m_OneUse(
+                   m_ShlOrSelf(m_OneUse(m_ZExt(m_Instruction(L1))), ShAmt1)))) {
     LI1 = dyn_cast<LoadInst>(L1);
   }
   LoadInst *LI2 = dyn_cast<LoadInst>(L2);
@@ -675,14 +694,15 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
-  // Verify if both loads have same base pointers and load sizes are same.
+  // Verify if both loads have same base pointers
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
-  if (Load1Ptr != Load2Ptr || LoadSize1 != LoadSize2)
+  if (Load1Ptr != Load2Ptr)
     return false;
 
-  // Support Loadsizes greater or equal to 8bits and only power of 2.
-  if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
+  // Make sure that there are no padding bits.
+  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) ||
+      !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
   // Alias Analysis to check for stores b/w the loads.
@@ -690,9 +710,17 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   MemoryLocation Loc;
   if (!Start->comesBefore(End)) {
     std::swap(Start, End);
-    Loc = MemoryLocation::get(End);
+    // If LOps.RootInsert comes after LI2, since we use LI2 as the new insert
+    // point, we should make sure whether the memory region accessed by LOps
+    // isn't modified.
     if (LOps.FoundRoot)
-      Loc = Loc.getWithNewSize(LOps.LoadSize);
+      Loc = MemoryLocation(
+          LOps.Root->getPointerOperand(),
+          LocationSize::precise(DL.getTypeStoreSize(
+              IntegerType::get(LI1->getContext(), LOps.LoadSize))),
+          LOps.AATags);
+    else
+      Loc = MemoryLocation::get(End);
   } else
     Loc = MemoryLocation::get(End);
   unsigned NumScanned = 0;
@@ -701,9 +729,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
 
-    // Ignore debug info so that's not counted against MaxInstrsToScan.
-    // Otherwise debug info could affect codegen.
-    if (!isa<DbgInfoIntrinsic>(Inst) && ++NumScanned > MaxInstrsToScan)
+    if (++NumScanned > MaxInstrsToScan)
       return false;
   }
 
@@ -722,13 +748,6 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (IsBigEndian)
     std::swap(ShAmt1, ShAmt2);
 
-  // Find Shifts values.
-  uint64_t Shift1 = 0, Shift2 = 0;
-  if (ShAmt1)
-    Shift1 = ShAmt1->getZExtValue();
-  if (ShAmt2)
-    Shift2 = ShAmt2->getZExtValue();
-
   // First load is always LI1. This is where we put the new load.
   // Use the merged load size available from LI1 for forward loads.
   if (LOps.FoundRoot) {
@@ -743,7 +762,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   uint64_t ShiftDiff = IsBigEndian ? LoadSize2 : LoadSize1;
   uint64_t PrevSize =
       DL.getTypeStoreSize(IntegerType::get(LI1->getContext(), LoadSize1));
-  if ((Shift2 - Shift1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
+  if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
     return false;
 
   // Update LOps
@@ -820,10 +839,230 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.
   if (LOps.Shift)
-    NewOp = Builder.CreateShl(NewOp, ConstantInt::get(I.getContext(), *LOps.Shift));
+    NewOp = Builder.CreateShl(NewOp, LOps.Shift);
   I.replaceAllUsesWith(NewOp);
 
   return true;
+}
+
+/// ValWidth bits starting at ValOffset of Val stored at PtrBase+PtrOffset.
+struct PartStore {
+  Value *PtrBase;
+  APInt PtrOffset;
+  Value *Val;
+  uint64_t ValOffset;
+  uint64_t ValWidth;
+  StoreInst *Store;
+
+  bool isCompatibleWith(const PartStore &Other) const {
+    return PtrBase == Other.PtrBase && Val == Other.Val;
+  }
+
+  bool operator<(const PartStore &Other) const {
+    return PtrOffset.slt(Other.PtrOffset);
+  }
+};
+
+static std::optional<PartStore> matchPartStore(Instruction &I,
+                                               const DataLayout &DL) {
+  auto *Store = dyn_cast<StoreInst>(&I);
+  if (!Store || !Store->isSimple())
+    return std::nullopt;
+
+  Value *StoredVal = Store->getValueOperand();
+  Type *StoredTy = StoredVal->getType();
+  if (!StoredTy->isIntegerTy() || !DL.typeSizeEqualsStoreSize(StoredTy))
+    return std::nullopt;
+
+  uint64_t ValWidth = StoredTy->getPrimitiveSizeInBits();
+  uint64_t ValOffset;
+  Value *Val;
+  if (!match(StoredVal, m_Trunc(m_LShrOrSelf(m_Value(Val), ValOffset))))
+    return std::nullopt;
+
+  Value *Ptr = Store->getPointerOperand();
+  APInt PtrOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  Value *PtrBase = Ptr->stripAndAccumulateConstantOffsets(
+      DL, PtrOffset, /*AllowNonInbounds=*/true);
+  return {{PtrBase, PtrOffset, Val, ValOffset, ValWidth, Store}};
+}
+
+static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
+                                       unsigned Width, const DataLayout &DL,
+                                       TargetTransformInfo &TTI) {
+  if (Parts.size() < 2)
+    return false;
+
+  // Check whether combining the stores is profitable.
+  // FIXME: We could generate smaller stores if we can't produce a large one.
+  const PartStore &First = Parts.front();
+  LLVMContext &Ctx = First.Store->getContext();
+  Type *NewTy = Type::getIntNTy(Ctx, Width);
+  unsigned Fast = 0;
+  if (!TTI.isTypeLegal(NewTy) ||
+      !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
+                                          First.Store->getPointerAddressSpace(),
+                                          First.Store->getAlign(), &Fast) ||
+      !Fast)
+    return false;
+
+  // Generate the combined store.
+  IRBuilder<> Builder(First.Store);
+  Value *Val = First.Val;
+  if (First.ValOffset != 0)
+    Val = Builder.CreateLShr(Val, First.ValOffset);
+  Val = Builder.CreateTrunc(Val, NewTy);
+  StoreInst *Store = Builder.CreateAlignedStore(
+      Val, First.Store->getPointerOperand(), First.Store->getAlign());
+
+  // Merge various metadata onto the new store.
+  AAMDNodes AATags = First.Store->getAAMetadata();
+  SmallVector<Instruction *> Stores = {First.Store};
+  Stores.reserve(Parts.size());
+  SmallVector<DebugLoc> DbgLocs = {First.Store->getDebugLoc()};
+  DbgLocs.reserve(Parts.size());
+  for (const PartStore &Part : drop_begin(Parts)) {
+    AATags = AATags.concat(Part.Store->getAAMetadata());
+    Stores.push_back(Part.Store);
+    DbgLocs.push_back(Part.Store->getDebugLoc());
+  }
+  Store->setAAMetadata(AATags);
+  Store->mergeDIAssignID(Stores);
+  Store->setDebugLoc(DebugLoc::getMergedLocations(DbgLocs));
+
+  // Remove the old stores.
+  for (const PartStore &Part : Parts)
+    Part.Store->eraseFromParent();
+
+  return true;
+}
+
+static bool mergePartStores(SmallVectorImpl<PartStore> &Parts,
+                            const DataLayout &DL, TargetTransformInfo &TTI) {
+  if (Parts.size() < 2)
+    return false;
+
+  // We now have multiple parts of the same value stored to the same pointer.
+  // Sort the parts by pointer offset, and make sure they are consistent with
+  // the value offsets. Also check that the value is fully covered without
+  // overlaps.
+  bool Changed = false;
+  llvm::sort(Parts);
+  int64_t LastEndOffsetFromFirst = 0;
+  const PartStore *First = &Parts[0];
+  for (const PartStore &Part : Parts) {
+    APInt PtrOffsetFromFirst = Part.PtrOffset - First->PtrOffset;
+    int64_t ValOffsetFromFirst = Part.ValOffset - First->ValOffset;
+    if (PtrOffsetFromFirst * 8 != ValOffsetFromFirst ||
+        LastEndOffsetFromFirst != ValOffsetFromFirst) {
+      Changed |= mergeConsecutivePartStores(ArrayRef(First, &Part),
+                                            LastEndOffsetFromFirst, DL, TTI);
+      First = &Part;
+      LastEndOffsetFromFirst = Part.ValWidth;
+      continue;
+    }
+
+    LastEndOffsetFromFirst = ValOffsetFromFirst + Part.ValWidth;
+  }
+
+  Changed |= mergeConsecutivePartStores(ArrayRef(First, Parts.end()),
+                                        LastEndOffsetFromFirst, DL, TTI);
+  return Changed;
+}
+
+static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
+                                  TargetTransformInfo &TTI, AliasAnalysis &AA) {
+  // FIXME: Add big endian support.
+  if (DL.isBigEndian())
+    return false;
+
+  BatchAAResults BatchAA(AA);
+  SmallVector<PartStore, 8> Parts;
+  bool MadeChange = false;
+  for (Instruction &I : make_early_inc_range(BB)) {
+    if (std::optional<PartStore> Part = matchPartStore(I, DL)) {
+      if (Parts.empty() || Part->isCompatibleWith(Parts[0])) {
+        Parts.push_back(std::move(*Part));
+        continue;
+      }
+
+      MadeChange |= mergePartStores(Parts, DL, TTI);
+      Parts.clear();
+      Parts.push_back(std::move(*Part));
+      continue;
+    }
+
+    if (Parts.empty())
+      continue;
+
+    if (I.mayThrow() ||
+        (I.mayReadOrWriteMemory() &&
+         isModOrRefSet(BatchAA.getModRefInfo(
+             &I, MemoryLocation::getBeforeOrAfter(Parts[0].PtrBase))))) {
+      MadeChange |= mergePartStores(Parts, DL, TTI);
+      Parts.clear();
+      continue;
+    }
+  }
+
+  MadeChange |= mergePartStores(Parts, DL, TTI);
+  return MadeChange;
+}
+
+/// Combine away instructions providing they are still equivalent when compared
+/// against 0. i.e do they have any bits set.
+static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->getOpcode() != Instruction::Or || !I->hasOneUse())
+    return nullptr;
+
+  Value *A;
+
+  // Look deeper into the chain of or's, combining away shl (so long as they are
+  // nuw or nsw).
+  Value *Op0 = I->getOperand(0);
+  if (match(Op0, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op0 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op0, Builder))
+    Op0 = NOp;
+
+  Value *Op1 = I->getOperand(1);
+  if (match(Op1, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op1 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op1, Builder))
+    Op1 = NOp;
+
+  if (Op0 != I->getOperand(0) || Op1 != I->getOperand(1))
+    return Builder.CreateOr(Op0, Op1);
+  return nullptr;
+}
+
+static bool foldICmpOrChain(Instruction &I, const DataLayout &DL,
+                            TargetTransformInfo &TTI, AliasAnalysis &AA,
+                            const DominatorTree &DT) {
+  CmpPredicate Pred;
+  Value *Op0;
+  if (!match(&I, m_ICmp(Pred, m_Value(Op0), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  // If the chain or or's matches a load, combine to that before attempting to
+  // remove shifts.
+  if (auto OpI = dyn_cast<Instruction>(Op0))
+    if (OpI->getOpcode() == Instruction::Or)
+      if (foldConsecutiveLoads(*OpI, DL, TTI, AA, DT))
+        return true;
+
+  IRBuilder<> Builder(&I);
+  // icmp eq/ne or(shl(a), b), 0 -> icmp eq/ne or(a, b), 0
+  if (auto *Res = optimizeShiftInOrChain(Op0, Builder)) {
+    I.replaceAllUsesWith(Builder.CreateICmp(Pred, Res, I.getOperand(1)));
+    return true;
+  }
+
+  return false;
 }
 
 // Calculate GEP Stride and accumulated const ModOffset. Return Stride and
@@ -842,7 +1081,7 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
 
     for (auto [V, Scale] : VarOffsets) {
       // Only keep a power of two factor for non-inbounds
-      if (!GEP->isInBounds())
+      if (!GEP->hasNoUnsignedSignedWrap())
         Scale = APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
 
       if (!Stride)
@@ -1079,11 +1318,19 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
     Value *VR =
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
     Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
-    if (i < N - 1)
-      B.CreateCondBr(B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)),
-                     BBNE, BBSubs[i + 1]);
-    else
+    if (i < N - 1) {
+      BranchInst *CondBrInst = B.CreateCondBr(
+          B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)), BBNE,
+          BBSubs[i + 1]);
+
+      Function *F = CI->getFunction();
+      assert(F && "Instruction does not belong to a function!");
+      std::optional<Function::ProfileCount> EC = F->getEntryCount();
+      if (EC && EC->getCount() > 0)
+        setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
+    } else {
       B.CreateBr(BBNE);
+    }
 
     Phi->addIncoming(Sub, BBSubs[i]);
   }
@@ -1132,10 +1379,14 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
   BasicBlock *BB = Call->getParent();
   BasicBlock *BBNext = SplitBlock(BB, Call, DTU);
   IRBuilder<> IRB(BB);
+  IRB.SetCurrentDebugLocation(Call->getDebugLoc());
   IntegerType *ByteTy = IRB.getInt8Ty();
   BB->getTerminator()->eraseFromParent();
   SwitchInst *SI = IRB.CreateSwitch(
       IRB.CreateTrunc(Call->getArgOperand(1), ByteTy), BBNext, N);
+  // We can't know the precise weights here, as they would depend on the value
+  // distribution of Call->getArgOperand(1). So we just mark it as "unknown".
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   Type *IndexTy = DL.getIndexType(Call->getType());
   SmallVector<DominatorTree::UpdateType, 8> Updates;
 
@@ -1223,6 +1474,329 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   return false;
 }
 
+/// Match high part of long multiplication.
+///
+/// Considering a multiply made up of high and low parts, we can split the
+/// multiply into:
+///  x * y == (xh*T + xl) * (yh*T + yl)
+/// where xh == x>>32 and xl == x & 0xffffffff. T = 2^32.
+/// This expands to
+///  xh*yh*T*T + xh*yl*T + xl*yh*T + xl*yl
+/// which can be drawn as
+/// [  xh*yh  ]
+///      [  xh*yl  ]
+///      [  xl*yh  ]
+///           [  xl*yl  ]
+/// We are looking for the "high" half, which is xh*yh + xh*yl>>32 + xl*yh>>32 +
+/// some carrys. The carry makes this difficult and there are multiple ways of
+/// representing it. The ones we attempt to support here are:
+///  Carry:  xh*yh + carry + lowsum
+///          carry = lowsum < xh*yl ? 0x1000000 : 0
+///          lowsum = xh*yl + xl*yh + (xl*yl>>32)
+///  Ladder: xh*yh + c2>>32 + c3>>32
+///          c2 = xh*yl + (xl*yl>>32); c3 = c2&0xffffffff + xl*yh
+///       or c2 = (xl*yh&0xffffffff) + xh*yl + (xl*yl>>32); c3 = xl*yh
+///  Carry4: xh*yh + carry + crosssum>>32 + (xl*yl + crosssum&0xffffffff) >> 32
+///          crosssum = xh*yl + xl*yh
+///          carry = crosssum < xh*yl ? 0x1000000 : 0
+///  Ladder4: xh*yh + (xl*yh)>>32 + (xh*yl)>>32 + low>>32;
+///          low = (xl*yl)>>32 + (xl*yh)&0xffffffff + (xh*yl)&0xffffffff
+///
+/// They all start by matching xh*yh + 2 or 3 other operands. The bottom of the
+/// tree is xh*yh, xh*yl, xl*yh and xl*yl.
+static bool foldMulHigh(Instruction &I) {
+  Type *Ty = I.getType();
+  if (!Ty->isIntOrIntVectorTy())
+    return false;
+
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+  APInt LowMask = APInt::getLowBitsSet(BitWidth, BitWidth / 2);
+  if (BitWidth % 2 != 0)
+    return false;
+
+  auto CreateMulHigh = [&](Value *X, Value *Y) {
+    IRBuilder<> Builder(&I);
+    Type *NTy = Ty->getWithNewBitWidth(BitWidth * 2);
+    Value *XExt = Builder.CreateZExt(X, NTy);
+    Value *YExt = Builder.CreateZExt(Y, NTy);
+    Value *Mul = Builder.CreateMul(XExt, YExt, "", /*HasNUW=*/true);
+    Value *High = Builder.CreateLShr(Mul, BitWidth);
+    Value *Res = Builder.CreateTrunc(High, Ty, "", /*HasNUW=*/true);
+    Res->takeName(&I);
+    I.replaceAllUsesWith(Res);
+    LLVM_DEBUG(dbgs() << "Created long multiply from parts of " << *X << " and "
+                      << *Y << "\n");
+    return true;
+  };
+
+  // Common check routines for X_lo*Y_lo and X_hi*Y_lo
+  auto CheckLoLo = [&](Value *XlYl, Value *X, Value *Y) {
+    return match(XlYl, m_c_Mul(m_And(m_Specific(X), m_SpecificInt(LowMask)),
+                               m_And(m_Specific(Y), m_SpecificInt(LowMask))));
+  };
+  auto CheckHiLo = [&](Value *XhYl, Value *X, Value *Y) {
+    return match(XhYl,
+                 m_c_Mul(m_LShr(m_Specific(X), m_SpecificInt(BitWidth / 2)),
+                         m_And(m_Specific(Y), m_SpecificInt(LowMask))));
+  };
+
+  auto FoldMulHighCarry = [&](Value *X, Value *Y, Instruction *Carry,
+                              Instruction *B) {
+    // Looking for LowSum >> 32 and carry (select)
+    if (Carry->getOpcode() != Instruction::Select)
+      std::swap(Carry, B);
+
+    // Carry = LowSum < XhYl ? 0x100000000 : 0
+    Value *LowSum, *XhYl;
+    if (!match(Carry,
+               m_OneUse(m_Select(
+                   m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(LowSum),
+                                           m_Value(XhYl))),
+                   m_SpecificInt(APInt::getOneBitSet(BitWidth, BitWidth / 2)),
+                   m_Zero()))))
+      return false;
+
+    // XhYl can be Xh*Yl or Xl*Yh
+    if (!CheckHiLo(XhYl, X, Y)) {
+      if (CheckHiLo(XhYl, Y, X))
+        std::swap(X, Y);
+      else
+        return false;
+    }
+    if (XhYl->hasNUsesOrMore(3))
+      return false;
+
+    // B = LowSum >> 32
+    if (!match(B, m_OneUse(m_LShr(m_Specific(LowSum),
+                                  m_SpecificInt(BitWidth / 2)))) ||
+        LowSum->hasNUsesOrMore(3))
+      return false;
+
+    // LowSum = XhYl + XlYh + XlYl>>32
+    Value *XlYh, *XlYl;
+    auto XlYlHi = m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2));
+    if (!match(LowSum,
+               m_c_Add(m_Specific(XhYl),
+                       m_OneUse(m_c_Add(m_OneUse(m_Value(XlYh)), XlYlHi)))) &&
+        !match(LowSum, m_c_Add(m_OneUse(m_Value(XlYh)),
+                               m_OneUse(m_c_Add(m_Specific(XhYl), XlYlHi)))) &&
+        !match(LowSum,
+               m_c_Add(XlYlHi, m_OneUse(m_c_Add(m_Specific(XhYl),
+                                                m_OneUse(m_Value(XlYh)))))))
+      return false;
+
+    // Check XlYl and XlYh
+    if (!CheckLoLo(XlYl, X, Y))
+      return false;
+    if (!CheckHiLo(XlYh, Y, X))
+      return false;
+
+    return CreateMulHigh(X, Y);
+  };
+
+  auto FoldMulHighLadder = [&](Value *X, Value *Y, Instruction *A,
+                               Instruction *B) {
+    //  xh*yh + c2>>32 + c3>>32
+    //    c2 = xh*yl + (xl*yl>>32); c3 = c2&0xffffffff + xl*yh
+    // or c2 = (xl*yh&0xffffffff) + xh*yl + (xl*yl>>32); c3 = xh*yl
+    Value *XlYh, *XhYl, *XlYl, *C2, *C3;
+    // Strip off the two expected shifts.
+    if (!match(A, m_LShr(m_Value(C2), m_SpecificInt(BitWidth / 2))) ||
+        !match(B, m_LShr(m_Value(C3), m_SpecificInt(BitWidth / 2))))
+      return false;
+
+    if (match(C3, m_c_Add(m_Add(m_Value(), m_Value()), m_Value())))
+      std::swap(C2, C3);
+    // Try to match c2 = (xl*yh&0xffffffff) + xh*yl + (xl*yl>>32)
+    if (match(C2,
+              m_c_Add(m_c_Add(m_And(m_Specific(C3), m_SpecificInt(LowMask)),
+                              m_Value(XlYh)),
+                      m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2)))) ||
+        match(C2, m_c_Add(m_c_Add(m_And(m_Specific(C3), m_SpecificInt(LowMask)),
+                                  m_LShr(m_Value(XlYl),
+                                         m_SpecificInt(BitWidth / 2))),
+                          m_Value(XlYh))) ||
+        match(C2, m_c_Add(m_c_Add(m_LShr(m_Value(XlYl),
+                                         m_SpecificInt(BitWidth / 2)),
+                                  m_Value(XlYh)),
+                          m_And(m_Specific(C3), m_SpecificInt(LowMask))))) {
+      XhYl = C3;
+    } else {
+      // Match c3 = c2&0xffffffff + xl*yh
+      if (!match(C3, m_c_Add(m_And(m_Specific(C2), m_SpecificInt(LowMask)),
+                             m_Value(XlYh))))
+        std::swap(C2, C3);
+      if (!match(C3, m_c_Add(m_OneUse(
+                                 m_And(m_Specific(C2), m_SpecificInt(LowMask))),
+                             m_Value(XlYh))) ||
+          !C3->hasOneUse() || C2->hasNUsesOrMore(3))
+        return false;
+
+      // Match c2 = xh*yl + (xl*yl >> 32)
+      if (!match(C2, m_c_Add(m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2)),
+                             m_Value(XhYl))))
+        return false;
+    }
+
+    // Match XhYl and XlYh - they can appear either way around.
+    if (!CheckHiLo(XlYh, Y, X))
+      std::swap(XlYh, XhYl);
+    if (!CheckHiLo(XlYh, Y, X))
+      return false;
+    if (!CheckHiLo(XhYl, X, Y))
+      return false;
+    if (!CheckLoLo(XlYl, X, Y))
+      return false;
+
+    return CreateMulHigh(X, Y);
+  };
+
+  auto FoldMulHighLadder4 = [&](Value *X, Value *Y, Instruction *A,
+                                Instruction *B, Instruction *C) {
+    ///  Ladder4: xh*yh + (xl*yh)>>32 + (xh+yl)>>32 + low>>32;
+    ///           low = (xl*yl)>>32 + (xl*yh)&0xffffffff + (xh*yl)&0xffffffff
+
+    // Find A = Low >> 32 and B/C = XhYl>>32, XlYh>>32.
+    auto ShiftAdd =
+        m_LShr(m_Add(m_Value(), m_Value()), m_SpecificInt(BitWidth / 2));
+    if (!match(A, ShiftAdd))
+      std::swap(A, B);
+    if (!match(A, ShiftAdd))
+      std::swap(A, C);
+    Value *Low;
+    if (!match(A, m_LShr(m_OneUse(m_Value(Low)), m_SpecificInt(BitWidth / 2))))
+      return false;
+
+    // Match B == XhYl>>32 and C == XlYh>>32
+    Value *XhYl, *XlYh;
+    if (!match(B, m_LShr(m_Value(XhYl), m_SpecificInt(BitWidth / 2))) ||
+        !match(C, m_LShr(m_Value(XlYh), m_SpecificInt(BitWidth / 2))))
+      return false;
+    if (!CheckHiLo(XhYl, X, Y))
+      std::swap(XhYl, XlYh);
+    if (!CheckHiLo(XhYl, X, Y) || XhYl->hasNUsesOrMore(3))
+      return false;
+    if (!CheckHiLo(XlYh, Y, X) || XlYh->hasNUsesOrMore(3))
+      return false;
+
+    // Match Low as XlYl>>32 + XhYl&0xffffffff + XlYh&0xffffffff
+    Value *XlYl;
+    if (!match(
+            Low,
+            m_c_Add(
+                m_OneUse(m_c_Add(
+                    m_OneUse(m_And(m_Specific(XhYl), m_SpecificInt(LowMask))),
+                    m_OneUse(m_And(m_Specific(XlYh), m_SpecificInt(LowMask))))),
+                m_OneUse(
+                    m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2))))) &&
+        !match(
+            Low,
+            m_c_Add(
+                m_OneUse(m_c_Add(
+                    m_OneUse(m_And(m_Specific(XhYl), m_SpecificInt(LowMask))),
+                    m_OneUse(
+                        m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2))))),
+                m_OneUse(m_And(m_Specific(XlYh), m_SpecificInt(LowMask))))) &&
+        !match(
+            Low,
+            m_c_Add(
+                m_OneUse(m_c_Add(
+                    m_OneUse(m_And(m_Specific(XlYh), m_SpecificInt(LowMask))),
+                    m_OneUse(
+                        m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2))))),
+                m_OneUse(m_And(m_Specific(XhYl), m_SpecificInt(LowMask))))))
+      return false;
+    if (!CheckLoLo(XlYl, X, Y))
+      return false;
+
+    return CreateMulHigh(X, Y);
+  };
+
+  auto FoldMulHighCarry4 = [&](Value *X, Value *Y, Instruction *Carry,
+                               Instruction *B, Instruction *C) {
+    //  xh*yh + carry + crosssum>>32 + (xl*yl + crosssum&0xffffffff) >> 32
+    //  crosssum = xh*yl+xl*yh
+    //  carry = crosssum < xh*yl ? 0x1000000 : 0
+    if (Carry->getOpcode() != Instruction::Select)
+      std::swap(Carry, B);
+    if (Carry->getOpcode() != Instruction::Select)
+      std::swap(Carry, C);
+
+    // Carry = CrossSum < XhYl ? 0x100000000 : 0
+    Value *CrossSum, *XhYl;
+    if (!match(Carry,
+               m_OneUse(m_Select(
+                   m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT,
+                                           m_Value(CrossSum), m_Value(XhYl))),
+                   m_SpecificInt(APInt::getOneBitSet(BitWidth, BitWidth / 2)),
+                   m_Zero()))))
+      return false;
+
+    if (!match(B, m_LShr(m_Specific(CrossSum), m_SpecificInt(BitWidth / 2))))
+      std::swap(B, C);
+    if (!match(B, m_LShr(m_Specific(CrossSum), m_SpecificInt(BitWidth / 2))))
+      return false;
+
+    Value *XlYl, *LowAccum;
+    if (!match(C, m_LShr(m_Value(LowAccum), m_SpecificInt(BitWidth / 2))) ||
+        !match(LowAccum, m_c_Add(m_OneUse(m_LShr(m_Value(XlYl),
+                                                 m_SpecificInt(BitWidth / 2))),
+                                 m_OneUse(m_And(m_Specific(CrossSum),
+                                                m_SpecificInt(LowMask))))) ||
+        LowAccum->hasNUsesOrMore(3))
+      return false;
+    if (!CheckLoLo(XlYl, X, Y))
+      return false;
+
+    if (!CheckHiLo(XhYl, X, Y))
+      std::swap(X, Y);
+    if (!CheckHiLo(XhYl, X, Y))
+      return false;
+    Value *XlYh;
+    if (!match(CrossSum, m_c_Add(m_Specific(XhYl), m_OneUse(m_Value(XlYh)))) ||
+        !CheckHiLo(XlYh, Y, X) || CrossSum->hasNUsesOrMore(4) ||
+        XhYl->hasNUsesOrMore(3))
+      return false;
+
+    return CreateMulHigh(X, Y);
+  };
+
+  // X and Y are the two inputs, A, B and C are other parts of the pattern
+  // (crosssum>>32, carry, etc).
+  Value *X, *Y;
+  Instruction *A, *B, *C;
+  auto HiHi = m_OneUse(m_Mul(m_LShr(m_Value(X), m_SpecificInt(BitWidth / 2)),
+                             m_LShr(m_Value(Y), m_SpecificInt(BitWidth / 2))));
+  if ((match(&I, m_c_Add(HiHi, m_OneUse(m_Add(m_Instruction(A),
+                                              m_Instruction(B))))) ||
+       match(&I, m_c_Add(m_Instruction(A),
+                         m_OneUse(m_c_Add(HiHi, m_Instruction(B)))))) &&
+      A->hasOneUse() && B->hasOneUse())
+    if (FoldMulHighCarry(X, Y, A, B) || FoldMulHighLadder(X, Y, A, B))
+      return true;
+
+  if ((match(&I, m_c_Add(HiHi, m_OneUse(m_c_Add(
+                                   m_Instruction(A),
+                                   m_OneUse(m_Add(m_Instruction(B),
+                                                  m_Instruction(C))))))) ||
+       match(&I, m_c_Add(m_Instruction(A),
+                         m_OneUse(m_c_Add(
+                             HiHi, m_OneUse(m_Add(m_Instruction(B),
+                                                  m_Instruction(C))))))) ||
+       match(&I, m_c_Add(m_Instruction(A),
+                         m_OneUse(m_c_Add(
+                             m_Instruction(B),
+                             m_OneUse(m_c_Add(HiHi, m_Instruction(C))))))) ||
+       match(&I,
+             m_c_Add(m_OneUse(m_c_Add(HiHi, m_Instruction(A))),
+                     m_OneUse(m_Add(m_Instruction(B), m_Instruction(C)))))) &&
+      A->hasOneUse() && B->hasOneUse() && C->hasOneUse())
+    return FoldMulHighCarry4(X, Y, A, B, C) ||
+           FoldMulHighLadder4(X, Y, A, B, C);
+
+  return false;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
@@ -1248,14 +1822,19 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToFPToSat(I, TTI);
-      MadeChange |= tryToRecognizeTableBasedCttz(I);
+      MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
+      MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
+      MadeChange |= foldMulHigh(I);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
       MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
     }
+
+    // Do this separately to avoid redundantly scanning stores multiple times.
+    MadeChange |= foldConsecutiveStores(BB, DL, TTI, AA);
   }
 
   // We're done with transforms, so remove dead instructions.

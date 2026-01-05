@@ -14,7 +14,7 @@ module openacc_declare_validity
 
   !$acc declare create(aa, bb)
 
-  !WARNING: 'aa' in the CREATE clause is already present in the same clause in this module
+  !WARNING: 'aa' in the CREATE clause is already present in the same clause in this module [-Wopen-acc-usage]
   !$acc declare create(aa)
 
   !$acc declare link(ab)
@@ -62,8 +62,20 @@ contains
   subroutine sub2(cc)
     real(8), dimension(*) :: cc
     !ERROR: Assumed-size dummy arrays may not appear on the DECLARE directive
-    !$acc declare present(cc)
+    !$acc declare copyin(cc)
   end subroutine sub2
+
+  subroutine sub2e1(cc)
+    real(8), dimension(*) :: cc
+    !OK
+    !$acc declare present(cc)
+  end subroutine sub2e1
+
+  subroutine sub2e2(cc)
+    real(8), dimension(*) :: cc
+    !OK
+    !$acc declare deviceptr(cc)
+  end subroutine sub2e2
 
   subroutine sub3()
     real :: aa(100)

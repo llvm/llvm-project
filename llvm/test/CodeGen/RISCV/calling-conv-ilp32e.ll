@@ -1152,7 +1152,7 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; ILP32E-FPELIM-NEXT:    lw a7, 0(sp)
 ; ILP32E-FPELIM-NEXT:    lw t0, 4(sp)
 ; ILP32E-FPELIM-NEXT:    lw t1, 8(sp)
-; ILP32E-FPELIM-NEXT:    andi a0, a0, 255
+; ILP32E-FPELIM-NEXT:    zext.b a0, a0
 ; ILP32E-FPELIM-NEXT:    slli a1, a1, 16
 ; ILP32E-FPELIM-NEXT:    srli a1, a1, 16
 ; ILP32E-FPELIM-NEXT:    add a0, a0, a2
@@ -1181,7 +1181,7 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; ILP32E-WITHFP-NEXT:    lw a7, 0(s0)
 ; ILP32E-WITHFP-NEXT:    lw t0, 4(s0)
 ; ILP32E-WITHFP-NEXT:    lw t1, 8(s0)
-; ILP32E-WITHFP-NEXT:    andi a0, a0, 255
+; ILP32E-WITHFP-NEXT:    zext.b a0, a0
 ; ILP32E-WITHFP-NEXT:    slli a1, a1, 16
 ; ILP32E-WITHFP-NEXT:    srli a1, a1, 16
 ; ILP32E-WITHFP-NEXT:    add a0, a0, a2
@@ -1209,7 +1209,7 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    lw a7, 0(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    lw t0, 4(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    lw t1, 8(sp)
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    andi a0, a0, 255
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    zext.b a0, a0
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    slli a1, a1, 16
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    srli a1, a1, 16
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    add a0, a0, a2
@@ -1236,7 +1236,7 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a7, 0(s0)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw t0, 4(s0)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw t1, 8(s0)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    andi a0, a0, 255
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    zext.b a0, a0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    slli a1, a1, 16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    srli a1, a1, 16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a0, a0, a2

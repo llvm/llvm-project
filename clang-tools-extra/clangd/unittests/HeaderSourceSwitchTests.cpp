@@ -76,6 +76,44 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   EXPECT_FALSE(PathResult.has_value());
 }
 
+TEST(HeaderSourceSwitchTest, ModuleInterfaces) {
+  MockFS FS;
+
+  auto FooCC = testPath("foo.cc");
+  auto FooCPPM = testPath("foo.cppm");
+  FS.Files[FooCC];
+  FS.Files[FooCPPM];
+  std::optional<Path> PathResult =
+      getCorrespondingHeaderOrSource(FooCC, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, FooCPPM);
+
+  auto Foo2CPP = testPath("foo2.cpp");
+  auto Foo2CCM = testPath("foo2.ccm");
+  FS.Files[Foo2CPP];
+  FS.Files[Foo2CCM];
+  PathResult = getCorrespondingHeaderOrSource(Foo2CPP, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, Foo2CCM);
+
+  auto Foo3CXX = testPath("foo3.cxx");
+  auto Foo3CXXM = testPath("foo3.cxxm");
+  FS.Files[Foo3CXX];
+  FS.Files[Foo3CXXM];
+  PathResult = getCorrespondingHeaderOrSource(Foo3CXX, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, Foo3CXXM);
+
+  auto Foo4CPLUSPLUS = testPath("foo4.c++");
+  auto Foo4CPLUSPLUSM = testPath("foo4.c++m");
+  FS.Files[Foo4CPLUSPLUS];
+  FS.Files[Foo4CPLUSPLUSM];
+  PathResult =
+      getCorrespondingHeaderOrSource(Foo4CPLUSPLUS, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, Foo4CPLUSPLUSM);
+}
+
 MATCHER_P(declNamed, Name, "") {
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(arg))
     if (ND->getQualifiedNameAsString() == Name)

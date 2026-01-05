@@ -29,62 +29,59 @@
 #include "test_allocator.h"
 
 template <class T>
-struct some_alloc
-{
-    typedef T value_type;
+struct some_alloc {
+  typedef T value_type;
 
-    some_alloc() {}
-    some_alloc(const some_alloc&);
-    void allocate(std::size_t);
-    void deallocate(void*, unsigned) {}
+  some_alloc() {}
+  some_alloc(const some_alloc&);
+  void allocate(std::size_t);
+  void deallocate(void*, unsigned) {}
 
-    typedef std::true_type propagate_on_container_swap;
+  typedef std::true_type propagate_on_container_swap;
 };
 
 template <class T>
-struct some_alloc2
-{
-    typedef T value_type;
+struct some_alloc2 {
+  typedef T value_type;
 
-    some_alloc2() {}
-    some_alloc2(const some_alloc2&);
-    void allocate(std::size_t);
-    void deallocate(void*, unsigned) {}
+  some_alloc2() {}
+  some_alloc2(const some_alloc2&);
+  void allocate(std::size_t);
+  void deallocate(void*, unsigned) {}
 
-    typedef std::false_type propagate_on_container_swap;
-    typedef std::true_type is_always_equal;
+  typedef std::false_type propagate_on_container_swap;
+  typedef std::true_type is_always_equal;
 };
 
-void test()
-{
-    {
-        typedef std::vector<MoveOnly> C;
-        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-    }
+void test() {
+  {
+    typedef std::vector<MoveOnly> C;
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+  }
 #if defined(_LIBCPP_VERSION)
-    {
-        typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
-        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-    }
+  {
+    typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+  }
 #endif
-    {
-        typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
-        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-    }
-    {
-        typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
+  {
+    typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+  }
+  {
+    typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
 #if TEST_STD_VER >= 14
-        //  In C++14, if POCS is set, swapping the allocator is required not to throw
-        static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+    //  In C++14, if POCS is set, swapping the allocator is required not to throw
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #else
-        static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #endif
-    }
+  }
 #if TEST_STD_VER >= 14
-    {
-        typedef std::vector<MoveOnly, some_alloc2<MoveOnly>> C;
-        // If the allocators are always equal, then the swap can be noexcept
-        static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-    }
+  {
+    typedef std::vector<MoveOnly, some_alloc2<MoveOnly>> C;
+    // If the allocators are always equal, then the swap can be noexcept
+    static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+  }
 #endif
 }

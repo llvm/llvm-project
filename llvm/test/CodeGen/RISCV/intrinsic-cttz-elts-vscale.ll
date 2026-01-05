@@ -42,7 +42,7 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; RV64-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    ret
@@ -64,7 +64,7 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV32-NEXT:    sub sp, sp, a0
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 2 * vlenb
 ; RV32-NEXT:    addi a0, sp, 32
-; RV32-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 3
 ; RV32-NEXT:    li a2, 8
@@ -79,7 +79,7 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    li a2, -1
 ; RV32-NEXT:    addi a3, sp, 32
-; RV32-NEXT:    vl2r.v v24, (a3) # Unknown-size Folded Reload
+; RV32-NEXT:    vl2r.v v24, (a3) # vscale x 16-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v24, 0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
@@ -233,11 +233,5 @@ define i16 @ctz_v8i1_i16_ret(<8 x i1> %a) {
   %res = call i16 @llvm.experimental.cttz.elts.i16.v8i1(<8 x i1> %a, i1 0)
   ret i16 %res
 }
-
-declare i64 @llvm.experimental.cttz.elts.i64.nxv8i16(<vscale x 8 x i16>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv4i32(<vscale x 4 x i32>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1>, i1)
-declare i16 @llvm.experimental.cttz.elts.i16.v16i1(<8 x i1>, i1)
 
 attributes #0 = { vscale_range(2,1024) }
