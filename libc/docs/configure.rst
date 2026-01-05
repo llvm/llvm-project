@@ -30,11 +30,14 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
 * **"errno" options**
     - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM_INLINE.
+* **"fenv" options**
+    - ``LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT``: Trap with SIGFPE when feraiseexcept is called with unmasked floating point exceptions, similar to glibc's behavior.  This is currently working only on x86 with SSE.
 * **"general" options**
     - ``LIBC_ADD_NULL_CHECKS``: Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior.
 * **"math" options**
     - ``LIBC_CONF_FREXP_INF_NAN_EXPONENT``: The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configure an explicit exp value for Inf/NaN inputs.
-    - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST.
+    - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configure optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST.
+    - ``LIBC_CONF_MATH_USE_SYSTEM_FENV``: Use C standard fenv.h calls from the system libc instead our internal fenv implementations.
 * **"printf" options**
     - ``LIBC_CONF_PRINTF_DISABLE_FIXED_POINT``: Disable printing fixed point values in printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_FLOAT``: Disable printing floating point values in printf and friends.

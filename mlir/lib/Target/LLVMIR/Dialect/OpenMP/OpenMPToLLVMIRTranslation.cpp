@@ -155,12 +155,12 @@ public:
   // Allocate space for linear variabes
   void createLinearVar(llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation,
-                       mlir::Value &linearVar, int idx) {
+                       llvm::Value *linearVar, int idx) {
     linearPreconditionVars.push_back(
         builder.CreateAlloca(linearVarTypes[idx], nullptr, ".linear_var"));
     llvm::Value *linearLoopBodyTemp =
         builder.CreateAlloca(linearVarTypes[idx], nullptr, ".linear_result");
-    linearOrigVal.push_back(moduleTranslation.lookupValue(linearVar));
+    linearOrigVal.push_back(linearVar);
     linearLoopBodyTemps.push_back(linearLoopBodyTemp);
   }
 
@@ -187,17 +187,37 @@ public:
                        llvm::Value *loopInductionVar) {
     builder.SetInsertPoint(loopBody->getTerminator());
     for (size_t index = 0; index < linearPreconditionVars.size(); index++) {
-      // Emit increments for linear vars
-      llvm::LoadInst *linearVarStart = builder.CreateLoad(
-          linearVarTypes[index], linearPreconditionVars[index]);
-      auto mulInst = builder.CreateMul(loopInductionVar, linearSteps[index]);
-      if (linearVarTypes[index]->isIntegerTy()) {
-        auto addInst = builder.CreateAdd(linearVarStart, mulInst);
+      llvm::Type *linearVarType = linearVarTypes[index];
+      llvm::Value *iv = loopInductionVar;
+      llvm::Value *step = linearSteps[index];
+
+      if (!iv->getType()->isIntegerTy())
+        llvm_unreachable("OpenMP loop induction variable must be an integer "
+                         "type");
+
+      if (linearVarType->isIntegerTy()) {
+        // Integer path: normalize all arithmetic to linearVarType
+        iv = builder.CreateSExtOrTrunc(iv, linearVarType);
+        step = builder.CreateSExtOrTrunc(step, linearVarType);
+
+        llvm::LoadInst *linearVarStart =
+            builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
+        llvm::Value *mulInst = builder.CreateMul(iv, step);
+        llvm::Value *addInst = builder.CreateAdd(linearVarStart, mulInst);
         builder.CreateStore(addInst, linearLoopBodyTemps[index]);
-      } else if (linearVarTypes[index]->isFloatingPointTy()) {
-        auto cvt = builder.CreateSIToFP(mulInst, linearVarTypes[index]);
-        auto addInst = builder.CreateFAdd(linearVarStart, cvt);
+      } else if (linearVarType->isFloatingPointTy()) {
+        // Float path: perform multiply in integer, then convert to float
+        step = builder.CreateSExtOrTrunc(step, iv->getType());
+        llvm::Value *mulInst = builder.CreateMul(iv, step);
+
+        llvm::LoadInst *linearVarStart =
+            builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
+        llvm::Value *mulFp = builder.CreateSIToFP(mulInst, linearVarType);
+        llvm::Value *addInst = builder.CreateFAdd(linearVarStart, mulFp);
         builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+      } else {
+        llvm_unreachable(
+            "Linear variable must be of integer or floating-point type");
       }
     }
   }
@@ -245,6 +265,16 @@ public:
     builder.SetInsertPoint(linearExitBB->getTerminator());
     return moduleTranslation.getOpenMPBuilder()->createBarrier(
         builder.saveIP(), llvm::omp::OMPD_barrier);
+  }
+
+  // Emit stores for linear variables. Useful in case of SIMD
+  // construct.
+  void emitStoresForLinearVar(llvm::IRBuilderBase &builder) {
+    for (size_t index = 0; index < linearOrigVal.size(); index++) {
+      llvm::LoadInst *linearVarTemp =
+          builder.CreateLoad(linearVarTypes[index], linearLoopBodyTemps[index]);
+      builder.CreateStore(linearVarTemp, linearOrigVal[index]);
+    }
   }
 
   // Rewrite all uses of the original variable in `BBName`
@@ -331,10 +361,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getInReductionVars().empty() || op.getInReductionByref() ||
         op.getInReductionSyms())
       result = todo("in_reduction");
-  };
-  auto checkIsDevicePtr = [&todo](auto op, LogicalResult &result) {
-    if (!op.getIsDevicePtrVars().empty())
-      result = todo("is_device_ptr");
   };
   auto checkNowait = [&todo](auto op, LogicalResult &result) {
     if (op.getNowait())
@@ -435,7 +461,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkBare(op, result);
         checkDevice(op, result);
         checkInReduction(op, result);
-        checkIsDevicePtr(op, result);
       })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
@@ -2628,8 +2653,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.registerType(moduleTranslation, linearVarType);
 
     for (auto [idx, linearVar] : llvm::enumerate(wsloopOp.getLinearVars()))
-      linearClauseProcessor.createLinearVar(builder, moduleTranslation,
-                                            linearVar, idx);
+      linearClauseProcessor.createLinearVar(
+          builder, moduleTranslation, moduleTranslation.lookupValue(linearVar),
+          idx);
     for (mlir::Value linearStep : wsloopOp.getLinearStepVars())
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
@@ -2947,6 +2973,11 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
 
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+      builder, moduleTranslation, privateVarsInfo, allocaIP);
+  if (handleError(afterAllocas, opInst).failed())
+    return failure();
+
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
 
@@ -2954,17 +2985,28 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     auto linearVarTypes = simdOp.getLinearVarTypes().value();
     for (mlir::Attribute linearVarType : linearVarTypes)
       linearClauseProcessor.registerType(moduleTranslation, linearVarType);
-    for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars()))
-      linearClauseProcessor.createLinearVar(builder, moduleTranslation,
-                                            linearVar, idx);
+    for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars())) {
+      bool isImplicit = false;
+      for (auto [mlirPrivVar, llvmPrivateVar] : llvm::zip_equal(
+               privateVarsInfo.mlirVars, privateVarsInfo.llvmVars)) {
+        // If the linear variable is implicit, reuse the already
+        // existing llvm::Value
+        if (linearVar == mlirPrivVar) {
+          isImplicit = true;
+          linearClauseProcessor.createLinearVar(builder, moduleTranslation,
+                                                llvmPrivateVar, idx);
+          break;
+        }
+      }
+
+      if (!isImplicit)
+        linearClauseProcessor.createLinearVar(
+            builder, moduleTranslation,
+            moduleTranslation.lookupValue(linearVar), idx);
+    }
     for (mlir::Value linearStep : simdOp.getLinearStepVars())
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
-
-  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-      builder, moduleTranslation, privateVarsInfo, allocaIP);
-  if (handleError(afterAllocas, opInst).failed())
-    return failure();
 
   if (failed(allocReductionVars(simdOp, reductionArgs, builder,
                                 moduleTranslation, allocaIP, reductionDecls,
@@ -3047,6 +3089,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             : nullptr,
                         order, simdlen, safelen);
 
+  linearClauseProcessor.emitStoresForLinearVar(builder);
   for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
     linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
                                          index);
@@ -3986,6 +4029,9 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
   auto mapTypeToBool = [&mlirFlags](omp::ClauseMapFlags flag) {
     return (mlirFlags & flag) == flag;
   };
+  const bool hasExplicitMap =
+      (mlirFlags & ~omp::ClauseMapFlags::is_device_ptr) !=
+      omp::ClauseMapFlags::none;
 
   llvm::omp::OpenMPOffloadMappingFlags mapType =
       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
@@ -4025,6 +4071,12 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
 
   if (mapTypeToBool(omp::ClauseMapFlags::attach))
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::is_device_ptr)) {
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
+    if (!hasExplicitMap)
+      mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
+  }
 
   return mapType;
 }
@@ -4149,6 +4201,9 @@ static void collectMapDataFromMapOperands(
     llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
     auto mapType = convertClauseMapFlags(mapOp.getMapType());
     auto mapTypeAlways = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+    bool isDevicePtr =
+        (mapOp.getMapType() & omp::ClauseMapFlags::is_device_ptr) !=
+        omp::ClauseMapFlags::none;
 
     mapData.OriginalValue.push_back(origValue);
     mapData.BasePointers.push_back(origValue);
@@ -4175,14 +4230,18 @@ static void collectMapDataFromMapOperands(
         mapData.Mappers.push_back(nullptr);
       }
     } else {
+      // For is_device_ptr we need the map type to propagate so the runtime
+      // can materialize the device-side copy of the pointer container.
       mapData.Types.push_back(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+          isDevicePtr ? mapType
+                      : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
       mapData.Mappers.push_back(nullptr);
     }
     mapData.Names.push_back(LLVM::createMappingInformation(
         mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
     mapData.DevicePointers.push_back(
-        llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
+        isDevicePtr ? llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer
+                    : llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
     mapData.IsAMapping.push_back(false);
     mapData.IsAMember.push_back(checkIsAMember(hasDevAddrOperands, mapOp));
   }

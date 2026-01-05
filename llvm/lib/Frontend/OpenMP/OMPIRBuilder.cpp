@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -763,6 +764,28 @@ static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
   }
 }
 
+static void hoistNonEntryAllocasToEntryBlock(llvm::BasicBlock &Block) {
+  llvm::SmallVector<llvm::Instruction *> AllocasToMove;
+
+  auto ShouldHoistAlloca = [](const llvm::AllocaInst &AllocaInst) {
+    // TODO: For now, we support simple static allocations, we might need to
+    // move non-static ones as well. However, this will need further analysis to
+    // move the lenght arguments as well.
+    return !AllocaInst.isArrayAllocation();
+  };
+
+  for (llvm::Instruction &Inst : Block)
+    if (auto *AllocaInst = llvm::dyn_cast<llvm::AllocaInst>(&Inst))
+      if (ShouldHoistAlloca(*AllocaInst))
+        AllocasToMove.push_back(AllocaInst);
+
+  auto InsertPoint =
+      Block.getParent()->getEntryBlock().getTerminator()->getIterator();
+
+  for (llvm::Instruction *AllocaInst : AllocasToMove)
+    AllocaInst->moveBefore(InsertPoint);
+}
+
 void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
@@ -867,6 +890,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     // Run a user callback, e.g. to add attributes.
     if (OI.PostOutlineCB)
       OI.PostOutlineCB(*OutlinedFn);
+
+    if (OI.FixUpNonEntryAllocas) {
+      PostDominatorTree PostDomTree(*OutlinedFn);
+      for (llvm::BasicBlock &BB : *OutlinedFn)
+        if (PostDomTree.properlyDominates(&BB, &OutlinedFn->getEntryBlock()))
+          hoistNonEntryAllocasToEntryBlock(BB);
+    }
   }
 
   // Remove work items that have been completed.
@@ -1369,7 +1399,7 @@ Error OpenMPIRBuilder::emitCancelationCheckImpl(
 // Callback used to create OpenMP runtime calls to support
 // omp parallel clause for the device.
 // We need to use this callback to replace call to the OutlinedFn in OuterFn
-// by the call to the OpenMP DeviceRTL runtime function (kmpc_parallel_51)
+// by the call to the OpenMP DeviceRTL runtime function (kmpc_parallel_60)
 static void targetParallelCallback(
     OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn, Function *OuterFn,
     BasicBlock *OuterAllocaBB, Value *Ident, Value *IfCondition,
@@ -1407,7 +1437,7 @@ static void targetParallelCallback(
     Args = Builder.CreatePointerCast(ArgsAlloca, PtrTy);
   Builder.restoreIP(CurrentIP);
 
-  // Store captured vars which are used by kmpc_parallel_51
+  // Store captured vars which are used by kmpc_parallel_60
   for (unsigned Idx = 0; Idx < NumCapturedVars; Idx++) {
     Value *V = *(CI->arg_begin() + 2 + Idx);
     Value *StoreAddress = Builder.CreateConstInBoundsGEP2_64(
@@ -1419,8 +1449,8 @@ static void targetParallelCallback(
       IfCondition ? Builder.CreateSExtOrTrunc(IfCondition, OMPIRBuilder->Int32)
                   : Builder.getInt32(1);
 
-  // Build kmpc_parallel_51 call
-  Value *Parallel51CallArgs[] = {
+  // Build kmpc_parallel_60 call
+  Value *Parallel60CallArgs[] = {
       /* identifier*/ Ident,
       /* global thread num*/ ThreadID,
       /* if expression */ Cond,
@@ -1429,14 +1459,15 @@ static void targetParallelCallback(
       /* outlined function */ &OutlinedFn,
       /* wrapper function */ NullPtrValue,
       /* arguments of the outlined funciton*/ Args,
-      /* number of arguments */ Builder.getInt64(NumCapturedVars)};
+      /* number of arguments */ Builder.getInt64(NumCapturedVars),
+      /* strict for number of threads */ Builder.getInt32(0)};
 
   FunctionCallee RTLFn =
-      OMPIRBuilder->getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_parallel_51);
+      OMPIRBuilder->getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_parallel_60);
 
-  OMPIRBuilder->createRuntimeFunctionCall(RTLFn, Parallel51CallArgs);
+  OMPIRBuilder->createRuntimeFunctionCall(RTLFn, Parallel60CallArgs);
 
-  LLVM_DEBUG(dbgs() << "With kmpc_parallel_51 placed: "
+  LLVM_DEBUG(dbgs() << "With kmpc_parallel_60 placed: "
                     << *Builder.GetInsertBlock()->getParent() << "\n");
 
   // Initialize the local TID stack location with the argument value.
@@ -1693,6 +1724,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
                              IfCondition, NumThreads, PrivTID, PrivTIDAddr,
                              ThreadID, ToBeDeletedVec);
     };
+    OI.FixUpNonEntryAllocas = true;
   } else {
     // Generate OpenMP host runtime call
     OI.PostOutlineCB = [=, ToBeDeletedVec =
@@ -1700,6 +1732,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
       hostParallelCallback(this, OutlinedFn, OuterFn, Ident, IfCondition,
                            PrivTID, PrivTIDAddr, ToBeDeletedVec);
     };
+    OI.FixUpNonEntryAllocas = true;
   }
 
   OI.OuterAllocaBB = OuterAllocaBlock;
@@ -5078,7 +5111,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
     bool NeedsBarrier, Value *ChunkSize, OMPScheduleType SchedType,
     Value *DistScheduleChunkSize, OMPScheduleType DistScheduleSchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
-  assert(ChunkSize || DistScheduleChunkSize && "Chunk size is required");
+  assert((ChunkSize || DistScheduleChunkSize) && "Chunk size is required");
 
   LLVMContext &Ctx = CLI->getFunction()->getContext();
   Value *IV = CLI->getIndVar();
@@ -5140,7 +5173,10 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
       ConstantInt::get(I32Type, static_cast<int>(DistScheduleSchedType));
   Builder.CreateStore(Zero, PLowerBound);
   Value *OrigUpperBound = Builder.CreateSub(CastedTripCount, One);
-  Builder.CreateStore(OrigUpperBound, PUpperBound);
+  Value *IsTripCountZero = Builder.CreateICmpEQ(CastedTripCount, Zero);
+  Value *UpperBound =
+      Builder.CreateSelect(IsTripCountZero, Zero, OrigUpperBound);
+  Builder.CreateStore(UpperBound, PUpperBound);
   Builder.CreateStore(One, PStride);
 
   // Call the "init" function and update the trip count of the loop with the
@@ -10703,6 +10739,12 @@ void OpenMPIRBuilder::setCorrectMemberOfFlag(
       static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
           (Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
           omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF))
+    return;
+
+  // Entries with ATTACH are not members-of anything. They are handled
+  // separately by the runtime after other maps have been handled.
+  if (static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
+          Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH))
     return;
 
   // Reset the placeholder value to prepare the flag for the assignment of the

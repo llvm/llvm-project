@@ -1078,7 +1078,7 @@ nonpacked9:
     .seh_startepilogue
     mov sp,  x29
     .seh_set_fp
-    ldp x29, lr,  [sp], #32
+    ldp x29, lr,  [sp], #16
     .seh_save_fplr_x 16
     add sp, sp, #32
     .seh_stackalloc 32

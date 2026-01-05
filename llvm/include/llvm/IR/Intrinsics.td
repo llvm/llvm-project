@@ -754,6 +754,19 @@ class MSBuiltin<string name> {
   string MSBuiltinName = name;
 }
 
+/// Utility class for intrinsics that
+/// 1. Don't touch memory or any hidden state
+/// 2. Can be freely speculated, and
+/// 3. Will not create undef or poison on defined inputs.
+class PureIntrinsic<list<LLVMType> ret_types,
+                list<LLVMType> param_types = [],
+                list<IntrinsicProperty> intr_properties = [],
+                string name = "",
+                list<SDNodeProperty> sd_properties = []>
+                : DefaultAttrsIntrinsic<ret_types, param_types,
+                            intr_properties # [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison],
+                            name, sd_properties>;
+
 #ifndef TEST_INTRINSICS_SUPPRESS_DEFS
 
 //===--------------- Variable Argument Handling Intrinsics ----------------===//
@@ -1884,6 +1897,20 @@ def int_allow_runtime_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_metadata
     [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>,
     ClangBuiltin<"__builtin_allow_runtime_check">;
 
+// Return true if the specific sanitizer is enabled for the function.
+def int_allow_sanitize_address
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_thread
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_memory
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_hwaddress
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
                                             [Throws]>;
@@ -1940,8 +1967,7 @@ def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
 // Intrinsic to mask out bits of a pointer.
 // First argument must be pointer or vector of pointer. This is checked by the
 // verifier.
-def int_ptrmask: DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty],
-                           [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
+def int_ptrmask: PureIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
 
 // Intrinsic to wrap a thread local variable.
 def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>],
@@ -2501,13 +2527,6 @@ def int_experimental_vp_splice:
 def int_experimental_vp_reverse:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>,
-                         LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                         llvm_i32_ty],
-                        [IntrNoMem, IntrSpeculatable]>;
-
-def int_experimental_vp_splat:
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMVectorElementType<0>,
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                          llvm_i32_ty],
                         [IntrNoMem, IntrSpeculatable]>;

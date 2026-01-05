@@ -289,6 +289,7 @@ protected:
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
+  bool HasSWakeupBarrier = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -453,30 +454,6 @@ public:
     return getGeneration() == SOUTHERN_ISLANDS;
   }
 
-  bool hasBFE() const {
-    return true;
-  }
-
-  bool hasBFI() const {
-    return true;
-  }
-
-  bool hasBFM() const {
-    return hasBFE();
-  }
-
-  bool hasBCNT(unsigned Size) const {
-    return true;
-  }
-
-  bool hasFFBL() const {
-    return true;
-  }
-
-  bool hasFFBH() const {
-    return true;
-  }
-
   bool hasMed3_16() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -490,10 +467,6 @@ public:
   }
 
   bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
-
-  bool hasCARRY() const {
-    return true;
-  }
 
   bool hasFMA() const {
     return FMA;
@@ -1612,6 +1585,9 @@ public:
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
+  // \returns true if target has S_WAKEUP_BARRIER instruction.
+  bool hasSWakeupBarrier() const { return HasSWakeupBarrier; }
+
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
   // extended VA to 57 bits.
@@ -1622,6 +1598,10 @@ public:
   bool needsKernArgPreloadProlog() const {
     return hasKernargPreload() && !GFX1250Insts;
   }
+
+  bool hasCondSubInsts() const { return GFX12Insts; }
+
+  bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

@@ -357,6 +357,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
+  if (isa<cir::DataMemberAttr>(attrType)) {
+    // More detailed type verifications are already done in
+    // DataMemberAttr::verify. Don't need to repeat here.
+    return success();
+  }
+
   if (isa<cir::ZeroAttr>(attrType)) {
     if (isa<cir::RecordType, cir::ArrayType, cir::VectorType, cir::ComplexType>(
             opType))
@@ -1234,6 +1240,27 @@ LogicalResult cir::ScopeOp::verify() {
   return success();
 }
 
+LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  // Only fold "trivial" scopes: a single block containing only a `cir.yield`.
+  if (!getRegion().hasOneBlock())
+    return failure();
+  Block &block = getRegion().front();
+  if (block.getOperations().size() != 1)
+    return failure();
+
+  auto yield = dyn_cast<cir::YieldOp>(block.front());
+  if (!yield)
+    return failure();
+
+  // Only fold when the scope produces a value.
+  if (getNumResults() != 1 || yield.getNumOperands() != 1)
+    return failure();
+
+  results.push_back(yield.getOperand(0));
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
@@ -1245,6 +1272,65 @@ mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
 
 Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
   return getDest();
+}
+
+//===----------------------------------------------------------------------===//
+// IndirectBrCondOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands
+cir::IndirectBrOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return mlir::SuccessorOperands(getSuccOperandsMutable()[index]);
+}
+
+ParseResult parseIndirectBrOpSucessors(
+    OpAsmParser &parser, Type &flagType,
+    SmallVectorImpl<Block *> &succOperandBlocks,
+    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &succOperands,
+    SmallVectorImpl<SmallVector<Type>> &succOperandsTypes) {
+  if (failed(parser.parseCommaSeparatedList(
+          OpAsmParser::Delimiter::Square,
+          [&]() {
+            Block *destination = nullptr;
+            SmallVector<OpAsmParser::UnresolvedOperand> operands;
+            SmallVector<Type> operandTypes;
+
+            if (parser.parseSuccessor(destination).failed())
+              return failure();
+
+            if (succeeded(parser.parseOptionalLParen())) {
+              if (failed(parser.parseOperandList(
+                      operands, OpAsmParser::Delimiter::None)) ||
+                  failed(parser.parseColonTypeList(operandTypes)) ||
+                  failed(parser.parseRParen()))
+                return failure();
+            }
+            succOperandBlocks.push_back(destination);
+            succOperands.emplace_back(operands);
+            succOperandsTypes.emplace_back(operandTypes);
+            return success();
+          },
+          "successor blocks")))
+    return failure();
+  return success();
+}
+
+void printIndirectBrOpSucessors(OpAsmPrinter &p, cir::IndirectBrOp op,
+                                Type flagType, SuccessorRange succs,
+                                OperandRangeRange succOperands,
+                                const TypeRangeRange &succOperandsTypes) {
+  p << "[";
+  llvm::interleave(
+      llvm::zip(succs, succOperands),
+      [&](auto i) {
+        p.printNewline();
+        p.printSuccessorAndUseList(std::get<0>(i), std::get<1>(i));
+      },
+      [&] { p << ','; });
+  if (!succOperands.empty())
+    p.printNewline();
+  p << "]";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1293,44 +1379,6 @@ void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
 //===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
-
-static ParseResult parseSwitchOp(OpAsmParser &parser, mlir::Region &regions,
-                                 mlir::OpAsmParser::UnresolvedOperand &cond,
-                                 mlir::Type &condType) {
-  cir::IntType intCondType;
-
-  if (parser.parseLParen())
-    return mlir::failure();
-
-  if (parser.parseOperand(cond))
-    return mlir::failure();
-  if (parser.parseColon())
-    return mlir::failure();
-  if (parser.parseCustomTypeWithFallback(intCondType))
-    return mlir::failure();
-  condType = intCondType;
-
-  if (parser.parseRParen())
-    return mlir::failure();
-  if (parser.parseRegion(regions, /*arguments=*/{}, /*argTypes=*/{}))
-    return failure();
-
-  return mlir::success();
-}
-
-static void printSwitchOp(OpAsmPrinter &p, cir::SwitchOp op,
-                          mlir::Region &bodyRegion, mlir::Value condition,
-                          mlir::Type condType) {
-  p << "(";
-  p << condition;
-  p << " : ";
-  p.printStrippedAttrOrType(condType);
-  p << ")";
-
-  p << ' ';
-  p.printRegion(bodyRegion, /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/true);
-}
 
 void cir::SwitchOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &region) {
@@ -1672,7 +1720,10 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (auto g = dyn_cast<GlobalOp>(op)) {
     symTy = g.getSymType();
     assert(!cir::MissingFeatures::addressSpace());
-    assert(!cir::MissingFeatures::opGlobalThreadLocal());
+    // Verify that for thread local global access, the global needs to
+    // be marked with tls bits.
+    if (getTls() && !g.getTlsModel())
+      return emitOpError("access to global not marked thread local");
   } else if (auto f = dyn_cast<FuncOp>(op)) {
     symTy = f.getFunctionType();
   } else {
@@ -1880,6 +1931,19 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     hasAlias = true;
   }
 
+  mlir::StringAttr personalityNameAttr = getPersonalityAttrName(state.name);
+  if (parser.parseOptionalKeyword("personality").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    mlir::StringAttr personalityAttr;
+    if (parser.parseOptionalSymbolName(personalityAttr).failed())
+      return failure();
+    state.addAttribute(personalityNameAttr,
+                       FlatSymbolRefAttr::get(personalityAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+  }
+
   auto parseGlobalDtorCtor =
       [&](StringRef keyword,
           llvm::function_ref<void(std::optional<int> prio)> createAttr)
@@ -2081,6 +2145,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << ")";
   }
 
+  if (std::optional<StringRef> personalityName = getPersonality()) {
+    p << " personality(";
+    p.printSymbolName(*personalityName);
+    p << ")";
+  }
+
   if (auto specialMemberAttr = getCxxSpecialMember()) {
     p << " special_member<";
     p.printAttribute(*specialMemberAttr);
@@ -2272,6 +2342,25 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+LogicalResult cir::SelectOp::verify() {
+  // AllTypesMatch already guarantees trueVal and falseVal have matching types.
+  auto condTy = dyn_cast<cir::VectorType>(getCondition().getType());
+
+  // If condition is not a vector, no further checks are needed.
+  if (!condTy)
+    return success();
+
+  // When condition is a vector, both other operands must also be vectors.
+  if (!isa<cir::VectorType>(getTrueValue().getType()) ||
+      !isa<cir::VectorType>(getFalseValue().getType())) {
+    return emitOpError()
+           << "expected both true and false operands to be vector types "
+              "when the condition is a vector boolean type";
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // ShiftOp
 //===----------------------------------------------------------------------===//
@@ -2437,6 +2526,21 @@ LogicalResult cir::CopyOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GetRuntimeMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::GetRuntimeMemberOp::verify() {
+  auto recordTy = mlir::cast<RecordType>(getAddr().getType().getPointee());
+  cir::DataMemberType memberPtrTy = getMember().getType();
+
+  if (recordTy != memberPtrTy.getClassTy())
+    return emitError() << "record type does not match the member pointer type";
+  if (getType().getPointee() != memberPtrTy.getMemberTy())
+    return emitError() << "result type does not match the member pointer type";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
@@ -2453,7 +2557,6 @@ LogicalResult cir::GetMemberOp::verify() {
 
   return mlir::success();
 }
-
 //===----------------------------------------------------------------------===//
 // VecCreateOp
 //===----------------------------------------------------------------------===//

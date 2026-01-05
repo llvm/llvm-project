@@ -419,8 +419,8 @@ func.func @lds_barrier() {
   // GFX942-NEXT: rocdl.s.barrier
   // GFX10-NEXT: rocdl.s.barrier
   // GFX11-NEXT: rocdl.s.barrier
-  // GFX12-NEXT: rocdl.s.barrier.signal -1
-  // GFX12-NEXT: rocdl.s.barrier.wait -1
+  // GFX12-NEXT: rocdl.s.barrier.signal id = -1
+  // GFX12-NEXT: rocdl.s.barrier.wait id = -1
   // CHECK-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
   amdgpu.lds_barrier
   func.return

@@ -214,6 +214,8 @@ public:
       if (Value *GlobalElem =
               Global->getNumOperands() > 0 ? Global->getOperand(0) : nullptr)
         ElementTy = findDeducedCompositeType(GlobalElem);
+      else if (const Function *Fn = dyn_cast<Function>(Global))
+        ElementTy = SPIRV::getOriginalFunctionType(*Fn);
     }
     return ElementTy ? ElementTy : Global->getValueType();
   }
@@ -612,6 +614,9 @@ public:
                                          bool IsWritable, bool EmitIr = false);
 
   SPIRVType *getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+
+  SPIRVType *getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
+                                               Type *ElemType);
 
   SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
                                    const TargetExtType *T, bool EmitIr = false);

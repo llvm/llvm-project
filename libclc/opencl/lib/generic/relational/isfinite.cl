@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/relational/isfinite.h>
 #include <clc/relational/clc_isfinite.h>
 
 #define __CLC_FUNCTION isfinite

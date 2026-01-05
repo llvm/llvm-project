@@ -103,7 +103,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
-  auto *Blend = new VPBlendRecipe(Phi, {DefI}, {});
+  auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -385,7 +385,7 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhiInExitVPIRBB) {
   auto *HeaderBlock =
       cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getEntry());
   VPInstruction *DefI =
-      new VPInstruction(VPInstruction::ExtractLastElement,
+      new VPInstruction(VPInstruction::ExtractLastLane,
                         {HeaderBlock->front().getVPSingleValue()});
   DefI->insertBefore(Plan->getMiddleBlock()->getTerminator());
   Plan->getExitBlocks()[0]->front().addOperand(DefI);

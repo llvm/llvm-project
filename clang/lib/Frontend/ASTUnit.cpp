@@ -745,7 +745,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
           Filename, TmpFileMgr, *AST->ModCache, PCHContainerRdr,
           /*FindModuleFileExtensions=*/true, Collector,
           /*ValidateDiagnosticOptions=*/true, ASTReader::ARR_None)) {
-    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);
     return nullptr;
   }
 
@@ -847,7 +847,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   case ASTReader::VersionMismatch:
   case ASTReader::ConfigurationMismatch:
   case ASTReader::HadErrors:
-    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);
     return nullptr;
   }
 
@@ -1133,7 +1133,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                                                   std::move(PCHContainerOps));
 
   // Clean up on error, disengage it if the function returns successfully.
-  auto CleanOnError = llvm::make_scope_exit([&]() {
+  llvm::scope_exit CleanOnError([&]() {
     // Remove the overridden buffer we used for the preamble.
     SavedMainFileBuffer = nullptr;
 

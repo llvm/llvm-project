@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -305,6 +306,13 @@ static cl::opt<std::string> InstrumentColdFuncOnlyPath(
              "with --pgo-instrument-cold-function-only)"),
     cl::Hidden);
 
+// TODO: There is a similar flag in WPD pass, we should consolidate them by
+// parsing the option only once in PassBuilder and share it across both places.
+static cl::opt<bool> EnableDevirtualizeSpeculatively(
+    "enable-devirtualize-speculatively",
+    cl::desc("Enable speculative devirtualization optimization"),
+    cl::init(false));
+
 extern cl::opt<std::string> UseCtxProfile;
 extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
 
@@ -326,6 +334,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   MergeFunctions = EnableMergeFunctions;
   InlinerThreshold = -1;
   EagerlyInvalidateAnalyses = EnableEagerlyInvalidateAnalyses;
+  DevirtualizeSpeculatively = EnableDevirtualizeSpeculatively;
 }
 
 namespace llvm {
@@ -403,6 +412,9 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+  // Count the types of instructions used
+  if (AreStatisticsEnabled())
+    MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
 }
 
 // Helper to check if the current compilation phase is preparing for LTO
@@ -1655,6 +1667,34 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (!LTOPreLink)
     MPM.addPass(RelLookupTableConverterPass());
 
+  // Add devirtualization pass only when LTO is not enabled, as otherwise
+  // the pass is already enabled in the LTO pipeline.
+  if (PTO.DevirtualizeSpeculatively && LTOPhase == ThinOrFullLTOPhase::None) {
+    // TODO: explore a better pipeline configuration that can improve
+    // compilation time overhead.
+    MPM.addPass(WholeProgramDevirtPass(
+        /*ExportSummary*/ nullptr,
+        /*ImportSummary*/ nullptr,
+        /*DevirtSpeculatively*/ PTO.DevirtualizeSpeculatively));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
+    // Given that the devirtualization creates more opportunities for inlining,
+    // we run the Inliner again here to maximize the optimization gain we
+    // get from devirtualization.
+    // Also, we can't run devirtualization before inlining because the
+    // devirtualization depends on the passes optimizing/eliminating vtable GVs
+    // and those passes are only effective after inlining.
+    if (EnableModuleInliner) {
+      MPM.addPass(ModuleInlinerPass(getInlineParamsFromOptLevel(Level),
+                                    UseInlineAdvisor,
+                                    ThinOrFullLTOPhase::None));
+    } else {
+      MPM.addPass(ModuleInlinerWrapperPass(
+          getInlineParamsFromOptLevel(Level),
+          /* MandatoryFirst */ true,
+          InlineContext{ThinOrFullLTOPhase::None, InlinePass::CGSCCInliner}));
+    }
+  }
   return MPM;
 }
 
@@ -2384,7 +2424,8 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
 
-  MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+  // Emit annotation remarks.
+  addAnnotationRemarksPass(MPM);
 
   return MPM;
 }

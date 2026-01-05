@@ -8,10 +8,10 @@
 
 ; CHECK: Performing Loop Fusion on function non_cfe
 ; CHECK: Fusion Candidates:
-; CHECK: *** Fusion Candidate Set ***
+; CHECK: *** Fusion Candidate List ***
 ; CHECK: bb
 ; CHECK: ****************************
-; CHECK: *** Fusion Candidate Set ***
+; CHECK: *** Fusion Candidate List ***
 ; CHECK: bb20.preheader
 ; CHECK: ****************************
 ; CHECK: Loop Fusion complete
@@ -81,14 +81,12 @@ bb33:                                             ; preds = %bb33.loopexit, %bb1
 
 ; CHECK: Performing Loop Fusion on function non_adjacent
 ; CHECK: Fusion Candidates:
-; CHECK: *** Fusion Candidate Set ***
+; CHECK: *** Fusion Candidate List ***
 ; CHECK-NEXT: [[LOOP1PREHEADER:bb[0-9]*]]
+; CHECK-NEXT: ****************************
+; CHECK: *** Fusion Candidate List ***
 ; CHECK-NEXT: [[LOOP2PREHEADER:bb[0-9]*]]
 ; CHECK-NEXT: ****************************
-; CHECK: Attempting fusion on Candidate Set:
-; CHECK-NEXT: [[LOOP1PREHEADER]]
-; CHECK-NEXT: [[LOOP2PREHEADER]]
-; CHECK: Fusion candidates are not adjacent. Not fusing.
 ; CHECK: Loop Fusion complete
 define void @non_adjacent(ptr noalias %arg) {
 bb:
@@ -143,11 +141,11 @@ bb25:                                             ; preds = %bb15
 
 ; CHECK: Performing Loop Fusion on function different_bounds
 ; CHECK: Fusion Candidates:
-; CHECK: *** Fusion Candidate Set ***
+; CHECK: *** Fusion Candidate List ***
 ; CHECK-NEXT: [[LOOP1PREHEADER:bb[0-9]*]]
 ; CHECK-NEXT: [[LOOP2PREHEADER:bb[0-9]*]]
 ; CHECK-NEXT: ****************************
-; CHECK: Attempting fusion on Candidate Set:
+; CHECK: Attempting fusion on Candidate List:
 ; CHECK-NEXT: [[LOOP1PREHEADER]]
 ; CHECK-NEXT: [[LOOP2PREHEADER]]
 ; CHECK: Fusion candidates do not have identical trip counts. Not fusing.
@@ -157,7 +155,7 @@ bb:
   br label %bb5
 
 bb4:                                              ; preds = %bb11
-  br label %bb13
+  br label %bb16
 
 bb5:                                              ; preds = %bb, %bb11
   %.013 = phi i64 [ 0, %bb ], [ %tmp12, %bb11 ]
@@ -175,14 +173,11 @@ bb11:                                             ; preds = %bb5
   %exitcond2 = icmp ne i64 %tmp12, 100
   br i1 %exitcond2, label %bb5, label %bb4
 
-bb13:                                             ; preds = %bb4
-  br label %bb16
-
 bb15:                                             ; preds = %bb23
   br label %bb25
 
-bb16:                                             ; preds = %bb13, %bb23
-  %.02 = phi i64 [ 0, %bb13 ], [ %tmp24, %bb23 ]
+bb16:                                             ; preds = %bb4, %bb23
+  %.02 = phi i64 [ 0, %bb4 ], [ %tmp24, %bb23 ]
   %tmp17 = add nsw i64 %.02, -3
   %tmp18 = add nuw nsw i64 %.02, 3
   %tmp19 = mul nsw i64 %tmp17, %tmp18
@@ -206,11 +201,11 @@ bb25:                                             ; preds = %bb15
 
 ; CHECK: Performing Loop Fusion on function negative_dependence
 ; CHECK: Fusion Candidates:
-; CHECK: *** Fusion Candidate Set ***
+; CHECK: *** Fusion Candidate List ***
 ; CHECK-NEXT: [[LOOP1PREHEADER:bb[0-9]*]]
 ; CHECK-NEXT: [[LOOP2PREHEADER:bb[0-9]*]]
 ; CHECK-NEXT: ****************************
-; CHECK: Attempting fusion on Candidate Set:
+; CHECK: Attempting fusion on Candidate List:
 ; CHECK-NEXT: [[LOOP1PREHEADER]]
 ; CHECK-NEXT: [[LOOP2PREHEADER]]
 ; CHECK: Memory dependencies do not allow fusion!
@@ -260,11 +255,11 @@ bb19:                                             ; preds = %bb18
 
 ; CHECK: Performing Loop Fusion on function sumTest
 ; CHECK: Fusion Candidates:
-; CHECK: *** Fusion Candidate Set ***
+; CHECK: *** Fusion Candidate List ***
 ; CHECK-NEXT: [[LOOP1PREHEADER:bb[0-9]*]]
 ; CHECK-NEXT: [[LOOP2PREHEADER:bb[0-9]*]]
 ; CHECK-NEXT: ****************************
-; CHECK: Attempting fusion on Candidate Set:
+; CHECK: Attempting fusion on Candidate List:
 ; CHECK-NEXT: [[LOOP1PREHEADER]]
 ; CHECK-NEXT: [[LOOP2PREHEADER]]
 ; CHECK: Memory dependencies do not allow fusion!
@@ -314,11 +309,11 @@ bb21:                                             ; preds = %bb14
 
 ; CHECK: Performing Loop Fusion on function test
 ; CHECK: Fusion Candidates:
-; CHECK: *** Fusion Candidate Set ***
+; CHECK: *** Fusion Candidate List ***
 ; CHECK-NEXT: [[LOOP1PREHEADER:for.body[0-9]*.preheader]]
 ; CHECK-NEXT: [[LOOP2PREHEADER:for.body[0-9]*.preheader]]
 ; CHECK-NEXT: ****************************
-; CHECK: Attempting fusion on Candidate Set:
+; CHECK: Attempting fusion on Candidate List:
 ; CHECK-NEXT: [[LOOP1PREHEADER]]
 ; CHECK-NEXT: [[LOOP2PREHEADER]]
 ; CHECK: Memory dependencies do not allow fusion!

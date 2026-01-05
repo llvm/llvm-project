@@ -204,7 +204,8 @@ def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"
   let constructor = "mlir::affine::createLoopUnrollPass()";
   let options = [
     Option<"unrollFactor", "unroll-factor", "int64_t", /*default=*/"4",
-           "Use this unroll factor for all loops being unrolled">,
+           "Use this unroll factor for all loops being unrolled, "
+           "set it to -1, and it will fully unroll.">,
     Option<"unrollUpToFactor", "unroll-up-to-factor", "bool",
            /*default=*/"false", "Allow unrolling up to the factor specified">,
     Option<"numRepetitions", "unroll-num-reps", "unsigned", /*default=*/"1",
@@ -437,6 +438,17 @@ def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
 def AffineExpandIndexOpsAsAffine : Pass<"affine-expand-index-ops-as-affine"> {
   let summary = "Lower affine operations operating on indices into affine.apply operations";
   let constructor = "mlir::affine::createAffineExpandIndexOpsAsAffinePass()";
+}
+
+def AffineFoldMemRefAliasOps : Pass<"affine-fold-memref-alias-ops"> {
+  let summary = "Fold memref alias ops into affine memory ops";
+  let description = [{
+    The pass folds memref.subview, memref.expand_shape, and memref.collapse_shape
+    operations into affine memory operations (currently only `affine.load` and
+    `affine.store`) . This is similar to the `fold-memref-alias-ops` pass in the
+    `memref` dialect but adds handling specific to affine operations.
+  }];
+  let dependentDialects = ["memref::MemRefDialect"];
 }
 
 #endif // MLIR_DIALECT_AFFINE_PASSES

@@ -7,15 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
+using namespace llvm::SCEVPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -80,37 +83,118 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
-                                           ScalarEvolution &SE, const Loop *L) {
+                                           PredicatedScalarEvolution &PSE,
+                                           const Loop *L) {
+  ScalarEvolution &SE = *PSE.getSE();
   if (V->isLiveIn()) {
-    if (Value *LiveIn = V->getLiveInIRValue())
+    Value *LiveIn = V->getLiveInIRValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
       return SE.getSCEV(LiveIn);
     return SE.getCouldNotCompute();
   }
 
+  // Helper to create SCEVs for binary and unary operations.
+  auto CreateSCEV =
+      [&](ArrayRef<VPValue *> Ops,
+          function_ref<const SCEV *(ArrayRef<const SCEV *>)> CreateFn)
+      -> const SCEV * {
+    SmallVector<const SCEV *, 2> SCEVOps;
+    for (VPValue *Op : Ops) {
+      const SCEV *S = getSCEVExprForVPValue(Op, PSE, L);
+      if (isa<SCEVCouldNotCompute>(S))
+        return SE.getCouldNotCompute();
+      SCEVOps.push_back(S);
+    }
+    return CreateFn(SCEVOps);
+  };
+
+  VPValue *LHSVal, *RHSVal;
+  if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+    });
+  if (match(V, m_Sub(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+    });
+  if (match(V, m_Not(m_VPValue(LHSVal)))) {
+    // not X = xor X, -1 = -1 - X
+    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getMinusSCEV(SE.getMinusOne(Ops[0]->getType()), Ops[0]);
+    });
+  }
+  if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
+    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
+    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getTruncateExpr(Ops[0], DestTy);
+    });
+  }
+  if (match(V, m_ZExt(m_VPValue(LHSVal)))) {
+    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
+    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getZeroExtendExpr(Ops[0], DestTy);
+    });
+  }
+  if (match(V, m_SExt(m_VPValue(LHSVal)))) {
+    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
+    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getSignExtendExpr(Ops[0], DestTy);
+    });
+  }
+  if (match(V,
+            m_Intrinsic<Intrinsic::umax>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getUMaxExpr(Ops[0], Ops[1]);
+    });
+  if (match(V,
+            m_Intrinsic<Intrinsic::smax>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getSMaxExpr(Ops[0], Ops[1]);
+    });
+  if (match(V,
+            m_Intrinsic<Intrinsic::umin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getUMinExpr(Ops[0], Ops[1]);
+    });
+  if (match(V,
+            m_Intrinsic<Intrinsic::smin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getSMinExpr(Ops[0], Ops[1]);
+    });
+
   // TODO: Support constructing SCEVs for more recipes as needed.
-  return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
+  const VPRecipeBase *DefR = V->getDefiningRecipe();
+  const SCEV *Expr = TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-      .Case<VPCanonicalIVPHIRecipe>([&SE, L](const VPCanonicalIVPHIRecipe *R) {
+      .Case<VPCanonicalIVPHIRecipe>([&SE, &PSE,
+                                     L](const VPCanonicalIVPHIRecipe *R) {
         if (!L)
           return SE.getCouldNotCompute();
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
         return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
                                 SCEV::FlagAnyWrap);
       })
       .Case<VPWidenIntOrFpInductionRecipe>(
-          [&SE, L](const VPWidenIntOrFpInductionRecipe *R) {
-            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), SE, L);
+          [&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
             if (!L || isa<SCEVCouldNotCompute>(Step))
               return SE.getCouldNotCompute();
             const SCEV *Start =
-                getSCEVExprForVPValue(R->getStartValue(), SE, L);
-            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+                getSCEVExprForVPValue(R->getStartValue(), PSE, L);
+            const SCEV *AddRec =
+                SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+            if (R->getTruncInst())
+              return SE.getTruncateExpr(AddRec, R->getScalarType());
+            return AddRec;
           })
-      .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
-        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);
-        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), SE, L);
+      .Case<VPDerivedIVRecipe>([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
+        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
         if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
           return SE.getCouldNotCompute();
 
@@ -118,26 +202,27 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                              SE.getMulExpr(IV, SE.getTruncateOrSignExtend(
                                                    Scale, IV->getType())));
       })
-      .Case<VPScalarIVStepsRecipe>([&SE, L](const VPScalarIVStepsRecipe *R) {
-        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), SE, L);
-        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+      .Case<VPScalarIVStepsRecipe>([&SE, &PSE,
+                                    L](const VPScalarIVStepsRecipe *R) {
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
         if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step) ||
             !Step->isOne())
           return SE.getCouldNotCompute();
         return SE.getMulExpr(SE.getTruncateOrSignExtend(IV, Step->getType()),
                              Step);
       })
-      .Case<VPReplicateRecipe>([&SE, L](const VPReplicateRecipe *R) {
+      .Case<VPReplicateRecipe>([&SE, &PSE, L](const VPReplicateRecipe *R) {
         if (R->getOpcode() != Instruction::GetElementPtr)
           return SE.getCouldNotCompute();
 
-        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
         if (isa<SCEVCouldNotCompute>(Base))
           return SE.getCouldNotCompute();
 
         SmallVector<const SCEV *> IndexExprs;
         for (VPValue *Index : drop_begin(R->operands())) {
-          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, SE, L);
+          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, PSE, L);
           if (isa<SCEVCouldNotCompute>(IndexExpr))
             return SE.getCouldNotCompute();
           IndexExprs.push_back(IndexExpr);
@@ -147,7 +232,27 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                  ->getSourceElementType();
         return SE.getGEPExpr(Base, IndexExprs, SrcElementTy);
       })
-      .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+      .Default(
+          [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+
+  return PSE.getPredicatedSCEV(Expr);
+}
+
+bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
+                                   const Loop *L) {
+  // If address is an SCEVAddExpr, we require that all operands must be either
+  // be invariant or a (possibly sign-extend) affine AddRec.
+  if (auto *PtrAdd = dyn_cast<SCEVAddExpr>(Addr)) {
+    return all_of(PtrAdd->operands(), [&SE, L](const SCEV *Op) {
+      return SE.isLoopInvariant(Op, L) ||
+             match(Op, m_scev_SExt(m_scev_AffineAddRec(m_SCEV(), m_SCEV()))) ||
+             match(Op, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
+    });
+  }
+
+  // Otherwise, check if address is loop invariant or an affine add recurrence.
+  return SE.isLoopInvariant(Addr, L) ||
+         match(Addr, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
 }
 
 /// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
@@ -316,11 +421,10 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   //     EMIT vp<%5> = any-of vp<%4>
   //     EMIT vp<%6> = add vp<%2>, vp<%0>
   //     EMIT vp<%7> = icmp eq vp<%6>, ir<64>
-  //     EMIT vp<%8> = or vp<%5>, vp<%7>
-  //     EMIT branch-on-cond vp<%8>
+  //     EMIT branch-on-two-conds vp<%5>, vp<%7>
   //   No successors
   // }
-  // Successor(s): middle.block
+  // Successor(s): early.exit, middle.block
   //
   // middle.block:
   // Successor(s): preheader
@@ -333,8 +437,8 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   auto *Region = Plan.getVectorLoopRegion();
   VPValue *UncountableCondition = nullptr;
   if (!match(Region->getExitingBasicBlock()->getTerminator(),
-             m_BranchOnCond(m_OneUse(m_c_BinaryOr(
-                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue())))))
+             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
+                                m_VPValue())))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
