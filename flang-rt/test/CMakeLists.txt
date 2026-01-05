@@ -43,6 +43,11 @@ set_target_properties(flang-rt-test-depends PROPERTIES FOLDER "Flang-RT/Meta")
 add_dependencies(flang-rt-test-depends
     flang_rt.runtime
   )
+if (TARGET flang_rt.quadmath)
+  add_dependencies(flang-rt-test-depends
+      flang_rt.quadmath
+    )
+endif ()
 
 add_lit_testsuite(check-flang-rt "Running the Flang-RT regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
