@@ -1612,6 +1612,11 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns the
+/// corresponding opcode with the opposite signedness:
+/// ISD::SMIN <-> ISD::UMIN, ISD::SMAX <-> ISD::UMAX.
+LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
+
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
 LLVM_ABI NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);

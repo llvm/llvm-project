@@ -6228,15 +6228,7 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
     };
 
     if (HasKnownSameSign(N0, N1)) {
-      unsigned AltOpcode;
-      switch (Opcode) {
-      case ISD::SMIN: AltOpcode = ISD::UMIN; break;
-      case ISD::SMAX: AltOpcode = ISD::UMAX; break;
-      case ISD::UMIN: AltOpcode = ISD::SMIN; break;
-      case ISD::UMAX: AltOpcode = ISD::SMAX; break;
-      default: llvm_unreachable("Unknown MINMAX opcode");
-      }
-
+      unsigned AltOpcode = ISD::getOppositeSignednessMinMaxOpcode(Opcode);
       if ((IsSatBroken && IsOpIllegal) || TLI.isOperationLegal(AltOpcode, VT))
         return DAG.getNode(AltOpcode, DL, VT, N0, N1);
     }
