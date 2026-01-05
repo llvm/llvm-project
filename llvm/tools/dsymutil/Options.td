@@ -109,9 +109,10 @@ def update: F<"update">,
   HelpText<"Updates existing dSYM files to contain the latest accelerator tables and other DWARF optimizations.">,
   Group<grp_general>;
 
-def allow_invalid_macho: F<"allow-invalid-macho">,
-  HelpText<"Allow generating Mach-O files that exceed certain format limitations, such as sections with file offsets greater than 4GB."
-           "Use with caution, as such files may not be compatible with all tools.">,
+def allow_slice_section_header_offset_overflow : F<"allow-slice-section-header-offset-overflow">,
+  HelpText<"Allow emitting Mach-O where, within a single slice, section header offsets (section.offset, 32-bit) exceed the 4GB limit (non-standard). "
+           "This option overrides dsymutil's per-slice 4GB check when writing section headers. "
+           "Use with caution: some tools may not be able to read the output.">,
   Group<grp_general>;
 
 def: Flag<["-"], "u">,

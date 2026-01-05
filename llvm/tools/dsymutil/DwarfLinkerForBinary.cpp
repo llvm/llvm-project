@@ -883,7 +883,7 @@ bool DwarfLinkerForBinary::linkImpl(
       ObjectType == Linker::OutputFileType::Object)
     return MachOUtils::generateDsymCompanion(
         Options.VFS, Map, *Streamer->getAsmPrinter().OutStreamer, OutFile,
-        RelocationsToApply, Options.AllowInvalidMachO);
+        RelocationsToApply, Options.AllowSliceSectionHeaderOffsetOverflow);
 
   Streamer->finish();
   return true;

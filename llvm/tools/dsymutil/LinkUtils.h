@@ -123,9 +123,9 @@ struct LinkOptions {
   bool IncludeSwiftModulesFromInterface = false;
   /// @}
 
-  /// Whether to allow generating Mach-O files that exceed certain format
-  /// limitations, such as sections with file offsets greater than 4GB.
-  bool AllowInvalidMachO = false;
+  /// Whether to allow emitting Mach-O where, within a single slice, section
+  /// header offsets (section.offset, 32-bit) exceed 4GB (non-standard).
+  bool AllowSliceSectionHeaderOffsetOverflow = false;
 
   LinkOptions() = default;
 };
