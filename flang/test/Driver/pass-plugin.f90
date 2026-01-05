@@ -1,4 +1,5 @@
 ! Verify that the static and dynamically loaded pass plugins work as expected.
+! (Plugins can be loaded dynamically or be statically linked into the binary.)
 ! This tests that the plugin is correctly added to and executed as part of the
 ! optimization pipeline.
 

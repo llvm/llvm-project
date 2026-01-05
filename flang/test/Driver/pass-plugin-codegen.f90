@@ -19,9 +19,8 @@
 ! RUN: %flang_fc1 -emit-llvm %s -o - %loadbye -mllvm -last-words \
 ! RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-LLVM
 
-! Bye fail and reports an error when an object file should be emitted;
-! the driver should propagate this as failing exit code and emit the
-! diagnostic from the plugin.
+! Bye fails and reports an error when an object file should be emitted.
+! (Note that this is specific for Bye; other plugins can support this.)
 ! RUN: not %flang_fc1 -emit-obj %s -o - %loadbye -mllvm -last-words \
 ! RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 
