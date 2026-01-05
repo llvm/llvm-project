@@ -76,6 +76,10 @@ int main(int argc, char const *argv[]) {
       "this a few times, you know.."
       " for science, or something";
 
+  const char *basic = "Hello";
+  const char *&ref = basic;
+  const char *&&refref = "Hi";
+
   puts("Break here");
 
   return 0;
