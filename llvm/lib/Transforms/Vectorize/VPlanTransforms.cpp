@@ -1740,18 +1740,18 @@ static void simplifyBlends(VPlan &Plan) {
 
       // Expand VPBlendRecipe into VPInstruction::Select.
       VPBuilder Builder(&R);
-      VPValue *NewBlend = Blend->getIncomingValue(StartIndex);
+      VPValue *Select = Blend->getIncomingValue(StartIndex);
       for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
         if (I == StartIndex)
           continue;
-        NewBlend =
+        Select =
             Builder.createSelect(Blend->getMask(I), Blend->getIncomingValue(I),
-                                 NewBlend, Blend->getDebugLoc(), "predphi");
-        NewBlend->setUnderlyingValue(Blend->getUnderlyingValue());
+                                 Select, Blend->getDebugLoc(), "predphi");
+        Select->setUnderlyingValue(Blend->getUnderlyingValue());
       }
 
       VPValue *DeadMask = Blend->getMask(StartIndex);
-      Blend->replaceAllUsesWith(NewBlend);
+      Blend->replaceAllUsesWith(Select);
       Blend->eraseFromParent();
       recursivelyDeleteDeadRecipes(DeadMask);
     }
