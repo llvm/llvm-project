@@ -1462,6 +1462,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::UIToFP:
     break; // Can't work with floating point.
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
     // Fall through and handle them the same as zext/trunc.
     [[fallthrough]];
@@ -4728,12 +4729,6 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   return Intrinsic::not_intrinsic;
 }
 
-static bool outputDenormalIsIEEEOrPosZero(const Function &F, const Type *Ty) {
-  Ty = Ty->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
-  return Mode.Output == DenormalMode::IEEE ||
-         Mode.Output == DenormalMode::PositiveZero;
-}
 /// Given an exploded icmp instruction, return true if the comparison only
 /// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
 /// the result of the comparison is true when the input value is signed.
@@ -4923,8 +4918,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
   if (auto *CFP = dyn_cast<ConstantFP>(V)) {
-    Known.KnownFPClasses = CFP->getValueAPF().classify();
-    Known.SignBit = CFP->isNegative();
+    Known = KnownFPClass(CFP->getValueAPF());
     return;
   }
 
@@ -5000,7 +4994,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   // assume this from flags/attributes.
   InterestedClasses &= ~KnownNotFromFlags;
 
-  auto ClearClassesFromFlags = make_scope_exit([=, &Known] {
+  llvm::scope_exit ClearClassesFromFlags([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
     if (!Known.SignBit && AssumedClasses.SignBit) {
       if (*AssumedClasses.SignBit)
@@ -5276,54 +5270,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
 
-      // This is essentially a stronger form of
-      // propagateCanonicalizingSrc. Other "canonicalizing" operations don't
-      // actually have an IR canonicalization guarantee.
-
-      // Canonicalize may flush denormals to zero, so we have to consider the
-      // denormal mode to preserve known-not-0 knowledge.
-      Known.KnownFPClasses = KnownSrc.KnownFPClasses | fcZero | fcQNan;
-
-      // Stronger version of propagateNaN
-      // Canonicalize is guaranteed to quiet signaling nans.
-      if (KnownSrc.isKnownNeverNaN())
-        Known.knownNot(fcNan);
-      else
-        Known.knownNot(fcSNan);
-
       const Function *F = II->getFunction();
-      if (!F)
-        break;
-
-      // If the parent function flushes denormals, the canonical output cannot
-      // be a denormal.
-      const fltSemantics &FPType =
-          II->getType()->getScalarType()->getFltSemantics();
-      DenormalMode DenormMode = F->getDenormalMode(FPType);
-      if (DenormMode == DenormalMode::getIEEE()) {
-        if (KnownSrc.isKnownNever(fcPosZero))
-          Known.knownNot(fcPosZero);
-        if (KnownSrc.isKnownNever(fcNegZero))
-          Known.knownNot(fcNegZero);
-        break;
-      }
-
-      if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
-        Known.knownNot(fcSubnormal);
-
-      if (DenormMode == DenormalMode::getPreserveSign()) {
-        if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
-          Known.knownNot(fcPosZero);
-        if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
-          Known.knownNot(fcNegZero);
-        break;
-      }
-
-      if (DenormMode.Input == DenormalMode::PositiveZero ||
-          (DenormMode.Output == DenormalMode::PositiveZero &&
-           DenormMode.Input == DenormalMode::IEEE))
-        Known.knownNot(fcNegZero);
-
+      DenormalMode DenormMode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
       break;
     }
     case Intrinsic::vector_reduce_fmax:
@@ -5387,22 +5339,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::exp2:
     case Intrinsic::exp10:
     case Intrinsic::amdgcn_exp2: {
-      Known.knownNot(fcNegative);
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+
+      Known = KnownFPClass::exp(KnownSrc);
 
       Type *EltTy = II->getType()->getScalarType();
       if (IID == Intrinsic::amdgcn_exp2 && EltTy->isFloatTy())
         Known.knownNot(fcSubnormal);
-
-      if ((InterestedClasses & fcNan) == fcNone)
-        break;
-
-      KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                          KnownSrc, Q, Depth + 1);
-      if (KnownSrc.isKnownNeverNaN()) {
-        Known.knownNot(fcNan);
-        Known.signBitMustBeZero();
-      }
 
       break;
     }
@@ -5421,6 +5366,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Type *EltTy = II->getType()->getScalarType();
       if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
         Known.knownNot(fcSubnormal);
+
+      Known.knownNot(fcNegZero);
 
       // log(+inf) -> +inf
       // log([+-]0.0) -> -inf
@@ -5667,14 +5614,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedSrcs,
                         KnownRHS, Q, Depth + 1);
 
+    // Special case fadd x, x, which is the canonical form of fmul x, 2.
+    bool SelfAdd = Op->getOperand(0) == Op->getOperand(1) &&
+                   isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI,
+                                            Q.DT, Depth + 1);
+    if (SelfAdd)
+      KnownLHS = KnownRHS;
+
     if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
         (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) ||
         WantNegZero || Opc == Instruction::FSub) {
 
-      // RHS is canonically cheaper to compute. Skip inspecting the LHS if
-      // there's no point.
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                          KnownLHS, Q, Depth + 1);
+      if (!SelfAdd) {
+        // RHS is canonically cheaper to compute. Skip inspecting the LHS if
+        // there's no point.
+        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
+                            KnownLHS, Q, Depth + 1);
+      }
+
       // Adding positive and negative infinity produces NaN.
       // TODO: Check sign of infinities.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
@@ -5688,6 +5645,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownLHS.cannotBeOrderedLessThanZero() &&
             KnownRHS.cannotBeOrderedLessThanZero())
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+        if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
+            KnownRHS.cannotBeOrderedGreaterThanZero())
+          Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+
         if (!F)
           break;
 
@@ -5699,7 +5660,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
              KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
             // Make sure output negative denormal can't flush to -0
-            outputDenormalIsIEEEOrPosZero(*F, Op->getType()))
+            (Mode.Output == DenormalMode::IEEE ||
+             Mode.Output == DenormalMode::PositiveZero))
           Known.knownNot(fcNegZero);
       } else {
         if (!F)
@@ -5713,7 +5675,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
              KnownRHS.isKnownNeverLogicalPosZero(Mode)) &&
             // Make sure output negative denormal can't flush to -0
-            outputDenormalIsIEEEOrPosZero(*F, Op->getType()))
+            (Mode.Output == DenormalMode::IEEE ||
+             Mode.Output == DenormalMode::PositiveZero))
           Known.knownNot(fcNegZero);
       }
     }
@@ -5725,15 +5688,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOperand(0) == Op->getOperand(1))
       Known.knownNot(fcNegative);
 
-    if ((InterestedClasses & fcNan) != fcNan)
-      break;
-
-    // fcSubnormal is only needed in case of DAZ.
-    const FPClassTest NeedForNan = fcNan | fcInf | fcZero | fcSubnormal;
-
     KnownFPClass KnownLHS, KnownRHS;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts, NeedForNan, KnownRHS,
-                        Q, Depth + 1);
 
     const APFloat *CRHS;
     if (match(Op->getOperand(1), m_APFloat(CRHS))) {
@@ -5750,14 +5705,47 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       int MinKnownExponent = ilogb(*CRHS);
       if (MinKnownExponent >= MantissaBits)
         Known.knownNot(fcSubnormal);
+
+      KnownRHS = KnownFPClass(*CRHS);
+    } else {
+      computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
+                          Q, Depth + 1);
     }
 
-    if (!KnownRHS.isKnownNeverNaN())
-      break;
-
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, NeedForNan, KnownLHS,
+    computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                         Q, Depth + 1);
-    if (!KnownLHS.isKnownNeverNaN())
+
+    // xor sign bit.
+    if ((KnownLHS.isKnownNever(fcNegative) &&
+         KnownRHS.isKnownNever(fcNegative)) ||
+        (KnownLHS.isKnownNever(fcPositive) &&
+         KnownRHS.isKnownNever(fcPositive)))
+      Known.knownNot(fcNegative);
+
+    if ((KnownLHS.isKnownNever(fcPositive) &&
+         KnownRHS.isKnownNever(fcNegative)) ||
+        (KnownLHS.isKnownNever(fcNegative) &&
+         KnownRHS.isKnownNever(fcPositive)))
+      Known.knownNot(fcPositive);
+
+    // inf * anything => inf or nan
+    if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
+        KnownRHS.isKnownAlways(fcInf | fcNan))
+      Known.knownNot(fcNormal | fcSubnormal | fcZero);
+
+    // 0 * anything => 0 or nan
+    if (KnownRHS.isKnownAlways(fcZero | fcNan) ||
+        KnownLHS.isKnownAlways(fcZero | fcNan))
+      Known.knownNot(fcNormal | fcSubnormal | fcInf);
+
+    // +/-0 * +/-inf = nan
+    if ((KnownLHS.isKnownAlways(fcZero | fcNan) &&
+         KnownRHS.isKnownAlways(fcInf | fcNan)) ||
+        (KnownLHS.isKnownAlways(fcInf | fcNan) &&
+         KnownRHS.isKnownAlways(fcZero | fcNan)))
+      Known.knownNot(~fcNan);
+
+    if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
       break;
 
     if (KnownLHS.SignBit && KnownRHS.SignBit) {
@@ -9675,10 +9663,10 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       match(L1, m_APInt(L1C)) && !L1C->isZero() &&
       match(L0, m_Sub(m_Value(A), m_Value(B))) &&
       ((A == R0 && B == R1) || (A == R1 && B == R0) ||
-       (match(A, m_PtrToInt(m_Specific(R0))) &&
-        match(B, m_PtrToInt(m_Specific(R1)))) ||
-       (match(A, m_PtrToInt(m_Specific(R1))) &&
-        match(B, m_PtrToInt(m_Specific(R0)))))) {
+       (match(A, m_PtrToIntOrAddr(m_Specific(R0))) &&
+        match(B, m_PtrToIntOrAddr(m_Specific(R1)))) ||
+       (match(A, m_PtrToIntOrAddr(m_Specific(R1))) &&
+        match(B, m_PtrToIntOrAddr(m_Specific(R0)))))) {
     return RPred.dropSameSign() == ICmpInst::ICMP_NE;
   }
 
@@ -10460,7 +10448,8 @@ addValueAffectedByCondition(Value *V,
 
     // Peek through unary operators to find the source of the condition.
     Value *Op;
-    if (match(I, m_CombineOr(m_PtrToInt(m_Value(Op)), m_Trunc(m_Value(Op))))) {
+    if (match(I, m_CombineOr(m_PtrToIntOrAddr(m_Value(Op)),
+                             m_Trunc(m_Value(Op))))) {
       if (isa<Instruction>(Op) || isa<Argument>(Op))
         InsertAffected(Op);
     }

@@ -2817,8 +2817,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   for (const Arg *A : Args) {
-    auto CheckMathErrnoForVecLib =
-        llvm::make_scope_exit([&, MathErrnoBeforeArg = MathErrno] {
+    llvm::scope_exit CheckMathErrnoForVecLib(
+        [&, MathErrnoBeforeArg = MathErrno] {
           if (NoMathErrnoWasImpliedByVecLib && !MathErrnoBeforeArg && MathErrno)
             ArgThatEnabledMathErrnoAfterVecLib = A;
         });
@@ -3699,6 +3699,7 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
 static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
   const unsigned ForwardedArguments[] = {
+      options::OPT_hlsl_all_resources_bound,
       options::OPT_dxil_validator_version,
       options::OPT_res_may_alias,
       options::OPT_D,
@@ -4097,6 +4098,19 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
     }
   }
 
+  // Forward -fobjc-direct-precondition-thunk to cc1
+  // Defaults to false and needs explict turn on for now
+  // TODO: switch to default true and needs explict turn off in the future.
+  // TODO: add support for other runtimes
+  if (Args.hasFlag(options::OPT_fobjc_direct_precondition_thunk,
+                   options::OPT_fno_objc_direct_precondition_thunk, false)) {
+    if (Runtime.isNeXTFamily()) {
+      CmdArgs.push_back("-fobjc-direct-precondition-thunk");
+    } else {
+      D.Diag(diag::warn_drv_unsupported_option_for_runtime)
+          << "-fobjc-direct-precondition-thunk" << Runtime.getAsString();
+    }
+  }
   // When ObjectiveC legacy runtime is in effect on MacOSX, turn on the option
   // to do Array/Dictionary subscripting by default.
   if (Arch == llvm::Triple::x86 && T.isMacOSX() &&
@@ -7221,9 +7235,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
        Std->containsValue("c++20") || Std->containsValue("gnu++20") ||
        Std->containsValue("c++2b") || Std->containsValue("gnu++2b") ||
        Std->containsValue("c++23") || Std->containsValue("gnu++23") ||
-       Std->containsValue("c++2c") || Std->containsValue("gnu++2c") ||
-       Std->containsValue("c++26") || Std->containsValue("gnu++26") ||
-       Std->containsValue("c++latest") || Std->containsValue("gnu++latest"));
+       Std->containsValue("c++23preview") || Std->containsValue("c++2c") ||
+       Std->containsValue("gnu++2c") || Std->containsValue("c++26") ||
+       Std->containsValue("gnu++26") || Std->containsValue("c++latest") ||
+       Std->containsValue("gnu++latest"));
   bool HaveModules =
       RenderModulesOptions(C, D, Args, Input, Output, HaveCxx20, CmdArgs);
 

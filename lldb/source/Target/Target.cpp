@@ -2864,7 +2864,7 @@ ExpressionResults Target::EvaluateExpression(
   // We shouldn't run stop hooks in expressions.
   bool old_suppress_value = m_suppress_stop_hooks;
   m_suppress_stop_hooks = true;
-  auto on_exit = llvm::make_scope_exit([this, old_suppress_value]() {
+  llvm::scope_exit on_exit([this, old_suppress_value]() {
     m_suppress_stop_hooks = old_suppress_value;
   });
 
@@ -3200,7 +3200,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   }
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
-  auto on_exit = llvm::make_scope_exit([output_sp] { output_sp->Flush(); });
+  llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
 
   size_t num_hooks_with_output = llvm::count_if(
       active_hooks, [](auto h) { return !h->GetSuppressOutput(); });
