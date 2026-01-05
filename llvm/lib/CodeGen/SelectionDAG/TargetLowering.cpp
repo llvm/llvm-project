@@ -9685,9 +9685,9 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
     EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), StepVecVT);
     unsigned WideNumElts = WideVecVT.getVectorNumElements();
 
-    // Build widened step vector: <0, 1, ..., OrigNumElts-1, undef, undef, ...>
+    // Build widened step vector: <0, 1, ..., OrigNumElts-1, poison, poison, ..>
     SDValue OrigStepVec = DAG.getStepVector(DL, StepVecVT);
-    SDValue UndefStep = DAG.getUNDEF(WideVecVT);
+    SDValue UndefStep = DAG.getPOISON(WideVecVT);
     StepVec = DAG.getInsertSubvector(DL, UndefStep, OrigStepVec, 0);
 
     // Widen mask: pad with zeros.
