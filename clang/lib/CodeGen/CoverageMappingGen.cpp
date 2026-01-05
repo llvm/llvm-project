@@ -886,7 +886,12 @@ struct CounterCoverageMappingBuilder
   /// The map of statements to count values.
   llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
 
+  /// Used to expand an allocatd SkipCnt to Expression with known counters.
+  /// Key: SkipCnt
+  /// Val: Subtract Expression
   CounterExpressionBuilder::SubstMap MapToExpand;
+
+  /// Index and number for additional counters for SkipCnt.
   unsigned NextCounterNum;
 
   MCDC::State &MCDCState;

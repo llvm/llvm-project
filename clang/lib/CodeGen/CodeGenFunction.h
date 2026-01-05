@@ -1662,9 +1662,15 @@ public:
   void markStmtAsUsed(bool Skipped, const Stmt *S);
   void markStmtMaybeUsed(const Stmt *S);
 
+  /// Used to specify which counter in a pair shall be incremented.
+  /// For non-binary counters, a skip counter is derived as (Parent - Exec).
+  /// In contrast for binary counters, a skip counter cannot be computed from
+  /// the Parent counter. In such cases, dedicated SkipPath counters must be
+  /// allocated and marked (incremented as binary counters). (Parent can be
+  /// synthesized with (Exec + Skip) in simple cases)
   enum CounterForIncrement {
-    UseExecPath = 0,
-    UseSkipPath,
+    UseExecPath = 0, ///< Exec (true)
+    UseSkipPath,     ///< Skip (false)
   };
 
   /// Increment the profiler's counter for the given statement by \p StepV.
