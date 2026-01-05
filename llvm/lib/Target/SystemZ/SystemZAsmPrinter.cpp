@@ -1602,25 +1602,19 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   MCSymbol *DateVersionSym = OutContext.createTempSymbol("DVS", false);
 
   std::time_t Time = getTranslationTime(M);
-  SmallString<15> CompilationTime; // 14 + null
-  raw_svector_ostream O(CompilationTime);
-  O << formatv("{0:%Y%m%d%H%M%S}", llvm::sys::toUtcTime(Time));
+  SmallString<14> CompilationTimeEBCDIC, CompilationTime;
+  CompilationTime = formatv("{0:%Y%m%d%H%M%S}", llvm::sys::toUtcTime(Time));
 
   uint32_t ProductVersion = getProductVersion(M),
            ProductRelease = getProductRelease(M),
            ProductPatch = getProductPatch(M);
 
-  SmallString<7> Version; // 6 + null
-  raw_svector_ostream ostr(Version);
-  ostr << formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion, ProductRelease,
-                  ProductPatch);
+  SmallString<6> VersionEBCDIC, Version;
+  Version = formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion,
+                    ProductRelease, ProductPatch);
 
-  // Drop 0 during conversion.
-  SmallString<sizeof(CompilationTime) - 1> CompilationTimeStr;
-  SmallString<sizeof(Version) - 1> VersionStr;
-
-  ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeStr);
-  ConverterEBCDIC::convertToEBCDIC(Version, VersionStr);
+  ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeEBCDIC);
+  ConverterEBCDIC::convertToEBCDIC(Version, VersionEBCDIC);
 
   enum class PPA2MemberId : uint8_t {
     // See z/OS Language Environment Vendor Interfaces v2r5, p.23, for
@@ -1689,8 +1683,8 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
 
   // Emit date and version section.
   OutStreamer->emitLabel(DateVersionSym);
-  OutStreamer->emitBytes(CompilationTimeStr.str());
-  OutStreamer->emitBytes(VersionStr.str());
+  OutStreamer->emitBytes(CompilationTimeEBCDIC.str());
+  OutStreamer->emitBytes(VersionEBCDIC.str());
 
   OutStreamer->emitInt16(0x0000); // Service level string length.
 
