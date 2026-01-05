@@ -1225,7 +1225,7 @@ public:
   bool isScalarWithPredication(Instruction *I, ElementCount VF);
 
   /// Wrapper function for LoopVectorizationLegality::isMaskRequired,
-  /// that passes the \p I and if we fold tail.
+  /// that passes the Instruction \p I and if we fold tail.
   bool isMaskRequired(Instruction *I) const;
 
   /// Returns true if \p I is an instruction that needs to be predicated
