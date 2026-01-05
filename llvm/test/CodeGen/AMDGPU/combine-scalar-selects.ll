@@ -487,44 +487,26 @@ entry:
 ; Negative test: too few selects (only 4 out of 16, less than half)
 define amdgpu_kernel void @no_combine_too_few_selects(
 ;
-; CHECK-OPT-LABEL: define amdgpu_kernel void @no_combine_too_few_selects(
-; CHECK-OPT-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x i32> [[SRC:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
-; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-OPT-NEXT:    [[SEL_BC:%.*]] = select i1 [[COND]], <4 x i32> [[SRC]], <4 x i32> zeroinitializer
-; CHECK-OPT-NEXT:    [[BYTES:%.*]] = bitcast <4 x i32> [[SEL_BC]] to <16 x i8>
-; CHECK-OPT-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[BYTES]], i64 0
-; CHECK-OPT-NEXT:    [[S1:%.*]] = extractelement <16 x i8> [[BYTES]], i64 1
-; CHECK-OPT-NEXT:    [[S2:%.*]] = extractelement <16 x i8> [[BYTES]], i64 2
-; CHECK-OPT-NEXT:    [[S3:%.*]] = extractelement <16 x i8> [[BYTES]], i64 3
-; CHECK-OPT-NEXT:    store i8 [[E0]], ptr addrspace(1) [[OUT]], align 1
-; CHECK-OPT-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-OPT-NEXT:    store i8 [[S1]], ptr addrspace(1) [[PTR1]], align 1
-; CHECK-OPT-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 2
-; CHECK-OPT-NEXT:    store i8 [[S2]], ptr addrspace(1) [[PTR2]], align 1
-; CHECK-OPT-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 3
-; CHECK-OPT-NEXT:    store i8 [[S3]], ptr addrspace(1) [[PTR3]], align 1
-; CHECK-OPT-NEXT:    ret void
-;
-; CHECK-NOOPT-LABEL: define amdgpu_kernel void @no_combine_too_few_selects(
-; CHECK-NOOPT-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x i32> [[SRC:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
-; CHECK-NOOPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-NOOPT-NEXT:    [[BYTES:%.*]] = bitcast <4 x i32> [[SRC]] to <16 x i8>
-; CHECK-NOOPT-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[BYTES]], i64 0
-; CHECK-NOOPT-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[BYTES]], i64 1
-; CHECK-NOOPT-NEXT:    [[E2:%.*]] = extractelement <16 x i8> [[BYTES]], i64 2
-; CHECK-NOOPT-NEXT:    [[E3:%.*]] = extractelement <16 x i8> [[BYTES]], i64 3
-; CHECK-NOOPT-NEXT:    [[S0:%.*]] = select i1 [[COND]], i8 [[E0]], i8 0
-; CHECK-NOOPT-NEXT:    [[S1:%.*]] = select i1 [[COND]], i8 [[E1]], i8 0
-; CHECK-NOOPT-NEXT:    [[S2:%.*]] = select i1 [[COND]], i8 [[E2]], i8 0
-; CHECK-NOOPT-NEXT:    [[S3:%.*]] = select i1 [[COND]], i8 [[E3]], i8 0
-; CHECK-NOOPT-NEXT:    store i8 [[S0]], ptr addrspace(1) [[OUT]], align 1
-; CHECK-NOOPT-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-NOOPT-NEXT:    store i8 [[S1]], ptr addrspace(1) [[PTR1]], align 1
-; CHECK-NOOPT-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 2
-; CHECK-NOOPT-NEXT:    store i8 [[S2]], ptr addrspace(1) [[PTR2]], align 1
-; CHECK-NOOPT-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 3
-; CHECK-NOOPT-NEXT:    store i8 [[S3]], ptr addrspace(1) [[PTR3]], align 1
-; CHECK-NOOPT-NEXT:    ret void
+; CHECK-LABEL: define amdgpu_kernel void @no_combine_too_few_selects(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x i32> [[SRC:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[BYTES:%.*]] = bitcast <4 x i32> [[SRC]] to <16 x i8>
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[BYTES]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[BYTES]], i64 1
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <16 x i8> [[BYTES]], i64 2
+; CHECK-NEXT:    [[E3:%.*]] = extractelement <16 x i8> [[BYTES]], i64 3
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[COND]], i8 [[E0]], i8 0
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[COND]], i8 [[E1]], i8 0
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[COND]], i8 [[E2]], i8 0
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[COND]], i8 [[E3]], i8 0
+; CHECK-NEXT:    store i8 [[S0]], ptr addrspace(1) [[OUT]], align 1
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 1
+; CHECK-NEXT:    store i8 [[S1]], ptr addrspace(1) [[PTR1]], align 1
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 2
+; CHECK-NEXT:    store i8 [[S2]], ptr addrspace(1) [[PTR2]], align 1
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr addrspace(1) [[OUT]], i64 3
+; CHECK-NEXT:    store i8 [[S3]], ptr addrspace(1) [[PTR3]], align 1
+; CHECK-NEXT:    ret void
 ;
   ptr addrspace(1) %out,
   <4 x i32> %src,
@@ -558,12 +540,12 @@ define amdgpu_kernel void @combine_with_extract_other_uses(
 ; CHECK-OPT-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT2:%.*]], <2 x i32> [[SRC:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
 ; CHECK-OPT-NEXT:    [[BYTES:%.*]] = bitcast <2 x i32> [[SRC]] to <8 x i8>
+; CHECK-OPT-NEXT:    [[TMP8:%.*]] = select i1 [[COND]], <2 x i32> [[SRC]], <2 x i32> zeroinitializer
+; CHECK-OPT-NEXT:    [[COMBINED_BC:%.*]] = bitcast <2 x i32> [[TMP8]] to <8 x i8>
 ; CHECK-OPT-NEXT:    [[E0:%.*]] = extractelement <8 x i8> [[BYTES]], i64 0
 ; CHECK-OPT-NEXT:    [[E1:%.*]] = extractelement <8 x i8> [[BYTES]], i64 1
 ; CHECK-OPT-NEXT:    [[E2:%.*]] = extractelement <8 x i8> [[BYTES]], i64 2
 ; CHECK-OPT-NEXT:    [[E3:%.*]] = extractelement <8 x i8> [[BYTES]], i64 3
-; CHECK-OPT-NEXT:    [[COMBINED_SEL:%.*]] = select i1 [[COND]], <2 x i32> [[SRC]], <2 x i32> zeroinitializer
-; CHECK-OPT-NEXT:    [[COMBINED_BC:%.*]] = bitcast <2 x i32> [[COMBINED_SEL]] to <8 x i8>
 ; CHECK-OPT-NEXT:    [[TMP0:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 0
 ; CHECK-OPT-NEXT:    [[TMP3:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 1
 ; CHECK-OPT-NEXT:    [[TMP5:%.*]] = extractelement <8 x i8> [[COMBINED_BC]], i64 2
