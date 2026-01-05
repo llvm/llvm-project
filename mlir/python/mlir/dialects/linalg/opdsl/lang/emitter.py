@@ -534,7 +534,9 @@ class _BodyBuilder:
         raise NotImplementedError("Unsupported 'max' operands: {lhs}, {rhs}")
 
     def _binary_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
-        if (isinstance(lhs.type, IntegerType) and not _is_bool_type(lhs.type)) or isinstance(lhs.type, IndexType):
+        if (
+            isinstance(lhs.type, IntegerType) and not _is_bool_type(lhs.type)
+        ) or isinstance(lhs.type, IndexType):
             return arith.MaxUIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'max_unsigned' operands: {lhs}, {rhs}")
 
@@ -546,7 +548,9 @@ class _BodyBuilder:
         raise NotImplementedError("Unsupported 'min' operands: {lhs}, {rhs}")
 
     def _binary_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
-        if (isinstance(lhs.type, IntegerType) and not _is_bool_type(lhs.type)) or isinstance(lhs.type, IndexType):
+        if (
+            isinstance(lhs.type, IntegerType) and not _is_bool_type(lhs.type)
+        ) or isinstance(lhs.type, IndexType):
             return arith.MinUIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'min_unsigned' operands: {lhs}, {rhs}")
 
@@ -607,3 +611,9 @@ def _add_type_mapping(
             )
     type_mapping[name] = element_or_self_type
     block_arg_types.append(element_or_self_type)
+
+
+def _is_bool_type(t: Type) -> bool:
+    if not isinstance(t, IntegerType):
+        return False
+    return t.width == 1

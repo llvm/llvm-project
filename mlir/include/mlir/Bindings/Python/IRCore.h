@@ -1543,12 +1543,6 @@ public:
                           .c_str()));
     cls.def(nanobind::init<PyValue &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("value"));
-    cls.def_static(
-        "isinstance",
-        [](PyValue &otherValue) -> bool {
-          return DerivedTy::isaFunction(otherValue);
-        },
-        nanobind::arg("other_value"));
     cls.def(
         MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
         [](DerivedTy &self) -> nanobind::typed<nanobind::object, DerivedTy> {
