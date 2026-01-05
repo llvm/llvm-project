@@ -6377,8 +6377,8 @@ constantFold(Instruction *I, const DataLayout &DL,
 
 /// Try to determine the resulting constant values in phi nodes
 /// at the common destination basic block, *CommonDest, for one of the case
-/// destionations CaseDest corresponding to value CaseVal (0 for the default
-/// case), of a switch instruction SI.
+/// destinations CaseDest corresponding to value CaseVal (nullptr for the
+/// default case), of a switch instruction SI.
 static bool
 getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
                BasicBlock **CommonDest,
@@ -7661,7 +7661,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
   Value *Sub =
-      Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
+      Builder.CreateSub(SI->getCondition(), ConstantInt::getSigned(Ty, Base));
   Value *Rot = Builder.CreateIntrinsic(
       Ty, Intrinsic::fshl,
       {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});

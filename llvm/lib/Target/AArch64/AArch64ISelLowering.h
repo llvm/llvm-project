@@ -349,8 +349,8 @@ public:
   bool isOpSuitableForLSE128(const Instruction *I) const;
   bool isOpSuitableForRCPC3(const Instruction *I) const;
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
-  bool
-  shouldInsertTrailingFenceForAtomicStore(const Instruction *I) const override;
+  bool shouldInsertTrailingSeqCstFenceForAtomicStore(
+      const Instruction *I) const override;
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
@@ -796,6 +796,8 @@ private:
   SDValue LowerFixedLengthVECTOR_SHUFFLEToSVE(SDValue Op,
                                               SelectionDAG &DAG) const;
   SDValue LowerFixedLengthBuildVectorToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthVectorCompressToSVE(SDValue Op,
+                                              SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;

@@ -483,7 +483,9 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
   if (CodeGenOpts.ResMayAlias)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.resmayalias", 1);
-
+  if (CodeGenOpts.AllResourcesBound)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error,
+                    "dx.allresourcesbound", 1);
   // NativeHalfType corresponds to the -fnative-half-type clang option which is
   // aliased by clang-dxc's -enable-16bit-types option. This option is used to
   // set the UseNativeLowPrecision DXIL module flag in the DirectX backend
@@ -1279,8 +1281,8 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
       AggValueSlot::DoesNotOverlap);
 
   // Calculate total array size (= range size).
-  llvm::Value *Range =
-      llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
+  llvm::Value *Range = llvm::ConstantInt::getSigned(
+      CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
 
   // If the result of the subscript operation is a single resource, call the
   // constructor.
@@ -1418,7 +1420,7 @@ class HLSLBufferCopyEmitter {
                          llvm::ConstantInt *LoadIndex) {
     CurStoreIndices.push_back(StoreIndex);
     CurLoadIndices.push_back(LoadIndex);
-    auto RestoreIndices = llvm::make_scope_exit([&]() {
+    llvm::scope_exit RestoreIndices([&]() {
       CurStoreIndices.pop_back();
       CurLoadIndices.pop_back();
     });

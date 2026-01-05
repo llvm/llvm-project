@@ -142,7 +142,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = add i64 3, [[TMP9]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ 67, [[MIDDLE_BLOCK]] ], [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
 ; VF4IC4-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -229,7 +229,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[P1]], i64 [[TMP7]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[PTREND]], [[MIDDLE_BLOCK]] ], [ [[TMP8]], [[VECTOR_EARLY_EXIT]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP8]], [[VECTOR_EARLY_EXIT]] ], [ [[PTREND]], [[MIDDLE_BLOCK]] ]
 ; VF4IC4-NEXT:    ret ptr [[RETVAL]]
 ;
 entry:
@@ -322,7 +322,7 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = add i64 3, [[TMP9]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ 67, [[MIDDLE_BLOCK]] ], [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
 ; VF4IC4-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -578,12 +578,12 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 -12
 ; VF4IC4-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr [[TMP18]], i64 -3
 ; VF4IC4-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
-; VF4IC4-NEXT:    [[REVERSE14:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD13]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
-; VF4IC4-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD1]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP6]], align 1
-; VF4IC4-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD3]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP27]], align 1
+; VF4IC4-NEXT:    [[REVERSE14:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD13]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD1]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD3]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[REVERSE6:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD5]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i64 0
@@ -595,12 +595,12 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i64 -12
 ; VF4IC4-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 -3
 ; VF4IC4-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i8>, ptr [[TMP46]], align 1
-; VF4IC4-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD14]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
-; VF4IC4-NEXT:    [[REVERSE10:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD9]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i8>, ptr [[TMP15]], align 1
-; VF4IC4-NEXT:    [[REVERSE12:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD11]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i8>, ptr [[TMP42]], align 1
+; VF4IC4-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD14]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[REVERSE10:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD9]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[REVERSE12:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD11]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[REVERSE16:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD15]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[TMP21:%.*]] = icmp ne <4 x i8> [[REVERSE14]], [[REVERSE15]]
 ; VF4IC4-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i8> [[REVERSE2]], [[REVERSE10]]
@@ -763,7 +763,7 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP42:%.*]] = select i1 [[TMP41]], i8 [[TMP40]], i8 [[TMP38]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i8 [ -1, [[MIDDLE_BLOCK]] ], [ [[TMP42]], [[VECTOR_EARLY_EXIT]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i8 [ [[TMP42]], [[VECTOR_EARLY_EXIT]] ], [ -1, [[MIDDLE_BLOCK]] ]
 ; VF4IC4-NEXT:    ret i8 [[RETVAL]]
 ;
 entry:
@@ -816,12 +816,12 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 -12
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 -3
 ; VF4IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i8>, ptr [[TMP8]], align 1
-; VF4IC4-NEXT:    [[REVERSE6:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD5]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
-; VF4IC4-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD1]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP6]], align 1
-; VF4IC4-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD3]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP11]], align 1
+; VF4IC4-NEXT:    [[REVERSE6:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD5]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD1]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD3]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[REVERSE7:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD6]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 0
@@ -833,12 +833,12 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 -12
 ; VF4IC4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 -3
 ; VF4IC4-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i8>, ptr [[TMP17]], align 1
-; VF4IC4-NEXT:    [[REVERSE14:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD13]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
-; VF4IC4-NEXT:    [[REVERSE10:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD9]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i8>, ptr [[TMP15]], align 1
-; VF4IC4-NEXT:    [[REVERSE12:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD11]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i8>, ptr [[TMP18]], align 1
+; VF4IC4-NEXT:    [[REVERSE14:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD13]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[REVERSE10:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD9]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF4IC4-NEXT:    [[REVERSE12:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD11]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD14]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF4IC4-NEXT:    [[TMP21:%.*]] = icmp ne <4 x i8> [[REVERSE6]], [[REVERSE14]]
 ; VF4IC4-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i8> [[REVERSE2]], [[REVERSE10]]

@@ -1486,7 +1486,7 @@ def CPUSpecific : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CPUSpecificCPUDispatchDocs];
   let AdditionalMembers = [{
-    IdentifierInfo *getCPUName(unsigned Index) const {
+    const IdentifierInfo *getCPUName(unsigned Index) const {
       return *(cpus_begin() + Index);
     }
   }];
@@ -1946,14 +1946,6 @@ def Final : InheritableAttr {
 
 def TriviallyRelocatable : InheritableAttr {
   let Spellings = [CustomKeyword<"trivially_relocatable_if_eligible">];
-  let SemaHandler = 0;
-  // Omitted from docs, since this is language syntax, not an attribute, as far
-  // as users are concerned.
-  let Documentation = [InternalOnly];
-}
-
-def Replaceable : InheritableAttr {
-  let Spellings = [CustomKeyword<"replaceable_if_eligible">];
   let SemaHandler = 0;
   // Omitted from docs, since this is language syntax, not an attribute, as far
   // as users are concerned.
@@ -5175,6 +5167,14 @@ def HLSLVkExtBuiltinInput : InheritableAttr {
   let Subjects = SubjectList<[HLSLInputBuiltin], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkExtBuiltinInputDocs];
+}
+
+def HLSLVkPushConstant : InheritableAttr {
+  let Spellings = [CXX11<"vk", "push_constant">];
+  let Args = [];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkPushConstantDocs];
 }
 
 def HLSLVkConstantId : InheritableAttr {
