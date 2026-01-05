@@ -283,7 +283,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     // but the constant still exists in the uniquing table.
     if (BB.hasAddressTaken()) {
       if (BlockAddress *BA = BlockAddress::lookup(&BB))
-        if (!BA->use_empty())
+        if (!BA->hasZeroLiveUses())
           MBB->setAddressTakenIRBlock(const_cast<BasicBlock *>(&BB));
     }
 
