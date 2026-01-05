@@ -145,61 +145,61 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       continue;
 
     switch (CB->getIntrinsicID()) {
-    default:
-      continue;
-    case Intrinsic::coro_begin:
-    case Intrinsic::coro_begin_custom_abi:
-      if (CoroBegin)
-        report_fatal_error(
-            "coroutine should have exactly one defining @llvm.coro.begin");
-      CoroBegin = cast<CoroBeginInst>(&I);
-      break;
-    case Intrinsic::coro_free:
-      CoroFrees.push_back(cast<CoroFreeInst>(&I));
-      break;
-    case Intrinsic::coro_suspend:
-      // Make sure that final suspend point is not duplicated as CoroSplit
-      // pass expects that there is at most one final suspend point.
-      if (cast<CoroSuspendInst>(&I)->isFinal())
-        CB->setCannotDuplicate();
-      HasCoroSuspend = true;
-      break;
-    case Intrinsic::coro_end_async:
-    case Intrinsic::coro_end:
-      // Make sure that fallthrough coro.end is not duplicated as CoroSplit
-      // pass expects that there is at most one fallthrough coro.end.
-      if (cast<AnyCoroEndInst>(&I)->isFallthrough())
-        CB->setCannotDuplicate();
-      break;
-    case Intrinsic::coro_id:
-      if (auto *CII = cast<CoroIdInst>(&I)) {
-        if (CII->getInfo().isPreSplit()) {
-          assert(F.isPresplitCoroutine() &&
-                "The frontend uses Switch-Resumed ABI should emit "
-                "\"presplitcoroutine\" attribute for the coroutine.");
-          setCannotDuplicate(CII);
-          CII->setCoroutineSelf();
-          CoroId = cast<CoroIdInst>(&I);
+      default:
+        continue;
+      case Intrinsic::coro_begin:
+      case Intrinsic::coro_begin_custom_abi:
+        if (CoroBegin)
+          report_fatal_error(
+              "coroutine should have exactly one defining @llvm.coro.begin");
+        CoroBegin = cast<CoroBeginInst>(&I);
+        break;
+      case Intrinsic::coro_free:
+        CoroFrees.push_back(cast<CoroFreeInst>(&I));
+        break;
+      case Intrinsic::coro_suspend:
+        // Make sure that final suspend point is not duplicated as CoroSplit
+        // pass expects that there is at most one final suspend point.
+        if (cast<CoroSuspendInst>(&I)->isFinal())
+          CB->setCannotDuplicate();
+        HasCoroSuspend = true;
+        break;
+      case Intrinsic::coro_end_async:
+      case Intrinsic::coro_end:
+        // Make sure that fallthrough coro.end is not duplicated as CoroSplit
+        // pass expects that there is at most one fallthrough coro.end.
+        if (cast<AnyCoroEndInst>(&I)->isFallthrough())
+          CB->setCannotDuplicate();
+        break;
+      case Intrinsic::coro_id:
+        if (auto *CII = cast<CoroIdInst>(&I)) {
+          if (CII->getInfo().isPreSplit()) {
+            assert(F.isPresplitCoroutine() &&
+                   "The frontend uses Switch-Resumed ABI should emit "
+                   "\"presplitcoroutine\" attribute for the coroutine.");
+            setCannotDuplicate(CII);
+            CII->setCoroutineSelf();
+            CoroId = cast<CoroIdInst>(&I);
+          }
         }
-      }
-      break;
-    case Intrinsic::coro_id_retcon:
-    case Intrinsic::coro_id_retcon_once:
-    case Intrinsic::coro_id_async:
-      F.setPresplitCoroutine();
-      break;
-    case Intrinsic::coro_resume:
-      lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
-      break;
-    case Intrinsic::coro_destroy:
-      lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
-      break;
-    case Intrinsic::coro_promise:
-      lowerCoroPromise(cast<CoroPromiseInst>(&I));
-      break;
-    case Intrinsic::coro_done:
-      lowerCoroDone(cast<IntrinsicInst>(&I));
-      break;
+        break;
+      case Intrinsic::coro_id_retcon:
+      case Intrinsic::coro_id_retcon_once:
+      case Intrinsic::coro_id_async:
+        F.setPresplitCoroutine();
+        break;
+      case Intrinsic::coro_resume:
+        lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
+        break;
+      case Intrinsic::coro_destroy:
+        lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
+        break;
+      case Intrinsic::coro_promise:
+        lowerCoroPromise(cast<CoroPromiseInst>(&I));
+        break;
+      case Intrinsic::coro_done:
+        lowerCoroDone(cast<IntrinsicInst>(&I));
+        break;
     }
   }
 
