@@ -1215,8 +1215,8 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
   OS << '\n';
 }
 
-/// Simplify the waitcnt, in the sense of removing redundant counts, and return
-/// whether a waitcnt instruction is needed at all.
+/// Simplify \p UpdateWait by removing waits that are redundant based on the
+/// current WaitcntBrackets and any other waits specified in \p CheckWait.
 void WaitcntBrackets::simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
                                       AMDGPU::Waitcnt &UpdateWait) const {
   simplifyWaitcnt(LOAD_CNT, UpdateWait.LoadCnt);
