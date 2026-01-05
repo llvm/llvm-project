@@ -411,7 +411,12 @@ RISCVTTIImpl::getPCRelativeAddrCost(const TTI::TargetCostKind CostKind) const {
     return 2;
   case TTI::TCK_Latency:
   case TTI::TCK_RecipThroughput:
-    return ST->hasAUIPCADDIFusion() ? 1 : 2;
+    // Depending on the memory model the address generation will
+    // require AUIPC + ADDI (medany) or LUI + ADDI (medlow). Don't
+    // have a way of getting this information here, so conservatively
+    // require both.
+    // In practice, these are generally implemented together.
+    return (ST->hasAUIPCADDIFusion() && ST->hasLUIADDIFusion()) ? 1 : 2;
   }
   llvm_unreachable("Unsupported cost kind");
 }
