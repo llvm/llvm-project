@@ -6218,10 +6218,13 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
         return true;
 
       KnownBits KA = DAG.computeKnownBits(A);
-      KnownBits KB = DAG.computeKnownBits(B);
+      if (!KA.isNonNegative() && !KA.isNegative())
+        return false;
 
-      return (KA.isNonNegative() && KB.isNonNegative()) ||
-            (KA.isNegative() && KB.isNegative());
+      KnownBits KB = DAG.computeKnownBits(B);
+      if (KA.isNonNegative())
+        return KB.isNonNegative();
+      return KB.isNegative();
     };
 
     if (HasKnownSameSign(N0, N1)) {
