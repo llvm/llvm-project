@@ -18,11 +18,7 @@
 namespace fir {
 class AddrOfOp;
 class DeclareOp;
-class FieldIndexOp;
 class GlobalOp;
-class ShapeOp;
-class ShapeShiftOp;
-class ShiftOp;
 } // namespace fir
 
 namespace hlfir {
