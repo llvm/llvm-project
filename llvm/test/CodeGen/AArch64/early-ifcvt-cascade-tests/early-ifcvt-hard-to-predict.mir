@@ -1,0 +1,57 @@
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt -o - %s | FileCheck %s
+
+# Test early if-conversion with a hard-to-predict branch (load-dependent condition).
+
+# The new heuristic in If Conversion added by this PR assumes that conditional
+# branches that originate from memory (and not function arguments) are data
+# dependent, and therefore more difficult to predict based on branch history alone.
+# In that case, we can be more aggressive with if-conversion and apply the full
+# mispredict penalty.
+
+# CHECK-LABEL: name: load_to_cond_branch
+
+# Current behavior: NOT converted
+# CHECK: bb.0:
+# CHECK: LDRWui
+# CHECK: Bcc
+# CHECK: bb.1:
+# CHECK: bb.2:
+# CHECK: PHI
+
+--- |
+  define i32 @load_to_cond_branch(ptr %p, i32 %x, i32 %y) {
+    ret i32 0
+  }
+...
+---
+name:            load_to_cond_branch
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+  - { reg: '$w2', virtual-reg: '%2' }
+body:             |
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $x0, $w1, $w2
+
+    %0:gpr64common = COPY $x0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = COPY $w2
+    %10:gpr32common = LDRWui %0, 0 :: (load (s32))
+    %11:gpr32 = SUBSWri %10, 100, 0, implicit-def $nzcv
+    Bcc 12, %bb.3, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %20:gpr32 = MADDWrrr %1, %2, $wzr
+    %21:gpr32 = MADDWrrr %20, %1, $wzr
+
+  bb.3:
+    %100:gpr32 = PHI %1, %bb.1, %21, %bb.2
+    $w0 = COPY %100
+    RET_ReallyLR implicit $w0
+...
