@@ -2367,8 +2367,8 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
 /// %0 = vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
 ///
 /// The canonical form of vector operations that reshape vectors is shape_cast.
-struct ExtractToShapeCast final : public OpRewritePattern<vector::ExtractOp> {
-  using OpRewritePattern::OpRewritePattern;
+struct ExtractToShapeCast final : OpRewritePattern<vector::ExtractOp> {
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
     VectorType sourceType = extractOp.getSourceVectorType();
@@ -3124,7 +3124,7 @@ struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
 /// The canonical form of vector operations that reshape vectors is shape_cast.
 struct BroadcastToShapeCast final
     : public OpRewritePattern<vector::BroadcastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::BroadcastOp broadcast,
                                 PatternRewriter &rewriter) const override {
 

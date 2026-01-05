@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -canonicalize |  FileCheck %s
+// RUN: mlir-opt %s --split-input-file --canonicalize | FileCheck %s
 
 // This file contains tests where a vector.shape_cast is the result
 // of canonicalization.
