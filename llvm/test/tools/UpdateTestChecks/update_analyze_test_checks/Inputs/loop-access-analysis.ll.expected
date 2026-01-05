@@ -8,26 +8,26 @@ define void @laa(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, p
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP1]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%loop>
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%loop>
 ; CHECK-EMPTY:
@@ -74,15 +74,15 @@ define void @test_brace_escapes(ptr noundef %arr) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds ptr, ptr %arr, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.1 = getelementptr inbounds ptr, ptr %arr, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: {(64 + %arr),+,64}<%loop.1> High: {(8064 + %arr),+,64}<%loop.1>)
 ; CHECK-NEXT:            Member: {{\{\{}}(64 + %arr),+,64}<%loop.1>,+,8}<%loop.2>
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %arr High: (8000 + %arr))
 ; CHECK-NEXT:            Member: {%arr,+,8}<nuw><%loop.2>
 ; CHECK-EMPTY:

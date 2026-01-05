@@ -5,8 +5,6 @@
 ; these instructions. MachineMemOperand handling can't currently deal with a
 ; negative stride that would allow memory before the pointer to be read.
 
-declare <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i8(ptr, i8, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i8> @strided_vpload_nxv1i8_i8(ptr %ptr, i8 signext %stride, <vscale x 1 x i1> %m, i32 zeroext %evl) {
   ; CHECK-LABEL: name: strided_vpload_nxv1i8_i8
   ; CHECK: bb.0 (%ir-block.0):
@@ -16,15 +14,13 @@ define <vscale x 1 x i8> @strided_vpload_nxv1i8_i8(ptr %ptr, i8 signext %stride,
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK-NEXT:   $v0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[PseudoVLSE8_V_MF8_MASK:%[0-9]+]]:vrnov0 = PseudoVLSE8_V_MF8_MASK $noreg, [[COPY3]], [[COPY2]], $v0, [[COPY]], 3 /* e8 */, 1 /* ta, mu */ :: (load unknown-size, align 1)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vmv0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[PseudoVLSE8_V_MF8_MASK:%[0-9]+]]:vmnov0 = PseudoVLSE8_V_MF8_MASK $noreg, [[COPY3]], [[COPY2]], [[COPY4]], [[COPY]], 3 /* e8 */, 1 /* ta, mu */ :: (load unknown-size, align 1)
   ; CHECK-NEXT:   $v8 = COPY [[PseudoVLSE8_V_MF8_MASK]]
   ; CHECK-NEXT:   PseudoRET implicit $v8
   %load = call <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i8(ptr %ptr, i8 %stride, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i8> %load
 }
-
-declare void @llvm.experimental.vp.strided.store.nxv1i8.p0.i8(<vscale x 1 x i8>, ptr, i8, <vscale x 1 x i1>, i32)
 
 define void @strided_vpstore_nxv1i8_i8(<vscale x 1 x i8> %val, ptr %ptr, i8 signext %stride, <vscale x 1 x i1> %m, i32 zeroext %evl) {
   ; CHECK-LABEL: name: strided_vpstore_nxv1i8_i8
@@ -36,8 +32,8 @@ define void @strided_vpstore_nxv1i8_i8(<vscale x 1 x i8> %val, ptr %ptr, i8 sign
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vr = COPY $v8
-  ; CHECK-NEXT:   $v0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   PseudoVSSE8_V_MF8_MASK [[COPY4]], [[COPY3]], [[COPY2]], $v0, [[COPY]], 3 /* e8 */ :: (store unknown-size, align 1)
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vmv0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   PseudoVSSE8_V_MF8_MASK [[COPY4]], [[COPY3]], [[COPY2]], [[COPY5]], [[COPY]], 3 /* e8 */ :: (store unknown-size, align 1)
   ; CHECK-NEXT:   PseudoRET
   call void @llvm.experimental.vp.strided.store.nxv1i8.p0.i8(<vscale x 1 x i8> %val, ptr %ptr, i8 %stride, <vscale x 1 x i1> %m, i32 %evl)
   ret void

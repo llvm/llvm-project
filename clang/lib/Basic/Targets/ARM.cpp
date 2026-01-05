@@ -14,7 +14,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -40,39 +39,12 @@ void ARMTargetInfo::setABIAAPCS() {
 
   ZeroLengthBitfieldBoundary = 0;
 
-  // Thumb1 add sp, #imm requires the immediate value be multiple of 4,
-  // so set preferred for small types to 32.
-  if (T.isOSBinFormatMachO()) {
-    resetDataLayout(BigEndian
-                        ? "E-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64",
-                    "_");
-  } else if (T.isOSWindows()) {
-    assert(!BigEndian && "Windows on ARM does not support big endian");
-    resetDataLayout("e"
-                    "-m:w"
-                    "-p:32:32"
-                    "-Fi8"
-                    "-i64:64"
-                    "-v128:64:128"
-                    "-a:0:32"
-                    "-n32"
-                    "-S64");
-  } else if (T.isOSNaCl()) {
-    assert(!BigEndian && "NaCl on ARM does not support big endian");
-    resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S128");
-  } else {
-    resetDataLayout(BigEndian
-                        ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
-  }
+  resetDataLayout();
 
   // FIXME: Enumerated types are variable width in straight AAPCS.
 }
 
 void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
-  const llvm::Triple &T = getTriple();
-
   IsAAPCS = false;
 
   if (IsAAPCS16)
@@ -93,20 +65,7 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
   /// gcc.
   ZeroLengthBitfieldBoundary = 32;
 
-  if (T.isOSBinFormatMachO() && IsAAPCS16) {
-    assert(!BigEndian && "AAPCS16 does not support big-endian");
-    resetDataLayout("e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128", "_");
-  } else if (T.isOSBinFormatMachO())
-    resetDataLayout(
-        BigEndian
-            ? "E-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32",
-        "_");
-  else
-    resetDataLayout(
-        BigEndian
-            ? "E-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+  resetDataLayout();
 
   // FIXME: Override "preferred align" for double and long long.
 }
@@ -137,19 +96,24 @@ void ARMTargetInfo::setArchInfo(llvm::ARM::ArchKind Kind) {
 }
 
 void ARMTargetInfo::setAtomic() {
-  // when triple does not specify a sub arch,
-  // then we are not using inline atomics
-  bool ShouldUseInlineAtomic =
-      (ArchISA == llvm::ARM::ISAKind::ARM && ArchVersion >= 6) ||
-      (ArchISA == llvm::ARM::ISAKind::THUMB && ArchVersion >= 7);
-  // Cortex M does not support 8 byte atomics, while general Thumb2 does.
   if (ArchProfile == llvm::ARM::ProfileKind::M) {
+    // M-class only ever supports 32-bit atomics. Cortex-M0 doesn't have
+    // any atomics.
     MaxAtomicPromoteWidth = 32;
-    if (ShouldUseInlineAtomic)
+    if (ArchVersion >= 7)
       MaxAtomicInlineWidth = 32;
   } else {
+    // A-class targets have up to 64-bit atomics.
+    //
+    // On Linux, 64-bit atomics are always available through kernel helpers
+    // (which are lock-free). Otherwise, atomics are available on v6 or later.
+    //
+    // (Thumb doesn't matter; for Thumbv6, we just use a library call which
+    // switches out of Thumb mode.)
+    //
+    // This should match setMaxAtomicSizeInBitsSupported() in the backend.
     MaxAtomicPromoteWidth = 64;
-    if (ShouldUseInlineAtomic)
+    if (getTriple().getOS() == llvm::Triple::Linux || ArchVersion >= 6)
       MaxAtomicInlineWidth = 64;
   }
 }
@@ -230,6 +194,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_5A";
   case llvm::ARM::ArchKind::ARMV9_6A:
     return "9_6A";
+  case llvm::ARM::ArchKind::ARMV9_7A:
+    return "9_7A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -259,6 +225,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
   bool IsFreeBSD = Triple.isOSFreeBSD();
+  bool IsFuchsia = Triple.isOSFuchsia();
   bool IsOpenBSD = Triple.isOSOpenBSD();
   bool IsNetBSD = Triple.isOSNetBSD();
   bool IsHaiku = Triple.isOSHaiku();
@@ -331,7 +298,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (IsFreeBSD || IsOpenBSD || IsHaiku || IsOHOS)
+      else if (IsFreeBSD || IsFuchsia || IsOpenBSD || IsHaiku || IsOHOS)
         setABI("aapcs-linux");
       else
         setABI("aapcs");
@@ -405,6 +372,7 @@ bool ARMTargetInfo::isBranchProtectionSupportedArch(StringRef Arch) const {
 
 bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
                                              BranchProtectionInfo &BPI,
+                                             const LangOptions &LO,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
   if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
@@ -583,13 +551,13 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
     } else if (Feature == "+dotprod") {
       DotProd = true;
     } else if (Feature == "+mve") {
       MVE |= MVE_INT;
     } else if (Feature == "+mve.fp") {
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
       FPU |= FPARMV8;
       MVE |= MVE_INT | MVE_FP;
       HW_FP |= HW_FP_SP | HW_FP_HP;
@@ -608,6 +576,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBTI = 1;
     } else if (Feature == "+fullbf16") {
       HasFullBFloat16 = true;
+    } else if (Feature == "+execute-only") {
+      TLSSupported = false;
     }
   }
 
@@ -617,20 +587,23 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   case 6:
     if (ArchProfile == llvm::ARM::ProfileKind::M)
       LDREX = 0;
-    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K)
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K ||
+             ArchKind == llvm::ARM::ArchKind::ARMV6KZ)
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     else
-      LDREX = LDREX_W;
+      LDREX = ARM_LDREX_W;
     break;
   case 7:
-    if (ArchProfile == llvm::ARM::ProfileKind::M)
-      LDREX = LDREX_W | LDREX_H | LDREX_B;
-    else
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
-    break;
   case 8:
+    if (ArchProfile == llvm::ARM::ProfileKind::M)
+      LDREX = ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
+    else
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
+    break;
   case 9:
-    LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+    assert(ArchProfile != llvm::ARM::ProfileKind::M &&
+           "No Armv9-M architectures defined");
+    LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
   }
 
   if (!(FPU & NeonFPU) && FPMath == FP_Neon) {
@@ -896,6 +869,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
+  case llvm::ARM::ArchKind::ARMV9_7A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1007,11 +981,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
   // Armv8.2-A FP16 vector intrinsic
-  if ((FPU & NeonFPU) && HasLegalHalfType)
+  if ((FPU & NeonFPU) && HasFastHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
 
   // Armv8.2-A FP16 scalar intrinsics
-  if (HasLegalHalfType)
+  if (HasFastHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
 
   // Armv8.2-A dot product intrinsics
@@ -1066,36 +1040,105 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
+  case llvm::ARM::ArchKind::ARMV9_7A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }
 }
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsNEON.def"
+static constexpr int NumBuiltins = ARM::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumNeonBuiltins =
+    NEON::FirstFp16Builtin - Builtin::FirstTSBuiltin;
+static constexpr int NumFp16Builtins =
+    NEON::FirstTSBuiltin - NEON::FirstFp16Builtin;
+static constexpr int NumMVEBuiltins =
+    ARM::FirstCDEBuiltin - NEON::FirstTSBuiltin;
+static constexpr int NumCDEBuiltins =
+    ARM::FirstARMBuiltin - ARM::FirstCDEBuiltin;
+static constexpr int NumARMBuiltins = ARM::LastTSBuiltin - ARM::FirstARMBuiltin;
+static_assert(NumBuiltins ==
+              (NumNeonBuiltins + NumFp16Builtins + NumMVEBuiltins +
+               NumCDEBuiltins + NumARMBuiltins));
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/BuiltinsARM.def"
+namespace clang {
+namespace NEON {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumNeonBuiltins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_INFOS
 };
 
-ArrayRef<Builtin::Info> ARMTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::ARM::LastTSBuiltin - Builtin::FirstTSBuiltin);
+namespace FP16 {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumFp16Builtins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_INFOS
+};
+} // namespace FP16
+} // namespace NEON
+} // namespace clang
+
+namespace {
+namespace MVE {
+#define GET_MVE_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_mve_builtins.inc"
+#undef GET_MVE_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumMVEBuiltins> BuiltinInfos = {
+#define GET_MVE_BUILTIN_INFOS
+#include "clang/Basic/arm_mve_builtins.inc"
+#undef GET_MVE_BUILTIN_INFOS
+};
+} // namespace MVE
+
+namespace CDE {
+#define GET_CDE_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_cde_builtins.inc"
+#undef GET_CDE_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumCDEBuiltins> BuiltinInfos = {
+#define GET_CDE_BUILTIN_INFOS
+#include "clang/Basic/arm_cde_builtins.inc"
+#undef GET_CDE_BUILTIN_INFOS
+};
+} // namespace CDE
+} // namespace
+
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsARM.def"
+    ; // namespace clang
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumARMBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsARM.def"
+});
+
+llvm::SmallVector<Builtin::InfosShard>
+ARMTargetInfo::getTargetBuiltins() const {
+  return {
+      {&NEON::BuiltinStrings, NEON::BuiltinInfos, "__builtin_neon_"},
+      {&NEON::FP16::BuiltinStrings, NEON::FP16::BuiltinInfos,
+       "__builtin_neon_"},
+      {&MVE::BuiltinStrings, MVE::BuiltinInfos, "__builtin_arm_mve_"},
+      {&CDE::BuiltinStrings, CDE::BuiltinInfos, "__builtin_arm_cde_"},
+      {&BuiltinStrings, BuiltinInfos},
+  };
 }
 
 bool ARMTargetInfo::isCLZForZeroUndef() const { return false; }
@@ -1333,7 +1376,7 @@ ARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_AAPCS_VFP:
   case CC_Swift:
   case CC_SwiftAsync:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
     return CCCR_OK;
   default:
     return CCCR_Warning;
@@ -1408,7 +1451,7 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
-  case CC_OpenCLKernel:
+  case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_Swift:
@@ -1465,7 +1508,7 @@ CygwinARMTargetInfo::CygwinARMTargetInfo(const llvm::Triple &Triple,
   this->WCharType = TargetInfo::UnsignedShort;
   TLSSupported = false;
   DoubleAlign = LongLongAlign = 64;
-  resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
+  resetDataLayout();
 }
 
 void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -1477,6 +1520,16 @@ void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "unix", Opts);
   if (Opts.CPlusPlus)
     Builder.defineMacro("_GNU_SOURCE");
+}
+
+AppleMachOARMTargetInfo::AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                                                 const TargetOptions &Opts)
+    : AppleMachOTargetInfo<ARMleTargetInfo>(Triple, Opts) {}
+
+void AppleMachOARMTargetInfo::getOSDefines(const LangOptions &Opts,
+                                           const llvm::Triple &Triple,
+                                           MacroBuilder &Builder) const {
+  getAppleMachODefines(Builder, Opts, Triple);
 }
 
 DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,

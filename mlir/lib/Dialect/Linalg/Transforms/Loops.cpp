@@ -10,7 +10,6 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -50,7 +49,7 @@ static SmallVector<Value> makeCanonicalAffineApplies(OpBuilder &b, Location loc,
     auto exprMap = AffineMap::get(dims, map.getNumSymbols(), e);
     SmallVector<Value> operands(vals);
     affine::canonicalizeMapAndOperands(&exprMap, &operands);
-    res.push_back(b.create<affine::AffineApplyOp>(loc, exprMap, operands));
+    res.push_back(affine::AffineApplyOp::create(b, loc, exprMap, operands));
   }
   return res;
 }
@@ -71,8 +70,9 @@ static void inlineRegionAndEmitStore(OpBuilder &b, Location loc, OpType op,
   Operation *terminator = block.getTerminator();
   for (OpOperand &operand : terminator->getOpOperands()) {
     Value toStore = map.lookupOrDefault(operand.get());
-    b.create<StoreOpTy>(loc, toStore, outputBuffers[operand.getOperandNumber()],
-                        indexing[operand.getOperandNumber()]);
+    StoreOpTy::create(b, loc, toStore,
+                      outputBuffers[operand.getOperandNumber()],
+                      indexing[operand.getOperandNumber()]);
   }
 }
 
@@ -146,7 +146,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
     auto indexing = makeCanonicalAffineApplies(
         b, loc, linalgOp.getMatchingIndexingMap(inputOperand), allIvsPlusDims);
     indexedValues.push_back(
-        b.create<LoadOpTy>(loc, inputOperand->get(), indexing));
+        LoadOpTy::create(b, loc, inputOperand->get(), indexing));
   }
   // 1.b. Emit load from output views.
   for (OpOperand &outputOperand : linalgOp.getDpsInitsMutable()) {
@@ -154,7 +154,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
         b, loc, linalgOp.getMatchingIndexingMap(&outputOperand),
         allIvsPlusDims);
     indexedValues.push_back(
-        b.create<LoadOpTy>(loc, outputOperand.get(), indexing));
+        LoadOpTy::create(b, loc, outputOperand.get(), indexing));
   }
 
   // TODO: When a region inliner exists, use it.
@@ -192,7 +192,7 @@ static void replaceIndexOpsByInductionVariables(RewriterBase &rewriter,
         .Case([&](affine::AffineForOp affineForOp) {
           allIvs.push_back(affineForOp.getInductionVar());
         })
-        .Default([&](Operation *op) { assert(false && "unexpected op"); });
+        .DefaultUnreachable("unexpected op");
   }
   assert(linalgOp.getNumLoops() == allIvs.size() &&
          "expected the number of loops and induction variables to match");
@@ -303,7 +303,7 @@ struct FoldAffineOp : public RewritePattern {
       }
       return failure();
     }
-    if (dyn_cast<AffineDimExpr>(expr) || dyn_cast<AffineSymbolExpr>(expr)) {
+    if (isa<AffineDimExpr, AffineSymbolExpr>(expr)) {
       rewriter.replaceOp(op, op->getOperand(0));
       return success();
     }

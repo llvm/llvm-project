@@ -20,15 +20,22 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::WebAssembly::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsWebAssembly.def"
-};
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#include "clang/Basic/BuiltinsWebAssembly.def"
+});
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime1"}};
@@ -52,6 +59,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
       .Case("fp16", HasFP16)
+      .Case("gc", HasGC)
       .Case("multimemory", HasMultiMemory)
       .Case("multivalue", HasMultivalue)
       .Case("mutable-globals", HasMutableGlobals)
@@ -91,6 +99,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_multimemory__");
   if (HasFP16)
     Builder.defineMacro("__wasm_fp16__");
+  if (HasGC)
+    Builder.defineMacro("__wasm_gc__");
   if (HasMultivalue)
     Builder.defineMacro("__wasm_multivalue__");
   if (HasMutableGlobals)
@@ -184,6 +194,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
     Features["fp16"] = true;
+    Features["gc"] = true;
     Features["multimemory"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
@@ -202,6 +213,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
 
 bool WebAssemblyTargetInfo::handleTargetFeatures(
     std::vector<std::string> &Features, DiagnosticsEngine &Diags) {
+  HasMustTail = false;
   for (const auto &Feature : Features) {
     if (Feature == "+atomics") {
       HasAtomics = true;
@@ -258,6 +270,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-fp16") {
       HasFP16 = false;
+      continue;
+    }
+    if (Feature == "+gc") {
+      HasGC = true;
+      continue;
+    }
+    if (Feature == "-gc") {
+      HasGC = false;
       continue;
     }
     if (Feature == "+multimemory") {
@@ -326,10 +346,12 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "+tail-call") {
       HasTailCall = true;
+      HasMustTail = true;
       continue;
     }
     if (Feature == "-tail-call") {
       HasTailCall = false;
+      HasMustTail = false;
       continue;
     }
     if (Feature == "+wide-arithmetic") {
@@ -346,6 +368,11 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     return false;
   }
 
+  // gc implies reference-types
+  if (HasGC) {
+    HasReferenceTypes = true;
+  }
+
   // bulk-memory-opt is a subset of bulk-memory.
   if (HasBulkMemory) {
     HasBulkMemoryOpt = true;
@@ -360,14 +387,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
   return true;
 }
 
-ArrayRef<Builtin::Info> WebAssemblyTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::WebAssembly::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+WebAssemblyTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
-void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,
-                                   LangOptions &Opts) {
-  TargetInfo::adjust(Diags, Opts);
+void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                                   const TargetInfo *Aux) {
+  TargetInfo::adjust(Diags, Opts, Aux);
   // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
   // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
   // because they are unsupported.

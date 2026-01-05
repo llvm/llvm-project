@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/ExecutionEngine.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -45,7 +45,7 @@ public:
     referencedObjects.push_back(obj);
   }
 
-  static nb::object createFromCapsule(nb::object capsule) {
+  static nb::object createFromCapsule(const nb::object &capsule) {
     MlirExecutionEngine rawPm =
         mlirPythonCapsuleToExecutionEngine(capsule.ptr());
     if (mlirExecutionEngineIsNull(rawPm))
@@ -75,13 +75,13 @@ NB_MODULE(_mlirExecutionEngine, m) {
           "__init__",
           [](PyExecutionEngine &self, MlirModule module, int optLevel,
              const std::vector<std::string> &sharedLibPaths,
-             bool enableObjectDump) {
+             bool enableObjectDump, bool enablePIC) {
             llvm::SmallVector<MlirStringRef, 4> libPaths;
             for (const std::string &path : sharedLibPaths)
               libPaths.push_back({path.c_str(), path.length()});
-            MlirExecutionEngine executionEngine =
-                mlirExecutionEngineCreate(module, optLevel, libPaths.size(),
-                                          libPaths.data(), enableObjectDump);
+            MlirExecutionEngine executionEngine = mlirExecutionEngineCreate(
+                module, optLevel, libPaths.size(), libPaths.data(),
+                enableObjectDump, enablePIC);
             if (mlirExecutionEngineIsNull(executionEngine))
               throw std::runtime_error(
                   "Failure while creating the ExecutionEngine.");
@@ -89,7 +89,7 @@ NB_MODULE(_mlirExecutionEngine, m) {
           },
           nb::arg("module"), nb::arg("opt_level") = 2,
           nb::arg("shared_libs") = nb::list(),
-          nb::arg("enable_object_dump") = true,
+          nb::arg("enable_object_dump") = true, nb::arg("enable_pic") = false,
           "Create a new ExecutionEngine instance for the given Module. The "
           "module must contain only dialects that can be translated to LLVM. "
           "Perform transformations and code generation at the optimization "
@@ -113,7 +113,7 @@ NB_MODULE(_mlirExecutionEngine, m) {
       .def(
           "raw_register_runtime",
           [](PyExecutionEngine &executionEngine, const std::string &name,
-             nb::object callbackObj) {
+             const nb::object &callbackObj) {
             executionEngine.addReferencedObject(callbackObj);
             uintptr_t rawSym =
                 nb::cast<uintptr_t>(nb::getattr(callbackObj, "value"));
@@ -124,6 +124,17 @@ NB_MODULE(_mlirExecutionEngine, m) {
           },
           nb::arg("name"), nb::arg("callback"),
           "Register `callback` as the runtime symbol `name`.")
+      .def(
+          "initialize",
+          [](PyExecutionEngine &executionEngine) {
+            mlirExecutionEngineInitialize(executionEngine.get());
+          },
+          "Initialize the ExecutionEngine. Global constructors specified by "
+          "`llvm.mlir.global_ctors` will be run. One common scenario is that "
+          "kernel binary compiled from `gpu.module` gets loaded during "
+          "initialization. Make sure all symbols are resolvable before "
+          "initialization by calling `register_runtime` or including "
+          "shared libraries.")
       .def(
           "dump_to_object_file",
           [](PyExecutionEngine &executionEngine, const std::string &fileName) {

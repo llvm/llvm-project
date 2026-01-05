@@ -1,0 +1,43 @@
+functions:
+  getpriority:
+    in-latest-posix: ''
+  getrlimit:
+    in-latest-posix: ''
+  getrusage:
+    in-latest-posix: ''
+  setpriority:
+    in-latest-posix: ''
+  setrlimit:
+    in-latest-posix: ''
+
+macros:
+  PRIO_PROCESS:
+    in-latest-posix: ''
+  PRIO_PGRP:
+    in-latest-posix: ''
+  PRIO_USER:
+    in-latest-posix: ''
+  RLIM_INFINITY:
+    in-latest-posix: ''
+  RLIM_SAVED_MAX:
+    in-latest-posix: ''
+  RLIM_SAVED_CUR:
+    in-latest-posix: ''
+  RLIMIT_CORE:
+    in-latest-posix: ''
+  RLIMIT_CPU:
+    in-latest-posix: ''
+  RLIMIT_DATA:
+    in-latest-posix: ''
+  RLIMIT_FSIZE:
+    in-latest-posix: ''
+  RLIMIT_NOFILE:
+    in-latest-posix: ''
+  RLIMIT_STACK:
+    in-latest-posix: ''
+  RLIMIT_AS:
+    in-latest-posix: ''
+  RUSAGE_SELF:
+    in-latest-posix: ''
+  RUSAGE_CHILDREN:
+    in-latest-posix: ''

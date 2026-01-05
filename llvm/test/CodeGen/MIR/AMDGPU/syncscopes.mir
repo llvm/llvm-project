@@ -74,14 +74,14 @@ body:             |
     liveins: $sgpr4_sgpr5
 
     S_WAITCNT 0
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr4_sgpr5, 8, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    $sgpr6 = S_LOAD_DWORD_IMM $sgpr4_sgpr5, 0, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
-    $sgpr2_sgpr3 = S_LOAD_DWORDX2_IMM $sgpr4_sgpr5, 24, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    $sgpr7 = S_LOAD_DWORD_IMM $sgpr4_sgpr5, 16, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
-    $sgpr8 = S_LOAD_DWORD_IMM $sgpr4_sgpr5, 32, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr4_sgpr5, 8, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    $sgpr6 = S_LOAD_DWORD_IMM $sgpr4_sgpr5, 0, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
+    $sgpr2_sgpr3 = S_LOAD_DWORDX2_IMM $sgpr4_sgpr5, 24, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    $sgpr7 = S_LOAD_DWORD_IMM $sgpr4_sgpr5, 16, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
+    $sgpr8 = S_LOAD_DWORD_IMM $sgpr4_sgpr5, 32, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
     S_WAITCNT 127
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
-    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed $sgpr4_sgpr5, 40, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed $sgpr4_sgpr5, 40, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit killed $sgpr0_sgpr1, implicit $sgpr0_sgpr1, implicit $exec
     $vgpr2 = V_MOV_B32_e32 killed $sgpr6, implicit $exec, implicit $exec
     FLAT_STORE_DWORD killed $vgpr0_vgpr1, killed $vgpr2, 0, 19, implicit $exec, implicit $flat_scr :: (volatile non-temporal store syncscope("agent") seq_cst (s32) into %ir.agent_out)

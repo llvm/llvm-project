@@ -76,7 +76,7 @@ unsigned Localizer::getNumPhiUses(MachineOperand &Op) const {
 bool Localizer::localizeInterBlock(MachineFunction &MF,
                                    LocalizedSetVecT &LocalizedInstrs) {
   bool Changed = false;
-  DenseMap<std::pair<MachineBasicBlock *, unsigned>, unsigned> MBBWithLocalDef;
+  DenseMap<std::pair<MachineBasicBlock *, Register>, Register> MBBWithLocalDef;
 
   // Since the IRTranslator only emits constants into the entry block, and the
   // rest of the GISel pipeline generally emits constants close to their users,
@@ -136,7 +136,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
         Register NewReg = MRI->cloneVirtualRegister(Reg);
         LocalizedMI->getOperand(0).setReg(NewReg);
         NewVRegIt =
-            MBBWithLocalDef.insert(std::make_pair(MBBAndReg, NewReg)).first;
+            MBBWithLocalDef.try_emplace(MBBAndReg, NewReg).first;
         LLVM_DEBUG(dbgs() << "Inserted: " << *LocalizedMI);
       }
       LLVM_DEBUG(dbgs() << "Update use with: " << printReg(NewVRegIt->second)
@@ -203,8 +203,7 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
 
 bool Localizer::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // Don't run the pass if the target asked so.

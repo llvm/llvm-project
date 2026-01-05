@@ -105,9 +105,8 @@ float16_t test_vcvth_f16_u64 (uint64_t a) {
 }
 
 // COMMON-LABEL: test_vcvth_s16_f16
-// COMMONIR:       [[VCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtzs.i32.f16(half %a)
-// COMMONIR:       [[TRUNC:%.*]] = trunc i32 [[VCVT]] to i16
-// COMMONIR:       ret i16 [[TRUNC]]
+// COMMONIR:       [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtzs.i16.f16(half %a)
+// COMMONIR:       ret i16 [[VCVT]]
 int16_t test_vcvth_s16_f16 (float16_t a) {
   return vcvth_s16_f16(a);
 }
@@ -127,9 +126,8 @@ int64_t test_vcvth_s64_f16 (float16_t a) {
 }
 
 // COMMON-LABEL: test_vcvth_u16_f16
-// COMMONIR:       [[VCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtzu.i32.f16(half %a)
-// COMMONIR:       [[TRUNC:%.*]] = trunc i32 [[VCVT]] to i16
-// COMMONIR:       ret i16 [[TRUNC]]
+// COMMONIR:       [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half %a)
+// COMMONIR:       ret i16 [[VCVT]]
 uint16_t test_vcvth_u16_f16 (float16_t a) {
   return vcvth_u16_f16(a);
 }

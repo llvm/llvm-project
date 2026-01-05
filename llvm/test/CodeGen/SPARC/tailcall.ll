@@ -253,13 +253,13 @@ define void @ret_large_struct(ptr noalias sret(%struct.big) %agg.result) #0 {
 ; V9-LABEL: ret_large_struct:
 ; V9:       ! %bb.0: ! %entry
 ; V9-NEXT:    save %sp, -176, %sp
-; V9-NEXT:    sethi %h44(bigstruct), %i1
-; V9-NEXT:    add %i1, %m44(bigstruct), %i1
-; V9-NEXT:    sllx %i1, 12, %i1
-; V9-NEXT:    add %i1, %l44(bigstruct), %o1
-; V9-NEXT:    mov 400, %o2
-; V9-NEXT:    call memcpy
 ; V9-NEXT:    mov %i0, %o0
+; V9-NEXT:    sethi %h44(bigstruct), %i0
+; V9-NEXT:    add %i0, %m44(bigstruct), %i0
+; V9-NEXT:    sllx %i0, 12, %i0
+; V9-NEXT:    add %i0, %l44(bigstruct), %o1
+; V9-NEXT:    call memcpy
+; V9-NEXT:    mov 400, %o2
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore
 entry:

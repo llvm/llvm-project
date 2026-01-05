@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -S -passes=loop-vectorize -debug-only=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOVEC
-; RUN: opt -S -passes=loop-vectorize -debug-only=loop-vectorize -enable-scalable-autovec-in-streaming-mode < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,VEC
+; RUN: opt -S -passes=loop-vectorize -debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOVEC
+; RUN: opt -S -passes=loop-vectorize -debug-only=loop-vectorize --disable-output -enable-scalable-autovec-in-streaming-mode < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,VEC
 
 target triple = "aarch64-unknown-linux-gnu"
 

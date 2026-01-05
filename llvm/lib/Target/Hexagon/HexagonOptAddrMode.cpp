@@ -9,6 +9,7 @@
 // load/store instructions.
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
@@ -35,7 +36,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -49,13 +49,6 @@ static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   "optimization"));
 
 extern cl::opt<unsigned> RDFFuncBlockLimit;
-
-namespace llvm {
-
-  FunctionPass *createHexagonOptAddrMode();
-  void initializeHexagonOptAddrModePass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
@@ -114,7 +107,7 @@ private:
   bool canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN, MachineInstr &MI,
                        const NodeList &UNodeList);
   bool isSafeToExtLR(NodeAddr<StmtNode *> SN, MachineInstr *MI,
-                     unsigned LRExtReg, const NodeList &UNodeList);
+                     Register LRExtReg, const NodeList &UNodeList);
   void getAllRealUses(NodeAddr<StmtNode *> SN, NodeList &UNodeList);
   bool allValidCandidates(NodeAddr<StmtNode *> SA, NodeList &UNodeList);
   short getBaseWithLongOffset(const MachineInstr &MI) const;
@@ -152,10 +145,10 @@ bool HexagonOptAddrMode::hasRepForm(MachineInstr &MI, unsigned TfrDefR) {
   }
 
   if (HII->getAddrMode(MI) == HexagonII::BaseRegOffset)
-    // Tranform to Absolute plus register offset.
+    // Transform to Absolute plus register offset.
     return (HII->changeAddrMode_rr_ur(MI) >= 0);
   else if (HII->getAddrMode(MI) == HexagonII::BaseImmOffset)
-    // Tranform to absolute addressing mode.
+    // Transform to absolute addressing mode.
     return (HII->changeAddrMode_io_abs(MI) >= 0);
 
   return false;
@@ -163,7 +156,7 @@ bool HexagonOptAddrMode::hasRepForm(MachineInstr &MI, unsigned TfrDefR) {
 
 // Check if addasl instruction can be removed. This is possible only
 // if it's feeding to only load/store instructions with base + register
-// offset as these instruction can be tranformed to use 'absolute plus
+// offset as these instruction can be transformed to use 'absolute plus
 // shifted register offset'.
 // ex:
 // Rs = ##foo
@@ -184,7 +177,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
   NodeId OffsetRegRD = 0;
   for (NodeAddr<UseNode *> UA : AddAslSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (OffsetReg == RR.Reg) {
+    if (OffsetReg == RR.asMCReg()) {
       OffsetRR = RR;
       OffsetRegRD = UA.Addr->getReachingDef();
     }
@@ -205,7 +198,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
     // Reaching Def to an offset register can't be a phi.
     if ((OffsetRegDN.Addr->getFlags() & NodeAttrs::PhiRef) &&
         MI.getParent() != UseMI.getParent())
-    return false;
+      return false;
 
     const MCInstrDesc &UseMID = UseMI.getDesc();
     if ((!UseMID.mayLoad() && !UseMID.mayStore()) ||
@@ -307,7 +300,7 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
 }
 
 bool HexagonOptAddrMode::isSafeToExtLR(NodeAddr<StmtNode *> SN,
-                                       MachineInstr *MI, unsigned LRExtReg,
+                                       MachineInstr *MI, Register LRExtReg,
                                        const NodeList &UNodeList) {
   RegisterRef LRExtRR;
   NodeId LRExtRegRD = 0;
@@ -315,7 +308,7 @@ bool HexagonOptAddrMode::isSafeToExtLR(NodeAddr<StmtNode *> SN,
   // for the LRExtReg.
   for (NodeAddr<UseNode *> UA : SN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (LRExtReg == RR.Reg) {
+    if (LRExtReg == RR.asMCReg()) {
       LRExtRR = RR;
       LRExtRegRD = UA.Addr->getReachingDef();
     }
@@ -455,9 +448,7 @@ bool HexagonOptAddrMode::usedInLoadStore(NodeAddr<StmtNode *> CurrentInstSN,
 
   getAllRealUses(CurrentInstSN, LoadStoreUseList);
   bool FoundLoadStoreUse = false;
-  for (auto I = LoadStoreUseList.begin(), E = LoadStoreUseList.end(); I != E;
-       ++I) {
-    NodeAddr<UseNode *> UN = *I;
+  for (NodeAddr<UseNode *> UN : LoadStoreUseList) {
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *LoadStoreMI = SN.Addr->getCode();
     const MCInstrDesc &MID = LoadStoreMI->getDesc();
@@ -490,10 +481,9 @@ bool HexagonOptAddrMode::findFirstReachedInst(
   for (auto &InstIter : *CurrentMBB) {
     // If the instruction is an Addi and is in the AddiList
     if (InstIter.getOpcode() == Hexagon::A2_addi) {
-      auto Iter = std::find_if(
-          AddiList.begin(), AddiList.end(), [&InstIter](const auto &SUPair) {
-            return SUPair.first.Addr->getCode() == &InstIter;
-          });
+      auto Iter = llvm::find_if(AddiList, [&InstIter](const auto &SUPair) {
+        return SUPair.first.Addr->getCode() == &InstIter;
+      });
       if (Iter != AddiList.end()) {
         UseSN = Iter->first;
         return true;
@@ -539,7 +529,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
       [](const MachineInstr *MI,
          const DenseSet<MachineInstr *> &ProcessedAddiInsts) -> bool {
     // If we've already processed this Addi, just return
-    if (ProcessedAddiInsts.find(MI) != ProcessedAddiInsts.end()) {
+    if (ProcessedAddiInsts.contains(MI)) {
       LLVM_DEBUG(dbgs() << "\t\t\tAddi already found in ProcessedAddiInsts: "
                         << *MI << "\n\t\t\tSkipping...");
       return true;
@@ -551,7 +541,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
     return Changed;
   ProcessedAddiInsts.insert(AddMI);
 
-  // Get the base register that would be shared by other Addi Intructions
+  // Get the base register that would be shared by other Addi Instructions
   Register BaseReg = AddMI->getOperand(1).getReg();
 
   // Store a list of all Addi instructions that share the above common base
@@ -562,7 +552,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   // Find the UseNode that contains the base register and it's reachingDef
   for (NodeAddr<UseNode *> UA : AddSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef URR = UA.Addr->getRegRef(*DFG);
-    if (BaseReg != URR.Reg)
+    if (BaseReg != URR.asMCReg())
       continue;
 
     UAReachingDefID = UA.Addr->getReachingDef();
@@ -587,8 +577,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   // Find all Addi instructions that share the same base register and add them
   // to the AddiList
   getAllRealUses(ReachingDefStmt, AddiUseList);
-  for (auto I = AddiUseList.begin(), E = AddiUseList.end(); I != E; ++I) {
-    NodeAddr<UseNode *> UN = *I;
+  for (NodeAddr<UseNode *> UN : AddiUseList) {
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *MI = SN.Addr->getCode();
 
@@ -638,7 +627,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
 
     NewOffset = CurrentMIImmOp.getImm() - FirstReachedMIImmOp.getImm();
 
-    // This is the first occuring Addi, so skip modifying this
+    // This is the first occurring Addi, so skip modifying this
     if (CurrentMI == FirstReachedMI) {
       continue;
     }
@@ -751,7 +740,7 @@ bool HexagonOptAddrMode::processAddUses(NodeAddr<StmtNode *> AddSN,
   // for the LRExtReg.
   for (NodeAddr<UseNode *> UA : AddSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (BaseReg == RR.Reg)
+    if (BaseReg == RR.asMCReg())
       LRExtRegRD = UA.Addr->getReachingDef();
   }
 
@@ -1084,7 +1073,7 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
 
     // Analyze all uses of 'add'. If the output of 'add' is used as an address
     // in the base+immediate addressing mode load/store instructions, see if
-    // they can be updated to use the immediate value as an offet. Thus,
+    // they can be updated to use the immediate value as an offset. Thus,
     // providing us the opportunity to eliminate 'add'.
     // Ex: Rx= add(Rt,#12)
     //     memw(Rx+#0) = Rs
