@@ -59,7 +59,8 @@ subroutine do_simd_reduction()
   ! CHECK:      %[[RED:.*]] = fir.load %[[RED_DECL]]#0 : !fir.ref<i32>
   ! CHECK:      %[[RESULT:.*]] = arith.addi %[[RED]], %{{.*}} : i32
   ! CHECK:      hlfir.assign %[[RESULT]] to %[[RED_DECL]]#0 : i32, !fir.ref<i32>
-  ! CHECK-NEXT: omp.yield
+  ! CHECK:      fir.if
+  ! CHECK:      omp.yield
   !$omp do simd reduction(+:sum)
     do index_ = 1, 10
       sum = sum + 1

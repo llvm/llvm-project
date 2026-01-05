@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp -fopenmp-version=45
 
 ! 2.15.1.1 Predetermined rules for associated do-loops index variable
 !   a) The loop iteration variable(s) in the associated do-loop(s) of a do,

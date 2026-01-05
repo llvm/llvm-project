@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp -fopenmp-version=45
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct restrictions on single directive.
 ! A positive case
