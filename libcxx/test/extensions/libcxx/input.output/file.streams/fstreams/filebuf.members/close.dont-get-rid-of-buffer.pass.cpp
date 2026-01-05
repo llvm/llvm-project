@@ -17,8 +17,7 @@
 //
 // Ensure that basic_filebuf::close() does not get rid of the underlying buffer set
 // via pubsetbuf(). Otherwise, reopening the stream will result in not reusing the
-// same buffer, which might be conforming but is definitely surprising. The standard
-// is not very clear on whether that is actually conforming.
+// same buffer, which is conforming but also very surprising.
 //
 
 #include <cassert>
