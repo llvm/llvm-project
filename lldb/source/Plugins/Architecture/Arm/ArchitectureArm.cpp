@@ -341,9 +341,10 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
 
 bool ArchitectureArm::IsValidBreakpointInstruction(
     llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
-  auto is_bkpt = false;
-  if (observed.size() < reference.size())
+  if (reference.size() > observed.size())
     return false;
+
+  auto is_bkpt = false;
   if (reference.size() == 2) {
     auto ref_bytes = llvm::support::endian::read16le(reference.data());
     auto obs_bytes = llvm::support::endian::read16le(observed.data());

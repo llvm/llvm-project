@@ -150,8 +150,8 @@ bool ArchitectureAArch64::IsValidBreakpointInstruction(
     return false;
   auto ref_bytes = llvm::support::endian::read32le(reference.data());
   auto bytes = llvm::support::endian::read32le(observed.data());
-  // Only the 11 highest bits define the breakpoint, the others include an
-  // immediate which is stored to a CPU register.
+  // Only the 11 highest bits define the breakpoint instruction, the others
+  // include an immediate value that we will explicitly check against.
   uint32_t mask = 0xFFE00000;
   // Check that the masked bytes match the reference, but also check that the
   // immediate in the instruction is the default output by llvm.debugtrap

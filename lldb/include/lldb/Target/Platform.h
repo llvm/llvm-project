@@ -338,7 +338,7 @@ public:
   ///     A hint to disambiguate which instruction is used on platforms where
   ///     there are multiple interrupts with different sizes in the ISA (e.g
   ///     ARM Thumb, RISC-V)
-  llvm::ArrayRef<uint8_t> SoftwareTrapOpcodeTable(const ArchSpec &arch,
+  llvm::ArrayRef<uint8_t> SoftwareTrapOpcodeBytes(const ArchSpec &arch,
                                                   size_t size_hint = 0);
 
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,

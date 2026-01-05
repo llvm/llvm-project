@@ -1159,37 +1159,39 @@ public:
     return false;
   }
 
-  void PerformAction(Event *event_ptr) override {
+  void PerformAction(Event [[maybe_unused]] * event_ptr) override {
     // A signal of SIGTRAP indicates that a break instruction has been hit
-    if (m_value == SIGTRAP) {
-      Log *log = GetLog(LLDBLog::Process);
-      Status error;
-      std::array<uint8_t, 4> bytes_at_pc = {0, 0, 0, 0};
-      auto reg_ctx_sp = GetThread()->GetRegisterContext();
-      auto process_sp = GetThread()->GetProcess();
-      addr_t pc = reg_ctx_sp->GetPC();
-      if (!process_sp->ReadMemory(pc, bytes_at_pc.data(), bytes_at_pc.size(),
-                                  error)) {
-        // If this fails, we simply don't handle the step-over-break logic and
-        // log the failure
-        LLDB_LOG(log, "failed to read program bytes at pc address {}, error {}",
-                 pc, error);
-        return;
-      }
-      auto &target = process_sp->GetTarget();
-      auto platform_sp = target.GetPlatform();
-      auto platform_opcode =
-          platform_sp->SoftwareTrapOpcodeTable(target.GetArchitecture());
+    if (m_value != SIGTRAP)
+      return;
+    Log *log = GetLog(LLDBLog::Process);
+    Status error;
+    // We don't expect to see byte sequences longer than four bytes long for
+    // any breakpoint instructions known to LLDB.
+    std::array<uint8_t, 4> bytes_at_pc = {0, 0, 0, 0};
+    auto reg_ctx_sp = GetThread()->GetRegisterContext();
+    auto process_sp = GetThread()->GetProcess();
+    addr_t pc = reg_ctx_sp->GetPC();
+    if (!process_sp->ReadMemory(pc, bytes_at_pc.data(), bytes_at_pc.size(),
+                                error)) {
+      // If this fails, we simply don't handle the step-over-break logic and
+      // log the failure
+      LLDB_LOG(log, "failed to read program bytes at pc address {}, error {}",
+               pc, error);
+      return;
+    }
+    auto &target = process_sp->GetTarget();
+    auto platform_sp = target.GetPlatform();
+    auto platform_opcode =
+        platform_sp->SoftwareTrapOpcodeBytes(target.GetArchitecture());
 
-      if (auto *arch_plugin = target.GetArchitecturePlugin();
-          arch_plugin &&
-          arch_plugin->IsValidBreakpointInstruction(
-              platform_opcode, llvm::ArrayRef<uint8_t>(bytes_at_pc.data(),
-                                                       bytes_at_pc.size()))) {
-        LLDB_LOG(log, "stepping over breakpoint in debuggee to new pc: {}",
-                 pc + platform_opcode.size());
-        reg_ctx_sp->SetPC(pc + platform_opcode.size());
-      }
+    if (auto *arch_plugin = target.GetArchitecturePlugin();
+        arch_plugin &&
+        arch_plugin->IsValidBreakpointInstruction(
+            platform_opcode,
+            llvm::ArrayRef<uint8_t>(bytes_at_pc.data(), bytes_at_pc.size()))) {
+      LLDB_LOG(log, "stepping over breakpoint in debuggee to new pc: {}",
+               pc + platform_opcode.size());
+      reg_ctx_sp->SetPC(pc + platform_opcode.size());
     }
   }
 

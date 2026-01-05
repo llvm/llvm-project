@@ -1947,7 +1947,7 @@ size_t Platform::ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
   return 0;
 }
 
-llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeTable(const ArchSpec &arch,
+llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeBytes(const ArchSpec &arch,
                                                           size_t size_hint) {
   llvm::ArrayRef<uint8_t> trap_opcode;
 
@@ -2052,12 +2052,16 @@ llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeTable(const ArchSpec &arch,
   } break;
 
   // Unreachable (0x00) triggers an unconditional trap.
-  case llvm::Triple::wasm32:
-  // In the case of an unkown platform, return 0x00 too
-  default: {
+  case llvm::Triple::wasm32: {
     static const uint8_t g_wasm_opcode[] = {0x00};
     trap_opcode = llvm::ArrayRef<uint8_t>(g_wasm_opcode, sizeof(g_wasm_opcode));
   } break;
+  // The default case should not match against anything, so return a zero
+  // size array.
+  default: {
+    static const uint8_t g_no_opcode[] = {};
+    trap_opcode = llvm::ArrayRef<uint8_t>(g_no_opcode, 0);
+  };
   }
   return trap_opcode;
 }
@@ -2083,7 +2087,7 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   if ((addr_class == AddressClass::eCodeAlternateISA) ||
       (arch.GetFlags() & ArchSpec::eRISCV_rvc))
     size_hint = 2;
-  auto trap_opcode = SoftwareTrapOpcodeTable(arch, size_hint);
+  auto trap_opcode = SoftwareTrapOpcodeBytes(arch, size_hint);
 
   if (bp_site &&
       bp_site->SetTrapOpcode(trap_opcode.begin(), trap_opcode.size()))
