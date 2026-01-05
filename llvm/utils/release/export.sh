@@ -31,6 +31,7 @@ Usage: $(basename $0) [-release|--release <major>.<minor>.<patch>]
                       [-final|--final]
                       [-git-ref|--git-ref <git-ref>]
                       [-template|--template <template>]
+                      [-sub-projects|--sub-projects]
 
 Flags:
 
@@ -153,9 +154,9 @@ while [ $# -gt 0 ]; do
         -final | --final )
             rc="final"
             ;;
-	-sub-projects | --sub-projects )
-	    subprojects=1
-	    ;;
+        -sub-projects | --sub-projects )
+            subprojects=1
+            ;;
         -git-ref | --git-ref )
             shift
             snapshot="$1"
