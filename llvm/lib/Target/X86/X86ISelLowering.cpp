@@ -48484,6 +48484,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     // The 'and' mask must be composed of power-of-2 constants.
     SDValue And = Cond.getOperand(0);
     SDValue Mask = And.getOperand(1);
+    EVT MskVT = Mask.getValueType();
     auto *C = isConstOrConstSplat(Mask);
     if (C && C->getAPIntValue().isPowerOf2()) {
       // vselect (X & C == 0), LHS, RHS --> vselect (X & C != 0), RHS, LHS
@@ -48495,26 +48496,22 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     // If we have a non-splat but still powers-of-2 mask, AVX1 can use pmulld
     // and AVX2 can use vpsllv{dq}. 8-bit lacks a proper shift or multiply.
     // 16-bit lacks a proper blendv.
+    // TODO: Can we merge this into the LowerVSETCC handling of uniform masks?
     bool CanShiftBlend =
         TLI.isTypeLegal(VT) && ((Subtarget.hasAVX() && EltBitWidth == 32) ||
                                 (Subtarget.hasAVX2() && EltBitWidth == 64) ||
                                 (Subtarget.hasXOP()));
-    if (CanShiftBlend && ISD::matchUnaryPredicate(Mask, [](ConstantSDNode *C) {
-          return C->getAPIntValue().isPowerOf2();
-        })) {
+    if (CanShiftBlend && DAG.isKnownToBeAPowerOfTwo(Mask)) {
       // Create a left-shift constant to get the mask bits over to the sign-bit.
-      SmallVector<int, 32> ShlVals;
-      for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
-        auto *MaskVal = cast<ConstantSDNode>(Mask.getOperand(i));
-        ShlVals.push_back(MaskVal->getAPIntValue().countl_zero());
-      }
       // vsel ((X & C) == 0), LHS, RHS --> vsel ((shl X, C') < 0), RHS, LHS
-      MVT MskVT = Mask.getSimpleValueType();
-      SDValue ShlAmt = getConstVector(ShlVals, MskVT, DAG, DL);
-      SDValue Shl = DAG.getNode(ISD::SHL, DL, MskVT, And.getOperand(0), ShlAmt);
-      SDValue NewCond =
-          DAG.getSetCC(DL, CondVT, Shl, Cond.getOperand(1), ISD::SETLT);
-      return DAG.getSelect(DL, VT, NewCond, RHS, LHS);
+      if (SDValue ShlAmt =
+              DAG.FoldConstantArithmetic(ISD::CTLZ, DL, MskVT, Mask)) {
+        SDValue Shl =
+            DAG.getNode(ISD::SHL, DL, MskVT, And.getOperand(0), ShlAmt);
+        SDValue NewCond =
+            DAG.getSetCC(DL, CondVT, Shl, Cond.getOperand(1), ISD::SETLT);
+        return DAG.getSelect(DL, VT, NewCond, RHS, LHS);
+      }
     }
   }
 
