@@ -621,7 +621,7 @@
                   "Launch the program inside an external terminal window."
                 ],
                 "description": "Specify where to launch the program: internal console, integrated terminal or external terminal.",
-                "default": "internalConsole"
+                "default": "integratedTerminal"
               },
               "stdio": {
                 "type": "array",
