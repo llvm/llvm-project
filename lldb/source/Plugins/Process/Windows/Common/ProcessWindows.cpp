@@ -250,7 +250,6 @@ Status ProcessWindows::DoAttachToProcessWithName(
             __FUNCTION__, process_name);
 
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-
   while (pid == LLDB_INVALID_PROCESS_ID) {
     ProcessInstanceInfoList process_infos;
     uint32_t num_matches = Host::FindProcesses(match_info, process_infos);
