@@ -7306,15 +7306,17 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
 
   VPReductionPHIRecipe *EpiRedHeaderPhi;
   if (EpiRedResult->getOpcode() == VPInstruction::ComputeReductionResult) {
-    // Find the reduction phi by looking at the other user of operand 0.
+    // Find the reduction phi by looking at the other user - across the backedge
+    // - of operand 0.
     VPValue *Op = EpiRedResult->getOperand(0);
     auto *OtherUser = *find_if(
         Op->users(), [EpiRedResult](VPUser *U) { return U != EpiRedResult; });
-    if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(OtherUser))
-      EpiRedHeaderPhi = Phi;
-    else // For truncated reductions, look through the cast.
+    EpiRedHeaderPhi = dyn_cast<VPReductionPHIRecipe>(OtherUser);
+    if (!EpiRedHeaderPhi) {
+      // For truncated reductions, look through the cast.
       EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
           cast<VPWidenCastRecipe>(OtherUser)->getSingleUser());
+    }
   } else {
     EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
   }
@@ -9402,17 +9404,17 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
               return VPI;
         return nullptr;
       };
-      VPInstruction *RdxResult = FindReductionResult(ReductionPhi);
-      if (!RdxResult)
-        RdxResult = FindReductionResult(ReductionPhi->getBackedgeValue());
-      // For truncated reductions, look through the extension on the backedge.
-      VPValue *TruncVal;
-      if (!RdxResult &&
-          VPlanPatternMatch::match(ReductionPhi->getBackedgeValue(),
-                                   VPlanPatternMatch::m_ZExtOrSExt(
-                                       VPlanPatternMatch::m_VPValue(TruncVal))))
+      VPInstruction *RdxResult =
+          FindReductionResult(ReductionPhi->getBackedgeValue());
+      if (!RdxResult) {
+        // For truncated reductions, look through the extension on the backedge.
+        VPValue *TruncVal = nullptr;
+        VPlanPatternMatch::match(ReductionPhi->getBackedgeValue(),
+                                 VPlanPatternMatch::m_ZExtOrSExt(
+                                     VPlanPatternMatch::m_VPValue(TruncVal)));
         RdxResult = FindReductionResult(TruncVal);
-      assert(RdxResult && "expected to find reduction result");
+        assert(RdxResult && "expected to find reduction result");
+      }
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
       RecurKind RK = ReductionPhi->getRecurrenceKind();

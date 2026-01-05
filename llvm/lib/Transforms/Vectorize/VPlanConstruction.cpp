@@ -1234,12 +1234,11 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // Look through selects inserted for tail folding.
     if (!RdxResult) {
-      VPReductionPHIRecipe *PhiR = RedPhiR;
-      auto *SelR = cast<VPSingleDefRecipe>(*find_if(
-          BackedgeVal->users(), [PhiR](VPUser *U) { return U != PhiR; }));
+      auto *SelR = cast<VPSingleDefRecipe>(
+          *find_if(BackedgeVal->users(),
+                   [PhiR = RedPhiR](VPUser *U) { return U != PhiR; }));
       RdxResult = findUserOf<VPInstruction::ComputeReductionResult>(SelR);
-      if (!RdxResult)
-        return false;
+      assert(RdxResult && "must find a ComputeReductionResult");
     }
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
@@ -1310,10 +1309,10 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
 
     // MinMaxPhiR has users outside the reduction cycle in the loop. Check if
     // the only other user is a FindLastIV reduction. MinMaxPhiR must have
-    // exactly 3 users: 1) the min/max operation, the compare of a FindLastIV
-    // reduction and ComputeReductionResult. The comparisom must compare
-    // MinMaxPhiR against the min/max operand used for the min/max reduction
-    // and only be used by the select of the FindLastIV reduction.
+    // exactly 2 users: 1) the min/max operation and the compare of a FindLastIV
+    // reduction. The comparison must compare MinMaxPhiR against the min/max
+    // operand used for the min/max reduction and only be used by the select of
+    // the FindLastIV reduction.
     RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
     assert(
         RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&

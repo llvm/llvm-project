@@ -804,8 +804,8 @@ public:
       NonNegFlags.NonNeg = false;
       break;
     case OperationType::Cmp:
-    case OperationType::Other:
     case OperationType::ReductionOp:
+    case OperationType::Other:
       break;
     }
   }
@@ -846,8 +846,8 @@ public:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
     case OperationType::Cmp:
-    case OperationType::Other:
     case OperationType::ReductionOp:
+    case OperationType::Other:
       break;
     }
   }
