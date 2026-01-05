@@ -2123,7 +2123,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   const DebugLoc &DL = Block.findDebugLoc(It);
 
   // Helper to emit expanded waitcnt sequence for profiling.
-  auto emitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
+  auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
                                  auto EmitWaitcnt) {
     if (Outstanding > Target) {
       for (unsigned i = Outstanding - 1; i >= Target && i != ~0u; --i) {
