@@ -65,7 +65,7 @@ func.func @concat_static_shape_mismatch(%arg0: tensor<3xf32>) {
 // -----
 
 func.func @extract_too_many_indices(%arg0: tensor<?xf32>) {
-  // expected-error@+1 {{incorrect number of indices, has 0, expected 1}}
+  // expected-error@+1 {{incorrect number of indices for extract_element}}
   %0 = tensor.extract %arg0[] : tensor<?xf32>
   return
 }

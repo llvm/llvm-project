@@ -24,7 +24,6 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -1884,21 +1883,36 @@ void ReduceOp::print(OpAsmPrinter &p) {
 LogicalResult ReduceOp::verify() {
   ArrayRef<int64_t> dimensionsRef = getDimensions();
 
-  if (failed(verifyAllShapesMatch(getOperation(), getInputs(), "inputs")))
-    return failure();
-  if (failed(verifyAllShapesMatch(getOperation(), getInits(), "inits")))
-    return failure();
+  for (int64_t i = 1; i < getNumDpsInputs(); ++i) {
+    if (llvm::cast<ShapedType>(getInputs()[i].getType()).getShape() !=
+        llvm::cast<ShapedType>(getInputs()[0].getType()).getShape()) {
+      return emitOpError() << "expects all inputs to have the same shapes. "
+                              "Shape at input-index "
+                           << i
+                           << " is not equal to the shape at input-index 0.";
+    }
+  }
+  for (int64_t i = 1; i < getNumDpsInits(); ++i) {
+    if (llvm::cast<ShapedType>(getInits()[i].getType()).getShape() !=
+        llvm::cast<ShapedType>(getInits()[0].getType()).getShape()) {
+      return emitOpError() << "expects all outputs to have the same shapes. "
+                              "Shape at output-index "
+                           << i
+                           << " is not equal to the shape at output-index 0.";
+    }
+  }
   auto inputType = llvm::cast<ShapedType>(getInputs()[0].getType());
   auto initType = llvm::cast<ShapedType>(getInits()[0].getType());
 
-  if (failed(verifyDimensionIndicesInRange(getOperation(), dimensionsRef,
-                                           inputType.getRank(),
-                                           "reduction dimensions")))
-    return failure();
-
   DenseSet<int64_t> dimensionsToReduce;
-  for (int64_t dimension : dimensionsRef)
+  for (int64_t dimension : dimensionsRef) {
+    if (dimension < 0 || dimension >= inputType.getRank()) {
+      return emitOpError()
+             << "dimensions for reduction should be in the range [0, "
+             << inputType.getRank() - 1 << "].";
+    }
     dimensionsToReduce.insert(dimension);
+  }
 
   auto inputDims = inputType.getShape();
   auto initDims = initType.getShape();

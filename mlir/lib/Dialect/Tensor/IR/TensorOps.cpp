@@ -1352,8 +1352,9 @@ void ExtractOp::getAsmResultNames(
 LogicalResult ExtractOp::verify() {
   // Verify the # indices match if we have a ranked type.
   auto tensorType = llvm::cast<RankedTensorType>(getTensor().getType());
-  return verifyIndexCountMatchesRank(getOperation(), tensorType.getRank(),
-                                     getIndices().size());
+  if (tensorType.getRank() != static_cast<int64_t>(getIndices().size()))
+    return emitOpError("incorrect number of indices for extract_element");
+  return success();
 }
 
 /// If we have an ExtractOp consuming an InsertOp with the same
