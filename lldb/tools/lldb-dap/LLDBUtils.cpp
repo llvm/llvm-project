@@ -143,12 +143,14 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonHistoryBoundary:
     return true;
   case lldb::eStopReasonBreakpoint: {
-    // Internal breakpoints must not be considered as valid stop reason.
-    uint64_t data_count = thread.GetStopReasonDataCount();
+    // Stop reason data for breakpoints consists of breakpoint ID and location
+    // ID pairs. Internal breakpoints (identified by their ID) are not
+    // considered valid stop reasons.
+    const uint64_t data_count = thread.GetStopReasonDataCount();
     if (data_count == 0)
       return true;
     for (uint64_t i = 0; i < data_count; i += 2) {
-      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+      const lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
       if (!LLDB_BREAK_ID_IS_INTERNAL(bp_id))
         return true;
     }
