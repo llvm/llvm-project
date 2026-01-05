@@ -896,7 +896,7 @@ well as verifying inline callstacks.
     {Line}  test.cpp:8 [foo]
     {Line}  test.cpp:9 [foo]
 
-Optionally, by adding `--print=symbols`, live variables for each line is
+Optionally, by adding `--print=symbols`, live variables for each line are
 printed out.
 
 .. code-block:: none

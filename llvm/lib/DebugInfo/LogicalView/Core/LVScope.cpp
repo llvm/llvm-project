@@ -1969,13 +1969,10 @@ void LVScopeFunction::printDebugger(raw_ostream &OS) const {
 
   // Sort all lines by their address.
   std::sort(AllLines.begin(), AllLines.end(),
-            [](const LVLine *a, const LVLine *b) -> bool {
-              if (a->getAddress() != b->getAddress())
-                return a->getAddress() < b->getAddress();
-              if (a->getIsLineDebug() != b->getIsLineDebug())
-                return a->getIsLineDebug();
-              return a->getID() < b->getID();
-            });
+    [](const LVLine *a, const LVLine *b) -> bool {
+      return std::make_tuple(a->getAddress(), a->getIsLineDebug(), a->getID())
+        < std::make_tuple(b->getAddress(), b->getIsLineDebug(), b->getID());
+    });
 
   // Print everything out
   const bool IncludeVars = options().getPrintSymbols();
@@ -1983,12 +1980,14 @@ void LVScopeFunction::printDebugger(raw_ostream &OS) const {
   SetVector<const LVLocation *>
       LiveSymbols; // This needs to be ordered since we're iterating over it.
   for (const LVLine *Line : AllLines) {
-    // Update live list: Add lives
-    for (auto Loc : LifetimeBegins[Line->getAddress()])
-      LiveSymbols.insert(Loc);
-    // Update live list: remove dead
-    for (auto Loc : LifetimeEndsExclusive[Line->getAddress()])
-      LiveSymbols.remove(Loc);
+    if (IncludeVars) {
+      // Update live list: Add lives
+      for (auto Loc : LifetimeBegins[Line->getAddress()])
+        LiveSymbols.insert(Loc);
+      // Update live list: remove dead
+      for (auto Loc : LifetimeEndsExclusive[Line->getAddress()])
+        LiveSymbols.remove(Loc);
+    }
 
     if (Line->getIsNewStatement() && Line->getIsLineDebug() &&
         Line->getLineNumber() != 0) {

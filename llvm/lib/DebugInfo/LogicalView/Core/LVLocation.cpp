@@ -651,13 +651,10 @@ void LVLocation::print(LVLocations *Locations, raw_ostream &OS, bool Full) {
 void LVLocationSymbol::printLocations(raw_ostream &OS) const {
   if (Entries) {
     bool CodeViewLocation = getParentSymbol()->getHasCodeViewLocation();
-    std::string Leading;
-    for (LVOperation *Operation : *Entries) {
-      OS << Leading
-         << (CodeViewLocation ? Operation->getOperandsCodeViewInfo()
-                              : Operation->getOperandsDWARFInfo());
-      Leading = ", ";
-    }
+    llvm::interleave(*Entries, OS, [&](LVOperation *Operation) {
+      OS << (CodeViewLocation ? Operation->getOperandsCodeViewInfo()
+        : Operation->getOperandsDWARFInfo());
+      }, ", ");
   }
 }
 
@@ -683,7 +680,12 @@ void LVLocationSymbol::printExtra(raw_ostream &OS, bool Full) const {
 void LVLocationSymbol::printDebugger(raw_ostream &OS, LVLevel Indent) const {
   LVSymbol *Sym = getParentSymbol();
   OS << indentAsString(Indent) << formattedKind(Sym->kind());
-  OS << " " << Sym->getName() << ": " << Sym->getType()->getName() << " : ";
+  OS << " " << Sym->getName() << ": ";
+  // If there is no type, just leave the space empty between the
+  // two colons.
+  if (LVElement *Ty = Sym->getType())
+    OS << Sym->getType()->getName();
+  OS << " : ";
   printLocations(OS);
   OS << " (line " << Sym->getLineNumber() << ")";
   OS << "\n";
