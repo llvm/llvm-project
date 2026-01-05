@@ -282,9 +282,9 @@ define amdgpu_kernel void @combine_with_extract_other_uses_asm(
 ; CHECK-OPT-NEXT:    s_bitcmp1_b32 s0, 0
 ; CHECK-OPT-NEXT:    s_cselect_b64 vcc, -1, 0
 ; CHECK-OPT-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-OPT-NEXT:    v_lshrrev_b32_e32 v5, 8, v0
 ; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v3, 0, v1, vcc
-; CHECK-OPT-NEXT:    v_add_u16_e32 v1, v0, v5
+; CHECK-OPT-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; CHECK-OPT-NEXT:    v_add_u16_e32 v1, v0, v1
 ; CHECK-OPT-NEXT:    v_add_u16_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; CHECK-OPT-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
 ; CHECK-OPT-NEXT:    v_add_u16_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
