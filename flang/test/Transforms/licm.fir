@@ -1324,3 +1324,35 @@ func.func @_QPtest_dummy_scalar_pointer_optional(%arg0: !fir.ref<!fir.array<?xi3
   fir.store %11 to %2 : !fir.ref<i32>
   return
 }
+
+// Check that nothing is hoisted out of omp.loop_nest
+// (even if omp.loop_nest becomes a loop-like operation):
+// CHECK-LABEL: func.func @_QPtest_omp_loop_wrapper
+// CHECK: omp.parallel
+// CHECK-NEXT: omp.wsloop
+// CHECK-NEXT: omp.loop_nest
+func.func @_QPtest_omp_loop_wrapper(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_omp_loop_wrapperEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_omp_loop_wrapperEi"}
+  %3 = fir.declare %2 {uniq_name = "_QFtest_omp_loop_wrapperEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  omp.parallel {
+    omp.wsloop private(@_QFtest_omp_loop_wrapperEi_private_i32 %3 -> %arg1 : !fir.ref<i32>) {
+      omp.loop_nest (%arg2) : i32 = (%c1_i32) to (%c10_i32) inclusive step (%c1_i32) {
+        %c0 = arith.constant 0 : index
+        %5 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+        %7 = fir.convert %arg2 : (i32) -> i64
+        %8 = fir.box_addr %5 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+        %9:3 = fir.box_dims %5, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+        %10 = fir.shape_shift %9#0, %9#1 : (index, index) -> !fir.shapeshift<1>
+        %11 = fir.array_coor %8(%10) %7 : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>, i64) -> !fir.ref<i32>
+        fir.store %c1_i32 to %11 : !fir.ref<i32>
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}

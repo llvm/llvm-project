@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/Support/DebugLog.h"
@@ -215,6 +216,23 @@ void LoopInvariantCodeMotion::runOnOperation() {
       };
 
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+    if (isa<omp::OutlineableOpenMPOpInterface>(loopLike.getOperation())) {
+      LDBG() << "Skipping omp::OutlineableOpenMPOpInterface operation";
+      return;
+    }
+    // We always hoist operations to the parent operation of the loopLike.
+    // Check that the parent operation allows the hoisting, e.g.
+    // omp::LoopWrapperInterface operations assume tight nesting
+    // of the inner maybe loop-like operations, so hoisting
+    // to such a parent would be invalid.
+    Operation *parentOp = loopLike->getParentOp();
+    if (!parentOp) {
+      LDBG() << "Skipping top-level loop-like operation?";
+      return;
+    } else if (isa<omp::LoopWrapperInterface>(parentOp)) {
+      LDBG() << "Skipping omp::LoopWrapperInterface operation";
+      return;
+    }
     moveLoopInvariantCode(
         loopLike.getLoopRegions(),
         /*isDefinedOutsideRegion=*/
