@@ -39,6 +39,8 @@ struct PDLType : PyConcreteType<PDLType> {
 
 struct AttributeType : PyConcreteType<AttributeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLAttributeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLAttributeTypeGetTypeID;
   static constexpr const char *pyClassName = "AttributeType";
   using Base::Base;
 
@@ -60,6 +62,8 @@ struct AttributeType : PyConcreteType<AttributeType> {
 
 struct OperationType : PyConcreteType<OperationType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLOperationType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLOperationTypeGetTypeID;
   static constexpr const char *pyClassName = "OperationType";
   using Base::Base;
 
@@ -81,6 +85,8 @@ struct OperationType : PyConcreteType<OperationType> {
 
 struct RangeType : PyConcreteType<RangeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLRangeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLRangeTypeGetTypeID;
   static constexpr const char *pyClassName = "RangeType";
   using Base::Base;
 
@@ -109,6 +115,8 @@ struct RangeType : PyConcreteType<RangeType> {
 
 struct TypeType : PyConcreteType<TypeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLTypeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLTypeTypeGetTypeID;
   static constexpr const char *pyClassName = "TypeType";
   using Base::Base;
 
@@ -130,6 +138,8 @@ struct TypeType : PyConcreteType<TypeType> {
 
 struct ValueType : PyConcreteType<ValueType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLValueType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLValueTypeGetTypeID;
   static constexpr const char *pyClassName = "ValueType";
   using Base::Base;
 

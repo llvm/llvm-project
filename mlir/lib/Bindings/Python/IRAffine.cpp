@@ -118,12 +118,6 @@ public:
   static void bind(nb::module_ &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName);
     cls.def(nb::init<PyAffineExpr &>(), nb::arg("expr"));
-    cls.def_static(
-        "isinstance",
-        [](PyAffineExpr &otherAffineExpr) -> bool {
-          return DerivedTy::isaFunction(otherAffineExpr);
-        },
-        nb::arg("other"));
     DerivedTy::bindDerived(cls);
   }
 

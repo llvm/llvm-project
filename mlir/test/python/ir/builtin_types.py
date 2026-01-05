@@ -97,15 +97,15 @@ def testTypeIsInstance():
     t1 = Type.parse("i32", ctx)
     t2 = Type.parse("f32", ctx)
     # CHECK: True
-    print(IntegerType.isinstance(t1))
+    print(isinstance(t1, IntegerType))
     # CHECK: False
-    print(F32Type.isinstance(t1))
+    print(isinstance(t1, F32Type))
     # CHECK: False
-    print(FloatType.isinstance(t1))
+    print(isinstance(t1, FloatType))
     # CHECK: True
-    print(F32Type.isinstance(t2))
+    print(isinstance(t2, F32Type))
     # CHECK: True
-    print(FloatType.isinstance(t2))
+    print(isinstance(t2, FloatType))
 
 
 # CHECK-LABEL: TEST: testFloatTypeSubclasses
