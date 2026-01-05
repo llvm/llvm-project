@@ -198,15 +198,20 @@ static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
   assert(intTy && "mask must be an integer type");
   unsigned width = intTy.getWidth();
 
-  mlir::Type maskTy = cir::VectorType::get(
-      cir::IntType::get(builder.getContext(), 1, false), width);
+  auto i1Ty = builder.getSIntNTy(1);
+  auto maskVecTy = cir::VectorType::get(i1Ty, width);
 
-  mask = builder.createBitcast(mask, maskTy);
-  mask = builder.createExtractElement(loc, mask, (uint64_t)0);
+  mlir::Value maskVec = builder.createBitcast(mask, maskVecTy);
+
+  // Extract bit 0 from the mask vector
+  mlir::Value bit0 = builder.createExtractElement(loc, maskVec, (uint64_t)0);
+
+  // Convert i1 to bool for select
   auto boolTy = cir::BoolType::get(builder.getContext());
-  mask = cir::CastOp::create(builder, loc, boolTy, cir::CastKind::int_to_bool,
-                             mask);
-  return builder.createSelect(loc, mask, op0, op1);
+  mlir::Value cond = cir::CastOp::create(builder, loc, boolTy,
+                                         cir::CastKind::int_to_bool, bit0);
+
+  return builder.createSelect(loc, cond, op0, op1);
 }
 
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
