@@ -1090,6 +1090,7 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
   class SCEVPtrToIntSinkingRewriter
       : public SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter> {
     using Base = SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter>;
+
   public:
     SCEVPtrToIntSinkingRewriter(ScalarEvolution &SE) : SCEVRewriteVisitor(SE) {}
 
