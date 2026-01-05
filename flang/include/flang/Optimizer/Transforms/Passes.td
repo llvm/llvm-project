@@ -528,7 +528,7 @@ def CUFPredefinedVarToGPU
   let summary = "Transform predefined variables to GPU operations";
   let description = [{
     Change the predefined variables injected in the device function to their
-    corresponding GPU dialect operations.
+    corresponding NVVM dialect operations.
   }];
   let dependentDialects = ["mlir::NVVM::NVVMDialect"];
 }
