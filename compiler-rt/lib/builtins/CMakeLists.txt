@@ -993,9 +993,6 @@ else ()
           endif()
         endif()
       endif()
-      check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
-                               int main(void) { return 0; }"
-                              COMPILER_RT_HAS_${arch}_FLOAT16)
       append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
       check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }
                                int main(void) { return 0; }"
@@ -1031,6 +1028,11 @@ else ()
                               C_STANDARD 11
                               CXX_STANDARD 17
                               PARENT_TARGET builtins)
+
+      # Write out the sources that were used to compile the builtins so that tests can be run in
+      # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
+      set_output_name(BUILTIN_LIB_TARGET_NAME clang_rt.builtins ${arch})
+      file(WRITE "${CMAKE_BINARY_DIR}/${BUILTIN_LIB_TARGET_NAME}.sources.txt" "${${arch}_SOURCES}")
       cmake_pop_check_state()
     endif ()
   endforeach ()
