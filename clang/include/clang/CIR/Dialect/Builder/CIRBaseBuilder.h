@@ -506,9 +506,7 @@ public:
 
   mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
                                   mlir::Value newElt, mlir::Value idx) {
-    auto op =
-        cir::VecInsertOp::create(*this, loc, vec.getType(), vec, newElt, idx);
-    return op.getResult();
+    return cir::VecInsertOp::create(*this, loc, vec.getType(), vec, newElt, idx);
   }
 
   mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
