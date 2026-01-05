@@ -242,13 +242,18 @@ exit:
 }
 
 define void @store_try_reorder(ptr %dst) {
-; CHECK-LABEL: @store_try_reorder(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 0, 0
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[DST:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_I1887:%.*]] = getelementptr i32, ptr [[DST]], i64 1
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[ARRAYIDX_I1887]], align 4
-; CHECK-NEXT:    ret void
+; NON-POW2-LABEL: @store_try_reorder(
+; NON-POW2-NEXT:  entry:
+; NON-POW2-NEXT:    store <3 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    ret void
+;
+; POW2-ONLY-LABEL: @store_try_reorder(
+; POW2-ONLY-NEXT:  entry:
+; POW2-ONLY-NEXT:    store <2 x i32> zeroinitializer, ptr [[DST:%.*]], align 4
+; POW2-ONLY-NEXT:    [[ADD216:%.*]] = sub i32 0, 0
+; POW2-ONLY-NEXT:    [[ARRAYIDX_I1891:%.*]] = getelementptr i32, ptr [[DST]], i64 2
+; POW2-ONLY-NEXT:    store i32 [[ADD216]], ptr [[ARRAYIDX_I1891]], align 4
+; POW2-ONLY-NEXT:    ret void
 ;
 entry:
   %add = add i32 0, 0

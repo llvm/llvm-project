@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx14ext,cxx17ext,cxx20ext,cxx23ext -std=c++03 -Wno-c99-designator %s -Wno-c++11-extensions
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx14ext,cxx17ext,cxx20ext,cxx23ext -std=c++03 -Wno-c99-designator %s -Wno-c++11-extensions -Wno-local-type-template-args
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx14ext,cxx17ext,cxx20ext,cxx23ext -std=c++11 -Wno-c99-designator %s
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx17ext,cxx20ext,cxx23ext          -std=c++14 -Wno-c99-designator %s
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx20ext,cxx23ext                   -std=c++17 -Wno-c99-designator %s
@@ -159,3 +159,15 @@ struct U {
   template <typename T>
   void m_fn1(T x = 0[0); // expected-error{{expected ']'}} expected-note{{to match this '['}}
 } *U;
+
+
+
+namespace GH63880{
+void f() {
+    char* i(*[] { return new int; }());
+    // expected-error@-1{{cannot initialize a variable of type 'char *' with an lvalue of type 'int'}}
+
+    char* j(&[]() -> int& { return *new int; }());
+    //expected-error@-1{{cannot initialize a variable of type 'char *' with an rvalue of type 'int *'}}
+}
+}

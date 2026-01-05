@@ -3,10 +3,29 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare i1 @llvm.is.fpclass.f16(half, i32)
 declare i1 @llvm.is.fpclass.f32(float, i32)
 declare i1 @llvm.is.fpclass.f64(double, i32)
 declare i1 @llvm.is.fpclass.f128(fp128, i32)
 
+
+define i1 @isnan_h(half %x) {
+; CHECK-LABEL: isnan_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    .cfi_def_cfa_offset 320
+; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT:    tceb %f0, 15
+; CHECK-NEXT:    ipm %r2
+; CHECK-NEXT:    srl %r2, 28
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
+; CHECK-NEXT:    br %r14
+  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
+  ret i1 %1
+}
 
 define i1 @isnan_f(float %x) {
 ; CHECK-LABEL: isnan_f:

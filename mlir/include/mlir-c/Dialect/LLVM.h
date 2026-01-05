@@ -23,6 +23,8 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(LLVM, llvm);
 MLIR_CAPI_EXPORTED MlirType mlirLLVMPointerTypeGet(MlirContext ctx,
                                                    unsigned addressSpace);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMPointerTypeGetTypeID(void);
+
 /// Returns `true` if the type is an LLVM dialect pointer type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMPointerType(MlirType type);
 
@@ -52,8 +54,13 @@ MLIR_CAPI_EXPORTED intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type);
 MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetInput(MlirType type,
                                                          intptr_t pos);
 
+/// Returns the return type of the function type.
+MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type);
+
 /// Returns `true` if the type is an LLVM dialect struct type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMStructType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMStructTypeGetTypeID(void);
 
 /// Returns `true` if the type is a literal (unnamed) LLVM struct type.
 MLIR_CAPI_EXPORTED bool mlirLLVMStructTypeIsLiteral(MlirType type);
@@ -303,7 +310,8 @@ typedef enum MlirLLVMDINameTableKind MlirLLVMDINameTableKind;
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
     MlirAttribute file, MlirAttribute producer, bool isOptimized,
-    MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind);
+    MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind,
+    MlirAttribute splitDebugFilename);
 
 /// Creates a LLVM DIFlags attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx,

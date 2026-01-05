@@ -1,5 +1,6 @@
 add_lldb_unittest(SymbolTests
   JSONSymbolTest.cpp
+  LineTableTest.cpp
   LocateSymbolFileTest.cpp
   MangledTest.cpp
   PostfixExpressionTest.cpp
@@ -11,6 +12,7 @@ add_lldb_unittest(SymbolTests
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
   TestLineEntry.cpp
+  UnwindPlanTest.cpp
 
   LINK_LIBS
     lldbCore

@@ -44,7 +44,8 @@ class ARMBaseInstrInfo : public ARMGenInstrInfo {
 
 protected:
   // Can be only subclassed.
-  explicit ARMBaseInstrInfo(const ARMSubtarget &STI);
+  explicit ARMBaseInstrInfo(const ARMSubtarget &STI,
+                            const ARMBaseRegisterInfo &TRI);
 
   void expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
                                 unsigned LoadImmOpc, unsigned LoadOpc) const;
@@ -125,10 +126,11 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
-                                      LiveIntervals *LIS) const override;
+  const ARMBaseRegisterInfo &getRegisterInfo() const {
+    return static_cast<const ARMBaseRegisterInfo &>(
+        TargetInstrInfo::getRegisterInfo());
+  }
 
-  virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
 
   ScheduleHazardRecognizer *
@@ -201,29 +203,27 @@ public:
                                     int &FrameIndex) const override;
 
   void copyToCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                  unsigned SrcReg, bool KillSrc,
+                  MCRegister SrcReg, bool KillSrc,
                   const ARMSubtarget &Subtarget) const;
   void copyFromCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    unsigned DestReg, bool KillSrc,
+                    MCRegister DestReg, bool KillSrc,
                     const ARMSubtarget &Subtarget) const;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -231,16 +231,14 @@ public:
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   MachineInstr &
   duplicate(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
             const MachineInstr &Orig) const override;
 
   const MachineInstrBuilder &AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
-                                     unsigned SubIdx, unsigned State,
-                                     const TargetRegisterInfo *TRI) const;
+                                     unsigned SubIdx, unsigned State) const;
 
   bool produceSameValue(const MachineInstr &MI0, const MachineInstr &MI1,
                         const MachineRegisterInfo *MRI) const override;
@@ -410,16 +408,6 @@ private:
                           MachineBasicBlock::iterator It, bool CFI,
                           bool Auth) const;
 
-  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
-  /// for the case when the LR is saved in the register \p Reg.
-  void emitCFIForLRSaveToReg(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator It,
-                             Register Reg) const;
-
-  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
-  /// after the LR is was restored from a register.
-  void emitCFIForLRRestoreFromReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator It) const;
   /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///
@@ -493,7 +481,7 @@ private:
   MachineInstr *canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetInstrInfo *TII) const;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.

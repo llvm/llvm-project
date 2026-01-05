@@ -150,13 +150,14 @@ define void @ucvtf_v16i16_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    uunpklo z1.s, z0.h
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_256-NEXT:    ucvtf z1.s, p0/m, z1.s
+; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    ucvtf z0.s, p0/m, z0.s
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ucvtf z1.s, p0/m, z1.s
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: ucvtf_v16i16_v16f32:
@@ -554,13 +555,14 @@ define void @ucvtf_v8i32_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    uunpklo z1.d, z0.s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    ucvtf z1.d, p0/m, z1.d
+; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    ucvtf z0.d, p0/m, z0.d
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ucvtf z1.d, p0/m, z1.d
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: ucvtf_v8i32_v8f64:
@@ -722,8 +724,11 @@ define <1 x float> @ucvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v1i64_v1f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    ucvtf s0, x8
+; CHECK-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %res = uitofp <1 x i64> %op1 to <1 x float>
   ret <1 x float> %res
@@ -733,8 +738,12 @@ define <1 x float> @ucvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 define <2 x float> @ucvtf_v2i64_v2f32(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v2i64_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    ucvtf s0, x9
+; CHECK-NEXT:    ucvtf s1, x8
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i64> %op1 to <2 x float>
   ret <2 x float> %res
@@ -1056,13 +1065,14 @@ define void @scvtf_v16i16_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    sunpklo z1.s, z0.h
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_256-NEXT:    scvtf z1.s, p0/m, z1.s
+; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    scvtf z0.s, p0/m, z0.s
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    scvtf z1.s, p0/m, z1.s
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: scvtf_v16i16_v16f32:
@@ -1472,13 +1482,14 @@ define void @scvtf_v8i32_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    sunpklo z1.d, z0.s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    movprfx z1, z0
+; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    scvtf z1.d, p0/m, z1.d
+; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    scvtf z0.d, p0/m, z0.d
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    scvtf z1.d, p0/m, z1.d
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: scvtf_v8i32_v8f64:
@@ -1646,8 +1657,11 @@ define <1 x float> @scvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v1i64_v1f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %res = sitofp <1 x i64> %op1 to <1 x float>
   ret <1 x float> %res
@@ -1657,8 +1671,12 @@ define <1 x float> @scvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 define <2 x float> @scvtf_v2i64_v2f32(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v2i64_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s0, x9
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i64> %op1 to <2 x float>
   ret <2 x float> %res

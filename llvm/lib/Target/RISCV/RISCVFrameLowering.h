@@ -23,6 +23,9 @@ class RISCVFrameLowering : public TargetFrameLowering {
 public:
   explicit RISCVFrameLowering(const RISCVSubtarget &STI);
 
+  int getInitialCFAOffset(const MachineFunction &MF) const override;
+  Register getInitialCFARegister(const MachineFunction &MF) const override;
+
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
@@ -44,11 +47,10 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
-  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                   const TargetRegisterInfo *TRI,
-                                   std::vector<CalleeSavedInfo> &CSI,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex) const override;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -81,7 +83,8 @@ public:
   void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      MachineFunction &MF, uint64_t Offset,
                      uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
-                     uint64_t ProbeSize) const;
+                     uint64_t ProbeSize, bool DynAllocation,
+                     MachineInstr::MIFlag Flag) const;
 
 protected:
   const RISCVSubtarget &STI;
@@ -107,6 +110,11 @@ private:
   // Replace a StackProbe stub (if any) with the actual probe code inline
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologueMBB) const override;
+  void allocateAndProbeStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   const DebugLoc &DL, int64_t Amount,
+                                   MachineInstr::MIFlag Flag, bool EmitCFI,
+                                   bool DynAllocation) const;
 };
 } // namespace llvm
 #endif

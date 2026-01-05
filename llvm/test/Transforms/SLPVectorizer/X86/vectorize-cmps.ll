@@ -4,12 +4,12 @@
 define i32 @test(ptr %isec, float %0) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[ISEC:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP0:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x float> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ISEC:%.*]], align 4
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[ISEC]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX10]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP0:%.*]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast float 0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    [[CMP61:%.*]] = fcmp fast oge float 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[CMP63:%.*]] = fcmp fast ogt float [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[CMP63]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:

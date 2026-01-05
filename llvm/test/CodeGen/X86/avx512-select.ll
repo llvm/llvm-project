@@ -502,7 +502,7 @@ define <16 x i64> @narrowExtractedVectorSelect_crash(<16 x i64> %arg, <16 x i16>
 ; X86-AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; X86-AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; X86-AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
-; X86-AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; X86-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; X86-AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; X86-AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm1
 ; X86-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
@@ -515,7 +515,7 @@ define <16 x i64> @narrowExtractedVectorSelect_crash(<16 x i64> %arg, <16 x i16>
 ; X64-AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; X64-AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; X64-AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
-; X64-AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; X64-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; X64-AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; X64-AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm1
 ; X64-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero

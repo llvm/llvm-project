@@ -4,6 +4,7 @@
 ; RUN: opt -S -passes='early-cse<memssa>' --enable-knowledge-retention < %s | FileCheck %s --check-prefixes=CHECK,USE_ASSUME
 
 declare void @clobber_and_use(i32)
+declare void @clobber_and_combine(i32, i32)
 
 define void @f_0(ptr %ptr) {
 ; NO_ASSUME-LABEL: @f_0(
@@ -161,6 +162,32 @@ define void @test_dse1(ptr %p) {
   %v1 = load i32, ptr %p, !invariant.load !{}
   call void @clobber_and_use(i32 %v1)
   store i32 %v1, ptr %p
+  ret void
+}
+
+; Extending @test_dse1, the call can't change the contents of p.invariant.
+; Moreover, the contents of p.invariant cannot change from the store to p.
+define void @test_dse2(ptr noalias %p, ptr noalias %p.invariant) {
+; NO_ASSUME-LABEL: @test_dse2(
+; NO_ASSUME-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4
+; NO_ASSUME-NEXT:    [[V_INVARIANT:%.*]] = load i32, ptr [[P_INVARIANT:%.*]], align 4, !invariant.load !0
+; NO_ASSUME-NEXT:    [[V_COMB:%.*]] = call i32 @clobber_and_combine(i32 [[V]], i32 [[V_INVARIANT]])
+; NO_ASSUME-NEXT:    store i32 [[V_COMB]], ptr [[P]], align 4
+; NO_ASSUME-NEXT:    ret void
+;
+; USE_ASSUME-LABEL: @test_dse2(
+; USE_ASSUME-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4
+; USE_ASSUME-NEXT:    [[V_INVARIANT:%.*]] = load i32, ptr [[P_INVARIANT:%.*]], align 4, !invariant.load !0
+; USE_ASSUME-NEXT:    [[V_COMB:%.*]] = call i32 @clobber_and_combine(i32 [[V]], i32 [[V_INVARIANT]])
+; USE_ASSUME-NEXT:    store i32 [[V_COMB]], ptr [[P]], align 4
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P_INVARIANT]], i64 4), "nonnull"(ptr [[P_INVARIANT]]), "align"(ptr [[P_INVARIANT]], i64 4) ]
+; USE_ASSUME-NEXT:    ret void
+;
+  %v = load i32, ptr %p
+  %v.invariant = load i32, ptr %p.invariant, !invariant.load !{}
+  %v.comb = call i32 @clobber_and_combine(i32 %v, i32 %v.invariant)
+  store i32 %v.comb, ptr %p
+  store i32 %v.invariant, ptr %p.invariant
   ret void
 }
 

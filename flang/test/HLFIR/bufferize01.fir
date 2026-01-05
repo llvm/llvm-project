@@ -27,7 +27,7 @@
 // CHECK:           %[[VAL_15:.*]] = fir.address_of(@_QQclXce30ef70ff16a711a97719fb946c0b3d) : !fir.ref<!fir.char<1>>
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
-// CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_14]], %[[VAL_16]], %[[VAL_2]], %[[VAL_1]], %[[VAL_17]], %[[VAL_0]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
+// CHECK:           fir.call @_FortranAInitArrayConstructorVector(%[[VAL_14]], %[[VAL_16]], %[[VAL_2]], %[[VAL_1]], %[[VAL_17]], %[[VAL_0]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> ()
 // CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 // CHECK:           %[[VAL_20:.*]] = fir.box_addr %[[VAL_19]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
 // CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
@@ -43,7 +43,7 @@
 // CHECK:           %[[VAL_31:.*]]:2 = fir.unboxchar %[[VAL_30]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_32:.*]] = fir.embox %[[VAL_31]]#0 typeparams %[[VAL_29]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 // CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-// CHECK:           %[[VAL_34:.*]] = fir.call @_FortranAPushArrayConstructorValue(%[[VAL_14]], %[[VAL_33]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+// CHECK:           fir.call @_FortranAPushArrayConstructorValue(%[[VAL_14]], %[[VAL_33]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>
 // CHECK:           %[[VAL_36:.*]] = fir.undefined tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
 // CHECK:           %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[VAL_2]], [1 : index] : (tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>, i1) -> tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
@@ -101,7 +101,7 @@ func.func @_QPtest1() {
   %10 = fir.address_of(@_QQclXce30ef70ff16a711a97719fb946c0b3d) : !fir.ref<!fir.char<1,1>>
   %11 = fir.convert %1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
   %12 = fir.convert %10 : (!fir.ref<!fir.char<1,1>>) -> !fir.ref<i8>
-  %13 = fir.call @_FortranAInitArrayConstructorVector(%9, %11, %true, %c80_i32, %12, %c1_i32) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAInitArrayConstructorVector(%9, %11, %true, %c80_i32, %12, %c1_i32) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> ()
   %14 = fir.load %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
   %15 = fir.box_addr %14 : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
   %16 = fir.load %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
@@ -117,7 +117,7 @@ func.func @_QPtest1() {
   %26:2 = fir.unboxchar %25 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %27 = fir.embox %26#0 typeparams %24 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
   %28 = fir.convert %27 : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-  %29 = fir.call @_FortranAPushArrayConstructorValue(%9, %28) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+  fir.call @_FortranAPushArrayConstructorValue(%9, %28) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
   %30 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>
   %31 = hlfir.as_expr %30 move %true : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1) -> !hlfir.expr<1x!fir.char<1,?>>
   %32 = fir.box_elesize %30 : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> index
@@ -137,12 +137,12 @@ func.func @_QPtest1() {
   hlfir.destroy %31 : !hlfir.expr<1x!fir.char<1,?>>
   return
 }
-func.func private @_FortranAInitArrayConstructorVector(!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+func.func private @_FortranAInitArrayConstructorVector(!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> () attributes {fir.runtime}
 fir.global linkonce @_QQclXce30ef70ff16a711a97719fb946c0b3d constant : !fir.char<1,1> {
   %0 = fir.string_lit "\00"(1) : !fir.char<1,1>
   fir.has_value %0 : !fir.char<1,1>
 }
-func.func private @_FortranAPushArrayConstructorValue(!fir.llvm_ptr<i8>, !fir.box<none>) -> none attributes {fir.runtime}
+func.func private @_FortranAPushArrayConstructorValue(!fir.llvm_ptr<i8>, !fir.box<none>) -> () attributes {fir.runtime}
 
 // -----
 

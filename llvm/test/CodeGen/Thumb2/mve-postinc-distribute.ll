@@ -100,8 +100,8 @@ define void @arm_cmplx_dot_prod_q15(ptr nocapture readonly %pSrcA, ptr nocapture
 ; CHECK-NEXT:    ldr.w r8, [sp, #36]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    mov r5, r7
-; CHECK-NEXT:    and r2, r2, #3
 ; CHECK-NEXT:    lsrl r6, r5, #6
+; CHECK-NEXT:    and r2, r2, #3
 ; CHECK-NEXT:    wls lr, r2, .LBB1_7
 ; CHECK-NEXT:  .LBB1_5: @ %while.body11
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
