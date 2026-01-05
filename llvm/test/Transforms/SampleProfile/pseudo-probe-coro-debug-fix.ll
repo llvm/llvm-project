@@ -6,8 +6,10 @@
 
 ; RUN: llc -mtriple=x86_64 < %t.ll --filetype=obj -o %t.obj
 ; RUN: obj2yaml %t.obj | FileCheck -check-prefix=OBJ --match-full-lines %s
-; OBJ:       - Name:            .pseudo_probe_desc{{$}}
+; OBJ:       - Name:            '.pseudo_probe (21)'{{$}}
 ; OBJ-NEXT:    Type:            SHT_PROGBITS{{$}}
+; OBJ-NEXT:    Flags:           [ SHF_LINK_ORDER ]{{$}}
+; OBJ-NEXT:    Link:            .text{{$}}
 ; OBJ-NEXT:    AddressAlign:    0x1{{$}}
 ; OBJ-NEXT:    Content:         7B340AC7FC888D7F{{[0-9A-F]+$}}
 
