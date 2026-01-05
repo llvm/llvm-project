@@ -1720,25 +1720,30 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (!RepOrWidenR || !vputils::isSingleScalar(RepOrWidenR))
         continue;
 
+      // Allowed VPUsers U of VPValue Op are those that wouldn't introduce extra
+      // broadcasts.
+      auto IsAllowedUser = [](const VPValue *Op, const VPUser *U) {
+        if (auto *VPI = dyn_cast<VPInstruction>(U)) {
+          unsigned Opcode = VPI->getOpcode();
+          if (Opcode == VPInstruction::ExtractLastLane ||
+              Opcode == VPInstruction::ExtractLastPart ||
+              Opcode == VPInstruction::ExtractPenultimateElement)
+            return true;
+        }
+        return U->usesScalars(Op);
+      };
+
       // Skip recipes for which conversion to single-scalar does introduce
       // additional broadcasts. No extra broadcasts are needed, if either only
       // the scalars of the recipe are used, or at least one of the operands
       // would require a broadcast. In the latter case, the single-scalar may
       // need to be broadcasted, but another broadcast is removed.
-      if (!all_of(RepOrWidenR->users(),
-                  [RepOrWidenR](const VPUser *U) {
-                    if (auto *VPI = dyn_cast<VPInstruction>(U)) {
-                      unsigned Opcode = VPI->getOpcode();
-                      if (Opcode == VPInstruction::ExtractLastLane ||
-                          Opcode == VPInstruction::ExtractLastPart ||
-                          Opcode == VPInstruction::ExtractPenultimateElement)
-                        return true;
-                    }
-
-                    return U->usesScalars(RepOrWidenR);
-                  }) &&
-          none_of(RepOrWidenR->operands(), [RepOrWidenR](VPValue *Op) {
-            if (Op->getSingleUser() != RepOrWidenR)
+      if (any_of(RepOrWidenR->users(),
+                 [&](VPUser *U) { return !IsAllowedUser(RepOrWidenR, U); }) &&
+          none_of(RepOrWidenR->operands(), [&](VPValue *Op) {
+            if (any_of(Op->users(), [&](VPUser *U) {
+                  return U != RepOrWidenR && !IsAllowedUser(Op, U);
+                }))
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
