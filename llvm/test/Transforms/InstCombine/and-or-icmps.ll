@@ -3725,10 +3725,7 @@ define i1 @merge_range_check_or(i8 %a) {
 ; Just a very complicated way of checking if v1 == 0.
 define i1 @complicated_zero_equality_test(i64 %v1) {
 ; CHECK-LABEL: @complicated_zero_equality_test(
-; CHECK-NEXT:    [[V2:%.*]] = trunc i64 [[V1:%.*]] to i32
-; CHECK-NEXT:    [[V3:%.*]] = icmp eq i32 [[V2]], 0
-; CHECK-NEXT:    [[V4:%.*]] = icmp ult i64 [[V1]], 4294967296
-; CHECK-NEXT:    [[V5:%.*]] = and i1 [[V4]], [[V3]]
+; CHECK-NEXT:    [[V5:%.*]] = icmp eq i64 [[V1:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[V5]]
 ;
   %v2 = trunc i64 %v1 to i32
