@@ -41,7 +41,9 @@ add_clang_library(clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic
+  clangFormat
   clangLex
+  clangToolingCore
 
   DEPENDS
   omp_gen
@@ -51,3 +53,4 @@ add_clang_library(clangAnalysis
 add_subdirectory(plugins)
 add_subdirectory(FlowSensitive)
 add_subdirectory(LifetimeSafety)
+add_subdirectory(Scalable)

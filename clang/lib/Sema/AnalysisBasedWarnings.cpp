@@ -36,7 +36,6 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -2884,6 +2883,32 @@ public:
         << EscapeExpr->getEndLoc();
   }
 
+  void suggestAnnotation(SuggestionScope Scope,
+                         const ParmVarDecl *ParmToAnnotate,
+                         const Expr *EscapeExpr) override {
+    unsigned DiagID;
+    switch (Scope) {
+    case SuggestionScope::CrossTU:
+      DiagID = diag::warn_lifetime_safety_cross_tu_suggestion;
+      break;
+    case SuggestionScope::IntraTU:
+      DiagID = diag::warn_lifetime_safety_intra_tu_suggestion;
+      break;
+    }
+
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
+        << ParmToAnnotate->getSourceRange()
+        << FixItHint::CreateInsertion(InsertionPoint,
+                                      " [[clang::lifetimebound]]");
+
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
 private:
   Sema &S;
 };
@@ -3015,6 +3040,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::ImplicitCastExprClass)
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
+  if (EnableLifetimeSafetyAnalysis) {
+    AC.getCFGBuildOptions().AddLifetime = true;
+  }
 
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
@@ -3107,7 +3135,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
-      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter, LSStats,
+                                           S.CollectStats);
     }
   }
   // Check for violations of "called once" parameter properties.
@@ -3203,4 +3232,5 @@ void clang::sema::AnalysisBasedWarnings::PrintStats() const {
                << " average block visits per function.\n"
                << "  " << MaxUninitAnalysisBlockVisitsPerFunction
                << " max block visits per function.\n";
+  clang::lifetimes::printStats(LSStats);
 }

@@ -349,7 +349,7 @@ entry:
 
 define i32 @rotl_i32_3rd_arg_var(i32 %a, i32 %c) {
 ; CHECK-LABEL: 'rotl_i32_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 %c)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 %c)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 entry:
@@ -369,7 +369,7 @@ entry:
 
 define i64 @rotl_i64_3rd_arg_var(i64 %a, i64 %c) {
 ; CHECK-LABEL: 'rotl_i64_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %c)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 %c)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 entry:

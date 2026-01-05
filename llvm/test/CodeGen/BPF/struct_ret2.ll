@@ -1,6 +1,6 @@
 ; RUN: not llc -mtriple=bpf < %s 2> %t1
 ; RUN: FileCheck %s < %t1
-; CHECK: too many arguments
+; CHECK: only small returns
 
 ; Function Attrs: nounwind uwtable
 define { i64, i32 } @foo(i32 %a, i32 %b, i32 %c) #0 {

@@ -6,6 +6,7 @@ from itertools import accumulate
 from typing import Optional
 
 from ._memref_ops_gen import *
+from ._memref_ops_gen import _Dialect
 from ._ods_common import _dispatch_mixed_values, MixedValues
 from .arith import ConstantOp, _is_integer_like_type
 from ..ir import Value, MemRefType, StridedLayoutAttr, ShapedType, Operation
@@ -14,8 +15,7 @@ from ..ir import Value, MemRefType, StridedLayoutAttr, ShapedType, Operation
 def _is_constant_int_like(i):
     return (
         isinstance(i, Value)
-        and isinstance(i.owner, Operation)
-        and isinstance(i.owner.opview, ConstantOp)
+        and isinstance(i.owner, ConstantOp)
         and _is_integer_like_type(i.type)
     )
 

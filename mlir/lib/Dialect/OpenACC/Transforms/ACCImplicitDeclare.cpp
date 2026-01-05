@@ -360,7 +360,9 @@ public:
                     accOp.getRegion(), globalsToAccDeclare, accSupport, symTab);
               })
           .Case<FunctionOpInterface>([&](auto func) {
-            if (acc::isAccRoutineOp(func) && !func.isExternal())
+            if ((acc::isAccRoutine(func) ||
+                 acc::isSpecializedAccRoutine(func)) &&
+                !func.isExternal())
               collectGlobalsFromDeviceRegion(func.getFunctionBody(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);

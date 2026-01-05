@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -enable-interleaved-mem-accesses=true -enable-masked-interleaved-mem-accesses -force-widen-divrem-via-safe-divisor=0 -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -enable-interleaved-mem-accesses=true -enable-masked-interleaved-mem-accesses -force-widen-divrem-via-safe-divisor=0 -disable-output %s 2>&1 | FileCheck --strict-whitespace %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -443,8 +443,8 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT:   IR %div = udiv i64 %y, 492802768830814060
-; CHECK-NEXT:   IR %inc = add i64 %div, 1
+; CHECK-NEXT:   IR   %div = udiv i64 %y, 492802768830814060
+; CHECK-NEXT:   IR   %inc = add i64 %div, 1
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + ((15 + (%y /u 492802768830814060))<nuw><nsw> /u (1 + (%y /u 492802768830814060))<nuw><nsw>))<nuw><nsw>
 ; CHECK-NEXT:   EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
@@ -463,7 +463,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%v3>, ir<%gep>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
@@ -524,7 +524,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add ir<%iv>, ir<%off>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep>
@@ -536,13 +536,14 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-element ir<%add>
+; CHECK-NEXT:   EMIT vp<[[EXIT_PART:%.+]]> = extract-last-part ir<%add>
+; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-lane vp<[[EXIT_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:   IR %lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[EXIT]]> from middle.block)
+; CHECK-NEXT:   IR   %lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[EXIT]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
@@ -903,7 +904,8 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:    WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN-CAST ir<%zext> = zext nneg ir<%l>
-; CHECK-NEXT:    EMIT vp<[[EXT:%.+]]> = extract-last-element ir<%zext>
+; CHECK-NEXT:    EMIT vp<[[EXT_PART:%.+]]> = extract-last-part ir<%zext>
+; CHECK-NEXT:    EMIT vp<[[EXT:%.+]]> = extract-last-lane vp<[[EXT_PART]]>
 ; CHECK-NEXT:    CLONE store vp<[[EXT]]>, ir<%p1>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -945,7 +947,7 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep.ptr>
 ; CHECK-NEXT:     WIDEN ir<%for.1.next> = load vp<[[VEC_PTR]]>
@@ -960,14 +962,15 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[RESUME_1_PART:%.+]]> = extract-last-part ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-lane vp<[[RESUME_1_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:   IR %for.1.lcssa = phi i16 [ %for.1, %loop ] (extra operand: vp<[[FOR_RESULT]]> from middle.block)
+; CHECK-NEXT:   IR   %for.1.lcssa = phi i16 [ %for.1, %loop ] (extra operand: vp<[[FOR_RESULT]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
@@ -1016,7 +1019,7 @@ define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-EMPTY:
 ; CHECK: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[IV:%.+]]> =  CANONICAL-INDUCTION ir<0>, vp<[[IV_NEXT_EXIT:%.+]]>
+; CHECK-NEXT:     EMIT vp<[[IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[IV_NEXT_EXIT:%.+]]>
 ; CHECK-NEXT:     vp<[[ST:%.+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%b>, vp<[[ST]]>
 ; CHECK-NEXT:     vp<[[PTR1:%.+]]> = vector-pointer inbounds nuw ir<[[GEP1]]>
