@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <8 x i7> @llvm.vp.shl.v8i7(<8 x i7>, <8 x i7>, <8 x i1>, i32)
-
 define <8 x i7> @vsll_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v8i7:
 ; CHECK:       # %bb.0:
@@ -17,8 +15,6 @@ define <8 x i7> @vsll_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroex
   %v = call <8 x i7> @llvm.vp.shl.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)
   ret <8 x i7> %v
 }
-
-declare <2 x i8> @llvm.vp.shl.v2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
 
 define <2 x i8> @vsll_vv_v2i8(<2 x i8> %va, <2 x i8> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v2i8:
@@ -84,8 +80,6 @@ define <2 x i8> @vsll_vi_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
   ret <2 x i8> %v
 }
 
-declare <3 x i8> @llvm.vp.shl.v3i8(<3 x i8>, <3 x i8>, <3 x i1>, i32)
-
 define <3 x i8> @vsll_vv_v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v3i8:
 ; CHECK:       # %bb.0:
@@ -95,8 +89,6 @@ define <3 x i8> @vsll_vv_v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 zeroex
   %v = call <3 x i8> @llvm.vp.shl.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> %m, i32 %evl)
   ret <3 x i8> %v
 }
-
-declare <4 x i8> @llvm.vp.shl.v4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)
 
 define <4 x i8> @vsll_vv_v4i8(<4 x i8> %va, <4 x i8> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v4i8:
@@ -162,8 +154,6 @@ define <4 x i8> @vsll_vi_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
   ret <4 x i8> %v
 }
 
-declare <8 x i8> @llvm.vp.shl.v8i8(<8 x i8>, <8 x i8>, <8 x i1>, i32)
-
 define <8 x i8> @vsll_vv_v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v8i8:
 ; CHECK:       # %bb.0:
@@ -227,8 +217,6 @@ define <8 x i8> @vsll_vi_v8i8_unmasked(<8 x i8> %va, i32 zeroext %evl) {
   %v = call <8 x i8> @llvm.vp.shl.v8i8(<8 x i8> %va, <8 x i8> splat (i8 3), <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i8> %v
 }
-
-declare <16 x i8> @llvm.vp.shl.v16i8(<16 x i8>, <16 x i8>, <16 x i1>, i32)
 
 define <16 x i8> @vsll_vv_v16i8(<16 x i8> %va, <16 x i8> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v16i8:
@@ -294,8 +282,6 @@ define <16 x i8> @vsll_vi_v16i8_unmasked(<16 x i8> %va, i32 zeroext %evl) {
   ret <16 x i8> %v
 }
 
-declare <2 x i16> @llvm.vp.shl.v2i16(<2 x i16>, <2 x i16>, <2 x i1>, i32)
-
 define <2 x i16> @vsll_vv_v2i16(<2 x i16> %va, <2 x i16> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v2i16:
 ; CHECK:       # %bb.0:
@@ -359,8 +345,6 @@ define <2 x i16> @vsll_vi_v2i16_unmasked(<2 x i16> %va, i32 zeroext %evl) {
   %v = call <2 x i16> @llvm.vp.shl.v2i16(<2 x i16> %va, <2 x i16> splat (i16 3), <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i16> %v
 }
-
-declare <4 x i16> @llvm.vp.shl.v4i16(<4 x i16>, <4 x i16>, <4 x i1>, i32)
 
 define <4 x i16> @vsll_vv_v4i16(<4 x i16> %va, <4 x i16> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v4i16:
@@ -426,8 +410,6 @@ define <4 x i16> @vsll_vi_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
   ret <4 x i16> %v
 }
 
-declare <8 x i16> @llvm.vp.shl.v8i16(<8 x i16>, <8 x i16>, <8 x i1>, i32)
-
 define <8 x i16> @vsll_vv_v8i16(<8 x i16> %va, <8 x i16> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v8i16:
 ; CHECK:       # %bb.0:
@@ -491,8 +473,6 @@ define <8 x i16> @vsll_vi_v8i16_unmasked(<8 x i16> %va, i32 zeroext %evl) {
   %v = call <8 x i16> @llvm.vp.shl.v8i16(<8 x i16> %va, <8 x i16> splat (i16 3), <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i16> %v
 }
-
-declare <16 x i16> @llvm.vp.shl.v16i16(<16 x i16>, <16 x i16>, <16 x i1>, i32)
 
 define <16 x i16> @vsll_vv_v16i16(<16 x i16> %va, <16 x i16> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v16i16:
@@ -558,8 +538,6 @@ define <16 x i16> @vsll_vi_v16i16_unmasked(<16 x i16> %va, i32 zeroext %evl) {
   ret <16 x i16> %v
 }
 
-declare <2 x i32> @llvm.vp.shl.v2i32(<2 x i32>, <2 x i32>, <2 x i1>, i32)
-
 define <2 x i32> @vsll_vv_v2i32(<2 x i32> %va, <2 x i32> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v2i32:
 ; CHECK:       # %bb.0:
@@ -623,8 +601,6 @@ define <2 x i32> @vsll_vi_v2i32_unmasked(<2 x i32> %va, i32 zeroext %evl) {
   %v = call <2 x i32> @llvm.vp.shl.v2i32(<2 x i32> %va, <2 x i32> splat (i32 3), <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i32> %v
 }
-
-declare <4 x i32> @llvm.vp.shl.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define <4 x i32> @vsll_vv_v4i32(<4 x i32> %va, <4 x i32> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v4i32:
@@ -690,8 +666,6 @@ define <4 x i32> @vsll_vi_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
   ret <4 x i32> %v
 }
 
-declare <8 x i32> @llvm.vp.shl.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
-
 define <8 x i32> @vsll_vv_v8i32(<8 x i32> %va, <8 x i32> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v8i32:
 ; CHECK:       # %bb.0:
@@ -756,8 +730,6 @@ define <8 x i32> @vsll_vi_v8i32_unmasked(<8 x i32> %va, i32 zeroext %evl) {
   ret <8 x i32> %v
 }
 
-declare <16 x i32> @llvm.vp.shl.v16i32(<16 x i32>, <16 x i32>, <16 x i1>, i32)
-
 define <16 x i32> @vsll_vv_v16i32(<16 x i32> %va, <16 x i32> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v16i32:
 ; CHECK:       # %bb.0:
@@ -821,8 +793,6 @@ define <16 x i32> @vsll_vi_v16i32_unmasked(<16 x i32> %va, i32 zeroext %evl) {
   %v = call <16 x i32> @llvm.vp.shl.v16i32(<16 x i32> %va, <16 x i32> splat (i32 3), <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i32> %v
 }
-
-declare <2 x i64> @llvm.vp.shl.v2i64(<2 x i64>, <2 x i64>, <2 x i1>, i32)
 
 define <2 x i64> @vsll_vv_v2i64(<2 x i64> %va, <2 x i64> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v2i64:
@@ -900,8 +870,6 @@ define <2 x i64> @vsll_vi_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) {
   ret <2 x i64> %v
 }
 
-declare <4 x i64> @llvm.vp.shl.v4i64(<4 x i64>, <4 x i64>, <4 x i1>, i32)
-
 define <4 x i64> @vsll_vv_v4i64(<4 x i64> %va, <4 x i64> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v4i64:
 ; CHECK:       # %bb.0:
@@ -978,8 +946,6 @@ define <4 x i64> @vsll_vi_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) {
   ret <4 x i64> %v
 }
 
-declare <8 x i64> @llvm.vp.shl.v8i64(<8 x i64>, <8 x i64>, <8 x i1>, i32)
-
 define <8 x i64> @vsll_vv_v8i64(<8 x i64> %va, <8 x i64> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v8i64:
 ; CHECK:       # %bb.0:
@@ -1055,8 +1021,6 @@ define <8 x i64> @vsll_vi_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) {
   %v = call <8 x i64> @llvm.vp.shl.v8i64(<8 x i64> %va, <8 x i64> splat (i64 3), <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i64> %v
 }
-
-declare <16 x i64> @llvm.vp.shl.v16i64(<16 x i64>, <16 x i64>, <16 x i1>, i32)
 
 define <16 x i64> @vsll_vv_v16i64(<16 x i64> %va, <16 x i64> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsll_vv_v16i64:

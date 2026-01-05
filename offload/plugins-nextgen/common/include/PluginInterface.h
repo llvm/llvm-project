@@ -50,6 +50,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
+using namespace llvm::omp::target::debug;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -712,8 +714,8 @@ public:
       IgnoreLockMappedFailures = false;
     } else {
       // Disable by default.
-      DP("Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS=%s\n",
-         OMPX_LockMappedBuffers.get().data());
+      ODBG(ODT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
+                      << OMPX_LockMappedBuffers.get();
       LockMappedBuffers = false;
     }
   }
@@ -793,6 +795,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
+
+  /// Get the total shared memory per block (in bytes) that can be used in any
+  /// kernel.
+  size_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
 
   /// Set the context of the device if needed, before calling device-specific
   /// functions. Plugins may implement this function as a no-op if not needed.
@@ -1251,6 +1257,9 @@ protected:
   /// Internal representation for OMPT device (initialize & finalize)
   std::atomic<bool> OmptInitialized;
 #endif
+
+  /// The total per-block native shared memory that a kernel may use.
+  size_t MaxBlockSharedMemSize = 0;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -1282,6 +1291,14 @@ struct GenericPluginTy {
 
   /// Create a new global handler for the underlying plugin.
   virtual GenericGlobalHandlerTy *createGlobalHandler() = 0;
+
+  /// Get the reference to the device with a certain device id.
+  const GenericDeviceTy &getDevice(int32_t DeviceId) const {
+    assert(isValidDeviceId(DeviceId) && "Invalid device id");
+    assert(Devices[DeviceId] && "Device is uninitialized");
+
+    return *Devices[DeviceId];
+  }
 
   /// Get the reference to the device with a certain device id.
   GenericDeviceTy &getDevice(int32_t DeviceId) {
@@ -1551,6 +1568,13 @@ public:
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
 
+  /// Returns a Range over all the devices in the plugin that can be
+  /// used in a for loop:
+  /// for (&Device : GenericPluginRef.getDevicesRange()) {
+  auto getDevicesRange() {
+    return llvm::make_range(Devices.begin(), Devices.end());
+  }
+
 private:
   /// Indicates if the platform runtime has been fully initialized.
   bool Initialized = false;
@@ -1632,7 +1656,8 @@ public:
   /// must be called before the destructor.
   virtual Error deinit() {
     if (NextAvailable)
-      DP("Missing %d resources to be returned\n", NextAvailable);
+      ODBG(ODT_Deinit) << "Missing " << NextAvailable
+                       << " resources to be returned";
 
     // TODO: This prevents a bug on libomptarget to make the plugins fail. There
     // may be some resources not returned. Do not destroy these ones.

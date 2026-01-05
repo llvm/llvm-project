@@ -11,7 +11,9 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/CommentVisitor.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
@@ -44,7 +46,7 @@ static void
 populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsAnonymousNamespace);
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
+template <typename T> static void populateMemberTypeInfo(T &I, const Decl *D);
 static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
                                    const DeclaratorDecl *D,
                                    bool IsStatic = false);
@@ -335,28 +337,29 @@ static std::string getSourceCode(const Decl *D, const SourceRange &R) {
       .str();
 }
 
-template <typename T> static std::string serialize(T &I) {
+template <typename T>
+static std::string serialize(T &I, DiagnosticsEngine &Diags) {
   SmallString<2048> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  ClangDocBitcodeWriter Writer(Stream);
+  ClangDocBitcodeWriter Writer(Stream, Diags);
   Writer.emitBlock(I);
   return Buffer.str().str();
 }
 
-std::string serialize(std::unique_ptr<Info> &I) {
+std::string serialize(std::unique_ptr<Info> &I, DiagnosticsEngine &Diags) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    return serialize(*static_cast<NamespaceInfo *>(I.get()));
+    return serialize(*static_cast<NamespaceInfo *>(I.get()), Diags);
   case InfoType::IT_record:
-    return serialize(*static_cast<RecordInfo *>(I.get()));
+    return serialize(*static_cast<RecordInfo *>(I.get()), Diags);
   case InfoType::IT_enum:
-    return serialize(*static_cast<EnumInfo *>(I.get()));
+    return serialize(*static_cast<EnumInfo *>(I.get()), Diags);
   case InfoType::IT_function:
-    return serialize(*static_cast<FunctionInfo *>(I.get()));
+    return serialize(*static_cast<FunctionInfo *>(I.get()), Diags);
   case InfoType::IT_concept:
-    return serialize(*static_cast<ConceptInfo *>(I.get()));
+    return serialize(*static_cast<ConceptInfo *>(I.get()), Diags);
   case InfoType::IT_variable:
-    return serialize(*static_cast<VarInfo *>(I.get()));
+    return serialize(*static_cast<VarInfo *>(I.get()), Diags);
   case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:
@@ -816,7 +819,9 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   }
 }
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
+// TODO: Rename this, since this doesn't populate anything besides comments and
+// isn't exclusive to members
+template <typename T> static void populateMemberTypeInfo(T &I, const Decl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
 
   ASTContext &Context = D->getASTContext();
@@ -965,6 +970,7 @@ static void parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
                   InfoType::IT_default, ActualDecl->getQualifiedNameAsString(),
                   getInfoRelativePath(ActualDecl));
 
+    populateMemberTypeInfo(F, ActualDecl);
     RI.Friends.push_back(std::move(F));
   }
 }
@@ -1111,6 +1117,9 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
   Info.DefLoc = Loc;
   auto &LO = D->getLangOpts();
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
+  populateTemplateParameters(Info.Template, D);
+  if (Info.Template)
+    populateConstraints(Info.Template.value(), D->getDescribedTemplate());
 
   if (Info.Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
@@ -1141,6 +1150,9 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
   Info.TypeDeclaration = getTypeAlias(D);
   Info.IsUsing = true;
+  populateTemplateParameters(Info.Template, D);
+  if (Info.Template)
+    populateConstraints(Info.Template.value(), D->getDescribedAliasTemplate());
 
   extractCommentFromDecl(D, Info);
 

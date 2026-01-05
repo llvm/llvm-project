@@ -130,6 +130,10 @@ int omp_get_num_devices(void);
 
 int omp_get_device_num(void);
 
+int omp_get_device_from_uid(const char *DeviceUid);
+
+const char *omp_get_uid_from_device(int DeviceNum);
+
 int omp_get_num_teams(void);
 
 int omp_get_team_num();

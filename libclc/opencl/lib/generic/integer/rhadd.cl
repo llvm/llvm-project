@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/integer/clc_rhadd.h>
-#include <clc/opencl/integer/rhadd.h>
 
 #define __CLC_FUNCTION rhadd
 #define __CLC_BODY <clc/shared/binary_def.inc>

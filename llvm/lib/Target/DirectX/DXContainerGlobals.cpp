@@ -29,7 +29,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cstdint>
-#include <optional>
 
 using namespace llvm;
 using namespace llvm::dxil;

@@ -264,6 +264,36 @@ map in the following way to CUDA builtins:
    ``gridDim``  ``@llvm.nvvm.read.ptx.sreg.nctaid.*``
    ============ =====================================
 
+'``llvm.nvvm.read.ptx.sreg.*_smem_size``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+    declare i32 @llvm.nvvm.read.ptx.sreg.aggr_smem_size()
+    declare i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.read.ptx.sreg.total_smem_size``' intrinsic reads the
+PTX special register that holds the total amount of shared memory
+allocated per CTA for the kernel at launch.
+
+The reported value includes both statically allocated and dynamically
+requested shared memory, but excludes any shared memory reserved for
+system use. The size is expressed in units of the architecture-specific
+shared memory allocation granularity. For targets sm_8x and newer,
+this granularity is 128 bytes.
+
+The '``aggr_smem_size``' variant returns the aggregate shared memory size,
+including the portion reserved for system software use.
+
+The '``dynamic_smem_size``' variant returns the amount of dynamic shared
+memory allocated per CTA for the kernel at launch time.
 
 Barriers
 --------
@@ -278,11 +308,24 @@ Syntax:
 
   declare void @llvm.nvvm.barrier.cta.sync.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.sync.all(i32 %id)
-  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
-
   declare void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %id)
+
+  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %id, i32 %n)
+
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 %id, i1 %pred)
 
 Overview:
 """""""""
@@ -305,14 +348,26 @@ the threads specified by the %n operand should participate in the barrier.
 All forms of the '``@llvm.nvvm.barrier.cta.*``' intrinsic cause the executing
 thread to wait for all non-exited threads from its warp and then marks the
 warp's arrival at the barrier. In addition to signaling its arrival at the 
-barrier, the '``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing
-thread to wait for non-exited threads of all other warps participating in the
-barrier to arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``'
-intrinsic does not cause the executing thread to wait for threads of other
-participating warps.
+barrier, the '``@llvm.nvvm.barrier.cta.red.*``' and
+'``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing thread to 
+wait for non-exited threads of all other warps participating in the barrier to
+arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``' intrinsic
+does not cause the executing thread to wait for threads of other participating
+warps.
 
 When a barrier completes, the waiting threads are restarted without delay,
 and the barrier is reinitialized so that it can be immediately reused.
+
+The '``@llvm.nvvm.barrier.cta.red.*``' intrinsics perform a reduction operation
+across threads. The %pred operands from all threads in the CTA are combined
+using the specified reduction operator. Once the barrier count is reached, the
+final value is returned in all threads waiting at the barrier.
+
+The reduction operations for '``@llvm.nvvm.barrier.cta.red.*``' are
+population-count ('``.popc``'), all-threads-true ('``.and``'), 
+and any-thread-true ('``.or``'). The result of '``.popc``' is the number of
+threads with a true predicate, while '``.and``' and '``.or``' indicate if all
+the threads had a true predicate or if any of the threads had a true predicate.
 
 The '``@llvm.nvvm.barrier.cta.*``' intrinsic has an optional '``.aligned``'
 modifier to indicate textual alignment of the barrier. When specified, it
@@ -796,6 +851,112 @@ every time. For more information, refer PTX ISA
 Membar/Fences
 -------------
 
+'``llvm.nvvm.fence.acquire/release.sync_restrict.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+The `nvvm.fence.{semantics}.sync_restrict.*` restrict the class of memory
+operations for which the fence instruction provides the memory ordering guarantees.
+When `.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`. For more details,
+please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.mbarrier_init.release.cluster``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.mbarrier_init.release.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.mbarrier_init.release.cluster` intrinsic restrict the class of
+memory operations for which the fence instruction provides the memory ordering
+guarantees. The `mbarrier_init` modifiers restricts the synchronizing effect to
+the prior `mbarrier_init` operation executed by the same thread on mbarrier objects
+in `shared_cta` memory space. For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.async_generic.acquire/release.sync_restrict``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.async.generic.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.proxy.async.generic.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.async_generic.{semantics}.sync_restrict` are used to establish
+ordering between a prior memory access performed via the `async proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+and a subsequent memory access performed via the generic proxy.
+``nvvm.fence.proxy.async_generic.release.sync_restrict`` can form a release
+sequence that synchronizes with an acquire sequence that contains the
+``nvvm.fence.proxy.async_generic.acquire.sync_restrict`` proxy fence. When
+`.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`.
+For more details, please refer the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.<proxykind>``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.alias()
+  declare void @llvm.nvvm.fence.proxy.async()
+  declare void @llvm.nvvm.fence.proxy.async.global()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cluster()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cta()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.{proxykind}` intrinsics represent a fence with bi-directional
+proxy ordering that is established between the memory accesses done between the
+`generic proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>__`
+and the proxy specified by `proxykind`. A `bi-directional proxy` ordering between
+two proxykinds establishes two `uni-directional` proxy orderings: one from the
+first proxykind to the second proxykind and the other from the second proxykind
+to the first proxykind.
+
+`alias` proxykind refers to memory accesses performed using virtually aliased
+addresses to the same memory location
+
+`async` proxykind specifies that the memory ordering is established between the
+`async proxy` and the `generic proxy`. The memory ordering is limited only to
+operations performed on objects in the state space specified (`generic`, `global`,
+`shared_cluster`, `shared_cta`). If no state space is specified, then the memory
+ordering applies on all state spaces. For more details, please refer the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
 '``llvm.nvvm.fence.proxy.tensormap_generic.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -911,7 +1072,7 @@ Semantics:
 """"""""""
 
 Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
-values. Instead, a NaN input yeilds an unspecified NaN output.
+values. Instead, a NaN input yields an unspecified NaN output.
 
 
 '``llvm.nvvm.fabs.ftz.*``' Intrinsic
@@ -1330,6 +1491,32 @@ copied and it must be a multiple of 16.
 * The [N-1]th argument (denoted by ``i1 %flag_mc``) when set, indicates
   the presence of a multicast mask (``i16 %mc``) and generates the PTX
   instruction with the ``.multicast::cluster`` modifier.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+
+'``llvm.nvvm.cp.async.bulk.global.to.shared.cta``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.global.to.shared.cta``' intrinsic
+corresponds to the ``cp.async.bulk.shared::cta.global.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+copy of bulk data from global memory to shared::cta memory.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+copied and it must be a multiple of 16. The last argument
+(denoted by ``i1 %flag_ch``) is a compile-time constant. When set,
+it indicates a valid cache_hint (``i64 %ch``) and generates the
+``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
@@ -2060,6 +2247,295 @@ The ``griddepcontrol`` intrinsics allows the dependent grids and prerequisite gr
 For more information, refer 
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol>`__.
 
+Tensormap Replace Intrinsics
+----------------------------
+
+These intrinsics modify the fields of the tensor-map object at ``%addr`` in 
+``tile`` mode.
+
+For more information, refer to the 
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace>`__.
+
+'``llvm.nvvm.tensormap.replace.global.address``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %addr, i64 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.address.p3(ptr addrspace(3) %addr, i64 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.address.*``' intrinsics replace the 
+``global_address`` field of the tensor-map object with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.rank``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.rank.p1(ptr addrspace(1) %addr, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.rank.p3(ptr addrspace(3) %addr, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.rank.*``' intrinsics replace the ``rank`` 
+field of the tensor-map object with ``%new_value`` which must be one less than 
+the desired tensor rank as this field uses zero-based numbering.
+
+'``llvm.nvvm.tensormap.replace.global.stride``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.stride.p1(ptr addrspace(1) %addr, i32 immarg %ord, i64 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.stride.p3(ptr addrspace(3) %addr, i32 immarg %ord, i64 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.stride.*``' intrinsics replace the 
+``%ord``-th element of the ``global_stride`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.element.stride``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.element.stride.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.element.stride.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.element.stride.*``' intrinsics replace the 
+``%ord``-th element of the ``element_stride`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.global.dim``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.dim.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.dim.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.dim.*``' intrinsics replace the 
+``%ord``-th element of the ``global_dim`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.box.dim``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.box.dim.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.box.dim.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.box.dim.*``' intrinsics replace the 
+``%ord``-th element of the ``box_dim`` field of the tensor-map object with 
+``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.elemtype``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.elemtype.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.elemtype.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.elemtype.*``' intrinsics replace the 
+``elemtype`` field of the tensor-map object with the type specified by 
+``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual element 
+type:
+
+  ============================ =====
+  Element Type                 Value
+  ============================ =====
+  ``u8``                       0
+  ``u16``                      1
+  ``u32``                      2
+  ``s32``                      3
+  ``u64``                      4
+  ``s64``                      5
+  ``f16``                      6
+  ``f32``                      7
+  ``f32.ftz``                  8
+  ``f64``                      9
+  ``bf16``                     10
+  ``tf32``                     11
+  ``tf32.ftz``                 12
+  ``b4x16``                    13
+  ``b4x16_p64``                14
+  ``b6x16_p32`` or ``b6p2x16`` 15
+  ============================ =====
+
+'``llvm.nvvm.tensormap.replace.interleave.layout``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.interleave.layout.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.interleave.layout.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.interleave.layout.*``' intrinsics replace 
+the ``interleave_layout`` field of the tensor-map object with the layout 
+specified by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual layout:
+
+  ================== =====
+  Interleave Layout  Value
+  ================== =====
+  ``No interleave``  0
+  ``16B interleave`` 1
+  ``32B interleave`` 2
+  ================== =====
+
+'``llvm.nvvm.tensormap.replace.swizzle_mode``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.swizzle.mode.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.swizzle.mode.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.swizzle.mode.*``' intrinsics replace the 
+``swizzle_mode`` field of the tensor-map object with the swizzle mode specified 
+by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual swizzle 
+mode:
+
+  ================ =====
+  Swizzle Mode     Value
+  ================ =====
+  ``No swizzle``   0
+  ``32B swizzle``  1
+  ``64B swizzle``  2
+  ``128B swizzle`` 3
+  ``96B swizzle``  4
+  ================ =====
+  
+'``llvm.nvvm.tensormap.replace.swizzle_atomicity``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.swizzle.atomicity.*``' intrinsics replace 
+the ``swizzle_atomicity`` field of the tensor-map object with the swizzle 
+atomicity specified by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual swizzle 
+atomicity:
+
+  ================= =====
+  Swizzle Atomicity Value
+  ================= =====
+  ``16B``           0
+  ``32B``           1
+  ``32B + 8B flip`` 2
+  ``64B``           3
+  ================= =====
+
+'``llvm.nvvm.tensormap.replace.fill_mode``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.fill.mode.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.fill.mode.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.fill.mode.*``' intrinsics replace the 
+``fill_mode`` field of the tensor-map object with the fill mode specified by
+``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual fill mode:
+
+  ================ =====
+  Fill Mode        Value
+  ================ =====
+  ``Zero fill``    0
+  ``OOB-NaN fill`` 1
+  ================ =====
+
 TCGEN05 family of Intrinsics
 ----------------------------
 
@@ -2601,7 +3077,7 @@ the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix and acc
 operation
 
 When `.sp` is specifed, the dimension of A matrix is `M x (K/2)` and requires
-specifiying an additional `%spmetadata` argument
+specifying an additional `%spmetadata` argument
 
 `.ashift` shifts the rows of the A matrix down by one row, except for the last row
 in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
@@ -2613,7 +3089,7 @@ along with `.ashift`
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%kind_flag` flag:
 
@@ -2690,14 +3166,14 @@ Overview:
 
 `nvvm.tcgen05.mma.block_scale` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.block_scale` will result in the initiation of the whole matrix multiply and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires specifying an additional `%spmetadata` argument
 
 The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%cta_group`:
 

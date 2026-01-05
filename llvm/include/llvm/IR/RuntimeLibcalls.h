@@ -23,6 +23,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -79,25 +80,17 @@ public:
 
   RuntimeLibcallsInfo() = default;
 
-  explicit RuntimeLibcallsInfo(
+  LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
       FloatABI::ABIType FloatABI = FloatABI::Default,
-      EABI EABIVersion = EABI::Default, StringRef ABIName = "") {
-    // FIXME: The ExceptionModel parameter is to handle the field in
-    // TargetOptions. This interface fails to distinguish the forced disable
-    // case for targets which support exceptions by default. This should
-    // probably be a module flag and removed from TargetOptions.
-    if (ExceptionModel == ExceptionHandling::None)
-      ExceptionModel = TT.getDefaultExceptionHandling();
-
-    initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
-  }
+      EABI EABIVersion = EABI::Default, StringRef ABIName = "",
+      VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   explicit RuntimeLibcallsInfo(const Module &M);
 
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &);
 
   /// Get the libcall routine name for the specified libcall implementation.
   static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
@@ -170,6 +163,10 @@ public:
   getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
                 RTLIB::LibcallImpl LibcallImpl) const;
 
+  /// Returns true if the function has a vector mask argument, which is assumed
+  /// to be the last argument.
+  static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl);
+
 private:
   LLVM_ABI static iota_range<RTLIB::LibcallImpl>
   lookupLibcallImplNameImpl(StringRef Name);
@@ -212,6 +209,16 @@ private:
       return !TT.isOSVersionLT(7, 0);
     // Any other darwin such as WatchOS/TvOS is new enough.
     return true;
+  }
+
+  static bool darwinHasMemsetPattern(const Triple &TT) {
+    // memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X 10.5 and
+    // later. All versions of watchOS support it.
+    if (TT.isMacOSX())
+      return !TT.isMacOSXVersionLT(10, 5);
+    if (TT.isiOS())
+      return !TT.isOSVersionLT(3, 0);
+    return TT.isWatchOS();
   }
 
   static bool hasAEABILibcalls(const Triple &TT) {

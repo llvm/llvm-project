@@ -627,7 +627,7 @@ define amdgpu_ps half @fneg_fadd_0_safe_f16(half inreg %tmp2, half inreg %tmp6, 
 ; GFX11-LABEL: fneg_fadd_0_safe_f16:
 ; GFX11:       ; %bb.0: ; %.entry
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f16_e32 v0, 0, v0
@@ -682,7 +682,7 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
 ; GFX11-LABEL: fneg_fadd_0_nsz_f16:
 ; GFX11:       ; %bb.0: ; %.entry
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_nlt_f16_e64 s1, -v0, s0
@@ -5303,7 +5303,7 @@ define half @v_fneg_inlineasm_f16(half %a, half %b, half %c, i32 %d) #0 {
 ; GFX11-NSZ-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul half %a, %b
   %fneg = fneg half %mul
-  call void asm sideeffect "; use $0", "v"(half %fneg) #0
+  call void asm sideeffect "; use $0", "v"(half %fneg)
   ret half %fneg
 }
 
@@ -5372,7 +5372,7 @@ define half @v_fneg_inlineasm_multi_use_src_f16(ptr addrspace(1) %out, half %a, 
   %out.gep = getelementptr inbounds half, ptr addrspace(1) %out, i64 %tid.ext
   %mul = fmul half %a, %b
   %fneg = fneg half %mul
-  call void asm sideeffect "; use $0", "v"(half %fneg) #0
+  call void asm sideeffect "; use $0", "v"(half %fneg)
   ret half %mul
 }
 

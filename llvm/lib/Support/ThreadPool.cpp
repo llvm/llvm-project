@@ -110,8 +110,13 @@ void StdThreadPool::processTasks(ThreadPoolTaskGroup *WaitingForGroup) {
     CurrentThreadTaskGroups->push_back(GroupOfTask);
 #endif
 
-    // Run the task we just grabbed
-    Task();
+    // Run the task we just grabbed. This also destroys the task once run to
+    // release any resources held by it through RAII captured objects.
+    //
+    // It is particularly important to do this here so that we're not holding
+    // any lock and any further operations on the thread or `ThreadPool` take
+    // place here, at the same point as the task itself is executed.
+    std::exchange(Task, {})();
 
 #ifndef NDEBUG
     CurrentThreadTaskGroups->pop_back();
@@ -184,8 +189,8 @@ void StdThreadPool::processTasksWithJobserver() {
 
     // `make_scope_exit` guarantees the job slot is released, even if the
     // task throws or we exit early. This prevents deadlocking the build.
-    auto SlotReleaser =
-        make_scope_exit([&] { TheJobserver->release(std::move(Slot)); });
+    llvm::scope_exit SlotReleaser(
+        [&] { TheJobserver->release(std::move(Slot)); });
 
     // While we hold a job slot, process tasks from the internal queue.
     while (true) {

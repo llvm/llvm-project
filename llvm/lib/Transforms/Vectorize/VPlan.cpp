@@ -99,20 +99,20 @@ VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
 
 VPValue::~VPValue() {
   assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  if (Def)
+  if (VPDef *Def = getDefiningRecipe())
     Def->removeDefinedValue(this);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
-  if (const VPRecipeBase *R = dyn_cast_or_null<VPRecipeBase>(Def))
+  if (const VPRecipeBase *R = getDefiningRecipe())
     R->print(OS, "", SlotTracker);
   else
     printAsOperand(OS, SlotTracker);
 }
 
 void VPValue::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this->Def);
+  const VPRecipeBase *Instr = getDefiningRecipe();
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), SlotTracker);
@@ -592,16 +592,16 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   const VPRecipeBase *R = &VPBB->back();
-  bool IsSwitch = isa<VPInstruction>(R) &&
-                  cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
-  bool IsCondBranch =
+  [[maybe_unused]] bool IsSwitch =
+      isa<VPInstruction>(R) &&
+      cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
+  [[maybe_unused]] bool IsBranchOnTwoConds = match(R, m_BranchOnTwoConds());
+  [[maybe_unused]] bool IsCondBranch =
       isa<VPBranchOnMaskRecipe>(R) ||
       match(R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()));
-  (void)IsCondBranch;
-  (void)IsSwitch;
   if (VPBB->getNumSuccessors() == 2 ||
       (VPBB->isExiting() && !VPBB->getParent()->isReplicator())) {
-    assert((IsCondBranch || IsSwitch) &&
+    assert((IsCondBranch || IsSwitch || IsBranchOnTwoConds) &&
            "block with multiple successors not terminated by "
            "conditional branch nor switch recipe");
 
@@ -609,13 +609,14 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   if (VPBB->getNumSuccessors() > 2) {
-    assert(IsSwitch && "block with more than 2 successors not terminated by "
-                       "a switch recipe");
+    assert((IsSwitch || IsBranchOnTwoConds) &&
+           "block with more than 2 successors not terminated by a switch or "
+           "branch-on-two-conds recipe");
     return true;
   }
 
   assert(
-      !IsCondBranch &&
+      !IsCondBranch && !IsBranchOnTwoConds &&
       "block with 0 or 1 successors terminated by conditional branch recipe");
   return false;
 }
@@ -843,15 +844,14 @@ void VPRegionBlock::dissolveToCFGLoop() {
 
   VPBlockBase *Preheader = getSinglePredecessor();
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-  VPBlockBase *Middle = getSingleSuccessor();
+
   VPBlockUtils::disconnectBlocks(Preheader, this);
-  VPBlockUtils::disconnectBlocks(this, Middle);
 
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry))
     VPB->setParent(getParent());
 
   VPBlockUtils::connectBlocks(Preheader, Header);
-  VPBlockUtils::connectBlocks(ExitingLatch, Middle);
+  VPBlockUtils::transferSuccessors(this, ExitingLatch);
   VPBlockUtils::connectBlocks(ExitingLatch, Header);
 }
 
@@ -884,8 +884,7 @@ VPlan::~VPlan() {
   }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
-  if (BackedgeTakenCount)
-    delete BackedgeTakenCount;
+  delete BackedgeTakenCount;
 }
 
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
@@ -1428,7 +1427,7 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
 void VPSlotTracker::assignName(const VPValue *V) {
   assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
   auto *UV = V->getUnderlyingValue();
-  auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe());
+  auto *VPI = dyn_cast_or_null<VPInstruction>(V);
   if (!UV && !(VPI && !VPI->getName().empty())) {
     VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
     NextSlot++;

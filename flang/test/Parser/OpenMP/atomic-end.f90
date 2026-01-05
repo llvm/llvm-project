@@ -19,7 +19,7 @@ end
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Read
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'v=x'
 !PARSE-TREE: | | | Variable = 'v'
@@ -29,7 +29,7 @@ end
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 
 
 subroutine f01
@@ -50,7 +50,7 @@ end
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Read
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'v=x'
 !PARSE-TREE: | | | Variable = 'v'
@@ -60,4 +60,4 @@ end
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}

@@ -30,6 +30,14 @@
 
 extern "C" {
 
+/// Definitions
+///{
+
+// See definition in OpenMP (omp.h.var/omp_lib.(F90|h).var)
+#define omp_invalid_device -2
+
+///}
+
 /// Type declarations
 ///{
 

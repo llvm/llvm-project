@@ -394,7 +394,7 @@ TEST(CloneLoop, CloneLoopNest) {
 
   std::unique_ptr<Module> M = parseIR(
     Context,
-    R"(define void @foo(i32* %A, i32 %ub) {
+    R"(define void @foo(ptr %A, i32 %ub) {
 entry:
   %guardcmp = icmp slt i32 0, %ub
   br i1 %guardcmp, label %for.outer.preheader, label %for.end
@@ -408,8 +408,8 @@ for.inner.preheader:
 for.inner:
   %i = phi i32 [ 0, %for.inner.preheader ], [ %inc, %for.inner ]
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  store i32 %i, ptr %arrayidx, align 4
   %inc = add nsw i32 %i, 1
   %cmp = icmp slt i32 %inc, %ub
   br i1 %cmp, label %for.inner, label %for.inner.exit
@@ -728,10 +728,10 @@ TEST(CloneFunction, CloneEmptyFunction) {
 
 TEST(CloneFunction, CloneFunctionWithInalloca) {
   StringRef ImplAssembly = R"(
-    declare void @a(i32* inalloca(i32))
+    declare void @a(ptr inalloca(i32))
     define void @foo() {
       %a = alloca inalloca i32
-      call void @a(i32* inalloca(i32) %a)
+      call void @a(ptr inalloca(i32) %a)
       ret void
     }
     declare void @bar()
