@@ -11029,13 +11029,6 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
           continue;
         }
         break;
-      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect:
-      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable:
-        if (!CE->getAddress()) {
-          ErrorFn(EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR, E.second);
-          continue;
-        }
-        break;
       default:
         break;
       }
@@ -11045,17 +11038,12 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       // entry. Indirect variables are handled separately on the device.
       if (auto *GV = dyn_cast<GlobalValue>(CE->getAddress()))
         if ((GV->hasLocalLinkage() || GV->hasHiddenVisibility()) &&
-            (Flags !=
-                 OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect &&
-             Flags != OffloadEntriesInfoManager::
-                          OMPTargetGlobalVarEntryIndirectVTable))
+            Flags != OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
           continue;
 
       // Indirect globals need to use a special name that doesn't match the name
       // of the associated host global.
-      if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect ||
-          Flags ==
-              OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable)
+      if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
         createOffloadEntry(CE->getAddress(), CE->getAddress(), CE->getVarSize(),
                            Flags, CE->getLinkage(), CE->getVarName());
       else
@@ -11492,9 +11480,7 @@ void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
       }
       return;
     }
-    if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect ||
-        Flags ==
-            OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable)
+    if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
       OffloadEntriesDeviceGlobalVar.try_emplace(VarName, OffloadingEntriesNum,
                                                 Addr, VarSize, Flags, Linkage,
                                                 VarName.str());
