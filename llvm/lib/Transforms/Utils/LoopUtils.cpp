@@ -66,7 +66,7 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
   auto RewriteExit = [&](BasicBlock *BB) {
     assert(InLoopPredecessors.empty() &&
            "Must start with an empty predecessors list!");
-    auto Cleanup = make_scope_exit([&] { InLoopPredecessors.clear(); });
+    llvm::scope_exit Cleanup([&] { InLoopPredecessors.clear(); });
 
     // See if there are any non-loop predecessors of this exit block and
     // keep track of the in-loop predecessors.
@@ -608,30 +608,30 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   llvm::SmallDenseSet<DebugVariable, 4> DeadDebugSet;
   llvm::SmallVector<DbgVariableRecord *, 4> DeadDbgVariableRecords;
 
-  if (ExitBlock) {
-    // Given LCSSA form is satisfied, we should not have users of instructions
-    // within the dead loop outside of the loop. However, LCSSA doesn't take
-    // unreachable uses into account. We handle them here.
-    // We could do it after drop all references (in this case all users in the
-    // loop will be already eliminated and we have less work to do but according
-    // to API doc of User::dropAllReferences only valid operation after dropping
-    // references, is deletion. So let's substitute all usages of
-    // instruction from the loop with poison value of corresponding type first.
-    for (auto *Block : L->blocks())
-      for (Instruction &I : *Block) {
-        auto *Poison = PoisonValue::get(I.getType());
-        for (Use &U : llvm::make_early_inc_range(I.uses())) {
-          if (auto *Usr = dyn_cast<Instruction>(U.getUser()))
-            if (L->contains(Usr->getParent()))
-              continue;
-          // If we have a DT then we can check that uses outside a loop only in
-          // unreachable block.
-          if (DT)
-            assert(!DT->isReachableFromEntry(U) &&
-                   "Unexpected user in reachable block");
-          U.set(Poison);
-        }
+  // Given LCSSA form is satisfied, we should not have users of instructions
+  // within the dead loop outside of the loop. However, LCSSA doesn't take
+  // unreachable uses into account. We handle them here.
+  // We could do it after drop all references (in this case all users in the
+  // loop will be already eliminated and we have less work to do but according
+  // to API doc of User::dropAllReferences only valid operation after dropping
+  // references, is deletion. So let's substitute all usages of
+  // instruction from the loop with poison value of corresponding type first.
+  for (auto *Block : L->blocks())
+    for (Instruction &I : *Block) {
+      auto *Poison = PoisonValue::get(I.getType());
+      for (Use &U : llvm::make_early_inc_range(I.uses())) {
+        if (auto *Usr = dyn_cast<Instruction>(U.getUser()))
+          if (L->contains(Usr->getParent()))
+            continue;
+        // If we have a DT then we can check that uses outside a loop only in
+        // unreachable block.
+        if (DT)
+          assert(!DT->isReachableFromEntry(U) &&
+                 "Unexpected user in reachable block");
+        U.set(Poison);
+      }
 
+      if (ExitBlock) {
         // For one of each variable encountered, preserve a debug record (set
         // to Poison) and transfer it to the loop exit. This terminates any
         // variable locations that were set during the loop.
@@ -646,7 +646,9 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
           DeadDbgVariableRecords.push_back(&DVR);
         }
       }
+    }
 
+  if (ExitBlock) {
     // After the loop has been deleted all the values defined and modified
     // inside the loop are going to be unavailable. Values computed in the
     // loop will have been deleted, automatically causing their debug uses
@@ -1382,22 +1384,6 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
   // bitwise ORs. Freeze it here before the condition is used.
   AnyOf = Builder.CreateFreeze(AnyOf);
   return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
-}
-
-Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       RecurKind RdxKind, Value *Start,
-                                       Value *Sentinel) {
-  bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RdxKind);
-  bool IsMaxRdx = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RdxKind);
-  Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? (IsMaxRdx ? Builder.CreateIntMaxReduce(Src, IsSigned)
-                                  : Builder.CreateIntMinReduce(Src, IsSigned))
-                      : Src;
-  // Correct the final reduction result back to the start value if the maximum
-  // reduction is sentinel value.
-  Value *Cmp =
-      Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
 }
 
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,

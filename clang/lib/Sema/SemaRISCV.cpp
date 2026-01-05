@@ -1699,7 +1699,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     // The QCI interrupt types require Xqciint
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest: {
-      if (!HasFeature("experimental-xqciint")) {
+      if (!HasFeature("xqciint")) {
         Diag(AL.getLoc(),
              diag::err_riscv_attribute_interrupt_requires_extension)
             << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";
@@ -1805,8 +1805,9 @@ bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
 }
 
 bool SemaRISCV::checkTargetClonesAttr(
-    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
-    SmallVectorImpl<SmallString<64>> &NewParams) {
+    const SmallVectorImpl<StringRef> &Params,
+    const SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams, SourceLocation AttrLoc) {
   using namespace DiagAttrParams;
 
   assert(Params.size() == Locs.size() &&
@@ -1859,7 +1860,7 @@ bool SemaRISCV::checkTargetClonesAttr(
     NewParams.push_back(Param);
   }
   if (!HasDefault)
-    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+    return Diag(AttrLoc, diag::err_target_clone_must_have_default);
 
   return false;
 }

@@ -131,13 +131,6 @@ if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
 
-# The pstl project was removed. Ignore it to pacify certain buildbots.
-list(FIND LLVM_ENABLE_PROJECTS "pstl" FOUND_INDEX)
-if(NOT "${FOUND_INDEX}" STREQUAL "-1")
-  message(WARNING "The pstl project has been removed and will not be built")
-  list(REMOVE_ITEM LLVM_ENABLE_PROJECTS "pstl")
-endif()
-
 foreach(proj ${LLVM_ENABLE_PROJECTS})
   if (NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}. Did you mean to enable it as a runtime in LLVM_ENABLE_RUNTIMES?")
@@ -704,7 +697,7 @@ else()
   option(LLVM_ENABLE_ASSERTIONS "Enable assertions" ON)
 endif()
 
-option(LLVM_ENABLE_IO_SANDBOX "Enable IO sandboxing in supported tools" ${LLVM_ENABLE_ASSERTIONS})
+option(LLVM_ENABLE_IO_SANDBOX "Enable IO sandboxing in supported tools" OFF)
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING

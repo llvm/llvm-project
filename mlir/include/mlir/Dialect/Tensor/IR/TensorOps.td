@@ -1253,7 +1253,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     inferCollapsedType(RankedTensorType type, ArrayRef<AffineMap> reassociation);
     static RankedTensorType
     inferCollapsedType(RankedTensorType type,
-                       SmallVector<ReassociationIndices> reassociation);
+                       ArrayRef<ReassociationIndices> reassociation);
   }];
   let hasVerifier = 1;
 }

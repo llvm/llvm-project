@@ -57,10 +57,66 @@
                         </ul>
                     </li>
                     {{/HasFunctions}}
+                    {{#HasNamespaces}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+                    </li>
+                    <li>
+                        <ul>
+                            {{#Namespaces}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Namespaces}}
+                        </ul>
+                    </li>
+                    {{/HasNamespaces}}
+                    {{#HasConcepts}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Concepts">Concepts</a>
+                    </li>
+                    <li>
+                        <ul>
+                            {{#Concepts}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Concepts}}
+                        </ul>
+                    </li>
+                    {{/HasConcepts}}
+                    {{#HasTypedefs}}
+                    <li class="sidebar-section">
+                        <a class="sidebar-item" href="#Typedefs">Typedefs</a>
+                    </li>
+                    <li>
+                        <ul>
+                            {{#Typedefs}}
+                            <li class="sidebar-item-container">
+                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                            </li>
+                            {{/Typedefs}}
+                        </ul>
+                    </li>
+                    {{/HasTypedefs}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
             <div class="content">
+                {{#HasNamespaces}}
+                <section id="Namespaces" class="section-container">
+                    <h2>Namespaces</h2>
+                    <ul class="class-container">
+                        {{#Namespaces}}
+                        <li id="{{USR}}">
+                            <a href="{{^Path}}../{{Name}}/{{/Path}}{{#Path}}./{{Name}}/{{/Path}}index.html">
+                                <pre><code class="language-cpp code-clang-doc">namespace {{Name}}</code></pre>
+                            </a>
+                        </li>
+                        {{/Namespaces}}
+                    </ul>
+                </section>
+                {{/HasNamespaces}}
                 {{#HasEnums}}
                 <section id="Enums" class="section-container">
                     <h2>Enumerations</h2>
@@ -97,6 +153,30 @@
                     </ul>
                 </section>
                 {{/HasFunctions}}
+                {{#HasConcepts}}
+                <section id="Concepts" class="section-container">
+                    <h2>Concepts</h2>
+                    {{#Concepts}}
+                    <div id="{{ID}}" class="delimiter-container">
+                        <div>
+                            <pre><code class="language-cpp code-clang-doc">{{#Template}}template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Template}} {{Name}} {{ConstraintExpression}}</code></pre> 
+                        </div>
+                        {{#Description}}
+                        {{>Comments}}
+                        {{/Description}}
+                        <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
+                    </div>
+                    {{/Concepts}}
+                </section>
+                {{/HasConcepts}}
+                {{#HasTypedefs}}
+                <section id="Typedefs" class="section-container">
+                    <h2>Typedefs</h2>
+                    {{#Typedefs}}
+                    {{>AliasPartial}}
+                    {{/Typedefs}}
+                </section>
+                {{/HasTypedefs}}
             </div>
         </div>
     </main>

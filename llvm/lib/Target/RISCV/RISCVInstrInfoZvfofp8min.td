@@ -81,20 +81,24 @@ multiclass VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min {
   }
 }
 
-let mayRaiseFPException = true, Predicates = [HasStdExtZvfofp8min] in {
-  defm PseudoVFWCVTBF16_F_F : VPseudoVWCVTD_V_NoSched_Zvfofp8min;
+let Predicates = [HasStdExtZvfofp8min] in {
+  let AltFmtType = IS_NOT_ALTFMT in
+    defm PseudoVFWCVTBF16_F_F : VPseudoVWCVTD_V_NoSched_Zvfofp8min;
   let AltFmtType = IS_ALTFMT in
     defm PseudoVFWCVTBF16_F_F_ALT : VPseudoVWCVTD_V_NoSched_Zvfofp8min;
-
-  defm PseudoVFNCVTBF16_F_F :     VPseudoVNCVTD_W_RM_NoSched_Zvfofp8min;
-  defm PseudoVFNCVTBF16_SAT_F_F : VPseudoVNCVTD_W_RM_NoSched_Zvfofp8min;
-  defm PseudoVFNCVT_F_F :         VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min;
-  defm PseudoVFNCVT_SAT_F_F :     VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min;
-  let AltFmtType = IS_ALTFMT in {
-    defm PseudoVFNCVTBF16_F_F_ALT :     VPseudoVNCVTD_W_RM_NoSched_Zvfofp8min;
-    defm PseudoVFNCVTBF16_SAT_F_F_ALT : VPseudoVNCVTD_W_RM_NoSched_Zvfofp8min;
-    defm PseudoVFNCVT_F_F_ALT :         VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min;
-    defm PseudoVFNCVT_SAT_F_F_ALT :     VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min;
+  let mayRaiseFPException = true in {
+    let AltFmtType = IS_NOT_ALTFMT in {
+      defm PseudoVFNCVTBF16_F_F :     VPseudoVNCVTD_W_RM_NoSched_Zvfofp8min;
+      defm PseudoVFNCVTBF16_SAT_F_F : VPseudoVNCVTD_W_RM_NoSched_Zvfofp8min;
+      defm PseudoVFNCVT_F_F :         VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min;
+      defm PseudoVFNCVT_SAT_F_F :     VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min;
+    }
+    let AltFmtType = IS_ALTFMT in {
+      defm PseudoVFNCVTBF16_F_F_ALT :     VPseudoVNCVTD_W_RM_NoSched_Zvfofp8min;
+      defm PseudoVFNCVTBF16_SAT_F_F_ALT : VPseudoVNCVTD_W_RM_NoSched_Zvfofp8min;
+      defm PseudoVFNCVT_F_F_ALT :         VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min;
+      defm PseudoVFNCVT_SAT_F_F_ALT :     VPseudoVNCVTD_Q_RM_NoSched_Zvfofp8min;
+    }
   }
 }
 
