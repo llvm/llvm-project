@@ -75,10 +75,10 @@ using ::c32rtomb _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_HAS_C8RTOMB_MBRTOC8
+#  if _LIBCPP_HAS_C8RTOMB_MBRTOC8
 using ::mbrtoc8 _LIBCPP_USING_IF_EXISTS;
 using ::c8rtomb _LIBCPP_USING_IF_EXISTS;
-#endif
+#  endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
