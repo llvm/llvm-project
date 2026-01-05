@@ -139,10 +139,7 @@ void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
     // through the PCH's compilation.
     auto MDLoc = MD->getLocation();
 
-    // The PCH loads the command line macros into the <built-in> buffer.
-    // This is not the same as SourceMgr.isWrittenInBuiltinFile(MDLoc),
-    // since we are not looking at the Presumed location.
-    if (SourceMgr.getBufferName(MDLoc) == "<built-in>") {
+    if (SourceMgr.isWrittenInCommandLineFile(MDLoc)) {
       auto MDFileID = SourceMgr.getFileID(MDLoc);
       if (PCHPredefinesFileID.isInvalid())
         PCHPredefinesFileID = MDFileID;
