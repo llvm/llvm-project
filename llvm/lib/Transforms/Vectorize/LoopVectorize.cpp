@@ -7121,7 +7121,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
           return true;
 
         // Keep track of how many selects are used for a phi.
-        if (auto *PHI = dyn_cast<PHINode>(UI))
+        if (auto *PHI = dyn_cast<PHINode>(UI)) {
           if (match(&R, m_VPInstruction<Instruction::Select>(
                             m_VPValue(), m_VPValue(), m_VPValue()))) {
             // The legacy cost model costs non-header phis with a scalar VF or
@@ -7131,7 +7131,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
               return true;
             PHISelects[PHI]++;
           }
-
+        }
         SeenInstrs.insert(UI);
       }
     }
