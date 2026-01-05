@@ -144,6 +144,19 @@ llvm::Error WasmIncrementalExecutor::cleanUp() {
   return llvm::Error::success();
 }
 
+llvm::Expected<llvm::orc::ExecutorAddr>
+WasmIncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
+                                          SymbolNameKind NameKind) const {
+  void *Sym = dlsym(RTLD_DEFAULT, Name.str().c_str());
+  if (!Sym) {
+    return llvm::make_error<llvm::StringError>("dlsym failed for symbol: " +
+                                                   Name.str(),
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  return llvm::orc::ExecutorAddr::fromPtr(Sym);
+}
+
 WasmIncrementalExecutor::~WasmIncrementalExecutor() = default;
 
 } // namespace clang

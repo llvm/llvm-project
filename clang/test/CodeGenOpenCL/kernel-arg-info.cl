@@ -21,6 +21,7 @@ kernel void foo(global int * globalintp, global int * restrict globalintrestrict
   *globalintrestrictp = constint + volatileint;
 }
 // CHECK: define{{.*}} spir_kernel void @foo{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD11:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD12:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD13:[0-9]+]]
@@ -32,6 +33,7 @@ kernel void foo(global int * globalintp, global int * restrict globalintrestrict
 kernel void foo2(read_only image1d_t img1, image2d_t img2, write_only image2d_array_t img3, read_write image1d_t img4) {
 }
 // CHECK: define{{.*}} spir_kernel void @foo2{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo2{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD21:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD22:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD23:[0-9]+]]
@@ -43,6 +45,7 @@ kernel void foo2(read_only image1d_t img1, image2d_t img2, write_only image2d_ar
 kernel void foo3(__global half * X) {
 }
 // CHECK: define{{.*}} spir_kernel void @foo3{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo3{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD31:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD32:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD33:[0-9]+]]
@@ -55,6 +58,7 @@ typedef unsigned int myunsignedint;
 kernel void foo4(__global unsigned int * X, __global myunsignedint * Y) {
 }
 // CHECK: define{{.*}} spir_kernel void @foo4{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo4{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD41:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD42:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD43:[0-9]+]]
@@ -67,6 +71,7 @@ typedef image1d_t myImage;
 kernel void foo5(myImage img1, write_only image1d_t img2) {
 }
 // CHECK: define{{.*}} spir_kernel void @foo5{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo5{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD41:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD51:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD52:[0-9]+]]
@@ -77,6 +82,8 @@ kernel void foo5(myImage img1, write_only image1d_t img2) {
 
 typedef char char16 __attribute__((ext_vector_type(16)));
 __kernel void foo6(__global char16 arg[]) {}
+// CHECK: define{{.*}} spir_kernel void @foo6{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo6{{[^!]+}}
 // CHECK: !kernel_arg_type ![[MD61:[0-9]+]]
 // ARGINFO: !kernel_arg_name ![[MD62:[0-9]+]]
 
@@ -87,6 +94,7 @@ kernel void foo7(ROImage ro, WOImage wo, RWImage rw) {
 }
 
 // CHECK: define{{.*}} spir_kernel void @foo7{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo7{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD71:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD72:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD73:[0-9]+]]
@@ -99,6 +107,7 @@ typedef unsigned char uchar;
 typedef uchar uchar2 __attribute__((ext_vector_type(2)));
 kernel void foo8(pipe int p1, pipe uchar p2, pipe uchar2 p3, const pipe uchar p4, write_only pipe uchar p5) {}
 // CHECK: define{{.*}} spir_kernel void @foo8{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo8{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[PIPE_AS_QUAL:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[PIPE_ACCESS_QUAL:[0-9]+]]
 // CHECK: !kernel_arg_type ![[PIPE_TY:[0-9]+]]
@@ -109,6 +118,7 @@ kernel void foo8(pipe int p1, pipe uchar p2, pipe uchar2 p3, const pipe uchar p4
 
 kernel void foo9(signed char sc1,  global const signed char* sc2) {}
 // CHECK: define{{.*}} spir_kernel void @foo9{{[^!]+}}
+// ARGINFO: define{{.*}} spir_kernel void @foo9{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[SCHAR_AS_QUAL:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD42]]
 // CHECK: !kernel_arg_type ![[SCHAR_TY:[0-9]+]]

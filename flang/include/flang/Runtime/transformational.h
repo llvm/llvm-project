@@ -146,6 +146,27 @@ void RTDECL(Pack)(Descriptor &result, const Descriptor &source,
     const Descriptor &mask, const Descriptor *vector = nullptr,
     const char *sourceFile = nullptr, int line = 0);
 
+/// Produce a shallow copy of the \p source in \p result.
+/// The \p source may have any type and rank.
+/// Unless \p source is unallocated, the \p result will
+/// be allocated using the same shape and dynamic type,
+/// and will contain the same top-level values as the \p source.
+/// The \p result will have the default lower bounds, if it is an array.
+/// As the name suggests, it is different from the Assign runtime,
+/// because it does not perform recursive assign actions
+/// for the components of the derived types.
+void RTDECL(ShallowCopy)(Descriptor &result, const Descriptor &source,
+    const char *sourceFile = nullptr, int line = 0);
+
+/// Same as ShallowCopy, where the caller provides a pre-allocated
+/// \p result. The \p source and \p result must be conforming:
+///   * Same rank.
+///   * Same extents.
+///   * Same size and type of elements (including the type parameters).
+/// If \p result is an array, its lower bounds are not affected.
+void RTDECL(ShallowCopyDirect)(const Descriptor &result,
+    const Descriptor &source, const char *sourceFile = nullptr, int line = 0);
+
 void RTDECL(Spread)(Descriptor &result, const Descriptor &source, int dim,
     std::int64_t ncopies, const char *sourceFile = nullptr, int line = 0);
 

@@ -6,6 +6,8 @@ get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 if(FLANG_INCLUDE_TESTS)
   set(test_libs
     FIRTestAnalysis
+    FIRTestOpenACCInterfaces
+    MLIROpenACCTestPasses
     MLIRTestIR
     )
 endif()
@@ -17,11 +19,19 @@ target_link_libraries(fir-opt PRIVATE
   FIRSupport
   FIRTransforms
   FIRCodeGen
+  FIRCodeGenDialect
   HLFIRDialect
   HLFIRTransforms
+  FIROpenACCSupport
+  FIROpenACCTransforms
+  FIROpenMPSupport
   FlangOpenMPTransforms
   FIRAnalysis
+  MIFDialect
   ${test_libs}
+)
+
+mlir_target_link_libraries(fir-opt PRIVATE
   ${dialect_libs}
   ${extension_libs}
 

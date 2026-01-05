@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceIRReferences.h"
-#include "Delta.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -37,14 +36,16 @@ static void dropIRReferencesFromInstructions(Oracle &O, MachineFunction &MF) {
   }
 }
 
-static void stripIRFromInstructions(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceIRInstructionReferencesDeltaPass(Oracle &O,
+                                                  ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F))
       dropIRReferencesFromInstructions(O, *MF);
   }
 }
 
-static void stripIRFromBlocks(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceIRBlockReferencesDeltaPass(Oracle &O,
+                                            ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F)) {
       for (MachineBasicBlock &MBB : *MF) {
@@ -55,7 +56,8 @@ static void stripIRFromBlocks(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-static void stripIRFromFunctions(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceIRFunctionReferencesDeltaPass(Oracle &O,
+                                               ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (!O.shouldKeep()) {
       if (auto *MF = WorkItem.MMI->getMachineFunction(F)) {
@@ -66,18 +68,4 @@ static void stripIRFromFunctions(Oracle &O, ReducerWorkItem &WorkItem) {
       }
     }
   }
-}
-
-void llvm::reduceIRInstructionReferencesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, stripIRFromInstructions,
-               "Reducing IR references from instructions");
-}
-
-void llvm::reduceIRBlockReferencesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, stripIRFromBlocks, "Reducing IR references from blocks");
-}
-
-void llvm::reduceIRFunctionReferencesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, stripIRFromFunctions,
-               "Reducing IR references from functions");
 }

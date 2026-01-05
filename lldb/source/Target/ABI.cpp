@@ -232,13 +232,13 @@ bool ABI::GetFallbackRegisterLocation(
 }
 
 std::unique_ptr<llvm::MCRegisterInfo> ABI::MakeMCRegisterInfo(const ArchSpec &arch) {
-  std::string triple = arch.GetTriple().getTriple();
+  const llvm::Triple &triple = arch.GetTriple();
   std::string lookup_error;
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, lookup_error);
   if (!target) {
     LLDB_LOG(GetLog(LLDBLog::Process),
-             "Failed to create an llvm target for {0}: {1}", triple,
+             "Failed to create an llvm target for {0}: {1}", triple.str(),
              lookup_error);
     return nullptr;
   }

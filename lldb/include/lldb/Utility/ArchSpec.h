@@ -215,6 +215,8 @@ public:
 
     eCore_x86_64_x86_64,
     eCore_x86_64_x86_64h, // Haswell enabled x86_64
+    eCore_x86_64_amd64,
+
     eCore_hexagon_generic,
     eCore_hexagon_hexagonv4,
     eCore_hexagon_hexagonv5,
@@ -324,6 +326,11 @@ public:
   ///
   ///  \return a boolean value.
   bool IsMIPS() const;
+
+  /// If NVPTX architecture return true.
+  ///
+  ///  \return a boolean value.
+  bool IsNVPTX() const;
 
   /// Returns a string representing current architecture as a target CPU for
   /// tools like compiler, disassembler etc.
@@ -562,6 +569,7 @@ protected:
 /// \return true if \a lhs is less than \a rhs
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
+bool operator!=(const ArchSpec &lhs, const ArchSpec &rhs);
 
 bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 

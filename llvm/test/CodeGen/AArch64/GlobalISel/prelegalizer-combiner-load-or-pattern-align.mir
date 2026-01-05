@@ -14,22 +14,25 @@ body:             |
     liveins: $x0, $x1
     ; NOT_STRICT-LABEL: name: misaligned
     ; NOT_STRICT: liveins: $x0, $x1
-    ; NOT_STRICT: %ptr:_(p0) = COPY $x1
-    ; NOT_STRICT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
-    ; NOT_STRICT: $w1 = COPY %full_load(s32)
-    ; NOT_STRICT: RET_ReallyLR implicit $w1
+    ; NOT_STRICT-NEXT: {{  $}}
+    ; NOT_STRICT-NEXT: %ptr:_(p0) = COPY $x1
+    ; NOT_STRICT-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
+    ; NOT_STRICT-NEXT: $w1 = COPY %full_load(s32)
+    ; NOT_STRICT-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; STRICT-LABEL: name: misaligned
     ; STRICT: liveins: $x0, $x1
-    ; STRICT: %cst_1:_(s64) = G_CONSTANT i64 1
-    ; STRICT: %cst_16:_(s32) = G_CONSTANT i32 16
-    ; STRICT: %ptr:_(p0) = COPY $x1
-    ; STRICT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; STRICT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
-    ; STRICT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
-    ; STRICT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
-    ; STRICT: %full_load:_(s32) = G_OR %low_half, %high_half
-    ; STRICT: $w1 = COPY %full_load(s32)
-    ; STRICT: RET_ReallyLR implicit $w1
+    ; STRICT-NEXT: {{  $}}
+    ; STRICT-NEXT: %cst_1:_(s64) = G_CONSTANT i64 1
+    ; STRICT-NEXT: %cst_16:_(s32) = G_CONSTANT i32 16
+    ; STRICT-NEXT: %ptr:_(p0) = COPY $x1
+    ; STRICT-NEXT: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
+    ; STRICT-NEXT: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; STRICT-NEXT: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; STRICT-NEXT: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
+    ; STRICT-NEXT: %full_load:_(s32) = G_OR %low_half, %high_half
+    ; STRICT-NEXT: $w1 = COPY %full_load(s32)
+    ; STRICT-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
@@ -54,16 +57,19 @@ body:             |
 
     ; NOT_STRICT-LABEL: name: aligned
     ; NOT_STRICT: liveins: $x0, $x1
-    ; NOT_STRICT: %ptr:_(p0) = COPY $x1
-    ; NOT_STRICT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    ; NOT_STRICT: $w1 = COPY %full_load(s32)
-    ; NOT_STRICT: RET_ReallyLR implicit $w1
+    ; NOT_STRICT-NEXT: {{  $}}
+    ; NOT_STRICT-NEXT: %ptr:_(p0) = COPY $x1
+    ; NOT_STRICT-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    ; NOT_STRICT-NEXT: $w1 = COPY %full_load(s32)
+    ; NOT_STRICT-NEXT: RET_ReallyLR implicit $w1
+    ;
     ; STRICT-LABEL: name: aligned
     ; STRICT: liveins: $x0, $x1
-    ; STRICT: %ptr:_(p0) = COPY $x1
-    ; STRICT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
-    ; STRICT: $w1 = COPY %full_load(s32)
-    ; STRICT: RET_ReallyLR implicit $w1
+    ; STRICT-NEXT: {{  $}}
+    ; STRICT-NEXT: %ptr:_(p0) = COPY $x1
+    ; STRICT-NEXT: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    ; STRICT-NEXT: $w1 = COPY %full_load(s32)
+    ; STRICT-NEXT: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 

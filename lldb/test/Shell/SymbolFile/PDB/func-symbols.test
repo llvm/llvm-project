@@ -1,7 +1,8 @@
-REQUIRES: target-windows, lld
-RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%T/FuncSymbolsTest.exe %S/Inputs/FuncSymbolsTestMain.cpp %S/Inputs/FuncSymbols.cpp
-RUN: lldb-test symbols %T/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-ONE %s
-RUN: lldb-test symbols %T/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-TWO %s
+REQUIRES: target-windows, lld, diasdk
+RUN: mkdir -p %t.dir
+RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%t.dir/FuncSymbolsTest.exe %S/Inputs/FuncSymbolsTestMain.cpp %S/Inputs/FuncSymbols.cpp
+RUN: lldb-test symbols %t.dir/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-ONE %s
+RUN: lldb-test symbols %t.dir/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-TWO %s
 
 ; Link multiple objects
 ; In this test, We don't check demangled name of a mangled function.

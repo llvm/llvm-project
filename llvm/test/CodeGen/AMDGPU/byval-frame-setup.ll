@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 %struct.ByValStruct = type { [4 x i32] }
 ; Make sure the offset is folded and function's frame register is used
