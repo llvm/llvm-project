@@ -845,4 +845,38 @@ TEST(KnownBitsTest, MulExhaustive) {
   }
 }
 
+TEST(KnownBitsTest, ReduceAddExhaustive) {
+  unsigned Bits = 4;
+  for (unsigned NumElts : {2, 4, 5}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &EltKnown) {
+      KnownBits Computed = EltKnown.reduceAdd(NumElts);
+      KnownBits Exact(Bits);
+      Exact.Zero.setAllBits();
+      Exact.One.setAllBits();
+
+      llvm::function_ref<void(unsigned, APInt)> EnumerateCombinations;
+      auto EnumerateCombinationsImpl = [&](unsigned Depth, APInt CurrentSum) {
+        if (Depth == NumElts) {
+          Exact.One &= CurrentSum;
+          Exact.Zero &= ~CurrentSum;
+          return;
+        }
+        ForeachNumInKnownBits(EltKnown, [&](const APInt &Elt) {
+          EnumerateCombinations(Depth + 1, CurrentSum + Elt);
+        });
+      };
+      EnumerateCombinations = EnumerateCombinationsImpl;
+
+      // Here we recursively generate NumElts unique elements matching known
+      // bits and collect exact known bits for all possible combinations.
+      EnumerateCombinations(0, APInt(Bits, 0));
+
+      if (!Exact.hasConflict()) {
+        EXPECT_TRUE(checkResult("reduceAdd", Exact, Computed, {EltKnown},
+                                /*CheckOptimality=*/false));
+      }
+    });
+  }
+}
+
 } // end anonymous namespace
