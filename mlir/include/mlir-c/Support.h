@@ -46,6 +46,8 @@
 #define MLIR_CAPI_EXPORTED __attribute__((visibility("default")))
 #endif
 
+#define MLIR_PYTHON_API_EXPORTED MLIR_CAPI_EXPORTED
+
 #ifdef __cplusplus
 extern "C" {
 #endif

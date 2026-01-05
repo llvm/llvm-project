@@ -37,6 +37,13 @@
     LLVM ERROR: ... unregistered/uninitialized dialect/type/pass ...`
     ```
 
+*   **`MLIR_BINDINGS_PYTHON_NB_DOMAIN`**: `STRING`
+
+    nanobind (and MLIR) domain within which extensions will be compiled. 
+    This determines whether this package will share nanobind types with other bindings packages. 
+    Expected to be unique per project (and per specific set of bindings, for projects with multiple bindings packages).
+    Can also be passed explicitly to `add_mlir_python_modules`.
+
 ### Recommended development practices
 
 It is recommended to use a Python virtual environment. Many ways exist for this,

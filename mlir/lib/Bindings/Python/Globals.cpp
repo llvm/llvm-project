@@ -6,25 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IRModule.h"
+#include "mlir/Bindings/Python/IRCore.h"
 
 #include <optional>
 #include <vector>
 
-#include "Globals.h"
-#include "NanobindUtils.h"
+#include "mlir/Bindings/Python/Globals.h"
+// clang-format off
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir-c/Bindings/Python/Interop.h"
+// clang-format on
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 
 namespace nb = nanobind;
 using namespace mlir;
-using namespace mlir::python;
 
 // -----------------------------------------------------------------------------
 // PyGlobals
 // -----------------------------------------------------------------------------
 
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 PyGlobals *PyGlobals::instance = nullptr;
 
 PyGlobals::PyGlobals() {
@@ -36,6 +40,11 @@ PyGlobals::PyGlobals() {
 }
 
 PyGlobals::~PyGlobals() { instance = nullptr; }
+
+PyGlobals &PyGlobals::get() {
+  assert(instance && "PyGlobals is null");
+  return *instance;
+}
 
 bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
   {
@@ -265,3 +274,6 @@ bool PyGlobals::TracebackLoc::isUserTracebackFilename(
   }
   return isUserTracebackFilenameCache[file];
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir

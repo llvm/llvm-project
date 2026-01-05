@@ -19,6 +19,10 @@ with mlir_standalone.ir.Context():
     # CHECK: standalone.foo %[[C2]] : i32
     print(str(standalone_module), file=sys.stderr)
 
+    custom_type = standalone_d.CustomType.get("foo")
+    # CHECK: !standalone.custom<"foo">
+    print(custom_type, file=sys.stderr)
+
 
 # CHECK: Testing mlir package
 print("Testing mlir package", file=sys.stderr)

@@ -13,11 +13,13 @@
 #include <utility>
 #include <vector>
 
-#include "IRModule.h"
-#include "NanobindUtils.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir/Bindings/Python/IRCore.h"
+// clang-format off
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "mlir-c/IntegerSet.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Support/LLVM.h"
@@ -28,7 +30,7 @@
 
 namespace nb = nanobind;
 using namespace mlir;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 using llvm::SmallVector;
 using llvm::StringRef;
@@ -78,7 +80,9 @@ static bool isPermutation(const std::vector<PermutationTy> &permutation) {
   return true;
 }
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 /// CRTP base class for Python MLIR affine expressions that subclass AffineExpr
 /// and should be castable from it. Intermediate hierarchy classes can be
@@ -356,7 +360,9 @@ public:
   }
 };
 
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 bool PyAffineExpr::operator==(const PyAffineExpr &other) const {
   return mlirAffineExprEqual(affineExpr, other.affineExpr);
@@ -378,7 +384,9 @@ PyAffineExpr PyAffineExpr::createFromCapsule(const nb::object &capsule) {
 //------------------------------------------------------------------------------
 // PyAffineMap and utilities.
 //------------------------------------------------------------------------------
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 /// A list of expressions contained in an affine map. Internally these are
 /// stored as a consecutive array leading to inexpensive random access. Both
@@ -414,7 +422,9 @@ private:
 
   PyAffineMap affineMap;
 };
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 bool PyAffineMap::operator==(const PyAffineMap &other) const {
   return mlirAffineMapEqual(affineMap, other.affineMap);
@@ -436,7 +446,9 @@ PyAffineMap PyAffineMap::createFromCapsule(const nb::object &capsule) {
 //------------------------------------------------------------------------------
 // PyIntegerSet and utilities.
 //------------------------------------------------------------------------------
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 class PyIntegerSetConstraint {
 public:
@@ -490,7 +502,9 @@ private:
 
   PyIntegerSet set;
 };
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 bool PyIntegerSet::operator==(const PyIntegerSet &other) const {
   return mlirIntegerSetEqual(integerSet, other.integerSet);
@@ -509,7 +523,10 @@ PyIntegerSet PyIntegerSet::createFromCapsule(const nb::object &capsule) {
       rawIntegerSet);
 }
 
-void mlir::python::populateIRAffine(nb::module_ &m) {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+void populateIRAffine(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyAffineExpr and derived classes.
   //----------------------------------------------------------------------------
@@ -995,3 +1012,6 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
   PyIntegerSetConstraint::bind(m);
   PyIntegerSetConstraintList::bind(m);
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
