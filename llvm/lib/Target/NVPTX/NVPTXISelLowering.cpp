@@ -7436,40 +7436,70 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+  auto *RI = dyn_cast<AtomicRMWInst>(I);
   // When CAS bitwidth is not supported on the hardware, the CAS is emulated
-  // using a retry loop that uses a higher-bitwidth monotonic CAS. We enforce
-  // the memory order using explicit fences around the retry loop.
-  // The memory order of natively supported CAS operations can be enforced
-  // by lowering to an atom.cas with the right memory synchronizing effect.
-  // However, atom.cas only supports relaxed, acquire, release and acq_rel.
-  // So we also use explicit fences for enforcing memory order for
-  // seq_cast CAS with natively-supported bitwidths.
-  return CI &&
-         (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
-              STI.getMinCmpXchgSizeInBits() ||
-          CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent);
+  // using a retry loop that uses a higher-bitwidth monotonic CAS. Similarly, if
+  // the atomicrmw operation is not supported on hardware, we emulate it with a
+  // cmpxchg loop. In such cases, we enforce the memory order using explicit
+  // fences around the retry loop.
+  // The memory order of natively supported CAS or RMW operations can be
+  // enforced by lowering to an `atom.<op>` instr with the right memory
+  // synchronization effect.  However, atom only supports relaxed, acquire,
+  // release and acq_rel.  So we also use explicit fences to enforce memory
+  // order in seq_cast CAS or RMW instructions that can be lowered as acq_rel.
+  if (CI)
+    return (cast<IntegerType>(CI->getCompareOperand()->getType())
+                ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
+           CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
+  if (RI)
+    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+           RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  return false;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     const Instruction *I) const {
-  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  bool BitwidthSupportedAndIsSeqCst =
-      CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
+  // Only lower to atom.<op>.acquire if the operation is not emulated, and its
+  // ordering is seq_cst. This produces a sequence of the form:
+  // fence.sc
+  // atom.<op>.acquire
+  // Instead of
+  // fence.sc
+  // atom.<op>
+  // fence.acquire
+  // The two-instruction sequence is weaker than the alternative, but guarantees
+  // seq_cst ordering.
+  //
+  // In all other cases, lower to atom.<op>.relaxed
+  const auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+  const auto *RI = dyn_cast<AtomicRMWInst>(I);
+  AtomicOrdering Ordering;
+  if (CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
-          STI.getMinCmpXchgSizeInBits();
-  return BitwidthSupportedAndIsSeqCst ? AtomicOrdering::Acquire
-                                      : AtomicOrdering::Monotonic;
+          STI.getMinCmpXchgSizeInBits())
+    Ordering = AtomicOrdering::Acquire;
+  else if (RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
+    Ordering = AtomicOrdering::Acquire;
+  else
+    Ordering = AtomicOrdering::Monotonic;
+  return Ordering;
 }
 
+// prerequisites: shouldInsertFencesForAtomic() returns true for Inst
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
-  if (!isa<AtomicCmpXchgInst>(Inst))
+  auto IsCmpXchg = isa<AtomicCmpXchgInst>(Inst);
+  auto IsRMW = isa<AtomicRMWInst>(Inst);
+  if (!IsCmpXchg && !IsRMW)
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
-  // Specialize for cmpxchg
+  // Specialize for cmpxchg and rmw
   // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
-  SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
+  SyncScope::ID SSID = IsCmpXchg
+                           ? cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID()
+                           : cast<AtomicRMWInst>(Inst)->getSyncScopeID();
   if (isReleaseOrStronger(Ord))
     return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
                                    ? Ord
@@ -7479,21 +7509,27 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
   return nullptr;
 }
 
+// prerequisites: shouldInsertFencesForAtomic() returns true for Inst
 Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
-  // Specialize for cmpxchg
-  if (!isa<AtomicCmpXchgInst>(Inst))
+  // Specialize for cmpxchg and rmw
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(Inst);
+  auto *RI = dyn_cast<AtomicRMWInst>(Inst);
+  if (!CI && !RI)
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 
-  auto *CI = cast<AtomicCmpXchgInst>(Inst);
-  auto CASWidth =
-      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth();
-  SyncScope::ID SSID = CI->getSyncScopeID();
-  // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
-  if (isAcquireOrStronger(Ord) &&
-      (Ord != AtomicOrdering::SequentiallyConsistent ||
-       CASWidth < STI.getMinCmpXchgSizeInBits()))
+  SyncScope::ID SSID = CI ? CI->getSyncScopeID() : RI->getSyncScopeID();
+
+  bool IsEmulated = false;
+  if (CI)
+    IsEmulated =
+        cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+        STI.getMinCmpXchgSizeInBits();
+  else if (RI)
+    IsEmulated = shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+
+  if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID);
 
   return nullptr;
