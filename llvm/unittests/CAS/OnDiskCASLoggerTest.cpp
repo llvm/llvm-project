@@ -23,6 +23,9 @@ using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 using namespace llvm::sys;
 
+
+#ifndef _WIN32 // windows doesn't support logging yet.
+
 static void writeToLog(OnDiskCASLogger *Logger, int NumOpens, int NumEntries) {
   StringRef Path = "/fake_cas/index";
   uint8_t Hash[32] = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
@@ -174,3 +177,5 @@ TEST(OnDiskCASLoggerTest, MultiProcess) {
 
   ASSERT_THAT_ERROR(checkLog(Dir.path()), Succeeded());
 }
+
+#endif // _WIN32

@@ -1,3 +1,5 @@
+REQUIRES: !system-windows, !system-cygwin
+
 RUN: rm -rf %t
 RUN: split-file %s %t
 RUN: %python -c "with open(r'%t/input/large', 'w') as file: file.truncate(100000)"

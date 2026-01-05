@@ -155,9 +155,11 @@ OnDiskActionCache::OnDiskActionCache(
 Expected<std::unique_ptr<OnDiskActionCache>>
 OnDiskActionCache::create(StringRef AbsPath) {
   std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+#ifndef _WIN32
   if (Error E =
           ondisk::OnDiskCASLogger::openIfEnabled(AbsPath).moveInto(Logger))
     return std::move(E);
+#endif
   std::unique_ptr<ondisk::OnDiskKeyValueDB> DB;
   if (Error E = ondisk::OnDiskKeyValueDB::open(
                     AbsPath, getHashName(), sizeof(HashType), getHashName(),
