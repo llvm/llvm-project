@@ -485,7 +485,10 @@ const SCEV *ScalarEvolution::getConstant(const APInt &Val) {
 const SCEV *
 ScalarEvolution::getConstant(Type *Ty, uint64_t V, bool isSigned) {
   IntegerType *ITy = cast<IntegerType>(getEffectiveSCEVType(Ty));
-  return getConstant(ConstantInt::get(ITy, V, isSigned));
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return getConstant(
+      ConstantInt::get(ITy, V, isSigned, /*ImplicitTrunc=*/true));
 }
 
 const SCEV *ScalarEvolution::getVScale(Type *Ty) {
