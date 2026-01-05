@@ -238,6 +238,7 @@ add_llvm_component_library(LLVMSupport
   PrefixMappingFileSystem.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
+  IntegerInclusiveInterval.cpp
   Regex.cpp
   RewriteBuffer.cpp
   RewriteRope.cpp
