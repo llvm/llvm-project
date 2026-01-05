@@ -53,13 +53,13 @@ class TestStringPrinter(TestBase):
 
         self.expect_var_path(
             "ref",
-            summary="<no value available>",
+            summary=None,
             children=[ValueCheck(name="&ref", summary='"Hello"')],
         )
 
         # FIXME: should LLDB use "&&refref" for the name here?
         self.expect_var_path(
             "refref",
-            summary="<no value available>",
+            summary=None,
             children=[ValueCheck(name="&refref", summary='"Hi"')],
         )
