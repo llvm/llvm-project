@@ -14,12 +14,12 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANNEXKDETECTION_H
 #define LLVM_CLANG_ANALYSIS_ANNEXKDETECTION_H
 
-#include "clang/Basic/LangOptions.h"
-#include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/StringRef.h"
-
 namespace clang {
-namespace analysis {
+class Preprocessor;
+class LangOptions;
+} // namespace clang
+
+namespace clang::analysis {
 
 /// Calculates whether Annex K is available for the current translation unit
 /// based on the macro definitions and the language options.
@@ -33,29 +33,8 @@ namespace analysis {
 /// \param PP The preprocessor instance to check macro definitions.
 /// \param LO The language options to check C11 standard.
 /// \returns true if Annex K is available, false otherwise.
-inline bool isAnnexKAvailable(Preprocessor *PP, const LangOptions &LO) {
-  if (!LO.C11)
-    return false;
+[[nodiscard]] bool isAnnexKAvailable(Preprocessor *PP, const LangOptions &LO);
 
-  assert(PP && "No Preprocessor registered.");
-
-  if (!PP->isMacroDefined("__STDC_LIB_EXT1__") ||
-      !PP->isMacroDefined("__STDC_WANT_LIB_EXT1__"))
-    return false;
-
-  const auto *MI =
-      PP->getMacroInfo(PP->getIdentifierInfo("__STDC_WANT_LIB_EXT1__"));
-  if (!MI || MI->tokens_empty())
-    return false;
-
-  const Token &T = MI->tokens().back();
-  if (!T.isLiteral() || !T.getLiteralData())
-    return false;
-
-  return StringRef(T.getLiteralData(), T.getLength()) == "1";
-}
-
-} // namespace analysis
-} // namespace clang
+} // namespace clang::analysis
 
 #endif // LLVM_CLANG_ANALYSIS_ANNEXKDETECTION_H
