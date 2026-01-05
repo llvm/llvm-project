@@ -1732,7 +1732,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
       hostParallelCallback(this, OutlinedFn, OuterFn, Ident, IfCondition,
                            PrivTID, PrivTIDAddr, ToBeDeletedVec);
     };
-    // TODO: fix-up allocations on the host as well?
+    OI.FixUpNonEntryAllocas = true;
   }
 
   OI.OuterAllocaBB = OuterAllocaBlock;
