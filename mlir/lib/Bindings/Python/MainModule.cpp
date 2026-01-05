@@ -9,7 +9,9 @@
 #include "Pass.h"
 #include "Rewrite.h"
 #include "mlir/Bindings/Python/Globals.h"
+#include "mlir/Bindings/Python/IRAttributes.h"
 #include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRTypes.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 
 namespace nb = nanobind;
