@@ -1356,3 +1356,34 @@ func.func @_QPtest_omp_loop_wrapper(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.arra
   }
   return
 }
+
+// Check that a volatile scalar load is not hoisted.
+// CHECK-LABEL: func.func @_QPtest_volatile_load
+// CHECK-NOT: fir.load{{.*}}volatile
+// CHECK: fir.do_loop
+func.func @_QPtest_volatile_load(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "b"}) {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.assumed_size_extent : index
+  %2 = fir.shape %1 : (index) -> !fir.shape<1>
+  %3 = fir.declare %arg0(%2) dummy_scope %0 arg 1 {uniq_name = "_QFtest_volatile_loadEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+  %4 = fir.volatile_cast %arg1 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
+  %5 = fir.declare %4 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_volatile_loadEb"} : (!fir.ref<i32, volatile>, !fir.dscope) -> !fir.ref<i32, volatile>
+  %6 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_volatile_loadEi"}
+  %7 = fir.declare %6 {uniq_name = "_QFtest_volatile_loadEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %8 = fir.convert %c1 : (index) -> i32
+  %9 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %8) -> (i32) {
+    fir.store %arg3 to %7 : !fir.ref<i32>
+    %10 = fir.load %5 : !fir.ref<i32, volatile>
+    %11 = fir.load %7 : !fir.ref<i32>
+    %12 = fir.convert %11 : (i32) -> i64
+    %13 = fir.array_coor %3(%2) %12 : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+    fir.store %10 to %13 : !fir.ref<i32>
+    %14 = fir.load %7 : !fir.ref<i32>
+    %15 = arith.addi %14, %8 overflow<nsw> : i32
+    fir.result %15 : i32
+  }
+  fir.store %9 to %7 : !fir.ref<i32>
+  return
+}
