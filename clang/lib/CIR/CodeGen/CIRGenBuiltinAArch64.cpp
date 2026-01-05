@@ -52,6 +52,51 @@ static mlir::Value genVscaleTimesFactor(mlir::Location loc,
                                builder.getUInt64(scalingFactor, loc));
 }
 
+static bool aarch64SVEIntrinsicsProvenSorted = false;
+
+namespace {
+struct aarc64BuiltinInfo {
+  unsigned builtinID;
+  unsigned LLVMIntrinsic;
+
+  bool operator<(unsigned RHSbuiltinID) const {
+    return builtinID < RHSbuiltinID;
+  }
+  bool operator<(const aarc64BuiltinInfo &TE) const {
+    return builtinID < TE.builtinID;
+  }
+};
+} // end anonymous namespace
+
+#define SVEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
+  {SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic}
+
+#define SVEMAP2(NameBase, TypeModifier) {SVE::BI__builtin_sve_##NameBase, 0}
+static const aarc64BuiltinInfo aarch64SVEIntrinsicMap[] = {
+#define GET_SVE_LLVM_INTRINSIC_MAP
+#include "clang/Basic/arm_sve_builtin_cg.inc"
+#undef GET_SVE_LLVM_INTRINSIC_MAP
+};
+
+static const aarc64BuiltinInfo *
+findARMVectorIntrinsicInMap(ArrayRef<aarc64BuiltinInfo> intrinsicMap,
+                            unsigned builtinID, bool &mapProvenSorted) {
+
+#ifndef NDEBUG
+  if (!mapProvenSorted) {
+    assert(llvm::is_sorted(intrinsicMap));
+    mapProvenSorted = true;
+  }
+#endif
+
+  const aarc64BuiltinInfo *info = llvm::lower_bound(intrinsicMap, builtinID);
+
+  if (info != intrinsicMap.end() && info->builtinID == builtinID)
+    return info;
+
+  return nullptr;
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                           const CallExpr *expr) {
@@ -65,7 +110,26 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
   assert(!cir::MissingFeatures::aarch64SVEIntrinsics());
 
+  auto *builtinIntrInfo = findARMVectorIntrinsicInMap(
+      aarch64SVEIntrinsicMap, builtinID, aarch64SVEIntrinsicsProvenSorted);
+
+  // The operands of the builtin call
+  llvm::SmallVector<mlir::Value> ops;
+
+  for (const auto *argExpr : expr->arguments())
+    ops.push_back(emitScalarExpr(argExpr));
+
   mlir::Location loc = getLoc(expr->getExprLoc());
+  if (builtinIntrInfo->LLVMIntrinsic) {
+    std::string llvmIntrName(Intrinsic::getBaseName(
+        (llvm::Intrinsic::ID)builtinIntrInfo->LLVMIntrinsic));
+
+    llvmIntrName.erase(0, /*std::strlen(".llvm")=*/5);
+
+    return emitIntrinsicCallOp(builder, loc, llvmIntrName,
+                               convertType(expr->getType()),
+                               mlir::ValueRange{ops});
+  }
 
   switch (builtinID) {
   default:
@@ -103,10 +167,12 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   case SVE::BI__builtin_sve_svpmullb_u64:
   case SVE::BI__builtin_sve_svpmullb_n_u16:
   case SVE::BI__builtin_sve_svpmullb_n_u64:
+
   case SVE::BI__builtin_sve_svdup_n_b8:
   case SVE::BI__builtin_sve_svdup_n_b16:
   case SVE::BI__builtin_sve_svdup_n_b32:
   case SVE::BI__builtin_sve_svdup_n_b64:
+
   case SVE::BI__builtin_sve_svdupq_n_b8:
   case SVE::BI__builtin_sve_svdupq_n_b16:
   case SVE::BI__builtin_sve_svdupq_n_b32:
@@ -129,22 +195,27 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+
   case SVE::BI__builtin_sve_svlen_u8:
   case SVE::BI__builtin_sve_svlen_s8:
     return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 16);
+
   case SVE::BI__builtin_sve_svlen_u16:
   case SVE::BI__builtin_sve_svlen_s16:
   case SVE::BI__builtin_sve_svlen_f16:
   case SVE::BI__builtin_sve_svlen_bf16:
     return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 8);
+
   case SVE::BI__builtin_sve_svlen_u32:
   case SVE::BI__builtin_sve_svlen_s32:
   case SVE::BI__builtin_sve_svlen_f32:
     return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 4);
+
   case SVE::BI__builtin_sve_svlen_u64:
   case SVE::BI__builtin_sve_svlen_s64:
   case SVE::BI__builtin_sve_svlen_f64:
     return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 2);
+
   case SVE::BI__builtin_sve_svtbl2_u8:
   case SVE::BI__builtin_sve_svtbl2_s8:
   case SVE::BI__builtin_sve_svtbl2_u16:
