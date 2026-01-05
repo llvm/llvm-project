@@ -31,7 +31,7 @@ struct AnyOpType : PyConcreteType<AnyOpType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirTransformAnyOpTypeGetTypeID;
   static constexpr const char *pyClassName = "AnyOpType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -54,7 +54,7 @@ struct AnyParamType : PyConcreteType<AnyParamType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirTransformAnyParamTypeGetTypeID;
   static constexpr const char *pyClassName = "AnyParamType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -77,7 +77,7 @@ struct AnyValueType : PyConcreteType<AnyValueType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirTransformAnyValueTypeGetTypeID;
   static constexpr const char *pyClassName = "AnyValueType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -101,7 +101,7 @@ struct OperationType : PyConcreteType<OperationType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirTransformOperationTypeGetTypeID;
   static constexpr const char *pyClassName = "OperationType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -136,7 +136,7 @@ struct ParamType : PyConcreteType<ParamType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirTransformParamTypeGetTypeID;
   static constexpr const char *pyClassName = "ParamType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(

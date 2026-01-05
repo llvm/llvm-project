@@ -931,6 +931,7 @@ public:
   using ClassTy = nanobind::class_<DerivedTy, BaseTy>;
   using IsAFunctionTy = bool (*)(MlirType);
   using GetTypeIDFunctionTy = MlirTypeID (*)();
+  using Base = PyConcreteType;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
 
   PyConcreteType() = default;
@@ -1063,6 +1064,7 @@ public:
   using IsAFunctionTy = bool (*)(MlirAttribute);
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  using Base = PyConcreteAttribute;
 
   PyConcreteAttribute() = default;
   PyConcreteAttribute(PyMlirContextRef contextRef, MlirAttribute attr)
@@ -1521,6 +1523,7 @@ public:
   using IsAFunctionTy = bool (*)(MlirValue);
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  using Base = PyConcreteValue;
 
   PyConcreteValue() = default;
   PyConcreteValue(PyOperationRef operationRef, MlirValue value)

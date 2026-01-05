@@ -30,7 +30,7 @@ namespace smt {
 struct BoolType : PyConcreteType<BoolType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsABool;
   static constexpr const char *pyClassName = "BoolType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -46,7 +46,7 @@ struct BoolType : PyConcreteType<BoolType> {
 struct BitVectorType : PyConcreteType<BitVectorType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsABitVector;
   static constexpr const char *pyClassName = "BitVectorType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -63,7 +63,7 @@ struct BitVectorType : PyConcreteType<BitVectorType> {
 struct IntType : PyConcreteType<IntType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsAInt;
   static constexpr const char *pyClassName = "IntType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(

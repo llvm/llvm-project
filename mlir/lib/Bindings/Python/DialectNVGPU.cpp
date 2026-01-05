@@ -24,7 +24,7 @@ struct TensorMapDescriptorType : PyConcreteType<TensorMapDescriptorType> {
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsANVGPUTensorMapDescriptorType;
   static constexpr const char *pyClassName = "TensorMapDescriptorType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(

@@ -37,7 +37,7 @@ struct StructType : PyConcreteType<StructType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirLLVMStructTypeGetTypeID;
   static constexpr const char *pyClassName = "StructType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -47,8 +47,7 @@ struct StructType : PyConcreteType<StructType> {
           python::CollectDiagnosticsToStringScope scope(
               mlirLocationGetContext(loc));
           std::vector<MlirType> elements_(elements.size());
-          std::transform(elements.begin(), elements.end(), elements_.begin(),
-                         [](const PyType &elem) { return elem; });
+          std::copy(elements.begin(), elements.end(), elements_.begin());
 
           MlirType type = mlirLLVMStructTypeLiteralGetChecked(
               loc, elements.size(), elements_.data(), packed);
@@ -67,8 +66,7 @@ struct StructType : PyConcreteType<StructType> {
           python::CollectDiagnosticsToStringScope scope(context.get()->get());
 
           std::vector<MlirType> elements_(elements.size());
-          std::transform(elements.begin(), elements.end(), elements_.begin(),
-                         [](const PyType &elem) { return elem; });
+          std::copy(elements.begin(), elements.end(), elements_.begin());
 
           MlirType type = mlirLLVMStructTypeLiteralGet(
               context.get()->get(), elements.size(), elements_.data(), packed);
@@ -105,8 +103,7 @@ struct StructType : PyConcreteType<StructType> {
         [](const StructType &self, const std::vector<PyType> &elements,
            bool packed) {
           std::vector<MlirType> elements_(elements.size());
-          std::transform(elements.begin(), elements.end(), elements_.begin(),
-                         [](const PyType &elem) { return elem; });
+          std::copy(elements.begin(), elements.end(), elements_.begin());
           MlirLogicalResult result = mlirLLVMStructTypeSetBody(
               self, elements.size(), elements_.data(), packed);
           if (!mlirLogicalResultIsSuccess(result)) {
@@ -121,8 +118,7 @@ struct StructType : PyConcreteType<StructType> {
         [](const std::string &name, const std::vector<PyType> &elements,
            bool packed, DefaultingPyMlirContext context) {
           std::vector<MlirType> elements_(elements.size());
-          std::transform(elements.begin(), elements.end(), elements_.begin(),
-                         [](const PyType &elem) { return elem; });
+          std::copy(elements.begin(), elements.end(), elements_.begin());
           return StructType(context->getRef(),
                             mlirLLVMStructTypeIdentifiedNewGet(
                                 context.get()->get(),
@@ -173,7 +169,7 @@ struct PointerType : PyConcreteType<PointerType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirLLVMPointerTypeGetTypeID;
   static constexpr const char *pyClassName = "PointerType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(

@@ -9,11 +9,10 @@
 #include "mlir-c/Dialect/GPU.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRAttributes.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
-
-#include <mlir/Bindings/Python/IRAttributes.h>
 
 namespace nb = nanobind;
 using namespace nanobind::literals;
@@ -30,7 +29,7 @@ namespace gpu {
 struct AsyncTokenType : PyConcreteType<AsyncTokenType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAGPUAsyncTokenType;
   static constexpr const char *pyClassName = "AsyncTokenType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -51,7 +50,7 @@ struct AsyncTokenType : PyConcreteType<AsyncTokenType> {
 struct ObjectAttr : PyConcreteAttribute<ObjectAttr> {
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAGPUObjectAttr;
   static constexpr const char *pyClassName = "ObjectAttr";
-  using PyConcreteAttribute::PyConcreteAttribute;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(

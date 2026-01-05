@@ -28,7 +28,7 @@ namespace pdl {
 struct PDLType : PyConcreteType<PDLType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLType;
   static constexpr const char *pyClassName = "PDLType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {}
 };
@@ -40,7 +40,7 @@ struct PDLType : PyConcreteType<PDLType> {
 struct AttributeType : PyConcreteType<AttributeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLAttributeType;
   static constexpr const char *pyClassName = "AttributeType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -61,7 +61,7 @@ struct AttributeType : PyConcreteType<AttributeType> {
 struct OperationType : PyConcreteType<OperationType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLOperationType;
   static constexpr const char *pyClassName = "OperationType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -82,7 +82,7 @@ struct OperationType : PyConcreteType<OperationType> {
 struct RangeType : PyConcreteType<RangeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLRangeType;
   static constexpr const char *pyClassName = "RangeType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -110,7 +110,7 @@ struct RangeType : PyConcreteType<RangeType> {
 struct TypeType : PyConcreteType<TypeType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLTypeType;
   static constexpr const char *pyClassName = "TypeType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -131,7 +131,7 @@ struct TypeType : PyConcreteType<TypeType> {
 struct ValueType : PyConcreteType<ValueType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLValueType;
   static constexpr const char *pyClassName = "ValueType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(

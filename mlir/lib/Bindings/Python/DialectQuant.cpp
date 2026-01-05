@@ -31,7 +31,7 @@ namespace quant {
 struct QuantizedType : PyConcreteType<QuantizedType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAQuantizedType;
   static constexpr const char *pyClassName = "QuantizedType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -193,7 +193,7 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
 struct AnyQuantizedType : PyConcreteType<AnyQuantizedType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAAnyQuantizedType;
   static constexpr const char *pyClassName = "AnyQuantizedType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -222,7 +222,7 @@ struct UniformQuantizedType
     : PyConcreteType<UniformQuantizedType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAUniformQuantizedType;
   static constexpr const char *pyClassName = "UniformQuantizedType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -274,7 +274,7 @@ struct UniformQuantizedPerAxisType
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsAUniformQuantizedPerAxisType;
   static constexpr const char *pyClassName = "UniformQuantizedPerAxisType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -358,7 +358,7 @@ struct UniformQuantizedSubChannelType
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsAUniformQuantizedSubChannelType;
   static constexpr const char *pyClassName = "UniformQuantizedSubChannelType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
@@ -449,7 +449,7 @@ struct CalibratedQuantizedType
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsACalibratedQuantizedType;
   static constexpr const char *pyClassName = "CalibratedQuantizedType";
-  using PyConcreteType::PyConcreteType;
+  using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(

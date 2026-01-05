@@ -358,8 +358,7 @@ void populateRewriteSubmodule(nb::module_ &m) {
           [](PyPatternRewriter &self, PyOperationBase &op,
              const std::vector<PyValue> &values) {
             std::vector<MlirValue> values_(values.size());
-            std::transform(values.begin(), values.end(), values_.begin(),
-                           [](const PyValue &val) { return val; });
+            std::copy(values.begin(), values.end(), values_.begin());
             self.replaceOp(op.getOperation(), values_);
           },
           "Replace an operation with a list of values.", nb::arg("op"),
