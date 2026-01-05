@@ -1078,10 +1078,10 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
                        "non-SCEVUnknown's.");
 
   // Otherwise, we've got some expression that is more complex than just a
-  // single SCEVUnknown. But we don't want to have a SCEVPtrToIntExpr of
-  // an arbitrary expression, we want to have SCEVPtrToIntExpr of an
-  // SCEVUnknown only, and the expressions must otherwise be integer-typed. So
-  // sink the cast down to the SCEVUnknown's.
+  // single SCEVUnknown. But we don't want to have a SCEVPtrToIntExpr of an
+  // arbitrary expression, we want to have SCEVPtrToIntExpr of an SCEVUnknown
+  // only, and the expressions must otherwise be integer-typed.
+  // So sink the cast down to the SCEVUnknown's.
 
   /// The SCEVPtrToIntSinkingRewriter takes a scalar evolution expression,
   /// which computes a pointer-typed value, and rewrites the whole expression
@@ -1091,8 +1091,7 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
       : public SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter> {
     using Base = SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter>;
   public:
-    SCEVPtrToIntSinkingRewriter(ScalarEvolution &SE)
-        : SCEVRewriteVisitor(SE) {}
+    SCEVPtrToIntSinkingRewriter(ScalarEvolution &SE) : SCEVRewriteVisitor(SE) {}
 
     static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE) {
       SCEVPtrToIntSinkingRewriter Rewriter(SE);
@@ -1146,10 +1145,10 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
 const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op, Type *Ty) {
   assert(Op->getType()->isPointerTy() && "Op must be a pointer");
 
-  // What would be an ID for such a SCEV cast expression?
   FoldingSetNodeID ID;
   ID.AddInteger(scPtrToAddr);
   ID.AddPointer(Op);
+  ID.AddPointer(Ty);
 
   void *IP = nullptr;
 
