@@ -990,6 +990,8 @@ OpenMP Support
   with OpenMP >= 61.
 - ``use_device_ptr`` and ``use_device_addr`` now preserve the original host
   address when lookup fails.
+- Added support for ``use_device_ptr`` clause to accept an optional
+  ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^
