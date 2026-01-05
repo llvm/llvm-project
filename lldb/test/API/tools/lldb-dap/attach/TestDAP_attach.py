@@ -2,6 +2,7 @@
 Test lldb-dap attach request
 """
 
+from datetime import datetime, timedelta
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -25,10 +26,15 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         )
 
     def spawn_and_wait(self, program, delay):
+        SPAWN_AND_WAIT_TIMEOUT = 900
         time.sleep(delay)
         proc = self.spawn(program=program)
-        # Wait for either the process to exit or the event to be set
+        start_time = datetime.now()
+        # Wait for either the process to exit or the event to be set.
         while proc.poll() is None and not self.spawn_event.is_set():
+            elapsed = datetime.now() - start_time
+            if elapsed >= timedelta(seconds=SPAWN_AND_WAIT_TIMEOUT):
+                break
             time.sleep(0.1)
         proc.kill()
         proc.wait()
