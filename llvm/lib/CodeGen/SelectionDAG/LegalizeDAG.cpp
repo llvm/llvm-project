@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -3795,7 +3796,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(DAG.getUNDEF(Node->getValueType(0)));
       Results.push_back(Node->getOperand(0));
 
-      const char *IntrinsicName = Node->getOpcode() == ISD::STACKADDRESS
+      StringRef IntrinsicName = Node->getOpcode() == ISD::STACKADDRESS
                                       ? "llvm.stackaddress"
                                       : "llvm.stacksave";
       DAG.getContext()->diagnose(DiagnosticInfoLegalizationFailure(
