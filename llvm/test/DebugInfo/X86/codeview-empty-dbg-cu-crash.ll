@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-unknown-uefi < %s | FileCheck %s
 
 ; CHECK: .file	"<stdin>"
 ; CHECK-NEXT: .section	.debug$S,"dr"
