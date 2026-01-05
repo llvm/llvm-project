@@ -38,7 +38,7 @@ Flags:
   -rc       | --rc <num>                           The release candidate number
   -final    | --final                              When provided, this option will disable the rc flag
   -git-ref  | --git-ref <git-ref>                  (optional) Use <git-ref> to determine the release and don't export the test-suite files
-  -sub-projects | --sub-projects                   Generate tarballs fore each sub-project (off by default).
+  -sub-projects | --sub-projects                   Generate tarballs for each sub-project (off by default).
   -template | --template <template>                (optional) Possible placeholders: \$PROJECT \$YYYYMMDD \$GIT_REF \$RELEASE \$RC.
                                                    Defaults to '${template}'.
 
