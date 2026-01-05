@@ -863,6 +863,9 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (Instruction *NV = foldBinOpIntoSelectOrPhi(Add))
     return NV;
 
+  if (Instruction *FoldedLogic = foldBinOpSelectBinOp(Add))
+    return FoldedLogic;
+
   Value *X;
   Constant *Op00C;
 

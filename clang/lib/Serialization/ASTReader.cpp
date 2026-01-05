@@ -4223,7 +4223,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             TULocalLocalOffset ? BaseOffset + TULocalLocalOffset : 0;
 
         DelayedNamespaceOffsetMap[ID] = {
-            {VisibleOffset, TULocalOffset, ModuleLocalOffset}, LexicalOffset};
+            {VisibleOffset, ModuleLocalOffset, TULocalOffset}, LexicalOffset};
 
         assert(!GetExistingDecl(ID) &&
                "We shouldn't load the namespace in the front of delayed "
@@ -5166,7 +5166,7 @@ ASTReader::ReadASTCore(StringRef FileName,
   assert(M && "Missing module file");
 
   bool ShouldFinalizePCM = false;
-  auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinalizeOrDropPCM([&]() {
     auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);

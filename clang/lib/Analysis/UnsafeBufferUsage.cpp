@@ -954,7 +954,7 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
   // In this case, this call is considered unsafe if at least one argument
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
-      llvm::make_range(Call->arg_begin() + FmtArgStartingIdx, Call->arg_end()),
+      llvm::make_range(Call->arg_begin() + FmtIdx, Call->arg_end()),
       [&UnsafeArg, &Ctx](const Expr *Arg) -> bool {
         if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
           UnsafeArg = Arg;
@@ -3638,7 +3638,7 @@ static bool hasConflictingOverload(const FunctionDecl *FD) {
 //   1. Add the `[[clang::unsafe_buffer_usage]]` attribute to each declaration
 //   of 'F';
 //   2. Create a declaration of "NewF" next to each declaration of `F`;
-//   3. Create a definition of "F" (as its' original definition is now belongs
+//   3. Create a definition of "F" (as its original definition is now belongs
 //      to "NewF") next to its original definition.  The body of the creating
 //      definition calls to "NewF".
 //
@@ -4170,7 +4170,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const FixitStrategy &S,
   }
 
   // `FixItsForVariable` now contains only variables that can be
-  // fixed. A variable can be fixed if its' declaration and all Fixables
+  // fixed. A variable can be fixed if its declaration and all Fixables
   // associated to it can all be fixed.
 
   // To further remove from `FixItsForVariable` variables whose group mates

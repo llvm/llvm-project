@@ -8679,6 +8679,34 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
   return nullptr;
 }
 
+/// Returns true if a select that implements a min/max is redundant and
+/// select result can be replaced with its non-constant operand, e.g.,
+///   select ( (si/ui-to-fp A) <= C ), C, (si/ui-to-fp A)
+/// where C is the FP constant equal to the minimum integer value
+/// representable by A.
+static bool isMinMaxCmpSelectEliminable(SelectPatternFlavor Flavor, Value *A,
+                                        Value *B) {
+  const APFloat *APF;
+  if (!match(B, m_APFloat(APF)))
+    return false;
+
+  auto *I = dyn_cast<Instruction>(A);
+  if (!I || !(I->getOpcode() == Instruction::SIToFP ||
+              I->getOpcode() == Instruction::UIToFP))
+    return false;
+
+  bool IsUnsigned = I->getOpcode() == Instruction::UIToFP;
+  unsigned BitWidth = I->getOperand(0)->getType()->getScalarSizeInBits();
+  APSInt IntBoundary = (Flavor == SPF_FMAXNUM)
+                           ? APSInt::getMinValue(BitWidth, IsUnsigned)
+                           : APSInt::getMaxValue(BitWidth, IsUnsigned);
+  APSInt ConvertedInt(BitWidth, IsUnsigned);
+  bool IsExact;
+  APFloat::opStatus Status =
+      APF->convertToInteger(ConvertedInt, APFloat::rmTowardZero, &IsExact);
+  return Status == APFloat::opOK && IsExact && ConvertedInt == IntBoundary;
+}
+
 Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   bool Changed = false;
 
@@ -8762,7 +8790,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     if (SelectInst *SI = dyn_cast<SelectInst>(I.user_back())) {
       Value *A, *B;
       SelectPatternResult SPR = matchSelectPattern(SI, A, B);
-      if (SPR.Flavor != SPF_UNKNOWN)
+      bool IsRedundantMinMaxClamp =
+          (SPR.Flavor == SPF_FMAXNUM || SPR.Flavor == SPF_FMINNUM) &&
+          isMinMaxCmpSelectEliminable(SPR.Flavor, A, B);
+      if (SPR.Flavor != SPF_UNKNOWN && !IsRedundantMinMaxClamp)
         return nullptr;
     }
 

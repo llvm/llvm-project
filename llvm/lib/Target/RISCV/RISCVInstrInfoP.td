@@ -1462,6 +1462,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
 //===----------------------------------------------------------------------===//
 
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
+def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
 
 def SDT_RISCVPBinOp : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                            SDTCisInt<0>,
@@ -1473,6 +1474,7 @@ def riscv_pmulhsu : RVSDNode<"PMULHSU", SDT_RISCVPBinOp>;
 
 let Predicates = [HasStdExtP] in {
   def : PatGpr<abs, ABS>;
+  def : PatGpr<ctls, CLS>;
 
   def : Pat<(XLenVT (fshl GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)),
             (SLX GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)>;
@@ -1585,6 +1587,8 @@ let Predicates = [HasStdExtP] in {
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
+  def : PatGprGpr<sshlsat, SSHA>;
+
   // Load/Store patterns
   def : StPat<store, SW, GPR, v4i8>;
   def : StPat<store, SW, GPR, v2i16>;
@@ -1598,6 +1602,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
 
 let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGpr<riscv_absw, ABSW>;
+  def : PatGpr<riscv_clsw, CLSW>;
 
   // 32-bit PLI SD node pattern
   def: Pat<(v2i32 (splat_vector simm10:$imm10)), (PLI_W simm10:$imm10)>;
