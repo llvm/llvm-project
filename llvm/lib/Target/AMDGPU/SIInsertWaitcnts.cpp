@@ -656,11 +656,16 @@ public:
   bool merge(const WaitcntBrackets &Other);
 
   bool counterOutOfOrder(InstCounterType T) const;
-  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait);
+  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
+    simplifyWaitcnt(Wait, Wait);
+  }
+  void simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
+                       AMDGPU::Waitcnt &UpdateWait) const;
   void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-  bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait);
-  bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait);
-  void simplifyXcnt(AMDGPU::Waitcnt &CheckWait, AMDGPU::Waitcnt &UpdateWait);
+  bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait) const;
+  bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) const;
+  void simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
+                    AMDGPU::Waitcnt &UpdateWait) const;
 
   void determineWaitForPhysReg(InstCounterType T, MCPhysReg Reg,
                                AMDGPU::Waitcnt &Wait) const;
@@ -1210,17 +1215,18 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
   OS << '\n';
 }
 
-/// Simplify the waitcnt, in the sense of removing redundant counts, and return
-/// whether a waitcnt instruction is needed at all.
-void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) {
-  simplifyWaitcnt(LOAD_CNT, Wait.LoadCnt);
-  simplifyWaitcnt(EXP_CNT, Wait.ExpCnt);
-  simplifyWaitcnt(DS_CNT, Wait.DsCnt);
-  simplifyWaitcnt(STORE_CNT, Wait.StoreCnt);
-  simplifyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
-  simplifyWaitcnt(BVH_CNT, Wait.BvhCnt);
-  simplifyWaitcnt(KM_CNT, Wait.KmCnt);
-  simplifyXcnt(Wait, Wait);
+/// Simplify \p UpdateWait by removing waits that are redundant based on the
+/// current WaitcntBrackets and any other waits specified in \p CheckWait.
+void WaitcntBrackets::simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
+                                      AMDGPU::Waitcnt &UpdateWait) const {
+  simplifyWaitcnt(LOAD_CNT, UpdateWait.LoadCnt);
+  simplifyWaitcnt(EXP_CNT, UpdateWait.ExpCnt);
+  simplifyWaitcnt(DS_CNT, UpdateWait.DsCnt);
+  simplifyWaitcnt(STORE_CNT, UpdateWait.StoreCnt);
+  simplifyWaitcnt(SAMPLE_CNT, UpdateWait.SampleCnt);
+  simplifyWaitcnt(BVH_CNT, UpdateWait.BvhCnt);
+  simplifyWaitcnt(KM_CNT, UpdateWait.KmCnt);
+  simplifyXcnt(CheckWait, UpdateWait);
 }
 
 void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
@@ -1332,16 +1338,32 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, UB);
     PendingEvents &= ~Context->WaitEventMaskForInst[T];
   }
+
+  if (T == KM_CNT && Count == 0 && hasPendingEvent(SMEM_GROUP)) {
+    if (!hasMixedPendingEvents(X_CNT))
+      applyWaitcnt(X_CNT, 0);
+    else
+      PendingEvents &= ~(1 << SMEM_GROUP);
+  }
+  if (T == LOAD_CNT && hasPendingEvent(VMEM_GROUP) &&
+      !hasPendingEvent(STORE_CNT)) {
+    if (!hasMixedPendingEvents(X_CNT))
+      applyWaitcnt(X_CNT, Count);
+    else if (Count == 0)
+      PendingEvents &= ~(1 << VMEM_GROUP);
+  }
 }
 
-bool WaitcntBrackets::hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait) {
+bool WaitcntBrackets::hasRedundantXCntWithKmCnt(
+    const AMDGPU::Waitcnt &Wait) const {
   // Wait on XCNT is redundant if we are already waiting for a load to complete.
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
   // zero.
   return Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP);
 }
 
-bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
+bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(
+    const AMDGPU::Waitcnt &Wait) const {
   // If we have pending store we cannot optimize XCnt because we do not wait for
   // stores. VMEM loads retun in order, so if we only have loads XCnt is
   // decremented to the same number as LOADCnt.
@@ -1349,26 +1371,18 @@ bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
          !hasPendingEvent(STORE_CNT);
 }
 
-void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait,
-                                   AMDGPU::Waitcnt &UpdateWait) {
+void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
+                                   AMDGPU::Waitcnt &UpdateWait) const {
   // Try to simplify xcnt further by checking for joint kmcnt and loadcnt
   // optimizations. On entry to a block with multiple predescessors, there may
   // be pending SMEM and VMEM events active at the same time.
   // In such cases, only clear one active event at a time.
   // TODO: Revisit xcnt optimizations for gfx1250.
-  if (hasRedundantXCntWithKmCnt(CheckWait)) {
-    if (!hasMixedPendingEvents(X_CNT)) {
-      applyWaitcnt(X_CNT, 0);
-    } else {
-      PendingEvents &= ~(1 << SMEM_GROUP);
-    }
-  } else if (canOptimizeXCntWithLoadCnt(CheckWait)) {
-    if (!hasMixedPendingEvents(X_CNT)) {
-      applyWaitcnt(X_CNT, std::min(CheckWait.XCnt, CheckWait.LoadCnt));
-    } else if (CheckWait.LoadCnt == 0) {
-      PendingEvents &= ~(1 << VMEM_GROUP);
-    }
-  }
+  if (hasRedundantXCntWithKmCnt(CheckWait))
+    UpdateWait.XCnt = ~0u;
+  if (canOptimizeXCntWithLoadCnt(CheckWait) &&
+      CheckWait.XCnt >= CheckWait.LoadCnt)
+    UpdateWait.XCnt = ~0u;
   simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
 }
 
@@ -1656,6 +1670,9 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       dbgs() << *It;
   });
 
+  // Accumulate waits that should not be simplified.
+  AMDGPU::Waitcnt RequiredWait;
+
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
     LLVM_DEBUG(dbgs() << "pre-existing iter: " << II);
@@ -1682,16 +1699,18 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeLoadcntDscnt(IV, OldEnc);
       if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(OldWait);
-      Wait = Wait.combined(OldWait);
+        Wait = Wait.combined(OldWait);
+      else
+        RequiredWait = RequiredWait.combined(OldWait);
       UpdatableInstr = &CombinedLoadDsCntInstr;
     } else if (Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT) {
       unsigned OldEnc =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeStorecntDscnt(IV, OldEnc);
       if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(OldWait);
-      Wait = Wait.combined(OldWait);
+        Wait = Wait.combined(OldWait);
+      else
+        RequiredWait = RequiredWait.combined(OldWait);
       UpdatableInstr = &CombinedStoreDsCntInstr;
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       // Architectures higher than GFX10 do not have direct loads to
@@ -1704,8 +1723,9 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       unsigned OldCnt =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
       if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(CT.value(), OldCnt);
-      addWait(Wait, CT.value(), OldCnt);
+        addWait(Wait, CT.value(), OldCnt);
+      else
+        addWait(RequiredWait, CT.value(), OldCnt);
       UpdatableInstr = &WaitInstrs[CT.value()];
     }
 
@@ -1718,8 +1738,9 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     }
   }
 
-  // Save the pre combine waitcnt in order to make xcnt checks.
-  AMDGPU::Waitcnt PreCombine = Wait;
+  ScoreBrackets.simplifyWaitcnt(Wait.combined(RequiredWait), Wait);
+  Wait = Wait.combined(RequiredWait);
+
   if (CombinedLoadDsCntInstr) {
     // Only keep an S_WAIT_LOADCNT_DSCNT if both counters actually need
     // to be waited for. Otherwise, let the instruction be deleted so
@@ -1810,13 +1831,6 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   }
 
   for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
-    if ((CT == KM_CNT && ScoreBrackets.hasRedundantXCntWithKmCnt(PreCombine)) ||
-        (CT == LOAD_CNT &&
-         ScoreBrackets.canOptimizeXCntWithLoadCnt(PreCombine))) {
-      // Xcnt may need to be updated depending on a pre-existing KM/LOAD_CNT
-      // due to taking the backedge of a block.
-      ScoreBrackets.simplifyXcnt(PreCombine, Wait);
-    }
     if (!WaitInstrs[CT])
       continue;
 
