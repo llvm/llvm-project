@@ -174,6 +174,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
     auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
     return StructTy->getTypeAtIndex(CI->getZExtValue());
   }
+  case Instruction::Select:
+    return inferScalarType(R->getOperand(1));
   default:
     break;
   }
@@ -195,15 +197,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
   assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)) &&
          "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
-}
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenSelectRecipe *R) {
-  Type *ResTy = inferScalarType(R->getOperand(1));
-  VPValue *OtherV = R->getOperand(2);
-  assert(inferScalarType(OtherV) == ResTy &&
-         "different types inferred for different operands");
-  CachedTypes[OtherV] = ResTy;
-  return ResTy;
 }
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
@@ -299,7 +292,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
                 VPWidenCastRecipe>(
               [](const auto *R) { return R->getResultType(); })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
+                VPWidenCallRecipe, VPWidenMemoryRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPInterleaveBase>([V](const auto *R) {
             // TODO: Use info from interleave group.
