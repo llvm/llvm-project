@@ -301,6 +301,7 @@ protected:
   AMDGPU::IsaVersion IV;
   InstCounterType MaxCounter;
   bool OptNone;
+  bool ExpandWaitcntProfiling = false;
   const AMDGPU::HardwareLimits *Limits = nullptr;
 
 public:
@@ -311,6 +312,8 @@ public:
         IV(AMDGPU::getIsaVersion(ST->getCPU())), MaxCounter(MaxCounter),
         OptNone(MF.getFunction().hasOptNone() ||
                 MF.getTarget().getOptLevel() == CodeGenOptLevel::None),
+        ExpandWaitcntProfiling(
+            MF.getFunction().hasFnAttribute("amdgpu-expand-waitcnt-profiling")),
         Limits(Limits) {}
 
   // Return true if the current function should be compiled with no
@@ -3214,7 +3217,6 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   WaitEventMaskForInst = WCG->getWaitEventMask();
 
   SmemAccessCounter = eventCounter(WaitEventMaskForInst, SMEM_ACCESS);
-
 
   BlockInfos.clear();
   bool Modified = false;
