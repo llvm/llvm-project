@@ -2401,17 +2401,17 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64_unmasked(<vscale x 16 x i64> %va, i
 ; RV32-NEXT:    vand.vv v16, v16, v0
 ; RV32-NEXT:    vsub.vv v24, v24, v16
 ; RV32-NEXT:    vsetvli a4, zero, e32, m8, ta, ma
-; RV32-NEXT:    vmv.v.x v16, a3
+; RV32-NEXT:    vmv.v.x v0, a3
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v0, v24, v16
+; RV32-NEXT:    vand.vv v16, v24, v0
 ; RV32-NEXT:    vsrl.vi v24, v24, 2
 ; RV32-NEXT:    csrr a3, vlenb
 ; RV32-NEXT:    slli a3, a3, 4
 ; RV32-NEXT:    add a3, sp, a3
 ; RV32-NEXT:    addi a3, a3, 16
-; RV32-NEXT:    vs8r.v v16, (a3) # vscale x 64-byte Folded Spill
-; RV32-NEXT:    vand.vv v24, v24, v16
-; RV32-NEXT:    vadd.vv v24, v0, v24
+; RV32-NEXT:    vs8r.v v0, (a3) # vscale x 64-byte Folded Spill
+; RV32-NEXT:    vand.vv v24, v24, v0
+; RV32-NEXT:    vadd.vv v24, v16, v24
 ; RV32-NEXT:    vsrl.vi v16, v24, 4
 ; RV32-NEXT:    vadd.vv v16, v24, v16
 ; RV32-NEXT:    lui a3, 61681

@@ -539,12 +539,12 @@ define <vscale x 32 x iXLen> @lrint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; RV64-i64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 32 * vlenb
 ; RV64-i64-NEXT:    mv s0, a0
 ; RV64-i64-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v28, v8
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v4, v10
+; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v20, v10
 ; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v8, v12
 ; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v24, v14
 ; RV64-i64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v28
+; RV64-i64-NEXT:    vfwcvt.x.f.v v0, v16
 ; RV64-i64-NEXT:    csrr a0, vlenb
 ; RV64-i64-NEXT:    slli a0, a0, 3
 ; RV64-i64-NEXT:    mv a1, a0
@@ -552,13 +552,13 @@ define <vscale x 32 x iXLen> @lrint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; RV64-i64-NEXT:    add a0, a0, a1
 ; RV64-i64-NEXT:    add a0, sp, a0
 ; RV64-i64-NEXT:    addi a0, a0, 32
-; RV64-i64-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v4
+; RV64-i64-NEXT:    vs8r.v v0, (a0) # vscale x 64-byte Folded Spill
+; RV64-i64-NEXT:    vfwcvt.x.f.v v0, v20
 ; RV64-i64-NEXT:    csrr a0, vlenb
 ; RV64-i64-NEXT:    slli a0, a0, 4
 ; RV64-i64-NEXT:    add a0, sp, a0
 ; RV64-i64-NEXT:    addi a0, a0, 32
-; RV64-i64-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; RV64-i64-NEXT:    vs8r.v v0, (a0) # vscale x 64-byte Folded Spill
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v8
 ; RV64-i64-NEXT:    csrr a0, vlenb
 ; RV64-i64-NEXT:    slli a0, a0, 3

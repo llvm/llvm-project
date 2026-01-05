@@ -579,7 +579,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    lh a4, 162(sp)
 ; RV32ZVFHMIN-NEXT:    lh a5, 290(sp)
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v24, v8, 2
-; RV32ZVFHMIN-NEXT:    vslidedown.vi v10, v16, 1
+; RV32ZVFHMIN-NEXT:    vslidedown.vi v26, v16, 1
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a4
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a5
 ; RV32ZVFHMIN-NEXT:    fle.h a4, fa4, fa5
@@ -599,9 +599,9 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    sb a0, 80(sp)
 ; RV32ZVFHMIN-NEXT:    lh a0, 226(sp)
 ; RV32ZVFHMIN-NEXT:    lh a1, 354(sp)
-; RV32ZVFHMIN-NEXT:    vslidedown.vi v11, v8, 1
+; RV32ZVFHMIN-NEXT:    vslidedown.vi v27, v8, 1
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV32ZVFHMIN-NEXT:    vslidedown.vi v0, v16, 15
+; RV32ZVFHMIN-NEXT:    vslidedown.vi v10, v16, 15
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV32ZVFHMIN-NEXT:    fle.h a0, fa4, fa5
@@ -706,7 +706,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    lh t1, 334(sp)
 ; RV32ZVFHMIN-NEXT:    fle.h t2, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, t0
-; RV32ZVFHMIN-NEXT:    vmv.x.s t0, v10
+; RV32ZVFHMIN-NEXT:    vmv.x.s t0, v26
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV32ZVFHMIN-NEXT:    fle.h t1, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a7
@@ -717,7 +717,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    fle.h a6, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    lh t1, 332(sp)
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a7
-; RV32ZVFHMIN-NEXT:    vmv.x.s a7, v11
+; RV32ZVFHMIN-NEXT:    vmv.x.s a7, v27
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v26, v16, 9
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV32ZVFHMIN-NEXT:    fle.h t1, fa4, fa5
@@ -786,7 +786,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    sb a0, 127(sp)
 ; RV32ZVFHMIN-NEXT:    lh a0, 252(sp)
 ; RV32ZVFHMIN-NEXT:    lh a1, 380(sp)
-; RV32ZVFHMIN-NEXT:    vslidedown.vi v10, v8, 13
+; RV32ZVFHMIN-NEXT:    vslidedown.vi v0, v8, 13
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v4, v8, 12
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a1
@@ -799,7 +799,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v30, v8, 10
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v28, v8, 9
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v8, v8, 8
-; RV32ZVFHMIN-NEXT:    vmv.x.s a4, v0
+; RV32ZVFHMIN-NEXT:    vmv.x.s a4, v10
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV32ZVFHMIN-NEXT:    fle.h a0, fa4, fa5
@@ -824,7 +824,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    xori a0, a0, 1
 ; RV32ZVFHMIN-NEXT:    sb a0, 123(sp)
 ; RV32ZVFHMIN-NEXT:    lh a0, 244(sp)
-; RV32ZVFHMIN-NEXT:    vmv.x.s t1, v10
+; RV32ZVFHMIN-NEXT:    vmv.x.s t1, v0
 ; RV32ZVFHMIN-NEXT:    lh a1, 372(sp)
 ; RV32ZVFHMIN-NEXT:    vmv.x.s t2, v20
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
@@ -1094,7 +1094,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    lh a4, 162(sp)
 ; RV64ZVFHMIN-NEXT:    lh a5, 290(sp)
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v24, v8, 2
-; RV64ZVFHMIN-NEXT:    vslidedown.vi v10, v16, 1
+; RV64ZVFHMIN-NEXT:    vslidedown.vi v26, v16, 1
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a4
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a5
 ; RV64ZVFHMIN-NEXT:    fle.h a4, fa4, fa5
@@ -1114,9 +1114,9 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    sb a0, 80(sp)
 ; RV64ZVFHMIN-NEXT:    lh a0, 226(sp)
 ; RV64ZVFHMIN-NEXT:    lh a1, 354(sp)
-; RV64ZVFHMIN-NEXT:    vslidedown.vi v11, v8, 1
+; RV64ZVFHMIN-NEXT:    vslidedown.vi v27, v8, 1
 ; RV64ZVFHMIN-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vslidedown.vi v0, v16, 15
+; RV64ZVFHMIN-NEXT:    vslidedown.vi v10, v16, 15
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV64ZVFHMIN-NEXT:    fle.h a0, fa4, fa5
@@ -1221,7 +1221,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    lh t1, 334(sp)
 ; RV64ZVFHMIN-NEXT:    fle.h t2, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, t0
-; RV64ZVFHMIN-NEXT:    vmv.x.s t0, v10
+; RV64ZVFHMIN-NEXT:    vmv.x.s t0, v26
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV64ZVFHMIN-NEXT:    fle.h t1, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a7
@@ -1232,7 +1232,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    fle.h a6, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    lh t1, 332(sp)
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a7
-; RV64ZVFHMIN-NEXT:    vmv.x.s a7, v11
+; RV64ZVFHMIN-NEXT:    vmv.x.s a7, v27
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v26, v16, 9
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV64ZVFHMIN-NEXT:    fle.h t1, fa4, fa5
@@ -1301,7 +1301,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    sb a0, 127(sp)
 ; RV64ZVFHMIN-NEXT:    lh a0, 252(sp)
 ; RV64ZVFHMIN-NEXT:    lh a1, 380(sp)
-; RV64ZVFHMIN-NEXT:    vslidedown.vi v10, v8, 13
+; RV64ZVFHMIN-NEXT:    vslidedown.vi v0, v8, 13
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v4, v8, 12
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a1
@@ -1314,7 +1314,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v30, v8, 10
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v28, v8, 9
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v8, v8, 8
-; RV64ZVFHMIN-NEXT:    vmv.x.s a4, v0
+; RV64ZVFHMIN-NEXT:    vmv.x.s a4, v10
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV64ZVFHMIN-NEXT:    fle.h a0, fa4, fa5
@@ -1339,7 +1339,7 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    xori a0, a0, 1
 ; RV64ZVFHMIN-NEXT:    sb a0, 123(sp)
 ; RV64ZVFHMIN-NEXT:    lh a0, 244(sp)
-; RV64ZVFHMIN-NEXT:    vmv.x.s t1, v10
+; RV64ZVFHMIN-NEXT:    vmv.x.s t1, v0
 ; RV64ZVFHMIN-NEXT:    lh a1, 372(sp)
 ; RV64ZVFHMIN-NEXT:    vmv.x.s t2, v20
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0
@@ -1639,16 +1639,16 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    lh a0, 350(sp)
 ; RV32ZVFHMIN-NEXT:    lh a1, 222(sp)
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v24, v8, 2
-; RV32ZVFHMIN-NEXT:    vslidedown.vi v11, v16, 1
+; RV32ZVFHMIN-NEXT:    vslidedown.vi v27, v16, 1
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV32ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    sb a0, 111(sp)
 ; RV32ZVFHMIN-NEXT:    lh a0, 348(sp)
 ; RV32ZVFHMIN-NEXT:    lh a1, 220(sp)
-; RV32ZVFHMIN-NEXT:    vslidedown.vi v10, v8, 1
+; RV32ZVFHMIN-NEXT:    vslidedown.vi v26, v8, 1
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV32ZVFHMIN-NEXT:    vslidedown.vi v0, v16, 15
+; RV32ZVFHMIN-NEXT:    vslidedown.vi v10, v16, 15
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV32ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
@@ -1743,7 +1743,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    lh t1, 200(sp)
 ; RV32ZVFHMIN-NEXT:    flt.h t2, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, t0
-; RV32ZVFHMIN-NEXT:    vmv.x.s t0, v11
+; RV32ZVFHMIN-NEXT:    vmv.x.s t0, v27
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV32ZVFHMIN-NEXT:    flt.h t1, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a7
@@ -1753,7 +1753,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    flt.h a6, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    lh t1, 198(sp)
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a7
-; RV32ZVFHMIN-NEXT:    vmv.x.s a7, v10
+; RV32ZVFHMIN-NEXT:    vmv.x.s a7, v26
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v26, v16, 9
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV32ZVFHMIN-NEXT:    flt.h t1, fa4, fa5
@@ -1790,7 +1790,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    sb a0, 127(sp)
 ; RV32ZVFHMIN-NEXT:    lh a0, 380(sp)
 ; RV32ZVFHMIN-NEXT:    lh a1, 252(sp)
-; RV32ZVFHMIN-NEXT:    vslidedown.vi v10, v8, 13
+; RV32ZVFHMIN-NEXT:    vslidedown.vi v0, v8, 13
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v4, v8, 12
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a1
@@ -1802,7 +1802,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v30, v8, 10
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v28, v8, 9
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v8, v8, 8
-; RV32ZVFHMIN-NEXT:    vmv.x.s a4, v0
+; RV32ZVFHMIN-NEXT:    vmv.x.s a4, v10
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV32ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
@@ -1824,7 +1824,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    sb a0, 123(sp)
 ; RV32ZVFHMIN-NEXT:    lh a0, 372(sp)
-; RV32ZVFHMIN-NEXT:    vmv.x.s t1, v10
+; RV32ZVFHMIN-NEXT:    vmv.x.s t1, v0
 ; RV32ZVFHMIN-NEXT:    lh a1, 244(sp)
 ; RV32ZVFHMIN-NEXT:    vmv.x.s t2, v20
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a0
@@ -2090,16 +2090,16 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    lh a0, 350(sp)
 ; RV64ZVFHMIN-NEXT:    lh a1, 222(sp)
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v24, v8, 2
-; RV64ZVFHMIN-NEXT:    vslidedown.vi v11, v16, 1
+; RV64ZVFHMIN-NEXT:    vslidedown.vi v27, v16, 1
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV64ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    sb a0, 111(sp)
 ; RV64ZVFHMIN-NEXT:    lh a0, 348(sp)
 ; RV64ZVFHMIN-NEXT:    lh a1, 220(sp)
-; RV64ZVFHMIN-NEXT:    vslidedown.vi v10, v8, 1
+; RV64ZVFHMIN-NEXT:    vslidedown.vi v26, v8, 1
 ; RV64ZVFHMIN-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vslidedown.vi v0, v16, 15
+; RV64ZVFHMIN-NEXT:    vslidedown.vi v10, v16, 15
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV64ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
@@ -2194,7 +2194,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    lh t1, 200(sp)
 ; RV64ZVFHMIN-NEXT:    flt.h t2, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, t0
-; RV64ZVFHMIN-NEXT:    vmv.x.s t0, v11
+; RV64ZVFHMIN-NEXT:    vmv.x.s t0, v27
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV64ZVFHMIN-NEXT:    flt.h t1, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a7
@@ -2204,7 +2204,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    flt.h a6, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    lh t1, 198(sp)
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a7
-; RV64ZVFHMIN-NEXT:    vmv.x.s a7, v10
+; RV64ZVFHMIN-NEXT:    vmv.x.s a7, v26
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v26, v16, 9
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV64ZVFHMIN-NEXT:    flt.h t1, fa4, fa5
@@ -2241,7 +2241,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    sb a0, 127(sp)
 ; RV64ZVFHMIN-NEXT:    lh a0, 380(sp)
 ; RV64ZVFHMIN-NEXT:    lh a1, 252(sp)
-; RV64ZVFHMIN-NEXT:    vslidedown.vi v10, v8, 13
+; RV64ZVFHMIN-NEXT:    vslidedown.vi v0, v8, 13
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v4, v8, 12
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a1
@@ -2253,7 +2253,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v30, v8, 10
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v28, v8, 9
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v8, v8, 8
-; RV64ZVFHMIN-NEXT:    vmv.x.s a4, v0
+; RV64ZVFHMIN-NEXT:    vmv.x.s a4, v10
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a1
 ; RV64ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
@@ -2275,7 +2275,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    sb a0, 123(sp)
 ; RV64ZVFHMIN-NEXT:    lh a0, 372(sp)
-; RV64ZVFHMIN-NEXT:    vmv.x.s t1, v10
+; RV64ZVFHMIN-NEXT:    vmv.x.s t1, v0
 ; RV64ZVFHMIN-NEXT:    lh a1, 244(sp)
 ; RV64ZVFHMIN-NEXT:    vmv.x.s t2, v20
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a0

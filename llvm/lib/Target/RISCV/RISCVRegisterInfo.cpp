@@ -15,6 +15,7 @@
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -841,6 +842,18 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
     Ops.push_back(dwarf::DW_OP_mul);
     Ops.push_back(dwarf::DW_OP_minus);
   }
+}
+
+unsigned
+RISCVRegisterInfo::shouldAddExtraCost(const LiveInterval &LI,
+                                      const MachineRegisterInfo *MRI) const {
+  if (const MachineInstr *MI = MRI->getUniqueVRegDef(LI.reg())) {
+    unsigned TSFlags = MI->getDesc().TSFlags;
+    // Only add the extra cost when DestEEW is not 1 (which means it is not a
+    // mask instruction).
+    return !(RISCVII::hasSEWOp(TSFlags) && RISCVII::getDestEEW(TSFlags) != 0);
+  }
+  return true;
 }
 
 unsigned

@@ -5097,8 +5097,7 @@ unsigned RISCV::getRVVMCOpcode(unsigned RVVPseudoOpcode) {
 }
 
 unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
-  unsigned DestEEW =
-      (Desc.TSFlags & RISCVII::DestEEWMask) >> RISCVII::DestEEWShift;
+  unsigned DestEEW = RISCVII::getDestEEW(Desc.TSFlags);
   // EEW = 1
   if (DestEEW == 0)
     return 0;

@@ -90,8 +90,8 @@ define <512 x i8> @vadd_v512i8_zvl128(<512 x i8> %a, <512 x i8> %b) #0 {
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vadd.vv v8, v8, v0
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vadd.vv v0, v8, v0
+; CHECK-NEXT:    vse8.v v0, (a0)
 ; CHECK-NEXT:    addi a1, a0, 384
 ; CHECK-NEXT:    vse8.v v16, (a1)
 ; CHECK-NEXT:    addi a1, a0, 256

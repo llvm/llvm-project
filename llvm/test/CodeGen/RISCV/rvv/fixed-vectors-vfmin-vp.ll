@@ -406,8 +406,8 @@ define <32 x double> @vfmin_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v0, (a1)
-; CHECK-NEXT:    vle64.v v24, (a0)
+; CHECK-NEXT:    vle64.v v24, (a1)
+; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    bltu a2, a1, .LBB27_2
@@ -415,13 +415,13 @@ define <32 x double> @vfmin_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:  .LBB27_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmin.vv v8, v8, v24
+; CHECK-NEXT:    vfmin.vv v8, v8, v0
 ; CHECK-NEXT:    addi a0, a2, -16
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmin.vv v16, v16, v0
+; CHECK-NEXT:    vfmin.vv v16, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.minnum.v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> splat (i1 true), i32 %evl)
   ret <32 x double> %v

@@ -573,7 +573,7 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
   uint8_t Cost = RegCosts[PhysReg.id()];
 
   // Most registers have 0 additional cost.
-  if (!Cost)
+  if (!Cost || !TRI->shouldAddExtraCost(VirtReg, MRI))
     return PhysReg;
 
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << " is available at cost "

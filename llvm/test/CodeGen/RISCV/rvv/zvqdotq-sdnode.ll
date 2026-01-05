@@ -632,10 +632,10 @@ define <vscale x 16 x i32> @partial_reduce_m8(<vscale x 64 x i8> %a, <vscale x 6
 ; NODOT-NEXT:    vsext.vf2 v24, v10
 ; NODOT-NEXT:    addi a0, sp, 16
 ; NODOT-NEXT:    vs4r.v v24, (a0) # vscale x 32-byte Folded Spill
-; NODOT-NEXT:    vsext.vf2 v4, v8
+; NODOT-NEXT:    vsext.vf2 v0, v8
 ; NODOT-NEXT:    vsext.vf2 v8, v18
-; NODOT-NEXT:    vsext.vf2 v0, v16
-; NODOT-NEXT:    vwmul.vv v24, v4, v0
+; NODOT-NEXT:    vsext.vf2 v4, v16
+; NODOT-NEXT:    vwmul.vv v24, v0, v4
 ; NODOT-NEXT:    vl4r.v v16, (a0) # vscale x 32-byte Folded Reload
 ; NODOT-NEXT:    vwmacc.vv v24, v16, v8
 ; NODOT-NEXT:    vsext.vf2 v8, v12
