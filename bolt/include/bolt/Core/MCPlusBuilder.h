@@ -1748,6 +1748,13 @@ public:
     return false;
   }
 
+  /// Some targets with short range branches use this to choose code
+  /// layout which does not require relocations.
+  virtual bool isShortRangeBranch(MCInst &Inst) const {
+    assert(isBranch(Inst) && "Branch expected.");
+    return false;
+  }
+
   /// Receives a list of MCInst of the basic block to analyze and interpret the
   /// terminators of this basic block. TBB must be initialized with the original
   /// fall-through for this BB.

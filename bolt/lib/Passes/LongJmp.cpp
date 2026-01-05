@@ -402,8 +402,11 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
 void LongJmpPass::tentativeLayout(const BinaryContext &BC,
                                   BinaryFunctionListType &SortedFunctions) {
   uint64_t DotAddress = BC.LayoutStartAddress;
+  bool PreferNonRelocLayout = any_of(SortedFunctions, [](BinaryFunction *F) {
+    return F->hasShortRangeBranchBeyondFragment();
+  });
 
-  if (!BC.HasRelocations) {
+  if (!BC.HasRelocations || PreferNonRelocLayout) {
     for (BinaryFunction *Func : SortedFunctions) {
       HotAddresses[Func] = Func->getAddress();
       DotAddress = alignTo(DotAddress, ColdFragAlign);

@@ -2114,6 +2114,11 @@ public:
       convertJmpToTailCall(Inst);
   }
 
+  bool isShortRangeBranch(MCInst &Inst) const override {
+    assert(isBranch(Inst) && "Branch expected.");
+    return isConditionalBranch(Inst);
+  }
+
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch,

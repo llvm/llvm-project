@@ -3608,6 +3608,26 @@ bool BinaryFunction::validateCFG() const {
   return true;
 }
 
+bool BinaryFunction::hasShortRangeBranchBeyondFragment() const {
+  auto &MIB = BC.MIB;
+  for (auto BBI = Layout.block_begin(), BBE = Layout.block_end(); BBI != BBE;
+       ++BBI) {
+    BinaryBasicBlock *BB = *BBI;
+    const MCSymbol *TBB = nullptr;
+    const MCSymbol *FBB = nullptr;
+    MCInst *CondBranch = nullptr;
+    MCInst *UncondBranch = nullptr;
+    if (!BB->analyzeBranch(TBB, FBB, CondBranch, UncondBranch))
+      continue;
+    if (CondBranch && MIB->isShortRangeBranch(*CondBranch)) {
+      const BinaryBasicBlock *TSuccessor = BB->getConditionalSuccessor(true);
+      if (BB->getFragmentNum() != TSuccessor->getFragmentNum())
+        return true;
+    }
+  }
+  return false;
+}
+
 void BinaryFunction::fixBranches() {
   assert(isSimple() && "Expected function with valid CFG.");
 
