@@ -1462,6 +1462,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::UIToFP:
     break; // Can't work with floating point.
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
     // Fall through and handle them the same as zext/trunc.
     [[fallthrough]];
