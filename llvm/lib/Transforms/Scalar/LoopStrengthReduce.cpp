@@ -331,7 +331,10 @@ public:
   }
 
   const SCEV *getUnknownSCEV(ScalarEvolution &SE, Type *Ty) const {
-    const SCEV *SU = SE.getUnknown(ConstantInt::getSigned(Ty, Quantity));
+    // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
+    const SCEV *SU = SE.getUnknown(
+        ConstantInt::getSigned(Ty, Quantity, /*ImplicitTrunc=*/true));
     if (Scalable)
       SU = SE.getMulExpr(SU, SE.getVScale(SU->getType()));
     return SU;
@@ -5803,12 +5806,15 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
     if (LU.Kind == LSRUse::ICmpZero) {
       // The other interesting way of "folding" with an ICmpZero is to use a
       // negated immediate.
-      if (!ICmpScaledV)
-        ICmpScaledV =
-            ConstantInt::getSigned(IntTy, -(uint64_t)Offset.getFixedValue());
-      else {
+      if (!ICmpScaledV) {
+        // TODO: Avoid implicit trunc?
+        // See https://github.com/llvm/llvm-project/issues/112510.
+        ICmpScaledV = ConstantInt::getSigned(
+            IntTy, -(uint64_t)Offset.getFixedValue(), /*ImplicitTrunc=*/true);
+      } else {
         Ops.push_back(SE.getUnknown(ICmpScaledV));
-        ICmpScaledV = ConstantInt::get(IntTy, Offset.getFixedValue());
+        ICmpScaledV = ConstantInt::getSigned(IntTy, Offset.getFixedValue(),
+                                             /*ImplicitTrunc=*/true);
       }
     } else {
       // Just add the immediate values. These again are expected to be matched
@@ -5856,8 +5862,11 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
       assert((F.Scale == 0 || F.Scale == 1) &&
              "ICmp does not support folding a global value and "
              "a scale at the same time!");
+      // TODO: Avoid implicit trunc?
+      // See https://github.com/llvm/llvm-project/issues/112510.
       Constant *C = ConstantInt::getSigned(SE.getEffectiveSCEVType(OpTy),
-                                           -(uint64_t)Offset.getFixedValue());
+                                           -(uint64_t)Offset.getFixedValue(),
+                                           /*ImplicitTrunc=*/true);
       if (C->getType() != OpTy) {
         C = ConstantFoldCastOperand(
             CastInst::getCastOpcode(C, false, OpTy, false), C, OpTy,
