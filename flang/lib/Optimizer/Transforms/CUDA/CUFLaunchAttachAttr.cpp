@@ -22,6 +22,8 @@ using namespace mlir;
 
 namespace {
 
+static constexpr llvm::StringRef cudaKernelInfix = "_cufk_";
+
 class CUFGPUAttachAttrPattern
     : public OpRewritePattern<mlir::gpu::LaunchFuncOp> {
   using OpRewritePattern<mlir::gpu::LaunchFuncOp>::OpRewritePattern;
@@ -47,7 +49,7 @@ struct CUFLaunchAttachAttr
     target.addIllegalOp<mlir::gpu::LaunchFuncOp>();
     target.addDynamicallyLegalOp<mlir::gpu::LaunchFuncOp>(
         [&](mlir::gpu::LaunchFuncOp op) -> bool {
-          if (op.getKernelName().getValue().contains("_cufk_")) {
+          if (op.getKernelName().getValue().contains(cudaKernelInfix)) {
             if (op.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                     cuf::getProcAttrName()))
               return true;
