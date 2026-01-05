@@ -102,8 +102,8 @@ struct RangeType : PyConcreteType<RangeType> {
     c.def_prop_ro(
         "element_type",
         [](RangeType &type) {
-          return PyType(type.getContext(),
-                        mlirPDLRangeTypeGetElementType(type));
+          return PyType(type.getContext(), mlirPDLRangeTypeGetElementType(type))
+              .maybeDownCast();
         },
         "Get the element type.");
   }
