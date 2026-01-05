@@ -1292,26 +1292,18 @@ static bool isBlockVarRef(const Expr *E) {
 
 void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   ApplyAtomGroup Grp(CGF.getDebugInfo());
-  // For an assignment to work, the value on the right has
-  // to be compatible with the value on the left.
   assert(CGF.getContext().hasSameUnqualifiedType(E->getLHS()->getType(),
                                                  E->getRHS()->getType())
-         && "Invalid assignment");
+          && "Invalid assignment");
 
-  // If the LHS might be a __block variable, and the RHS can
-  // potentially cause a block copy, we need to evaluate the RHS first
-  // so that the assignment goes the right place.
-  // This is pretty semantically fragile.
   if (isBlockVarRef(E->getLHS()) &&
       E->getRHS()->HasSideEffects(CGF.getContext())) {
-    // Ensure that we have a destination, and evaluate the RHS into that.
     EnsureDest(E->getRHS()->getType());
     Visit(E->getRHS());
 
-    // Now emit the LHS and copy into it.
+    // UPDATED: Use EmitCheckedLValue for LHS
     LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
-    // That copy is an atomic copy if the LHS is atomic.
     if (LHS.getType()->isAtomicType() ||
         CGF.LValueIsSuitableForInlineAtomic(LHS)) {
       CGF.EmitAtomicStore(Dest.asRValue(), LHS, /*isInit*/ false);
@@ -1327,10 +1319,9 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
+  // UPDATED: Use EmitCheckedLValue for LHS
   LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
-  // If we have an atomic type, evaluate into the destination and then
-  // do an atomic copy.
   if (LHS.getType()->isAtomicType() ||
       CGF.LValueIsSuitableForInlineAtomic(LHS)) {
     EnsureDest(E->getRHS()->getType());
@@ -1339,18 +1330,15 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
-  // Codegen the RHS so that it stores directly into the LHS.
   AggValueSlot LHSSlot = AggValueSlot::forLValue(
       LHS, AggValueSlot::IsDestructed, needsGC(E->getLHS()->getType()),
       AggValueSlot::IsAliased, AggValueSlot::MayOverlap);
-  // A non-volatile aggregate destination might have volatile member.
+  
   if (!LHSSlot.isVolatile() &&
       CGF.hasVolatileMember(E->getLHS()->getType()))
     LHSSlot.setVolatile(true);
 
   CGF.EmitAggExpr(E->getRHS(), LHSSlot);
-
-  // Copy into the destination if the assignment isn't ignored.
   EmitFinalDestCopy(E->getType(), LHS);
 
   if (!Dest.isIgnored() && !Dest.isExternallyDestructed() &&

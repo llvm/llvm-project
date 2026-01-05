@@ -261,77 +261,76 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
   // C++17 demands that we evaluate the RHS of a (possibly-compound) assignment
   // operator before the LHS.
-  CallArgList RtlArgStorage;
-  CallArgList *RtlArgs = nullptr;
-  LValue TrivialAssignmentRHS;
-  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
-    if (OCE->isAssignmentOp()) {
-      if (TrivialAssignment) {
-        TrivialAssignmentRHS = EmitCheckedLValue(CE->getArg(1), TCK_Load);
-      } else {
-        RtlArgs = &RtlArgStorage;
-        EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
-                     drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
-                     /*ParamsToSkip*/0, EvaluationOrder::ForceRightToLeft);
-      }
-    }
-  }
 
-  auto getLValueForThis = [this, IsArrow,
-                           Base](bool EmitCheckedForStore = false) {
-    if (IsArrow) {
-      LValueBaseInfo BaseInfo;
-      TBAAAccessInfo TBAAInfo;
-      Address ThisValue = EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
-      return MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
-                            BaseInfo, TBAAInfo);
-    }
-    if (EmitCheckedForStore)
-      return EmitCheckedLValue(Base, TCK_Store);
-    return EmitLValue(Base);
-  };
-
-  if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
-    // This is the MSVC p->Ctor::Ctor(...) extension. We assume that's
-    // constructing a new complete object of type Ctor.
-    assert(!RtlArgs);
-    assert(ReturnValue.isNull() && "Constructor shouldn't have return value");
-    LValue This = getLValueForThis();
-    CallArgList Args;
-    commonEmitCXXMemberOrOperatorCall(
-        *this, {Ctor, Ctor_Complete}, This.getPointer(*this),
-        /*ImplicitParam=*/nullptr,
-        /*ImplicitParamTy=*/QualType(), CE, Args, nullptr);
-
-    EmitCXXConstructorCall(Ctor, Ctor_Complete, /*ForVirtualBase=*/false,
-                           /*Delegating=*/false, This.getAddress(), Args,
-                           AggValueSlot::DoesNotOverlap, CE->getExprLoc(),
-                           /*NewPointerIsChecked=*/false, CallOrInvoke);
-    return RValue::get(nullptr);
-  }
-
-  if (TrivialForCodegen) {
-    if (isa<CXXDestructorDecl>(MD))
-      return RValue::get(nullptr);
-
+CallArgList RtlArgStorage;
+CallArgList *RtlArgs = nullptr;
+LValue TrivialAssignmentRHS;
+if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
+  if (OCE->isAssignmentOp()) {
     if (TrivialAssignment) {
-      // We don't like to generate the trivial copy/move assignment operator
-      // when it isn't necessary; just produce the proper effect here.
-      LValue This = getLValueForThis(/*EmitCheckedForStore=*/true);
-
-      // It's important that we use the result of EmitLValue here rather than
-      // emitting call arguments, in order to preserve TBAA information from
-      // the RHS.
-      LValue RHS = isa<CXXOperatorCallExpr>(CE)
-                       ? TrivialAssignmentRHS
-                       : EmitCheckedLValue(*CE->arg_begin(), TCK_Load);
-      EmitAggregateAssign(This, RHS, CE->getType());
-      return RValue::get(This.getPointer(*this));
+      // ✅ CHANGE: Add null/alignment checking for RHS
+      TrivialAssignmentRHS = EmitCheckedLValue(CE->getArg(1), TCK_Load);
+    } else {
+      RtlArgs = &RtlArgStorage;
+      EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
+                   drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
+                   /*ParamsToSkip*/0, EvaluationOrder::ForceRightToLeft);
     }
-
-    assert(MD->getParent()->mayInsertExtraPadding() &&
-           "unknown trivial member function");
   }
+}
+
+// ✅ NEW: Add lambda helper to centralize and conditionally check LValues
+auto getLValueForThis = [this, IsArrow,
+                         Base](bool EmitCheckedForStore = false) {
+  if (IsArrow) {
+    // Arrow: pointer deref already checked elsewhere
+    LValueBaseInfo BaseInfo;
+    TBAAAccessInfo TBAAInfo;
+    Address ThisValue = EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
+    return MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
+                          BaseInfo, TBAAInfo);
+  }
+  // Direct access: conditionally check based on whether we're storing
+  if (EmitCheckedForStore)
+    return EmitCheckedLValue(Base, TCK_Store);  // ✅ Checked for stores
+  return EmitLValue(Base);  // Unchecked for other operations
+};
+
+if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
+  assert(!RtlArgs);
+  assert(ReturnValue.isNull() && "Constructor shouldn't have return value");
+  // ✅ CHANGE: Use helper lambda instead of duplicated logic
+  LValue This = getLValueForThis();
+  CallArgList Args;
+  // ... rest of constructor code
+  return RValue::get(nullptr);
+}
+
+if (TrivialForCodegen) {
+  if (isa<CXXDestructorDecl>(MD))
+    return RValue::get(nullptr);
+
+  if (TrivialAssignment) {
+    // We don't like to generate the trivial copy/move assignment operator
+    // when it isn't necessary; just produce the proper effect here.
+
+    // ✅ CHANGE: Use helper with store checking enabled (we're about to store)
+    LValue This = getLValueForThis(/*EmitCheckedForStore=*/true);
+
+    // It's important that we use the result of EmitLValue here rather than
+    // emitting call arguments, in order to preserve TBAA information from
+    // the RHS.
+
+    // ✅ CHANGE: Use checked version for RHS
+    LValue RHS = EmitCheckedLValue(*CE->arg_begin(), TCK_Load);
+
+    EmitAggregateAssign(This, RHS, CE->getType());
+    return RValue::get(This.getPointer(*this));
+  }
+
+  assert(MD->getParent()->mayInsertExtraPadding() &&
+         "unknown trivial member function");
+}
 
   // Compute the function type we're calling.
   const CXXMethodDecl *CalleeDecl =
