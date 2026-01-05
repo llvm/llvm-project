@@ -340,7 +340,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("depend");
   };
   auto checkDevice = [&todo](auto op, LogicalResult &result) {
-    if (op.getDevice() && !isa<omp::TargetOp>(op))
+    if (op.getDevice())
       result = todo("device");
   };
   auto checkHint = [](auto op, LogicalResult &) {
@@ -444,12 +444,16 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::SimdOp op) { checkReduction(op, result); })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
             omp::AtomicCaptureOp>([&](auto op) { checkHint(op, result); })
-      .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp, omp::TargetUpdateOp>(
+      .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>(
           [&](auto op) { checkDepend(op, result); })
+      .Case<omp::TargetUpdateOp>([&](auto op) {
+        checkDepend(op, result);
+        checkDevice(op, result);
+      })
+      .Case<omp::TargetDataOp>([&](auto op) { checkDevice(op, result); })
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
-        checkDevice(op, result);
         checkInReduction(op, result);
       })
       .Default([](Operation &) {

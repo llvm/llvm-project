@@ -38,7 +38,7 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | declare simd construct                                     | N      | |
 | do simd construct                                          | P      | linear clause is not supported |
 | target data construct                                      | P      | device clause not supported |
-| target construct                                           | P      | device clause not supported |
+| target construct                                           | Y      | |
 | target update construct                                    | P      | device clause not supported |
 | declare target directive                                   | Y      | |
 | teams construct                                            | Y      | |
