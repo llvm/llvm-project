@@ -2915,15 +2915,10 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         else
           *Brackets = *BI.Incoming;
       } else {
-        if (!Brackets) {
+        if (!Brackets)
           Brackets = std::make_unique<WaitcntBrackets>(this);
-        } else {
-          // Reinitialize in-place. N.B. do not do this by assigning from a
-          // temporary because the WaitcntBrackets class is large and it could
-          // cause this function to use an unreasonable amount of stack space.
-          Brackets->~WaitcntBrackets();
-          new (Brackets.get()) WaitcntBrackets(this);
-        }
+        else
+          *Brackets = WaitcntBrackets(this);
       }
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
