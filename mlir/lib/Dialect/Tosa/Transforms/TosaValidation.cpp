@@ -659,6 +659,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Variable);
   CHECK_RANKS_AND_SIZES(VariableWrite);
   CHECK_RANKS_AND_SIZES(VariableRead);
+  // Shape Operators
+  CHECK_RANKS_AND_SIZES(Dim);
 
   // For the following operators, check whether the size of each tensor
   // operand is valid in a given Level.

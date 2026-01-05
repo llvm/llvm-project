@@ -546,6 +546,12 @@ Bug Fixes in This Version
 - Fix an assertion failure when a ``target_clones`` attribute is only on the
   forward declaration of a multiversioned function. (#GH165517) (#GH129483)
 - Fix a crash caused by invalid format string in printf-like functions with ``-Wunsafe-buffer-usage-in-libc-call`` option enabled. (#GH170496)
+- Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
+- Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
+- Fixed a crash when parsing invalid nested name specifier sequences
+  containing a single colon. (#GH167905)
+- Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
+  by diagnosing invalid comma-separated argument lists. (#GH166325)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -570,6 +576,7 @@ Bug Fixes to Attribute Support
 - Fix ``cleanup`` attribute by delaying type checks until after the type is deduced. (#GH129631)
 - Fix a crash when instantiating a function template with ``constructor`` or ``destructor``
   attributes without a priority argument. (#GH169072)
+- Fix an assertion when using ``target_clones`` attribute with empty argument list. (#GH173684)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -815,12 +822,6 @@ Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 - Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
-- Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
-- Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
-- Fixed a crash when parsing invalid nested name specifier sequences
-  containing a single colon. (#GH167905)
-- Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
-  by diagnosing invalid comma-separated argument lists. (#GH166325)
 
 Improvements
 ^^^^^^^^^^^^
@@ -833,6 +834,13 @@ Moved checkers
 Sanitizers
 ----------
 - Improved documentation for legacy ``no_sanitize`` attributes.
+- Added ``__builtin_allow_sanitize_check("name")`` that returns true if the
+  specified sanitizer is enabled for the current function (after inlining).
+  This allows for conditional code execution based on sanitizer enablement,
+  respecting ``no_sanitize`` attributes. It currently supports sanitizers:
+  "address", "kernel-address", "hwaddress", "kernel-hwaddress", "memory",
+  "kernel-memory", and "thread".
+
 
 Python Binding Changes
 ----------------------
@@ -876,6 +884,7 @@ Improvements
   including diagnosing when the array-section's base is not a named-variable.
 - Handling of ``use_device_addr`` and ``use_device_ptr`` in the presence of
   other maps with the same base-pointer/variable, was improved.
+- Preserve the initializer when variable declaration dedution fails for better error recovery.
 
 Additional Information
 ======================

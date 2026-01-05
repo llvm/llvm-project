@@ -436,7 +436,10 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
   const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val,
+                                    /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   Register Res = find(CI, &MF);
   if (Res.isValid())
     return Res;

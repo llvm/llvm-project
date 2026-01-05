@@ -497,6 +497,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
+  setOperationAction(ISD::CTLS, MVT::i32, Legal);
+  setOperationAction(ISD::CTLS, MVT::i64, Legal);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
@@ -6826,6 +6828,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::experimental_vector_match: {
     return LowerVectorMatch(Op, DAG);
   }
+  case Intrinsic::aarch64_cls:
+  case Intrinsic::aarch64_cls64:
+    SDValue Res = DAG.getNode(ISD::CTLS, DL, Op.getOperand(1).getValueType(),
+                              Op.getOperand(1));
+    return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
   }
 }
 
@@ -29526,25 +29533,6 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())
     return TargetLowering::useLoadStackGuardNode(M);
   return true;
-}
-
-bool AArch64TargetLowering::useStackGuardMixCookie() const {
-  // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
-  return Subtarget->getTargetTriple().isOSMSVCRT() &&
-         !getTargetMachine().Options.EnableGlobalISel;
-}
-
-SDValue AArch64TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
-                                                       SDValue Val,
-                                                       const SDLoc &DL,
-                                                       bool FailureBB) const {
-  if (FailureBB)
-    return DAG.getNode(
-        ISD::ADD, DL, Val.getValueType(),
-        DAG.getCopyFromReg(DAG.getEntryNode(), DL,
-                           getStackPointerRegisterToSaveRestore(), MVT::i64),
-        Val);
-  return Val;
 }
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
