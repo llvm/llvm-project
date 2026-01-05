@@ -158,3 +158,11 @@ func.func @test_add_shape() -> !tosa.shape<4> {
   %c = tosa.add_shape %a, %b : (!tosa.shape<4>, !tosa.shape<4>) -> !tosa.shape<4>
   return %c : !tosa.shape<4>
 }
+
+// -----
+
+// CHECK-LABEL: test_dim
+func.func @test_dim(%arg0: tensor<1x2x3x4xi32>) -> !tosa.shape<1> {
+  %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<1x2x3x4xi32>) -> !tosa.shape<1>
+  return %0 : !tosa.shape<1>
+}

@@ -4602,24 +4602,9 @@ LogicalResult OpTrait::tosa::verifyTosaResolvableShapeOperands(Operation *op) {
   return success();
 }
 
-LogicalResult OpTrait::tosa::verifyTosaShapeOperator(Operation *op) {
-  for (auto type : op->getOperandTypes()) {
-    if (!mlir::isa<mlir::tosa::shapeType>(type)) {
-      return op->emitOpError("must have operands with tosa shape type");
-    }
-  }
-  for (auto type : op->getResultTypes()) {
-    if (!mlir::isa<mlir::tosa::shapeType>(type)) {
-      return op->emitOpError("must have result with tosa shape type");
-    }
-  }
-  return success();
-}
-
 LogicalResult
 OpTrait::tosa::verifyTosaShapeOperatorWithSameRanks(Operation *op) {
-  if (failed(OpTrait::impl::verifyAtLeastNOperands(op, 1)) ||
-      failed(verifyTosaShapeOperator(op)))
+  if (failed(OpTrait::impl::verifyAtLeastNOperands(op, 1)))
     return failure();
 
   // delegate function that returns rank of shape type
@@ -4659,6 +4644,24 @@ LogicalResult tosa::ConstShapeOp::verify() {
     return emitOpError("expect number of elements in attribute values (")
            << count << ") to be equal to the rank (" << rank
            << ") for the result shape type";
+  }
+  return success();
+}
+
+LogicalResult tosa::DimOp::verify() {
+  const tosa::shapeType outShapeType =
+      cast<tosa::shapeType>(getResult().getType());
+  if (outShapeType.getRank() != 1)
+    return emitOpError("expect output shape type to contain one element, got ")
+           << outShapeType;
+
+  const ShapeAdaptor inputType(getInput1().getType());
+  if (inputType.hasRank()) {
+    const int64_t inputRank = inputType.getRank();
+    const int64_t axis = getAxisAttr().getInt();
+    if (axis < 0 || axis >= inputRank)
+      return emitOpError("expect axis to be in the range [0, ")
+             << inputRank << "), got " << axis;
   }
   return success();
 }
