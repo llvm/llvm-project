@@ -104,22 +104,6 @@ public:
   void
   SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) override;
 
-  /// Finds the pid matching the process_name.
-  ///
-  /// If there are multiple processes with the same name, this method will
-  /// return the first one.
-  ///
-  /// \param[in] process_name
-  ///     The name of the process to find.
-  ///
-  /// \param[out] error
-  ///     An error that indicates the success or failure of the search.
-  ///
-  /// \return
-  ///     Returns the pid of the process if a match was found. Returns \code
-  ///     LLDB_INVALID_PROCESS otherwise.
-  lldb::pid_t FindProcessByName(const char *process_name, Status &error);
-
 protected:
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 

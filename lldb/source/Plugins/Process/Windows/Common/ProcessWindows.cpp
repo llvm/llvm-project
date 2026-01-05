@@ -32,6 +32,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -239,44 +240,47 @@ Status ProcessWindows::DoAttachToProcessWithName(
     return error;
   }
 
-  lldb::pid_t pid = FindProcessByName(process_name, error);
+  ProcessInstanceInfoMatch match_info;
+  match_info.SetNameMatchType(NameMatch::Equals);
+  match_info.GetProcessInfo().GetExecutableFile().SetFile(
+      process_name, FileSpec::Style::native);
+
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOGF(log, "ProcessWindows::%s waiting for process '%s' to launch",
+            __FUNCTION__, process_name);
+
+  lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+
+  while (pid == LLDB_INVALID_PROCESS_ID) {
+    ProcessInstanceInfoList process_infos;
+    uint32_t num_matches = Host::FindProcesses(match_info, process_infos);
+
+    if (num_matches == 1) {
+      pid = process_infos[0].GetProcessID();
+      break;
+    }
+    if (num_matches > 1) {
+      StreamString s;
+      ProcessInstanceInfo::DumpTableHeader(s, true, false);
+      for (size_t i = 0; i < num_matches; i++) {
+        process_infos[i].DumpAsTableRow(
+            s, lldb_private::HostInfoWindows::GetUserIDResolver(), true, false);
+      }
+      error = Status::FromErrorStringWithFormat(
+          "more than one process named %s:\n%s", process_name, s.GetData());
+      break;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
   if (pid == LLDB_INVALID_PROCESS_ID) {
-    error = Status::FromErrorStringWithFormatv("Unable to find process '%s'",
-                                               process_name);
+    error = Status::FromErrorStringWithFormatv(
+        "unable to find process named '%s'", process_name);
     return error;
   }
 
   return DoAttachToProcessWithID(pid, attach_info);
-}
-
-lldb::pid_t ProcessWindows::FindProcessByName(const char *process_name,
-                                              Status &error) {
-  HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-  if (hProcessSnap == INVALID_HANDLE_VALUE) {
-    error = Status(GetLastError(), eErrorTypeWin32);
-    return LLDB_INVALID_PROCESS_ID;
-  }
-  auto cleanup = llvm::make_scope_exit([&] { CloseHandle(hProcessSnap); });
-
-  llvm::StringRef process_filename = llvm::sys::path::filename(process_name);
-
-  PROCESSENTRY32W pe32;
-  pe32.dwSize = sizeof(PROCESSENTRY32W);
-  if (!Process32FirstW(hProcessSnap, &pe32)) {
-    error = Status(GetLastError(), eErrorTypeWin32);
-    return LLDB_INVALID_PROCESS_ID;
-  }
-
-  do {
-    std::string exe_name;
-    llvm::convertWideToUTF8(pe32.szExeFile, exe_name);
-
-    if (exe_name == process_filename)
-      return pe32.th32ProcessID;
-  } while (Process32NextW(hProcessSnap, &pe32));
-
-  return LLDB_INVALID_PROCESS_ID;
 }
 
 Status ProcessWindows::DoResume(RunDirection direction) {
