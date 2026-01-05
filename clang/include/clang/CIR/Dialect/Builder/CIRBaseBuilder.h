@@ -495,8 +495,7 @@ public:
                                    mlir::Value idx) {
     auto vecTy = mlir::cast<cir::VectorType>(vec.getType());
     mlir::Type eltTy = vecTy.getElementType();
-    auto op = cir::VecExtractOp::create(*this, loc, eltTy, vec, idx);
-    return op.getResult();
+    return cir::VecExtractOp::create(*this, loc, eltTy, vec, idx);
   }
 
   mlir::Value createExtractElement(mlir::Location loc, mlir::Value vec,
