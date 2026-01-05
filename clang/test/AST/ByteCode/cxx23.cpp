@@ -450,6 +450,20 @@ namespace VolatileWrites {
                             // all-note {{in call to}}
 }
 
+namespace VolatileReads {
+  constexpr int test1(bool b) {
+    if (!b)
+      return -1;
+    struct C {
+      int a;
+    };
+    volatile C c{12}; // all-note {{volatile object declared here}}
+    return ((C&)(c)).a; // all-note {{read of volatile object}}
+  }
+  static_assert(test1(true) == 0); // all-error {{not an integral constant expression}} \
+                                   // all-note {{in call to}}
+}
+
 namespace AIEWithIndex0Narrows {
   template <class _Tp> struct greater {
     constexpr void operator()(_Tp, _Tp) {}
