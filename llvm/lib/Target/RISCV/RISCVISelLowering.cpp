@@ -16435,16 +16435,14 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
   bool IsRounding = false;
   if (Op.getOpcode() == ISD::ADD && (EltBits == 16 || EltBits == 32)) {
     SDValue AddRHS = Op.getOperand(1);
-    if (AddRHS.getOpcode() == ISD::BUILD_VECTOR) {
-      if (auto *RndBV = dyn_cast<BuildVectorSDNode>(AddRHS.getNode())) {
-        if (auto *RndC =
-                dyn_cast_or_null<ConstantSDNode>(RndBV->getSplatValue())) {
-          uint64_t ExpectedRnd = 1ULL << (EltBits - 1);
-          if (RndC->getZExtValue() == ExpectedRnd &&
-              Op.getOperand(0).getOpcode() == ISD::MUL) {
-            Op = Op.getOperand(0);
-            IsRounding = true;
-          }
+    if (auto *RndBV = dyn_cast<BuildVectorSDNode>(AddRHS.getNode())) {
+      if (auto *RndC =
+              dyn_cast_or_null<ConstantSDNode>(RndBV->getSplatValue())) {
+        uint64_t ExpectedRnd = 1ULL << (EltBits - 1);
+        if (RndC->getZExtValue() == ExpectedRnd &&
+            Op.getOperand(0).getOpcode() == ISD::MUL) {
+          Op = Op.getOperand(0);
+          IsRounding = true;
         }
       }
     }
