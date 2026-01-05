@@ -523,6 +523,16 @@ def CUFComputeSharedMemoryOffsetsAndSize
   ];
 }
 
+def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
+  let summary = "Attach CUDA attribute to CUF kernel generated launch";
+  let description = [{
+    CUF kernel is generated via gpu.launch and then outlined. The resulting
+    launch operation needs to hava a CUDA attribute attached so it will
+    be distinguishable from other launch.
+  }];
+  let dependentDialects = ["cuf::CUFDialect"];
+}
+
 def CUFPredefinedVarToGPU
     : Pass<"cuf-predefined-var-to-gpu", "::mlir::func::FuncOp"> {
   let summary = "Transform predefined variables to GPU operations";
