@@ -13,6 +13,7 @@
 #include "BuiltinCAS.h"
 #include "llvm/ADT/TrieRawHashMap.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Config/llvm-config.h"
@@ -153,10 +154,14 @@ OnDiskActionCache::OnDiskActionCache(
 
 Expected<std::unique_ptr<OnDiskActionCache>>
 OnDiskActionCache::create(StringRef AbsPath) {
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+  if (Error E =
+          ondisk::OnDiskCASLogger::openIfEnabled(AbsPath).moveInto(Logger))
+    return std::move(E);
   std::unique_ptr<ondisk::OnDiskKeyValueDB> DB;
-  if (Error E = ondisk::OnDiskKeyValueDB::open(AbsPath, getHashName(),
-                                               sizeof(HashType), getHashName(),
-                                               sizeof(DataT))
+  if (Error E = ondisk::OnDiskKeyValueDB::open(
+                    AbsPath, getHashName(), sizeof(HashType), getHashName(),
+                    sizeof(DataT), /*UnifiedCache=*/nullptr, std::move(Logger))
                     .moveInto(DB))
     return std::move(E);
   return std::unique_ptr<OnDiskActionCache>(
