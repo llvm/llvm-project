@@ -96,8 +96,8 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
 SmallVector<CallsiteID>
 BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
-  return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName))
-      .PrefetchTargets;
+  auto R = ProgramOptimizationProfile.find(getAliasName(FuncName));
+  return R != ProgramOptimizationProfile.end() ? R->second.PrefetchTargets : SmallVector<CallsiteID>();
 }
 
 // Reads the version 1 basic block sections profile. Profile for each function
@@ -348,7 +348,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     case 't': { // Callsite target specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
-      if (FI == ProgramPathAndClusterInfo.end())
+      if (FI == ProgramOptimizationProfile.end())
         continue;
       SmallVector<StringRef, 2> PrefetchTargetStr;
       Values[0].split(PrefetchTargetStr, ',');
