@@ -139,6 +139,10 @@ class TreeTransform {
     ~ForgetPartiallySubstitutedPackRAII() {
       Self.RememberPartiallySubstitutedPack(Old);
     }
+    ForgetPartiallySubstitutedPackRAII(
+        const ForgetPartiallySubstitutedPackRAII &) = delete;
+    ForgetPartiallySubstitutedPackRAII &
+    operator=(const ForgetPartiallySubstitutedPackRAII &) = delete;
   };
 
 protected:
@@ -233,6 +237,8 @@ public:
     ~TemporaryBase() {
       Self.getDerived().setBase(OldLocation, OldEntity);
     }
+    TemporaryBase(const TemporaryBase &) = delete;
+    TemporaryBase &operator=(const TemporaryBase &) = delete;
   };
 
   /// Determine whether the given type \p T has already been
@@ -2847,6 +2853,16 @@ public:
     return getSema().ActOnArraySubscriptExpr(/*Scope=*/nullptr, LHS,
                                              LBracketLoc, RHS,
                                              RBracketLoc);
+  }
+
+  /// Build a new matrix single subscript expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildMatrixSingleSubscriptExpr(Expr *Base, Expr *RowIdx,
+                                              SourceLocation RBracketLoc) {
+    return getSema().CreateBuiltinMatrixSingleSubscriptExpr(Base, RowIdx,
+                                                            RBracketLoc);
   }
 
   /// Build a new matrix subscript expression.
@@ -13393,6 +13409,25 @@ TreeTransform<Derived>::TransformArraySubscriptExpr(ArraySubscriptExpr *E) {
   return getDerived().RebuildArraySubscriptExpr(
       LHS.get(),
       /*FIXME:*/ E->getLHS()->getBeginLoc(), RHS.get(), E->getRBracketLoc());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  ExprResult Base = getDerived().TransformExpr(E->getBase());
+  if (Base.isInvalid())
+    return ExprError();
+
+  ExprResult RowIdx = getDerived().TransformExpr(E->getRowIdx());
+  if (RowIdx.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && Base.get() == E->getBase() &&
+      RowIdx.get() == E->getRowIdx())
+    return E;
+
+  return getDerived().RebuildMatrixSingleSubscriptExpr(Base.get(), RowIdx.get(),
+                                                       E->getRBracketLoc());
 }
 
 template <typename Derived>

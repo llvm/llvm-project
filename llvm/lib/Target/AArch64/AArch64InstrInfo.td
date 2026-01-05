@@ -211,7 +211,7 @@ def HasSME2p2        : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME2
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p2), "sme2p2">;
 def HasSVEAES2       : Predicate<"Subtarget->hasSVEAES2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVEAES2), "sve-aes2">;
-def HasSVEBFSCALE    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVEBFSCALE()">,
+def HasSVEBFSCALE    : Predicate<"Subtarget->isNonStreamingSVEorSME2Available() && Subtarget->hasSVE_BFSCALE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVEBFSCALE), "sve-bfscale">;
 def HasSVE_F16F32MM  : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_F16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_F16F32MM), "sve-f16f32mm">;
@@ -3268,6 +3268,10 @@ def : InstAlias<"tst $src1, $src2$sh",
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
+def : Pat<(not logical_shifted_reg32:$Rm_and_shift),
+          (ORNWrs WZR, logical_shifted_reg32:$Rm_and_shift)>;
+def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
+          (ORNXrs XZR, logical_shifted_reg64:$Rm_and_shift)>;
 
 // Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
 let AddedComplexity = 6 in

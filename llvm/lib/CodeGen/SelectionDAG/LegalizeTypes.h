@@ -326,6 +326,7 @@ private:
   SDValue PromoteIntRes_BUILD_PAIR(SDNode *N);
   SDValue PromoteIntRes_Constant(SDNode *N);
   SDValue PromoteIntRes_CTLZ(SDNode *N);
+  SDValue PromoteIntRes_CTLS(SDNode *N);
   SDValue PromoteIntRes_CTPOP_PARITY(SDNode *N);
   SDValue PromoteIntRes_CTTZ(SDNode *N);
   SDValue PromoteIntRes_VP_CttzElements(SDNode *N);
@@ -585,6 +586,7 @@ private:
   SDValue SoftenFloatRes_FASIN(SDNode *N);
   SDValue SoftenFloatRes_FATAN(SDNode *N);
   SDValue SoftenFloatRes_FATAN2(SDNode *N);
+  SDValue SoftenFloatRes_FCANONICALIZE(SDNode *N);
   SDValue SoftenFloatRes_FMINNUM(SDNode *N);
   SDValue SoftenFloatRes_FMAXNUM(SDNode *N);
   SDValue SoftenFloatRes_FMINIMUMNUM(SDNode *N);
