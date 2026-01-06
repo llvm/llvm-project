@@ -74,6 +74,8 @@ public:
   LLVM_ABI std::optional<FileLocRange>
   getFunctionLocation(const Function *) const;
   LLVM_ABI std::optional<FileLocRange>
+  getFunctionArgumentLocation(const Argument *) const;
+  LLVM_ABI std::optional<FileLocRange>
   getBlockLocation(const BasicBlock *) const;
   LLVM_ABI std::optional<FileLocRange>
   getInstructionLocation(const Instruction *) const;

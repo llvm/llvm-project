@@ -18,6 +18,13 @@ AsmParserContext::getFunctionLocation(const Function *F) const {
 }
 
 std::optional<FileLocRange>
+AsmParserContext::getFunctionArgumentLocation(const Argument *F) const {
+  if (auto FIt = FunctionArguments.find(F); FIt != FunctionArguments.end())
+    return FIt->second;
+  return std::nullopt;
+}
+
+std::optional<FileLocRange>
 AsmParserContext::getBlockLocation(const BasicBlock *BB) const {
   if (auto BBIt = Blocks.find(BB); BBIt != Blocks.end())
     return BBIt->second;
