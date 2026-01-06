@@ -107,6 +107,31 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
       II.eraseFromParent();
     return Changed;
   }
+  case Intrinsic::amdgcn_wave_shuffle: {
+    Value *Val = II.getOperand(0);
+    Value *Idx = II.getOperand(1);
+
+    // When Index is uniform, this is just a readlane operation
+    if (isDivergentUseWithNew(II.getOperandUse(1), UI, Tracker))
+      return false;
+
+    // Like with readlane, if Value is also uniform then just propagate it
+    if (!isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker)) {
+      II.replaceAllUsesWith(Val);
+      II.eraseFromParent();
+      return true;
+    }
+
+    // Otherwise, construct a proper call to amdgcn_readlane
+    llvm::IRBuilder<> Builder(&II);
+    CallInst *Readlane =
+        Builder.CreateIntrinsic(Builder.getInt32Ty(),
+                                Intrinsic::amdgcn_readlane, {Val, Idx});
+
+    II.replaceAllUsesWith(Readlane);
+    II.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }

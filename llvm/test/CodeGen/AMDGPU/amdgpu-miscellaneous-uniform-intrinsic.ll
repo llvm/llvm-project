@@ -171,3 +171,36 @@ if:
 exit:
   ret void
 }
+
+define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(ptr addrspace(1) %out) {
+; CHECK-LABEL: wave_shuffle_nonuniform_value_uniform_index:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 5
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 %tid, i32 5)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(ptr addrspace(1) %out, i32 %val) {
+; CHECK-LABEL: wave_shuffle_uniform_value_and_index:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+  %uniform_vgpr = load i32, ptr addrspace(1) null, align 4
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 %uniform_vgpr, i32 5)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
