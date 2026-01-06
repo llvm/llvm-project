@@ -3587,6 +3587,30 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+
+  case Builtin::BI__builtin_allow_sanitize_check: {
+    Expr *Arg = TheCall->getArg(0);
+    // Check if the argument is a string literal.
+    const StringLiteral *SanitizerName =
+        dyn_cast<StringLiteral>(Arg->IgnoreParenImpCasts());
+    if (!SanitizerName) {
+      Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    // Validate the sanitizer name.
+    if (!llvm::StringSwitch<bool>(SanitizerName->getString())
+             .Cases({"address", "thread", "memory", "hwaddress",
+                     "kernel-address", "kernel-memory", "kernel-hwaddress"},
+                    true)
+             .Default(false)) {
+      Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_argument)
+          << SanitizerName->getString() << "__builtin_allow_sanitize_check"
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    break;
+  }
   case Builtin::BI__builtin_counted_by_ref:
     if (BuiltinCountedByRef(TheCall))
       return ExprError();

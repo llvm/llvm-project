@@ -29,179 +29,179 @@
   @i64_align4 = common global i64 0, align 4
   @i64_align8 = common global i64 0, align 8
 
-  define i32 @load3align1(%struct.MemSize3_Align1* %S) {
+  define i32 @load3align1(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize3_Align1* %S to i24*
-    %bf.load = load i24, i24* %0, align 1
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i24, ptr %0, align 1
     %bf.cast = zext i24 %bf.load to i32
     ret i32 %bf.cast
   }
 
-  define i32 @load3align2(%struct.MemSize3_Align2* %S) {
+  define i32 @load3align2(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize3_Align2* %S to i24*
-    %bf.load = load i24, i24* %0, align 2
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i24, ptr %0, align 2
     %bf.cast = zext i24 %bf.load to i32
     ret i32 %bf.cast
   }
 
-  define i32 @load3align4(%struct.MemSize3_Align4* %S, i32 signext %a) {
+  define i32 @load3align4(ptr %S, i32 signext %a) {
   entry:
-    %0 = bitcast %struct.MemSize3_Align4* %S to i24*
-    %bf.load = load i24, i24* %0, align 4
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i24, ptr %0, align 4
     %bf.cast = zext i24 %bf.load to i32
     ret i32 %bf.cast
   }
 
-  define i32 @load3align8(%struct.MemSize3_Align8* %S, i32 signext %a) {
+  define i32 @load3align8(ptr %S, i32 signext %a) {
   entry:
-    %0 = bitcast %struct.MemSize3_Align8* %S to i24*
-    %bf.load = load i24, i24* %0, align 8
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i24, ptr %0, align 8
     %bf.cast = zext i24 %bf.load to i32
     ret i32 %bf.cast
   }
 
-  define i64 @load5align1(%struct.MemSize5_Align1* %S) {
+  define i64 @load5align1(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize5_Align1* %S to i40*
-    %bf.load = load i40, i40* %0, align 1
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i40, ptr %0, align 1
     %bf.cast = zext i40 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load5align2(%struct.MemSize5_Align2* %S) {
+  define i64 @load5align2(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize5_Align2* %S to i40*
-    %bf.load = load i40, i40* %0, align 2
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i40, ptr %0, align 2
     %bf.cast = zext i40 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load5align4(%struct.MemSize5_Align4* %S) {
+  define i64 @load5align4(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize5_Align4* %S to i40*
-    %bf.load = load i40, i40* %0, align 4
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i40, ptr %0, align 4
     %bf.cast = zext i40 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load5align8(%struct.MemSize5_Align8* %S) {
+  define i64 @load5align8(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize5_Align8* %S to i40*
-    %bf.load = load i40, i40* %0, align 8
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i40, ptr %0, align 8
     %bf.cast = zext i40 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load6align1(%struct.MemSize6_Align1* %S) {
+  define i64 @load6align1(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize6_Align1* %S to i48*
-    %bf.load = load i48, i48* %0, align 1
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i48, ptr %0, align 1
     %bf.cast = zext i48 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load6align2(%struct.MemSize6_Align2* %S) {
+  define i64 @load6align2(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize6_Align2* %S to i48*
-    %bf.load = load i48, i48* %0, align 2
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i48, ptr %0, align 2
     %bf.cast = zext i48 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load6align4(%struct.MemSize6_Align4* %S) {
+  define i64 @load6align4(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize6_Align4* %S to i48*
-    %bf.load = load i48, i48* %0, align 4
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i48, ptr %0, align 4
     %bf.cast = zext i48 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load6align8(%struct.MemSize6_Align8* %S) {
+  define i64 @load6align8(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize6_Align8* %S to i48*
-    %bf.load = load i48, i48* %0, align 8
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i48, ptr %0, align 8
     %bf.cast = zext i48 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load7align1(%struct.MemSize7_Align1* %S) {
+  define i64 @load7align1(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize7_Align1* %S to i56*
-    %bf.load = load i56, i56* %0, align 1
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i56, ptr %0, align 1
     %bf.cast = zext i56 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load7align2(%struct.MemSize7_Align2* %S) {
+  define i64 @load7align2(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize7_Align2* %S to i56*
-    %bf.load = load i56, i56* %0, align 2
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i56, ptr %0, align 2
     %bf.cast = zext i56 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load7align4(%struct.MemSize7_Align4* %S) {
+  define i64 @load7align4(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize7_Align4* %S to i56*
-    %bf.load = load i56, i56* %0, align 4
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i56, ptr %0, align 4
     %bf.cast = zext i56 %bf.load to i64
     ret i64 %bf.cast
   }
 
-  define i64 @load7align8(%struct.MemSize7_Align8* %S) {
+  define i64 @load7align8(ptr %S) {
   entry:
-    %0 = bitcast %struct.MemSize7_Align8* %S to i56*
-    %bf.load = load i56, i56* %0, align 8
+    %0 = bitcast ptr %S to ptr
+    %bf.load = load i56, ptr %0, align 8
     %bf.cast = zext i56 %bf.load to i64
     ret i64 %bf.cast
   }
 
   define double @load_double_align1() {
   entry:
-    %0 = load double, double* @double_align1, align 1
+    %0 = load double, ptr @double_align1, align 1
     ret double %0
   }
 
   define double @load_double_align2() {
   entry:
-    %0 = load double, double* @double_align2, align 2
+    %0 = load double, ptr @double_align2, align 2
     ret double %0
   }
 
   define double @load_double_align4() {
   entry:
-    %0 = load double, double* @double_align4, align 4
+    %0 = load double, ptr @double_align4, align 4
     ret double %0
   }
 
   define double @load_double_align8() {
   entry:
-    %0 = load double, double* @double_align8, align 8
+    %0 = load double, ptr @double_align8, align 8
     ret double %0
   }
 
   define i64 @load_i64_align1() {
   entry:
-    %0 = load i64, i64* @i64_align1, align 1
+    %0 = load i64, ptr @i64_align1, align 1
     ret i64 %0
   }
 
   define i64 @load_i64_align2() {
   entry:
-    %0 = load i64, i64* @i64_align2, align 2
+    %0 = load i64, ptr @i64_align2, align 2
     ret i64 %0
   }
 
   define i64 @load_i64_align4() {
   entry:
-    %0 = load i64, i64* @i64_align4, align 4
+    %0 = load i64, ptr @i64_align4, align 4
     ret i64 %0
   }
 
   define i64 @load_i64_align8() {
   entry:
-    %0 = load i64, i64* @i64_align8, align 8
+    %0 = load i64, ptr @i64_align8, align 8
     ret i64 %0
   }
 

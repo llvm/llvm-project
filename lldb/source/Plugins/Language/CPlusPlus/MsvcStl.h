@@ -19,6 +19,8 @@ namespace formatters {
 
 bool IsMsvcStlStringType(ValueObject &valobj);
 
+bool IsMsvcStlStringViewType(ValueObject &valobj);
+
 template <StringPrinter::StringElementType element_type>
 bool MsvcStlStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
