@@ -2032,9 +2032,6 @@ uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
     return std::min(
         {DefaultNewAlign, MaxFundamentalAlign, llvm::bit_floor(AllocSize)});
   }
-
-  default:
-    llvm_unreachable("Unhandled DynAlloc::Kind");
   }
 }
 
