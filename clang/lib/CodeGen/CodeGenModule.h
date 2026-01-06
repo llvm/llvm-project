@@ -783,6 +783,9 @@ public:
   // i32 @__isPlatformVersionAtLeast(i32, i32, i32, i32)
   llvm::FunctionCallee IsPlatformVersionAtLeastFn = nullptr;
 
+  //  Store indirect CallExprs that are within an omp target region
+  llvm::SmallPtrSet<const CallExpr *, 16> OMPTargetCalls;
+
   InstrProfStats &getPGOStats() { return PGOStats; }
   llvm::IndexedInstrProfReader *getPGOReader() const { return PGOReader.get(); }
 

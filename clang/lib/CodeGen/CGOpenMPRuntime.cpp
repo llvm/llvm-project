@@ -24,6 +24,7 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
