@@ -95,6 +95,93 @@ void test(std::chrono::time_zone tz, std::chrono::time_zone_link link, std::chro
 #endif // TEST_STD_VER >= 20
 
 void test() {
+  { // [time.duration]
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::microseconds(2));
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::duration_values<int>::zero();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::duration_values<int>::max();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::duration_values<int>::min();
+
+    std::chrono::duration<int, std::ratio<1, 30> > dr;
+
+#if TEST_STD_VER >= 17
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::floor<std::chrono::seconds>(dr);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::ceil<std::chrono::seconds>(dr);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::round<std::chrono::seconds>(dr);
+#endif
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    dr.count();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    +dr;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    -dr;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::duration<int, std::ratio<1, 30> >::zero();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::duration<int, std::ratio<1, 30> >::max();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::chrono::duration<int, std::ratio<1, 30> >::min();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    dr + dr;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    dr - dr;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    dr * 94;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    94 * dr;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    dr / 82;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    dr / dr;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    dr % 47;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    dr % dr;
+
+    using namespace std::chrono_literals;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    94h;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    82.5h;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    94min;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    82.5min;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    94s;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    82.5s;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    94ms;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    82.5ms;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    94us;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    82.5us;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    94ns;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    82.5ns;
+  }
+
 #if TEST_STD_VER >= 20
   { // [time.clock.file]
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -210,91 +297,4 @@ void test() {
     std::chrono::get_leap_second_info(std::chrono::utc_seconds{});
   }
 #endif // TEST_STD_VER >= 20
-
-  { // [time.duration]
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::microseconds(2));
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::duration_values<int>::zero();
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::duration_values<int>::max();
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::duration_values<int>::min();
-
-    std::chrono::duration<int, std::ratio<1, 30> > dr;
-
-#if TEST_STD_VER >= 17
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::floor<std::chrono::seconds>(dr);
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::ceil<std::chrono::seconds>(dr);
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::round<std::chrono::seconds>(dr);
-#endif
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    dr.count();
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    +dr;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    -dr;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::duration<int, std::ratio<1, 30> >::zero();
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::duration<int, std::ratio<1, 30> >::max();
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::chrono::duration<int, std::ratio<1, 30> >::min();
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    dr + dr;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    dr - dr;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    dr * 94;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    94 * dr;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    dr / 82;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    dr / dr;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    dr % 47;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    dr % dr;
-
-    using namespace std::chrono_literals;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    94h;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    82.5h;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    94min;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    82.5min;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    94s;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    82.5s;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    94ms;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    82.5ms;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    94us;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    82.5us;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    94ns;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    82.5ns;
-  }
 }
