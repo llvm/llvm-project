@@ -217,6 +217,17 @@ define void @test.prefetch.unnamed(ptr %ptr) {
   ret void
 }
 
+define void @test.vector.splice(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @test.vector.splice
+; CHECK: @llvm.vector.splice.left.v4i32(<4 x i32> %a, <4 x i32> %b, i32 3)
+  call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> %b, i32 3)
+; CHECK: @llvm.vector.splice.right.v4i32(<4 x i32> %a, <4 x i32> %b, i32 2)
+  call <4 x i32> @llvm.vector.splice(<4 x i32> %a, <4 x i32> %b, i32 -2)
+; CHECK: @llvm.vector.splice.left.v4i32(<4 x i32> %a, <4 x i32> %b, i32 1)
+  call <4 x i32> @llvm.vector.splice.v4i32(<4 x i32> %a, <4 x i32> %b, i32 1)
+  ret void
+}
+
 define i32 @ctlz(i32 %A) {
 ; CHECK: %for.body.i = call i32 @llvm.ctlz.i32(i32 %A, i1 false)
   %for.body.i = call i32 @llvm.ctlz.i32.p0(i32 %A)
