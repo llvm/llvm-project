@@ -1489,6 +1489,18 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI16VT (add GPR:$rs1, GPR:$rs2)), (PADD_H GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_H GPR:$rs1, GPR:$rs2)>;
 
+  // 8-bit bitwise operation patterns
+  def: Pat<(XLenVecI8VT (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (xor GPR:$rs1, immAllOnesV)), (XORI GPR:$rs1, -1)>;
+
+  // 16-bit bitwise operation patterns
+  def: Pat<(XLenVecI16VT (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (xor GPR:$rs1, immAllOnesV)), (XORI GPR:$rs1, -1)>;
+
   // 8-bit saturating add/sub patterns
   def: Pat<(XLenVecI8VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_B GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI8VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_B GPR:$rs1, GPR:$rs2)>;
@@ -1610,6 +1622,12 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // Basic 32-bit arithmetic patterns
   def: Pat<(v2i32 (add GPR:$rs1, GPR:$rs2)), (PADD_W GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (sub GPR:$rs1, GPR:$rs2)), (PSUB_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit bitwise operation patterns
+  def: Pat<(v2i32 (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (xor GPR:$rs1, immAllOnesV)), (XORI GPR:$rs1, -1)>;
 
   // 32-bit saturating add/sub patterns
   def: Pat<(v2i32 (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_W GPR:$rs1, GPR:$rs2)>;
