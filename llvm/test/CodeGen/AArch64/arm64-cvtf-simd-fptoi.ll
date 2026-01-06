@@ -120,3 +120,127 @@ define double @ucvtf_bitcast_f64_to_f64(double %d) nounwind {
   %r = uitofp i64 %i to double
   ret double %r
 }
+
+;
+; Also test `strictfp` nodes
+;
+
+define double @scvtf_bitcast_f32_to_f64_strict(float %f) nounwind strictfp {
+; CHECK-LABEL: scvtf_bitcast_f32_to_f64_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf d0, s0
+; CHECK-NEXT:    ret
+  %i = bitcast float %f to i32
+  %r = sitofp i32 %i to double
+  ret double %r
+}
+
+define double @ucvtf_bitcast_f32_to_f64_strict(float %f) nounwind strictfp {
+; CHECK-LABEL: ucvtf_bitcast_f32_to_f64_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf d0, s0
+; CHECK-NEXT:    ret
+  %i = bitcast float %f to i32
+  %r = uitofp i32 %i to double
+  ret double %r
+}
+
+define half @scvtf_bitcast_f32_to_f16_strict(float %f) nounwind strictfp {
+; CHECK-LABEL: scvtf_bitcast_f32_to_f16_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf h0, s0
+; CHECK-NEXT:    ret
+  %i = bitcast float %f to i32
+  %r = sitofp i32 %i to half
+  ret half %r
+}
+
+define half @ucvtf_bitcast_f32_to_f16_strict(float %f) nounwind strictfp {
+; CHECK-LABEL: ucvtf_bitcast_f32_to_f16_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf h0, s0
+; CHECK-NEXT:    ret
+  %i = bitcast float %f to i32
+  %r = uitofp i32 %i to half
+  ret half %r
+}
+
+define float @scvtf_bitcast_f64_to_f32_strict(double %d) nounwind strictfp {
+; CHECK-LABEL: scvtf_bitcast_f64_to_f32_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf s0, d0
+; CHECK-NEXT:    ret
+  %i = bitcast double %d to i64
+  %r = sitofp i64 %i to float
+  ret float %r
+}
+
+define float @ucvtf_bitcast_f64_to_f32_strict(double %d) nounwind strictfp {
+; CHECK-LABEL: ucvtf_bitcast_f64_to_f32_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf s0, d0
+; CHECK-NEXT:    ret
+  %i = bitcast double %d to i64
+  %r = uitofp i64 %i to float
+  ret float %r
+}
+
+define half @scvtf_bitcast_f64_to_f16_strict(double %d) nounwind strictfp {
+; CHECK-LABEL: scvtf_bitcast_f64_to_f16_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf h0, d0
+; CHECK-NEXT:    ret
+  %i = bitcast double %d to i64
+  %r = sitofp i64 %i to half
+  ret half %r
+}
+
+define half @ucvtf_bitcast_f64_to_f16_strict(double %d) nounwind strictfp {
+; CHECK-LABEL: ucvtf_bitcast_f64_to_f16_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf h0, d0
+; CHECK-NEXT:    ret
+  %i = bitcast double %d to i64
+  %r = uitofp i64 %i to half
+  ret half %r
+}
+
+define float @scvtf_bitcast_f32_to_f32_strict(float %f) nounwind strictfp {
+; CHECK-LABEL: scvtf_bitcast_f32_to_f32_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf s0, s0
+; CHECK-NEXT:    ret
+  %i = bitcast float %f to i32
+  %r = sitofp i32 %i to float
+  ret float %r
+}
+
+define float @ucvtf_bitcast_f32_to_f32_strict(float %f) nounwind strictfp {
+; CHECK-LABEL: ucvtf_bitcast_f32_to_f32_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf s0, s0
+; CHECK-NEXT:    ret
+  %i = bitcast float %f to i32
+  %r = uitofp i32 %i to float
+  ret float %r
+}
+
+define double @scvtf_bitcast_f64_to_f64_strict(double %d) nounwind strictfp {
+; CHECK-LABEL: scvtf_bitcast_f64_to_f64_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf d0, d0
+; CHECK-NEXT:    ret
+  %i = bitcast double %d to i64
+  %r = sitofp i64 %i to double
+  ret double %r
+}
+
+define double @ucvtf_bitcast_f64_to_f64_strict(double %d) nounwind strictfp {
+; CHECK-LABEL: ucvtf_bitcast_f64_to_f64_strict:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf d0, d0
+; CHECK-NEXT:    ret
+  %i = bitcast double %d to i64
+  %r = uitofp i64 %i to double
+  ret double %r
+}
