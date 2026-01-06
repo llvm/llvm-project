@@ -82,7 +82,7 @@ LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
   LDBG() << "[visitOperation] Enter: "
          << OpWithFlags(op, OpPrintingFlags().skipRegions());
   // This marks values of type (1.a) and (4) liveness as "live".
-  if (!isMemoryEffectFree(op) || op->hasTrait<OpTrait::ReturnLike>()) {
+  if (!wouldOpBeTriviallyDead(op)) {
     LDBG() << "[visitOperation] Operation has memory effects or is "
               "return-like, marking operands live";
     for (auto *operand : operands) {
@@ -131,18 +131,9 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // the forwarded branch operands or the non-branch operands. Thus they need
   // to be handled separately. This is where we handle them.
 
-  if (isa<BranchOpInterface>(op)) {
-    // 1. BranchOpInterface: We cannot track all successor blocks. Therefore, we
-    // conservatively consider the non-forwarded operand of the branch operation
-    // live.
-    LDBG() << "[visitBranchOperand] Non-forwarded branch operand may "
-              "be live due to branch op interface"
-           << operand.get();
-    Liveness *operandLiveness = getLatticeElement(operand.get());
-    propagateIfChanged(operandLiveness, operandLiveness->markLive());
-    return;
-  }
-
+  // 1. BranchOpInterface: We cannot track all successor blocks. Therefore, we
+  // conservatively consider the non-forwarded operand of the branch operation
+  // live. We can just call visitOperation, which treats any terminator as live.
   // 2. RegionBranchOpInterface: We can simply visit it as a normal operation
   // with this operand. The operand is live if the results of the op are used,
   // or if it has any recursive memory side effects (which visitOperation will
