@@ -91,7 +91,7 @@ define i8 @urem_var_divisor_unknown(i8 %a, i8 %d) {
 ; CHECK-LABEL: 'urem_var_divisor_unknown'
 ; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_unknown
 ; CHECK-NEXT:    %t0 = urem i8 %a, %d
-; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: [0,-1) S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_unknown
 ;
   %t0 = urem i8 %a, %d
@@ -102,7 +102,7 @@ define i8 @urem_var_divisor_ult_10(i8 %a, i8 range(i8 0, 10) %d) {
 ; CHECK-LABEL: 'urem_var_divisor_ult_10'
 ; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_ult_10
 ; CHECK-NEXT:    %t0 = urem i8 %a, %d
-; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: [0,9) S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_ult_10
 ;
   %t0 = urem i8 %a, %d
@@ -135,7 +135,7 @@ define i8 @urem_var_divisor_signed(i8 %a, i8 range(i8 -19, 10) %d) {
 ; CHECK-LABEL: 'urem_var_divisor_signed'
 ; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_signed
 ; CHECK-NEXT:    %t0 = urem i8 %a, %d
-; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: [0,-1) S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_signed
 ;
   %t0 = urem i8 %a, %d

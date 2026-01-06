@@ -6781,12 +6781,10 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     const SCEV *URemLHS = nullptr, *URemRHS = nullptr;
     if (SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED &&
         match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), *this))) {
+      ConstantRange LHSRange = getRangeRef(URemLHS, SignHint, Depth + 1);
       ConstantRange RHSRange = getRangeRef(URemRHS, SignHint, Depth + 1);
-      if (!RHSRange.contains(APInt::getZero(RHSRange.getBitWidth()))) {
-        ConstantRange LHSRange = getRangeRef(URemLHS, SignHint, Depth + 1);
-        ConservativeResult = ConservativeResult.intersectWith(
-            LHSRange.urem(RHSRange), RangeType);
-      }
+      ConservativeResult = ConservativeResult.intersectWith(
+          LHSRange.urem(RHSRange), RangeType);
     }
     ConstantRange X = getRangeRef(Add->getOperand(0), SignHint, Depth + 1);
     unsigned WrapType = OBO::AnyWrap;

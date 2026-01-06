@@ -721,7 +721,7 @@ define void @test_urem_non_constant(ptr %dst, i32 %a, i32 %b) {
 ; CHECK-LABEL: 'test_urem_non_constant'
 ; CHECK-NEXT:  Classifying expressions for: @test_urem_non_constant
 ; CHECK-NEXT:    %rem = urem i32 %a, %b
-; CHECK-NEXT:    --> ((-1 * (%a /u %b) * %b) + %a) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (%a /u %b) * %b) + %a) U: [0,-1) S: full-set
 ; CHECK-NEXT:    %and.0 = and i1 %pre.0, %pre.1
 ; CHECK-NEXT:    --> (%pre.1 umin %pre.0) U: full-set S: full-set
 ; CHECK-NEXT:    %and.1 = and i1 %and.0, %pre.2
