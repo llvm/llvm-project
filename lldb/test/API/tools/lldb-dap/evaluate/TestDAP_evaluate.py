@@ -432,7 +432,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "my_longs",
-                "{5, 6, 7}" if enableAutoVariableSummaries else r"long\[3\] @ 0x",
+                "{5, 6, 7}" if enableAutoVariableSummaries else r"long\[3\]",
                 want_varref=True,
             )
 
