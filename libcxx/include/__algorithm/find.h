@@ -208,31 +208,22 @@ __find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __la
 
 // segmented iterator implementation
 
-template <class>
-struct __find_segment;
-
 template <class _SegmentedIterator,
           class _Tp,
           class _Proj,
           __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
-  return std::__find_segment_if(std::move(__first), std::move(__last), __find_segment<_Tp>(__value), __proj);
+  using __local_iterator = typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator;
+  return std::__find_segment_if(
+      std::move(__first),
+      std::move(__last),
+      [&__value](__local_iterator __lfirst, __local_iterator __llast, _Proj& __lproj) {
+        return std::__rewrap_iter(
+            __lfirst, std::__find(std::__unwrap_iter(__lfirst), std::__unwrap_iter(__llast), __value, __lproj));
+      },
+      __proj);
 }
-
-template <class _Tp>
-struct __find_segment {
-  const _Tp& __value_;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __find_segment(const _Tp& __value) : __value_(__value) {}
-
-  template <class _InputIterator, class _Proj>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _InputIterator
-  operator()(_InputIterator __first, _InputIterator __last, _Proj& __proj) const {
-    return std::__rewrap_iter(
-        __first, std::__find(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __value_, __proj));
-  }
-};
 
 // public API
 template <class _InputIterator, class _Tp>

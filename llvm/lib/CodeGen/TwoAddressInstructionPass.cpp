@@ -97,7 +97,6 @@ class TwoAddressInstructionImpl {
   MachineRegisterInfo *MRI = nullptr;
   LiveVariables *LV = nullptr;
   LiveIntervals *LIS = nullptr;
-  AliasAnalysis *AA = nullptr;
   CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
 
   // The current basic block being processed.
@@ -217,7 +216,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addUsedIfAvailable<AAResultsWrapperPass>();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
@@ -257,11 +255,8 @@ char TwoAddressInstructionLegacyPass::ID = 0;
 
 char &llvm::TwoAddressInstructionPassID = TwoAddressInstructionLegacyPass::ID;
 
-INITIALIZE_PASS_BEGIN(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
-                      "Two-Address instruction pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
-                    "Two-Address instruction pass", false, false)
+INITIALIZE_PASS(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
+                "Two-Address instruction pass", false, false)
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(
     MachineFunction &Func, MachineFunctionAnalysisManager &MFAM)
@@ -271,11 +266,7 @@ TwoAddressInstructionImpl::TwoAddressInstructionImpl(
       MRI(&Func.getRegInfo()),
       LV(MFAM.getCachedResult<LiveVariablesAnalysis>(Func)),
       LIS(MFAM.getCachedResult<LiveIntervalsAnalysis>(Func)),
-      OptLevel(Func.getTarget().getOptLevel()) {
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(Func)
-                  .getManager();
-  AA = FAM.getCachedResult<AAManager>(Func.getFunction());
-}
+      OptLevel(Func.getTarget().getOptLevel()) {}
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(MachineFunction &Func,
                                                      MachineFunctionPass *P)
@@ -287,10 +278,6 @@ TwoAddressInstructionImpl::TwoAddressInstructionImpl(MachineFunction &Func,
   LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   auto *LISWrapper = P->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  if (auto *AAPass = P->getAnalysisIfAvailable<AAResultsWrapperPass>())
-    AA = &AAPass->getAAResults();
-  else
-    AA = nullptr;
 }
 
 /// Return the MachineInstr* if it is the single def of the Reg in current BB.
