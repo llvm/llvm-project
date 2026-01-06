@@ -20,6 +20,8 @@ common/clc_sign.cl
 common/clc_smoothstep.cl
 common/clc_step.cl
 conversion/clc_convert_float2float.cl
+conversion/clc_convert_float2int.cl
+conversion/clc_convert_int2float.cl
 conversion/clc_convert_integer.cl
 geometric/clc_cross.cl
 geometric/clc_distance.cl

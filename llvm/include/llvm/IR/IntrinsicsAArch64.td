@@ -4130,7 +4130,7 @@ let TargetPrefix = "aarch64" in {
                                 llvm_nxv16i8_ty,
                                 llvm_i32_ty],
                             [IntrInaccessibleMemOnly, ImmArg<ArgIndex<6>>]>;
-  class SME_FP8_ZA_SINGLE_VGx1_Intrinsic
+  class SME_FP8_ZA_VGx1_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                 llvm_nxv16i8_ty,
                                 llvm_nxv16i8_ty],
@@ -4193,11 +4193,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x1 : SME_FP8_ZA_LANE_VGx1_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x2 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
-  // Single
-  def int_aarch64_sme_fp8_fmlal_single_za16_vg2x1 : SME_FP8_ZA_SINGLE_VGx1_Intrinsic;
+  // Single-Single
+  def int_aarch64_sme_fp8_fmlal_za16_vg2x1 : SME_FP8_ZA_VGx1_Intrinsic;
+  // Multi-Single
   def int_aarch64_sme_fp8_fmlal_single_za16_vg2x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_single_za16_vg2x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
-  // Multi
+  // Multi-Multi
   def int_aarch64_sme_fp8_fmlal_multi_za16_vg2x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_multi_za16_vg2x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
 
@@ -4205,11 +4206,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x1 : SME_FP8_ZA_LANE_VGx1_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
-  // Single
-  def int_aarch64_sme_fp8_fmlall_single_za32_vg4x1 : SME_FP8_ZA_SINGLE_VGx1_Intrinsic;
+  // Single-Single
+  def int_aarch64_sme_fp8_fmlall_za32_vg4x1 : SME_FP8_ZA_VGx1_Intrinsic;
+  // Multi-Single
   def int_aarch64_sme_fp8_fmlall_single_za32_vg4x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_single_za32_vg4x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
-  // Multi
+  // Multi-Multi
   def int_aarch64_sme_fp8_fmlall_multi_za32_vg4x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_multi_za32_vg4x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
 

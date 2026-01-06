@@ -291,7 +291,7 @@ struct Recipe_match {
       return false;
 
     if (R->getNumOperands() != std::tuple_size<Ops_t>::value) {
-      assert(Opcode == Instruction::PHI &&
+      assert((Opcode == Instruction::PHI || isa<VPReplicateRecipe>(R)) &&
              "non-variadic recipe with matched opcode does not have the "
              "expected number of operands");
       return false;
@@ -335,7 +335,7 @@ template <unsigned Opcode, typename... OpTys>
 using AllRecipe_match =
     Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ false,
                  VPWidenRecipe, VPReplicateRecipe, VPWidenCastRecipe,
-                 VPInstruction, VPWidenSelectRecipe>;
+                 VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_commutative_match =
@@ -562,6 +562,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Instruction::Mul, Op0_t, Op1_t>
 m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::UDiv, Op0_t, Op1_t>
+m_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::UDiv, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary AND operation.

@@ -48484,6 +48484,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     // The 'and' mask must be composed of power-of-2 constants.
     SDValue And = Cond.getOperand(0);
     SDValue Mask = And.getOperand(1);
+    EVT MskVT = Mask.getValueType();
     auto *C = isConstOrConstSplat(Mask);
     if (C && C->getAPIntValue().isPowerOf2()) {
       // vselect (X & C == 0), LHS, RHS --> vselect (X & C != 0), RHS, LHS
@@ -48495,26 +48496,22 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     // If we have a non-splat but still powers-of-2 mask, AVX1 can use pmulld
     // and AVX2 can use vpsllv{dq}. 8-bit lacks a proper shift or multiply.
     // 16-bit lacks a proper blendv.
+    // TODO: Can we merge this into the LowerVSETCC handling of uniform masks?
     bool CanShiftBlend =
         TLI.isTypeLegal(VT) && ((Subtarget.hasAVX() && EltBitWidth == 32) ||
                                 (Subtarget.hasAVX2() && EltBitWidth == 64) ||
                                 (Subtarget.hasXOP()));
-    if (CanShiftBlend && ISD::matchUnaryPredicate(Mask, [](ConstantSDNode *C) {
-          return C->getAPIntValue().isPowerOf2();
-        })) {
+    if (CanShiftBlend && DAG.isKnownToBeAPowerOfTwo(Mask)) {
       // Create a left-shift constant to get the mask bits over to the sign-bit.
-      SmallVector<int, 32> ShlVals;
-      for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
-        auto *MaskVal = cast<ConstantSDNode>(Mask.getOperand(i));
-        ShlVals.push_back(MaskVal->getAPIntValue().countl_zero());
-      }
       // vsel ((X & C) == 0), LHS, RHS --> vsel ((shl X, C') < 0), RHS, LHS
-      MVT MskVT = Mask.getSimpleValueType();
-      SDValue ShlAmt = getConstVector(ShlVals, MskVT, DAG, DL);
-      SDValue Shl = DAG.getNode(ISD::SHL, DL, MskVT, And.getOperand(0), ShlAmt);
-      SDValue NewCond =
-          DAG.getSetCC(DL, CondVT, Shl, Cond.getOperand(1), ISD::SETLT);
-      return DAG.getSelect(DL, VT, NewCond, RHS, LHS);
+      if (SDValue ShlAmt =
+              DAG.FoldConstantArithmetic(ISD::CTLZ, DL, MskVT, Mask)) {
+        SDValue Shl =
+            DAG.getNode(ISD::SHL, DL, MskVT, And.getOperand(0), ShlAmt);
+        SDValue NewCond =
+            DAG.getSetCC(DL, CondVT, Shl, Cond.getOperand(1), ISD::SETLT);
+        return DAG.getSelect(DL, VT, NewCond, RHS, LHS);
+      }
     }
   }
 
@@ -59207,7 +59204,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             return BC0 == peekThroughBitcasts(SubOp.getOperand(Op));
           }))
         return true;
+      SmallVector<SDValue> Subs;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
+        Subs.push_back(SubOps[I].getOperand(Op));
         SDValue BC = peekThroughBitcasts(SubOps[I].getOperand(Op));
         unsigned SubSize = BC.getValueSizeInBits();
         unsigned EltSize = BC.getScalarValueSizeInBits();
@@ -59216,7 +59215,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                    BC.getOperand(0).getValueSizeInBits() == VecSize &&
                    (BC.getConstantOperandVal(1) * EltSize) == (I * SubSize);
       }
-      return AllConstants || AllSubs;
+      return AllConstants || AllSubs ||
+             DAG.doesNodeExist(ISD::CONCAT_VECTORS, DAG.getVTList(VT), Subs);
     };
     auto CombineSubOperand = [&](MVT VT, ArrayRef<SDValue> SubOps, unsigned I) {
       bool AllConstants = true;
@@ -59225,7 +59225,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         AllConstants &= IsOpConstant(peekThroughBitcasts(SubOp.getOperand(I)));
         Subs.push_back(SubOp.getOperand(I));
       }
-      if (AllConstants)
+      if (AllConstants ||
+          DAG.doesNodeExist(ISD::CONCAT_VECTORS, DAG.getVTList(VT), Subs))
         return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
       return combineConcatVectorOps(DL, VT, Subs, DAG, Subtarget, Depth + 1);
     };
@@ -59697,6 +59698,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     case ISD::SETCC:
+    case X86ISD::CMPM:
       if (!IsSplat && EltSizeInBits == 1 &&
           llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op0.getOperand(0).getValueType() ==
@@ -59811,7 +59813,25 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           bool SelfMul = llvm::all_of(Ops, [](SDValue Op) {
             return Op.getOperand(0) == Op.getOperand(1);
           });
-          if (Concat0 || Concat1 || Concat2 || NumFree >= 2 || SelfMul)
+          // Check for accumulative FMA patterns where we share a concat.
+          // e.g. FMA(FMA(X,Y,Z),Y,W)
+          // TODO: We should be doing this generally as part of the recursion.
+          bool Inner0 = !IsFree0 && !Concat0;
+          bool Inner1 = !IsFree1 && !Concat1;
+          for (SDValue Op : Ops) {
+            auto IsAnyFMA = [](unsigned Opc) {
+              return Opc == ISD::FMA || Opc == X86ISD::FMSUB ||
+                     Opc == X86ISD::FNMSUB || Opc == X86ISD::FNMADD;
+            };
+            Inner0 &= IsAnyFMA(Op.getOperand(1).getOpcode()) &&
+                      (Op.getOperand(1).getOperand(0) == Op.getOperand(0) ||
+                       Op.getOperand(1).getOperand(1) == Op.getOperand(0));
+            Inner1 &= IsAnyFMA(Op.getOperand(0).getOpcode()) &&
+                      (Op.getOperand(0).getOperand(0) == Op.getOperand(1) ||
+                       Op.getOperand(0).getOperand(1) == Op.getOperand(1));
+          }
+          if (Concat0 || Inner0 || Concat1 || Inner1 || Concat2 ||
+              NumFree >= 2 || SelfMul)
             return DAG.getNode(Opcode, DL, VT,
                                Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
                                Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1),
@@ -60142,6 +60162,8 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
     // Attempt to merge comparison/logic ops if the type is legal.
     if (TLI.isTypeLegal(VT) &&
         (all_of(Ops, [](SDValue Op) { return Op.getOpcode() == ISD::SETCC; }) ||
+         all_of(Ops,
+                [](SDValue Op) { return Op.getOpcode() == X86ISD::CMPM; }) ||
          all_of(Ops, [](SDValue Op) {
            return ISD::isBitwiseLogicOp(Op.getOpcode());
          }))) {

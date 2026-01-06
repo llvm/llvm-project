@@ -19,8 +19,8 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP2]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 510, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 510, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 3, [[N_VEC]]
@@ -29,7 +29,7 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP27:%.*]] = mul nuw nsw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP27:%.*]] = shl nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw nsw i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP27]]
