@@ -14,7 +14,8 @@
 namespace clang::tidy::misc {
 
 class NewDeleteOverloadsCheck : public ClangTidyCheck {
-  llvm::DenseMap<const CXXRecordDecl *, SmallVector<const FunctionDecl *, 4>>
+  llvm::DenseMap<const CXXRecordDecl *,
+                 llvm::SmallVector<const FunctionDecl *, 4>>
       Overloads;
 
 public:

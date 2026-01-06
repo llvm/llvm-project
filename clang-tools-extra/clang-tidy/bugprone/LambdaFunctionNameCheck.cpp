@@ -30,8 +30,7 @@ static constexpr bool DefaultIgnoreMacros = false;
 // either a function body or a lambda body.
 class MacroExpansionsWithFileAndLine : public PPCallbacks {
 public:
-  explicit MacroExpansionsWithFileAndLine(
-      LambdaFunctionNameCheck::SourceRangeSet *SME)
+  explicit MacroExpansionsWithFileAndLine(llvm::DenseSet<SourceRange> *SME)
       : SuppressMacroExpansions(SME) {}
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
@@ -48,11 +47,11 @@ public:
       }
     }
     if (HasFile && HasLine)
-      SuppressMacroExpansions->insert({Range.getBegin(), Range.getEnd()});
+      SuppressMacroExpansions->insert(Range);
   }
 
 private:
-  LambdaFunctionNameCheck::SourceRangeSet *SuppressMacroExpansions;
+  llvm::DenseSet<SourceRange> *SuppressMacroExpansions;
 };
 
 AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
@@ -97,7 +96,7 @@ void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
 
     auto ER =
         Result.SourceManager->getImmediateExpansionRange(E->getLocation());
-    if (SuppressMacroExpansions.contains({ER.getBegin(), ER.getEnd()})) {
+    if (SuppressMacroExpansions.contains(ER.getAsRange())) {
       // This is a macro expansion for which we should not warn.
       return;
     }

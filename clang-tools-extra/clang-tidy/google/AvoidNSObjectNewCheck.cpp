@@ -14,8 +14,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <map>
 #include <string>
+#include <utility>
 
 using namespace clang::ast_matchers;
 
