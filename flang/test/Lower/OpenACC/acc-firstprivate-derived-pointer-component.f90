@@ -1,6 +1,12 @@
 ! Test lowering of firstprivate on derived type with pointer components.
 ! No deep copy must be done.
 
+! TODO: clarify the intended behavior of private with pointer components (deep
+! copy or not).
+! Until then, a TODO is emitted in lowering.
+
+! XFAIL: *
+
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefix=FIR-CHECK
 
@@ -22,8 +28,7 @@ module m_firstprivate_derived_ptr_comp
 ! CHECK-LABEL:   acc.firstprivate.recipe @firstprivatization_ref_rec__QMm_firstprivate_derived_ptr_compTpoint : !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>):
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "acc.private.init"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>)
-! CHECK:           acc.yield %[[VAL_2]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK:           acc.yield %[[VAL_1]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
 !
 ! CHECK:         } copy {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, %[[VAL_1:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>):
@@ -67,8 +72,7 @@ module m_firstprivate_derived_ptr_comp
 ! FIR-CHECK-LABEL:   acc.firstprivate.recipe @firstprivatization_ref_rec__QMm_firstprivate_derived_ptr_compTpoint : !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>> init {
 ! FIR-CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>):
 ! FIR-CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-! FIR-CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "acc.private.init"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-! FIR-CHECK:           acc.yield %[[VAL_2]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! FIR-CHECK:           acc.yield %[[VAL_1]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
 !
 ! FIR-CHECK-LABEL:   } copy {
 ! FIR-CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, %[[VAL_1:.*]]: !fir.ref<!fir.type<_QMm_firstprivate_derived_ptr_compTpoint{x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>):
