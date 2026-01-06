@@ -19,7 +19,7 @@ STRING_EXTENSION_OUTSIDE(SBVariableAnnotator)
             annotations = []
             for i in range(structured_data.GetSize()):
                 item = structured_data.GetItemAtIndex(i)
-                if item.GetType() != lldb.eStructuredDataTypeDictionary:
+                if item.GetType() != eStructuredDataTypeDictionary:
                     continue
 
                 annotation = {}
