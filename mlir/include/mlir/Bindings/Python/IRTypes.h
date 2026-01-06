@@ -26,6 +26,8 @@ public:
   static constexpr const char *pyClassName = "IntegerType";
   using PyConcreteType::PyConcreteType;
 
+  enum Signedness { Signless, Signed, Unsigned };
+
   static void bindDerived(ClassTy &c);
 };
 
