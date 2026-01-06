@@ -28,10 +28,11 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%cond> = icmp eq ir<%iv>, ir<%x>
 ; CHECK-NEXT:   EMIT vp<[[AND:%.+]]> = logical-and vp<[[MASK]]>, ir<%cond>
-; CHECK-NEXT: Successor(s): pred.store
+; CHECK-NEXT: Successor(s): pred.load
 
 ; CHECK:      <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
@@ -39,16 +40,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 
 ; CHECK:      pred.store.if:
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[STEPS]]
-; CHECK-NEXT:     REPLICATE store ir<4>, ir<%gep.a>
+; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[STEPS]]>
+; CHECK-NEXT:     REPLICATE store vp<[[SHL:%.+]]>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
 ; CHECK:      pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 
-; CHECK:      if.0:
+; CHECK:      if.1:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
