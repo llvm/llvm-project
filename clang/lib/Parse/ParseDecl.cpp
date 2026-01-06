@@ -680,10 +680,9 @@ void Parser::ParseGNUAttributeArgs(
     PrototypeScope.emplace(this, Scope::FunctionPrototypeScope |
                                      Scope::FunctionDeclarationScope |
                                      Scope::DeclScope);
-    for (unsigned i = 0; i != FTI.NumParams; ++i) {
-      ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
-      Actions.ActOnReenterCXXMethodParameter(getCurScope(), Param);
-    }
+    for (unsigned i = 0; i != FTI.NumParams; ++i)
+      Actions.ActOnReenterCXXMethodParameter(
+          getCurScope(), dyn_cast_or_null<ParmVarDecl>(FTI.Params[i].Param));
   }
 
   ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,

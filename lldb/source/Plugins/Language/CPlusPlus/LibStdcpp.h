@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBSTDCPP_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBSTDCPP_H
 
+#include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/Stream.h"
@@ -19,6 +20,16 @@ namespace formatters {
 bool LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libstdc++ std::string
+
+template <StringPrinter::StringElementType element_type>
+bool LibStdcppStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions
+        &options); // libstdc++ std::{u8,u16,u32}?string_view
+
+bool LibStdcppWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libstdc++ std::wstring_view
 
 bool LibStdcppSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
