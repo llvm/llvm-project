@@ -917,12 +917,10 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_alt(__alt<_Ip, _Tp>& __a, _Arg&& __arg) {
     if (this->index() == _Ip) {
       __a.__value = std::forward<_Arg>(__arg);
+    } else if constexpr (is_nothrow_constructible_v<_Tp, _Arg> || !is_nothrow_move_constructible_v<_Tp>) {
+      this->__emplace<_Ip>(std::forward<_Arg>(__arg));
     } else {
-      if constexpr (is_nothrow_constructible_v<_Tp, _Arg> || !is_nothrow_move_constructible_v<_Tp>) {
-        this->__emplace<_Ip>(std::forward<_Arg>(__arg));
-      } else {
-        this->__emplace<_Ip>(_Tp(std::forward<_Arg>(__arg)));
-      }
+      this->__emplace<_Ip>(_Tp(std::forward<_Arg>(__arg)));
     }
   }
 
