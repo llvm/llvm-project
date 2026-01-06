@@ -197,6 +197,11 @@ public:
                                       llvm::opt::ArgStringList &CmdArgs) const {
   }
 
+  virtual bool HasPlatformPrefix(const llvm::Triple &T) const { return false; }
+
+  virtual void AppendPlatformPrefix(SmallString<128> &Path,
+                                    const llvm::Triple &T) const {}
+
   /// On some iOS platforms, kernel and kernel modules were built statically. Is
   /// this such a target?
   virtual bool isKernelStatic() const { return false; }
@@ -669,6 +674,11 @@ public:
 
   void AddLinkARCArgs(const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs) const override;
+
+  bool HasPlatformPrefix(const llvm::Triple &T) const override;
+
+  void AppendPlatformPrefix(SmallString<128> &Path,
+                            const llvm::Triple &T) const override;
 
   unsigned GetDefaultDwarfVersion() const override;
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,

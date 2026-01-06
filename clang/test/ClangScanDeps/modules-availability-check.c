@@ -26,8 +26,22 @@
 //--- MacOSX11.0.sdk/SDKSettings.json
 {
   "DefaultVariant": "macos", "DisplayName": "macOS 11",
-  "Version": "11.0",
-  "MaximumDeploymentTarget": "11.0.99"
+  "CanonicalName": "macosx11.0", "Version": "11.0",
+  "MaximumDeploymentTarget": "11.0.99",
+  "SupportedTargets": {
+    "macosx": {
+      "Archs": ["x86_64", "x86_64h", "arm64", "arm64e"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "macosx",
+      "LLVMTargetTripleEnvironment": ""
+    },
+    "iosmac": {
+      "Archs": ["x86_64", "x86_64h", "arm64", "arm64e"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "ios",
+      "LLVMTargetTripleEnvironment": "macabi"
+    }
+  }
 }
 
 //--- module.modulemap

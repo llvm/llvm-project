@@ -26,4 +26,7 @@
 // DEPLOY_VAR: error: invalid version number in 'IPHONEOS_DEPLOYMENT_TARGET=21.0'
 
 //--- iPhoneOS21.0.sdk/SDKSettings.json
-{"Version":"21.0", "MaximumDeploymentTarget": "21.0.99"}
+{"Version":"21.0", "CanonicalName":"iphoneos21.0", "MaximumDeploymentTarget": "21.0.99",
+ "SupportedTargets": {
+   "iphoneos": {"Archs": ["arm64e", "arm64"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "ios", "LLVMTargetTripleEnvironment": "","SystemPrefix": ""}
+}}
