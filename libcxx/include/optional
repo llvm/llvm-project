@@ -1396,10 +1396,9 @@ public:
     requires(is_lvalue_reference_v<_Tp> && is_object_v<__libcpp_remove_reference_t<_Tp>> &&
              !is_array_v<__libcpp_remove_reference_t<_Tp>>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decay_t<_Tp> value_or(_Up&& __v) const {
-    using _X = remove_cvref_t<_Tp>;
-    static_assert(is_constructible_v<_X, _Tp&>, "optional<T&>::value_or: remove_cv_t<T> must be constructible");
-    static_assert(is_convertible_v<_Up, _X>, "optional<T&>::value_or: U must be convertible to remove_cv_t<T>");
-    return this->has_value() ? this->__get() : static_cast<_X>(std::forward<_Up>(__v));
+    static_assert(is_constructible_v<remove_cvref_t<_Tp>, _Tp&>, "optional<T&>::value_or: remove_cv_t<T> must be constructible");
+    static_assert(is_convertible_v<_Up, remove_cvref_t<_Tp>>, "optional<T&>::value_or: U must be convertible to remove_cv_t<T>");
+    return this->has_value() ? this->__get() : static_cast<remove_cvref_t<_Tp>>(std::forward<_Up>(__v));
   }
 
   template <class _Func>
@@ -1417,7 +1416,7 @@ public:
     requires(is_lvalue_reference_v<_Tp>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<remove_cv_t<invoke_result_t<_Func, _Tp&>>>
   transform(_Func&& __f) const {
-    using _Up = remove_cvref_t<_Tp>;
+    using _Up = remove_cvref_t<invoke_result_t<_Func, _Tp&>>;
     static_assert(!is_array_v<_Up>, "Result of f(value()) should not be an Array");
     static_assert(!is_same_v<_Up, in_place_t>, "Result of f(value()) should not be std::in_place_t");
     static_assert(!is_same_v<_Up, nullopt_t>, "Result of f(value()) should not be std::nullopt_t");
