@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMRISCVDesc
   RISCVELFStreamer.cpp
 
   LINK_COMPONENTS
+  BinaryFormat
   MC
   RISCVInfo
   Support
