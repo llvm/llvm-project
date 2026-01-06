@@ -11,7 +11,7 @@ compound=true
   N2 -> N5 [ label=""]
   N2 -> N4 [ label=""]
   N4 [label =
-    "cond.0"
+    "latch"
   ]
   N4 -> N7 [ label=""]
   N4:e -> N2:e [ label=""]

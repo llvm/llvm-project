@@ -12,7 +12,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 4
 ; VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 8
@@ -35,9 +35,9 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP15]], [[TMP16]]
 ; VF4IC4-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP11]])
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; VF4IC4-NEXT:    br i1 [[TMP3]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP3]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[E2:%.*]]
 ; VF4IC4:       vector.early.exit:
@@ -84,7 +84,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
@@ -116,9 +116,9 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP36]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
@@ -140,7 +140,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = add i64 3, [[TMP9]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
 ; VF4IC4-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -179,7 +179,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1]], i64 [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 4
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 8
@@ -202,9 +202,9 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[TMP33]], [[TMP34]]
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF4IC4-NEXT:    br i1 [[TMP10]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP10]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
@@ -226,7 +226,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[P1]], i64 [[TMP7]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP8]], [[VECTOR_EARLY_EXIT]] ], [ [[PTREND]], [[MIDDLE_BLOCK1]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP8]], [[VECTOR_EARLY_EXIT]] ], [ [[PTREND]], [[MIDDLE_BLOCK]] ]
 ; VF4IC4-NEXT:    ret ptr [[RETVAL]]
 ;
 entry:
@@ -262,7 +262,7 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
@@ -294,9 +294,9 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP36]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
@@ -318,7 +318,7 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = add i64 3, [[TMP9]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP10]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
 ; VF4IC4-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -358,7 +358,7 @@ define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
@@ -390,9 +390,9 @@ define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP36]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
@@ -459,7 +459,7 @@ define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
@@ -491,9 +491,9 @@ define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP15]], [[TMP36]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
@@ -560,7 +560,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 0
@@ -610,9 +610,9 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP45]], [[TMP47]]
 ; VF4IC4-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
 ; VF4IC4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1008
-; VF4IC4-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4IC4:       vector.early.exit:
@@ -689,7 +689,7 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
 ; VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
@@ -720,9 +720,9 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP19]], [[TMP30]]
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
 ; VF4IC4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
@@ -755,7 +755,7 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP42:%.*]] = select i1 [[TMP41]], i8 [[TMP40]], i8 [[TMP38]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i8 [ [[TMP42]], [[VECTOR_EARLY_EXIT]] ], [ -1, [[MIDDLE_BLOCK1]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i8 [ [[TMP42]], [[VECTOR_EARLY_EXIT]] ], [ -1, [[MIDDLE_BLOCK]] ]
 ; VF4IC4-NEXT:    ret i8 [[RETVAL]]
 ;
 entry:
@@ -796,7 +796,7 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4:       vector.ph:
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
-; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_COND_1:%.*]] ]
 ; VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; VF4IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 0
@@ -846,9 +846,9 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP52]], [[TMP53]]
 ; VF4IC4-NEXT:    [[TMP25:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
 ; VF4IC4-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1008
-; VF4IC4-NEXT:    br i1 [[TMP25]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
-; VF4IC4:       cond.0:
-; VF4IC4-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; VF4IC4-NEXT:    br i1 [[TMP25]], label [[VECTOR_EARLY_EXIT:%.*]], label [[VECTOR_BODY_COND_1]]
+; VF4IC4:       vector.body.cond.1:
+; VF4IC4-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4IC4:       vector.early.exit:

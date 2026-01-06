@@ -3765,33 +3765,31 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     assert(Br->getNumOperands() == 2 &&
            "BranchOnTwoConds must have exactly 2 conditions");
     DebugLoc DL = Br->getDebugLoc();
-    VPBasicBlock *Latch = Br->getParent();
-    const auto Successors = to_vector(Latch->getSuccessors());
+    VPBasicBlock *Cond0BB = Br->getParent();
+    const auto Successors = to_vector(Cond0BB->getSuccessors());
     assert(Successors.size() == 3 &&
            "BranchOnTwoConds must have exactly 3 successors");
 
     for (VPBlockBase *Succ : Successors)
-      VPBlockUtils::disconnectBlocks(Latch, Succ);
+      VPBlockUtils::disconnectBlocks(Cond0BB, Succ);
 
-    VPValue *EarlyExitingCond = Br->getOperand(0);
-    VPValue *LateExitingCond = Br->getOperand(1);
-    VPBlockBase *EarlyExitBB = Successors[0];
-    VPBlockBase *LateExitBB = Successors[1];
-    VPBlockBase *Header = Successors[2];
+    VPValue *Cond0 = Br->getOperand(0);
+    VPValue *Cond1 = Br->getOperand(1);
+    VPBlockBase *Succ0 = Successors[0];
+    VPBlockBase *Succ1 = Successors[1];
+    VPBlockBase *Succ2 = Successors[2];
 
-    VPBasicBlock *Cond0BB = Plan.createVPBasicBlock("cond.0");
-    Cond0BB->setParent(LateExitBB->getParent());
+    VPBasicBlock *Cond1BB =
+        Plan.createVPBasicBlock(Cond0BB->getName() + ".cond.1");
+    Cond1BB->setParent(Succ1->getParent());
 
-    VPBuilder(Latch).createNaryOp(VPInstruction::BranchOnCond,
-                                  {EarlyExitingCond}, DL);
-    VPBlockUtils::connectBlocks(Latch, EarlyExitBB);
-    VPBlockUtils::connectBlocks(Latch, Cond0BB);
+    VPBuilder(Cond0BB).createNaryOp(VPInstruction::BranchOnCond, {Cond0}, DL);
+    VPBlockUtils::connectBlocks(Cond0BB, Succ0);
+    VPBlockUtils::connectBlocks(Cond0BB, Cond1BB);
 
-    VPBuilder(Cond0BB).createNaryOp(VPInstruction::BranchOnCond,
-                                    {LateExitingCond}, DL);
-    VPBlockUtils::connectBlocks(Cond0BB, LateExitBB);
-    VPBlockUtils::connectBlocks(Cond0BB, Header);
-
+    VPBuilder(Cond1BB).createNaryOp(VPInstruction::BranchOnCond, {Cond1}, DL);
+    VPBlockUtils::connectBlocks(Cond1BB, Succ1);
+    VPBlockUtils::connectBlocks(Cond1BB, Succ2);
     Br->eraseFromParent();
   }
 }
