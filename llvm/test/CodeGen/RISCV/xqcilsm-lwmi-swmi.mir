@@ -252,7 +252,8 @@ body: |
     ; CHECK-LABEL: name: no_pair_if_rd_is_x0_swmi
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: QC_SWMI $x0, $x10, 2, 0, implicit $x1 :: (store (s32))
+    ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
+    ; CHECK-NEXT: SW $x1, $x10, 4 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
     SW $x0, $x10, 0 :: (store (s32), align 4)
     SW $x1, $x10, 4 :: (store (s32), align 4)
