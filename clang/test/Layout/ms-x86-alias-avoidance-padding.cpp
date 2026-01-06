@@ -49,7 +49,7 @@ struct AT3 : AT2, AT1 {
 // CHECK-NEXT:    0 |   struct AT2 (base)
 // CHECK-NEXT:    0 |     struct AT0 t
 // CHECK-NEXT:    0 |       union AT0::(unnamed at {{.*}} x
-// CHECK-NEXT:    0 |         struct AT0::(anonymous union)::(unnamed at {{.*}} y
+// CHECK-NEXT:    0 |         struct AT0::(unnamed union)::(unnamed at {{.*}} y
 // CHECK-NEXT:    0 |           int a
 // CHECK-NEXT:    4 |           struct AT t (empty)
 // CHECK:         0 |         int b
@@ -66,7 +66,7 @@ struct AT3 : AT2, AT1 {
 // CHECK-X64-NEXT:    0 |   struct AT2 (base)
 // CHECK-X64-NEXT:    0 |     struct AT0 t
 // CHECK-X64-NEXT:    0 |       union AT0::(unnamed at {{.*}} x
-// CHECK-X64-NEXT:    0 |         struct AT0::(anonymous union)::(unnamed at {{.*}} y
+// CHECK-X64-NEXT:    0 |         struct AT0::(unnamed union)::(unnamed at {{.*}} y
 // CHECK-X64-NEXT:    0 |           int a
 // CHECK-X64-NEXT:    4 |           struct AT t (empty)
 // CHECK-X64:         0 |         int b
