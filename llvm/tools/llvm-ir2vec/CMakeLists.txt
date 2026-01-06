@@ -30,8 +30,6 @@ target_link_libraries(emb_utils PRIVATE
   LLVMAsmParser LLVMPasses LLVMDemangle
 )
 
-target_compile_definitions(emb_utils PRIVATE ${LLVM_DEFINITIONS})
-
 # Main executable
 add_llvm_tool(llvm-ir2vec
   llvm-ir2vec.cpp
