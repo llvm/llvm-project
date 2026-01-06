@@ -31,4 +31,6 @@ bb.2:
 bb.1:
   store i32 0, ptr addrspace(5) %alloca
   ret void
+
+uselistorder ptr addrspace(5) %alloca, { 1, 0 }
 }

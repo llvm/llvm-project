@@ -1166,7 +1166,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   });
 
   // Now fixup the placeholders.
-  SmallVector<WeakVH> PlaceholderToNewVal(Placeholders.size());
+  SmallVector<Value *> PlaceholderToNewVal(Placeholders.size());
   for (auto [Index, Placeholder] : enumerate(Placeholders)) {
     Value *NewVal = Updater.GetValueInMiddleOfBlock(Placeholder->getParent());
     PlaceholderToNewVal[Index] = NewVal;
