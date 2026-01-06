@@ -775,16 +775,14 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
 
         # Wait for the initialized event; for LLDB, this will be sent after the launch request has been processed;
         # for other debuggers, it will have been sent some time after the initialize response was sent.
-        # FIXME: It may be possible that Dexter should do something about this timeout, but as we don't know whether
-        # some debuggers/inputs may reasonably trigger the timeout, leave it as a warning for now.
-        initialize_timeout = Timeout(10)
-        while not self._debugger_state.initialized:
-            if initialize_timeout and initialize_timeout.timed_out():
-                self.context.logger.warning(
-                    "Waiting for 'initialized' event for more than 10 seconds, debugger may be hanging."
-                )
-                # Only trigger the warning once.
-                initialize_timeout = None
+        # NB: In all currently known cases this timeout is never hit because the initialized event is usually received
+        # almost immediately after either the initialize response or the launch request/response, and otherwise this
+        # timeout is long enough for any internal debugger timeout to be hit, and so if this gets hit it probably means
+        # the debugger is hanging.
+        initialize_timeout = Timeout(60)
+        while self._proc.poll() is None and not self._debugger_state.initialized:
+            if initialize_timeout.timed_out():
+                raise TimeoutError("Timed out while waiting for initialized event from DAP")
             time.sleep(0.01)
 
         # Set breakpoints after receiving launch response but before configurationDone.
