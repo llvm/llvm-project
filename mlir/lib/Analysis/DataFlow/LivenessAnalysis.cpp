@@ -131,126 +131,34 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // the forwarded branch operands or the non-branch operands. Thus they need
   // to be handled separately. This is where we handle them.
 
-  // This marks values of type (1.b/1.c) liveness as "live". A non-forwarded
-  // branch operand will be live if a block where its op could take the control
-  // has an op with memory effects or could result in different results.
-  // Populating such blocks in `blocks`.
-  bool mayLive = false;
-  SmallVector<Block *, 4> blocks;
-  if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-    if (op->getNumResults() != 0) {
-      // This mark value of type 1.c liveness as may live, because the region
-      // branch operation has a return value, and the non-forwarded operand can
-      // determine the region to jump to, it can thereby control the result of
-      // the region branch operation.
-      // Therefore, if the result value is live, we conservatively consider the
-      // non-forwarded operand of the region branch operation with result may
-      // live and record all result.
-      for (auto [resultIndex, result] : llvm::enumerate(op->getResults())) {
-        if (getLatticeElement(result)->isLive) {
-          mayLive = true;
-          LDBG() << "[visitBranchOperand] Non-forwarded branch operand may be "
-                    "live due to live result #"
-                 << resultIndex << ": "
-                 << OpWithFlags(op, OpPrintingFlags().skipRegions());
-          break;
-        }
-      }
-    } else {
-      // When the op is a `RegionBranchOpInterface`, like an `scf.for` or an
-      // `scf.index_switch` op, its branch operand controls the flow into this
-      // op's regions.
-      for (Region &region : op->getRegions()) {
-        for (Block &block : region)
-          blocks.push_back(&block);
-      }
-    }
-  } else if (isa<BranchOpInterface>(op)) {
-    // We cannot track all successor blocks of the branch operation(More
-    // specifically, it's the successor's successor). Additionally, different
-    // blocks might also lead to the different block argument described in 1.c.
-    // Therefore, we conservatively consider the non-forwarded operand of the
-    // branch operation may live.
-    mayLive = true;
+  if (isa<BranchOpInterface>(op)) {
+    // 1. BranchOpInterface: We cannot track all successor blocks. Therefore, we
+    // conservatively consider the non-forwarded operand of the branch operation
+    // live.
     LDBG() << "[visitBranchOperand] Non-forwarded branch operand may "
-              "be live due to branch op interface";
-  } else {
-    Operation *parentOp = op->getParentOp();
-    assert(isa<RegionBranchOpInterface>(parentOp) &&
-           "expected parent op to implement `RegionBranchOpInterface`");
-    if (parentOp->getNumResults() != 0) {
-      // This mark value of type 1.c liveness as may live, because the region
-      // branch operation has a return value, and the non-forwarded operand can
-      // determine the region to jump to, it can thereby control the result of
-      // the region branch operation.
-      // Therefore, if the result value is live, we conservatively consider the
-      // non-forwarded operand of the region branch operation with result may
-      // live and record all result.
-      for (Value result : parentOp->getResults()) {
-        if (getLatticeElement(result)->isLive) {
-          mayLive = true;
-          LDBG() << "[visitBranchOperand] Non-forwarded branch "
-                    "operand may be live due to parent live result: "
-                 << result;
-          break;
-        }
-      }
-    } else {
-      // When the op is a `RegionBranchTerminatorOpInterface`, like an
-      // `scf.condition` op or return-like, like an `scf.yield` op, its branch
-      // operand controls the flow into this op's parent's (which is a
-      // `RegionBranchOpInterface`'s) regions.
-      for (Region &region : parentOp->getRegions()) {
-        for (Block &block : region)
-          blocks.push_back(&block);
-      }
-    }
-  }
-  for (Block *block : blocks) {
-    if (mayLive)
-      break;
-    for (Operation &nestedOp : *block) {
-      if (!isMemoryEffectFree(&nestedOp)) {
-        mayLive = true;
-        LDBG() << "Non-forwarded branch operand may be "
-                  "live due to memory effect in block: "
-               << block;
-        break;
-      }
-    }
-  }
-
-  if (mayLive) {
+              "be live due to branch op interface"
+           << operand.get();
     Liveness *operandLiveness = getLatticeElement(operand.get());
-    LDBG() << "Marking branch operand live: " << operand.get();
     propagateIfChanged(operandLiveness, operandLiveness->markLive());
+    return;
   }
 
-  // Now that we have checked for memory-effecting ops in the blocks of concern,
-  // we will simply visit the op with this non-forwarded operand to potentially
-  // mark it "live" due to type (1.a/3) liveness.
-  SmallVector<Liveness *, 4> operandLiveness;
-  operandLiveness.push_back(getLatticeElement(operand.get()));
+  // 2. RegionBranchOpInterface: We can simply visit it as a normal operation
+  // with this operand. The operand is live if the results of the op are used,
+  // or if it has any recursive memory side effects (which visitOperation will
+  // check).
+  // 3. RegionBranchOpTerminatorInterface, the operand is live if the
+  // surrounding RegionBranchOp is live, so we call visitOperation on the
+  // surrounding op, but with the operand that we are looking at.
+  auto *visitOp =
+      isa<RegionBranchTerminatorOpInterface>(op) ? op->getParentOp() : op;
+  Liveness *operandLiveness[] = {getLatticeElement(operand.get())};
   SmallVector<const Liveness *, 4> resultsLiveness;
-  for (const Value result : op->getResults())
+  for (const Value result : visitOp->getResults())
     resultsLiveness.push_back(getLatticeElement(result));
   LDBG() << "Visiting operation for non-forwarded branch operand: "
-         << OpWithFlags(op, OpPrintingFlags().skipRegions());
-  (void)visitOperation(op, operandLiveness, resultsLiveness);
-
-  // We also visit the parent op with the parent's results and this operand if
-  // `op` is a `RegionBranchTerminatorOpInterface` because its non-forwarded
-  // operand depends on not only its memory effects/results but also on those of
-  // its parent's.
-  if (!isa<RegionBranchTerminatorOpInterface>(op))
-    return;
-  Operation *parentOp = op->getParentOp();
-  SmallVector<const Liveness *, 4> parentResultsLiveness;
-  for (const Value parentResult : parentOp->getResults())
-    parentResultsLiveness.push_back(getLatticeElement(parentResult));
-  LDBG() << "Visiting parent operation for non-forwarded branch operand: "
-         << *parentOp;
-  (void)visitOperation(parentOp, operandLiveness, parentResultsLiveness);
+         << OpWithFlags(visitOp, OpPrintingFlags().skipRegions());
+  (void)visitOperation(visitOp, operandLiveness, resultsLiveness);
 }
 
 void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
