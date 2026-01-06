@@ -774,6 +774,15 @@ mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
 // Affine expression inference
 //===----------------------------------------------------------------------===//
 
+static ConstantIntRanges clampToPositive(const ConstantIntRanges &val) {
+  unsigned width = val.smin().getBitWidth();
+  APInt one(width, 1);
+  APInt clampedUMin = val.umin().ult(one) ? one : val.umin();
+  APInt clampedSMin = val.smin().slt(one) ? one : val.smin();
+  return ConstantIntRanges::fromUnsigned(clampedUMin, val.umax())
+      .intersection(ConstantIntRanges::fromSigned(clampedSMin, val.smax()));
+}
+
 ConstantIntRanges
 mlir::intrange::inferAffineExpr(AffineExpr expr,
                                 ArrayRef<ConstantIntRanges> dimRanges,
@@ -820,14 +829,17 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
     // Affine mod is Euclidean modulo: result is always in [0, rhs-1].
     // This assumes RHS is positive (enforced by affine expr semantics).
-    const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax();
-    const APInt &rhsMin = rhs.smin(), &rhsMax = rhs.smax();
+    const APInt &lhsMin = lhs.smin();
+    const APInt &lhsMax = lhs.smax();
+    const APInt &rhsMin = rhs.smin();
+    const APInt &rhsMax = rhs.smax();
     unsigned width = rhsMin.getBitWidth();
-    APInt zero = APInt::getZero(width);
 
     // Guard against division by zero.
     if (rhsMax.isZero())
       return ConstantIntRanges::maxRange(width);
+
+    APInt zero = APInt::getZero(width);
 
     // For Euclidean mod, result is in [0, max(rhs)-1].
     APInt umin = zero;
@@ -865,14 +877,7 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
     // Affine floordiv requires strictly positive divisor (> 0).
     // Clamp divisor lower bound to 1 for tighter range inference.
-    unsigned width = rhs.smin().getBitWidth();
-    APInt one(width, 1);
-    APInt clampedUMin = rhs.umin().ult(one) ? one : rhs.umin();
-    APInt clampedSMin = rhs.smin().slt(one) ? one : rhs.smin();
-    ConstantIntRanges clampedRhs =
-        ConstantIntRanges::fromUnsigned(clampedUMin, rhs.umax())
-            .intersection(
-                ConstantIntRanges::fromSigned(clampedSMin, rhs.smax()));
+    ConstantIntRanges clampedRhs = clampToPositive(rhs);
     return inferFloorDivS({lhs, clampedRhs});
   }
   case AffineExprKind::CeilDiv: {
@@ -883,14 +888,7 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
     // Affine ceildiv requires strictly positive divisor (> 0).
     // Clamp divisor lower bound to 1 for tighter range inference.
-    unsigned width = rhs.smin().getBitWidth();
-    APInt one(width, 1);
-    APInt clampedUMin = rhs.umin().ult(one) ? one : rhs.umin();
-    APInt clampedSMin = rhs.smin().slt(one) ? one : rhs.smin();
-    ConstantIntRanges clampedRhs =
-        ConstantIntRanges::fromUnsigned(clampedUMin, rhs.umax())
-            .intersection(
-                ConstantIntRanges::fromSigned(clampedSMin, rhs.smax()));
+    ConstantIntRanges clampedRhs = clampToPositive(rhs);
     return inferCeilDivS({lhs, clampedRhs});
   }
   }

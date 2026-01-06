@@ -146,3 +146,16 @@ func.func @affine_apply_mod_variable_divisor() -> index {
   %1 = test.reflect_bounds %0 : index
   func.return %1 : index
 }
+
+// CHECK-LABEL: func @affine_apply_mod_negative_dividend
+// CHECK: test.reflect_bounds {smax = 3 : index, smin = 0 : index, umax = 3 : index, umin = 0 : index}
+func.func @affine_apply_mod_negative_dividend() -> index {
+  %d0 = test.with_bounds { umin = 0 : index, umax = 2 : index,
+                           smin = -2 : index, smax = 2 : index } : index
+  // Negative dividend: signed range [-2, 2] mod 4
+  // Actual results: -2->2, -1->3, 0->0, 1->1, 2->2 (Euclidean mod)
+  // Range is NOT contiguous, so we return conservative [0, 3]
+  %0 = affine.apply affine_map<(d0) -> (d0 mod 4)>(%d0)
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}
