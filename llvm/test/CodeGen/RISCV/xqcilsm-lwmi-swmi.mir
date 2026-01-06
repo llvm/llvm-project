@@ -306,8 +306,7 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x0 = LW $x10, 0 :: (load (s32))
-    ; CHECK-NEXT: $x1 = LW $x10, 4 :: (load (s32))
-    ; CHECK-NEXT: $x2 = LW $x10, 8 :: (load (s32))
+    ; CHECK-NEXT: $x1 = QC_LWMI $x10, 2, 4, implicit-def $x2 :: (load (s32))
     ; CHECK-NEXT: PseudoRET
     $x0 = LW $x10, 0 :: (load (s32), align 4)
     $x1 = LW $x10, 4 :: (load (s32), align 4)
@@ -325,8 +324,7 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
-    ; CHECK-NEXT: SW $x1, $x10, 4 :: (store (s32))
-    ; CHECK-NEXT: SW $x2, $x10, 8 :: (store (s32))
+    ; CHECK-NEXT: QC_SWMI $x1, $x10, 2, 4, implicit $x2 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
     SW $x0, $x10, 0 :: (store (s32), align 4)
     SW $x1, $x10, 4 :: (store (s32), align 4)
@@ -344,8 +342,7 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
-    ; CHECK-NEXT: SW $x2, $x10, 4 :: (store (s32))
-    ; CHECK-NEXT: SW $x2, $x10, 8 :: (store (s32))
+    ; CHECK-NEXT: QC_SETWMI $x2, $x10, 2, 4 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
     SW $x0, $x10, 0 :: (store (s32), align 4)
     SW $x2, $x10, 4 :: (store (s32), align 4)
