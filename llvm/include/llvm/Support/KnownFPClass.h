@@ -19,6 +19,7 @@
 #include <optional>
 
 namespace llvm {
+class APFloat;
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -27,6 +28,9 @@ struct KnownFPClass {
   /// std::nullopt if the sign bit is unknown, true if the sign bit is
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
+
+  KnownFPClass() = default;
+  KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
     return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
@@ -154,6 +158,15 @@ struct KnownFPClass {
 
     signBitMustBeZero();
   }
+
+  /// Apply the canonicalize intrinsic to this value. This is essentially a
+  /// stronger form of propagateCanonicalizingSrc.
+  LLVM_ABI static KnownFPClass
+  canonicalize(const KnownFPClass &Src,
+               DenormalMode DenormMode = DenormalMode::getDynamic());
+
+  /// Report known values for exp, exp2 and exp10.
+  LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }

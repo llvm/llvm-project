@@ -45,6 +45,8 @@ public:
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
+
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
@@ -77,6 +79,8 @@ private:
 
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
+  SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
@@ -332,7 +336,7 @@ public:
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 

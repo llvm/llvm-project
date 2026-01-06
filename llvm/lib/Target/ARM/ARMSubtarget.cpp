@@ -379,10 +379,15 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 }
 
 bool ARMSubtarget::isROPI() const {
+  // FIXME: This should ideally come from a function attribute, to work
+  // correctly with LTO.
   return TM.getRelocationModel() == Reloc::ROPI ||
          TM.getRelocationModel() == Reloc::ROPI_RWPI;
 }
+
 bool ARMSubtarget::isRWPI() const {
+  // FIXME: This should ideally come from a function attribute, to work
+  // correctly with LTO.
   return TM.getRelocationModel() == Reloc::RWPI ||
          TM.getRelocationModel() == Reloc::ROPI_RWPI;
 }

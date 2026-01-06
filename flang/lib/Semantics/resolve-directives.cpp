@@ -717,8 +717,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpAllocateClause &x) {
-    const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
-    ResolveOmpObjectList(objectList, Symbol::Flag::OmpAllocate);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpAllocate);
     return false;
   }
   bool Pre(const parser::OmpClause::Firstprivate &x) {
@@ -726,8 +726,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpClause::Lastprivate &x) {
-    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
-    ResolveOmpObjectList(objList, Symbol::Flag::OmpLastPrivate);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpLastPrivate);
     return false;
   }
   bool Pre(const parser::OmpClause::Copyin &x) {
@@ -739,8 +739,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpLinearClause &x) {
-    auto &objects{std::get<parser::OmpObjectList>(x.t)};
-    ResolveOmpObjectList(objects, Symbol::Flag::OmpLinear);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpLinear);
     return false;
   }
 
@@ -750,13 +750,13 @@ public:
   }
 
   bool Pre(const parser::OmpInReductionClause &x) {
-    auto &objects{std::get<parser::OmpObjectList>(x.t)};
-    ResolveOmpObjectList(objects, Symbol::Flag::OmpInReduction);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpInReduction);
     return false;
   }
 
   bool Pre(const parser::OmpClause::Reduction &x) {
-    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    const auto &objList{*parser::omp::GetOmpObjectList(x)};
     ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
 
     if (auto &modifiers{OmpGetModifiers(x.v)}) {
@@ -806,8 +806,8 @@ public:
   }
 
   bool Pre(const parser::OmpAlignedClause &x) {
-    const auto &alignedNameList{std::get<parser::OmpObjectList>(x.t)};
-    ResolveOmpObjectList(alignedNameList, Symbol::Flag::OmpAligned);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpAligned);
     return false;
   }
 
@@ -920,7 +920,7 @@ public:
       }
     }
 
-    const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
+    const auto &ompObjList{*parser::omp::GetOmpObjectList(x)};
     for (const auto &ompObj : ompObjList.v) {
       common::visit(
           common::visitors{
@@ -932,12 +932,6 @@ public:
                         ompFlag.value_or(Symbol::Flag::OmpMapStorage));
                     AddToContextObjectWithDSA(*name->symbol,
                         ompFlag.value_or(Symbol::Flag::OmpMapStorage));
-                    if (semantics::IsAssumedSizeArray(*name->symbol)) {
-                      context_.Say(designator.source,
-                          "Assumed-size whole arrays may not appear on the %s "
-                          "clause"_err_en_US,
-                          "MAP");
-                    }
                   }
                 }
               },
@@ -2357,7 +2351,7 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
 //     parallel do, taskloop, or distribute construct is (are) private.
 //   - The loop iteration variable in the associated do-loop of a simd construct
 //     with just one associated do-loop is linear with a linear-step that is the
-//     increment of the associated do-loop.
+//     increment of the associated do-loop (only for OpenMP versions <= 4.5)
 //   - The loop iteration variables in the associated do-loops of a simd
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
@@ -2367,9 +2361,10 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     return;
   }
   Symbol::Flag ivDSA;
+  unsigned version{context_.langOptions().OpenMPVersion};
   if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
-  } else if (level == 1) {
+  } else if (level == 1 && version <= 45) {
     ivDSA = Symbol::Flag::OmpLinear;
   } else {
     ivDSA = Symbol::Flag::OmpLastPrivate;
@@ -2477,7 +2472,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
-  PushContext(beginSpec.DirName().source, beginSpec.DirName().v);
+  PushContext(beginSpec.DirName().source, beginSpec.DirId());
   GetContext().withinConstruct = true;
   return true;
 }
@@ -2566,9 +2561,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
   PushContext(x.source, dirSpec.DirId());
 
   for (const auto &clause : dirSpec.Clauses().v) {
-    if (const auto *allocClause{
-            std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
-      ResolveOmpObjectList(std::get<parser::OmpObjectList>(allocClause->v.t),
+    if (std::get_if<parser::OmpClause::Allocate>(&clause.u)) {
+      ResolveOmpObjectList(*parser::omp::GetOmpObjectList(clause),
           Symbol::Flag::OmpExecutableAllocateDirective);
     }
   }

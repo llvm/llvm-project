@@ -15,6 +15,7 @@ define void @foo(i64 %n, i64 %m, i64 %o, ptr nocapture %A) #0 {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m][%o] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{3,+,2}<nuw><%for.i>][{-4,+,3}<nw><%for.j>][{7,+,5}<nw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   %cmp32 = icmp sgt i64 %n, 0

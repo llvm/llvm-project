@@ -1513,7 +1513,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
     SmallPtrSet<Value *, 8> &Visited) {
   if (!Visited.insert(V).second)
     return nullptr;
-  auto _ = make_scope_exit([&Visited, V]() { Visited.erase(V); });
+  llvm::scope_exit _([&Visited, V]() { Visited.erase(V); });
 
   BasicBlock *PredBB = BB->getSinglePredecessor();
   assert(PredBB && "Expected a single predecessor");
@@ -1918,6 +1918,13 @@ bool JumpThreadingPass::maybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB) {
   // MergeBasicBlockIntoOnlyPred may delete SinglePred, we need to avoid
   // deleting a BB pointer from Unreachable.
   if (Unreachable.count(SinglePred))
+    return false;
+
+  // Don't merge if both the basic block and the predecessor contain loop or
+  // entry convergent intrinsics, since there may only be one convergence token
+  // per block.
+  if (HasLoopOrEntryConvergenceToken(BB) &&
+      HasLoopOrEntryConvergenceToken(SinglePred))
     return false;
 
   // If SinglePred was a loop header, BB becomes one.

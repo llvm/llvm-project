@@ -20,6 +20,7 @@
 #include "NVPTXRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include <string>
 
@@ -89,6 +90,9 @@ public:
     return SmVersion >= 100 && PTXVersion >= 88 &&
            AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
   }
+  bool hasUsedBytesMaskPragma() const {
+    return SmVersion >= 50 && PTXVersion >= 83;
+  }
   bool hasAtomAddF64() const { return SmVersion >= 60; }
   bool hasAtomScope() const { return SmVersion >= 60; }
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
@@ -98,6 +102,7 @@ public:
   bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
+  bool hasBrx() const { return SmVersion >= 30 && PTXVersion >= 60; }
   bool hasFP16Math() const { return SmVersion >= 53; }
   bool hasBF16Math() const { return SmVersion >= 80; }
   bool allowFP16Math() const;
@@ -196,6 +201,34 @@ public:
     return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
            hasPTXWithFamilySMs(88, {100, 101, 120}) ||
            hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
+  bool hasTensormapReplaceSupport() const {
+    return hasPTXWithFamilySMs(90, {90, 100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {90, 100, 101, 120}) ||
+           hasPTXWithAccelSMs(83, {90, 100, 101, 120});
+  }
+
+  bool hasTensormapReplaceElemtypeSupport(unsigned value) const {
+    if (value >= static_cast<unsigned>(nvvm::TensormapElemType::B4x16))
+      return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+             hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+             hasPTXWithAccelSMs(87, {100, 101, 120});
+
+    return hasTensormapReplaceSupport();
+  }
+
+  bool hasTensormapReplaceSwizzleAtomicitySupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(87, {100, 101, 120});
+  }
+
+  bool hasTensormapReplaceSwizzleModeSupport(unsigned value) const {
+    if (value == static_cast<unsigned>(nvvm::TensormapSwizzleMode::SWIZZLE_96B))
+      return hasPTXWithAccelSMs(88, {103});
+
+    return hasTensormapReplaceSupport();
   }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction

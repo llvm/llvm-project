@@ -150,7 +150,7 @@ static CanQual<FunctionProtoType> GetFormalType(const CXXMethodDecl *MD) {
 /// and it makes ABI code a little easier to be able to assume that
 /// all parameter and return types are top-level unqualified.
 static CanQualType GetReturnType(QualType RetTy) {
-  return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
+  return RetTy->getCanonicalTypeUnqualified();
 }
 
 /// Arrange the argument and result information for a value of the given
@@ -2559,6 +2559,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
+
+    if (auto *ModularFormat = TargetDecl->getAttr<ModularFormatAttr>()) {
+      FormatAttr *Format = TargetDecl->getAttr<FormatAttr>();
+      StringRef Type = Format->getType()->getName();
+      std::string FormatIdx = std::to_string(Format->getFormatIdx());
+      std::string FirstArg = std::to_string(Format->getFirstArg());
+      SmallVector<StringRef> Args = {
+          Type, FormatIdx, FirstArg,
+          ModularFormat->getModularImplFn()->getName(),
+          ModularFormat->getImplName()};
+      llvm::append_range(Args, ModularFormat->aspects());
+      FuncAttrs.addAttribute("modular-format", llvm::join(Args, ","));
+    }
   }
 
   // Attach "no-builtins" attributes to:

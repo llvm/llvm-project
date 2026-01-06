@@ -208,7 +208,7 @@ Type MMAMatrixType::getElementType() const { return getImpl()->elementType; }
 StringRef MMAMatrixType::getOperand() const { return getImpl()->getOperand(); }
 
 bool MMAMatrixType::isValidElementType(Type elementType) {
-  return elementType.isF16() || elementType.isF32() ||
+  return elementType.isF16() || elementType.isF32() || elementType.isF64() ||
          elementType.isUnsignedInteger(8) || elementType.isSignedInteger(8) ||
          elementType.isInteger(32);
 }
@@ -225,7 +225,7 @@ MMAMatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 
   if (!MMAMatrixType::isValidElementType(elementType))
     return emitError()
-           << "MMAMatrixType elements must be SI8, UI8, I32, F16, or F32";
+           << "MMAMatrixType elements must be SI8, UI8, I32, F16, F32, or F64";
 
   return success();
 }
@@ -395,6 +395,8 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
   if (attr.getName() == getKnownBlockSizeAttrHelper().getName())
     return verifyKnownLaunchSizeAttr(op, attr);
   if (attr.getName() == getKnownGridSizeAttrHelper().getName())
+    return verifyKnownLaunchSizeAttr(op, attr);
+  if (attr.getName() == getKnownClusterSizeAttrHelper().getName())
     return verifyKnownLaunchSizeAttr(op, attr);
   if (!llvm::isa<UnitAttr>(attr.getValue()) ||
       attr.getName() != getContainerModuleAttrName())
@@ -2534,6 +2536,14 @@ LogicalResult gpu::SubgroupBroadcastOp::verify() {
              << "lane must be specified for `specific_lane` broadcast";
     return success();
   }
+}
+
+OpFoldResult gpu::SubgroupBroadcastOp::fold(FoldAdaptor /*adaptor*/) {
+  // Broadcast result is always uniform.
+  if (auto prev = getSrc().getDefiningOp<SubgroupBroadcastOp>())
+    return prev.getResult();
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

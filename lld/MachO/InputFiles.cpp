@@ -217,7 +217,8 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
   if (entry != cachedReads.end())
     return entry->second;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr =
+      MemoryBuffer::getFile(path, false, /*RequiresNullTerminator=*/false);
   if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
     return std::nullopt;
