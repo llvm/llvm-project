@@ -31,29 +31,36 @@
 
 using namespace clang;
 
-static void dumpPreviousDeclImpl(raw_ostream &OS, ...) {}
+static void dumpPreviousDeclImpl(TextNodeDumper &TND, raw_ostream &OS, ...) {}
 
 template <typename T>
-static void dumpPreviousDeclImpl(raw_ostream &OS, const Mergeable<T> *D) {
+static void dumpPreviousDeclImpl(TextNodeDumper &TND, raw_ostream &OS,
+                                 const Mergeable<T> *D) {
   const T *First = D->getFirstDecl();
-  if (First != D)
-    OS << " first " << First;
+  if (First != D) {
+    OS << " first";
+    TND.dumpPointer(First);
+  }
 }
 
 template <typename T>
-static void dumpPreviousDeclImpl(raw_ostream &OS, const Redeclarable<T> *D) {
+static void dumpPreviousDeclImpl(TextNodeDumper &TND, raw_ostream &OS,
+                                 const Redeclarable<T> *D) {
   const T *Prev = D->getPreviousDecl();
-  if (Prev)
-    OS << " prev " << Prev;
+  if (Prev) {
+    OS << " prev";
+    TND.dumpPointer(Prev);
+  }
 }
 
 /// Dump the previous declaration in the redeclaration chain for a declaration,
 /// if any.
-static void dumpPreviousDecl(raw_ostream &OS, const Decl *D) {
+static void dumpPreviousDecl(TextNodeDumper &TND, raw_ostream &OS,
+                             const Decl *D) {
   switch (D->getKind()) {
 #define DECL(DERIVED, BASE)                                                    \
   case Decl::DERIVED:                                                          \
-    return dumpPreviousDeclImpl(OS, cast<DERIVED##Decl>(D));
+    return dumpPreviousDeclImpl(TND, OS, cast<DERIVED##Decl>(D));
 #define ABSTRACT_DECL(DECL)
 #include "clang/AST/DeclNodes.inc"
   }
@@ -275,9 +282,11 @@ void TextNodeDumper::Visit(const Decl *D) {
     OS << D->getDeclKindName() << "Decl";
   }
   dumpPointer(D);
-  if (D->getLexicalDeclContext() != D->getDeclContext())
-    OS << " parent " << cast<Decl>(D->getDeclContext());
-  dumpPreviousDecl(OS, D);
+  if (D->getLexicalDeclContext() != D->getDeclContext()) {
+    OS << " parent";
+    dumpPointer(cast<Decl>(D->getDeclContext()));
+  }
+  dumpPreviousDecl(*this, OS, D);
   dumpSourceRange(D->getSourceRange());
   OS << ' ';
   dumpLocation(D->getLocation());
@@ -2355,13 +2364,14 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
     if (MD->size_overridden_methods() != 0) {
       auto dumpOverride = [=](const CXXMethodDecl *D) {
         SplitQualType T_split = D->getType().split();
-        OS << D << " " << D->getParent()->getName() << "::" << D->getDeclName()
+        dumpPointer(D);
+        OS << " " << D->getParent()->getName() << "::" << D->getDeclName()
            << " '" << QualType::getAsString(T_split, PrintPolicy) << "'";
       };
 
       AddChild([=] {
         auto Overrides = MD->overridden_methods();
-        OS << "Overrides: [ ";
+        OS << "Overrides: [";
         dumpOverride(*Overrides.begin());
         for (const auto *Override : llvm::drop_begin(Overrides)) {
           OS << ", ";
