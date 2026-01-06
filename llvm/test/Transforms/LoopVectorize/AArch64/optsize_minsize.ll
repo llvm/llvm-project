@@ -440,7 +440,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = sub i64 15, [[TMP6]]
@@ -490,7 +490,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; OPTSIZE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; OPTSIZE:       [[VECTOR_PH]]:
 ; OPTSIZE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; OPTSIZE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
+; OPTSIZE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; OPTSIZE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; OPTSIZE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
 ; OPTSIZE-NEXT:    [[TMP7:%.*]] = sub i64 15, [[TMP6]]
@@ -540,7 +540,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; MINSIZE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; MINSIZE:       [[VECTOR_PH]]:
 ; MINSIZE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; MINSIZE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
+; MINSIZE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; MINSIZE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; MINSIZE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
 ; MINSIZE-NEXT:    [[TMP7:%.*]] = sub i64 15, [[TMP6]]
