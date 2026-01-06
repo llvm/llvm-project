@@ -2762,14 +2762,13 @@ bool X86TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
 }
 
-bool X86TargetLowering::useStackGuardMixCookie() const {
+bool X86TargetLowering::useStackGuardXorFP() const {
   // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
   return Subtarget.getTargetTriple().isOSMSVCRT() && !Subtarget.isTargetMachO();
 }
 
-SDValue X86TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
-                                                   SDValue Val, const SDLoc &DL,
-                                                   bool FailureBB) const {
+SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+                                               const SDLoc &DL) const {
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
   unsigned XorOp = Subtarget.is64Bit() ? X86::XOR64_FP : X86::XOR32_FP;
   MachineSDNode *Node = DAG.getMachineNode(XorOp, DL, PtrTy, Val);
@@ -23428,7 +23427,7 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
       VT = MVT::getVectorVT(SVT, VT.getSizeInBits() / SVT.getSizeInBits());
       LHS = DAG.getBitcast(VT, MaskBits(LHS));
       RHS = DAG.getBitcast(VT, MaskBits(RHS));
-      EVT BoolVT = VT.changeVectorElementType(MVT::i1);
+      EVT BoolVT = VT.changeVectorElementType(*DAG.getContext(), MVT::i1);
       SDValue V = DAG.getSetCC(DL, BoolVT, LHS, RHS, ISD::SETEQ);
       V = DAG.getSExtOrTrunc(V, DL, VT);
       while (VT.getSizeInBits() > TestSize) {
@@ -34424,7 +34423,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     SDValue Res;
     if (isSoftF16(SrcVT, Subtarget)) {
-      EVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
+      EVT NVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
       if (IsStrict) {
         Res =
             DAG.getNode(Opc, dl, {VT, MVT::Other},
@@ -47262,14 +47261,14 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
   // sum+zext v8i8 subvectors to vXi64, then perform the reduction.
   // TODO: See if its worth avoiding vXi16/i32 truncations?
   if (Opc == ISD::ADD && NumElts >= 4 && EltSizeInBits >= 16 &&
-      DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
+      EltSizeInBits <= 64 && DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
       (EltSizeInBits == 16 || Rdx.getOpcode() == ISD::ZERO_EXTEND ||
        Subtarget.hasAVX512())) {
     if (Rdx.getValueType() == MVT::v8i16) {
       Rdx = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Rdx,
                         DAG.getUNDEF(MVT::v8i16));
     } else {
-      EVT ByteVT = VecVT.changeVectorElementType(MVT::i8);
+      EVT ByteVT = VecVT.changeVectorElementType(*DAG.getContext(), MVT::i8);
       Rdx = DAG.getNode(ISD::TRUNCATE, DL, ByteVT, Rdx);
       if (ByteVT.getSizeInBits() < 128)
         Rdx = WidenToV16I8(Rdx, true);
@@ -48207,7 +48206,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if (SelectableLHS || SelectableRHS) {
       EVT SrcVT = SelectableLHS ? LHS.getOperand(0).getValueType()
                                 : RHS.getOperand(0).getValueType();
-      EVT SrcCondVT = SrcVT.changeVectorElementType(MVT::i1);
+      EVT SrcCondVT = SrcVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
       LHS = insertSubVector(DAG.getUNDEF(SrcVT), LHS, 0, DAG, DL,
                             VT.getSizeInBits());
       RHS = insertSubVector(DAG.getUNDEF(SrcVT), RHS, 0, DAG, DL,
@@ -48471,8 +48470,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                           MaskVal->getAPIntValue().exactLogBase2());
       }
       // vsel ((X & C) == 0), LHS, RHS --> vsel ((shl X, C') < 0), RHS, LHS
-      SDValue ShlAmt = getConstVector(ShlVals, VT.getSimpleVT(), DAG, DL);
-      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, And.getOperand(0), ShlAmt);
+      MVT MskVT = Mask.getSimpleValueType();
+      SDValue ShlAmt = getConstVector(ShlVals, MskVT, DAG, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, MskVT, And.getOperand(0), ShlAmt);
       SDValue NewCond =
           DAG.getSetCC(DL, CondVT, Shl, Cond.getOperand(1), ISD::SETLT);
       return DAG.getSelect(DL, VT, NewCond, RHS, LHS);
@@ -49905,7 +49905,7 @@ static SDValue combineMulToPMADDWD(SDNode *N, const SDLoc &DL,
       // Convert sext(vXi8) to zext(vXi16 sext(vXi8)) on pre-SSE41 targets
       // which will expand the extension.
       if (Src.getScalarValueSizeInBits() < 16 && !Subtarget.hasSSE41()) {
-        EVT ExtVT = VT.changeVectorElementType(MVT::i16);
+        EVT ExtVT = VT.changeVectorElementType(*DAG.getContext(), MVT::i16);
         Src = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, Src);
         return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Src);
       }
@@ -52172,7 +52172,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // AND(X,SEXT(SETCC())) -> SELECT(SETCC(),X,0)
   if (DCI.isAfterLegalizeDAG() && VT.isVector()) {
     SDValue X, Y;
-    EVT CondVT = VT.changeVectorElementType(MVT::i1);
+    EVT CondVT = VT.changeVectorElementType(*DAG.getContext(), MVT::i1);
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
         (VT.is512BitVector() || Subtarget.hasVLX()) &&
         (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
@@ -53214,7 +53214,7 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
     if (SDValue USatVal = detectSSatPattern(In, VT, true)) {
       // vXi32 -> vXi8 must be performed as PACKUSWB(PACKSSDW,PACKSSDW).
       if (SVT == MVT::i8 && InSVT == MVT::i32) {
-        EVT MidVT = VT.changeVectorElementType(MVT::i16);
+        EVT MidVT = VT.changeVectorElementType(*DAG.getContext(), MVT::i16);
         SDValue Mid = truncateVectorWithPACK(X86ISD::PACKSS, MidVT, USatVal, DL,
                                              DAG, Subtarget);
         assert(Mid && "Failed to pack!");
@@ -53540,7 +53540,7 @@ reduceMaskedLoadToScalarLoad(MaskedLoadSDNode *ML, SelectionDAG &DAG,
   EVT CastVT = VT;
   if (EltVT == MVT::i64 && !Subtarget.is64Bit()) {
     EltVT = MVT::f64;
-    CastVT = VT.changeVectorElementType(EltVT);
+    CastVT = VT.changeVectorElementType(*DAG.getContext(), EltVT);
   }
 
   SDValue Load =
@@ -53673,7 +53673,7 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
   EVT EltVT = VT.getVectorElementType();
   if (EltVT == MVT::i64 && !Subtarget.is64Bit()) {
     EltVT = MVT::f64;
-    EVT CastVT = VT.changeVectorElementType(EltVT);
+    EVT CastVT = VT.changeVectorElementType(*DAG.getContext(), EltVT);
     Value = DAG.getBitcast(CastVT, Value);
   }
   SDValue Extract =
@@ -57417,7 +57417,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     // FIXME: We could check that the type is legal if we're after legalize
     // types, but then we would need to construct test cases where that happens.
     if (IndexWidth > 32 && DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
-      EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
+      EVT NewVT = IndexVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
 
       // FIXME: We could support more than just constant fold, but we need to
       // careful with costing. A truncate that can be optimized out would be
@@ -57495,7 +57495,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     // Make sure the index is either i32 or i64
     if (IndexWidth != 32 && IndexWidth != 64) {
       MVT EltVT = IndexWidth > 32 ? MVT::i64 : MVT::i32;
-      IndexVT = IndexVT.changeVectorElementType(EltVT);
+      IndexVT = IndexVT.changeVectorElementType(*DAG.getContext(), EltVT);
       Index = DAG.getSExtOrTrunc(Index, DL, IndexVT);
       return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
     }
@@ -57679,7 +57679,7 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   if (InVT.isVector() && InVT.getScalarSizeInBits() < 32 &&
       VT.getScalarType() != MVT::f16) {
     SDLoc dl(N);
-    EVT DstVT = InVT.changeVectorElementType(MVT::i32);
+    EVT DstVT = InVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
     SDValue P = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op0);
 
     // UINT_TO_FP isn't legal without AVX512 so use SINT_TO_FP.
@@ -57750,7 +57750,7 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   if (InVT.isVector() && InVT.getScalarSizeInBits() < 32 &&
       VT.getScalarType() != MVT::f16) {
     SDLoc dl(N);
-    EVT DstVT = InVT.changeVectorElementType(MVT::i32);
+    EVT DstVT = InVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
     SDValue P = DAG.getNode(ISD::SIGN_EXTEND, dl, DstVT, Op0);
     if (IsStrict)
       return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
@@ -57767,7 +57767,7 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
     if (NumSignBits >= (BitWidth - 31)) {
       EVT TruncVT = MVT::i32;
       if (InVT.isVector())
-        TruncVT = InVT.changeVectorElementType(TruncVT);
+        TruncVT = InVT.changeVectorElementType(*DAG.getContext(), TruncVT);
       SDLoc dl(N);
       if (DCI.isBeforeLegalize() || TruncVT != MVT::v2i32) {
         SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Op0);
@@ -60983,7 +60983,7 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
       ISD::LoadExtType Ext = Opcode == ISD::SIGN_EXTEND_VECTOR_INREG
                                  ? ISD::SEXTLOAD
                                  : ISD::ZEXTLOAD;
-      EVT MemVT = VT.changeVectorElementType(SVT);
+      EVT MemVT = VT.changeVectorElementType(*DAG.getContext(), SVT);
       if (TLI.isLoadExtLegal(Ext, VT, MemVT)) {
         SDValue Load = DAG.getExtLoad(
             Ext, DL, VT, Ld->getChain(), Ld->getBasePtr(), Ld->getPointerInfo(),
@@ -61110,12 +61110,12 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
 
     assert(!IsStrict && "Strict FP doesn't support BF16");
     if (VT.getVectorElementType() == MVT::f64) {
-      EVT TmpVT = VT.changeVectorElementType(MVT::f32);
+      EVT TmpVT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
       return DAG.getNode(ISD::FP_EXTEND, dl, VT,
                          DAG.getNode(ISD::FP_EXTEND, dl, TmpVT, Src));
     }
     assert(VT.getVectorElementType() == MVT::f32 && "Unexpected fpext");
-    EVT NVT = SrcVT.changeVectorElementType(MVT::i32);
+    EVT NVT = SrcVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
     Src = DAG.getBitcast(SrcVT.changeTypeToInteger(), Src);
     Src = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Src);
     Src = DAG.getNode(ISD::SHL, dl, NVT, Src, DAG.getConstant(16, dl, NVT));

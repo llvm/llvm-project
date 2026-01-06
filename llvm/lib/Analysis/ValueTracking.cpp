@@ -4923,8 +4923,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
   if (auto *CFP = dyn_cast<ConstantFP>(V)) {
-    Known.KnownFPClasses = CFP->getValueAPF().classify();
-    Known.SignBit = CFP->isNegative();
+    Known = KnownFPClass(CFP->getValueAPF());
     return;
   }
 
@@ -5276,54 +5275,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
 
-      // This is essentially a stronger form of
-      // propagateCanonicalizingSrc. Other "canonicalizing" operations don't
-      // actually have an IR canonicalization guarantee.
-
-      // Canonicalize may flush denormals to zero, so we have to consider the
-      // denormal mode to preserve known-not-0 knowledge.
-      Known.KnownFPClasses = KnownSrc.KnownFPClasses | fcZero | fcQNan;
-
-      // Stronger version of propagateNaN
-      // Canonicalize is guaranteed to quiet signaling nans.
-      if (KnownSrc.isKnownNeverNaN())
-        Known.knownNot(fcNan);
-      else
-        Known.knownNot(fcSNan);
-
       const Function *F = II->getFunction();
-      if (!F)
-        break;
-
-      // If the parent function flushes denormals, the canonical output cannot
-      // be a denormal.
-      const fltSemantics &FPType =
-          II->getType()->getScalarType()->getFltSemantics();
-      DenormalMode DenormMode = F->getDenormalMode(FPType);
-      if (DenormMode == DenormalMode::getIEEE()) {
-        if (KnownSrc.isKnownNever(fcPosZero))
-          Known.knownNot(fcPosZero);
-        if (KnownSrc.isKnownNever(fcNegZero))
-          Known.knownNot(fcNegZero);
-        break;
-      }
-
-      if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
-        Known.knownNot(fcSubnormal);
-
-      if (DenormMode == DenormalMode::getPreserveSign()) {
-        if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
-          Known.knownNot(fcPosZero);
-        if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
-          Known.knownNot(fcNegZero);
-        break;
-      }
-
-      if (DenormMode.Input == DenormalMode::PositiveZero ||
-          (DenormMode.Output == DenormalMode::PositiveZero &&
-           DenormMode.Input == DenormalMode::IEEE))
-        Known.knownNot(fcNegZero);
-
+      DenormalMode DenormMode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
       break;
     }
     case Intrinsic::vector_reduce_fmax:
@@ -5387,22 +5344,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::exp2:
     case Intrinsic::exp10:
     case Intrinsic::amdgcn_exp2: {
-      Known.knownNot(fcNegative);
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
+                          KnownSrc, Q, Depth + 1);
+
+      Known = KnownFPClass::exp(KnownSrc);
 
       Type *EltTy = II->getType()->getScalarType();
       if (IID == Intrinsic::amdgcn_exp2 && EltTy->isFloatTy())
         Known.knownNot(fcSubnormal);
-
-      if ((InterestedClasses & fcNan) == fcNone)
-        break;
-
-      KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                          KnownSrc, Q, Depth + 1);
-      if (KnownSrc.isKnownNeverNaN()) {
-        Known.knownNot(fcNan);
-        Known.signBitMustBeZero();
-      }
 
       break;
     }
@@ -5421,6 +5371,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Type *EltTy = II->getType()->getScalarType();
       if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
         Known.knownNot(fcSubnormal);
+
+      Known.knownNot(fcNegZero);
 
       // log(+inf) -> +inf
       // log([+-]0.0) -> -inf
@@ -5725,15 +5677,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOperand(0) == Op->getOperand(1))
       Known.knownNot(fcNegative);
 
-    if ((InterestedClasses & fcNan) != fcNan)
-      break;
-
-    // fcSubnormal is only needed in case of DAZ.
-    const FPClassTest NeedForNan = fcNan | fcInf | fcZero | fcSubnormal;
-
     KnownFPClass KnownLHS, KnownRHS;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts, NeedForNan, KnownRHS,
-                        Q, Depth + 1);
 
     const APFloat *CRHS;
     if (match(Op->getOperand(1), m_APFloat(CRHS))) {
@@ -5750,14 +5694,47 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       int MinKnownExponent = ilogb(*CRHS);
       if (MinKnownExponent >= MantissaBits)
         Known.knownNot(fcSubnormal);
+
+      KnownRHS = KnownFPClass(*CRHS);
+    } else {
+      computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
+                          Q, Depth + 1);
     }
 
-    if (!KnownRHS.isKnownNeverNaN())
-      break;
-
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, NeedForNan, KnownLHS,
+    computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                         Q, Depth + 1);
-    if (!KnownLHS.isKnownNeverNaN())
+
+    // xor sign bit.
+    if ((KnownLHS.isKnownNever(fcNegative) &&
+         KnownRHS.isKnownNever(fcNegative)) ||
+        (KnownLHS.isKnownNever(fcPositive) &&
+         KnownRHS.isKnownNever(fcPositive)))
+      Known.knownNot(fcNegative);
+
+    if ((KnownLHS.isKnownAlways(fcNegative | fcNan) &&
+         KnownRHS.isKnownNever(fcNegative)) ||
+        (KnownLHS.isKnownNever(fcNegative) &&
+         KnownRHS.isKnownAlways(fcNegative | fcNan)))
+      Known.knownNot(fcPositive);
+
+    // inf * anything => inf or nan
+    if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
+        KnownRHS.isKnownAlways(fcInf | fcNan))
+      Known.knownNot(fcNormal | fcSubnormal | fcZero);
+
+    // 0 * anything => 0 or nan
+    if (KnownRHS.isKnownAlways(fcZero | fcNan) ||
+        KnownLHS.isKnownAlways(fcZero | fcNan))
+      Known.knownNot(fcNormal | fcSubnormal | fcInf);
+
+    // +/-0 * +/-inf = nan
+    if ((KnownLHS.isKnownAlways(fcZero | fcNan) &&
+         KnownRHS.isKnownAlways(fcInf | fcNan)) ||
+        (KnownLHS.isKnownAlways(fcInf | fcNan) &&
+         KnownRHS.isKnownAlways(fcZero | fcNan)))
+      Known.knownNot(~fcNan);
+
+    if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
       break;
 
     if (KnownLHS.SignBit && KnownRHS.SignBit) {

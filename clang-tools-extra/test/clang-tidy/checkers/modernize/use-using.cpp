@@ -437,3 +437,27 @@ namespace GH97009 {
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
 // CHECK-FIXES: using Function = bool (*)(PointType, PointType);
 }
+
+namespace GH173732 {
+  // reference to array
+  typedef char (&refarray)[2];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using refarray = char (&)[2];
+  typedef char &ref;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using ref = char &;
+
+
+  // pointer to array
+  typedef char (*ptrarray)[2];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using ptrarray = char (*)[2];
+  typedef char *ptr;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using ptr = char *;
+
+  // multiple in one typedef
+  typedef char (&refArray)[2], (*ptrArray)[2];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-MESSAGES: :[[@LINE-2]]:29: warning: use 'using' instead of 'typedef' [modernize-use-using]
+}
