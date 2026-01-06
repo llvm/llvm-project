@@ -1166,18 +1166,18 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   });
 
   // Now fixup the placeholders.
-  DenseMap<Value *, Value *> PlaceholderMap;
-  for (Instruction *Placeholder : Placeholders) {
+  SmallVector<WeakVH> PlaceholderToNewVal(Placeholders.size());
+  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
     Value *NewVal = Updater.GetValueInMiddleOfBlock(Placeholder->getParent());
+    PlaceholderToNewVal[Index] = NewVal;
     Placeholder->replaceAllUsesWith(NewVal);
-    PlaceholderMap[Placeholder] = NewVal;
   }
   // Note: we cannot merge this loop with the previous one because it is
   // possible that the placeholder itself can be used in the SSAUpdater. The
   // replaceAllUsesWith doesn't replace those uses.
-  for (Instruction *Placeholder : Placeholders) {
+  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
     if (!Placeholder->use_empty())
-      Placeholder->replaceAllUsesWith(PlaceholderMap[Placeholder]);
+      Placeholder->replaceAllUsesWith(PlaceholderToNewVal[Index]);
     Placeholder->eraseFromParent();
   }
 
