@@ -120,7 +120,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
     @no_debug_info_test
     @skipIf(archs=no_match(["x86_64"]))
     def test_structured_annotations_api(self):
-        """Test SBVariableAnnotator::AnnotateStructured API returns structured data"""
+        """Test SBVariableAnnotator.get_annotations_list() Python API."""
         obj = self._build_obj("d_original_example.o")
         target = self._create_target(obj)
 
@@ -139,7 +139,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
         if self.TraceOn():
             print(
-                f"\nTesting SBVariableAnnotator::AnnotateStructured API on {instructions.GetSize()} instructions"
+                f"\nTesting SBVariableAnnotator.get_annotations_list() on {instructions.GetSize()} instructions"
             )
 
         expected_vars = ["argc", "argv", "i"]
@@ -147,7 +147,6 @@ class TestVariableAnnotationsDisassembler(TestBase):
         annotator = lldb.SBVariableAnnotator()
 
         # Track current state of variables across instructions.
-        active_vars = {}  # var_name -> location_description.
         found_variables = set()
 
         # Test each instruction.
@@ -155,83 +154,37 @@ class TestVariableAnnotationsDisassembler(TestBase):
             inst = instructions.GetInstructionAtIndex(i)
             self.assertTrue(inst.IsValid(), f"Invalid instruction at index {i}")
 
-            # TODO: use get_annotations_list from Extensions.i.
-            # Get annotations (may be empty if nothing changed).
-            annotations = annotator.AnnotateStructured(inst)
+            # Get annotations as Python list of dicts (may be empty if nothing changed).
+            annotations = annotator.get_annotations_list(inst)
 
-            self.assertIsInstance(
-                annotations,
-                lldb.SBStructuredData,
-                "AnnotateStructured should return SBStructuredData",
-            )
+            for ann in annotations:
+                # Validate required fields are present.
+                self.assertIn("variable_name", ann, "Missing 'variable_name' field")
+                self.assertIn("location_description", ann, "Missing 'location_description' field")
+                self.assertIn("is_live", ann, "Missing 'is_live' field")
+                self.assertIn("start_address", ann, "Missing 'start_address' field")
+                self.assertIn("end_address", ann, "Missing 'end_address' field")
+                self.assertIn("register_kind", ann, "Missing 'register_kind' field")
 
-            # Process changes.
-            for j in range(annotations.GetSize()):
-                ann = annotations.GetItemAtIndex(j)
-                self.assertTrue(ann.IsValid(), f"Invalid annotation at index {j}")
+                var_name = ann["variable_name"]
 
-                self.assertEqual(
-                    ann.GetType(),
-                    lldb.eStructuredDataTypeDictionary,
-                    "Each annotation should be a dictionary",
-                )
+                # Validate types and values.
+                self.assertIsInstance(var_name, str, "variable_name should be string")
+                self.assertIsInstance(ann["location_description"], str, "location_description should be string")
+                self.assertIsInstance(ann["is_live"], bool, "is_live should be boolean")
+                self.assertIsInstance(ann["start_address"], int, "start_address should be integer")
+                self.assertIsInstance(ann["end_address"], int, "end_address should be integer")
+                self.assertIsInstance(ann["register_kind"], int, "register_kind should be integer")
 
-                # Validate all required fields are present.
-                var_name_obj = ann.GetValueForKey("variable_name")
-                self.assertTrue(
-                    var_name_obj.IsValid(), "Missing 'variable_name' field"
-                )
-
-                location_obj = ann.GetValueForKey("location_description")
-                self.assertTrue(
-                    location_obj.IsValid(), "Missing 'location_description' field"
-                )
-
-                is_live_obj = ann.GetValueForKey("is_live")
-                self.assertTrue(is_live_obj.IsValid(), "Missing 'is_live' field")
-
-                start_addr_obj = ann.GetValueForKey("start_address")
-                self.assertTrue(
-                    start_addr_obj.IsValid(), "Missing 'start_address' field"
-                )
-
-                end_addr_obj = ann.GetValueForKey("end_address")
-                self.assertTrue(
-                    end_addr_obj.IsValid(), "Missing 'end_address' field"
-                )
-
-                register_kind_obj = ann.GetValueForKey("register_kind")
-                self.assertTrue(
-                    register_kind_obj.IsValid(), "Missing 'register_kind' field"
-                )
-
-                var_name = var_name_obj.GetStringValue(1024)
-                location = location_obj.GetStringValue(1024)
-                is_live = is_live_obj.GetBooleanValue()
+                self.assertGreater(len(var_name), 0, "variable_name should not be empty")
+                self.assertGreater(len(ann["location_description"]), 0, "location_description should not be empty")
+                self.assertGreater(ann["end_address"], ann["start_address"], "end_address should be > start_address")
 
                 self.assertIn(
                     var_name, expected_vars, f"Unexpected variable name: {var_name}"
                 )
 
                 found_variables.add(var_name)
-
-                # Update tracking state.
-                if location == "undef" or not is_live:
-                    # Variable went away.
-                    if var_name in active_vars:
-                        if self.TraceOn():
-                            print(f"  [{i:2d}] {var_name}: {active_vars[var_name]} -> undef")
-                        active_vars.pop(var_name)
-                else:
-                    # Variable newly live or location changed.
-                    old_location = active_vars.get(var_name)
-                    if old_location != location:
-                        if self.TraceOn():
-                            if old_location is None:
-                                print(f"  [{i:2d}] {var_name}: -> {location} (newly live)")
-                            else:
-                                print(f"  [{i:2d}] {var_name}: {old_location} -> {location} (changed)")
-                        active_vars[var_name] = location
 
         # Validate we find all expected variables.
         self.assertEqual(
