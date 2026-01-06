@@ -69,6 +69,13 @@ void test(std::chrono::time_zone tz, std::chrono::time_zone_link link, std::chro
   {
     leap.date();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     leap.value(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#  if TEST_STD_VER >= 26
+    std::hash<std::chrono::leap_second> hash;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    hash(leap);
+#  endif
   }
 
   {
@@ -89,6 +96,13 @@ void test(std::chrono::time_zone tz, std::chrono::time_zone_link link, std::chro
     zt.get_local_time(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     zt.get_sys_time();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     zt.get_info();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#  if TEST_STD_VER >= 26
+    std::hash<std::chrono::zoned_time<std::chrono::seconds>> hash;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    hash(zt);
+#  endif
   }
 }
 #endif // TEST_STD_VER >= 20
@@ -181,6 +195,13 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     82.5ns;
 #endif // TEST_STD_VER >= 14
+
+#if TEST_STD_VER >= 26
+    std::hash<std::chrono::duration<int, std::ratio<1, 30>>> hash;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    hash(dr);
+#endif
   }
 
 #if TEST_STD_VER >= 20
@@ -231,6 +252,13 @@ void test() {
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::chrono::system_clock::from_time_t(time);
+
+#if TEST_STD_VER >= 26
+    std::hash<std::chrono::time_point<std::chrono::system_clock>> hash;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    hash(tp);
+#endif
   }
 
 #if TEST_STD_VER >= 20
