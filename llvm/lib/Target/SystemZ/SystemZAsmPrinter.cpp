@@ -170,13 +170,14 @@ void SystemZAsmPrinter::emitCallInformation(CallType CT) {
                      .addReg(SystemZMC::GR64Regs[static_cast<unsigned>(CT)]));
 }
 
-uint32_t SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
-                                                            unsigned SlotKind) {
+std::pair<const MCSymbol *, uint32_t>
+SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
+                                                   unsigned SlotKind) {
   auto Key = std::make_pair(Sym, SlotKind);
-  auto It = Displacements.find(Key);
+  auto *It = Displacements.find(Key);
 
   if (It != Displacements.end())
-    return (*It).second;
+    return std::pair(Sym, (*It).second);
 
   // Determine length of descriptor.
   uint32_t Length;
@@ -193,14 +194,15 @@ uint32_t SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
   Displacements[std::make_pair(Sym, SlotKind)] = NextDisplacement;
   NextDisplacement += Length;
 
-  return Displacement;
+  return std::pair(Sym, Displacement);
 }
 
-uint32_t
+std::pair<const MCSymbol *, uint32_t>
 SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MachineOperand MO) {
   MCSymbol *Sym;
   if (MO.getType() == MachineOperand::MO_GlobalAddress) {
     const GlobalValue *GV = MO.getGlobal();
+    assert(GV->hasName() && "Cannot put unnamed value in ADA");
     Sym = MO.getParent()->getMF()->getTarget().getSymbol(GV);
     assert(Sym && "No symbol");
   } else if (MO.getType() == MachineOperand::MO_ExternalSymbol) {
@@ -347,7 +349,9 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::ADA_ENTRY: {
     const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
     const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
-    uint32_t Disp = ADATable.insert(MI->getOperand(1));
+    const MCSymbol *Sym;
+    uint32_t Disp;
+    std::tie(Sym, Disp) = ADATable.insert(MI->getOperand(1));
     Register TargetReg = MI->getOperand(0).getReg();
 
     Register ADAReg = MI->getOperand(2).getReg();
@@ -1562,13 +1566,17 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
     OutStreamer->AddComment("Flags");
     OutStreamer->emitInt32(0); // LSDA field is a WAS offset
     OutStreamer->AddComment("Personality routine");
-    OutStreamer->emitInt64(ADATable.insert(
-        PersonalityRoutine, SystemZII::MO_ADA_INDIRECT_FUNC_DESC));
+    // Store only offset of function descriptor
+    OutStreamer->emitInt64(
+        ADATable
+            .insert(PersonalityRoutine, SystemZII::MO_ADA_INDIRECT_FUNC_DESC)
+            .second);
+    // Store only offset of LSDA
     OutStreamer->AddComment("LSDA location");
     MCSymbol *GCCEH = MF->getContext().getOrCreateSymbol(
         Twine("GCC_except_table") + Twine(MF->getFunctionNumber()));
     OutStreamer->emitInt64(
-        ADATable.insert(GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR));
+        ADATable.insert(GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR).second);
   }
 
   // Emit name length and name optional section (0x01 of flags 4)

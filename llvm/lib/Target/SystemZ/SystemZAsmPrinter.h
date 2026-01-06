@@ -73,16 +73,17 @@ private:
 
     /// @brief Add a function descriptor to the ADA.
     /// @param MI Pointer to an ADA_ENTRY instruction.
-    /// @return The displacement of the descriptor into the ADA.
-    uint32_t insert(const MachineOperand MO);
+    /// @return The symbol and displacement of the descriptor into the ADA.
+    std::pair<const MCSymbol *, uint32_t> insert(const MachineOperand MO);
 
     /// @brief Get the displacement into associated data area (ADA) for a name.
     /// If no  displacement is already associated with the name, assign one and
     /// return it.
     /// @param Sym The symbol for which the displacement should be returned.
     /// @param SlotKind The ADA type.
-    /// @return The displacement of the descriptor into the ADA.
-    uint32_t insert(const MCSymbol *Sym, unsigned SlotKind);
+    /// @return The symbol and displacement of the descriptor into the ADA.
+    std::pair<const MCSymbol *, uint32_t> insert(const MCSymbol *Sym,
+                                                 unsigned SlotKind);
 
     /// Get the table of GOFF displacements.  This is 'const' since it should
     /// never be modified by anything except the APIs on this class.
