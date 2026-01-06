@@ -445,32 +445,25 @@ function(add_libclc_builtin_set)
         ${builtins_link_lib}
       DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
     )
-    add_custom_target( ${builtins_opt_lib_tgt}
-      ALL DEPENDS ${libclc_builtins_lib}
-    )
-    set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
-      TARGET_FILE ${libclc_builtins_lib}
-      FOLDER "libclc/Device IR/Opt"
-    )
   endif()
 
-  # Add a 'prepare' target
-  add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${libclc_builtins_lib} )
-  set_target_properties( "prepare-${obj_suffix}" PROPERTIES
+  # Add a 'library' target
+  add_custom_target( library-${obj_suffix} ALL DEPENDS ${libclc_builtins_lib} )
+  set_target_properties( "library-${obj_suffix}" PROPERTIES
     TARGET_FILE ${libclc_builtins_lib}
-    FOLDER "libclc/Device IR/Prepare"
+    FOLDER "libclc/Device IR/Library"
   )
 
-  # Also add a 'prepare' target for the triple. Since a triple may have
+  # Also add a 'library' target for the triple. Since a triple may have
   # multiple devices, ensure we only try to create the triple target once. The
   # triple's target will build all of the bytecode for its constituent devices.
-  if( NOT TARGET prepare-${ARG_TRIPLE} )
-    add_custom_target( prepare-${ARG_TRIPLE} ALL )
+  if( NOT TARGET library-${ARG_TRIPLE} )
+    add_custom_target( library-${ARG_TRIPLE} ALL )
   endif()
-  add_dependencies( prepare-${ARG_TRIPLE} prepare-${obj_suffix} )
+  add_dependencies( library-${ARG_TRIPLE} library-${obj_suffix} )
   # Add dependency to top-level pseudo target to ease making other
   # targets dependent on libclc.
-  add_dependencies( ${ARG_PARENT_TARGET} prepare-${ARG_TRIPLE} )
+  add_dependencies( ${ARG_PARENT_TARGET} library-${ARG_TRIPLE} )
 
   libclc_install(FILES ${libclc_builtins_lib})
 
@@ -505,7 +498,7 @@ function(add_libclc_builtin_set)
     add_custom_command(
       OUTPUT ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
       COMMAND ${CMAKE_COMMAND} -E ${LIBCLC_LINK_OR_COPY} ${LIBCLC_LINK_OR_COPY_SOURCE} ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
-      DEPENDS prepare-${obj_suffix}
+      DEPENDS library-${obj_suffix}
     )
     add_custom_target( alias-${alias_suffix} ALL
       DEPENDS ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
