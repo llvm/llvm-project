@@ -24,6 +24,7 @@ struct PyCustomType
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirStandaloneCustomTypeGetTypeID;
   static constexpr const char *pyClassName = "CustomType";
+  static constexpr const char *name = "standalone.custom";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c) {
