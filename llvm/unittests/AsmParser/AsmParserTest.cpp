@@ -495,9 +495,9 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   } while (false)
 
 TEST(AsmParserTest, ParserObjectLocations) {
-  StringRef Source = "define i32 @main() {\n"
+  StringRef Source = "define i32 @main(i32 %arg) {\n"
                      "entry:\n"
-                     "    %a = add i32 1, 2\n"
+                     "    %a = add i32 1, %arg\n"
                      "    ret i32 %a\n"
                      "}\n";
   LLVMContext Ctx;
@@ -527,7 +527,7 @@ TEST(AsmParserTest, ParserObjectLocations) {
             ParserContext.getBlockAtLocation(*MaybeEntryBBLoc));
 
   SmallVector<FileLocRange> InstructionLocations = {
-      FileLocRange(FileLoc{2, 4}, FileLoc{2, 21}),
+      FileLocRange(FileLoc{2, 4}, FileLoc{2, 24}),
       FileLocRange(FileLoc{3, 4}, FileLoc{3, 14})};
 
   for (const auto &[Inst, ExpectedLoc] : zip(EntryBB, InstructionLocations)) {
@@ -538,6 +538,23 @@ TEST(AsmParserTest, ParserObjectLocations) {
     ASSERT_EQ(ParserContext.getInstructionAtLocation(MaybeInstLoc->Start),
               ParserContext.getInstructionAtLocation(*MaybeInstLoc));
   }
+
+  SmallVector<FileLocRange> FunctionArgumentLocations = {
+      FileLocRange(FileLoc{0, 21}, FileLoc{0, 25}),
+  };
+  for (const auto &[Arg, ExpectedLoc] :
+       zip(MainFn->args(), FunctionArgumentLocations)) {
+    auto MaybeArgLoc = ParserContext.getFunctionArgumentLocation(&Arg);
+    ASSERT_TRUE(MaybeArgLoc.has_value());
+    auto ArgLoc = MaybeArgLoc.value();
+    ASSERT_EQ_LOC(ArgLoc, ExpectedLoc);
+    ASSERT_EQ(ParserContext.getFunctionArgumentAtLocation(ArgLoc.Start),
+              ParserContext.getFunctionArgumentAtLocation(ArgLoc));
+  }
+  ASSERT_EQ(&*MainFn->arg_begin(),
+            ParserContext.getValueReferencedAtLocation(FileLoc(2, 22)));
+  ASSERT_EQ(&*EntryBB.begin(),
+            ParserContext.getValueReferencedAtLocation(FileLoc(3, 13)));
 }
 
 } // end anonymous namespace
