@@ -198,4 +198,10 @@ __llvm_omp_emissary_rpc(void* fn, void *data) {
 }
 }
 
+// C++ ABI helpers.
+extern "C" {
+[[gnu::weak]] void __cxa_pure_virtual(void) { __builtin_trap(); }
+[[gnu::weak]] void __cxa_deleted_virtual(void) { __builtin_trap(); }
+}
+
 ///}
