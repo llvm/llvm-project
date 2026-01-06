@@ -1276,7 +1276,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_pmovqd512_mask:
   case X86::BI__builtin_ia32_pmovwb512_mask: {
     mlir::Value Res =
-        builder.createTrunc(ops[0], cast<cir::VectorType>(ops[1].getType()));
+        builder.createIntCast(ops[0], cast<cir::VectorType>(ops[1].getType()));
     return emitX86Select(builder, getLoc(expr->getExprLoc()), ops[2], Res,
                          ops[1]);
   }
