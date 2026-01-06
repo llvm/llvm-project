@@ -1387,3 +1387,190 @@ func.func @_QPtest_volatile_load(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_n
   fir.store %9 to %7 : !fir.ref<i32>
   return
 }
+
+// Check that a load of scalar defined as associate(c => b(10))
+// is not hoisted, because it is actually an access of array
+// and it may be out of bounds.
+// subroutine test_associated_array_access(a,b,n)
+//   integer :: a(*),b(*),n
+//   do i=1,n
+//      associate (c => b(10))
+//        a(i) = c
+//      end associate
+//   end do
+// end subroutine
+// CHECK-LABEL:   func.func @_QPtest_associated_array_access(
+// CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"},
+// CHECK-SAME:      %[[ARG1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "b"},
+// CHECK-SAME:      %[[ARG2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtest_associated_array_accessEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG1]](%{{.*}}) dummy_scope %{{.*}} arg 2 {uniq_name = "_QFtest_associated_array_accessEb"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:           %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[DECLARE_1]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_4:.*]] = fir.declare %[[ARRAY_COOR_0]] {uniq_name = "_QFtest_associated_array_accessEc"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
+// CHECK:             %[[LOAD_1:.*]] = fir.load %[[DECLARE_4]] : !fir.ref<i32>
+// CHECK:             %[[ARRAY_COOR_1:.*]] = fir.array_coor %[[DECLARE_0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+// CHECK:             fir.store %[[LOAD_1]] to %[[ARRAY_COOR_1]] : !fir.ref<i32>
+func.func @_QPtest_associated_array_access(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "b"}, %arg2: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.assumed_size_extent : index
+  %2 = fir.shape %1 : (index) -> !fir.shape<1>
+  %3 = fir.declare %arg0(%2) dummy_scope %0 arg 1 {uniq_name = "_QFtest_associated_array_accessEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+  %4 = fir.declare %arg1(%2) dummy_scope %0 arg 2 {uniq_name = "_QFtest_associated_array_accessEb"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+  %5 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_associated_array_accessEi"}
+  %6 = fir.declare %5 {uniq_name = "_QFtest_associated_array_accessEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %7 = fir.declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFtest_associated_array_accessEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %8 = fir.load %7 : !fir.ref<i32>
+  %9 = fir.convert %8 : (i32) -> index
+  %10 = fir.convert %c1 : (index) -> i32
+  // Manually hoisted: begin
+  %12 = fir.array_coor %4(%2) %c10 : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+  %13 = fir.declare %12 {uniq_name = "_QFtest_associated_array_accessEc"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  // Manually hoisted: end
+  %11 = fir.do_loop %arg3 = %c1 to %9 step %c1 iter_args(%arg4 = %10) -> (i32) {
+    fir.store %arg4 to %6 : !fir.ref<i32>
+    %14 = fir.load %13 : !fir.ref<i32>
+    %15 = fir.load %6 : !fir.ref<i32>
+    %16 = fir.convert %15 : (i32) -> i64
+    %17 = fir.array_coor %3(%2) %16 : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+    fir.store %14 to %17 : !fir.ref<i32>
+    %18 = fir.load %6 : !fir.ref<i32>
+    %19 = arith.addi %18, %10 overflow<nsw> : i32
+    fir.result %19 : i32
+  }
+  fir.store %11 to %6 : !fir.ref<i32>
+  return
+}
+
+// 'b' can be hoisted.
+// subroutine test_common_scalar(a,n)
+//   common /blk/ b,c
+//   integer :: a(*),b,n
+//   real :: c(10)
+//   do i=1,n
+//      a(i) = b
+//   end do
+// end subroutine
+// CHECK-LABEL:   func.func @_QPtest_common_scalar(
+// CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"},
+// CHECK-SAME:      %[[ARG1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtest_common_scalarEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<44xi8>>
+// CHECK:           %[[COORDINATE_OF_0:.*]] = fir.coordinate_of %[[ADDRESS_OF_0]], %{{.*}} : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
+// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[COORDINATE_OF_0]] : (!fir.ref<i8>) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[CONVERT_0]] storage(%[[ADDRESS_OF_0]][0]) {uniq_name = "_QFtest_common_scalarEb"} : (!fir.ref<i32>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_4:.*]] = fir.declare %[[ARG1]] dummy_scope %{{.*}} arg 2 {uniq_name = "_QFtest_common_scalarEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
+// CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[DECLARE_0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+// CHECK:             fir.store %[[LOAD_1]] to %[[ARRAY_COOR_0]] : !fir.ref<i32>
+func.func @_QPtest_common_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.assumed_size_extent : index
+  %2 = fir.shape %1 : (index) -> !fir.shape<1>
+  %3 = fir.declare %arg0(%2) dummy_scope %0 arg 1 {uniq_name = "_QFtest_common_scalarEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+  %4 = fir.address_of(@blk_) : !fir.ref<!fir.array<44xi8>>
+  %5 = fir.coordinate_of %4, %c0 : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
+  %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<i32>
+  %7 = fir.declare %6 storage(%4[0]) {uniq_name = "_QFtest_common_scalarEb"} : (!fir.ref<i32>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<i32>
+  %8 = fir.coordinate_of %4, %c4 : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
+  %9 = fir.convert %8 : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
+  %10 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %11 = fir.declare %9(%10) storage(%4[4]) {uniq_name = "_QFtest_common_scalarEc"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
+  %12 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_common_scalarEi"}
+  %13 = fir.declare %12 {uniq_name = "_QFtest_common_scalarEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %14 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_common_scalarEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %15 = fir.load %14 : !fir.ref<i32>
+  %16 = fir.convert %15 : (i32) -> index
+  %17 = fir.convert %c1 : (index) -> i32
+  %18 = fir.do_loop %arg2 = %c1 to %16 step %c1 iter_args(%arg3 = %17) -> (i32) {
+    fir.store %arg3 to %13 : !fir.ref<i32>
+    %19 = fir.load %7 : !fir.ref<i32>
+    %20 = fir.load %13 : !fir.ref<i32>
+    %21 = fir.convert %20 : (i32) -> i64
+    %22 = fir.array_coor %3(%2) %21 : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+    fir.store %19 to %22 : !fir.ref<i32>
+    %23 = fir.load %13 : !fir.ref<i32>
+    %24 = arith.addi %23, %17 overflow<nsw> : i32
+    fir.result %24 : i32
+  }
+  fir.store %18 to %13 : !fir.ref<i32>
+  return
+}
+
+// 'm' can be hoisted, and 'c(m)' cannot.
+// subroutine test_common_array(a,n,m)
+//   common /blk/ b,c
+//   integer :: a(*),b,n
+//   real :: c(10)
+//   do i=1,n
+//      a(i) = c(m)
+//   end do
+// end subroutine
+// CHECK-LABEL:   func.func @_QPtest_common_array(
+// CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"},
+// CHECK-SAME:      %[[ARG1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"},
+// CHECK-SAME:      %[[ARG2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "m"}) attributes {no_inline} {
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 4 : index
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtest_common_arrayEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<44xi8>>
+// CHECK:           %[[COORDINATE_OF_1:.*]] = fir.coordinate_of %[[ADDRESS_OF_0]], %[[CONSTANT_2]] : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
+// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[COORDINATE_OF_1]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[CONVERT_1]](%{{.*}}) storage(%[[ADDRESS_OF_0]][4]) {uniq_name = "_QFtest_common_arrayEc"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           %[[DECLARE_4:.*]] = fir.declare %[[ARG2]] dummy_scope %{{.*}} arg 3 {uniq_name = "_QFtest_common_arrayEm"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_4]] : !fir.ref<i32>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
+// CHECK:             %[[CONVERT_4:.*]] = fir.convert %[[LOAD_1]] : (i32) -> i64
+// CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[DECLARE_2]](%{{.*}}) %[[CONVERT_4]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
+// CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<f32>
+// CHECK:             %[[CONVERT_5:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
+// CHECK:             %[[ARRAY_COOR_1:.*]] = fir.array_coor %[[DECLARE_0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+// CHECK:             fir.store %[[CONVERT_5]] to %[[ARRAY_COOR_1]] : !fir.ref<i32>
+func.func @_QPtest_common_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "m"}) attributes {no_inline} {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.assumed_size_extent : index
+  %2 = fir.shape %1 : (index) -> !fir.shape<1>
+  %3 = fir.declare %arg0(%2) dummy_scope %0 arg 1 {uniq_name = "_QFtest_common_arrayEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>>
+  %4 = fir.address_of(@blk_) : !fir.ref<!fir.array<44xi8>>
+  %5 = fir.coordinate_of %4, %c0 : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
+  %6 = fir.convert %5 : (!fir.ref<i8>) -> !fir.ref<i32>
+  %7 = fir.declare %6 storage(%4[0]) {uniq_name = "_QFtest_common_arrayEb"} : (!fir.ref<i32>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<i32>
+  %8 = fir.coordinate_of %4, %c4 : (!fir.ref<!fir.array<44xi8>>, index) -> !fir.ref<i8>
+  %9 = fir.convert %8 : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
+  %10 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %11 = fir.declare %9(%10) storage(%4[4]) {uniq_name = "_QFtest_common_arrayEc"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
+  %12 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_common_arrayEi"}
+  %13 = fir.declare %12 {uniq_name = "_QFtest_common_arrayEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %14 = fir.declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFtest_common_arrayEm"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %15 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_common_arrayEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %16 = fir.load %15 : !fir.ref<i32>
+  %17 = fir.convert %16 : (i32) -> index
+  %18 = fir.convert %c1 : (index) -> i32
+  %19 = fir.do_loop %arg3 = %c1 to %17 step %c1 iter_args(%arg4 = %18) -> (i32) {
+    fir.store %arg4 to %13 : !fir.ref<i32>
+    %20 = fir.load %14 : !fir.ref<i32>
+    %21 = fir.convert %20 : (i32) -> i64
+    %22 = fir.array_coor %11(%10) %21 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
+    %23 = fir.load %22 : !fir.ref<f32>
+    %24 = fir.convert %23 : (f32) -> i32
+    %25 = fir.load %13 : !fir.ref<i32>
+    %26 = fir.convert %25 : (i32) -> i64
+    %27 = fir.array_coor %3(%2) %26 : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+    fir.store %24 to %27 : !fir.ref<i32>
+    %28 = fir.load %13 : !fir.ref<i32>
+    %29 = arith.addi %28, %18 overflow<nsw> : i32
+    fir.result %29 : i32
+  }
+  fir.store %19 to %13 : !fir.ref<i32>
+  return
+}

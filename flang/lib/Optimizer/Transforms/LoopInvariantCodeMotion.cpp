@@ -13,11 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 
 namespace fir {
@@ -83,16 +86,67 @@ static bool isNonOptionalScalar(Value location) {
     }
     Operation *defOp = location.getDefiningOp();
     if (!defOp) {
+      // If this is a function argument
+      auto blockArg = cast<BlockArgument>(location);
+      Block *block = blockArg.getOwner();
+      if (block && block->isEntryBlock())
+        if (auto funcOp =
+                dyn_cast_if_present<FunctionOpInterface>(block->getParentOp()))
+          if (!funcOp.getArgAttrOfType<UnitAttr>(blockArg.getArgNumber(),
+                                                 fir::getOptionalAttrName())) {
+            LDBG() << "Success: is non optional scalar dummy";
+            return true;
+          }
+
       LDBG() << "Failure: no defining operation";
       return false;
     }
+
+    // Scalars "defined" by fir.alloca and fir.address_of
+    // are present.
+    if (isa<fir::AllocaOp, fir::AddrOfOp>(defOp)) {
+      LDBG() << "Success: is non optional scalar";
+      return true;
+    }
+
     if (auto varIface = dyn_cast<fir::FortranVariableOpInterface>(defOp)) {
-      bool result = !varIface.isOptional();
-      if (result)
-        LDBG() << "Success: is non optional scalar";
-      else
-        LDBG() << "Failure: is not non optional scalar";
-      return result;
+      if (varIface.isOptional()) {
+        // The variable is optional, so do not look further.
+        // Note that it is possible to deduce that the optional
+        // is actually present, but we are not doing it now.
+        LDBG() << "Failure: is optional";
+        return false;
+      }
+
+      // In case of MLIR inlining and ASSOCIATE an [hl]fir.declare
+      // may declare a scalar variable that is actually a "view"
+      // of an array element. Originally, such [hl]fir.declare
+      // would be located inside the loop preventing the hoisting.
+      // But if we decide to hoist such [hl]fir.declare in future,
+      // we cannot rely on their attributes/types.
+      // Use reliable checks based on the variable storage.
+
+      // If the variable has storage specifier (e.g. it is a member
+      // of COMMON, etc.), we can rely that the storage is present,
+      // and we can also rely on its FortranVariableOpInterface
+      // definition type (which is a scalar due to previous checks).
+      if (auto storageIface =
+              dyn_cast<fir::FortranVariableStorageOpInterface>(defOp))
+        if (Value storage = storageIface.getStorage()) {
+          LDBG() << "Success: is scalar with existing storage";
+          return true;
+        }
+
+      Value memref = llvm::TypeSwitch<Operation *, Value>(defOp)
+                         .Case<fir::DeclareOp, hlfir::DeclareOp>(
+                             [](auto op) { return op.getMemref(); })
+                         .Default([](auto) { return nullptr; });
+
+      if (memref)
+        return isNonOptionalScalar(memref);
+
+      LDBG() << "Failure: cannot reason about variable storage";
+      return false;
     }
     if (auto viewIface = dyn_cast<fir::FortranObjectViewOpInterface>(defOp)) {
       location = viewIface.getViewSource(cast<OpResult>(location));
