@@ -102,6 +102,14 @@ bool AsmParserContext::addFunctionLocation(Function *F,
   return Inserted;
 }
 
+bool AsmParserContext::addFunctionArgumentLocation(Argument *FA,
+                                                   const FileLocRange &Loc) {
+  bool Inserted = FunctionArguments.insert({FA, Loc}).second;
+  if (Inserted)
+    FunctionArgumentsInverse.insert(Loc.Start, Loc.End, FA);
+  return Inserted;
+}
+
 bool AsmParserContext::addBlockLocation(BasicBlock *BB,
                                         const FileLocRange &Loc) {
   bool Inserted = Blocks.insert({BB, Loc}).second;
