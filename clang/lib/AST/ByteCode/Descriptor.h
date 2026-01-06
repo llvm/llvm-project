@@ -272,6 +272,26 @@ public:
   /// Whether variables of this descriptor need their destructor called or not.
   bool hasTrivialDtor() const;
 
+  /// Kind of source for a dynamic allocation.
+  enum class DynAllocKind {
+    None,              // not a dynamic allocation
+    New,               // new expression
+    ArrayNew,          // new[] expression
+    StdAllocator,      // std::allocator::allocate call
+    BuiltinOperatorNew // __operator_builtin_new call
+  };
+  /// Returns the kind of dynamic allocation source of this block.
+  static DynAllocKind getDynAllocKindForExpr(const Expr *E);
+  /// Returns the kind of dynamic allocation source of this block.
+  DynAllocKind getDynAllocKind() const {
+    return asExpr() ? getDynAllocKindForExpr(asExpr()) : DynAllocKind::None;
+  }
+  /// Checks if the descriptor is of a dynamic allocation.
+  bool isDynAlloc() const { return getDynAllocKind() != DynAllocKind::None; }
+
+  /// Compute the alignment for a dynamic allocation.
+  uint64_t computeAlignForDynamicAlloc(const ASTContext &Ctx) const;
+
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;
   void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;

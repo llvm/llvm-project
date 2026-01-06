@@ -17,6 +17,8 @@
 #include "Record.h"
 #include "Source.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -418,33 +420,15 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
     return ElemType;
   };
 
-  if (const auto *E = asExpr()) {
-    if (isa<CXXNewExpr>(E))
-      return MakeArrayType(E->getType()->getPointeeType());
-
-    // std::allocator.allocate() call.
-    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
-        ME && ME->getRecordDecl()->getName() == "allocator" &&
-        ME->getMethodDecl()->getName() == "allocate")
-      return MakeArrayType(E->getType()->getPointeeType());
-    return E->getType();
-  }
+  if (isDynAlloc())
+    return MakeArrayType(asExpr()->getType()->getPointeeType());
 
   return getType();
 }
 
 QualType Descriptor::getDataElemType() const {
-  if (const auto *E = asExpr()) {
-    if (isa<CXXNewExpr>(E))
-      return E->getType()->getPointeeType();
-
-    // std::allocator.allocate() call.
-    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
-        ME && ME->getRecordDecl()->getName() == "allocator" &&
-        ME->getMethodDecl()->getName() == "allocate")
-      return E->getType()->getPointeeType();
-    return E->getType();
-  }
+  if (isDynAlloc())
+    return asExpr()->getType()->getPointeeType();
 
   return getType();
 }
@@ -481,3 +465,107 @@ bool Descriptor::hasTrivialDtor() const {
 }
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
+
+Descriptor::DynAllocKind Descriptor::getDynAllocKindForExpr(const Expr *E) {
+  // new or new[] expression
+  if (const auto *NE = dyn_cast<CXXNewExpr>(E))
+    return NE->isArray() ? DynAllocKind::ArrayNew : DynAllocKind::New;
+  // std::allocator::allocate call
+  if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+      ME && ME->getRecordDecl()->getName() == "allocator" &&
+      ME->getMethodDecl()->getName() == "allocate")
+    return DynAllocKind::StdAllocator;
+  // __builtin_operator_new call
+  if (const auto *CE = dyn_cast<CallExpr>(E);
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
+    return DynAllocKind::BuiltinOperatorNew;
+  return DynAllocKind::None;
+}
+
+uint64_t Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
+  const Expr *AllocExpr = asExpr();
+  const QualType AllocType = getDataType(Ctx);
+
+  const TargetInfo &TI = Ctx.getTargetInfo();
+
+  const uint64_t DefaultNewAlign = TI.getNewAlign();
+  const uint64_t MaxFundamentalAlign =
+      std::max(TI.getLongLongAlign(), TI.getLongDoubleAlign());
+
+  const DynAllocKind AllocKind = getDynAllocKindForExpr(AllocExpr);
+  assert((AllocKind != DynAllocKind::None) &&
+         "should only be called on dynamically allocated blocks");
+  assert((AllocKind != DynAllocKind::BuiltinOperatorNew) &&
+         "__builtin_operator_new should have been allowed only from "
+         "std::allocator::allocate");
+
+  const uint64_t AllocSize = Ctx.getTypeSize(AllocType);
+
+  // Allocating a zero-sized array is allowed, however it doesn't have
+  // any alignment guarantees.
+  if ((AllocKind == DynAllocKind::ArrayNew ||
+       AllocKind == DynAllocKind::StdAllocator) &&
+      AllocSize == 0)
+    return TI.getCharWidth();
+
+  // For the non-array form, the size of the allocated object should be
+  // positive.
+  assert(AllocSize > 0 && "Unknown size for allocated type!");
+
+  const uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
+  assert(TypeAlignment > 0 && "Unknown alignment for allocated type!");
+
+  // For new-extended alignment the ::operator new overload with
+  // std::align_val_t parameter is used. According to C++
+  // [basic.stc.dynamic.allocation]p3.1 this overload returns memory
+  // according to the requested alignment. No stricter guarantees are
+  // made.
+  if (TypeAlignment > DefaultNewAlign)
+    return TypeAlignment;
+
+  switch (AllocKind) {
+  // According to C++ [allocator.members]p5 it is unspecified how the
+  // memory obtained from ::operator new is used by
+  // std::allocator::allocate, therefore be conservative here.
+  case DynAllocKind::StdAllocator:
+    return TypeAlignment;
+
+  // The non-array form of new does not permit allocation overhead and
+  // therefore provides alignment as guaranteed by ::operator new.
+  // According to C++ [basic.stc.dynamic.allocation]p3.3 the allocation
+  // is suitably aligned for all objects without new-extended alignment
+  // with the exact size of the allocation. An object of the exact size
+  // AllocSize can have alignment of at most the lowest bit set in
+  // AllocSize.
+  case DynAllocKind::New:
+    return std::min(DefaultNewAlign,
+                    uint64_t{1} << llvm::countr_zero(AllocSize));
+
+  case DynAllocKind::ArrayNew: {
+    const Type *ET = AllocType.getTypePtr()
+                         ->getArrayElementTypeNoTypeQual()
+                         ->getCanonicalTypeUnqualified()
+                         .getTypePtr();
+    // According to C++ [expr.new]p17, unless the element type of an
+    // array new expression is char, unsigned char or std::byte, the
+    // allocation may be offset into the allocation returned by
+    // ::operator new[]. Therefore no stricter alignment than the type's
+    // alignment is guaranteed. For char, unsigned char and std::byte
+    if (!ET->isSpecificBuiltinType(BuiltinType::UChar) &&
+        !ET->isSpecificBuiltinType(BuiltinType::Char_U) &&
+        !ET->isSpecificBuiltinType(BuiltinType::Char_S) && !ET->isStdByteType())
+      return TypeAlignment;
+
+    // Otherwise, the allocation is offset from the result of ::operator
+    // new[] by a multiple of the strictest fundamental alignment.
+    // According C++ [basic.stc.dynamic.allocation]p3.2 the allocation
+    // returned by ::operator new[] is suitably aligned for all objects
+    // without new-extended alignment and size up to the allocated size.
+    return std::min(
+        {DefaultNewAlign, MaxFundamentalAlign, llvm::bit_floor(AllocSize)});
+  }
+
+  default:
+    llvm_unreachable("Unhandled DynAllocKind");
+  }
+}

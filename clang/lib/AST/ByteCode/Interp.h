@@ -90,8 +90,7 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 
 /// Check the source of the pointer passed to delete/delete[] has actually
 /// been heap allocated by us.
-bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
-                       const Pointer &Ptr);
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                  AccessKinds AK);

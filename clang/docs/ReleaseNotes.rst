@@ -557,6 +557,9 @@ Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix an ambiguous reference to the builtin `type_info` (available when using
   `-fms-compatibility`) with modules. (#GH38400)
+- Fix a crash when using ``__builtin_assume_aligned`` with dynamic allocations during
+  constant evaluation. Also correct the behavior with the new constant interpreter, so
+  that both apply alignment guarantees made by the standard. (#GH173767)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

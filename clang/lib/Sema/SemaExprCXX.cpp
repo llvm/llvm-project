@@ -2618,6 +2618,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       } else {
         Diag(TypeRange.getEnd(), diag::err_new_array_size_unknown_from_init)
             << Initializer->getSourceRange();
+        return ExprError();
       }
     }
   }
