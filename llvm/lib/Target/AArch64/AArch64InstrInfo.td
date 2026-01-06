@@ -6572,8 +6572,8 @@ multiclass IntegerToFPSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
   def : Pat<(f64 (OpN (i64 (bitconvert (f64 FPR64:$Rn))))),
             (!cast<Instruction>(INST # v1i64) FPR64:$Rn)>;
 }
-defm : IntegerToFPSIMDScalarPatterns<sint_to_fp, "SCVTF">;
-defm : IntegerToFPSIMDScalarPatterns<uint_to_fp, "UCVTF">;
+defm : IntegerToFPSIMDScalarPatterns<any_sint_to_fp, "SCVTF">;
+defm : IntegerToFPSIMDScalarPatterns<any_uint_to_fp, "UCVTF">;
 
 // Floating-point conversion patterns.
 multiclass FPToIntegerSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
