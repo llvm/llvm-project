@@ -72,60 +72,90 @@ Potentially Breaking Changes
 - Clang warning suppressions file, ``--warning-suppression-mappings=``, now will
   use the last matching entry instead of the longest one.
 - Trailing null statements in GNU statement expressions are no longer
-  ignored by Clang; they now result in a void type. Clang previously
-  matched GCC's behavior, which was recently clarified to be incorrect.
+  ignored by Clang;
+they now result in a void
+        type.Clang previously matched GCC's behavior, which was recently clarified to be incorrect.
 
-  .. code-block:: c++
+            ..code -
+    block::c++
 
     // The resulting type is 'void', not 'int'
-    void foo(void) {
-      return ({ 1;; });
-    }
+    void
+    foo(void) {
+  return ({
+    1;
+    ;
+  });
+}
 - Downstream projects that previously linked only against ``clangDriver`` may
-  now (also) need to link against the new ``clangOptions`` library, since
-  options-related code has been moved out of the Driver into a separate library.
-- The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
-  break downstream projects that relied on this transitive dependency.
-- Clang now supports MSVC vector deleting destructors when targeting Windows.
-  This means that vtables of classes with virtual destructors will contain a
-  pointer to vector deleting destructor (instead of scalar deleting destructor)
-  which in fact is a different symbol with different name and linkage. This
-  may cause runtime failures if two binaries using the same class defining a
-  virtual destructor are compiled with different versions of clang.
+now(also)
+need to link against the new ``clangOptions`` library,
+    since options -
+        related code has been moved out of the Driver into a separate library.-
+        The ``clangFrontend`` library no longer depends on ``clangDriver``,
+    which may break downstream projects that relied on this transitive
+            dependency.-
+        Clang now supports MSVC vector deleting destructors when targeting
+                Windows
+                    .This means that vtables of classes with virtual destructors
+                        will contain a pointer to vector deleting
+                        destructor(instead of scalar deleting destructor) which
+            in fact is a different symbol with different name and linkage
+                    .This may cause runtime failures if two binaries
+            using the same class defining a
+            virtual destructor are compiled with different versions of clang.
 
-C/C++ Language Potentially Breaking Changes
--------------------------------------------
+            C
+            / C++ Language Potentially Breaking Changes
+              -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -
 
-- The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
+              -The ``__has_builtin`` function now only considers the currently
+              active target when being used with target offloading.
 
-- The ``-Wincompatible-pointer-types`` diagnostic now defaults to an error;
-  it can still be downgraded to a warning by passing ``-Wno-error=incompatible-pointer-types``. (#GH74605)
+        - The ``- Wincompatible - pointer
+        - types`` diagnostic now defaults to an error;
+it can still be downgraded to a warning by passing ``- Wno -
+    error =
+    incompatible - pointer -
+    types``.(#GH74605)
 
-C++ Specific Potentially Breaking Changes
------------------------------------------
-- For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
-  regressions if your build system supports two-phase compilation model but haven't support
-  reduced BMI or it is a compiler bug or a bug in users code.
+        C++ Specific Potentially Breaking
+            Changes-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- - -For
+                C++ 20 modules,
+    the Reduced BMI mode will be the default option.This may introduce
+                regressions if your build system supports two -
+            phase compilation model but haven't support reduced BMI or it is a
+                compiler bug or
+        a bug in users code.
 
-- Clang now correctly diagnoses during constant expression evaluation undefined behavior due to member
-  pointer access to a member which is not a direct or indirect member of the most-derived object
-  of the accessed object but is instead located directly in a sibling class to one of the classes
-  along the inheritance hierarchy of the most-derived object as ill-formed.
-  Other scenarios in which the member is not member of the most derived object were already
-  diagnosed previously. (#GH150709)
+            - Clang now correctly diagnoses during constant expression
+                  evaluation undefined behavior due to member pointer access to
+                      a member which is not a direct or
+        indirect member of the most -
+            derived object of the accessed object but is instead located
+                directly in a sibling class to one of the classes along the
+                    inheritance hierarchy of the most -
+            derived object as ill -
+            formed
+                .Other scenarios in which the member is not member of the most
+                    derived object were already diagnosed previously
+                .(#GH150709)
 
-  .. code-block:: c++
+                ..code -
+            block::c++
 
-    struct A {};
-    struct B : A {};
-    struct C : A { constexpr int foo() const { return 1; } };
-    constexpr A a;
-    constexpr B b;
-    constexpr C c;
-    constexpr auto mp = static_cast<int(A::*)() const>(&C::foo);
-    static_assert((a.*mp)() == 1); // continues to be rejected
-    static_assert((b.*mp)() == 1); // newly rejected
-    static_assert((c.*mp)() == 1); // accepted
+            struct A {};
+struct B : A {};
+struct C : A {
+  constexpr int foo() const { return 1; }
+};
+constexpr A a;
+constexpr B b;
+constexpr C c;
+constexpr auto mp = static_cast<int (A::*)() const>(&C::foo);
+static_assert((a.*mp)() == 1); // continues to be rejected
+static_assert((b.*mp)() == 1); // newly rejected
+static_assert((c.*mp)() == 1); // accepted
 
 - ``VarTemplateSpecializationDecl::getTemplateArgsAsWritten()`` method now
   returns ``nullptr`` for implicitly instantiated declarations.
@@ -248,6 +278,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+ 
+
 - Added ``__scoped_atomic_uinc_wrap`` and ``__scoped_atomic_udec_wrap``.
 
 - Removed OpenCL header-only feature macros (previously unconditionally enabled
@@ -351,7 +383,8 @@ New Compiler Flags
 
 Lanai Support
 ^^^^^^^^^^^^^^
-- The option ``-mcmodel={small,medium,large}`` is supported again.
+- The option ``-mcmodel={
+  small, medium, large}`` is supported again.
 
 Deprecated Compiler Flags
 -------------------------
@@ -506,6 +539,8 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+- Avoid crash when declaring functions with ``__typeof``, ``__asm__`` alias and ``__attribute__((noreturn))`` in C2X mode. (#GH173598)
+
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (#GH149762).
 - Fix a crash in variable length array (e.g. ``int a[*]``) function parameter type
