@@ -12,7 +12,6 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__new/align_val_t.h>
-#include <__new/exceptions.h>
 #include <__new/nothrow_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -25,12 +24,6 @@
 #  define _THROW_BAD_ALLOC
 #endif
 
-#if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
-#  define _LIBCPP_HAS_SIZED_DEALLOCATION 1
-#else
-#  define _LIBCPP_HAS_SIZED_DEALLOCATION 0
-#endif
-
 #if defined(_LIBCPP_ABI_VCRUNTIME)
 #  include <new.h>
 #else
@@ -39,7 +32,7 @@
     _LIBCPP_NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete(void* __p) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete(void* __p, const std::nothrow_t&) _NOEXCEPT;
-#  if _LIBCPP_HAS_SIZED_DEALLOCATION
+#  if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete(void* __p, std::size_t __sz) _NOEXCEPT;
 #  endif
 
@@ -48,7 +41,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete(void* __p, std::size_t __sz) _
     _LIBCPP_NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, const std::nothrow_t&) _NOEXCEPT;
-#  if _LIBCPP_HAS_SIZED_DEALLOCATION
+#  if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::size_t __sz) _NOEXCEPT;
 #  endif
 
@@ -58,7 +51,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::size_t __sz)
 operator new(std::size_t __sz, std::align_val_t, const std::nothrow_t&) _NOEXCEPT _LIBCPP_NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete(void* __p, std::align_val_t) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete(void* __p, std::align_val_t, const std::nothrow_t&) _NOEXCEPT;
-#    if _LIBCPP_HAS_SIZED_DEALLOCATION
+#    if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete(void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
 #    endif
 
@@ -68,7 +61,7 @@ operator new[](std::size_t __sz, std::align_val_t) _THROW_BAD_ALLOC;
 operator new[](std::size_t __sz, std::align_val_t, const std::nothrow_t&) _NOEXCEPT _LIBCPP_NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::align_val_t) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::align_val_t, const std::nothrow_t&) _NOEXCEPT;
-#    if _LIBCPP_HAS_SIZED_DEALLOCATION
+#    if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
 #    endif
 #  endif

@@ -10,6 +10,10 @@ add_flang_library(FIRTransforms
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
   CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFDeviceFuncTransform.cpp
+  CUDA/CUFFunctionRewrite.cpp
+  CUDA/CUFLaunchAttachAttr.cpp
+  CUDA/CUFPredefinedVarToGPU.cpp
   CUFAddConstructor.cpp
   CUFDeviceGlobal.cpp
   CUFOpConversion.cpp

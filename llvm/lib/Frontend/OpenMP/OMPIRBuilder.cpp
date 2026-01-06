@@ -8712,8 +8712,6 @@ static void emitTargetCall(
     }
 
     unsigned NumTargetItems = Info.NumberOfPtrs;
-    // TODO: Use correct device ID
-    Value *DeviceID = Builder.getInt64(OMP_DEVICEID_UNDEF);
     uint32_t SrcLocStrSize;
     Constant *SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
     Value *RTLoc = OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize,
@@ -8739,13 +8737,13 @@ static void emitTargetCall(
       // The presence of certain clauses on the target directive require the
       // explicit generation of the target task.
       if (RequiresOuterTargetTask)
-        return OMPBuilder.emitTargetTask(TaskBodyCB, DeviceID, RTLoc, AllocaIP,
-                                         Dependencies, KArgs.RTArgs,
-                                         Info.HasNoWait);
+        return OMPBuilder.emitTargetTask(TaskBodyCB, RuntimeAttrs.DeviceID,
+                                         RTLoc, AllocaIP, Dependencies,
+                                         KArgs.RTArgs, Info.HasNoWait);
 
-      return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
-                                         EmitTargetCallFallbackCB, KArgs,
-                                         DeviceID, RTLoc, AllocaIP);
+      return OMPBuilder.emitKernelLaunch(
+          Builder, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
+          RuntimeAttrs.DeviceID, RTLoc, AllocaIP);
     }());
 
     Builder.restoreIP(AfterIP);
@@ -10634,6 +10632,13 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
           continue;
         }
         break;
+      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect:
+      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable:
+        if (!CE->getAddress()) {
+          ErrorFn(EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR, E.second);
+          continue;
+        }
+        break;
       default:
         break;
       }
@@ -10643,12 +10648,17 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       // entry. Indirect variables are handled separately on the device.
       if (auto *GV = dyn_cast<GlobalValue>(CE->getAddress()))
         if ((GV->hasLocalLinkage() || GV->hasHiddenVisibility()) &&
-            Flags != OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
+            (Flags !=
+                 OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect &&
+             Flags != OffloadEntriesInfoManager::
+                          OMPTargetGlobalVarEntryIndirectVTable))
           continue;
 
       // Indirect globals need to use a special name that doesn't match the name
       // of the associated host global.
-      if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
+      if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect ||
+          Flags ==
+              OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable)
         createOffloadEntry(CE->getAddress(), CE->getAddress(), CE->getVarSize(),
                            Flags, CE->getLinkage(), CE->getVarName());
       else
@@ -11085,7 +11095,9 @@ void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
       }
       return;
     }
-    if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
+    if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect ||
+        Flags ==
+            OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable)
       OffloadEntriesDeviceGlobalVar.try_emplace(VarName, OffloadingEntriesNum,
                                                 Addr, VarSize, Flags, Linkage,
                                                 VarName.str());
