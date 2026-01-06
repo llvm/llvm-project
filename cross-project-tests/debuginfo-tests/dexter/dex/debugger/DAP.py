@@ -782,7 +782,9 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         initialize_timeout = Timeout(60)
         while self._proc.poll() is None and not self._debugger_state.initialized:
             if initialize_timeout.timed_out():
-                raise TimeoutError("Timed out while waiting for initialized event from DAP")
+                raise TimeoutError(
+                    "Timed out while waiting for initialized event from DAP"
+                )
             time.sleep(0.01)
 
         # Set breakpoints after receiving launch response but before configurationDone.
