@@ -180,14 +180,12 @@ entry:
 
 declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)
 
-define dso_local void @copy_string(ptr noundef %dest, ptr noundef %src) {
-; CHECK-LE-P9-LABEL: copy_string:
+define dso_local void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
+; CHECK-LE-P9-LABEL: strcpy_test:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    mflr r0
 ; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
 ; CHECK-LE-P9-NEXT:    std r0, 64(r1)
-; CHECK-LE-P9-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-LE-P9-NEXT:    .cfi_offset lr, 16
 ; CHECK-LE-P9-NEXT:    std r3, 40(r1)
 ; CHECK-LE-P9-NEXT:    std r4, 32(r1)
 ; CHECK-LE-P9-NEXT:    bl strcpy
@@ -197,13 +195,11 @@ define dso_local void @copy_string(ptr noundef %dest, ptr noundef %src) {
 ; CHECK-LE-P9-NEXT:    mtlr r0
 ; CHECK-LE-P9-NEXT:    blr
 ;
-; CHECK-BE-P9-LABEL: copy_string:
+; CHECK-BE-P9-LABEL: strcpy_test:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    mflr r0
 ; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
 ; CHECK-BE-P9-NEXT:    std r0, 144(r1)
-; CHECK-BE-P9-NEXT:    .cfi_def_cfa_offset 128
-; CHECK-BE-P9-NEXT:    .cfi_offset lr, 16
 ; CHECK-BE-P9-NEXT:    std r3, 120(r1)
 ; CHECK-BE-P9-NEXT:    std r4, 112(r1)
 ; CHECK-BE-P9-NEXT:    bl strcpy
@@ -213,7 +209,7 @@ define dso_local void @copy_string(ptr noundef %dest, ptr noundef %src) {
 ; CHECK-BE-P9-NEXT:    mtlr r0
 ; CHECK-BE-P9-NEXT:    blr
 ;
-; CHECK-AIX-64-P9-LABEL: copy_string:
+; CHECK-AIX-64-P9-LABEL: strcpy_test:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -128(r1)

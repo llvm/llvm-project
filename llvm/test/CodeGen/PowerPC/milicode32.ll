@@ -160,8 +160,8 @@ entry:
 
 declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)
 
-define void @copy_string(ptr noundef %dest, ptr noundef %src) {
-; CHECK-AIX-32-P9-LABEL: copy_string:
+define void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
+; CHECK-AIX-32-P9-LABEL: strcpy_test:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    mflr r0
 ; CHECK-AIX-32-P9-NEXT:    stwu r1, -80(r1)
@@ -175,13 +175,11 @@ define void @copy_string(ptr noundef %dest, ptr noundef %src) {
 ; CHECK-AIX-32-P9-NEXT:    mtlr r0
 ; CHECK-AIX-32-P9-NEXT:    blr
 ;
-; CHECK-LINUX32-P9-LABEL: copy_string:
+; CHECK-LINUX32-P9-LABEL: strcpy_test:
 ; CHECK-LINUX32-P9:       # %bb.0: # %entry
 ; CHECK-LINUX32-P9-NEXT:    mflr r0
 ; CHECK-LINUX32-P9-NEXT:    stwu r1, -32(r1)
 ; CHECK-LINUX32-P9-NEXT:    stw r0, 36(r1)
-; CHECK-LINUX32-P9-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LINUX32-P9-NEXT:    .cfi_offset lr, 4
 ; CHECK-LINUX32-P9-NEXT:    stw r3, 24(r1)
 ; CHECK-LINUX32-P9-NEXT:    stw r4, 16(r1)
 ; CHECK-LINUX32-P9-NEXT:    bl strcpy
@@ -199,6 +197,5 @@ entry:
   %call = call ptr @strcpy(ptr noundef %0, ptr noundef %1)
   ret void
 }
-
 
 declare ptr @strcpy(ptr noundef, ptr noundef)
