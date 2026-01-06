@@ -60,6 +60,17 @@ def ApplySinkVectorProducerOpsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyShuffleBF16VectorContractResultPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86vector.shuffle_bf16_vector_contract_result",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to shuffle results of flat layout BF16 type 
+       vector.contract operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 
 #endif // X86VECTOR_TRANSFORM_OPS
 
