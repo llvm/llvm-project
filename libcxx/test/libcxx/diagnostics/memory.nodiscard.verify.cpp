@@ -52,7 +52,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     AllocTraits::allocate(allocator, 1);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    HintedAllocTraits::allocate(hintedAllocator, 1);
+    HintedAllocTraits::allocate(hintedAllocator, 1, nullptr);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     AllocTraits::allocate(allocator, 1, nullptr);
 
@@ -68,7 +68,7 @@ void test() {
       value_type* allocate(std::size_t) { return nullptr; }
       value_type* allocate(std::size_t, const void*) { return nullptr; }
 
-      size_type max_size();
+      size_type max_size() const { return 0; }
     } sizedAllocator;
     typedef std::allocator_traits<SizedAlloc> SizedAllocTraits;
 
