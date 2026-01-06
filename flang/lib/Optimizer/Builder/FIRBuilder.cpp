@@ -427,7 +427,8 @@ mlir::Value fir::FirOpBuilder::genTempDeclareOp(
       builder, loc, memref.getType(), memref, shape, typeParams,
       /*dummy_scope=*/nullptr,
       /*storage=*/nullptr,
-      /*storage_offset=*/0, nameAttr, fortranAttrs, cuf::DataAttributeAttr{});
+      /*storage_offset=*/0, nameAttr, fortranAttrs, cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 }
 
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
@@ -1392,12 +1393,10 @@ fir::ExtendedValue fir::factory::arraySectionElementToExtendedValue(
   return fir::factory::componentToExtendedValue(builder, loc, element);
 }
 
-void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
-                                       mlir::Location loc,
-                                       const fir::ExtendedValue &lhs,
-                                       const fir::ExtendedValue &rhs,
-                                       bool needFinalization,
-                                       bool isTemporaryLHS) {
+void fir::factory::genScalarAssignment(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::ExtendedValue &lhs, const fir::ExtendedValue &rhs,
+    bool needFinalization, bool isTemporaryLHS, mlir::ArrayAttr accessGroups) {
   assert(lhs.rank() == 0 && rhs.rank() == 0 && "must be scalars");
   auto type = fir::unwrapSequenceType(
       fir::unwrapPassByRefType(fir::getBase(lhs).getType()));
@@ -1419,7 +1418,9 @@ void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
     mlir::Value lhsAddr = fir::getBase(lhs);
     rhsVal = builder.createConvert(loc, fir::unwrapRefType(lhsAddr.getType()),
                                    rhsVal);
-    fir::StoreOp::create(builder, loc, rhsVal, lhsAddr);
+    fir::StoreOp store = fir::StoreOp::create(builder, loc, rhsVal, lhsAddr);
+    if (accessGroups)
+      store.setAccessGroupsAttr(accessGroups);
   }
 }
 
@@ -1667,6 +1668,26 @@ mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
     return complexHelper.createComplex(type, zeroPart, zeroPart);
   }
   fir::emitFatalError(loc, "internal: trying to generate zero value of non "
+                           "numeric or logical type");
+}
+
+mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Type type) {
+  mlir::Type i1 = builder.getIntegerType(1);
+  if (mlir::isa<fir::LogicalType>(type) || type == i1)
+    return builder.createConvert(loc, type, builder.createBool(loc, true));
+  if (fir::isa_integer(type))
+    return builder.createIntegerConstant(loc, type, 1);
+  if (fir::isa_real(type))
+    return builder.createRealOneConstant(loc, type);
+  if (fir::isa_complex(type)) {
+    fir::factory::Complex complexHelper(builder, loc);
+    mlir::Type partType = complexHelper.getComplexPartType(type);
+    mlir::Value realPart = builder.createRealOneConstant(loc, partType);
+    mlir::Value imagPart = builder.createRealZeroConstant(loc, partType);
+    return complexHelper.createComplex(type, realPart, imagPart);
+  }
+  fir::emitFatalError(loc, "internal: trying to generate one value of non "
                            "numeric or logical type");
 }
 

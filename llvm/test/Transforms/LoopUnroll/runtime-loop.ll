@@ -295,11 +295,12 @@ exit2.loopexit:
 ; COMMON-LABEL: {{^}}!0 =
 
 ; EPILOG: [[EPILOG_PROF_0]] = !{!"branch_weights", i32 1, i32 11}
-; EPILOG: [[EPILOG_PROF_1]] = !{!"branch_weights", i32 1, i32 127}
-; EPILOG: [[EPILOG_PROF_2]] = !{!"branch_weights", i32 1, i32 7}
-; EPILOG: [[EPILOG_PROF_3]] = !{!"branch_weights", i32 3, i32 1}
+; EPILOG: [[EPILOG_PROF_1]] = !{!"branch_weights", i32 326124004, i32 1821359644}
+; EPILOG: [[EPILOG_PROF_2]] = !{!"branch_weights", i32 1856428066, i32 291055582}
+; EPILOG: [[EPILOG_PROF_3]] = !{!"branch_weights", i32 1597681585, i32 549802063}
 
-; EPILOG: [[EPILOG_LOOP]] = distinct !{[[EPILOG_LOOP]], [[EPILOG_LOOP_1:![0-9]+]]}
+; EPILOG: [[EPILOG_LOOP]] = distinct !{[[EPILOG_LOOP]], [[EPILOG_TC:![0-9]+]], [[EPILOG_LOOP_1:![0-9]+]]}
+; EPILOG: [[EPILOG_TC]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ; EPILOG: [[EPILOG_LOOP_1]] = !{!"llvm.loop.unroll.disable"}
 
 ; PROLOG: [[PROLOG_PROF_0]] = !{!"branch_weights", i32 1, i32 11}

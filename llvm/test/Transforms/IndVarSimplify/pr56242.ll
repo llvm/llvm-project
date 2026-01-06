@@ -20,7 +20,7 @@ define void @test(ptr %arr) {
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_INC]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_INC]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IV_INC]], 16
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

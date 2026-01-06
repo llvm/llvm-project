@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_cos.h>
-#include <clc/opencl/math/cos.h>
 
 #define __CLC_FUNCTION cos
 #define __CLC_BODY <clc/shared/unary_def.inc>

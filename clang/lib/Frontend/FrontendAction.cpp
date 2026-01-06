@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
@@ -23,7 +24,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/Frontend/MultiplexConsumer.h"
@@ -836,7 +836,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If we fail, reset state since the client will not end up calling the
   // matching EndSourceFile(). All paths that return true should release this.
-  auto FailureCleanup = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FailureCleanup([&]() {
     if (HasBegunSourceFile)
       CI.getDiagnosticClient().EndSourceFile();
     CI.setASTConsumer(nullptr);
@@ -1039,7 +1039,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
                 CI.getCodeGenOpts(), CI.getTargetOpts(),
-                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                CI.getPreprocessorOpts(), CI.getHeaderSearchOpts(),
+                SpecificModuleCachePath,
                 /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;

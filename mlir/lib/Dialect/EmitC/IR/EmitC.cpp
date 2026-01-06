@@ -226,6 +226,21 @@ FailureOr<SmallVector<ReplacementItem>> parseFormatString(
 }
 
 //===----------------------------------------------------------------------===//
+// AddressOfOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AddressOfOp::verify() {
+  emitc::LValueType referenceType = getReference().getType();
+  emitc::PointerType resultType = getResult().getType();
+
+  if (referenceType.getValueType() != resultType.getPointee())
+    return emitOpError("requires result to be a pointer to the type "
+                       "referenced by operand");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AddOp
 //===----------------------------------------------------------------------===//
 
@@ -378,6 +393,20 @@ LogicalResult emitc::ConstantOp::verify() {
 }
 
 OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
+
+//===----------------------------------------------------------------------===//
+// DereferenceOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DereferenceOp::verify() {
+  emitc::PointerType pointerType = getPointer().getType();
+
+  if (pointerType.getPointee() != getResult().getType().getValueType())
+    return emitOpError("requires result to be an lvalue of the type "
+                       "pointed to by operand");
+
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // ExpressionOp
@@ -584,6 +613,10 @@ void ForOp::print(OpAsmPrinter &p) {
 LogicalResult ForOp::verifyRegions() {
   // Check that the body defines as single block argument for the induction
   // variable.
+  if (getBody()->getNumArguments() != 1)
+    return emitOpError("expected body to have a single block argument for the "
+                       "induction variable");
+
   if (getInductionVar().getType() != getLowerBound().getType())
     return emitOpError(
         "expected induction variable to be same type as bounds and step");

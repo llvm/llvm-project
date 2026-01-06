@@ -87,4 +87,7 @@ add_lit_testsuite(check-clang-extra "Running clang-tools-extra/test"
 
 add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}
+   SKIP "^clang-doc"
   )
+
+add_subdirectory(clang-doc)

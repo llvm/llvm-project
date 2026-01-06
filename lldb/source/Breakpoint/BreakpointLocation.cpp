@@ -251,7 +251,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     }
 
     m_user_expression_sp.reset(GetTarget().GetUserExpressionForLanguage(
-        condition.GetText(), llvm::StringRef(), language,
+        condition.GetText(), llvm::StringRef(), SourceLanguage{language},
         Expression::eResultTypeAny, EvaluateExpressionOptions(), nullptr,
         error));
     if (error.Fail()) {
@@ -749,13 +749,11 @@ void BreakpointLocation::Dump(Stream *s) const {
 
 void BreakpointLocation::SendBreakpointLocationChangedEvent(
     lldb::BreakpointEventType eventKind) {
-  if (!m_owner.IsInternal() && m_owner.GetTarget().EventTypeHasListeners(
-                                   Target::eBroadcastBitBreakpointChanged)) {
+  if (!m_owner.IsInternal()) {
     auto data_sp = std::make_shared<Breakpoint::BreakpointEventData>(
         eventKind, m_owner.shared_from_this());
     data_sp->GetBreakpointLocationCollection().Add(shared_from_this());
-    m_owner.GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                                       data_sp);
+    m_owner.GetTarget().NotifyBreakpointChanged(m_owner, data_sp);
   }
 }
 

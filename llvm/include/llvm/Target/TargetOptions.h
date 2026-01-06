@@ -15,6 +15,7 @@
 #define LLVM_TARGET_TARGETOPTIONS_H
 
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -139,8 +140,7 @@ public:
         DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true),
-        FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
+        VerifyArgABICompliance(true) {}
 
   /// DisableFramePointerElim - This returns true if frame pointer elimination
   /// optimization should be disabled for the given machine function.
@@ -409,25 +409,10 @@ public:
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
-private:
-  /// Flushing mode to assume in default FP environment.
-  DenormalMode FPDenormalMode;
-
-  /// Flushing mode to assume in default FP environment, for float/vector of
-  /// float.
-  DenormalMode FP32DenormalMode;
+  /// Vector math library to use.
+  VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
 public:
-  void setFPDenormalMode(DenormalMode Mode) { FPDenormalMode = Mode; }
-
-  void setFP32DenormalMode(DenormalMode Mode) { FP32DenormalMode = Mode; }
-
-  DenormalMode getRawFPDenormalMode() const { return FPDenormalMode; }
-
-  DenormalMode getRawFP32DenormalMode() const { return FP32DenormalMode; }
-
-  LLVM_ABI DenormalMode getDenormalMode(const fltSemantics &FPType) const;
-
   /// What exception model to use
   ExceptionHandling ExceptionModel = ExceptionHandling::None;
 

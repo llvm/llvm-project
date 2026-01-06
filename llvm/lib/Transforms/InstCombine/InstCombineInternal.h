@@ -479,7 +479,7 @@ private:
                                      const Twine &NameStr = "",
                                      InsertPosition InsertBefore = nullptr) {
     auto *Sel = SelectInst::Create(C, S1, S2, NameStr, InsertBefore, nullptr);
-    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, F, DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, DEBUG_TYPE, &F);
     return Sel;
   }
 
@@ -666,6 +666,8 @@ public:
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
                                 bool FoldWithMultiUse = false,
                                 bool SimplifyBothArms = false);
+
+  Instruction *foldBinOpSelectBinOp(BinaryOperator &Op);
 
   /// This is a convenience wrapper function for the above two functions.
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);

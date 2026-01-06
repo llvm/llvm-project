@@ -1,6 +1,8 @@
-; RUN: echo "!foo" > %t.order.txt
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t.order.txt  | FileCheck --check-prefix=SOURCE-DRIFT %s
-; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t.order.txt -bbsections-detect-source-drift=false | FileCheck --check-prefix=HASH-CHECK-DISABLED %s
+; RUN: echo "v1" > %t
+; RUN: echo "f foo" >> %t
+; RUN: echo "c 0" >> %t
+; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t  | FileCheck --check-prefix=SOURCE-DRIFT %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=%t -bbsections-detect-source-drift=false | FileCheck --check-prefix=HASH-CHECK-DISABLED %s
 
 define dso_local i32 @foo(i1 zeroext %0, i1 zeroext %1)  !annotation !1 {
   br i1 %0, label %5, label %3

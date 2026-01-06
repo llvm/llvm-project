@@ -299,6 +299,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ROTR:                       return "rotr";
   case ISD::FSHL:                       return "fshl";
   case ISD::FSHR:                       return "fshr";
+  case ISD::CLMUL:                      return "clmul";
+  case ISD::CLMULR:                     return "clmulr";
+  case ISD::CLMULH:                     return "clmulh";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
   case ISD::FSUB:                       return "fsub";
@@ -472,6 +475,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::LIFETIME_END:               return "lifetime.end";
   case ISD::FAKE_USE:
     return "fake_use";
+  case ISD::RELOC_NONE:
+    return "reloc_none";
   case ISD::PSEUDO_PROBE:
     return "pseudoprobe";
   case ISD::GC_TRANSITION_START:        return "gc_transition.start";
@@ -510,6 +515,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CTTZ_ZERO_UNDEF:            return "cttz_zero_undef";
   case ISD::CTLZ:                       return "ctlz";
   case ISD::CTLZ_ZERO_UNDEF:            return "ctlz_zero_undef";
+  case ISD::CTLS:                       return "ctls";
   case ISD::PARITY:                     return "parity";
 
   // Trampolines
@@ -588,6 +594,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "partial_reduce_smla";
   case ISD::PARTIAL_REDUCE_SUMLA:
     return "partial_reduce_sumla";
+  case ISD::PARTIAL_REDUCE_FMLA:
+    return "partial_reduce_fmla";
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
     return "loop_dep_war";
   case ISD::LOOP_DEPENDENCE_RAW_MASK:

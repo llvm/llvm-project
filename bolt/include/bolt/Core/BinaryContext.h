@@ -65,6 +65,9 @@ namespace bolt {
 
 class BinaryFunction;
 
+using BinaryFunctionListType = std::vector<BinaryFunction *>;
+using ConstBinaryFunctionListType = std::vector<const BinaryFunction *>;
+
 /// Information on loadable part of the file.
 struct SegmentInfo {
   uint64_t Address;           /// Address of the segment in memory.
@@ -228,11 +231,14 @@ class BinaryContext {
   /// Store all functions in the binary, sorted by original address.
   std::map<uint64_t, BinaryFunction> BinaryFunctions;
 
-  /// A mutex that is used to control parallel accesses to BinaryFunctions
+  /// Functions to be considered for the output in a sorted order.
+  BinaryFunctionListType OutputFunctions;
+
+  /// A mutex that is used to control parallel accesses to BinaryFunctions.
   mutable llvm::sys::RWMutex BinaryFunctionsMutex;
 
-  /// Functions injected by BOLT
-  std::vector<BinaryFunction *> InjectedBinaryFunctions;
+  /// Functions injected by BOLT.
+  BinaryFunctionListType InjectedBinaryFunctions;
 
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
@@ -353,9 +359,6 @@ public:
 
   /// Newly created segments.
   std::vector<SegmentInfo> NewSegments;
-
-  /// Symbols that are expected to be undefined in MCContext during emission.
-  std::unordered_set<MCSymbol *> UndefinedSymbols;
 
   /// [name] -> [BinaryData*] map used for global symbol resolution.
   using SymbolMapType = StringMap<BinaryData *>;
@@ -500,7 +503,7 @@ public:
   ///
   /// As we fold identical functions, multiple symbols can point
   /// to the same BinaryFunction.
-  std::unordered_map<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
+  DenseMap<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
 
   /// A mutex that is used to control parallel accesses to SymbolToFunctionMap
   mutable llvm::sys::RWMutex SymbolToFunctionMapMutex;
@@ -554,6 +557,9 @@ public:
     return BinaryFunctions;
   }
 
+  /// Return functions meant for the output in a sorted order.
+  BinaryFunctionListType &getOutputBinaryFunctions() { return OutputFunctions; }
+
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
                                                bool IsSimple = true);
@@ -570,13 +576,13 @@ public:
                          const InstructionListType &Instructions,
                          const Twine &Name = "");
 
-  std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
+  BinaryFunctionListType &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
 
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
-  std::vector<BinaryFunction *> getAllBinaryFunctions();
+  BinaryFunctionListType getAllBinaryFunctions();
 
   /// Construct a jump table for \p Function at \p Address or return an existing
   /// one at that location.
@@ -810,6 +816,15 @@ public:
   /// the execution of the binary is completed.
   std::optional<uint64_t> FiniFunctionAddress;
 
+  /// DT_INIT.
+  std::optional<uint64_t> InitAddress;
+
+  /// DT_INIT_ARRAY. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArrayAddress;
+
+  /// DT_INIT_ARRAYSZ. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArraySize;
+
   /// DT_FINI.
   std::optional<uint64_t> FiniAddress;
 
@@ -931,6 +946,17 @@ public:
   /// Return <Symbol, Addend> pair corresponding to the \p Address.
   std::pair<const MCSymbol *, uint64_t>
   handleAddressRef(uint64_t Address, BinaryFunction &BF, bool IsPCRel);
+
+  /// When \p Address inside function \p BF is a target of a control transfer
+  /// instruction (branch) from another function, return a corresponding symbol
+  /// that should be used by the branch. For example, main or secondary entry
+  /// point.
+  ///
+  /// This function also performs validations: If \p Address points to an
+  /// invalid instruction or lies within a constant island, return nullptr and
+  /// mark both \p Source and \p Target as ignored.
+  MCSymbol *handleExternalBranchTarget(uint64_t Address, BinaryFunction &Source,
+                                       BinaryFunction &Target);
 
   /// Analyze memory contents at the given \p Address and return the type of
   /// memory contents (such as a possible jump table).
@@ -1097,7 +1123,7 @@ public:
     return FragmentClasses.isEquivalent(LHS, RHS);
   }
 
-  /// Add interprocedural reference for \p Function to \p Address
+  /// Add interprocedural branch reference from \p Function to \p Address.
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1112,7 +1138,8 @@ public:
   /// argument is false.
   bool handleAArch64Veneer(uint64_t Address, bool MatchOnly = false);
 
-  /// Resolve inter-procedural dependencies from
+  /// Resolve inter-procedural branch dependencies discovered during
+  /// disassembly.
   void processInterproceduralReferences();
 
   /// Skip functions with all parent and child fragments transitively.
@@ -1365,9 +1392,6 @@ public:
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
                                   const uint32_t SrcCUID, unsigned FileIndex);
-
-  /// Return functions in output layout order
-  std::vector<BinaryFunction *> getSortedFunctions();
 
   /// Do the best effort to calculate the size of the function by emitting
   /// its code, and relaxing branch instructions. By default, branch

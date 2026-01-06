@@ -667,6 +667,7 @@ LogicalResult LLVMStructType::verifyEntries(DataLayoutEntryListRef entries,
 
 static constexpr llvm::StringRef kSpirvPrefix = "spirv.";
 static constexpr llvm::StringRef kArmSVCount = "aarch64.svcount";
+static constexpr llvm::StringRef kAMDGCNNamedBarrier = "amdgcn.named.barrier";
 
 bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
   // See llvm/lib/IR/Type.cpp for reference.
@@ -675,6 +676,9 @@ bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
   if (getExtTypeName().starts_with(kSpirvPrefix))
     properties |=
         (LLVMTargetExtType::HasZeroInit | LLVM::LLVMTargetExtType::CanBeGlobal);
+
+  if (getExtTypeName() == kAMDGCNNamedBarrier)
+    properties |= LLVMTargetExtType::CanBeGlobal;
 
   return (properties & prop) == prop;
 }
@@ -798,7 +802,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
           // clang-format on
           .Case<PtrLikeTypeInterface>(
               [](Type type) { return isCompatiblePtrType(type); })
-          .Default([](Type) { return false; });
+          .Default(false);
 
   if (!result)
     compatibleTypes.erase(type);

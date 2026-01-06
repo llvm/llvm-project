@@ -316,7 +316,7 @@ multiclass FPCmp_rr_m<bits<7> funct7, bits<3> funct3, string opcodestr,
 }
 
 class PseudoFROUND<DAGOperand Ty, ValueType vt, ValueType intvt = XLenVT>
-    : Pseudo<(outs Ty:$rd), (ins Ty:$rs1, Ty:$rs2, ixlenimm:$rm),
+    : Pseudo<(outs Ty:$rd), (ins Ty:$rs1, Ty:$rs2, frmarg:$rm),
       [(set Ty:$rd, (vt (riscv_fround Ty:$rs1, Ty:$rs2, (intvt timm:$rm))))]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -330,6 +330,7 @@ class PseudoFROUND<DAGOperand Ty, ValueType vt, ValueType intvt = XLenVT>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtF] in {
+let canFoldAsLoad = 1, isReMaterializable = 1 in
 def FLW : FPLoad_r<0b010, "flw", FPR32, WriteFLD32>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
