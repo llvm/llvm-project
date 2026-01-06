@@ -457,6 +457,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
+  case VPInstruction::InsertLastLane:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
     return 2;
@@ -687,6 +688,15 @@ Value *VPInstruction::generate(VPTransformState &State) {
       Res = Builder.CreateInsertElement(Res, State.get(Op, true),
                                         Builder.getInt32(Idx));
     return Res;
+  }
+  case VPInstruction::InsertLastLane: {
+    if (State.VF.isScalar())
+      return State.get(getOperand(1), true);
+    Value *Vec = State.get(getOperand(0));
+    Value *Elt = State.get(getOperand(1), /*IsScalar=*/true);
+    Value *RuntimeVF = getRuntimeVF(Builder, Builder.getInt32Ty(), State.VF);
+    Value *LastIdx = Builder.CreateSub(RuntimeVF, Builder.getInt32(1));
+    return Builder.CreateInsertElement(Vec, Elt, LastIdx, Name);
   }
   case VPInstruction::ReductionStartVector: {
     if (State.VF.isScalar())
@@ -1322,6 +1332,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::InsertLastLane:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
@@ -1352,6 +1363,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ExtractElement:
+  case VPInstruction::InsertLastLane:
     return Op == getOperand(1);
   case Instruction::PHI:
     return true;
@@ -1470,6 +1482,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BuildVector:
     O << "buildvector";
+    break;
+  case VPInstruction::InsertLastLane:
+    O << "insert-last-lane";
     break;
   case VPInstruction::ExtractLane:
     O << "extract-lane";
@@ -4349,27 +4364,10 @@ void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
-  auto &Builder = State.Builder;
-  // Create a vector from the initial value.
-  auto *VectorInit = getStartValue()->getLiveInIRValue();
-
-  Type *VecTy = State.VF.isScalar()
-                    ? VectorInit->getType()
-                    : VectorType::get(VectorInit->getType(), State.VF);
-
+  Value *VectorInit = State.get(getStartValue(), State.VF.isScalar());
+  Type *VecTy = VectorInit->getType();
   BasicBlock *VectorPH =
       State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  if (State.VF.isVector()) {
-    auto *IdxTy = Builder.getInt32Ty();
-    auto *One = ConstantInt::get(IdxTy, 1);
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    Builder.SetInsertPoint(VectorPH->getTerminator());
-    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, State.VF);
-    auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
-    VectorInit = Builder.CreateInsertElement(
-        PoisonValue::get(VecTy), VectorInit, LastIdx, "vector.recur.init");
-  }
-
   // Create a phi node for the new recurrence.
   PHINode *Phi = PHINode::Create(VecTy, 2, "vector.recur");
   Phi->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());

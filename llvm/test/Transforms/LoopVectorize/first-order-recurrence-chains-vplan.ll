@@ -14,13 +14,15 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<[[RECUR_INIT:%.+]]> = insert-last-lane ir<poison>, ir<22>
+; CHECK-NEXT:   EMIT vp<[[RECUR_INIT]]>.1 = insert-last-lane ir<poison>, ir<33>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi vp<[[RECUR_INIT]]>, ir<%for.1.next>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi vp<[[RECUR_INIT]]>.1, vp<[[FOR1_SPLICE:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep.ptr>
@@ -93,14 +95,17 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:  EMIT vp<[[RECUR_INIT:%.+]]> = insert-last-lane ir<poison>, ir<22>
+; CHECK-NEXT:  EMIT vp<[[RECUR_INIT]]>.1 = insert-last-lane ir<poison>, ir<33>
+; CHECK-NEXT:  EMIT vp<[[RECUR_INIT]]>.2 = insert-last-lane ir<poison>, ir<33>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.3> = phi ir<33>, vp<[[FOR2_SPLICE:%.+]]>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi vp<[[RECUR_INIT]]>, ir<%for.1.next>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi vp<[[RECUR_INIT]]>.1, vp<[[FOR1_SPLICE:%.+]]>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.3> = phi vp<[[RECUR_INIT]]>.2, vp<[[FOR2_SPLICE:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep.ptr>
@@ -185,14 +190,16 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<[[RECUR_INIT:%.+]]> = insert-last-lane ir<poison>, ir<0>
+; CHECK-NEXT:   EMIT vp<[[RECUR_INIT]]>.1 = insert-last-lane ir<poison>.1, ir<0>
 ; CHECK-NEXT:   CLONE ir<%for.x.next> = mul ir<%x>, ir<2>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, ir<%for.x.next>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi vp<[[RECUR_INIT]]>, ir<%for.x.next>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi vp<[[RECUR_INIT]]>.1, ir<%for.x.prev>
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%base>, vp<[[SCALAR_STEPS]]>
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_X:%.]]> = first-order splice ir<%for.x>, ir<%for.x.next>
@@ -264,13 +271,15 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<[[RECUR_INIT:%.+]]> = insert-last-lane ir<poison>, ir<0>
+; CHECK-NEXT:   EMIT vp<[[RECUR_INIT]]>.1 = insert-last-lane ir<poison>.1, ir<0>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, ir<%for.x.next>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi vp<[[RECUR_INIT]]>, ir<%for.x.next>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi vp<[[RECUR_INIT]]>.1, ir<%for.x.prev>
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%base>, vp<[[SCALAR_STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
