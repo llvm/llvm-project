@@ -595,6 +595,7 @@ Bug Fixes to C++ Support
   "initializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
+- Fix a crash when using an explicit object parameter in a non-member function with an invalid return type.(#GH173943)
 - Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
   instantiated properly. (#GH154054)
 - Fixed a bug where our ``member-like constrained friend`` checking caused an incorrect analysis of lambda captures. (#GH156225)
