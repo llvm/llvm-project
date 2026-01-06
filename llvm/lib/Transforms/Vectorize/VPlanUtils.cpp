@@ -75,7 +75,8 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
          B == Plan.getBackedgeTakenCount();
 }
 
-const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
+const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
+                                           ScalarEvolution &SE, const Loop *L) {
   if (V->isLiveIn()) {
     if (Value *LiveIn = V->getLiveInIRValue())
       return SE.getSCEV(LiveIn);
@@ -86,6 +87,52 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+      .Case<VPCanonicalIVPHIRecipe>([&SE, L](const VPCanonicalIVPHIRecipe *R) {
+        if (!L)
+          return SE.getCouldNotCompute();
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
+                                SCEV::FlagAnyWrap);
+      })
+      .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), SE, L);
+        if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
+          return SE.getCouldNotCompute();
+
+        return SE.getAddExpr(SE.getTruncateOrSignExtend(Start, IV->getType()),
+                             SE.getMulExpr(IV, SE.getTruncateOrSignExtend(
+                                                   Scale, IV->getType())));
+      })
+      .Case<VPScalarIVStepsRecipe>([&SE, L](const VPScalarIVStepsRecipe *R) {
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+        if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step))
+          return SE.getCouldNotCompute();
+        return SE.getMulExpr(SE.getTruncateOrSignExtend(IV, Step->getType()),
+                             Step);
+      })
+      .Case<VPReplicateRecipe>([&SE, L](const VPReplicateRecipe *R) {
+        if (R->getOpcode() != Instruction::GetElementPtr)
+          return SE.getCouldNotCompute();
+
+        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        if (isa<SCEVCouldNotCompute>(Base))
+          return SE.getCouldNotCompute();
+
+        SmallVector<const SCEV *> IndexExprs;
+        for (VPValue *Index : drop_begin(R->operands())) {
+          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, SE, L);
+          if (isa<SCEVCouldNotCompute>(IndexExpr))
+            return SE.getCouldNotCompute();
+          IndexExprs.push_back(IndexExpr);
+        }
+
+        Type *SrcElementTy = cast<GetElementPtrInst>(R->getUnderlyingInstr())
+                                 ->getSourceElementType();
+        return SE.getGEPExpr(Base, IndexExprs, SrcElementTy);
+      })
       .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 }
 
