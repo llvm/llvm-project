@@ -1,8 +1,6 @@
 
 #include <iostream>
 
-
-
 int my_next() {
   static int i = 0;
   std::cout << "incrementing " << i << std::endl;
