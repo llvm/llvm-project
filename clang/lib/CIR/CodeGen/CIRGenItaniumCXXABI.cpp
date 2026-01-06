@@ -2351,6 +2351,7 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
       return;
     }
 
+    // Otherwise, it returns a pointer into the exception object.
     mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
     mlir::Value catchParam =
         callBeginCatch(cgf, cgf.getBuilder().getPointerTo(cirCatchTy), false);
@@ -2358,11 +2359,12 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
     LValue destLV = cgf.makeAddrLValue(paramAddr, catchType);
     switch (tek) {
     case cir::TEK_Complex: {
-      cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Complex");
+      mlir::Value load = cgf.emitLoadOfComplex(srcLV, loc);
+      cgf.emitStoreOfComplex(cgf.getLoc(loc), load, destLV, /*isInit=*/true);
       return;
     }
     case cir::TEK_Scalar: {
-      auto exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
+      mlir::Value exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
       cgf.emitStoreOfScalar(exnLoad, destLV, /*isInit=*/true);
       return;
     }
@@ -2370,7 +2372,6 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
       llvm_unreachable("evaluation kind filtered out!");
     }
 
-    // Otherwise, it returns a pointer into the exception object.
     llvm_unreachable("bad evaluation kind");
   }
 
