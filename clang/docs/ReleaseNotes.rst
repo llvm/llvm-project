@@ -577,6 +577,7 @@ Bug Fixes to Attribute Support
 - Fix a crash when instantiating a function template with ``constructor`` or ``destructor``
   attributes without a priority argument. (#GH169072)
 - Fix an assertion when using ``target_clones`` attribute with empty argument list. (#GH173684)
+- Fixed a crash when applying the ``sentinel`` attribute to block variables. (#GH173820)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
