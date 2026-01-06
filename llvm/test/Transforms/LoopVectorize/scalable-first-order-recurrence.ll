@@ -47,7 +47,7 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[INDEX]], 1
 ; CHECK-VF4UF1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP17]]
 ; CHECK-VF4UF1-NEXT:    [[WIDE_LOAD]] = load <vscale x 4 x i32>, ptr [[TMP18]], align 4
-; CHECK-VF4UF1-NEXT:    [[TMP20:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 -1)
+; CHECK-VF4UF1-NEXT:    [[TMP20:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 1)
 ; CHECK-VF4UF1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-VF4UF1-NEXT:    [[TMP22:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], [[TMP20]]
 ; CHECK-VF4UF1-NEXT:    store <vscale x 4 x i32> [[TMP22]], ptr [[TMP21]], align 4
@@ -113,8 +113,8 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[TMP18]], i64 [[TMP12]]
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP18]], align 4
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD3]] = load <vscale x 4 x i32>, ptr [[TMP22]], align 4
-; CHECK-VF4UF2-NEXT:    [[TMP23:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 -1)
-; CHECK-VF4UF2-NEXT:    [[TMP24:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD3]], i32 -1)
+; CHECK-VF4UF2-NEXT:    [[TMP23:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 1)
+; CHECK-VF4UF2-NEXT:    [[TMP24:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD3]], i32 1)
 ; CHECK-VF4UF2-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-VF4UF2-NEXT:    [[TMP26:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], [[TMP23]]
 ; CHECK-VF4UF2-NEXT:    [[TMP27:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD3]], [[TMP24]]
@@ -203,7 +203,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-VF4UF1-NEXT:    [[WIDE_LOAD]] = load <vscale x 4 x i32>, ptr [[TMP10]], align 4
-; CHECK-VF4UF1-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 -1)
+; CHECK-VF4UF1-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 1)
 ; CHECK-VF4UF1-NEXT:    [[TMP13:%.*]] = sub nsw <vscale x 4 x i32> [[WIDE_LOAD]], [[TMP12]]
 ; CHECK-VF4UF1-NEXT:    [[TMP14:%.*]] = icmp sgt <vscale x 4 x i32> [[TMP13]], zeroinitializer
 ; CHECK-VF4UF1-NEXT:    [[TMP15:%.*]] = select <vscale x 4 x i1> [[TMP14]], <vscale x 4 x i32> [[TMP13]], <vscale x 4 x i32> zeroinitializer
@@ -266,8 +266,8 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 [[TMP11]]
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP10]], align 4
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD2]] = load <vscale x 4 x i32>, ptr [[TMP14]], align 4
-; CHECK-VF4UF2-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 -1)
-; CHECK-VF4UF2-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD2]], i32 -1)
+; CHECK-VF4UF2-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[WIDE_LOAD]], i32 1)
+; CHECK-VF4UF2-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD2]], i32 1)
 ; CHECK-VF4UF2-NEXT:    [[TMP17:%.*]] = sub nsw <vscale x 4 x i32> [[WIDE_LOAD]], [[TMP15]]
 ; CHECK-VF4UF2-NEXT:    [[TMP18:%.*]] = sub nsw <vscale x 4 x i32> [[WIDE_LOAD2]], [[TMP16]]
 ; CHECK-VF4UF2-NEXT:    [[TMP19:%.*]] = icmp sgt <vscale x 4 x i32> [[TMP17]], zeroinitializer
@@ -388,7 +388,7 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF1-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-VF4UF1-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-VF4UF1-NEXT:    [[WIDE_LOAD]] = load <vscale x 4 x i16>, ptr [[TMP19]], align 2, !alias.scope [[META6:![0-9]+]]
-; CHECK-VF4UF1-NEXT:    [[TMP21:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 -1)
+; CHECK-VF4UF1-NEXT:    [[TMP21:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 1)
 ; CHECK-VF4UF1-NEXT:    [[TMP22:%.*]] = sitofp <vscale x 4 x i16> [[WIDE_LOAD]] to <vscale x 4 x double>
 ; CHECK-VF4UF1-NEXT:    [[TMP23:%.*]] = sitofp <vscale x 4 x i16> [[TMP21]] to <vscale x 4 x double>
 ; CHECK-VF4UF1-NEXT:    [[TMP24:%.*]] = fmul fast <vscale x 4 x double> [[TMP23]], [[BROADCAST_SPLAT]]
@@ -467,8 +467,8 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i16, ptr [[TMP19]], i64 [[TMP13]]
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP19]], align 2, !alias.scope [[META6:![0-9]+]]
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD4]] = load <vscale x 4 x i16>, ptr [[TMP20]], align 2, !alias.scope [[META6]]
-; CHECK-VF4UF2-NEXT:    [[TMP24:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 -1)
-; CHECK-VF4UF2-NEXT:    [[TMP25:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> [[WIDE_LOAD]], <vscale x 4 x i16> [[WIDE_LOAD4]], i32 -1)
+; CHECK-VF4UF2-NEXT:    [[TMP24:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 1)
+; CHECK-VF4UF2-NEXT:    [[TMP25:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> [[WIDE_LOAD]], <vscale x 4 x i16> [[WIDE_LOAD4]], i32 1)
 ; CHECK-VF4UF2-NEXT:    [[TMP26:%.*]] = sitofp <vscale x 4 x i16> [[WIDE_LOAD]] to <vscale x 4 x double>
 ; CHECK-VF4UF2-NEXT:    [[TMP27:%.*]] = sitofp <vscale x 4 x i16> [[WIDE_LOAD4]] to <vscale x 4 x double>
 ; CHECK-VF4UF2-NEXT:    [[TMP28:%.*]] = sitofp <vscale x 4 x i16> [[TMP24]] to <vscale x 4 x double>
@@ -759,7 +759,7 @@ define void @sink_after(ptr %a, ptr %b, i64 %n) {
 ; CHECK-VF4UF1-NEXT:    [[TMP12:%.*]] = add nuw nsw i64 [[INDEX]], 1
 ; CHECK-VF4UF1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP12]]
 ; CHECK-VF4UF1-NEXT:    [[WIDE_LOAD]] = load <vscale x 4 x i16>, ptr [[TMP13]], align 2, !alias.scope [[META17:![0-9]+]]
-; CHECK-VF4UF1-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 -1)
+; CHECK-VF4UF1-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 1)
 ; CHECK-VF4UF1-NEXT:    [[TMP16:%.*]] = sext <vscale x 4 x i16> [[TMP15]] to <vscale x 4 x i32>
 ; CHECK-VF4UF1-NEXT:    [[TMP17:%.*]] = sext <vscale x 4 x i16> [[WIDE_LOAD]] to <vscale x 4 x i32>
 ; CHECK-VF4UF1-NEXT:    [[TMP18:%.*]] = mul nsw <vscale x 4 x i32> [[TMP17]], [[TMP16]]
@@ -819,8 +819,8 @@ define void @sink_after(ptr %a, ptr %b, i64 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP13]], i64 [[TMP7]]
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP13]], align 2, !alias.scope [[META17:![0-9]+]]
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD3]] = load <vscale x 4 x i16>, ptr [[TMP14]], align 2, !alias.scope [[META17]]
-; CHECK-VF4UF2-NEXT:    [[TMP18:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 -1)
-; CHECK-VF4UF2-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> [[WIDE_LOAD]], <vscale x 4 x i16> [[WIDE_LOAD3]], i32 -1)
+; CHECK-VF4UF2-NEXT:    [[TMP18:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 1)
+; CHECK-VF4UF2-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> [[WIDE_LOAD]], <vscale x 4 x i16> [[WIDE_LOAD3]], i32 1)
 ; CHECK-VF4UF2-NEXT:    [[TMP20:%.*]] = sext <vscale x 4 x i16> [[TMP18]] to <vscale x 4 x i32>
 ; CHECK-VF4UF2-NEXT:    [[TMP21:%.*]] = sext <vscale x 4 x i16> [[TMP19]] to <vscale x 4 x i32>
 ; CHECK-VF4UF2-NEXT:    [[TMP22:%.*]] = sext <vscale x 4 x i16> [[WIDE_LOAD]] to <vscale x 4 x i32>

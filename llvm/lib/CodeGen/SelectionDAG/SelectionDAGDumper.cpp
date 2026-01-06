@@ -351,7 +351,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECTOR_INTERLEAVE:          return "vector_interleave";
   case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
   case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
-  case ISD::VECTOR_SPLICE:              return "vector_splice";
+  case ISD::VECTOR_SPLICE_LEFT:         return "vector_splice_left";
+  case ISD::VECTOR_SPLICE_RIGHT:        return "vector_splice_right";
   case ISD::SPLAT_VECTOR:               return "splat_vector";
   case ISD::SPLAT_VECTOR_PARTS:         return "splat_vector_parts";
   case ISD::VECTOR_REVERSE:             return "vector_reverse";
