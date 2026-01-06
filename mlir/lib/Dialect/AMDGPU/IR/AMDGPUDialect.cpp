@@ -151,12 +151,7 @@ FailureOr<OpFoldResult> FatRawBufferCastOp::reifyDimOfResult(OpBuilder &builder,
                                                              int resultIndex,
                                                              int dim) {
   assert(resultIndex == 0 && "FatRawBufferCastOp has a single result");
-  Value source = getSource();
-  auto sourceType = cast<MemRefType>(source.getType());
-  if (sourceType.isDynamicDim(dim))
-    return OpFoldResult(
-        builder.createOrFold<memref::DimOp>(getLoc(), source, dim));
-  return OpFoldResult(builder.getIndexAttr(sourceType.getDimSize(dim)));
+  return memref::getMixedSize(builder, getLoc(), getSource(), dim);
 }
 
 LogicalResult FatRawBufferCastOp::verify() {

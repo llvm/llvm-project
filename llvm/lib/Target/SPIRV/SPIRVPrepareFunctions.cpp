@@ -385,13 +385,20 @@ static void lowerExpectAssume(IntrinsicInst *II) {
 }
 
 static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
+  auto *LifetimeArg0 = II->getArgOperand(0);
+
+  // If the lifetime argument is a poison value, the intrinsic has no effect.
+  if (isa<PoisonValue>(LifetimeArg0)) {
+    II->eraseFromParent();
+    return true;
+  }
+
   IRBuilder<> Builder(II);
-  auto *Alloca = cast<AllocaInst>(II->getArgOperand(0));
+  auto *Alloca = cast<AllocaInst>(LifetimeArg0);
   std::optional<TypeSize> Size =
       Alloca->getAllocationSize(Alloca->getDataLayout());
   Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
-  Builder.CreateIntrinsic(NewID, Alloca->getType(),
-                          {SizeVal, II->getArgOperand(0)});
+  Builder.CreateIntrinsic(NewID, Alloca->getType(), {SizeVal, LifetimeArg0});
   II->eraseFromParent();
   return true;
 }
