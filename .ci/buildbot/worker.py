@@ -1,3 +1,8 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+"""Utilities for ScriptedBuilder Buildbot worker scripts"""
+
 import argparse
 import filecmp
 import os
@@ -337,17 +342,15 @@ def run(
     involves deleting ${prefix}/llvm.src as well as ${prefix}/build.
     The term 'clobber' means deleting build artifacts, but not already
     downloaded git repositories. Build artifacts include build- and
-    install-directories, but not source directories. Changes in the llvm.src
-    directory will either be force-reset by the buildbot's 'checkout' step
-    anyway, or -- in case of local invocation -- represents the state the user
-    wants to reproduce. In either case the source directories should not be
-    touched. We consider 'clean' to comprise 'clobber'. The llvm-zorg also uses
-    the term 'clean_obj' instead of 'clobber'.
-
-    be reset before the next build anyway. By default, we will
-    always clobber to get the same starting point at every build. If
-    incremental=True or the --incremental command line option is used, the
-    starting point is the previous build.
+    install-directories. Changes in the llvm.src directory will
+    either be force-reset by the buildbot's 'checkout' step anyway,
+    or -- in case of local invocation -- represents the source the user wants
+    to reproduce without being tied to a specific commit. In either case the
+    source directories should not be touched. We consider 'clean' to comprise
+    'clobber'. llvm-zorg also uses the term 'clean_obj' instead of 'clobber'.
+    By default, we will always clobber to get the same starting point at every
+    build. If incremental=True or the --incremental command line option is used,
+    the starting point is the previous build.
 
     A buildbot worker will invoke this script using this directory structure,
     where ${prefix} is a dedicated directory for this builder:
