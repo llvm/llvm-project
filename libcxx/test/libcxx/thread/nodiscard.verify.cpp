@@ -12,6 +12,7 @@
 
 #include <chrono>
 #include <barrier>
+#include <future>
 #include <latch>
 #include <mutex>
 #include <semaphore>
