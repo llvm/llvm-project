@@ -872,6 +872,10 @@ def err_drv_experimental_crel : Error<
   "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "
   "CREL is experimental and uses a non-standard section type code">;
 
+def err_drv_experimental_sframe : Error<
+  "-Wa,--allow-experimental-sframe must be specified to use -Wa,--gsframe. "
+  "SFrames are experimental and may be removed at any time without warning">;
+
 def warn_android_unversioned_fallback : Warning<
   "using unversioned Android target directory %0 for target %1; unversioned "
   "directories will not be used in Clang 19 -- provide a versioned directory "
