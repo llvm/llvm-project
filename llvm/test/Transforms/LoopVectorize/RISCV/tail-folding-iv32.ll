@@ -38,7 +38,7 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP11:%.*]] = mul nuw i32 [[TMP1]], 4
+; NO-VP-NEXT:    [[TMP11:%.*]] = shl nuw i32 [[TMP1]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP11]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]

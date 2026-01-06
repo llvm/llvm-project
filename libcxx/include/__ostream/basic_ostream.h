@@ -174,7 +174,7 @@ public:
   basic_ostream& flush();
 
   // 27.7.2.5 seeks:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 pos_type tellp();
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 pos_type tellp();
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& seekp(pos_type __pos);
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& seekp(off_type __off, ios_base::seekdir __dir);
 

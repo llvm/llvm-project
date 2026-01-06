@@ -455,7 +455,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i8 [[INDUCTION_IV]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i8 [[INDUCTION_IV]], 2
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT1]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -484,7 +484,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[DOTSPLAT11:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT10]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT11]]
 ; CHECK-NEXT:    [[INDUCTION12:%.*]] = add <4 x i8> [[DOTSPLAT9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i8 [[INDUCTION_IV]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i8 [[INDUCTION_IV]], 2
 ; CHECK-NEXT:    [[DOTSPLATINSERT13:%.*]] = insertelement <4 x i8> poison, i8 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT14:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT13]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -542,7 +542,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP2:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> zeroinitializer, [[TMP2]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP3:%.*]] = mul i8 [[INDUCTION_IV]], 4
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP3:%.*]] = shl i8 [[INDUCTION_IV]], 2
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP3]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT1]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -571,7 +571,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT11:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT10]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP8:%.*]] = mul <2 x i8> <i8 0, i8 1>, [[DOTSPLAT11]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION12:%.*]] = add <2 x i8> [[DOTSPLAT9]], [[TMP8]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP9:%.*]] = mul i8 [[INDUCTION_IV]], 2
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP9:%.*]] = shl i8 [[INDUCTION_IV]], 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT13:%.*]] = insertelement <2 x i8> poison, i8 [[TMP9]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT14:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT13]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]

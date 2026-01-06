@@ -17,8 +17,8 @@ define i64 @test_foldable_live_in_via_scev() {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ splat (i64 1), %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i64> [ splat (i64 1), %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0]] = mul <2 x i64> [[VEC_PHI]], splat (i64 2)
-; CHECK-NEXT:    [[TMP1]] = mul <2 x i64> [[VEC_PHI1]], splat (i64 2)
+; CHECK-NEXT:    [[TMP0]] = shl <2 x i64> [[VEC_PHI]], splat (i64 1)
+; CHECK-NEXT:    [[TMP1]] = shl <2 x i64> [[VEC_PHI1]], splat (i64 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
