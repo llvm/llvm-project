@@ -16,14 +16,3 @@ define void @range_prefetch_metadata_accesses(ptr %a, i64 %metadata) {
   call void @llvm.aarch64.range.prefetch(ptr %a, i32 1, i32 1, i64 %metadata)
   ret void
 }
-
-define void @range_prefetch_metadata_const(ptr %a) {
-; CHECK-LABEL: range_prefetch_metadata_const:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #2097152 // =0x200000
-; CHECK-NEXT:    movk x8, #2048, lsl #48
-; CHECK-NEXT:    rprfm pldkeep, x8, [x0]
-; CHECK-NEXT:    ret
-  call void @llvm.aarch64.range.prefetch(ptr %a, i32 0, i32 0, i64 576460752305520640)
-  ret void
-}

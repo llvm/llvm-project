@@ -171,7 +171,7 @@ void test_pld() {
 // AArch64-NEXT:    call void @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 [[MD:%.*]])
 // AArch64-NEXT:    ret void
 //
-void test_pld_range(unsigned long md) {
+void test_pld_range(uint64_t md) {
   __pld_range(0, 1, md, 0);
 }
 
