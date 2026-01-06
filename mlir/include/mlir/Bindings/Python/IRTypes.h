@@ -10,6 +10,7 @@
 #define MLIR_BINDINGS_PYTHON_IRTYPES_H
 
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir/Bindings/Python/IRCore.h"
 
 namespace mlir {
 namespace python {
@@ -24,6 +25,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirIntegerTypeGetTypeID;
   static constexpr const char *pyClassName = "IntegerType";
+  static constexpr const char *name = "builtin.integer";
   using PyConcreteType::PyConcreteType;
 
   enum Signedness { Signless, Signed, Unsigned };
@@ -39,6 +41,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirIndexTypeGetTypeID;
   static constexpr const char *pyClassName = "IndexType";
+  static constexpr const char *name = "builtin.index";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -49,6 +52,7 @@ class MLIR_PYTHON_API_EXPORTED PyFloatType
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat;
   static constexpr const char *pyClassName = "FloatType";
+  static constexpr const char *name = nullptr;
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -62,6 +66,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat4E2M1FNTypeGetTypeID;
   static constexpr const char *pyClassName = "Float4E2M1FNType";
+  static constexpr const char *name = "builtin.f4E2M1FN";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -75,6 +80,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat6E2M3FNTypeGetTypeID;
   static constexpr const char *pyClassName = "Float6E2M3FNType";
+  static constexpr const char *name = "builtin.f6E2M3FN";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -88,6 +94,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat6E3M2FNTypeGetTypeID;
   static constexpr const char *pyClassName = "Float6E3M2FNType";
+  static constexpr const char *name = "builtin.f6E3M2FN";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -101,6 +108,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat8E4M3FNTypeGetTypeID;
   static constexpr const char *pyClassName = "Float8E4M3FNType";
+  static constexpr const char *name = "builtin.f8E4M3FN";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -114,6 +122,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat8E5M2TypeGetTypeID;
   static constexpr const char *pyClassName = "Float8E5M2Type";
+  static constexpr const char *name = "builtin.f8E5M2";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -127,6 +136,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat8E4M3TypeGetTypeID;
   static constexpr const char *pyClassName = "Float8E4M3Type";
+  static constexpr const char *name = "builtin.f8E4M3";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -140,6 +150,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat8E4M3FNUZTypeGetTypeID;
   static constexpr const char *pyClassName = "Float8E4M3FNUZType";
+  static constexpr const char *name = "builtin.f8E4M3FNUZ";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -153,6 +164,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat8E4M3B11FNUZTypeGetTypeID;
   static constexpr const char *pyClassName = "Float8E4M3B11FNUZType";
+  static constexpr const char *name = "builtin.f8E4M3B11FNUZ";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -166,6 +178,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat8E5M2FNUZTypeGetTypeID;
   static constexpr const char *pyClassName = "Float8E5M2FNUZType";
+  static constexpr const char *name = "builtin.f8E5M2FNUZ";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -179,6 +192,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat8E3M4TypeGetTypeID;
   static constexpr const char *pyClassName = "Float8E3M4Type";
+  static constexpr const char *name = "builtin.f8E3M4";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -192,6 +206,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat8E8M0FNUTypeGetTypeID;
   static constexpr const char *pyClassName = "Float8E8M0FNUType";
+  static constexpr const char *name = "builtin.f8E8M0FNU";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -205,6 +220,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirBFloat16TypeGetTypeID;
   static constexpr const char *pyClassName = "BF16Type";
+  static constexpr const char *name = "builtin.bf16";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -218,6 +234,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat16TypeGetTypeID;
   static constexpr const char *pyClassName = "F16Type";
+  static constexpr const char *name = "builtin.f16";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -231,6 +248,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloatTF32TypeGetTypeID;
   static constexpr const char *pyClassName = "FloatTF32Type";
+  static constexpr const char *name = "builtin.tf32";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -244,6 +262,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat32TypeGetTypeID;
   static constexpr const char *pyClassName = "F32Type";
+  static constexpr const char *name = "builtin.f32";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -257,6 +276,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloat64TypeGetTypeID;
   static constexpr const char *pyClassName = "F64Type";
+  static constexpr const char *name = "builtin.f64";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -269,6 +289,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirNoneTypeGetTypeID;
   static constexpr const char *pyClassName = "NoneType";
+  static constexpr const char *name = "builtin.none";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -282,6 +303,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirComplexTypeGetTypeID;
   static constexpr const char *pyClassName = "ComplexType";
+  static constexpr const char *name = "builtin.complex";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -293,6 +315,7 @@ class MLIR_PYTHON_API_EXPORTED MLIR_PYTHON_API_EXPORTED PyShapedType
 public:
   static const IsAFunctionTy isaFunction;
   static constexpr const char *pyClassName = "ShapedType";
+  static constexpr const char *name = nullptr;
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -309,6 +332,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirVectorTypeGetTypeID;
   static constexpr const char *pyClassName = "VectorType";
+  static constexpr const char *name = "builtin.vector";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -334,6 +358,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirRankedTensorTypeGetTypeID;
   static constexpr const char *pyClassName = "RankedTensorType";
+  static constexpr const char *name = "builtin.tensor";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -347,6 +372,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirUnrankedTensorTypeGetTypeID;
   static constexpr const char *pyClassName = "UnrankedTensorType";
+  static constexpr const char *name = "builtin.unranked_tensor";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -360,6 +386,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirMemRefTypeGetTypeID;
   static constexpr const char *pyClassName = "MemRefType";
+  static constexpr const char *name = "builtin.memref";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -373,6 +400,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirUnrankedMemRefTypeGetTypeID;
   static constexpr const char *pyClassName = "UnrankedMemRefType";
+  static constexpr const char *name = "builtin.unranked_memref";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -386,6 +414,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirTupleTypeGetTypeID;
   static constexpr const char *pyClassName = "TupleType";
+  static constexpr const char *name = "builtin.tuple";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -399,6 +428,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFunctionTypeGetTypeID;
   static constexpr const char *pyClassName = "FunctionType";
+  static constexpr const char *name = "builtin.function";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);
@@ -412,6 +442,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirOpaqueTypeGetTypeID;
   static constexpr const char *pyClassName = "OpaqueType";
+  static constexpr const char *name = "builtin.opaque";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c);

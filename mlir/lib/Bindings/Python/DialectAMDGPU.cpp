@@ -26,6 +26,7 @@ struct TDMBaseType : PyConcreteType<TDMBaseType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirAMDGPUTDMBaseTypeGetTypeID;
   static constexpr const char *pyClassName = "TDMBaseType";
+  static constexpr const char *name = "amdgpu.tdm_base";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -47,6 +48,7 @@ struct TDMDescriptorType : PyConcreteType<TDMDescriptorType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirAMDGPUTDMDescriptorTypeGetTypeID;
   static constexpr const char *pyClassName = "TDMDescriptorType";
+  static constexpr const char *name = "amdgpu.tdm_descriptor";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -68,6 +70,7 @@ struct TDMGatherBaseType : PyConcreteType<TDMGatherBaseType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirAMDGPUTDMGatherBaseTypeGetTypeID;
   static constexpr const char *pyClassName = "TDMGatherBaseType";
+  static constexpr const char *name = "amdgpu.tdm_gather_base";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

@@ -34,6 +34,7 @@ struct PyTestType
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPythonTestTestTypeGetTypeID;
   static constexpr const char *pyClassName = "TestType";
+  static constexpr const char *name = "python_test.test_type";
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c) {

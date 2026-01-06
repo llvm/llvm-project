@@ -37,6 +37,7 @@ struct StructType : PyConcreteType<StructType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirLLVMStructTypeGetTypeID;
   static constexpr const char *pyClassName = "StructType";
+  static constexpr const char *name = "llvm.struct";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -169,6 +170,7 @@ struct PointerType : PyConcreteType<PointerType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirLLVMPointerTypeGetTypeID;
   static constexpr const char *pyClassName = "PointerType";
+  static constexpr const char *name = "llvm.ptr";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

@@ -191,6 +191,30 @@ def testStandardTypeCasts():
         print("Exception not produced")
 
 
+# CHECK-LABEL: TEST: testTypeName
+@run
+def testTypeName():
+    with Context() as ctx:
+        # CHECK: builtin.integer
+        print(IntegerType.type_name)
+        # CHECK: builtin.f32
+        print(F32Type.type_name)
+        # CHECK: builtin.f6E2M3FN
+        print(Float6E2M3FNType.type_name)
+        # CHECK: builtin.vector
+        print(VectorType.type_name)
+        # CHECK: builtin.tensor
+        print(RankedTensorType.type_name)
+        # CHECK: builtin.unranked_tensor
+        print(UnrankedTensorType.type_name)
+        # CHECK: builtin.memref
+        print(MemRefType.type_name)
+        # CHECK: builtin.unranked_memref
+        print(UnrankedMemRefType.type_name)
+        # CHECK: builtin.none
+        print(NoneType.type_name)
+
+
 # CHECK-LABEL: TEST: testIntegerType
 @run
 def testIntegerType():

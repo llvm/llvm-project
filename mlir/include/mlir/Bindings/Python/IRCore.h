@@ -979,6 +979,10 @@ public:
       printAccum.parts.append(")");
       return printAccum.join();
     });
+    cls.def_prop_ro_static("type_name", [](nanobind::object & /*cls*/) {
+      return DerivedTy::name ? nanobind::str(DerivedTy::name)
+                             : nanobind::none();
+    });
 
     if (DerivedTy::getTypeIdFunction) {
       PyGlobals::get().registerTypeCaster(

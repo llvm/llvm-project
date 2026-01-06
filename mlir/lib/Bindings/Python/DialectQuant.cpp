@@ -31,6 +31,7 @@ namespace quant {
 struct QuantizedType : PyConcreteType<QuantizedType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAQuantizedType;
   static constexpr const char *pyClassName = "QuantizedType";
+  static constexpr const char *name = nullptr;
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -198,6 +199,7 @@ struct AnyQuantizedType : PyConcreteType<AnyQuantizedType, QuantizedType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirAnyQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "AnyQuantizedType";
+  static constexpr const char *name = "quant.any";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -229,6 +231,7 @@ struct UniformQuantizedType
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirUniformQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedType";
+  static constexpr const char *name = "quant.uniform";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

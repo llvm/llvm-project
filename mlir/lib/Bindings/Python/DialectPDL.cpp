@@ -28,6 +28,7 @@ namespace pdl {
 struct PDLType : PyConcreteType<PDLType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLType;
   static constexpr const char *pyClassName = "PDLType";
+  static constexpr const char *name = "pdl.type";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {}
@@ -42,6 +43,7 @@ struct AttributeType : PyConcreteType<AttributeType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLAttributeTypeGetTypeID;
   static constexpr const char *pyClassName = "AttributeType";
+  static constexpr const char *name = "pdl.attribute";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -65,6 +67,7 @@ struct OperationType : PyConcreteType<OperationType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLOperationTypeGetTypeID;
   static constexpr const char *pyClassName = "OperationType";
+  static constexpr const char *name = "pdl.operation";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -88,6 +91,7 @@ struct RangeType : PyConcreteType<RangeType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLRangeTypeGetTypeID;
   static constexpr const char *pyClassName = "RangeType";
+  static constexpr const char *name = "pdl.range";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -118,6 +122,7 @@ struct TypeType : PyConcreteType<TypeType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLTypeTypeGetTypeID;
   static constexpr const char *pyClassName = "TypeType";
+  static constexpr const char *name = "pdl.type";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -141,6 +146,7 @@ struct ValueType : PyConcreteType<ValueType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLValueTypeGetTypeID;
   static constexpr const char *pyClassName = "ValueType";
+  static constexpr const char *name = "pdl.value";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
