@@ -2117,7 +2117,7 @@ private:
 
   ExprResult ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName);
 
-  bool parseAttributeArgumentList(
+  bool ParseAttributeArgumentList(
       const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
       ParsedAttributeArgumentsProperties ArgsProperties, unsigned Arg);
 

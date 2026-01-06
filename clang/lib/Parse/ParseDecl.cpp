@@ -421,7 +421,7 @@ Parser::ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName) {
   return ParseUnevaluatedStringLiteralExpression();
 }
 
-bool Parser::parseAttributeArgumentList(
+bool Parser::ParseAttributeArgumentList(
     const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
     ParsedAttributeArgumentsProperties ArgsProperties, unsigned Arg) {
   bool SawError = false;
@@ -579,7 +579,7 @@ unsigned Parser::ParseAttributeArgsCommon(
       ParsedAttributeArgumentsProperties ArgProperties =
           attributeStringLiteralListArg(getTargetInfo().getTriple(), *AttrName,
                                         Form.getSyntax(), ScopeName);
-      if (parseAttributeArgumentList(*AttrName, ParsedExprs, ArgProperties,
+      if (ParseAttributeArgumentList(*AttrName, ParsedExprs, ArgProperties,
                                      ArgExprs.size())) {
         SkipUntil(tok::r_paren, StopAtSemi);
         return 0;
