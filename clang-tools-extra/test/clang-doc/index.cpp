@@ -27,18 +27,20 @@ namespace inner {
 // CHECK-HTML-NEXT:            <div class="sidebar">
 // CHECK-HTML-NEXT:                <h2></h2>
 // CHECK-HTML-NEXT:                <ul>
-// CHECK-HTML-NEXT:                    <li class="sidebar-section">
-// CHECK-HTML-NEXT:                        <a class="sidebar-item" href="#Namespaces">Namespaces</a>
-// CHECK-HTML-NEXT:                    </li>
 // CHECK-HTML-NEXT:                    <li>
-// CHECK-HTML-NEXT:                        <ul>
-// CHECK-HTML-NEXT:                            <li class="sidebar-item-container">
-// CHECK-HTML-NEXT:                                <a class="sidebar-item" href="#GlobalNamespace">GlobalNamespace</a>
-// CHECK-HTML-NEXT:                            </li>
-// CHECK-HTML-NEXT:                            <li class="sidebar-item-container">
-// CHECK-HTML-NEXT:                                <a class="sidebar-item" href="#inner">inner</a>
-// CHECK-HTML-NEXT:                            </li>
-// CHECK-HTML-NEXT:                        </ul>
+// CHECK-HTML-NEXT:                        <details open>
+// CHECK-HTML-NEXT:                            <summary class="sidebar-section">
+// CHECK-HTML-NEXT:                                <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+// CHECK-HTML-NEXT:                            </summary>
+// CHECK-HTML-NEXT:                            <ul>
+// CHECK-HTML-NEXT:                                <li class="sidebar-item-container">
+// CHECK-HTML-NEXT:                                    <a class="sidebar-item" href="#GlobalNamespace">GlobalNamespace</a>
+// CHECK-HTML-NEXT:                                </li>
+// CHECK-HTML-NEXT:                                <li class="sidebar-item-container">
+// CHECK-HTML-NEXT:                                    <a class="sidebar-item" href="#inner">inner</a>
+// CHECK-HTML-NEXT:                                </li>
+// CHECK-HTML-NEXT:                            </ul>
+// CHECK-HTML-NEXT:                        </details> 
 // CHECK-HTML-NEXT:                    </li>
 // CHECK-HTML-NEXT:                </ul>
 // CHECK-HTML-NEXT:            </div>

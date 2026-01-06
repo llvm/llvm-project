@@ -22,10 +22,12 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 
 using namespace clang;
+using ::testing::IsEmpty;
 
 namespace clang {
 class SourceManagerTestHelper {
@@ -377,6 +379,20 @@ TEST_F(SourceManagerTest, getInvalidBOM) {
                 llvm::StringLiteral::withInnerNUL(
                     "\xFF\xFE\x00\x00#include <iostream>"))),
             "UTF-32 (LE)");
+}
+
+TEST_F(SourceManagerTest, sourceRangeWorksWithDenseSet) {
+  llvm::DenseSet<SourceRange> Set;
+  SourceRange TestRange = {SourceLocation::getFromRawEncoding(10),
+                           SourceLocation::getFromRawEncoding(11)};
+  ASSERT_THAT(Set, IsEmpty());
+  Set.insert(TestRange);
+  ASSERT_EQ(Set.size(), 1U);
+  ASSERT_TRUE(Set.contains(TestRange));
+  ASSERT_FALSE(Set.contains({SourceLocation::getFromRawEncoding(10),
+                             SourceLocation::getFromRawEncoding(10)}));
+  Set.erase(TestRange);
+  ASSERT_THAT(Set, IsEmpty());
 }
 
 // Regression test - there was an out of bound access for buffers not terminated by zero.
