@@ -80,9 +80,11 @@ public:
 
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
 
-  /// When checking a struct value for uninitialized data, should all the fields
-  /// be un-initialized or only find one uninitialized field.
-  bool StructInitializednessComplete = true;
+  /// When checking a struct value for uninitialized data and this setting is
+  /// true, all members should be completely uninitialized to get a checker
+  /// warning. When the value is false, the warning is emitted for partially
+  // initialized structures too.
+  bool ArgPointeeInitializednessComplete = true;
 
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 
@@ -292,7 +294,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
   if (!ParamT->isPointerOrReferenceType())
     return false;
 
-  bool AllowPartialInitializedness = StructInitializednessComplete;
+  bool AllowPartialInitializedness = ArgPointeeInitializednessComplete;
   QualType PointeeT = ParamT->getPointeeType();
   if (!PointeeT.isConstQualified()) {
     if (const int *PI = FunctionsWithInOutPtrParam.lookup(Call)) {
@@ -765,7 +767,7 @@ void ento::registerCallAndMessageChecker(CheckerManager &Mgr) {
   QUERY_CHECKER_OPTION(NilReceiver)
   QUERY_CHECKER_OPTION(UndefReceiver)
 
-  Chk->StructInitializednessComplete =
+  Chk->ArgPointeeInitializednessComplete =
       Mgr.getAnalyzerOptions().getCheckerBooleanOption(
           Mgr.getCurrentCheckerName(), "ArgPointeeInitializednessComplete");
 }
