@@ -84,8 +84,8 @@ int main(int, char**) {
   }
 
 #if TEST_STD_VER >= 26
-    assert(test_ref());
-    static_assert(test_ref());
+  assert(test_ref());
+  static_assert(test_ref());
 #endif
 
   return 0;
