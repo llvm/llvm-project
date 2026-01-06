@@ -3401,24 +3401,26 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
         return error(TypeLoc, "argument can not have void type");
 
       std::string Name;
-      FileLoc NameStart;
-      FileLoc NameEnd;
+      FileLoc IdentStart;
+      FileLoc IdentEnd;
+      bool Unnamed = false;
       if (Lex.getKind() == lltok::LocalVar) {
         Name = Lex.getStrVal();
-        NameStart = Lex.getTokLineColumnPos();
+        IdentStart = Lex.getTokLineColumnPos();
         Lex.Lex();
-        NameEnd = Lex.getPrevTokEndLineColumnPos();
+        IdentEnd = Lex.getPrevTokEndLineColumnPos();
       } else {
         unsigned ArgID;
         if (Lex.getKind() == lltok::LocalVarID) {
           ArgID = Lex.getUIntVal();
-          NameStart = Lex.getTokLineColumnPos();
+          IdentStart = Lex.getTokLineColumnPos();
           if (checkValueID(TypeLoc, "argument", "%", CurValID, ArgID))
             return true;
           Lex.Lex();
-          NameEnd = Lex.getPrevTokEndLineColumnPos();
+          IdentEnd = Lex.getPrevTokEndLineColumnPos();
         } else {
           ArgID = CurValID;
+          Unnamed = true;
         }
         UnnamedArgNums.push_back(ArgID);
         CurValID = ArgID + 1;
@@ -3427,9 +3429,11 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       if (!FunctionType::isValidArgumentType(ArgTy))
         return error(TypeLoc, "invalid type for function argument");
 
-      ArgList.emplace_back(TypeLoc, ArgTy, FileLocRange(NameStart, NameEnd),
-                           AttributeSet::get(ArgTy->getContext(), Attrs),
-                           std::move(Name));
+      ArgList.emplace_back(
+          TypeLoc, ArgTy,
+          Unnamed ? std::nullopt
+                  : std::make_optional(FileLocRange(IdentStart, IdentEnd)),
+          AttributeSet::get(ArgTy->getContext(), Attrs), std::move(Name));
     } while (EatIfPresent(lltok::comma));
   }
 
@@ -6944,8 +6948,9 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   // Add all of the arguments we parsed to the function.
   Function::arg_iterator ArgIt = Fn->arg_begin();
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i, ++ArgIt) {
-    if (ParserContext)
-      ParserContext->addFunctionArgumentLocation(&*ArgIt, ArgList[i].IdentLoc);
+    if (ParserContext && ArgList[i].IdentLoc)
+      ParserContext->addFunctionArgumentLocation(&*ArgIt,
+                                                 ArgList[i].IdentLoc.value());
     // If the argument has a name, insert it into the argument symbol table.
     if (ArgList[i].Name.empty()) continue;
 

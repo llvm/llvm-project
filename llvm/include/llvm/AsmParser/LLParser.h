@@ -612,11 +612,11 @@ namespace llvm {
     struct ArgInfo {
       LocTy Loc;
       Type *Ty;
-      FileLocRange IdentLoc;
+      std::optional<FileLocRange> IdentLoc;
       AttributeSet Attrs;
       std::string Name;
-      ArgInfo(LocTy L, Type *ty, FileLocRange IdentLoc, AttributeSet Attr,
-              const std::string &N)
+      ArgInfo(LocTy L, Type *ty, std::optional<FileLocRange> IdentLoc,
+              AttributeSet Attr, const std::string &N)
           : Loc(L), Ty(ty), IdentLoc(IdentLoc), Attrs(Attr), Name(N) {}
     };
     bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
