@@ -66,6 +66,28 @@ define <16 x i8> @test_v16i8_nosignbit(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %4
 }
 
+define <16 x i8> @test_v16i8_knownnegative(<16 x i8> %a, <16 x i8> %b) {
+; SSE2-LABEL: test_v16i8_knownnegative:
+; SSE2:       pmaxub
+;
+; SSE41-LABEL: test_v16i8_knownnegative:
+; SSE41:       pmaxsb
+;
+; SSE42-LABEL: test_v16i8_knownnegative:
+; SSE42:       pmaxsb
+;
+; AVX1-LABEL: test_v16i8_knownnegative:
+; AVX1:        vpmaxsb
+;
+; AVX2-LABEL: test_v16i8_knownnegative:
+; AVX2:        vpmaxsb
+  %1 = or <16 x i8> %a, <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+  %2 = or <16 x i8> %b, <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+  %3 = icmp sgt <16 x i8> %1, %2
+  %4 = select <16 x i1> %3, <16 x i8> %1, <16 x i8> %2
+  ret <16 x i8> %4
+}
+
 define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 ; SSE2-LABEL: test_v16i8_reassociation:
 ; SSE2:       # %bb.0:
