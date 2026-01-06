@@ -60,7 +60,7 @@ bool generateDsymCompanion(
     MCStreamer &MS, raw_fd_ostream &OutFile,
     const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
         &RelocationsToApply,
-    bool AllowSliceSectionHeaderOffsetOverflow);
+    bool AllowSectionHeaderOffsetOverflow);
 
 std::string getArchName(StringRef Arch);
 } // namespace MachOUtils
