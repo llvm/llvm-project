@@ -327,12 +327,12 @@ struct allocator_traits {
   }
 
   template <class _Ap = _Alloc, __enable_if_t<__has_select_on_container_copy_construction_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
   select_on_container_copy_construction(const allocator_type& __a) {
     return __a.select_on_container_copy_construction();
   }
   template <class _Ap = _Alloc, __enable_if_t<!__has_select_on_container_copy_construction_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
   select_on_container_copy_construction(const allocator_type& __a) {
     return __a;
   }
