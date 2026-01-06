@@ -769,7 +769,7 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !5 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !4, metadata !DIExpression()), !dbg !6
+      call void @llvm.dbg.declare(metadata ptr undef, metadata !4, metadata !DIExpression()), !dbg !6
       ret void
     }
 
@@ -813,7 +813,7 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !3 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !5, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr undef, metadata !5, metadata !DIExpression()), !dbg !7
       ret void
     }
 
