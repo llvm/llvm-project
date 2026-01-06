@@ -324,7 +324,9 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
       APInt::udivrem(ConstantOffset, Remainder, ConstantOffset, Remainder);
       CurrentRow = Builder.CreateAdd(
           CurrentRow, ConstantInt::get(Builder.getInt32Ty(), ConstantOffset));
-      CurrentIndex = Remainder.udiv(Intrin.EltSize).getZExtValue();
+      CurrentIndex = ((GlobalOffsetVal % hlsl::CBufferRowSizeInBytes) +
+                      Remainder.getZExtValue()) /
+                     Intrin.EltSize;
     } else {
       assert(LastGEP->getNumIndices() == 1 &&
              "Last GEP of cbuffer access is not array or struct access");
