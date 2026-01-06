@@ -615,8 +615,8 @@ class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
   using VocabMap = std::map<std::string, ir2vec::Embedding>;
   std::optional<ir2vec::VocabStorage> Vocab;
 
-  Error readVocabulary(StringRef EffectivePath, VocabMap &OpcVocab,
-                       VocabMap &TypeVocab, VocabMap &ArgVocab);
+  Error readVocabulary(VocabMap &OpcVocab, VocabMap &TypeVocab,
+                       VocabMap &ArgVocab);
   void generateVocabStorage(VocabMap &OpcVocab, VocabMap &TypeVocab,
                             VocabMap &ArgVocab);
   void emitError(Error Err, LLVMContext &Ctx);

@@ -62,19 +62,6 @@ cl::opt<IR2VecKind> IR2VecEmbeddingKind(
     cl::init(IR2VecKind::Symbolic), cl::desc("IR2Vec embedding kind"),
     cl::cat(IR2VecCategory));
 
-static std::optional<std::string> VocabOverride;
-void setIR2VecVocabPath(StringRef Path) {
-  if (Path.empty())
-    VocabOverride = std::nullopt;
-  else
-    VocabOverride = Path.str();
-}
-
-StringRef getIR2VecVocabPath() {
-  return VocabOverride ? StringRef(*VocabOverride)
-                       : StringRef(VocabFile.getValue());
-}
-
 } // namespace ir2vec
 } // namespace llvm
 
@@ -495,14 +482,12 @@ VocabStorage Vocabulary::createDummyVocabForTest(unsigned Dim) {
 
 // FIXME: Make this optional. We can avoid file reads
 // by auto-generating a default vocabulary during the build time.
-Error IR2VecVocabAnalysis::readVocabulary(StringRef EffectivePath,
-                                          VocabMap &OpcVocab,
+Error IR2VecVocabAnalysis::readVocabulary(VocabMap &OpcVocab,
                                           VocabMap &TypeVocab,
                                           VocabMap &ArgVocab) {
-  auto BufOrError =
-      MemoryBuffer::getFileOrSTDIN(EffectivePath, /*IsText=*/true);
+  auto BufOrError = MemoryBuffer::getFileOrSTDIN(VocabFile, /*IsText=*/true);
   if (!BufOrError)
-    return createFileError(EffectivePath.str(), BufOrError.getError());
+    return createFileError(VocabFile, BufOrError.getError());
 
   auto Content = BufOrError.get()->getBuffer();
 
@@ -630,11 +615,8 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   if (Vocab.has_value())
     return Vocabulary(std::move(Vocab.value()));
 
-  StringRef EffectivePath =
-      VocabOverride ? StringRef(*VocabOverride) : VocabFile.getValue();
-
   // Otherwise, try to read from the vocabulary file.
-  if (EffectivePath.empty()) {
+  if (VocabFile.empty()) {
     // FIXME: Use default vocabulary
     Ctx->emitError("IR2Vec vocabulary file path not specified; You may need to "
                    "set it using --ir2vec-vocab-path");
@@ -642,7 +624,7 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   }
 
   VocabMap OpcVocab, TypeVocab, ArgVocab;
-  if (auto Err = readVocabulary(EffectivePath, OpcVocab, TypeVocab, ArgVocab)) {
+  if (auto Err = readVocabulary(OpcVocab, TypeVocab, ArgVocab)) {
     emitError(std::move(Err), *Ctx);
     return Vocabulary();
   }

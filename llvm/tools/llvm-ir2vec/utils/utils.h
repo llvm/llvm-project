@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_IR2VEC_UTILS_H
-#define LLVM_TOOLS_LLVM_IR2VEC_UTILS_H
+#ifndef LLVM_TOOLS_LLVM_IR2VEC_UTILS_UTILS_H
+#define LLVM_TOOLS_LLVM_IR2VEC_UTILS_UTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
@@ -34,8 +34,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
 #include <string>
@@ -198,4 +198,4 @@ struct MIRContext {
 
 } // namespace llvm
 
-#endif // LLVM_TOOLS_LLVM_IR2VEC_UTILS_H
+#endif // LLVM_TOOLS_LLVM_IR2VEC_UTILS_UTILS_H

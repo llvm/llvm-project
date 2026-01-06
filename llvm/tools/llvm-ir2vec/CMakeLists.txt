@@ -25,12 +25,3 @@ set_target_properties(ir2vec_utils PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # Main executable
 add_llvm_tool(llvm-ir2vec llvm-ir2vec.cpp DEPENDS intrinsics_gen)
 target_link_libraries(llvm-ir2vec PRIVATE ir2vec_utils)
-
-# Python bindings
-find_package(Python3 COMPONENTS Interpreter Development.Module)
-find_package(pybind11 CONFIG QUIET)
-
-if(Python3_FOUND AND pybind11_FOUND)
-  pybind11_add_module(py_ir2vec MODULE bindings/ir2vec_bindings.cpp)
-  target_link_libraries(py_ir2vec PRIVATE ir2vec_utils)
-endif()
