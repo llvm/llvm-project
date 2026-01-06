@@ -3,9 +3,8 @@
 
 The SBVariableAnnotator class enables retrieval of structured variable 
 location information for assembly instructions during debugging. This 
-allows tools to understand where variables are stored (registers, memory) 
-at specific instruction addresses, which is essential for debugging 
-optimized code where variables may move between locations.
+allows to understand where variables are stored (registers, memory) 
+at specific instruction addresses.
 
 The annotator extracts DWARF debug information to provide:
 * Variable names and types
@@ -13,30 +12,29 @@ The annotator extracts DWARF debug information to provide:
 * Address ranges where the location is valid
 * Source declaration information
 
-For example, when debugging optimized code::
+For example, when debugging optimized code:
 
     annotator = lldb.SBVariableAnnotator()
     target = lldb.debugger.GetSelectedTarget()
     frame = target.GetProcess().GetSelectedThread().GetSelectedFrame()
 
-    # Get instructions for current function
+    # Get instructions for current function.
     function = frame.GetFunction()
     instructions = target.ReadInstructions(function.GetStartAddress(),
                                          function.GetEndAddress())
 
-    # Annotate each instruction
+    # Annotate each instruction.
     for i in range(instructions.GetSize()):
         inst = instructions.GetInstructionAtIndex(i)
         annotations = annotator.AnnotateStructured(inst)
 
-        # Process structured annotation data
+        # Process structured annotation data.
         for j in range(annotations.GetSize()):
             item = annotations.GetItemAtIndex(j)
             var_name = item.GetValueForKey('variable_name').GetStringValue(1024)
             location = item.GetValueForKey('location_description').GetStringValue(1024)
-            is_live = item.GetValueForKey('is_live').GetBooleanValue()
 
-            print(f'Variable {var_name} in {location}, live: {is_live}')"
+            print(f'Variable {var_name} in {location}')"
 ) lldb::SBVariableAnnotator;
 
 %feature("docstring", "
