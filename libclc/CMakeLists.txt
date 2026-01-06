@@ -148,13 +148,11 @@ endif()
 # List of all targets. Note that some are added dynamically below.
 set( LIBCLC_TARGETS_ALL
   amdgcn--
-  amdgcn--amdhsa
+  amdgcn-amd-amdhsa
   clspv--
   clspv64--
   r600--
-  nvptx--
   nvptx64--
-  nvptx--nvidiacl
   nvptx64--nvidiacl
 )
 
@@ -205,12 +203,10 @@ add_subdirectory( utils )
 set( r600--_devices cedar cypress barts cayman )
 set( amdgcn--_devices tahiti )
 set( amdgcn-mesa-mesa3d_devices ${amdgcn--_devices} )
-set( amdgcn--amdhsa_devices none )
+set( amdgcn-amd-amdhsa_devices none )
 set( clspv--_devices none )
 set( clspv64--_devices none )
-set( nvptx--_devices none )
 set( nvptx64--_devices none )
-set( nvptx--nvidiacl_devices none )
 set( nvptx64--nvidiacl_devices none )
 set( spirv-mesa3d-_devices none )
 set( spirv64-mesa3d-_devices none )
@@ -303,7 +299,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   endif()
 
   # Some targets' directories alias others
-  if( ${ARCH} STREQUAL nvptx OR ${ARCH} STREQUAL nvptx64 )
+  if( ${ARCH} STREQUAL nvptx64 )
     set( DARCH ptx )
   elseif( ${ARCH} STREQUAL clspv OR ${ARCH} STREQUAL clspv64 )
     set( DARCH clspv )
