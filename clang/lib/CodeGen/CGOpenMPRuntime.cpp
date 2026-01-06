@@ -22,9 +22,9 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
@@ -6376,7 +6376,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         if (LangOpts.OpenMPIsTargetDevice) {
           // Search AST for target "CallExpr"s of "OMPTargetAutoLookup".
           OMPTargetCallCollector Visitor(CGF, CGF.CGM.OMPTargetCalls);
-          Visitor.TraverseStmt(const_cast<Stmt*>(CS.getCapturedStmt()));
+          Visitor.TraverseStmt(const_cast<Stmt *>(CS.getCapturedStmt()));
         }
 
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);

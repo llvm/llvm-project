@@ -15,7 +15,8 @@ public:
   __attribute__((noinline)) __attribute__((optnone)) virtual int bar() {
     return 2;
   }
-  __attribute__((noinline)) __attribute__((optnone)) virtual int foo_with_arg(int x) {
+  __attribute__((noinline)) __attribute__((optnone)) virtual int
+  foo_with_arg(int x) {
     return x;
   }
 };
@@ -28,7 +29,8 @@ public:
   __attribute__((noinline)) __attribute__((optnone)) virtual int bar() {
     return 20;
   }
-  __attribute__((noinline)) __attribute__((optnone)) virtual int foo_with_arg(int x) {
+  __attribute__((noinline)) __attribute__((optnone)) virtual int
+  foo_with_arg(int x) {
     return -x;
   }
 };
@@ -143,7 +145,8 @@ int test_virtual_reference_implicit() {
   }
 
   assert(c_ret == TEST_VAL && "Control Base call failed on gpu (implicit)");
-  assert(b_ret == -TEST_VAL && "Reference to derived call failed on gpu (implicit)");
+  assert(b_ret == -TEST_VAL &&
+         "Reference to derived call failed on gpu (implicit)");
   assert(d_ret == -TEST_VAL && "Derived call failed on gpu (implicit)");
 
   return 0;

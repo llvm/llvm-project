@@ -5,14 +5,14 @@
 
 #pragma omp begin declare variant match(device = {kind(gpu)})
 // Provided by the runtime.
-void *__kmpc_omp_indirect_call_lookup(void *host_ptr);
-#pragma omp declare target to(__kmpc_omp_indirect_call_lookup)                 \
+void *__llvm_omp_indirect_call_lookup(void *host_ptr);
+#pragma omp declare target to(__llvm_omp_indirect_call_lookup)                 \
     device_type(nohost)
 #pragma omp end declare variant
 
 #pragma omp begin declare variant match(device = {kind(cpu)})
 // We assume unified addressing on the CPU target.
-void *__kmpc_omp_indirect_call_lookup(void *host_ptr) { return host_ptr; }
+void *__llvm_omp_indirect_call_lookup(void *host_ptr) { return host_ptr; }
 #pragma omp end declare variant
 
 #pragma omp begin declare target indirect
@@ -32,11 +32,11 @@ int main() {
   void *baz_res;
 #pragma omp target map(to : foo_ptr, bar_ptr, baz_ptr) map(tofrom : count)
   {
-    foo_res = __kmpc_omp_indirect_call_lookup(foo_ptr);
+    foo_res = __llvm_omp_indirect_call_lookup(foo_ptr);
     ((void (*)(int *))foo_res)(&count);
-    bar_res = __kmpc_omp_indirect_call_lookup(bar_ptr);
+    bar_res = __llvm_omp_indirect_call_lookup(bar_ptr);
     ((void (*)(int *))bar_res)(&count);
-    baz_res = __kmpc_omp_indirect_call_lookup(baz_ptr);
+    baz_res = __llvm_omp_indirect_call_lookup(baz_ptr);
     ((void (*)(int *))baz_res)(&count);
   }
 

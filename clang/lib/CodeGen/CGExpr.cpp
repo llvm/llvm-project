@@ -6834,7 +6834,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     llvm::Type *RtlFnArgs[] = {PtrTy};
     llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(PtrTy, RtlFnArgs, false),
-        "__kmpc_omp_indirect_call_lookup");
+        "__llvm_omp_indirect_call_lookup");
     llvm::Value *Func = Callee.getFunctionPointer();
     llvm::Type *BackupTy = Func->getType();
     Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, PtrTy);
