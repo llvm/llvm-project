@@ -28,9 +28,9 @@ protected:
 
   void SetUp() override {
     StringRef Assembly = "@g = global i32 0\n"
-                         "@g_alias = alias i32, i32* @g\n"
+                         "@g_alias = alias i32, ptr @g\n"
                          "define i32 @f() {\n"
-                         "  %1 = load i32, i32* @g\n"
+                         "  %1 = load i32, ptr @g\n"
                          "  ret i32 %1\n"
                          "}";
 

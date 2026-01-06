@@ -446,6 +446,10 @@ def sra_parts  : SDNode<"ISD::SRA_PARTS" , SDTIntShiftPairOp>;
 def srl_parts  : SDNode<"ISD::SRL_PARTS" , SDTIntShiftPairOp>;
 def fshl       : SDNode<"ISD::FSHL"      , SDTIntShiftDOp>;
 def fshr       : SDNode<"ISD::FSHR"      , SDTIntShiftDOp>;
+def clmul      : SDNode<"ISD::CLMUL"     , SDTIntBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
+def clmulr     : SDNode<"ISD::CLMULR"    , SDTIntBinOp, [SDNPCommutative]>;
+def clmulh     : SDNode<"ISD::CLMULH"    , SDTIntBinOp, [SDNPCommutative]>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,
@@ -838,7 +842,8 @@ def ist        : SDNode<"ISD::STORE"      , SDTIStore,
 
 def vector_shuffle : SDNode<"ISD::VECTOR_SHUFFLE", SDTVecShuffle, []>;
 def vector_reverse : SDNode<"ISD::VECTOR_REVERSE", SDTVecReverse>;
-def vector_splice : SDNode<"ISD::VECTOR_SPLICE", SDTVecSlice, []>;
+def vector_splice_left : SDNode<"ISD::VECTOR_SPLICE_LEFT", SDTVecSlice, []>;
+def vector_splice_right : SDNode<"ISD::VECTOR_SPLICE_RIGHT", SDTVecSlice, []>;
 def build_vector : SDNode<"ISD::BUILD_VECTOR", SDTypeProfile<1, -1, []>, []>;
 def splat_vector : SDNode<"ISD::SPLAT_VECTOR", SDTypeProfile<1, 1, []>, []>;
 def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
