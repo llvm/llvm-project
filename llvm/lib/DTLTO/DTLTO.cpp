@@ -146,7 +146,7 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return Input;
 
   SmallString<64> NewModuleId;
-  BitcodeModule &BM = Input->getSingleBitcodeModule();
+  BitcodeModule &BM = Input->getPrimaryBitcodeModule();
 
   // Check if the archive is a thin archive.
   Expected<bool> IsThin = isThinArchive(ArchivePath);
