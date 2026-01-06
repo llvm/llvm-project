@@ -291,7 +291,7 @@ struct Recipe_match {
       return false;
 
     if (R->getNumOperands() != std::tuple_size_v<Ops_t>) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(R);
+      [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(R);
       assert((Opcode == Instruction::PHI ||
               (RepR && std::tuple_size_v<Ops_t> ==
                            RepR->getNumOperands() - RepR->isPredicated())) &&
