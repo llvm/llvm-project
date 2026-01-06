@@ -1431,12 +1431,8 @@ public:
   /// Return jump table addressed by this instruction.
   uint64_t getJumpTable(const MCInst &Inst) const;
 
-  /// Return index register for instruction that uses a jump table.
-  uint16_t getJumpTableIndexReg(const MCInst &Inst) const;
-
   /// Set jump table addressed by this instruction.
-  bool setJumpTable(MCInst &Inst, uint64_t Value, uint16_t IndexReg,
-                    AllocatorIdTy AllocId = 0);
+  bool setJumpTable(MCInst &Inst, uint64_t Value);
 
   /// Disassociate instruction with a jump table.
   bool unsetJumpTable(MCInst &Inst) const;

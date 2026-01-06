@@ -1022,7 +1022,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   // Convert the instruction into jump table branch.
   const MCSymbol *JTLabel = BC.getOrCreateJumpTable(*this, ArrayStart, JTType);
   BC.MIB->replaceMemOperandDisp(*MemLocInstr, JTLabel, BC.Ctx.get());
-  BC.MIB->setJumpTable(Instruction, ArrayStart, IndexRegNum);
+  BC.MIB->setJumpTable(Instruction, ArrayStart);
 
   JTSites.emplace_back(Offset, ArrayStart);
 
@@ -2116,8 +2116,7 @@ bool BinaryFunction::validateInternalRefDataRelocations() {
   return false;
 }
 
-bool BinaryFunction::postProcessIndirectBranches(
-    MCPlusBuilder::AllocatorIdTy AllocId) {
+bool BinaryFunction::postProcessIndirectBranches() {
   auto addUnknownControlFlow = [&](BinaryBasicBlock &BB) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding unknown control flow in " << *this
                       << " for " << BB.getName() << "\n");
@@ -2132,7 +2131,6 @@ bool BinaryFunction::postProcessIndirectBranches(
   MCInst *LastIndirectJump = nullptr;
   BinaryBasicBlock *LastIndirectJumpBB = nullptr;
   uint64_t LastJT = 0;
-  uint16_t LastJTIndexReg = BC.MIB->getNoRegister();
   for (BinaryBasicBlock &BB : blocks()) {
     for (BinaryBasicBlock::iterator II = BB.begin(); II != BB.end(); ++II) {
       MCInst &Instr = *II;
@@ -2179,7 +2177,6 @@ bool BinaryFunction::postProcessIndirectBranches(
           LastIndirectJump = &Instr;
           LastIndirectJumpBB = &BB;
           LastJT = BC.MIB->getJumpTable(Instr);
-          LastJTIndexReg = BC.MIB->getJumpTableIndexReg(Instr);
           BC.MIB->unsetJumpTable(Instr);
 
           JumpTable *JT = BC.getJumpTableContainingAddress(LastJT);
@@ -2232,7 +2229,7 @@ bool BinaryFunction::postProcessIndirectBranches(
       !BC.getJumpTableContainingAddress(LastJT)->IsSplit) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: unsetting unknown control flow in "
                       << *this << '\n');
-    BC.MIB->setJumpTable(*LastIndirectJump, LastJT, LastJTIndexReg, AllocId);
+    BC.MIB->setJumpTable(*LastIndirectJump, LastJT);
     HasUnknownControlFlow = false;
 
     LastIndirectJumpBB->updateJumpTableSuccessors();
@@ -2498,7 +2495,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   annotateCFIState();
 
   // Annotate invoke instructions with GNU_args_size data.
-  propagateGnuArgsSizeInfo(AllocatorId);
+  propagateGnuArgsSizeInfo();
 
   // Set the basic block layout to the original order and set end offsets.
   PrevBB = nullptr;
@@ -2526,7 +2523,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   CurrentState = State::CFG;
 
   // Make any necessary adjustments for indirect branches.
-  bool ValidCFG = postProcessIndirectBranches(AllocatorId);
+  bool ValidCFG = postProcessIndirectBranches();
   if (!ValidCFG && opts::Verbosity) {
     BC.errs() << "BOLT-WARNING: failed to post-process indirect branches for "
               << *this << '\n';
@@ -3718,8 +3715,7 @@ void BinaryFunction::fixBranches() {
          "Invalid CFG detected after fixing branches");
 }
 
-void BinaryFunction::propagateGnuArgsSizeInfo(
-    MCPlusBuilder::AllocatorIdTy AllocId) {
+void BinaryFunction::propagateGnuArgsSizeInfo() {
   assert(CurrentState == State::Disassembled && "unexpected function state");
 
   if (!hasEHRanges() || !usesGnuArgsSize())
@@ -4130,8 +4126,7 @@ bool BinaryFunction::checkForAmbiguousJumpTables() {
   return false;
 }
 
-void BinaryFunction::disambiguateJumpTables(
-    MCPlusBuilder::AllocatorIdTy AllocId) {
+void BinaryFunction::disambiguateJumpTables() {
   assert((opts::JumpTables != JTS_BASIC && isSimple()) || !BC.HasRelocations);
   SmallPtrSet<JumpTable *, 4> JumpTables;
   for (BinaryBasicBlock *&BB : BasicBlocks) {
@@ -4225,7 +4220,7 @@ void BinaryFunction::disambiguateJumpTables(
       }
       // We use a unique ID with the high bit set as address for this "injected"
       // jump table (not originally in the input binary).
-      BC.MIB->setJumpTable(Inst, NewJumpTableID, 0, AllocId);
+      BC.MIB->setJumpTable(Inst, NewJumpTableID);
     }
   }
 }

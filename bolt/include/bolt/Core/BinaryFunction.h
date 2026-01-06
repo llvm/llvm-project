@@ -33,7 +33,6 @@
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/JumpTable.h"
-#include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -488,7 +487,7 @@ private:
 
   /// Associate DW_CFA_GNU_args_size info with invoke instructions
   /// (call instructions with non-empty landing pad).
-  void propagateGnuArgsSizeInfo(MCPlusBuilder::AllocatorIdTy AllocId);
+  void propagateGnuArgsSizeInfo();
 
   /// Synchronize branch instructions with CFG.
   void postProcessBranches();
@@ -1609,7 +1608,7 @@ public:
   /// by an indirect branch, e.g.: instrumentation or shrink wrapping. However,
   /// this is only possible if we are not updating jump tables in place, but are
   /// writing it to a new location (moving them).
-  void disambiguateJumpTables(MCPlusBuilder::AllocatorIdTy AllocId);
+  void disambiguateJumpTables();
 
   /// Change \p OrigDest to \p NewDest in the jump table used at the end of
   /// \p BB. Returns false if \p OrigDest couldn't be find as a valid target
@@ -2363,7 +2362,7 @@ public:
   ///
   /// Return true upon successful processing, or false if the control flow
   /// cannot be statically evaluated for any given indirect branch.
-  bool postProcessIndirectBranches(MCPlusBuilder::AllocatorIdTy AllocId);
+  bool postProcessIndirectBranches();
 
   /// Validate that all data references to function offsets are claimed by
   /// recognized jump tables. Returns true if there are no unclaimed externally

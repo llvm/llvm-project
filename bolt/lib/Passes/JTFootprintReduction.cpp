@@ -159,7 +159,7 @@ bool JTFootprintReduction::tryOptimizeNonPIC(
 
   BC.MIB->createIJmp32Frag(NewFrag, Base, MCOperand::createImm(Scale),
                            MCOperand::createReg(Index), Offset, RegOp);
-  BC.MIB->setJumpTable(NewFrag.back(), JTAddr, Index);
+  BC.MIB->setJumpTable(NewFrag.back(), JTAddr);
 
   JumpTable->OutputEntrySize = 4;
 
@@ -198,7 +198,7 @@ bool JTFootprintReduction::tryOptimizePIC(BinaryContext &BC,
   BC.MIB->createIJmp32Frag(NewFrag, MCOperand::createReg(0),
                            MCOperand::createImm(Scale),
                            MCOperand::createReg(Index), JumpTableRef, RegOp);
-  BC.MIB->setJumpTable(NewFrag.back(), JTAddr, Index);
+  BC.MIB->setJumpTable(NewFrag.back(), JTAddr);
 
   JumpTable->OutputEntrySize = 4;
   // DePICify

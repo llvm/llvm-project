@@ -390,7 +390,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   }
 
   FuncDesc->Function = &Function;
-  Function.disambiguateJumpTables(AllocId);
+  Function.disambiguateJumpTables();
   Function.deleteConservativeEdges();
 
   std::unordered_map<const BinaryBasicBlock *, uint32_t> BBToID;
