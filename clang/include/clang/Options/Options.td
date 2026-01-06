@@ -7340,7 +7340,7 @@ file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
 def Mextend : Flag<["-"], "Mextend">, Group<f_Group>,
   HelpText<"Classic Flang compat: Allow 132-column lines in fixed form">,
-  Visibility<[FC1Option, FlangOption]>;
+  Visibility<[FlangOption]>;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
   HelpText<"Set endian conversion of data for unformatted files">;
 def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,

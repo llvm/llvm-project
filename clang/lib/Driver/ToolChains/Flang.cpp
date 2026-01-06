@@ -36,19 +36,23 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  // Handle the -Mextend parameter
-  if (Args.hasArg(options::OPT_Mextend)) {
-    // Check if -ffixed-line-length has been specified
-    if (!Args.hasArg(options::OPT_ffixed_line_length_EQ)) {
+  // Handle -Mextend and -ffixed-line-length conflict
+  // The last specified option takes precedence
+  Arg *LastLineLengthArg = Args.getLastArg(options::OPT_ffixed_line_length_EQ,
+                                           options::OPT_Mextend);
+  
+  if (LastLineLengthArg) {
+    if (LastLineLengthArg->getOption().matches(options::OPT_ffixed_line_length_EQ)) {
+      // User specified -ffixed-line-length=N (either before or after -Mextend)
+      LastLineLengthArg->render(Args, CmdArgs);
+    } else {
+      // -Mextend was the last specified option
       CmdArgs.push_back("-ffixed-line-length=132");
     }
-    // If the user specifies both -Mextend and -ffixed-line-length=N,
-    // Then -ffixed-line-length=N will override -Mextend
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
                             options::OPT_ffree_form,
-                            options::OPT_ffixed_line_length_EQ,
                             options::OPT_fopenacc,
                             options::OPT_finput_charset_EQ,
                             options::OPT_fimplicit_none,
