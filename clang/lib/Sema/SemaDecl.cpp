@@ -20817,8 +20817,8 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
         // C++ [dcl.enum]p4: Following the closing brace of an
         // enum-specifier, each enumerator has the type of its
         // enumeration.
-        // C23 6.7.2.2p15: For an enumerated type with fixed underlying type,
-        // the enumeration member type is the enumerated type.
+        // C23 6.7.3.3p16: The enumeration member type for an enumerated type
+        // with fixed underlying type is the enumerated type.
         ECD->setType(EnumType);
       continue;
     } else {
@@ -20843,8 +20843,8 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       // C++ [dcl.enum]p4: Following the closing brace of an
       // enum-specifier, each enumerator has the type of its
       // enumeration.
-      // C23 6.7.2.2p15: For an enumerated type with fixed underlying type, the
-      // enumeration member type is the enumerated type.
+      // C23 6.7.3.3p16: The enumeration member type for an enumerated type
+      // with fixed underlying type is the enumerated type.
       ECD->setType(EnumType);
     else
       ECD->setType(NewTy);
