@@ -43,6 +43,8 @@ class RISCVTuneInfo {
   bits<32> MaxLoadsPerMemcmpOptSize = 4;
   bits<32> MaxLoadsPerMemcmp = 8;
 
+  bits<8> MaxVectorCoalesceElts = 2;
+
   // The direction of PostRA scheduling.
   code PostRASchedDirection = TopDown;
 }
@@ -58,7 +60,7 @@ def RISCVTuneInfoTable : GenericTable {
                 "MaxStoresPerMemcpyOptSize", "MaxStoresPerMemcpy",
                 "MaxStoresPerMemmoveOptSize", "MaxStoresPerMemmove",
                 "MaxLoadsPerMemcmpOptSize", "MaxLoadsPerMemcmp",
-                "PostRASchedDirection"];
+                "MaxVectorCoalesceElts", "PostRASchedDirection"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
