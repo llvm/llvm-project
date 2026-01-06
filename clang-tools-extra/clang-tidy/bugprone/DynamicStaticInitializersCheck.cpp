@@ -20,6 +20,10 @@ namespace {
 AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   if (Node.isConstexpr())
     return true;
+  if (llvm::any_of(Node.redecls(), [](const VarDecl *D) {
+        return D->hasAttr<ConstInitAttr>();
+      }))
+    return true;
   const Expr *Init = Node.getInit();
   if (Init && !Init->isValueDependent())
     return Node.evaluateValue();

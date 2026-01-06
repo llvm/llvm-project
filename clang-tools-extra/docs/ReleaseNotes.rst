@@ -111,10 +111,10 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
-- Added a new ``MacroFilter`` configuration option to ``Completion`` to 
-  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting 
-  macros. ``ExactPrefix`` is the default, which retains previous 
-  behavior of suggesting macros which match the prefix exactly.  
+- Added a new ``MacroFilter`` configuration option to ``Completion`` to
+  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting
+  macros. ``ExactPrefix`` is the default, which retains previous
+  behavior of suggesting macros which match the prefix exactly.
 
 Code actions
 ^^^^^^^^^^^^
@@ -205,7 +205,7 @@ Improvements to clang-tidy
 
 - Improved :program:`clang-tidy` by adding the `--removed-arg` option to remove
   arguments sent to the compiler when invoking Clang-Tidy. This option was also
-  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and 
+  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and
   can be configured in the config file through the `RemovedArgs` option.
 
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
@@ -364,7 +364,7 @@ New check aliases
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`google-build-namespaces <clang-tidy/checks/google/build-namespaces>` to
-  :doc:`misc-anonymous-namespace-in-header 
+  :doc:`misc-anonymous-namespace-in-header
   <clang-tidy/checks/misc/anonymous-namespace-in-header>`
   keeping initial check as an alias to the new one.
 
@@ -382,9 +382,12 @@ Changes in existing checks
   expansions.
 
 - Improved :doc:`bugprone-dynamic-static-initializers
-  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check by
-  avoiding false positives for ``constexpr`` variables whose
-  initializers are value-dependent.
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check:
+
+  - Avoided false positives for ``constexpr`` variables whose initializers
+    are value-dependent.
+
+  - Added support for C++20 ``constinit`` variables.
 
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
