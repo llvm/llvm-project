@@ -74,7 +74,7 @@ private:
       llvm::SmallVector<CharSourceRange> Ranges;
 
       // Methods to construct a llvm-style location.
-      llvm::SmallVector<CharSourceRange> getCharSourceRangesWithOption(SARIFDiagnostic&);
+      llvm::SmallVector<CharSourceRange> getCharSourceRangesWithOption(const LangOptions& LangOpts);
     };
 
     // Constructor
@@ -96,8 +96,8 @@ private:
     unsigned getDiagID();
     DiagnosticsEngine::Level getLevel();
     std::string getDiagnosticMessage();
-    llvm::SmallVector<CharSourceRange> getLocations(SARIFDiagnostic&);
-    llvm::SmallVector<CharSourceRange> getRelatedLocations(SARIFDiagnostic&);
+    llvm::SmallVector<CharSourceRange> getLocations(const LangOptions& LangOpts);
+    llvm::SmallVector<CharSourceRange> getRelatedLocations(const LangOptions& LangOpts);
     int getNesting();
 
   private:

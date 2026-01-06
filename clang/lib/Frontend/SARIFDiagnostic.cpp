@@ -9,7 +9,7 @@
 #include "clang/Frontend/SARIFDiagnostic.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -21,7 +21,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
-#include <algorithm>
 #include <string>
 
 namespace clang {
@@ -66,16 +65,16 @@ SARIFDiagnostic::~SARIFDiagnostic() {
 
     SarifResult Result = SarifResult::create(RuleIndex)
       .setDiagnosticMessage(TopLevelDiagnosticsPtr->getDiagnosticMessage())
-      .addLocations(TopLevelDiagnosticsPtr->getLocations(*this))
-      .addRelatedLocations(TopLevelDiagnosticsPtr->getRelatedLocations(*this));
+      .addLocations(TopLevelDiagnosticsPtr->getLocations(*LangOptsPtr))
+      .addRelatedLocations(TopLevelDiagnosticsPtr->getRelatedLocations(*LangOptsPtr));
     TopLevelDiagnosticsPtr->recursiveForEach([&] (Node& Node) { // For each (recursive) ChildResults.
       Result.addRelatedLocations({
         SarifChildResult::create()
           .setDiagnosticMessage(Node.getDiagnosticMessage())
-          .addLocations(Node.getLocations(*this))
+          .addLocations(Node.getLocations(*LangOptsPtr))
           .setNesting(Node.getNesting())
       });
-      Result.addRelatedLocations(Node.getRelatedLocations(*this));
+      Result.addRelatedLocations(Node.getRelatedLocations(*LangOptsPtr));
     });
     Writer->appendResult(Result); // Write into Writer
   }
@@ -176,21 +175,21 @@ std::string SARIFDiagnostic::Node::getDiagnosticMessage() {
   return Result_.Message;
 }
 
-llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations(SARIFDiagnostic& SARIFDiag) {
+llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations(const LangOptions& LangOpts) {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
   llvm::for_each(Locations, [&](Location &Location) {
-    CharSourceRanges.append(Location.getCharSourceRangesWithOption(SARIFDiag));
+    CharSourceRanges.append(Location.getCharSourceRangesWithOption(LangOpts));
   });
   return CharSourceRanges;
 }
 
 llvm::SmallVector<CharSourceRange>
-SARIFDiagnostic::Node::getRelatedLocations(SARIFDiagnostic& SARIFDiag) {
+SARIFDiagnostic::Node::getRelatedLocations(const LangOptions& LangOpts) {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
   llvm::for_each(RelatedLocations,
                 [&](Location &RelatedLocation) {
                   CharSourceRanges.append(
-                      RelatedLocation.getCharSourceRangesWithOption(SARIFDiag));
+                      RelatedLocation.getCharSourceRangesWithOption(LangOpts));
                 });
   return CharSourceRanges;
 }
@@ -198,7 +197,7 @@ SARIFDiagnostic::Node::getRelatedLocations(SARIFDiagnostic& SARIFDiag) {
 int SARIFDiagnostic::Node::getNesting() { return Nesting; }
 
 llvm::SmallVector<CharSourceRange>
-SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(SARIFDiagnostic& SARIFDiag) {
+SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(const LangOptions& LangOpts) {
   SmallVector<CharSourceRange> Locations = {};
 
   if (PLoc.isInvalid()) {
@@ -231,7 +230,7 @@ SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(SARIFDiagnostic& 
     // tokens.
     unsigned TokSize = 0;
     if (IsTokenRange)
-      TokSize = Lexer::MeasureTokenLength(E, SM, *SARIFDiag.LangOptsPtr);
+      TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
 
     FullSourceLoc BF(B, SM), EF(E, SM);
     SourceLocation BeginLoc = SM.translateLineCol(
@@ -249,8 +248,8 @@ SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(SARIFDiagnostic& 
   auto FID = PLoc.getFileID();
   // Visual Studio 2010 or earlier expects column number to be off by one.
   unsigned int ColNo =
-      (SARIFDiag.LangOptsPtr->MSCompatibilityVersion &&
-       !SARIFDiag.LangOptsPtr->isCompatibleWithMSVC(LangOptions::MSVC2012))
+      (LangOpts.MSCompatibilityVersion &&
+       !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2012))
           ? PLoc.getColumn() - 1
           : PLoc.getColumn();
   SourceLocation DiagLoc = SM.translateLineCol(FID, PLoc.getLine(), ColNo);
