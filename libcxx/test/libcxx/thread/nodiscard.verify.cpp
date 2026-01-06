@@ -22,6 +22,13 @@
 const auto timePoint = std::chrono::steady_clock::now();
 
 void test() {
+  { // [futures.async]
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::async([]() {});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::async(std::launch::any, []() {});
+  }
+
   // std::scoped_lock
   {
 #if TEST_STD_VER >= 17
