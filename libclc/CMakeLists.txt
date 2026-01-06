@@ -196,9 +196,6 @@ list( SORT LIBCLC_TARGETS_TO_BUILD )
 # headers are not $build/include/ which is what LLVM_INCLUDE_DIR is set to.
 include_directories( ${LLVM_INCLUDE_DIRS} )
 
-# Configure prepare_builtins
-add_subdirectory( utils )
-
 # Setup arch devices
 set( r600--_devices cedar cypress barts cayman )
 set( amdgcn--_devices tahiti )
