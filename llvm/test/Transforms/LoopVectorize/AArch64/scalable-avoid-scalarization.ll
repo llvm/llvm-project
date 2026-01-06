@@ -16,11 +16,12 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP3]], i32 6)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[IDX]], [[N_VEC]]

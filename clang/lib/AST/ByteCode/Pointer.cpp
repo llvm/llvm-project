@@ -11,12 +11,11 @@
 #include "Context.h"
 #include "Floating.h"
 #include "Function.h"
+#include "InitMap.h"
 #include "Integral.h"
 #include "InterpBlock.h"
-#include "InterpState.h"
 #include "MemberPointer.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "Record.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -34,13 +33,12 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
 
 Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
+  assert(Pointee);
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
   assert(Base >= Pointee->getDescriptor()->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
-
-  if (Pointee)
-    Pointee->addPointer(this);
+  Pointee->addPointer(this);
 }
 
 Pointer::Pointer(const Pointer &P)
@@ -364,7 +362,13 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
-size_t Pointer::computeOffsetForComparison() const {
+/// Compute an offset that can be used to compare the pointer to another one
+/// with the same base. To get accurate results, we basically _have to_ compute
+/// the lvalue offset using the ASTRecordLayout.
+///
+/// FIXME: We're still mixing values from the record layout with our internal
+/// offsets, which will inevitably lead to cryptic errors.
+size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   switch (StorageKind) {
   case Storage::Int:
     return Int.Value + Offset;
@@ -380,7 +384,6 @@ size_t Pointer::computeOffsetForComparison() const {
   size_t Result = 0;
   Pointer P = *this;
   while (true) {
-
     if (P.isVirtualBaseClass()) {
       Result += getInlineDesc()->Offset;
       P = P.getBase();
@@ -402,28 +405,29 @@ size_t Pointer::computeOffsetForComparison() const {
 
     if (P.isRoot()) {
       if (P.isOnePastEnd())
-        ++Result;
+        Result +=
+            ASTCtx.getTypeSizeInChars(P.getDeclDesc()->getType()).getQuantity();
       break;
     }
 
-    if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
-      if (P.isOnePastEnd())
-        ++Result;
-      // Direct child of a union - all have offset 0.
-      P = P.getBase();
-      continue;
-    }
+    assert(P.getField());
+    const Record *R = P.getBase().getRecord();
+    assert(R);
 
-    // Fields, etc.
-    Result += P.getInlineDesc()->Offset;
+    const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
+    Result += ASTCtx
+                  .toCharUnitsFromBits(
+                      Layout.getFieldOffset(P.getField()->getFieldIndex()))
+                  .getQuantity();
+
     if (P.isOnePastEnd())
-      ++Result;
+      Result +=
+          ASTCtx.getTypeSizeInChars(P.getField()->getType()).getQuantity();
 
     P = P.getBase();
     if (P.isRoot())
       break;
   }
-
   return Result;
 }
 
@@ -444,25 +448,17 @@ bool Pointer::isInitialized() const {
   if (!isBlockPointer())
     return true;
 
-  assert(BS.Pointee && "Cannot check if null pointer was initialized");
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    const auto &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
     return GD.InitState == GlobalInitState::Initialized;
   }
 
+  assert(BS.Pointee && "Cannot check if null pointer was initialized");
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
-  if (Desc->isPrimitiveArray()) {
-    InitMap *&IM = getInitMap();
-    if (!IM)
-      return false;
-
-    if (InitMap::allInitialized(IM))
-      return true;
-    return IM->isElementInitialized(getIndex());
-  }
+  if (Desc->isPrimitiveArray())
+    return isElementInitialized(getIndex());
 
   if (asBlockPointer().Base == 0)
     return true;
@@ -471,37 +467,43 @@ bool Pointer::isInitialized() const {
 }
 
 bool Pointer::isElementInitialized(unsigned Index) const {
-  assert(isBlockPointer());
-  const Descriptor *Desc = getFieldDesc();
-  assert(Desc->isArray());
-  if (Desc->isPrimitiveArray()) {
-    assert(getFieldDesc()->isPrimitiveArray());
-    InitMap *&IM = getInitMap();
-    if (!IM)
-      return false;
-
-    if (InitMap::allInitialized(IM))
-      return true;
-    return IM->isElementInitialized(Index);
-  }
-
-  // Composite arrays.
-  return getDescriptor(BS.Base + sizeof(InlineDescriptor) +
-                       (elemSize() * Index))
-      ->IsInitialized;
-}
-
-void Pointer::initialize(InterpState &S) const {
   if (!isBlockPointer())
-    return;
-  assert(BS.Pointee && "Cannot initialize null pointer");
+    return true;
+
+  const Descriptor *Desc = getFieldDesc();
+  assert(Desc);
 
   if (isStatic() && BS.Base == 0)
-    return;
+    return true;
+
   if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
       Offset == BS.Base) {
-    auto &GD =
-        *reinterpret_cast<GlobalInlineDescriptor *>(BS.Pointee->rawData());
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
+  if (Desc->isPrimitiveArray()) {
+    InitMapPtr IM = getInitMap();
+
+    if (IM.allInitialized())
+      return true;
+
+    if (!IM.hasInitMap())
+      return false;
+    return IM->isElementInitialized(Index);
+  }
+  return isInitialized();
+}
+
+void Pointer::initialize() const {
+  if (!isBlockPointer())
+    return;
+
+  assert(BS.Pointee && "Cannot initialize null pointer");
+
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
+    auto &GD = BS.Pointee->getBlockDesc<GlobalInlineDescriptor>();
     GD.InitState = GlobalInitState::Initialized;
     return;
   }
@@ -510,7 +512,7 @@ void Pointer::initialize(InterpState &S) const {
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
     if (Desc->getNumElems() != 0)
-      initializeElement(S, getIndex());
+      initializeElement(getIndex());
     return;
   }
 
@@ -519,49 +521,50 @@ void Pointer::initialize(InterpState &S) const {
   getInlineDesc()->IsInitialized = true;
 }
 
-void Pointer::initializeElement(InterpState &S, unsigned Index) const {
-  assert(isBlockPointer());
-  assert(getFieldDesc()->isPrimitiveArray());
-  assert(Index < getFieldDesc()->getNumElems());
-
-  InitMap *&IM = getInitMap();
-  if (InitMap::allInitialized(IM))
+void Pointer::initializeElement(unsigned Index) const {
+  // Primitive global arrays don't have an initmap.
+  if (isStatic() && BS.Base == 0)
     return;
 
-  // nullptr means no initmap yet.
-  if (!IM) {
-    unsigned NumElems = getFieldDesc()->getNumElems();
-    if (NumElems == 1) {
-      InitMap::markAllInitialized(IM);
-      return;
-    }
+  assert(Index < getFieldDesc()->getNumElems());
 
-    if (block()->isStatic())
-      IM = (InitMap *)S.P.Allocate(InitMap::allocBytes(NumElems),
-                                   alignof(InitMap));
-    else
-      IM = (InitMap *)S.allocate(InitMap::allocBytes(NumElems),
-                                 alignof(InitMap));
-    new (IM) InitMap(NumElems);
+  InitMapPtr &IM = getInitMap();
+
+  if (IM.allInitialized())
+    return;
+
+  if (!IM.hasInitMap()) {
+    const Descriptor *Desc = getFieldDesc();
+    IM.setInitMap(new InitMap(Desc->getNumElems()));
   }
+  assert(IM.hasInitMap());
 
-  assert(IM);
   if (IM->initializeElement(Index))
-    InitMap::markAllInitialized(IM);
+    IM.noteAllInitialized();
 }
 
 void Pointer::initializeAllElements() const {
-  assert(isBlockPointer());
   assert(getFieldDesc()->isPrimitiveArray());
   assert(isArrayRoot());
-  InitMap::markAllInitialized(getInitMap());
+
+  getInitMap().noteAllInitialized();
 }
 
 bool Pointer::allElementsInitialized() const {
-  assert(isBlockPointer());
   assert(getFieldDesc()->isPrimitiveArray());
   assert(isArrayRoot());
-  return InitMap::allInitialized(getInitMap());
+
+  if (isStatic() && BS.Base == 0)
+    return true;
+
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
+  InitMapPtr IM = getInitMap();
+  return IM.allInitialized();
 }
 
 void Pointer::activate() const {

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/relational/isequal.h>
 #include <clc/relational/clc_isequal.h>
 
 #define __CLC_FUNCTION isequal

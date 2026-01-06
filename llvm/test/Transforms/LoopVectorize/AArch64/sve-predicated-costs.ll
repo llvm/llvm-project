@@ -71,7 +71,8 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C1]], i64 0
@@ -83,15 +84,12 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[P0]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[TMP10]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP10]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP20]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[P1]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP13]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[TMP9]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[TMP9]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP9]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP12]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[TMP21:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[WIDE_MASKED_LOAD4]], <vscale x 2 x i64> splat (i64 1)

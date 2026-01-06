@@ -439,6 +439,17 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, i);
   }
 
+  if (MF.getSubtarget<AArch64Subtarget>().isLFI()) {
+    markSuperRegs(Reserved, AArch64::W28);
+    markSuperRegs(Reserved, AArch64::W27);
+    markSuperRegs(Reserved, AArch64::W26);
+    markSuperRegs(Reserved, AArch64::W25);
+    if (!MF.getProperties().hasNoVRegs()) {
+      markSuperRegs(Reserved, AArch64::LR);
+      markSuperRegs(Reserved, AArch64::W30);
+    }
+  }
+
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
     if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
       markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
@@ -536,7 +547,9 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     // it's liveness. We use the NoVRegs property instead of IsSSA because
     // IsSSA is removed before VirtRegRewriter runs.
     if (!MF.getProperties().hasNoVRegs())
-      markSuperRegs(Reserved, AArch64::LR);
+      // Reserve LR (X30) by marking from its subregister W30 because otherwise
+      // the register allocator could clobber the subregister.
+      markSuperRegs(Reserved, AArch64::W30);
   }
 
   assert(checkAllSuperRegsMarked(Reserved));
@@ -1175,6 +1188,9 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         case AArch64::DestructiveBinary:
         case AArch64::DestructiveBinaryImm:
           AddHintIfSuitable(R, Def.getOperand(2));
+          break;
+        case AArch64::DestructiveUnaryPassthru:
+          AddHintIfSuitable(R, Def.getOperand(3));
           break;
         }
       }

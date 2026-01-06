@@ -418,7 +418,7 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::add(A, B, Bits, &Result.elem<T>(1)))
       return false;
-    Result.initialize(S);
+    Result.initialize();
     Result.initializeAllElements();
   }
 
@@ -777,6 +777,8 @@ bool Inc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr,
                                                       CanOverflow);
@@ -787,6 +789,8 @@ bool IncBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                  unsigned BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, CanOverflow,
@@ -801,6 +805,8 @@ bool IncPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
@@ -810,6 +816,8 @@ bool IncPopBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                     uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow,
@@ -821,6 +829,8 @@ bool PreInc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
@@ -830,6 +840,8 @@ bool PreIncBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                     uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow,
@@ -845,6 +857,8 @@ bool Dec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr,
                                                       CanOverflow);
@@ -854,6 +868,8 @@ bool DecBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                  uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, CanOverflow,
@@ -868,6 +884,8 @@ bool DecPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
@@ -877,6 +895,8 @@ bool DecPopBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                     uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow,
@@ -888,6 +908,8 @@ bool PreDec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
 
@@ -896,6 +918,8 @@ bool PreDecBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                     uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow,
                                                      BitWidth);
@@ -926,6 +950,8 @@ inline bool Incf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, FPOI);
 }
@@ -933,6 +959,8 @@ inline bool Incf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 inline bool IncfPop(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, FPOI);
@@ -942,6 +970,8 @@ inline bool Decf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, FPOI);
 }
@@ -949,6 +979,8 @@ inline bool Decf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 inline bool DecfPop(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, FPOI);
@@ -1095,8 +1127,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
-    size_t A = LHS.computeOffsetForComparison();
-    size_t B = RHS.computeOffsetForComparison();
+    size_t A = LHS.computeOffsetForComparison(S.getASTContext());
+    size_t B = RHS.computeOffsetForComparison(S.getASTContext());
+
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
     return true;
   }
@@ -1390,7 +1423,7 @@ bool SetField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Field = Obj.atField(I);
   if (!CheckStore(S, OpPC, Field))
     return false;
-  Field.initialize(S);
+  Field.initialize();
   Field.deref<T>() = Value;
   return true;
 }
@@ -1455,8 +1488,7 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
-  const auto &Desc =
-      *reinterpret_cast<const GlobalInlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (Desc.InitState != GlobalInitState::Initialized)
     return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
                                  AK_Read);
@@ -1492,7 +1524,7 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
     }
   }
 
-  P.initialize(S);
+  P.initialize();
   return true;
 }
 
@@ -1512,7 +1544,7 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
       std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
 
   Ptr.deref<T>() = S.Stk.pop<T>();
-  Ptr.initialize(S);
+  Ptr.initialize();
   return true;
 }
 
@@ -1541,7 +1573,7 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Field = This.atField(I);
   assert(Field.canBeInitialized());
   Field.deref<T>() = S.Stk.pop<T>();
-  Field.initialize(S);
+  Field.initialize();
   return true;
 }
 
@@ -1556,7 +1588,7 @@ bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
   assert(Field.canBeInitialized());
   Field.deref<T>() = S.Stk.pop<T>();
   Field.activate();
-  Field.initialize(S);
+  Field.initialize();
   return true;
 }
 
@@ -1575,7 +1607,7 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
   assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
-  Field.initialize(S);
+  Field.initialize();
   return true;
 }
 
@@ -1592,7 +1624,7 @@ bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
   assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
-  Field.initialize(S);
+  Field.initialize();
   Field.activate();
   return true;
 }
@@ -1611,7 +1643,7 @@ bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
-  Field.initialize(S);
+  Field.initialize();
   return true;
 }
 
@@ -1627,7 +1659,7 @@ bool InitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.activate();
-  Field.initialize(S);
+  Field.initialize();
   return true;
 }
 
@@ -1658,7 +1690,7 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   } else {
     Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
   }
-  Field.initialize(S);
+  Field.initialize();
   return true;
 }
 
@@ -1691,7 +1723,7 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
     Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
   }
   Field.activate();
-  Field.initialize(S);
+  Field.initialize();
   return true;
 }
 
@@ -1828,21 +1860,21 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.canBeInitialized())
-    Ptr.initialize(S);
+    Ptr.initialize();
   return true;
 }
 
 inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized())
-    Ptr.initialize(S);
+    Ptr.initialize();
   return true;
 }
 
 inline bool FinishInitActivate(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     Ptr.activate();
   }
   return true;
@@ -1851,7 +1883,7 @@ inline bool FinishInitActivate(InterpState &S, CodePtr OpPC) {
 inline bool FinishInitActivatePop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.canBeInitialized()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     Ptr.activate();
   }
   return true;
@@ -1944,7 +1976,7 @@ bool Store(InterpState &S, CodePtr OpPC) {
   if (!CheckStore(S, OpPC, Ptr))
     return false;
   if (Ptr.canBeInitialized())
-    Ptr.initialize(S);
+    Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1956,7 +1988,7 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   if (!CheckStore(S, OpPC, Ptr))
     return false;
   if (Ptr.canBeInitialized())
-    Ptr.initialize(S);
+    Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1988,7 +2020,7 @@ bool StoreActivate(InterpState &S, CodePtr OpPC) {
   if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     Ptr.activate();
   }
   Ptr.deref<T>() = Value;
@@ -2003,7 +2035,7 @@ bool StoreActivatePop(InterpState &S, CodePtr OpPC) {
   if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     Ptr.activate();
   }
   Ptr.deref<T>() = Value;
@@ -2018,7 +2050,7 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized())
-    Ptr.initialize(S);
+    Ptr.initialize();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2033,7 +2065,7 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   if (!CheckStore(S, OpPC, Ptr))
     return false;
   if (Ptr.canBeInitialized())
-    Ptr.initialize(S);
+    Ptr.initialize();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2049,7 +2081,7 @@ bool StoreBitFieldActivate(InterpState &S, CodePtr OpPC) {
   if (!CheckStore(S, OpPC, Ptr, /*WilLBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     Ptr.activate();
   }
   if (const auto *FD = Ptr.getField())
@@ -2067,7 +2099,7 @@ bool StoreBitFieldActivatePop(InterpState &S, CodePtr OpPC) {
   if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     Ptr.activate();
   }
   if (const auto *FD = Ptr.getField())
@@ -2083,7 +2115,7 @@ bool Init(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
-  Ptr.initialize(S);
+  Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
 }
@@ -2094,7 +2126,7 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
-  Ptr.initialize(S);
+  Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
 }
@@ -2114,7 +2146,7 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
   if (Idx == 0 && !Desc->isArray()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     new (&Ptr.deref<T>()) T(Value);
     return true;
   }
@@ -2130,7 +2162,7 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
     }
     return false;
   }
-  Ptr.initializeElement(S, Idx);
+  Ptr.initializeElement(Idx);
   new (&Ptr.elem<T>(Idx)) T(Value);
   return true;
 }
@@ -2148,7 +2180,7 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
   if (Idx == 0 && !Desc->isArray()) {
-    Ptr.initialize(S);
+    Ptr.initialize();
     new (&Ptr.deref<T>()) T(Value);
     return true;
   }
@@ -2164,7 +2196,7 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
     }
     return false;
   }
-  Ptr.initializeElement(S, Idx);
+  Ptr.initializeElement(Idx);
   new (&Ptr.elem<T>(Idx)) T(Value);
   return true;
 }
@@ -3174,7 +3206,7 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
       return false;
 
     DestPtr.elem<T>(DestIndex + I) = SrcPtr.elem<T>(SrcIndex + I);
-    DestPtr.initializeElement(S, DestIndex + I);
+    DestPtr.initializeElement(DestIndex + I);
   }
   return true;
 }
