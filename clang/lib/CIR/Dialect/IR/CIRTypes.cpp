@@ -735,6 +735,33 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// MethodType Definitions
+//===----------------------------------------------------------------------===//
+
+static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
+  // With Itanium ABI, member function pointers have the same layout as the
+  // following struct: struct { fnptr_t, ptrdiff_t }, where fnptr_t is a
+  // function pointer type.
+  // TODO: consider member function pointer layout in other ABIs
+  auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
+  mlir::Type fields[2]{voidPtrTy, voidPtrTy};
+  return cir::RecordType::get(ctx, fields, /*packed=*/false,
+                              /*padded=*/false, cir::RecordType::Struct);
+}
+
+llvm::TypeSize
+MethodType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+uint64_t
+MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+//===----------------------------------------------------------------------===//
 // BoolType
 //===----------------------------------------------------------------------===//
 

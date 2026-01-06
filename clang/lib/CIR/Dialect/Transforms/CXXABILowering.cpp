@@ -268,6 +268,11 @@ static void prepareCXXABITypeConverter(mlir::TypeConverter &converter,
         lowerModule.getCXXABI().lowerDataMemberType(type, converter);
     return converter.convertType(abiType);
   });
+  converter.addConversion([&](cir::MethodType type) -> mlir::Type {
+    mlir::Type abiType =
+        lowerModule.getCXXABI().lowerMethodType(type, converter);
+    return converter.convertType(abiType);
+  });
   // This is necessary in order to convert CIR function types that have argument
   // or return types that use CIR types that we are lowering in this pass.
   converter.addConversion([&](cir::FuncType type) -> mlir::Type {

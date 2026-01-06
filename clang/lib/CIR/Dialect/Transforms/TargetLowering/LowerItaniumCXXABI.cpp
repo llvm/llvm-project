@@ -39,6 +39,10 @@ public:
   lowerDataMemberType(cir::DataMemberType type,
                       const mlir::TypeConverter &typeConverter) const override;
 
+  mlir::Type
+  lowerMethodType(cir::MethodType type,
+                  const mlir::TypeConverter &typeConverter) const override;
+
   mlir::TypedAttr lowerDataMemberConstant(
       cir::DataMemberAttr attr, const mlir::DataLayout &layout,
       const mlir::TypeConverter &typeConverter) const override;
@@ -69,6 +73,27 @@ mlir::Type LowerItaniumCXXABI::lowerDataMemberType(
   //   A data member pointer is represented as the data member's offset in bytes
   //   from the address point of an object of the base type, as a ptrdiff_t.
   return getPtrDiffCIRTy(lm);
+}
+
+mlir::Type LowerItaniumCXXABI::lowerMethodType(
+    cir::MethodType type, const mlir::TypeConverter &typeConverter) const {
+  // Itanium C++ ABI 2.3.2:
+  //    In all representations, the basic ABI properties of member function
+  //    pointer types are those of the following class, where fnptr_t is the
+  //    appropriate function-pointer type for a member function of this type:
+  //
+  //    struct {
+  //      fnptr_t ptr;
+  //      ptrdiff_t adj;
+  //    };
+
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
+
+  // Note that clang CodeGen emits struct{ptrdiff_t, ptrdiff_t} for member
+  // function pointers. Let's follow this approach.
+  return cir::RecordType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
+                              /*packed=*/false, /*padded=*/false,
+                              cir::RecordType::Struct);
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(

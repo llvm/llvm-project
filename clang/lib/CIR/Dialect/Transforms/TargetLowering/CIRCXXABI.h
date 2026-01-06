@@ -40,6 +40,12 @@ public:
   lowerDataMemberType(cir::DataMemberType type,
                       const mlir::TypeConverter &typeConverter) const = 0;
 
+  /// Lower the given member function pointer type to its ABI type. The returned
+  /// type is also a CIR type.
+  virtual mlir::Type
+  lowerMethodType(cir::MethodType type,
+                  const mlir::TypeConverter &typeConverter) const = 0;
+
   /// Lower the given data member pointer constant to a constant of the ABI
   /// type. The returned constant is represented as an attribute as well.
   virtual mlir::TypedAttr
