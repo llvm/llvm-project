@@ -521,15 +521,13 @@ namespace llvm {
     static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
   };
 
-  template <> struct DenseMapInfo<clang::SourceRange, void> {
+  template <> struct DenseMapInfo<clang::SourceRange> {
     static clang::SourceRange getEmptyKey() {
-      return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-              DenseMapInfo<clang::SourceLocation>::getEmptyKey()};
+      return DenseMapInfo<clang::SourceLocation>::getEmptyKey();
     }
 
     static clang::SourceRange getTombstoneKey() {
-      return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-              DenseMapInfo<clang::SourceLocation>::getTombstoneKey()};
+      return DenseMapInfo<clang::SourceLocation>::getTombstoneKey();
     }
 
     static unsigned getHashValue(clang::SourceRange Range) {
