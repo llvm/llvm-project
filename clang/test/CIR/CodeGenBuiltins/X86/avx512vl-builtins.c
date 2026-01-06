@@ -199,6 +199,68 @@ __m256i test_mm256_mask_i32gather_epi32(__m256i __v1_old, __mmask8 __mask, __m25
   return _mm256_mmask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2); 
 }
 
+__m128i test_mm_ror_epi32(__m128i __A) {
+  // CIR-LABEL: test_mm_ror_epi32
+  // CIR: cir.cast integral %{{.*}} : !s32i -> !u32i
+  // CIR: cir.vec.splat %{{.*}} : !u32i, !cir.vector<4 x !u32i>
+  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}: (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !u32i>) -> !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: @test_mm_ror_epi32
+  // LLVM: %[[CASTED_VAR:.*]] = bitcast <2 x i64> %{{.*}} to <4 x i32>
+  // LLVM: call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %[[CASTED_VAR]], <4 x i32> %[[CASTED_VAR]], <4 x i32> splat (i32 5))
+
+  // OGCG-LABEL: @test_mm_ror_epi32
+  // OGCG: %[[CASTED_VAR:.*]] = bitcast <2 x i64> %{{.*}} to <4 x i32>
+  // OGCG: call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %[[CASTED_VAR]], <4 x i32> %[[CASTED_VAR]], <4 x i32> splat (i32 5))
+  return _mm_ror_epi32(__A, 5);
+}
+
+__m256i test_mm256_ror_epi32(__m256i __A) {
+  // CIR-LABEL: test_mm256_ror_epi32
+  // CIR: cir.cast integral %{{.*}} : !s32i -> !u32i
+  // CIR: cir.vec.splat %{{.*}} : !u32i, !cir.vector<8 x !u32i>
+  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}: (!cir.vector<8 x !s32i>, !cir.vector<8 x !s32i>, !cir.vector<8 x !u32i>) -> !cir.vector<8 x !s32i>
+
+  // LLVM-LABEL: @test_mm256_ror_epi32
+  // LLVM: %[[CASTED_VAR:.*]] = bitcast <4 x i64> %{{.*}} to <8 x i32>
+  // LLVM: call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %[[CASTED_VAR]], <8 x i32> %[[CASTED_VAR]], <8 x i32> splat (i32 5))
+
+  // OGCG-LABEL: @test_mm256_ror_epi32
+  // OGCG: %[[CASTED_VAR:.*]] = bitcast <4 x i64> %{{.*}} to <8 x i32>
+  // OGCG: call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %[[CASTED_VAR]], <8 x i32> %[[CASTED_VAR]], <8 x i32> splat (i32 5))
+  return _mm256_ror_epi32(__A, 5);
+}
+
+__m128i test_mm_ror_epi64(__m128i __A) {
+  // CIR-LABEL: test_mm_ror_epi64
+  // CIR: cir.cast integral %{{.*}} : !s32i -> !u32i
+  // CIR: cir.cast integral %{{.*}} : !u32i -> !u64i
+  // CIR: cir.vec.splat %{{.*}} : !u64i, !cir.vector<2 x !u64i>
+  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}: (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !u64i>) -> !cir.vector<2 x !s64i>
+
+  // LLVM-LABEL: @test_mm_ror_epi64
+  // LLVM: call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %[[V:.*]], <2 x i64> %[[V]], <2 x i64> splat (i64 5))
+
+  // OGCG-LABEL: @test_mm_ror_epi64
+  // OGCG: call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %[[V:.*]], <2 x i64> %[[V]], <2 x i64> splat (i64 5))
+  return _mm_ror_epi64(__A, 5);
+}
+
+__m256i test_mm256_ror_epi64(__m256i __A) {
+  // CIR-LABEL: test_mm256_ror_epi64
+  // CIR: cir.cast integral %{{.*}} : !s32i -> !u32i
+  // CIR: cir.cast integral %{{.*}} : !u32i -> !u64i
+  // CIR: cir.vec.splat %{{.*}} : !u64i, !cir.vector<4 x !u64i>
+  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}: (!cir.vector<4 x !s64i>, !cir.vector<4 x !s64i>, !cir.vector<4 x !u64i>) -> !cir.vector<4 x !s64i>
+
+  // LLVM-LABEL: @test_mm256_ror_epi64
+  // LLVM: call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %[[V:.*]], <4 x i64> %[[V]], <4 x i64> splat (i64 5))
+
+  // OGCG-LABEL: @test_mm256_ror_epi64
+  // OGCG: call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %[[V:.*]], <4 x i64> %[[V]], <4 x i64> splat (i64 5))
+  return _mm256_ror_epi64(__A, 5);
+}
+
 __m256 test_mm256_insertf32x4(__m256 __A, __m128 __B) {
   // CIR-LABEL: test_mm256_insertf32x4
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.float>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i] : !cir.vector<8 x !cir.float>
