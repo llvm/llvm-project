@@ -2755,10 +2755,10 @@ getSimpleVT(const uint8_t *MatcherTable, unsigned &MatcherIndex) {
 /// use GetVBR to decode it.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static MVT
 getHwModeVT(const uint8_t *MatcherTable, unsigned &MatcherIndex,
-                   const SelectionDAGISel &SDISel) {
+            const SelectionDAGISel &SDISel) {
   unsigned Index = MatcherTable[MatcherIndex++];
   if (Index & 128)
-     Index = GetVBR(Index, MatcherTable, MatcherIndex);
+    Index = GetVBR(Index, MatcherTable, MatcherIndex);
 
   return SDISel.getValueTypeByHwMode(Index);
 }
@@ -3168,7 +3168,8 @@ static unsigned IsPredicateKnownToFail(
   }
   case SelectionDAGISel::OPC_CheckTypeByHwMode: {
     MVT VT = getHwModeVT(Table, Index, SDISel);
-    Result = !::CheckType(VT.SimpleTy, N, SDISel.TLI, SDISel.CurDAG->getDataLayout());
+    Result = !::CheckType(VT.SimpleTy, N, SDISel.TLI,
+                          SDISel.CurDAG->getDataLayout());
     return Index;
   }
   case SelectionDAGISel::OPC_CheckTypeRes: {
@@ -3180,7 +3181,8 @@ static unsigned IsPredicateKnownToFail(
   case SelectionDAGISel::OPC_CheckTypeResByHwMode: {
     unsigned Res = Table[Index++];
     MVT VT = getHwModeVT(Table, Index, SDISel);
-    Result = !::CheckType(VT.SimpleTy, N.getValue(Res), SDISel.TLI, SDISel.CurDAG->getDataLayout());
+    Result = !::CheckType(VT.SimpleTy, N.getValue(Res), SDISel.TLI,
+                          SDISel.CurDAG->getDataLayout());
     return Index;
   }
   case SelectionDAGISel::OPC_CheckChild0Type:
@@ -3776,7 +3778,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_CheckTypeResByHwMode: {
       unsigned Res = MatcherTable[MatcherIndex++];
       MVT VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
-      if (!::CheckType(VT.SimpleTy, N.getValue(Res), TLI, CurDAG->getDataLayout()))
+      if (!::CheckType(VT.SimpleTy, N.getValue(Res), TLI,
+                       CurDAG->getDataLayout()))
         break;
       continue;
     }
@@ -3896,7 +3899,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_CheckChild7TypeByHwMode: {
       MVT VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
       unsigned ChildNo = Opcode - OPC_CheckChild0TypeByHwMode;
-      if (!::CheckChildType(VT.SimpleTy, N, TLI, CurDAG->getDataLayout(), ChildNo))
+      if (!::CheckChildType(VT.SimpleTy, N, TLI, CurDAG->getDataLayout(),
+                            ChildNo))
         break;
       continue;
     }

@@ -1094,8 +1094,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       if (!OmitComments)
         OS << "/*#VTs*/";
       OS << ",";
-      }
-      unsigned NumTypeBytes = 0;
+    }
+    unsigned NumTypeBytes = 0;
     if (ByHwMode) {
       for (unsigned i = 0, e = EN->getNumVTs(); i != e; ++i) {
         OS << ' ';
