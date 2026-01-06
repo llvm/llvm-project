@@ -54,6 +54,13 @@ class AsmParserContext {
   IMap::Allocator IAllocator;
   IMap InstructionsInverse = IMap(IAllocator);
 
+  using VMap =
+      IntervalMap<FileLoc, Value *,
+                  IntervalMapImpl::NodeSizer<FileLoc, Value *>::LeafSize,
+                  IntervalMapHalfOpenInfo<FileLoc>>;
+  VMap::Allocator VAllocator;
+  VMap ReferencedValues = VMap(VAllocator);
+
 public:
   LLVM_ABI std::optional<FileLocRange>
   getFunctionLocation(const Function *) const;
@@ -85,9 +92,18 @@ public:
   /// If no instruction occupies the queried location, or the record is missing,
   /// a nullptr is returned.
   Instruction *getInstructionAtLocation(const FileLoc &) const;
+  /// Get value referenced at the requested location.
+  /// If no value occupies the queried location, or the record is missing,
+  /// a nullptr is returned.
+  Value *getValueReferencedAtLocation(const FileLoc &) const;
+  /// Get value referenced at the requested location range.
+  /// If no value occupies the queried location, or the record is missing,
+  /// a nullptr is returned.
+  Value *getValueReferencedAtLocation(const FileLocRange &) const;
   bool addFunctionLocation(Function *, const FileLocRange &);
   bool addBlockLocation(BasicBlock *, const FileLocRange &);
   bool addInstructionLocation(Instruction *, const FileLocRange &);
+  bool addValueReferenceAtLocation(Value *, const FileLocRange &);
 };
 } // namespace llvm
 
