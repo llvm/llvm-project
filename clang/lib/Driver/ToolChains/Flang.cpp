@@ -45,7 +45,7 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
     // If the user specifies both -Mextend and -ffixed-line-length=N,
     // Then -ffixed-line-length=N will override -Mextend
   }
-  
+
   Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
                             options::OPT_ffree_form,
                             options::OPT_ffixed_line_length_EQ,
