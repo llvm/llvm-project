@@ -47,13 +47,6 @@ public:
   /// - "type_name": string type name of the variable
   lldb::SBStructuredData AnnotateStructured(SBInstruction inst);
 
-protected:
-  SBVariableAnnotator(const lldb::VariableAnnotatorSP &annotator_sp);
-
-  lldb::VariableAnnotatorSP GetSP() const;
-
-  void SetSP(const lldb::VariableAnnotatorSP &annotator_sp);
-
 private:
   lldb::VariableAnnotatorSP m_opaque_sp;
 };

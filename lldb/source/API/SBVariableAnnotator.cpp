@@ -64,13 +64,13 @@ SBVariableAnnotator::AnnotateStructured(SBInstruction inst) {
 
   lldb::SBStructuredData result;
 
-  if (lldb::VariableAnnotatorSP annotator_sp = GetSP())
+  if (m_opaque_sp)
     if (lldb::InstructionSP inst_sp = inst.GetOpaque()) {
       StructuredData::ArraySP array_sp =
           std::make_shared<StructuredData::Array>();
 
       const std::vector<lldb_private::VariableAnnotation>
-          structured_annotations = annotator_sp->AnnotateStructured(*inst_sp);
+          structured_annotations = m_opaque_sp->AnnotateStructured(*inst_sp);
 
       for (const VariableAnnotation &annotation : structured_annotations) {
         auto dict_sp = std::make_shared<StructuredData::Dictionary>();
