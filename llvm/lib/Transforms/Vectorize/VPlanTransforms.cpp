@@ -2546,7 +2546,6 @@ static void licm(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
   // Sink recipes with no users inside the vector loop region into a dedicated
   // exit block.
-  SmallPtrSet<VPBasicBlock *, 16> Visited;
   while (!WorklistForSink.empty()) {
     VPRegionBlock *CurLoop = WorklistForSink.pop_back_val();
     auto *SingleExit =
@@ -2558,9 +2557,6 @@ static void licm(VPlan &Plan) {
 
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
              vp_post_order_shallow(CurLoop->getEntry()))) {
-      // Skip the basic block in inner loops.
-      if (!Visited.insert(VPBB).second)
-        continue;
       // Skip the basic block that is not dominates the exit block.
       if (!VPDT.properlyDominates(VPBB, SingleExit))
         continue;
@@ -2577,9 +2573,9 @@ static void licm(VPlan &Plan) {
         // Cannot sink the recipe if any user is defined in the same loop or in
         // any nested inner loop region.
         if (any_of(Def->users(), [&](VPUser *U) {
-              VPBasicBlock *UB = cast<VPRecipeBase>(U)->getParent();
-              return Visited.count(UB) ||
-                     UB->getEnclosingLoopRegion() == CurLoop;
+              VPRegionBlock *ParentL =
+                  cast<VPRecipeBase>(U)->getParent()->getEnclosingLoopRegion();
+              return ParentL && !is_contained(WorklistForSink, ParentL);
             }))
           continue;
         Def->moveBefore(*SingleExit, SingleExit->getFirstNonPhi());
