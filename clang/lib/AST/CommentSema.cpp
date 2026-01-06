@@ -225,7 +225,8 @@ static ParamCommandPassDirection getParamPassDirection(StringRef Arg) {
   return llvm::StringSwitch<ParamCommandPassDirection>(Arg)
       .Case("[in]", ParamCommandPassDirection::In)
       .Case("[out]", ParamCommandPassDirection::Out)
-      .Cases({"[in,out]", "[out,in]", "[inout]", "[outin]"},
+      .Cases({"[in,out]", "[out,in]", "[in out]", "[out in]", "[inout]",
+              "[outin]"},
              ParamCommandPassDirection::InOut)
       .Default(static_cast<ParamCommandPassDirection>(-1));
 }

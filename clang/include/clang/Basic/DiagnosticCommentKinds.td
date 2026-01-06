@@ -64,7 +64,7 @@ def note_doc_block_command_previous_alias : Note<
 
 def warn_doc_param_invalid_direction : Warning<
   "unrecognized parameter passing direction, "
-  "valid directions are '[in]', '[out]', '[in,out]', '[out,in]', '[inout]', and '[outin]'">,
+  "valid directions are '[in]', '[out]', '[in,out]', '[out,in]', '[in out]', '[out in]', '[inout]', and '[outin]'">,
   InGroup<Documentation>, DefaultIgnore;
 
 def warn_doc_param_spaces_in_direction : Warning<
