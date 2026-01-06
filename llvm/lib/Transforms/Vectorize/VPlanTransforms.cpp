@@ -115,9 +115,6 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
               drop_end(Ingredient.operands()), CI->getType(), VPIRFlags(*CI),
               *VPI, CI->getDebugLoc());
-        } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
-          NewRecipe = new VPWidenSelectRecipe(SI, Ingredient.operands(), *VPI,
-                                              *VPI, Ingredient.getDebugLoc());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
           NewRecipe = new VPWidenCastRecipe(
               CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), CI,
@@ -1124,8 +1121,8 @@ static std::optional<std::pair<bool, unsigned>>
 getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
   return TypeSwitch<const VPSingleDefRecipe *,
                     std::optional<std::pair<bool, unsigned>>>(R)
-      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-            VPWidenSelectRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(
+      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
+            VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
       .Case<VPWidenIntrinsicRecipe>([](auto *I) {
         return std::make_pair(true, I->getVectorIntrinsicID());
@@ -1344,6 +1341,21 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_c_Mul(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(
         Def->getOperand(0) == A ? Def->getOperand(1) : Def->getOperand(0));
+
+  const APInt *APC;
+  if (match(Def, m_c_Mul(m_VPValue(), m_APInt(APC))) && APC->isPowerOf2())
+    return Def->replaceAllUsesWith(Builder.createNaryOp(
+        Instruction::Shl,
+        {Def->getOperand(0),
+         Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
+        *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
+
+  if (match(Def, m_UDiv(m_VPValue(), m_APInt(APC))) && APC->isPowerOf2())
+    return Def->replaceAllUsesWith(Builder.createNaryOp(
+        Instruction::LShr,
+        {Def->getOperand(0),
+         Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
+        {}, Def->getDebugLoc()));
 
   if (match(Def, m_Not(m_VPValue(A)))) {
     if (match(A, m_Not(m_VPValue(A))))
@@ -1582,8 +1594,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPWidenGEPRecipe,
-               VPReplicateRecipe, VPWidenStoreRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
+               VPWidenStoreRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
@@ -2071,6 +2083,13 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
+
+    // For BranchOnTwoConds, set the latch exit condition to true directly.
+    if (match(Term, m_BranchOnTwoConds())) {
+      Term->setOperand(1, Plan.getTrue());
+      return true;
+    }
+
     auto *BOC = new VPInstruction(VPInstruction::BranchOnCond, {Plan.getTrue()},
                                   {}, {}, Term->getDebugLoc());
     ExitingVPBB->appendRecipe(BOC);
@@ -2531,8 +2550,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
-               VPWidenSelectRecipe, VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(
-              &R))
+               VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R))
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
@@ -2580,7 +2598,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         continue;
 
       // Shrink operands by introducing truncates as needed.
-      unsigned StartIdx = isa<VPWidenSelectRecipe>(&R) ? 1 : 0;
+      unsigned StartIdx =
+          match(&R, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) ? 1 : 0;
       for (unsigned Idx = StartIdx; Idx != R.getNumOperands(); ++Idx) {
         auto *Op = R.getOperand(Idx);
         unsigned OpSizeInBits =

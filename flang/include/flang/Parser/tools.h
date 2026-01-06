@@ -136,10 +136,19 @@ template <typename A>
 struct HasSource<A, decltype(static_cast<void>(A::source), 0)>
     : std::true_type {};
 
-// Detects parse tree nodes with "typedExpr" members.
+// Detects parse tree nodes with "typedExpr", "typedCall", &c. members.
 template <typename A, typename = int> struct HasTypedExpr : std::false_type {};
 template <typename A>
 struct HasTypedExpr<A, decltype(static_cast<void>(A::typedExpr), 0)>
+    : std::true_type {};
+template <typename A, typename = int> struct HasTypedCall : std::false_type {};
+template <typename A>
+struct HasTypedCall<A, decltype(static_cast<void>(A::typedCall), 0)>
+    : std::true_type {};
+template <typename A, typename = int>
+struct HasTypedAssignment : std::false_type {};
+template <typename A>
+struct HasTypedAssignment<A, decltype(static_cast<void>(A::typedAssignment), 0)>
     : std::true_type {};
 
 // GetSource()

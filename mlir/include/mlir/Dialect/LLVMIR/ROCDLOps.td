@@ -805,16 +805,15 @@ class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> :
 }
 
 class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
-    [0], [1], [], 1, 0, 0, 0, [0, 2, 5, 6, 7], ["signA", "signB", "reuseA","reuseB", "clamp"]>,
-  Arguments<(ins 
+    [0], [1], [], 1, 0, 0, 0, [0, 2, 5, 6], ["signA", "signB", "reuseA","reuseB"]>,
+  Arguments<(ins
              DefaultValuedAttr<I1Attr, "0">:$signA,
              LLVM_ScalarOrVectorOf<AB>:$a,
              DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             LLVM_ScalarOrVectorOf<CD>:$c, 
-             DefaultValuedAttr<I1Attr, "0">:$reuseA, 
-             DefaultValuedAttr<I1Attr, "0">:$reuseB,
-             DefaultValuedAttr<I1Attr, "0">:$clamp)> {
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
+             DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
@@ -1064,12 +1063,12 @@ foreach bitsVal = [8, 32, 64, 128] in {
 foreach bitsVal = [8, 32, 64, 128] in {
   defvar bitsStr = "b" # !cast<string>(bitsVal);
   def ROCDL_ClusterLoadAsyncToLDS # !toupper(bitsStr) # Op :
-    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3, 4], ["offset", "cpol", "mask"]> {
+    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "cpol"]> {
     dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                    Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                    I32Attr:$offset,
                    I32Attr:$cpol,
-                   I32Attr:$mask);
+                   I32:$mask);
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,` $cpol `,` $mask
