@@ -15,8 +15,8 @@ subroutine test_array_format
   ! CHECK: %[[fmtArg:.*]] = fir.zero_bits !fir.ref<i8>
   ! CHECK: %[[fmtLenArg:.*]] = fir.zero_bits i64
   ! CHECK: %[[fmtDesc:.*]] = fir.convert %[[fmtBox]] : (!fir.box<!fir.array<2x!fir.char<1,10>>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput(%[[fmtArg]], %[[fmtLenArg]], %[[fmtDesc]], {{.*}}) 
-  write(*, array) 
+  ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput(%[[fmtArg]], %[[fmtLenArg]], %[[fmtDesc]], {{.*}})
+  write(*, array)
 end subroutine
 
 ! A test to check the buffer and it's length.

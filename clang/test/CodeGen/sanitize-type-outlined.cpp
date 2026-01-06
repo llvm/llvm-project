@@ -1,9 +1,7 @@
-// UNSUPPORTED: target={{.*}}-windows-{{.*}}
-
-// RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
+// RUN: %clang --target=x86_64-linux-gnu -S -fsanitize=type -emit-llvm -o - %s \
 // RUN:     -fno-sanitize-type-outline-instrumentation \
 // RUN:     | FileCheck %s --check-prefixes=CHECK-NO-OUTLINE
-// RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
+// RUN: %clang --target=x86_64-linux-gnu -S -fsanitize=type -emit-llvm -o - %s \
 // RUN:     -fsanitize-type-outline-instrumentation \
 // RUN:     | FileCheck %s --check-prefixes=CHECK-OUTLINE
 

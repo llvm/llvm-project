@@ -8,37 +8,7 @@ define amdgpu_kernel void @extract_insert_chain_to_shuffles(<16 x i8> %in, <16 x
 ; OPT-LABEL: define amdgpu_kernel void @extract_insert_chain_to_shuffles(
 ; OPT-SAME: <16 x i8> [[IN:%.*]], <16 x i8> [[ADD:%.*]], ptr addrspace(3) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[TMP226:%.*]] = extractelement <16 x i8> [[IN]], i64 1
-; OPT-NEXT:    [[TMP228:%.*]] = extractelement <16 x i8> [[IN]], i64 2
-; OPT-NEXT:    [[TMP230:%.*]] = extractelement <16 x i8> [[IN]], i64 3
-; OPT-NEXT:    [[TMP232:%.*]] = extractelement <16 x i8> [[IN]], i64 4
-; OPT-NEXT:    [[TMP234:%.*]] = extractelement <16 x i8> [[IN]], i64 5
-; OPT-NEXT:    [[TMP236:%.*]] = extractelement <16 x i8> [[IN]], i64 6
-; OPT-NEXT:    [[TMP238:%.*]] = extractelement <16 x i8> [[IN]], i64 7
-; OPT-NEXT:    [[TMP240:%.*]] = extractelement <16 x i8> [[IN]], i64 8
-; OPT-NEXT:    [[TMP242:%.*]] = extractelement <16 x i8> [[IN]], i64 9
-; OPT-NEXT:    [[TMP244:%.*]] = extractelement <16 x i8> [[IN]], i64 10
-; OPT-NEXT:    [[TMP246:%.*]] = extractelement <16 x i8> [[IN]], i64 11
-; OPT-NEXT:    [[TMP248:%.*]] = extractelement <16 x i8> [[IN]], i64 12
-; OPT-NEXT:    [[TMP250:%.*]] = extractelement <16 x i8> [[IN]], i64 13
-; OPT-NEXT:    [[TMP252:%.*]] = extractelement <16 x i8> [[IN]], i64 14
-; OPT-NEXT:    [[TMP256:%.*]] = shufflevector <16 x i8> [[IN]], <16 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; OPT-NEXT:    [[I257:%.*]] = insertelement <16 x i8> [[TMP256]], i8 [[TMP226]], i64 1
-; OPT-NEXT:    [[I258:%.*]] = insertelement <16 x i8> [[I257]], i8 [[TMP228]], i64 2
-; OPT-NEXT:    [[I259:%.*]] = insertelement <16 x i8> [[I258]], i8 [[TMP230]], i64 3
-; OPT-NEXT:    [[I260:%.*]] = insertelement <16 x i8> [[I259]], i8 [[TMP232]], i64 4
-; OPT-NEXT:    [[I261:%.*]] = insertelement <16 x i8> [[I260]], i8 [[TMP234]], i64 5
-; OPT-NEXT:    [[I262:%.*]] = insertelement <16 x i8> [[I261]], i8 [[TMP236]], i64 6
-; OPT-NEXT:    [[I263:%.*]] = insertelement <16 x i8> [[I262]], i8 [[TMP238]], i64 7
-; OPT-NEXT:    [[I264:%.*]] = insertelement <16 x i8> [[I263]], i8 [[TMP240]], i64 8
-; OPT-NEXT:    [[I265:%.*]] = insertelement <16 x i8> [[I264]], i8 [[TMP242]], i64 9
-; OPT-NEXT:    [[I266:%.*]] = insertelement <16 x i8> [[I265]], i8 [[TMP244]], i64 10
-; OPT-NEXT:    [[I267:%.*]] = insertelement <16 x i8> [[I266]], i8 [[TMP246]], i64 11
-; OPT-NEXT:    [[I268:%.*]] = insertelement <16 x i8> [[I267]], i8 [[TMP248]], i64 12
-; OPT-NEXT:    [[I269:%.*]] = insertelement <16 x i8> [[I268]], i8 [[TMP250]], i64 13
-; OPT-NEXT:    [[TMP270:%.*]] = insertelement <16 x i8> [[I269]], i8 [[TMP252]], i64 14
-; OPT-NEXT:    [[TMP271:%.*]] = shufflevector <16 x i8> [[TMP270]], <16 x i8> [[IN]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 31>
-; OPT-NEXT:    [[SUM:%.*]] = add <16 x i8> [[TMP271]], [[ADD]]
+; OPT-NEXT:    [[SUM:%.*]] = add <16 x i8> [[IN]], [[ADD]]
 ; OPT-NEXT:    store <16 x i8> [[SUM]], ptr addrspace(3) [[OUT]], align 16
 ; OPT-NEXT:    ret void
 ;

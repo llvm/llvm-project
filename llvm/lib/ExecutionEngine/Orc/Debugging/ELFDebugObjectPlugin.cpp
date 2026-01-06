@@ -51,11 +51,10 @@ public:
   DebugObject(StringRef Name, SimpleSegmentAlloc Alloc, JITLinkContext &Ctx,
               ExecutionSession &ES)
       : Name(Name), WorkingMem(std::move(Alloc)),
-        MemMgr(Ctx.getMemoryManager()), ES(ES) {
-    FinalizeFuture = FinalizePromise.get_future();
-  }
+        MemMgr(Ctx.getMemoryManager()), ES(ES) {}
 
   ~DebugObject() {
+    assert(!FinalizeFuture.valid());
     if (Alloc) {
       std::vector<FinalizedAlloc> Allocs;
       Allocs.push_back(std::move(Alloc));
@@ -64,19 +63,15 @@ public:
     }
   }
 
-  StringRef getName() const { return Name; }
-
-  StringRef getBuffer() {
-    MutableArrayRef<char> Buffer = getMutBuffer();
-    return StringRef(Buffer.data(), Buffer.size());
-  }
-
-  MutableArrayRef<char> getMutBuffer() {
+  MutableArrayRef<char> getBuffer() {
     auto SegInfo = WorkingMem.getSegInfo(MemProt::Read);
     return SegInfo.WorkingMem;
   }
 
-  SimpleSegmentAlloc &getTargetAlloc() { return WorkingMem; }
+  SimpleSegmentAlloc collectTargetAlloc() {
+    FinalizeFuture = FinalizePromise.get_future();
+    return std::move(WorkingMem);
+  }
 
   void trackFinalizedAlloc(FinalizedAlloc FA) { Alloc = std::move(FA); }
 
@@ -90,13 +85,24 @@ public:
     FinalizePromise.set_value(std::move(Err));
   }
 
-  void reportError(Error Err) { ES.reportError(std::move(Err)); }
+  void releasePendingResources() {
+    if (FinalizeFuture.valid()) {
+      // Error before step 4: Finalization error was not reported
+      Expected<ExecutorAddrRange> TargetMem = FinalizeFuture.get();
+      if (!TargetMem)
+        ES.reportError(TargetMem.takeError());
+    } else {
+      // Error before step 3: WorkingMem was not collected
+      WorkingMem.abandon(
+          [ES = &this->ES](Error Err) { ES->reportError(std::move(Err)); });
+    }
+  }
 
   using GetLoadAddressFn = llvm::unique_function<ExecutorAddr(StringRef)>;
-  void visitSections(GetLoadAddressFn Callback);
+  Error visitSections(GetLoadAddressFn Callback);
 
   template <typename ELFT>
-  void visitSectionLoadAddresses(GetLoadAddressFn Callback);
+  Error visitSectionLoadAddresses(GetLoadAddressFn Callback);
 
 private:
   std::string Name;
@@ -111,36 +117,33 @@ private:
 };
 
 template <typename ELFT>
-void DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
+Error DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
   using SectionHeader = typename ELFT::Shdr;
 
-  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(getBuffer());
-  if (!ObjRef) {
-    reportError(ObjRef.takeError());
-    return;
-  }
+  MutableArrayRef<char> Buffer = getBuffer();
+  StringRef BufferRef(Buffer.data(), Buffer.size());
+  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(BufferRef);
+  if (!ObjRef)
+    return ObjRef.takeError();
 
   Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
-  if (!Sections) {
-    reportError(Sections.takeError());
-    return;
-  }
+  if (!Sections)
+    return Sections.takeError();
 
   for (const SectionHeader &Header : *Sections) {
     Expected<StringRef> Name = ObjRef->getSectionName(Header);
-    if (!Name) {
-      reportError(Name.takeError());
-      return;
-    }
+    if (!Name)
+      return Name.takeError();
     if (Name->empty())
       continue;
     ExecutorAddr LoadAddress = Callback(*Name);
-    const_cast<SectionHeader &>(Header).sh_addr =
-        static_cast<typename ELFT::uint>(LoadAddress.getValue());
+    if (LoadAddress)
+      const_cast<SectionHeader &>(Header).sh_addr =
+          static_cast<typename ELFT::uint>(LoadAddress.getValue());
   }
 
   LLVM_DEBUG({
-    dbgs() << "Section load-addresses in debug object for \"" << getName()
+    dbgs() << "Section load-addresses in debug object for \"" << Name
            << "\":\n";
     for (const SectionHeader &Header : *Sections) {
       StringRef Name = cantFail(ObjRef->getSectionName(Header));
@@ -151,11 +154,14 @@ void DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
       }
     }
   });
+
+  return Error::success();
 }
 
-void DebugObject::visitSections(GetLoadAddressFn Callback) {
+Error DebugObject::visitSections(GetLoadAddressFn Callback) {
   unsigned char Class, Endian;
-  std::tie(Class, Endian) = getElfArchType(getBuffer());
+  MutableArrayRef<char> Buf = getBuffer();
+  std::tie(Class, Endian) = getElfArchType(StringRef(Buf.data(), Buf.size()));
 
   switch (Class) {
   case ELF::ELFCLASS32:
@@ -163,24 +169,19 @@ void DebugObject::visitSections(GetLoadAddressFn Callback) {
       return visitSectionLoadAddresses<ELF32LE>(std::move(Callback));
     if (Endian == ELF::ELFDATA2MSB)
       return visitSectionLoadAddresses<ELF32BE>(std::move(Callback));
-    return reportError(createStringError(
-        object_error::invalid_file_type,
-        "Invalid endian in 32-bit ELF object file: %x", Endian));
+    break;
 
   case ELF::ELFCLASS64:
     if (Endian == ELF::ELFDATA2LSB)
       return visitSectionLoadAddresses<ELF64LE>(std::move(Callback));
     if (Endian == ELF::ELFDATA2MSB)
       return visitSectionLoadAddresses<ELF64BE>(std::move(Callback));
-    return reportError(createStringError(
-        object_error::invalid_file_type,
-        "Invalid endian in 64-bit ELF object file: %x", Endian));
+    break;
 
   default:
-    return reportError(createStringError(object_error::invalid_file_type,
-                                         "Invalid arch in ELF object file: %x",
-                                         Class));
+    break;
   }
+  llvm_unreachable("Checked class and endian in notifyMaterializing()");
 }
 
 ELFDebugObjectPlugin::ELFDebugObjectPlugin(ExecutionSession &ES,
@@ -210,8 +211,25 @@ static bool isDwarfSection(StringRef SectionName) {
 void ELFDebugObjectPlugin::notifyMaterializing(
     MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
     MemoryBufferRef InputObj) {
+  if (InputObj.getBufferSize() == 0)
+    return;
   if (G.getTargetTriple().getObjectFormat() != Triple::ELF)
     return;
+
+  unsigned char Class, Endian;
+  std::tie(Class, Endian) = getElfArchType(InputObj.getBuffer());
+  if (Class != ELF::ELFCLASS64 && Class != ELF::ELFCLASS32)
+    return ES.reportError(
+        createStringError(object_error::invalid_file_type,
+                          "Skipping debug object registration: Invalid arch "
+                          "0x%02x in ELF LinkGraph %s",
+                          Class, G.getName().c_str()));
+  if (Endian != ELF::ELFDATA2LSB && Endian != ELF::ELFDATA2MSB)
+    return ES.reportError(
+        createStringError(object_error::invalid_file_type,
+                          "Skipping debug object registration: Invalid endian "
+                          "0x%02x in ELF LinkGraph %s",
+                          Endian, G.getName().c_str()));
 
   // Step 1: We copy the raw input object into the working memory of a
   // single-segment read-only allocation
@@ -232,7 +250,7 @@ void ELFDebugObjectPlugin::notifyMaterializing(
   PendingObjs[&MR] = std::make_unique<DebugObject>(
       InputObj.getBufferIdentifier(), std::move(*Alloc), Ctx, ES);
 
-  MutableArrayRef<char> Buffer = PendingObjs[&MR]->getMutBuffer();
+  MutableArrayRef<char> Buffer = PendingObjs[&MR]->getBuffer();
   memcpy(Buffer.data(), InputObj.getBufferStart(), Size);
 }
 
@@ -258,16 +276,23 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // Step 2: Once the target memory layout is ready, we write the
     // addresses of the LinkGraph sections into the load-address fields of the
     // section headers in our debug object allocation
-    DebugObj->visitSections(
+    Error Err = DebugObj->visitSections(
         [&G, &SectionsPatched, &HasDebugSections](StringRef Name) {
+          Section *S = G.findSectionByName(Name);
+          if (!S) {
+            // The section may have been merged into a different one during
+            // linking, ignore it.
+            return ExecutorAddr();
+          }
+
           SectionsPatched += 1;
           if (isDwarfSection(Name))
             HasDebugSections = true;
-          Section *S = G.findSectionByName(Name);
-          assert(S && "No graph section for object section");
           return SectionRange(*S).getStart();
         });
 
+    if (Err)
+      return Err;
     if (!SectionsPatched) {
       LLVM_DEBUG(dbgs() << "Skipping debug registration for LinkGraph '"
                         << G.getName() << "': no debug info\n");
@@ -281,7 +306,7 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     }
 
     // Step 3: We start copying the debug object into target memory
-    auto &Alloc = DebugObj->getTargetAlloc();
+    SimpleSegmentAlloc Alloc = DebugObj->collectTargetAlloc();
 
     // FIXME: FA->getAddress() below is supposed to be the address of the memory
     // range on the target, but InProcessMemoryManager returns the address of a
@@ -289,7 +314,16 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     auto ROSeg = Alloc.getSegInfo(MemProt::Read);
     ExecutorAddrRange R(ROSeg.Addr, ROSeg.WorkingMem.size());
     Alloc.finalize([this, R, &MR](Expected<DebugObject::FinalizedAlloc> FA) {
-      DebugObject *DebugObj = getPendingDebugObj(MR);
+      // Bail out if materialization failed in the meantime
+      std::lock_guard<std::mutex> Lock(PendingObjsLock);
+      auto It = PendingObjs.find(&MR);
+      if (It == PendingObjs.end()) {
+        if (!FA)
+          ES.reportError(FA.takeError());
+        return;
+      }
+
+      DebugObject *DebugObj = It->second.get();
       if (!FA)
         DebugObj->failMaterialization(FA.takeError());
 
@@ -340,7 +374,9 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
 
 Error ELFDebugObjectPlugin::notifyFailed(MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  PendingObjs.erase(&MR);
+  auto It = PendingObjs.find(&MR);
+  It->second->releasePendingResources();
+  PendingObjs.erase(It);
   return Error::success();
 }
 

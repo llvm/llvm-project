@@ -465,19 +465,19 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                     - Radeon RX 7900 XT
                                                                         IDs                           - Radeon RX 7900 GRE
 
-     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7800 XT
+                                                    - wavefrontsize64   flat                          - Radeon RX 7700 XT
+                                                                        scratch                       - Radeon RX 7700
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
-     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7600 XT
+                                                    - wavefrontsize64   flat                          - Radeon RX 7600
+                                                                        scratch
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
      ``gfx1103``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -1527,11 +1527,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
-  llvm.amdgcn.atomic.cond.sub.u32                  Provides direct access to flat_atomic_cond_sub_u32, global_atomic_cond_sub_u32
-                                                   and ds_cond_sub_u32 based on address space on gfx12 targets. This
-                                                   performs a subtraction only if the memory value is greater than or
-                                                   equal to the data value.
-
   llvm.amdgcn.s.barrier.signal.isfirst             Provides access to the s_barrier_signal_first instruction;
                                                    additionally ensures that the result value is valid even when the
                                                    intrinsic is used from a wave that is not running in a workgroup.
@@ -2071,9 +2066,6 @@ The AMDGPU backend supports the following calling conventions:
                                      stack pointer. Calls to ``amdgpu_gfx`` functions are allowed and behave like they
                                      do in ``amdgpu_cs`` functions.
 
-                                     All counters (``lgkmcnt``, ``vmcnt``, ``storecnt``, etc.) are presumed in an
-                                     unknown state at function entry.
-
                                      A function may have multiple exits (e.g. one chain exit and one plain ``ret void``
                                      for when the wave ends), but all ``llvm.amdgcn.cs.chain`` exits must be in
                                      uniform control flow.
@@ -2132,6 +2124,22 @@ The AMDGPU backend supports the following calling conventions:
                                      Describe.
 
      =============================== ==========================================================
+
+The following ABI conventions apply to all calling conventions that are used for
+callable functions (i.e. those that do not correspond to hardware entry points):
+
+* On entry to a function the dependency counters (``VMcnt``, ``LOADcnt`` etc.)
+  are in an indeterminate state.
+* On return from a function, all dependency counters must be zero except for
+  ``VScnt``/``STOREcnt``.
+
+For entry points, the ABI conventions are dictated by the hardware behavior at
+wave launch and wave termination:
+
+* When a wave is launched the shader can assume that all dependency counters are
+  zero.
+* The shader can leave the dependency counters in any state before terminating
+  the wave (e.g. with ``s_endpgm``).
 
 AMDGPU MCExpr
 -------------

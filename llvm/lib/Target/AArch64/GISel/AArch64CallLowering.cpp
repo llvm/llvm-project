@@ -1421,6 +1421,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   } else if (Info.CFIType) {
     MIB->setCFIType(MF, Info.CFIType->getZExtValue());
   }
+  MIB->setDeactivationSymbol(MF, Info.DeactivationSymbol);
 
   MIB.add(Info.Callee);
 

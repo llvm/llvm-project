@@ -121,8 +121,6 @@ define float @fdiv_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.sqrt.f32(float)
-
 define float @fsqrt_s(float %a) nounwind {
 ; CHECKIF-LABEL: fsqrt_s:
 ; CHECKIF:       # %bb.0:
@@ -149,8 +147,6 @@ define float @fsqrt_s(float %a) nounwind {
   %1 = call float @llvm.sqrt.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.copysign.f32(float, float)
 
 define float @fsgnj_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fsgnj_s:
@@ -270,8 +266,6 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
   ret float %3
 }
 
-declare float @llvm.fabs.f32(float)
-
 define float @fabs_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fabs_s:
 ; CHECKIF:       # %bb.0:
@@ -311,8 +305,6 @@ define float @fabs_s(float %a, float %b) nounwind {
   ret float %3
 }
 
-declare float @llvm.minimumnum.f32(float, float)
-
 define float @fminimumnum_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fminimumnum_s:
 ; CHECKIF:       # %bb.0:
@@ -339,8 +331,6 @@ define float @fminimumnum_s(float %a, float %b) nounwind {
   %1 = call float @llvm.minimumnum.f32(float %a, float %b)
   ret float %1
 }
-
-declare float @llvm.maximumnum.f32(float, float)
 
 define float @fmaximumnum_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmaximumnum_s:
@@ -369,8 +359,6 @@ define float @fmaximumnum_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.minnum.f32(float, float)
-
 define float @fmin_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmin_s:
 ; CHECKIF:       # %bb.0:
@@ -398,8 +386,6 @@ define float @fmin_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.maxnum.f32(float, float)
-
 define float @fmax_s(float %a, float %b) nounwind {
 ; CHECKIF-LABEL: fmax_s:
 ; CHECKIF:       # %bb.0:
@@ -426,8 +412,6 @@ define float @fmax_s(float %a, float %b) nounwind {
   %1 = call float @llvm.maxnum.f32(float %a, float %b)
   ret float %1
 }
-
-declare float @llvm.fma.f32(float, float, float)
 
 define float @fmadd_s(float %a, float %b, float %c) nounwind {
 ; CHECKIF-LABEL: fmadd_s:

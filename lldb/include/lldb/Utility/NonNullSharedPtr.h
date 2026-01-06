@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_NONNULLSHAREDPTR_H
 #define LLDB_UTILITY_NONNULLSHAREDPTR_H
 
+#include <cassert>
 #include <memory>
 #include <utility>
 
@@ -56,7 +57,6 @@ public:
   using Base::operator*;
   using Base::operator->;
   using Base::get;
-  using Base::unique;
   using Base::use_count;
   using Base::operator bool;
 

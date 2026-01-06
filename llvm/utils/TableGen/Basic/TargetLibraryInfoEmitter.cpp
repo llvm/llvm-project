@@ -146,7 +146,6 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
     }
     return Sig;
   };
-  DenseMap<unsigned, Signature> SignatureMap;
   Signature NoFuncSig({StringRef("Void")});
   SignatureTable.add(NoFuncSig);
   for (const auto *R : AllTargetLibcalls)

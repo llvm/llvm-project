@@ -1,0 +1,50 @@
+## Note: ls -l prints the modified timestamp.
+
+# RUN: yaml2obj %s -o %t.exe
+
+## Preserve dates when stripping to an output file.
+# RUN: cp %t.exe %t.1.exe
+# RUN: touch -m -t 199705050555.55 %t.1.exe
+# RUN: llvm-strip -p %t.1.exe -o %t-preserved.1.exe
+# RUN: ls -l %t-preserved.1.exe | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+## Check that the stripped output is in fact a valid object file and the timestamp in the PE header is preserved.
+# RUN: llvm-readobj --headers %t-preserved.1.exe | FileCheck %s
+
+## Preserve dates available via objcopy interface as well.
+# RUN: cp %t.exe %t.2.exe
+# RUN: touch -m -t 199705050555.55 %t.2.exe
+# RUN: llvm-objcopy -p %t.2.exe %t-preserved.2.exe
+# RUN: ls -l %t-preserved.2.exe | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj --headers %t-preserved.2.exe | FileCheck %s
+
+## Preserve dates when stripping in place.
+# RUN: cp %t.exe %t.3.exe
+# RUN: touch -m -t 199705050555.55 %t.3.exe
+# RUN: llvm-strip -p %t.3.exe
+# RUN: ls -l %t.3.exe | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj --headers %t.3.exe | FileCheck %s
+
+## Without -p set, don't preserve dates.
+# RUN: cp %t.exe %t.4.exe
+# RUN: touch -m -t 199705050555.55 %t.4.exe
+# RUN: llvm-strip %t.4.exe
+# RUN: ls -l %t.4.exe | FileCheck %s --check-prefix=CHECK-NO-PRESERVE-MTIME
+# RUN: llvm-readobj --headers %t.4.exe | FileCheck %s
+
+## Always preserve the timestamp in the PE header.
+# CHECK: TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+
+# CHECK-PRESERVE-MTIME:        {{[[:space:]]1997}}
+# CHECK-NO-PRESERVE-MTIME-NOT: {{[[:space:]]1997}}
+
+!COFF
+OptionalHeader:
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualSize:     20
+symbols:         []
+...

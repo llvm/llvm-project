@@ -341,11 +341,11 @@ def AArch64urhadd : PatFrags<(ops node:$pg, node:$op1, node:$op2),
 
 def AArch64saba : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_saba node:$op1, node:$op2, node:$op3),
-                            (add node:$op1, (AArch64sabd_p (SVEAllActive), node:$op2, node:$op3))]>;
+                            (add node:$op1, (AArch64sabd_p (SVEAnyPredicate), node:$op2, node:$op3))]>;
 
 def AArch64uaba : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_uaba node:$op1, node:$op2, node:$op3),
-                            (add node:$op1, (AArch64uabd_p (SVEAllActive), node:$op2, node:$op3))]>;
+                            (add node:$op1, (AArch64uabd_p (SVEAnyPredicate), node:$op2, node:$op3))]>;
 
 def AArch64usra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_usra node:$op1, node:$op2, node:$op3),
@@ -462,6 +462,7 @@ def AArch64fmlsidx : PatFrags<(ops node:$acc, node:$op1, node:$op2, node:$idx),
 def AArch64fnmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                               [(int_aarch64_sve_fnmla_u node:$pg, node:$za, node:$zn, node:$zm),
                                (AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, (AArch64fneg_mt node:$pg, node:$za, (undef))),
+                               (AArch64fma_p node:$pg, node:$zn, (AArch64fneg_mt node:$pg, node:$zm, (undef)), (AArch64fneg_mt node:$pg, node:$za, (undef))),
                                (AArch64fneg_mt_nsz node:$pg, (AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za), (undef))]>;
 
 def AArch64fnmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
@@ -3062,13 +3063,13 @@ let Predicates = [HasSVE_or_SME] in {
   multiclass unpred_store<PatFrag Store, ValueType Ty, Instruction RegRegInst,
                           Instruction RegImmInst, Instruction PTrue,
                           ComplexPattern AddrCP> {
-    let AddedComplexity = 1 in {
-      def _reg : Pat<(Store Ty:$val, (AddrCP GPR64sp:$base, GPR64:$offset)),
-                     (RegRegInst ZPR:$val, (PTrue 31), GPR64sp:$base, GPR64:$offset)>;
-    }
     let AddedComplexity = 2 in {
       def _imm : Pat<(Store Ty:$val, (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
                      (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
+    }
+    let AddedComplexity = 1 in {
+      def _reg : Pat<(Store Ty:$val, (AddrCP GPR64sp:$base, GPR64:$offset)),
+                     (RegRegInst ZPR:$val, (PTrue 31), GPR64sp:$base, GPR64:$offset)>;
     }
 
     def : Pat<(Store Ty:$val, GPR64:$base),
@@ -3095,16 +3096,27 @@ let Predicates = [HasSVE_or_SME] in {
   defm : unpred_store<         store, nxv2f32,  ST1W_D, ST1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
   defm : unpred_store<         store, nxv2f64,    ST1D,   ST1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
 
+  let AddedComplexity = 3 in {
+    defm : unpred_store<nontemporalstore, nxv16i8, STNT1B_ZRR, STNT1B_ZRI, PTRUE_B, am_sve_regreg_lsl0>;
+    defm : unpred_store<nontemporalstore, nxv8i16, STNT1H_ZRR, STNT1H_ZRI, PTRUE_H, am_sve_regreg_lsl1>;
+    defm : unpred_store<nontemporalstore, nxv4i32, STNT1W_ZRR, STNT1W_ZRI, PTRUE_S, am_sve_regreg_lsl2>;
+    defm : unpred_store<nontemporalstore, nxv2i64, STNT1D_ZRR, STNT1D_ZRI, PTRUE_D, am_sve_regreg_lsl3>;
+    defm : unpred_store<nontemporalstore, nxv8f16, STNT1H_ZRR, STNT1H_ZRI, PTRUE_H, am_sve_regreg_lsl1>;
+    defm : unpred_store<nontemporalstore, nxv8bf16, STNT1H_ZRR, STNT1H_ZRI, PTRUE_H, am_sve_regreg_lsl1>;
+    defm : unpred_store<nontemporalstore, nxv4f32, STNT1W_ZRR, STNT1W_ZRI, PTRUE_S, am_sve_regreg_lsl2>;
+    defm : unpred_store<nontemporalstore, nxv2f64, STNT1D_ZRR, STNT1D_ZRI, PTRUE_D, am_sve_regreg_lsl3>;
+  }
+
   multiclass unpred_load<PatFrag Load, ValueType Ty, Instruction RegRegInst,
                          Instruction RegImmInst, Instruction PTrue,
                          ComplexPattern AddrCP> {
-    let AddedComplexity = 1 in {
-      def _reg: Pat<(Ty (Load  (AddrCP GPR64sp:$base, GPR64:$offset))),
-                    (RegRegInst (PTrue 31), GPR64sp:$base, GPR64:$offset)>;
-    }
     let AddedComplexity = 2 in {
       def _imm: Pat<(Ty (Load  (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset))),
                     (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
+    }
+    let AddedComplexity = 1 in {
+      def _reg: Pat<(Ty (Load  (AddrCP GPR64sp:$base, GPR64:$offset))),
+                    (RegRegInst (PTrue 31), GPR64sp:$base, GPR64:$offset)>;
     }
 
     def : Pat<(Ty (Load GPR64:$base)),
@@ -3143,6 +3155,17 @@ let Predicates = [HasSVE_or_SME] in {
   defm : unpred_load<        load, nxv2f32,  LD1W_D,  LD1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
   defm : unpred_load<        load, nxv2f64,    LD1D,    LD1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
 
+  let AddedComplexity = 3 in {
+    defm : unpred_load<nontemporalload, nxv16i8, LDNT1B_ZRR, LDNT1B_ZRI, PTRUE_B, am_sve_regreg_lsl0>;
+    defm : unpred_load<nontemporalload, nxv8i16, LDNT1H_ZRR, LDNT1H_ZRI, PTRUE_H, am_sve_regreg_lsl1>;
+    defm : unpred_load<nontemporalload, nxv4i32, LDNT1W_ZRR, LDNT1W_ZRI, PTRUE_S, am_sve_regreg_lsl2>;
+    defm : unpred_load<nontemporalload, nxv2i64, LDNT1D_ZRR, LDNT1D_ZRI, PTRUE_D, am_sve_regreg_lsl3>;
+    defm : unpred_load<nontemporalload, nxv8f16, LDNT1H_ZRR, LDNT1H_ZRI, PTRUE_H, am_sve_regreg_lsl1>;
+    defm : unpred_load<nontemporalload, nxv8bf16, LDNT1H_ZRR, LDNT1H_ZRI, PTRUE_H, am_sve_regreg_lsl1>;
+    defm : unpred_load<nontemporalload, nxv4f32, LDNT1W_ZRR, LDNT1W_ZRI, PTRUE_S, am_sve_regreg_lsl2>;
+    defm : unpred_load<nontemporalload, nxv2f64, LDNT1D_ZRR, LDNT1D_ZRI, PTRUE_D, am_sve_regreg_lsl3>;
+  }
+
   let Predicates = [HasSVE_or_SME, IsLE] in {
     // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
     // same width as nxv16i8.  This saves an add in cases where we would
@@ -3164,7 +3187,7 @@ let Predicates = [HasSVE_or_SME] in {
   }
 
   // Allow using LDR/STR to avoid the predicate dependence.
-  let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses] in
+  let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses, AllowUnpredicatedLdStLower] in
     foreach Ty = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in {
       let AddedComplexity = 2 in {
         def : Pat<(Ty (load (am_sve_indexed_s9 GPR64sp:$base, simm9:$offset))),
@@ -3706,7 +3729,7 @@ let Predicates = [HasSVE, HasMatMulFP32] in {
 } // End HasSVE, HasMatMulFP32
 
 let Predicates = [HasSVE_F16F32MM] in {
-  def FMLLA_ZZZ_HtoS : sve_fp_matrix_mla<0b001, "fmmla", ZPR32, ZPR16>;
+  defm FMLLA_ZZZ_HtoS : sve_fp_matrix_mla<0b001, "fmmla", ZPR32, ZPR16, int_aarch64_sve_fmmla, nxv4f32, nxv8f16>;
 } // End HasSVE_F16F32MM
 
 let Predicates = [HasSVE, HasMatMulFP64] in {
@@ -3837,12 +3860,15 @@ let Predicates = [HasSVE2_or_SME] in {
   // SVE2 integer halving add/subtract (predicated)
   defm SHADD_ZPmZ  : sve2_int_arith_pred<0b100000, "shadd",  AArch64shadd>;
   defm UHADD_ZPmZ  : sve2_int_arith_pred<0b100010, "uhadd",  AArch64uhadd>;
-  defm SHSUB_ZPmZ  : sve2_int_arith_pred<0b100100, "shsub",  int_aarch64_sve_shsub>;
-  defm UHSUB_ZPmZ  : sve2_int_arith_pred<0b100110, "uhsub",  int_aarch64_sve_uhsub>;
+  defm SHSUB_ZPmZ  : sve2_int_arith_pred<0b100100, "shsub",  int_aarch64_sve_shsub, "SHSUB_ZPZZ", DestructiveBinaryCommWithRev, "SHSUBR_ZPmZ">;
+  defm UHSUB_ZPmZ  : sve2_int_arith_pred<0b100110, "uhsub",  int_aarch64_sve_uhsub, "UHSUB_ZPZZ", DestructiveBinaryCommWithRev, "UHSUBR_ZPmZ">;
   defm SRHADD_ZPmZ : sve2_int_arith_pred<0b101000, "srhadd", AArch64srhadd>;
   defm URHADD_ZPmZ : sve2_int_arith_pred<0b101010, "urhadd", AArch64urhadd>;
-  defm SHSUBR_ZPmZ : sve2_int_arith_pred<0b101100, "shsubr", int_aarch64_sve_shsubr>;
-  defm UHSUBR_ZPmZ : sve2_int_arith_pred<0b101110, "uhsubr", int_aarch64_sve_uhsubr>;
+  defm SHSUBR_ZPmZ : sve2_int_arith_pred<0b101100, "shsubr", int_aarch64_sve_shsubr, "SHSUBR_ZPZZ", DestructiveBinaryCommWithRev, "SHSUB_ZPmZ", /*isReverseInstr*/ 1>;
+  defm UHSUBR_ZPmZ : sve2_int_arith_pred<0b101110, "uhsubr", int_aarch64_sve_uhsubr, "UHSUBR_ZPZZ", DestructiveBinaryCommWithRev, "UHSUB_ZPmZ", /*isReverseInstr*/ 1>;
+
+  defm SHSUB_ZPZZ  : sve_int_bin_pred_bhsd<int_aarch64_sve_shsub_u>;
+  defm UHSUB_ZPZZ  : sve_int_bin_pred_bhsd<int_aarch64_sve_uhsub_u>;
 
   // SVE2 integer pairwise add and accumulate long
   defm SADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<0, "sadalp", int_aarch64_sve_sadalp>;
@@ -3885,12 +3911,12 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SQRSHLR_ZPmZ : sve2_int_arith_pred<0b011100, "sqrshlr", null_frag,              "SQRSHLR_ZPZZ", DestructiveBinaryCommWithRev, "SQRSHL_ZPmZ", /*isReverseInstr*/ 1>;
   defm UQRSHLR_ZPmZ : sve2_int_arith_pred<0b011110, "uqrshlr", null_frag,              "UQRSHLR_ZPZZ", DestructiveBinaryCommWithRev, "UQRSHL_ZPmZ", /*isReverseInstr*/ 1>;
 
-  defm SRSHL_ZPZZ   : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_srshl>;
-  defm URSHL_ZPZZ   : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_urshl>;
-  defm SQSHL_ZPZZ   : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_sqshl>;
-  defm UQSHL_ZPZZ   : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_uqshl>;
-  defm SQRSHL_ZPZZ  : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_sqrshl>;
-  defm UQRSHL_ZPZZ  : sve_int_bin_pred_all_active_bhsd<int_aarch64_sve_uqrshl>;
+  defm SRSHL_ZPZZ   : sve_int_bin_pred_bhsd<int_aarch64_sve_srshl_u>;
+  defm URSHL_ZPZZ   : sve_int_bin_pred_bhsd<int_aarch64_sve_urshl_u>;
+  defm SQSHL_ZPZZ   : sve_int_bin_pred_bhsd<int_aarch64_sve_sqshl_u>;
+  defm UQSHL_ZPZZ   : sve_int_bin_pred_bhsd<int_aarch64_sve_uqshl_u>;
+  defm SQRSHL_ZPZZ  : sve_int_bin_pred_bhsd<int_aarch64_sve_sqrshl_u>;
+  defm UQRSHL_ZPZZ  : sve_int_bin_pred_bhsd<int_aarch64_sve_uqrshl_u>;
 } // End HasSVE2_or_SME
 
 let Predicates = [HasSVE2_or_SME, UseExperimentalZeroingPseudos] in {
@@ -3908,6 +3934,9 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SRSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1100, "srshr",  "SRSHR_ZPZI",  int_aarch64_sve_srshr>;
   defm URSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1101, "urshr",  "URSHR_ZPZI",  AArch64urshri_p>;
   defm SQSHLU_ZPmI : sve_int_bin_pred_shift_imm_left<    0b1111, "sqshlu", "SQSHLU_ZPZI", int_aarch64_sve_sqshlu>;
+
+  defm SQSHL_ZPZI : sve_int_shift_pred_bhsd<int_aarch64_sve_sqshl_u, SVEShiftImmL8, SVEShiftImmL16, SVEShiftImmL32, SVEShiftImmL64>;
+  defm UQSHL_ZPZI : sve_int_shift_pred_bhsd<int_aarch64_sve_uqshl_u, SVEShiftImmL8, SVEShiftImmL16, SVEShiftImmL32, SVEShiftImmL64>;
 
   // SVE2 integer add/subtract long
   defm SADDLB_ZZZ : sve2_wide_int_arith_long<0b00000, "saddlb", int_aarch64_sve_saddlb>;
@@ -4508,7 +4537,7 @@ defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
 } // HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos
 
 let Predicates = [HasSVEBFSCALE] in {
-  def BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", DestructiveBinary>;
+  defm BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", int_aarch64_sve_fscale, DestructiveBinary>;
 } // HasSVEBFSCALE
 //===----------------------------------------------------------------------===//
 // SME2.1 or SVE2.1 instructions
@@ -4626,8 +4655,8 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm UXTW_ZPzZ  : sve_int_un_pred_arit_d_z<0b101, "uxtw", AArch64uxt_mt>;
 
   // SVE predicate count
-  defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
-  defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
+  defm FIRSTP_XPP : sve_int_pcount_pred<0b001, "firstp", int_aarch64_sve_firstp>;
+  defm LASTP_XPP  : sve_int_pcount_pred<0b010, "lastp", int_aarch64_sve_lastp>;
 
   // SVE reverse within elements, zeroing predicate
   defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit", AArch64rbit_mt>;
@@ -4711,7 +4740,7 @@ let Predicates = [HasSVE2p2, HasF16MM] in {
 //===----------------------------------------------------------------------===//
 let Predicates = [HasNonStreamingSVE2p2_or_SME2p2] in {
   // SVE2 EXPAND
-  defm EXPAND_ZPZ : sve2_int_perm_expand<"expand">;
+  defm EXPAND_ZPZ : sve2_int_perm_expand<"expand", int_aarch64_sve_expand>;
   // SVE COMPACT - byte and halfword
   defm COMPACT_ZPZ : sve_int_perm_compact_bh<"compact", int_aarch64_sve_compact>;
 }
@@ -4766,11 +4795,11 @@ defm FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt", nxv4f32, int_aarch64_
 } // End HasSSVE_FP8FMA
 
 let Predicates = [HasSVE2, HasF8F32MM] in {
-  def FMMLA_ZZZ_BtoS :  sve2_fp8_mmla<0b0, ZPR32, "fmmla">;
+  defm FMMLA_ZZZ_BtoS : sve2_fp8_fmmla<0b0, ZPR32, "fmmla", nxv4f32>;
 }
 
 let Predicates = [HasSVE2, HasF8F16MM] in {
-  def FMMLA_ZZZ_BtoH :  sve2_fp8_mmla<0b1, ZPR16, "fmmla">;
+  defm FMMLA_ZZZ_BtoH : sve2_fp8_fmmla<0b1, ZPR16, "fmmla", nxv8f16>;
 }
 
 let Predicates = [HasSSVE_FP8DOT2] in {

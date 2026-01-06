@@ -27,6 +27,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/VTableBuilder.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -634,8 +635,9 @@ private:
                                        int32_t VBTableOffset,
                                        llvm::Value **VBPtr = nullptr) {
     assert(VBTableOffset % 4 == 0 && "should be byte offset into table of i32s");
-    llvm::Value *VBPOffset = llvm::ConstantInt::get(CGM.IntTy, VBPtrOffset),
-                *VBTOffset = llvm::ConstantInt::get(CGM.IntTy, VBTableOffset);
+    llvm::Value *VBPOffset =
+        llvm::ConstantInt::getSigned(CGM.IntTy, VBPtrOffset);
+    llvm::Value *VBTOffset = llvm::ConstantInt::get(CGM.IntTy, VBTableOffset);
     return GetVBaseOffsetFromVBPtr(CGF, Base, VBPOffset, VBTOffset, VBPtr);
   }
 
@@ -2237,7 +2239,8 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
 
   // The offset from ObjectWithVPtr's vbptr to itself always leads.
   CharUnits VBPtrOffset = BaseLayout.getVBPtrOffset();
-  Offsets[0] = llvm::ConstantInt::get(CGM.IntTy, -VBPtrOffset.getQuantity());
+  Offsets[0] =
+      llvm::ConstantInt::getSigned(CGM.IntTy, -VBPtrOffset.getQuantity());
 
   MicrosoftVTableContext &Context = CGM.getMicrosoftVTableContext();
   for (const auto &I : ObjectWithVPtr->vbases()) {
@@ -2254,7 +2257,8 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
 
     unsigned VBIndex = Context.getVBTableIndex(ObjectWithVPtr, VBase);
     assert(Offsets[VBIndex] == nullptr && "The same vbindex seen twice?");
-    Offsets[VBIndex] = llvm::ConstantInt::get(CGM.IntTy, Offset.getQuantity());
+    Offsets[VBIndex] =
+        llvm::ConstantInt::getSigned(CGM.IntTy, Offset.getQuantity());
   }
 
   assert(Offsets.size() ==
@@ -2638,7 +2642,7 @@ struct ResetGuardBit final : EHScopeStack::Cleanup {
     CGBuilderTy &Builder = CGF.Builder;
     llvm::LoadInst *LI = Builder.CreateLoad(Guard);
     llvm::ConstantInt *Mask =
-        llvm::ConstantInt::get(CGF.IntTy, ~(1ULL << GuardNum));
+        llvm::ConstantInt::getSigned(CGF.IntTy, ~(1ULL << GuardNum));
     Builder.CreateStore(Builder.CreateAnd(LI, Mask), Guard);
   }
 };
@@ -2912,8 +2916,8 @@ MicrosoftCXXABI::EmitFullMemberPointer(llvm::Constant *FirstField,
   fields.push_back(FirstField);
 
   if (inheritanceModelHasNVOffsetField(IsMemberFunction, Inheritance))
-    fields.push_back(llvm::ConstantInt::get(
-      CGM.IntTy, NonVirtualBaseAdjustment.getQuantity()));
+    fields.push_back(llvm::ConstantInt::getSigned(
+        CGM.IntTy, NonVirtualBaseAdjustment.getQuantity()));
 
   if (inheritanceModelHasVBPtrOffsetField(Inheritance)) {
     CharUnits Offs = CharUnits::Zero();
@@ -3245,11 +3249,8 @@ llvm::Value *MicrosoftCXXABI::AdjustVirtualBase(
     CharUnits offs = CharUnits::Zero();
     if (!RD->hasDefinition()) {
       DiagnosticsEngine &Diags = CGF.CGM.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "member pointer representation requires a "
-          "complete class type for %0 to perform this expression");
-      Diags.Report(E->getExprLoc(), DiagID) << RD << E->getSourceRange();
+      Diags.Report(E->getExprLoc(), diag::err_member_ptr_requires_complete_type)
+          << RD << E->getSourceRange();
     } else if (RD->getNumVBases())
       offs = getContext().getASTRecordLayout(RD).getVBPtrOffset();
     VBPtrOffset = llvm::ConstantInt::get(CGM.IntTy, offs.getQuantity());
@@ -3478,7 +3479,7 @@ llvm::Value *MicrosoftCXXABI::EmitNonNullMemberPointerConversion(
   // Set the VBPtrOffset to zero if the vbindex is zero.  Otherwise, initialize
   // it to the offset of the vbptr.
   if (inheritanceModelHasVBPtrOffsetField(DstInheritance)) {
-    llvm::Value *DstVBPtrOffset = llvm::ConstantInt::get(
+    llvm::Value *DstVBPtrOffset = llvm::ConstantInt::getSigned(
         CGM.IntTy,
         getContext().getASTRecordLayout(DstRD).getVBPtrOffset().getQuantity());
     VBPtrOffset =
@@ -3912,7 +3913,7 @@ MSRTTIBuilder::getBaseClassDescriptor(const MSRTTIClass &Class) {
           ABI.getAddrOfRTTIDescriptor(Context.getCanonicalTagType(Class.RD))),
       llvm::ConstantInt::get(CGM.IntTy, Class.NumBases),
       llvm::ConstantInt::get(CGM.IntTy, Class.OffsetInVBase),
-      llvm::ConstantInt::get(CGM.IntTy, VBPtrOffset),
+      llvm::ConstantInt::getSigned(CGM.IntTy, VBPtrOffset),
       llvm::ConstantInt::get(CGM.IntTy, OffsetInVBTable),
       llvm::ConstantInt::get(CGM.IntTy, Class.Flags),
       ABI.getImageRelativeConstant(
@@ -4105,7 +4106,7 @@ void MicrosoftCXXABI::emitCXXStructor(GlobalDecl GD) {
     return;
 
   if (GD.getDtorType() == Dtor_VectorDeleting &&
-      !CGM.classNeedsVectorDestructor(dtor->getParent())) {
+      !getContext().classNeedsVectorDeletingDestructor(dtor->getParent())) {
     // Create GlobalDecl object with the correct type for the scalar
     // deleting destructor.
     GlobalDecl ScalarDtorGD(dtor, Dtor_Deleting);
@@ -4302,13 +4303,13 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
     Flags |= 16;
 
   llvm::Constant *Fields[] = {
-      llvm::ConstantInt::get(CGM.IntTy, Flags),       // Flags
-      TD,                                             // TypeDescriptor
-      llvm::ConstantInt::get(CGM.IntTy, NVOffset),    // NonVirtualAdjustment
-      llvm::ConstantInt::get(CGM.IntTy, VBPtrOffset), // OffsetToVBPtr
-      llvm::ConstantInt::get(CGM.IntTy, VBIndex),     // VBTableIndex
-      llvm::ConstantInt::get(CGM.IntTy, Size),        // Size
-      CopyCtor                                        // CopyCtor
+      llvm::ConstantInt::get(CGM.IntTy, Flags),    // Flags
+      TD,                                          // TypeDescriptor
+      llvm::ConstantInt::get(CGM.IntTy, NVOffset), // NonVirtualAdjustment
+      llvm::ConstantInt::getSigned(CGM.IntTy, VBPtrOffset), // OffsetToVBPtr
+      llvm::ConstantInt::get(CGM.IntTy, VBIndex),           // VBTableIndex
+      llvm::ConstantInt::get(CGM.IntTy, Size),              // Size
+      CopyCtor                                              // CopyCtor
   };
   llvm::StructType *CTType = getCatchableTypeType();
   auto *GV = new llvm::GlobalVariable(

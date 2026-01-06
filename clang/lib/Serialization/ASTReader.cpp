@@ -555,7 +555,25 @@ namespace {
 
 using MacroDefinitionsMap =
     llvm::StringMap<std::pair<StringRef, bool /*IsUndef*/>>;
-using DeclsMap = llvm::DenseMap<DeclarationName, SmallVector<NamedDecl *, 8>>;
+
+class DeclsSet {
+  SmallVector<NamedDecl *, 64> Decls;
+  llvm::SmallPtrSet<NamedDecl *, 8> Found;
+
+public:
+  operator ArrayRef<NamedDecl *>() const { return Decls; }
+
+  bool empty() const { return Decls.empty(); }
+
+  bool insert(NamedDecl *ND) {
+    auto [_, Inserted] = Found.insert(ND);
+    if (Inserted)
+      Decls.push_back(ND);
+    return Inserted;
+  }
+};
+
+using DeclsMap = llvm::DenseMap<DeclarationName, DeclsSet>;
 
 } // namespace
 
@@ -942,13 +960,12 @@ bool SimpleASTReaderListener::ReadPreprocessorOptions(
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
 /// \returns true when the module cache paths differ.
-static bool checkModuleCachePath(llvm::vfs::FileSystem &VFS,
-                                 StringRef SpecificModuleCachePath,
-                                 StringRef ExistingModuleCachePath,
-                                 StringRef ModuleFilename,
-                                 DiagnosticsEngine *Diags,
-                                 const LangOptions &LangOpts,
-                                 const PreprocessorOptions &PPOpts) {
+static bool checkModuleCachePath(
+    llvm::vfs::FileSystem &VFS, StringRef SpecificModuleCachePath,
+    StringRef ExistingModuleCachePath, StringRef ASTFilename,
+    DiagnosticsEngine *Diags, const LangOptions &LangOpts,
+    const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+    const HeaderSearchOptions &ASTFileHSOpts) {
   if (!LangOpts.Modules || PPOpts.AllowPCHWithDifferentModulesCachePath ||
       SpecificModuleCachePath == ExistingModuleCachePath)
     return false;
@@ -956,21 +973,31 @@ static bool checkModuleCachePath(llvm::vfs::FileSystem &VFS,
       VFS.equivalent(SpecificModuleCachePath, ExistingModuleCachePath);
   if (EqualOrErr && *EqualOrErr)
     return false;
-  if (Diags)
-    Diags->Report(diag::err_ast_file_modulecache_mismatch)
-        << SpecificModuleCachePath << ExistingModuleCachePath << ModuleFilename;
+  if (Diags) {
+    // If the module cache arguments provided from the command line are the
+    // same, the mismatch must come from other arguments of the configuration
+    // and not directly the cache path.
+    EqualOrErr =
+        VFS.equivalent(ASTFileHSOpts.ModuleCachePath, HSOpts.ModuleCachePath);
+    if (EqualOrErr && *EqualOrErr)
+      Diags->Report(clang::diag::warn_ast_file_config_mismatch) << ASTFilename;
+    else
+      Diags->Report(diag::err_ast_file_modulecache_mismatch)
+          << SpecificModuleCachePath << ExistingModuleCachePath << ASTFilename;
+  }
   return true;
 }
 
 bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                           StringRef ModuleFilename,
+                                           StringRef ASTFilename,
                                            StringRef SpecificModuleCachePath,
                                            bool Complain) {
+  const HeaderSearch &HeaderSearchInfo = PP.getHeaderSearchInfo();
   return checkModuleCachePath(
       Reader.getFileManager().getVirtualFileSystem(), SpecificModuleCachePath,
-      PP.getHeaderSearchInfo().getModuleCachePath(), ModuleFilename,
+      HeaderSearchInfo.getModuleCachePath(), ASTFilename,
       Complain ? &Reader.Diags : nullptr, PP.getLangOpts(),
-      PP.getPreprocessorOpts());
+      PP.getPreprocessorOpts(), HeaderSearchInfo.getHeaderSearchOpts(), HSOpts);
 }
 
 void PCHValidator::ReadCounter(const ModuleFile &M, uint32_t Value) {
@@ -4205,7 +4232,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             TULocalLocalOffset ? BaseOffset + TULocalLocalOffset : 0;
 
         DelayedNamespaceOffsetMap[ID] = {
-            {VisibleOffset, TULocalOffset, ModuleLocalOffset}, LexicalOffset};
+            {VisibleOffset, ModuleLocalOffset, TULocalOffset}, LexicalOffset};
 
         assert(!GetExistingDecl(ID) &&
                "We shouldn't load the namespace in the front of delayed "
@@ -4447,6 +4474,22 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
         DeclsToCheckForDeferredDiags.insert(ReadDeclID(F, Record, I));
       break;
+
+    case RISCV_VECTOR_INTRINSICS_PRAGMA: {
+      unsigned NumRecords = Record.front();
+      // Last record which is used to keep number of valid records.
+      if (Record.size() - 1 != NumRecords)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "invalid rvv intrinsic pragma record");
+
+      if (RISCVVecIntrinsicPragma.empty())
+        RISCVVecIntrinsicPragma.append(NumRecords, 0);
+      // There might be multiple precompiled modules imported, we need to union
+      // them all.
+      for (unsigned i = 0; i < NumRecords; ++i)
+        RISCVVecIntrinsicPragma[i] |= Record[i + 1];
+      break;
+    }
     }
   }
 }
@@ -5132,7 +5175,7 @@ ASTReader::ReadASTCore(StringRef FileName,
   assert(M && "Missing module file");
 
   bool ShouldFinalizePCM = false;
-  auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinalizeOrDropPCM([&]() {
     auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);
@@ -5580,9 +5623,13 @@ void ASTReader::InitializeContext() {
 
   // If there were any CUDA special declarations, deserialize them.
   if (!CUDASpecialDeclRefs.empty()) {
-    assert(CUDASpecialDeclRefs.size() == 1 && "More decl refs than expected!");
+    assert(CUDASpecialDeclRefs.size() == 3 && "More decl refs than expected!");
     Context.setcudaConfigureCallDecl(
-                           cast<FunctionDecl>(GetDecl(CUDASpecialDeclRefs[0])));
+        cast_or_null<FunctionDecl>(GetDecl(CUDASpecialDeclRefs[0])));
+    Context.setcudaGetParameterBufferDecl(
+        cast_or_null<FunctionDecl>(GetDecl(CUDASpecialDeclRefs[1])));
+    Context.setcudaLaunchDeviceDecl(
+        cast_or_null<FunctionDecl>(GetDecl(CUDASpecialDeclRefs[2])));
   }
 
   // Re-export any modules that were imported by a non-module AST file.
@@ -5725,6 +5772,7 @@ namespace {
     const CodeGenOptions &ExistingCGOpts;
     const TargetOptions &ExistingTargetOpts;
     const PreprocessorOptions &ExistingPPOpts;
+    const HeaderSearchOptions &ExistingHSOpts;
     std::string ExistingModuleCachePath;
     FileManager &FileMgr;
     bool StrictOptionMatches;
@@ -5734,11 +5782,12 @@ namespace {
                        const CodeGenOptions &ExistingCGOpts,
                        const TargetOptions &ExistingTargetOpts,
                        const PreprocessorOptions &ExistingPPOpts,
+                       const HeaderSearchOptions &ExistingHSOpts,
                        StringRef ExistingModuleCachePath, FileManager &FileMgr,
                        bool StrictOptionMatches)
         : ExistingLangOpts(ExistingLangOpts), ExistingCGOpts(ExistingCGOpts),
           ExistingTargetOpts(ExistingTargetOpts),
-          ExistingPPOpts(ExistingPPOpts),
+          ExistingPPOpts(ExistingPPOpts), ExistingHSOpts(ExistingHSOpts),
           ExistingModuleCachePath(ExistingModuleCachePath), FileMgr(FileMgr),
           StrictOptionMatches(StrictOptionMatches) {}
 
@@ -5764,13 +5813,13 @@ namespace {
     }
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                 StringRef ModuleFilename,
+                                 StringRef ASTFilename,
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
-      return checkModuleCachePath(FileMgr.getVirtualFileSystem(),
-                                  SpecificModuleCachePath,
-                                  ExistingModuleCachePath, ModuleFilename,
-                                  nullptr, ExistingLangOpts, ExistingPPOpts);
+      return checkModuleCachePath(
+          FileMgr.getVirtualFileSystem(), SpecificModuleCachePath,
+          ExistingModuleCachePath, ASTFilename, nullptr, ExistingLangOpts,
+          ExistingPPOpts, ExistingHSOpts, HSOpts);
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
@@ -5976,6 +6025,7 @@ bool ASTReader::readASTFileControlBlock(
         case INPUT_FILE_HASH:
           break;
         case INPUT_FILE:
+          time_t StoredTime = static_cast<time_t>(Record[2]);
           bool Overridden = static_cast<bool>(Record[3]);
           auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
               getUnresolvedInputFilenames(Record, Blob);
@@ -5991,7 +6041,7 @@ bool ASTReader::readASTFileControlBlock(
           }
           shouldContinue = Listener.visitInputFileAsRequested(
               *FilenameAsRequestedBuf, Filename, isSystemFile, Overridden,
-              /*IsExplicitModule=*/false);
+              StoredTime, /*IsExplicitModule=*/false);
           break;
         }
         if (!shouldContinue)
@@ -6111,9 +6161,9 @@ bool ASTReader::isAcceptableASTFile(
     StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
     const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
     const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
-    const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
-    bool RequireStrictOptionMatches) {
-  SimplePCHValidator validator(LangOpts, CGOpts, TargetOpts, PPOpts,
+    const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+    StringRef ExistingModuleCachePath, bool RequireStrictOptionMatches) {
+  SimplePCHValidator validator(LangOpts, CGOpts, TargetOpts, PPOpts, HSOpts,
                                ExistingModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
   return !readASTFileControlBlock(Filename, FileMgr, ModCache, PCHContainerRdr,
@@ -8525,10 +8575,14 @@ bool ASTReader::LoadExternalSpecializationsImpl(
     ArrayRef<TemplateArgument> TemplateArgs) {
   assert(D);
 
-  auto It = SpecLookups.find(D);
-  if (It == SpecLookups.end())
+  reader::LazySpecializationInfoLookupTable *LookupTable = nullptr;
+  if (auto It = SpecLookups.find(D); It != SpecLookups.end())
+    LookupTable = &It->getSecond();
+  if (!LookupTable)
     return false;
 
+  // NOTE: The getNameForDiagnostic usage in the lambda may mutate the
+  // `SpecLookups` object.
   llvm::TimeTraceScope TimeScope("Load External Specializations for ", [&] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
@@ -8543,7 +8597,7 @@ bool ASTReader::LoadExternalSpecializationsImpl(
 
   // Get Decl may violate the iterator from SpecLookups
   llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
-      It->second.Table.find(HashValue);
+      LookupTable->Table.find(HashValue);
 
   bool NewSpecsFound = false;
   for (auto &Info : Infos) {
@@ -8698,14 +8752,23 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     return false;
 
   // Load the list of declarations.
-  SmallVector<NamedDecl *, 64> Decls;
-  llvm::SmallPtrSet<NamedDecl *, 8> Found;
+  DeclsSet DS;
 
   auto Find = [&, this](auto &&Table, auto &&Key) {
     for (GlobalDeclID ID : Table.find(Key)) {
       NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() == Name && Found.insert(ND).second)
-        Decls.push_back(ND);
+      if (ND->getDeclName() != Name)
+        continue;
+      // Special case for namespaces: There can be a lot of redeclarations of
+      // some namespaces, and we import a "key declaration" per imported module.
+      // Since all declarations of a namespace are essentially interchangeable,
+      // we can optimize namespace look-up by only storing the key declaration
+      // of the current TU, rather than storing N key declarations where N is
+      // the # of imported modules that declare that namespace.
+      // TODO: Try to generalize this optimization to other redeclarable decls.
+      if (isa<NamespaceDecl>(ND))
+        ND = cast<NamedDecl>(getKeyDeclaration(ND));
+      DS.insert(ND);
     }
   };
 
@@ -8740,8 +8803,8 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     Find(It->second.Table, Name);
   }
 
-  SetExternalVisibleDeclsForName(DC, Name, Decls);
-  return !Decls.empty();
+  SetExternalVisibleDeclsForName(DC, Name, DS);
+  return !DS.empty();
 }
 
 void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
@@ -8759,7 +8822,16 @@ void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
 
     for (GlobalDeclID ID : It->second.Table.findAll()) {
       NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      Decls[ND->getDeclName()].push_back(ND);
+      // Special case for namespaces: There can be a lot of redeclarations of
+      // some namespaces, and we import a "key declaration" per imported module.
+      // Since all declarations of a namespace are essentially interchangeable,
+      // we can optimize namespace look-up by only storing the key declaration
+      // of the current TU, rather than storing N key declarations where N is
+      // the # of imported modules that declare that namespace.
+      // TODO: Try to generalize this optimization to other redeclarable decls.
+      if (isa<NamespaceDecl>(ND))
+        ND = cast<NamedDecl>(getKeyDeclaration(ND));
+      Decls[ND->getDeclName()].insert(ND);
     }
 
     // FIXME: Why a PCH test is failing if we remove the iterator after findAll?
@@ -8769,9 +8841,9 @@ void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
   findAll(ModuleLocalLookups, NumModuleLocalVisibleDeclContexts);
   findAll(TULocalLookups, NumTULocalVisibleDeclContexts);
 
-  for (DeclsMap::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
-    SetExternalVisibleDeclsForName(DC, I->first, I->second);
-  }
+  for (auto &[Name, DS] : Decls)
+    SetExternalVisibleDeclsForName(DC, Name, DS);
+
   const_cast<DeclContext *>(DC)->setHasExternalVisibleStorage(false);
 }
 
@@ -9059,6 +9131,13 @@ void ASTReader::UpdateSema() {
         PointersToMembersPragmaLocation);
   }
   SemaObj->CUDA().ForceHostDeviceDepth = ForceHostDeviceDepth;
+  if (!RISCVVecIntrinsicPragma.empty()) {
+    assert(RISCVVecIntrinsicPragma.size() == 3 &&
+           "Wrong number of RISCVVecIntrinsicPragma");
+    SemaObj->RISCV().DeclareRVVBuiltins = RISCVVecIntrinsicPragma[0];
+    SemaObj->RISCV().DeclareSiFiveVectorBuiltins = RISCVVecIntrinsicPragma[1];
+    SemaObj->RISCV().DeclareAndesVectorBuiltins = RISCVVecIntrinsicPragma[2];
+  }
 
   if (PragmaAlignPackCurrentValue) {
     // The bottom of the stack might have a default value. It must be adjusted
@@ -12387,6 +12466,8 @@ void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
     C->setMotionModifier(
         I, static_cast<OpenMPMotionModifierKind>(Record.readInt()));
     C->setMotionModifierLoc(I, Record.readSourceLocation());
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      C->setIteratorModifier(Record.readExpr());
   }
   C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
   C->setMapperIdInfo(Record.readDeclarationNameInfo());
@@ -12443,6 +12524,8 @@ void OMPClauseReader::VisitOMPFromClause(OMPFromClause *C) {
     C->setMotionModifier(
         I, static_cast<OpenMPMotionModifierKind>(Record.readInt()));
     C->setMotionModifierLoc(I, Record.readSourceLocation());
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      C->setIteratorModifier(Record.readExpr());
   }
   C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
   C->setMapperIdInfo(Record.readDeclarationNameInfo());

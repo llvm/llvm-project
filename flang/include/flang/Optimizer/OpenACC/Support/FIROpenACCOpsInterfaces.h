@@ -65,6 +65,7 @@ struct GlobalVariableModel
     : public mlir::acc::GlobalVariableOpInterface::ExternalModel<
           GlobalVariableModel, fir::GlobalOp> {
   bool isConstant(mlir::Operation *op) const;
+  mlir::Region *getInitRegion(mlir::Operation *op) const;
 };
 
 template <typename Op>
@@ -75,6 +76,15 @@ struct IndirectGlobalAccessModel
                             llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
                             mlir::SymbolTable *symbolTable) const;
 };
+
+/// External model for OutlineRematerializationOpInterface.
+/// This interface marks operations that are candidates for rematerialization
+/// during outlining. These operations produce synthetic types or values
+/// that cannot be passed as arguments to outlined regions.
+template <typename Op>
+struct OutlineRematerializationModel
+    : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
+          OutlineRematerializationModel<Op>, Op> {};
 
 } // namespace fir::acc
 

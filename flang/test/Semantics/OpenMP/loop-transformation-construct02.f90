@@ -7,7 +7,7 @@ subroutine loop_transformation_construct1
   implicit none
 
   !$omp do
-  !ERROR: The FUSE construct requires the END FUSE directive
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp fuse 
 end subroutine
 
@@ -15,7 +15,7 @@ subroutine loop_transformation_construct2
   implicit none
 
   !$omp do
-  !ERROR: A DO loop must follow the FUSE directive
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp fuse 
   !$omp end fuse
 end subroutine
@@ -36,7 +36,7 @@ subroutine loop_transformation_construct3
   end do
   !$omp end fuse
   !$omp end do
-  !ERROR: The END FUSE directive must follow the DO loop associated with the loop construct
+  !ERROR: Misplaced OpenMP end-directive
   !$omp end fuse
 end subroutine
 
@@ -50,7 +50,7 @@ subroutine loop_transformation_construct4
   do x = 1, i
     v(x) = v(x) * 2
   end do
-  !ERROR: A DO loop must follow the FUSE directive
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp fuse
   !$omp end fuse
 end subroutine
@@ -62,7 +62,7 @@ subroutine loop_transformation_construct5
   integer :: v(i)
 
   !$omp do
-  !ERROR: If a loop construct has been fully unrolled, it cannot then be further transformed
+  !ERROR: OpenMP loop construct cannot apply to a fully unrolled loop
   !$omp fuse
   !$omp unroll full
   do x = 1, i
@@ -80,6 +80,7 @@ subroutine loop_transformation_construct6
   integer :: x
   integer :: v(i)
 
+  !ERROR: This construct applies to a loop nest, but has a loop sequence of length 2
   !$omp do
   !$omp fuse looprange(1,1)
   !$omp unroll partial(2)
