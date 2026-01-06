@@ -83,9 +83,9 @@ int main() {
 // CHECK-NEXT:    [[F:%.*]] = alloca [[CLASS_FOO:%.*]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    call void @_ZN3FooC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2)
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3)
-// CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0)
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2), !srcloc [[META2:![0-9]+]]
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3), !srcloc [[META3:![0-9]+]]
+// CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0), !srcloc [[META4:![0-9]+]]
 // CHECK-NEXT:    store i32 [[CALL2]], ptr [[RETVAL]], align 4
 // CHECK-NEXT:    call void @_ZN3FooD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[F]]) #[[ATTR2]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RETVAL]], align 4
@@ -184,9 +184,9 @@ int main() {
 // MACHO-NEXT:    [[F:%.*]] = alloca [[CLASS_FOO:%.*]], align 4
 // MACHO-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // MACHO-NEXT:    call void @_ZN3FooC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
-// MACHO-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2)
-// MACHO-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3)
-// MACHO-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0)
+// MACHO-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2), !srcloc [[META2:![0-9]+]]
+// MACHO-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3), !srcloc [[META3:![0-9]+]]
+// MACHO-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0), !srcloc [[META4:![0-9]+]]
 // MACHO-NEXT:    store i32 [[CALL2]], ptr [[RETVAL]], align 4
 // MACHO-NEXT:    call void @_ZN3FooD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[F]]) #[[ATTR2]]
 // MACHO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RETVAL]], align 4
@@ -239,9 +239,9 @@ int main() {
 // MSVC-NEXT:    [[F:%.*]] = alloca [[CLASS_FOO:%.*]], align 4
 // MSVC-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // MSVC-NEXT:    [[CALL:%.*]] = call noundef ptr @"??0Foo@@QEAA@H@Z"(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
-// MSVC-NEXT:    [[CALL1:%.*]] = call noundef i32 @"?function_defined_inline@Foo@@QEBAHH@Z"(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2)
-// MSVC-NEXT:    [[CALL2:%.*]] = call noundef i32 @"?function_defined_out_of_line@Foo@@QEBAHH@Z"(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3)
-// MSVC-NEXT:    [[CALL3:%.*]] = call noundef i32 @"?static_noinline_fn@@YAHH@Z"(i32 noundef 0)
+// MSVC-NEXT:    [[CALL1:%.*]] = call noundef i32 @"?function_defined_inline@Foo@@QEBAHH@Z"(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2), !srcloc [[META6:![0-9]+]]
+// MSVC-NEXT:    [[CALL2:%.*]] = call noundef i32 @"?function_defined_out_of_line@Foo@@QEBAHH@Z"(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3), !srcloc [[META7:![0-9]+]]
+// MSVC-NEXT:    [[CALL3:%.*]] = call noundef i32 @"?static_noinline_fn@@YAHH@Z"(i32 noundef 0), !srcloc [[META8:![0-9]+]]
 // MSVC-NEXT:    store i32 [[CALL3]], ptr [[RETVAL]], align 4
 // MSVC-NEXT:    call void @"??1Foo@@QEAA@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[F]]) #[[ATTR2:[0-9]+]]
 // MSVC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RETVAL]], align 4
@@ -301,9 +301,9 @@ int main() {
 // MINGW-NEXT:    [[F:%.*]] = alloca [[CLASS_FOO:%.*]], align 4
 // MINGW-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // MINGW-NEXT:    call void @_ZN3FooC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
-// MINGW-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2)
-// MINGW-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3)
-// MINGW-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0)
+// MINGW-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2), !srcloc [[META6:![0-9]+]]
+// MINGW-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3), !srcloc [[META7:![0-9]+]]
+// MINGW-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0), !srcloc [[META8:![0-9]+]]
 // MINGW-NEXT:    store i32 [[CALL2]], ptr [[RETVAL]], align 4
 // MINGW-NEXT:    call void @_ZN3FooD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[F]]) #[[ATTR2]]
 // MINGW-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RETVAL]], align 4
@@ -348,3 +348,20 @@ int main() {
 // MINGW-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
 // MINGW-NEXT:    ret i32 [[TMP0]]
 //
+//.
+// CHECK: [[META2]] = !{i64 1048}
+// CHECK: [[META3]] = !{i64 1080}
+// CHECK: [[META4]] = !{i64 1122}
+//.
+// MACHO: [[META2]] = !{i64 1048}
+// MACHO: [[META3]] = !{i64 1080}
+// MACHO: [[META4]] = !{i64 1122}
+//.
+// MSVC: [[META6]] = !{i64 1048}
+// MSVC: [[META7]] = !{i64 1080}
+// MSVC: [[META8]] = !{i64 1122}
+//.
+// MINGW: [[META6]] = !{i64 1048}
+// MINGW: [[META7]] = !{i64 1080}
+// MINGW: [[META8]] = !{i64 1122}
+//.
