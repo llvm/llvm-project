@@ -2115,6 +2115,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       SrcDemandedMask |= fcSubnormal;
     }
 
+    // Normal inputs may result in underflow.
+    if (DemandedMask & fcSubnormal)
+      SrcDemandedMask |= fcNormal;
+
+    if (DemandedMask & fcZero)
+      SrcDemandedMask |= fcNormal | fcSubnormal;
+
     const SimplifyQuery &SQ = getSimplifyQuery();
     if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
       if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))

@@ -1288,7 +1288,8 @@ define nofpclass(nan inf norm sub) float @zero_result_demands_sub_source_lhs(i1 
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) float @zero_result_demands_sub_source_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = call float @returns_sub()
@@ -1301,7 +1302,8 @@ define nofpclass(nan inf norm sub) float @zero_result_demands_sub_source_rhs(i1 
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) float @zero_result_demands_sub_source_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = call float @returns_sub()
@@ -1314,7 +1316,8 @@ define nofpclass(nan inf norm sub) float @zero_result_demands_norm_source_lhs(i1
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) float @zero_result_demands_norm_source_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call float @returns_norm()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NORM]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %norm = call float @returns_norm()
@@ -1327,7 +1330,8 @@ define nofpclass(nan inf norm sub) float @zero_result_demands_norm_source_rhs(i1
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) float @zero_result_demands_norm_source_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call float @returns_norm()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NORM]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %norm = call float @returns_norm()
@@ -1340,7 +1344,8 @@ define nofpclass(nan inf norm zero) float @sub_result_demands_norm_source_lhs(i1
 ; CHECK-LABEL: define nofpclass(nan inf zero norm) float @sub_result_demands_norm_source_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call float @returns_norm()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NORM]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %norm = call float @returns_norm()
@@ -1353,7 +1358,8 @@ define nofpclass(nan inf norm zero) float @sub_result_demands_norm_source_rhs(i1
 ; CHECK-LABEL: define nofpclass(nan inf zero norm) float @sub_result_demands_norm_source_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call float @returns_norm()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NORM]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %norm = call float @returns_norm()
