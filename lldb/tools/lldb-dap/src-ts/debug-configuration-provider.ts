@@ -1,11 +1,11 @@
-import * as vscode from "vscode";
 import * as child_process from "child_process";
 import * as util from "util";
-import { LLDBDapServer } from "./lldb-dap-server";
+import * as vscode from "vscode";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
-import { ConfigureButton, showErrorMessage } from "./ui/show-error-message";
-import { ErrorWithNotification } from "./ui/error-with-notification";
+import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
+import { ErrorWithNotification } from "./ui/error-with-notification";
+import { ConfigureButton } from "./ui/show-error-message";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -69,7 +69,9 @@ const configurations: Record<string, DefaultConfig> = {
   terminateCommands: { type: "stringArray", default: [] },
 };
 
-export function getDefaultConfigKey(key: string): string | number | boolean | string[] | undefined {
+export function getDefaultConfigKey(
+  key: string,
+): string | number | boolean | string[] | undefined {
   return configurations[key]?.default;
 }
 

@@ -1462,6 +1462,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::UIToFP:
     break; // Can't work with floating point.
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
     // Fall through and handle them the same as zext/trunc.
     [[fallthrough]];
@@ -5655,6 +5656,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             Op->getType()->getScalarType()->getFltSemantics();
         DenormalMode Mode = F->getDenormalMode(FltSem);
 
+        // Doubling 0 will give the same 0.
+        if (SelfAdd && KnownRHS.isKnownNeverLogicalPosZero(Mode) &&
+            (Mode.Output == DenormalMode::IEEE ||
+             Mode.Output == DenormalMode::PreserveSign))
+          Known.knownNot(fcPosZero);
+
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
         if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
              KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
@@ -5721,10 +5728,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
          KnownRHS.isKnownNever(fcPositive)))
       Known.knownNot(fcNegative);
 
-    if ((KnownLHS.isKnownAlways(fcNegative | fcNan) &&
+    if ((KnownLHS.isKnownNever(fcPositive) &&
          KnownRHS.isKnownNever(fcNegative)) ||
         (KnownLHS.isKnownNever(fcNegative) &&
-         KnownRHS.isKnownAlways(fcNegative | fcNan)))
+         KnownRHS.isKnownNever(fcPositive)))
       Known.knownNot(fcPositive);
 
     // inf * anything => inf or nan
@@ -9662,10 +9669,10 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       match(L1, m_APInt(L1C)) && !L1C->isZero() &&
       match(L0, m_Sub(m_Value(A), m_Value(B))) &&
       ((A == R0 && B == R1) || (A == R1 && B == R0) ||
-       (match(A, m_PtrToInt(m_Specific(R0))) &&
-        match(B, m_PtrToInt(m_Specific(R1)))) ||
-       (match(A, m_PtrToInt(m_Specific(R1))) &&
-        match(B, m_PtrToInt(m_Specific(R0)))))) {
+       (match(A, m_PtrToIntOrAddr(m_Specific(R0))) &&
+        match(B, m_PtrToIntOrAddr(m_Specific(R1)))) ||
+       (match(A, m_PtrToIntOrAddr(m_Specific(R1))) &&
+        match(B, m_PtrToIntOrAddr(m_Specific(R0)))))) {
     return RPred.dropSameSign() == ICmpInst::ICMP_NE;
   }
 
@@ -10447,7 +10454,8 @@ addValueAffectedByCondition(Value *V,
 
     // Peek through unary operators to find the source of the condition.
     Value *Op;
-    if (match(I, m_CombineOr(m_PtrToInt(m_Value(Op)), m_Trunc(m_Value(Op))))) {
+    if (match(I, m_CombineOr(m_PtrToIntOrAddr(m_Value(Op)),
+                             m_Trunc(m_Value(Op))))) {
       if (isa<Instruction>(Op) || isa<Argument>(Op))
         InsertAffected(Op);
     }
