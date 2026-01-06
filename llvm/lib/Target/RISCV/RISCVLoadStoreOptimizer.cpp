@@ -247,7 +247,7 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
       XqciOpc = RISCV::QC_SETWMI;
       StartRegState = getKillRegState(FirstOp0.isKill() || SecondOp0.isKill());
       AddNextReg = false;
-    } else if (NextReg == StartReg + 1) {
+    } else if (NextReg == StartReg + 1 && StartReg != RISCV::X0) {
       XqciOpc = RISCV::QC_SWMI;
       StartRegState = getKillRegState(FirstOp0.isKill());
       NextRegState = RegState::Implicit | getKillRegState(SecondOp0.isKill());
