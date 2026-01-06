@@ -1448,6 +1448,14 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Replace splice(A, A, -1) with A if A is uniform.
+  if (match(Def, m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
+                     m_VPValue(A), m_Deferred(A))) &&
+      vputils::isSingleScalar(A)) {
+    Def->replaceAllUsesWith(A);
+    return;
+  }
+
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
