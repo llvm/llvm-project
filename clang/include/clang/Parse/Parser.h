@@ -2117,6 +2117,11 @@ private:
 
   ExprResult ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName);
 
+  /// Parses a comma-delimited list of arguments of an attribute \p AttrName,
+  /// filling \p Exprs. \p ArgsProperties specifies which of the arguments
+  /// should be parsed as unevaluated string literals. \p Arg is the number
+  /// of arguments parsed before calling / this function (the index of the
+  /// argument to be parsed next).
   bool ParseAttributeArgumentList(
       const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
       ParsedAttributeArgumentsProperties ArgsProperties, unsigned Arg);
