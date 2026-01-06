@@ -75,7 +75,7 @@
 ; SPV-DAG: %[[#i1s:]] = OpFunctionParameter %[[#]]
 ; SPV-DAG: %[[#i1v:]] = OpFunctionParameter %[[#]]
 
-define dso_local spir_kernel void @K(float addrspace(1)* nocapture %A, i32 %B, i1 %i1s, <2 x i1> %i1v) local_unnamed_addr {
+define dso_local spir_kernel void @K(ptr addrspace(1) nocapture %A, i32 %B, i1 %i1s, <2 x i1> %i1v) local_unnamed_addr {
 entry:
 
 ; SPV: %[[#cmp_res:]] = OpSGreaterThan %[[#bool]] %[[#B]] %[[#zero_32]]
@@ -84,7 +84,7 @@ entry:
 ; SPV: %[[#utof_res:]] = OpConvertUToF %[[#float]] %[[#select_res]]
   %conv = uitofp i1 %cmp to float
 ; SPV: OpStore %[[#A]] %[[#utof_res]]
-  store float %conv, float addrspace(1)* %A, align 4;
+  store float %conv, ptr addrspace(1) %A, align 4;
 
 ; SPV: %[[#s1:]] = OpSelect %[[#int_8]] %[[#i1s]] %[[#mone_8]] %[[#zero_8]]
   %s1 = sext i1 %i1s to i8

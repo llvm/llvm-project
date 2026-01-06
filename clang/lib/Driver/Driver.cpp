@@ -1273,8 +1273,7 @@ bool Driver::readConfigFile(StringRef FileName,
 
 bool Driver::loadConfigFiles() {
   llvm::cl::ExpansionContext ExpCtx(Saver.getAllocator(),
-                                    llvm::cl::tokenizeConfigFile);
-  ExpCtx.setVFS(&getVFS());
+                                    llvm::cl::tokenizeConfigFile, &getVFS());
 
   // Process options that change search path for config files.
   if (CLOptions) {
@@ -5187,7 +5186,19 @@ Action *Driver::ConstructPhaseAction(
         offloadDeviceOnly() &&
         !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
 
+    auto &DefaultToolChain = C.getDefaultToolChain();
+    auto DefaultToolChainTriple = DefaultToolChain.getTriple();
+    // For regular C/C++ to AMD SPIRV emit bitcode to avoid spirv-link
+    // dependency, SPIRVAMDToolChain's linker takes care of the generation of
+    // the final SPIRV. The only exception is -S without -emit-llvm to output
+    // textual SPIRV assembly, which fits the default compilation path.
+    bool EmitBitcodeForNonOffloadAMDSPIRV =
+        !OffloadingToolChain && DefaultToolChainTriple.isSPIRV() &&
+        DefaultToolChainTriple.getVendor() == llvm::Triple::VendorType::AMD &&
+        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm));
+
     if (Args.hasArg(options::OPT_emit_llvm) ||
+        EmitBitcodeForNonOffloadAMDSPIRV ||
         TargetDeviceOffloadKind == Action::OFK_SYCL ||
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&

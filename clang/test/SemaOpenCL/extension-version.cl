@@ -111,7 +111,7 @@
 #endif
 #pragma OPENCL EXTENSION cles_khr_int64 : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 120)
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 100)
 #ifndef cl_khr_gl_msaa_sharing
 #error "Missing cl_khr_gl_msaa_sharing define"
 #endif
