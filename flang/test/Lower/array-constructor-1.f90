@@ -1,4 +1,4 @@
-! RUN: bbc -hlfir=false -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
 module units
   integer, parameter :: preconnected_unit(3) = [0, 5, 6]
@@ -6,11 +6,12 @@ contains
   ! CHECK-LABEL: _QMunitsPis_preconnected_unit
   logical function is_preconnected_unit(u)
   ! CHECK: [[units_ssa:%[0-9]+]] = fir.address_of(@_QMunitsECpreconnected_unit) : !fir.ref<!fir.array<3xi32>>
+  ! CHECK: [[units_decl:%[0-9]+]] = fir.declare [[units_ssa]]
     integer :: u
     integer :: i
     is_preconnected_unit = .true.
     do i = lbound(preconnected_unit,1), ubound(preconnected_unit,1)
-      ! CHECK: fir.coordinate_of [[units_ssa]]
+      ! CHECK: fir.array_coor [[units_decl]]
       if (preconnected_unit(i) == u) return
     end do
     is_preconnected_unit = .false.
@@ -30,7 +31,6 @@ subroutine zero
   complex, parameter :: a(0) = [(((k,k=1,10),j=-2,2,-1),i=2,-2,-2)]
   complex, parameter :: b(0) = [(7,i=3,-3)]
   ! CHECK: fir.address_of(@_QQro.0xz4.null.0) : !fir.ref<!fir.array<0xcomplex<f32>>>
-  ! CHECK-NOT: _QQro
   print*, '>', a, '<'
   print*, '>', b, '<'
 end
