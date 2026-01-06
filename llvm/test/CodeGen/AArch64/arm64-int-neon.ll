@@ -258,6 +258,20 @@ entry:
   ret i32 %res
 }
 
+define void @test_sqdmulh_scalar_store(i32 noundef %a, ptr %dst) {
+; CHECK-LABEL: test_sqdmulh_scalar_store:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    sqdmulh s0, s0, s0
+; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %mul = call i32 @llvm.aarch64.neon.sqdmulh.i32(i32 %a, i32 %a)
+  %res = bitcast i32 %mul to float
+  store float %res, ptr %dst
+  ret void
+}
+
 define i32 @test_sqrdmulh_scalar(float noundef %a) {
 ; CHECK-LABEL: test_sqrdmulh_scalar:
 ; CHECK:       // %bb.0: // %entry
@@ -269,6 +283,20 @@ entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %cvt, i32 %cvt)
   ret i32 %res
+}
+
+define void @test_sqrdmulh_scalar_store(i32 noundef %a, ptr %dst) {
+; CHECK-LABEL: test_sqrdmulh_scalar_store:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    sqrdmulh s0, s0, s0
+; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %mul = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %a, i32 %a)
+  %res = bitcast i32 %mul to float
+  store float %res, ptr %dst
+  ret void
 }
 
 define i32 @test_sqrdmlah_scalar(float noundef %a) #0 {
@@ -284,6 +312,20 @@ entry:
   ret i32 %res
 }
 
+define void @test_sqrdmlah_scalar_store(i32 noundef %a, ptr %dst) #0 {
+; CHECK-LABEL: test_sqrdmlah_scalar_store:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    sqrdmlah s0, s0, s0
+; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %mul = call i32 @llvm.aarch64.neon.sqrdmlah.i32(i32 %a, i32 %a, i32 %a)
+  %res = bitcast i32 %mul to float
+  store float %res, ptr %dst
+  ret void
+}
+
 define i32 @test_sqrdmlsh_scalar(float noundef %a) #0 {
 ; CHECK-LABEL: test_sqrdmlsh_scalar:
 ; CHECK:       // %bb.0: // %entry
@@ -295,6 +337,20 @@ entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = call i32 @llvm.aarch64.neon.sqrdmlsh.i32(i32 %cvt, i32 %cvt, i32 %cvt)
   ret i32 %res
+}
+
+define void @test_sqrdmlsh_scalar_store(i32 noundef %a, ptr %dst) #0 {
+; CHECK-LABEL: test_sqrdmlsh_scalar_store:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    sqrdmlsh s0, s0, s0
+; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %mul = call i32 @llvm.aarch64.neon.sqrdmlsh.i32(i32 %a, i32 %a, i32 %a)
+  %res = bitcast i32 %mul to float
+  store float %res, ptr %dst
+  ret void
 }
 
 attributes #0 = { "target-features"="+rdm" }

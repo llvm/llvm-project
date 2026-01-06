@@ -7744,22 +7744,20 @@ multiclass SIMDThreeScalarHS<bit U, bits<5> opc, string asm,
             (!cast<Instruction>(NAME#"v1i32") FPR32:$Rn, FPR32:$Rm)>;
 }
 
-let Predicates = [HasRDM] in {
-  multiclass SIMDThreeScalarHSTied<bit U, bit R, bits<5> opc, string asm,
-                             SDPatternOperator OpNode, SDPatternOperator G_OpNode> {
-    def v1i32: BaseSIMDThreeScalarTied<U, 0b10, R, opc, (outs FPR32:$dst),
-                                       (ins FPR32:$Rd, FPR32:$Rn, FPR32:$Rm),
-                                       asm, []>;
-    def v1i16: BaseSIMDThreeScalarTied<U, 0b01, R, opc, (outs FPR16:$dst),
-                                       (ins FPR16:$Rd, FPR16:$Rn, FPR16:$Rm),
-                                       asm, []>;
+multiclass SIMDThreeScalarHSTied<bit U, bit R, bits<5> opc, string asm,
+                                 SDPatternOperator OpNode, SDPatternOperator G_OpNode> {
+  def v1i32: BaseSIMDThreeScalarTied<U, 0b10, R, opc, (outs FPR32:$dst),
+                                     (ins FPR32:$Rd, FPR32:$Rn, FPR32:$Rm),
+                                     asm, []>;
+  def v1i16: BaseSIMDThreeScalarTied<U, 0b01, R, opc, (outs FPR16:$dst),
+                                     (ins FPR16:$Rd, FPR16:$Rn, FPR16:$Rm),
+                                     asm, []>;
 
-    def : Pat<(i32 (G_OpNode (i32 FPR32:$Rd), (i32 FPR32:$Rn), (i32 FPR32:$Rm))),
-              (!cast<Instruction>(NAME#"v1i32") FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+  def : Pat<(i32 (G_OpNode (i32 FPR32:$Rd), (i32 FPR32:$Rn), (i32 FPR32:$Rm))),
+            (!cast<Instruction>(NAME#"v1i32") FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 
-    def : Pat<(f32 (OpNode FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)),
-              (!cast<Instruction>(NAME#"v1i32") FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)>;
-  }
+  def : Pat<(f32 (OpNode FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)),
+            (!cast<Instruction>(NAME#"v1i32") FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 }
 
 multiclass SIMDFPThreeScalar<bit U, bit S, bits<3> opc, string asm,
@@ -11736,7 +11734,7 @@ multiclass SIMDIndexedSQRDMLxHSDTied<bit U, bits<4> opc, string asm,
   }
 
   def : Pat<(f32 (op (f32 FPR32Op:$Rd),
-                     (bitconvert (i32 FPR32Op:$Rn)),
+                     (f32 FPR32Op:$Rn),
                      (bitconvert (i32 (vector_extract (v4i32 V128:$Rm),
                                        VectorIndexS:$idx))))),
             (!cast<Instruction>(NAME # v1i32_indexed) FPR32Op:$Rd, FPR32Op:$Rn,
