@@ -69,12 +69,12 @@ def testValueIsInstance():
         ctx,
     )
     func = module.body.operations[0]
-    assert BlockArgument.isinstance(func.regions[0].blocks[0].arguments[0])
-    assert not OpResult.isinstance(func.regions[0].blocks[0].arguments[0])
+    assert isinstance(func.regions[0].blocks[0].arguments[0], BlockArgument)
+    assert not isinstance(func.regions[0].blocks[0].arguments[0], OpResult)
 
     op = func.regions[0].blocks[0].operations[0]
-    assert not BlockArgument.isinstance(op.results[0])
-    assert OpResult.isinstance(op.results[0])
+    assert not isinstance(op.results[0], BlockArgument)
+    assert isinstance(op.results[0], OpResult)
 
 
 # CHECK-LABEL: TEST: testValueHash
@@ -291,6 +291,28 @@ def testValuePrintAsOperand():
         value2.owner.detach_from_parent()
         # CHECK: %0
         print(value2.get_name())
+
+
+# CHECK-LABEL: TEST: testValuePrintAsOperandNamedLocPrefix
+@run
+def testValuePrintAsOperandNamedLocPrefix():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            named_value = Operation.create(
+                "custom.op5", results=[i32], loc=Location.name("apple")
+            ).results[0]
+            # CHECK: Value(%[[VAL5:.*]] = "custom.op5"() : () -> i32)
+            print(named_value)
+
+        # CHECK: With use_name_loc_as_prefix
+        # CHECK: %apple
+        print("With use_name_loc_as_prefix")
+        print(named_value.get_name(use_name_loc_as_prefix=True))
 
 
 # CHECK-LABEL: TEST: testValueSetType

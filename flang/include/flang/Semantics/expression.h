@@ -26,6 +26,7 @@
 #include "flang/Support/Fortran.h"
 #include <map>
 #include <optional>
+#include <stack>
 #include <type_traits>
 #include <variant>
 
@@ -257,17 +258,18 @@ public:
 
   // Builds a typed Designator from an untyped DataRef
   MaybeExpr Designate(DataRef &&);
+  void CheckForWholeAssumedSizeArray(parser::CharBlock, const Symbol *);
+
+  // Allows a whole assumed-size array to appear for the lifetime of
+  // the returned value.
+  common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
+    return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
+  }
 
 protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
 
 private:
-  // Allows a whole assumed-size array to appear for the lifetime of
-  // the returned value.
-  common::Restorer<bool> AllowWholeAssumedSizeArray() {
-    return common::ScopedSet(isWholeAssumedSizeArrayOk_, true);
-  }
-
   // Allows an Expr to be a null pointer.
   common::Restorer<bool> AllowNullPointer() {
     return common::ScopedSet(isNullPointerOk_, true);
@@ -342,7 +344,6 @@ private:
       const semantics::Scope &, bool C919bAlreadyEnforced = false);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);
-  void CheckSubscripts(ArrayRef &);
   bool CheckRanks(const DataRef &); // Return false if error exists.
   bool CheckPolymorphic(const DataRef &); // ditto
   bool CheckDataRef(const DataRef &); // ditto
@@ -367,11 +368,16 @@ private:
   using AdjustActuals =
       std::optional<std::function<bool(const Symbol &, ActualArguments &)>>;
   const Symbol *ResolveForward(const Symbol &);
-  std::pair<const Symbol *, bool /* failure due ambiguity */> ResolveGeneric(
-      const Symbol &, const ActualArguments &, const AdjustActuals &,
-      bool isSubroutine, bool mightBeStructureConstructor = false);
-  void EmitGenericResolutionError(
-      const Symbol &, bool dueToNullActuals, bool isSubroutine);
+  struct GenericResolution {
+    const Symbol *specific{nullptr};
+    bool failedDueToAmbiguity{false};
+    SymbolVector tried{};
+  };
+  GenericResolution ResolveGeneric(const Symbol &, const ActualArguments &,
+      const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
+      bool mightBeStructureConstructor = false);
+  void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
+      bool isSubroutine, ActualArguments &, const SymbolVector &);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,
@@ -394,6 +400,19 @@ private:
   MaybeExpr AnalyzeComplex(MaybeExpr &&re, MaybeExpr &&im, const char *what);
   std::optional<Chevrons> AnalyzeChevrons(const parser::CallStmt &);
 
+  // CheckStructureConstructor() is used for parsed structure constructors
+  // as well as for generic function references.
+  struct ComponentSpec {
+    ComponentSpec() = default;
+    ComponentSpec(ComponentSpec &&) = default;
+    parser::CharBlock source, exprSource;
+    bool hasKeyword{false};
+    const Symbol *keywordSymbol{nullptr};
+    MaybeExpr expr;
+  };
+  MaybeExpr CheckStructureConstructor(parser::CharBlock typeName,
+      const semantics::DerivedTypeSpec &, std::list<ComponentSpec> &&);
+
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 
   semantics::SemanticsContext &context_;
@@ -410,6 +429,7 @@ private:
   bool inDataStmtConstant_{false};
   bool inStmtFunctionDefinition_{false};
   bool iterativelyAnalyzingSubexpressions_{false};
+  bool inDeadCode_{false};
   friend class ArgumentAnalyzer;
 };
 
@@ -446,6 +466,13 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
     SemanticsContext &, common::TypeCategory,
     const std::optional<parser::KindSelector> &);
 
+void NoteUsedSymbols(SemanticsContext &, const SomeExpr &);
+void NoteUsedSymbols(SemanticsContext &, const evaluate::ProcedureRef &);
+void NoteUsedSymbols(SemanticsContext &, const evaluate::Assignment &);
+void NoteUsedSymbols(SemanticsContext &, const parser::TypedExpr &);
+void NoteUsedSymbols(SemanticsContext &, const parser::TypedCall &);
+void NoteUsedSymbols(SemanticsContext &, const parser::TypedAssignment &);
+
 // Semantic analysis of all expressions in a parse tree, which becomes
 // decorated with typed representations for top-level expressions.
 class ExprChecker {
@@ -457,11 +484,11 @@ public:
   bool Walk(const parser::Program &);
 
   bool Pre(const parser::Expr &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::Variable &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::Selector &x) {
@@ -473,11 +500,11 @@ public:
     return false;
   }
   bool Pre(const parser::AllocateObject &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::PointerObject &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::DataStmtObject &);
@@ -485,15 +512,15 @@ public:
   bool Pre(const parser::DataImpliedDo &);
 
   bool Pre(const parser::CallStmt &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::AssignmentStmt &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   bool Pre(const parser::PointerAssignmentStmt &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
 
@@ -517,11 +544,14 @@ public:
     exprAnalyzer_.set_inWhereBody(InWhereBody());
   }
 
+  bool Pre(const parser::IfConstruct &);
+
   bool Pre(const parser::ComponentDefStmt &) {
     inComponentDefStmt_ = true;
     return true;
   }
   void Post(const parser::ComponentDefStmt &) { inComponentDefStmt_ = false; }
+  bool Pre(const parser::KindSelector &) { return !inComponentDefStmt_; }
   bool Pre(const parser::Initialization &x) {
     // Default component initialization expressions (but not DATA-like ones
     // as in DEC STRUCTUREs) were already analyzed in name resolution
@@ -533,27 +563,37 @@ public:
   }
 
   template <typename A> bool Pre(const parser::Scalar<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Constant<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Integer<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   template <typename A> bool Pre(const parser::Logical<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
   template <typename A> bool Pre(const parser::DefaultChar<A> &x) {
-    exprAnalyzer_.Analyze(x);
+    AnalyzeAndNoteUses(x);
     return false;
   }
 
 private:
+  template <typename A> void AnalyzeAndNoteUses(const A &x) {
+    exprAnalyzer_.Analyze(x);
+    if constexpr (parser::HasTypedExpr<A>::value) {
+      NoteUsedSymbols(context_, x.typedExpr);
+    } else if constexpr (parser::HasTypedCall<A>::value) {
+      NoteUsedSymbols(context_, x.typedCall);
+    } else if constexpr (parser::HasTypedAssignment<A>::value) {
+      NoteUsedSymbols(context_, x.typedAssignment);
+    }
+  }
   bool InWhereBody() const { return whereDepth_ > 0; }
 
   SemanticsContext &context_;

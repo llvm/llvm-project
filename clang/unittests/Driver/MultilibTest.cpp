@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Multilib.h"
-#include "../../lib/Driver/ToolChains/CommonArgs.h"
 #include "SimpleDiagnosticConsumer.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/CommonArgs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -131,7 +131,7 @@ TEST(MultilibTest, Construction3) {
                                             E = M.flags().end();
        I != E; ++I) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(*I)
-                    .Cases("+f1", "+f2", "-f3", true)
+                    .Cases({"+f1", "+f2", "-f3"}, true)
                     .Default(false));
   }
 }
@@ -144,7 +144,7 @@ TEST(MultilibTest, SetPushback) {
   ASSERT_TRUE(MS.size() == 2);
   for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
-                    .Cases("/one", "/two", true)
+                    .Cases({"/one", "/two"}, true)
                     .Default(false));
   }
 }

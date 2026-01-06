@@ -31,7 +31,7 @@ using namespace llvm::yaml::bolt;
 
 namespace opts {
 
-cl::OptionCategory MergeFdataCategory("merge-fdata options");
+static cl::OptionCategory MergeFdataCategory("merge-fdata options");
 
 enum SortType : char {
   ST_NONE,
@@ -120,14 +120,14 @@ void mergeProfileHeaders(BinaryProfileHeader &MergedHeader,
   if (!MergedHeader.Id.empty() && (MergedHeader.Id != Header.Id))
     errs() << "WARNING: build-ids in merged profiles do not match\n";
 
-  // Cannot merge samples profile with LBR profile.
+  // Cannot merge samples profile with brstack profile.
   if (!MergedHeader.Flags)
     MergedHeader.Flags = Header.Flags;
 
-  constexpr auto Mask = llvm::bolt::BinaryFunction::PF_LBR |
-                        llvm::bolt::BinaryFunction::PF_SAMPLE;
+  constexpr auto Mask = llvm::bolt::BinaryFunction::PF_BRANCH |
+                        llvm::bolt::BinaryFunction::PF_BASIC;
   if ((MergedHeader.Flags & Mask) != (Header.Flags & Mask)) {
-    errs() << "ERROR: cannot merge LBR profile with non-LBR profile\n";
+    errs() << "ERROR: cannot merge brstack profile with non-brstack profile\n";
     exit(1);
   }
   MergedHeader.Flags = MergedHeader.Flags | Header.Flags;
@@ -278,10 +278,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     }
     CounterTy operator+(const CounterTy &O) { return *this += O; }
   };
-  struct ProfileTy {
-    StringMap<CounterTy> Branch;
-    StringMap<CounterTy> Memory;
-  };
+  typedef StringMap<CounterTy> ProfileTy;
 
   auto ParseProfile = [&](const std::string &Filename, auto &Profiles) {
     const llvm::thread::id tid = llvm::this_thread::get_id();
@@ -326,7 +323,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       auto [Signature, ExecCount] = Line.rsplit(' ');
       if (ExecCount.getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted execution count");
-      // Only LBR profile has misprediction field
+      // Only LBR profile has misprediction field, branch entries
       if (!NoLBRCollection.value_or(false) && IsBranchEntry) {
         auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
         Signature = SignatureLBR;
@@ -334,8 +331,8 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
           report_error(Filename, "Malformed / corrupted misprediction count");
       }
 
-      auto &ProfileMap = IsBranchEntry ? Profile->Branch : Profile->Memory;
-      ProfileMap[Signature] += Count;
+      Count += Profile->lookup(Signature);
+      Profile->insert_or_assign(Signature, Count);
     } while (std::getline(FdataFile, FdataLine));
   };
 
@@ -351,25 +348,25 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   Pool.wait();
 
   ProfileTy MergedProfile;
-  for (const auto &[Thread, Profile] : ParsedProfiles) {
-    for (const auto &[Key, Value] : Profile.Branch)
-      MergedProfile.Branch[Key] += Value;
-    for (const auto &[Key, Value] : Profile.Memory)
-      MergedProfile.Memory[Key] += Value;
-  }
+  for (const auto &[Thread, Profile] : ParsedProfiles)
+    for (const auto &[Key, Value] : Profile) {
+      CounterTy Count = MergedProfile.lookup(Key) + Value;
+      MergedProfile.insert_or_assign(Key, Count);
+    }
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   if (NoLBRCollection.value_or(false))
     output() << "no_lbr\n";
-  for (const auto &[Key, Value] : MergedProfile.Branch) {
+  for (const auto &[Key, Value] : MergedProfile) {
     output() << Key << " ";
-    if (!NoLBRCollection.value_or(false))
+    unsigned Type = 0;
+    Key.split(' ').first.getAsInteger(10, Type);
+    bool IsBranchEntry = Type < 3;
+    if (!NoLBRCollection.value_or(false) && IsBranchEntry)
       output() << Value.Mispred << " ";
     output() << Value.Exec << "\n";
   }
-  for (const auto &[Key, Value] : MergedProfile.Memory)
-    output() << Key << ' ' << Value.Exec << '\n';
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }

@@ -1,1 +1,5 @@
-{"Version":"15.1", "MaximumDeploymentTarget": "15.1.99"}
+{"Version":"15.1", "CanonicalName": "macosx15.1", "MaximumDeploymentTarget": "15.1.99",
+ "SupportedTargets": {
+   "macosx": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "macos", "LLVMTargetTripleEnvironment": "", "SystemPrefix": ""},
+   "iosmac": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "ios", "LLVMTargetTripleEnvironment": "macabi", "SystemPrefix": "\/System\/iOSSupport"}
+}}

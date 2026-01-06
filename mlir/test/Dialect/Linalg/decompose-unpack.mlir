@@ -169,3 +169,54 @@ func.func @unpack_with_dynamic_dims(%arg0: tensor<?x1x1x1x8x32xf32>, %arg1: tens
 // CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[EXTRACT_SLICE]] into %[[DEST]]
 // CHECK-SAME:      [0, 0, 0, 0] [%[[DIM0_DEST]], 1, 32, 8] [1, 1, 1, 1]
 // CHECK:         return %[[INSERT]]
+
+// -----
+
+func.func @unpack_with_non_adjacent_inner_dims_pos_and_unit_outer(%arg0: tensor<1x1x1x4x1xf32>, %arg1: tensor<1x1x4xf32>) -> tensor<1x1x4xf32> {
+  %0 = linalg.unpack %arg0 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 0] inner_tiles = [4, 1] into %arg1 : tensor<1x1x1x4x1xf32> -> tensor<1x1x4xf32>
+  return %0 : tensor<1x1x4xf32>
+}
+// CHECK-LABEL: func.func @unpack_with_non_adjacent_inner_dims_pos_and_unit_outer
+// CHECK-SAME:     %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:     %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:        %[[SLICE:.+]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0, 0] [1, 1, 1, 4, 1] [1, 1, 1, 1, 1] : tensor<1x1x1x4x1xf32> to tensor<4x1xf32>
+// CHECK:        %[[EMPTY:.+]] = tensor.empty() : tensor<1x4xf32>
+// CHECK:        %[[TRANSP:.+]] = linalg.transpose
+// CHECK-SAME:                      ins(%[[SLICE]] : tensor<4x1xf32>)
+// CHECK-SAME:                      outs(%[[EMPTY]] : tensor<1x4xf32>) permutation = [1, 0]
+// CHECK:        %[[INSERT:.+]] = tensor.insert_slice %transposed into %[[DEST]][0, 0, 0] [1, 1, 4] [1, 1, 1] : tensor<1x4xf32> into tensor<1x1x4xf32>
+// CHECK:        return %[[INSERT]]
+
+// -----
+
+func.func @unpack_with_non_trailing_dimensions_in_inner_dims(%arg0: tensor<1x1x1x4x1xf32>, %arg1: tensor<1x1x4xf32>) -> tensor<1x1x4xf32> {
+  %pack = linalg.unpack %arg0 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 1] inner_tiles = [4, 1] into %arg1 : tensor<1x1x1x4x1xf32> -> tensor<1x1x4xf32>
+  return %pack : tensor<1x1x4xf32>
+}
+// CHECK-LABEL: func.func @unpack_with_non_trailing_dimensions_in_inner_dims
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:        %[[SLICE:.+]] = tensor.extract_slice %[[SRC]][0, 0, 0, 0, 0] [1, 1, 1, 4, 1] [1, 1, 1, 1, 1] : tensor<1x1x1x4x1xf32> to tensor<4x1xf32>
+// CHECK:        %[[EMPTY:.+]] = tensor.empty() : tensor<1x4xf32>
+// CHECK:        %[[TRANSP:.+]] = linalg.transpose
+// CHECK-SAME:                      ins(%[[SLICE]] : tensor<4x1xf32>)
+// CHECK-SAME:                      outs(%[[EMPTY]] : tensor<1x4xf32>) permutation = [1, 0]
+// CHECK:        %[[INSERT:.+]] = tensor.insert_slice %transposed into %[[DEST]][0, 0, 0] [1, 1, 4] [1, 1, 1] : tensor<1x4xf32> into tensor<1x1x4xf32>
+// CHECK:        return %[[INSERT]]
+
+// -----
+
+/// Note "126", which is a non-unit tile-outer-dim. This is not supported.
+
+func.func @negative_non_unit_tiled_outer_dim(%src: tensor<1x126x1x1x8xf32>, %dest: tensor<1x1x1x1001xf32>) -> tensor<1x1x1x1001xf32> {
+  %unpack = linalg.unpack %src
+    outer_dims_perm = [0, 3, 2, 1]
+    inner_dims_pos = [3]
+    inner_tiles = [8]
+    into %dest : tensor<1x126x1x1x8xf32>
+    -> tensor<1x1x1x1001xf32>
+
+  return %unpack : tensor<1x1x1x1001xf32>
+}
+// CHECK-LABEL: @negative_non_unit_tiled_outer_dim(
+// CHECK: linalg.unpack

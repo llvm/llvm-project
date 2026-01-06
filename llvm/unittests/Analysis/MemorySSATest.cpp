@@ -70,7 +70,8 @@ protected:
 
 public:
   MemorySSATest()
-      : M("MemorySSATest", C), B(C), DL(DLString), TLI(TLII), F(nullptr) {}
+      : M("MemorySSATest", C), B(C), DL(DLString), TLII(M.getTargetTriple()),
+        TLI(TLII), F(nullptr) {}
 };
 
 TEST_F(MemorySSATest, CreateALoad) {
@@ -579,14 +580,14 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
 // We had a bug with caching where the walker would report MemoryDef#3's clobber
 // (below) was MemoryDef#1.
 //
-// define void @F(i8*) {
+// define void @F(ptr) {
 //   %A = alloca i8, i8 1
 // ; 1 = MemoryDef(liveOnEntry)
-//   store i8 0, i8* %A
+//   store i8 0, ptr %A
 // ; 2 = MemoryDef(1)
-//   store i8 1, i8* %A
+//   store i8 1, ptr %A
 // ; 3 = MemoryDef(2)
-//   store i8 2, i8* %A
+//   store i8 2, ptr %A
 // }
 TEST_F(MemorySSATest, TestTripleStore) {
   F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
@@ -640,7 +641,7 @@ TEST_F(MemorySSATest, TestStoreAndLoad) {
 // Another bug (related to the above two fixes): It was noted that, given the
 // following code:
 // ; 1 = MemoryDef(liveOnEntry)
-// store i8 0, i8* %1
+// store i8 0, ptr %1
 //
 // ...A query to getClobberingMemoryAccess(MemoryAccess*, MemoryLocation) would
 // hand back the store (correctly). A later call to
@@ -874,7 +875,6 @@ TEST_F(MemorySSATest, Irreducible) {
   // }
   // use(x)
 
-  SmallVector<PHINode *, 8> Inserted;
   IRBuilder<> B(C);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
@@ -907,9 +907,9 @@ TEST_F(MemorySSATest, MoveToBeforeLiveOnEntryInvalidatesCache) {
   // Create:
   //   %1 = alloca i8
   //   ; 1 = MemoryDef(liveOnEntry)
-  //   store i8 0, i8* %1
+  //   store i8 0, ptr %1
   //   ; 2 = MemoryDef(1)
-  //   store i8 0, i8* %1
+  //   store i8 0, ptr %1
   //
   // ...And be sure that MSSA's caching doesn't give us `1` for the clobber of
   // `2` after `1` is removed.
@@ -949,11 +949,11 @@ TEST_F(MemorySSATest, RemovingDefInvalidatesCache) {
   //   %x = alloca i8
   //   %y = alloca i8
   //   ; 1 = MemoryDef(liveOnEntry)
-  //   store i8 0, i8* %x
+  //   store i8 0, ptr %x
   //   ; 2 = MemoryDef(1)
-  //   store i8 0, i8* %y
+  //   store i8 0, ptr %y
   //   ; 3 = MemoryDef(2)
-  //   store i8 0, i8* %x
+  //   store i8 0, ptr %x
   //
   // And be sure that MSSA's caching handles the removal of def `1`
   // appropriately.
@@ -1086,16 +1086,17 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
 
 TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // Example code:
-  // define void @a(i8* %foo) {
-  //   %bar = getelementptr i8, i8* %foo, i64 1
-  //   %baz = getelementptr i8, i8* %foo, i64 2
-  //   store i8 0, i8* %foo
-  //   store i8 0, i8* %bar
-  //   call void @llvm.lifetime.end.p0i8(i64 3, i8* %foo)
-  //   call void @llvm.lifetime.start.p0i8(i64 3, i8* %foo)
-  //   store i8 0, i8* %foo
-  //   store i8 0, i8* %bar
-  //   call void @llvm.memset.p0i8(i8* %baz, i8 0, i64 1)
+  // define void @a() {
+  //   %foo = alloca i32
+  //   %bar = getelementptr i8, ptr %foo, i64 1
+  //   %baz = getelementptr i8, ptr %foo, i64 2
+  //   store i8 0, ptr %foo
+  //   store i8 0, ptr %bar
+  //   call void @llvm.lifetime.end.p0(ptr %foo)
+  //   call void @llvm.lifetime.start.p0(ptr %foo)
+  //   store i8 0, ptr %foo
+  //   store i8 0, ptr %bar
+  //   call void @llvm.memset.p0i8(ptr %baz, i8 0, i64 1)
   //   ret void
   // }
   //
@@ -1104,14 +1105,14 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // it.
 
   IRBuilder<> B(C);
-  F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
 
   // Make blocks
   BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
 
   B.SetInsertPoint(Entry);
-  Value *Foo = &*F->arg_begin();
+  Value *Foo = B.CreateAlloca(B.getInt32Ty());
 
   Value *Bar = B.CreatePtrAdd(Foo, B.getInt64(1), "bar");
   Value *Baz = B.CreatePtrAdd(Foo, B.getInt64(2), "baz");
@@ -1119,14 +1120,8 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   B.CreateStore(B.getInt8(0), Foo);
   B.CreateStore(B.getInt8(0), Bar);
 
-  auto GetLifetimeIntrinsic = [&](Intrinsic::ID ID) {
-    return Intrinsic::getOrInsertDeclaration(&M, ID, {Foo->getType()});
-  };
-
-  B.CreateCall(GetLifetimeIntrinsic(Intrinsic::lifetime_end),
-               {B.getInt64(3), Foo});
-  Instruction *LifetimeStart = B.CreateCall(
-      GetLifetimeIntrinsic(Intrinsic::lifetime_start), {B.getInt64(3), Foo});
+  B.CreateLifetimeEnd(Foo);
+  Instruction *LifetimeStart = B.CreateLifetimeStart(Foo);
 
   Instruction *FooStore = B.CreateStore(B.getInt8(0), Foo);
   Instruction *BarStore = B.CreateStore(B.getInt8(0), Bar);
@@ -1553,18 +1548,16 @@ TEST_F(MemorySSATest, TestLoadClobber) {
 TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
   SMDiagnostic E;
   auto LocalM =
-      parseAssemblyString("define void @test(i64 %a0, i8* %a1, i1* %a2) {\n"
+      parseAssemblyString("define void @test(i64 %a0, ptr %a1, ptr %a2) {\n"
                           "entry:\n"
-                          "%v0 = getelementptr i8, i8* %a1, i64 %a0\n"
-                          "%v1 = bitcast i8* %v0 to i64*\n"
-                          "%v2 = bitcast i8* %v0 to i32*\n"
-                          "%v3 = load i1, i1* %a2\n"
+                          "%v0 = getelementptr i8, ptr %a1, i64 %a0\n"
+                          "%v3 = load i1, ptr %a2\n"
                           "br i1 %v3, label %body, label %exit\n"
                           "body:\n"
-                          "store i32 1, i32* %v2\n"
+                          "store i32 1, ptr %v0\n"
                           "br label %exit\n"
                           "exit:\n"
-                          "store i64 0, i64* %v1\n"
+                          "store i64 0, ptr %v0\n"
                           "ret void\n"
                           "}",
                           E, C);
@@ -1597,12 +1590,12 @@ TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
 
 TEST_F(MemorySSATest, TestInvariantGroup) {
   SMDiagnostic E;
-  auto M = parseAssemblyString("declare void @f(i8*)\n"
-                               "define i8 @test(i8* %p) {\n"
+  auto M = parseAssemblyString("declare void @f(ptr)\n"
+                               "define i8 @test(ptr %p) {\n"
                                "entry:\n"
-                               "  store i8 42, i8* %p, !invariant.group !0\n"
-                               "  call void @f(i8* %p)\n"
-                               "  %v = load i8, i8* %p, !invariant.group !0\n"
+                               "  store i8 42, ptr %p, !invariant.group !0\n"
+                               "  call void @f(ptr %p)\n"
+                               "  %v = load i8, ptr %p, !invariant.group !0\n"
                                "  ret i8 %v\n"
                                "}\n"
                                "!0 = !{}",

@@ -16,16 +16,19 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANHELPERS_H
 
 #include "VPlanAnalysis.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
 
+class AssumptionCache;
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
@@ -37,7 +40,6 @@ class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
 class Value;
-class LoopVersioning;
 
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
@@ -47,14 +49,6 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 /// Return a value for Step multiplied by VF.
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step);
-
-/// A helper function that returns the reciprocal of the block probability of
-/// predicated blocks. If we return X, we are assuming the predicated block
-/// will execute once for every X iterations of the loop header.
-///
-/// TODO: We should use actual block probability here, if available. Currently,
-///       we always assume predicated blocks have a 50% chance of executing.
-inline unsigned getReciprocalPredBlockProb() { return 2; }
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -194,10 +188,10 @@ public:
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
-                   LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan,
-                   Loop *CurrentParentLoop, Type *CanonicalIVTy);
+  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
+                   LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
+                   IRBuilderBase &Builder, VPlan *Plan, Loop *CurrentParentLoop,
+                   Type *CanonicalIVTy);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -212,21 +206,23 @@ struct VPTransformState {
   struct DataState {
     // Each value from the original loop, when vectorized, is represented by a
     // vector value in the map.
-    DenseMap<VPValue *, Value *> VPV2Vector;
+    DenseMap<const VPValue *, Value *> VPV2Vector;
 
-    DenseMap<VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
+    DenseMap<const VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
   /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
   /// is false, otherwise return the generated scalar. \See set.
-  Value *get(VPValue *Def, bool IsScalar = false);
+  Value *get(const VPValue *Def, bool IsScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
-  Value *get(VPValue *Def, const VPLane &Lane);
+  Value *get(const VPValue *Def, const VPLane &Lane);
 
-  bool hasVectorValue(VPValue *Def) { return Data.VPV2Vector.contains(Def); }
+  bool hasVectorValue(const VPValue *Def) {
+    return Data.VPV2Vector.contains(Def);
+  }
 
-  bool hasScalarValue(VPValue *Def, VPLane Lane) {
+  bool hasScalarValue(const VPValue *Def, VPLane Lane) {
     auto I = Data.VPV2Scalars.find(Def);
     if (I == Data.VPV2Scalars.end())
       return false;
@@ -236,7 +232,7 @@ struct VPTransformState {
 
   /// Set the generated vector Value for a given VPValue, if \p
   /// IsScalar is false. If \p IsScalar is true, set the scalar in lane 0.
-  void set(VPValue *Def, Value *V, bool IsScalar = false) {
+  void set(const VPValue *Def, Value *V, bool IsScalar = false) {
     if (IsScalar) {
       set(Def, V, VPLane(0));
       return;
@@ -247,13 +243,13 @@ struct VPTransformState {
   }
 
   /// Reset an existing vector value for \p Def and a given \p Part.
-  void reset(VPValue *Def, Value *V) {
+  void reset(const VPValue *Def, Value *V) {
     assert(Data.VPV2Vector.contains(Def) && "need to overwrite existing value");
     Data.VPV2Vector[Def] = V;
   }
 
   /// Set the generated scalar \p V for \p Def and the given \p Lane.
-  void set(VPValue *Def, Value *V, const VPLane &Lane) {
+  void set(const VPValue *Def, Value *V, const VPLane &Lane) {
     auto &Scalars = Data.VPV2Scalars[Def];
     unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
@@ -263,7 +259,7 @@ struct VPTransformState {
   }
 
   /// Reset an existing scalar value for \p Def and a given \p Lane.
-  void reset(VPValue *Def, Value *V, const VPLane &Lane) {
+  void reset(const VPValue *Def, Value *V, const VPLane &Lane) {
     auto Iter = Data.VPV2Scalars.find(Def);
     assert(Iter != Data.VPV2Scalars.end() &&
            "need to overwrite existing value");
@@ -273,26 +269,13 @@ struct VPTransformState {
     Iter->second[CacheIdx] = V;
   }
 
-  /// Add additional metadata to \p To that was not present on \p Orig.
-  ///
-  /// Currently this is used to add the noalias annotations based on the
-  /// inserted memchecks.  Use this for instructions that are *cloned* into the
-  /// vector loop.
-  void addNewMetadata(Instruction *To, const Instruction *Orig);
-
-  /// Add metadata from one instruction to another.
-  ///
-  /// This includes both the original MDs from \p From and additional ones (\see
-  /// addNewMetadata).  Use this for *newly created* instructions in the vector
-  /// loop.
-  void addMetadata(Value *To, Instruction *From);
-
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Construct the vectorized value of a scalarized value \p V one lane at a
-  /// time.
-  void packScalarIntoVectorizedValue(VPValue *Def, const VPLane &Lane);
+  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
+  /// and return the resulting value.
+  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
+                                       const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -310,27 +293,24 @@ struct VPTransformState {
 
     /// A mapping of each VPBasicBlock to the corresponding BasicBlock. In case
     /// of replication, maps the BasicBlock of the last replica created.
-    SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
+    SmallDenseMap<const VPBasicBlock *, BasicBlock *> VPBB2IRBB;
 
     /// Updater for the DominatorTree.
     DomTreeUpdater DTU;
 
     CFGState(DominatorTree *DT)
         : DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy) {}
-
-    /// Returns the BasicBlock* mapped to the pre-header of the loop region
-    /// containing \p R.
-    BasicBlock *getPreheaderBBFor(VPRecipeBase *R);
   } CFG;
 
   /// Hold a pointer to LoopInfo to register new basic blocks in the loop.
   LoopInfo *LI;
 
+  /// Hold a pointer to AssumptionCache to register new assumptions after
+  /// replicating assume calls.
+  AssumptionCache *AC;
+
   /// Hold a reference to the IRBuilder used to generate output IR code.
   IRBuilderBase &Builder;
-
-  /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
-  InnerLoopVectorizer *ILV;
 
   /// Pointer to the VPlan code is generated for.
   VPlan *Plan;
@@ -338,19 +318,11 @@ struct VPTransformState {
   /// The parent loop object for the current scope, or nullptr.
   Loop *CurrentParentLoop = nullptr;
 
-  /// LoopVersioning.  It's only set up (non-null) if memchecks were
-  /// used.
-  ///
-  /// This is currently only used to add no-alias metadata based on the
-  /// memchecks.  The actually versioning is performed manually.
-  LoopVersioning *LVer = nullptr;
-
-  /// Map SCEVs to their expanded values. Populated when executing
-  /// VPExpandSCEVRecipes.
-  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
-
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
+
+  /// VPlan-based dominator tree.
+  VPDominatorTree VPDT;
 };
 
 /// Struct to hold various analysis needed for cost computations.
@@ -362,12 +334,15 @@ struct VPCostContext {
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
+  PredicatedScalarEvolution &PSE;
+  const Loop *L;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                Type *CanIVTy, LoopVectorizationCostModel &CM,
-                TargetTransformInfo::TargetCostKind CostKind)
-      : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM), CostKind(CostKind) {}
+                const VPlan &Plan, LoopVectorizationCostModel &CM,
+                TargetTransformInfo::TargetCostKind CostKind,
+                PredicatedScalarEvolution &PSE, const Loop *L)
+      : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
+        CostKind(CostKind), PSE(PSE), L(L) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -377,8 +352,26 @@ struct VPCostContext {
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 
+  /// \returns how much the cost of a predicated block should be divided by.
+  /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
+  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
+
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
+
+  /// Return true if \p I is considered uniform-after-vectorization in the
+  /// legacy cost model for \p VF. Only used to check for additional VPlan
+  /// simplifications.
+  bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
+
+  /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
+  /// and \p Operands with \p VF. This is a convenience wrapper for the
+  /// type-based getScalarizationOverhead API. If \p AlwaysIncludeReplicatingR
+  /// is true, always compute the cost of scalarizing replicating operands.
+  InstructionCost
+  getScalarizationOverhead(Type *ResultTy, ArrayRef<const VPValue *> Operands,
+                           ElementCount VF,
+                           bool AlwaysIncludeReplicatingR = false);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
@@ -397,20 +390,44 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
+  /// Lazily created ModuleSlotTracker, used only when unnamed IR instructions
+  /// require slot tracking.
+  std::unique_ptr<ModuleSlotTracker> MST;
+
+  /// Cached metadata kind names from the Module's LLVMContext.
+  SmallVector<StringRef> MDNames;
+
+  /// Cached Module pointer for printing metadata.
+  const Module *M = nullptr;
+
   void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
+  LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
+  std::string getName(const Value *V);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
+    if (Plan) {
       assignNames(*Plan);
+      if (auto *ScalarHeader = Plan->getScalarHeader())
+        M = ScalarHeader->getIRBasicBlock()->getModule();
+    }
   }
 
   /// Returns the name assigned to \p V, if there is one, otherwise try to
   /// construct one from the underlying value, if there's one; else return
   /// <badref>.
   std::string getOrCreateName(const VPValue *V) const;
+
+  /// Returns the cached metadata kind names.
+  ArrayRef<StringRef> getMDNames() {
+    if (MDNames.empty() && M)
+      M->getContext().getMDKindNames(MDNames);
+    return MDNames;
+  }
+
+  /// Returns the cached Module pointer.
+  const Module *getModule() const { return M; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -464,6 +481,10 @@ public:
 };
 #endif
 
+/// Check if a constant \p CI can be safely treated as having been extended
+/// from a narrower type with the given extension kind.
+bool canConstantBeExtended(const APInt *C, Type *NarrowType,
+                           TTI::PartialReductionExtendKind ExtKind);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

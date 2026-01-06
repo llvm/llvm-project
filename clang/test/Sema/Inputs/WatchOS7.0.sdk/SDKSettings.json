@@ -1,8 +1,17 @@
 {
   "DisplayName": "watchOS 7.0",
   "Version": "7.0",
+  "CanonicalName": "watchos7.0",
   "MaximumDeploymentTarget": "7.0.99",
   "PropertyConditionFallbackNames": [],
+  "SupportedTargets": {
+    "watchos": {
+      "Archs": ["arm64_32", "armv7k"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "watchos",
+      "LLVMTargetTripleEnvironment": ""
+    }
+  },
   "VersionMap": {
     "iOS_watchOS": {
       "10.0": "3.0",

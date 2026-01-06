@@ -92,18 +92,25 @@ static void computeMultiplierAndShiftTosaScale32(double scale,
 }
 
 /// Generates a quantized multiplier/shift from double.
-void mlir::tosa::computeMultiplierAndShift(double scale, int32_t &multiplier,
+bool mlir::tosa::computeMultiplierAndShift(double scale, int32_t &multiplier,
                                            int32_t &shift, int32_t scaleWidth) {
 
   switch (scaleWidth) {
   case 16:
     computeMultiplierAndShiftTosaScale16(scale, multiplier, shift);
-    return;
+
+    // In some cases computeMultiplierAndShiftTosaScale16 can return
+    // a value less then 2, which is not valid in the TOSA spec.
+    return (!(shift < 2));
   case 32:
     computeMultiplierAndShiftTosaScale32(scale, multiplier, shift);
-    return;
+
+    // In some cases computeMultiplierAndShiftTosaScale32 can return
+    // a value less then 2, which is not valid in the TOSA spec.
+    return (!(shift < 2));
   default:
     assert(0 && "Unsupported Tosa quantized_scale regime specified!");
+    return false;
   }
 }
 
@@ -387,4 +394,17 @@ mlir::tosa::buildQTypeAttrFromMinMax(OpBuilder builder, Type inputDtype,
   return TypeAttr::get(buildQTypeFromMinMax(builder, inputDtype, minAttr,
                                             maxAttr, quantBits, filterQuantDim,
                                             isSigned, narrowRange));
+}
+
+Type mlir::tosa::getStorageElementTypeFromQuantized(
+    quant::QuantizedType quantType) {
+  auto quantEty = quantType.getStorageType();
+  // StorageType doesn't capture the sign information
+  // Explicitly create unsigned type if needed
+  if (!quantType.isSigned()) {
+    quantEty = IntegerType::get(quantEty.getContext(),
+                                quantEty.getIntOrFloatBitWidth(),
+                                IntegerType::Unsigned);
+  }
+  return quantEty;
 }

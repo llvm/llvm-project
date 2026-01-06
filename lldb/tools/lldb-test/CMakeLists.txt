@@ -5,6 +5,8 @@ add_lldb_tool(lldb-test
   lldb-test.cpp
   SystemInitializerTest.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -18,9 +20,6 @@ add_lldb_tool(lldb-test
     lldbUtility
     lldbVersion
     ${LLDB_ALL_PLUGINS}
-
-  LINK_COMPONENTS
-    Support
   )
 
 if(Python3_RPATH)

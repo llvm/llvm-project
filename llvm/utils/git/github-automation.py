@@ -26,8 +26,8 @@ Hi!
 
 This issue may be a good introductory issue for people new to working on LLVM. If you would like to work on this issue, your first steps are:
 
-1. Check that no other contributor has already been assigned to this issue. If you believe that no one is actually working on it despite an assignment, ping the person. After one week without a response, the assignee may be changed.
-1. In the comments of this issue, request for it to be assigned to you, or just create a [pull request](https://github.com/llvm/llvm-project/pulls) after following the steps below. [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
+1. Check that no other contributor is working on this issue. If someone is assigned to the issue or claimed to be working on it, ping the person. After one week without a response, the assignee may be changed.
+1. Leave a comment indicating that you are working on the issue, or just create a [pull request](https://github.com/llvm/llvm-project/pulls) after following the steps below. [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
 1. Fix the issue locally.
 1. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
 1. Create a Git commit.
@@ -270,6 +270,7 @@ class CommitRequestGreeter:
         merged_by = {}
         reviewed_by = {}
         for i in self.repo.get_issues(creator=self.issue.user.login, state="all"):
+            print("Looking at issue:", i)
             issue_reviewed_by = set()
             try:
                 pr = i.as_pull_request()
@@ -292,14 +293,20 @@ class CommitRequestGreeter:
                         merged_by[merger] += 1
                     continue
 
-            except github.GithubException:
+            except github.GithubException as e:
+                print(e)
                 continue
 
+        total_prs_url = f"https://github.com/llvm/llvm-project/pulls?q=author%3A{self.issue.user.login}+is%3Apr"
+        merged_prs_url = total_prs_url + "+is%3Amerged"
         comment = f"""
             ### Activity Summary:
-            * [{total_prs} Pull Requests](https://github.com/llvm/llvm-project/pulls/{self.issue.user.login}) ({merged_prs} merged)
+            * [{total_prs} Pull Requests]({total_prs_url})
+            * [{merged_prs} Merged Pull Requests]({merged_prs_url})
             * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
             * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
+
+            Reviewers should clearly state their reasoning for accepting or rejecting this request, and finish with a clear statement such as \"I approve of this request\", \"LGTM\", or \"I do not approve of this request\". Please review the instructions for [obtaining commit access](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
         """
         self.issue.create_comment(textwrap.dedent(comment))
 
@@ -490,7 +497,7 @@ class ReleaseWorkflow:
         if pr.state != "closed":
             return
 
-        gh = github.Github(login_or_token=self.token)
+        gh = github.Github(auth=github.Auth.Token(self.token))
         query = """
             query($node_id: ID!) {
               node(id: $node_id) {

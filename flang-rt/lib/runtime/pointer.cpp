@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/pointer.h"
+#include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/environment.h"
@@ -86,9 +87,9 @@ void RTDEF(PointerAssociateLowerBounds)(Descriptor &pointer,
   }
 }
 
-void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
+static void RT_API_ATTRS PointerRemapping(Descriptor &pointer,
     const Descriptor &target, const Descriptor &bounds, const char *sourceFile,
-    int sourceLine) {
+    int sourceLine, bool isMonomorphic) {
   Terminator terminator{sourceFile, sourceLine};
   SubscriptValue byteStride{/*captured from first dimension*/};
   std::size_t boundElementBytes{bounds.ElementBytes()};
@@ -98,7 +99,7 @@ void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
   // the ranks may mismatch. Use target as a mold for initializing
   // the pointer descriptor.
   INTERNAL_CHECK(static_cast<std::size_t>(pointer.rank()) == boundsRank);
-  pointer.ApplyMold(target, boundsRank);
+  pointer.ApplyMold(target, boundsRank, isMonomorphic);
   pointer.set_base_addr(target.raw().base_addr);
   pointer.raw().attribute = CFI_attribute_pointer;
   for (unsigned j{0}; j < boundsRank; ++j) {
@@ -114,20 +115,37 @@ void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
       byteStride *= dim.Extent();
     }
   }
-  if (pointer.Elements() > target.Elements()) {
+  std::size_t pointerElements{pointer.Elements()};
+  std::size_t targetElements{target.Elements()};
+  if (pointerElements > targetElements) {
     terminator.Crash("PointerAssociateRemapping: too many elements in remapped "
                      "pointer (%zd > %zd)",
-        pointer.Elements(), target.Elements());
+        pointerElements, targetElements);
   }
 }
 
-RT_API_ATTRS void *AllocateValidatedPointerPayload(std::size_t byteSize) {
+void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
+    const Descriptor &target, const Descriptor &bounds, const char *sourceFile,
+    int sourceLine) {
+  PointerRemapping(
+      pointer, target, bounds, sourceFile, sourceLine, /*isMonomorphic=*/false);
+}
+void RTDEF(PointerAssociateRemappingMonomorphic)(Descriptor &pointer,
+    const Descriptor &target, const Descriptor &bounds, const char *sourceFile,
+    int sourceLine) {
+  PointerRemapping(
+      pointer, target, bounds, sourceFile, sourceLine, /*isMonomorphic=*/true);
+}
+
+RT_API_ATTRS void *AllocateValidatedPointerPayload(
+    std::size_t byteSize, int allocatorIdx) {
   // Add space for a footer to validate during deallocation.
   constexpr std::size_t align{sizeof(std::uintptr_t)};
   byteSize = ((byteSize + align - 1) / align) * align;
   std::size_t total{byteSize + sizeof(std::uintptr_t)};
-  void *p{std::malloc(total)};
-  if (p) {
+  AllocFct alloc{allocatorRegistry.GetAllocator(allocatorIdx)};
+  void *p{alloc(total, /*asyncObject=*/nullptr)};
+  if (p && allocatorIdx == 0) {
     // Fill the footer word with the XOR of the ones' complement of
     // the base address, which is a value that would be highly unlikely
     // to appear accidentally at the right spot.
@@ -139,7 +157,8 @@ RT_API_ATTRS void *AllocateValidatedPointerPayload(std::size_t byteSize) {
 }
 
 int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine,
+    MemcpyFct memcpyFct) {
   Terminator terminator{sourceFile, sourceLine};
   if (!pointer.IsPointer()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
@@ -151,7 +170,7 @@ int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
     elementBytes = pointer.raw().elem_len = 0;
   }
   std::size_t byteSize{pointer.Elements() * elementBytes};
-  void *p{AllocateValidatedPointerPayload(byteSize)};
+  void *p{AllocateValidatedPointerPayload(byteSize, pointer.GetAllocIdx())};
   if (!p) {
     return ReturnError(terminator, CFI_ERROR_MEM_ALLOCATION, errMsg, hasStat);
   }
@@ -161,7 +180,8 @@ int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
   if (const DescriptorAddendum * addendum{pointer.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noInitializationNeeded()) {
-        stat = Initialize(pointer, *derived, terminator, hasStat, errMsg);
+        stat = Initialize(
+            pointer, *derived, terminator, hasStat, errMsg, memcpyFct);
       }
     }
   }
@@ -211,6 +231,7 @@ int RTDEF(PointerDeallocate)(Descriptor &pointer, bool hasStat,
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
   if (executionEnvironment.checkPointerDeallocation &&
+      pointer.GetAllocIdx() == kDefaultAllocator &&
       !ValidatePointerPayload(pointer.raw())) {
     return ReturnError(terminator, StatBadPointerDeallocation, errMsg, hasStat);
   }
@@ -248,8 +269,10 @@ bool RTDEF(PointerIsAssociatedWith)(
   if (!target) {
     return pointer.raw().base_addr != nullptr;
   }
-  if (!target->raw().base_addr ||
-      (target->raw().type != CFI_type_struct && target->ElementBytes() == 0)) {
+  if (!target->raw().base_addr || target->ElementBytes() == 0 ||
+      target->Elements() == 0) {
+    // F2023, 16.9.20, p5, case (v)-(vi): don't associate pointers with
+    // targets that have zero sized storage sequence.
     return false;
   }
   int rank{pointer.rank()};

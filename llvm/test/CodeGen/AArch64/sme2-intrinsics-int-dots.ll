@@ -48,13 +48,12 @@ entry:
 define void @udot_multi_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
 ; CHECK-LABEL: udot_multi_za32_u16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
@@ -138,13 +137,12 @@ define void @udot_multi_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @udot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
 ; CHECK-LABEL: udot_multi_za32_u8_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
@@ -180,13 +178,12 @@ define void @udot_multi_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @udot_multi_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
 ; CHECK-LABEL: udot_multi_za64_u16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
@@ -244,13 +241,12 @@ entry:
 define void @usdot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
 ; CHECK-LABEL: usdot_multi_za32_u8_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
@@ -358,13 +354,12 @@ entry:
 define void @sdot_multi_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
 ; CHECK-LABEL: sdot_multi_za32_u16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
@@ -448,13 +443,12 @@ define void @sdot_multi_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @sdot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
 ; CHECK-LABEL: sdot_multi_za32_u8_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
@@ -513,13 +507,12 @@ entry:
 define void @sdot_multi_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
 ; CHECK-LABEL: sdot_multi_za64_u16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x1]
 ; CHECK-NEXT:    mov z7.d, z4.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
@@ -604,7 +597,7 @@ define void @udot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 8
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    add x9, x0, x1
 ; CHECK-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
@@ -616,7 +609,7 @@ define void @udot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 8
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z9.h, z10.h }, z0.h
 ; CHECK-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -639,7 +632,7 @@ define void @udot_single_za32_u16_vg1x2_x4load_x2tuple(ptr %ptr, i64 %stride, <v
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-5
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    add x9, x0, x1
 ; CHECK-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
@@ -657,7 +650,7 @@ define void @udot_single_za32_u16_vg1x2_x4load_x2tuple(ptr %ptr, i64 %stride, <v
 ; CHECK-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #4, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #5
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -700,7 +693,7 @@ define void @udot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 8
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    add x9, x1, x1, lsl #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x10, x0, x1
@@ -729,7 +722,7 @@ define void @udot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 8
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -837,7 +830,7 @@ define void @usdot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
@@ -848,7 +841,7 @@ define void @usdot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z9.b, z10.b }, z0.b
 ; CHECK-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -885,7 +878,7 @@ define void @usdot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
@@ -913,7 +906,7 @@ define void @usdot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -971,7 +964,7 @@ define void @sdot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 8
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    add x9, x0, x1
 ; CHECK-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
@@ -983,7 +976,7 @@ define void @sdot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 8
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z9.h, z10.h }, z0.h
 ; CHECK-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1020,7 +1013,7 @@ define void @sdot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 8
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    add x9, x1, x1, lsl #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x10, x0, x1
@@ -1049,7 +1042,7 @@ define void @sdot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 8
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1157,7 +1150,7 @@ define void @sudot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
@@ -1168,7 +1161,7 @@ define void @sudot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z9.b, z10.b }, z0.b
 ; CHECK-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1205,7 +1198,7 @@ define void @sudot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
@@ -1233,7 +1226,7 @@ define void @sudot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1366,11 +1359,10 @@ define void @udot_form_2x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z11, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z10, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    ld1b { z2.b, z10.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z3.b, z11.b }, pn8/z, [x0, x1]
@@ -1378,8 +1370,8 @@ define void @udot_form_2x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z10.b, z11.b }, z0.b[0]
 ; CHECK-NEXT:    ldr z11, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1454,11 +1446,10 @@ define void @udot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x10, x9, x1
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
@@ -1483,8 +1474,8 @@ define void @udot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1529,7 +1520,7 @@ define void @udot_single_za32_u16_vg1x4_x2load_x4tuple(ptr %ptr, i64 %stride, <v
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-5
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z12, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
@@ -1547,7 +1538,7 @@ define void @udot_single_za32_u16_vg1x4_x2load_x4tuple(ptr %ptr, i64 %stride, <v
 ; CHECK-NEXT:    ldr z12, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #4, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #5
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1672,11 +1663,10 @@ define void @usdot_form_2x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z11, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z10, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    ld1b { z2.b, z10.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z3.b, z11.b }, pn8/z, [x0, x1]
@@ -1684,8 +1674,8 @@ define void @usdot_form_2x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z10.b, z11.b }, z0.b[0]
 ; CHECK-NEXT:    ldr z11, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1760,11 +1750,10 @@ define void @usdot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x10, x9, x1
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
@@ -1789,8 +1778,8 @@ define void @usdot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -1928,11 +1917,10 @@ define void @sdot_form_2x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z11, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z10, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    ld1b { z2.b, z10.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z3.b, z11.b }, pn8/z, [x0, x1]
@@ -1940,8 +1928,8 @@ define void @sdot_form_2x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z10.b, z11.b }, z0.b[0]
 ; CHECK-NEXT:    ldr z11, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -2016,11 +2004,10 @@ define void @sdot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x10, x9, x1
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
@@ -2045,8 +2032,8 @@ define void @sdot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -2184,11 +2171,10 @@ define void @sudot_form_2x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z11, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z10, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    ld1b { z2.b, z10.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z3.b, z11.b }, pn8/z, [x0, x1]
@@ -2196,8 +2182,8 @@ define void @sudot_form_2x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z10.b, z11.b }, z0.b[0]
 ; CHECK-NEXT:    ldr z11, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -2272,11 +2258,10 @@ define void @sudot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x10, x9, x1
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
@@ -2301,8 +2286,8 @@ define void @sudot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

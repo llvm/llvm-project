@@ -12,10 +12,8 @@
 #include "InputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "UnwindInfoSection.h"
 
 #include "lld/Common/CommonLinkerContext.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -175,14 +173,37 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       // a valid offset in the literal section.
       return isecA->getOffset(valueA) == isecB->getOffset(valueB) &&
              ra.addend == rb.addend;
-    else {
-      assert(valueA == 0 && valueB == 0);
-      // For section relocs, we compare the content at the section offset.
-      return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
-    }
+    assert(valueA == 0 && valueB == 0);
+    // For section relocs, we compare the content at the section offset.
+    return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
   };
-  return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
-                    f);
+  if (!llvm::equal(ia->relocs, ib->relocs, f))
+    return false;
+
+  // Check unwind info structural compatibility: if there are symbols with
+  // associated unwind info, check that both sections have compatible symbol
+  // layouts. For simplicity, we only attempt folding when all symbols are at
+  // offset zero within the section (which is typically the case with
+  // .subsections_via_symbols.)
+  auto hasUnwind = [](Defined *d) { return d->unwindEntry() != nullptr; };
+  const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
+  const auto *itB = llvm::find_if(ib->symbols, hasUnwind);
+  if (itA == ia->symbols.end())
+    return itB == ib->symbols.end();
+  if (itB == ib->symbols.end())
+    return false;
+  const Defined *da = *itA;
+  const Defined *db = *itB;
+  if (da->value != 0 || db->value != 0)
+    return false;
+  auto isZero = [](Defined *d) { return d->value == 0; };
+  // Since symbols are stored in order of value, and since we have already
+  // checked that da/db have value zero, we just need to do the isZero check on
+  // the subsequent symbols.
+  return std::find_if_not(std::next(itA), ia->symbols.end(), isZero) ==
+             ia->symbols.end() &&
+         std::find_if_not(std::next(itB), ib->symbols.end(), isZero) ==
+             ib->symbols.end();
 }
 
 // Compare the "moving" parts of two ConcatInputSections -- i.e. everything not
@@ -219,31 +240,19 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
     }
     return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
   };
-  if (!std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(), f))
+  if (!llvm::equal(ia->relocs, ib->relocs, f))
     return false;
 
-  // If there are symbols with associated unwind info, check that the unwind
-  // info matches. For simplicity, we only handle the case where there are only
-  // symbols at offset zero within the section (which is typically the case with
-  // .subsections_via_symbols.)
+  // Compare unwind info equivalence classes.
   auto hasUnwind = [](Defined *d) { return d->unwindEntry() != nullptr; };
   const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
-  const auto *itB = llvm::find_if(ib->symbols, hasUnwind);
   if (itA == ia->symbols.end())
-    return itB == ib->symbols.end();
-  if (itB == ib->symbols.end())
-    return false;
+    return true;
   const Defined *da = *itA;
-  const Defined *db = *itB;
-  if (da->unwindEntry()->icfEqClass[icfPass % 2] !=
-          db->unwindEntry()->icfEqClass[icfPass % 2] ||
-      da->value != 0 || db->value != 0)
-    return false;
-  auto isZero = [](Defined *d) { return d->value == 0; };
-  return std::find_if_not(std::next(itA), ia->symbols.end(), isZero) ==
-             ia->symbols.end() &&
-         std::find_if_not(std::next(itB), ib->symbols.end(), isZero) ==
-             ib->symbols.end();
+  // equalsConstant() guarantees that both sections have unwind info.
+  const Defined *db = *llvm::find_if(ib->symbols, hasUnwind);
+  return da->unwindEntry()->icfEqClass[icfPass % 2] ==
+         db->unwindEntry()->icfEqClass[icfPass % 2];
 }
 
 // Find the first InputSection after BEGIN whose equivalence class differs
@@ -297,15 +306,24 @@ static Symbol *getThunkTargetSymbol(ConcatInputSection *isec) {
 // direct branch thunk rather than containing a full copy of the actual function
 // body.
 void ICF::applySafeThunksToRange(size_t begin, size_t end) {
-  // If the functions we're dealing with are smaller than the thunk size, then
-  // just leave them all as-is - creating thunks would be a net loss.
-  uint32_t thunkSize = target->getICFSafeThunkSize();
-  if (icfInputs[begin]->data.size() <= thunkSize)
-    return;
-
   // When creating a unique ICF thunk, use the first section as the section that
   // all thunks will branch to.
   ConcatInputSection *masterIsec = icfInputs[begin];
+
+  // If the first section is not address significant, sorting guarantees that
+  // there are no address significant functions. So we can skip this range.
+  if (!masterIsec->keepUnique)
+    return;
+
+  // Skip anything that is not a code section.
+  if (!isCodeSection(masterIsec))
+    return;
+
+  // If the functions we're dealing with are smaller than the thunk size, then
+  // just leave them all as-is - creating thunks would be a net loss.
+  uint32_t thunkSize = target->getICFSafeThunkSize();
+  if (masterIsec->data.size() <= thunkSize)
+    return;
 
   // Get the symbol that all thunks will branch to.
   Symbol *masterSym = getThunkTargetSymbol(masterIsec);
@@ -442,7 +460,7 @@ void ICF::run() {
 
     ConcatInputSection *beginIsec = icfInputs[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      // Skip keepUnique inputs when using safe_thunks (already handeled above)
+      // Skip keepUnique inputs when using safe_thunks (already handled above)
       if (useSafeThunks && icfInputs[i]->keepUnique) {
         // Assert keepUnique sections are either small or replaced with thunks.
         assert(!icfInputs[i]->live ||

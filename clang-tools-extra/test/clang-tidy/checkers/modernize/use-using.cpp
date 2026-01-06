@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -I %S/Inputs/use-using/
+// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -isystem %S/Inputs/use-using/
 
 typedef int Type;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
@@ -265,7 +265,7 @@ class Variadic {};
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >;
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t, *Variadic_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -319,8 +319,8 @@ typedef void (*ISSUE_65055_1)(int);
 typedef bool (*ISSUE_65055_2)(int);
 // CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: {{^}}using ISSUE_65055_1 = void (*)(int);{{$}}
-// CHECK-FIXES: {{^}}using ISSUE_65055_2 = bool (*)(int);{{$}}
+// CHECK-FIXES: using ISSUE_65055_1 = void (*)(int);
+// CHECK-FIXES: using ISSUE_65055_2 = bool (*)(int);
 
 typedef class ISSUE_67529_1 *ISSUE_67529;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -436,4 +436,28 @@ namespace GH97009 {
   typedef bool (*Function)(PointType, PointType);
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
 // CHECK-FIXES: using Function = bool (*)(PointType, PointType);
+}
+
+namespace GH173732 {
+  // reference to array
+  typedef char (&refarray)[2];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using refarray = char (&)[2];
+  typedef char &ref;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using ref = char &;
+
+
+  // pointer to array
+  typedef char (*ptrarray)[2];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using ptrarray = char (*)[2];
+  typedef char *ptr;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using ptr = char *;
+
+  // multiple in one typedef
+  typedef char (&refArray)[2], (*ptrArray)[2];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-MESSAGES: :[[@LINE-2]]:29: warning: use 'using' instead of 'typedef' [modernize-use-using]
 }

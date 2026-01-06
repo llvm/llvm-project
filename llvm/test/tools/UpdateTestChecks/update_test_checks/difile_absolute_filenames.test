@@ -1,0 +1,7 @@
+## Test that update_test_checks.py is not sensitive to absolute paths in
+## DIFile's filename field.
+# RUN: cp -f %S/Inputs/difile_absolute_filenames.ll %t.ll && %update_test_checks %t.ll --check-globals
+# RUN: diff -u %t.ll %S/Inputs/difile_absolute_filenames.ll.expected
+## Check that running the script again does not change the result:
+# RUN: %update_test_checks %t.ll --check-globals
+# RUN: diff -u %t.ll %S/Inputs/difile_absolute_filenames.ll.expected

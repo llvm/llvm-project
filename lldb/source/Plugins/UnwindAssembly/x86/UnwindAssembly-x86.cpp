@@ -73,7 +73,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
 
   int wordsize = 8;
   ProcessSP process_sp(thread.GetProcess());
-  if (process_sp.get() == nullptr)
+  if (!process_sp || !first_row || !last_row)
     return false;
 
   wordsize = process_sp->GetTarget().GetArchitecture().GetAddressByteSize();
@@ -193,9 +193,11 @@ bool UnwindAssembly_x86::GetFastUnwindPlan(AddressRange &func, Thread &thread,
               0 ||
           memcmp(opcode_data.data(), x86_64_push_mov,
                  sizeof(x86_64_push_mov)) == 0) {
-        ABISP abi_sp = process_sp->GetABI();
-        if (abi_sp) {
-          return abi_sp->CreateDefaultUnwindPlan(unwind_plan);
+        if (ABISP abi_sp = process_sp->GetABI()) {
+          if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
+            unwind_plan = std::move(*plan_sp);
+            return true;
+          }
         }
       }
     }

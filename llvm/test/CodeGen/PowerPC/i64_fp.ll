@@ -1,17 +1,17 @@
 ; fcfid and fctid should be generated when the 64bit feature is enabled, but not
 ; otherwise.
 
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=+64bit | \
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=+64bit-support | \
 ; RUN:   grep fcfid
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=+64bit | \
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=+64bit-support | \
 ; RUN:   grep fctidz
 ; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mcpu=g5 | \
 ; RUN:   grep fcfid
 ; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mcpu=g5 | \
 ; RUN:   grep fctidz
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=-64bit | \
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=-64bit-support | \
 ; RUN:   not grep fcfid
-; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=-64bit | \
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mattr=-64bit-support | \
 ; RUN:   not grep fctidz
 ; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -mtriple=ppc32-- -mcpu=g4 | \
 ; RUN:   not grep fcfid
