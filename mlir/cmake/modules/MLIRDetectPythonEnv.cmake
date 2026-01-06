@@ -1,5 +1,6 @@
 # Macros and functions related to detecting details of the Python environment.
 
+set(MLIR_MINIMUM_PYTHON_VERSION 3.10)
 # Finds and configures python packages needed to build MLIR Python bindings.
 macro(mlir_configure_python_dev_packages)
   if(NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES)
@@ -8,7 +9,7 @@ macro(mlir_configure_python_dev_packages)
       # package. This seems to work around cmake bugs searching only for
       # Development.Module in some environments. However, in other environments
       # it may interfere with the subsequent search for Development.Module.
-      find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
+      find_package(Python3 ${MLIR_MINIMUM_PYTHON_VERSION}
         COMPONENTS Interpreter Development)
     endif()
 
@@ -19,7 +20,7 @@ macro(mlir_configure_python_dev_packages)
     # See https://pybind11.readthedocs.io/en/stable/compiling.html#findpython-mode
     set(_python_development_component Development.Module)
 
-    find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
+    find_package(Python3 ${MLIR_MINIMUM_PYTHON_VERSION}
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
 
     # We look for both Python3 and Python, the search algorithm should be
@@ -39,7 +40,7 @@ macro(mlir_configure_python_dev_packages)
 
     # It's a little silly to detect Python a second time, but nanobind's cmake
     # code looks for Python_ not Python3_.
-    find_package(Python ${LLVM_MINIMUM_PYTHON_VERSION}
+    find_package(Python ${MLIR_MINIMUM_PYTHON_VERSION}
       COMPONENTS Interpreter ${_python_development_component} REQUIRED)
 
     unset(_python_development_component)

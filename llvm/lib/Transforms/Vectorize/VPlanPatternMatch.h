@@ -335,7 +335,7 @@ template <unsigned Opcode, typename... OpTys>
 using AllRecipe_match =
     Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ false,
                  VPWidenRecipe, VPReplicateRecipe, VPWidenCastRecipe,
-                 VPInstruction, VPWidenSelectRecipe>;
+                 VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_commutative_match =
@@ -372,6 +372,17 @@ template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::BranchOnCond, Op0_t>
 m_BranchOnCond(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::BranchOnCond>(Op0);
+}
+
+inline VPInstruction_match<VPInstruction::BranchOnTwoConds>
+m_BranchOnTwoConds() {
+  return m_VPInstruction<VPInstruction::BranchOnTwoConds>();
+}
+
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::BranchOnTwoConds, Op0_t, Op1_t>
+m_BranchOnTwoConds(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::BranchOnTwoConds>(Op0, Op1);
 }
 
 template <typename Op0_t>

@@ -70,6 +70,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTLZ:        Res = PromoteIntRes_CTLZ(N); break;
+  case ISD::CTLS:        Res = PromoteIntRes_CTLS(N); break;
   case ISD::PARITY:
   case ISD::VP_CTPOP:
   case ISD::CTPOP:       Res = PromoteIntRes_CTPOP_PARITY(N); break;
@@ -345,6 +346,12 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FSHL:
   case ISD::VP_FSHR:
     Res = PromoteIntRes_VPFunnelShift(N);
+    break;
+
+  case ISD::CLMUL:
+  case ISD::CLMULH:
+  case ISD::CLMULR:
+    Res = PromoteIntRes_CLMUL(N);
     break;
 
   case ISD::IS_FPCLASS:
@@ -770,6 +777,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
     return DAG.getNode(CtlzOpcode, dl, NVT, Op, Mask, EVL);
   }
   llvm_unreachable("Invalid CTLZ Opcode");
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_CTLS(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  SDLoc dl(N);
+
+  SDValue ExtractLeadingBits = DAG.getConstant(
+      NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits(), dl, NVT);
+
+  SDValue Op = SExtPromotedInteger(N->getOperand(0));
+  return DAG.getNode(ISD::SUB, dl, NVT, DAG.getNode(ISD::CTLS, dl, NVT, Op),
+                     ExtractLeadingBits);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CTPOP_PARITY(SDNode *N) {
@@ -1698,6 +1718,38 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VPFunnelShift(SDNode *N) {
     Amt = DAG.getNode(ISD::VP_ADD, DL, AmtVT, Amt, ShiftOffset, Mask, EVL);
 
   return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amt, Mask, EVL);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
+  unsigned Opcode = N->getOpcode();
+  SDValue X = ZExtPromotedInteger(N->getOperand(0));
+  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
+
+  SDLoc DL(N);
+  EVT OldVT = N->getOperand(0).getValueType();
+  EVT VT = X.getValueType();
+
+  if (Opcode == ISD::CLMUL)
+    return DAG.getNode(ISD::CLMUL, DL, VT, X, Y);
+
+  unsigned OldBits = OldVT.getScalarSizeInBits();
+  unsigned NewBits = VT.getScalarSizeInBits();
+  if (NewBits < 2 * OldBits) {
+    SDValue Clmul = DAG.getNode(ISD::CLMUL, DL, VT, X, Y);
+    unsigned ShAmt = Opcode == ISD::CLMULH ? OldBits : OldBits - 1;
+    SDValue Lo = DAG.getNode(ISD::SRL, DL, VT, Clmul,
+                             DAG.getShiftAmountConstant(ShAmt, VT, DL));
+    SDValue Clmulh = DAG.getNode(ISD::CLMULH, DL, VT, X, Y);
+    ShAmt = Opcode == ISD::CLMULH ? NewBits - OldBits : NewBits - OldBits + 1;
+    SDValue Hi = DAG.getNode(ISD::SHL, DL, VT, Clmulh,
+                             DAG.getShiftAmountConstant(ShAmt, VT, DL));
+    return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
+  }
+
+  SDValue Clmul = DAG.getNode(ISD::CLMUL, DL, VT, X, Y);
+  unsigned ShAmt = Opcode == ISD::CLMULH ? OldBits : OldBits - 1;
+  return DAG.getNode(ISD::SRL, DL, VT, Clmul,
+                     DAG.getShiftAmountConstant(ShAmt, VT, DL));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
@@ -3159,6 +3211,12 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FSHL:
   case ISD::FSHR:
     ExpandIntRes_FunnelShift(N, Lo, Hi);
+    break;
+
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
+    ExpandIntRes_CLMUL(N, Lo, Hi);
     break;
 
   case ISD::VSCALE:
@@ -5393,6 +5451,31 @@ void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N, SDValue &Lo,
   SDValue Select3 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In3, In4);
   Lo = DAG.getNode(Opc, DL, HalfVT, Select2, Select1, NewShAmt);
   Hi = DAG.getNode(Opc, DL, HalfVT, Select3, Select2, NewShAmt);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  if (N->getOpcode() != ISD::CLMUL) {
+    SDValue Res = TLI.expandCLMUL(N, DAG);
+    return SplitInteger(Res, Lo, Hi);
+  }
+
+  SDValue LL, LH, RL, RH;
+  GetExpandedInteger(N->getOperand(0), LL, LH);
+  GetExpandedInteger(N->getOperand(1), RL, RH);
+  EVT HalfVT = LL.getValueType();
+  SDLoc DL(N);
+
+  // The low bits are a direct CLMUL of the the low bits.
+  Lo = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RL);
+
+  // We compute two Hi-Lo cross-products, XOR them, and XOR it with the overflow
+  // of the CLMUL of the low bits (given by CLMULH of the low bits) to yield the
+  // final high bits.
+  SDValue LoH = DAG.getNode(ISD::CLMULH, DL, HalfVT, LL, RL);
+  SDValue HiLoCross1 = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RH);
+  SDValue HiLoCross2 = DAG.getNode(ISD::CLMUL, DL, HalfVT, LH, RL);
+  SDValue HiLoCross = DAG.getNode(ISD::XOR, DL, HalfVT, HiLoCross1, HiLoCross2);
+  Hi = DAG.getNode(ISD::XOR, DL, HalfVT, LoH, HiLoCross);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
