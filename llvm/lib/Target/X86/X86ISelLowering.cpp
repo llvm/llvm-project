@@ -52968,24 +52968,18 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   // iff the upper elements of the non-shifted arg are zero.
   // KUNPCK require 16+ bool vector elements.
   if (N0.getOpcode() == X86ISD::KSHIFTL || N1.getOpcode() == X86ISD::KSHIFTL) {
+    using namespace SDPatternMatch;
     unsigned NumElts = VT.getVectorNumElements();
     unsigned HalfElts = NumElts / 2;
-    APInt UpperElts = APInt::getHighBitsSet(NumElts, HalfElts);
-    if (NumElts >= 16 && N1.getOpcode() == X86ISD::KSHIFTL &&
-        N1.getConstantOperandAPInt(1) == HalfElts &&
-        DAG.MaskedVectorIsZero(N0, UpperElts)) {
-      return DAG.getNode(
-          ISD::CONCAT_VECTORS, dl, VT,
-          extractSubVector(N0, 0, DAG, dl, HalfElts),
-          extractSubVector(N1.getOperand(0), 0, DAG, dl, HalfElts));
-    }
-    if (NumElts >= 16 && N0.getOpcode() == X86ISD::KSHIFTL &&
-        N0.getConstantOperandAPInt(1) == HalfElts &&
-        DAG.MaskedVectorIsZero(N1, UpperElts)) {
-      return DAG.getNode(
-          ISD::CONCAT_VECTORS, dl, VT,
-          extractSubVector(N1, 0, DAG, dl, HalfElts),
-          extractSubVector(N0.getOperand(0), 0, DAG, dl, HalfElts));
+    SDValue X, Y;
+    if (sd_match(N, m_Or(m_Value(X), m_BinOp(X86ISD::KSHIFTL, m_Value(Y),
+                                             m_SpecificInt(HalfElts))))) {
+      APInt UpperElts = APInt::getHighBitsSet(NumElts, HalfElts);
+      if (NumElts >= 16 && DAG.MaskedVectorIsZero(X, UpperElts)) {
+        return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
+                           extractSubVector(X, 0, DAG, dl, HalfElts),
+                           extractSubVector(Y, 0, DAG, dl, HalfElts));
+      }
     }
   }
 
