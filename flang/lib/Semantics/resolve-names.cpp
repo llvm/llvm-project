@@ -3517,6 +3517,14 @@ void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
           "'%s' is not an object and may not have a CUDA data attribute"_err_en_US,
           symbol.name());
     }
+  } else if (context().languageFeatures().IsEnabled(
+                 common::LanguageFeature::CudaManaged)) {
+    // -gpu=managed: implicitly treat allocatable arrays as managed
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
+        object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+      }
+    }
   }
 }
 
