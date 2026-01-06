@@ -36,7 +36,7 @@ module  {
 module  {
   cir.func @extract_member_invalid_for_union() {
     %0 = cir.const #cir.const_record<{#cir.int<1> : !u32i}> : !rec_U
-	// expected-error @below {{cir.extract_member currently does not work on unions}}
+	// expected-error @below {{cir.extract_member currently does not support unions}}
     %1 = cir.extract_member %0[2] : !rec_U -> !u32i
     cir.return
   }
