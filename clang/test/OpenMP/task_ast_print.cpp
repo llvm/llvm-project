@@ -181,6 +181,21 @@ enum class TaskType {
   TypeB,
   TypeC
 };
+
+template <typename T>
+class TransparentTemplate {
+public:
+  void TestTaskImport() {
+    #pragma omp task transparent(omp_import)
+    {
+      T temp;
+    }
+  }
+  void TestTaskLoopImpex() {
+    #pragma omp taskloop transparent(omp_impex)
+    for (int i = 0; i < 10; ++i) {}
+  }
+};
 #endif
 
 int main(int argc, char **argv) {
@@ -253,6 +268,11 @@ int main(int argc, char **argv) {
   foo();
 #endif
 
+  // CHECK60: #pragma omp taskloop transparent(C)
+  // CHECK60: #pragma omp taskloop transparent(1)
+  // CHECK60: #pragma omp task transparent(omp_import)
+  // CHECK60: #pragma omp taskloop transparent(omp_impex)
+  // CHECK60: #pragma omp task transparent(omp_import)
   // CHECK60: #pragma omp task threadset(omp_pool)
   // CHECK60: #pragma omp task threadset(omp_team)
   // CHECK60-NEXT: foo();
@@ -271,6 +291,14 @@ int main(int argc, char **argv) {
 
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
+
+#ifdef OMP60
+void TestTaskTransparent() {
+  TransparentTemplate<int> obj;
+  obj.TestTaskImport();
+  obj.TestTaskLoopImpex();
+}
+#endif
 
 extern template int S<int>::TS;
 extern template long S<long>::TS;

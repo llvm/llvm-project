@@ -16860,6 +16860,12 @@ isNonNegativeIntegerValue(Expr *&ValExpr, Sema &SemaRef, OpenMPClauseKind CKind,
             << ValExpr->getSourceRange();
         return false;
       }
+      if (CKind == OMPC_transparent) {
+        if (Result->isNegative() ||
+            Result >=
+                static_cast<int64_t>(SemaOpenMP::OpenMPImpexType::OMP_Export))
+          SemaRef.Diag(Loc, diag::err_omp_transparent_invalid_value);
+      }
     }
     if (!BuildCapture)
       return true;
@@ -16996,10 +17002,11 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
   if (CKind == OMPC_transparent) {
     OpenMPImpexType ResultType =
         static_cast<OpenMPImpexType>(Result.getExtValue());
-    if (Result.isNegative() || (ResultType != OpenMPImpexType::OMP_Export &&
+    if (Result.isNegative() || (ResultType != OpenMPImpexType::OMP_NotImpex &&
                                 ResultType != OpenMPImpexType::OMP_Impex &&
-                                ResultType != OpenMPImpexType::OMP_Export &&
-                                ResultType != OpenMPImpexType::OMP_NotImpex))
+                                ResultType != OpenMPImpexType::OMP_Import &&
+                                ResultType != OpenMPImpexType::OMP_Export) ||
+        Result >= static_cast<int64_t>(OpenMPImpexType::OMP_Export))
       Diag(E->getExprLoc(), diag::err_omp_transparent_invalid_value);
   }
   return ICE;
@@ -17437,7 +17444,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
       OMPThreadsetClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
-static OMPClause *CreateTransparentClause(Sema &SemaRef, ASTContext &Ctx,
+static OMPClause *createTransparentClause(Sema &SemaRef, ASTContext &Ctx,
                                           Expr *ImpexTypeArg,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
@@ -17466,21 +17473,23 @@ OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
           << TypedefName;
       return nullptr;
     }
-    return CreateTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
+    return createTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
                                    StartLoc, LParenLoc, EndLoc);
   }
 
   if (Ty->isEnumeralType())
-    return CreateTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
+    return createTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
                                    StartLoc, LParenLoc, EndLoc);
 
-  ExprResult ImpexVal =
-      VerifyPositiveIntegerConstantInClause(ImpexTypeArg, OMPC_transparent);
-  if (ImpexVal.isInvalid())
-    return nullptr;
-
-  return new (getASTContext())
-      OMPTransparentClause(ImpexVal.get(), StartLoc, LParenLoc, EndLoc);
+  if (Ty->isIntegerType()) {
+      if (isNonNegativeIntegerValue(ImpexTypeArg, SemaRef, OMPC_transparent,
+                                  /*StrictlyPositive=*/false)) {
+      return createTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
+                                     StartLoc, LParenLoc, EndLoc);
+      }
+  }
+  SemaRef.Diag(StartLoc, diag::err_omp_transparent_invalid_type)
+      << Ty.getAsString();
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,

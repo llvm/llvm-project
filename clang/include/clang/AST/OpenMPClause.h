@@ -1544,7 +1544,7 @@ public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Returns argument of the clause.
-  Expr *getImpexType() const { return cast<Expr>(ImpexType); }
+  Expr *getImpexType() const { return ImpexType; }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(&ImpexType),
