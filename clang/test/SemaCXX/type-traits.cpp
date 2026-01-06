@@ -4003,6 +4003,10 @@ namespace is_trivially_equality_comparable {
 struct ForwardDeclared; // expected-note {{forward declaration of 'is_trivially_equality_comparable::ForwardDeclared'}}
 static_assert(!__is_trivially_equality_comparable(ForwardDeclared)); // expected-error {{incomplete type 'ForwardDeclared' used in type trait expression}}
 
+enum Byte : unsigned char {};
+enum ByteWithOpEq : unsigned char {};
+bool operator==(ByteWithOpEq, ByteWithOpEq);
+
 enum Enum {};
 enum EnumWithOpEq {};
 bool operator==(EnumWithOpEq, EnumWithOpEq);
@@ -4014,6 +4018,8 @@ static_assert(!__is_trivially_equality_comparable(int[3]));
 static_assert(!__is_trivially_equality_comparable(float));
 static_assert(!__is_trivially_equality_comparable(double));
 static_assert(!__is_trivially_equality_comparable(long double));
+static_assert(__is_trivially_equality_comparable(Byte));
+static_assert(!__is_trivially_equality_comparable(ByteWithOpEq));
 static_assert(__is_trivially_equality_comparable(Enum));
 static_assert(!__is_trivially_equality_comparable(EnumWithOpEq));
 
