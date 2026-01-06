@@ -554,7 +554,7 @@ define void @test_2xi64_mul_add_xor_mismatched_opcodes2(ptr noalias %data, ptr n
 ; VF2-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[TMP3]], splat (i64 2)
 ; VF2-NEXT:    [[TMP5:%.*]] = xor <2 x i64> splat (i64 4), [[TMP4]]
 ; VF2-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[STRIDED_VEC1]]
-; VF2-NEXT:    [[TMP7:%.*]] = mul <2 x i64> [[TMP6]], splat (i64 2)
+; VF2-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP6]], splat (i64 1)
 ; VF2-NEXT:    [[TMP8:%.*]] = xor <2 x i64> splat (i64 4), [[TMP7]]
 ; VF2-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
