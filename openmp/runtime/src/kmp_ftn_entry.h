@@ -1569,7 +1569,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid)
 int FTN_STDCALL
 KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid) {
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
-  return omp_invalid_device;
+  return -2; // omp_invalid_device, see definition in omp.h
 #else
   int (*fptr)(const char *);
   if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_device_from_uid")))

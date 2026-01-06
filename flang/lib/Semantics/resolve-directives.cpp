@@ -932,12 +932,6 @@ public:
                         ompFlag.value_or(Symbol::Flag::OmpMapStorage));
                     AddToContextObjectWithDSA(*name->symbol,
                         ompFlag.value_or(Symbol::Flag::OmpMapStorage));
-                    if (semantics::IsAssumedSizeArray(*name->symbol)) {
-                      context_.Say(designator.source,
-                          "Assumed-size whole arrays may not appear on the %s "
-                          "clause"_err_en_US,
-                          "MAP");
-                    }
                   }
                 }
               },
@@ -2477,7 +2471,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
-  PushContext(beginSpec.DirName().source, beginSpec.DirName().v);
+  PushContext(beginSpec.DirName().source, beginSpec.DirId());
   GetContext().withinConstruct = true;
   return true;
 }

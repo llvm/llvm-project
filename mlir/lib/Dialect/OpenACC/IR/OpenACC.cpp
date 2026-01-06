@@ -390,6 +390,61 @@ void OpenACCDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// RegionBranchOpInterface for acc.kernels / acc.parallel / acc.serial /
+// acc.kernel_environment / acc.data / acc.host_data
+//===----------------------------------------------------------------------===//
+
+/// Generic helper for single-region OpenACC ops that execute their body once
+/// and then return to the parent operation with their results (if any).
+static void
+getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
+                                  RegionBranchPoint point,
+                                  SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&region));
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(op, op->getResults()));
+}
+
+void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void ParallelOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void SerialOp::getSuccessorRegions(RegionBranchPoint point,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void KernelEnvironmentOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void DataOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+void HostDataOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
+                                    regions);
+}
+
+//===----------------------------------------------------------------------===//
 // device_type support helpers
 //===----------------------------------------------------------------------===//
 
@@ -4462,6 +4517,45 @@ void RoutineOp::addGang(MLIRContext *context,
 
   setGangDimAttr(mlir::ArrayAttr::get(context, dimValues));
   setGangDimDeviceTypeAttr(mlir::ArrayAttr::get(context, deviceTypes));
+}
+
+void RoutineOp::addBindStrName(MLIRContext *context,
+                               llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                               mlir::StringAttr val) {
+  unsigned before = getBindStrNameDeviceTypeAttr()
+                        ? getBindStrNameDeviceTypeAttr().size()
+                        : 0;
+
+  setBindStrNameDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getBindStrNameDeviceTypeAttr(), effectiveDeviceTypes));
+  unsigned after = getBindStrNameDeviceTypeAttr().size();
+
+  llvm::SmallVector<mlir::Attribute> vals;
+  if (getBindStrNameAttr())
+    llvm::copy(getBindStrNameAttr(), std::back_inserter(vals));
+  for (unsigned i = 0; i < after - before; ++i)
+    vals.push_back(val);
+
+  setBindStrNameAttr(mlir::ArrayAttr::get(context, vals));
+}
+
+void RoutineOp::addBindIDName(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+                              mlir::SymbolRefAttr val) {
+  unsigned before =
+      getBindIdNameDeviceTypeAttr() ? getBindIdNameDeviceTypeAttr().size() : 0;
+
+  setBindIdNameDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getBindIdNameDeviceTypeAttr(), effectiveDeviceTypes));
+  unsigned after = getBindIdNameDeviceTypeAttr().size();
+
+  llvm::SmallVector<mlir::Attribute> vals;
+  if (getBindIdNameAttr())
+    llvm::copy(getBindIdNameAttr(), std::back_inserter(vals));
+  for (unsigned i = 0; i < after - before; ++i)
+    vals.push_back(val);
+
+  setBindIdNameAttr(mlir::ArrayAttr::get(context, vals));
 }
 
 //===----------------------------------------------------------------------===//

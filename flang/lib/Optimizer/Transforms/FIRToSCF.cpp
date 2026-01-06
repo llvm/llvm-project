@@ -153,10 +153,23 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
 
     rewriter.setInsertionPointToStart(&beforeBlock);
 
-    mlir::Value inductionCmp = mlir::arith::CmpIOp::create(
+    // The comparison depends on the sign of the step value. We fully expect
+    // this expression to be folded by the optimizer or LLVM. This expression
+    // is written this way so that `step == 0` always returns `false`.
+    auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto compl0 = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::slt, zero, step);
+    auto compl1 = mlir::arith::CmpIOp::create(
         rewriter, loc, mlir::arith::CmpIPredicate::sle, ivInBefore, upperBound);
-    mlir::Value cond = mlir::arith::AndIOp::create(rewriter, loc, inductionCmp,
-                                                   earlyExitInBefore);
+    auto compl2 = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::slt, step, zero);
+    auto compl3 = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::sge, ivInBefore, upperBound);
+    auto cmp0 = mlir::arith::AndIOp::create(rewriter, loc, compl0, compl1);
+    auto cmp1 = mlir::arith::AndIOp::create(rewriter, loc, compl2, compl3);
+    auto cmp2 = mlir::arith::OrIOp::create(rewriter, loc, cmp0, cmp1);
+    mlir::Value cond =
+        mlir::arith::AndIOp::create(rewriter, loc, earlyExitInBefore, cmp2);
 
     mlir::scf::ConditionOp::create(rewriter, loc, cond, argsInBefore);
 

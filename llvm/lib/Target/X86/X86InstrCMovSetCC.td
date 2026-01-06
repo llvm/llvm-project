@@ -167,10 +167,6 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
   }
 }
 
-let Predicates = [HasZU] in
-  def : Pat<(i32 (zext (X86setcc timm:$cond, EFLAGS))),
-            (INSERT_SUBREG (i32 (IMPLICIT_DEF)), (SETZUCCr ccode:$cond), sub_8bit)>;
-
 // SALC is an undocumented instruction. Information for this instruction can be found
 // here http://www.rcollins.org/secrets/opcodes/SALC.html
 // Set AL if carry. 

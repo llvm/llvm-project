@@ -16,6 +16,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -422,28 +423,35 @@ cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
   return nullptr;
 }
 
-void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
-                                   cir::FuncOp fn, cir::FuncType funcType,
-                                   FunctionArgList args, SourceLocation loc,
-                                   SourceLocation startLoc) {
-  assert(!curFn &&
-         "CIRGenFunction can only be used for one function at a time");
+/// An argument came in as a promoted argument; demote it back to its
+/// declared type.
+static mlir::Value emitArgumentDemotion(CIRGenFunction &cgf, const VarDecl *var,
+                                        mlir::Value value) {
+  mlir::Type ty = cgf.convertType(var->getType());
 
-  curFn = fn;
+  // This can happen with promotions that actually don't change the
+  // underlying type, like the enum promotions.
+  if (value.getType() == ty)
+    return value;
 
-  const Decl *d = gd.getDecl();
+  assert((mlir::isa<cir::IntType>(ty) || cir::isAnyFloatingPointType(ty)) &&
+         "unexpected promotion type");
 
-  didCallStackSave = false;
-  curCodeDecl = d;
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
-  curFuncDecl = d->getNonClosureContext();
+  if (mlir::isa<cir::IntType>(ty))
+    return cgf.getBuilder().CIRBaseBuilderTy::createIntCast(value, ty);
 
-  prologueCleanupDepth = ehStack.stable_begin();
+  return cgf.getBuilder().createFloatingCast(value, ty);
+}
 
-  mlir::Block *entryBB = &fn.getBlocks().front();
-  builder.setInsertionPointToStart(entryBB);
+void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
+                                        mlir::Block *entryBB,
+                                        const FunctionDecl *fd,
+                                        SourceLocation bodyBeginLoc) {
+  // Naked functions don't have prologues.
+  if (fd && fd->hasAttr<NakedAttr>()) {
+    cgm.errorNYI(bodyBeginLoc, "naked function decl");
+  }
 
-  // TODO(cir): this should live in `emitFunctionProlog
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
     const VarDecl *paramVar = std::get<0>(nameValue);
@@ -466,20 +474,64 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
     assert(!cir::MissingFeatures::constructABIArgDirectExtend());
     if (isPromoted)
-      cgm.errorNYI(fd->getSourceRange(), "Function argument demotion");
+      paramVal = emitArgumentDemotion(*this, paramVar, paramVal);
 
     // Location of the store to the param storage tracked as beginning of
     // the function body.
-    mlir::Location fnBodyBegin = getLoc(fd->getBody()->getBeginLoc());
+    mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
   }
   assert(builder.getInsertionBlock() && "Should be valid");
+}
+
+void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
+                                   cir::FuncOp fn, cir::FuncType funcType,
+                                   FunctionArgList args, SourceLocation loc,
+                                   SourceLocation startLoc) {
+  assert(!curFn &&
+         "CIRGenFunction can only be used for one function at a time");
+
+  curFn = fn;
+
+  const Decl *d = gd.getDecl();
+
+  didCallStackSave = false;
+  curCodeDecl = d;
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
+  curFuncDecl = d->getNonClosureContext();
+
+  prologueCleanupDepth = ehStack.stable_begin();
+
+  mlir::Block *entryBB = &fn.getBlocks().front();
+  builder.setInsertionPointToStart(entryBB);
+
+  // Determine the function body begin location for the prolog.
+  // If fd is null or has no body, use startLoc as fallback.
+  SourceLocation bodyBeginLoc = startLoc;
+  if (fd) {
+    if (Stmt *body = fd->getBody())
+      bodyBeginLoc = body->getBeginLoc();
+    else
+      bodyBeginLoc = fd->getLocation();
+  }
+
+  emitFunctionProlog(args, entryBB, fd, bodyBeginLoc);
 
   // When the current function is not void, create an address to store the
   // result value.
-  if (!returnType->isVoidType())
-    emitAndUpdateRetAlloca(returnType, getLoc(fd->getBody()->getEndLoc()),
+  if (!returnType->isVoidType()) {
+    // Determine the function body end location.
+    // If fd is null or has no body, use loc as fallback.
+    SourceLocation bodyEndLoc = loc;
+    if (fd) {
+      if (Stmt *body = fd->getBody())
+        bodyEndLoc = body->getEndLoc();
+      else
+        bodyEndLoc = fd->getLocation();
+    }
+    emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+  }
 
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
       cast<CXXMethodDecl>(d)->isInstance()) {
@@ -795,7 +847,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (dtorType == Dtor_Deleting) {
+  if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
+    if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
+      cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
     if (haveInsertPoint()) {
@@ -828,6 +882,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
+  case Dtor_VectorDeleting:
     llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:

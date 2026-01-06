@@ -1184,6 +1184,77 @@ struct EvaluateResponseBody {
 };
 llvm::json::Value toJSON(const EvaluateResponseBody &);
 
+/// Arguments for `pause` request.
+struct PauseArguments {
+  /// Pause execution for this thread.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+};
+bool fromJSON(const llvm::json::Value &, PauseArguments &, llvm::json::Path);
+
+/// Response to `pause` request. This is just an acknowledgement, so no body
+/// field is required.
+using PauseResponse = VoidResponse;
+
+/// Arguments for `locations` request.
+struct LocationsArguments {
+  /// Location reference to resolve.
+  uint64_t locationReference = LLDB_DAP_INVALID_VALUE_LOC;
+};
+bool fromJSON(const llvm::json::Value &, LocationsArguments &,
+              llvm::json::Path);
+
+/// Response to 'locations' request.
+struct LocationsResponseBody {
+  /// The source containing the location; either `source.path` or
+  /// `source.sourceReference` must be specified.
+  Source source;
+
+  /// The line number of the location. The client capability `linesStartAt1`
+  /// determines whether it is 0- or 1-based.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
+
+  /// Position of the location within the `line`. It is measured in UTF-16 code
+  /// units and the client capability `columnsStartAt1` determines whether it is
+  /// 0- or 1-based. If no column is given, the first position in the start line
+  /// is assumed.
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// End line of the location, present if the location refers to a range. The
+  /// client capability `linesStartAt1` determines whether it is 0- or 1-based.
+  uint32_t endLine = LLDB_INVALID_LINE_NUMBER;
+
+  /// End position of the location within `endLine`, present if the location
+  /// refers to a range. It is measured in UTF-16 code units and the client
+  /// capability `columnsStartAt1` determines whether it is 0- or 1-based.
+  uint32_t endColumn = LLDB_INVALID_COLUMN_NUMBER;
+};
+llvm::json::Value toJSON(const LocationsResponseBody &);
+
+/// Arguments for `compileUnits` request.
+struct CompileUnitsArguments {
+  /// The ID of the module.
+  std::string moduleId;
+};
+bool fromJSON(const llvm::json::Value &, CompileUnitsArguments &,
+              llvm::json::Path);
+
+/// Response to `compileUnits` request.
+struct CompileUnitsResponseBody {
+  /// Array of compile units.
+  std::vector<CompileUnit> compileUnits;
+};
+llvm::json::Value toJSON(const CompileUnitsResponseBody &);
+
+/// Arguments for `testGetTargetBreakpoints` request.
+using TestGetTargetBreakpointsArguments = EmptyArguments;
+
+/// Response to `testGetTargetBreakpoints` request.
+struct TestGetTargetBreakpointsResponseBody {
+  /// Array of all breakpoints that are currently set in the target.
+  std::vector<Breakpoint> breakpoints;
+};
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &);
+
 } // namespace lldb_dap::protocol
 
 #endif

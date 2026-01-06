@@ -217,7 +217,7 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     p                    0.15      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     p                    0.18      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
@@ -230,6 +230,7 @@
 // CHECK-NEXT:     smpmpmt              0.6       'Smpmpmt' (PMP-based Memory Types Extension)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
 // CHECK-NEXT:     xqccmp               0.3       'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)
+// CHECK-NEXT:     xqci                 0.13      'Xqci' (Qualcomm uC Extension)
 // CHECK-NEXT:     xqcia                0.7       'Xqcia' (Qualcomm uC Arithmetic Extension)
 // CHECK-NEXT:     xqciac               0.3       'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
 // CHECK-NEXT:     xqcibi               0.2       'Xqcibi' (Qualcomm uC Branch Immediate Extension)

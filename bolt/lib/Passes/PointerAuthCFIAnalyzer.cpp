@@ -28,6 +28,10 @@
 
 using namespace llvm;
 
+namespace opts {
+extern llvm::cl::opt<unsigned> Verbosity;
+} // namespace opts
+
 namespace llvm {
 namespace bolt {
 
@@ -43,9 +47,10 @@ bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
         // Not all functions have .cfi_negate_ra_state in them. But if one does,
         // we expect psign/pauth instructions to have the hasNegateRAState
         // annotation.
-        BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                  << BF.getPrintName()
-                  << ": ptr sign/auth inst without .cfi_negate_ra_state\n";
+        if (opts::Verbosity >= 1)
+          BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
+                    << BF.getPrintName()
+                    << ": ptr sign/auth inst without .cfi_negate_ra_state\n";
         std::lock_guard<std::mutex> Lock(IgnoreMutex);
         BF.setIgnored();
         return false;
@@ -65,9 +70,10 @@ bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
       if (BC.MIB->isPSignOnLR(Inst)) {
         if (RAState) {
           // RA signing instructions should only follow unsigned RA state.
-          BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                    << BF.getPrintName()
-                    << ": ptr signing inst encountered in Signed RA state\n";
+          if (opts::Verbosity >= 1)
+            BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
+                      << BF.getPrintName()
+                      << ": ptr signing inst encountered in Signed RA state\n";
           std::lock_guard<std::mutex> Lock(IgnoreMutex);
           BF.setIgnored();
           return false;
@@ -75,10 +81,11 @@ bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
       } else if (BC.MIB->isPAuthOnLR(Inst)) {
         if (!RAState) {
           // RA authenticating instructions should only follow signed RA state.
-          BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                    << BF.getPrintName()
-                    << ": ptr authenticating inst encountered in Unsigned RA "
-                       "state\n";
+          if (opts::Verbosity >= 1)
+            BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
+                      << BF.getPrintName()
+                      << ": ptr authenticating inst encountered in Unsigned RA "
+                         "state\n";
           std::lock_guard<std::mutex> Lock(IgnoreMutex);
           BF.setIgnored();
           return false;
@@ -130,13 +137,34 @@ Error PointerAuthCFIAnalyzer::runOnFunctions(BinaryContext &BC) {
     return P.second.containedNegateRAState() && !P.second.isIgnored();
   });
 
+  if (Total == 0)
+    return Error::success();
+
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
       SkipPredicate, "PointerAuthCFIAnalyzer");
+
+  float IgnoredPercent = (100.0 * FunctionsIgnored) / Total;
   BC.outs() << "BOLT-INFO: PointerAuthCFIAnalyzer ran on " << Total
             << " functions. Ignored " << FunctionsIgnored << " functions "
-            << format("(%.2lf%%)", (100.0 * FunctionsIgnored) / Total)
+            << format("(%.2lf%%)", IgnoredPercent)
             << " because of CFI inconsistencies\n";
+
+  // Errors in the input are expected from two sources:
+  // - compilers emitting incorrect CFIs. This happens more frequently with
+  //   older compiler versions, but it should not account for a large
+  //   percentage.
+  // - input binary is using synchronous unwind tables. This means that after
+  //   call sites, the unwind CFIs are dropped: the pass sees missing
+  //   .cfi_negate_ra_state from autiasp instructions. If this is the case, a
+  //   larger percentage of functions will be ignored.
+  //
+  // This is why the 10% threshold was chosen: we should not warn about
+  // synchronous unwind tables if only a few % are ignored.
+  if (IgnoredPercent >= 10.0)
+    BC.outs() << "BOLT-WARNING: PointerAuthCFIAnalyzer only supports "
+                 "asynchronous unwind tables. For C compilers, see "
+                 "-fasynchronous-unwind-tables.\n";
 
   return Error::success();
 }

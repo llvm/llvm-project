@@ -53,7 +53,7 @@ def main(
     github_token: str,
     pr_number: int,
     return_code: int,
-):
+) -> bool:
     """The main entrypoint for the script.
 
     This function parses failures from files, requests information from the
@@ -112,19 +112,14 @@ def main(
             advisor_explanations = advisor_response.json()
         else:
             print(advisor_response.reason)
-    comments.append(
-        get_comment(
-            github_token,
-            pr_number,
-            generate_test_report_lib.generate_report(
-                generate_test_report_lib.compute_platform_title(),
-                return_code,
-                junit_objects,
-                ninja_logs,
-                failure_explanations_list=advisor_explanations,
-            ),
-        )
+    report, failures_explained = generate_test_report_lib.generate_report(
+        generate_test_report_lib.compute_platform_title(),
+        return_code,
+        junit_objects,
+        ninja_logs,
+        failure_explanations_list=advisor_explanations,
     )
+    comments.append(get_comment(github_token, pr_number, report))
     if return_code == 0 and "id" not in comments[0]:
         # If the job succeeds and there is not an existing comment, we
         # should not write one to reduce noise.
@@ -132,6 +127,8 @@ def main(
     comments_file_name = f"comments-{platform.system()}-{platform.machine()}"
     with open(comments_file_name, "w") as comment_file_handle:
         json.dump(comments, comment_file_handle)
+    print(f"Wrote comments to {comments_file_name}")
+    return failures_explained
 
 
 if __name__ == "__main__":
@@ -150,10 +147,15 @@ if __name__ == "__main__":
     if platform.machine() == "arm64" or platform.machine() == "aarch64":
         sys.exit(0)
 
-    main(
+    failures_explained = main(
         args.commit_sha,
         args.build_log_files,
         args.github_token,
         args.pr_number,
         args.return_code,
     )
+
+    if failures_explained:
+        sys.exit(0)
+
+    sys.exit(args.return_code)

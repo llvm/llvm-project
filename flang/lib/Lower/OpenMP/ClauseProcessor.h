@@ -20,7 +20,7 @@
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Parser/parse-tree.h"
+#include "flang/Parser/char-block.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace fir {
@@ -89,7 +89,7 @@ public:
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
   bool processInitializer(
-      lower::SymMap &symMap, const parser::OmpClause::Initializer &inp,
+      lower::SymMap &symMap,
       ReductionProcessor::GenInitValueCBTy &genInitValueCB) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;

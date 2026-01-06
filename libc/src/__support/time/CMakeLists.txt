@@ -37,3 +37,23 @@ if(TARGET libc.src.__support.time.${LIBC_TARGET_OS}.clock_settime)
       libc.src.__support.time.${LIBC_TARGET_OS}.clock_settime
   )
 endif()
+
+add_header_library(
+  abs_timeout
+  HDRS
+    abs_timeout.h
+  DEPENDS
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.units
+    libc.src.__support.CPP.expected
+)
+
+add_header_library(
+  monotonicity
+  HDRS
+    monotonicity.h
+  DEPENDS
+    .clock_conversion
+    .abs_timeout
+    libc.hdr.time_macros
+)

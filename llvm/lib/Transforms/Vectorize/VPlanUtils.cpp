@@ -82,7 +82,8 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            ScalarEvolution &SE, const Loop *L) {
   if (V->isLiveIn()) {
-    if (Value *LiveIn = V->getLiveInIRValue())
+    Value *LiveIn = V->getLiveInIRValue();
+    if (LiveIn && SE.isSCEVable(LiveIn->getType()))
       return SE.getSCEV(LiveIn);
     return SE.getCouldNotCompute();
   }

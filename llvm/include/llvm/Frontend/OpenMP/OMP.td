@@ -125,6 +125,9 @@ def OMPC_Collapse : Clause<[Spelling<"collapse">]> {
 }
 def OMPC_Collector : Clause<[Spelling<"collector">]> {
 }
+def OMPC_Combiner : Clause<[Spelling<"combiner">]> {
+  let flangClass = "OmpCombinerClause";
+}
 def OMPC_Compare : Clause<[Spelling<"compare">]> {
   let clangClass = "OMPCompareClause";
 }
@@ -379,13 +382,13 @@ def OMPC_NumTasks : Clause<[Spelling<"num_tasks">]> {
 }
 def OMPC_NumTeams : Clause<[Spelling<"num_teams">]> {
   let clangClass = "OMPNumTeamsClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpNumTeamsClause";
 }
 def OMP_NUMTHREADS_Strict : EnumVal<"strict", 1, 1> {}
 def OMP_NUMTHREADS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
 def OMPC_NumThreads : Clause<[Spelling<"num_threads">]> {
   let clangClass = "OMPNumThreadsClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpNumThreadsClause";
   let enumClauseValue = "NumThreadsType";
   let allowedClauseValues = [
     OMP_NUMTHREADS_Strict,
@@ -535,7 +538,7 @@ def OMPC_TaskReduction : Clause<[Spelling<"task_reduction">]> {
 }
 def OMPC_ThreadLimit : Clause<[Spelling<"thread_limit">]> {
   let clangClass = "OMPThreadLimitClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "OmpThreadLimitClause";
 }
 def OMPC_ThreadPrivate : Clause<[Spelling<"threadprivate">]> {
   let isImplicit = true;
@@ -775,6 +778,7 @@ def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
 def OMP_DeclareReduction : Directive<[Spelling<"declare reduction", 1, 52>,
                                       Spelling<"declare_reduction", 60>]> {
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Combiner, 60>,
     VersionedClause<OMPC_Initializer>,
   ];
   let association = AS_None;

@@ -34,6 +34,12 @@ enum class Confidence : uint8_t {
   Definite // Reported as a definite error (-Wlifetime-safety-permissive)
 };
 
+/// Enum to track functions visible across or within TU.
+enum class SuggestionScope {
+  CrossTU, // For suggestions on declarations visible across Translation Units.
+  IntraTU  // For suggestions on definitions local to a Translation Unit.
+};
+
 class LifetimeSafetyReporter {
 public:
   LifetimeSafetyReporter() = default;
@@ -49,7 +55,8 @@ public:
                                     Confidence Confidence) {}
 
   // Suggests lifetime bound annotations for function paramters
-  virtual void suggestAnnotation(const ParmVarDecl *PVD,
+  virtual void suggestAnnotation(SuggestionScope Scope,
+                                 const ParmVarDecl *ParmToAnnotate,
                                  const Expr *EscapeExpr) {}
 };
 
@@ -80,13 +87,13 @@ public:
     return *LoanPropagation;
   }
   LiveOriginsAnalysis &getLiveOrigins() const { return *LiveOrigins; }
-  FactManager &getFactManager() { return FactMgr; }
+  FactManager &getFactManager() { return *FactMgr; }
 
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;
-  FactManager FactMgr;
+  std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };

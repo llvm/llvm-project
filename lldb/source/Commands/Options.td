@@ -2558,3 +2558,8 @@ let Command = "statistics dump" in {
              "enabled state. Defaults to true for both summary and default "
              "mode.">;
 }
+
+let Command = "version" in {
+  def version_verbose : Option<"verbose", "v">,
+                        Desc<"Include build configuration in version output.">;
+}

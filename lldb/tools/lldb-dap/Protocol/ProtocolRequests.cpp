@@ -515,7 +515,7 @@ bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
   json::ObjectMapper O(Params, P);
   return O &&
          DecodeMemoryReference(Params, "memoryReference", DA.memoryReference, P,
-                               /*required=*/true) &&
+                               /*required=*/true, /*allow_empty*/ true) &&
          O.mapOptional("offset", DA.offset) &&
          O.mapOptional("instructionOffset", DA.instructionOffset) &&
          O.map("instructionCount", DA.instructionCount) &&
@@ -692,6 +692,48 @@ llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
   if (Body.valueLocationReference != LLDB_DAP_INVALID_VALUE_LOC)
     result.insert({"valueLocationReference", Body.valueLocationReference});
 
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, PauseArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
+bool fromJSON(const llvm::json::Value &Params, LocationsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("locationReference", Args.locationReference);
+}
+
+llvm::json::Value toJSON(const LocationsResponseBody &Body) {
+  assert(Body.line != LLDB_INVALID_LINE_NUMBER);
+  json::Object result{{"source", Body.source}, {"line", Body.line}};
+
+  if (Body.column != 0 && Body.column != LLDB_INVALID_COLUMN_NUMBER)
+    result.insert({"column", Body.column});
+  if (Body.endLine != 0 && Body.endLine != LLDB_INVALID_LINE_NUMBER)
+    result.insert({"endLine", Body.endLine});
+  if (Body.endColumn != 0 && Body.endColumn != LLDB_INVALID_COLUMN_NUMBER)
+    result.insert({"endColumn", Body.endColumn});
+
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompileUnitsArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("moduleId", Args.moduleId);
+}
+
+llvm::json::Value toJSON(const CompileUnitsResponseBody &Body) {
+  json::Object result{{"compileUnits", Body.compileUnits}};
+  return result;
+}
+
+llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &Body) {
+  json::Object result{{"breakpoints", Body.breakpoints}};
   return result;
 }
 

@@ -338,6 +338,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v3f32, MVT::v3f16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
+  setTruncStoreAction(MVT::v6f32, MVT::v6f16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8f16, Expand);
   setTruncStoreAction(MVT::v16f32, MVT::v16bf16, Expand);
@@ -3070,14 +3071,14 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   SDNodeFlags Flags = Op->getFlags();
   const bool IsExp10 = Op.getOpcode() == ISD::FEXP10;
 
+  // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
+  // library behavior. Also, is known-not-daz source sufficient?
+  if (allowApproxFunc(DAG, Flags)) { // TODO: Does this really require fast?
+    return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
+                   : lowerFEXPUnsafe(X, SL, DAG, Flags);
+  }
+
   if (VT.getScalarType() == MVT::f16) {
-    // v_exp_f16 (fmul x, log2e)
-
-    if (allowApproxFunc(DAG, Flags)) { // TODO: Does this really require fast?
-      return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
-                     : lowerFEXPUnsafe(X, SL, DAG, Flags);
-    }
-
     if (VT.isVector())
       return SDValue();
 
@@ -3095,13 +3096,6 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   assert(VT == MVT::f32);
-
-  // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
-  // library behavior. Also, is known-not-daz source sufficient?
-  if (allowApproxFunc(DAG, Flags)) {
-    return IsExp10 ? lowerFEXP10Unsafe(X, SL, DAG, Flags)
-                   : lowerFEXPUnsafe(X, SL, DAG, Flags);
-  }
 
   //    Algorithm:
   //

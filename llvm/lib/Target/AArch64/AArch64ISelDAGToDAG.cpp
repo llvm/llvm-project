@@ -74,6 +74,8 @@ public:
   template <signed Low, signed High>
   bool SelectRDSVLShiftImm(SDValue N, SDValue &Imm);
 
+  bool SelectAddUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
+
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
@@ -957,6 +959,19 @@ bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   }
 
   return false;
+}
+
+/// SelectAddUXTXRegister - Select a "UXTX register" operand. This
+/// operand is referred by the instructions have SP operand
+bool AArch64DAGToDAGISel::SelectAddUXTXRegister(SDValue N, SDValue &Reg,
+                                                SDValue &Shift) {
+  // TODO: Relax condition to apply to more scenarios
+  if (N.getOpcode() != ISD::LOAD)
+    return false;
+  Reg = N;
+  Shift = CurDAG->getTargetConstant(getArithExtendImm(AArch64_AM::UXTX, 0),
+                                    SDLoc(N), MVT::i32);
+  return true;
 }
 
 /// SelectArithExtendedRegister - Select a "extended register" operand.  This
@@ -6236,10 +6251,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::BFSCALE_2ZZ);
       return;
     case Intrinsic::aarch64_sve_fmul_single_x4:
-      SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::BFMUL_4ZZ);
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BFMUL_4ZZ, AArch64::FMUL_4ZZ_H, AArch64::FMUL_4ZZ_S,
+               AArch64::FMUL_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
       return;
     case Intrinsic::aarch64_sve_fmul_single_x2:
-      SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::BFMUL_2ZZ);
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BFMUL_2ZZ, AArch64::FMUL_2ZZ_H, AArch64::FMUL_2ZZ_S,
+               AArch64::FMUL_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
       return;
     case Intrinsic::aarch64_sve_fmaxnm_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
@@ -6276,10 +6299,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectDestructiveMultiIntrinsic(Node, 2, true, AArch64::BFSCALE_2Z2Z);
       return;
     case Intrinsic::aarch64_sve_fmul_x4:
-      SelectDestructiveMultiIntrinsic(Node, 4, true, AArch64::BFMUL_4Z4Z);
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BFMUL_4Z4Z, AArch64::FMUL_4Z4Z_H, AArch64::FMUL_4Z4Z_S,
+               AArch64::FMUL_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
       return;
     case Intrinsic::aarch64_sve_fmul_x2:
-      SelectDestructiveMultiIntrinsic(Node, 2, true, AArch64::BFMUL_2Z2Z);
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {AArch64::BFMUL_2Z2Z, AArch64::FMUL_2Z2Z_H, AArch64::FMUL_2Z2Z_S,
+               AArch64::FMUL_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
       return;
     case Intrinsic::aarch64_sve_fcvtzs_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::FCVTZS_2Z2Z_StoS);
