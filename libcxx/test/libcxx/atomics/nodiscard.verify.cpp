@@ -21,6 +21,9 @@ void test() {
     const std::atomic_ref<int> atRef{i};
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    a.address();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     atRef.is_lock_free();
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
