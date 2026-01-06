@@ -39,6 +39,15 @@ class AsmParserContext {
   DenseMap<Function *, FileLocRange> Functions;
   FMap::Allocator FAllocator;
   FMap FunctionsInverse = FMap(FAllocator);
+
+  DenseMap<Argument *, FileLocRange> FunctionArguments;
+  using FAMap =
+      IntervalMap<FileLoc, Argument *,
+                  IntervalMapImpl::NodeSizer<FileLoc, Argument *>::LeafSize,
+                  IntervalMapHalfOpenInfo<FileLoc>>;
+  FAMap::Allocator FAAllocator;
+  FAMap FunctionArgumentsInverse = FAMap(FAAllocator);
+
   DenseMap<BasicBlock *, FileLocRange> Blocks;
   using BBMap =
       IntervalMap<FileLoc, BasicBlock *,
@@ -79,6 +88,14 @@ public:
   /// Get the block at the requested location range.
   /// If no single block occupies the queried range, or the record is missing, a
   /// nullptr is returned.
+  Argument *getFunctionArgumentAtLocation(const FileLocRange &) const;
+  /// Get the function at the requested location.
+  /// If no function occupies the queried location, or the record is missing, a
+  /// nullptr is returned.
+  Argument *getFunctionArgumentAtLocation(const FileLoc &) const;
+  /// Get the block at the requested location range.
+  /// If no single block occupies the queried range, or the record is missing, a
+  /// nullptr is returned.
   BasicBlock *getBlockAtLocation(const FileLocRange &) const;
   /// Get the block at the requested location.
   /// If no block occupies the queried location, or the record is missing, a
@@ -101,6 +118,7 @@ public:
   /// a nullptr is returned.
   Value *getValueReferencedAtLocation(const FileLocRange &) const;
   bool addFunctionLocation(Function *, const FileLocRange &);
+  bool addFunctionArgumentLocation(Argument *, const FileLocRange &);
   bool addBlockLocation(BasicBlock *, const FileLocRange &);
   bool addInstructionLocation(Instruction *, const FileLocRange &);
   bool addValueReferenceAtLocation(Value *, const FileLocRange &);

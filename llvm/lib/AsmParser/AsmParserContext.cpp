@@ -43,6 +43,19 @@ Function *AsmParserContext::getFunctionAtLocation(const FileLoc &Query) const {
   return FunctionsInverse.lookup(Query, nullptr);
 }
 
+Argument *AsmParserContext::getFunctionArgumentAtLocation(
+    const FileLocRange &Query) const {
+  auto It = FunctionArgumentsInverse.find(Query.Start);
+  if (It.stop() <= Query.End)
+    return *It;
+  return nullptr;
+}
+
+Argument *
+AsmParserContext::getFunctionArgumentAtLocation(const FileLoc &Query) const {
+  return FunctionArgumentsInverse.lookup(Query, nullptr);
+}
+
 BasicBlock *
 AsmParserContext::getBlockAtLocation(const FileLocRange &Query) const {
   auto It = BlocksInverse.find(Query.Start);
