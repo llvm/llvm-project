@@ -68,6 +68,7 @@ OPENCL_OPTIONALCOREFEATURE(cl_khr_fp64, true, 100, OCL_C_12P)
 OPENCL_EXTENSION(cl_khr_fp16, true, 100)
 OPENCL_EXTENSION(cl_khr_int64_base_atomics, true, 100)
 OPENCL_EXTENSION(cl_khr_int64_extended_atomics, true, 100)
+OPENCL_EXTENSION(cl_khr_gl_msaa_sharing, true, 100)
 OPENCL_GENERIC_EXTENSION(cl_khr_3d_image_writes, true, 100, OCL_C_20, OCL_C_30)
 
 // EMBEDDED_PROFILE
@@ -75,7 +76,6 @@ OPENCL_EXTENSION(cles_khr_int64, true, 110)
 
 // OpenCL 1.2.
 OPENCL_EXTENSION(cl_khr_depth_images, true, 120)
-OPENCL_EXTENSION(cl_khr_gl_msaa_sharing,true, 120)
 
 // OpenCL 2.0.
 OPENCL_EXTENSION(cl_ext_float_atomics, false, 200)

@@ -24,7 +24,11 @@ struct MyClass {
 // CHECK-NEXT:            {
 // CHECK-NEXT:              "End": true,
 // CHECK-NEXT:              "Name": "param",
-// CHECK-NEXT:              "Type": "T"
+// CHECK-NEXT:              "Type": {
+// CHECK-NEXT:                "Name": "T",
+// CHECK-NEXT:                "QualName": "T",
+// CHECK-NEXT:                "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:              }
 // CHECK-NEXT:            }
 // CHECK-NEXT:          ],
 // CHECK-NEXT:          "ReturnType": {

@@ -11459,6 +11459,31 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   if (SDValue AVG = foldShiftToAvg(N, DL))
     return AVG;
 
+  SDValue Y;
+  if (VT.getScalarSizeInBits() % 2 == 0 && N1C) {
+    // Fold clmul(zext(x), zext(y)) >> (BW - 1 | BW) -> clmul(r|h)(x, y).
+    unsigned HalfBW = VT.getScalarSizeInBits() / 2;
+    if (sd_match(N0, m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
+        X.getScalarValueSizeInBits() == HalfBW &&
+        Y.getScalarValueSizeInBits() == HalfBW) {
+      if (N1C->getZExtValue() == HalfBW - 1)
+        return DAG.getNode(
+            ISD::ZERO_EXTEND, DL, VT,
+            DAG.getNode(ISD::CLMULR, DL, X.getValueType(), X, Y));
+      if (N1C->getZExtValue() == HalfBW)
+        return DAG.getNode(
+            ISD::ZERO_EXTEND, DL, VT,
+            DAG.getNode(ISD::CLMULH, DL, X.getValueType(), X, Y));
+    }
+  }
+
+  // Fold bitreverse(clmul(bitreverse(x), bitreverse(y))) >> 1 ->
+  // clmulh(x, y).
+  if (N1C && N1C->getZExtValue() == 1 &&
+      sd_match(N0, m_BitReverse(m_Clmul(m_BitReverse(m_Value(X)),
+                                        m_BitReverse(m_Value(Y))))))
+    return DAG.getNode(ISD::CLMULH, DL, VT, X, Y);
+
   return SDValue();
 }
 
@@ -11809,6 +11834,10 @@ SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
   if ((!LegalOperations || TLI.isOperationLegal(ISD::SRL, VT)) &&
       sd_match(N0, m_Shl(m_BitReverse(m_Value(X)), m_Value(Y))))
     return DAG.getNode(ISD::SRL, DL, VT, X, Y);
+
+  // fold bitreverse(clmul(bitreverse(x), bitreverse(y))) -> clmulr(x, y)
+  if (sd_match(N0, m_Clmul(m_BitReverse(m_Value(X)), m_BitReverse(m_Value(Y)))))
+    return DAG.getNode(ISD::CLMULR, DL, VT, X, Y);
 
   return SDValue();
 }

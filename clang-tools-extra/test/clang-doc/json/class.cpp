@@ -104,7 +104,11 @@ private:
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "",
-// CHECK-NEXT:            "Type": "int"
+// CHECK-NEXT:            "Type": {
+// CHECK-NEXT:              "Name": "int",
+// CHECK-NEXT:              "QualName": "int",
+// CHECK-NEXT:              "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Reference": {
@@ -217,7 +221,11 @@ private:
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "MyParam",
-// CHECK-NEXT:            "Type": "int"
+// CHECK-NEXT:            "Type": {
+// CHECK-NEXT:              "Name": "int",
+// CHECK-NEXT:              "QualName": "int",
+// CHECK-NEXT:              "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "ReturnType": {

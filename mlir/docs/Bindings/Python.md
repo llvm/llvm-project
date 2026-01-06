@@ -544,9 +544,9 @@ attribute = <...>
 type = <...>
 
 # No need to handle errors here.
-if ConcreteAttr.isinstance(attribute):
+if isinstance(attribute, ConcreteAttr):
   concrete_attr = ConcreteAttr(attribute)
-if ConcreteType.isinstance(type):
+if isinstance(type, ConcreteType):
   concrete_type = ConcreteType(type)
 ```
 
