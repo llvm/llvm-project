@@ -450,8 +450,7 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
 static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
                                             mlir::Location loc,
                                             llvm::ArrayRef<mlir::Value> ops,
-                                            mlir::Type dstTy,
-                                            unsigned builtinID) {
+                                            mlir::Type dstTy) {
   assert((ops.size() == 1 || ops.size() == 3 || ops.size() == 4) &&
          "Unknown cvtph2ps intrinsic");
 
@@ -460,21 +459,8 @@ static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
     auto constOp = ops[3].getDefiningOp<cir::ConstantOp>();
     assert(constOp && "Expected constant operand");
     if (constOp.getIntValue().getZExtValue() != 4) {
-      StringRef intrinsicName;
-      switch (builtinID) {
-      default:
-        llvm_unreachable("Unexpected builtin");
-      case X86::BI__builtin_ia32_vcvtph2ps_mask:
-        intrinsicName = "x86.avx512.mask.vcvtph2ps.128";
-        break;
-      case X86::BI__builtin_ia32_vcvtph2ps256_mask:
-        intrinsicName = "x86.avx512.mask.vcvtph2ps.256";
-        break;
-      case X86::BI__builtin_ia32_vcvtph2ps512_mask:
-        intrinsicName = "x86.avx512.mask.vcvtph2ps.512";
-        break;
-      }
-      return emitIntrinsicCallOp(builder, loc, intrinsicName, dstTy, ops);
+      return emitIntrinsicCallOp(builder, loc, "x86.avx512.mask.vcvtph2ps.512",
+                                 dstTy, ops);
     }
   }
 
@@ -1892,7 +1878,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     return emitX86CvtF16ToFloatExpr(builder, loc, ops,
-                                    convertType(expr->getType()), builtinID);
+                                    convertType(expr->getType()));
   }
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
