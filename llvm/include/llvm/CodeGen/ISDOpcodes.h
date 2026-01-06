@@ -371,11 +371,13 @@ enum NodeType {
 
   /// RESULT = [US]SHLSAT(LHS, RHS) - Perform saturation left shift. The first
   /// operand is the value to be shifted, and the second argument is the amount
-  /// to shift by. Both must be integers of the same bit width (W). If the true
-  /// value of LHS << RHS exceeds the largest value that can be represented by
-  /// W bits, the resulting value is this maximum value, Otherwise, if this
-  /// value is less than the smallest value that can be represented by W bits,
-  /// the resulting value is this minimum value.
+  /// to shift by. Both must be integers. After legalization the type of the
+  /// shift amount is known to be TLI.getShiftAmountTy(). Before legalization
+  /// the shift amount can be any type, but care must be taken to ensure it is
+  /// large enough. If the true value of LHS << RHS exceeds the largest value
+  /// that can be represented by W bits, the resulting value is this maximum
+  /// value, Otherwise, if this value is less than the smallest value that can
+  /// be represented by W bits, the resulting value is this minimum value.
   SSHLSAT,
   USHLSAT,
 
@@ -767,6 +769,11 @@ enum NodeType {
   FSHL,
   FSHR,
 
+  /// Carry-less multiplication operations.
+  CLMUL,
+  CLMULR,
+  CLMULH,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,
@@ -778,6 +785,10 @@ enum NodeType {
   /// Bit counting operators with an undefined result for zero inputs.
   CTTZ_ZERO_UNDEF,
   CTLZ_ZERO_UNDEF,
+
+  /// Count leading redundant sign bits. Equivalent to
+  /// (sub (ctlz (x < 0 ? ~x : x)), 1).
+  CTLS,
 
   /// Select(COND, TRUEVAL, FALSEVAL).  If the type of the boolean COND is not
   /// i1 then the high bits must conform to getBooleanContents.

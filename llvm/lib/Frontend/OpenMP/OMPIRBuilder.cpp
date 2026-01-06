@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -763,6 +764,28 @@ static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
   }
 }
 
+static void hoistNonEntryAllocasToEntryBlock(llvm::BasicBlock &Block) {
+  llvm::SmallVector<llvm::Instruction *> AllocasToMove;
+
+  auto ShouldHoistAlloca = [](const llvm::AllocaInst &AllocaInst) {
+    // TODO: For now, we support simple static allocations, we might need to
+    // move non-static ones as well. However, this will need further analysis to
+    // move the lenght arguments as well.
+    return !AllocaInst.isArrayAllocation();
+  };
+
+  for (llvm::Instruction &Inst : Block)
+    if (auto *AllocaInst = llvm::dyn_cast<llvm::AllocaInst>(&Inst))
+      if (ShouldHoistAlloca(*AllocaInst))
+        AllocasToMove.push_back(AllocaInst);
+
+  auto InsertPoint =
+      Block.getParent()->getEntryBlock().getTerminator()->getIterator();
+
+  for (llvm::Instruction *AllocaInst : AllocasToMove)
+    AllocaInst->moveBefore(InsertPoint);
+}
+
 void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
@@ -867,6 +890,13 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     // Run a user callback, e.g. to add attributes.
     if (OI.PostOutlineCB)
       OI.PostOutlineCB(*OutlinedFn);
+
+    if (OI.FixUpNonEntryAllocas) {
+      PostDominatorTree PostDomTree(*OutlinedFn);
+      for (llvm::BasicBlock &BB : *OutlinedFn)
+        if (PostDomTree.properlyDominates(&BB, &OutlinedFn->getEntryBlock()))
+          hoistNonEntryAllocasToEntryBlock(BB);
+    }
   }
 
   // Remove work items that have been completed.
@@ -1694,6 +1724,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
                              IfCondition, NumThreads, PrivTID, PrivTIDAddr,
                              ThreadID, ToBeDeletedVec);
     };
+    OI.FixUpNonEntryAllocas = true;
   } else {
     // Generate OpenMP host runtime call
     OI.PostOutlineCB = [=, ToBeDeletedVec =
@@ -1701,6 +1732,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
       hostParallelCallback(this, OutlinedFn, OuterFn, Ident, IfCondition,
                            PrivTID, PrivTIDAddr, ToBeDeletedVec);
     };
+    OI.FixUpNonEntryAllocas = true;
   }
 
   OI.OuterAllocaBB = OuterAllocaBlock;
@@ -10602,6 +10634,13 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
           continue;
         }
         break;
+      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect:
+      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable:
+        if (!CE->getAddress()) {
+          ErrorFn(EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR, E.second);
+          continue;
+        }
+        break;
       default:
         break;
       }
@@ -10611,12 +10650,17 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       // entry. Indirect variables are handled separately on the device.
       if (auto *GV = dyn_cast<GlobalValue>(CE->getAddress()))
         if ((GV->hasLocalLinkage() || GV->hasHiddenVisibility()) &&
-            Flags != OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
+            (Flags !=
+                 OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect &&
+             Flags != OffloadEntriesInfoManager::
+                          OMPTargetGlobalVarEntryIndirectVTable))
           continue;
 
       // Indirect globals need to use a special name that doesn't match the name
       // of the associated host global.
-      if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
+      if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect ||
+          Flags ==
+              OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable)
         createOffloadEntry(CE->getAddress(), CE->getAddress(), CE->getVarSize(),
                            Flags, CE->getLinkage(), CE->getVarName());
       else
@@ -11053,7 +11097,9 @@ void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
       }
       return;
     }
-    if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect)
+    if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect ||
+        Flags ==
+            OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable)
       OffloadEntriesDeviceGlobalVar.try_emplace(VarName, OffloadingEntriesNum,
                                                 Addr, VarSize, Flags, Linkage,
                                                 VarName.str());

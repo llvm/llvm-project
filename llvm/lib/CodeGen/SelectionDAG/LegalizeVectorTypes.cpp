@@ -200,6 +200,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SRL:
   case ISD::ROTL:
   case ISD::ROTR:
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
     R = ScalarizeVecRes_BinOp(N);
     break;
 
@@ -1385,6 +1388,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ADD: case ISD::VP_ADD:
   case ISD::SUB: case ISD::VP_SUB:
   case ISD::MUL: case ISD::VP_MUL:
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
   case ISD::MULHS:
   case ISD::MULHU:
   case ISD::ABDS:
@@ -2123,7 +2129,7 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo,
   EVT EltVT = VecVT.getVectorElementType();
   if (!EltVT.isByteSized()) {
     EltVT = EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
-    VecVT = VecVT.changeElementType(EltVT);
+    VecVT = VecVT.changeElementType(*DAG.getContext(), EltVT);
     Vec = DAG.getNode(ISD::ANY_EXTEND, dl, VecVT, Vec);
     // Extend the element type to match if needed.
     if (EltVT.bitsGT(Elt.getValueType()))
@@ -4070,7 +4076,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   EVT EltVT = VecVT.getVectorElementType();
   if (!EltVT.isByteSized()) {
     EltVT = EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
-    VecVT = VecVT.changeElementType(EltVT);
+    VecVT = VecVT.changeElementType(*DAG.getContext(), EltVT);
     Vec = DAG.getNode(ISD::ANY_EXTEND, dl, VecVT, Vec);
     SDValue NewExtract =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Vec, Idx);
@@ -4619,7 +4625,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
 
   EVT VT = N->getValueType(0);
-  EVT PartResVT = Lo0.getValueType().changeElementType(VT.getScalarType());
+  EVT PartResVT = Lo0.getValueType().changeElementType(*DAG.getContext(),
+                                                       VT.getScalarType());
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
@@ -4945,6 +4952,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SHL: case ISD::VP_SHL:
   case ISD::SRA: case ISD::VP_SRA:
   case ISD::SRL: case ISD::VP_SRL:
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::VP_FMINNUM:
@@ -5891,8 +5901,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_ExpOp(SDNode *N) {
   EVT ExpVT = RHS.getValueType();
   SDValue ExpOp = RHS;
   if (ExpVT.isVector()) {
-    EVT WideExpVT =
-        WidenVT.changeVectorElementType(ExpVT.getVectorElementType());
+    EVT WideExpVT = WidenVT.changeVectorElementType(
+        *DAG.getContext(), ExpVT.getVectorElementType());
     ExpOp = ModifyToType(RHS, WideExpVT);
   }
 

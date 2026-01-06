@@ -8677,6 +8677,23 @@ denoting if the type contains a pointer.
 
   !0 = !{!"<type-name>", i1 <contains-pointer>}
 
+'``stack-protector``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``stack-protector`` metadata may be attached to alloca instructions.  An
+alloca instruction with this metadata and value `i32 0` will be skipped when
+deciding whether a given function requires a stack protector.  The function
+may still use a stack protector, if other criteria determine it needs one.
+
+The metadata contains an integer, where a 0 value opts the given alloca out
+of requiring a stack protector.
+
+.. code-block:: none
+
+   %a = alloca [1000 x i8], align 1, !stack-protector !0
+
+  !0 = !{i32 0}
+
 Module Flags Metadata
 =====================
 
@@ -18370,8 +18387,6 @@ then the result is the size in bits of the type of ``src`` if
 ``is_zero_poison == 0`` and ``poison`` otherwise. For example,
 ``llvm.cttz(2) = 1``.
 
-.. _int_overflow:
-
 .. _int_fshl:
 
 '``llvm.fshl.*``' Intrinsic
@@ -18467,6 +18482,57 @@ Example:
       %r = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)  ; %r = i8: 254 (0b11111110)
       %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
       %r = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)   ; %r = i8: 255 (0b11111111)
+
+.. _int_clmul:
+
+'``llvm.clmul.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.clmul`` on any integer
+or vectors of integer elements.
+
+::
+
+      declare i16 @llvm.clmul.i16(i16 %a, i16 %b)
+      declare i32 @llvm.clmul.i32(i32 %a, i32 %b)
+      declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
+      declare <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.clmul``' family of intrinsic functions performs carry-less
+multiplication, or XOR multiplication, on the two arguments, and returns
+the low-bits.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.clmul``' intrinsic computes carry-less multiply of its arguments,
+which is the result of applying the standard multiplication algorithm, where
+all of the additions are replaced with XORs, and returns the low-bits.
+The vector variants operate lane-wise.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+      %r = call i4 @llvm.clmul.i4(i4 1, i4 2)    ; %r = 2
+      %r = call i4 @llvm.clmul.i4(i4 5, i4 6)    ; %r = 14
+      %r = call i4 @llvm.clmul.i4(i4 -4, i4 2)   ; %r = -8
+      %r = call i4 @llvm.clmul.i4(i4 -4, i4 -5)  ; %r = 4
+
+.. _int_overflow:
 
 Arithmetic with Overflow Intrinsics
 -----------------------------------
@@ -20811,7 +20877,7 @@ of integers whose elements contain a linear sequence of values starting from 0
 with a step of 1. This intrinsic can only be used for vectors with integer
 elements that are at least 8 bits in size. If the sequence value exceeds
 the allowed limit for the element type then the result for that lane is
-a poison value.
+truncated.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types, the recommended way to express this operation for

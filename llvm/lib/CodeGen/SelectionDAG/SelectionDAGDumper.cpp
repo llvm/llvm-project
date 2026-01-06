@@ -299,6 +299,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ROTR:                       return "rotr";
   case ISD::FSHL:                       return "fshl";
   case ISD::FSHR:                       return "fshr";
+  case ISD::CLMUL:                      return "clmul";
+  case ISD::CLMULR:                     return "clmulr";
+  case ISD::CLMULH:                     return "clmulh";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
   case ISD::FSUB:                       return "fsub";
@@ -512,6 +515,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CTTZ_ZERO_UNDEF:            return "cttz_zero_undef";
   case ISD::CTLZ:                       return "ctlz";
   case ISD::CTLZ_ZERO_UNDEF:            return "ctlz_zero_undef";
+  case ISD::CTLS:                       return "ctls";
   case ISD::PARITY:                     return "parity";
 
   // Trampolines
