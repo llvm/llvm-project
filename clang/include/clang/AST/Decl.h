@@ -3811,6 +3811,9 @@ protected:
   /// True if this decl is currently being defined.
   void setBeingDefined(bool V = true) { TagDeclBits.IsBeingDefined = V; }
 
+  void printAnonymousTagDecl(llvm::raw_ostream &OS,
+                             const PrintingPolicy &Policy) const;
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
