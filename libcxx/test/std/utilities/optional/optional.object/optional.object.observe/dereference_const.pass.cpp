@@ -78,15 +78,15 @@ int main(int, char**) {
     constexpr optional<X> opt(X{});
     static_assert((*opt).test() == 3, "");
   }
-    {
-        constexpr optional<Y> opt(Y{});
-        assert((*opt).test() == 2);
-    }
+  {
+    constexpr optional<Y> opt(Y{});
+    assert((*opt).test() == 2);
+  }
 
 #if TEST_STD_VER >= 26
     assert(test_ref());
     static_assert(test_ref());
 #endif
 
-    return 0;
+  return 0;
 }
