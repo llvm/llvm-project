@@ -360,7 +360,6 @@ template<class T> valarray<T> tanh (const valarray<T>& x);
 #  include <__config>
 #  include <__cstddef/ptrdiff_t.h>
 #  include <__functional/operations.h>
-#  include <__iterator/reverse_iterator.h>
 #  include <__memory/addressof.h>
 #  include <__memory/allocator.h>
 #  include <__memory/uninitialized_algorithms.h>
