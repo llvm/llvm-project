@@ -1,8 +1,21 @@
 set(LLVM_LINK_COMPONENTS
-  Analysis Core Demangle IRReader Support CodeGen MIRParser
-  AllTargetsAsmParsers AllTargetsCodeGens AllTargetsDescs 
-  AllTargetsInfos TargetParser
-)
+  # Core LLVM components for IR processing
+  Analysis
+  Core
+  IRReader
+  Support
+  
+  # Machine IR components (for -mode=mir)
+  CodeGen           
+  MIRParser         
+  
+  # Target initialization (required for MIR parsing)
+  AllTargetsAsmParsers
+  AllTargetsCodeGens
+  AllTargetsDescs
+  AllTargetsInfos
+  TargetParser
+  )
 
 # Static utility library
 add_library(ir2vec_utils STATIC utils/utils.cpp)
