@@ -48,8 +48,8 @@ public:
       : Address(pointer, elementType, alignment, false) {}
 
   Address(mlir::Value pointer, mlir::Type elementType,
-          clang::CharUnits alignment, bool pointerAndKnownNonNull)
-      : pointerAndKnownNonNull(pointer, pointerAndKnownNonNull),
+          clang::CharUnits alignment, bool isKnownNonNull)
+      : pointerAndKnownNonNull(pointer, isKnownNonNull),
         elementType(elementType), alignment(alignment) {
     assert(pointer && "Pointer cannot be null");
     assert(elementType && "Element type cannot be null");
