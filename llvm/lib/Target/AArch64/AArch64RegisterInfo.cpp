@@ -547,7 +547,9 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     // it's liveness. We use the NoVRegs property instead of IsSSA because
     // IsSSA is removed before VirtRegRewriter runs.
     if (!MF.getProperties().hasNoVRegs())
-      markSuperRegs(Reserved, AArch64::LR);
+      // Reserve LR (X30) by marking from its subregister W30 because otherwise
+      // the register allocator could clobber the subregister.
+      markSuperRegs(Reserved, AArch64::W30);
   }
 
   assert(checkAllSuperRegsMarked(Reserved));
