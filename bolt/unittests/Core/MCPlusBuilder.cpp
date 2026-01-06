@@ -184,6 +184,12 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
   ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, BTIKind::JC));
   ASSERT_FALSE(BC->MIB->isBTILandingPad(*II, BTIKind::J));
   ASSERT_TRUE(BC->MIB->isImplicitBTIC(*II));
+
+  MCInst BTIcSigned;
+  BC->MIB->createBTI(BTIcSigned, BTIKind::C);
+  BC->MIB->setRAState(BTIcSigned, true);
+  II = BB->addInstruction(BTIcSigned);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, BTIKind::C));
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_insertBTI_empty) {
@@ -206,6 +212,9 @@ TEST_P(MCPlusBuilderTester, AArch64_insertBTI_0) {
   BB->addInstruction(Inst);
   // BR x16 needs BTI c or BTI j. We prefer adding a BTI c.
   MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  // Adding an annotation to the call, to check if param numbers are calculated
+  // correctly. Could be any other annotation as well.
+  BC->MIB->setRAState(CallInst, false);
   auto II = BB->begin();
   ASSERT_FALSE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
   BC->MIB->insertBTI(*BB, CallInst);
@@ -223,6 +232,7 @@ TEST_P(MCPlusBuilderTester, AArch64_insertBTI_1) {
   BB->addInstruction(BTIc);
   // BR x16 needs BTI c or BTI j. We have a BTI c, no change is needed.
   MCInst CallInst = MCInstBuilder(AArch64::BR).addReg(AArch64::X16);
+  BC->MIB->setRAState(CallInst, true);
   auto II = BB->begin();
   ASSERT_TRUE(BC->MIB->isCallCoveredByBTI(CallInst, *II));
   BC->MIB->insertBTI(*BB, CallInst);
