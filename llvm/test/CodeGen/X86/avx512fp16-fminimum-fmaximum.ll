@@ -29,12 +29,12 @@ define half @test_fminimum(half %x, half %y) {
   ret half %z
 }
 
-define <8 x half> @test_fminimum_v8f16(<8 x half> %x, <8 x half> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <8 x half> @test_fminimum_v8f16(<8 x half> %x, <8 x half> %y) "no-nans-fp-math"="true" {
 ; CHECK-LABEL: test_fminimum_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vminph %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %r = call <8 x half> @llvm.minimum.v8f16(<8 x half> %x, <8 x half> %y)
+  %r = call nsz <8 x half> @llvm.minimum.v8f16(<8 x half> %x, <8 x half> %y)
   ret <8 x half> %r
 }
 
@@ -107,12 +107,12 @@ define half @test_fmaximum(half %x, half %y) {
   ret half %r
 }
 
-define <8 x half> @test_fmaximum_v8f16(<8 x half> %x, <8 x half> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <8 x half> @test_fmaximum_v8f16(<8 x half> %x, <8 x half> %y) "no-nans-fp-math"="true" {
 ; CHECK-LABEL: test_fmaximum_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmaxph %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %r = call <8 x half> @llvm.maximum.v8f16(<8 x half> %x, <8 x half> %y)
+  %r = call nsz <8 x half> @llvm.maximum.v8f16(<8 x half> %x, <8 x half> %y)
   ret <8 x half> %r
 }
 
@@ -145,7 +145,7 @@ define half @test_fmaximum_zero(half %x, half %y) {
   ret half %1
 }
 
-define half @test_fmaximum_nsz(half %x, half %y) "no-signed-zeros-fp-math"="true" {
+define half @test_fmaximum_nsz(half %x, half %y) {
 ; CHECK-LABEL: test_fmaximum_nsz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmaxsh %xmm1, %xmm0, %xmm1
@@ -153,7 +153,7 @@ define half @test_fmaximum_nsz(half %x, half %y) "no-signed-zeros-fp-math"="true
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
-  %1 = tail call half @llvm.maximum.f16(half %x, half %y)
+  %1 = tail call nsz half @llvm.maximum.f16(half %x, half %y)
   ret half %1
 }
 
@@ -172,16 +172,16 @@ define half @test_fmaximum_combine_cmps(half %x, half %y) {
   ret half %2
 }
 
-define <16 x half> @test_fminimum_v16f16(<16 x half> %x, <16 x half> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <16 x half> @test_fminimum_v16f16(<16 x half> %x, <16 x half> %y) "no-nans-fp-math"="true" {
 ; CHECK-LABEL: test_fminimum_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vminph %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
-  %r = call <16 x half> @llvm.minimum.v16f16(<16 x half> %x, <16 x half> %y)
+  %r = call nsz <16 x half> @llvm.minimum.v16f16(<16 x half> %x, <16 x half> %y)
   ret <16 x half> %r
 }
 
-define <16 x half> @test_fmaximum_v16f16_nans(<16 x half> %x, <16 x half> %y) "no-signed-zeros-fp-math"="true" {
+define <16 x half> @test_fmaximum_v16f16_nans(<16 x half> %x, <16 x half> %y) {
 ; CHECK-LABEL: test_fmaximum_v16f16_nans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmaxph %ymm1, %ymm0, %ymm1
@@ -189,7 +189,7 @@ define <16 x half> @test_fmaximum_v16f16_nans(<16 x half> %x, <16 x half> %y) "n
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
 ; CHECK-NEXT:    retq
-  %r = call <16 x half> @llvm.maximum.v16f16(<16 x half> %x, <16 x half> %y)
+  %r = call nsz <16 x half> @llvm.maximum.v16f16(<16 x half> %x, <16 x half> %y)
   ret <16 x half> %r
 }
 

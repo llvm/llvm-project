@@ -105,7 +105,7 @@ define float @test_fmaximum(float %x, float %y) nounwind {
   ret float %1
 }
 
-define <4 x float> @test_fmaximum_scalarize(<4 x float> %x, <4 x float> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <4 x float> @test_fmaximum_scalarize(<4 x float> %x, <4 x float> %y) "no-nans-fp-math"="true" {
 ; SSE2-LABEL: test_fmaximum_scalarize:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    maxps %xmm1, %xmm0
@@ -125,7 +125,7 @@ define <4 x float> @test_fmaximum_scalarize(<4 x float> %x, <4 x float> %y) "no-
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> %y)
+  %r = call nsz <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %r
 }
 
@@ -407,7 +407,7 @@ define double @test_fmaximum_zero2(double %x, double %y) {
   ret double %1
 }
 
-define float @test_fmaximum_nsz(float %x, float %y) "no-signed-zeros-fp-math"="true" nounwind {
+define float @test_fmaximum_nsz(float %x, float %y) nounwind {
 ; SSE2-LABEL: test_fmaximum_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
@@ -451,7 +451,7 @@ define float @test_fmaximum_nsz(float %x, float %y) "no-signed-zeros-fp-math"="t
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
-  %1 = tail call float @llvm.maximum.f32(float %x, float %y)
+  %1 = tail call nsz float @llvm.maximum.f32(float %x, float %y)
   ret float %1
 }
 
@@ -649,7 +649,7 @@ define float @test_fminimum(float %x, float %y) nounwind {
   ret float %1
 }
 
-define <2 x double> @test_fminimum_scalarize(<2 x double> %x, <2 x double> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <2 x double> @test_fminimum_scalarize(<2 x double> %x, <2 x double> %y) "no-nans-fp-math"="true" {
 ; SSE2-LABEL: test_fminimum_scalarize:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    minpd %xmm1, %xmm0
@@ -669,7 +669,7 @@ define <2 x double> @test_fminimum_scalarize(<2 x double> %x, <2 x double> %y) "
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> %y)
+  %r = call nsz <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> %y)
   ret <2 x double> %r
 }
 
@@ -1133,7 +1133,7 @@ define <2 x double> @test_fminimum_vector(<2 x double> %x, <2 x double> %y) {
   ret <2 x double> %r
 }
 
-define <4 x float> @test_fmaximum_vector(<4 x float> %x, <4 x float> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <4 x float> @test_fmaximum_vector(<4 x float> %x, <4 x float> %y) "no-nans-fp-math"="true" {
 ; SSE2-LABEL: test_fmaximum_vector:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    maxps %xmm1, %xmm0
@@ -1153,7 +1153,7 @@ define <4 x float> @test_fmaximum_vector(<4 x float> %x, <4 x float> %y) "no-nan
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> %y)
+  %r = call nsz <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %r
 }
 
