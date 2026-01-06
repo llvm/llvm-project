@@ -6691,8 +6691,13 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
 bool LLParser::parseValue(Type *Ty, Value *&V, PerFunctionState *PFS) {
   V = nullptr;
   ValID ID;
-  return parseValID(ID, PFS, Ty) ||
-         convertValIDToValue(Ty, ID, V, PFS);
+
+  FileLoc Start = Lex.getTokLineColumnPos();
+  bool Ret = parseValID(ID, PFS, Ty) || convertValIDToValue(Ty, ID, V, PFS);
+  FileLoc End = Lex.getPrevTokEndLineColumnPos();
+  if (ParserContext)
+    ParserContext->addValueReferenceAtLocation(V, FileLocRange(Start, End));
+  return Ret;
 }
 
 bool LLParser::parseTypeAndValue(Value *&V, PerFunctionState *PFS) {
