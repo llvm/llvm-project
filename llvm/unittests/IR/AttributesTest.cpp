@@ -263,19 +263,19 @@ TEST(Attributes, AttributeListPrinting) {
 
 TEST(Attributes, MismatchedABIAttrs) {
   const char *IRString = R"IR(
-    declare void @f1(i32* byval(i32))
+    declare void @f1(ptr byval(i32))
     define void @g() {
-      call void @f1(i32* null)
+      call void @f1(ptr null)
       ret void
     }
-    declare void @f2(i32* preallocated(i32))
+    declare void @f2(ptr preallocated(i32))
     define void @h() {
-      call void @f2(i32* null)
+      call void @f2(ptr null)
       ret void
     }
-    declare void @f3(i32* inalloca(i32))
+    declare void @f3(ptr inalloca(i32))
     define void @i() {
-      call void @f3(i32* null)
+      call void @f3(ptr null)
       ret void
     }
   )IR";

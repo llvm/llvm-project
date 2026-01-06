@@ -1,4 +1,4 @@
-//===-- AMDGPULowerKernelAttributes.cpp ------------------------------------------===//
+//===-- AMDGPULowerKernelAttributes.cpp------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -66,13 +66,11 @@ public:
 
   bool runOnModule(Module &M) override;
 
-  StringRef getPassName() const override {
-    return "AMDGPU Kernel Attributes";
-  }
+  StringRef getPassName() const override { return "AMDGPU Kernel Attributes"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
- }
+  }
 };
 
 Function *getBasePtrIntrinsic(Module &M, bool IsV5OrAbove) {
@@ -104,7 +102,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
-    F->getFnAttribute("uniform-work-group-size").getValueAsBool();
+      F->getFnAttribute("uniform-work-group-size").getValueAsBool();
 
   SmallVector<unsigned> MaxNumWorkgroups =
       AMDGPU::getIntegerVecAttribute(*F, "amdgpu-max-num-workgroups",
@@ -115,9 +113,9 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     return false;
 
   Value *BlockCounts[3] = {nullptr, nullptr, nullptr};
-  Value *GroupSizes[3]  = {nullptr, nullptr, nullptr};
-  Value *Remainders[3]  = {nullptr, nullptr, nullptr};
-  Value *GridSizes[3]   = {nullptr, nullptr, nullptr};
+  Value *GroupSizes[3] = {nullptr, nullptr, nullptr};
+  Value *Remainders[3] = {nullptr, nullptr, nullptr};
+  Value *GridSizes[3] = {nullptr, nullptr, nullptr};
 
   const DataLayout &DL = F->getDataLayout();
 
@@ -230,13 +228,15 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
   bool MadeChange = false;
   if (IsV5OrAbove && HasUniformWorkGroupSize) {
-    // Under v5  __ockl_get_local_size returns the value computed by the expression:
+    // Under v5  __ockl_get_local_size returns the value computed by the
+    // expression:
     //
-    //   workgroup_id < hidden_block_count ? hidden_group_size : hidden_remainder
+    //   workgroup_id < hidden_block_count ? hidden_group_size :
+    //                                       hidden_remainder
     //
-    // For functions with the attribute uniform-work-group-size=true. we can evaluate
-    // workgroup_id < hidden_block_count as true, and thus hidden_group_size is returned
-    // for __ockl_get_local_size.
+    // For functions with the attribute uniform-work-group-size=true. we can
+    // evaluate workgroup_id < hidden_block_count as true, and thus
+    // hidden_group_size is returned for __ockl_get_local_size.
     for (int I = 0; I < 3; ++I) {
       Value *BlockCount = BlockCounts[I];
       if (!BlockCount)
@@ -261,7 +261,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     for (Value *Remainder : Remainders) {
       if (!Remainder)
         continue;
-      Remainder->replaceAllUsesWith(Constant::getNullValue(Remainder->getType()));
+      Remainder->replaceAllUsesWith(
+          Constant::getNullValue(Remainder->getType()));
       MadeChange = true;
     }
   } else if (HasUniformWorkGroupSize) { // Pre-V5.
@@ -302,13 +303,13 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
           continue;
 
         for (User *UMin : ZextGroupSize->users()) {
-          if (match(UMin,
-                    m_UMin(m_Sub(m_Specific(GridSize),
-                                 m_Mul(GroupIDIntrin, m_Specific(ZextGroupSize))),
-                           m_Specific(ZextGroupSize)))) {
+          if (match(UMin, m_UMin(m_Sub(m_Specific(GridSize),
+                                       m_Mul(GroupIDIntrin,
+                                             m_Specific(ZextGroupSize))),
+                                 m_Specific(ZextGroupSize)))) {
             if (HasReqdWorkGroupSize) {
-              ConstantInt *KnownSize
-                = mdconst::extract<ConstantInt>(MD->getOperand(I));
+              ConstantInt *KnownSize =
+                  mdconst::extract<ConstantInt>(MD->getOperand(I));
               UMin->replaceAllUsesWith(ConstantFoldIntegerCast(
                   KnownSize, UMin->getType(), false, DL));
             } else {
@@ -340,7 +341,6 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   return MadeChange;
 }
 
-
 // TODO: Move makeLIDRangeMetadata usage into here. Seem to not get
 // TargetPassConfig for subtarget.
 bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
@@ -363,7 +363,6 @@ bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
 
   return MadeChange;
 }
-
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelAttributes, DEBUG_TYPE,
                       "AMDGPU Kernel Attributes", false, false)
