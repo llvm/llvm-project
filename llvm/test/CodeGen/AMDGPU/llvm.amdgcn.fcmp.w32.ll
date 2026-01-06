@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=SDAG-GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=SDAG-GFX10 %s
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GISEL-GFX11 %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GISEL-GFX10 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GISEL-GFX11 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=1 -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GISEL-GFX10 %s
 
 declare i32 @llvm.amdgcn.fcmp.f32(float, float, i32) #0
 declare i32 @llvm.amdgcn.fcmp.f64(double, double, i32) #0
