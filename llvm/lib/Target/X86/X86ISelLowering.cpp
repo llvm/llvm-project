@@ -52976,8 +52976,8 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
       // If we can locate the original half subvectors, then see if we can
       // concat the operands directly.
       MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
-      if (sd_match(X, m_InsertSubvector(m_Zero(), m_SpecificVT(HalfVT),
-                                        m_Zero())) &&
+      if (sd_match(
+              X, m_InsertSubvector(m_Zero(), m_SpecificVT(HalfVT), m_Zero())) &&
           sd_match(Y, m_InsertSubvector(m_Undef(), m_SpecificVT(HalfVT),
                                         m_Zero()))) {
         if (SDValue Concat = combineConcatVectorOps(
