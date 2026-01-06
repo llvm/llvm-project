@@ -33,7 +33,7 @@ void test(SBDebugger &dbg, std::vector<std::string> args) {
   if (!target.IsValid())
     throw Exception("invalid target");
 
-  SBBreakpoint breakpoint = target.BreakpointCreateByName("next");
+  SBBreakpoint breakpoint = target.BreakpointCreateByName("my_next");
   if (!breakpoint.IsValid())
     throw Exception("invalid breakpoint");
 

@@ -33,7 +33,7 @@ void test(SBDebugger &dbg, std::vector<string> args) {
     SBTarget target = dbg.CreateTarget(args.at(0).c_str());
     if (!target.IsValid()) throw Exception("invalid target");
 
-    SBBreakpoint breakpoint = target.BreakpointCreateByName("next");
+    SBBreakpoint breakpoint = target.BreakpointCreateByName("my_next");
     if (!breakpoint.IsValid()) throw Exception("invalid breakpoint");
 
     std::unique_ptr<char> working_dir(get_working_dir());

@@ -3,7 +3,7 @@
 
 
 
-int next() {
+int my_next() {
   static int i = 0;
   std::cout << "incrementing " << i << std::endl;
   return ++i;
@@ -12,6 +12,6 @@ int next() {
 int main() {
   int i = 0;
   while (i < 5)
-    i = next();
+    i = my_next();
   return 0;
 }

@@ -33,7 +33,7 @@ void test(SBDebugger &dbg, vector<string> args) {
   SBTarget target = dbg.CreateTarget(args.at(0).c_str());
   if (!target.IsValid()) throw Exception("invalid target");
 
-  SBBreakpoint breakpoint = target.BreakpointCreateByName("next");
+  SBBreakpoint breakpoint = target.BreakpointCreateByName("my_next");
   if (!breakpoint.IsValid()) throw Exception("invalid breakpoint");
 
   if(breakpoint.GetNumLocations() != 1) throw Exception("unexpected amount of breakpoint locations");
