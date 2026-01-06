@@ -5722,10 +5722,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
          KnownRHS.isKnownNever(fcPositive)))
       Known.knownNot(fcNegative);
 
-    if ((KnownLHS.isKnownAlways(fcNegative | fcNan) &&
+    if ((KnownLHS.isKnownNever(fcPositive) &&
          KnownRHS.isKnownNever(fcNegative)) ||
         (KnownLHS.isKnownNever(fcNegative) &&
-         KnownRHS.isKnownAlways(fcNegative | fcNan)))
+         KnownRHS.isKnownNever(fcPositive)))
       Known.knownNot(fcPositive);
 
     // inf * anything => inf or nan
