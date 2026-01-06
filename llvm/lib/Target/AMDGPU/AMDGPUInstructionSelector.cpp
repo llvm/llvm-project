@@ -1216,6 +1216,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap:
     return selectPermlaneSwapIntrin(I, IntrinsicID);
+  case Intrinsic::amdgcn_wave_shuffle:
+    return selectWaveShuffleIntrin(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -3889,6 +3891,130 @@ bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
       IsVALU ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
   if (!RBI.constrainGenericRegister(DstReg, RC, *MRI))
     return false;
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
+    MachineInstr &MI) const {
+  assert(MI.getNumOperands() == 4);
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register ValReg = MI.getOperand(2).getReg();
+  Register IdxReg = MI.getOperand(3).getReg();
+
+  const LLT DstTy = MRI->getType(DstReg);
+  unsigned DstSize = DstTy.getSizeInBits();
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const TargetRegisterClass *DstRC =
+      TRI.getRegClassForSizeOnBank(DstSize, *DstRB);
+
+  if (DstTy != LLT::scalar(32))
+    return false;
+
+  // If we can bpermute across the whole wave, then just do that
+  if (Subtarget->supportsWaveWideBPermute()) {
+    Register ShiftIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHLREV_B32_e64), ShiftIdxReg)
+        .addImm(2)
+        .addReg(IdxReg);
+
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), DstReg)
+        .addReg(ShiftIdxReg)
+        .addReg(ValReg)
+        .addImm(0);
+  } else {
+    // Otherwise, we need to make use of whole wave mode
+    assert(Subtarget->isWave64());
+
+    // Set inactive lanes to poison
+    Register UndefValReg =
+        MRI->createVirtualRegister(TRI.getRegClass(AMDGPU::SReg_32RegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefValReg);
+
+    Register UndefExecReg = MRI->createVirtualRegister(
+        TRI.getRegClass(AMDGPU::SReg_64_XEXECRegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefExecReg);
+
+    Register PoisonValReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SET_INACTIVE_B32), PoisonValReg)
+        .addImm(0)
+        .addReg(ValReg)
+        .addImm(0)
+        .addReg(UndefValReg)
+        .addReg(UndefExecReg);
+
+    // ds_bpermute requires index to be multiplied by 4
+    Register ShiftIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHLREV_B32_e64), ShiftIdxReg)
+        .addImm(2)
+        .addReg(IdxReg);
+
+    Register PoisonIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SET_INACTIVE_B32), PoisonIdxReg)
+        .addImm(0)
+        .addReg(ShiftIdxReg)
+        .addImm(0)
+        .addReg(UndefValReg)
+        .addReg(UndefExecReg);
+
+    // Get permutation of each half, then we'll select which one to use
+    Register SameSidePermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), SameSidePermReg)
+        .addReg(PoisonIdxReg)
+        .addReg(PoisonValReg)
+        .addImm(0);
+
+    Register SwappedValReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_PERMLANE64_B32), SwappedValReg)
+        .addReg(PoisonValReg);
+
+    Register OppSidePermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), OppSidePermReg)
+        .addReg(PoisonIdxReg)
+        .addReg(SwappedValReg)
+        .addImm(0);
+
+    Register WWMSwapPermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::STRICT_WWM), WWMSwapPermReg)
+        .addReg(OppSidePermReg);
+
+    // Select which side to take the permute from
+    // We can get away with only using mbcnt_lo here since we're only
+    // trying to detect which side of 32 each lane is on, and mbcnt_lo
+    // returns 32 for lanes 32-63.
+    Register ThreadIDReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MBCNT_LO_U32_B32_e64), ThreadIDReg)
+        .addImm(-1)
+        .addImm(0);
+
+    Register XORReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_XOR_B32_e64), XORReg)
+        .addReg(ThreadIDReg)
+        .addReg(PoisonIdxReg);
+
+    Register ANDReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_AND_B32_e64), ANDReg)
+        .addReg(XORReg)
+        .addImm(32);
+
+    Register CompareReg = MRI->createVirtualRegister(
+        TRI.getRegClass(AMDGPU::SReg_64_XEXECRegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_CMP_EQ_U32_e64), CompareReg)
+        .addReg(ANDReg)
+        .addImm(0);
+
+    // Finally do the selection
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_CNDMASK_B32_e64), DstReg)
+        .addImm(0)
+        .addReg(WWMSwapPermReg)
+        .addImm(0)
+        .addReg(SameSidePermReg)
+        .addReg(CompareReg);
+  }
 
   MI.eraseFromParent();
   return true;

@@ -43,7 +43,7 @@ define void @test(ptr %p) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 200, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 200, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
@@ -111,7 +111,7 @@ define void @test_may_clobber1(ptr %p) {
 ; IF-EVL-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP4]], align 32
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       exit:
@@ -221,7 +221,7 @@ define void @test_may_clobber3(ptr %p) {
 ; IF-EVL-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP4]], align 32
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       exit:
@@ -285,7 +285,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP13]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[TMP5]], [[TMP13]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       exit:
@@ -299,7 +299,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 200, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 200, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
@@ -372,7 +372,7 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP11]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP11]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       exit:

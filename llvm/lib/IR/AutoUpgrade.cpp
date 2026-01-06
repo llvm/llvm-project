@@ -32,6 +32,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -1282,6 +1283,18 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           return true;
         }
         break; // No other 'amdgcn.atomic.*'
+      }
+
+      // Legacy wmma iu intrinsics without the optional clamp operand.
+      if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8 &&
+          F->arg_size() == 7) {
+        NewFn = nullptr;
+        return true;
+      }
+      if (F->getIntrinsicID() == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8 &&
+          F->arg_size() == 8) {
+        NewFn = nullptr;
+        return true;
       }
 
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
@@ -4620,6 +4633,50 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 //
 static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
                                          Function *F, IRBuilder<> &Builder) {
+  // Legacy WMMA iu intrinsics missed the optional clamp operand. Append clamp=0
+  // for compatibility.
+  auto UpgradeLegacyWMMAIUIntrinsicCall =
+      [](Function *F, CallBase *CI, IRBuilder<> &Builder,
+         ArrayRef<Type *> OverloadTys) -> Value * {
+    // Prepare arguments, append clamp=0 for compatibility
+    SmallVector<Value *, 10> Args(CI->args().begin(), CI->args().end());
+    Args.push_back(Builder.getFalse());
+
+    // Insert the declaration for the right overload types
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), F->getIntrinsicID(), OverloadTys);
+
+    // Copy operand bundles if any
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    // Create the new call and copy calling properties
+    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->setDebugLoc(CI->getDebugLoc());
+    NewCall->copyMetadata(*CI);
+    return NewCall;
+  };
+
+  if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8) {
+    assert(CI->arg_size() == 7 && "Legacy int_amdgcn_wmma_i32_16x16x64_iu8 "
+                                  "intrinsic should have 7 arguments");
+    Type *T1 = CI->getArgOperand(4)->getType();
+    Type *T2 = CI->getArgOperand(1)->getType();
+    return UpgradeLegacyWMMAIUIntrinsicCall(F, CI, Builder, {T1, T2});
+  }
+  if (F->getIntrinsicID() == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8) {
+    assert(CI->arg_size() == 8 && "Legacy int_amdgcn_swmmac_i32_16x16x128_iu8 "
+                                  "intrinsic should have 8 arguments");
+    Type *T1 = CI->getArgOperand(4)->getType();
+    Type *T2 = CI->getArgOperand(1)->getType();
+    Type *T3 = CI->getArgOperand(3)->getType();
+    Type *T4 = CI->getArgOperand(5)->getType();
+    return UpgradeLegacyWMMAIUIntrinsicCall(F, CI, Builder, {T1, T2, T3, T4});
+  }
+
   AtomicRMWInst::BinOp RMWOp =
       StringSwitch<AtomicRMWInst::BinOp>(Name)
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)

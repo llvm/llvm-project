@@ -243,7 +243,7 @@ define void @non_constant_vector_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr ptr, ptr [[CALL:%.*]], i32 [[OFFSET_IDX]]
 ; STRIDED-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP6]], align 4
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; STRIDED-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP1]], 4
+; STRIDED-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP1]], 2
 ; STRIDED-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP3]]
 ; STRIDED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; STRIDED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
