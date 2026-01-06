@@ -144,15 +144,18 @@ def olMemRegister : Function {
         "pointer that devices should use for memory transfers involving the host",
         "pinned allocation. If the buffer intersects with other existing buffer,",
         "a new user will be registered. A partial overlapping is not allowed.",
-        "The locked pointer can be accessed both on host and device and",
-        "no guarantees are made about consistency."
+        "The pinned pointer can be accessed both on host and device and",
+        "no guarantees are made about consistency.",
+        "The pinned pointer should be used to execute memory transfers.",
+        "The functionality is currently implemented for AMD only",
+        "where memory is pinned for all devices."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
     Param<"void *", "Ptr", "host pointer", PARAM_IN>,
     Param<"size_t", "Size", "size of the memory in bytes", PARAM_IN>,
     Param<"ol_memory_register_flags_t", "Flags", "flags. Reserved for future use", PARAM_IN>,
-    Param<"void**", "LockedPtr", "pointer to the locked memory", PARAM_OUT>
+    Param<"void**", "PinnedPtr", "pointer to the pinned memory", PARAM_OUT>
   ];
   let returns = [
     Return<"OL_ERRC_INVALID_SIZE", [
