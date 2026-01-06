@@ -2736,7 +2736,7 @@ def CIR_ExtractMemberOp : CIR_Op<"extract_member", [Pure]> {
   let description = [{
     The `cir.extract_member` operation extracts the value of a particular member
     from the input record. Unlike `cir.get_member` which derives pointers, this
-    operation operates on values. It takes a value of record type, and extract
+    operation operates on values. It takes a value of record type and extracts
     the value of the specified record member from the input record value.
 
     Currently `cir.extract_member` does not work on unions.
@@ -2750,7 +2750,8 @@ def CIR_ExtractMemberOp : CIR_Op<"extract_member", [Pure]> {
     !record_ty = !cir.record<"struct.Bar" {!s32i, !s8i}>
 
     // And suppose we have a value of the record type.
-    %0 = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s8i}> : !record_ty
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !s32i,
+	                                 #cir.int<2> : !s8i}> : !record_ty
 
     // Extract the value of the second member of the record.
     %1 = cir.extract_member %0[1] : !record_ty -> !s8i
