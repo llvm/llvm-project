@@ -96,7 +96,7 @@ bool DependencyScanningWorker::computeDependencies(
     }
 
     auto DiagEngineWithDiagOpts =
-        DiagnosticsEngineWithDiagOpts(Cmd, OverlayFS, DiagConsumer);
+        DiagnosticsEngineWithDiagOpts(Cmd, FS, DiagConsumer);
     auto &Diags = *DiagEngineWithDiagOpts.DiagEngine;
 
     // Create an invocation that uses the underlying file system to ensure that
