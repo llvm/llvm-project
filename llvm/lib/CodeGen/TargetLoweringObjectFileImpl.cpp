@@ -2865,7 +2865,6 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
 
 static MCSectionGOFF *getStaticStructorSectionGOFF(MCContext &Ctx,
                                                    const MCSection *TextSection,
-                                                   bool IsCtor,
                                                    unsigned Priority) {
   // xl compilers on z/OS support priorities from min-int to max-int, with
   // sinit as source priority 0. For clang, sinit has source priority 65535.
@@ -2898,12 +2897,10 @@ static MCSectionGOFF *getStaticStructorSectionGOFF(MCContext &Ctx,
 
 MCSection *TargetLoweringObjectFileGOFF::getStaticCtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  return getStaticStructorSectionGOFF(getContext(), TextSection, true,
-                                      Priority);
+  return getStaticStructorSectionGOFF(getContext(), TextSection, Priority);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  return getStaticStructorSectionGOFF(getContext(), TextSection, false,
-                                      Priority);
+  return getStaticStructorSectionGOFF(getContext(), TextSection, Priority);
 }

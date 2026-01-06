@@ -190,10 +190,6 @@ uint32_t SystemZAsmPrinter::AssociatedDataAreaTable::insert(const MCSymbol *Sym,
     break;
   }
 
-  // Language Environment DLL logic requires function descriptors, for
-  // imported functions, that are placed in the ADA to be 8 byte aligned.
-  if (SlotKind == SystemZII::MO_ADA_DIRECT_FUNC_DESC)
-    NextDisplacement = alignTo(NextDisplacement, 8);
   uint32_t Displacement = NextDisplacement;
   Displacements[std::make_pair(Sym, SlotKind)] = NextDisplacement;
   NextDisplacement += Length;
@@ -1031,15 +1027,13 @@ void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
   const Align Align = llvm::Align(4);
   const TargetLoweringObjectFile &Obj = getObjFileLowering();
   for (Structor &S : Structors) {
-    MCSection *OutputSection =
-        (IsCtor ? Obj.getStaticCtorSection(S.Priority, nullptr)
-                : Obj.getStaticDtorSection(S.Priority, nullptr));
-    OutStreamer->switchSection(OutputSection);
+    MCSectionGOFF *Section = static_cast<MCSectionGOFF *>(
+        IsCtor ? Obj.getStaticCtorSection(S.Priority, nullptr)
+               : Obj.getStaticDtorSection(S.Priority, nullptr));
+    OutStreamer->switchSection(Section);
     if (OutStreamer->getCurrentSection() != OutStreamer->getPreviousSection())
       emitAlignment(Align);
 
-    const MCSectionGOFF *Section =
-        static_cast<const MCSectionGOFF *>(getCurrentSection());
     uint32_t XtorPriority = Section->getPRAttributes().SortKey;
 
     const GlobalValue *GV = dyn_cast<GlobalValue>(S.Func->stripPointerCasts());
