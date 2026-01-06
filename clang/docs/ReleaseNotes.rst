@@ -914,8 +914,9 @@ Improvements
 Moved checkers
 ^^^^^^^^^^^^^^
 
-- The ``valist.*`` checker package was moved to ``security.VAList.*``.
-  Also improved the diagnostic messages and other smaller improvements.
+- The functionality of the checkers in the package ``valist.*`` was
+  consolidated as a single new checker called ``security.VAList``.
+  Diagnostic messages were also improved.
   (#GH156682, #GH157846)
 
 Removed checkers
