@@ -12,7 +12,6 @@
 
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
-#include <__type_traits/enable_if.h>
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_null_pointer.h>
@@ -35,8 +34,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr enable_if_t<is_integral_v<_Tp> && !is_same_v<bool, _Tp> && !is_null_pointer_v<_Tp>, _Tp>
-midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
+  requires(is_integral_v<_Tp> && !is_same_v<bool, _Tp> && !is_null_pointer_v<_Tp>)
+[[nodiscard]]
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
   using _Up                = make_unsigned_t<_Tp>;
   constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
 
@@ -48,8 +48,9 @@ midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
   return __a + __half_diff;
 }
 
-template <class _Tp, enable_if_t<is_object_v<_Tp> && !is_void_v<_Tp> && (sizeof(_Tp) > 0), int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp* midpoint(_Tp* __a, _Tp* __b) noexcept {
+template <class _Tp>
+  requires(is_object_v<_Tp> && !is_void_v<_Tp> && (sizeof(_Tp) > 0))
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* midpoint(_Tp* __a, _Tp* __b) noexcept {
   return __a + std::midpoint(ptrdiff_t(0), __b - __a);
 }
 
@@ -64,7 +65,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Fp __fp_abs(_Fp __f) {
 }
 
 template <class _Fp>
-_LIBCPP_HIDE_FROM_ABI constexpr enable_if_t<is_floating_point_v<_Fp>, _Fp> midpoint(_Fp __a, _Fp __b) noexcept {
+  requires(is_floating_point_v<_Fp>)
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Fp midpoint(_Fp __a, _Fp __b) noexcept {
   constexpr _Fp __lo = numeric_limits<_Fp>::min() * 2;
   constexpr _Fp __hi = numeric_limits<_Fp>::max() / 2;
 
