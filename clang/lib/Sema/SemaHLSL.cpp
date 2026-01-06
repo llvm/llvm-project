@@ -2362,14 +2362,16 @@ static bool DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
 }
 
 // return false if the slot count exceeds the limit, true otherwise
-static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &SlotCount,
-                                        const uint64_t &Limit, ASTContext &Ctx,
-                                        uint64_t Multiplier = 1) {
+static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &StartSlot,
+                                        const uint64_t &Limit,
+                                        const ResourceClass ResClass,
+                                        ASTContext &Ctx,
+                                        uint64_t ArrayCount = 1) {
   Ty = Ty.getCanonicalType();
   const Type *T = Ty.getTypePtr();
 
   // Early exit if already overflowed
-  if (SlotCount > Limit)
+  if (StartSlot > Limit)
     return false;
 
   // Case 1: array type
@@ -2380,29 +2382,44 @@ static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &SlotCount,
       Count = CAT->getSize().getZExtValue();
 
     QualType ElemTy = AT->getElementType();
-    return AccumulateHLSLResourceSlots(ElemTy, SlotCount, Limit, Ctx,
-                                       Multiplier * Count);
+    return AccumulateHLSLResourceSlots(ElemTy, StartSlot, Limit, ResClass, Ctx,
+                                       ArrayCount * Count);
   }
 
   // Case 2: resource leaf
-  if (T->isHLSLResourceRecord()) {
+  if (auto ResTy = dyn_cast<HLSLAttributedResourceType>(T)) {
+    // First ensure this resource counts towards the corresponding
+    // register type limit.
+    if (ResTy->getAttrs().ResourceClass != ResClass)
+      return true;
+
     // Validate highest slot used
-    uint64_t EndSlot = SlotCount + Multiplier - 1;
+    uint64_t EndSlot = StartSlot + ArrayCount - 1;
     if (EndSlot > Limit)
       return false;
 
     // Advance SlotCount past the consumed range
-    SlotCount = EndSlot + 1;
+    StartSlot = EndSlot + 1;
     return true;
   }
 
   // Case 3: struct / record
   if (const auto *RT = dyn_cast<RecordType>(T)) {
     const RecordDecl *RD = RT->getDecl();
-    for (const FieldDecl *Field : RD->fields())
-      if (!AccumulateHLSLResourceSlots(Field->getType(), SlotCount, Limit, Ctx,
-                                       Multiplier))
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (!AccumulateHLSLResourceSlots(Base.getType(), StartSlot, Limit,
+                                         ResClass, Ctx, ArrayCount))
+          return false;
+      }
+    }
+
+    for (const FieldDecl *Field : RD->fields()) {
+      if (!AccumulateHLSLResourceSlots(Field->getType(), StartSlot, Limit,
+                                       ResClass, Ctx, ArrayCount))
         return false;
+    }
 
     return true;
   }
@@ -2413,16 +2430,19 @@ static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &SlotCount,
 
 // return true if there is something invalid, false otherwise
 static bool ValidateRegisterNumber(const StringRef SlotNumStr, Decl *TheDecl,
-                                   ASTContext &Ctx, unsigned &Result) {
+                                   ASTContext &Ctx, RegisterType RegTy,
+                                   unsigned &Result) {
   uint64_t SlotNum;
   if (SlotNumStr.getAsInteger(10, SlotNum))
     return true;
 
   const uint64_t Limit = UINT32_MAX;
+
   if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
     uint64_t BaseSlot = SlotNum;
 
-    if (!AccumulateHLSLResourceSlots(VD->getType(), SlotNum, Limit, Ctx))
+    if (!AccumulateHLSLResourceSlots(VD->getType(), SlotNum, Limit,
+                                     getResourceClass(RegTy), Ctx))
       return true;
 
     // After AccumulateHLSLResourceSlots runs, SlotNum is now
@@ -2520,7 +2540,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     // Validate register number. It should not exceed UINT32_MAX,
     // including if the resource type is an array that starts
     // before UINT32_MAX, but ends afterwards.
-    if (ValidateRegisterNumber(SlotNumStr, TheDecl, getASTContext(), N)) {
+    if (ValidateRegisterNumber(SlotNumStr, TheDecl, getASTContext(), RegType,
+                               N)) {
       Diag(SlotLoc, diag::err_hlsl_register_number_too_large);
       return;
     }

@@ -43,6 +43,40 @@ cbuffer MyCB : register(b9995294967294) {
   int   I[10];
 };
 
+struct MySRV {
+  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
+};
+
+struct MySampler {
+  __hlsl_resource_t [[hlsl::resource_class(Sampler)]] x;
+};
+
+struct MyUAV {
+  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
+};
+
+// test that different resource classes don't contribute to the
+// maximum limit
+struct MyResources {
+  MySRV TheSRV[10]; // t
+  MySampler TheSampler[20]; // s
+  MyUAV TheUAV[40]; // u
+}
+
+// no failures here, since only the SRV contributes to the count,
+// and the count + 10 does not exceed uint32 max.
+MyResources M : register(t4294967284);
+
+// three failures, since each of the three resources exceed the limit
+// expected-error@+3 {{register number should not exceed 4294967295}}
+// expected-error@+2 {{register number should not exceed 4294967295}}
+// expected-error@+1 {{register number should not exceed 4294967295}}
+MyResources M2 : register(t4294967294) : register(s4294967294) : register(u4294967294);
+
+// one failure here, just because the final UAV exceeds the limit.
+// expected-error@+1 {{register number should not exceed 4294967295}}
+MyResources M3 : register(t2) : register(s3) : register(u4294967280);
+
 
 // expected-error@+1 {{register number should be an integer}}
 RWBuffer<float> Buf3[10][10] : register(ud); 
