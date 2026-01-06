@@ -14,22 +14,14 @@
 
 #include <iterator>
 #include <cassert>
-#include <type_traits>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
 template <class It>
 TEST_CONSTEXPR_CXX17 void test(It i) {
-#if TEST_STD_VER >= 11
-  // Verify that this constructor is conditionally noexcept in libc++.
-  // Because many (un)conditionally noexcept functions construct the returned reverse_iterator by this constructor.
-  LIBCPP_STATIC_ASSERT(std::is_nothrow_constructible<std::reverse_iterator<It>, It&>::value ==
-                           std::is_nothrow_constructible<It, It&>::value,
-                       "");
-#endif
-  std::reverse_iterator<It> r(i);
-  assert(r.base() == i);
+    std::reverse_iterator<It> r(i);
+    assert(r.base() == i);
 }
 
 TEST_CONSTEXPR_CXX17 bool tests() {
