@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-  requires(is_integral_v<_Tp> && !is_same_v<_Tp, bool>)
+  requires(is_integral_v<_Tp> && !is_same_v<__remove_cv_t<_Tp>, bool>)
 [[nodiscard]]
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
   using _Up                = make_unsigned_t<_Tp>;
