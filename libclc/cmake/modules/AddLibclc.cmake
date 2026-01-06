@@ -437,46 +437,33 @@ function(add_libclc_builtin_set)
     # Non-SPIR-V targets add an extra step to optimize the bytecode
     set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )
 
-    add_custom_command( OUTPUT ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
-      COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
+    set( obj_suffix ${ARG_ARCH_SUFFIX}.bc )
+    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${obj_suffix} )
+
+    add_custom_command( OUTPUT ${libclc_builtins_lib}
+      COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${libclc_builtins_lib}
         ${builtins_link_lib}
       DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
     )
-    add_custom_target( ${builtins_opt_lib_tgt}
-      ALL DEPENDS ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
-    )
-    set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
-      TARGET_FILE ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
-      FOLDER "libclc/Device IR/Opt"
-    )
-
-    set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
-
-    set( obj_suffix ${ARG_ARCH_SUFFIX}.bc )
-    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${obj_suffix} )
-    add_custom_command( OUTPUT ${libclc_builtins_lib}
-      COMMAND ${prepare_builtins_exe} -o ${libclc_builtins_lib} ${builtins_opt_lib}
-      DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target}
-    )
   endif()
 
-  # Add a 'prepare' target
-  add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${libclc_builtins_lib} )
-  set_target_properties( "prepare-${obj_suffix}" PROPERTIES
+  # Add a 'library' target
+  add_custom_target( library-${obj_suffix} ALL DEPENDS ${libclc_builtins_lib} )
+  set_target_properties( "library-${obj_suffix}" PROPERTIES
     TARGET_FILE ${libclc_builtins_lib}
-    FOLDER "libclc/Device IR/Prepare"
+    FOLDER "libclc/Device IR/Library"
   )
 
-  # Also add a 'prepare' target for the triple. Since a triple may have
+  # Also add a 'library' target for the triple. Since a triple may have
   # multiple devices, ensure we only try to create the triple target once. The
   # triple's target will build all of the bytecode for its constituent devices.
-  if( NOT TARGET prepare-${ARG_TRIPLE} )
-    add_custom_target( prepare-${ARG_TRIPLE} ALL )
+  if( NOT TARGET library-${ARG_TRIPLE} )
+    add_custom_target( library-${ARG_TRIPLE} ALL )
   endif()
-  add_dependencies( prepare-${ARG_TRIPLE} prepare-${obj_suffix} )
+  add_dependencies( library-${ARG_TRIPLE} library-${obj_suffix} )
   # Add dependency to top-level pseudo target to ease making other
   # targets dependent on libclc.
-  add_dependencies( ${ARG_PARENT_TARGET} prepare-${ARG_TRIPLE} )
+  add_dependencies( ${ARG_PARENT_TARGET} library-${ARG_TRIPLE} )
 
   libclc_install(FILES ${libclc_builtins_lib})
 
@@ -488,7 +475,7 @@ function(add_libclc_builtin_set)
   # Add a test for whether or not the libraries contain unresolved functions
   # which would usually indicate a build problem. Note that we don't perform
   # this test for all libclc targets:
-  # * nvptx-- targets don't include workitem builtins
+  # * nvptx64-- targets don't include workitem builtins
   # * clspv targets don't include all OpenCL builtins
   if( NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" )
     add_test( NAME external-funcs-${obj_suffix}
@@ -511,7 +498,7 @@ function(add_libclc_builtin_set)
     add_custom_command(
       OUTPUT ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
       COMMAND ${CMAKE_COMMAND} -E ${LIBCLC_LINK_OR_COPY} ${LIBCLC_LINK_OR_COPY_SOURCE} ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
-      DEPENDS prepare-${obj_suffix}
+      DEPENDS library-${obj_suffix}
     )
     add_custom_target( alias-${alias_suffix} ALL
       DEPENDS ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}

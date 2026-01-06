@@ -35,6 +35,12 @@ int mlirTypeIsAIntegerOrFloat(MlirType type) {
 }
 
 void PyIntegerType::bindDerived(ClassTy &c) {
+  nb::enum_<Signedness>(c, "Signedness")
+      .value("SIGNLESS", Signless)
+      .value("SIGNED", Signed)
+      .value("UNSIGNED", Unsigned)
+      .export_values();
+
   c.def_static(
       "get_signless",
       [](unsigned width, DefaultingPyMlirContext context) {
@@ -59,6 +65,33 @@ void PyIntegerType::bindDerived(ClassTy &c) {
       },
       nb::arg("width"), nb::arg("context") = nb::none(),
       "Create an unsigned integer type");
+  c.def_static(
+      "get",
+      [](unsigned width, Signedness signedness,
+         DefaultingPyMlirContext context) {
+        MlirType t;
+        switch (signedness) {
+        case Signless:
+          t = mlirIntegerTypeGet(context->get(), width);
+          break;
+        case Signed:
+          t = mlirIntegerTypeSignedGet(context->get(), width);
+          break;
+        case Unsigned:
+          t = mlirIntegerTypeUnsignedGet(context->get(), width);
+          break;
+        }
+        return PyIntegerType(context->getRef(), t);
+      },
+      nb::arg("width"), nb::arg("signedness") = Signless,
+      nb::arg("context") = nb::none(), "Create an integer type");
+  c.def_prop_ro("signedness", [](PyIntegerType &self) -> Signedness {
+    if (mlirIntegerTypeIsSignless(self))
+      return Signless;
+    if (mlirIntegerTypeIsSigned(self))
+      return Signed;
+    return Unsigned;
+  });
   c.def_prop_ro(
       "width",
       [](PyIntegerType &self) { return mlirIntegerTypeGetWidth(self); },

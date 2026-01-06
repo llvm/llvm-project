@@ -227,6 +227,20 @@ def testIntegerType():
         print("signed:", IntegerType.get_signed(8))
         # CHECK: unsigned: ui64
         print("unsigned:", IntegerType.get_unsigned(64))
+        # CHECK: signless: i8
+        print("signless:", IntegerType.get(8))
+        # CHECK: signless: i16
+        print("signless:", IntegerType.get(16, IntegerType.SIGNLESS))
+        # CHECK: signed: si8
+        print("signed:", IntegerType.get(8, IntegerType.SIGNED))
+        # CHECK: unsigned: ui64
+        print("unsigned:", IntegerType.get(64, IntegerType.UNSIGNED))
+        # CHECK: SIGNLESS
+        print(IntegerType.get(8).signedness)
+        # CHECK: SIGNED
+        print(IntegerType.get(8, IntegerType.SIGNED).signedness)
+        # CHECK: UNSIGNED
+        print(IntegerType.get(8, IntegerType.UNSIGNED).signedness)
 
 
 # CHECK-LABEL: TEST: testIndexType
