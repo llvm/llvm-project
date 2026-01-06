@@ -1536,7 +1536,10 @@ module std [system] {
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
     module readable_traits            { header "__iterator/readable_traits.h" }
-    module reverse_access             { header "__iterator/reverse_access.h" }
+    module reverse_access {
+      header "__iterator/reverse_access.h"
+      export std.iterator.reverse_iterator
+    }
     module reverse_iterator           { header "__iterator/reverse_iterator.h" }
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
     module size                       { header "__iterator/size.h" }

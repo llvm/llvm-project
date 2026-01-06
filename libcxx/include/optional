@@ -272,7 +272,6 @@ namespace std {
 #  include <__functional/unary_function.h>
 #  include <__fwd/functional.h>
 #  include <__iterator/bounded_iter.h>
-#  include <__iterator/reverse_iterator.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
