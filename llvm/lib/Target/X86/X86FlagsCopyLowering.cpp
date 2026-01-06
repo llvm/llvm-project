@@ -745,12 +745,13 @@ Register X86FlagsCopyLoweringPass::promoteCondToReg(
     MachineBasicBlock &TestMBB, MachineBasicBlock::iterator TestPos,
     const DebugLoc &TestLoc, X86::CondCode Cond) {
   Register Reg = MRI->createVirtualRegister(PromoteRC);
-  auto SetI = BuildMI(TestMBB, TestPos, TestLoc,
-                      TII->get((!Subtarget->hasZU() || Subtarget->preferSetCC())
-                                   ? X86::SETCCr
-                                   : X86::SETZUCCr),
-                      Reg)
-                  .addImm(Cond);
+  auto SetI =
+      BuildMI(TestMBB, TestPos, TestLoc,
+              TII->get((!Subtarget->hasZU() || Subtarget->preferLegacySetCC())
+                           ? X86::SETCCr
+                           : X86::SETZUCCr),
+              Reg)
+          .addImm(Cond);
   (void)SetI;
   LLVM_DEBUG(dbgs() << "    save cond: "; SetI->dump());
   ++NumSetCCsInserted;

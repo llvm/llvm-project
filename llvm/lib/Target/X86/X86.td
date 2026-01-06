@@ -775,8 +775,8 @@ def TuningUseGLMDivSqrtCosts
 def TuningBranchHint: SubtargetFeature<"branch-hint", "HasBranchHint", "true",
                                         "Target has branch hint feature">;
 
-def TuningPreferSetCC
-    : SubtargetFeature<"prefer-setcc", "PreferSetCC", "true",
+def TuningPreferLegacySetCC
+    : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
                        "Prefer to emit legacy SetCC.">;
 
 //===----------------------------------------------------------------------===//

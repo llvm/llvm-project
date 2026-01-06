@@ -4,7 +4,7 @@
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=avx | FileCheck %s --check-prefixes=FAST,FAST_AVX
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=avx512f | FileCheck %s --check-prefixes=FAST,FAST_AVX
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=+zu | FileCheck %s --check-prefix=FAST_SETZUCC
-; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=+zu,+prefer-setcc | FileCheck %s --check-prefix=FAST_NO-SETZUCC
+; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=+zu,+prefer-legacy-setcc | FileCheck %s --check-prefix=FAST_NO-SETZUCC
 
 define zeroext i1 @fcmp_oeq(float %x, float %y) {
 ; SDAG-LABEL: fcmp_oeq:

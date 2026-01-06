@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X64,AVX,AVX512
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu | FileCheck %s --check-prefixes=SSE,SETZUCC
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu,+prefer-setcc | FileCheck %s --check-prefixes=SSE,NO-SETZUCC
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu,+prefer-legacy-setcc | FileCheck %s --check-prefixes=SSE,NO-SETZUCC
 
 define i8 @scmp.8.8(i8 %x, i8 %y) nounwind {
 ; X64-LABEL: scmp.8.8:

@@ -4,13 +4,13 @@
 ; RUN: llc -O0 -mtriple=i686-unknown   -mcpu=skx -o - %s | FileCheck %s --check-prefix=X86-O0
 ; RUN: llc     -mtriple=i686-unknown   -mcpu=skx -o - %s | FileCheck %s --check-prefix=X86
 ; RUN: llc -O0 -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu -o - %s | FileCheck %s --check-prefix=X64-O0-SETZUCC
-; RUN: llc -O0 -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu,+prefer-setcc -o - %s | FileCheck %s --check-prefix=X64-O0-NO-SETZUCC
+; RUN: llc -O0 -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu,+prefer-legacy-setcc -o - %s | FileCheck %s --check-prefix=X64-O0-NO-SETZUCC
 ; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu -o - %s | FileCheck %s --check-prefix=X64-SETZUCC
-; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu,+prefer-setcc -o - %s | FileCheck %s --check-prefix=X64-NO-SETZUCC
+; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu,+prefer-legacy-setcc -o - %s | FileCheck %s --check-prefix=X64-NO-SETZUCC
 
 ; The test is to check if setzucc instruction is emitted when zu feature is
-; specified in llc option or setcc instruction is emitted when prefer-setcc is
-; specified.
+; specified in llc option or setcc instruction is emitted when
+; prefer-legacy-setcc is specified.
 
 @c = external dso_local constant i8, align 1
 
