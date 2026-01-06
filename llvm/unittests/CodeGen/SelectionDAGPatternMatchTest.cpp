@@ -1108,6 +1108,18 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {
   SDValue VecWrong = DAG->getBuildVector(VecVT, DL, WrongOps);
   EXPECT_FALSE(sd_match(VecWrong, m_SpecificNeg(VecPos)));
 
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto Vec16VT = EVT::getVectorVT(Context, Int16VT, 4);
+  SDValue Const1_16 = DAG->getConstant(1, DL, Int16VT);
+  SDValue Const2_16 = DAG->getConstant(2, DL, Int16VT);
+  SDValue Const3_16 = DAG->getConstant(3, DL, Int16VT);
+  SDValue Const5_16 = DAG->getConstant(5, DL, Int16VT);
+  SDValue PosOps16[] = {Const1_16, Const2_16, Const5_16, Const3_16};
+  SDValue NegOps32[] = {ConstNeg1, ConstNeg2, ConstNeg5, ConstNeg3};
+  SDValue VecPos16 = DAG->getBuildVector(Vec16VT, DL, PosOps16);
+  SDValue VecNeg32 = DAG->getBuildVector(Vec16VT, DL, NegOps32);
+  EXPECT_FALSE(sd_match(VecNeg32, m_SpecificNeg(VecPos16)));
+
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
   EXPECT_TRUE(sd_match(Zero, m_SpecificNeg(Zero)));
 }
