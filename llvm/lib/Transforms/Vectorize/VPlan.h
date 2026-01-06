@@ -4501,10 +4501,10 @@ public:
 
   void setName(const Twine &newName) { Name = newName.str(); }
 
-  /// Gets the live-in VPValue for \p V or adds a new live-in (if none exists
+  /// Gets the live-in VPIRValue for \p V or adds a new live-in (if none exists
   ///  yet) for \p V.
   VPIRValue *getOrAddLiveIn(Value *V) {
-    assert(V && "Trying to get or add the VPValue of a null Value");
+    assert(V && "Trying to get or add the VPIRValue of a null Value");
     auto [It, Inserted] = LiveIns.try_emplace(V);
     if (Inserted)
       It->second = new VPIRValue(V);
@@ -4512,6 +4512,10 @@ public:
     assert(isa<VPIRValue>(It->second) &&
            "Only VPIRValues should be in mapping");
     return It->second;
+  }
+  VPIRValue *getOrAddLiveIn(VPIRValue *V) {
+    assert(V && "Trying to get or add the VPIRValue of a null VPIRValue");
+    return getOrAddLiveIn(V->getValue());
   }
 
   /// Return a VPIRValue wrapping i1 true.

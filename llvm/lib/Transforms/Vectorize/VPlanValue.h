@@ -179,8 +179,8 @@ public:
 LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
                                           const VPRecipeBase &R);
 
-/// A VPValue representing a live-in from the input IR. It wraps an underlying
-/// IR Value.
+/// A VPValue representing a live-in from the input IR or a constant. It wraps
+/// an underlying IR Value.
 struct VPIRValue : public VPValue {
   VPIRValue(Value *UV) : VPValue(VPVIRValueSC, UV) {
     assert(UV && "VPIRValue requires an underlying IR value");

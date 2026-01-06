@@ -1666,8 +1666,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
-            auto *LI = dyn_cast<VPIRValue>(Op);
-            bool LiveInNeedsBroadcast = LI && !isa<Constant>(LI->getValue());
+            auto *IRV = dyn_cast<VPIRValue>(Op);
+            bool LiveInNeedsBroadcast = IRV && !isa<Constant>(IRV->getValue());
             auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
             return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
           }))

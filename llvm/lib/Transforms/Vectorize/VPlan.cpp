@@ -1181,7 +1181,7 @@ VPlan *VPlan::duplicate() {
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
-    Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn->getValue());
+    Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VF] = &NewPlan->VF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
@@ -1189,8 +1189,8 @@ VPlan *VPlan::duplicate() {
     NewPlan->BackedgeTakenCount = new VPSymbolicValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
   }
-  if (auto *LI = dyn_cast_or_null<VPIRValue>(TripCount))
-    Old2NewVPValues[LI] = NewPlan->getOrAddLiveIn(LI->getValue());
+  if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
+    Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
@@ -1456,7 +1456,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
 
   // First assign the base name for V.
   const auto &[A, _] = VPValue2Name.try_emplace(V, BaseName);
-  // Integer or FP constants with different types will result in he same string
+  // Integer or FP constants with different types will result in the same string
   // due to stripping types.
   if (isa<VPIRValue>(V) && isa<ConstantInt, ConstantFP>(UV))
     return;
@@ -1735,8 +1735,8 @@ bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
 
 TargetTransformInfo::OperandValueInfo
 VPCostContext::getOperandInfo(VPValue *V) const {
-  if (auto *LI = dyn_cast<VPIRValue>(V))
-    return TTI::getOperandInfo(LI->getValue());
+  if (auto *IRV = dyn_cast<VPIRValue>(V))
+    return TTI::getOperandInfo(IRV->getValue());
 
   return {};
 }

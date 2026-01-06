@@ -106,11 +106,11 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
   int_pred_ty() : P() {}
 
   bool match(VPValue *VPV) const {
-    auto *LI = dyn_cast<VPIRValue>(VPV);
-    if (!LI)
+    auto *IRV = dyn_cast<VPIRValue>(VPV);
+    if (!IRV)
       return false;
-    assert(!LI->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(LI->getValue());
+    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
     if (!CI)
       return false;
 
@@ -180,11 +180,11 @@ struct bind_apint {
   bind_apint(const APInt *&Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
-    auto *LI = dyn_cast<VPIRValue>(VPV);
-    if (!LI)
+    auto *IRV = dyn_cast<VPIRValue>(VPV);
+    if (!IRV)
       return false;
-    assert(!LI->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(LI->getValue());
+    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
     if (!CI)
       return false;
     Res = &CI->getValue();

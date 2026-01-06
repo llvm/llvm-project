@@ -534,9 +534,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
-    if (auto *IdxLI = dyn_cast<VPIRValue>(getOperand(1))) {
+    if (auto *IdxIRV = dyn_cast<VPIRValue>(getOperand(1))) {
       unsigned IdxToExtract =
-          cast<ConstantInt>(IdxLI->getValue())->getZExtValue();
+          cast<ConstantInt>(IdxIRV->getValue())->getZExtValue();
       return State.get(getOperand(0), VPLane(IdxToExtract));
     }
     Value *Vec = State.get(getOperand(0));
@@ -1099,8 +1099,8 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
     llvm::CmpPredicate Pred;
     if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
-      if (auto *LI = dyn_cast<VPIRValue>(getOperand(0)))
-        if (auto *Cmp = dyn_cast<CmpInst>(LI->getValue()))
+      if (auto *CondIRV = dyn_cast<VPIRValue>(getOperand(0)))
+        if (auto *Cmp = dyn_cast<CmpInst>(CondIRV->getValue()))
           Pred = Cmp->getPredicate();
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getCmpSelInstrCost(
@@ -2005,8 +2005,8 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   // a multiply, and add that into the cost.
   InstructionCost MulCost =
       Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
-  if (auto *IncAmtLI = dyn_cast<VPIRValue>(IncAmt)) {
-    ConstantInt *CI = dyn_cast<ConstantInt>(IncAmtLI->getValue());
+  if (auto *IncAmountIRV = dyn_cast<VPIRValue>(IncAmt)) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(IncAmountIRV->getValue());
 
     if (CI && CI->getZExtValue() == 1)
       MulCost = TTI::TCC_Free;
