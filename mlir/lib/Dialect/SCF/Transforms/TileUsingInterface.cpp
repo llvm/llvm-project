@@ -1328,7 +1328,7 @@ getUntiledProducerFromSliceSource(OpOperand *source,
   if (loopIt == loops.rend())
     destinationIterArg = source;
 
-  OpResult result = dyn_cast<OpResult>(source->get());
+  auto result = dyn_cast<OpResult>(source->get());
   if (result) {
     Operation *producer = result.getOwner();
     Operation *innermostLoop = loops.back();
