@@ -6302,7 +6302,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     auto splitMultiRegDbgValue =
         [&](ArrayRef<std::pair<Register, TypeSize>> SplitRegs) -> bool {
       unsigned Offset = 0;
-      for (const auto [Reg, RegSizeInBits] : SplitRegs) {
+      for (const auto &[Reg, RegSizeInBits] : SplitRegs) {
         // FIXME: Scalable sizes are not supported in fragment expressions.
         if (RegSizeInBits.isScalable())
           return false;
@@ -7319,6 +7319,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       auto FunnelOpcode = IsFSHL ? ISD::FSHL : ISD::FSHR;
       setValue(&I, DAG.getNode(FunnelOpcode, sdl, VT, X, Y, Z));
     }
+    return;
+  }
+  case Intrinsic::clmul: {
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::CLMUL, sdl, X.getValueType(), X, Y));
     return;
   }
   case Intrinsic::sadd_sat: {
