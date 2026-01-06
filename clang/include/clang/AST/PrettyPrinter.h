@@ -61,8 +61,8 @@ struct PrintingPolicy {
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SupressStorageClassSpecifiers(false),
-        SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
+        SupressStorageClassSpecifiers(false), SuppressTagKeyword(LO.CPlusPlus),
+        SuppressTagKeywordInAnonNames(false), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
         SuppressInlineNamespace(
             llvm::to_underlying(SuppressInlineNamespaceMode::Redundant)),
@@ -78,12 +78,13 @@ struct PrintingPolicy {
         PolishForDeclaration(false), Half(LO.Half),
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
-        SuppressImplicitBase(false), UseStdFunctionForLambda(false), FullyQualifiedName(false),
-        PrintAsCanonical(false), PrintInjectedClassNameWithArguments(true),
-        UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
+        SuppressImplicitBase(false), UseStdFunctionForLambda(false),
+        FullyQualifiedName(false), PrintAsCanonical(false),
+        PrintInjectedClassNameWithArguments(true), UsePreferredNames(true),
+        AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true), UseHLSLTypes(LO.HLSL),
-    /* TO_UPSTREAM(BoundsSafety) ON */
+        /* TO_UPSTREAM(BoundsSafety) ON */
         CountedByInArrayBracket(false), DelayedArrayQual() {
     // GNU Attributes cannot be placed inside the array bracket, hence 'counted_by'
     // attribute in the upstream is printed after the array bracket. Internally,
@@ -138,6 +139,15 @@ struct PrintingPolicy {
   /// \endcode
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTagKeyword : 1;
+
+  /// Whether type printing should skip printing the tag keyword
+  /// of anonymous entities. E.g.,
+  ///
+  /// * \c (anonymous) as opopsed to (anonymous struct)
+  /// * \c (unnamed) as opposed to (unnamed enum)
+  ///
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressTagKeywordInAnonNames : 1;
 
   /// When true, include the body of a tag definition.
   ///
