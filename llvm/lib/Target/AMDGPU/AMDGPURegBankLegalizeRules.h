@@ -204,6 +204,7 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: extends
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
+  Vgpr32AExtBoolInReg,
   Sgpr32SExt,
   Sgpr32ZExt,
   Vgpr32SExt,
