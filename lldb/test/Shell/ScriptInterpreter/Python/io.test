@@ -1,0 +1,9 @@
+# RUN: rm -rf %t.stdout
+# RUN: cat %s | %lldb --script-language python > %t.stdout
+# RUN: cat %t.stdout | FileCheck %s --check-prefix STDOUT
+script
+variable = 300
+print(variable)
+quit
+
+# STDOUT: 300
