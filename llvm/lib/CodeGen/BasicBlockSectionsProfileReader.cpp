@@ -171,8 +171,8 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 //
 // A prefetch target is specified by a pair "<bbid>,<subblock_index>" where
 // bbid specifies the target basic block and subblock_index is a zero-based
-// index. Callsite 0 refers to the region at the beginning of the block up to
-// the first callsite. Callsite `i > 0` refers to the region immediately after
+// index. Subblock 0 refers to the region at the beginning of the block up to
+// the first callsite. Subblock `i > 0` refers to the region immediately after
 // the `i`-th callsite up to the `i+1`-th callsite (or the end of the block).
 // The prefetch target is always emitted at the beginning of the subblock.
 // This is the beginning of the basic block for `i = 0` and immediately after
@@ -189,15 +189,15 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // each subblock.
 //
 // +----------------------------------+
-// | __llvm_prefetch_target_foo_10_0: | <- Callsite 0 (before call_A)
+// | __llvm_prefetch_target_foo_10_0: | <--- Subblock 0 (before call_A)
 // |  Instruction 1                   |
 // |  Instruction 2                   |
 // |  call_A (Callsite 0)             |
-// | __llvm_prefetch_target_foo_10_1: | <--- Callsite 1 (after call_A,
+// | __llvm_prefetch_target_foo_10_1: | <--- Subblock 1 (after call_A,
 // |                                  |                  before call_B)
 // |  Instruction 3                   |
 // |  call_B (Callsite 1)             |
-// | __llvm_prefetch_target_foo_10_2: | <--- Callsite 2 (after call_B,
+// | __llvm_prefetch_target_foo_10_2: | <--- Subblock 2 (after call_B,
 // |                                  |                  before call_C)
 // |  Instruction 4                   |
 // +----------------------------------+
