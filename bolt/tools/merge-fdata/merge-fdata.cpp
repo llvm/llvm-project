@@ -278,7 +278,10 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     }
     CounterTy operator+(const CounterTy &O) { return *this += O; }
   };
-  typedef StringMap<CounterTy> ProfileTy;
+  struct ProfileTy {
+    StringMap<CounterTy> Branch;
+    StringMap<CounterTy> Memory;
+  };
 
   auto ParseProfile = [&](const std::string &Filename, auto &Profiles) {
     const llvm::thread::id tid = llvm::this_thread::get_id();
@@ -323,7 +326,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       auto [Signature, ExecCount] = Line.rsplit(' ');
       if (ExecCount.getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted execution count");
-      // Only LBR profile has misprediction field, branch entries
+      // Only LBR profile has misprediction field
       if (!NoLBRCollection.value_or(false) && IsBranchEntry) {
         auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
         Signature = SignatureLBR;
@@ -331,8 +334,8 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
           report_error(Filename, "Malformed / corrupted misprediction count");
       }
 
-      Count += Profile->lookup(Signature);
-      Profile->insert_or_assign(Signature, Count);
+      auto &ProfileMap = IsBranchEntry ? Profile->Branch : Profile->Memory;
+      ProfileMap[Signature] += Count;
     } while (std::getline(FdataFile, FdataLine));
   };
 
@@ -348,25 +351,25 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   Pool.wait();
 
   ProfileTy MergedProfile;
-  for (const auto &[Thread, Profile] : ParsedProfiles)
-    for (const auto &[Key, Value] : Profile) {
-      CounterTy Count = MergedProfile.lookup(Key) + Value;
-      MergedProfile.insert_or_assign(Key, Count);
-    }
+  for (const auto &[Thread, Profile] : ParsedProfiles) {
+    for (const auto &[Key, Value] : Profile.Branch)
+      MergedProfile.Branch[Key] += Value;
+    for (const auto &[Key, Value] : Profile.Memory)
+      MergedProfile.Memory[Key] += Value;
+  }
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   if (NoLBRCollection.value_or(false))
     output() << "no_lbr\n";
-  for (const auto &[Key, Value] : MergedProfile) {
+  for (const auto &[Key, Value] : MergedProfile.Branch) {
     output() << Key << " ";
-    unsigned Type = 0;
-    Key.split(' ').first.getAsInteger(10, Type);
-    bool IsBranchEntry = Type < 3;
-    if (!NoLBRCollection.value_or(false) && IsBranchEntry)
+    if (!NoLBRCollection.value_or(false))
       output() << Value.Mispred << " ";
     output() << Value.Exec << "\n";
   }
+  for (const auto &[Key, Value] : MergedProfile.Memory)
+    output() << Key << ' ' << Value.Exec << '\n';
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }
