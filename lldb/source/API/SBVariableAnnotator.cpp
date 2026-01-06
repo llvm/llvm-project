@@ -108,19 +108,3 @@ SBVariableAnnotator::AnnotateStructured(SBInstruction inst) {
     }
   return result;
 }
-
-SBVariableAnnotator::SBVariableAnnotator(
-    const lldb::VariableAnnotatorSP &annotator_sp)
-    : m_opaque_sp(annotator_sp) {
-  LLDB_INSTRUMENT_VA(this, annotator_sp);
-}
-
-lldb::VariableAnnotatorSP SBVariableAnnotator::GetSP() const {
-  LLDB_INSTRUMENT_VA(this);
-  return m_opaque_sp;
-}
-
-void SBVariableAnnotator::SetSP(const lldb::VariableAnnotatorSP &annotator_sp) {
-  LLDB_INSTRUMENT_VA(this, annotator_sp);
-  m_opaque_sp = annotator_sp;
-}
