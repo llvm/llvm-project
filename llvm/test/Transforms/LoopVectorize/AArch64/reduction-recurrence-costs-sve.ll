@@ -91,10 +91,10 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP8]], align 4
 ; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP24]], i64 0
 ; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT7]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT6]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; VSCALEFORTUNING2-NEXT:    [[TMP25:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[BROADCAST_SPLAT7]], i32 -1)
-; VSCALEFORTUNING2-NEXT:    [[TMP26]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT7]], <vscale x 4 x i32> [[BROADCAST_SPLAT7]], i32 -1)
-; VSCALEFORTUNING2-NEXT:    [[TMP27:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR4]], <vscale x 4 x i32> [[TMP25]], i32 -1)
-; VSCALEFORTUNING2-NEXT:    [[TMP28:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[TMP25]], <vscale x 4 x i32> [[TMP26]], i32 -1)
+; VSCALEFORTUNING2-NEXT:    [[TMP25:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[BROADCAST_SPLAT7]], i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP26]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[BROADCAST_SPLAT7]], <vscale x 4 x i32> [[BROADCAST_SPLAT7]], i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP27:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR4]], <vscale x 4 x i32> [[TMP25]], i32 1)
+; VSCALEFORTUNING2-NEXT:    [[TMP28:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[TMP25]], <vscale x 4 x i32> [[TMP26]], i32 1)
 ; VSCALEFORTUNING2-NEXT:    [[TMP29:%.*]] = or <vscale x 4 x i32> [[TMP27]], [[BROADCAST_SPLAT]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP30:%.*]] = or <vscale x 4 x i32> [[TMP28]], [[BROADCAST_SPLAT]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP31:%.*]] = shl <vscale x 4 x i32> [[TMP29]], splat (i32 1)
@@ -218,8 +218,8 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP12]], align 4
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP28]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT6]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP29]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[BROADCAST_SPLAT6]], i32 -1)
-; PRED-NEXT:    [[TMP30:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR4]], <vscale x 4 x i32> [[TMP29]], i32 -1)
+; PRED-NEXT:    [[TMP29]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR]], <vscale x 4 x i32> [[BROADCAST_SPLAT6]], i32 1)
+; PRED-NEXT:    [[TMP30:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[VECTOR_RECUR4]], <vscale x 4 x i32> [[TMP29]], i32 1)
 ; PRED-NEXT:    [[TMP31:%.*]] = or <vscale x 4 x i32> [[TMP30]], [[BROADCAST_SPLAT]]
 ; PRED-NEXT:    [[TMP32:%.*]] = shl <vscale x 4 x i32> [[TMP31]], splat (i32 1)
 ; PRED-NEXT:    [[TMP33:%.*]] = or <vscale x 4 x i32> [[TMP32]], splat (i32 2)

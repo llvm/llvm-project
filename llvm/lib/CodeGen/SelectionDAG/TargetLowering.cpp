@@ -11989,14 +11989,16 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
 
 SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                                            SelectionDAG &DAG) const {
-  assert(Node->getOpcode() == ISD::VECTOR_SPLICE && "Unexpected opcode!");
+  assert((Node->getOpcode() == ISD::VECTOR_SPLICE_LEFT ||
+          Node->getOpcode() == ISD::VECTOR_SPLICE_RIGHT) &&
+         "Unexpected opcode!");
   assert(Node->getValueType(0).isScalableVector() &&
          "Fixed length vector types expected to use SHUFFLE_VECTOR!");
 
   EVT VT = Node->getValueType(0);
   SDValue V1 = Node->getOperand(0);
   SDValue V2 = Node->getOperand(1);
-  int64_t Imm = cast<ConstantSDNode>(Node->getOperand(2))->getSExtValue();
+  uint64_t Imm = Node->getConstantOperandVal(2);
   SDLoc DL(Node);
 
   // Expand through memory thusly:
@@ -12027,7 +12029,7 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
   SDValue StackPtr2 = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, VTBytes);
   SDValue StoreV2 = DAG.getStore(StoreV1, DL, V2, StackPtr2, PtrInfo);
 
-  if (Imm >= 0) {
+  if (Node->getOpcode() == ISD::VECTOR_SPLICE_LEFT) {
     // Load back the required element. getVectorElementPointer takes care of
     // clamping the index if it's out-of-bounds.
     StackPtr = getVectorElementPointer(DAG, StackPtr, VT, Node->getOperand(2));
@@ -12036,14 +12038,11 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                        MachinePointerInfo::getUnknownStack(MF));
   }
 
-  uint64_t TrailingElts = -Imm;
-
   // NOTE: TrailingElts must be clamped so as not to read outside of V1:V2.
   TypeSize EltByteSize = VT.getVectorElementType().getStoreSize();
-  SDValue TrailingBytes =
-      DAG.getConstant(TrailingElts * EltByteSize, DL, PtrVT);
+  SDValue TrailingBytes = DAG.getConstant(Imm * EltByteSize, DL, PtrVT);
 
-  if (TrailingElts > VT.getVectorMinNumElements())
+  if (Imm > VT.getVectorMinNumElements())
     TrailingBytes = DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, VTBytes);
 
   // Calculate the start address of the spliced result.

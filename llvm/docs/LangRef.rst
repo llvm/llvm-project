@@ -20813,8 +20813,8 @@ Arguments:
 All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
-'``llvm.vector.splice``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.vector.splice.left``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -20822,21 +20822,15 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
 
 Overview:
 """""""""
 
-The '``llvm.vector.splice.*``' intrinsics construct a vector by
-concatenating elements from the first input vector with elements of the second
-input vector, returning a vector of the same type as the input vectors. The
-signed immediate, modulo the number of elements in the vector, is the index
-into the first vector from which to extract the result value. This means
-conceptually that for a positive immediate, a vector is extracted from
-``concat(%vec1, %vec2)`` starting at index ``imm``, whereas for a negative
-immediate, it extracts ``-imm`` trailing elements from the first vector, and
-the remaining elements from ``%vec2``.
+The '``llvm.vector.splice.left.*``' intrinsics construct a vector by
+concatenating two vectors together, shifting the elements left by ``imm``, and
+extracting the lower half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
@@ -20847,18 +20841,61 @@ For example:
 
 .. code-block:: text
 
- llvm.vector.splice(<A,B,C,D>, <E,F,G,H>, 1);  ==> <B, C, D, E> index
- llvm.vector.splice(<A,B,C,D>, <E,F,G,H>, -3); ==> <B, C, D, E> trailing elements
+ llvm.vector.splice.left(<A,B,C,D>, <E,F,G,H>, 1);
+                     ==> <A,B,C,D,E,F,G,H>
+                     ==> <B,C,D,E,F,G,H,_>
+                     ==> <B,C,D,E>
 
 
 Arguments:
 """"""""""
 
-The first two operands are vectors with the same type. The start index is imm
-modulo the runtime number of elements in the source vector. For a fixed-width
-vector <N x eltty>, imm is a signed integer constant in the range
--N <= imm < N. For a scalable vector <vscale x N x eltty>, imm is a signed
-integer constant in the range -X <= imm < X where X=vscale_range_min * N.
+The first two operands are vectors with the same type. For a fixed-width vector
+<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm < N. For
+a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
+the range 0 <= imm < X where X=vscale_range_min * N.
+
+'``llvm.vector.splice.right``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.splice.right.*``' intrinsics construct a vector by
+concatenating two vectors together, shifting the elements right by ``imm``, and
+extracting the upper half.
+
+These intrinsics work for both fixed and scalable vectors. While this intrinsic
+supports all vector types the recommended way to express this operation for
+fixed-width vectors is still to use a shufflevector, as that may allow for more
+optimization opportunities.
+
+For example:
+
+.. code-block:: text
+
+ llvm.vector.splice.right(<A,B,C,D>, <E,F,G,H>, 1);
+                      ==> <A,B,C,D,E,F,G,H>
+                      ==> <_,A,B,C,D,E,F,G>
+                      ==>         <D,E,F,G>
+
+
+Arguments:
+""""""""""
+
+The first two operands are vectors with the same type. For a fixed-width vector
+<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm <= N. For
+a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
+the range 0 <= imm <= X where X=vscale_range_min * N.
 
 '``llvm.stepvector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
