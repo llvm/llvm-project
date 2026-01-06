@@ -90,8 +90,6 @@ def TestBitEnum_Attr : EnumAttr<Test_Dialect, TestBitEnum, "testbitenum">;
 // CHECK:         return bin(self).count("1")
 
 // CHECK:     def __str__(self):
-// CHECK:         if len(self) > 1:
-// CHECK:             return " | ".join(map(str, self))
 // CHECK:         if self is TestBitEnum.User:
 // CHECK:             return "user"
 // CHECK:         if self is TestBitEnum.Group:
@@ -100,6 +98,8 @@ def TestBitEnum_Attr : EnumAttr<Test_Dialect, TestBitEnum, "testbitenum">;
 // CHECK:             return "other"
 // CHECK:         if self is TestBitEnum.Any:
 // CHECK:             return "any"
+// CHECK:         if len(self) > 1:
+// CHECK:             return " | ".join(map(str, self))
 // CHECK:         raise ValueError("Unknown TestBitEnum enum entry.")
 
 // CHECK: @register_attribute_builder("TestBitEnum")

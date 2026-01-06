@@ -71,15 +71,15 @@ static void emitEnumClass(EnumInfo enumInfo, raw_ostream &os) {
   }
 
   os << formatv("    def __str__(self):\n");
-  if (enumInfo.isBitEnum())
-    os << formatv("        if len(self) > 1:\n"
-                  "            return \"{0}\".join(map(str, self))\n",
-                  enumInfo.getDef().getValueAsString("separator"));
   for (const EnumCase &enumCase : enumInfo.getAllCases()) {
     os << formatv("        if self is {0}.{1}:\n", enumInfo.getEnumClassName(),
                   makePythonEnumCaseName(enumCase.getSymbol()));
     os << formatv("            return \"{0}\"\n", enumCase.getStr());
   }
+  if (enumInfo.isBitEnum())
+  os << formatv("        if len(self) > 1:\n"
+                "            return \"{0}\".join(map(str, self))\n",
+                enumInfo.getDef().getValueAsString("separator"));
   os << formatv("        raise ValueError(\"Unknown {0} enum entry.\")\n\n\n",
                 enumInfo.getEnumClassName());
   os << "\n";
