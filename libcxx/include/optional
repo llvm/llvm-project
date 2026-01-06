@@ -284,6 +284,7 @@ namespace std {
 #  include <__type_traits/decay.h>
 #  include <__type_traits/disjunction.h>
 #  include <__type_traits/enable_if.h>
+#  include <__type_traits/integral_constant.h>
 #  include <__type_traits/invoke.h>
 #  include <__type_traits/is_array.h>
 #  include <__type_traits/is_assignable.h>
@@ -678,6 +679,27 @@ struct __is_std_optional : false_type {};
 template <class _Tp>
 struct __is_std_optional<optional<_Tp>> : true_type {};
 
+template <class _Tp, class... _Args>
+inline constexpr bool __is_constructible_for_optional_v = is_constructible_v<_Tp, _Args...>;
+
+template <class _Tp, class... _Args>
+struct __is_constructible_for_optional : bool_constant<__is_constructible_for_optional_v<_Tp, _Args...>> {};
+
+template <class _Tp, class _Up, class... _Args>
+inline constexpr bool __is_constructible_for_optional_initializer_list_v =
+    is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>;
+
+#    if _LIBCPP_STD_VER >= 26
+template <class _Tp, class... _Args>
+inline constexpr bool __is_constructible_for_optional_v<_Tp&, _Args...> = false;
+template <class _Tp, class _Arg>
+inline constexpr bool __is_constructible_for_optional_v<_Tp&, _Arg> =
+    is_constructible_v<_Tp&, _Arg> && !reference_constructs_from_temporary_v<_Tp&, _Arg>;
+
+template <class _Tp, class _Up, class... _Args>
+inline constexpr bool __is_constructible_for_optional_initializer_list_v<_Tp&, _Up, _Args...> = false;
+#    endif
+
 template <class _Tp, class = void>
 struct __optional_iterator {};
 
@@ -873,13 +895,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr optional(optional&&)      = default;
   _LIBCPP_HIDE_FROM_ABI constexpr optional(nullopt_t) noexcept {}
 
-  template <class _InPlaceT,
-            class... _Args,
-            enable_if_t<_And<_IsSame<_InPlaceT, in_place_t>, is_constructible<_Tp, _Args...>>::value, int> = 0>
+  template <
+      class _InPlaceT,
+      class... _Args,
+      enable_if_t<_And<_IsSame<_InPlaceT, in_place_t>, __is_constructible_for_optional<_Tp, _Args...>>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_InPlaceT, _Args&&... __args)
       : __base(in_place, std::forward<_Args>(__args)...) {}
 
-  template <class _Up, class... _Args, enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...>, int> = 0>
+  template <class _Up,
+            class... _Args,
+            enable_if_t<__is_constructible_for_optional_initializer_list_v<_Tp, _Up, _Args...>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(in_place_t, initializer_list<_Up> __il, _Args&&... __args)
       : __base(in_place, __il, std::forward<_Args>(__args)...) {}
 
@@ -1552,17 +1577,21 @@ template <
 #    if _LIBCPP_STD_VER >= 26
     __make_optional_barrier_tag = __make_optional_barrier_tag{},
 #    endif
-    class _Tp>
+    class _Tp,
+    enable_if_t<is_constructible_v<decay_t<_Tp>, _Tp>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<decay_t<_Tp>> make_optional(_Tp&& __v) {
   return optional<decay_t<_Tp>>(std::forward<_Tp>(__v));
 }
 
-template <class _Tp, class... _Args>
+template <class _Tp, class... _Args, enable_if_t<__is_constructible_for_optional_v<_Tp, _Args...>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<_Tp> make_optional(_Args&&... __args) {
   return optional<_Tp>(in_place, std::forward<_Args>(__args)...);
 }
 
-template <class _Tp, class _Up, class... _Args>
+template <class _Tp,
+          class _Up,
+          class... _Args,
+          enable_if_t<__is_constructible_for_optional_initializer_list_v<_Tp, _Up, _Args...>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional<_Tp>
 make_optional(initializer_list<_Up> __il, _Args&&... __args) {
   return optional<_Tp>(in_place, __il, std::forward<_Args>(__args)...);

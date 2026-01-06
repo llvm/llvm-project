@@ -2159,7 +2159,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
         // exp(+/- smallest_normal) = 1
         // exp(+/- largest_denormal) = 1
         // exp(+/- smallest_denormal) = 1
-        SrcDemandedMask |= fcPosNormal | fcSubnormal | fcZero;
+        // exp(-1) = pos normal
+        SrcDemandedMask |= fcNormal | fcSubnormal | fcZero;
       }
 
       // exp(inf), exp(largest_normal) = inf
@@ -2180,6 +2181,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       // exp(+/-0) = 1
       if (KnownSrc.isKnownAlways(fcZero))
         return ConstantFP::get(VTy, 1.0);
+
+      // Only perform nan propagation.
+      // Note: Dropping canonicalize / quiet of signaling nan.
+      if (KnownSrc.isKnownAlways(fcNan))
+        return CI->getArgOperand(0);
 
       // exp(0 | nan) => x == 0.0 ? 1.0 : x
       if (KnownSrc.isKnownAlways(fcZero | fcNan)) {
@@ -2202,19 +2208,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
         Value *X = CI->getArgOperand(0);
         Value *IsPosInfOrNan = Builder.CreateFCmpFMF(
             FCmpInst::FCMP_UEQ, X, ConstantFP::getInfinity(VTy), FMF);
-        Value *ZeroOrInf = Builder.CreateSelectFMF(
-            IsPosInfOrNan, X, ConstantFP::getZero(VTy), FMF);
         // We do not know whether an infinity or a NaN is more likely here,
         // so mark the branch weights as unkown.
-        if (auto *SI = dyn_cast<SelectInst>(ZeroOrInf))
-          setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
+        Value *ZeroOrInf = Builder.CreateSelectFMFWithUnknownProfile(
+            IsPosInfOrNan, X, ConstantFP::getZero(VTy), FMF, DEBUG_TYPE);
         return ZeroOrInf;
       }
-
-      // Only perform nan propagation.
-      // Note: Dropping canonicalize / quiet of signaling nan.
-      if (KnownSrc.isKnownAlways(fcNan))
-        return CI->getArgOperand(0);
 
       Known = KnownFPClass::exp(KnownSrc);
       break;
