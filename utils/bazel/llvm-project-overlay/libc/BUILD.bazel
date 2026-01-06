@@ -1667,21 +1667,49 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_threads_raw_mutex",
+    name = "__support_threads_mutex_common",
     hdrs = [
-        "src/__support/threads/linux/raw_mutex.h",
+        "src/__support/threads/mutex_common.h",
+    ],
+    deps = [
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_threads_unix_mutex",
+    hdrs = [
+        "src/__support/threads/unix_mutex.h",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":__support_cpp_expected",
         ":__support_cpp_optional",
+        ":__support_macros_config",
+        ":__support_threads_mutex_common",
+        ":__support_threads_raw_mutex",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_threads_raw_mutex",
+    hdrs = [
+        "src/__support/threads/raw_mutex.h",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_cpp_optional",
+        ":__support_macros_config",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_sleep",
         ":__support_time",
-        ":types_pid_t",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -1689,21 +1717,12 @@ libc_support_library(
     name = "__support_threads_mutex",
     hdrs = [
         "src/__support/threads/mutex.h",
-        "src/__support/threads/mutex_common.h",
-    ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    textual_hdrs = [
-        "src/__support/threads/linux/mutex.h",
     ],
     deps = [
-        ":__support_cpp_atomic",
-        ":__support_osutil_syscall",
-        ":__support_threads_linux_futex_utils",
-        ":__support_threads_raw_mutex",
-        ":types_pid_t",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_threads_mutex_common",
+        ":__support_threads_unix_mutex",
     ],
 )
 
@@ -6093,6 +6112,15 @@ libc_function(
 )
 
 libc_function(
+    name = "getpagesize",
+    srcs = ["src/unistd/linux/getpagesize.cpp"],
+    hdrs = ["src/unistd/getpagesize.h"],
+    deps = [
+        ":__support_osutil_linux_auxv",
+    ],
+)
+
+libc_function(
     name = "getppid",
     srcs = ["src/unistd/linux/getppid.cpp"],
     hdrs = ["src/unistd/getppid.h"],
@@ -7075,7 +7103,6 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
-        ":mprotect",
         ":mprotect_common",
         ":types_size_t",
     ],

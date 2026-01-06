@@ -15,6 +15,7 @@
 #define CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRCXXABI_H
 
 #include "mlir/Transforms/DialectConversion.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace cir {
@@ -45,6 +46,13 @@ public:
   lowerDataMemberConstant(cir::DataMemberAttr attr,
                           const mlir::DataLayout &layout,
                           const mlir::TypeConverter &typeConverter) const = 0;
+
+  /// Lower the given cir.get_runtime_member op to a sequence of more
+  /// "primitive" CIR operations that act on the ABI types.
+  virtual mlir::Operation *
+  lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
+                        mlir::Value loweredAddr, mlir::Value loweredMember,
+                        mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.

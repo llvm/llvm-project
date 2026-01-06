@@ -331,6 +331,7 @@ An overview of all the command-line options:
                                    example, to place the correct user name in
                                    TODO() comments in the relevant check.
     WarningsAsErrors             - Same as '--warnings-as-errors'.
+    RemovedArgs                  - Same as '--removed-arg'
 
     The effective configuration can be inspected using --dump-config:
 
