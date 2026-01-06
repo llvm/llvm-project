@@ -1376,7 +1376,7 @@ public:
   Result Return(parser::Message &&msg) const {
     if (severity_) {
       msg.set_severity(*severity_);
-      if (*severity_ != parser::Severity::Error) {
+      if (parser::IsWarningSeverity(*severity_)) {
         msg.set_languageFeature(feature);
       }
     }

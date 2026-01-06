@@ -119,8 +119,16 @@ bool formatters::MsvcStlVariantSummaryProvider(
     storage_type = storage_type.GetTypedefedType();
 
   CompilerType active_type = storage_type.GetTypeTemplateArgument(1, true);
-  if (!active_type)
-    return false;
+  if (!active_type) {
+    // PDB: get the type from the head as we don't have template arguments
+    // there.
+    ValueObjectSP head = GetHead(*storage);
+    if (!head)
+      return false;
+    active_type = head->GetCompilerType();
+    if (!active_type)
+      return false;
+  }
 
   stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
   return true;

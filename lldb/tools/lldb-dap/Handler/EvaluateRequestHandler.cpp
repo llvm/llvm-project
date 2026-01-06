@@ -84,8 +84,10 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   if (value.GetError().Fail())
     return ToError(value.GetError(), /*show_user=*/false);
 
-  VariableDescription desc(value,
-                           dap.configuration.enableAutoVariableSummaries);
+  const bool hex = arguments.format ? arguments.format->hex : false;
+
+  VariableDescription desc(value, dap.configuration.enableAutoVariableSummaries,
+                           hex);
 
   body.result = desc.GetResult(arguments.context);
   body.type = desc.display_type_name;
@@ -98,7 +100,7 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     body.memoryReference = EncodeMemoryReference(addr);
 
   if (ValuePointsToCode(value) &&
-      body.variablesReference != LLDB_DAP_INVALID_VARRERF)
+      body.variablesReference != LLDB_DAP_INVALID_VAR_REF)
     body.valueLocationReference = PackLocation(body.variablesReference, true);
 
   return body;

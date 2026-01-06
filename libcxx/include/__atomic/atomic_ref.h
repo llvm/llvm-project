@@ -122,7 +122,9 @@ public:
   static constexpr bool is_always_lock_free =
       __atomic_always_lock_free(sizeof(_Tp), std::addressof(__get_aligner_instance<required_alignment>::__instance));
 
-  _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept { return __atomic_is_lock_free(sizeof(_Tp), __ptr_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const noexcept {
+    return __atomic_is_lock_free(sizeof(_Tp), __ptr_);
+  }
 
   _LIBCPP_HIDE_FROM_ABI void store(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_STORE_MEMORY_ORDER(__order) {
@@ -137,7 +139,7 @@ public:
     return __desired;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __order = memory_order::seq_cst) const noexcept
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _Tp load(memory_order __order = memory_order::seq_cst) const noexcept
       _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__order) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
@@ -233,6 +235,8 @@ protected:
 
 template <class _Tp>
 struct __atomic_waitable_traits<__atomic_ref_base<_Tp>> {
+  using __value_type _LIBCPP_NODEBUG = _Tp;
+
   static _LIBCPP_HIDE_FROM_ABI _Tp __atomic_load(const __atomic_ref_base<_Tp>& __a, memory_order __order) {
     return __a.load(__order);
   }

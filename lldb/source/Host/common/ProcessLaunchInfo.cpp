@@ -20,7 +20,9 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 
-#if !defined(_WIN32)
+#ifdef _WIN32
+#include "lldb/Host/windows/PseudoConsole.h"
+#else
 #include <climits>
 #endif
 
@@ -31,8 +33,7 @@ using namespace lldb_private;
 
 ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),
-      m_file_actions(), m_pty(new PseudoTerminal), m_monitor_callback(nullptr) {
-}
+      m_file_actions(), m_pty(new PTY), m_monitor_callback(nullptr) {}
 
 ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &stdout_file_spec,
@@ -40,7 +41,7 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &working_directory,
                                      uint32_t launch_flags)
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
-      m_file_actions(), m_pty(new PseudoTerminal) {
+      m_file_actions(), m_pty(new PTY) {
   if (stdin_file_spec) {
     FileAction file_action;
     const bool read = true;
@@ -208,13 +209,12 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 
   LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
-  int open_flags = O_RDWR | O_NOCTTY;
-#if !defined(_WIN32)
-  // We really shouldn't be specifying platform specific flags that are
-  // intended for a system call in generic code.  But this will have to
-  // do for now.
-  open_flags |= O_CLOEXEC;
-#endif
+#ifdef _WIN32
+  if (llvm::Error Err = m_pty->OpenPseudoConsole())
+    return Err;
+  return llvm::Error::success();
+#else
+  int open_flags = O_RDWR | O_NOCTTY | O_CLOEXEC;
   if (llvm::Error Err = m_pty->OpenFirstAvailablePrimary(open_flags))
     return Err;
 
@@ -229,6 +229,7 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   if (stderr_free)
     AppendOpenFileAction(STDERR_FILENO, secondary_file_spec, false, true);
   return llvm::Error::success();
+#endif
 }
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(

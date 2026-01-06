@@ -118,6 +118,17 @@ func.func @main(%arg0 : i32) {
 
 // -----
 
+// CHECK-LABEL: func.func private @clean_func_op_remove_side_effecting_op() {
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+func.func private @clean_func_op_remove_side_effecting_op(%arg0: i32) -> (i32) {
+  // vector.print has a side effect but the op is dead.
+  vector.print %arg0 : i32
+  return %arg0 : i32
+}
+
+// -----
+
 // %arg0 is not live because it is never used. %arg1 is not live because its
 // user `arith.addi` doesn't have any uses and the value that it is forwarded to
 // (%non_live_0) also doesn't have any uses.
@@ -685,5 +696,38 @@ func.func @op_block_have_dead_arg(%arg0: index, %arg1: index, %arg2: i1) {
       scf.yield
   }
   // CHECK-NEXT: return
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func private @remove_dead_branch_op()
+// CHECK-NEXT:    ub.unreachable
+// CHECK-NEXT:  ^{{.*}}:
+// CHECK-NEXT:    return
+// CHECK-NEXT:  ^{{.*}}:
+// CHECK-NEXT:    return
+func.func private @remove_dead_branch_op(%c: i1, %arg0: i64, %arg1: i64) -> (i64) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  return %arg0 : i64
+^bb2:
+  return %arg1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_loop_no_use_iv_has_side_effect_op
+func.func @affine_loop_no_use_iv_has_side_effect_op() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<10xindex>
+  affine.for %arg0 = 0 to 79 {
+    memref.store %c1, %alloc[%c1] : memref<10xindex>
+  }
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<10xindex>
+// CHECK: affine.for %[[VAL_0:.*]] = 0 to 79 {
+// CHECK:   memref.store %[[C1]], %[[ALLOC]]{{\[}}%[[C1]]] : memref<10xindex>
+// CHECK: }
   return
 }

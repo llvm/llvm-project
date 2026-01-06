@@ -493,7 +493,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
     ],
 )
 
@@ -1406,7 +1406,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
     ],
 )
 
@@ -2091,6 +2091,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2142,11 +2143,15 @@ cc_library(
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:InterpreterHeaders",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

@@ -44,6 +44,7 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXForwardParams.cpp",
     "NVPTXFrameLowering.cpp",
     "NVPTXGenericToNVVM.cpp",
+    "NVPTXIRPeephole.cpp",
     "NVPTXISelDAGToDAG.cpp",
     "NVPTXISelLowering.cpp",
     "NVPTXImageOptimizer.cpp",

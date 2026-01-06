@@ -2,7 +2,7 @@
 ; Test that we are able to generate the Xqcia instructions
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32I
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcia -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+xqcia -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCIA
 
 define i32 @addsat(i32 %a, i32 %b) {

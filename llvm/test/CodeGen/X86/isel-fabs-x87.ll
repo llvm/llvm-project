@@ -39,7 +39,7 @@ define void @test_float_abs(ptr %argptr)   {
 ; GISEL-X86-ISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-ISEL-NEXT:    andl $2147483647, (%eax) # imm = 0x7FFFFFFF
 ; GISEL-X86-ISEL-NEXT:    retl
-     %arg = load  float, float* %argptr
+     %arg = load  float, ptr %argptr
      %abs = tail call float @llvm.fabs.f32(float %arg)
      store float %abs, ptr %argptr
      ret void
@@ -69,9 +69,9 @@ define void @test_double_abs(ptr %argptr)  {
 ; X86-NEXT:    fabs
 ; X86-NEXT:    fstpl (%eax)
 ; X86-NEXT:    retl
-    %arg = load double, double* %argptr
+    %arg = load double, ptr %argptr
     %abs = tail call double @llvm.fabs.f64(double %arg)
-    store double %abs, double* %argptr
+    store double %abs, ptr %argptr
     ret void
 }
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReplaceDisallowCopyAndAssignMacroCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -59,7 +60,7 @@ private:
   /// \returns \c true if the next token after the given \p MacroLoc is \b not a
   /// semicolon.
   bool shouldAppendSemi(SourceRange MacroLoc) {
-    std::optional<Token> Next = Lexer::findNextToken(
+    std::optional<Token> Next = utils::lexer::findNextTokenSkippingComments(
         MacroLoc.getEnd(), PP.getSourceManager(), PP.getLangOpts());
     return !(Next && Next->is(tok::semi));
   }
