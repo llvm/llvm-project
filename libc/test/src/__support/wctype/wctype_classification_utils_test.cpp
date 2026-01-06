@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/properties/os.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/wctype/wctype_classification_utils.h"
 #include "test/UnitTest/Test.h"
 
 namespace {
 
-// On Windows, wchar_t is 16 bits. We guard the cases that do not fit
-// within 16 bits to prevent narrowing conversion and incorrect test results.
+// Some platform (like Windows) have a 16 bit wchar_t. We guard the cases that
+// do not fit within 16 bits to prevent narrowing conversion and incorrect test
+// results.
 struct TestCase {
   uint32_t wc;
   const char *name;
@@ -196,10 +197,10 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Alpha) {
       // Combining marks
       {0x0300, "COMBINING GRAVE ACCENT", false},
 
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
+#if WCHAR_MAX > 0xFFFF
       {0x1F600, "GRINNING FACE", false},
       {0x20000, "CJK UNIFIED IDEOGRAPH-20000", true},
-#endif // LIBC_TARGET_OS_IS_WINDOWS
+#endif
 
   };
 
@@ -334,10 +335,10 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Print) {
       {0xE000, "PRIVATE USE AREA (first)", true},
       {0xF000, "PRIVATE USE AREA (last)", true},
 
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
+#if WCHAR_MAX > 0xFFFF
       {0x10FFFD, "SUPPLEMENTARY PRIVATE USE AREA B", true},
       {0x1F600, "GRINNING FACE", true},
-#endif // LIBC_TARGET_OS_IS_WINDOWS
+#endif
   };
 
   for (const auto &tc : cases) {
@@ -492,9 +493,9 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, InvalidCodepoints) {
       {0xDBFF, "HIGH SURROGATE END"},   {0xDC00, "LOW SURROGATE START"},
       {0xDD00, "LOW SURROGATE MIDDLE"}, {0xDFFF, "LOW SURROGATE END"},
 
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
+#if WCHAR_MAX > 0xFFFF
       {0x110000, "Beyond max Unicode"},
-#endif // LIBC_TARGET_OS_IS_WINDOWS
+#endif
   };
 
   for (const auto &tc : cases) {
@@ -519,14 +520,14 @@ TEST(LlvmLibcWctypeClassificationUtilsTest, Noncharacters) {
       {0xFDD0, "NONCHARACTER U+FDD0"},
       {0xFDD5, "NONCHARACTER U+FDD5"},
 
-#ifndef LIBC_TARGET_OS_IS_WINDOWS
+#if WCHAR_MAX > 0xFFFF
       // Supplementary plane noncharacters
       {0x1FFFE, "PLANE 1 NONCHARACTER"},
       {0x2FFFE, "PLANE 2 NONCHARACTER"},
       {0x3FFFE, "PLANE 3 NONCHARACTER"},
       {0x10FFFE, "PLANE 16 NONCHARACTER"},
       {0x10FFFF, "PLANE 16 NONCHARACTER"},
-#endif // LIBC_TARGET_OS_IS_WINDOWS
+#endif
   };
 
   for (const auto &tc : cases) {
