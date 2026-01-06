@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_CIR_SEMA_FALLTHROUGHWARNING_H
 #define LLVM_CLANG_CIR_SEMA_FALLTHROUGHWARNING_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -63,7 +64,7 @@ public:
   FallThroughWarningPass() = default;
 
   /// Check fall-through behavior for a CIR function body
-  void checkFallThroughForFuncBody(Sema &s, cir::FuncOp cfg, QualType blockType,
+  void checkFallThroughForFuncBody(ASTContext& astContext, DiagnosticsEngine &diag,  cir::FuncOp cfg, QualType blockType,
                                    const CheckFallThroughDiagnostics &cd);
   ControlFlowKind checkFallThrough(cir::FuncOp cfg);
   mlir::SetVector<mlir::Block *> getLiveSet(cir::FuncOp cfg);

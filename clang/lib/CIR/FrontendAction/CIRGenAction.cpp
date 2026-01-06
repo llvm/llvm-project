@@ -123,6 +123,7 @@ public:
 
     // Run CIR analysis passes if requested
     if (!FEOptions.ClangIRAnalysisList.empty()) {
+      llvm_unreachable("");
       CIRAnalysisSet AnalysisSet =
           parseCIRAnalysisList(FEOptions.ClangIRAnalysisList);
 
@@ -150,7 +151,7 @@ public:
                      ? CheckFallThroughDiagnostics::makeForLambda()
                      : CheckFallThroughDiagnostics::makeForFunction(S, D));
             // Run fall-through analysis on this function
-            FallThroughPass.checkFallThroughForFuncBody(S, FuncOp, FuncType,
+            FallThroughPass.checkFallThroughForFuncBody(C, CI.getDiagnostics(), FuncOp, FuncType,
                                                         CD);
           });
         }

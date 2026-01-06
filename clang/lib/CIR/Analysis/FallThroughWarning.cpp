@@ -352,10 +352,10 @@ ControlFlowKind FallthroughInstance::handleFallthroughFuncOp(cir::FuncOp fnOp) {
 }
 
 void FallThroughWarningPass::checkFallThroughForFuncBody(
-    Sema &s, cir::FuncOp cfg, QualType blockType,
+    ASTContext& astContext, DiagnosticsEngine &diags, cir::FuncOp cfg, QualType blockType,
     const CheckFallThroughDiagnostics &cd) {
 
-  auto *d = getDeclByName(s.getASTContext(), cfg.getName());
+  auto *d = getDeclByName(astContext, cfg.getName());
   assert(d && "we need non null decl");
   auto *body = d->getBody();
 
@@ -390,8 +390,6 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
         hasNoReturn = true;
     }
   }
-
-  DiagnosticsEngine &diags = s.getDiagnostics();
 
   // Short circuit for compilation speed.
   if (cd.checkDiagnostics(diags, returnsVoid, hasNoReturn))
@@ -440,7 +438,8 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
         }
       }
       bool notInAllControlPaths = fallThroughType == MaybeFallThrough;
-      s.Diag(rBrace, cd.diagFallThroughReturnsNonVoid)
+
+      diags.Report(rBrace, cd.diagFallThroughReturnsNonVoid)
           << cd.funKind << notInAllControlPaths;
     }
     break;
