@@ -451,7 +451,7 @@ RT_API_ATTRS int AssignTicket::Continue(WorkQueue &workQueue) {
   std::size_t toElements{to_.InlineElements()};
   if (from_->rank() > 0) {
     std::size_t fromElements{from_->InlineElements()};
-    if (toElements != fromElements) {
+    if (fromElements && toElements != fromElements) {
       workQueue.terminator().Crash("Assign: mismatching element counts in "
                                    "array assignment (to %zd, from %zd)",
           toElements, fromElements);
