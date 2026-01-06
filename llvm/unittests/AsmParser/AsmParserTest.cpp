@@ -495,7 +495,7 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   } while (false)
 
 TEST(AsmParserTest, ParserObjectLocations) {
-  StringRef Source = "define i32 @main(i32 %arg) {\n"
+  StringRef Source = "define i32 @main(i32 %arg, i64) {\n"
                      "entry:\n"
                      "    %a = add i32 1, %arg\n"
                      "    ret i32 %a\n"
@@ -539,15 +539,16 @@ TEST(AsmParserTest, ParserObjectLocations) {
               ParserContext.getInstructionAtLocation(*MaybeInstLoc));
   }
 
-  SmallVector<FileLocRange> FunctionArgumentLocations = {
-      FileLocRange(FileLoc{0, 21}, FileLoc{0, 25}),
-  };
+  SmallVector<std::optional<FileLocRange>> FunctionArgumentLocations = {
+      FileLocRange(FileLoc{0, 21}, FileLoc{0, 25}), std::nullopt};
   for (const auto &[Arg, ExpectedLoc] :
        zip(MainFn->args(), FunctionArgumentLocations)) {
     auto MaybeArgLoc = ParserContext.getFunctionArgumentLocation(&Arg);
-    ASSERT_TRUE(MaybeArgLoc.has_value());
+    ASSERT_EQ(MaybeArgLoc.has_value(), ExpectedLoc.has_value());
+    if (!ExpectedLoc.has_value())
+      continue;
     auto ArgLoc = MaybeArgLoc.value();
-    ASSERT_EQ_LOC(ArgLoc, ExpectedLoc);
+    ASSERT_EQ_LOC(ArgLoc, ExpectedLoc.value());
     ASSERT_EQ(ParserContext.getFunctionArgumentAtLocation(ArgLoc.Start),
               ParserContext.getFunctionArgumentAtLocation(ArgLoc));
   }
