@@ -61,36 +61,18 @@ struct StructuralEquivalenceContext {
   /// (which we have already complained about).
   NonEquivalentDeclSet &NonEquivalentDecls;
 
-  /// RAII helper used during attribute equivalence checking. While this object
-  /// is alive, attribute comparison uses a local queue and visited set in order
-  /// not to pollute the ones stored in StructuralEquivalenceContext (i.e.,
-  /// DeclsToCheck and VisitedDecls).
+  /// RAII helper that is used to suppress diagnostics during attribute
+  /// equivalence checking.
   struct AttrScopedAttrEquivalenceContext {
     AttrScopedAttrEquivalenceContext(StructuralEquivalenceContext &Ctx)
-        : Ctx(Ctx), OldDeclsToCheck(Ctx.CurDeclsToCheck),
-          OldVisitedDecls(Ctx.CurVisitedDecls), OldComplain(Ctx.Complain) {
-      Ctx.CurDeclsToCheck = &LocalDeclsToCheck;
-      Ctx.CurVisitedDecls = &LocalVisitedDecls;
-      // Silence diagnostics while trying to determine whether the attributes
-      // are equivalent.
+        : Ctx(Ctx), OldComplain(Ctx.Complain) {
       Ctx.Complain = false;
     }
-    ~AttrScopedAttrEquivalenceContext();
+    ~AttrScopedAttrEquivalenceContext() { Ctx.Complain = OldComplain; }
+
     StructuralEquivalenceContext &Ctx;
-    std::queue<std::pair<Decl *, Decl *>> LocalDeclsToCheck, *OldDeclsToCheck;
-    llvm::DenseSet<std::pair<Decl *, Decl *>> LocalVisitedDecls,
-        *OldVisitedDecls;
     bool OldComplain;
   };
-
-  /// Pointers to the current decl queue and visited decl set that are being
-  /// used.
-  std::queue<std::pair<Decl *, Decl *>> *CurDeclsToCheck;
-  llvm::DenseSet<std::pair<Decl *, Decl *>> *CurVisitedDecls;
-
-  bool isInAttrEquivalenceCheck() const {
-    return CurVisitedDecls != &VisitedDecls;
-  }
 
   StructuralEquivalenceKind EqKind;
 
@@ -119,8 +101,7 @@ struct StructuralEquivalenceContext {
                                bool ErrorOnTagTypeMismatch = false,
                                bool IgnoreTemplateParmDepth = false)
       : LangOpts(LangOpts), FromCtx(FromCtx), ToCtx(ToCtx),
-        NonEquivalentDecls(NonEquivalentDecls), CurDeclsToCheck(&DeclsToCheck),
-        CurVisitedDecls(&VisitedDecls), EqKind(EqKind),
+        NonEquivalentDecls(NonEquivalentDecls), EqKind(EqKind),
         StrictTypeSpelling(StrictTypeSpelling),
         ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain),
         IgnoreTemplateParmDepth(IgnoreTemplateParmDepth) {}
@@ -166,8 +147,8 @@ struct StructuralEquivalenceContext {
   // relevant warning for the input error diagnostic.
   unsigned getApplicableDiagnostic(unsigned ErrorDiagnostic);
 
-  /// Iterate over the decl pairs in CurDeclsToCheck until either an
-  /// inequivalent pair is found or the queue is empty.
+  /// Iterate over the decl pairs in DeclsToCheck until either an inequivalent
+  /// pair is found or the queue is empty.
   bool checkDeclQueue();
 
 private:
