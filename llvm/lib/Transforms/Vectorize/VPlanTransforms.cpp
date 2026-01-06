@@ -1484,6 +1484,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
+  if (Def->getNumOperands() == 2 &&
+      match(Def, m_ExtractLane(m_VPValue(), m_VPValue(A))) &&
+      vputils::isSingleScalar(A))
+    return Def->replaceAllUsesWith(A);
+
   uint64_t Idx;
   if (match(Def, m_ExtractElement(m_BuildVector(), m_ConstantInt(Idx)))) {
     auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
