@@ -156,7 +156,6 @@ private:
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSGetBarrierState(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierLeave(MachineInstr &I) const;
-  bool selectWaveShuffleIntrin(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,
                                                    bool IsCanonicalizing = true,

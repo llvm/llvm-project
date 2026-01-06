@@ -566,8 +566,6 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-static void AppendPlatformPrefix(SmallString<128> &Path, const llvm::Triple &T);
-
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -795,13 +793,15 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       NonStandardSearchPath =
           Version.getMajor() < 605 ||
           (Version.getMajor() == 605 && Version.getMinor().value_or(0) < 1);
+    } else {
+      NonStandardSearchPath = getMachOToolChain().HasPlatformPrefix(Triple);
     }
 
     if (NonStandardSearchPath) {
       if (auto *Sysroot = Args.getLastArg(options::OPT_isysroot)) {
         auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath) {
           SmallString<128> P(Sysroot->getValue());
-          AppendPlatformPrefix(P, Triple);
+          getMachOToolChain().AppendPlatformPrefix(P, Triple);
           llvm::sys::path::append(P, SearchPath);
           if (getToolChain().getVFS().exists(P)) {
             CmdArgs.push_back(Args.MakeArgString(Flag + P));
@@ -1913,10 +1913,15 @@ struct DarwinPlatform {
   /// the platform from the SDKPath.
   DarwinSDKInfo inferSDKInfo() {
     assert(Kind == InferredFromSDK && "can infer SDK info only");
-    return DarwinSDKInfo(getOSVersion(),
-                         /*MaximumDeploymentTarget=*/
-                         VersionTuple(getOSVersion().getMajor(), 0, 99),
-                         getOSFromPlatform(Platform));
+    llvm::Triple::OSType OS = getOSFromPlatform(Platform);
+    StringRef PlatformPrefix =
+        (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
+    return DarwinSDKInfo(
+        getOSVersion(), /*MaximumDeploymentTarget=*/
+        VersionTuple(getOSVersion().getMajor(), 0, 99),
+        {DarwinSDKInfo::SDKPlatformInfo(llvm::Triple::Apple, OS,
+                                        llvm::Triple::UnknownEnvironment,
+                                        llvm::Triple::MachO, PlatformPrefix)});
   }
 
 private:
@@ -2606,12 +2611,25 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 }
 
+bool DarwinClang::HasPlatformPrefix(const llvm::Triple &T) const {
+  if (SDKInfo)
+    return !SDKInfo->getPlatformPrefix(T).empty();
+  else
+    return Darwin::HasPlatformPrefix(T);
+}
+
 // For certain platforms/environments almost all resources (e.g., headers) are
 // located in sub-directories, e.g., for DriverKit they live in
 // <SYSROOT>/System/DriverKit/usr/include (instead of <SYSROOT>/usr/include).
-static void AppendPlatformPrefix(SmallString<128> &Path,
-                                 const llvm::Triple &T) {
-  if (T.isDriverKit()) {
+void DarwinClang::AppendPlatformPrefix(SmallString<128> &Path,
+                                       const llvm::Triple &T) const {
+  if (SDKInfo) {
+    const StringRef PlatformPrefix = SDKInfo->getPlatformPrefix(T);
+    if (!PlatformPrefix.empty())
+      llvm::sys::path::append(Path, PlatformPrefix);
+  } else if (T.isDriverKit()) {
+    // The first version of DriverKit didn't have SDKSettings.json, manually add
+    // its prefix.
     llvm::sys::path::append(Path, "System", "DriverKit");
   }
 }
@@ -3120,8 +3138,22 @@ sdkSupportsBuiltinModules(const std::optional<DarwinSDKInfo> &SDKInfo) {
     // the old behavior which is to not use builtin modules.
     return false;
 
+  DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
+      SDKInfo->getCanonicalPlatformInfo();
+  switch (PlatformInfo.getEnvironment()) {
+  case llvm::Triple::UnknownEnvironment:
+  case llvm::Triple::Simulator:
+  case llvm::Triple::MacABI:
+    // Standard xnu/Mach/Darwin based environments depend on the SDK version.
+    break;
+
+  default:
+    // All other environments support builtin modules from the start.
+    return true;
+  }
+
   VersionTuple SDKVersion = SDKInfo->getVersion();
-  switch (SDKInfo->getOS()) {
+  switch (PlatformInfo.getOS()) {
   // Existing SDKs added support for builtin modules in the fall
   // 2024 major releases.
   case llvm::Triple::MacOSX:

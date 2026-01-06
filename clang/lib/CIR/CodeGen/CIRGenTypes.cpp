@@ -545,8 +545,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     if (mpt->isMemberDataPointer()) {
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      assert(!cir::MissingFeatures::methodType());
-      cgm.errorNYI(SourceLocation(), "MethodType");
+      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
+      resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
   }

@@ -22,6 +22,7 @@ class MCObjectTargetWriter;
 class raw_ostream;
 
 class RISCVAsmBackend : public MCAsmBackend {
+protected:
   const MCSubtargetInfo &STI;
   uint8_t OSABI;
   bool Is64Bit;

@@ -2367,6 +2367,8 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
   }
 
   if (R->isSubClassOf("RegClassByHwMode")) {
+    if (NotRegisters)
+      return TypeSetByHwMode(); // Unknown.
     const CodeGenTarget &T = CDP.getTargetInfo();
     return getTypeForRegClassByHwMode(T, R, TP.getRecord()->getLoc());
   }

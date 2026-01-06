@@ -1,0 +1,4 @@
+{"Version": "21.0.1", "CanonicalName": "driverkit21.0.1", "MaximumDeploymentTarget": "21.0.1.99",
+ "SupportedTargets": {
+   "driverkit": {"Archs": ["x86_64", "x86_64h", "arm64", "arm64e"], "LLVMTargetTripleVendor": "apple", "LLVMTargetTripleSys": "driverkit", "LLVMTargetTripleEnvironment": ""}
+}}
