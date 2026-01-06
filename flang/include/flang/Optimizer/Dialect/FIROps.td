@@ -363,6 +363,43 @@ def fir_StoreOp : fir_Op<"store", [
   }];
 }
 
+// NOTE on memory effects: The allocation effect (MemAlloc) is to ensure
+// this operation is not removed by dead code elimination as a dead read
+// on the argument: the prefetch happens as a side effect.
+def fir_PrefetchOp : fir_Op<"prefetch", [MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "prefetch a memory reference";
+
+  let description = [{
+    The prefetch is a hint to the code generator that the memory reference will
+    be used in the near future. The prefetch is not guaranteed to be executed.
+
+    ```
+      %a = ... -> !fir.ref<i32>
+      fir.prefetch %a {read, data, localityHint = 3 : i32} : !fir.ref<i32>
+      // ...
+      fir.load %a : !fir.ref<i32> // use the prefetched value
+    ```
+    Here,
+    `memref'      : address to be prefetched
+    `rw'          : rw specifier >
+                     represented as read (default) or write with values
+                     0 and 1, respectively
+    `localityHint': temporal locality specifier >
+                     value ranging from 0 - no locality to 3 - extremely local
+    `cacheType'   : cache type specifier >
+                     represented as instruction or data (default) with values
+                     0 and 1, respectively
+  }];
+
+  /// NOTE: The numerical values used here is in reference to the LLVM LangRef
+  let arguments =
+      (ins AnyReferenceLike : $memref, UnitAttr : $rw,
+       ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]> : $localityHint,
+       UnitAttr : $cacheType);
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 def fir_CopyOp : fir_Op<"copy", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "copy constant size memory";
 

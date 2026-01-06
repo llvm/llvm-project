@@ -113,6 +113,10 @@ bool mlirTypeIsAAnyQuantizedType(MlirType type) {
   return isa<quant::AnyQuantizedType>(unwrap(type));
 }
 
+MlirTypeID mlirAnyQuantizedTypeGetTypeID(void) {
+  return wrap(quant::AnyQuantizedType::getTypeID());
+}
+
 MlirType mlirAnyQuantizedTypeGet(unsigned flags, MlirType storageType,
                                  MlirType expressedType, int64_t storageTypeMin,
                                  int64_t storageTypeMax) {
@@ -127,6 +131,10 @@ MlirType mlirAnyQuantizedTypeGet(unsigned flags, MlirType storageType,
 
 bool mlirTypeIsAUniformQuantizedType(MlirType type) {
   return isa<quant::UniformQuantizedType>(unwrap(type));
+}
+
+MlirTypeID mlirUniformQuantizedTypeGetTypeID(void) {
+  return wrap(quant::UniformQuantizedType::getTypeID());
 }
 
 MlirType mlirUniformQuantizedTypeGet(unsigned flags, MlirType storageType,
@@ -156,6 +164,10 @@ bool mlirUniformQuantizedTypeIsFixedPoint(MlirType type) {
 
 bool mlirTypeIsAUniformQuantizedPerAxisType(MlirType type) {
   return isa<quant::UniformQuantizedPerAxisType>(unwrap(type));
+}
+
+MlirTypeID mlirUniformQuantizedPerAxisTypeGetTypeID(void) {
+  return wrap(quant::UniformQuantizedPerAxisType::getTypeID());
 }
 
 MlirType mlirUniformQuantizedPerAxisTypeGet(
@@ -201,6 +213,10 @@ bool mlirUniformQuantizedPerAxisTypeIsFixedPoint(MlirType type) {
 
 bool mlirTypeIsAUniformQuantizedSubChannelType(MlirType type) {
   return isa<quant::UniformQuantizedSubChannelType>(unwrap(type));
+}
+
+MlirTypeID mlirUniformQuantizedSubChannelTypeGetTypeID(void) {
+  return wrap(quant::UniformQuantizedSubChannelType::getTypeID());
 }
 
 MlirType mlirUniformQuantizedSubChannelTypeGet(
@@ -256,6 +272,10 @@ MlirAttribute mlirUniformQuantizedSubChannelTypeGetZeroPoints(MlirType type) {
 
 bool mlirTypeIsACalibratedQuantizedType(MlirType type) {
   return isa<quant::CalibratedQuantizedType>(unwrap(type));
+}
+
+MlirTypeID mlirCalibratedQuantizedTypeGetTypeID(void) {
+  return wrap(quant::CalibratedQuantizedType::getTypeID());
 }
 
 MlirType mlirCalibratedQuantizedTypeGet(MlirType expressedType, double min,
