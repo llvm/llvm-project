@@ -84,6 +84,7 @@ constexpr int test()
     {
       int y = 2;
       optional<int&> opt;
+      ASSERT_SAME_TYPE(decltype(std::move(opt).value_or(y)), int);
       assert(std::move(opt).value_or(y) == 2);
       assert(!opt);
     }
@@ -93,7 +94,8 @@ constexpr int test()
 
 int main(int, char**)
 {
-    static_assert(test() == 0);
+  assert(test() == 0);
+  static_assert(test() == 0);
 
   return 0;
 }

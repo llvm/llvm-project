@@ -16,6 +16,7 @@
 #include <cassert>
 #include <memory>
 
+#include "copy_move_types.h"
 #include "test_macros.h"
 #include "archetypes.h"
 
@@ -252,9 +253,9 @@ constexpr T pr38638(T v)
 
 #if TEST_STD_VER >= 26
 
-template <typename T, std::remove_reference_t<T> _Val>
-constexpr void test_with_ref() {
-  T t{_Val};
+template <typename T>
+constexpr bool test_with_ref(std::decay_t<T> val) {
+  T t{val};
   { // to empty
     optional<T&> opt;
     opt = t;
@@ -280,7 +281,7 @@ constexpr void test_with_ref() {
   }
   // test two objects, make sure that the optional only changes what it holds a reference to
   {
-    T t2{_Val};
+    T t2{val};
     optional<T&> opt{t};
     opt = t2;
 
@@ -299,6 +300,20 @@ constexpr void test_with_ref() {
     assert(std::addressof(*opt) == std::addressof(j));
     assert(*opt == 2);
   }
+
+  { // test that no copy is made when assigning
+    TracedCopyMove t1{};
+    TracedCopyMove t2{};
+
+    optional<TracedCopyMove&> o(t1);
+
+    o = t2;
+    assert(std::addressof(*o) == &t2);
+    assert(o->constCopy == 0);
+    assert(o->nonConstCopy == 0);
+  }
+
+  return true;
 }
 #endif
 
@@ -333,7 +348,8 @@ int main(int, char**)
     static_assert(pr38638(3) == 5, "");
 
 #if TEST_STD_VER >= 26
-    test_with_ref<int, 3>();
+    assert(test_with_ref<int>(3));
+    static_assert(test_with_ref<int>(3));
 #endif
     return 0;
 }

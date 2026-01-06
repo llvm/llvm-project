@@ -11,10 +11,11 @@
 
 // constexpr T& optional<T>::operator*() &;
 
-#include <optional>
-#include <type_traits>
 #include <cassert>
+#include <memory>
+#include <optional>
 
+#include "copy_move_types.h"
 #include "test_macros.h"
 
 using std::optional;
@@ -38,6 +39,38 @@ test()
     optional<Y> opt{Y{}};
     return (*opt).test();
 }
+
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  {
+    TracedCopyMove x{};
+    std::optional<TracedCopyMove&> opt(x);
+    static_assert(noexcept(*opt));
+    ASSERT_SAME_TYPE(decltype(*opt), TracedCopyMove&);
+
+    assert(std::addressof(*opt) == std::addressof(x));
+    assert(x.constMove == 0);
+    assert(x.nonConstMove == 0);
+    assert(x.constCopy == 0);
+    assert(x.nonConstCopy == 0);
+  }
+
+  {
+    TracedCopyMove x{};
+    std::optional<const TracedCopyMove&> opt(x);
+    static_assert(noexcept(*opt));
+    ASSERT_SAME_TYPE(decltype(*opt), const TracedCopyMove&);
+
+    assert(std::addressof(*opt) == std::addressof(x));
+    assert(x.constMove == 0);
+    assert(x.nonConstMove == 0);
+    assert(x.constCopy == 0);
+    assert(x.nonConstCopy == 0);
+  }
+
+  return true;
+}
+#endif
 
 int main(int, char**)
 {

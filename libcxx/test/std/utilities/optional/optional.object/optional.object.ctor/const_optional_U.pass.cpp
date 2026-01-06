@@ -11,6 +11,7 @@
 
 // template <class U>
 //   optional(const optional<U>& rhs);
+//optional<T&>: optional(const optional<U>&& rhs);
 
 #include <cassert>
 #include <optional>
@@ -85,6 +86,53 @@ constexpr bool test_all() {
   }
   return true;
 }
+
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  // optional(const optional<U>&)
+  {
+    int i = 1;
+    const std::optional<int&> o1{i};
+    const std::optional<int&> o2{o1};
+
+    ASSERT_NOEXCEPT(std::optional<int&>(o2));
+    assert(o2.has_value());
+    assert(&(*o1) == &(*o2));
+    assert(*o1 == i);
+    assert(*o2 == i);
+  }
+
+  {
+    const std::optional<int&> o1;
+    const std::optional<int&> o2{o1};
+    ASSERT_NOEXCEPT(std::optional<int&>(o2));
+    assert(!o2.has_value());
+  }
+
+  // optional(optional<U>&&)
+  {
+    int i = 1;
+    const std::optional<int&> o1{i};
+    const std::optional<int&> o2{std::move(o1)};
+
+    // trivial move constructor should just copy the reference
+    ASSERT_NOEXCEPT(std::optional<int&>(std::move(o2)));
+    assert(o2.has_value());
+    assert(&(*o1) == &(*o2));
+    assert(*o1 == i);
+    assert(*o2 == i);
+  }
+
+  {
+    const std::optional<int&> o1;
+    const std::optional<int&> o2{std::move(o1)};
+    ASSERT_NOEXCEPT(std::optional<int&>(o2));
+    assert(!o2.has_value());
+  }
+
+  return true;
+}
+#endif
 
 int main(int, char**) {
   test_all<int, short>();

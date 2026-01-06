@@ -149,9 +149,48 @@ void test_explicit() {
 #endif
 }
 
+#if TEST_STD_VER >= 26
+struct Throws {
+  int val = 42;
+  bool b  = false;
+  constexpr Throws() {};
+  operator int&() {
+    if (b) {
+      TEST_THROW(1);
+    }
+    return val;
+  }
+};
+
+constexpr bool test_ref() {
+  {
+    int i = 0;
+    std::optional<int&> o(i);
+    ASSERT_NOEXCEPT(std::optional<int&>(i));
+    assert(o.has_value());
+    assert(&(*o) == &i);
+    assert(*o == 0);
+    assert(o.value() == 0);
+  }
+
+#  ifndef TEST_HAS_NO_EXCEPTIONS
+  {
+    using T = Throws;
+    T t{};
+    ASSERT_NOT_NOEXCEPT(std::optional<int&>(t));
+    // TODO: There doesn't seem to be a usable type which can actually make the ctor not noexcept
+  }
+#  endif
+  return true;
+}
+#endif
+
 int main(int, char**) {
   test_implicit();
   test_explicit();
-
+#if TEST_STD_VER >= 26
+  assert(test_ref());
+  static_assert(test_ref());
+#endif
   return 0;
 }
