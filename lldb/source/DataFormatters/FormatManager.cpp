@@ -747,7 +747,7 @@ void FormatManager::LoadSystemFormatters() {
   TypeSummaryImpl::Flags string_flags;
   string_flags.SetCascades(true)
       .SetSkipPointers(true)
-      .SetSkipReferences(false)
+      .SetSkipReferences(true)
       .SetDontShowChildren(true)
       .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
