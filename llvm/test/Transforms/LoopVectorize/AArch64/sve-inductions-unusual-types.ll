@@ -18,10 +18,10 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP40:%.*]] = mul nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP40:%.*]] = shl nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP40]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP40]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i7
@@ -84,10 +84,10 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP40:%.*]] = mul nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP40:%.*]] = shl nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP40]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP40]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i3
