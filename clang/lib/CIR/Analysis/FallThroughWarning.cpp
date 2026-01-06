@@ -19,6 +19,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <unordered_map>
+#include <unordered_set>
 
 #define DEBUG_TYPE "cir-fallthrough"
 
@@ -29,13 +31,31 @@ using namespace clang;
 namespace clang {
 
 class FallthroughInstance {
-  ControlFlowKind fallthrough = Undetermined;
+  std::unordered_map<mlir::Operation *, ControlFlowKind> fallthroughOp;
 
-  ControlFlowKind updateControlFlowKind(ControlFlowKind cfk,
+  ControlFlowKind getCfkFor(mlir::Operation *op) {
+    auto it = fallthroughOp.find(op);
+    if (it != fallthroughOp.end())
+      return it->second;
+    return ControlFlowKind::Undetermined;
+  }
+  ControlFlowKind updateControlFlowKind(mlir::Operation *parentOp,
+                                        ControlFlowKind cfk,
                                         ControlFlowKind newCfk) {
     cfk = std::min(cfk, newCfk);
-    fallthrough = std::min(fallthrough, cfk);
+
+    if (parentOp) {
+      auto x = fallthroughOp.find(parentOp);
+      if (x != fallthroughOp.end())
+        fallthroughOp[parentOp] = std::min(cfk, x->second);
+      else
+        fallthroughOp[parentOp] = cfk;
+    }
     return cfk;
+  }
+
+  ControlFlowKind maybeFallThrough() {
+    return ControlFlowKind::MaybeFallThrough;
   }
 
 public:
@@ -223,7 +243,7 @@ ControlFlowKind
 FallthroughInstance::handleFallthroughCaseOp(cir::CaseOp caseOp) {
   ControlFlowKind cfk = NeverFallThroughOrReturn;
   for (auto &block : caseOp.getCaseRegion()) {
-    cfk = updateControlFlowKind(cfk, isFallThroughAble(block));
+    cfk = updateControlFlowKind(caseOp, cfk, isFallThroughAble(block));
   }
 
   return cfk;
@@ -247,23 +267,23 @@ FallthroughInstance::handleFallthroughSwitchOp(cir::SwitchOp swOp) {
       break;
     }
   }
-
-  for (auto caseOp : cases) {
-    ControlFlowKind fallthrough = handleFallthroughCaseOp(caseOp);
-    cfk = updateControlFlowKind(cfk, fallthrough);
-  }
-
   // if we don't cover all case and we don't have a default -> fall through
-  if (!coverAllCases && !coverDefault)  {
-    return MaybeFallThrough;
+  if (!coverAllCases && !coverDefault) {
+    cfk = maybeFallThrough();
+  } else {
+    for (auto caseOp : cases) {
+      ControlFlowKind fallthrough = handleFallthroughCaseOp(caseOp);
+      cfk = updateControlFlowKind(swOp, cfk, fallthrough);
+    }
   }
+
   return cfk;
 }
 ControlFlowKind
 FallthroughInstance::handleFallthroughScopeOp(cir::ScopeOp scopeOp) {
   ControlFlowKind cfk = Undetermined;
   for (auto &block : scopeOp.getScopeRegion()) {
-    cfk = updateControlFlowKind(cfk, isFallThroughAble(block));
+    cfk = updateControlFlowKind(scopeOp, cfk, isFallThroughAble(block));
   }
   return cfk;
 }
@@ -278,11 +298,13 @@ ControlFlowKind FallthroughInstance::isFallThroughAble(mlir::Operation &op) {
   if (auto scopeOp = mlir::dyn_cast_or_null<cir::ScopeOp>(op)) {
     return handleFallthroughScopeOp(scopeOp);
   }
+
+  auto *parentOp = op.getParentOp();
+  ControlFlowKind cfk = getCfkFor(parentOp);
   if (auto returnOp = mlir::dyn_cast_or_null<cir::ReturnOp>(op)) {
     if (isPhonyReturn(returnOp)) {
-      if (this->fallthrough < ControlFlowKind::NeverFallThrough ||
-          this->fallthrough == Undetermined) {
-        return ControlFlowKind::MaybeFallThrough;
+      if (cfk < ControlFlowKind::NeverFallThrough || cfk == Undetermined) {
+        return maybeFallThrough();
       }
     }
     return ControlFlowKind::NeverFallThrough;
@@ -291,24 +313,17 @@ ControlFlowKind FallthroughInstance::isFallThroughAble(mlir::Operation &op) {
     LLVM_DEBUG({
       llvm::errs() << "Encountered yield op\n";
       yieldOp->dump();
+      yieldOp.getLoc().dump();
     });
-    auto *parentOp = yieldOp->getParentOp();
-    if (isa<cir::CaseOp>(parentOp)) {
-      if (this->fallthrough < ControlFlowKind::NeverFallThrough ||
-          this->fallthrough == Undetermined) 
-        return ControlFlowKind::MaybeFallThrough;
-    }
-    if (isa<cir::ScopeOp>(parentOp)) {
-      if (this->fallthrough < ControlFlowKind::NeverFallThrough ||
-          this->fallthrough == Undetermined) 
-      return ControlFlowKind::MaybeFallThrough;
-    }
+    if (isa<cir::CaseOp, cir::ScopeOp>(parentOp))
+      if (cfk < ControlFlowKind::NeverFallThrough|| cfk == Undetermined) 
+          return maybeFallThrough();
     return ControlFlowKind::Undetermined;
   }
   if (auto breakOp = mlir::dyn_cast_or_null<cir::BreakOp>(op)) {
     auto *parentOp = breakOp->getParentOp();
     if (isa<cir::CaseOp>(parentOp)) {
-      return ControlFlowKind::MaybeFallThrough;
+      return maybeFallThrough();
     }
   }
   return ControlFlowKind::Undetermined;
@@ -317,7 +332,8 @@ ControlFlowKind FallthroughInstance::isFallThroughAble(mlir::Operation &op) {
 ControlFlowKind FallthroughInstance::isFallThroughAble(mlir::Block &block) {
   ControlFlowKind cfk = Undetermined;
   for (auto &op : block) {
-    cfk = updateControlFlowKind(cfk, isFallThroughAble(op));
+    cfk =
+        updateControlFlowKind(block.getParentOp(), cfk, isFallThroughAble(op));
 
     if (cfk < ControlFlowKind::NeverFallThrough) {
       return cfk;
@@ -330,7 +346,7 @@ ControlFlowKind FallthroughInstance::isFallThroughAble(mlir::Block &block) {
 ControlFlowKind FallthroughInstance::handleFallthroughFuncOp(cir::FuncOp fnOp) {
   ControlFlowKind cfk = Undetermined;
   for (auto &o : fnOp) {
-    cfk = updateControlFlowKind(cfk, isFallThroughAble(o));
+    cfk = updateControlFlowKind(fnOp, cfk, isFallThroughAble(o));
   }
   return cfk;
 }
