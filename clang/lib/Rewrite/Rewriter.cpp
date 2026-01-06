@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
@@ -320,6 +321,8 @@ bool Rewriter::overwriteChangedFiles() {
     OptionalFileEntryRef Entry = getSourceMgr().getFileEntryRefForID(I->first);
     llvm::SmallString<128> Path(Entry->getName());
     getSourceMgr().getFileManager().makeAbsolutePath(Path);
+    // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     if (auto Error = llvm::writeToOutput(Path, [&](llvm::raw_ostream &OS) {
           I->second.write(OS);
           return llvm::Error::success();
