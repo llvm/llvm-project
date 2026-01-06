@@ -2430,8 +2430,7 @@ module std_fenv_h [system] {
 }
 module std_float_h [system] {
   textual header "float.h"
-  module characteristics { header "__float/characteristics.h" }
-  module header_macro { header "__float/header_macro.h" }
+  module float { header "__float/float.h" }
 }
 module std_inttypes_h [system] {
   header "inttypes.h"

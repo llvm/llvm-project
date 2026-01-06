@@ -16,4 +16,21 @@
 #  pragma GCC system_header
 #endif
 
+#ifdef __cplusplus
+
+// Workround for https://github.com/llvm/llvm-project/issues/172800
+#  define __need_next_float_after_libcpp
+#  include <float.h>
+#  undef __need_next_float_after_libcpp
+
+#  ifndef FLT_EVAL_METHOD
+#    define FLT_EVAL_METHOD __FLT_EVAL_METHOD__
+#  endif
+
+#  ifndef DECIMAL_DIG
+#    define DECIMAL_DIG __DECIMAL_DIG__
+#  endif
+
+#endif // __cplusplus
+
 #endif // _LIBCPP_FLOAT_H

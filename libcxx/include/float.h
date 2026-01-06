@@ -70,23 +70,18 @@ Macros:
 #if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 #  include <__cxx03/float.h>
 #else
-#  if (defined(__need_infinity_nan) || defined(__need_next_float_after_libcpp)) && __has_include_next(<float.h>)
+#  include <__config>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+#  if __has_include_next(<float.h>)
 #    include_next <float.h>
-#  else
-#    include <__float/header_macro.h>
+#  endif
 
-#    include <__config>
+#  ifndef __need_next_float_after_libcpp
+#    include <__float/float.h>
+#  endif
 
-#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#      pragma GCC system_header
-#    endif
-
-#    if __has_include_next(<float.h>)
-#      include_next <float.h>
-#    endif
-
-#    ifdef __cplusplus
-#      include <__float/characteristics.h>
-#    endif // __cplusplus
-#  endif   // defined(__need_infinity_nan) && __has_include_next(<float.h>)
-#endif     // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

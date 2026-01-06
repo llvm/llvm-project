@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// gcc supports "partitial inclusion" of some builtin headers via __need macros.
+// gcc supports "partial inclusion" of some builtin headers via __need macros.
 // These are implemented in modules via textual headers, which are tricky to
 // support because libc++ needs to know about them and make its corresponding
 // headers textual too so that the macros are passed along.
@@ -19,8 +19,8 @@
 // gcc doesn't support all of the __need macros
 // UNSUPPORTED: gcc
 
-// The __need macros don't fully with in the frozen headers
-// UNSUPPORTED: c++03
+// The frozen C++03 headers don't support the __need macros tested here.
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // Some of the __need macros are new in clang 22.x and Apple clang 21.x (there
 // isn't an Apple clang 18-20)
