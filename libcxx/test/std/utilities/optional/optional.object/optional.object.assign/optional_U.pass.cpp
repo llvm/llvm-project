@@ -293,7 +293,16 @@ TEST_CONSTEXPR_CXX20 bool test()
       assert(state[0] == state_t::inactive);
       assert(state[1] == state_t::copy_assigned);
     }
+#if TEST_STD_VER >= 26
+    {
+      state_t state{state_t::constructed};
+      StateTracker t{state};
+      std::optional<StateTracker&> o1{t};
+      std::optional<StateTracker> o2 = std::move(o1);
+      assert(state != state_t::move_assigned);
+    }
 
+#endif
     return true;
 }
 

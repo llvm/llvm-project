@@ -20,6 +20,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "copy_move_types.h"
 #include "test_macros.h"
 
 using std::optional;
@@ -110,6 +111,13 @@ constexpr bool test_ref() {
     std::optional<int&> o2{std::move(o1)};
     ASSERT_NOEXCEPT(std::optional<int&>(o2));
     assert(!o2.has_value());
+  }
+  {
+    TracedCopyMove t{};
+    std::optional<TracedCopyMove&> o1{t};
+    std::optional<TracedCopyMove> o2{std::move(o1)};
+    assert(t.constMove == 0);
+    assert(t.nonConstMove == 0);
   }
 
   return true;
