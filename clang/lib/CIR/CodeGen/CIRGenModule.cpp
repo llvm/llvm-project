@@ -662,10 +662,21 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
   mlir::Location loc = getLoc(d->getSourceRange());
 
+  // Calculate constant storage flag before creating the global. This was moved
+  // from after the global creation to ensure the constant flag is set correctly
+  // at creation time, matching the logic used in emitCXXGlobalVarDeclInit.
+  bool isConstant = false;
+  if (d) {
+    bool needsDtor =
+        d->needsDestruction(astContext) == QualType::DK_cxx_destructor;
+    isConstant = d->getType().isConstantStorage(
+        astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/!needsDtor);
+  }
+
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
   cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty, false,
+      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty, isConstant,
                                    /*insertPoint=*/entry.getOperation());
 
   // This is the first use or definition of a mangled name.  If there is a
@@ -685,10 +696,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       errorNYI(d->getSourceRange(), "OpenMP target global variable");
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
-    // FIXME: This code is overly simple and should be merged with other global
-    // handling.
-    gv.setConstant(d->getType().isConstantStorage(
-        astContext, /*ExcludeCtor=*/false, /*ExcludeDtor=*/false));
 
     setLinkageForGV(gv, d);
 
@@ -880,10 +887,12 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     emitter->finalize(gv);
 
   // If it is safe to mark the global 'constant', do so now.
+  // Use the same logic as classic codegen EmitGlobalVarDefinition.
   gv.setConstant((vd->hasAttr<CUDAConstantAttr>() && langOpts.CUDAIsDevice) ||
                  (!needsGlobalCtor && !needsGlobalDtor &&
-                  vd->getType().isConstantStorage(
-                      astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/true)));
+                  vd->getType().isConstantStorage(astContext,
+                                                  /*ExcludeCtor=*/true,
+                                                  /*ExcludeDtor=*/true)));
   assert(!cir::MissingFeatures::opGlobalSection());
 
   // Set CIR's linkage type as appropriate.

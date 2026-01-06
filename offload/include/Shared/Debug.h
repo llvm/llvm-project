@@ -443,12 +443,11 @@ template <typename LambdaTy> struct LambdaHelper {
   }
 
   static constexpr size_t NArgs = CountArgs(&LambdaTy::operator());
-}
+};
 
-template <typename LambdaTy>
-struct LambdaOs : public LambdaHelper<LambdaTy> {
+template <typename LambdaTy> struct LambdaOs : public LambdaHelper<LambdaTy> {
   static void dispatch(LambdaTy func, llvm::raw_ostream &Os, uint32_t Level) {
-    if constexpr (NArgs == 2)
+    if constexpr (LambdaHelper<LambdaTy>::NArgs == 2)
       func(Os, Level);
     else
       func(Os);
@@ -487,7 +486,7 @@ struct LambdaOs : public LambdaHelper<LambdaTy> {
 // helper templates to support lambdas with different number of arguments
 template <typename LambdaTy> struct LambdaIf : public LambdaHelper<LambdaTy> {
   static void dispatch(LambdaTy func, uint32_t Level) {
-    if constexpr (NArgs == 1)
+    if constexpr (LambdaHelper<LambdaTy>::NArgs == 1)
       func(Level);
     else
       func();
@@ -567,6 +566,7 @@ constexpr const char *ODT_EmptyMapping = "EmptyMapping";
 constexpr const char *ODT_Device = "Device";
 constexpr const char *ODT_Interface = "Interface";
 constexpr const char *ODT_Alloc = "Alloc";
+constexpr const char *ODT_Tool = "Tool";
 
 static inline odbg_ostream reportErrorStream() {
 #ifdef OMPTARGET_DEBUG

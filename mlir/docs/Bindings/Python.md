@@ -25,6 +25,25 @@
     multiple Python implementations, setting this explicitly to the preferred
     `python3` executable is strongly recommended.
 
+*   **`CMAKE_C_VISIBILITY_PRESET`**: `STRING`
+*   **`CMAKE_CXX_VISIBILITY_PRESET`**: `STRING`
+*   **`CMAKE_VISIBILITY_INLINES_HIDDEN`**: `BOOL`
+
+    It is **highly** recommended these are set to `hidden`, `hidden`, and `ON` (respectively) if the final built package
+    is intended to be used in a context/use-case where multiple bindings packages will be used simultaneously
+    (i.e., multiple bindings packages loaded in the same Python interpreter session). Failing to do so can lead
+    to incorrect/ambiguous symbol resolution; the symptom of this is an `LLVM ERROR` like:
+    ```
+    LLVM ERROR: ... unregistered/uninitialized dialect/type/pass ...`
+    ```
+
+*   **`MLIR_BINDINGS_PYTHON_NB_DOMAIN`**: `STRING`
+
+    nanobind (and MLIR) domain within which extensions will be compiled. 
+    This determines whether this package will share nanobind types with other bindings packages. 
+    Expected to be unique per project (and per specific set of bindings, for projects with multiple bindings packages).
+    Can also be passed explicitly to `add_mlir_python_modules`.
+
 ### Recommended development practices
 
 It is recommended to use a Python virtual environment. Many ways exist for this,
@@ -525,9 +544,9 @@ attribute = <...>
 type = <...>
 
 # No need to handle errors here.
-if ConcreteAttr.isinstance(attribute):
+if isinstance(attribute, ConcreteAttr):
   concrete_attr = ConcreteAttr(attribute)
-if ConcreteType.isinstance(type):
+if isinstance(type, ConcreteType):
   concrete_type = ConcreteType(type)
 ```
 

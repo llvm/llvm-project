@@ -210,7 +210,7 @@ public:
   /// Get integer from a mlir::Value that is an int constant or a constant op.
   static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
     auto constOp = val.getDefiningOp<cir::ConstantOp>();
-    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
+    assert(constOp && "getSExtIntValueFromConstOp call with non ConstantOp");
     return constOp.getIntValue().getSExtValue();
   }
 
@@ -218,8 +218,7 @@ public:
   /// constant op.
   static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
     auto constOp = val.getDefiningOp<cir::ConstantOp>();
-    assert(constOp &&
-           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
+    assert(constOp && "getZExtIntValueFromConstOp call with non ConstantOp");
     return constOp.getIntValue().getZExtValue();
   }
 
@@ -974,6 +973,7 @@ public:
     return false;
   }
 
+  void populateUnwindResumeBlock(bool isCleanup, cir::TryOp tryOp);
   void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
                               cir::TryOp tryOp);
 
@@ -1072,6 +1072,12 @@ public:
     // Holds the actual value for ScopeKind::Try
     cir::TryOp tryOp = nullptr;
 
+    // On a coroutine body, the OnFallthrough sub stmt holds the handler
+    // (CoreturnStmt) for control flow falling off the body. Keep track
+    // of emitted co_return in this scope and allow OnFallthrough to be
+    // skipeed.
+    bool hasCoreturnStmt = false;
+
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
     enum Kind {
@@ -1118,6 +1124,12 @@ public:
       cleanup();
       restore();
     }
+
+    // ---
+    // Coroutine tracking
+    // ---
+    bool hasCoreturn() const { return hasCoreturnStmt; }
+    void setCoreturn() { hasCoreturnStmt = true; }
 
     // ---
     // Kind
@@ -1349,6 +1361,9 @@ public:
   void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
   void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
                        bool isVolatile, bool isInit);
+  void emitAtomicExprWithMemOrder(
+      const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
+      llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1473,6 +1488,8 @@ public:
   void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  mlir::LogicalResult emitCoreturnStmt(const CoreturnStmt &s);
 
   void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
                             AggValueSlot dest);
@@ -1614,6 +1631,8 @@ public:
 
   mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
                               llvm::ArrayRef<mlir::Value> args = {});
+
+  void emitInvariantStart(CharUnits size, mlir::Value addr, mlir::Location loc);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e,

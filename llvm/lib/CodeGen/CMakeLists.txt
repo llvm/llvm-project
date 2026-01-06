@@ -57,8 +57,7 @@ add_llvm_component_library(LLVMCodeGen
   EdgeBundles.cpp
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
-  ExpandLargeDivRem.cpp
-  ExpandFp.cpp
+  ExpandIRInsts.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
@@ -80,6 +79,7 @@ add_llvm_component_library(LLVMCodeGen
   IndirectBrExpandPass.cpp
   InitUndef.cpp
   InlineSpiller.cpp
+  InsertCodePrefetch.cpp
   InterferenceCache.cpp
   InterleavedAccessPass.cpp
   InterleavedLoadCombinePass.cpp
