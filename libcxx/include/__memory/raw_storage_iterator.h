@@ -46,7 +46,7 @@ public:
   typedef void reference;
 
   _LIBCPP_HIDE_FROM_ABI explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
-  _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator*() { return *this; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator*() { return *this; }
   _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator=(const _Tp& __element) {
     ::new ((void*)std::addressof(*__x_)) _Tp(__element);
     return *this;

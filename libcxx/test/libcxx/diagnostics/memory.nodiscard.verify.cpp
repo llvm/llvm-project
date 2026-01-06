@@ -31,26 +31,64 @@ void test() {
 #endif
   }
 
-  std::allocator<int> allocator;
-
   {
-    std::allocator_traits<std::allocator<int> > allocator_traits;
+    struct Alloc {
+      typedef int value_type;
+
+      value_type* allocate(std::size_t n);
+      value_type* allocate(std::size_t n, const void* p);
+    } allocator;
+    typedef std::allocator_traits<Alloc> AllocTraits;
+
+    struct HintedAlloc {
+      typedef int value_type;
+      typedef const void* const_void_pointer;
+
+      value_type* allocate(std::size_t n);
+      value_type* allocate(std::size_t n, const void* p);
+    } hintedAllocator;
+    typedef std::allocator_traits<HintedAlloc> HintedAllocTraits;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    allocator_traits.allocate(allocator, 1);
+    AllocTraits::allocate(allocator, 1);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    allocator_traits.allocate(allocator, 1, nullptr);
-  }
-
-  allocator.allocate(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    HintedAllocTraits::allocate(hintedAllocator, 1);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    AllocTraits::allocate(allocator, 1, nullptr);
 
 #if TEST_STD_VER >= 23
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  allocator.allocate_at_least(1);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    AllocTraits::allocate_at_least(allocator, 1, nullptr);
+#endif
+
+    struct SizedAlloc {
+      typedef int value_type;
+      typedef std::size_t size_type;
+
+      value_type* allocate(std::size_t n);
+      value_type* allocate(std::size_t n, const void* p);
+      size_type max_size();
+    } sizedAllocator;
+    typedef std::allocator_traits<SizedAlloc> SizedAllocTraits;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    SizedAllocTraits::max_size(sizedAllocator);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    AllocTraits::max_size(allocator);
+  }
+
+  {
+    std::allocator<int> allocator;
+
+    allocator.allocate(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#if TEST_STD_VER >= 23
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    allocator.allocate_at_least(1);
 #endif
 
 #if TEST_STD_VER <= 17
-  {
+
     const int ci = 0;
 
     allocator.address(i);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -66,6 +104,7 @@ void test() {
   {
     std::raw_storage_iterator<int*, int> it{nullptr};
 
+    *it;       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     it.base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 #endif
