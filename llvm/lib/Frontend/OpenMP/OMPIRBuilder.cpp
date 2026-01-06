@@ -8712,8 +8712,6 @@ static void emitTargetCall(
     }
 
     unsigned NumTargetItems = Info.NumberOfPtrs;
-    // TODO: Use correct device ID
-    Value *DeviceID = Builder.getInt64(OMP_DEVICEID_UNDEF);
     uint32_t SrcLocStrSize;
     Constant *SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
     Value *RTLoc = OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize,
@@ -8739,13 +8737,13 @@ static void emitTargetCall(
       // The presence of certain clauses on the target directive require the
       // explicit generation of the target task.
       if (RequiresOuterTargetTask)
-        return OMPBuilder.emitTargetTask(TaskBodyCB, DeviceID, RTLoc, AllocaIP,
-                                         Dependencies, KArgs.RTArgs,
-                                         Info.HasNoWait);
+        return OMPBuilder.emitTargetTask(TaskBodyCB, RuntimeAttrs.DeviceID,
+                                         RTLoc, AllocaIP, Dependencies,
+                                         KArgs.RTArgs, Info.HasNoWait);
 
-      return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
-                                         EmitTargetCallFallbackCB, KArgs,
-                                         DeviceID, RTLoc, AllocaIP);
+      return OMPBuilder.emitKernelLaunch(
+          Builder, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
+          RuntimeAttrs.DeviceID, RTLoc, AllocaIP);
     }());
 
     Builder.restoreIP(AfterIP);
