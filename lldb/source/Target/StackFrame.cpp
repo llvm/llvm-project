@@ -1936,8 +1936,8 @@ bool StackFrame::DumpUsingFormat(Stream &strm,
   StreamString s;
   s.PutCString(frame_marker);
 
-  if (format && FormatEntity::Format(*format, s, &m_sc, &exe_ctx, nullptr,
-                                     nullptr, false, false)) {
+  if (format && FormatEntity::Formatter(&m_sc, &exe_ctx, nullptr, false, false)
+                    .Format(*format, s)) {
     strm.PutCString(s.GetString());
     return true;
   }
