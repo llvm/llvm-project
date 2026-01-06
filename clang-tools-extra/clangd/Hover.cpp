@@ -176,19 +176,22 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   // tag for extra clarity. This isn't very idiomatic, so don't attempt it for
   // complex cases, including pointers/references, template specializations,
   // etc.
+  PrintingPolicy Copy(PP);
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
-        TT && TT->isCanonicalUnqualified())
+        TT && TT->isCanonicalUnqualified()) {
+      Copy.SuppressTagKeywordInAnonNames = true;
       OS << TT->getDecl()->getKindName() << " ";
+    }
   }
-  QT.print(OS, PP);
+  QT.print(OS, Copy);
 
   const Config &Cfg = Config::current();
   if (!QT.isNull() && Cfg.Hover.ShowAKA) {
     bool ShouldAKA = false;
     QualType DesugaredTy = clang::desugarForDiagnostic(ASTCtx, QT, ShouldAKA);
     if (ShouldAKA)
-      Result.AKA = DesugaredTy.getAsString(PP);
+      Result.AKA = DesugaredTy.getAsString(Copy);
   }
   return Result;
 }

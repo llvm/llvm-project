@@ -1,6 +1,5 @@
-import { FSWatcher, watch as chokidarWatch } from 'chokidar';
+import { FSWatcher, watch as chokidarWatch } from "chokidar";
 import * as child_process from "node:child_process";
-import * as path from "path";
 import { isDeepStrictEqual } from "util";
 import * as vscode from "vscode";
 
@@ -92,8 +91,8 @@ export class LLDBDapServer implements vscode.Disposable {
       this.serverFileChanged = false;
       this.serverFileWatcher = chokidarWatch(dapPath);
       this.serverFileWatcher
-        .on('change', () => this.serverFileChanged = true)
-        .on('unlink', () => this.serverFileChanged = true);
+        .on("change", () => (this.serverFileChanged = true))
+        .on("unlink", () => (this.serverFileChanged = true));
     });
     return this.serverInfo;
   }
@@ -139,8 +138,7 @@ ${this.serverSpawnInfo.join(" ")}
 The new lldb-dap server will be started with:
 
 ${newSpawnInfo.join(" ")}
-`
-      );
+`);
     }
 
     // If the server hasn't changed, continue startup without killing it.
@@ -153,7 +151,7 @@ ${newSpawnInfo.join(" ")}
       "The lldb-dap server has changed. Would you like to restart the server?",
       {
         modal: true,
-        detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with ${changeTLDR.map(s => `*${s}*`).join(" and ")}.
+        detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with ${changeTLDR.map((s) => `*${s}*`).join(" and ")}.
 ${changeDetails.join("\n")}
 Restarting the server will interrupt any existing debug sessions and start a new server.`,
       },

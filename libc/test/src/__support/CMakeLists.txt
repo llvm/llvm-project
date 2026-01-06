@@ -293,4 +293,5 @@ add_subdirectory(threads)
 # Cannot currently build this on MacOS in overlay mode
 if(NOT(LIBC_TARGET_OS_IS_DARWIN))
   add_subdirectory(wchar)
+  add_subdirectory(wctype)
 endif()

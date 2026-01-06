@@ -1,11 +1,11 @@
+import * as child_process from "child_process";
+import * as fs from "node:fs/promises";
 import * as path from "path";
 import * as util from "util";
 import * as vscode from "vscode";
-import * as child_process from "child_process";
-import * as fs from "node:fs/promises";
-import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
-import { ErrorWithNotification } from "./ui/error-with-notification";
 import { LogFilePathProvider, LogType } from "./logging";
+import { ErrorWithNotification } from "./ui/error-with-notification";
+import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { expandUser } from "./utils";
 
 const exec = util.promisify(child_process.execFile);
@@ -92,8 +92,7 @@ function validateDAPEnv(debugConfigEnv: any): boolean {
   if (
     Array.isArray(debugConfigEnv) &&
     debugConfigEnv.findIndex(
-      (entry) =>
-        typeof entry !== "string" || !/^\w+(=.*)?$/.test(entry),
+      (entry) => typeof entry !== "string" || !/^\w+(=.*)?$/.test(entry),
     ) !== -1
   ) {
     return false;
