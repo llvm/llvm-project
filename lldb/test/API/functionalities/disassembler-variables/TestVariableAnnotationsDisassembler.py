@@ -160,7 +160,9 @@ class TestVariableAnnotationsDisassembler(TestBase):
             for ann in annotations:
                 # Validate required fields are present.
                 self.assertIn("variable_name", ann, "Missing 'variable_name' field")
-                self.assertIn("location_description", ann, "Missing 'location_description' field")
+                self.assertIn(
+                    "location_description", ann, "Missing 'location_description' field"
+                )
                 self.assertIn("is_live", ann, "Missing 'is_live' field")
                 self.assertIn("start_address", ann, "Missing 'start_address' field")
                 self.assertIn("end_address", ann, "Missing 'end_address' field")
@@ -170,15 +172,35 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
                 # Validate types and values.
                 self.assertIsInstance(var_name, str, "variable_name should be string")
-                self.assertIsInstance(ann["location_description"], str, "location_description should be string")
+                self.assertIsInstance(
+                    ann["location_description"],
+                    str,
+                    "location_description should be string",
+                )
                 self.assertIsInstance(ann["is_live"], bool, "is_live should be boolean")
-                self.assertIsInstance(ann["start_address"], int, "start_address should be integer")
-                self.assertIsInstance(ann["end_address"], int, "end_address should be integer")
-                self.assertIsInstance(ann["register_kind"], int, "register_kind should be integer")
+                self.assertIsInstance(
+                    ann["start_address"], int, "start_address should be integer"
+                )
+                self.assertIsInstance(
+                    ann["end_address"], int, "end_address should be integer"
+                )
+                self.assertIsInstance(
+                    ann["register_kind"], int, "register_kind should be integer"
+                )
 
-                self.assertGreater(len(var_name), 0, "variable_name should not be empty")
-                self.assertGreater(len(ann["location_description"]), 0, "location_description should not be empty")
-                self.assertGreater(ann["end_address"], ann["start_address"], "end_address should be > start_address")
+                self.assertGreater(
+                    len(var_name), 0, "variable_name should not be empty"
+                )
+                self.assertGreater(
+                    len(ann["location_description"]),
+                    0,
+                    "location_description should not be empty",
+                )
+                self.assertGreater(
+                    ann["end_address"],
+                    ann["start_address"],
+                    "end_address should be > start_address",
+                )
 
                 self.assertIn(
                     var_name, expected_vars, f"Unexpected variable name: {var_name}"
@@ -190,7 +212,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
         self.assertEqual(
             found_variables,
             set(expected_vars),
-            f"Did not find all expected variables. Expected: {expected_vars}, find: {found_variables}"
+            f"Did not find all expected variables. Expected: {expected_vars}, find: {found_variables}",
         )
 
         if self.TraceOn():
