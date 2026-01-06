@@ -2496,12 +2496,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     // produce a vector of pointers, we need to either arbitrarily pick an
     // operand to broadcast, or broadcast a clone of the original GEP.
     // Here, we broadcast a clone of the original.
-    //
-    // TODO: If at some point we decide to scalarize instructions having
-    //       loop-invariant operands, this special case will no longer be
-    //       required. We would add the scalarization decision to
-    //       collectLoopScalars() and teach getVectorValue() to broadcast
-    //       the lane-zero scalar value.
+
     SmallVector<Value *> Ops;
     for (unsigned I = 0, E = getNumOperands(); I != E; I++)
       Ops.push_back(State.get(getOperand(I), VPLane(0)));
