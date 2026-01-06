@@ -78,6 +78,8 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
   Register StackPointerRegister = BBF.MF.getSubtarget()
                                       .getTargetLowering()
                                       ->getStackPointerRegisterToSaveRestore();
+  // FIXME: Only loading first register with memory address is hacky.
+  bool isFirstRegister = true;
   for (const RegisterValue &RV : Key.RegisterInitialValues) {
     if (GenerateMemoryInstructions) {
       // If we're generating memory instructions, don't load in the value for
@@ -85,6 +87,13 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       // the setup.
       if (Register(RV.Register) == StackPointerRegister)
         continue;
+      auto StackLoadInsts = ET._generateRegisterStackPop(RV.Register, 16);
+      if (!StackLoadInsts.empty() && isFirstRegister) {
+        for (const auto &Inst : StackLoadInsts)
+          BBF.addInstruction(Inst);
+        isFirstRegister = false;
+        continue;
+      }
     }
     // Load a constant in the register.
     const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);

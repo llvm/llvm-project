@@ -70,6 +70,6 @@ RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=FPCR-ASM < %t.s
 FPCR-ASM:         <foo>:
 FPCR-ASM:         movi    d{{[0-9]+}}, #0000000000000000
-FPCR-ASM-NEXT:    mov     x8, #0x0
-FPCR-ASM-NEXT:    msr     FPCR, x8
+FPCR-ASM-NEXT:    mov     x16, #0x0
+FPCR-ASM-NEXT:    msr     FPCR, x16
 FPCR-ASM-NEXT:    bfcvt   h{{[0-9]+}}, s{{[0-9]+}}
