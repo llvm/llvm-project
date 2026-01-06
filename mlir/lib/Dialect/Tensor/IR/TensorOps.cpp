@@ -1664,9 +1664,9 @@ LogicalResult GenerateOp::verify() {
   // Ensure that the tensor type has as many dynamic dimensions as are
   // specified by the operands.
   RankedTensorType resultType = llvm::cast<RankedTensorType>(getType());
-  if (getNumOperands() != resultType.getNumDynamicDims())
-    return emitError("must have as many index operands as dynamic extents "
-                     "in the result type");
+  if (failed(verifyDynamicDimensionCount(getOperation(), resultType,
+                                         getOperands())))
+    return failure();
   return success();
 }
 

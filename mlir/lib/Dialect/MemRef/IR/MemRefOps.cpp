@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -192,9 +193,8 @@ static LogicalResult verifyAllocLikeOp(AllocLikeOp op) {
   if (!memRefType)
     return op.emitOpError("result must be a memref");
 
-  if (op.getDynamicSizes().size() != memRefType.getNumDynamicDims())
-    return op.emitOpError("dimension operand count does not equal memref "
-                          "dynamic dimension count");
+  if (failed(verifyDynamicDimensionCount(op, memRefType, op.getDynamicSizes())))
+    return failure();
 
   unsigned numSymbols = 0;
   if (!memRefType.getLayout().isIdentity())
@@ -3728,9 +3728,8 @@ LogicalResult ViewOp::verify() {
            << baseType << " and view memref type " << viewType;
 
   // Verify that we have the correct number of sizes for the result type.
-  unsigned numDynamicDims = viewType.getNumDynamicDims();
-  if (getSizes().size() != numDynamicDims)
-    return emitError("incorrect number of size operands for type ") << viewType;
+  if (failed(verifyDynamicDimensionCount(getOperation(), viewType, getSizes())))
+    return failure();
 
   return success();
 }
