@@ -488,7 +488,7 @@ function(add_libclc_builtin_set)
   # Add a test for whether or not the libraries contain unresolved functions
   # which would usually indicate a build problem. Note that we don't perform
   # this test for all libclc targets:
-  # * nvptx-- targets don't include workitem builtins
+  # * nvptx64-- targets don't include workitem builtins
   # * clspv targets don't include all OpenCL builtins
   if( NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" )
     add_test( NAME external-funcs-${obj_suffix}
