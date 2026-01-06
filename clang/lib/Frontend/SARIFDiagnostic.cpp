@@ -30,7 +30,7 @@ SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                  DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
     : DiagnosticRenderer(LangOpts, DiagOpts),
-      Root(Node::Result(),
+      Root(Node::Result{/*Level=*/DiagnosticsEngine::Level::Error, /*Message=*/"", /*Diag=*/nullptr},
            /*Nesting=*/-1), // The root does not represents a diagnostic.
       Current(&Root), 
       LangOptsPtr(&LangOpts),
@@ -48,16 +48,16 @@ SARIFDiagnostic::~SARIFDiagnostic() {
       .setDefaultConfiguration(
         SarifReportingConfiguration::create()
           .setLevel(
-            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Note    ? SarifResultLevel::Note :
-            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Remark  ? SarifResultLevel::Note :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Note    ? SarifResultLevel::Note    :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Remark  ? SarifResultLevel::Note    :
             TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Warning ? SarifResultLevel::Warning :
-            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Error   ? SarifResultLevel::Error :
-            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Fatal   ? SarifResultLevel::Error :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Error   ? SarifResultLevel::Error   :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Fatal   ? SarifResultLevel::Error   :
                                          (assert(false && "Invalid diagnostic type"), SarifResultLevel::None)
           )
           .setRank(
-            TopLevelDiagnosticsPtr->getLevel() <= DiagnosticsEngine::Level::Warning ? 0  :
-            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Error   ? 50 :
+            TopLevelDiagnosticsPtr->getLevel() <= DiagnosticsEngine::Level::Warning ? 0   :
+            TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Error   ? 50  :
             TopLevelDiagnosticsPtr->getLevel() == DiagnosticsEngine::Level::Fatal   ? 100 :
                                          (assert(false && "Invalid diagnostic type"), 0)
           )
@@ -124,9 +124,8 @@ SARIFDiagnostic::Node &SARIFDiagnostic::Node::getParent() {
 
 SARIFDiagnostic::Node &SARIFDiagnostic::Node::getForkableParent() {
   Node *Ptr = this;
-  while (Ptr->getLevel() <=
-         DiagnosticsEngine::Note) // The forkable node here "is and only is"
-                                  // warning/error/fatal.
+  // The forkable node here "is and only is" warning/error/fatal.
+  while (Ptr->getLevel() <= DiagnosticsEngine::Note)
     Ptr = &Ptr->getParent();
   return *Ptr;
 }
