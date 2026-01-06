@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | FileCheck --check-prefixes=CHECK %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_100f -mattr=+ptx88 | FileCheck --check-prefixes=CHECK %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_110f -mattr=+ptx88 | FileCheck --check-prefixes=CHECK %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_110f -mattr=+ptx90 | FileCheck --check-prefixes=CHECK %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_120f -mattr=+ptx88 | FileCheck --check-prefixes=CHECK %s
 ; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -march=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | %ptxas-verify -arch=sm_100a %}
 ; RUN: %if ptxas-sm_100f && ptxas-isa-8.8 %{ llc < %s -march=nvptx64 -mcpu=sm_100f -mattr=+ptx88 | %ptxas-verify -arch=sm_100f %}

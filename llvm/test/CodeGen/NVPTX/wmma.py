@@ -1263,7 +1263,7 @@ define ${ret_ty} @test_${function}(
 
 
 def gen_mma_block_scale_tests():
-    if not (ptx_version >= 88 and sm_version >= 120 and has_family_specific_features()):
+    if not (ptx_version >= 87 and sm_version >= 120 and has_family_specific_features()):
         return []
 
     mma_block_scale_intrinsic_template = "llvm.nvvm.mma.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
@@ -1665,7 +1665,7 @@ define ${ret_ty} @test_${function}_${selector}(
 
 
 def gen_mma_sp_block_scale_tests():
-    if not ((sm_version == 120 or sm_version == 121) and has_arch_accel_features()):
+    if not (ptx_version >= 87 and sm_version >= 120):
         return []
 
     mma_sp_block_scale_intrinsic_template = "llvm.nvvm.mma.sp.ordered.metadata.block.scale.${geom}.row.col.${kind}${scale}.${intrinsic_signature}.${stype}"
@@ -1679,6 +1679,11 @@ def gen_mma_sp_block_scale_tests():
         ["", ".scale_vec::1X", ".scale_vec::2X", ".scale_vec::4X"],
         ["ue8m0", "ue4m3"],
     ):
+        if (kind == "mxf4" or kind == "mxf4nvf4") and not (
+            (sm_version == 120 or sm_version == 121) and has_arch_accel_features()
+        ):
+            continue
+
         if not is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
             continue
 
