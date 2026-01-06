@@ -1210,19 +1210,15 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
   if (!RegionCounterMap)
     return;
 
-  unsigned Counter;
-  auto &TheMap = (*RegionCounterMap)[S];
-  if (!UseSkipPath) {
-    if (!TheMap.Executed.hasValue())
-      return;
-    Counter = TheMap.Executed;
-  } else {
-    if (!TheMap.Skipped.hasValue())
-      return;
-    Counter = TheMap.Skipped;
-  }
+  // Allocate S in the Map regardless of emission.
+  const auto &TheCounterPair = (*RegionCounterMap)[S];
 
   if (!Builder.GetInsertBlock())
+    return;
+
+  const CounterPair::ValueOpt &Counter =
+      (UseSkipPath ? TheCounterPair.Skipped : TheCounterPair.Executed);
+  if (!Counter.hasValue())
     return;
 
   // Make sure that pointer to global is passed in with zero addrspace
