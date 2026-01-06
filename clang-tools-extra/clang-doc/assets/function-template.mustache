@@ -11,7 +11,7 @@
         <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
         {{/Template}}
         {{! Function Prototype }}
-        <pre><code class="language-cpp code-clang-doc">{{ReturnType.Name}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{^End}}{{Type}} {{Name}}, {{/End}}{{#End}}{{Type}} {{Name}}{{/End}}{{/Params}})</code></pre>
+        <pre><code class="language-cpp code-clang-doc">{{ReturnType.QualName}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})</code></pre>
         {{! Function Comments }}
         {{#Description}}
         <div>

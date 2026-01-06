@@ -230,7 +230,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep.a>
 ; CHECK-NEXT:     WIDEN ir<%l.a> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%cmp2> = icmp eq ir<%l.a>, ir<%start>
-; CHECK-NEXT:     WIDEN-SELECT ir<%cond> = select  ir<%cmp2>, ir<%iv>, ir<%rdx>
+; CHECK-NEXT:     WIDEN ir<%cond> = select  ir<%cmp2>, ir<%iv>, ir<%rdx>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<{{.+}}>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK-NEXT:   No successors
