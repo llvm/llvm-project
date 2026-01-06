@@ -4271,12 +4271,12 @@ let Predicates = [HasSVEAES2, HasNonStreamingSVE_or_SSVE_AES] in {
   def AESE_2ZZI_B    : sve_crypto_binary_multi2<0b000, "aese">;
   def AESD_2ZZI_B    : sve_crypto_binary_multi2<0b010, "aesd">;
   def AESEMC_2ZZI_B  : sve_crypto_binary_multi2<0b100, "aesemc">;
-  def AESDMIC_2ZZI_B : sve_crypto_binary_multi2<0b110, "aesdimc">;
+  def AESDIMC_2ZZI_B : sve_crypto_binary_multi2<0b110, "aesdimc">;
   // SVE_AES2 multi-vector instructions (x4)
   def AESE_4ZZI_B    : sve_crypto_binary_multi4<0b0000, "aese">;
   def AESD_4ZZI_B    : sve_crypto_binary_multi4<0b0100, "aesd">;
   def AESEMC_4ZZI_B  : sve_crypto_binary_multi4<0b1000, "aesemc">;
-  def AESDMIC_4ZZI_B : sve_crypto_binary_multi4<0b1100, "aesdimc">;
+  def AESDIMC_4ZZI_B : sve_crypto_binary_multi4<0b1100, "aesdimc">;
 
   // SVE_AES2 multi-vector polynomial multiply
   def PMLAL_2ZZZ_Q : sve_crypto_pmlal_multi<"pmlal">;
