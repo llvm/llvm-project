@@ -3711,6 +3711,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
+  case ISD::VECTOR_SPLICE_VA: {
+    Results.push_back(TLI.expandVectorSpliceVA(Node, DAG));
+    break;
+  }
   case ISD::VECTOR_SPLICE: {
     Results.push_back(TLI.expandVectorSplice(Node, DAG));
     break;
@@ -5649,6 +5653,14 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp1 = ShuffleWithNarrowerEltType(NVT, OVT, dl, Tmp1, Tmp2, Mask);
     Tmp1 = DAG.getNode(ISD::BITCAST, dl, OVT, Tmp1);
     Results.push_back(Tmp1);
+    break;
+  }
+  case ISD::VECTOR_SPLICE_VA: {
+    Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(1));
+    Tmp3 = DAG.getNode(ISD::VECTOR_SPLICE_VA, dl, NVT, Tmp1, Tmp2,
+                       Node->getOperand(2));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp3));
     break;
   }
   case ISD::VECTOR_SPLICE: {

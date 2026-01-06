@@ -2837,6 +2837,12 @@ def int_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                IntrSpeculatable,
                                                ImmArg<ArgIndex<2>>]>;
 
+def int_vector_splice_va : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                 [LLVMMatchType<0>,
+                                                  LLVMMatchType<0>,
+                                                  llvm_i32_ty],
+                                                 [IntrNoMem]>;
+
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                        [],

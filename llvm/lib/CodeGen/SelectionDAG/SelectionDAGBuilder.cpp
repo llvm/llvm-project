@@ -8373,6 +8373,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_splice:
     visitVectorSplice(I);
     return;
+  case Intrinsic::vector_splice_va:
+    visitVectorSpliceVA(I);
+    return;
   case Intrinsic::callbr_landingpad:
     visitCallBrLandingPad(I);
     return;
@@ -12869,6 +12872,30 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   for (unsigned i = 0; i < NumElts; ++i)
     Mask.push_back(Idx + i);
   setValue(&I, DAG.getVectorShuffle(VT, DL, V1, V2, Mask));
+}
+
+void SelectionDAGBuilder::visitVectorSpliceVA(const CallInst &I) {
+  // Validate operand types
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+  if (!VT.isVector()) {
+    // Invalid type, report error or fall back
+    return;
+  }
+
+  // Fall back to ISD::VECTOR_SPLICE just in case.
+  if (isa<ConstantInt>(I.getOperand(2))) {
+    visitVectorSplice(I);
+    return;
+  }
+
+  SDLoc DL = getCurSDLoc();
+  SDValue V1 = getValue(I.getOperand(0));
+  SDValue V2 = getValue(I.getOperand(1));
+  SDValue V3 = getValue(I.getOperand(2));
+
+  setValue(&I, DAG.getNode(ISD::VECTOR_SPLICE_VA, DL, VT, V1, V2, V3));
 }
 
 // Consider the following MIR after SelectionDAG, which produces output in

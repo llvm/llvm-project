@@ -545,6 +545,8 @@ private:
                    SmallPtrSet<Value *, 16> &Visited) const;
   std::optional<uint64_t> getPHIBaseMinAlignment(Instruction &In,
                                                  PHINode *PN) const;
+  bool matchVectorSplice(Instruction &In) const;
+  Value *processVectorSplice(Instruction &In) const;
 
   // Vector manipulations for Ripple
   bool matchScatter(Instruction &In) const;
@@ -1876,6 +1878,13 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
   return Ext;
 }
 
+bool HvxIdioms::matchVectorSplice(Instruction &In) const {
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(&In);
+  if (!II)
+    return false;
+  return II->getIntrinsicID() == Intrinsic::vector_splice_va;
+}
+
 inline bool HvxIdioms::matchScatter(Instruction &In) const {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(&In);
   if (!II)
@@ -1902,6 +1911,77 @@ inline bool HvxIdioms::matchMStore(Instruction &In) const {
   if (!II)
     return false;
   return (II->getIntrinsicID() == Intrinsic::masked_store);
+Value *HvxIdioms::processVectorSplice(Instruction &In) const {
+  IRBuilder Builder(In.getParent(), In.getIterator(),
+                    InstSimplifyFolder(HVC.DL));
+
+  auto *InpTy = cast<VectorType>(In.getOperand(0)->getType());
+  unsigned InpSize = HVC.getSizeOf(InpTy);
+  if (!InpTy) {
+    LLVM_DEBUG(
+        dbgs() << "Cannot handle non-vector type for llvm.vector.splice.va\n");
+    return nullptr;
+  }
+
+  LLVM_DEBUG(dbgs() << "Process vector splice " << In << "\n");
+  LLVM_DEBUG(dbgs() << "  Input type(" << *InpTy << ") elements("
+                    << HVC.length(InpTy) << ") VecLen(" << InpSize << ")\n");
+
+  auto *ElemTy = cast<IntegerType>(InpTy->getElementType());
+  if (!ElemTy) {
+    LLVM_DEBUG(
+        dbgs() << "Cannot handle FP element for llvm.vector.splice.va\n");
+    return nullptr;
+  }
+
+  unsigned ElemWidth = ElemTy->getBitWidth() >> 3;
+  LLVM_DEBUG(dbgs() << "  Element type(" << *ElemTy << ") with(" << ElemWidth
+                    << ")bytes\n");
+
+  if (In.getOperand(0) != In.getOperand(1)) {
+    LLVM_DEBUG(dbgs() << "Only support same arg for llvm.vector.splice.va\n");
+    return nullptr;
+  }
+
+  if (!HVC.HST.isTypeForHVX(InpTy)) {
+    LLVM_DEBUG(
+        dbgs() << "Non HVX type not supported for llvm.vector.splice.va\n");
+    return nullptr;
+  }
+
+  // We need to scale the rotate amound by number of bytes in a vector element;
+  Value *ShiftAmount = In.getOperand(2);
+  if (ElemWidth > 1)
+    ShiftAmount = Builder.CreateShl(
+        ShiftAmount, HVC.getConstInt(Log2_32(ElemWidth)), "ripple.scale");
+
+  if (HVC.HST.getVectorLength() == InpSize) {
+    // Native width cast to default type and vror
+    Type *NT = HVC.getHvxTy(HVC.getIntTy(ElemTy->getBitWidth()), false);
+    auto V6_vror = HVC.HST.getIntrinsicId(Hexagon::V6_vror);
+    return HVC.createHvxIntrinsic(Builder, V6_vror, NT,
+                                  {In.getOperand(0), ShiftAmount});
+  } else if (HVC.HST.getVectorLength() == InpSize * 2) {
+    // This is half of the reg width, duplicate low in high
+    Value *Pair = HVC.concat(Builder, {In.getOperand(0), In.getOperand(0)});
+    Value *Shift = HVC.vralignb(Builder, Pair, Pair, ShiftAmount);
+    return Builder.CreateExtractVector(InpTy, Shift, Builder.getInt64(0));
+  } else if (HVC.HST.getVectorLength() * 2 == InpSize) {
+    // Double vec length
+    Type *NT = HVC.getHvxTy(HVC.getIntTy(ElemTy->getBitWidth()), false);
+    auto V6_hi = HVC.HST.getIntrinsicId(Hexagon::V6_hi);
+    auto V6_lo = HVC.HST.getIntrinsicId(Hexagon::V6_lo);
+
+    Value *Hi = HVC.createHvxIntrinsic(Builder, V6_hi, NT, {In.getOperand(0)});
+    Value *Lo = HVC.createHvxIntrinsic(Builder, V6_lo, NT, {In.getOperand(0)});
+
+    Value *ShiftHiLo = HVC.vralignb(Builder, Hi, Lo, ShiftAmount);
+    Value *ShiftLoHi = HVC.vralignb(Builder, Lo, Hi, ShiftAmount);
+
+    return HVC.concat(Builder, {ShiftLoHi, ShiftHiLo});
+  }
+  // All other cases are not yet implemented.
+  llvm_unreachable("Underimplemented llvm.vector.splice.va");
 }
 
 Instruction *locateDestination(Instruction *In, HvxIdioms::DstQualifier &Qual);
@@ -3255,6 +3335,15 @@ auto HvxIdioms::run() -> bool {
         It = StartOver ? B.rbegin()
                        : cast<Instruction>(New)->getReverseIterator();
         Changed = true;
+      } else if (matchVectorSplice(*It)) {
+        Value *New = processVectorSplice(*It);
+        if (!New)
+          continue;
+        LLVM_DEBUG(dbgs() << "  Vsplice : " << *New << "\n");
+        It->replaceAllUsesWith(New);
+        RecursivelyDeleteTriviallyDeadInstructions(&*It, &HVC.TLI);
+        It = cast<Instruction>(New)->getReverseIterator();
+        Changed = true;
       } else if (matchGather(*It)) {
         Value *New = processVGather(*It);
         if (!New)
@@ -3290,7 +3379,6 @@ auto HvxIdioms::run() -> bool {
       }
     }
   }
-
   return Changed;
 }
 
