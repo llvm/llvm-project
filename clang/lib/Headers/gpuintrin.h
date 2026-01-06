@@ -81,7 +81,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks(int __dim) {
   case 2:
     return __gpu_num_blocks_z();
   default:
-    __builtin_unreachable();
+    return 1;
   }
 }
 
@@ -95,7 +95,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_block_id(int __dim) {
   case 2:
     return __gpu_block_id_z();
   default:
-    __builtin_unreachable();
+    return 0;
   }
 }
 
@@ -109,7 +109,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_threads(int __dim) {
   case 2:
     return __gpu_num_threads_z();
   default:
-    __builtin_unreachable();
+    return 1;
   }
 }
 
@@ -123,7 +123,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_thread_id(int __dim) {
   case 2:
     return __gpu_thread_id_z();
   default:
-    __builtin_unreachable();
+    return 0;
   }
 }
 
