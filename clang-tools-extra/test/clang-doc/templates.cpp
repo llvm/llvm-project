@@ -54,7 +54,11 @@ void ParamPackFunction(T... args);
 // JSON-NEXT:        {
 // JSON-NEXT:          "End": true,
 // JSON-NEXT:          "Name": "args",
-// JSON-NEXT:          "Type": "T..."
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "T...",
+// JSON-NEXT:            "QualName": "T...",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
 // JSON-NEXT:        }
 // JSON-NEXT:      ],
 // JSON-NEXT:      "ReturnType": {
@@ -113,7 +117,11 @@ void function(T x) {}
 // JSON-NEXT:        {
 // JSON-NEXT:          "End": true,
 // JSON-NEXT:          "Name": "x",
-// JSON-NEXT:          "Type": "T"
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "T",
+// JSON-NEXT:            "QualName": "T",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
 // JSON-NEXT:        }
 // JSON-NEXT:      ],
 // JSON-NEXT:      "ReturnType": {
@@ -139,7 +147,7 @@ void function(T x) {}
 // HTML-NEXT:      <div id="{{([0-9A-F]{40})}}">
 // HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">template &lt;typename T, int U = 1&gt;</code></pre>
 // HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">void function (T x)</code></pre>
-// HTML-NEXT:          <p>Defined at line [[# @LINE - 56]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:          <p>Defined at line [[# @LINE - 60]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:      </div>
 // HTML-NEXT:  </div>
 
@@ -177,7 +185,11 @@ void function<bool, 0>(bool x) {}
 // JSON-NEXT:        {
 // JSON-NEXT:          "End": true,
 // JSON-NEXT:          "Name": "x",
-// JSON-NEXT:          "Type": "bool"
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "bool",
+// JSON-NEXT:            "QualName": "bool",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
 // JSON-NEXT:        }
 // JSON-NEXT:      ],
 // JSON-NEXT:      "ReturnType": {
@@ -206,7 +218,7 @@ void function<bool, 0>(bool x) {}
 // HTML-NEXT:      <div id="{{([0-9A-F]{40})}}">
 // HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">template &lt;&gt;</code></pre>
 // HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">void function&lt;bool, 0&gt; (bool x)</code></pre>
-// HTML-NEXT:          <p>Defined at line [[# @LINE - 62]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:          <p>Defined at line [[# @LINE - 66]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:      </div>
 // HTML-NEXT:  </div>
 
@@ -284,12 +296,16 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // MD: **t** The input to func_with_tuple_param
 
 // JSON:           "Name": "func_with_tuple_param",
-// COM:            FIXME: Add type info to parameters
 // JSON-NEXT:      "Params": [
 // JSON-NEXT:        {
 // JSON-NEXT:          "End": true,
 // JSON-NEXT:          "Name": "t",
-// JSON-NEXT:          "Type": "tuple"
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "tuple",
+// JSON-NEXT:            "Path": "GlobalNamespace",
+// JSON-NEXT:            "QualName": "tuple<int, int, bool>",
+// JSON-NEXT:            "USR": "{{([0-9A-F]{40})}}"
+// JSON-NEXT:          }
 // JSON-NEXT:        }
 // JSON-NEXT:      ],
 // JSON-NEXT:      "ReturnType": {
@@ -302,7 +318,7 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 
 // HTML:       <div class="delimiter-container">
 // HTML-NEXT:      <div id="{{([0-9A-F]{40})}}">
-// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">tuple func_with_tuple_param (tuple t)</code></pre>
+// HTML-NEXT:          <pre><code class="language-cpp code-clang-doc">tuple&lt;int, int, bool&gt; func_with_tuple_param (tuple&lt;int, int, bool&gt; t)</code></pre>
 // HTML-NEXT:          <div>
 // HTML-NEXT:              <div>
 // HTML-NEXT:                  <p> A function with a tuple parameter</p>
@@ -312,6 +328,6 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // HTML-NEXT:                  <b>t</b>   The input to func_with_tuple_param
 // HTML-NEXT:              </div> 
 // HTML-NEXT:          </div>
-// HTML-NEXT:          <p>Defined at line [[# @LINE - 77]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:          <p>Defined at line [[# @LINE - 81]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:      </div>
 // HTML-NEXT:  </div>
