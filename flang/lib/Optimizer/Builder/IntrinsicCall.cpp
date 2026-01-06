@@ -3852,11 +3852,16 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
                                           EXIT_SUCCESS)
           : fir::getBase(args[0]);
 
-  assert(status.getType() == builder.getDefaultIntegerType() &&
-         "STATUS parameter must be an INTEGER of default kind");
+  mlir::Type defaultIntTy = builder.getDefaultIntegerType();
+
+  // Convert INTEGER(any kind) → default INTEGER
+  if (status.getType() != defaultIntTy) {
+    status = builder.createConvert(loc, defaultIntTy, status);
+  }
 
   fir::runtime::genExit(builder, loc, status);
 }
+
 
 // EXPONENT
 mlir::Value IntrinsicLibrary::genExponent(mlir::Type resultType,

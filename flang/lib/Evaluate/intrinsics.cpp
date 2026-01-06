@@ -1604,7 +1604,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
-    {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
+    {"exit", {{"status", AnyInt, Rank::scalar, Optionality::optional}}, {},
         Rank::elemental, IntrinsicClass::impureSubroutine},
     {"free", {{"ptr", Addressable}}, {}},
     {"flush",
@@ -2157,8 +2157,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           semantics::IsTeamType(&type->GetDerivedTypeSpec());
       break;
     case KindCode::defaultIntegerKind:
-      argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Integer);
-      break;
+  if (name == "exit" && d.keyword == "status" &&
+      type->category() == TypeCategory::Integer) {
+    // GNU / CCE compatibility: allow any integer kind
+    argOk = true;
+  } else {
+    argOk = type->kind() ==
+        defaults.GetDefaultKind(TypeCategory::Integer);
+  }
+  break;
+
     case KindCode::defaultRealKind:
       argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Real);
       break;
@@ -2286,6 +2294,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           d.keyword, type->AsFortran());
       return std::nullopt;
     }
+    
   }
 
   // Check the ranks of the arguments against the intrinsic's interface.
