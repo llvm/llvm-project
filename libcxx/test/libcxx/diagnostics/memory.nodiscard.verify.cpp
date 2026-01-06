@@ -36,16 +36,16 @@ void test() {
       typedef int value_type;
 
       value_type* allocate(std::size_t) { return nullptr; }
-      value_type* allocate(std::size_t, const void*) { return nullptr; }
     } allocator;
     typedef std::allocator_traits<Alloc> AllocTraits;
 
     struct HintedAlloc {
       typedef int value_type;
+      typedef std::size_t size_type;
       typedef const void* const_void_pointer;
 
-      value_type* allocate(std::size_t) { return nullptr; }
-      value_type* allocate(std::size_t, const void*) { return nullptr; }
+      value_type* allocate(size_type) { return nullptr; }
+      value_type* allocate(size_type, const_void_pointer) { return nullptr; }
     } hintedAllocator;
     typedef std::allocator_traits<HintedAlloc> HintedAllocTraits;
 
