@@ -1312,6 +1312,15 @@ bool FormatEntity::Formatter::FormatStringRef(const llvm::StringRef &format_str,
 
 bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
                                      ValueObject *valobj) {
+  if (IsInvalidRecursiveFormat(entry.type)) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "Error: detected recursive format entity: {0}",
+             FormatEntity::Entry::TypeToCString(entry.type));
+    return false;
+  }
+
+  auto entry_stack_guard = PushEntryType(entry.type);
+
   switch (entry.type) {
   case Entry::Type::Invalid:
   case Entry::Type::ParentNumber: // Only used for
@@ -2703,4 +2712,12 @@ Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
   entry.type = Entry::Type::Root;
   llvm::StringRef modifiable_format(format_str);
   return ParseInternal(modifiable_format, entry, 0);
+}
+
+bool FormatEntity::Formatter::IsInvalidRecursiveFormat(Entry::Type type) {
+  // It is expected that Scope and Root format entities recursively call Format.
+  if (llvm::is_contained({Entry::Type::Scope, Entry::Type::Root}, type))
+    return false;
+
+  return llvm::is_contained(m_entry_type_stack, type);
 }
