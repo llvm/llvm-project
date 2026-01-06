@@ -124,29 +124,37 @@ void ScriptLexer::lex() {
       return;
     }
 
-    // Some operators form separate tokens.
-    if (s.starts_with("<<=") || s.starts_with(">>=")) {
-      curTok = s.substr(0, 3);
-      s = s.substr(3);
-      return;
-    }
-    if (s.size() > 1 && (s[1] == '=' && strchr("+-*/!&^|", s[0]))) {
-      curTok = s.substr(0, 2);
-      s = s.substr(2);
-      return;
-    }
+    // In Script and Expr states, recognize compound assignment operators.
+    auto doAssign = [&]() -> std::optional<StringRef> {
+      if (s.starts_with("<<=") || s.starts_with(">>=")) {
+        curTok = s.substr(0, 3);
+        s = s.substr(3);
+        return s;
+      }
+      if (s.size() > 1 && (s[1] == '=' && strchr("+-*/!&^|", s[0]))) {
+        curTok = s.substr(0, 2);
+        s = s.substr(2);
+        return s;
+      }
+      return {};
+    };
 
     // Unquoted token. The non-expression token is more relaxed than tokens in
     // C-like languages, so that you can write "file-name.cpp" as one bare
     // token.
     size_t pos;
+    constexpr StringRef scriptChars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+        "0123456789_.$/\\~=+[]*?-!^:";
     switch (lexState) {
     case State::Script:
-      pos = s.find_first_not_of(
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-          "0123456789_.$/\\~=+[]*?-!^:");
+      if (auto ret = doAssign())
+        return;
+      pos = s.find_first_not_of(scriptChars);
       break;
     case State::Expr:
+      if (auto ret = doAssign())
+        return;
       pos = s.find_first_not_of(
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
           "0123456789_.$");
@@ -154,6 +162,22 @@ void ScriptLexer::lex() {
           ((s[0] == s[1] && strchr("<>&|", s[0])) ||
            is_contained({"==", "!=", "<=", ">=", "<<", ">>"}, s.substr(0, 2))))
         pos = 2;
+      break;
+    case State::VersionNode:
+      // Treat `:` as a token boundary unless it's part of a scope operator `::`
+      // (for extern "C++"). This behavior resembles GNU ld and allows proper
+      // tokenization of patterns like `local:*`.
+      pos = 0;
+      for (; pos != s.size(); ++pos) {
+        if (s[pos] == ':') {
+          if (pos + 1 != s.size() && s[pos + 1] == ':') {
+            ++pos;
+            continue;
+          }
+        } else if (scriptChars.contains(s[pos]))
+          continue;
+        break;
+      }
       break;
     }
 
