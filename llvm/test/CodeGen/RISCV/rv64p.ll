@@ -227,7 +227,6 @@ define i32 @cls_i32_knownbits(i32 %x) {
 ; CHECK-LABEL: cls_i32_knownbits:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    andi a0, a0, 31
 ; CHECK-NEXT:    ret
   %a = ashr i32 %x, 31
   %b = xor i32 %x, %a
@@ -242,7 +241,6 @@ define i32 @cls_i32_knownbits_2(i16 signext %x) {
 ; CHECK-LABEL: cls_i32_knownbits_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    ori a0, a0, 16
 ; CHECK-NEXT:    ret
   %sext = sext i16 %x to i32
   %a = ashr i32 %sext, 31
@@ -258,7 +256,6 @@ define i32 @cls_i32_knownbits_3(i8 signext %x) {
 ; CHECK-LABEL: cls_i32_knownbits_3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    ori a0, a0, 24
 ; CHECK-NEXT:    ret
   %sext = sext i8 %x to i32
   %a = ashr i32 %sext, 31
