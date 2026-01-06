@@ -1293,7 +1293,7 @@ define void @PR34743(ptr %a, ptr %b, i64 %n) #1 {
 ; CHECK-NEXT:    [[TMP21:%.*]] = sext <vscale x 4 x i16> [[WIDE_MASKED_GATHER]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i16, ptr [[A]], <vscale x 4 x i64> [[TMP19]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER4]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP22]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i16> poison), !alias.scope [[META34]]
-; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_MASKED_GATHER4]], i32 -1)
+; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_MASKED_GATHER4]], i32 1)
 ; CHECK-NEXT:    [[TMP24:%.*]] = sext <vscale x 4 x i16> [[TMP23]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext <vscale x 4 x i16> [[WIDE_MASKED_GATHER4]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[TMP26:%.*]] = mul nsw <vscale x 4 x i32> [[TMP24]], [[TMP21]]

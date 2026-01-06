@@ -1656,7 +1656,7 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   // Compute the offset hint.
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
   const CXXRecordDecl *DestDecl = DestRecordTy->getAsCXXRecordDecl();
-  llvm::Value *OffsetHint = llvm::ConstantInt::get(
+  llvm::Value *OffsetHint = llvm::ConstantInt::getSigned(
       PtrDiffLTy,
       computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl).getQuantity());
 
