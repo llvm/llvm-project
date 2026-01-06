@@ -113,7 +113,7 @@ define i8 @urem_var_divisor_ugt_0_ult_10(i8 %a, i8 range(i8 1, 10) %d) {
 ; CHECK-LABEL: 'urem_var_divisor_ugt_0_ult_10'
 ; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_ugt_0_ult_10
 ; CHECK-NEXT:    %t0 = urem i8 %a, %d
-; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: [0,9) S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_ugt_0_ult_10
 ;
   %t0 = urem i8 %a, %d
@@ -124,7 +124,7 @@ define i8 @urem_var_divisor_ugt_1_ult_10(i8 %a, i8 range(i8 2, 10) %d) {
 ; CHECK-LABEL: 'urem_var_divisor_ugt_1_ult_10'
 ; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_ugt_1_ult_10
 ; CHECK-NEXT:    %t0 = urem i8 %a, %d
-; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: [0,9) S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_ugt_1_ult_10
 ;
   %t0 = urem i8 %a, %d
