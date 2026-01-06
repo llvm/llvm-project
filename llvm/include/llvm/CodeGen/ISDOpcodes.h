@@ -769,6 +769,11 @@ enum NodeType {
   FSHL,
   FSHR,
 
+  /// Carry-less multiplication operations.
+  CLMUL,
+  CLMULR,
+  CLMULH,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,

@@ -175,6 +175,25 @@ private:
       DiagPrinterWithOS;
 };
 
+/// Run the dependency scanning worker for the given driver or frontend
+/// command-line, and report the discovered dependencies to the provided
+/// consumer.
+///
+/// OverlayFS should be based on the Worker's dependency scanning file-system
+/// and can be used to provide any input specified on the command-line as
+/// in-memory file. If no overlay file-system is provided, the Worker's
+/// dependency scanning file-system is used instead.
+///
+/// \returns false if any errors occurred (with diagnostics reported to
+/// \c DiagConsumer), true otherwise.
+bool computeDependencies(
+    dependencies::DependencyScanningWorker &Worker, StringRef WorkingDirectory,
+    ArrayRef<std::string> CommandLine,
+    dependencies::DependencyConsumer &Consumer,
+    dependencies::DependencyActionController &Controller,
+    DiagnosticConsumer &DiagConsumer,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
+
 } // end namespace tooling
 } // end namespace clang
 
