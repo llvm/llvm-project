@@ -37,6 +37,7 @@ public:
 
 private:
   void runLowerConstExpr(Function &F);
+  void runLowerI1Comparisons(Function &F);
 };
 } // namespace
 
@@ -151,7 +152,79 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
   }
 }
 
+static Instruction *createLogicalOp(Value *Op1, Value *Op2, bool UseAnd,
+                                    Constant *TrueVal,
+                                    BasicBlock::iterator InsertPt) {
+  auto *NotOp2 =
+      BinaryOperator::Create(Instruction::Xor, Op2, TrueVal, "", InsertPt);
+  return BinaryOperator::Create(UseAnd ? Instruction::And : Instruction::Or,
+                                Op1, NotOp2, "", InsertPt);
+}
+
+// Lower i1 comparisons with certain predicates to logical operations.
+// The backend treats i1 as boolean values, and SPIR-V only allows logical
+// operations for boolean values. This function lowers i1 comparisons with
+// certain predicates to logical operations to generate valid SPIR-V.
+void SPIRVRegularizer::runLowerI1Comparisons(Function &F) {
+  LLVMContext &Ctx = F.getContext();
+
+  for (auto &I : make_early_inc_range(instructions(F))) {
+    auto *Cmp = dyn_cast<ICmpInst>(&I);
+    if (!Cmp)
+      continue;
+
+    bool IsI1 = Cmp->getOperand(0)->getType()->isIntegerTy(1);
+    if (!IsI1)
+      continue;
+
+    auto Pred = Cmp->getPredicate();
+    bool IsTargetPred =
+        Pred >= ICmpInst::ICMP_UGT && Pred <= ICmpInst::ICMP_SLE;
+    if (!IsTargetPred)
+      continue;
+
+    Value *P = Cmp->getOperand(0);
+    Value *Q = Cmp->getOperand(1);
+    auto *TrueVal = ConstantInt::getTrue(Ctx);
+
+    Instruction *Result = nullptr;
+    switch (Pred) {
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_SLT:
+      // Result = p & !q
+      Result =
+          createLogicalOp(P, Q, /*UseAnd=*/true, TrueVal, Cmp->getIterator());
+      break;
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_SGT:
+      // Result = q & !p
+      Result =
+          createLogicalOp(Q, P, /*UseAnd=*/true, TrueVal, Cmp->getIterator());
+      break;
+    case ICmpInst::ICMP_ULE:
+    case ICmpInst::ICMP_SGE:
+      // Result = q | !p
+      Result =
+          createLogicalOp(Q, P, /*UseAnd=*/false, TrueVal, Cmp->getIterator());
+      break;
+    case ICmpInst::ICMP_UGE:
+    case ICmpInst::ICMP_SLE:
+      // Result = p | !q
+      Result =
+          createLogicalOp(P, Q, /*UseAnd=*/false, TrueVal, Cmp->getIterator());
+      break;
+    default:
+      llvm_unreachable("Unexpected predicate");
+    }
+
+    // Replace all uses and erase the old instruction
+    Cmp->replaceAllUsesWith(Result);
+    Cmp->eraseFromParent();
+  }
+}
+
 bool SPIRVRegularizer::runOnFunction(Function &F) {
+  runLowerI1Comparisons(F);
   runLowerConstExpr(F);
   return true;
 }
