@@ -11,8 +11,8 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1600, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1600, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -82,8 +82,8 @@ define void @test2(ptr %a, ptr noalias %b) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP6]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP6]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1600, [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1600, [[N_MOD_VF]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
@@ -148,10 +148,10 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
