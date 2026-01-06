@@ -1409,9 +1409,12 @@ template <typename Conv2DOp, typename Conv1DOp>
 FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
     returningMatchAndRewrite(LinalgOp convOp, PatternRewriter &rewriter) const {
   // Check if this LinalgOp is of the expected Conv2DOp type (named or generic).
-  SmallVector<int64_t> dilations, strides;
-  if (!linalg::isaConvolutionOpOfType<Conv2DOp>(convOp, &dilations, &strides))
+  std::optional<DilationsAndStrides> convParams =
+      matchConvolutionOpOfType<Conv2DOp>(convOp);
+  if (!convParams)
     return failure();
+  SmallVector<int64_t> dilations = std::move(convParams->dilations);
+  SmallVector<int64_t> strides = std::move(convParams->strides);
 
   if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
@@ -1526,10 +1529,12 @@ FailureOr<DepthwiseConv1DNwcWcOp>
 DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
     LinalgOp convOp, PatternRewriter &rewriter) const {
   // Check if this LinalgOp is a DepthwiseConv2DNhwcHwcOp (named or generic).
-  SmallVector<int64_t> dilations, strides;
-  if (!linalg::isaConvolutionOpOfType<DepthwiseConv2DNhwcHwcOp>(
-          convOp, &dilations, &strides))
+  std::optional<DilationsAndStrides> convParams =
+      matchConvolutionOpOfType<DepthwiseConv2DNhwcHwcOp>(convOp);
+  if (!convParams)
     return failure();
+  SmallVector<int64_t> dilations = std::move(convParams->dilations);
+  SmallVector<int64_t> strides = std::move(convParams->strides);
 
   if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
@@ -1597,8 +1602,9 @@ FailureOr<Conv1DOp>
 DownscaleConv2DOp::returningMatchAndRewrite(LinalgOp convOp,
                                             PatternRewriter &rewriter) const {
   // Check if this LinalgOp is a Conv2DOp (named or generic).
-  SmallVector<int64_t> dilations, strides;
-  if (!linalg::isaConvolutionOpOfType<Conv2DOp>(convOp, &dilations, &strides))
+  std::optional<DilationsAndStrides> convParams =
+      matchConvolutionOpOfType<Conv2DOp>(convOp);
+  if (!convParams)
     return failure();
 
   if (convOp.hasPureBufferSemantics())
