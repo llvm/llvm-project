@@ -86,3 +86,58 @@ define i32 @test_trunc_zext(i32 %arg) {
   %sub = sub i32 %arg, %zext
   ret i32 %sub
 }
+
+define i8 @urem_var_divisor_unknown(i8 %a, i8 %d) {
+; CHECK-LABEL: 'urem_var_divisor_unknown'
+; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_unknown
+; CHECK-NEXT:    %t0 = urem i8 %a, %d
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_unknown
+;
+  %t0 = urem i8 %a, %d
+  ret i8 %t0
+}
+
+define i8 @urem_var_divisor_ult_10(i8 %a, i8 range(i8 0, 10) %d) {
+; CHECK-LABEL: 'urem_var_divisor_ult_10'
+; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_ult_10
+; CHECK-NEXT:    %t0 = urem i8 %a, %d
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_ult_10
+;
+  %t0 = urem i8 %a, %d
+  ret i8 %t0
+}
+
+define i8 @urem_var_divisor_ugt_0_ult_10(i8 %a, i8 range(i8 1, 10) %d) {
+; CHECK-LABEL: 'urem_var_divisor_ugt_0_ult_10'
+; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_ugt_0_ult_10
+; CHECK-NEXT:    %t0 = urem i8 %a, %d
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_ugt_0_ult_10
+;
+  %t0 = urem i8 %a, %d
+  ret i8 %t0
+}
+
+define i8 @urem_var_divisor_ugt_1_ult_10(i8 %a, i8 range(i8 2, 10) %d) {
+; CHECK-LABEL: 'urem_var_divisor_ugt_1_ult_10'
+; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_ugt_1_ult_10
+; CHECK-NEXT:    %t0 = urem i8 %a, %d
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_ugt_1_ult_10
+;
+  %t0 = urem i8 %a, %d
+  ret i8 %t0
+}
+
+define i8 @urem_var_divisor_signed(i8 %a, i8 range(i8 -19, 10) %d) {
+; CHECK-LABEL: 'urem_var_divisor_signed'
+; CHECK-NEXT:  Classifying expressions for: @urem_var_divisor_signed
+; CHECK-NEXT:    %t0 = urem i8 %a, %d
+; CHECK-NEXT:    --> ((-1 * (%a /u %d) * %d) + %a) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @urem_var_divisor_signed
+;
+  %t0 = urem i8 %a, %d
+  ret i8 %t0
+}
