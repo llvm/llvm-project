@@ -1042,7 +1042,7 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
 
 LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManagerReserveAlloc(
-    LLVMOrcExecutionSessionRef ES, bool ReserveAlloc) {
+    LLVMOrcExecutionSessionRef ES, LLVMBool ReserveAlloc) {
   assert(ES && "ES must not be null");
   return wrap(new RTDyldObjectLinkingLayer(
       *unwrap(ES), [ReserveAlloc](const MemoryBuffer &) {
