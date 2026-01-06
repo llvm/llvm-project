@@ -58,7 +58,8 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         "expressed_type",
         [](QuantizedType &type) {
           return PyType(type.getContext(),
-                        mlirQuantizedTypeGetExpressedType(type));
+                        mlirQuantizedTypeGetExpressedType(type))
+              .maybeDownCast();
         },
         "Type expressed by this quantized type.");
     c.def_prop_ro(
@@ -78,7 +79,8 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         "storage_type",
         [](QuantizedType &type) {
           return PyType(type.getContext(),
-                        mlirQuantizedTypeGetStorageType(type));
+                        mlirQuantizedTypeGetStorageType(type))
+              .maybeDownCast();
         },
         "Storage type backing this quantized type.");
     c.def_prop_ro(
@@ -111,7 +113,8 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         "quantized_element_type",
         [](QuantizedType &type) {
           return PyType(type.getContext(),
-                        mlirQuantizedTypeGetQuantizedElementType(type));
+                        mlirQuantizedTypeGetQuantizedElementType(type))
+              .maybeDownCast();
         },
         "Element type of this quantized type expressed as quantized type.");
     c.def(
@@ -131,10 +134,10 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         nb::arg("candidate"));
     c.def_static(
         "cast_to_storage_type",
-        [](QuantizedType &type) {
+        [](PyType &type) {
           MlirType castResult = mlirQuantizedTypeCastToStorageType(type);
           if (!mlirTypeIsNull(castResult))
-            return PyType(type.getContext(), castResult);
+            return PyType(type.getContext(), castResult).maybeDownCast();
           throw nb::type_error("Invalid cast.");
         },
         "Casts from a type based on a quantized type to a corresponding type "
@@ -147,7 +150,7 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
           MlirType castResult =
               mlirQuantizedTypeCastFromExpressedType(type, candidate);
           if (!mlirTypeIsNull(castResult))
-            return PyType(type.getContext(), castResult);
+            return PyType(type.getContext(), castResult).maybeDownCast();
           throw nb::type_error("Invalid cast.");
         },
         "Casts from a type based on the expressed type of this quantized type "
@@ -157,10 +160,10 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
         nb::arg("candidate"));
     c.def_static(
         "cast_to_expressed_type",
-        [](QuantizedType &type) {
+        [](PyType &type) {
           MlirType castResult = mlirQuantizedTypeCastToExpressedType(type);
           if (!mlirTypeIsNull(castResult))
-            return PyType(type.getContext(), castResult);
+            return PyType(type.getContext(), castResult).maybeDownCast();
           throw nb::type_error("Invalid cast.");
         },
         "Casts from a type based on a quantized type to a corresponding type "
@@ -174,7 +177,7 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
           MlirType castResult =
               mlirQuantizedTypeCastExpressedToStorageType(type, candidate);
           if (!mlirTypeIsNull(castResult))
-            return PyType(type.getContext(), castResult);
+            return PyType(type.getContext(), castResult).maybeDownCast();
           throw nb::type_error("Invalid cast.");
         },
         "Casts from a type based on the expressed type of this quantized type "
@@ -192,6 +195,8 @@ struct QuantizedType : PyConcreteType<QuantizedType> {
 
 struct AnyQuantizedType : PyConcreteType<AnyQuantizedType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAAnyQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirAnyQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "AnyQuantizedType";
   using Base::Base;
 
@@ -221,6 +226,8 @@ struct AnyQuantizedType : PyConcreteType<AnyQuantizedType, QuantizedType> {
 struct UniformQuantizedType
     : PyConcreteType<UniformQuantizedType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAUniformQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirUniformQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedType";
   using Base::Base;
 
@@ -273,6 +280,8 @@ struct UniformQuantizedPerAxisType
     : PyConcreteType<UniformQuantizedPerAxisType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsAUniformQuantizedPerAxisType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirUniformQuantizedPerAxisTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedPerAxisType";
   using Base::Base;
 
@@ -357,6 +366,8 @@ struct UniformQuantizedSubChannelType
     : PyConcreteType<UniformQuantizedSubChannelType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsAUniformQuantizedSubChannelType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirUniformQuantizedSubChannelTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedSubChannelType";
   using Base::Base;
 
@@ -448,6 +459,8 @@ struct CalibratedQuantizedType
     : PyConcreteType<CalibratedQuantizedType, QuantizedType> {
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsACalibratedQuantizedType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirCalibratedQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "CalibratedQuantizedType";
   using Base::Base;
 

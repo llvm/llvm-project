@@ -888,7 +888,7 @@ public:
   /// is taken by calling this function.
   static PyType createFromCapsule(nanobind::object capsule);
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyType> maybeDownCast();
 
 private:
   MlirType type;
@@ -957,12 +957,6 @@ public:
     auto cls = ClassTy(m, DerivedTy::pyClassName);
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
-    cls.def_static(
-        "isinstance",
-        [](PyType &otherType) -> bool {
-          return DerivedTy::isaFunction(otherType);
-        },
-        nanobind::arg("other"));
     cls.def_prop_ro_static(
         "static_typeid",
         [](nanobind::object & /*class*/) {
@@ -1020,7 +1014,7 @@ public:
   /// is taken by calling this function.
   static PyAttribute createFromCapsule(const nanobind::object &capsule);
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyAttribute> maybeDownCast();
 
 private:
   MlirAttribute attr;
@@ -1094,12 +1088,6 @@ public:
     }
     cls.def(nanobind::init<PyAttribute &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_attr"));
-    cls.def_static(
-        "isinstance",
-        [](PyAttribute &otherAttr) -> bool {
-          return DerivedTy::isaFunction(otherAttr);
-        },
-        nanobind::arg("other"));
     cls.def_prop_ro(
         "type",
         [](PyAttribute &attr) -> nanobind::typed<nanobind::object, PyType> {
@@ -1183,7 +1171,7 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   nanobind::object getCapsule();
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyValue> maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
@@ -1555,12 +1543,6 @@ public:
                           .c_str()));
     cls.def(nanobind::init<PyValue &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("value"));
-    cls.def_static(
-        "isinstance",
-        [](PyValue &otherValue) -> bool {
-          return DerivedTy::isaFunction(otherValue);
-        },
-        nanobind::arg("other_value"));
     cls.def(
         MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
         [](DerivedTy &self) -> nanobind::typed<nanobind::object, DerivedTy> {
