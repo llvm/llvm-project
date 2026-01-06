@@ -299,7 +299,9 @@ TEST_CONSTEXPR_CXX20 bool test()
       StateTracker t{state};
       std::optional<StateTracker&> o1{t};
       std::optional<StateTracker> o2 = std::move(o1);
+      (void) *o2;
       assert(state != state_t::move_assigned);
+      assert(state == state_t::constructed);
     }
 
 #endif
@@ -310,6 +312,7 @@ TEST_CONSTEXPR_CXX20 bool test()
 int main(int, char**)
 {
 #if TEST_STD_VER > 17
+    assert(test());
     static_assert(test());
 #endif
     test_with_test_type();
