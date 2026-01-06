@@ -1274,6 +1274,25 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
                       {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
+  // Performant implementations of the vector extension will attempt to re-use
+  // elements if they fall on the same cache line
+  uint64_t CacheLineBytes = ST->getCacheLineSize();
+  if (!CacheLineBytes) // If no value, use default value of 64
+    CacheLineBytes = 64;
+  unsigned EltsPerCL = (CacheLineBytes * 8) / DataTy->getScalarSizeInBits();
+  if (const ConstantInt *StrideCI =
+          dyn_cast_or_null<ConstantInt>(MICA.getStrideVal())) {
+    uint64_t AbsStride = (uint64_t)std::abs(StrideCI->getSExtValue());
+    if (AbsStride < EltsPerCL) {
+      uint64_t MaxCombines = ST->getMaxVectorCoalesceElts();
+      if ((EltsPerCL / AbsStride) >= MaxCombines)
+        NumLoads = divideCeil(NumLoads, MaxCombines);
+      else
+        // If we were to calculate EltsPerCL / AbsStride first, would lose
+        // accuracy
+        NumLoads = divideCeil((NumLoads * AbsStride), EltsPerCL);
+    }
+  }
   return NumLoads * MemOpCost;
 }
 
