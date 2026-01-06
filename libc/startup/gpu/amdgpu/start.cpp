@@ -18,9 +18,6 @@ extern "C" void __cxa_finalize(void *dso);
 
 namespace LIBC_NAMESPACE_DECL {
 
-// FIXME: Factor this out into common logic so we don't need to stub it here.
-void teardown_main_tls() {}
-
 // FIXME: Touch this symbol to force this to be linked in statically.
 volatile void *dummy = &LIBC_NAMESPACE::rpc::client;
 
