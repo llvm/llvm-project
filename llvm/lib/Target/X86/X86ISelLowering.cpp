@@ -43509,9 +43509,6 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
   if (VT.getVectorElementType() == MVT::f16)
     return SDValue();
 
-  if (!HasAllowContract)
-    return SDValue();
-
   return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
 }
 
