@@ -173,8 +173,6 @@ llvm.func @target_allocate(%x : !llvm.ptr) {
 // -----
 
 llvm.func @target_device(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause device in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
   omp.target device(%x : i32) {
     omp.terminator
   }

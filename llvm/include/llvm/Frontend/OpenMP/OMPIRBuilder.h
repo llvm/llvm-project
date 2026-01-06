@@ -2555,6 +2555,9 @@ public:
     /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
     /// it is a generic kernel.
     Value *LoopTripCount = nullptr;
+
+    /// Device ID value used in the kernel launch.
+    Value *DeviceID = nullptr;
   };
 
   /// Data structure that contains the needed information to construct the
