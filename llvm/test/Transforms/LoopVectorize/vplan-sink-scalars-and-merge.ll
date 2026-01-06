@@ -122,7 +122,7 @@ exit:
 ; CHECK-NEXT: }
 
 ; CHECK:      loop.0:
-; CHECK-NEXT:   EMIT vp<%9> = shl ir<%iv>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[SHL:%.+]]> = shl ir<%iv>, ir<1>
 ; CHECK-NEXT: Successor(s): pred.store
 
 ; CHECK:      <xVFxUF> pred.store: {
@@ -131,7 +131,7 @@ exit:
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<%9>
+; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[SHL]]>
 ; CHECK-NEXT:     REPLICATE ir<%add> = add vp<[[PRED]]>, ir<10>
 ; CHECK-NEXT:     REPLICATE store ir<%add>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
