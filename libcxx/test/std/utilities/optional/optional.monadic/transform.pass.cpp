@@ -220,6 +220,16 @@ constexpr bool test_ref() {
 
     assert(*o2 == 44);
   }
+
+  {
+    int i = 42;
+    float k = 4.0f;
+    std::optional<int&> opt{i};
+    std::same_as<std::optional<float>> decltype(auto) o2 =
+        opt.transform([&](int&) { return k; });
+    assert(*o2 == 4.0f);
+  }
+
   // &
   {
     // Without & qualifier on F's operator()
