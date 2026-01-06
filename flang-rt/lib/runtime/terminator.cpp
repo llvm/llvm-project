@@ -41,6 +41,13 @@ void Terminator::InvokeCrashHandler(const char *message, ...) const {
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
+#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+RT_VAR_ATTRS ExitHandler exitHandler;
+RT_VAR_ATTRS void (*normalEndCallback)(int);
+RT_VAR_ATTRS void (*failImageCallback)(void);
+RT_VAR_ATTRS void (*errorCallback)(int);
+#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+
 RT_API_ATTRS void Terminator::CrashHeader() const {
 #if defined(RT_DEVICE_COMPILATION)
   std::printf("\nfatal Fortran runtime error");
@@ -73,7 +80,7 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
   // FIXME: re-enable the flush along with the IO enabling.
   io::FlushOutputOnCrash(*this);
 #endif
-  NotifyOtherImagesOfErrorTermination();
+  NotifyOtherImagesOfErrorTermination(EXIT_FAILURE);
 #if defined(RT_DEVICE_COMPILATION)
   DeviceTrap();
 #else
@@ -93,9 +100,23 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
       sourceFileName_, sourceLine_);
 }
 
-RT_API_ATTRS void NotifyOtherImagesOfNormalEnd() {
+void ExitHandler::Configure(bool mifEnabled) {
+  multiImageFeatureEnabled = mifEnabled;
+}
+
+void ExitHandler::Exit(int exitCode) {
+  if (multiImageFeatureEnabled)
+    if (exitCode == EXIT_SUCCESS)
+      SynchronizeImagesOfNormalEnd(exitCode);
+    else
+      NotifyOtherImagesOfErrorTermination(exitCode);
+  else
+    std::exit(exitCode);
+}
+
+RT_API_ATTRS void SynchronizeImagesOfNormalEnd(int code) {
   if (normalEndCallback)
-    (*normalEndCallback)();
+    (*normalEndCallback)(code);
 }
 
 RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement() {
@@ -103,9 +124,9 @@ RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement() {
     (*failImageCallback)();
 }
 
-RT_API_ATTRS void NotifyOtherImagesOfErrorTermination() {
+RT_API_ATTRS void NotifyOtherImagesOfErrorTermination(int code) {
   if (errorCallback)
-    (*errorCallback)();
+    (*errorCallback)(code);
 }
 
 RT_OFFLOAD_API_GROUP_END

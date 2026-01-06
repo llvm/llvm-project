@@ -142,15 +142,19 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            mlir::ModuleOp module,
                                            TerminationKind termKind) {
-  mlir::FunctionType funcType = mlir::FunctionType::get(
-      builder.getContext(), /*inputs*/ {}, /*result*/ {});
   std::string funcName;
-  if (termKind == TerminationKind::Normal)
+  mlir::FunctionType funcType =
+      mlir::FunctionType::get(builder.getContext(), {}, {});
+  mlir::Type i32Ty = builder.getI32Type();
+  if (termKind == TerminationKind::Normal) {
     funcName = getPRIFProcName("stop");
-  else if (termKind == TerminationKind::Error)
+    funcType = mlir::FunctionType::get(builder.getContext(), {i32Ty}, {});
+  } else if (termKind == TerminationKind::Error) {
     funcName = getPRIFProcName("error_stop");
-  else
+    funcType = mlir::FunctionType::get(builder.getContext(), {i32Ty}, {});
+  } else {
     funcName = getPRIFProcName("fail_image");
+  }
   funcName += "_termination_wrapper";
   mlir::func::FuncOp funcWrapperOp =
       module.lookupSymbol<mlir::func::FuncOp>(funcName);
@@ -165,11 +169,12 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
     mlir::Type i32Ty = builder.getI32Type();
     if (termKind == TerminationKind::Normal) {
       mlir::Value quiet = builder.createBool(loc, true);
-      genPRIFStopErrorStop(builder, loc, quiet, mlir::Value{},
+      genPRIFStopErrorStop(builder, loc, quiet, funcWrapperOp.getArgument(0),
                            /*isError*/ false);
     } else if (termKind == TerminationKind::Error) {
-      mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-      genPRIFStopErrorStop(builder, loc, mlir::Value{}, one, /*isError*/ true);
+      mlir::Value quiet = builder.createBool(loc, true);
+      genPRIFStopErrorStop(builder, loc, quiet, funcWrapperOp.getArgument(0),
+                           /*isError*/ true);
     } else {
       mlir::func::FuncOp fOp = builder.createFunction(
           loc, getPRIFProcName("fail_image"),

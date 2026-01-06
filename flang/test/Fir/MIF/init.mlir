@@ -20,31 +20,31 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 
 // CHECK-LABEL: func.func @main
 // CHECK: %[[VAL_0:.*]] = fir.alloca i32
-// CHECK: %[[VAL_1:.*]] = fir.address_of(@_QMprifPprif_stop_termination_wrapper) : () -> () 
+// CHECK: %[[VAL_1:.*]] = fir.address_of(@_QMprifPprif_stop_termination_wrapper) : (i32) -> () 
 // CHECK: fir.call @_FortranARegisterImagesNormalEndCallback({{.*}}) : (!fir.llvm_ptr<() -> ()>) -> ()
-// CHECK: %[[VAL_2:.*]] = fir.address_of(@_QMprifPprif_error_stop_termination_wrapper) : () -> () 
+// CHECK: %[[VAL_2:.*]] = fir.address_of(@_QMprifPprif_error_stop_termination_wrapper) : (i32) -> () 
 // CHECK: fir.call @_FortranARegisterImagesErrorCallback({{.*}}) : (!fir.llvm_ptr<() -> ()>) -> ()
 // CHECK: %[[VAL_3:.*]] = fir.address_of(@_QMprifPprif_fail_image_termination_wrapper) : () -> ()
 // CHECK: fir.call @_FortranARegisterFailImageCallback({{.*}}) : (!fir.llvm_ptr<() -> ()>) -> ()
 // CHECK: fir.call @_QMprifPprif_init(%[[VAL_0]]) : (!fir.ref<i32>) -> ()
 
-// CHECK-LABEL:  func.func private @_QMprifPprif_stop_termination_wrapper
-// CHECK:  %[[VAL_0:.*]] = fir.alloca i1
-// CHECK:  %[[TRUE:.*]] = arith.constant true
-// CHECK:  fir.store %[[TRUE]] to %[[VAL_0]] : !fir.ref<i1>
-// CHECK:  %[[VAL_1:.*]] = fir.absent !fir.boxchar<1>
-// CHECK:  %[[VAL_2:.*]] = fir.absent !fir.ref<i32>
-// CHECK:  fir.call @_QMprifPprif_stop(%[[VAL_0]], %[[VAL_2]], %[[VAL_1]]) : (!fir.ref<i1>, !fir.ref<i32>, !fir.boxchar<1>) -> ()
-// CHECK:  return
-
-// CHECK-LABEL:  func.func private @_QMprifPprif_error_stop_termination_wrapper
+// CHECK:  func.func private @_QMprifPprif_stop_termination_wrapper(%[[ARG0:.*]]: i32)
 // CHECK:  %[[VAL_0:.*]] = fir.alloca i32
 // CHECK:  %[[VAL_1:.*]] = fir.alloca i1
-// CHECK:  %[[C1_I32:.*]] = arith.constant 1 : i32
-// CHECK:  %[[FALSE:.*]] = arith.constant false
-// CHECK:  fir.store %[[FALSE]] to %[[VAL_1]] : !fir.ref<i1>
+// CHECK:  %[[TRUE:.*]] = arith.constant true
+// CHECK:  fir.store %[[TRUE]] to %[[VAL_1]] : !fir.ref<i1>
 // CHECK:  %[[VAL_2:.*]] = fir.absent !fir.boxchar<1>
-// CHECK:  fir.store %[[C1_I32]] to %[[VAL_0]] : !fir.ref<i32>
+// CHECK:  fir.store %[[ARG0]] to %[[VAL_0]] : !fir.ref<i32>
+// CHECK:  fir.call @_QMprifPprif_stop(%[[VAL_1]], %[[VAL_0]], %[[VAL_2]]) : (!fir.ref<i1>, !fir.ref<i32>, !fir.boxchar<1>) -> ()
+// CHECK:  return
+
+// CHECK:  func.func private @_QMprifPprif_error_stop_termination_wrapper(%[[ARG0:.*]]: i32)
+// CHECK:  %[[VAL_0:.*]] = fir.alloca i32
+// CHECK:  %[[VAL_1:.*]] = fir.alloca i1
+// CHECK:  %[[TRUE:.*]] = arith.constant true 
+// CHECK:  fir.store %[[TRUE]] to %[[VAL_1]] : !fir.ref<i1>
+// CHECK:  %[[VAL_2:.*]] = fir.absent !fir.boxchar<1>
+// CHECK:  fir.store %[[ARG0]] to %[[VAL_0]] : !fir.ref<i32>
 // CHECK:  fir.call @_QMprifPprif_error_stop(%[[VAL_1]], %[[VAL_0]], %[[VAL_2]]) : (!fir.ref<i1>, !fir.ref<i32>, !fir.boxchar<1>) -> ()
 // CHECK:  return
 

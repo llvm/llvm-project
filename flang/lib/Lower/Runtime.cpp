@@ -68,7 +68,6 @@ void Fortran::lower::genStopStatement(
   llvm::SmallVector<mlir::Value> operands;
   mlir::func::FuncOp callee;
   mlir::FunctionType calleeType;
-  mlir::Value stopCode;
   // First operand is stop code (zero if absent)
   if (const auto &code =
           std::get<std::optional<Fortran::parser::StopCode>>(stmt.t)) {
@@ -86,12 +85,8 @@ void Fortran::lower::genStopStatement(
               builder.createConvert(loc, calleeType.getInput(0), x.getAddr()));
           operands.push_back(
               builder.createConvert(loc, calleeType.getInput(1), x.getLen()));
-          if (coarrayIsEnabled)
-            stopCode =
-                fir::factory::CharacterExprHelper{builder, loc}.createEmbox(x);
         },
         [&](fir::UnboxedValue x) {
-          stopCode = x;
           callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(
               loc, builder);
           calleeType = callee.getFunctionType();
@@ -115,12 +110,11 @@ void Fortran::lower::genStopStatement(
       loc, calleeType.getInput(operands.size()), isError));
 
   // Third operand indicates QUIET (default to false).
-  mlir::Value q;
   if (const auto &quiet =
           std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(stmt.t)) {
     const SomeExpr *expr = Fortran::semantics::GetExpr(*quiet);
     assert(expr && "failed getting typed expression");
-    q = fir::getBase(converter.genExprValue(*expr, stmtCtx));
+    mlir::Value q = fir::getBase(converter.genExprValue(*expr, stmtCtx));
     operands.push_back(
         builder.createConvert(loc, calleeType.getInput(operands.size()), q));
   } else {
@@ -128,13 +122,7 @@ void Fortran::lower::genStopStatement(
         loc, calleeType.getInput(operands.size()), 0));
   }
 
-  if (coarrayIsEnabled) {
-    if (isError)
-      mif::ErrorStopOp::create(builder, loc, stopCode, q);
-    else
-      mif::StopOp::create(builder, loc, stopCode, q);
-  } else
-    fir::CallOp::create(builder, loc, callee, operands);
+  fir::CallOp::create(builder, loc, callee, operands);
 
   auto blockIsUnterminated = [&builder]() {
     mlir::Block *currentBlock = builder.getBlock();

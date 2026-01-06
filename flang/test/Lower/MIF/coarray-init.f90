@@ -6,11 +6,11 @@ program test_init
 end
 
 ! ALL-LABEL: func.func @main
-! ALL: fir.call @_FortranAProgramStart
+! COARRAY:   %true = arith.constant true
+! COARRAY: fir.call @_FortranAProgramStart(%arg0, %arg1, %arg2, %0, %true) {{.*}} : (i32, !llvm.ptr, !llvm.ptr, !fir.ref<tuple<i32, !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>, i1) -> ()
+
+! NOCOARRAY: %false = arith.constant false
+! NOCARRAY: fir.call @_FortranAProgramStart(%arg0, %arg1, %arg2, %0, %false) {{.*}} : (i32, !llvm.ptr, !llvm.ptr, !fir.ref<tuple<i32, !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>, i1) -> ()
+
 ! COARRAY: mif.init -> i32
 ! NOCOARRAY-NOT: mif.init
-
-! COARRAY: %[[TRUE:.*]] = arith.constant true
-! COARRAY: mif.stop code %[[C0_I32:.*]] quiet %[[TRUE]] : (i32, i1)
-! NOCOARRAY-NOT: mif.stop
-! NOCOARRAY: fir.call @_FortranAProgramEndStatement

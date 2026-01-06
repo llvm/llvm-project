@@ -28,8 +28,8 @@ void RTNAME(PauseStatementText)(const char *, size_t);
 NORETURN void RTNAME(FailImageStatement)(NO_ARGUMENTS);
 NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 
-void RTNAME(RegisterImagesNormalEndCallback)(void (*)(void));
-void RTNAME(RegisterImagesErrorCallback)(void (*)(void));
+void RTNAME(RegisterImagesNormalEndCallback)(void (*)(int));
+void RTNAME(RegisterImagesErrorCallback)(void (*)(int));
 void RTNAME(RegisterFailImageCallback)(void (*)(void));
 
 // Extensions

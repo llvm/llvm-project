@@ -113,12 +113,22 @@ private:
   else \
     Terminator{__FILE__, __LINE__}.CheckFailed(#pred)
 
-static void (*normalEndCallback)(void) = nullptr;
-static void (*failImageCallback)(void) = nullptr;
-static void (*errorCallback)(void) = nullptr;
-RT_API_ATTRS void NotifyOtherImagesOfNormalEnd();
+struct ExitHandler {
+  ExitHandler() {};
+
+  void Configure(bool multiImageFeatureEnabled);
+  void Exit(int exitCode);
+
+  bool multiImageFeatureEnabled{false};
+};
+extern RT_VAR_ATTRS ExitHandler exitHandler;
+
+extern RT_VAR_ATTRS void (*normalEndCallback)(int);
+extern RT_VAR_ATTRS void (*failImageCallback)(void);
+extern RT_VAR_ATTRS void (*errorCallback)(int);
+RT_API_ATTRS void SynchronizeImagesOfNormalEnd(int);
 RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement();
-RT_API_ATTRS void NotifyOtherImagesOfErrorTermination();
+RT_API_ATTRS void NotifyOtherImagesOfErrorTermination(int);
 
 #if defined(RT_DEVICE_COMPILATION)
 /// Trap the execution on the device.
