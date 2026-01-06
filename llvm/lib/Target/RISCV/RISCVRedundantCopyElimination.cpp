@@ -120,15 +120,13 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
 
   Register TargetReg = Cond[1].getReg();
 
+  if (!TargetReg)
+    return false;
+
   bool IsZeroCopy = guaranteesZeroRegInBlock(MBB, Cond, TBB);
 
-  if (IsZeroCopy) {
-    if (!TargetReg)
-      return false;
-  } else {
-    if (!guaranteesRegEqualsImmInBlock(MBB, Cond, TBB) || !TargetReg)
-      return false;
-  }
+  if (!IsZeroCopy && !guaranteesRegEqualsImmInBlock(MBB, Cond, TBB))
+    return false;
 
   bool Changed = false;
   MachineBasicBlock::iterator LastChange = MBB.begin();
