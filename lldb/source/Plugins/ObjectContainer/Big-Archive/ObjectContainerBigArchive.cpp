@@ -56,6 +56,7 @@ ObjectContainerBigArchive::ObjectContainerBigArchive(
     lldb::offset_t file_offset, lldb::offset_t size)
     : ObjectContainer(module_sp, file, file_offset, size, data_sp, data_offset),
       m_archive_sp() {}
+
 void ObjectContainerBigArchive::SetArchive(Archive::shared_ptr &archive_sp) {
   m_archive_sp = archive_sp;
 }

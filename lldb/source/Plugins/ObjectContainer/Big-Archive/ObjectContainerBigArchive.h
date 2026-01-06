@@ -90,7 +90,7 @@ protected:
     /// File offset in bytes from the beginning of the file of the object data.
     lldb::offset_t file_offset = 0;
 
-    /// Length of the object data.
+    /// Length of the object data in bytes.
     lldb::offset_t file_size = 0;
 
     void Dump(lldb_private::Stream *s) const;
