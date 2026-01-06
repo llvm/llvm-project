@@ -760,3 +760,45 @@ func.func @group_non_uniform_all_equal(%value: f32) -> i1 {
   %0 = spirv.GroupNonUniformAllEqual <Device> %value : f32, i1
   return %0: i1
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformQuadSwap
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_quad_swap
+func.func @group_non_uniform_quad_swap(%value: f32) -> f32 {
+  %dir = spirv.Constant 0 : i32
+  // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> %{{.+}} %{{.+}} : f32, i32
+  %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : f32, i32
+  return %0: f32
+}
+
+// -----
+
+// CHECK-LABEL: @group_non_uniform_quad_swap
+func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
+  %dir = spirv.Constant 0 : i32
+  // CHECK: %{{.+}} = spirv.GroupNonUniformQuadSwap <Subgroup> %{{.+}} %{{.+}} : vector<4xf32>, i32
+  %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : vector<4xf32>, i32
+  return %0: vector<4xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
+  %dir = spirv.Constant 0 : i32
+  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  %0 = spirv.GroupNonUniformQuadSwap <Device> %value %dir : vector<4xf32>, i32
+  return %0: vector<4xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_quad_swap(%value: vector<4xf32>) -> vector<4xf32> {
+  %dir = spirv.Constant 0.0 : f32
+  // expected-error @+1 {{op operand #1 must be 8/16/32/64-bit signless/unsigned integer, but got 'f32'}}
+  %0 = spirv.GroupNonUniformQuadSwap <Device> %value %dir : vector<4xf32>, f32
+  return %0: vector<4xf32>
+}
