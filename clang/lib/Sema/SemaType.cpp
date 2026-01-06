@@ -6138,7 +6138,11 @@ namespace {
         TypeSourceInfo *TInfo = nullptr;
         Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
         assert(TInfo);
-        TL.getValueLoc().initializeFullCopy(TInfo->getTypeLoc());
+        if (TL.getValueLoc().getType() == TInfo->getTypeLoc().getType())
+          TL.getValueLoc().initializeFullCopy(TInfo->getTypeLoc());
+        else
+          TL.getValueLoc().initialize(Context,
+                                      TInfo->getTypeLoc().getBeginLoc());
       } else {
         TL.setKWLoc(DS.getAtomicSpecLoc());
         // No parens, to indicate this was spelled as an _Atomic qualifier.
@@ -6152,7 +6156,12 @@ namespace {
 
       TypeSourceInfo *TInfo = nullptr;
       Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
-      TL.getValueLoc().initializeFullCopy(TInfo->getTypeLoc());
+      if (TInfo && TL.getValueLoc().getType() == TInfo->getTypeLoc().getType())
+        TL.getValueLoc().initializeFullCopy(TInfo->getTypeLoc());
+      else
+        TL.getValueLoc().initialize(Context,
+                                    TInfo ? TInfo->getTypeLoc().getBeginLoc()
+                                          : DS.getTypeSpecTypeLoc());
     }
 
     void VisitExtIntTypeLoc(BitIntTypeLoc TL) {
