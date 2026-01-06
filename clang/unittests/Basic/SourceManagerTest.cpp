@@ -383,14 +383,14 @@ TEST_F(SourceManagerTest, sourceRangeWorksWithDenseSet) {
   llvm::DenseSet<SourceRange> Set;
   SourceRange TestRange = {SourceLocation::getFromRawEncoding(10),
                            SourceLocation::getFromRawEncoding(11)};
-  ASSERT_EQ(Set.size(), 0);
+  ASSERT_EQ(Set.size(), 0U);
   Set.insert(TestRange);
-  ASSERT_EQ(Set.size(), 1);
+  ASSERT_EQ(Set.size(), 1U);
   ASSERT_TRUE(Set.contains(TestRange));
   ASSERT_FALSE(Set.contains({SourceLocation::getFromRawEncoding(10),
                              SourceLocation::getFromRawEncoding(10)}));
   Set.erase(TestRange);
-  ASSERT_EQ(Set.size(), 0);
+  ASSERT_EQ(Set.size(), 0U);
 }
 
 // Regression test - there was an out of bound access for buffers not terminated by zero.
