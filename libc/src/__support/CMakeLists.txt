@@ -413,6 +413,7 @@ add_subdirectory(time)
 # Therefore, cannot currently build this on macos in overlay mode
 if(NOT (LIBC_TARGET_OS_IS_DARWIN))
   add_subdirectory(wchar)
+  add_subdirectory(wctype)
 endif()
 
 add_subdirectory(math)
