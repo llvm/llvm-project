@@ -18,7 +18,6 @@
 #include <chrono>
 #include <ctime>
 #include <ratio>
-#include <ratio>
 
 #include "test_macros.h"
 
@@ -149,6 +148,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     dr % dr;
 
+#if TEST_STD_VER >= 17
     using namespace std::chrono_literals;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -180,6 +180,7 @@ void test() {
     94ns;
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     82.5ns;
+#endif // TEST_STD_VER >= 14
   }
 
 #if TEST_STD_VER >= 20
