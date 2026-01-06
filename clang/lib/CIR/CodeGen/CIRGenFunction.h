@@ -31,6 +31,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
@@ -1266,6 +1267,9 @@ public:
   /// CIR emit functions
   /// ----------------------
 public:
+  bool getAArch64SVEProcessedOperands(unsigned builtinID, const CallExpr *expr,
+                                      SmallVectorImpl<mlir::Value> &ops,
+                                      clang::SVETypeFlags typeFlags);
   std::optional<mlir::Value>
   emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                          ReturnValueSlot returnValue,
