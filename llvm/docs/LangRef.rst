@@ -17305,6 +17305,45 @@ The returned value is completely identical to the input except for the sign bit;
 in particular, if the input is a NaN, then the quiet/signaling bit and payload
 are perfectly preserved.
 
+Floating-point min/max intrinsics comparison
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+LLVM supports three pairs of floating-point min/max intrinsics, which differ
+in their handling of :ref:`NaN values <floatnan>`:
+
+ * ``llvm.minimum`` and ``llvm.maximum``: Return NaN if one the arguments is
+   NaN.
+ * ``llvm.minimumnum`` and ``llvm.maximumnum``: Return the other argument if
+   one of the arguments is NaN.
+ * ``llvm.minnum`` and ``llvm.maxnum``: For quiet NaNs behaves like
+   minimumnum/maximumnum. For signaling NaNs, non-deterministically returns
+   NaN or the other operand.
+
+Additionally, each of these intrinsics supports two behaviors for signed zeroes.
+By default, -0.0 is considered smaller than +0.0. If the ``nsz`` flag is
+specified, the order is non-deterministic.
+
+The mapping between the LLVM intrinsics, C functions and IEEE-754 functions is
+as follows (up to divergences permitted by the usual `NaN rules <floatnan>`):
+
+.. list-table::
+   :header-rows: 1
+
+   * - LLVM intrinsic
+     - llvm.minnum with nsz flag
+     - llvm.minimum
+     - llvm.minimumnum
+
+   * - C function
+     - fmin
+     - fminimum
+     - fminimum_num
+
+   * - IEEE-754 function
+     - minNum (2008)
+     - minimum (2019)
+     - minimumNumber (2019)
+
 .. _i_minnum:
 
 '``llvm.minnum.*``' Intrinsic
