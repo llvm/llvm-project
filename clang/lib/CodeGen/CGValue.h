@@ -513,7 +513,7 @@ public:
     LValue LV;
     LV.LVType = MatrixRow;
     LV.MatrixRowIdx = RowIdx; // store the row index here
-    LV.MatrixRowElts = nullptr;
+    LV.MatrixRowElts = nullptr; // use sequential indexing
     LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), Addr, BaseInfo, TBAAInfo);
     return LV;
   }
@@ -526,7 +526,7 @@ public:
     LV.LVType = MatrixRow;
     LV.Addr = MatAddr;
     LV.MatrixRowIdx = RowIdx;
-    LV.MatrixRowElts = Cols; // swizzle columns
+    LV.MatrixRowElts = Cols; // use indices in list order
     LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), MatAddr, BaseInfo,
                   TBAAInfo);
     return LV;

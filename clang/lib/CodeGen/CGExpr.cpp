@@ -2475,8 +2475,6 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
     llvm::Value *MatrixVec = EmitLoadOfScalar(LV, Loc);
     llvm::Value *Row = LV.getMatrixRowIdx();
     llvm::Type *ElemTy = ConvertType(MT->getElementType());
-    llvm::Type *RowTy = llvm::FixedVectorType::get(ElemTy, MT->getNumColumns());
-    llvm::Value *Result = llvm::PoisonValue::get(RowTy); // <NumCols x T>
     llvm::Constant *ColConstsIndices = nullptr;
     llvm::MatrixBuilder MB(Builder);
 
@@ -2486,9 +2484,12 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
                      ->getNumElements();
     }
 
+    llvm::Type *RowTy = llvm::FixedVectorType::get(ElemTy, NumLanes);
+    llvm::Value *Result = llvm::PoisonValue::get(RowTy); // <NumLanes x T>
+
     for (unsigned Col = 0; Col < NumLanes; ++Col) {
       llvm::Value *ColIdx;
-      if (LV.isMatrixRowSwizzle())
+      if (ColConstsIndices)
         ColIdx = ColConstsIndices->getAggregateElement(Col);
       else
         ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
@@ -2755,7 +2756,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
       for (unsigned Col = 0; Col < NumLanes; ++Col) {
         llvm::Value *ColIdx;
-        if (Dst.isMatrixRowSwizzle())
+        if (ColConstsIndices)
           ColIdx = ColConstsIndices->getAggregateElement(Col);
         else
           ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
@@ -5294,7 +5295,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     }
     llvm::Constant *Cols =
         llvm::ConstantDataVector::get(getLLVMContext(), Indices);
-    // Note: inntentionally not using E.getType() so we can reuse isMatrixRow()
+    // Note: intentionally not using E.getType() so we can reuse isMatrixRow()
     // implementations in EmitLoadOfLValue & EmitStoreThroughLValue and don't
     // need the LValue to have its own number of rows and columns when the
     // type is a vector.

@@ -36,7 +36,6 @@ void setMatrix(out float4x4 M, int index, float4 V) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <3 x float> @_Z9getMatrixu11matrix_typeILm4ELm4EfEi(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <3 x float>, align 16
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [16 x float], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <16 x float> [[M]], ptr [[M_ADDR]], align 4
@@ -45,19 +44,44 @@ void setMatrix(out float4x4 M, int index, float4 V) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[TMP0]]
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 [[TMP2]]
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> poison, float [[TMP3]], i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = add i32 4, [[TMP0]]
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <16 x float> [[TMP1]], i32 [[TMP5]]
-// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP6]], i32 1
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x float> [[TMP4]], float [[TMP6]], i32 1
 // CHECK-NEXT:    [[TMP8:%.*]] = add i32 8, [[TMP0]]
 // CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x float> [[TMP1]], i32 [[TMP8]]
-// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP9]], i32 2
-// CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    [[TMP11:%.*]] = load <3 x float>, ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret <3 x float> [[TMP11]]
+// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <3 x float> [[TMP7]], float [[TMP9]], i32 2
+// CHECK-NEXT:    ret <3 x float> [[TMP10]]
 //
 float3 getMatrix(float4x4 M, int index) {
     return M[index].rgb;
+}
+
+// CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z9getMatrixu11matrix_typeILm3ELm3EfEi(
+// CHECK-SAME: <9 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [9 x float], align 4
+// CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store <9 x float> [[M]], ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <9 x float>, ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[TMP0]]
+// CHECK-NEXT:    [[TMP3:%.*]] = extractelement <9 x float> [[TMP1]], i32 [[TMP2]]
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = add i32 3, [[TMP0]]
+// CHECK-NEXT:    [[TMP6:%.*]] = extractelement <9 x float> [[TMP1]], i32 [[TMP5]]
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP6]], i32 1
+// CHECK-NEXT:    [[TMP8:%.*]] = add i32 6, [[TMP0]]
+// CHECK-NEXT:    [[TMP9:%.*]] = extractelement <9 x float> [[TMP1]], i32 [[TMP8]]
+// CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP9]], i32 2
+// CHECK-NEXT:    [[TMP11:%.*]] = add i32 0, [[TMP0]]
+// CHECK-NEXT:    [[TMP12:%.*]] = extractelement <9 x float> [[TMP1]], i32 [[TMP11]]
+// CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP12]], i32 3
+// CHECK-NEXT:    ret <4 x float> [[TMP13]]
+//
+float4 getMatrix(float3x3 M, int index) {
+    return M[index].rgbr;
 }
 
 // CHECK-LABEL: define hidden noundef <3 x i32> @_Z19getMatrixSwizzle2x3Ru11matrix_typeILm2ELm3EiEi(
