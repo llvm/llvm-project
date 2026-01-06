@@ -20793,9 +20793,9 @@ For example:
 .. code-block:: text
 
  llvm.vector.splice.left(<A,B,C,D>, <E,F,G,H>, 1);
-		     ==> <A,B,C,D,E,F,G,H>
-		     ==> <B,C,D,E,F,G,H,_>
-		     ==> <B,C,D,E>
+                     ==> <A,B,C,D,E,F,G,H>
+                     ==> <B,C,D,E,F,G,H,_>
+                     ==> <B,C,D,E>
 
 
 Arguments:
@@ -20835,9 +20835,9 @@ For example:
 .. code-block:: text
 
  llvm.vector.splice.right(<A,B,C,D>, <E,F,G,H>, 1);
-		      ==> <A,B,C,D,E,F,G,H>
-		      ==> <_,A,B,C,D,E,F,G>
-		      ==>         <D,E,F,G>
+                      ==> <A,B,C,D,E,F,G,H>
+                      ==> <_,A,B,C,D,E,F,G>
+                      ==>         <D,E,F,G>
 
 
 Arguments:
