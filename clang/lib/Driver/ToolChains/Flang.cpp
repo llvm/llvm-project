@@ -37,7 +37,7 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
   // Handle the -Mextend parameter
-  if (Arg *A = Args.getLastArg(options::OPT_Mextend)) {
+  if (Args.hasArg(options::OPT_Mextend)) {
     // Check if -ffixed-line-length has been specified
     if (!Args.hasArg(options::OPT_ffixed_line_length_EQ)) {
       CmdArgs.push_back("-ffixed-line-length=132");
