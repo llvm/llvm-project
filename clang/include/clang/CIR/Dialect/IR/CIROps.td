@@ -4197,8 +4197,7 @@ def CIR_BaseDataMemberOp : CIR_Op<"base_data_member", [Pure]> {
   let results = (outs CIR_DataMemberType:$result);
 
   let assemblyFormat = [{
-    $src `:` qualified(type($src))
-    ` ` `[` $offset `]` `->` qualified(type($result)) attr-dict
+    $src `[` $offset `]` `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
   }];
 
   let hasVerifier = 1;
@@ -4222,8 +4221,7 @@ def CIR_DerivedDataMemberOp : CIR_Op<"derived_data_member", [Pure]> {
   let results = (outs CIR_DataMemberType:$result);
 
   let assemblyFormat = [{
-    $src `:` qualified(type($src))
-    ` ` `[` $offset `]` `->` qualified(type($result)) attr-dict
+    $src `[` $offset `]` `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
   }];
 
   let hasVerifier = 1;

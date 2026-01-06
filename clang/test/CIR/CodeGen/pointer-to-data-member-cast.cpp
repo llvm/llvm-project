@@ -24,7 +24,7 @@ auto base_to_derived(int Base2::*ptr) -> int Derived::* {
 
 // CIR-BEFORE: cir.func {{.*}} @_Z15base_to_derivedM5Base2i
 // CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR-BEFORE:   %[[RET:.*]] = cir.derived_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Base2> [4] -> !cir.data_member<!s32i in !rec_Derived>
+// CIR-BEFORE:   %[[RET:.*]] = cir.derived_data_member %[[PTR]][4] : !cir.data_member<!s32i in !rec_Base2> -> !cir.data_member<!s32i in !rec_Derived>
 
 // CIR-AFTER: cir.func {{.*}} @_Z15base_to_derivedM5Base2i
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
@@ -52,7 +52,7 @@ auto derived_to_base(int Derived::*ptr) -> int Base2::* {
 
 // CIR-BEFORE: cir.func {{.*}} @_Z15derived_to_baseM7Derivedi
 // CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR-BEFORE:   %[[RET:.*]] = cir.base_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Derived> [4] -> !cir.data_member<!s32i in !rec_Base2>
+// CIR-BEFORE:   %[[RET:.*]] = cir.base_data_member %[[PTR]][4] : !cir.data_member<!s32i in !rec_Derived> -> !cir.data_member<!s32i in !rec_Base2>
 
 // CIR-AFTER: cir.func {{.*}} @_Z15derived_to_baseM7Derivedi
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
@@ -80,7 +80,7 @@ auto base_to_derived_zero_offset(int Base1::*ptr) -> int Derived::* {
 
 // CIR-BEFORE: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1i
 // CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR-BEFORE:   %[[RET:.*]] = cir.derived_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Base1> [0] -> !cir.data_member<!s32i in !rec_Derived>
+// CIR-BEFORE:   %[[RET:.*]] = cir.derived_data_member %[[PTR]][0] : !cir.data_member<!s32i in !rec_Base1> -> !cir.data_member<!s32i in !rec_Derived>
 
 // CIR-AFTER: cir.func {{.*}} @_Z27base_to_derived_zero_offsetM5Base1i
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
@@ -110,7 +110,7 @@ auto derived_to_base_zero_offset(int Derived::*ptr) -> int Base1::* {
 
 // CIR-BEFORE: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7Derivedi
 // CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR-BEFORE:   %[[RET:.*]] = cir.base_data_member %[[PTR]] : !cir.data_member<!s32i in !rec_Derived> [0] -> !cir.data_member<!s32i in !rec_Base1>
+// CIR-BEFORE:   %[[RET:.*]] = cir.base_data_member %[[PTR]][0] : !cir.data_member<!s32i in !rec_Derived> -> !cir.data_member<!s32i in !rec_Base1>
 
 // CIR-AFTER: cir.func {{.*}} @_Z27derived_to_base_zero_offsetM7Derivedi
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
