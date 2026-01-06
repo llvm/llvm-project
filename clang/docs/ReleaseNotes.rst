@@ -876,7 +876,7 @@ Improvements
 - The ``strxfrm`` is modeled in the ``alpha.unix.cstring`` checkers. (#GH156507)
 - Handling of placement-new expressions were improved in the
   ``alpha.core.PointerArithm`` checker. (#GH155855)
-- The ``security.arraybound`` checker now mentions the element count in
+- The ``security.ArrayBound`` checker now mentions the element count in
   underflow reports. (#GH158639)
 - The engine had a ``PrivateMethodCache`` that was not cleaned up - potentially
   causing spuriously failing Objective-C unittest failures because that uses the
