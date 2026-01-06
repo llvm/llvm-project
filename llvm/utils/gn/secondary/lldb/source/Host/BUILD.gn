@@ -16,6 +16,7 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
+    "common/DiagnosticsRendering.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -74,6 +75,7 @@ static_library("Host") {
       "windows/MainLoopWindows.cpp",
       "windows/PipeWindows.cpp",
       "windows/ProcessLauncherWindows.cpp",
+      "windows/PseudoConsole.cpp",
       "windows/ProcessRunLock.cpp",
     ]
   } else {

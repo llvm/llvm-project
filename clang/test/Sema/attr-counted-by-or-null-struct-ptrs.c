@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -verify %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -Wpointer-arith -verify %s
 
 #define __counted_by_or_null(f)  __attribute__((counted_by_or_null(f)))
 #define __counted_by(f)  __attribute__((counted_by(f)))
@@ -32,7 +32,8 @@ struct on_member_pointer_const_incomplete_ty {
 
 struct on_member_pointer_void_ty {
   int count;
-  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'void' is an incomplete type}}
+  // expected-warning@+2{{'counted_by_or_null' on a pointer to void is a GNU extension, treated as 'sized_by_or_null'}}
+  // expected-note@+1{{use '__sized_by_or_null' to suppress this warning}}
   void* buf __counted_by_or_null(count);
 };
 
@@ -124,7 +125,8 @@ struct on_member_pointer_const_incomplete_ty_ty_pos {
 
 struct on_member_pointer_void_ty_ty_pos {
   int count;
-  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'void' is an incomplete type}}
+  // expected-warning@+2{{'counted_by_or_null' on a pointer to void is a GNU extension, treated as 'sized_by_or_null'}}
+  // expected-note@+1{{use '__sized_by_or_null' to suppress this warning}}
   void *__counted_by_or_null(count) buf;
 };
 

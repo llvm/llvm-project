@@ -97,19 +97,15 @@ TEST_F(MemoryProfileInfoTest, Attribute) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call1 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call1 to i32*
-  %call2 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %1 = bitcast i8* %call2 to i32*
-  %call3 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %2 = bitcast i8* %call3 to i32*  
-  %call4 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %3 = bitcast i8* %call4 to i32*
-  ret i32* %1
+  %call1 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  %call2 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  %call3 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  %call4 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call2
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -212,13 +208,12 @@ TEST_F(MemoryProfileInfoTest, ColdAndNotColdMIB) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -262,13 +257,12 @@ TEST_F(MemoryProfileInfoTest, ColdAndHotMIB) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -314,13 +308,12 @@ TEST_F(MemoryProfileInfoTest, ColdAndNotColdAndHotMIB) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret i32* %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -367,13 +360,12 @@ TEST_F(MemoryProfileInfoTest, TrimmedMIBContext) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -423,13 +415,12 @@ TEST_F(MemoryProfileInfoTest, PruneUnneededNotColdContexts) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -485,11 +476,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 define i32* @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40)
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -557,17 +547,14 @@ TEST_F(MemoryProfileInfoTest, SimplifyMIBToAttribute) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call1 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40), !memprof !0
-  %0 = bitcast i8* %call1 to i32*
-  %call2 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40), !memprof !3
-  %1 = bitcast i8* %call2 to i32*
-  %call3 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40), !memprof !6
-  %2 = bitcast i8* %call3 to i32*
-  ret i32* %1
+  %call1 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !0
+  %call2 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !3
+  %call3 = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !6
+  ret ptr %call2
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 !0 = !{!1}
 !1 = !{!2, !"cold"}
 !2 = !{i64 1, i64 2, i64 3}
@@ -628,17 +615,16 @@ TEST_F(MemoryProfileInfoTest, ReTrimMIBContext) {
                                              R"IR(
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
+define ptr @test() {
 entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40), !memprof !0
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias dereferenceable_or_null(40) ptr @malloc(i64 noundef 40), !memprof !0
+  ret ptr %call
 }
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
+declare dso_local noalias noundef ptr @malloc(i64 noundef)
 !0 = !{!1, !3, !5, !7, !9, !11}
 !1 = !{!2, !"cold"}
 !2 = !{i64 1, i64 2, i64 3}
-!3 = !{!4, !"cold"}
+!3 = !{!4, !"cold", !13}
 !4 = !{i64 1, i64 2, i64 4}
 !5 = !{!6, !"notcold"}
 !6 = !{i64 1, i64 5, i64 6}
@@ -647,7 +633,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
 !9 = !{!10, !"hot"}
 !10 = !{i64 1, i64 8, i64 9}
 !11 = !{!12, !"hot"}
-!12 = !{i64 1, i64 8, i64 10}  
+!12 = !{i64 1, i64 8, i64 10}
+!13 = !{i64 123, i64 456}
 )IR");
 
   Function *Func = M->getFunction("test");
@@ -683,10 +670,25 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
     auto *StackId = mdconst::dyn_extract<ConstantInt>(StackMD->getOperand(0));
     EXPECT_EQ(StackId->getZExtValue(), 1u);
     StackId = mdconst::dyn_extract<ConstantInt>(StackMD->getOperand(1));
-    if (StackId->getZExtValue() == 2u)
+    if (StackId->getZExtValue() == 2u) {
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Cold);
-    else if (StackId->getZExtValue() == 5u)
+      // We should propagate the single context size info from the second cold
+      // context above onto the new merged/trimmed context.
+      ASSERT_EQ(MIB->getNumOperands(), 3u);
+      MDNode *ContextSizePair = dyn_cast<MDNode>(MIB->getOperand(2));
+      assert(ContextSizePair->getNumOperands() == 2);
+      EXPECT_EQ(
+          mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(0))
+              ->getZExtValue(),
+          123u);
+      EXPECT_EQ(
+          mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(1))
+              ->getZExtValue(),
+          456u);
+    } else if (StackId->getZExtValue() == 5u) {
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
+      ASSERT_EQ(MIB->getNumOperands(), 2u);
+    }
   }
 }
 
@@ -709,7 +711,7 @@ declare noundef nonnull ptr @_Znam(i64 noundef)
 !5 = !{i64 1, i64 2, i64 3, i64 5}
 !6 = !{i64 1}
 !7 = !{!8, !"hot"}
-!8 = !{i64 1, i64 2, i64 3, i64 6}  
+!8 = !{i64 1, i64 2, i64 3, i64 6}
 )IR");
 
   Function *Func = M->getFunction("test");

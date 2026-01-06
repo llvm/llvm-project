@@ -29,7 +29,7 @@ subroutine s1()
   p_or_c => c
 
   jvar = 5
-  
+
   ! References in this DO CONCURRENT are OK since there's no DEFAULT(NONE)
   ! locality-spec
   associate (avar => ivar)
@@ -46,7 +46,7 @@ subroutine s1()
       mvar = 3.5
     end do
   end associate
-  
+
   associate (avar => ivar)
 !ERROR: DO CONCURRENT step expression may not be zero
     do concurrent (i = 1:2:0) default(none) shared(jvar) local(kvar)
@@ -95,5 +95,5 @@ subroutine s1()
   end select
 
   x = 5.0  ! OK, we're not in a DO CONCURRENT
-  
+
 end subroutine s1

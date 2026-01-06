@@ -2491,9 +2491,10 @@ The packet below are supported by the
 ### qWasmCallStack
 
 Get the Wasm call stack for the given thread id. This returns a hex-encoded
-list of PC values, one for each frame of the call stack. To match the Wasm
-specification, the addresses are encoded in little endian byte order, even if
-the endian of the Wasm runtime's host is not little endian.
+list (with no delimiters) of 64-bit PC values, one for each frame of the call
+stack. To match the Wasm specification, the addresses are encoded in little
+endian byte order, even if the endian of the Wasm runtime's host is not little
+endian.
 
 ```
 send packet: $qWasmCallStack:202dbe040#08
@@ -2507,7 +2508,7 @@ stack traces.
 
 Get the value of a Wasm global variable for the given frame index at the given
 variable index. The indexes are encoded as base 10. The result is a hex-encoded
-address from where to read the value.
+little-endian value of the global.
 
 ```
 send packet: $qWasmGlobal:0;2#cb
@@ -2522,7 +2523,7 @@ variables.
 
 Get the value of a Wasm function argument or local variable for the given frame
 index at the given variable index. The indexes are encoded as base 10. The
-result is a hex-encoded address from where to read the value.
+result is a hex-encoded little-endian value of the local.
 
 
 ```
@@ -2538,7 +2539,7 @@ variables.
 
 Get the value of a Wasm local variable from the Wasm operand stack, for the
 given frame index at the given variable index. The indexes are encoded as base
-10. The result is a hex-encoded address from where to read value.
+10. The result is a hex-encoded little-endian value from the stack at the given index.
 
 ```
 send packet: $qWasmStackValue:0;2#cb

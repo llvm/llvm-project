@@ -690,8 +690,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
   if (const NamespaceDecl *namespace_context =
           dyn_cast<NamespaceDecl>(context.m_decl_context)) {
-    if (namespace_context->getName().str() ==
-        std::string(g_lldb_local_vars_namespace_cstr)) {
+    if (namespace_context->getName() == g_lldb_local_vars_namespace_cstr) {
       CompilerDeclContext compiler_decl_ctx =
           m_clang_ast_context->CreateDeclContext(
               const_cast<clang::DeclContext *>(context.m_decl_context));
@@ -1023,13 +1022,14 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
 
   bool append = false;
   uint32_t max_matches = 1;
-  std::vector<clang::NamedDecl *> decls;
+  std::vector<CompilerDecl> decls;
 
   if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
     return;
 
   assert(!decls.empty() && "FindDecls returned true but no decls?");
-  clang::NamedDecl *const decl_from_modules = decls[0];
+  auto *const decl_from_modules =
+      llvm::cast<NamedDecl>(ClangUtil::GetDecl(decls[0]));
 
   LLDB_LOG(log,
            "  CAS::FEVD Matching decl found for "
@@ -1223,7 +1223,7 @@ bool ClangExpressionDeclMap::LookupFunction(
 
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
-  std::vector<clang::NamedDecl *> decls_from_modules;
+  std::vector<CompilerDecl> decls_from_modules;
 
   if (target) {
     if (std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
@@ -1314,7 +1314,8 @@ bool ClangExpressionDeclMap::LookupFunction(
     }
 
     if (!found_function_with_type_info) {
-      for (clang::NamedDecl *decl : decls_from_modules) {
+      for (const CompilerDecl &compiler_decl : decls_from_modules) {
+        clang::Decl *decl = ClangUtil::GetDecl(compiler_decl);
         if (llvm::isa<clang::FunctionDecl>(decl)) {
           clang::NamedDecl *copied_decl =
               llvm::cast_or_null<FunctionDecl>(CopyDecl(decl));

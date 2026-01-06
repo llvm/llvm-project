@@ -43,13 +43,21 @@ public:
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitConditionalOperator(const ConditionalOperator *CO);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE);
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE);
   void VisitInitListExpr(const InitListExpr *ILE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
 
 private:
-  void handleDestructor(const CFGAutomaticObjDtor &DtorOpt);
+  OriginList *getOriginsList(const ValueDecl &D);
+  OriginList *getOriginsList(const Expr &E);
+
+  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+
+  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+
+  void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
@@ -63,25 +71,17 @@ private:
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-        DestOID, SrcOID, /*KillDest=*/false));
+    flow(getOriginsList(D), getOriginsList(S), /*Kill=*/false);
   }
 
   template <typename Destination, typename Source>
   void killAndFlowOrigin(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<OriginFlowFact>(DestOID, SrcOID, /*KillDest=*/true));
+    flow(getOriginsList(D), getOriginsList(S), /*Kill=*/true);
   }
 
   /// Checks if the expression is a `void("__lifetime_test_point_...")` cast.
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
-
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
 
   // A DeclRefExpr will be treated as a use of the referenced decl. It will be
   // checked for use-after-free unless it is later marked as being written to
@@ -90,9 +90,14 @@ private:
 
   void markUseAsWrite(const DeclRefExpr *DRE);
 
+  llvm::SmallVector<Fact *> issuePlaceholderLoans();
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
+  // Collect origins that escape the function in this block (OriginEscapesFact),
+  // appended at the end of CurrentBlockFacts to ensure they appear after
+  // ExpireFact entries.
+  llvm::SmallVector<Fact *> EscapesInCurrentBlock;
   // To distinguish between reads and writes for use-after-free checks, this map
   // stores the `UseFact` for each `DeclRefExpr`. We initially identify all
   // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use

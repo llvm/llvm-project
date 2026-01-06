@@ -26,6 +26,19 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesInFile) {
   EXPECT_TRUE(matches(input, binaryOperator(isExpandedFromMacro("MY_MACRO"))));
 }
 
+static std::string constructMacroName(llvm::StringRef A, llvm::StringRef B) {
+  return (A + "_" + B).str();
+}
+
+TEST_P(ASTMatchersTest, IsExpandedFromMacro_ConstructedMacroName) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) (4 + (a))
+    void Test() { MY_MACRO(4); }
+  )cc";
+  auto matcher = isExpandedFromMacro(constructMacroName("MY", "MACRO"));
+  EXPECT_TRUE(matches(input, binaryOperator(matcher)));
+}
+
 TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesNested) {
   StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
@@ -2696,23 +2709,46 @@ TEST_P(ASTMatchersTest, HasName_MatchesAnonymousNamespaces) {
   EXPECT_TRUE(matches(code, recordDecl(hasName("::a::C"))));
 }
 
-TEST_P(ASTMatchersTest, HasName_MatchesAnonymousOuterClasses) {
+TEST_P(ASTMatchersTest, HasName_MatchesUnnamedOuterClasses) {
   if (!GetParam().isCXX()) {
     return;
   }
 
   EXPECT_TRUE(matches("class A { class { class C; } x; };",
-                      recordDecl(hasName("A::(anonymous class)::C"))));
+                      recordDecl(hasName("A::(unnamed class)::C"))));
   EXPECT_TRUE(matches("class A { class { class C; } x; };",
-                      recordDecl(hasName("::A::(anonymous class)::C"))));
+                      recordDecl(hasName("::A::(unnamed class)::C"))));
   EXPECT_FALSE(matches("class A { class { class C; } x; };",
                        recordDecl(hasName("::A::C"))));
   EXPECT_TRUE(matches("class A { struct { class C; } x; };",
-                      recordDecl(hasName("A::(anonymous struct)::C"))));
+                      recordDecl(hasName("A::(unnamed struct)::C"))));
   EXPECT_TRUE(matches("class A { struct { class C; } x; };",
-                      recordDecl(hasName("::A::(anonymous struct)::C"))));
+                      recordDecl(hasName("::A::(unnamed struct)::C"))));
   EXPECT_FALSE(matches("class A { struct { class C; } x; };",
                        recordDecl(hasName("::A::C"))));
+}
+
+TEST_P(ASTMatchersTest, HasName_MatchesAnonymousOuterClasses) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      "class A { struct { struct { class C; } x; }; };",
+      recordDecl(hasName("A::(anonymous struct)::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { struct { struct { class C; } x; }; };",
+      recordDecl(hasName("::A::(anonymous struct)::(unnamed struct)::C"))));
+  EXPECT_FALSE(matches("class A { struct { struct { class C; } x; }; };",
+                       recordDecl(hasName("A::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { class { public: struct { class C; } x; }; };",
+      recordDecl(hasName("A::(anonymous class)::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { class { public: struct { class C; } x; }; };",
+      recordDecl(hasName("::A::(anonymous class)::(unnamed struct)::C"))));
+  EXPECT_FALSE(matches("class A { class { public: struct { class C; } x; }; };",
+                       recordDecl(hasName("A::(unnamed struct)::C"))));
 }
 
 TEST_P(ASTMatchersTest, HasName_MatchesFunctionScope) {

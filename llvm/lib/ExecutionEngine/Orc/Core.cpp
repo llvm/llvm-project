@@ -377,18 +377,18 @@ void ReExportsMaterializationUnit::materialize(
     SymbolAliasMap QueryAliases;
 
     // Collect as many aliases as we can without including a chain.
-    for (auto &KV : RequestedAliases) {
+    for (auto &[Alias, AliasInfo] : RequestedAliases) {
       // Chain detected. Skip this symbol for this round.
-      if (&SrcJD == &TgtJD && (QueryAliases.count(KV.second.Aliasee) ||
-                               RequestedAliases.count(KV.second.Aliasee)))
+      if (&SrcJD == &TgtJD && (QueryAliases.count(AliasInfo.Aliasee) ||
+                               RequestedAliases.count(AliasInfo.Aliasee)))
         continue;
 
-      ResponsibilitySymbols.insert(KV.first);
-      QuerySymbols.add(KV.second.Aliasee,
-                       KV.second.AliasFlags.hasMaterializationSideEffectsOnly()
+      ResponsibilitySymbols.insert(Alias);
+      QuerySymbols.add(AliasInfo.Aliasee,
+                       AliasInfo.AliasFlags.hasMaterializationSideEffectsOnly()
                            ? SymbolLookupFlags::WeaklyReferencedSymbol
                            : SymbolLookupFlags::RequiredSymbol);
-      QueryAliases[KV.first] = std::move(KV.second);
+      QueryAliases[Alias] = std::move(AliasInfo);
     }
 
     // Remove the aliases collected this round from the RequestedAliases map.
@@ -713,12 +713,7 @@ JITDylib::defineMaterializing(MaterializationResponsibility &FromMR,
     std::vector<NonOwningSymbolStringPtr> AddedSyms;
     std::vector<NonOwningSymbolStringPtr> RejectedWeakDefs;
 
-    for (auto SFItr = SymbolFlags.begin(), SFEnd = SymbolFlags.end();
-         SFItr != SFEnd; ++SFItr) {
-
-      auto &Name = SFItr->first;
-      auto &Flags = SFItr->second;
-
+    for (auto &[Name, Flags] : SymbolFlags) {
       auto EntryItr = Symbols.find(Name);
 
       // If the entry already exists...
@@ -1902,9 +1897,9 @@ Error ExecutionSession::registerJITDispatchHandlers(
   return Error::success();
 }
 
-void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
-                                             ExecutorAddr HandlerFnTagAddr,
-                                             ArrayRef<char> ArgBuffer) {
+void ExecutionSession::runJITDispatchHandler(
+    SendResultFunction SendResult, ExecutorAddr HandlerFnTagAddr,
+    shared::WrapperFunctionBuffer ArgBytes) {
 
   std::shared_ptr<JITDispatchHandlerFunction> F;
   {
@@ -1915,9 +1910,9 @@ void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
   }
 
   if (F)
-    (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
+    (*F)(std::move(SendResult), ArgBytes.data(), ArgBytes.size());
   else
-    SendResult(shared::WrapperFunctionResult::createOutOfBandError(
+    SendResult(shared::WrapperFunctionBuffer::createOutOfBandError(
         ("No function registered for tag " +
          formatv("{0:x16}", HandlerFnTagAddr))
             .str()));
@@ -2901,12 +2896,22 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
 
   for (auto &SN : ER.Ready)
     IL_collectQueries(
-        EQ.Updated, SN->defs(),
+        EQ.Completed, SN->defs(),
         [](JITDylib::SymbolTableEntry &E) { E.setState(SymbolState::Ready); },
         [](AsynchronousSymbolQuery &Q, JITDylib &JD,
            NonOwningSymbolStringPtr Name, JITDylib::SymbolTableEntry &E) {
           Q.notifySymbolMetRequiredState(SymbolStringPtr(Name), E.getSymbol());
         });
+
+  // std::erase_if is not available in C++17, and llvm::erase_if does not work
+  // here.
+  for (auto it = EQ.Completed.begin(), end = EQ.Completed.end(); it != end;) {
+    if ((*it)->isComplete()) {
+      ++it;
+    } else {
+      it = EQ.Completed.erase(it);
+    }
+  }
 
 #ifdef EXPENSIVE_CHECKS
   verifySessionState("exiting ExecutionSession::IL_emit");
@@ -3043,9 +3048,8 @@ Error ExecutionSession::OL_notifyEmitted(
     }
   }
 
-  for (auto &UQ : EmitQueries->Updated)
-    if (UQ->isComplete())
-      UQ->handleComplete(*this);
+  for (auto &UQ : EmitQueries->Completed)
+    UQ->handleComplete(*this);
 
   // If there are any bad dependencies then return an error.
   if (!BadDeps.empty()) {

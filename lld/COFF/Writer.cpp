@@ -1114,6 +1114,10 @@ void Writer::createSections() {
         sc->printDiscardedMessage();
       continue;
     }
+    if (auto *cc = dyn_cast<CommonChunk>(c)) {
+      if (!cc->live)
+        continue;
+    }
     StringRef name = c->getSectionName();
     if (shouldStripSectionSuffix(sc, name, ctx.config.mingw))
       name = name.split('$').first;

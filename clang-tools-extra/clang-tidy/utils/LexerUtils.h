@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXER_UTILS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXER_UTILS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXERUTILS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXERUTILS_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TokenKinds.h"
@@ -48,7 +48,7 @@ SourceLocation findPreviousAnyTokenKind(SourceLocation Start,
   if (Start.isInvalid() || Start.isMacroID())
     return {};
   while (true) {
-    SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
+    const SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
       return {};
 
@@ -76,7 +76,7 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
     if (!CurrentToken)
       return {};
 
-    Token PotentialMatch = *CurrentToken;
+    const Token PotentialMatch = *CurrentToken;
     if (PotentialMatch.isOneOf(TK, TKs...))
       return PotentialMatch.getLocation();
 
@@ -89,6 +89,7 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
   }
 }
 
+// Finds next token, possibly a comment.
 inline std::optional<Token>
 findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
                                const LangOptions &LangOpts) {
@@ -96,9 +97,11 @@ findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
 }
 
 // Finds next token that's not a comment.
-std::optional<Token> findNextTokenSkippingComments(SourceLocation Start,
-                                                   const SourceManager &SM,
-                                                   const LangOptions &LangOpts);
+inline std::optional<Token>
+findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  return Lexer::findNextToken(Start, SM, LangOpts, false);
+}
 
 /// Re-lex the provide \p Range and return \c false if either a macro spans
 /// multiple tokens, a pre-processor directive or failure to retrieve the
@@ -130,4 +133,4 @@ SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
 } // namespace tidy::utils::lexer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXER_UTILS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXERUTILS_H
