@@ -243,7 +243,7 @@
                         <pre><code class="language-cpp code-clang-doc">class {{Reference.Name}}</code></pre>
                         {{/IsClass}}
                         {{^IsClass}}
-                        <pre><code class="language-cpp code-clang-doc">{{ReturnType.Name}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{^End}}{{Type}} {{Name}}, {{/End}}{{#End}}{{Type}} {{Name}}{{/End}}{{/Params}})</code></pre>
+                        <pre><code class="language-cpp code-clang-doc">{{ReturnType.Name}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})</code></pre>
                         {{/IsClass}}
                         {{#.Description}}
                         {{>Comments}}

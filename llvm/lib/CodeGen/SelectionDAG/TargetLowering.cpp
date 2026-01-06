@@ -8372,6 +8372,54 @@ SDValue TargetLowering::expandROT(SDNode *Node, bool AllowVectorOps,
   return DAG.getNode(ISD::OR, DL, VT, ShVal, HsVal);
 }
 
+SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue X = Node->getOperand(0);
+  SDValue Y = Node->getOperand(1);
+  unsigned BW = VT.getScalarSizeInBits();
+  unsigned Opcode = Node->getOpcode();
+
+  switch (Opcode) {
+  case ISD::CLMUL: {
+    SDValue Res = DAG.getConstant(0, DL, VT);
+    for (unsigned I = 0; I < BW; ++I) {
+      SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
+      SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
+      Res = DAG.getNode(ISD::XOR, DL, VT, Res, Mul);
+    }
+    return Res;
+  }
+  case ISD::CLMULR:
+  case ISD::CLMULH: {
+    EVT ExtVT = VT.changeElementType(
+        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
+    // For example, ExtVT = i64 based operations aren't legal on a 32-bit
+    // target; use bitreverse-based lowering in this case.
+    if (!isOperationLegalOrCustom(ISD::ZERO_EXTEND, ExtVT) ||
+        !isOperationLegalOrCustom(ISD::SRL, ExtVT)) {
+      SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
+      SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, Y);
+      SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
+      SDValue Res = DAG.getNode(ISD::BITREVERSE, DL, VT, ClMul);
+      if (Opcode == ISD::CLMULH)
+        Res = DAG.getNode(ISD::SRL, DL, VT, Res,
+                          DAG.getShiftAmountConstant(1, VT, DL));
+      return Res;
+    }
+    SDValue XExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, X);
+    SDValue YExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, Y);
+    SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, ExtVT, XExt, YExt);
+    unsigned ShAmt = Opcode == ISD::CLMULR ? BW - 1 : BW;
+    SDValue HiBits = DAG.getNode(ISD::SRL, DL, ExtVT, ClMul,
+                                 DAG.getShiftAmountConstant(ShAmt, ExtVT, DL));
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, HiBits);
+  }
+  }
+  llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
+}
+
 void TargetLowering::expandShiftParts(SDNode *Node, SDValue &Lo, SDValue &Hi,
                                       SelectionDAG &DAG) const {
   assert(Node->getNumOperands() == 3 && "Not a double-shift!");
@@ -11963,14 +12011,16 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
 
 SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                                            SelectionDAG &DAG) const {
-  assert(Node->getOpcode() == ISD::VECTOR_SPLICE && "Unexpected opcode!");
+  assert((Node->getOpcode() == ISD::VECTOR_SPLICE_LEFT ||
+          Node->getOpcode() == ISD::VECTOR_SPLICE_RIGHT) &&
+         "Unexpected opcode!");
   assert(Node->getValueType(0).isScalableVector() &&
          "Fixed length vector types expected to use SHUFFLE_VECTOR!");
 
   EVT VT = Node->getValueType(0);
   SDValue V1 = Node->getOperand(0);
   SDValue V2 = Node->getOperand(1);
-  int64_t Imm = cast<ConstantSDNode>(Node->getOperand(2))->getSExtValue();
+  uint64_t Imm = Node->getConstantOperandVal(2);
   SDLoc DL(Node);
 
   // Expand through memory thusly:
@@ -12001,7 +12051,7 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
   SDValue StackPtr2 = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, VTBytes);
   SDValue StoreV2 = DAG.getStore(StoreV1, DL, V2, StackPtr2, PtrInfo);
 
-  if (Imm >= 0) {
+  if (Node->getOpcode() == ISD::VECTOR_SPLICE_LEFT) {
     // Load back the required element. getVectorElementPointer takes care of
     // clamping the index if it's out-of-bounds.
     StackPtr = getVectorElementPointer(DAG, StackPtr, VT, Node->getOperand(2));
@@ -12010,14 +12060,11 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                        MachinePointerInfo::getUnknownStack(MF));
   }
 
-  uint64_t TrailingElts = -Imm;
-
   // NOTE: TrailingElts must be clamped so as not to read outside of V1:V2.
   TypeSize EltByteSize = VT.getVectorElementType().getStoreSize();
-  SDValue TrailingBytes =
-      DAG.getConstant(TrailingElts * EltByteSize, DL, PtrVT);
+  SDValue TrailingBytes = DAG.getConstant(Imm * EltByteSize, DL, PtrVT);
 
-  if (TrailingElts > VT.getVectorMinNumElements())
+  if (Imm > VT.getVectorMinNumElements())
     TrailingBytes = DAG.getNode(ISD::UMIN, DL, PtrVT, TrailingBytes, VTBytes);
 
   // Calculate the start address of the spliced result.

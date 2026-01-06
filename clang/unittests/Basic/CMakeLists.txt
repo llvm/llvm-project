@@ -16,6 +16,7 @@ add_distinct_clang_unittest(BasicTests
   clangBasic
   clangLex
   LINK_LIBS
+  LLVMTargetParser
   LLVMTestingSupport
   LLVM_COMPONENTS
   Support
