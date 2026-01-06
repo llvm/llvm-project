@@ -238,11 +238,11 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
 
     // C++ template parameters.
     if (PP->getLangOpts().CPlusPlus && Prev.isOneOf(tok::comma, tok::less)) {
-      const auto *NextIt = std::next(TI);
-      while (NextIt != MI->tokens_end() &&
-             NextIt->isOneOf(tok::star, tok::amp, tok::ampamp, tok::kw_const,
-                             tok::kw_volatile))
-        ++NextIt;
+      const auto *NextIt =
+          std::find_if_not(std::next(TI), MI->tokens_end(), [](const Token &T) {
+            return T.isOneOf(tok::star, tok::amp, tok::ampamp, tok::kw_const,
+                             tok::kw_volatile);
+          });
 
       if (NextIt != MI->tokens_end() &&
           NextIt->isOneOf(tok::comma, tok::greater))
