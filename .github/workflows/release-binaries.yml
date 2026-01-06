@@ -22,6 +22,7 @@ on:
           - ubuntu-22.04
           - ubuntu-22.04-arm
           - macos-14
+          - windows-2022
 
   workflow_call:
     inputs:
@@ -116,9 +117,16 @@ jobs:
         echo "ref=$ref" >> $GITHUB_OUTPUT
         echo "upload=$upload" >> $GITHUB_OUTPUT
 
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          # Wix uses .msi
+          release_binary_suffix="msi"
+        else
+          release_binary_suffix="tar.xz"
+        fi
+
         release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
-        echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
+        echo "release-binary-filename=$release_binary_basename.$release_binary_suffix" >> $GITHUB_OUTPUT
 
         target="$RUNNER_OS-$RUNNER_ARCH"
 
@@ -134,12 +142,32 @@ jobs:
         fi
 
         if [ "$RUNNER_OS" = "Windows" ]; then
-          # The build times out on Windows, so we need to disable LTO.
+          # LTO causes the WiX generator to crash so we need to disable it:
+          # light.exe : error LGHT0001 : Catastrophic failure (Exception from HRESULT: 0x8000FFFF (E_UNEXPECTED))
+          # Stack Trace:
+          # at Microsoft.Tools.WindowsInstallerXml.Cab.Interop.NativeMethods.CreateCabFinish(IntPtr contextHandle, IntPtr newCabNamesCallBackAddress)
+          # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
+          # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+          # libxml2 config
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON -DBOOTSTRAP_BOOTSTRAP_CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON"
+
+          # We are using the Wix generator which doesn't support strings in
+          # the version, so strip out the git suffix and replace the -rc3 suffix
+          # with .3.
+          set +o pipefail
+          rc_version=`grep -o 'LLVM_VERSION_SUFFIX -rc[0-9]' cmake/Modules/LLVMVersion.cmake | cut -d ' ' -f 2 | sed 's/-rc//g'`
+          set -o pipefail
+          if [ -z "$rc_version" ]; then
+            version_suffix=""
+          else
+            version_suffix=".$rc_version"
+          fi
+          target_cmake_flags="$target_cmake_flags -DLLVM_VERSION_SUFFIX=$version_suffix"
         fi
 
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04*)
+          ubuntu-22.04*|windows-2022)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
@@ -176,6 +204,7 @@ jobs:
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
 
+
   build-release-package:
     name: "Build Release Package"
     needs: prepare
@@ -185,6 +214,32 @@ jobs:
       digest: ${{ steps.digest.outputs.digest }}
       artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
     steps:
+    - name: Windows config
+      if: runner.os == 'Windows'
+      run: |
+        # In order to avoid some errors with long paths names, we need to shorten
+        # the path names for the build.
+        subst S: ${{ github.workspace }}
+
+        # Disable autocrlf See https://llvm.org/docs/GettingStarted.html#id4
+        git config --global core.autocrlf false
+
+        # Install Wix for creating the installer.
+        dotnet tool install --global wix
+
+        # Install libxml2
+        # Specify [core] to disable extra features so we don't add extra dll dependencies.
+        # Even with [core] there is still one dll dependency which is bcrypt.dll.
+        vcpkg install libxml2[core]:x64-windows-static
+
+    # Setup python to ensure consistency in the python version used for
+    # all steps of this job.
+    - name: Setup Python
+      id: setup-python
+      uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      with:
+        python-version: '3.13'
+        pip-install: packaging psutil
 
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -199,6 +254,8 @@ jobs:
         if [ "${{ runner.os }}" = "Linux" ]; then
           sudo chown $USER:$USER /mnt/
           build_prefix=/mnt/
+        elif [ "${{ runner.os }}" = "Windows" ]; then
+          build_prefix=/s/
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
@@ -214,6 +271,11 @@ jobs:
 
     - name: Build
       shell: bash
+      env:
+        # Set this variable so that stage2-instrumented and stage2 configuration
+        # steps can find libxml2.  This only is used on Windows and setting
+        # this variable should have no affect on other OSes.
+        LIBXML2_ROOT: /c/vcpkg/packages/libxml2_x64-windows-static/
       run: |
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
@@ -239,8 +301,22 @@ jobs:
     - name: Run Tests
       # These almost always fail so don't let them fail the build and prevent the uploads.
       continue-on-error: true
+      shell: bash
+      env:
+        # Some tests seem to timeout on windows, so limit the runtime.
+        LIT_OPTS: "--timeout=300"
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
+
+    - name: Save logs
+      if: failure() && runner.os == 'Windows'
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-nsis-log
+        path: |
+          S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
+          S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
+          S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/CPackConfig.cmake
 
   upload-release-binaries:
     name: "Upload Release Binaries"
