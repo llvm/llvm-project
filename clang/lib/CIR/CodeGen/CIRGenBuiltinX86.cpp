@@ -446,7 +446,7 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createMul(loc, lhs, rhs);
 }
 
-// Convert F16 halfs to floats.
+// Convert f16 half values to floats.
 static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
                                             mlir::Location loc,
                                             llvm::ArrayRef<mlir::Value> ops,
