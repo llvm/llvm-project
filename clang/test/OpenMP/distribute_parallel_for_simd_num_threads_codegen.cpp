@@ -112,7 +112,7 @@ int main() {
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    call void @_ZN1SC1El(ptr nonnull align 8 dereferenceable(24) [[S]], i64 0)
 // CHECK1-NEXT:    [[CALL:%.*]] = invoke signext i8 @_ZN1ScvcEv(ptr nonnull align 8 dereferenceable(24) [[S]])
-// CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+// CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    store i8 [[CALL]], ptr [[A]], align 1
 // CHECK1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
@@ -1450,7 +1450,7 @@ int main() {
 // CHECK3-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK3-NEXT:    call void @_ZN1SC1El(ptr nonnull align 8 dereferenceable(24) [[S]], i64 0)
 // CHECK3-NEXT:    [[CALL:%.*]] = invoke signext i8 @_ZN1ScvcEv(ptr nonnull align 8 dereferenceable(24) [[S]])
-// CHECK3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+// CHECK3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK3:       invoke.cont:
 // CHECK3-NEXT:    store i8 [[CALL]], ptr [[A]], align 1
 // CHECK3-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
@@ -1787,7 +1787,7 @@ int main() {
 // CHECK5-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK5-NEXT:    call void @_ZN1SC1El(ptr nonnull align 8 dereferenceable(24) [[S]], i64 0)
 // CHECK5-NEXT:    [[CALL:%.*]] = invoke signext i8 @_ZN1ScvcEv(ptr nonnull align 8 dereferenceable(24) [[S]])
-// CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+// CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK5:       invoke.cont:
 // CHECK5-NEXT:    store i8 [[CALL]], ptr [[A]], align 1
 // CHECK5-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
@@ -3123,7 +3123,7 @@ int main() {
 // CHECK9-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK9-NEXT:    call void @_ZN1SC1El(ptr nonnull align 8 dereferenceable(24) [[S]], i64 0)
 // CHECK9-NEXT:    [[CALL:%.*]] = invoke i8 @_ZN1ScvcEv(ptr nonnull align 8 dereferenceable(24) [[S]])
-// CHECK9-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+// CHECK9-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK9:       invoke.cont:
 // CHECK9-NEXT:    store i8 [[CALL]], ptr [[A]], align 1
 // CHECK9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
@@ -4461,7 +4461,7 @@ int main() {
 // CHECK11-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK11-NEXT:    call void @_ZN1SC1El(ptr nonnull align 8 dereferenceable(24) [[S]], i64 0)
 // CHECK11-NEXT:    [[CALL:%.*]] = invoke i8 @_ZN1ScvcEv(ptr nonnull align 8 dereferenceable(24) [[S]])
-// CHECK11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+// CHECK11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK11:       invoke.cont:
 // CHECK11-NEXT:    store i8 [[CALL]], ptr [[A]], align 1
 // CHECK11-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
@@ -4798,7 +4798,7 @@ int main() {
 // CHECK13-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK13-NEXT:    call void @_ZN1SC1El(ptr nonnull align 8 dereferenceable(24) [[S]], i64 0)
 // CHECK13-NEXT:    [[CALL:%.*]] = invoke i8 @_ZN1ScvcEv(ptr nonnull align 8 dereferenceable(24) [[S]])
-// CHECK13-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+// CHECK13-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK13:       invoke.cont:
 // CHECK13-NEXT:    store i8 [[CALL]], ptr [[A]], align 1
 // CHECK13-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0

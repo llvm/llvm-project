@@ -34,7 +34,7 @@ throwing_task f() {
   // CHECK: init.ready:
   // CHECK-NEXT: store i1 true, ptr %[[RESUMETHREW:.+]], align 1
   // CHECK-NEXT: invoke void @_ZN18throwing_awaitable12await_resumeEv
-  // CHECK-NEXT: to label %[[RESUMECONT:.+]] unwind label %[[RESUMELPAD:.+]]
+  // CHECK-NEXT: to label %[[RESUMECONT:.+]] unwind label %[[RESUMELPAD:.+]], !srcloc
 
   // If 'await_resume' does not throw an exception, 'false' is stored in
   // variable RESUMETHREW.
