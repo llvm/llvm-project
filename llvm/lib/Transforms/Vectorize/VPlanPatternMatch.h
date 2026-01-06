@@ -331,7 +331,7 @@ template <unsigned Opcode, typename... OpTys>
 using AllRecipe_match =
     Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ false,
                  VPWidenRecipe, VPReplicateRecipe, VPWidenCastRecipe,
-                 VPInstruction, VPWidenSelectRecipe>;
+                 VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_commutative_match =

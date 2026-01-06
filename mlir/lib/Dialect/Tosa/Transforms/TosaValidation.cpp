@@ -659,6 +659,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Variable);
   CHECK_RANKS_AND_SIZES(VariableWrite);
   CHECK_RANKS_AND_SIZES(VariableRead);
+  // Shape Operators
+  CHECK_RANKS_AND_SIZES(Dim);
 
   // For the following operators, check whether the size of each tensor
   // operand is valid in a given Level.
@@ -1262,16 +1264,16 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
 
 void TosaValidation::runOnOperation() {
   ModuleOp modOp = getOperation();
+  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
+  if (!tosaDialect)
+    return;
+
   const TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(modOp);
   const auto maybeTargetEnv =
       tosa::TargetEnv::createTargetEnvFromAttr(targetEnvAttr, modOp.getLoc());
   if (failed(maybeTargetEnv))
     return signalPassFailure();
   targetEnv = *maybeTargetEnv;
-
-  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
-  if (!tosaDialect)
-    return;
 
   modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)

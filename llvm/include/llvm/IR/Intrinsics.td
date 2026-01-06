@@ -1478,6 +1478,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
       [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_fshr : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_clmul : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable,
@@ -1896,6 +1898,20 @@ def int_allow_ubsan_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i8_ty],
 def int_allow_runtime_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_metadata_ty],
     [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>,
     ClangBuiltin<"__builtin_allow_runtime_check">;
+
+// Return true if the specific sanitizer is enabled for the function.
+def int_allow_sanitize_address
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_thread
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_memory
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_hwaddress
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
 
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
@@ -2813,13 +2829,15 @@ def int_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                [IntrNoMem,
                                                 IntrSpeculatable]>;
 
-def int_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                              [LLVMMatchType<0>,
-                                               LLVMMatchType<0>,
-                                               llvm_i32_ty],
-                                              [IntrNoMem,
-                                               IntrSpeculatable,
-                                               ImmArg<ArgIndex<2>>]>;
+def int_vector_splice_left
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+
+def int_vector_splice_right
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],

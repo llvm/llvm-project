@@ -557,7 +557,6 @@ public:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
-    case VPRecipeBase::VPWidenSelectSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
@@ -933,7 +932,6 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPDefID() == VPRecipeBase::VPWidenCallSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenSelectSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
@@ -1558,6 +1556,14 @@ protected:
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Opcode == Instruction::Select && Op == getOperand(0) &&
+           Op->isDefinedOutsideLoopRegions();
+  }
 };
 
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
@@ -1801,56 +1807,6 @@ public:
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
-/// A recipe for widening select instructions. Supports both wide vector and
-/// single-scalar conditions, matching the behavior of LLVM IR's select
-/// instruction.
-struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
-                                               public VPIRMetadata {
-  VPWidenSelectRecipe(SelectInst *SI, ArrayRef<VPValue *> Operands,
-                      const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
-                      DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, Flags, DL),
-        VPIRMetadata(MD) {
-    setUnderlyingValue(SI);
-  }
-
-  ~VPWidenSelectRecipe() override = default;
-
-  VPWidenSelectRecipe *clone() override {
-    return new VPWidenSelectRecipe(cast<SelectInst>(getUnderlyingInstr()),
-                                   operands(), *this, *this, getDebugLoc());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPWidenSelectSC)
-
-  /// Produce a widened version of the select instruction.
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPWidenSelectRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-  unsigned getOpcode() const { return Instruction::Select; }
-
-  VPValue *getCond() const {
-    return getOperand(0);
-  }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool usesFirstLaneOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return Op == getCond() && Op->isDefinedOutsideLoopRegions();
-  }
-
-protected:
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
@@ -3936,8 +3892,6 @@ static inline auto castToVPIRMetadata(RecipeBasePtrTy R) -> DstTy {
     return cast<VPWidenIntrinsicRecipe>(R);
   case VPDef::VPWidenCallSC:
     return cast<VPWidenCallRecipe>(R);
-  case VPDef::VPWidenSelectSC:
-    return cast<VPWidenSelectRecipe>(R);
   case VPDef::VPReplicateSC:
     return cast<VPReplicateRecipe>(R);
   case VPDef::VPInterleaveSC:
@@ -3962,10 +3916,10 @@ struct CastInfoVPIRMetadata : public CastIsPossible<DstTy, SrcTy> {
     // NOTE: Each recipe inheriting from VPIRMetadata must be listed here and
     // also handled in castToVPIRMetadata.
     return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-               VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPWidenSelectRecipe,
-               VPReplicateRecipe, VPInterleaveRecipe, VPInterleaveEVLRecipe,
-               VPWidenLoadRecipe, VPWidenLoadEVLRecipe, VPWidenStoreRecipe,
-               VPWidenStoreEVLRecipe>(R);
+               VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
+               VPInterleaveRecipe, VPInterleaveEVLRecipe, VPWidenLoadRecipe,
+               VPWidenLoadEVLRecipe, VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(
+        R);
   }
 
   using RetTy = DstTy *;

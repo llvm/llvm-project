@@ -281,7 +281,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
 static void
 serializeCommonAttributes(const Info &I, json::Object &Obj,
                           const std::optional<StringRef> RepositoryUrl) {
-  Obj["Name"] = I.Name;
+  insertNonEmpty("Name", I.Name, Obj);
   Obj["USR"] = toHex(toStringRef(I.USR));
   Obj["InfoType"] = infoTypeToString(I.IT);
   // Conditionally insert fields.
@@ -448,7 +448,11 @@ static void serializeInfo(const TypeInfo &I, Object &Obj) {
 
 static void serializeInfo(const FieldTypeInfo &I, Object &Obj) {
   Obj["Name"] = I.Name;
-  Obj["Type"] = I.Type.Name;
+  insertNonEmpty("DefaultValue", I.DefaultValue, Obj);
+  json::Value ReferenceVal = Object();
+  Object &ReferenceObj = *ReferenceVal.getAsObject();
+  serializeReference(I.Type, ReferenceObj);
+  Obj["Type"] = ReferenceVal;
 }
 
 static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
@@ -528,6 +532,7 @@ static void serializeInfo(const FriendInfo &I, Object &Obj) {
     serializeInfo(I.ReturnType.value(), ReturnTypeObj);
     Obj["ReturnType"] = std::move(ReturnTypeObj);
   }
+  serializeCommonAttributes(I, Obj, std::nullopt);
 }
 
 static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
@@ -617,8 +622,10 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
 
-  if (!I.Friends.empty())
+  if (!I.Friends.empty()) {
     serializeArray(I.Friends, Obj, "Friends", SerializeInfoLambda);
+    Obj["HasFriends"] = true;
+  }
 
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }

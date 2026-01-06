@@ -4034,8 +4034,6 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         TypeSwitch<const VPRecipeBase *, unsigned>(R)
             .Case<VPHeaderPHIRecipe>(
                 [](const auto *R) { return Instruction::PHI; })
-            .Case<VPWidenSelectRecipe>(
-                [](const auto *R) { return Instruction::Select; })
             .Case<VPWidenStoreRecipe>(
                 [](const auto *R) { return Instruction::Store; })
             .Case<VPWidenLoadRecipe>(
@@ -4131,7 +4129,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenGEPSC:
       case VPDef::VPWidenIntrinsicSC:
       case VPDef::VPWidenSC:
-      case VPDef::VPWidenSelectSC:
       case VPDef::VPBlendSC:
       case VPDef::VPFirstOrderRecurrencePHISC:
       case VPDef::VPHistogramSC:
@@ -6480,7 +6477,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // the result would need to be a vector of pointers.
     if (VF.isScalable())
       return InstructionCost::getInvalid();
-    [[fallthrough]];
+    return TTI.getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
   default:
     // This opcode is unknown. Assume that it is the same as 'mul'.
     return TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
@@ -8241,10 +8238,6 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
     return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr), R->operands(),
                                 *VPI, VPI->getDebugLoc());
 
-  if (VPI->getOpcode() == Instruction::Select)
-    return new VPWidenSelectRecipe(cast<SelectInst>(Instr), R->operands(), *VPI,
-                                   *VPI, VPI->getDebugLoc());
-
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CI = cast<CastInst>(Instr);
     auto *CastR = cast<VPInstructionWithType>(VPI);
@@ -8789,10 +8782,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // ComputeReductionResult.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
       auto *Select = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
-        return isa<VPWidenSelectRecipe>(U) ||
-               (isa<VPReplicateRecipe>(U) &&
-                cast<VPReplicateRecipe>(U)->getUnderlyingInstr()->getOpcode() ==
-                    Instruction::Select);
+        return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
       }));
       VPValue *Cmp = Select->getOperand(0);
       // If the compare is checking the reduction PHI node, adjust it to check

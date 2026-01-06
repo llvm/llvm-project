@@ -254,6 +254,7 @@ bool FriendInfo::mergeable(const FriendInfo &Other) {
 void FriendInfo::merge(FriendInfo &&Other) {
   assert(mergeable(Other));
   Ref.merge(std::move(Other.Ref));
+  SymbolInfo::merge(std::move(Other));
 }
 
 void Info::mergeBase(Info &&Other) {
