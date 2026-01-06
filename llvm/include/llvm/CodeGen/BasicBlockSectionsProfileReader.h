@@ -91,7 +91,7 @@ struct PrefetchHint {
 // including CFG data (block and edge counts) and layout directives (clustering
 // and cloning paths).
 struct FunctionOptimizationProfile {
-// This represents the raw input profile for one function.
+  // This represents the raw input profile for one function.
   // BB Cluster information specified by `UniqueBBID`s.
   SmallVector<BBClusterInfo> ClusterInfo;
   // Paths to clone. A path a -> b -> c -> d implies cloning b, c, and d along
