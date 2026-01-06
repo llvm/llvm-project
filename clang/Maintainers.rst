@@ -148,6 +148,10 @@ Clang static analyzer
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
 
+| Donát Nagy
+| donat.nagy\@ericsson.com (email), NagyDonat (GitHub), DonatNagyE (Discourse)
+
+
 Compiler options
 ~~~~~~~~~~~~~~~~
 | Jan Svoboda
