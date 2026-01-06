@@ -84,7 +84,7 @@
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 // CHECK-MESSAGES: :[[@LINE-2]]:42: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD_TEMPLATE6(T)  (std::vector<2*T>)
-// CHECK-MESSAGES: :[[@LINE-1]]:47: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD_CAST1(T)      (reinterpret_cast<T*2>(0))
 // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD_CAST2(T)      (reinterpret_cast<T+1>(0))
