@@ -52966,7 +52966,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   // Combine OR(X,KSHIFTL(Y,Elts/2)) -> CONCAT_VECTORS(X,Y) == KUNPCK(X,Y).
   // Combine OR(KSHIFTL(X,Elts/2),Y) -> CONCAT_VECTORS(Y,X) == KUNPCK(Y,X).
   // iff the upper elements of the non-shifted arg are zero.
-  // KUNPCK require 16+ bool vector elements.
   if (N0.getOpcode() == X86ISD::KSHIFTL || N1.getOpcode() == X86ISD::KSHIFTL) {
     using namespace SDPatternMatch;
     unsigned NumElts = VT.getVectorNumElements();
@@ -52974,6 +52973,19 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     SDValue X, Y;
     if (sd_match(N, m_Or(m_Value(X), m_BinOp(X86ISD::KSHIFTL, m_Value(Y),
                                              m_SpecificInt(HalfElts))))) {
+      // If we can locate the original half subvectors, then see if we can
+      // concat the operands directly.
+      MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
+      if (sd_match(X, m_InsertSubvector(m_Zero(), m_SpecificVT(HalfVT),
+                                        m_Zero())) &&
+          sd_match(Y, m_InsertSubvector(m_Undef(), m_SpecificVT(HalfVT),
+                                        m_Zero()))) {
+        if (SDValue Concat = combineConcatVectorOps(
+                dl, VT.getSimpleVT(), {X.getOperand(1), Y.getOperand(1)}, DAG,
+                Subtarget))
+          return Concat;
+      }
+      // KUNPCK require 16+ bool vector elements.
       APInt UpperElts = APInt::getHighBitsSet(NumElts, HalfElts);
       if (NumElts >= 16 && DAG.MaskedVectorIsZero(X, UpperElts)) {
         return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
