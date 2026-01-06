@@ -224,7 +224,7 @@ func.func @outerproduct_non_vector_operand(%arg0: f32) {
 // -----
 
 func.func @outerproduct_invalid_kind_attr(%arg0 : vector<[4]xf32>, %arg1 : vector<[8]xf32>) {
-  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind(e.g. 'vector.kind<add>')}}
+  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
   %0 = vector.outerproduct %arg0, %arg1 {kind = "invalid"} : vector<[4]xf32>, vector<[8]xf32>
   return
 }
@@ -1015,7 +1015,7 @@ func.func @contract_missing_iterator_types(%arg0: vector<1x2xi32>, %arg1: vector
 func.func @contraction_invalid_kind(%arg0: vector<4x3xf32>,
                                     %arg1: vector<3x7xf32>,
                                     %arg2: vector<4x7xf32>) {
-  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind(e.g. 'vector.kind<add>')}}
+  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
     : vector<4x3xf32>, vector<3x7xf32> into vector<4x7xf32>
   return

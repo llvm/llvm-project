@@ -1092,7 +1092,7 @@ LogicalResult ContractionOp::verify() {
     return failure();
 
   if (!getKindAttr()) {
-    return emitOpError("expected 'kind' attribute of type CombiningKind(e.g. "
+    return emitOpError("expected 'kind' attribute of type CombiningKind (e.g. "
                        "'vector.kind<add>')");
   }
 
@@ -4113,7 +4113,7 @@ LogicalResult OuterProductOp::verify() {
     return emitOpError("expected operand #3 of same type as result type");
 
   if (!getKindAttr()) {
-    return emitOpError("expected 'kind' attribute of type CombiningKind(e.g. "
+    return emitOpError("expected 'kind' attribute of type CombiningKind (e.g. "
                        "'vector.kind<add>')");
   }
 
