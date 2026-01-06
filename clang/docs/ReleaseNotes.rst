@@ -845,8 +845,8 @@ Crash and bug fixes
   expression. (#GH147686)
 - `crosscheck-with-z3 <https://clang.llvm.org/docs/analyzer/user-docs/Options.html#crosscheck-with-z3>`__
   config option sometimes crashed. (#GH168034)
-- The ``alpha.core.StdVariant`` checker sometimes crashed when floating-point
-  values were involved. (#GH167341)
+- The ``alpha.core.StdVariant`` checker sometimes crashed when unknown
+  values or type aliases were involved. (#GH167341)
 - Hardened the engine for supporting platforms where different address-space
   pointers might have different sizes. (#GH151370)
 - The ``core.builtin.BuiltinFunctions`` checker crashed when passing
