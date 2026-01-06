@@ -3,11 +3,11 @@
 ; CHECK: %[[#]] = OpExtInstImport "OpenCL.std"
 ; CHECK: %[[#]] = OpTypeInt 32 0
 
-define spir_kernel void @foo(i32 addrspace(1)* %a) {
+define spir_kernel void @foo(ptr addrspace(1) %a) {
 entry:
-  %a.addr = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* %a, i32 addrspace(1)** %a.addr, align 4
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)** %a.addr, align 4
-  store i32 0, i32 addrspace(1)* %0, align 4
+  %a.addr = alloca ptr addrspace(1), align 4
+  store ptr addrspace(1) %a, ptr %a.addr, align 4
+  %0 = load ptr addrspace(1), ptr %a.addr, align 4
+  store i32 0, ptr addrspace(1) %0, align 4
   ret void
 }

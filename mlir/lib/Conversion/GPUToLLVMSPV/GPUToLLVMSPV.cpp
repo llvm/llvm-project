@@ -533,7 +533,8 @@ void populateGpuToLLVMSPVConversionPatterns(
       GPUFuncOpLoweringOptions{
           privateAddressSpace, localAddressSpace,
           /*kernelAttributeName=*/{}, kernelBlockSizeAttributeName,
-          LLVM::CConv::SPIR_KERNEL, LLVM::CConv::SPIR_FUNC,
+          /*kernelClusterSizeAttributeName=*/{}, LLVM::CConv::SPIR_KERNEL,
+          LLVM::CConv::SPIR_FUNC,
           /*encodeWorkgroupAttributionsAsArguments=*/true});
 }
 

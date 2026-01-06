@@ -24,15 +24,15 @@
 
 $_ZTS4Test = comdat any
 
-define weak_odr dso_local spir_kernel void @_ZTS4Test(%struct._ZTS3POD.POD addrspace(1)* %_arg_, %"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range"* byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_1, %"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range"* byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_2, %"class._ZTSN2cl4sycl2idILi1EEE.cl::sycl::id"* byval(%"class._ZTSN2cl4sycl2idILi1EEE.cl::sycl::id") align 8 %_arg_3) local_unnamed_addr comdat {
+define weak_odr dso_local spir_kernel void @_ZTS4Test(ptr addrspace(1) %_arg_, ptr byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_1, ptr byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_2, ptr byval(%"class._ZTSN2cl4sycl2idILi1EEE.cl::sycl::id") align 8 %_arg_3) local_unnamed_addr comdat {
 entry:
   %ref.tmp.i = alloca %struct._ZTS3POD.POD, align 8
-  %0 = getelementptr inbounds %"class._ZTSN2cl4sycl2idILi1EEE.cl::sycl::id", %"class._ZTSN2cl4sycl2idILi1EEE.cl::sycl::id"* %_arg_3, i64 0, i32 0, i32 0, i64 0
-  %1 = load i64, i64* %0, align 8
-  %add.ptr.i = getelementptr inbounds %struct._ZTS3POD.POD, %struct._ZTS3POD.POD addrspace(1)* %_arg_, i64 %1
-  %2 = bitcast %struct._ZTS3POD.POD* %ref.tmp.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 24, i8* nonnull %2)
-  %3 = addrspacecast %struct._ZTS3POD.POD* %ref.tmp.i to %struct._ZTS3POD.POD addrspace(4)*
+  %0 = getelementptr inbounds %"class._ZTSN2cl4sycl2idILi1EEE.cl::sycl::id", ptr %_arg_3, i64 0, i32 0, i32 0, i64 0
+  %1 = load i64, ptr %0, align 8
+  %add.ptr.i = getelementptr inbounds %struct._ZTS3POD.POD, ptr addrspace(1) %_arg_, i64 %1
+  %2 = bitcast ptr %ref.tmp.i to ptr
+  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %2)
+  %3 = addrspacecast ptr %ref.tmp.i to ptr addrspace(4)
 
   %4 = call i32 @_Z20__spirv_SpecConstantii(i32 3, i32 1)
 ; CHECK-SPIRV-DAG: %[[#SC3]] = OpSpecConstant %[[#Int]] 1
@@ -70,21 +70,21 @@ entry:
   %15 = call %struct._ZTS3POD.POD @"_Z29__spirv_SpecConstantCompositeAstruct._ZTS1A.Aclass._ZTSN2cl4sycl3vecIiLi2EEE.cl::sycl::vec"([2 x %struct._ZTS1A.A] %10, %"class._ZTSN2cl4sycl3vecIiLi2EEE.cl::sycl::vec" %14)
 ; CHECK-SPIRV-DAG: %[[#SC_POD:]] = OpSpecConstantComposite %[[#POD_TYPE]] %[[#SC_Array]] %[[#SC_Struct]]
 
-  store %struct._ZTS3POD.POD %15, %struct._ZTS3POD.POD addrspace(4)* %3, align 8
+  store %struct._ZTS3POD.POD %15, ptr addrspace(4) %3, align 8
 ; CHECK-SPIRV-DAG: OpStore %[[#]] %[[#SC_POD]]
 
-  %16 = bitcast %struct._ZTS3POD.POD addrspace(1)* %add.ptr.i to i8 addrspace(1)*
-  %17 = addrspacecast i8 addrspace(1)* %16 to i8 addrspace(4)*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8 addrspace(4)* align 8 dereferenceable(24) %17, i8* nonnull align 8 dereferenceable(24) %2, i64 24, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull %2)
+  %16 = bitcast ptr addrspace(1) %add.ptr.i to ptr addrspace(1)
+  %17 = addrspacecast ptr addrspace(1) %16 to ptr addrspace(4)
+  call void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 8 dereferenceable(24) %17, ptr nonnull align 8 dereferenceable(24) %2, i64 24, i1 false)
+  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %2)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
-declare void @llvm.memcpy.p4i8.p0i8.i64(i8 addrspace(4)* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+declare void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 declare i32 @_Z20__spirv_SpecConstantii(i32, i32)
 

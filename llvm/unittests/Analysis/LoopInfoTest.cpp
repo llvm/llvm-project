@@ -234,7 +234,7 @@ TEST(LoopInfoTest, PreorderTraversals) {
 
 TEST(LoopInfoTest, CanonicalLoop) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -243,8 +243,8 @@ TEST(LoopInfoTest, CanonicalLoop) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -293,7 +293,7 @@ TEST(LoopInfoTest, CanonicalLoop) {
 
 TEST(LoopInfoTest, LoopWithInverseGuardSuccs) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp sge i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.end, label %for.preheader\n"
@@ -302,8 +302,8 @@ TEST(LoopInfoTest, LoopWithInverseGuardSuccs) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -352,7 +352,7 @@ TEST(LoopInfoTest, LoopWithInverseGuardSuccs) {
 
 TEST(LoopInfoTest, LoopWithSwappedGuardCmp) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp sgt i32 %ub, 0\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -361,8 +361,8 @@ TEST(LoopInfoTest, LoopWithSwappedGuardCmp) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp sge i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.exit, label %for.body\n"
@@ -411,7 +411,7 @@ TEST(LoopInfoTest, LoopWithSwappedGuardCmp) {
 
 TEST(LoopInfoTest, LoopWithInverseLatchSuccs) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -420,8 +420,8 @@ TEST(LoopInfoTest, LoopWithInverseLatchSuccs) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp sge i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.exit, label %for.body\n"
@@ -470,7 +470,7 @@ TEST(LoopInfoTest, LoopWithInverseLatchSuccs) {
 
 TEST(LoopInfoTest, LoopWithLatchCmpNE) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -479,8 +479,8 @@ TEST(LoopInfoTest, LoopWithLatchCmpNE) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp ne i32 %i, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -529,7 +529,7 @@ TEST(LoopInfoTest, LoopWithLatchCmpNE) {
 
 TEST(LoopInfoTest, LoopWithGuardCmpSLE) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %ubPlusOne = add i32 %ub, 1\n"
       "  %guardcmp = icmp sle i32 0, %ub\n"
@@ -539,8 +539,8 @@ TEST(LoopInfoTest, LoopWithGuardCmpSLE) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp ne i32 %i, %ubPlusOne\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -589,7 +589,7 @@ TEST(LoopInfoTest, LoopWithGuardCmpSLE) {
 
 TEST(LoopInfoTest, LoopNonConstantStep) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub, i32 %step) {\n"
+      "define void @foo(ptr %A, i32 %ub, i32 %step) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -598,8 +598,8 @@ TEST(LoopInfoTest, LoopNonConstantStep) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = zext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, %step\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -645,7 +645,7 @@ TEST(LoopInfoTest, LoopNonConstantStep) {
 
 TEST(LoopInfoTest, LoopUnsignedBounds) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp ult i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -654,8 +654,8 @@ TEST(LoopInfoTest, LoopUnsignedBounds) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = zext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add i32 %i, 1\n"
       "  %cmp = icmp ult i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -704,7 +704,7 @@ TEST(LoopInfoTest, LoopUnsignedBounds) {
 
 TEST(LoopInfoTest, DecreasingLoop) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -713,8 +713,8 @@ TEST(LoopInfoTest, DecreasingLoop) {
       "for.body:\n"
       "  %i = phi i32 [ %ub, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = sub nsw i32 %i, 1\n"
       "  %cmp = icmp sgt i32 %inc, 0\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -763,7 +763,7 @@ TEST(LoopInfoTest, DecreasingLoop) {
 
 TEST(LoopInfoTest, CannotFindDirection) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub, i32 %step) {\n"
+      "define void @foo(ptr %A, i32 %ub, i32 %step) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -772,8 +772,8 @@ TEST(LoopInfoTest, CannotFindDirection) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, %step\n"
       "  %cmp = icmp ne i32 %i, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -821,7 +821,7 @@ TEST(LoopInfoTest, CannotFindDirection) {
 
 TEST(LoopInfoTest, ZextIndVar) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -831,8 +831,8 @@ TEST(LoopInfoTest, ZextIndVar) {
       "  %indvars.iv = phi i64 [ 0, %for.preheader ], [ %indvars.iv.next, %for.body ]\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %wide.trip.count = zext i32 %ub to i64\n"
@@ -883,7 +883,7 @@ TEST(LoopInfoTest, ZextIndVar) {
 
 TEST(LoopInfoTest, MultiExitingLoop) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub, i1 %cond) {\n"
+      "define void @foo(ptr %A, i32 %ub, i1 %cond) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -894,8 +894,8 @@ TEST(LoopInfoTest, MultiExitingLoop) {
       "  br i1 %cond, label %for.body.1, label %for.exit\n"
       "for.body.1:\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -943,7 +943,7 @@ TEST(LoopInfoTest, MultiExitingLoop) {
 
 TEST(LoopInfoTest, MultiExitLoop) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub, i1 %cond) {\n"
+      "define void @foo(ptr %A, i32 %ub, i1 %cond) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -954,8 +954,8 @@ TEST(LoopInfoTest, MultiExitLoop) {
       "  br i1 %cond, label %for.body.1, label %for.exit\n"
       "for.body.1:\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit.1\n"
@@ -1003,14 +1003,14 @@ TEST(LoopInfoTest, MultiExitLoop) {
 
 TEST(LoopInfoTest, UnguardedLoop) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  br label %for.body\n"
       "for.body:\n"
       "  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -1056,7 +1056,7 @@ TEST(LoopInfoTest, UnguardedLoop) {
 
 TEST(LoopInfoTest, UnguardedLoopWithControlFlow) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub, i1 %cond) {\n"
+      "define void @foo(ptr %A, i32 %ub, i1 %cond) {\n"
       "entry:\n"
       "  br i1 %cond, label %for.preheader, label %for.end\n"
       "for.preheader:\n"
@@ -1064,8 +1064,8 @@ TEST(LoopInfoTest, UnguardedLoopWithControlFlow) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.body, label %for.exit\n"
@@ -1114,7 +1114,7 @@ TEST(LoopInfoTest, UnguardedLoopWithControlFlow) {
 
 TEST(LoopInfoTest, LoopNest) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.outer.preheader, label %for.end\n"
@@ -1128,8 +1128,8 @@ TEST(LoopInfoTest, LoopNest) {
       "for.inner:\n"
       "  %i = phi i32 [ 0, %for.inner.preheader ], [ %inc, %for.inner ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.inner, label %for.inner.exit\n"
@@ -1210,7 +1210,7 @@ TEST(LoopInfoTest, LoopNest) {
 
 TEST(LoopInfoTest, AuxiliaryIV) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -1223,8 +1223,8 @@ TEST(LoopInfoTest, AuxiliaryIV) {
       "  %usedoutside = phi i32 [ 0, %for.preheader ], [ %usedoutsideinc, %for.body ]\n"
       "  %mulopcode = phi i32 [ 0, %for.preheader ], [ %mulopcodeinc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %mulopcodeinc = mul nsw i32 %mulopcode, 5\n"
       "  %usedoutsideinc = add nsw i32 %usedoutside, 5\n"
       "  %loopvariantinc = add nsw i32 %loopvariant, %i\n"
@@ -1329,7 +1329,7 @@ TEST(LoopInfoTest, LoopNotInSimplifyForm) {
 
 TEST(LoopInfoTest, LoopLatchNotExiting) {
   const char *ModuleStr =
-      "define void @foo(i32* %A, i32 %ub) {\n"
+      "define void @foo(ptr %A, i32 %ub) {\n"
       "entry:\n"
       "  %guardcmp = icmp slt i32 0, %ub\n"
       "  br i1 %guardcmp, label %for.preheader, label %for.end\n"
@@ -1338,8 +1338,8 @@ TEST(LoopInfoTest, LoopLatchNotExiting) {
       "for.body:\n"
       "  %i = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]\n"
       "  %idxprom = sext i32 %i to i64\n"
-      "  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom\n"
-      "  store i32 %i, i32* %arrayidx, align 4\n"
+      "  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom\n"
+      "  store i32 %i, ptr %arrayidx, align 4\n"
       "  %inc = add nsw i32 %i, 1\n"
       "  %cmp = icmp slt i32 %inc, %ub\n"
       "  br i1 %cmp, label %for.latch, label %for.exit\n"
@@ -1468,16 +1468,16 @@ TEST(LoopInfoTest, LoopNonLatchUniqueExitBlocks) {
 TEST(LoopInfoTest, LoopNotRotated) {
   const char *ModuleStr =
       "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
-      "define void @foo(i32* %elem) {\n"
+      "define void @foo(ptr %elem) {\n"
       "entry:\n"
       "  br label %while.cond\n"
       "while.cond:\n"
-      "  %elem.addr.0 = phi i32* [ %elem, %entry ], [ %incdec.ptr, %while.body "
+      "  %elem.addr.0 = phi ptr [ %elem, %entry ], [ %incdec.ptr, %while.body "
       "]\n"
-      "  %tobool = icmp eq i32* %elem.addr.0, null\n"
+      "  %tobool = icmp eq ptr %elem.addr.0, null\n"
       "  br i1 %tobool, label %while.end, label %while.body\n"
       "while.body:\n"
-      "  %incdec.ptr = getelementptr inbounds i32, i32* %elem.addr.0, i64 1\n"
+      "  %incdec.ptr = getelementptr inbounds i32, ptr %elem.addr.0, i64 1\n"
       "  br label %while.cond\n"
       "while.end:\n"
       "  ret void\n"
@@ -1506,7 +1506,7 @@ TEST(LoopInfoTest, LoopNotRotated) {
 TEST(LoopInfoTest, LoopUserBranch) {
   const char *ModuleStr =
       "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
-      "define void @foo(i32* %B, i64 signext %nx, i1 %cond) {\n"
+      "define void @foo(ptr %B, i64 signext %nx, i1 %cond) {\n"
       "entry:\n"
       "  br i1 %cond, label %bb, label %guard\n"
       "guard:\n"
@@ -1516,8 +1516,8 @@ TEST(LoopInfoTest, LoopUserBranch) {
       "  br label %for.i\n"
       "for.i:\n"
       "  %i = phi i64 [ 0, %for.i.preheader ], [ %inc13, %for.i ]\n"
-      "  %Bi = getelementptr inbounds i32, i32* %B, i64 %i\n"
-      "  store i32 0, i32* %Bi, align 4\n"
+      "  %Bi = getelementptr inbounds i32, ptr %B, i64 %i\n"
+      "  store i32 0, ptr %Bi, align 4\n"
       "  %inc13 = add nsw i64 %i, 1\n"
       "  %cmp = icmp slt i64 %inc13, %nx\n"
       "  br i1 %cmp, label %for.i, label %for.i.exit\n"
@@ -1552,18 +1552,18 @@ TEST(LoopInfoTest, LoopUserBranch) {
 
 TEST(LoopInfoTest, LoopInductionVariable) {
   const char *ModuleStr =
-      "define i32 @foo(i32* %addr) {\n"
+      "define i32 @foo(ptr %addr) {\n"
       "entry:\n"
       "  br label %for.body\n"
       "for.body:\n"
       "  %sum.08 = phi i32 [ 0, %entry ], [ %add, %for.body ]\n"
-      "  %addr.addr.06 = phi i32* [ %addr, %entry ], [ %incdec.ptr, %for.body "
+      "  %addr.addr.06 = phi ptr [ %addr, %entry ], [ %incdec.ptr, %for.body "
       "]\n"
       "  %count.07 = phi i32 [ 6000, %entry ], [ %dec, %for.body ]\n"
-      "  %0 = load i32, i32* %addr.addr.06, align 4\n"
+      "  %0 = load i32, ptr %addr.addr.06, align 4\n"
       "  %add = add nsw i32 %0, %sum.08\n"
       "  %dec = add nsw i32 %count.07, -1\n"
-      "  %incdec.ptr = getelementptr inbounds i32, i32* %addr.addr.06, i64 1\n"
+      "  %incdec.ptr = getelementptr inbounds i32, ptr %addr.addr.06, i64 1\n"
       "  %cmp = icmp ugt i32 %count.07, 1\n"
       "  br i1 %cmp, label %for.body, label %for.end\n"
       "for.end:\n"
@@ -1595,28 +1595,26 @@ TEST(LoopInfoTest, TokenLCSSA) {
       "outer_loop:\n"
       "  br label %inner_loop\n"
       "inner_loop:\n"
-      "  %token = call token (i64, i32, i8 addrspace(1)* (i64, i32, i32, "
-      "i32)*, i32, i32, ...) "
+      "  %token = call token (i64, i32, ptr, i32, i32, ...) "
       "@llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64 2882400000, "
-      "i32 0, i8 addrspace(1)* (i64, i32, i32, i32)* nonnull elementtype(i8 "
-      "addrspace(1)* (i64, i32, i32, i32)) @foo, i32 4, i32 0, i64 undef, i32 "
-      "5, i32 5, i32 undef, i32 0, i32 0) [ \"deopt\"(), \"gc-live\"(i8 "
-      "addrspace(1)* undef) ]\n"
+      "i32 0, ptr @foo, i32 4, i32 0, i64 undef, i32 "
+      "5, i32 5, i32 undef, i32 0, i32 0) [ \"deopt\"(), \"gc-live\"(ptr "
+      "addrspace(1) undef) ]\n"
       "  br i1 undef, label %inner_loop, label %outer_backedge\n"
       "outer_backedge:\n"
       "  br i1 undef, label %outer_loop, label %exit\n"
       "exit:\n"
-      "  %tmp35 = call coldcc i8 addrspace(1)* "
+      "  %tmp35 = call coldcc ptr addrspace(1) "
       "@llvm.experimental.gc.relocate.p1i8(token %token, i32 0, i32 0) ; "
       "(undef, undef)\n"
       "  ret void\n"
       "}\n"
-      "declare i8 addrspace(1)* @foo(i64, i32, i32, i32)\n"
-      "declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 "
+      "declare ptr addrspace(1) @foo(i64, i32, i32, i32)\n"
+      "declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1i8(token, i32 "
       "immarg, i32 immarg) #0\n"
       "declare token "
       "@llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64 immarg, i32 "
-      "immarg, i8 addrspace(1)* (i64, i32, i32, i32)*, i32 immarg, i32 immarg, "
+      "immarg, ptr, i32 immarg, i32 immarg, "
       "...)\n"
       "attributes #0 = { nounwind readnone }\n";
 

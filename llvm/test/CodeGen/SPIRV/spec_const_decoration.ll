@@ -12,11 +12,11 @@
 
 $_ZTS6kernel = comdat any
 
-define weak_odr dso_local spir_kernel void @_ZTS6kernel(i8 addrspace(1)* %_arg_, %"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range"* byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_1, %"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range"* byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_2, %"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range"* byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_3) local_unnamed_addr comdat {
+define weak_odr dso_local spir_kernel void @_ZTS6kernel(ptr addrspace(1) %_arg_, ptr byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_1, ptr byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_2, ptr byval(%"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range") align 8 %_arg_3) local_unnamed_addr comdat {
 entry:
-  %0 = getelementptr inbounds %"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range", %"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range"* %_arg_3, i64 0, i32 0, i32 0, i64 0
-  %1 = addrspacecast i64* %0 to i64 addrspace(4)*
-  %2 = load i64, i64 addrspace(4)* %1, align 8
+  %0 = getelementptr inbounds %"class._ZTSN2cl4sycl5rangeILi1EEE.cl::sycl::range", ptr %_arg_3, i64 0, i32 0, i32 0, i64 0
+  %1 = addrspacecast ptr %0 to ptr addrspace(4)
+  %2 = load i64, ptr addrspace(4) %1, align 8
   br label %for.cond.i.i
 
 for.cond.i.i:                                     ; preds = %for.body.i.i, %entry
@@ -29,9 +29,9 @@ for.body.i.i:                                     ; preds = %for.cond.i.i
   br label %for.cond.i.i
 
 _ZZZ4mainENKUlRN2cl4sycl7handlerEE_clES2_ENKUlNS0_14kernel_handlerEE_clES4_.exit: ; preds = %for.cond.i.i
-  %add.ptr.i = getelementptr inbounds i8, i8 addrspace(1)* %_arg_, i64 %2
-  %arrayidx.ascast.i.i = addrspacecast i8 addrspace(1)* %add.ptr.i to i8 addrspace(4)*
-  store i8 %value.0.i.i, i8 addrspace(4)* %arrayidx.ascast.i.i, align 1
+  %add.ptr.i = getelementptr inbounds i8, ptr addrspace(1) %_arg_, i64 %2
+  %arrayidx.ascast.i.i = addrspacecast ptr addrspace(1) %add.ptr.i to ptr addrspace(4)
+  store i8 %value.0.i.i, ptr addrspace(4) %arrayidx.ascast.i.i, align 1
   ret void
 }
 

@@ -393,7 +393,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
         ASSERT_TRUE(FindExactlyAttributes(Map, Old, ""));
       }));
   Tests.push_back(std::make_pair(
-      "call void @llvm.assume(i1 true) [\"align\"(i8* undef, i32 undef)]",
+      "call void @llvm.assume(i1 true) [\"align\"(ptr undef, i32 undef)]",
       [](Instruction *I) {
         // Don't crash but don't learn from undef.
         RetainedKnowledgeMap Map;
