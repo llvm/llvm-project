@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -795,31 +796,37 @@ bool PolynomialMultiplyRecognize::matchRightShift(SelectInst *SelI,
 
   using namespace PatternMatch;
 
-  Value *C = nullptr;
-  CmpPredicate P;
   bool TrueIfZero;
-
-  if (match(CondV, m_c_ICmp(P, m_Value(C), m_Zero()))) {
-    if (P != CmpInst::ICMP_EQ && P != CmpInst::ICMP_NE)
-      return false;
-    // Matched: select C == 0 ? ... : ...
-    //          select C != 0 ? ... : ...
-    TrueIfZero = (P == CmpInst::ICMP_EQ);
-  } else if (match(CondV, m_c_ICmp(P, m_Value(C), m_One()))) {
-    if (P != CmpInst::ICMP_EQ && P != CmpInst::ICMP_NE)
-      return false;
-    // Matched: select C == 1 ? ... : ...
-    //          select C != 1 ? ... : ...
-    TrueIfZero = (P == CmpInst::ICMP_NE);
-  } else
-    return false;
-
   Value *X = nullptr;
-  if (!match(C, m_And(m_Value(X), m_One())))
-    return false;
-  // Matched: select (X & 1) == +++ ? ... : ...
-  //          select (X & 1) != +++ ? ... : ...
 
+  if (std::optional<DecomposedBitTest> Res = llvm::decomposeBitTest(CondV)) {
+    if (!Res->Mask.isOne())
+      return false;
+    X = Res->X;
+    TrueIfZero = (Res->Pred == CmpInst::ICMP_EQ);
+  } else {
+    Value *C = nullptr;
+    CmpPredicate P;
+    if (match(CondV, m_c_ICmp(P, m_Value(C), m_Zero()))) {
+      if (P != CmpInst::ICMP_EQ && P != CmpInst::ICMP_NE)
+        return false;
+      // Matched: select C == 0 ? ... : ...
+      //          select C != 0 ? ... : ...
+      TrueIfZero = (P == CmpInst::ICMP_EQ);
+    } else if (match(CondV, m_c_ICmp(P, m_Value(C), m_One()))) {
+      if (P != CmpInst::ICMP_EQ && P != CmpInst::ICMP_NE)
+        return false;
+      // Matched: select C == 1 ? ... : ...
+      //          select C != 1 ? ... : ...
+      TrueIfZero = (P == CmpInst::ICMP_NE);
+    } else
+      return false;
+
+    if (!match(C, m_And(m_Value(X), m_One())))
+      return false;
+    // Matched: select (X & 1) == +++ ? ... : ...
+    //          select (X & 1) != +++ ? ... : ...
+  }
   Value *R = nullptr, *Q = nullptr;
   if (TrueIfZero) {
     // The select's condition is true if the tested bit is 0.
@@ -1033,7 +1040,11 @@ void PolynomialMultiplyRecognize::promoteTo(Instruction *In,
   if (TruncInst *T = dyn_cast<TruncInst>(In)) {
     IntegerType *TruncTy = cast<IntegerType>(OrigTy);
     Value *Mask = ConstantInt::get(DestTy, (1u << TruncTy->getBitWidth()) - 1);
-    Value *And = IRBuilder<>(In).CreateAnd(T->getOperand(0), Mask);
+    IRBuilder<> B(In);
+    Value *And = B.CreateAnd(T->getOperand(0), Mask);
+    if (TruncTy->getBitWidth() == 1) {
+      And = B.CreateICmpNE(And, ConstantInt::getNullValue(DestTy));
+    }
     T->replaceAllUsesWith(And);
     T->eraseFromParent();
     return;

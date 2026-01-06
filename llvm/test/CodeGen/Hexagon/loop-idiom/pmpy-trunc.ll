@@ -8,23 +8,34 @@ define zeroext i16 @pmpy_trunc(i8 zeroext %a0, i16 zeroext %a1) local_unnamed_ad
 ; CHECK-LABEL: define zeroext i16 @pmpy_trunc(
 ; CHECK-SAME: i8 zeroext [[A0:%.*]], i16 zeroext [[A1:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[B1:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[A1]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[A0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.hexagon.M4.pmpyw(i32 [[TMP3]], i32 255)
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.hexagon.M4.pmpyw(i32 [[TMP6]], i32 81922)
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i32
 ; CHECK-NEXT:    br label %[[B2:.*]]
 ; CHECK:       [[B2]]:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, %[[B1]] ], [ [[ADD:%.*]], %[[B2]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i16 [ [[A1]], %[[B1]] ], [ [[SELECT:%.*]], %[[B2]] ]
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i8 [ [[A0]], %[[B1]] ], [ [[LSHR1:%.*]], %[[B2]] ]
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i16 [[PHI2]] to i8
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[PHI3]], [[TRUNC1]]
-; CHECK-NEXT:    [[LSHR1]] = lshr i8 [[PHI3]], 1
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i8 [[XOR1]] to i1
-; CHECK-NEXT:    [[LSHR2:%.*]] = lshr i16 [[PHI2]], 1
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i16 [[LSHR2]], -24575
-; CHECK-NEXT:    [[SELECT]] = select i1 [[TRUNC2]], i16 [[XOR2]], i16 [[LSHR2]]
-; CHECK-NEXT:    [[ADD]] = add nuw nsw i8 [[PHI1]], 1
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp samesign ult i8 [[PHI1]], 7
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, %[[B1]] ], [ [[ADD:%.*]], %[[B2]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[TMP0]], %[[B1]] ], [ [[TMP10]], %[[B2]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = xor i32 [[PHI2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i32 1, [[PHI1]]
+; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = shl i32 81922, [[PHI1]]
+; CHECK-NEXT:    [[TMP16:%.*]] = xor i32 [[PHI2]], [[TMP15]]
+; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[PHI1]], 1
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp samesign ult i32 [[PHI1]], 7
 ; CHECK-NEXT:    br i1 [[ICMP]], label %[[B2]], label %[[B3:.*]]
 ; CHECK:       [[B3]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = phi i16 [ [[SELECT]], %[[B2]] ]
+; CHECK-NEXT:    [[SELECT_LCSSA:%.*]] = phi i32 [ [[TMP10]], %[[B2]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i32 [[SELECT_LCSSA]], 8
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc i32 [[TMP17]] to i16
 ; CHECK-NEXT:    ret i16 [[TMP18]]
 ;
 b1:
