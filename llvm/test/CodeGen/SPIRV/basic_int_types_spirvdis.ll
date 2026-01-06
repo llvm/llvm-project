@@ -6,51 +6,51 @@ define void @main() {
 entry:
 ; CHECK: %int16_t_Val = OpVariable %_ptr_Function_ushort Function
   %int16_t_Val = alloca i16, align 2
-  store i16 0, i16* %int16_t_Val, align 2
+  store i16 0, ptr %int16_t_Val, align 2
 
 ; CHECK: %int_Val = OpVariable %_ptr_Function_uint Function
   %int_Val = alloca i32, align 4
-  store i32 0, i32* %int_Val, align 4
+  store i32 0, ptr %int_Val, align 4
 
 ; CHECK: %int64_t_Val = OpVariable %_ptr_Function_ulong Function
   %int64_t_Val = alloca i64, align 8
-  store i64 0, i64* %int64_t_Val, align 8
+  store i64 0, ptr %int64_t_Val, align 8
 
 ; CHECK: %int16_t2_Val = OpVariable %_ptr_Function_v2ushort Function
   %int16_t2_Val = alloca <2 x i16>, align 4
-  store <2 x i16> zeroinitializer, <2 x i16>* %int16_t2_Val, align 4
+  store <2 x i16> zeroinitializer, ptr %int16_t2_Val, align 4
 
 ; CHECK: %int16_t3_Val = OpVariable %_ptr_Function_v3ushort Function
   %int16_t3_Val = alloca <3 x i16>, align 8
-  store <3 x i16> zeroinitializer, <3 x i16>* %int16_t3_Val, align 8
+  store <3 x i16> zeroinitializer, ptr %int16_t3_Val, align 8
 
 ; CHECK: %int16_t4_Val = OpVariable %_ptr_Function_v4ushort Function
   %int16_t4_Val = alloca <4 x i16>, align 8
-  store <4 x i16> zeroinitializer, <4 x i16>* %int16_t4_Val, align 8
+  store <4 x i16> zeroinitializer, ptr %int16_t4_Val, align 8
 
 ; CHECK: %int2_Val = OpVariable %_ptr_Function_v2uint Function
   %int2_Val = alloca <2 x i32>, align 8
-  store <2 x i32> zeroinitializer, <2 x i32>* %int2_Val, align 8
+  store <2 x i32> zeroinitializer, ptr %int2_Val, align 8
 
 ; CHECK: %int3_Val = OpVariable %_ptr_Function_v3uint Function
   %int3_Val = alloca <3 x i32>, align 16
-  store <3 x i32> zeroinitializer, <3 x i32>* %int3_Val, align 16
+  store <3 x i32> zeroinitializer, ptr %int3_Val, align 16
 
 ; CHECK: %int4_Val = OpVariable %_ptr_Function_v4uint Function
   %int4_Val = alloca <4 x i32>, align 16
-  store <4 x i32> zeroinitializer, <4 x i32>* %int4_Val, align 16
+  store <4 x i32> zeroinitializer, ptr %int4_Val, align 16
 
 ; CHECK: %int64_t2_Val = OpVariable %_ptr_Function_v2ulong Function
   %int64_t2_Val = alloca <2 x i64>, align 16
-  store <2 x i64> zeroinitializer, <2 x i64>* %int64_t2_Val, align 16
+  store <2 x i64> zeroinitializer, ptr %int64_t2_Val, align 16
 
 ; CHECK: %int64_t3_Val = OpVariable %_ptr_Function_v3ulong Function
   %int64_t3_Val = alloca <3 x i64>, align 32
-  store <3 x i64> zeroinitializer, <3 x i64>* %int64_t3_Val, align 32
+  store <3 x i64> zeroinitializer, ptr %int64_t3_Val, align 32
 
 ; CHECK: %int64_t4_Val = OpVariable %_ptr_Function_v4ulong Function
   %int64_t4_Val = alloca <4 x i64>, align 32
-  store <4 x i64> zeroinitializer, <4 x i64>* %int64_t4_Val, align 32
+  store <4 x i64> zeroinitializer, ptr %int64_t4_Val, align 32
 
   ret void
 }

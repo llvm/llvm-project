@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -O0 -mtriple=spirv64-unknown-unknown < %s 2>&1 | FileCheck %s
 ; CHECK: argument of incompatible type!
 
 ; The BE does not support non-global-object aliases
