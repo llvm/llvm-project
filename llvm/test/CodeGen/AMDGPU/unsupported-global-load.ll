@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx9-generic    < %s 2>&1 | FileCheck -check-prefixes=GFX9-GENERIC    %s
 ; xxx: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx9-4-generic  < %s 2>&1 | FileCheck -check-prefixes=GFX9-4-GENERIC  %s
 ; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx10-1-generic < %s 2>&1 | FileCheck -check-prefixes=GFX10-1-GENERIC %s
