@@ -1584,6 +1584,54 @@ let Predicates = [HasStdExtP] in {
   // // splat pattern
   def: Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
+
+  // 8/16-bit comparison patterns (result is all 1s or all 0s per element)
+  // a == b
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETEQ)),
+           (PMSEQ_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETEQ)),
+           (PMSEQ_H GPR:$rs1, GPR:$rs2)>;
+  // a != b => !(a == b)
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETNE)),
+           (XORI (PMSEQ_B GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETNE)),
+           (XORI (PMSEQ_H GPR:$rs1, GPR:$rs2), -1)>;
+  // a < b
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETLT)),
+           (PMSLT_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETULT)),
+           (PMSLTU_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETLT)),
+           (PMSLT_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETULT)),
+           (PMSLTU_H GPR:$rs1, GPR:$rs2)>;
+  // a <= b => !(b < a)
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETLE)),
+           (XORI (PMSLT_B GPR:$rs2, GPR:$rs1), -1)>;
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETULE)),
+           (XORI (PMSLTU_B GPR:$rs2, GPR:$rs1), -1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETLE)),
+           (XORI (PMSLT_H GPR:$rs2, GPR:$rs1), -1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETULE)),
+           (XORI (PMSLTU_H GPR:$rs2, GPR:$rs1), -1)>;
+  // a > b => b < a
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETGT)),
+           (PMSLT_B GPR:$rs2, GPR:$rs1)>;
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETUGT)),
+           (PMSLTU_B GPR:$rs2, GPR:$rs1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETGT)),
+           (PMSLT_H GPR:$rs2, GPR:$rs1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETUGT)),
+           (PMSLTU_H GPR:$rs2, GPR:$rs1)>;
+  // a >= b => !(a < b)
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETGE)),
+           (XORI (PMSLT_B GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETUGE)),
+           (XORI (PMSLTU_B GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETGE)),
+           (XORI (PMSLT_H GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETUGE)),
+           (XORI (PMSLTU_H GPR:$rs1, GPR:$rs2), -1)>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -1642,6 +1690,34 @@ let Predicates = [HasStdExtP, IsRV64] in {
 
   // splat pattern
   def: Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
+
+  // 32-bit comparison patterns (result is all 1s or all 0s per element)
+  // a == b
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETEQ)),
+           (PMSEQ_W GPR:$rs1, GPR:$rs2)>;
+  // a != b => !(a == b)
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETNE)),
+           (XORI (PMSEQ_W GPR:$rs1, GPR:$rs2), -1)>;
+  // a < b
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETLT)),
+           (PMSLT_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETULT)),
+           (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
+  // a <= b => !(b < a)
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETLE)),
+           (XORI (PMSLT_W GPR:$rs2, GPR:$rs1), -1)>;
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETULE)),
+           (XORI (PMSLTU_W GPR:$rs2, GPR:$rs1), -1)>;
+  // a > b => b < a
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETGT)),
+           (PMSLT_W GPR:$rs2, GPR:$rs1)>;
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETUGT)),
+           (PMSLTU_W GPR:$rs2, GPR:$rs1)>;
+  // a >= b => !(a < b)
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETGE)),
+           (XORI (PMSLT_W GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETUGE)),
+           (XORI (PMSLTU_W GPR:$rs1, GPR:$rs2), -1)>;
 
   // 32-bit logical shift left/right patterns
   def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
