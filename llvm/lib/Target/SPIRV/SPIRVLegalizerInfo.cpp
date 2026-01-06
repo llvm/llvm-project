@@ -776,6 +776,21 @@ static bool legalizeSpvExtractElt(LegalizerHelper &Helper, MachineInstr &MI,
     auto StackTemp = Helper.createStackTemporary(
         TypeSize::getFixed(SrcTy.getSizeInBytes()), VecAlign, PtrInfo);
 
+    // Set the type of StackTemp to a pointer to an array of the element type.
+    SPIRVType *SpvSrcTy = GR->getSPIRVTypeForVReg(SrcReg);
+    SPIRVType *EltSpvTy = GR->getScalarOrVectorComponentType(SpvSrcTy);
+    const Type *LLVMEltTy = GR->getTypeForSPIRVType(EltSpvTy);
+    const Type *LLVMArrTy =
+        ArrayType::get(const_cast<Type *>(LLVMEltTy), SrcTy.getNumElements());
+    SPIRVType *ArrSpvTy = GR->getOrCreateSPIRVType(
+        LLVMArrTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+    SPIRVType *PtrToArrSpvTy = GR->getOrCreateSPIRVPointerType(
+        ArrSpvTy, MIRBuilder, SPIRV::StorageClass::Function);
+
+    Register StackReg = StackTemp.getReg(0);
+    MRI.setRegClass(StackReg, GR->getRegClass(PtrToArrSpvTy));
+    GR->assignSPIRVTypeToVReg(PtrToArrSpvTy, StackReg, *MI.getMF());
+
     MIRBuilder.buildStore(SrcReg, StackTemp, PtrInfo, VecAlign);
 
     Register IdxReg = IdxOperand.getReg();
