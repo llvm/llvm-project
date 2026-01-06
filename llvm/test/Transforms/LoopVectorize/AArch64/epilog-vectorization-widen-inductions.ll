@@ -19,6 +19,16 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = extractelement <2 x ptr> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, <2 x ptr> [[TMP5]], <2 x i64> splat (i64 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <2 x ptr> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <2 x ptr> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP9]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP12]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP14]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 2
 ; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP15]], align 1
@@ -27,16 +37,6 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <2 x ptr> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <2 x ptr> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP12]])
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP10]], i32 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP14]])
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP21]])
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END4:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 10000
@@ -51,17 +51,17 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[POINTER_PHI2:%.*]] = phi ptr [ [[BC_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[PTR_IND5:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[POINTER_PHI2]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = extractelement <2 x ptr> [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp ne <2 x ptr> [[TMP20]], zeroinitializer
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i1> [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP21]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP22]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP23]])
 ; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[NEXT_GEP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2
 ; CHECK-NEXT:    [[PTR_IND5]] = getelementptr i8, ptr [[POINTER_PHI2]], i64 2
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT9]], 10000
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp ne <2 x ptr> [[TMP20]], zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP22]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP23]])
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x i1> [[TMP22]], i32 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP24]])
 ; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]

@@ -2566,7 +2566,7 @@ static void licm(VPlan &Plan) {
           R.eraseFromParent();
           continue;
         }
-        if (cannotHoistOrSinkRecipe(R))
+        if (cannotHoistOrSinkRecipe(R) || R.mayHaveSideEffects())
           continue;
 
         auto *Def = cast<VPSingleDefRecipe>(&R);

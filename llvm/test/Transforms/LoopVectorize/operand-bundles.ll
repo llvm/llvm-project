@@ -148,6 +148,10 @@ define void @assume_loop_variant_operand_bundle(ptr noalias %a, ptr noalias %b) 
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP0]]) ]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP1]]) ]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP2]]) ]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP3]]) ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP10]], align 4
@@ -155,10 +159,6 @@ define void @assume_loop_variant_operand_bundle(ptr noalias %a, ptr noalias %b) 
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP0]]) ]
-; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP1]]) ]
-; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP2]]) ]
-; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP3]]) ]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -189,6 +189,7 @@ define void @assume_cold_operand_bundle(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "cold"() ]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -201,7 +202,6 @@ define void @assume_cold_operand_bundle(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "cold"() ]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
