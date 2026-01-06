@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstring>
 
 // VC++ defines 'alloca' as an object-like macro, which interferes with our
@@ -44,6 +45,7 @@ enum LanguageID : uint16_t {
   OCL_DSE = 0x400,           // builtin requires OpenCL device side enqueue.
   ALL_OCL_LANGUAGES = 0x800, // builtin for OCL languages.
   HLSL_LANG = 0x1000,        // builtin requires HLSL.
+  C23_LANG = 0x2000,         // builtin requires C23 or later.
   ALL_LANGUAGES = C_LANG | CXX_LANG | OBJC_LANG, // builtin for all languages.
   ALL_GNU_LANGUAGES = ALL_LANGUAGES | GNU_LANG,  // builtin requires GNU mode.
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG     // builtin requires MS mode.
@@ -93,6 +95,12 @@ struct Info {
   ///
   /// Must be provided the `Shard` for this `Info` object.
   std::string getName(const InfosShard &Shard) const;
+
+  // Builtin non-null attribute modes.
+  // NonOptimizing: attaches Clang's `_Nonnull` type qualifier to parameters.
+  // Optimizing: emits the classic GNU-style `nonnull` attribute for
+  // optimization.
+  enum class NonNullMode { NonOptimizing, Optimizing };
 };
 
 /// A constexpr function to construct an infos array from X-macros.
@@ -391,6 +399,11 @@ public:
   bool performsCallback(unsigned ID,
                         llvm::SmallVectorImpl<int> &Encoding) const;
 
+  /// Return true if this builtin has parameters that must be non-null.
+  /// The parameter indices are appended into 'Indxs'.
+  bool isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
+                 Info::NonNullMode &Mode) const;
+
   /// Return true if this function has no side effects and doesn't
   /// read memory, except for possibly errno or raising FP exceptions.
   ///
@@ -403,6 +416,22 @@ public:
   bool isConstWithoutExceptions(unsigned ID) const {
     return strchr(getAttributesString(ID), 'g') != nullptr;
   }
+
+  /// Determine whether we can generate LLVM intrinsics for the given
+  /// builtin ID, based on whether it has side effects such as setting errno.
+  ///
+  /// \param BuiltinID The builtin ID to check.
+  /// \param Trip The target triple.
+  /// \param ErrnoOverwritten Indicates whether the errno setting behavior
+  ///        has been overwritten via '#pragma float_control(precise, on/off)'.
+  /// \param MathErrnoEnabled Indicates whether math-errno is enabled on
+  ///        command line.
+  /// \param HasOptNoneAttr True iff 'attribute__((optnone))' is used.
+  /// \param IsOptimizationEnabled True iff the optimization level is not 'O0'.
+  bool shouldGenerateFPMathIntrinsic(unsigned BuiltinID, llvm::Triple Trip,
+                                     std::optional<bool> ErrnoOverwritten,
+                                     bool MathErrnoEnabled, bool HasOptNoneAttr,
+                                     bool IsOptimizationEnabled) const;
 
   const char *getRequiredFeatures(unsigned ID) const;
 
@@ -459,14 +488,8 @@ bool evaluateRequiredTargetFeatures(
 
 /// Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {
-  /// This names the __make_integer_seq BuiltinTemplateDecl.
-  BTK__make_integer_seq,
-
-  /// This names the __type_pack_element BuiltinTemplateDecl.
-  BTK__type_pack_element,
-
-  /// This names the __builtin_common_type BuiltinTemplateDecl.
-  BTK__builtin_common_type,
+#define BuiltinTemplate(BTName) BTK##BTName,
+#include "clang/Basic/BuiltinTemplates.inc"
 };
 
 } // end namespace clang

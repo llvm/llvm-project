@@ -1,8 +1,24 @@
 {
   "DefaultVariant": "macos", "DisplayName": "macOS 11",
   "Version": "11.0",
+  "CanonicalName": "macosx11.0",
   "MaximumDeploymentTarget": "11.0.99",
-  "PropertyConditionFallbackNames": [], "VersionMap": {
+  "PropertyConditionFallbackNames": [],
+  "SupportedTargets": {
+    "macosx": {
+      "Archs": ["x86_64", "x86_64h", "arm64", "arm64e"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "macosx",
+      "LLVMTargetTripleEnvironment": ""
+    },
+    "iosmac": {
+      "Archs": ["x86_64", "x86_64h", "arm64", "arm64e"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "ios",
+      "LLVMTargetTripleEnvironment": "macabi"
+    }
+  },
+  "VersionMap": {
     "iOSMac_macOS": {
       "13.2": "10.15.1",
       "13.4": "10.15.4",

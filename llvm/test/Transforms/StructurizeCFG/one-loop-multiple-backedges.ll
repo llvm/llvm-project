@@ -16,7 +16,6 @@ define void @blam(ptr addrspace(1) nocapture %arg, float %arg1, float %arg2) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp uge float 0.000000e+00, [[ARG2:%.*]]
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 15, [[BB5]] ], [ undef, [[BB3]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP6]], [[BB5]] ], [ [[TMP4]], [[BB3]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB7:%.*]], label [[FLOW1]]
 ; CHECK:       bb7:
@@ -24,10 +23,10 @@ define void @blam(ptr addrspace(1) nocapture %arg, float %arg1, float %arg2) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp sge i64 [[TMP8]], 5
 ; CHECK-NEXT:    br label [[FLOW1]]
 ; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP2]] = phi i64 [ [[TMP8]], [[BB7]] ], [ undef, [[FLOW]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 255, [[BB7]] ], [ [[TMP0]], [[FLOW]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP9]], [[BB7]] ], [ true, [[FLOW]] ]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[BB10:%.*]], label [[BB3]]
+; CHECK-NEXT:    [[TMP2]] = phi i64 [ [[TMP8]], [[BB7]] ], [ poison, [[FLOW]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 255, [[BB7]] ], [ 15, [[FLOW]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP9]], [[BB7]] ], [ true, [[FLOW]] ]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BB10:%.*]], label [[BB3]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[ARG:%.*]], align 4
 ; CHECK-NEXT:    ret void

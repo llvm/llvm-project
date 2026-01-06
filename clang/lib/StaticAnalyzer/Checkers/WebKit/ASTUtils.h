@@ -56,6 +56,7 @@ bool tryToFindPtrOrigin(
     const clang::Expr *E, bool StopAtFirstRefCountedObj,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
+    std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool)> callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return
@@ -66,8 +67,19 @@ bool tryToFindPtrOrigin(
 /// \returns Whether \p E is a safe call arugment.
 bool isASafeCallArg(const clang::Expr *E);
 
+/// \returns true if E is nullptr or __null.
+bool isNullPtr(const clang::Expr *E);
+
 /// \returns true if E is a MemberExpr accessing a const smart pointer type.
 bool isConstOwnerPtrMemberExpr(const clang::Expr *E);
+
+/// \returns true if E is a MemberExpr accessing a member variable which
+/// supports CheckedPtr.
+bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E);
+
+/// \returns true if \p E is a [[alloc] init] pattern expression.
+/// Sets \p InnerExpr to the inner function call or selector invocation.
+bool isAllocInit(const Expr *E, const Expr **InnerExpr = nullptr);
 
 /// \returns true if E is a CXXMemberCallExpr which returns a const smart
 /// pointer type.

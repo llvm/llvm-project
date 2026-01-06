@@ -36,7 +36,7 @@ Examples:
   std::string_view("test", 0);
 
 Passing an invalid first character position parameter to constructor will
-cause ``std::out_of_range`` exception at runtime. 
+cause ``std::out_of_range`` exception at runtime.
 
 Examples:
 

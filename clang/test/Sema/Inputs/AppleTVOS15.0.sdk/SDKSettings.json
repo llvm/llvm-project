@@ -1,8 +1,17 @@
 {
   "DisplayName": "tvOS 15.0",
   "Version": "15.0",
+  "CanonicalName": "appletvos15.0",
   "MaximumDeploymentTarget": "15.0.99",
   "PropertyConditionFallbackNames": [],
+  "SupportedTargets": {
+    "appletvos": {
+      "Archs": ["arm64e", "arm64"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "tvos",
+      "LLVMTargetTripleEnvironment": ""
+    }
+  },
   "VersionMap": {
     "iOS_tvOS": {
       "10.0": "10.0",

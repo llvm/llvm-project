@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/Dialect/Quant.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
@@ -112,6 +113,10 @@ bool mlirTypeIsAAnyQuantizedType(MlirType type) {
   return isa<quant::AnyQuantizedType>(unwrap(type));
 }
 
+MlirTypeID mlirAnyQuantizedTypeGetTypeID(void) {
+  return wrap(quant::AnyQuantizedType::getTypeID());
+}
+
 MlirType mlirAnyQuantizedTypeGet(unsigned flags, MlirType storageType,
                                  MlirType expressedType, int64_t storageTypeMin,
                                  int64_t storageTypeMax) {
@@ -126,6 +131,10 @@ MlirType mlirAnyQuantizedTypeGet(unsigned flags, MlirType storageType,
 
 bool mlirTypeIsAUniformQuantizedType(MlirType type) {
   return isa<quant::UniformQuantizedType>(unwrap(type));
+}
+
+MlirTypeID mlirUniformQuantizedTypeGetTypeID(void) {
+  return wrap(quant::UniformQuantizedType::getTypeID());
 }
 
 MlirType mlirUniformQuantizedTypeGet(unsigned flags, MlirType storageType,
@@ -155,6 +164,10 @@ bool mlirUniformQuantizedTypeIsFixedPoint(MlirType type) {
 
 bool mlirTypeIsAUniformQuantizedPerAxisType(MlirType type) {
   return isa<quant::UniformQuantizedPerAxisType>(unwrap(type));
+}
+
+MlirTypeID mlirUniformQuantizedPerAxisTypeGetTypeID(void) {
+  return wrap(quant::UniformQuantizedPerAxisType::getTypeID());
 }
 
 MlirType mlirUniformQuantizedPerAxisTypeGet(
@@ -195,11 +208,74 @@ bool mlirUniformQuantizedPerAxisTypeIsFixedPoint(MlirType type) {
 }
 
 //===---------------------------------------------------------------------===//
+// UniformQuantizedSubChannelType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAUniformQuantizedSubChannelType(MlirType type) {
+  return isa<quant::UniformQuantizedSubChannelType>(unwrap(type));
+}
+
+MlirTypeID mlirUniformQuantizedSubChannelTypeGetTypeID(void) {
+  return wrap(quant::UniformQuantizedSubChannelType::getTypeID());
+}
+
+MlirType mlirUniformQuantizedSubChannelTypeGet(
+    unsigned flags, MlirType storageType, MlirType expressedType,
+    MlirAttribute scalesAttr, MlirAttribute zeroPointsAttr, intptr_t nDims,
+    int32_t *quantizedDimensions, int64_t *blockSizes, int64_t storageTypeMin,
+    int64_t storageTypeMax) {
+  auto scales = dyn_cast<mlir::DenseElementsAttr>(unwrap(scalesAttr));
+  auto zeroPoints = dyn_cast<mlir::DenseElementsAttr>(unwrap(zeroPointsAttr));
+
+  if (!scales || !zeroPoints) {
+    return {};
+  }
+
+  return wrap(quant::UniformQuantizedSubChannelType::get(
+      flags, unwrap(storageType), unwrap(expressedType), scales, zeroPoints,
+      llvm::ArrayRef<int32_t>(quantizedDimensions, nDims),
+      llvm::ArrayRef<int64_t>(blockSizes, nDims), storageTypeMin,
+      storageTypeMax));
+}
+
+intptr_t mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(MlirType type) {
+  return cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
+      .getBlockSizes()
+      .size();
+}
+
+int32_t mlirUniformQuantizedSubChannelTypeGetQuantizedDimension(MlirType type,
+                                                                intptr_t pos) {
+  return cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
+      .getQuantizedDimensions()[pos];
+}
+
+int64_t mlirUniformQuantizedSubChannelTypeGetBlockSize(MlirType type,
+                                                       intptr_t pos) {
+  return cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
+      .getBlockSizes()[pos];
+}
+
+MlirAttribute mlirUniformQuantizedSubChannelTypeGetScales(MlirType type) {
+  return wrap(
+      cast<quant::UniformQuantizedSubChannelType>(unwrap(type)).getScales());
+}
+
+MlirAttribute mlirUniformQuantizedSubChannelTypeGetZeroPoints(MlirType type) {
+  return wrap(cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
+                  .getZeroPoints());
+}
+
+//===---------------------------------------------------------------------===//
 // CalibratedQuantizedType
 //===---------------------------------------------------------------------===//
 
 bool mlirTypeIsACalibratedQuantizedType(MlirType type) {
   return isa<quant::CalibratedQuantizedType>(unwrap(type));
+}
+
+MlirTypeID mlirCalibratedQuantizedTypeGetTypeID(void) {
+  return wrap(quant::CalibratedQuantizedType::getTypeID());
 }
 
 MlirType mlirCalibratedQuantizedTypeGet(MlirType expressedType, double min,

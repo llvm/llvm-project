@@ -1,0 +1,50 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner %s -o /dev/null
+
+# Check that edges that violate topological order are not added to the
+# SwingSchedulerDAG. This is a case where the crash was caused by PR 145878.
+
+--- |
+  target triple = "hexagon"
+  
+  define void @crash_145878() {
+  entry:
+    br label %loop
+  
+  loop:                                             ; preds = %loop, %entry
+    %lsr.iv2 = phi i32 [ %lsr.iv.next, %loop ], [ 1, %entry ]
+    %lsr.iv = phi ptr [ %cgep3, %loop ], [ inttoptr (i32 -8 to ptr), %entry ]
+    %cgep = getelementptr i8, ptr %lsr.iv, i32 12
+    %load = load i32, ptr %cgep, align 4
+    store i32 %load, ptr %lsr.iv, align 4
+    %lsr.iv.next = add nsw i32 %lsr.iv2, -1
+    %iv.cmp.not = icmp eq i32 %lsr.iv.next, 0
+    %cgep3 = getelementptr i8, ptr %lsr.iv, i32 -8
+    br i1 %iv.cmp.not, label %exit, label %loop
+  
+  exit:                                             ; preds = %loop
+    ret void
+  }
+...
+---
+name:            crash_145878
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    %5:intregs = A2_tfrsi -8
+    J2_loop0i %bb.1, 1, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+  
+  bb.1.loop (machine-block-address-taken):
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    %1:intregs = PHI %5, %bb.0, %3, %bb.1
+    %6:intregs = L2_loadri_io %1, 12 :: (load (s32) from %ir.cgep)
+    S2_storeri_io %1, 0, killed %6 :: (store (s32) into %ir.lsr.iv)
+    %3:intregs = A2_addi %1, -8
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+  
+  bb.2.exit:
+    PS_jmpret $r31, implicit-def dead $pc
+...

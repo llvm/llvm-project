@@ -13,7 +13,8 @@ define amdgpu_kernel void @preload_ptr_kernarg_header(ptr inreg %arg) {
 ; ASM-NEXT:    .p2align 8
 ; ASM-NEXT:  .LBB0_0:
 ; ASM-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; ASM-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; ASM-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
+; ASM-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; ASM-NEXT:    s_endpgm
     store ptr %arg, ptr %arg
     ret void

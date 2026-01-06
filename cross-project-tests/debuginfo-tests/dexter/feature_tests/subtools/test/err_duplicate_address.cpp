@@ -1,7 +1,7 @@
 // Purpose:
 //      Check that declaring duplicate addresses gives a useful error message.
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s --match-full-lines
 
 

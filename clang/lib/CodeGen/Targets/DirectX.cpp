@@ -29,14 +29,26 @@ public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
-  llvm::Type *getHLSLType(
-      CodeGenModule &CGM, const Type *T,
-      const SmallVector<unsigned> *Packoffsets = nullptr) const override;
+  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T,
+                          const CGHLSLOffsetInfo &OffsetInfo) const override;
+
+  llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                             CharUnits NumBytes) const override {
+    unsigned Size = NumBytes.getQuantity();
+    return llvm::TargetExtType::get(CGM.getLLVMContext(), "dx.Padding", {},
+                                    {Size});
+  }
+
+  bool isHLSLPadding(llvm::Type *Ty) const override {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(Ty))
+      return TET->getName() == "dx.Padding";
+    return false;
+  }
 };
 
 llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     CodeGenModule &CGM, const Type *Ty,
-    const SmallVector<unsigned> *Packoffsets) const {
+    const CGHLSLOffsetInfo &OffsetInfo) const {
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;
@@ -52,15 +64,21 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
       return nullptr;
 
     // convert element type
-    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
 
     llvm::StringRef TypeName =
         ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";
     SmallVector<unsigned, 3> Ints = {/*IsWriteable*/ ResAttrs.ResourceClass ==
                                          llvm::dxil::ResourceClass::UAV,
                                      /*IsROV*/ ResAttrs.IsROV};
-    if (!ResAttrs.RawBuffer)
-      Ints.push_back(/*IsSigned*/ ContainedTy->isSignedIntegerType());
+    if (!ResAttrs.RawBuffer) {
+      const clang::Type *ElemType = ContainedTy->getUnqualifiedDesugaredType();
+      if (ElemType->isVectorType())
+        ElemType = cast<clang::VectorType>(ElemType)
+                       ->getElementType()
+                       ->getUnqualifiedDesugaredType();
+      Ints.push_back(/*IsSigned*/ ElemType->isSignedIntegerType());
+    }
 
     return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }
@@ -69,9 +87,9 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     if (ContainedTy.isNull() || !ContainedTy->isStructureType())
       return nullptr;
 
-    llvm::Type *BufferLayoutTy =
-        HLSLBufferLayoutBuilder(CGM, "dx.Layout")
-            .createLayoutType(ContainedTy->getAsStructureType(), Packoffsets);
+    llvm::StructType *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM).layOutStruct(
+            ContainedTy->getAsCanonical<RecordType>(), OffsetInfo);
     if (!BufferLayoutTy)
       return nullptr;
 

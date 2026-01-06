@@ -22,23 +22,24 @@ End Program
 ! CHECK:         store i32 %[[VAL_10]], ptr %[[VAL_9]], align 4
 ! CHECK:         %[[VAL_12:.*]] = load i32, ptr %[[VAL_9]], align 4
 ! CHECK:         %[[PRIV_BOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
-! ...
-! check that we use the private copy of table for the assignment
-! CHECK:       omp.par.region1:
 ! CHECK:         %[[ELEMENTAL_TMP:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
+! CHECK:         %[[ELEMENTAL_TMP_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 ! CHECK:         %[[TABLE_BOX_ADDR:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 ! CHECK:         %[[BOXED_FIFTY:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, align 8
 ! CHECK:         %[[FIFTY:.*]] = alloca i32, i64 1, align 4
 ! CHECK:         %[[INTERMEDIATE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 ! CHECK:         %[[TABLE_BOX_ADDR2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
-! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[INTERMEDIATE]], ptr %[[PRIV_BOX_ALLOC]], i32 48, i1 false)
+! ...
+! check that we use the private copy of table for the assignment
+! CHECK:       omp.par.region1:
+! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[INTERMEDIATE]], ptr %[[PRIV_BOX_ALLOC]], i32 {{4[48]}}, i1 false)
 ! CHECK:         store i32 50, ptr %[[FIFTY]], align 4
 ! CHECK:         %[[FIFTY_BOX_VAL:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8 } { ptr undef, i64 4, i32 20240719, i8 0, i8 9, i8 0, i8 0 }, ptr %[[FIFTY]], 0
-! CHECK:         store { ptr, i64, i32, i8, i8, i8, i8 } %[[FIFTY_BOX_VAL]], ptr %[[BOXED_FIFTY]], align 8
-! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[TABLE_BOX_ADDR2]], ptr %[[INTERMEDIATE]], i32 48, i1 false)
+! CHECK:         store { ptr, i64, i32, i8, i8, i8, i8 } %[[FIFTY_BOX_VAL]], ptr %[[BOXED_FIFTY]], align {{[48]}}
+! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[TABLE_BOX_ADDR2]], ptr %[[INTERMEDIATE]], i32 {{4[48]}}, i1 false)
 ! CHECK:         call void @_FortranAAssign(ptr %[[TABLE_BOX_ADDR2]], ptr %[[BOXED_FIFTY]], ptr @{{.*}}, i32 9)
-! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[TABLE_BOX_ADDR]], ptr %[[PRIV_BOX_ALLOC]], i32 48, i1 false)
-! CHECK:         %[[PRIV_TABLE:.*]] = call ptr @malloc(i64 40)
+! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[TABLE_BOX_ADDR]], ptr %[[PRIV_BOX_ALLOC]], i32 {{4[48]}}, i1 false)
+! CHECK:         %[[PRIV_TABLE:.*]] = call ptr @malloc(i{{(32)|(64)}} 40)
 ! ...
 ! check that we use the private copy of table for table/=50
 ! CHECK:       omp.par.region3:

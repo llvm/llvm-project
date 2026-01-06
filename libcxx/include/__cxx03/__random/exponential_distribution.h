@@ -56,12 +56,7 @@ private:
 
 public:
   // constructors and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI exponential_distribution() : exponential_distribution(1) {}
-  _LIBCPP_HIDE_FROM_ABI explicit exponential_distribution(result_type __lambda) : __p_(param_type(__lambda)) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit exponential_distribution(result_type __lambda = 1) : __p_(param_type(__lambda)) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit exponential_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 

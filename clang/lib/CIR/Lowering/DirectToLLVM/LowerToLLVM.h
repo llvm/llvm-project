@@ -12,6 +12,10 @@
 #ifndef CLANG_CIR_LOWERTOLLVM_H
 #define CLANG_CIR_LOWERTOLLVM_H
 
+#include "LowerModule.h"
+
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
@@ -19,32 +23,22 @@ namespace cir {
 
 namespace direct {
 
-class CIRToLLVMGlobalOpLowering
-    : public mlir::OpConversionPattern<cir::GlobalOp> {
-  const mlir::DataLayout &dataLayout;
+/// Convert a CIR attribute to an LLVM attribute. May use the datalayout for
+/// lowering attributes to-be-stored in memory.
+mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
+                                mlir::ConversionPatternRewriter &rewriter,
+                                const mlir::TypeConverter *converter);
 
-public:
-  CIRToLLVMGlobalOpLowering(const mlir::TypeConverter &typeConverter,
-                            mlir::MLIRContext *context,
-                            const mlir::DataLayout &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {
-    setHasBoundedRewriteRecursion();
-  }
+mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
-  mlir::LogicalResult
-  matchAndRewrite(cir::GlobalOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override;
+void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn);
 
-private:
-  bool attrRequiresRegionInitialization(mlir::Attribute attr) const;
-
-  mlir::LogicalResult matchAndRewriteRegionInitializedGlobal(
-      cir::GlobalOp op, mlir::Attribute init,
-      mlir::ConversionPatternRewriter &rewriter) const;
-
-  void setupRegionInitializedLLVMGlobalOp(
-      cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
-};
+#define GET_LLVM_LOWERING_PATTERNS
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef GET_LLVM_LOWERING_PATTERNS
 
 } // namespace direct
 } // namespace cir

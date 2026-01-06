@@ -21,39 +21,39 @@ namespace {
 constexpr const char *TestString = "test string";
 } // end anonymous namespace
 
-TEST(WrapperFunctionUtilsTest, DefaultWrapperFunctionResult) {
-  WrapperFunctionResult R;
+TEST(WrapperFunctionUtilsTest, DefaultWrapperFunctionBuffer) {
+  WrapperFunctionBuffer R;
   EXPECT_TRUE(R.empty());
   EXPECT_EQ(R.size(), 0U);
   EXPECT_EQ(R.getOutOfBandError(), nullptr);
 }
 
-TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromRange) {
-  auto R = WrapperFunctionResult::copyFrom(TestString, strlen(TestString) + 1);
+TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromRange) {
+  auto R = WrapperFunctionBuffer::copyFrom(TestString, strlen(TestString) + 1);
   EXPECT_EQ(R.size(), strlen(TestString) + 1);
   EXPECT_TRUE(strcmp(R.data(), TestString) == 0);
   EXPECT_FALSE(R.empty());
   EXPECT_EQ(R.getOutOfBandError(), nullptr);
 }
 
-TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromCString) {
-  auto R = WrapperFunctionResult::copyFrom(TestString);
+TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromCString) {
+  auto R = WrapperFunctionBuffer::copyFrom(TestString);
   EXPECT_EQ(R.size(), strlen(TestString) + 1);
   EXPECT_TRUE(strcmp(R.data(), TestString) == 0);
   EXPECT_FALSE(R.empty());
   EXPECT_EQ(R.getOutOfBandError(), nullptr);
 }
 
-TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromStdString) {
-  auto R = WrapperFunctionResult::copyFrom(std::string(TestString));
+TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromStdString) {
+  auto R = WrapperFunctionBuffer::copyFrom(std::string(TestString));
   EXPECT_EQ(R.size(), strlen(TestString) + 1);
   EXPECT_TRUE(strcmp(R.data(), TestString) == 0);
   EXPECT_FALSE(R.empty());
   EXPECT_EQ(R.getOutOfBandError(), nullptr);
 }
 
-TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromOutOfBandError) {
-  auto R = WrapperFunctionResult::createOutOfBandError(TestString);
+TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromOutOfBandError) {
+  auto R = WrapperFunctionBuffer::createOutOfBandError(TestString);
   EXPECT_FALSE(R.empty());
   EXPECT_TRUE(strcmp(R.getOutOfBandError(), TestString) == 0);
 }
@@ -73,17 +73,17 @@ private:
   int32_t X;
 };
 
-static WrapperFunctionResult voidNoopWrapper(const char *ArgData,
+static WrapperFunctionBuffer voidNoopWrapper(const char *ArgData,
                                              size_t ArgSize) {
   return WrapperFunction<void()>::handle(ArgData, ArgSize, voidNoop);
 }
 
-static WrapperFunctionResult addWrapper(const char *ArgData, size_t ArgSize) {
+static WrapperFunctionBuffer addWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(int32_t, int32_t)>::handle(
       ArgData, ArgSize, [](int32_t X, int32_t Y) -> int32_t { return X + Y; });
 }
 
-static WrapperFunctionResult addMethodWrapper(const char *ArgData,
+static WrapperFunctionBuffer addMethodWrapper(const char *ArgData,
                                               size_t ArgSize) {
   return WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::handle(
       ArgData, ArgSize, makeMethodWrapperHandler(&AddClass::addMethod));
@@ -112,29 +112,30 @@ static void voidNoopAsync(unique_function<void(SPSEmpty)> SendResult) {
   SendResult(SPSEmpty());
 }
 
-static WrapperFunctionResult voidNoopAsyncWrapper(const char *ArgData,
+static WrapperFunctionBuffer voidNoopAsyncWrapper(const char *ArgData,
                                                   size_t ArgSize) {
-  std::promise<WrapperFunctionResult> RP;
+  std::promise<WrapperFunctionBuffer> RP;
   auto RF = RP.get_future();
 
   WrapperFunction<void()>::handleAsync(
-      ArgData, ArgSize, voidNoopAsync,
-      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); });
+      ArgData, ArgSize,
+      [&](WrapperFunctionBuffer R) { RP.set_value(std::move(R)); },
+      voidNoopAsync);
 
   return RF.get();
 }
 
-static WrapperFunctionResult addAsyncWrapper(const char *ArgData,
+static WrapperFunctionBuffer addAsyncWrapper(const char *ArgData,
                                              size_t ArgSize) {
-  std::promise<WrapperFunctionResult> RP;
+  std::promise<WrapperFunctionBuffer> RP;
   auto RF = RP.get_future();
 
   WrapperFunction<int32_t(int32_t, int32_t)>::handleAsync(
       ArgData, ArgSize,
+      [&](WrapperFunctionBuffer R) { RP.set_value(std::move(R)); },
       [](unique_function<void(int32_t)> SendResult, int32_t X, int32_t Y) {
         SendResult(X + Y);
-      },
-      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); });
+      });
   return RF.get();
 }
 
@@ -149,12 +150,12 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandleAsyncRet) {
   EXPECT_EQ(Result, (int32_t)3);
 }
 
-static WrapperFunctionResult failingWrapper(const char *ArgData,
+static WrapperFunctionBuffer failingWrapper(const char *ArgData,
                                             size_t ArgSize) {
-  return WrapperFunctionResult::createOutOfBandError("failed");
+  return WrapperFunctionBuffer::createOutOfBandError("failed");
 }
 
-void asyncFailingWrapperCaller(unique_function<void(WrapperFunctionResult)> F,
+void asyncFailingWrapperCaller(unique_function<void(WrapperFunctionBuffer)> F,
                                const char *ArgData, size_t ArgSize) {
   F(failingWrapper(ArgData, ArgSize));
 }

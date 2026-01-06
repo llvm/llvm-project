@@ -1,3 +1,5 @@
+set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND Instruction)
+
 add_subdirectory(ARM)
 add_subdirectory(ARM64)
 add_subdirectory(LoongArch)

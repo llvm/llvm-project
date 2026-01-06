@@ -344,7 +344,7 @@ private:
 
   /// Activate parser-specific variables
   void EnableParserVars() {
-    if (!m_parser_vars.get())
+    if (!m_parser_vars)
       m_parser_vars = std::make_unique<ParserVars>();
   }
 
@@ -371,7 +371,7 @@ private:
 
   /// Activate struct variables
   void EnableStructVars() {
-    if (!m_struct_vars.get())
+    if (!m_struct_vars)
       m_struct_vars.reset(new struct StructVars);
   }
 
@@ -481,7 +481,10 @@ private:
   ///
   /// \param[in] namespace_decl
   ///     If valid and module is non-NULL, the parent namespace.
-  void LookupFunction(NameSearchContext &context, lldb::ModuleSP module_sp,
+  ///
+  /// \returns Returns \c true if we successfully found a function
+  /// and could create a decl with correct type-info for it.
+  bool LookupFunction(NameSearchContext &context, lldb::ModuleSP module_sp,
                       ConstString name,
                       const CompilerDeclContext &namespace_decl);
 

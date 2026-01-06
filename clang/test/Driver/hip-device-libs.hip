@@ -6,7 +6,7 @@
 // RUN:  --cuda-gpu-arch=gfx803 \
 // RUN:  --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // Test subtarget with flushing off by ddefault.
@@ -14,7 +14,7 @@
 // RUN:  --cuda-gpu-arch=gfx900 \
 // RUN:  --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // Test explicit flag, opposite of target default.
@@ -23,7 +23,7 @@
 // RUN:   -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // Test explicit flag, opposite of target default.
@@ -32,7 +32,7 @@
 // RUN:   -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // Test explicit flag, same as target default.
@@ -41,7 +41,7 @@
 // RUN:   -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // Test explicit flag, same as target default.
@@ -50,7 +50,7 @@
 // RUN:   -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // Test last flag wins, not flushing
@@ -59,7 +59,7 @@
 // RUN:   -fgpu-flush-denormals-to-zero -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -67,7 +67,7 @@
 // RUN:   -fgpu-flush-denormals-to-zero -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -75,7 +75,7 @@
 // RUN:   -fno-gpu-flush-denormals-to-zero -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -83,21 +83,21 @@
 // RUN:   -fno-gpu-flush-denormals-to-zero -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 // Test finding device lib in resource dir
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --offload-arch=gfx803 -nogpuinc \
 // RUN:   -resource-dir=%S/Inputs/rocm_resource_dir \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,RESDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,RESDIR
 
 // Test --hip-device-lib-path flag
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 -nogpuinc \
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 // Test --hip-device-lib-path wins over -resource-dir
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -105,7 +105,7 @@
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode   \
 // RUN:   -resource-dir=%S/Inputs/rocm_resource_dir \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 // Test environment variable HIP_DEVICE_LIB_PATH
 // RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/rocm/amdgcn/bitcode \
@@ -157,7 +157,7 @@
 // Test default code object version.
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI5
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI6
 
 // Test default code object version with old device library without abi_version_400.bc
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
@@ -208,14 +208,10 @@
 // ALL-NOT: error:
 // ALL: {{"[^"]*clang[^"]*"}}
 
-// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(64)?(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
-// ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
+// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(64)?(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
+// ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
 
-// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ocml.bc"
 // ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ockl.bc"
-
-// FLUSHD-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_daz_opt_on.bc"
-// NOFLUSHD-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_daz_opt_off.bc"
 
 // ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_unsafe_math_off.bc"
 // ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_finite_only_off.bc"
@@ -224,23 +220,19 @@
 // ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_isa_version_{{[0-9]+}}.bc"
 // INST-SAME: "-mlink-builtin-bitcode" "{{.*}}instrument.bc"
 
-// FAST: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
-// FAST-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_on.bc"
+// FAST: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_on.bc"
 // FAST-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_on.bc"
 // FAST-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_on.bc"
 
-// FINITE: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
-// FINITE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_off.bc"
+// FINITE: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_off.bc"
 // FINITE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_on.bc"
 // FINITE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_on.bc"
 
-// UNSAFE: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
-// UNSAFE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_on.bc"
+// UNSAFE: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_on.bc"
 // UNSAFE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_off.bc"
 // UNSAFE-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_on.bc"
 
-// DIVSQRT: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
-// DIVSQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_off.bc"
+// DIVSQRT: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_off.bc"
 // DIVSQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_off.bc"
 // DIVSQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_off.bc"
 
@@ -254,4 +246,4 @@
 // NOABI4-NOT: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_400.bc"
 // NOABI4-NOT: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_500.bc"
 // NOABI5: error: cannot find ROCm device library for ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
-// NOABI6: error: cannot find ROCm device library for ABI version 6; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
+// NOABI6: error: cannot find ROCm device library for ABI version 6, which requires ROCm 6.3 or higher; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library

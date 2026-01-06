@@ -265,3 +265,43 @@ omp.private {type = firstprivate} @_QFequivalenceEx_firstprivate_ptr_f32 : f32 c
 // CHECK:   store float %[[HOST_VAL]], ptr %[[PRIV_ALLOC]], align 4
 // Test that we inlined the body of the parallel region.
 // CHECK:   store float 0x{{.*}}, ptr %[[PRIV_ALLOC]], align 4
+
+// -----
+
+omp.private {type = private} @_QFEi_private_i32 : i32
+llvm.func @_QPprivate_alloc_with_switch() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(30 : i32) : i32
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x i32 {bindc_name = "n"} : (i64) -> !llvm.ptr
+  %4 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
+  llvm.store %0, %3 : i32, !llvm.ptr
+  %5 = llvm.load %3 : !llvm.ptr -> i32
+  llvm.switch %5 : i32, ^bb1 [
+    1: ^bb1,
+    2: ^bb2
+  ]
+^bb1:  // 2 preds: ^bb0, ^bb0
+  omp.simd private(@_QFEi_private_i32 %4 -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%arg1) : i32 = (%0) to (%1) inclusive step (%0) {
+      llvm.store %arg1, %arg0 : i32, !llvm.ptr
+      omp.yield
+    }
+  }
+  llvm.br ^bb2
+^bb2:  // 2 preds: ^bb0, ^bb1
+  llvm.return
+}
+
+// CHECK-LABEL: define void @_QPprivate_alloc_with_switch() {
+// CHECK:   br label %[[AFTER_ALLOCA_BLOCK:.*]]
+// CHECK: [[AFTER_ALLOCA_BLOCK]]:
+// CHECK:   switch i32 %{{.*}}, label %[[PRIVATE_INIT_BLOCK:.*]] [
+// CHECK:     i32 1, label %[[PRIVATE_INIT_BLOCK]]
+// CHECK:     i32 2, label %[[EXIT_BLOCK:.*]]
+// CHECK:   ]
+// CHECK: [[PRIVATE_INIT_BLOCK]]:
+// CHECK: omp.private.init:
+// CHECK: omp.simd.region:
+// CHECK: [[EXIT_BLOCK]]:
+// CHECK:   ret void

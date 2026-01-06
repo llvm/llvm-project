@@ -11,9 +11,14 @@
 #include "PythonTestCAPI.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/Diagnostics.h"
+#include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRTypes.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "nanobind/nanobind.h"
 
 namespace nb = nanobind;
 using namespace mlir::python::nanobind_adaptors;
@@ -23,18 +28,107 @@ static bool mlirTypeIsARankedIntegerTensor(MlirType t) {
          mlirTypeIsAInteger(mlirShapedTypeGetElementType(t));
 }
 
+struct PyTestType
+    : mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyConcreteType<PyTestType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPythonTestTestType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPythonTestTestTypeGetTypeID;
+  static constexpr const char *pyClassName = "TestType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+               context) {
+          return PyTestType(context->getRef(),
+                            mlirPythonTestTestTypeGet(context.get()->get()));
+        },
+        nb::arg("context").none() = nb::none());
+  }
+};
+
+struct PyTestIntegerRankedTensorType
+    : mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyConcreteType<
+          PyTestIntegerRankedTensorType,
+          mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyRankedTensorType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsARankedIntegerTensor;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirRankedTensorTypeGetTypeID;
+  static constexpr const char *pyClassName = "TestIntegerRankedTensorType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](std::vector<int64_t> shape, unsigned width,
+           mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+               ctx) {
+          MlirAttribute encoding = mlirAttributeGetNull();
+          return PyTestIntegerRankedTensorType(
+              ctx->getRef(),
+              mlirRankedTensorTypeGet(
+                  shape.size(), shape.data(),
+                  mlirIntegerTypeGet(ctx.get()->get(), width), encoding));
+        },
+        nb::arg("shape"), nb::arg("width"),
+        nb::arg("context").none() = nb::none());
+  }
+};
+
+struct PyTestTensorValue
+    : mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyConcreteValue<
+          PyTestTensorValue> {
+  static constexpr IsAFunctionTy isaFunction =
+      mlirTypeIsAPythonTestTestTensorValue;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirRankedTensorTypeGetTypeID;
+  static constexpr const char *pyClassName = "TestTensorValue";
+  using PyConcreteValue::PyConcreteValue;
+
+  static void bindDerived(ClassTy &c) {
+    c.def("is_null", [](MlirValue &self) { return mlirValueIsNull(self); });
+  }
+};
+
+class PyTestAttr
+    : public mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::PyConcreteAttribute<
+          PyTestAttr> {
+public:
+  static constexpr IsAFunctionTy isaFunction =
+      mlirAttributeIsAPythonTestTestAttribute;
+  static constexpr const char *pyClassName = "TestAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPythonTestTestAttributeGetTypeID;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+               context) {
+          return PyTestAttr(context->getRef(), mlirPythonTestTestAttributeGet(
+                                                   context.get()->get()));
+        },
+        nb::arg("context").none() = nb::none());
+  }
+};
+
 NB_MODULE(_mlirPythonTestNanobind, m) {
   m.def(
       "register_python_test_dialect",
-      [](MlirContext context, bool load) {
+      [](mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+             context,
+         bool load) {
         MlirDialectHandle pythonTestDialect =
             mlirGetDialectHandle__python_test__();
-        mlirDialectHandleRegisterDialect(pythonTestDialect, context);
+        mlirDialectHandleRegisterDialect(pythonTestDialect,
+                                         context.get()->get());
         if (load) {
-          mlirDialectHandleLoadDialect(pythonTestDialect, context);
+          mlirDialectHandleLoadDialect(pythonTestDialect, context.get()->get());
         }
       },
-      nb::arg("context"), nb::arg("load") = true);
+      nb::arg("context").none() = nb::none(), nb::arg("load") = true);
 
   m.def(
       "register_dialect",
@@ -43,77 +137,23 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
             mlirGetDialectHandle__python_test__();
         mlirDialectHandleInsertDialect(pythonTestDialect, registry);
       },
-      nb::arg("registry"));
+      nb::arg("registry"),
+      // clang-format off
+      nb::sig("def register_dialect(registry: " MAKE_MLIR_PYTHON_QUALNAME("ir.DialectRegistry") ") -> None"));
+  // clang-format on
 
-  mlir_attribute_subclass(m, "TestAttr",
-                          mlirAttributeIsAPythonTestTestAttribute,
-                          mlirPythonTestTestAttributeGetTypeID)
-      .def_classmethod(
-          "get",
-          [](const nb::object &cls, MlirContext ctx) {
-            return cls(mlirPythonTestTestAttributeGet(ctx));
-          },
-          nb::arg("cls"), nb::arg("context").none() = nb::none());
+  m.def(
+      "test_diagnostics_with_errors_and_notes",
+      [](mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext
+             ctx) {
+        mlir::python::CollectDiagnosticsToStringScope handler(ctx.get()->get());
+        mlirPythonTestEmitDiagnosticWithNote(ctx.get()->get());
+        throw nb::value_error(handler.takeMessage().c_str());
+      },
+      nb::arg("context").none() = nb::none());
 
-  mlir_type_subclass(m, "TestType", mlirTypeIsAPythonTestTestType,
-                     mlirPythonTestTestTypeGetTypeID)
-      .def_classmethod(
-          "get",
-          [](const nb::object &cls, MlirContext ctx) {
-            return cls(mlirPythonTestTestTypeGet(ctx));
-          },
-          nb::arg("cls"), nb::arg("context").none() = nb::none());
-
-  auto typeCls =
-      mlir_type_subclass(m, "TestIntegerRankedTensorType",
-                         mlirTypeIsARankedIntegerTensor,
-                         nb::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-                             .attr("RankedTensorType"))
-          .def_classmethod(
-              "get",
-              [](const nb::object &cls, std::vector<int64_t> shape,
-                 unsigned width, MlirContext ctx) {
-                MlirAttribute encoding = mlirAttributeGetNull();
-                return cls(mlirRankedTensorTypeGet(
-                    shape.size(), shape.data(), mlirIntegerTypeGet(ctx, width),
-                    encoding));
-              },
-              nb::arg("cls"), nb::arg("shape"), nb::arg("width"),
-              nb::arg("context").none() = nb::none());
-
-  assert(nb::hasattr(typeCls.get_class(), "static_typeid") &&
-         "TestIntegerRankedTensorType has no static_typeid");
-
-  MlirTypeID mlirRankedTensorTypeID = mlirRankedTensorTypeGetTypeID();
-
-  nb::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-      .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
-          mlirRankedTensorTypeID, nb::arg("replace") = true)(
-          nanobind::cpp_function([typeCls](const nb::object &mlirType) {
-            return typeCls.get_class()(mlirType);
-          }));
-
-  auto valueCls = mlir_value_subclass(m, "TestTensorValue",
-                                      mlirTypeIsAPythonTestTestTensorValue)
-                      .def("is_null", [](MlirValue &self) {
-                        return mlirValueIsNull(self);
-                      });
-
-  nb::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-      .attr(MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR)(
-          mlirRankedTensorTypeID)(
-          nanobind::cpp_function([valueCls](const nb::object &valueObj) {
-            nb::object capsule = mlirApiObjectToCapsule(valueObj);
-            MlirValue v = mlirPythonCapsuleToValue(capsule.ptr());
-            MlirType t = mlirValueGetType(v);
-            // This is hyper-specific in order to exercise/test registering a
-            // value caster from cpp (but only for a single test case; see
-            // testTensorValue python_test.py).
-            if (mlirShapedTypeHasStaticShape(t) &&
-                mlirShapedTypeGetDimSize(t, 0) == 1 &&
-                mlirShapedTypeGetDimSize(t, 1) == 2 &&
-                mlirShapedTypeGetDimSize(t, 2) == 3)
-              return valueCls.get_class()(valueObj);
-            return valueObj;
-          }));
+  PyTestAttr::bind(m);
+  PyTestType::bind(m);
+  PyTestIntegerRankedTensorType::bind(m);
+  PyTestTensorValue::bind(m);
 }
