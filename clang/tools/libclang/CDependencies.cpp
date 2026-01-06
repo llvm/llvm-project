@@ -366,9 +366,9 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
     if (!Result)
       return CXError_Failure;
   } else {
-    Result =
-        Worker->computeDependencies(WorkingDirectory, Compilation, DepConsumer,
-                                    *Controller, *SerialDiagConsumer);
+    Result = clang::tooling::computeDependencies(
+        *Worker, WorkingDirectory, Compilation, DepConsumer, *Controller,
+        *SerialDiagConsumer);
   }
 
   if (!Result)
