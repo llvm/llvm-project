@@ -1071,6 +1071,14 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def WaveActiveBallot : DXILOp<118, waveAnyTrue> {
+  let Doc = "returns uint4 containing a bitmask of the evaluation of the boolean expression for all active lanes in the current wave.";
+  let intrinsics = [IntrinSelect<int_dx_wave_ballot>];
+  let arguments = [Int1Ty];
+  let result = OverloadTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let Doc = "returns the result of the operation across waves";
   let intrinsics = [
