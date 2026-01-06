@@ -59698,6 +59698,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     case ISD::SETCC:
+    case X86ISD::CMPM:
       if (!IsSplat && EltSizeInBits == 1 &&
           llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op0.getOperand(0).getValueType() ==
@@ -60161,6 +60162,8 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
     // Attempt to merge comparison/logic ops if the type is legal.
     if (TLI.isTypeLegal(VT) &&
         (all_of(Ops, [](SDValue Op) { return Op.getOpcode() == ISD::SETCC; }) ||
+         all_of(Ops,
+                [](SDValue Op) { return Op.getOpcode() == X86ISD::CMPM; }) ||
          all_of(Ops, [](SDValue Op) {
            return ISD::isBitwiseLogicOp(Op.getOpcode());
          }))) {
