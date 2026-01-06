@@ -1,7 +1,11 @@
 import * as vscode from "vscode";
 
-export function getSymbolsTableHTMLContent(tabulatorJsPath: vscode.Uri, tabulatorCssPath: vscode.Uri, symbolsTableScriptPath: vscode.Uri): string {
-    return `<!DOCTYPE html>
+export function getSymbolsTableHTMLContent(
+  tabulatorJsPath: vscode.Uri,
+  tabulatorCssPath: vscode.Uri,
+  symbolsTableScriptPath: vscode.Uri,
+): string {
+  return `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">

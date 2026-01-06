@@ -1,5 +1,5 @@
-import * as vscode from "vscode";
 import { DebugProtocol } from "@vscode/debugprotocol";
+import * as vscode from "vscode";
 import { DebugSessionTracker } from "../debug-session-tracker";
 
 export interface ModuleProperty {

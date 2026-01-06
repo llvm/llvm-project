@@ -40,6 +40,7 @@
     "esbuild": "^0.25.9",
     "prettier": "^3.4.2",
     "prettier-plugin-curly": "^0.3.1",
+    "prettier-plugin-organize-imports": "^4.3.0",
     "tabulator-tables": "^6.3.1",
     "typescript": "^5.7.3"
   },

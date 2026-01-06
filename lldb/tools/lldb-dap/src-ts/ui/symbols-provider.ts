@@ -1,12 +1,11 @@
-import * as vscode from "vscode";
 import { DebugProtocol } from "@vscode/debugprotocol";
+import * as vscode from "vscode";
 
 import { DebugSessionTracker } from "../debug-session-tracker";
 import { DisposableContext } from "../disposable-context";
 
 import { SymbolType } from "..";
 import { getSymbolsTableHTMLContent } from "./symbols-webview-html";
-import { getDefaultConfigKey } from "../debug-configuration-provider";
 
 export class SymbolsProvider extends DisposableContext {
   constructor(
@@ -15,35 +14,43 @@ export class SymbolsProvider extends DisposableContext {
   ) {
     super();
 
-    this.pushSubscription(vscode.commands.registerCommand(
-      "lldb-dap.debug.showSymbols",
-      () => {
+    this.pushSubscription(
+      vscode.commands.registerCommand("lldb-dap.debug.showSymbols", () => {
         const session = vscode.debug.activeDebugSession;
         if (!session) return;
 
         this.SelectModuleAndShowSymbols(session);
-      },
-    ));
+      }),
+    );
 
-    this.pushSubscription(vscode.commands.registerCommand(
-      "lldb-dap.modules.showSymbols",
-      (moduleItem: DebugProtocol.Module) => {
-        const session = vscode.debug.activeDebugSession;
-        if (!session) return;
+    this.pushSubscription(
+      vscode.commands.registerCommand(
+        "lldb-dap.modules.showSymbols",
+        (moduleItem: DebugProtocol.Module) => {
+          const session = vscode.debug.activeDebugSession;
+          if (!session) return;
 
-        this.showSymbolsForModule(session, moduleItem);
-      },
-    ));
+          this.showSymbolsForModule(session, moduleItem);
+        },
+      ),
+    );
 
-    this.tracker.onDidReceiveSessionCapabilities(([ _session, capabilities ]) => {
+    this.tracker.onDidReceiveSessionCapabilities(([_session, capabilities]) => {
       if (capabilities.supportsModuleSymbolsRequest) {
         vscode.commands.executeCommand(
-            "setContext", "lldb-dap.supportsModuleSymbolsRequest", true);
+          "setContext",
+          "lldb-dap.supportsModuleSymbolsRequest",
+          true,
+        );
       }
     });
 
     this.tracker.onDidExitSession((_session) => {
-      vscode.commands.executeCommand("setContext", "lldb-dap.supportsModuleSymbolsRequest", false);
+      vscode.commands.executeCommand(
+        "setContext",
+        "lldb-dap.supportsModuleSymbolsRequest",
+        false,
+      );
     });
   }
 
@@ -54,9 +61,12 @@ export class SymbolsProvider extends DisposableContext {
     }
 
     // Let the user select a module to show symbols for
-    const selectedModule = await vscode.window.showQuickPick(modules.map(m => new ModuleQuickPickItem(m)), {
-        placeHolder: "Select a module to show symbols for"
-    });
+    const selectedModule = await vscode.window.showQuickPick(
+      modules.map((m) => new ModuleQuickPickItem(m)),
+      {
+        placeHolder: "Select a module to show symbols for",
+      },
+    );
     if (!selectedModule) {
       return;
     }
@@ -64,23 +74,40 @@ export class SymbolsProvider extends DisposableContext {
     await this.showSymbolsForModule(session, selectedModule.module);
   }
 
-  private async showSymbolsForModule(session: vscode.DebugSession, module: DebugProtocol.Module) {
+  private async showSymbolsForModule(
+    session: vscode.DebugSession,
+    module: DebugProtocol.Module,
+  ) {
     try {
-      const symbols = await this.getSymbolsForModule(session, module.id.toString());
+      const symbols = await this.getSymbolsForModule(
+        session,
+        module.id.toString(),
+      );
       await this.showSymbolsInNewTab(module.name.toString(), symbols);
     } catch (error) {
       if (error instanceof Error) {
-        await vscode.window.showErrorMessage("Failed to retrieve symbols: " + error.message);
+        await vscode.window.showErrorMessage(
+          "Failed to retrieve symbols: " + error.message,
+        );
       } else {
-        await vscode.window.showErrorMessage("Failed to retrieve symbols due to an unknown error.");
+        await vscode.window.showErrorMessage(
+          "Failed to retrieve symbols due to an unknown error.",
+        );
       }
-      
+
       return;
     }
   }
 
-  private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<SymbolType[]> {
-    const symbols_response: { symbols: Array<SymbolType> } = await session.customRequest("__lldb_moduleSymbols", { moduleId, moduleName: '' });
+  private async getSymbolsForModule(
+    session: vscode.DebugSession,
+    moduleId: string,
+  ): Promise<SymbolType[]> {
+    const symbols_response: { symbols: Array<SymbolType> } =
+      await session.customRequest("__lldb_moduleSymbols", {
+        moduleId,
+        moduleName: "",
+      });
     return symbols_response?.symbols || [];
   }
 
@@ -91,26 +118,47 @@ export class SymbolsProvider extends DisposableContext {
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
-        localResourceRoots: [
-          this.getExtensionResourcePath()
-        ]
-      }
+        localResourceRoots: [this.getExtensionResourcePath()],
+      },
     );
 
     let tabulatorJsFilename = "tabulator_simple.min.css";
-    if (vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast) {
+    if (
+      vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ||
+      vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
+    ) {
       tabulatorJsFilename = "tabulator_midnight.min.css";
     }
-    const tabulatorCssPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), tabulatorJsFilename));
-    const tabulatorJsPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.js"));
-    const symbolsTableScriptPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "symbols-table-view.js"));
+    const tabulatorCssPath = panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.getExtensionResourcePath(), tabulatorJsFilename),
+    );
+    const tabulatorJsPath = panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.js"),
+    );
+    const symbolsTableScriptPath = panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.getExtensionResourcePath(),
+        "symbols-table-view.js",
+      ),
+    );
 
-    panel.webview.html = getSymbolsTableHTMLContent(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath);
-    await panel.webview.postMessage({ command: "updateSymbols", symbols: symbols });
+    panel.webview.html = getSymbolsTableHTMLContent(
+      tabulatorJsPath,
+      tabulatorCssPath,
+      symbolsTableScriptPath,
+    );
+    await panel.webview.postMessage({
+      command: "updateSymbols",
+      symbols: symbols,
+    });
   }
 
   private getExtensionResourcePath(): vscode.Uri {
-    return vscode.Uri.joinPath(this.extensionContext.extensionUri, "out", "webview");
+    return vscode.Uri.joinPath(
+      this.extensionContext.extensionUri,
+      "out",
+      "webview",
+    );
   }
 }
 
