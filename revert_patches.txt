@@ -1,4 +1,3 @@
 ---
-need to work on __cxa_pure_virtual symbol
-[OpenMP][clang] Register Vtables on device for indirect calls (#159856)
+XXXXXXXXX
 ---
