@@ -173,7 +173,7 @@ define <16 x float> @concat_sqrt_v16f32_v8f32(<8 x float> %a0, <8 x float> %a1) 
   ret <16 x float> %res
 }
 
-; FIXME: We are concatenating the sqrt operands, so the fadd could be cheaply concatenated as well.
+; We are concatenating the sqrt operands, so the fadd can be cheaply concatenated as well.
 define void @concat_sqrt_fadd_v8f32_v4f32(<4 x float> %x0, <4 x float> %x1, <4 x float> %y0, <4 x float> %y1, ptr %p0){
 ; SSE-LABEL: concat_sqrt_fadd_v8f32_v4f32:
 ; SSE:       # %bb.0:
@@ -189,12 +189,12 @@ define void @concat_sqrt_fadd_v8f32_v4f32(<4 x float> %x0, <4 x float> %x1, <4 x
 ;
 ; AVX1-LABEL: concat_sqrt_fadd_v8f32_v4f32:
 ; AVX1:       # %bb.0:
+; AVX1-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vaddps %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vaddps %xmm3, %xmm1, %xmm3
-; AVX1-NEXT:    vmovaps %xmm3, 16(%rdi)
-; AVX1-NEXT:    vmovaps %xmm2, (%rdi)
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm1
+; AVX1-NEXT:    vmovaps %ymm1, (%rdi)
 ; AVX1-NEXT:    vsqrtps %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, 32(%rdi)
 ; AVX1-NEXT:    vzeroupper
@@ -202,25 +202,25 @@ define void @concat_sqrt_fadd_v8f32_v4f32(<4 x float> %x0, <4 x float> %x1, <4 x
 ;
 ; AVX2-LABEL: concat_sqrt_fadd_v8f32_v4f32:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vaddps %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vaddps %xmm3, %xmm1, %xmm3
-; AVX2-NEXT:    vmovaps %xmm3, 16(%rdi)
+; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vaddps %ymm2, %ymm0, %ymm1
 ; AVX2-NEXT:    vsqrtps %ymm0, %ymm0
-; AVX2-NEXT:    vmovaps %xmm2, (%rdi)
+; AVX2-NEXT:    vmovaps %ymm1, (%rdi)
 ; AVX2-NEXT:    vmovaps %ymm0, 32(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: concat_sqrt_fadd_v8f32_v4f32:
 ; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-NEXT:    vaddps %xmm2, %xmm0, %xmm2
-; AVX512-NEXT:    vaddps %xmm3, %xmm1, %xmm3
-; AVX512-NEXT:    vmovaps %xmm3, 16(%rdi)
-; AVX512-NEXT:    vmovaps %xmm2, (%rdi)
+; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vaddps %ymm2, %ymm0, %ymm1
+; AVX512-NEXT:    vmovaps %ymm1, (%rdi)
 ; AVX512-NEXT:    vsqrtps %ymm0, %ymm0
 ; AVX512-NEXT:    vmovaps %ymm0, 32(%rdi)
 ; AVX512-NEXT:    vzeroupper

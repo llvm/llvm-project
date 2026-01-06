@@ -244,6 +244,9 @@ emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
       if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
         return "";
 
+      if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
+        return "";
+
       if (const auto *generic =
               ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
         if (!generic->specific())
