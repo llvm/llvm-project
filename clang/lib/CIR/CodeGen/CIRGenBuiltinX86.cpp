@@ -449,17 +449,33 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
 // Convert F16 halfs to floats.
 static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
                                             mlir::Location loc,
-                                            const StringRef str,
                                             llvm::ArrayRef<mlir::Value> ops,
-                                            mlir::Type dstTy) {
+                                            mlir::Type dstTy,
+                                            unsigned builtinID) {
   assert((ops.size() == 1 || ops.size() == 3 || ops.size() == 4) &&
          "Unknown cvtph2ps intrinsic");
 
   // If the SAE intrinsic doesn't use default rounding then we can't upgrade.
-  if (ops.size() == 4 &&
-      ops[3].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() !=
-          4) {
-    return emitIntrinsicCallOp(builder, loc, str, dstTy, ops);
+  if (ops.size() == 4) {
+    auto constOp = ops[3].getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "Expected constant operand");
+    if (constOp.getIntValue().getZExtValue() != 4) {
+      StringRef intrinsicName;
+      switch (builtinID) {
+      default:
+        llvm_unreachable("Unexpected builtin");
+      case X86::BI__builtin_ia32_vcvtph2ps_mask:
+        intrinsicName = "x86.avx512.mask.vcvtph2ps.128";
+        break;
+      case X86::BI__builtin_ia32_vcvtph2ps256_mask:
+        intrinsicName = "x86.avx512.mask.vcvtph2ps.256";
+        break;
+      case X86::BI__builtin_ia32_vcvtph2ps512_mask:
+        intrinsicName = "x86.avx512.mask.vcvtph2ps.512";
+        break;
+      }
+      return emitIntrinsicCallOp(builder, loc, intrinsicName, dstTy, ops);
+    }
   }
 
   unsigned numElts = cast<cir::VectorType>(dstTy).getSize();
@@ -1875,8 +1891,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vcvtph2ps256_mask:
   case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
     mlir::Location loc = getLoc(expr->getExprLoc());
-    return emitX86CvtF16ToFloatExpr(builder, loc, "cvtph2ps", ops,
-                                    convertType(expr->getType()));
+    return emitX86CvtF16ToFloatExpr(builder, loc, ops,
+                                    convertType(expr->getType()), builtinID);
   }
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:

@@ -106,3 +106,42 @@ __m512 test_vcvtph2ps512_maskz(__m256i a, __mmask16 k) {
   typedef short __v16hi __attribute__((__vector_size__(32)));
   return __builtin_ia32_vcvtph2ps512_mask((__v16hi)a, _mm512_setzero_ps(), k, 4);
 }
+
+__m512 test_mm512_cvt_roundph_ps(__m256i a) {
+  // CIR-LABEL: cir.func no_inline dso_local @test_mm512_cvt_roundph_ps
+  // CIR: %{{.*}} = cir.call_llvm_intrinsic "x86.avx512.mask.vcvtph2ps.512" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<16 x !s16i>, !cir.vector<16 x !cir.float>, !u16i, !s32i) -> !cir.vector<16 x !cir.float>
+
+  // LLVM-LABEL: @test_mm512_cvt_roundph_ps
+  // LLVM: call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %{{.*}}, <16 x float> %{{.*}}, i16 -1, i32 8)
+
+  // OGCG-LABEL: @test_mm512_cvt_roundph_ps
+  // OGCG: call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %{{.*}}, <16 x float> zeroinitializer, i16 -1, i32 8)
+  typedef short __v16hi __attribute__((__vector_size__(32)));
+  return _mm512_cvt_roundph_ps((__v16hi)a, _MM_FROUND_NO_EXC);
+}
+
+__m512 test_mm512_mask_cvt_roundph_ps(__m512 w, __mmask16 u, __m256i a) {
+  // CIR-LABEL: cir.func no_inline dso_local @test_mm512_mask_cvt_roundph_ps
+  // CIR: %{{.*}} = cir.call_llvm_intrinsic "x86.avx512.mask.vcvtph2ps.512" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<16 x !s16i>, !cir.vector<16 x !cir.float>, !u16i, !s32i) -> !cir.vector<16 x !cir.float>
+
+  // LLVM-LABEL: @test_mm512_mask_cvt_roundph_ps
+  // LLVM: call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %{{.*}}, <16 x float> %{{.*}}, i16 %{{.*}}, i32 8)
+
+  // OGCG-LABEL: @test_mm512_mask_cvt_roundph_ps
+  // OGCG: call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %{{.*}}, <16 x float> %{{.*}}, i16 %{{.*}}, i32 8)
+  typedef short __v16hi __attribute__((__vector_size__(32)));
+  return _mm512_mask_cvt_roundph_ps(w, u, (__v16hi)a, _MM_FROUND_NO_EXC);
+}
+
+__m512 test_mm512_maskz_cvt_roundph_ps(__mmask16 u, __m256i a) {
+  // CIR-LABEL: cir.func no_inline dso_local @test_mm512_maskz_cvt_roundph_ps
+  // CIR: %{{.*}} = cir.call_llvm_intrinsic "x86.avx512.mask.vcvtph2ps.512" %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<16 x !s16i>, !cir.vector<16 x !cir.float>, !u16i, !s32i) -> !cir.vector<16 x !cir.float>
+
+  // LLVM-LABEL: @test_mm512_maskz_cvt_roundph_ps
+  // LLVM: call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %{{.*}}, <16 x float> %{{.*}}, i16 %{{.*}}, i32 8)
+
+  // OGCG-LABEL: @test_mm512_maskz_cvt_roundph_ps
+  // OGCG: call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %{{.*}}, <16 x float> %{{.*}}, i16 %{{.*}}, i32 8)
+  typedef short __v16hi __attribute__((__vector_size__(32)));
+  return _mm512_maskz_cvt_roundph_ps(u, (__v16hi)a, _MM_FROUND_NO_EXC);
+}
