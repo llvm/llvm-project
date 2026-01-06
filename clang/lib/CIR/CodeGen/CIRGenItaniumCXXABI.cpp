@@ -2357,9 +2357,13 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
                          "initCatchParam: PointerRepresentation OCL_Strong");
         return;
 
-      case Qualifiers::OCL_None:
       case Qualifiers::OCL_ExplicitNone:
       case Qualifiers::OCL_Autoreleasing:
+        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation "
+                              "OCL_ExplicitNone & OCL_Autoreleasing");
+        return;
+
+      case Qualifiers::OCL_None:
         cgf.getBuilder().createStore(cgf.getLoc(loc), catchParam, paramAddr);
         return;
 
