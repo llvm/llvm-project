@@ -4673,7 +4673,8 @@ UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
 
   Descriptor *D = P.createDescriptor(
       Src, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
-      IsTemporary, /*IsMutable=*/false, /*IsVolatile=*/false, Init);
+      IsTemporary, /*IsMutable=*/false, /*IsVolatile=*/Ty.isVolatileQualified(),
+      Init);
   if (!D)
     return std::nullopt;
   D->IsConstexprUnknown = IsConstexprUnknown;
@@ -4900,8 +4901,11 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
 
     UnsignedOrNone GlobalIndex = P.getGlobal(VD);
     if (GlobalIndex) {
+      // The global was previously created but the initializer failed.
+      if (!P.getGlobal(*GlobalIndex)->isInitialized())
+        return false;
       // We've already seen and initialized this global.
-      if (P.getPtrGlobal(*GlobalIndex).isInitialized())
+      if (P.isGlobalInitialized(*GlobalIndex))
         return checkDecl();
       // The previous attempt at initialization might've been unsuccessful,
       // so let's try this one.

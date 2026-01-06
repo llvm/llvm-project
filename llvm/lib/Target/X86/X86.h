@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/PassInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -130,10 +131,23 @@ FunctionPass *createX86DynAllocaExpanderLegacyPass();
 FunctionPass *createX86TileConfigPass();
 
 /// Return a pass that preconfig the tile registers before fast reg allocation.
-FunctionPass *createX86FastPreTileConfigPass();
+class X86FastPreTileConfigPass
+    : public PassInfoMixin<X86FastPreTileConfigPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FastPreTileConfigLegacyPass();
 
 /// Return a pass that config the tile registers after fast reg allocation.
-FunctionPass *createX86FastTileConfigPass();
+class X86FastTileConfigPass : public PassInfoMixin<X86FastTileConfigPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FastTileConfigLegacyPass();
 
 /// Return a pass that insert pseudo tile config instruction.
 FunctionPass *createX86PreTileConfigPass();
@@ -305,8 +319,8 @@ void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoLegacyPass(PassRegistry &);
 void initializeX86FPStackifierLegacyPass(PassRegistry &);
-void initializeX86FastPreTileConfigPass(PassRegistry &);
-void initializeX86FastTileConfigPass(PassRegistry &);
+void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
+void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);

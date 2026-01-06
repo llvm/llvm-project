@@ -81,8 +81,8 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86CallFrameOptimizationLegacyPass(PR);
   initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigPass(PR);
-  initializeX86FastPreTileConfigPass(PR);
-  initializeX86FastTileConfigPass(PR);
+  initializeX86FastPreTileConfigLegacyPass(PR);
+  initializeX86FastTileConfigLegacyPass(PR);
   initializeKCFIPass(PR);
   initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
@@ -529,7 +529,7 @@ void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
   else
-    addPass(createX86FastPreTileConfigPass());
+    addPass(createX86FastPreTileConfigLegacyPass());
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
@@ -635,7 +635,7 @@ void X86PassConfig::addPreEmitPass2() {
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {
-  addPass(createX86FastTileConfigPass());
+  addPass(createX86FastTileConfigLegacyPass());
   return true;
 }
 

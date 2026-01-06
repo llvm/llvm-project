@@ -244,6 +244,9 @@ emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
       if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
         return "";
 
+      if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
+        return "";
+
       if (const auto *generic =
               ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
         if (!generic->specific())
@@ -3475,7 +3478,24 @@ private:
               attachInliningDirectiveToStmt(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::Prefetch &prefetch) {
-              TODO(getCurrentLocation(), "!$dir prefetch");
+              for (const auto &p : prefetch.v) {
+                Fortran::evaluate::ExpressionAnalyzer ea{
+                    bridge.getSemanticsContext()};
+                Fortran::lower::SomeExpr expr{*ea.Analyze(
+                    std::get<Fortran::parser::DataRef>(p.value().u))};
+                Fortran::lower::StatementContext stmtCtx;
+                mlir::Location loc = genLocation(dir.source);
+                hlfir::Entity var = Fortran::lower::convertExprToHLFIR(
+                    loc, *this, expr, localSymbols, stmtCtx);
+                mlir::Value memRef =
+                    hlfir::genVariableRawAddress(loc, *builder, var);
+
+                // TODO: Don't use default value, instead get the following
+                //       info from the directive
+                uint32_t isRead{0}, localityHint{3}, isData{1};
+                fir::PrefetchOp::create(*builder, loc, memRef, isRead,
+                                        localityHint, isData);
+              }
             },
             [&](const Fortran::parser::CompilerDirective::IVDep &) {
               attachDirectiveToLoop(dir, &eval);
