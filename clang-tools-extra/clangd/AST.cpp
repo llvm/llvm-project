@@ -418,7 +418,7 @@ std::string printType(const QualType QT, const DeclContext &CurContext,
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   PrintingPolicy PP(CurContext.getParentASTContext().getPrintingPolicy());
-  PP.SuppressTagKeyword = true;
+  PP.SuppressTagKeywordInElaboratedNames = true;
   PP.SuppressUnwrittenScope = true;
   PP.FullyQualifiedName = FullyQualify;
 

@@ -104,7 +104,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
       llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
   policy.AlwaysIncludeTypeForTemplateArgument = true;
   policy.PrintAsCanonical = true;
-  policy.SuppressTagKeyword = true;
+  policy.SuppressTagKeywordInElaboratedNames = true;
 
   if (recordDecl->getIdentifier())
     QualType(astContext.getCanonicalTagType(recordDecl))

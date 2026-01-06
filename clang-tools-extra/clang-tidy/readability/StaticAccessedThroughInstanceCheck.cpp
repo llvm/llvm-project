@@ -72,7 +72,7 @@ void StaticAccessedThroughInstanceCheck::check(
 
   const ASTContext *AstContext = Result.Context;
   PrintingPolicy PrintingPolicyWithSuppressedTag(AstContext->getLangOpts());
-  PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
+  PrintingPolicyWithSuppressedTag.SuppressTagKeywordInElaboratedNames = true;
   PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
 
   PrintingPolicyWithSuppressedTag.PrintAsCanonical =

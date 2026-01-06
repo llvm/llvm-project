@@ -1006,7 +1006,7 @@ public:
     // Ensure that the printing policy is producing a description that is as
     // short as possible.
     m_desc_policy.SuppressScope = true;
-    m_desc_policy.SuppressTagKeyword = true;
+    m_desc_policy.SuppressTagKeywordInElaboratedNames = true;
     m_desc_policy.FullyQualifiedName = false;
     m_desc_policy.TerseOutput = true;
     m_desc_policy.IncludeNewlines = false;

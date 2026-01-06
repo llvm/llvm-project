@@ -61,8 +61,9 @@ struct PrintingPolicy {
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
-        SuppressScope(false), SuppressUnwrittenScope(false),
+        SuppressTagKeywordInElaboratedNames(LO.CPlusPlus),
+        IncludeTagDefinition(false), SuppressScope(false),
+        SuppressUnwrittenScope(false),
         SuppressInlineNamespace(
             llvm::to_underlying(SuppressInlineNamespaceMode::Redundant)),
         SuppressInitializers(false), ConstantArraySizeAsWritten(false),
@@ -88,7 +89,7 @@ struct PrintingPolicy {
   /// construct). This should not be used if a real LangOptions object is
   /// available.
   void adjustForCPlusPlus() {
-    SuppressTagKeyword = true;
+    SuppressTagKeywordInElaboratedNames = true;
     Bool = true;
     UseVoidForZeroParams = false;
   }
@@ -122,7 +123,7 @@ struct PrintingPolicy {
   /// struct Geometry::Point;
   /// \endcode
   LLVM_PREFERRED_TYPE(bool)
-  unsigned SuppressTagKeyword : 1;
+  unsigned SuppressTagKeywordInElaboratedNames : 1;
 
   /// When true, include the body of a tag definition.
   ///
