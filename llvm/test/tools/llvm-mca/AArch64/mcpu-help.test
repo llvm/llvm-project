@@ -1,0 +1,7 @@
+# RUN: llvm-mca -mtriple=aarch64-unknown-linux-gnu -mcpu=help 2>&1 | FileCheck %s --check-prefix=HELP
+
+# HELP: Available CPUs for this target:
+# CHECK: a64fx           - Select the a64fx processor.
+# CHECK: ampere1         - Select the ampere1 processor.
+# CHECK: Available features for this target:
+# CHECK-NOT: error:

@@ -392,11 +392,18 @@ int main(int argc, char **argv) {
   if (!TheTarget)
     return 1;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferPtr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename);
-  if (std::error_code EC = BufferPtr.getError()) {
-    WithColor::error() << InputFilename << ": " << EC.message() << '\n';
-    return 1;
+  const bool WantsCPUHelp = MCPU == "help";
+
+  std::unique_ptr<MemoryBuffer> InputBuffer;
+  if (!WantsCPUHelp) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+        MemoryBuffer::getFileOrSTDIN(InputFilename);
+    if (!BufferOrErr) {
+      std::error_code EC = BufferOrErr.getError();
+      WithColor::error() << InputFilename << ": " << EC.message() << '\n';
+      return 1;
+    }
+    InputBuffer = std::move(*BufferOrErr);
   }
 
   if (MCPU == "native")
@@ -417,6 +424,9 @@ int main(int argc, char **argv) {
     WithColor::error() << "unable to create subtarget info\n";
     return 1;
   }
+
+  if (WantsCPUHelp)
+    return 0;
 
   if (!STI->isCPUStringValid(MCPU))
     return 1;
@@ -449,7 +459,7 @@ int main(int argc, char **argv) {
   SourceMgr SrcMgr;
 
   // Tell SrcMgr about this buffer, which is what the parser will pick up.
-  SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
+  SrcMgr.AddNewSourceBuffer(std::move(InputBuffer), SMLoc());
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
