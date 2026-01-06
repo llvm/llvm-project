@@ -291,8 +291,7 @@ struct Recipe_match {
       return false;
 
     if (R->getNumOperands() != std::tuple_size<Ops_t>::value) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(R);
-      assert((Opcode == Instruction::PHI || RepR && RepR->isPredicated()) &&
+      assert((Opcode == Instruction::PHI || isa<VPReplicateRecipe>(R)) &&
              "non-variadic recipe with matched opcode does not have the "
              "expected number of operands");
       return false;
