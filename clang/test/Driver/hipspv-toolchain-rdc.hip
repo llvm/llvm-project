@@ -41,7 +41,7 @@
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // Link device code, lower it with HIPSPV passes and emit SPIR-V binary.
-// CHECK: {{".*llvm-link.*"}} [[A_BC1]] [[B_BC1]] "-o" [[AB_LINK:".*bc"]]
+// CHECK: {{".*llvm-link.*"}} "-o" [[AB_LINK:".*bc"]] [[A_BC1]] [[B_BC1]]
 // CHECK: {{".*opt.*"}} [[AB_LINK]] "-load-pass-plugin"
 // CHECK-SAME: "{{.*}}/Inputs/hipspv/lib/libLLVMHipSpvPasses.so"
 // CHECK-SAME: "-o" [[AB_LOWER:".*bc"]]
