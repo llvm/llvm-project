@@ -1724,6 +1724,8 @@ public:
     MCInst BTIInst;
     createBTI(BTIInst, BTIKind::C);
     NewPLTSeq.push_back(BTIInst);
+    // Only adding the instructions from the first BB (adrp, ldr, add, br) to
+    // NewPLTSeq.
     for (auto II = FirstBBI->begin(); II != FirstBBI->end(); ++II) {
       NewPLTSeq.push_back(*II);
     }
