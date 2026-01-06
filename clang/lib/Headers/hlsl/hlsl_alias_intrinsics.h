@@ -2420,7 +2420,7 @@ __attribute__((convergent)) bool WaveActiveAnyTrue(bool Val);
 /// \return uint4 bitmask
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_ballot)
-__attribute__((convergent)) bool WaveActiveBallot(bool Val);
+__attribute__((convergent)) uint4 WaveActiveBallot(bool Val);
 
 /// \brief Counts the number of boolean variables which evaluate to true across
 /// all active lanes in the current wave.
