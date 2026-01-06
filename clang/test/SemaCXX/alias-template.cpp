@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -std=c++14 -fcxx-exceptions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
+#if __cplusplus < 202002L
 namespace RedeclAliasTypedef {
   template<typename U> using T = int;
   template<typename U> using T = int;
@@ -198,3 +200,18 @@ int g = sfinae_me<int>(); // expected-error{{no matching function for call to 's
 namespace NullExceptionDecl {
 template<int... I> auto get = []() { try { } catch(...) {}; return I; }; // expected-error{{initializer contains unexpanded parameter pack 'I'}}
 }
+#endif
+
+#if __cplusplus >= 202002L
+namespace PR174281 {
+template <class T>
+struct A {
+  template <class U>
+  using E = U; // expected-note {{template is declared here}}
+  static E u2 = 0; // expected-error {{alias template 'E' requires template arguments; argument deduction only allowed for class templates or alias templates}}
+  static E u; // expected-error {{declaration of variable 'u' with deduced type 'E' requires an initializer}}
+};
+
+decltype(A<int>::u) a; // expected-note {{in instantiation of template class 'PR174281::A<int>' requested here}}
+}
+#endif
