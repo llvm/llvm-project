@@ -192,6 +192,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-SDAG-NEXT: OPC_RecordMemRef,
 // ISEL-SDAG-NEXT: OPC_RecordNode, // #0 = 'st' chained node
 // ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $val
+// ISEL-SDAG-NEXT: OPC_CheckChild1TypeI64,
 // ISEL-SDAG-NEXT: OPC_RecordChild2, // #2 = $src
 // ISEL-SDAG-NEXT: OPC_Scope, {{[0-9]+}}, /*->{{[0-9]+}}*/ // 2 children in Scope
 // ISEL-SDAG-NEXT: OPC_CheckChild2TypeI32,
