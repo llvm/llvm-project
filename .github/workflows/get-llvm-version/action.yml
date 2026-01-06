@@ -29,4 +29,4 @@ runs:
           echo "$v=`llvm/utils/release/get-llvm-version.sh --$v`" >> $GITHUB_OUTPUT
         done
 
-        echo "full-no-suffix=$(llvm/utils/release/get-llvm-version.sh) >> $GITHUB_OUTPUT
+        echo "full-no-suffix=$(llvm/utils/release/get-llvm-version.sh)" >> $GITHUB_OUTPUT
