@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/internal/clc.h>
+#include <clc/shared/clc_max.h>
+#include <clc/shared/clc_min.h>
 
 #define __CLC_BODY <clc_clamp.inc>
 #include <clc/integer/gentype.inc>

@@ -777,6 +777,8 @@ bool Inc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr,
                                                       CanOverflow);
@@ -787,6 +789,8 @@ bool IncBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                  unsigned BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, CanOverflow,
@@ -801,6 +805,8 @@ bool IncPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
@@ -810,6 +816,8 @@ bool IncPopBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                     uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow,
@@ -821,6 +829,8 @@ bool PreInc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
@@ -830,6 +840,8 @@ bool PreIncBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                     uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow,
@@ -845,6 +857,8 @@ bool Dec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr,
                                                       CanOverflow);
@@ -854,6 +868,8 @@ bool DecBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                  uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, CanOverflow,
@@ -868,6 +884,8 @@ bool DecPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
@@ -877,6 +895,8 @@ bool DecPopBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                     uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow,
@@ -888,6 +908,8 @@ bool PreDec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
 
@@ -896,6 +918,8 @@ bool PreDecBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
                     uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow,
                                                      BitWidth);
@@ -926,6 +950,8 @@ inline bool Incf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, FPOI);
 }
@@ -933,6 +959,8 @@ inline bool Incf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 inline bool IncfPop(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, FPOI);
@@ -942,6 +970,8 @@ inline bool Decf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, FPOI);
 }
@@ -949,6 +979,8 @@ inline bool Decf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 inline bool DecfPop(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
     return false;
 
   return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, FPOI);
@@ -1095,8 +1127,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
-    size_t A = LHS.computeOffsetForComparison();
-    size_t B = RHS.computeOffsetForComparison();
+    size_t A = LHS.computeOffsetForComparison(S.getASTContext());
+    size_t B = RHS.computeOffsetForComparison(S.getASTContext());
+
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
     return true;
   }
@@ -1455,8 +1488,7 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
-  const auto &Desc =
-      *reinterpret_cast<const GlobalInlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (Desc.InitState != GlobalInitState::Initialized)
     return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
                                  AK_Read);

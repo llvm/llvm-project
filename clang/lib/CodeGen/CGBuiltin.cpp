@@ -566,6 +566,7 @@ static Value *EmitISOVolatileLoad(CodeGenFunction &CGF, const CallExpr *E) {
   llvm::Type *ITy =
       llvm::IntegerType::get(CGF.getLLVMContext(), LoadSize.getQuantity() * 8);
   llvm::LoadInst *Load = CGF.Builder.CreateAlignedLoad(ITy, Ptr, LoadSize);
+  Load->setAtomic(llvm::AtomicOrdering::Monotonic);
   Load->setVolatile(true);
   return Load;
 }
@@ -578,6 +579,7 @@ static Value *EmitISOVolatileStore(CodeGenFunction &CGF, const CallExpr *E) {
   CharUnits StoreSize = CGF.getContext().getTypeSizeInChars(ElTy);
   llvm::StoreInst *Store =
       CGF.Builder.CreateAlignedStore(Value, Ptr, StoreSize);
+  Store->setAtomic(llvm::AtomicOrdering::Monotonic);
   Store->setVolatile(true);
   return Store;
 }
@@ -3290,7 +3292,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Inverse = Builder.CreateNot(ArgValue, "not");
     Value *Tmp = Builder.CreateSelect(IsNeg, Inverse, ArgValue);
     Value *Ctlz = Builder.CreateCall(F, {Tmp, Builder.getFalse()});
-    Value *Result = Builder.CreateSub(Ctlz, llvm::ConstantInt::get(ArgType, 1));
+    Value *Result =
+        Builder.CreateNUWSub(Ctlz, llvm::ConstantInt::get(ArgType, 1));
     Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
                                    "cast");
     return RValue::get(Result);
@@ -3548,6 +3551,41 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::allow_runtime_check),
         llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Kind)));
     return RValue::get(Allow);
+  }
+  case Builtin::BI__builtin_allow_sanitize_check: {
+    Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
+    StringRef Name =
+        cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
+
+    // We deliberately allow the use of kernel- and non-kernel names
+    // interchangably, even when one or the other is enabled. This is consistent
+    // with the no_sanitize-attribute, which allows either kernel- or non-kernel
+    // name to disable instrumentation (see CodeGenFunction::StartFunction).
+    if (getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
+                                        SanitizerKind::KernelAddress) &&
+        (Name == "address" || Name == "kernel-address")) {
+      IntrID = Intrinsic::allow_sanitize_address;
+    } else if (getLangOpts().Sanitize.has(SanitizerKind::Thread) &&
+               Name == "thread") {
+      IntrID = Intrinsic::allow_sanitize_thread;
+    } else if (getLangOpts().Sanitize.hasOneOf(SanitizerKind::Memory |
+                                               SanitizerKind::KernelMemory) &&
+               (Name == "memory" || Name == "kernel-memory")) {
+      IntrID = Intrinsic::allow_sanitize_memory;
+    } else if (getLangOpts().Sanitize.hasOneOf(
+                   SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress) &&
+               (Name == "hwaddress" || Name == "kernel-hwaddress")) {
+      IntrID = Intrinsic::allow_sanitize_hwaddress;
+    }
+
+    if (IntrID != Intrinsic::not_intrinsic) {
+      llvm::Value *Allow = Builder.CreateCall(CGM.getIntrinsic(IntrID));
+      return RValue::get(Allow);
+    }
+    // If the checked sanitizer is not enabled, we can safely lower to false
+    // right away. This is also more efficient, since the LowerAllowCheckPass
+    // must not always be enabled if none of the above sanitizers are enabled.
+    return RValue::get(Builder.getFalse());
   }
   case Builtin::BI__arithmetic_fence: {
     // Create the builtin call if FastMath is selected, and the target
@@ -4261,7 +4299,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *IntTy = ConvertType(E->getType());
     Value *Zero = Constant::getNullValue(IntTy);
     Value *One = ConstantInt::get(IntTy, 1);
-    Value *NegativeOne = ConstantInt::get(IntTy, -1);
+    Value *NegativeOne = ConstantInt::getAllOnesValue(IntTy);
     Value *SignResult = Builder.CreateSelect(IsNeg, NegativeOne, One);
     Value *Result = Builder.CreateSelect(IsInf, SignResult, Zero);
     return RValue::get(Result);
@@ -4677,7 +4715,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     PHINode *Ret = Builder.CreatePHI(IntTy, 4);
     Ret->addIncoming(ConstantInt::get(IntTy, 0), Entry);
     Ret->addIncoming(ConstantInt::get(IntTy, 1), CmpGT);
-    Ret->addIncoming(ConstantInt::get(IntTy, -1), CmpLT);
+    Ret->addIncoming(ConstantInt::getAllOnesValue(IntTy), CmpLT);
     Ret->addIncoming(ConstantInt::get(IntTy, 0), Next);
     return RValue::get(Ret);
   }
@@ -6197,6 +6235,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_store_half:
   case Builtin::BI__builtin_store_halff: {
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(0));
     Address Address = EmitPointerWithAlignment(E->getArg(1));
     Value *HalfVal = Builder.CreateFPTrunc(Val, Builder.getHalfTy());

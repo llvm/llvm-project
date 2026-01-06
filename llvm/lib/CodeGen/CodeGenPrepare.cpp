@@ -556,7 +556,6 @@ PreservedAnalyses CodeGenPreparePass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserve<TargetLibraryAnalysis>();
   PA.preserve<TargetIRAnalysis>();
-  PA.preserve<LoopAnalysis>();
   return PA;
 }
 
@@ -6881,7 +6880,10 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       }
       IRBuilder<> NewBaseBuilder(NewBaseInsertBB, NewBaseInsertPt);
       // Create a new base.
-      Value *BaseIndex = ConstantInt::get(PtrIdxTy, BaseOffset);
+      // TODO: Avoid implicit trunc?
+      // See https://github.com/llvm/llvm-project/issues/112510.
+      Value *BaseIndex =
+          ConstantInt::getSigned(PtrIdxTy, BaseOffset, /*ImplicitTrunc=*/true);
       NewBaseGEP = OldBase;
       if (NewBaseGEP->getType() != I8PtrTy)
         NewBaseGEP = NewBaseBuilder.CreatePointerCast(NewBaseGEP, I8PtrTy);

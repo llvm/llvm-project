@@ -1917,6 +1917,8 @@ def int_aarch64_sve_cntw : AdvSIMD_SVE_CNTB_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_cntd : AdvSIMD_SVE_CNTB_Intrinsic<[IntrSpeculatable]>;
 
 def int_aarch64_sve_cntp : AdvSIMD_SVE_CNTP_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_firstp : AdvSIMD_SVE_CNTP_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_lastp  : AdvSIMD_SVE_CNTP_Intrinsic<[IntrSpeculatable]>;
 
 //
 // FFR manipulation
@@ -2013,6 +2015,7 @@ def int_aarch64_sve_clasta_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic<[IntrSpecul
 def int_aarch64_sve_clastb    : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_clastb_n  : AdvSIMD_SVE_ReduceWithInit_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_compact   : AdvSIMD_Pred1VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_expand    : AdvSIMD_Pred1VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_dupq_lane : AdvSIMD_SVE_DUPQ_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_dup_laneq : SVE2_1VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_ext       : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
@@ -2435,6 +2438,7 @@ def int_aarch64_sve_stnt1_scatter_scalar_offset  : AdvSIMD_ScatterStore_VS_Intri
 def int_aarch64_sve_saba          : AdvSIMD_3VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_shsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sli           : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_sqabs         : AdvSIMD_Merged1VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -2467,6 +2471,7 @@ def int_aarch64_sve_suqadd        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpecul
 def int_aarch64_sve_uaba          : AdvSIMD_3VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uhadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uhsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uhsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uhsubr        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uqrshl        : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -4125,7 +4130,7 @@ let TargetPrefix = "aarch64" in {
                                 llvm_nxv16i8_ty,
                                 llvm_i32_ty],
                             [IntrInaccessibleMemOnly, ImmArg<ArgIndex<6>>]>;
-  class SME_FP8_ZA_SINGLE_VGx1_Intrinsic
+  class SME_FP8_ZA_VGx1_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                 llvm_nxv16i8_ty,
                                 llvm_nxv16i8_ty],
@@ -4188,11 +4193,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x1 : SME_FP8_ZA_LANE_VGx1_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x2 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_lane_za16_vg2x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
-  // Single
-  def int_aarch64_sme_fp8_fmlal_single_za16_vg2x1 : SME_FP8_ZA_SINGLE_VGx1_Intrinsic;
+  // Single-Single
+  def int_aarch64_sme_fp8_fmlal_za16_vg2x1 : SME_FP8_ZA_VGx1_Intrinsic;
+  // Multi-Single
   def int_aarch64_sme_fp8_fmlal_single_za16_vg2x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_single_za16_vg2x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
-  // Multi
+  // Multi-Multi
   def int_aarch64_sme_fp8_fmlal_multi_za16_vg2x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlal_multi_za16_vg2x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
 
@@ -4200,11 +4206,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x1 : SME_FP8_ZA_LANE_VGx1_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4 : SME_FP8_ZA_LANE_VGx4_Intrinsic;
-  // Single
-  def int_aarch64_sme_fp8_fmlall_single_za32_vg4x1 : SME_FP8_ZA_SINGLE_VGx1_Intrinsic;
+  // Single-Single
+  def int_aarch64_sme_fp8_fmlall_za32_vg4x1 : SME_FP8_ZA_VGx1_Intrinsic;
+  // Multi-Single
   def int_aarch64_sme_fp8_fmlall_single_za32_vg4x2 : SME_FP8_ZA_SINGLE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_single_za32_vg4x4 : SME_FP8_ZA_SINGLE_VGx4_Intrinsic;
-  // Multi
+  // Multi-Multi
   def int_aarch64_sme_fp8_fmlall_multi_za32_vg4x2 : SME_FP8_ZA_MULTI_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fmlall_multi_za32_vg4x4 : SME_FP8_ZA_MULTI_VGx4_Intrinsic;
 
@@ -4234,4 +4241,31 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fp8_fvdot_lane_za16_vg1x2  : SME_FP8_ZA_LANE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fvdotb_lane_za32_vg1x4 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
   def int_aarch64_sme_fp8_fvdott_lane_za32_vg1x4 : SME_FP8_ZA_LANE_VGx2_Intrinsic;
+  
+  // AES2
+  class SVE2_Crypto_LANE_X2_Intrinsic
+  : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+      [llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_i32_ty],
+      [ImmArg<ArgIndex<3>>, IntrNoMem]>;
+  class SVE2_Crypto_LANE_X4_Intrinsic
+  : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
+      [llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, 
+       llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_i32_ty],
+      [ImmArg<ArgIndex<5>>, IntrNoMem]>;
+
+  def int_aarch64_sve_aesd_lane_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
+  def int_aarch64_sve_aesdimc_lane_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
+  def int_aarch64_sve_aese_lane_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
+  def int_aarch64_sve_aesemc_lane_x2 : SVE2_Crypto_LANE_X2_Intrinsic;
+
+  def int_aarch64_sve_aesd_lane_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
+  def int_aarch64_sve_aesdimc_lane_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
+  def int_aarch64_sve_aese_lane_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
+  def int_aarch64_sve_aesemc_lane_x4 : SVE2_Crypto_LANE_X4_Intrinsic;
+
+  def int_aarch64_sve_pmull_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
+      [llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
+  def int_aarch64_sve_pmlal_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
+      [llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
 }
+

@@ -266,7 +266,7 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
 
 def main():
     token = sys.argv[1]
-    gh = github.Github(login_or_token=token)
+    gh = github.Github(auth=github.Auth.Token(token))
     org = gh.get_organization("llvm")
     repo = org.get_repo("llvm-project")
     one_year_ago = datetime.datetime.now() - datetime.timedelta(days=365)

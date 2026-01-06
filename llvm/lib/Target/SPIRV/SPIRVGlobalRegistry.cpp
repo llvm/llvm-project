@@ -436,7 +436,10 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
   const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val,
+                                    /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   Register Res = find(CI, &MF);
   if (Res.isValid())
     return Res;
@@ -1465,6 +1468,27 @@ SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
   auto *T = Type::getInt8Ty(MIRBuilder.getContext());
   SPIRVType *R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
   finishCreatingSPIRVType(T, R);
+  add(Key, R);
+  return R;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanPushConstantType(
+    MachineIRBuilder &MIRBuilder, Type *T) {
+  const auto SC = SPIRV::StorageClass::PushConstant;
+
+  auto Key = SPIRV::irhandle_vkbuffer(T, SC, /* IsWritable= */ false);
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  // We need to get the SPIR-V type for the element here, so we can add the
+  // decoration to it.
+  auto *BlockType = getOrCreateSPIRVType(
+      T, MIRBuilder, SPIRV::AccessQualifier::None,
+      /* ExplicitLayoutRequired= */ true, /* EmitIr= */ false);
+
+  buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                  SPIRV::Decoration::Block, {});
+  SPIRVType *R = BlockType;
   add(Key, R);
   return R;
 }
