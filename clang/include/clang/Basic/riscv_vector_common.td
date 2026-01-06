@@ -181,6 +181,9 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // This builtin has a masked form.
   bit HasMasked = true;
 
+  // This is used by intrinsics that need vtype.altfmt
+  bit AltFmt = false;
+
   // If HasMasked, this flag states that this builtin has a maskedoff operand. It
   // is always the first operand in builtin and IR intrinsic.
   bit HasMaskedOffOperand = true;

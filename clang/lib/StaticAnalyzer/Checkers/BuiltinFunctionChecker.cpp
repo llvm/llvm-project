@@ -36,9 +36,8 @@ QualType getSufficientTypeForOverflowOp(CheckerContext &C, const QualType &T) {
   assert(T->isIntegerType());
 
   ASTContext &ACtx = C.getASTContext();
-
   unsigned BitWidth = ACtx.getIntWidth(T);
-  return ACtx.getIntTypeForBitwidth(BitWidth * 2, T->isSignedIntegerType());
+  return ACtx.getBitIntType(T->isUnsignedIntegerType(), BitWidth * 2);
 }
 
 QualType getOverflowBuiltinResultType(const CallEvent &Call) {
@@ -208,8 +207,10 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
   SVal Arg1 = Call.getArgSVal(0);
   SVal Arg2 = Call.getArgSVal(1);
 
-  SVal RetValMax = SVB.evalBinOp(State, Op, Arg1, Arg2,
-                                 getSufficientTypeForOverflowOp(C, ResultType));
+  QualType SufficientlyWideTy = getSufficientTypeForOverflowOp(C, ResultType);
+  assert(!SufficientlyWideTy.isNull());
+
+  SVal RetValMax = SVB.evalBinOp(State, Op, Arg1, Arg2, SufficientlyWideTy);
   SVal RetVal = SVB.evalBinOp(State, Op, Arg1, Arg2, ResultType);
 
   auto [Overflow, NotOverflow] = checkOverflow(C, RetValMax, ResultType);
