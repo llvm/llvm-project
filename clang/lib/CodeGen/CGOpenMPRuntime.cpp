@@ -6346,9 +6346,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   class OMPTargetCallCollector
       : public RecursiveASTVisitor<OMPTargetCallCollector> {
   public:
-    OMPTargetCallCollector(CodeGenFunction &CGF,
-                           llvm::SmallPtrSetImpl<const CallExpr *> &TargetCalls)
-        : CGF(CGF), TargetCalls(TargetCalls) {}
+    OMPTargetCallCollector(llvm::SmallPtrSetImpl<const CallExpr *> &TargetCalls)
+        : TargetCalls(TargetCalls) {}
 
     bool VisitCallExpr(CallExpr *CE) {
       if (!CE->getDirectCallee())
@@ -6357,7 +6356,6 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     }
 
   private:
-    CodeGenFunction &CGF;
     llvm::SmallPtrSetImpl<const CallExpr *> &TargetCalls;
   };
 
@@ -6375,7 +6373,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         const auto &LangOpts = CGF.getLangOpts();
         if (LangOpts.OpenMPIsTargetDevice) {
           // Search AST for target "CallExpr"s of "OMPTargetAutoLookup".
-          OMPTargetCallCollector Visitor(CGF, CGF.CGM.OMPTargetCalls);
+          OMPTargetCallCollector Visitor(CGF.CGM.OMPTargetCalls);
           Visitor.TraverseStmt(const_cast<Stmt *>(CS.getCapturedStmt()));
         }
 
