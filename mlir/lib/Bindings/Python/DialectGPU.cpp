@@ -76,7 +76,8 @@ struct ObjectAttr : PyConcreteAttribute<ObjectAttr> {
         "Gets a gpu.object from parameters.");
 
     c.def_prop_ro("target", [](ObjectAttr &self) {
-      return PyAttribute(self.getContext(), mlirGPUObjectAttrGetTarget(self));
+      return PyAttribute(self.getContext(), mlirGPUObjectAttrGetTarget(self))
+          .maybeDownCast();
     });
     c.def_prop_ro("format", [](const ObjectAttr &self) {
       return mlirGPUObjectAttrGetFormat(self);
@@ -93,10 +94,12 @@ struct ObjectAttr : PyConcreteAttribute<ObjectAttr> {
           return std::nullopt;
         });
     c.def_prop_ro("kernels",
-                  [](ObjectAttr &self) -> std::optional<PyAttribute> {
+                  [](ObjectAttr &self)
+                      -> std::optional<nb::typed<nb::object, PyAttribute>> {
                     if (mlirGPUObjectAttrHasKernels(self))
                       return PyAttribute(self.getContext(),
-                                         mlirGPUObjectAttrGetKernels(self));
+                                         mlirGPUObjectAttrGetKernels(self))
+                          .maybeDownCast();
                     return std::nullopt;
                   });
   }
