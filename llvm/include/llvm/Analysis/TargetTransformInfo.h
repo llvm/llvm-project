@@ -1210,7 +1210,6 @@ public:
                          ///< with any shuffle mask.
     SK_PermuteSingleSrc, ///< Shuffle elements of single source vector with any
                          ///< shuffle mask.
-    // TODO: Split into SK_SpliceLeft + SK_SpliceRight
     SK_Splice            ///< Concatenates elements from the first input vector
                          ///< with elements of the second input vector. Returning
                          ///< a vector of the same type as the input vectors.

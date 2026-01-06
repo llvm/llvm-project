@@ -7258,6 +7258,30 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     return nullptr;
   }
+  case Intrinsic::vector_splice_left:
+  case Intrinsic::vector_splice_right: {
+    Value *Offset = Args[2];
+    auto *Ty = cast<VectorType>(F->getReturnType());
+    if (Q.isUndefValue(Offset))
+      return PoisonValue::get(Ty);
+
+    unsigned BitWidth = Offset->getType()->getScalarSizeInBits();
+    ConstantRange NumElts(
+        APInt(BitWidth, Ty->getElementCount().getKnownMinValue()));
+    if (Ty->isScalableTy())
+      NumElts = NumElts.multiply(getVScaleRange(Call->getFunction(), BitWidth));
+
+    // If we know Offset > NumElts, simplify to poison.
+    ConstantRange CR = computeConstantRangeIncludingKnownBits(Offset, false, Q);
+    if (CR.getUnsignedMin().ugt(NumElts.getUnsignedMax()))
+      return PoisonValue::get(Ty);
+
+    // splice.left(a, b, 0) --> a, splice.right(a, b, 0) --> b
+    if (CR.isSingleElement() && CR.getSingleElement()->isZero())
+      return IID == Intrinsic::vector_splice_left ? Args[0] : Args[1];
+
+    return nullptr;
+  }
   case Intrinsic::experimental_constrained_fadd: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
     return simplifyFAddInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,

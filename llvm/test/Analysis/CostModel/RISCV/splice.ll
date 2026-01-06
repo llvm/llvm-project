@@ -4,7 +4,7 @@
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -S -mtriple=riscv64 -mattr=+v,+f,+d,+zfh,+zvfh | FileCheck %s --check-prefix=SIZE
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -S -mtriple=riscv64 -mattr=+v,+f,+d,+zfh,+zvfhmin | FileCheck %s --check-prefix=SIZE
 
-define void @vector_splice() {
+define void @vector_splice(i32 zeroext %offset) {
 ; CHECK-LABEL: 'vector_splice'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call <vscale x 1 x i8> @llvm.vector.splice.right.nxv1i8(<vscale x 1 x i8> zeroinitializer, <vscale x 1 x i8> zeroinitializer, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = call <vscale x 2 x i8> @llvm.vector.splice.right.nxv2i8(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x i8> zeroinitializer, i32 1)
@@ -62,6 +62,8 @@ define void @vector_splice() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %54 = call <vscale x 16 x double> @llvm.vector.splice.right.nxv16f64(<vscale x 16 x double> zeroinitializer, <vscale x 16 x double> zeroinitializer, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %55 = call <vscale x 32 x double> @llvm.vector.splice.right.nxv32f64(<vscale x 32 x double> zeroinitializer, <vscale x 32 x double> zeroinitializer, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %56 = call <vscale x 64 x double> @llvm.vector.splice.right.nxv64f64(<vscale x 64 x double> zeroinitializer, <vscale x 64 x double> zeroinitializer, i32 1)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_splice'
@@ -121,6 +123,8 @@ define void @vector_splice() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %54 = call <vscale x 16 x double> @llvm.vector.splice.right.nxv16f64(<vscale x 16 x double> zeroinitializer, <vscale x 16 x double> zeroinitializer, i32 1)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %55 = call <vscale x 32 x double> @llvm.vector.splice.right.nxv32f64(<vscale x 32 x double> zeroinitializer, <vscale x 32 x double> zeroinitializer, i32 1)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %56 = call <vscale x 64 x double> @llvm.vector.splice.right.nxv64f64(<vscale x 64 x double> zeroinitializer, <vscale x 64 x double> zeroinitializer, i32 1)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+; SIZE-NEXT:  Cost Model: Invalid cost for instruction: %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %splice.nxv1i8 = call <vscale x 1 x i8> @llvm.vector.splice.nxv1i8(<vscale x 1 x i8> zeroinitializer, <vscale x 1 x i8> zeroinitializer, i32 -1)
@@ -186,6 +190,9 @@ define void @vector_splice() {
   %splice.nxv16f64 = call <vscale x 16 x double> @llvm.vector.splice.nxv16f64(<vscale x 16 x double> zeroinitializer, <vscale x 16 x double> zeroinitializer, i32 -1)
   %splice.nxv32f64 = call <vscale x 32 x double> @llvm.vector.splice.nxv32f64(<vscale x 32 x double> zeroinitializer, <vscale x 32 x double> zeroinitializer, i32 -1)
   %splice.nxv64f64 = call <vscale x 64 x double> @llvm.vector.splice.nxv64f64(<vscale x 64 x double> zeroinitializer, <vscale x 64 x double> zeroinitializer, i32 -1)
+
+  %left.variable = call <vscale x 4 x i32> @llvm.vector.splice.left(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
+  %right.variable = call <vscale x 4 x i32> @llvm.vector.splice.right(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i32 %offset)
 
   ret void
 }

@@ -12850,19 +12850,18 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   SDLoc DL = getCurSDLoc();
   SDValue V1 = getValue(I.getOperand(0));
   SDValue V2 = getValue(I.getOperand(1));
-  uint64_t Imm = cast<ConstantInt>(I.getOperand(2))->getZExtValue();
   const bool IsLeft = I.getIntrinsicID() == Intrinsic::vector_splice_left;
 
-  // VECTOR_SHUFFLE doesn't support a scalable mask so use a dedicated node.
-  if (VT.isScalableVector()) {
-    setValue(
-        &I,
-        DAG.getNode(
-            IsLeft ? ISD::VECTOR_SPLICE_LEFT : ISD::VECTOR_SPLICE_RIGHT, DL, VT,
-            V1, V2,
-            DAG.getConstant(Imm, DL, TLI.getVectorIdxTy(DAG.getDataLayout()))));
+  // VECTOR_SHUFFLE doesn't support a scalable or non-constant mask.
+  if (VT.isScalableVector() || !isa<ConstantInt>(I.getOperand(2))) {
+    SDValue Offset = DAG.getZExtOrTrunc(
+        getValue(I.getOperand(2)), DL, TLI.getVectorIdxTy(DAG.getDataLayout()));
+    setValue(&I, DAG.getNode(IsLeft ? ISD::VECTOR_SPLICE_LEFT
+                                    : ISD::VECTOR_SPLICE_RIGHT,
+                             DL, VT, V1, V2, Offset));
     return;
   }
+  uint64_t Imm = cast<ConstantInt>(I.getOperand(2))->getZExtValue();
 
   unsigned NumElts = VT.getVectorNumElements();
 
