@@ -411,7 +411,7 @@ if emulator:
     lit_config.warning("%device_rm is not implemented")
     config.substitutions.append(("%device_rm", "echo "))
     config.compile_wrapper = ""
-elif config.target_os == "Darwin" and config.apple_platform != "osx":
+elif config.target_os == "Darwin" and not config.apple_target_is_host:
     # Darwin tests can be targetting macOS, a device or a simulator. All devices
     # are declared as "ios", even for iOS derivatives (tvOS, watchOS). Similarly,
     # all simulators are "iossim". See the table below.
@@ -428,9 +428,12 @@ elif config.target_os == "Darwin" and config.apple_platform != "osx":
     # watchOS simulator  | darwin, ios, iossim, watchos, watchossim
     # =========================================================================
 
+    # All non-OSX targets have the ios feature (see the above table)
+    if config.apple_platform != "osx":
+        config.available_features.add("ios")
+
     ios_or_iossim = "iossim" if config.apple_platform.endswith("sim") else "ios"
 
-    config.available_features.add("ios")
     device_id_env = "SANITIZER_" + ios_or_iossim.upper() + "_TEST_DEVICE_IDENTIFIER"
     if ios_or_iossim == "iossim":
         config.available_features.add("iossim")

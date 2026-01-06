@@ -157,7 +157,7 @@ public:
     return __r;
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 locale getloc() const { return __loc_; }
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 locale getloc() const { return __loc_; }
 
   // 27.6.2.2.2 buffer and positioning:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_streambuf* pubsetbuf(char_type* __s, streamsize __n) {
@@ -178,7 +178,7 @@ public:
 
   // Get and put areas:
   // 27.6.2.2.3 Get area:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 streamsize in_avail() {
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 streamsize in_avail() {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -187,7 +187,7 @@ public:
     return showmanyc();
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type snextc() {
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type snextc() {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
@@ -207,7 +207,7 @@ public:
     return __c;
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sgetc() {
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 int_type sgetc() {
     __check_invariants();
     auto __guard = std::__make_scope_guard([this] { this->__check_invariants(); });
 
