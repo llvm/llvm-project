@@ -29,6 +29,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1874,6 +1875,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AND, MVT::i512, Custom);
     setOperationAction(ISD::OR, MVT::i512, Custom);
     setOperationAction(ISD::XOR, MVT::i512, Custom);
+    setOperationAction(ISD::ADD, MVT::i512, Custom);
+    setOperationAction(ISD::SUB, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
@@ -34253,6 +34256,65 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Op = DAG.getNode(Opc, dl, VecVT, DAG.getBitcast(VecVT, N0),
                              DAG.getBitcast(VecVT, N1));
     Results.push_back(DAG.getBitcast(VT, Op));
+    return;
+  }
+  case ISD::ADD:
+  case ISD::SUB: {
+    // Use Kogge-Stone parallel carry/borrow propagation for i512 add/sub.
+    // TODO: ISD::UADDO_CARRY
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    EVT VT = N->getValueType(0);
+    bool IsAdd = Opc == ISD::ADD;
+
+    assert(Subtarget.useAVX512Regs() && "AVX512 required");
+    assert(VT == MVT::i512 && "Unexpected VT!");
+
+    if (!mayFoldIntoVector(LHS, Subtarget) ||
+        !mayFoldIntoVector(RHS, Subtarget))
+      return;
+
+    MVT VecVT = MVT::getVectorVT(MVT::i64, 8);
+    MVT BoolVT = MVT::getVectorVT(MVT::i1, 8);
+    SDValue Vec0 = DAG.getBitcast(VecVT, LHS);
+    SDValue Vec1 = DAG.getBitcast(VecVT, RHS);
+    SDValue AllOnes = DAG.getAllOnesConstant(dl, VecVT);
+
+    // Compute partial sum/difference (per-lane, no carry propagation).
+    SDValue Partial = DAG.getNode(Opc, dl, VecVT, Vec0, Vec1);
+
+    // Detect carry/borrow generation.
+    ISD::CondCode CarryCC = IsAdd ? ISD::SETULT : ISD::SETUGT;
+    SDValue Carry = DAG.getSetCC(dl, BoolVT, Partial, Vec0, CarryCC);
+
+    // Detect propagate lanes.
+    SDValue PropCmp = IsAdd ? AllOnes : DAG.getConstant(0, dl, VecVT);
+    SDValue Propagate = DAG.getSetCC(dl, BoolVT, Partial, PropCmp, ISD::SETEQ);
+
+    // Convert masks to scalar for Kogge-Stone propagation.
+    SDValue CarryIn = DAG.getNode(ISD::BITCAST, dl, MVT::i8, Carry);
+    SDValue PropIn = DAG.getNode(ISD::BITCAST, dl, MVT::i8, Propagate);
+    CarryIn = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, CarryIn);
+    PropIn = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, PropIn);
+
+    // Kogge-Stone: shift carry left and add propagate.
+    SDValue ShiftedCarry = DAG.getNode(ISD::SHL, dl, MVT::i32, CarryIn,
+                                       DAG.getConstant(1, dl, MVT::i8));
+    SDValue CarryOut =
+        DAG.getNode(ISD::ADD, dl, MVT::i32, ShiftedCarry, PropIn);
+
+    // Correction mask: lanes that received a carry/borrow.
+    SDValue CorrMask = DAG.getNode(ISD::XOR, dl, MVT::i32, PropIn, CarryOut);
+    CorrMask = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, CorrMask);
+    SDValue CorrVec = DAG.getNode(ISD::BITCAST, dl, BoolVT, CorrMask);
+
+    // Apply correction: +1 for ADD (via -(-1)), -1 for SUB (via +(-1)).
+    unsigned AdjustOpc = IsAdd ? ISD::SUB : ISD::ADD;
+    SDValue Adjusted = DAG.getNode(AdjustOpc, dl, VecVT, Partial, AllOnes);
+    SDValue Res =
+        DAG.getNode(ISD::VSELECT, dl, VecVT, CorrVec, Adjusted, Partial);
+
+    Results.push_back(DAG.getBitcast(VT, Res));
     return;
   }
   case ISD::CTPOP: {
