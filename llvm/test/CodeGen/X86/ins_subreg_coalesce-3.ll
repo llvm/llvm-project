@@ -22,41 +22,45 @@ define void @FontChange(i1 %foo) nounwind {
 ; CHECK-LABEL: FontChange:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    je .LBB0_10
+; CHECK-NEXT:    je .LBB0_12
+; CHECK-NEXT:  # %bb.1: # %bb298
+; CHECK-NEXT:    je .LBB0_3
+; CHECK-NEXT:  # %bb.2: # %bb304
+; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_1: # %bb366
+; CHECK-NEXT:  .LBB0_3: # %bb366
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %bb428
+; CHECK-NEXT:    jne .LBB0_3
+; CHECK-NEXT:  .LBB0_4: # %bb428
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    je .LBB0_10
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    je .LBB0_12
+; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    cmpb $0, 0
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_4: # %bb650
+; CHECK-NEXT:  .LBB0_6: # %bb650
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.5: # %bb662
+; CHECK-NEXT:    je .LBB0_6
+; CHECK-NEXT:  # %bb.7: # %bb662
 ; CHECK-NEXT:    movl 0, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    andl $57344, %ecx # imm = 0xE000
 ; CHECK-NEXT:    cmpl $8192, %ecx # imm = 0x2000
-; CHECK-NEXT:    jne .LBB0_10
-; CHECK-NEXT:  # %bb.6: # %bb4884
+; CHECK-NEXT:    jne .LBB0_12
+; CHECK-NEXT:  # %bb.8: # %bb4884
 ; CHECK-NEXT:    andl $7168, %eax # imm = 0x1C00
 ; CHECK-NEXT:    cmpl $1024, %eax # imm = 0x400
-; CHECK-NEXT:    jne .LBB0_10
-; CHECK-NEXT:  # %bb.7: # %bb4932
+; CHECK-NEXT:    jne .LBB0_12
+; CHECK-NEXT:  # %bb.9: # %bb4932
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB0_10
-; CHECK-NEXT:  # %bb.8: # %bb4940
+; CHECK-NEXT:    jne .LBB0_12
+; CHECK-NEXT:  # %bb.10: # %bb4940
 ; CHECK-NEXT:    movl 0, %eax
 ; CHECK-NEXT:    cmpl $160, %eax
-; CHECK-NEXT:    je .LBB0_10
-; CHECK-NEXT:  # %bb.9: # %bb4940
+; CHECK-NEXT:    je .LBB0_12
+; CHECK-NEXT:  # %bb.11: # %bb4940
 ; CHECK-NEXT:    cmpl $159, %eax
-; CHECK-NEXT:  .LBB0_10: # %bb4897
+; CHECK-NEXT:  .LBB0_12: # %bb4897
 ; CHECK-NEXT:    retq
 entry:
 	br i1 %foo, label %bb298, label %bb49

@@ -396,12 +396,12 @@ entry:
 define i32 @shl32r1(i32 noundef %a) {
 ; CHECK-LABEL: shl32r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl %edi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x01,0xff]
+; CHECK-NEXT:    leal (%rdi,%rdi), %eax # encoding: [0x8d,0x04,0x3f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shl32r1:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} addl %edi, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x01,0xff]
+; NF-NEXT:    leal (%rdi,%rdi), %eax # encoding: [0x8d,0x04,0x3f]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shl = shl i32 %a, 1
@@ -411,12 +411,12 @@ entry:
 define i64 @shl64r1(i64 noundef %a) {
 ; CHECK-LABEL: shl64r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq %rdi, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x01,0xff]
+; CHECK-NEXT:    leaq (%rdi,%rdi), %rax # encoding: [0x48,0x8d,0x04,0x3f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shl64r1:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} addq %rdi, %rdi, %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x01,0xff]
+; NF-NEXT:    leaq (%rdi,%rdi), %rax # encoding: [0x48,0x8d,0x04,0x3f]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shl = shl i64 %a, 1

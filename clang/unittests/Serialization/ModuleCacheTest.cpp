@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -121,6 +122,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
       createInvocationAndEnableFree(Args, CIOpts);
   ASSERT_TRUE(Invocation);
   CompilerInstance Instance(std::move(Invocation));
+  Instance.setVirtualFileSystem(CIOpts.VFS);
   Instance.setDiagnostics(Diags);
   SyntaxOnlyAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
@@ -145,6 +147,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   CompilerInstance Instance2(std::move(Invocation2),
                              Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
+  Instance2.setVirtualFileSystem(CIOpts.VFS);
   Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
@@ -171,6 +174,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
       createInvocationAndEnableFree(Args, CIOpts);
   ASSERT_TRUE(Invocation);
   CompilerInstance Instance(std::move(Invocation));
+  Instance.setVirtualFileSystem(CIOpts.VFS);
   Instance.setDiagnostics(Diags);
   SyntaxOnlyAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
@@ -189,6 +193,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   CompilerInstance Instance2(std::move(Invocation2),
                              Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
+  Instance2.setVirtualFileSystem(CIOpts.VFS);
   Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));

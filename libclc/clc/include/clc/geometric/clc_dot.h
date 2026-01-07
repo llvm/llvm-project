@@ -9,11 +9,11 @@
 #ifndef __CLC_GEOMETRIC_CLC_DOT_H__
 #define __CLC_GEOMETRIC_CLC_DOT_H__
 
-#define FUNCTION __clc_dot
+#define __CLC_FUNCTION __clc_dot
 #define __CLC_BODY <clc/geometric/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_GEOMETRIC_CLC_DOT_H__

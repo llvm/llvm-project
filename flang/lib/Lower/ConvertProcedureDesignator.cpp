@@ -212,5 +212,5 @@ mlir::Value Fortran::lower::derefPassProcPointerComponent(
          "failed to retrieve pointer procedure component symbol");
   hlfir::EntityWithAttributes pointerComp = designateProcedurePointerComponent(
       loc, converter, *procComponentSym, passedArg, symMap, stmtCtx);
-  return converter.getFirOpBuilder().create<fir::LoadOp>(loc, pointerComp);
+  return fir::LoadOp::create(converter.getFirOpBuilder(), loc, pointerComp);
 }

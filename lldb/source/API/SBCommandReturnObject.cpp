@@ -15,6 +15,7 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Host/File.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -275,14 +276,16 @@ void SBCommandReturnObject::SetImmediateErrorFile(FILE *fh) {
 void SBCommandReturnObject::SetImmediateOutputFile(FILE *fh,
                                                    bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  FileSP file = std::make_shared<NativeFile>(fh, transfer_ownership);
+  FileSP file = std::make_shared<NativeFile>(fh, File::eOpenOptionWriteOnly,
+                                             transfer_ownership);
   ref().SetImmediateOutputFile(file);
 }
 
 void SBCommandReturnObject::SetImmediateErrorFile(FILE *fh,
                                                   bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  FileSP file = std::make_shared<NativeFile>(fh, transfer_ownership);
+  FileSP file = std::make_shared<NativeFile>(fh, File::eOpenOptionWriteOnly,
+                                             transfer_ownership);
   ref().SetImmediateErrorFile(file);
 }
 
@@ -312,8 +315,8 @@ void SBCommandReturnObject::PutCString(const char *string, int len) {
   if (len == 0 || string == nullptr || *string == 0) {
     return;
   } else if (len > 0) {
-    std::string buffer(string, len);
-    ref().AppendMessage(buffer.c_str());
+    const llvm::StringRef buffer{string, static_cast<size_t>(len)};
+    ref().AppendMessage(buffer);
   } else
     ref().AppendMessage(string);
 }

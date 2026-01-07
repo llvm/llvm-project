@@ -114,7 +114,8 @@ void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);
 void populateGpuEliminateBarriersPatterns(RewritePatternSet &patterns);
 
 /// Tries to promote `gpu.shuffle`s to specialized AMDGPU intrinsics.
-void populateGpuPromoteShuffleToAMDGPUPatterns(RewritePatternSet &patterns);
+void populateGpuPromoteShuffleToAMDGPUPatterns(
+    RewritePatternSet &patterns, std::optional<amdgpu::Chipset> maybeChipset);
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION

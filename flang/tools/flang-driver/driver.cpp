@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "flang/Config/config.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
@@ -51,9 +52,9 @@ createAndPopulateDiagOpts(llvm::ArrayRef<const char *> argv) {
   // Any errors that would be diagnosed here will also be diagnosed later,
   // when the DiagnosticsEngine actually exists.
   unsigned missingArgIndex, missingArgCount;
-  llvm::opt::InputArgList args = clang::driver::getDriverOptTable().ParseArgs(
+  llvm::opt::InputArgList args = clang::getDriverOptTable().ParseArgs(
       argv.slice(1), missingArgIndex, missingArgCount,
-      llvm::opt::Visibility(clang::driver::options::FlangOption));
+      llvm::opt::Visibility(clang::options::FlangOption));
 
   (void)Fortran::frontend::parseDiagnosticArgs(*diagOpts, args);
 
@@ -137,6 +138,7 @@ int main(int argc, const char **argv) {
                                   llvm::sys::getDefaultTargetTriple(), diags,
                                   "flang LLVM compiler");
   theDriver.setTargetAndMode(targetandMode);
+  theDriver.setPreferredLinker(FLANG_DEFAULT_LINKER);
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
   theDriver.setFlangF128MathLibrary(FLANG_RUNTIME_F128_MATH_LIB);
 #endif

@@ -25,6 +25,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/SmallSet.h"
+#include <deque>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -48,6 +50,33 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   }
   return GetNonCallSiteUnwindPlanFromAssembly(
       range, function_text.data(), function_text.size(), unwind_plan);
+}
+
+static void DumpUnwindRowsToLog(Log *log, AddressRange range,
+                                const UnwindPlan &unwind_plan) {
+  if (!log || !log->GetVerbose())
+    return;
+  StreamString strm;
+  lldb::addr_t base_addr = range.GetBaseAddress().GetFileAddress();
+  strm.Printf("Resulting unwind rows for [0x%" PRIx64 " - 0x%" PRIx64 "):",
+              base_addr, base_addr + range.GetByteSize());
+  unwind_plan.Dump(strm, nullptr, base_addr);
+  log->PutString(strm.GetString());
+}
+
+static void DumpInstToLog(Log *log, Instruction &inst,
+                          const InstructionList &inst_list) {
+  if (!log || !log->GetVerbose())
+    return;
+  const bool show_address = true;
+  const bool show_bytes = true;
+  const bool show_control_flow_kind = false;
+  StreamString strm;
+  lldb_private::FormatEntity::Entry format;
+  FormatEntity::Parse("${frame.pc}: ", format);
+  inst.Dump(&strm, inst_list.GetMaxOpcocdeByteSize(), show_address, show_bytes,
+            show_control_flow_kind, nullptr, nullptr, nullptr, &format, 0);
+  log->PutString(strm.GetString());
 }
 
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
@@ -82,11 +111,6 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   m_range_ptr = &range;
   m_unwind_plan_ptr = &unwind_plan;
 
-  const uint32_t addr_byte_size = m_arch.GetAddressByteSize();
-  const bool show_address = true;
-  const bool show_bytes = true;
-  const bool show_control_flow_kind = false;
-
   m_state.cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
       unwind_plan.GetRegisterKind(), unwind_plan.GetInitialCFARegister());
   m_state.fp_is_cfa = false;
@@ -94,134 +118,142 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
   m_pushed_regs.clear();
 
-  // Initialize the CFA with a known value. In the 32 bit case it will be
-  // 0x80000000, and in the 64 bit case 0x8000000000000000. We use the address
-  // byte size to be safe for any future address sizes
-  m_initial_sp = (1ull << ((addr_byte_size * 8) - 1));
   RegisterValue cfa_reg_value;
-  cfa_reg_value.SetUInt(m_initial_sp, m_state.cfa_reg_info.byte_size);
+  cfa_reg_value.SetUInt(m_initial_cfa, m_state.cfa_reg_info.byte_size);
   SetRegisterValue(m_state.cfa_reg_info, cfa_reg_value);
 
-  const InstructionList &inst_list = disasm_sp->GetInstructionList();
-  const size_t num_instructions = inst_list.GetSize();
+  InstructionList inst_list = disasm_sp->GetInstructionList();
 
-  if (num_instructions > 0) {
-    Instruction *inst = inst_list.GetInstructionAtIndex(0).get();
-    const lldb::addr_t base_addr = inst->GetAddress().GetFileAddress();
+  if (inst_list.GetSize() == 0) {
+    DumpUnwindRowsToLog(log, range, unwind_plan);
+    return unwind_plan.GetRowCount() > 0;
+  }
 
-    // Map for storing the unwind state at a given offset. When we see a forward
-    // branch we add a new entry to this map with the actual unwind plan row and
-    // register context for the target address of the branch as the current data
-    // have to be valid for the target address of the branch too if we are in
-    // the same function.
-    std::map<lldb::addr_t, UnwindState> saved_unwind_states;
+  Instruction &first_inst = *inst_list.GetInstructionAtIndex(0);
+  const lldb::addr_t base_addr = first_inst.GetAddress().GetFileAddress();
 
-    // Make a copy of the current instruction Row and save it in m_state so
-    // we can add updates as we process the instructions.
-    m_state.row = *unwind_plan.GetLastRow();
+  // Map for storing the unwind state at a given offset. When we see a forward
+  // branch we add a new entry to this map with the actual unwind plan row and
+  // register context for the target address of the branch as the current data
+  // have to be valid for the target address of the branch too if we are in
+  // the same function.
+  std::map<lldb::addr_t, UnwindState> saved_unwind_states;
 
-    // Add the initial state to the save list with offset 0.
-    auto condition_block_start_state =
-        saved_unwind_states.emplace(0, m_state).first;
+  // Make a copy of the current instruction Row and save it in m_state so
+  // we can add updates as we process the instructions.
+  m_state.row = *unwind_plan.GetLastRow();
 
-    // The architecture dependent condition code of the last processed
-    // instruction.
-    EmulateInstruction::InstructionCondition last_condition =
-        EmulateInstruction::UnconditionalCondition;
+  // Add the initial state to the save list with offset 0.
+  auto condition_block_start_state =
+      saved_unwind_states.emplace(0, m_state).first;
 
-    for (size_t idx = 0; idx < num_instructions; ++idx) {
-      m_curr_row_modified = false;
-      m_forward_branch_offset = 0;
+  // The architecture dependent condition code of the last processed
+  // instruction.
+  EmulateInstruction::InstructionCondition last_condition =
+      EmulateInstruction::UnconditionalCondition;
 
-      inst = inst_list.GetInstructionAtIndex(idx).get();
-      if (!inst)
-        continue;
+  std::deque<std::size_t> to_visit = {0};
+  llvm::SmallSet<std::size_t, 0> enqueued = {0};
 
-      lldb::addr_t current_offset =
-          inst->GetAddress().GetFileAddress() - base_addr;
-      auto it = saved_unwind_states.upper_bound(current_offset);
-      assert(it != saved_unwind_states.begin() &&
-             "Unwind row for the function entry missing");
-      --it; // Move it to the row corresponding to the current offset
+  // Instructions reachable through jumps are inserted on the front.
+  // The next instruction is inserted on the back.
+  // Pop from the back to ensure non-branching instructions are visited
+  // sequentially.
+  while (!to_visit.empty()) {
+    const std::size_t current_index = to_visit.back();
+    Instruction &inst = *inst_list.GetInstructionAtIndex(current_index);
+    to_visit.pop_back();
+    DumpInstToLog(log, inst, inst_list);
 
-      // If the offset of m_curr_row don't match with the offset we see in
-      // saved_unwind_states then we have to update current unwind state to
-      // the saved values. It is happening after we processed an epilogue and a
-      // return to caller instruction.
-      if (it->second.row.GetOffset() != m_state.row.GetOffset())
-        m_state = it->second;
+    m_curr_row_modified = false;
+    m_branch_offset = 0;
 
-      m_inst_emulator_up->SetInstruction(inst->GetOpcode(), inst->GetAddress(),
-                                         nullptr);
+    lldb::addr_t current_offset =
+        inst.GetAddress().GetFileAddress() - base_addr;
+    auto it = saved_unwind_states.upper_bound(current_offset);
+    assert(it != saved_unwind_states.begin() &&
+           "Unwind row for the function entry missing");
+    --it; // Move it to the row corresponding to the current offset
 
-      if (last_condition != m_inst_emulator_up->GetInstructionCondition()) {
-        // If the last instruction was conditional with a different condition
-        // than the current condition then restore the state.
-        if (last_condition != EmulateInstruction::UnconditionalCondition) {
-          m_state = condition_block_start_state->second;
-          m_state.row.SetOffset(current_offset);
-          // The last instruction might already created a row for this offset
-          // and we want to overwrite it.
-          saved_unwind_states.insert_or_assign(current_offset, m_state);
-        }
+    // When state is forwarded through a branch, the offset of m_state.row is
+    // different from the offset available in saved_unwind_states. Use the
+    // forwarded state in this case, as the previous instruction may have been
+    // an unconditional jump.
+    // FIXME: this assignment can always be done unconditionally.
+    if (it->second.row.GetOffset() != m_state.row.GetOffset())
+      m_state = it->second;
 
-        // We are starting a new conditional block at the actual offset
-        condition_block_start_state = it;
+    m_inst_emulator_up->SetInstruction(inst.GetOpcode(), inst.GetAddress(),
+                                       nullptr);
+    const EmulateInstruction::InstructionCondition new_condition =
+        m_inst_emulator_up->GetInstructionCondition();
+
+    if (last_condition != new_condition) {
+      // If the last instruction was conditional with a different condition
+      // than the current condition then restore the state.
+      if (last_condition != EmulateInstruction::UnconditionalCondition) {
+        m_state = condition_block_start_state->second;
+        m_state.row.SetOffset(current_offset);
+        // The last instruction might already created a row for this offset
+        // and we want to overwrite it.
+        saved_unwind_states.insert_or_assign(current_offset, m_state);
       }
 
-      if (log && log->GetVerbose()) {
-        StreamString strm;
-        lldb_private::FormatEntity::Entry format;
-        FormatEntity::Parse("${frame.pc}: ", format);
-        inst->Dump(&strm, inst_list.GetMaxOpcocdeByteSize(), show_address,
-                   show_bytes, show_control_flow_kind, nullptr, nullptr,
-                   nullptr, &format, 0);
-        log->PutString(strm.GetString());
-      }
+      // We are starting a new conditional block at the actual offset
+      condition_block_start_state = it;
+    }
 
-      last_condition = m_inst_emulator_up->GetInstructionCondition();
+    last_condition = new_condition;
 
-      m_inst_emulator_up->EvaluateInstruction(
-          eEmulateInstructionOptionIgnoreConditions);
+    m_inst_emulator_up->EvaluateInstruction(
+        eEmulateInstructionOptionIgnoreConditions);
 
-      // If the current instruction is a branch forward then save the current
-      // CFI information for the offset where we are branching.
-      if (m_forward_branch_offset != 0 &&
-          range.ContainsFileAddress(inst->GetAddress().GetFileAddress() +
-                                    m_forward_branch_offset)) {
-        if (auto [it, inserted] = saved_unwind_states.emplace(
-                current_offset + m_forward_branch_offset, m_state);
-            inserted)
-          it->second.row.SetOffset(current_offset + m_forward_branch_offset);
-      }
-
-      // Were there any changes to the CFI while evaluating this instruction?
-      if (m_curr_row_modified) {
-        // Save the modified row if we don't already have a CFI row in the
-        // current address
-        if (saved_unwind_states.count(current_offset +
-                                      inst->GetOpcode().GetByteSize()) == 0) {
-          m_state.row.SetOffset(current_offset +
-                                inst->GetOpcode().GetByteSize());
-          saved_unwind_states.emplace(
-              current_offset + inst->GetOpcode().GetByteSize(), m_state);
+    // If the current instruction is a branch forward then save the current
+    // CFI information for the offset where we are branching.
+    Address branch_address = inst.GetAddress();
+    branch_address.Slide(m_branch_offset);
+    if (m_branch_offset != 0 &&
+        range.ContainsFileAddress(branch_address.GetFileAddress())) {
+      if (auto [it, inserted] = saved_unwind_states.emplace(
+              current_offset + m_branch_offset, m_state);
+          inserted) {
+        it->second.row.SetOffset(current_offset + m_branch_offset);
+        if (std::size_t dest_instr_index =
+                inst_list.GetIndexOfInstructionAtAddress(branch_address);
+            dest_instr_index < inst_list.GetSize()) {
+          to_visit.push_front(dest_instr_index);
+          enqueued.insert(dest_instr_index);
         }
       }
     }
-    for (auto &[_, state] : saved_unwind_states) {
-      unwind_plan.InsertRow(std::move(state.row),
-                            /*replace_existing=*/true);
+
+    // If inst is a barrier, do not propagate state to the next instruction.
+    if (inst.IsBarrier())
+      continue;
+
+    // Were there any changes to the CFI while evaluating this instruction?
+    if (m_curr_row_modified) {
+      // Save the modified row if we don't already have a CFI row in the
+      // current address
+      const lldb::addr_t next_inst_offset =
+          current_offset + inst.GetOpcode().GetByteSize();
+      if (saved_unwind_states.count(next_inst_offset) == 0) {
+        m_state.row.SetOffset(next_inst_offset);
+        saved_unwind_states.emplace(next_inst_offset, m_state);
+      }
     }
+
+    const size_t next_idx = current_index + 1;
+    const bool never_enqueued = enqueued.insert(next_idx).second;
+    if (never_enqueued && next_idx < inst_list.GetSize())
+      to_visit.push_back(next_idx);
   }
 
-  if (log && log->GetVerbose()) {
-    StreamString strm;
-    lldb::addr_t base_addr = range.GetBaseAddress().GetFileAddress();
-    strm.Printf("Resulting unwind rows for [0x%" PRIx64 " - 0x%" PRIx64 "):",
-                base_addr, base_addr + range.GetByteSize());
-    unwind_plan.Dump(strm, nullptr, base_addr);
-    log->PutString(strm.GetString());
-  }
+  for (auto &[_, state] : saved_unwind_states)
+    unwind_plan.InsertRow(std::move(state.row),
+                          /*replace_existing=*/true);
+
+  DumpUnwindRowsToLog(log, range, unwind_plan);
   return unwind_plan.GetRowCount() > 0;
 }
 
@@ -382,7 +414,7 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
     if (reg_num != LLDB_INVALID_REGNUM &&
         generic_regnum != LLDB_REGNUM_GENERIC_SP) {
       if (m_pushed_regs.try_emplace(reg_num, addr).second) {
-        const int32_t offset = addr - m_initial_sp;
+        const int32_t offset = addr - m_initial_cfa;
         m_state.row.SetRegisterLocationToAtCFAPlusOffset(reg_num, offset,
                                                          /*can_replace=*/true);
         m_curr_row_modified = true;
@@ -502,21 +534,20 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextAbsoluteBranchRegister:
   case EmulateInstruction::eContextRelativeBranchImmediate: {
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
-        context.info.ISAAndImmediate.unsigned_data32 > 0) {
-      m_forward_branch_offset =
-          context.info.ISAAndImmediateSigned.signed_data32;
+        context.info.ISAAndImmediate.unsigned_data32 != 0) {
+      m_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
-               context.info.ISAAndImmediateSigned.signed_data32 > 0) {
-      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
+               context.info.ISAAndImmediateSigned.signed_data32 != 0) {
+      m_branch_offset = context.info.ISAAndImmediateSigned.signed_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediate &&
-               context.info.unsigned_immediate > 0) {
-      m_forward_branch_offset = context.info.unsigned_immediate;
+               context.info.unsigned_immediate != 0) {
+      m_branch_offset = context.info.unsigned_immediate;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediateSigned &&
-               context.info.signed_immediate > 0) {
-      m_forward_branch_offset = context.info.signed_immediate;
+               context.info.signed_immediate != 0) {
+      m_branch_offset = context.info.signed_immediate;
     }
   } break;
 
@@ -549,7 +580,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
                   sp_reg_info.kinds[m_unwind_plan_ptr->GetRegisterKind()];
               assert(cfa_reg_num != LLDB_INVALID_REGNUM);
               m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
-                  cfa_reg_num, m_initial_sp - sp_reg_val.GetAsUInt64());
+                  cfa_reg_num, m_initial_cfa - sp_reg_val.GetAsUInt64());
             }
           }
         }
@@ -580,7 +611,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
           reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
       assert(cfa_reg_num != LLDB_INVALID_REGNUM);
       m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
-          cfa_reg_num, m_initial_sp - reg_value.GetAsUInt64());
+          cfa_reg_num, m_initial_cfa - reg_value.GetAsUInt64());
       m_curr_row_modified = true;
     }
     break;
@@ -593,7 +624,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
           reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
       assert(cfa_reg_num != LLDB_INVALID_REGNUM);
       m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
-          cfa_reg_num, m_initial_sp - reg_value.GetAsUInt64());
+          cfa_reg_num, m_initial_cfa - reg_value.GetAsUInt64());
       m_curr_row_modified = true;
     }
     break;
@@ -604,7 +635,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     if (!m_state.fp_is_cfa) {
       m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
           m_state.row.GetCFAValue().GetRegisterNumber(),
-          m_initial_sp - reg_value.GetAsUInt64());
+          m_initial_cfa - reg_value.GetAsUInt64());
       m_curr_row_modified = true;
     }
     break;

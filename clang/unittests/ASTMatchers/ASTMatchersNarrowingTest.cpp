@@ -26,6 +26,19 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesInFile) {
   EXPECT_TRUE(matches(input, binaryOperator(isExpandedFromMacro("MY_MACRO"))));
 }
 
+static std::string constructMacroName(llvm::StringRef A, llvm::StringRef B) {
+  return (A + "_" + B).str();
+}
+
+TEST_P(ASTMatchersTest, IsExpandedFromMacro_ConstructedMacroName) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) (4 + (a))
+    void Test() { MY_MACRO(4); }
+  )cc";
+  auto matcher = isExpandedFromMacro(constructMacroName("MY", "MACRO"));
+  EXPECT_TRUE(matches(input, binaryOperator(matcher)));
+}
+
 TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesNested) {
   StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
@@ -1172,8 +1185,8 @@ TEST_P(ASTMatchersTest, IsDerivedFrom_ElaboratedType) {
     return;
   }
 
-  DeclarationMatcher IsDerivenFromBase =
-      cxxRecordDecl(isDerivedFrom(decl().bind("typedef")));
+  DeclarationMatcher IsDerivenFromBase = cxxRecordDecl(
+      isDerivedFrom(decl().bind("typedef")), unless(isImplicit()));
 
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "struct AnInterface {};"
@@ -2302,10 +2315,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(elaboratedType(namesType(
-                templateSpecializationType(hasDeclaration(classTemplateDecl(
-                    has(cxxRecordDecl(has(cxxMethodDecl(hasName("mem"))
-                                              .bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
 
     EXPECT_TRUE(
@@ -2323,10 +2335,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(has(
-                        fieldDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
 
@@ -2341,10 +2352,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                        has(varDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
   {

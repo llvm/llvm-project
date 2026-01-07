@@ -7,8 +7,8 @@
 
 #include <stdio.h>
 
-extern int func(); // Provided in liba.so, returns 42
-typedef int (*fp_t)();
+extern int func(void); // Provided in liba.so, returns 42
+typedef int (*fp_t)(void);
 
 int main() {
   int x = 0;

@@ -42,6 +42,20 @@ struct TestSCFForUtilsPass
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
+    // Annotate every loop-like operation with the static trip count.
+    func.walk([&](LoopLikeOpInterface loopOp) {
+      std::optional<APInt> tripCount = loopOp.getStaticTripCount();
+      if (tripCount.has_value())
+        loopOp->setDiscardableAttr(
+            "test.trip-count",
+            IntegerAttr::get(IntegerType::get(&getContext(),
+                                              tripCount.value().getBitWidth()),
+                             tripCount.value().getSExtValue()));
+      else
+        loopOp->setDiscardableAttr("test.trip-count",
+                                   StringAttr::get(&getContext(), "none"));
+    });
+
     if (testReplaceWithNewYields) {
       func.walk([&](scf::ForOp forOp) {
         if (forOp.getNumResults() == 0)

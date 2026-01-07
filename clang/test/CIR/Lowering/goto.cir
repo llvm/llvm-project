@@ -1,0 +1,52 @@
+// RUN: cir-opt %s --pass-pipeline='builtin.module(cir-to-llvm,canonicalize{region-simplify=disabled})' -o - | FileCheck %s -check-prefix=MLIR
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+  cir.func @gotoFromIf(%arg0: !s32i) -> !s32i {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %6 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      %7 = cir.const #cir.int<5> : !s32i
+      %8 = cir.cmp(gt, %6, %7) : !s32i, !cir.bool
+      cir.if %8 {
+        cir.goto "err"
+      }
+    }
+    %2 = cir.const #cir.int<0> : !s32i
+    cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
+    cir.br ^bb1
+  ^bb1:
+    %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %3 : !s32i
+  ^bb2:
+    cir.label "err"
+    %4 = cir.const #cir.int<1> : !s32i
+    %5 = cir.unary(minus, %4) : !s32i, !s32i
+    cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
+    cir.br ^bb1
+  }
+
+// MLIR:  llvm.func @gotoFromIf
+// MLIR:    %[[#One:]] = llvm.mlir.constant(1 : i32) : i32
+// MLIR:    %[[#Zero:]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR:    llvm.cond_br {{.*}}, ^bb[[#COND_YES:]], ^bb[[#COND_NO:]]
+// MLIR:  ^bb[[#COND_YES]]:
+// MLIR:    llvm.br ^bb[[#GOTO_BLK:]]
+// MLIR:   ^bb[[#COND_NO]]:
+// MLIR:    llvm.br ^bb[[#BLK:]]
+// MLIR:  ^bb[[#BLK]]:
+// MLIR:    llvm.store %[[#Zero]], %[[#Ret_val_addr:]] {{.*}}: i32, !llvm.ptr
+// MLIR:    llvm.br ^bb[[#RETURN:]]
+// MLIR:  ^bb[[#RETURN]]:
+// MLIR:    %[[#Ret_val:]] = llvm.load %[[#Ret_val_addr]] {alignment = 4 : i64} : !llvm.ptr -> i32
+// MLIR:    llvm.return %[[#Ret_val]] : i32
+// MLIR:  ^bb[[#GOTO_BLK]]:
+// MLIR:    %[[#Neg_one:]] = llvm.sub %[[#Zero]], %[[#One]]  : i32
+// MLIR:    llvm.store %[[#Neg_one]], %[[#Ret_val_addr]] {{.*}}: i32, !llvm.ptr
+// MLIR:    llvm.br ^bb[[#RETURN]]
+// MLIR: }
+}

@@ -437,7 +437,7 @@ void SymbolFileBreakpad::FindFunctions(
       sc.comp_unit = cu_sp.get();
       sc.function = func_sp.get();
       sc.module_sp = func_sp->CalculateSymbolContextModule();
-      sc_list.Append(sc);
+      sc_list.AppendIfUnique(sc, /*merge_symbol_into_function=*/true);
     }
   }
 }

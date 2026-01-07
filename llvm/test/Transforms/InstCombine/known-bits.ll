@@ -1244,6 +1244,48 @@ define i1 @extract_value_smul_fail(i8 %xx, i8 %yy) {
   ret i1 %r
 }
 
+define i8 @known_self_mul_bit_0_set(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_0_set(
+; CHECK-NEXT:    ret i8 0
+;
+  %bit_0_set = or i8 %x, 1
+  %self_mul = mul i8 %bit_0_set, %bit_0_set
+  %r = and i8 %self_mul, 4
+  ret i8 %r
+}
+
+define i8 @known_self_mul_bit_0_unset(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_0_unset(
+; CHECK-NEXT:    ret i8 0
+;
+  %bit_0_unset = and i8 %x, -2
+  %self_mul = mul i8 %bit_0_unset, %bit_0_unset
+  %r = and i8 %self_mul, 8
+  ret i8 %r
+}
+
+define i8 @known_self_mul_bit_1_set_bit_0_unset(i8 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_1_set_bit_0_unset(
+; CHECK-NEXT:    ret i8 0
+;
+  %lower_2_unset = and i8 %x, -4
+  %bit_1_set_bit_0_unset = or disjoint i8 %lower_2_unset, 2
+  %self_mul = mul i8 %bit_1_set_bit_0_unset, %bit_1_set_bit_0_unset
+  %r = and i8 %self_mul, 24
+  ret i8 %r
+}
+
+define i4 @known_self_mul_bit_1_set_bit_0_unset_i4(i4 noundef %x) {
+; CHECK-LABEL: @known_self_mul_bit_1_set_bit_0_unset_i4(
+; CHECK-NEXT:    ret i4 0
+;
+  %lower_2_unset = and i4 %x, -4
+  %bit_1_set_bit_0_unset = or disjoint i4 %lower_2_unset, 2
+  %self_mul = mul i4 %bit_1_set_bit_0_unset, %bit_1_set_bit_0_unset
+  %r = and i4 %self_mul, 24
+  ret i4 %r
+}
+
 define i8 @known_reduce_or(<2 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_or(
 ; CHECK-NEXT:    ret i8 1
@@ -2381,6 +2423,23 @@ if:
 exit:
   %or2 = or i8 %x, -4
   ret i8 %or2
+}
+
+define <vscale x 4 x i32> @scalable_add_to_disjoint_or(i8 %x, <vscale x 4 x i32> range(i32 0, 256) %rhs) {
+; CHECK-LABEL: @scalable_add_to_disjoint_or(
+; CHECK-NEXT:    [[EXTX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i32 [[EXTX]], 8
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[SHIFT]], i64 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint <vscale x 4 x i32> [[SPLAT]], [[RHS:%.*]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
+;
+  %extx = zext i8 %x to i32
+  %shift = shl nuw nsw i32 %extx, 8
+  %insert = insertelement <vscale x 4 x i32> poison, i32 %shift, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %insert, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %add = add <vscale x 4 x i32> %splat, %rhs
+  ret <vscale x 4 x i32> %add
 }
 
 declare void @dummy()

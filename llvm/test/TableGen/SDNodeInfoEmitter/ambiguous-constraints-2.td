@@ -26,8 +26,12 @@ def my_node_2b : SDNode<"MyTargetISD::NODE_2", SDTypeProfile<1, 0, [SDTCisVT<0, 
 // CHECK-NEXT:    "MyTargetISD::NODE_2\0"
 // CHECK-NEXT:    ;
 
-// CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
-// CHECK-NEXT:    /* 0 */ {SDTCisVT, 0, 0, MVT::i32},
+// CHECK:       static const VTByHwModePair MyTargetVTByHwModeTable[] = {
+// CHECK-NEXT:   /* dummy */ {0, MVT::INVALID_SIMPLE_VALUE_TYPE}
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
+// CHECK-NEXT:    /* 0 */ {SDTCisVT, 0, 0, 0, MVT::i32},
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
@@ -36,5 +40,5 @@ def my_node_2b : SDNode<"MyTargetISD::NODE_2", SDTypeProfile<1, 0, [SDTCisVT<0, 
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
-// CHECK-NEXT:      /*NumOpcodes=*/2, MyTargetSDNodeDescs,
-// CHECK-NEXT:      MyTargetSDNodeNames, MyTargetSDTypeConstraints);
+// CHECK-NEXT:      /*NumOpcodes=*/2, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// CHECK-NEXT:      MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);

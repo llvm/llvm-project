@@ -44,7 +44,10 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   // Waiting until 'configurationDone' to send target based capabilities in case
   // the launch or attach scripts adjust the target. The initial dummy target
   // may have different capabilities than the final target.
-  SendTargetBasedCapabilities(dap);
+
+  /// Also send here custom capabilities to the client, which is consumed by the
+  /// lldb-dap specific editor extension.
+  SendExtraCapabilities(dap);
 
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.
@@ -60,6 +63,15 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
     return SendThreadStoppedEvent(dap, /*on_entry=*/true);
 
   return ToError(process.Continue());
+}
+
+void ConfigurationDoneRequestHandler::PostRun() const {
+  if (!dap.on_configuration_done)
+    return;
+
+  dap.on_configuration_done();
+  // Clear the callback to ensure any captured resources are released.
+  dap.on_configuration_done = nullptr;
 }
 
 } // namespace lldb_dap

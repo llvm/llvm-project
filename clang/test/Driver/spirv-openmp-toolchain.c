@@ -21,7 +21,7 @@
 // CHECK-PHASES: 7: backend, {6}, assembler, (device-openmp)
 // CHECK-PHASES: 8: assembler, {7}, object, (device-openmp)
 // CHECK-PHASES: 9: offload, "device-openmp (spirv64-intel)" {8}, object
-// CHECK-PHASES: 10: clang-offload-packager, {9}, image, (device-openmp)
+// CHECK-PHASES: 10: llvm-offload-binary, {9}, image, (device-openmp)
 // CHECK-PHASES: 11: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {10}, ir
 // CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
 // CHECK-PHASES: 13: assembler, {12}, object, (host-openmp)
@@ -60,3 +60,12 @@
 // RUN:        --libomptarget-spirv-bc-path=%t/ -nogpulib %s 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-OFFLOAD-ARCH-ERROR
 // CHECK-OFFLOAD-ARCH-ERROR: error: failed to deduce triple for target architecture 'spirv64-intel'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead
+
+// RUN: %clang -mllvm --spirv-ext=+SPV_INTEL_function_pointers -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=spirv64-intel \
+// RUN:        -nogpulib %s 2>&1 \
+// RUN: | FileCheck %s --check-prefix=CHECK-LINKER-ARG
+// CHECK-LINKER-ARG: clang-linker-wrapper
+// CHECK-LINKER-ARG-NOT: --device-linker=spirv64
+// CHECK-LINKER-ARG-NOT: -mllvm
+// CHECK-LINKER-ARG-NOT: --spirv-ext=+SPV_INTEL_function_pointers
+// CHECK-LINKER-ARG: --linker-path

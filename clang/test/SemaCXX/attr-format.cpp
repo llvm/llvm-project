@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wformat-nonliteral -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -Wformat-nonliteral -verify %s
 #include <stdarg.h>
 
 int printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -11,6 +11,10 @@ struct S {
   // the format argument is argument 2 here.
   void g(const char*, ...) __attribute__((format(printf, 2, 3)));
   const char* g2(const char*) __attribute__((format_arg(2)));
+  // From C++23 'this' can also be specified explicitly.
+  void g3(this S&, const char *, ...) __attribute__((format(printf, 2, 3)));
+  void g4(this const char* s, ...) __attribute__((format(printf, 1, 2)));
+  consteval operator const char*() const { return "%f"; } // #g4_fmt_string
 
   void h(const char*, ...) __attribute__((format(printf, 1, 4))); // \
       expected-error{{implicit this argument as the format string}}
@@ -18,9 +22,16 @@ struct S {
       expected-error{{out of bounds}}
   const char* h3(const char*) __attribute__((format_arg(1))); // \
       expected-error{{invalid for the implicit this argument}}
+  void h4(this S&, const char *, ...) __attribute__((format(printf, 1, 3))); // \
+      expected-error {{format argument not a string type}}
 
   void operator() (const char*, ...) __attribute__((format(printf, 2, 3)));
 };
+
+void s() {
+  S().g4(4); // expected-warning {{format specifies type 'double' but the argument has type 'int'}}
+             // expected-note@#g4_fmt_string {{format string is defined here}}
+}
 
 // PR5521
 struct A { void a(const char*,...) __attribute((format(printf,2,3))); };

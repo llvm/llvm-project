@@ -19,6 +19,7 @@
 #include <limits>
 
 namespace mlir {
+class RewritePatternSet;
 
 namespace func {
 class FuncOp;
@@ -106,7 +107,6 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLoopTilingPass();
 /// all) or the default unroll factor is used (LoopUnroll:kDefaultUnrollFactor).
 std::unique_ptr<InterfacePass<FunctionOpInterface>> createLoopUnrollPass(
     int unrollFactor = -1, bool unrollUpToFactor = false,
-    bool unrollFull = false,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr);
 
 /// Creates a loop unroll jam pass to unroll jam by the specified factor. A
@@ -126,6 +126,10 @@ std::unique_ptr<Pass> createAffineExpandIndexOpsPass();
 /// Creates a pass to expand affine index operations into affine.apply
 /// operations.
 std::unique_ptr<Pass> createAffineExpandIndexOpsAsAffinePass();
+
+/// Appends patterns for folding memref aliasing ops into affine load/store
+/// ops into `patterns`.
+void populateAffineFoldMemRefAliasOpPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 // Registration

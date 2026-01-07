@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly-custom<deps>' -polly-print-deps -disable-output < %s | FileCheck %s
 ;
 ;
 ; These are the important RAW dependences, as they need to originate/end in only one iteration:

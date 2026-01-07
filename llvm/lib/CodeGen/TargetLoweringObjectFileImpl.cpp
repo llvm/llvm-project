@@ -247,6 +247,8 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
     break;
   case Triple::riscv32:
   case Triple::riscv64:
+  case Triple::riscv32be:
+  case Triple::riscv64be:
     LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
     PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
                           dwarf::DW_EH_PE_sdata4;
@@ -1918,6 +1920,13 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   }
 
   emitCGProfileMetadata(Streamer, M);
+  emitPseudoProbeDescMetadata(Streamer, M, [](MCStreamer &Streamer) {
+    if (MCSymbol *Sym =
+            static_cast<MCSectionCOFF *>(Streamer.getCurrentSectionOnly())
+                ->getCOMDATSymbol())
+      if (Sym->isUndefined())
+        Streamer.emitLabel(Sym);
+  });
 }
 
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
@@ -2779,9 +2788,10 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));
-  TextLD->setLDAttributes(GOFF::LDAttr{
-      false, GOFF::ESD_EXE_CODE, GOFF::ESD_BST_Strong, GOFF::ESD_LT_XPLink,
-      GOFF::ESD_AMODE_64, GOFF::ESD_BSC_Section});
+  TextLD->setCodeData(GOFF::ESD_EXE_CODE);
+  TextLD->setLinkage(GOFF::ESD_LT_XPLink);
+  TextLD->setExternal(false);
+  TextLD->setWeak(false);
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);
 }

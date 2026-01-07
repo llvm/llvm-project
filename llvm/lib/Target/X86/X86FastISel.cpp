@@ -3323,6 +3323,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     return false;
 
   SmallVector<MVT, 16> OutVTs;
+  SmallVector<Type *, 16> ArgTys;
   SmallVector<Register, 16> ArgRegs;
 
   // If this is a constant i1/i8/i16 argument, promote to i32 to avoid an extra
@@ -3369,6 +3370,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
     ArgRegs.push_back(ResultReg);
     OutVTs.push_back(VT);
+    ArgTys.push_back(Val->getType());
   }
 
   // Analyze operands of the call, assigning locations to each operand.
@@ -3379,7 +3381,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (IsWin64)
     CCInfo.AllocateStack(32, Align(8));
 
-  CCInfo.AnalyzeCallOperands(OutVTs, OutFlags, CC_X86);
+  CCInfo.AnalyzeCallOperands(OutVTs, OutFlags, ArgTys, CC_X86);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getAlignedCallFrameSize();

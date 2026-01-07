@@ -21,8 +21,8 @@ use omp_lib
   integer(omp_allocator_handle_kind) :: xy_alloc
   xy_alloc = omp_init_allocator(xy_memspace, 1, xy_traits)
 
-  arrayA = 1.414
-  arrayB = 3.14
+  arrayA = 1.414d0
+  arrayB = 3.14d0
   N = 1024
 
 ! 2.5 parallel-clause -> if-clause |
@@ -252,7 +252,7 @@ use omp_lib
   !$omp parallel do if(target:a>1.)
   do i = 1, N
   enddo
-  !ERROR: Unmatched END SIMD directive
+  !ERROR: Misplaced OpenMP end-directive
   !$omp end simd
 
 ! 2.7.2 sections-clause -> private-clause |
@@ -426,7 +426,7 @@ use omp_lib
      enddo
   enddo
   !omp end do nowait
-  !$omp end parallel 
+  !$omp end parallel
 
 ! 2.11.4 parallel-do-simd-clause -> parallel-clause |
 !                                   do-simd-clause
@@ -574,7 +574,7 @@ use omp_lib
   do i = 1, N
      a = a + 3.14
   enddo
-  !ERROR: Unmatched END TASKLOOP directive
+  !ERROR: Misplaced OpenMP end-directive
   !$omp end taskloop
 
   !ERROR: GRAINSIZE and NUM_TASKS clauses are mutually exclusive and may not appear on the same TASKLOOP SIMD directive
@@ -591,7 +591,7 @@ use omp_lib
      allc = 3.14
   enddo
 
-  !$omp target enter data map(alloc:A) device(0) 
-  !$omp target exit data map(delete:A) device(0) 
+  !$omp target enter data map(alloc:A) device(0)
+  !$omp target exit data map(delete:A) device(0)
 
 end program

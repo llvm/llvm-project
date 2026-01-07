@@ -396,7 +396,7 @@ body, html {
 
 .sidebar {
     width: 250px;
-    top: 0;
+    top: 60px;
     left: 0;
     height: 100%;
     position: fixed;

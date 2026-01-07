@@ -314,7 +314,7 @@ bool XtensaFrameLowering::spillCalleeSavedRegisters(
     bool IsKill = !IsA0AndRetAddrIsTaken;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     TII.storeRegToStackSlot(EntryBlock, MI, Reg, IsKill, CSI[i].getFrameIdx(),
-                            RC, TRI, Register());
+                            RC, Register());
   }
 
   return true;

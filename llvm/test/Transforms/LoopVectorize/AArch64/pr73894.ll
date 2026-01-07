@@ -10,11 +10,8 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[N]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP1]], i32 1)
 ; CHECK-NEXT:    [[UMAX:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = icmp ult i64 0, [[UMAX]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ult i64 1, [[UMAX]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -53,24 +50,9 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP17]], i32 [[TMP18]])
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDUC:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDUC_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[MAX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP24:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDUC]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP24]] = tail call i32 @llvm.smax.i32(i32 [[TMP23]], i32 [[MAX]])
-; CHECK-NEXT:    [[INDUC_NEXT]] = add nuw nsw i64 [[INDUC]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDUC_NEXT]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP24]], [[LOOP]] ], [ [[RDX_MINMAX]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 [[RDX_MINMAX]]
 ;
 entry:
   %1 = and i32 %n, 15
@@ -100,5 +82,4 @@ declare i32 @llvm.umax.i32(i32, i32)
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.

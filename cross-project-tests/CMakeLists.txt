@@ -21,9 +21,11 @@ set(CROSS_PROJECT_TEST_DEPS
   count
   llvm-ar
   llvm-config
+  llvm-dis
   llvm-dwarfdump
   llvm-objdump
   not
+  obj2yaml
   split-file
   )
 
@@ -98,6 +100,13 @@ add_lit_testsuite(check-cross-amdgpu "Running AMDGPU cross-project tests"
 # DTLTO tests.
 add_lit_testsuite(check-cross-dtlto "Running DTLTO cross-project tests"
   ${CMAKE_CURRENT_BINARY_DIR}/dtlto
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
+  )
+
+# veclib tests.
+add_lit_testsuite(check-cross-veclib "Running veclib cross-project tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/veclib
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )

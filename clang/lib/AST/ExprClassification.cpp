@@ -259,6 +259,9 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     }
     return Cl::CL_LValue;
 
+  case Expr::MatrixSingleSubscriptExprClass:
+    return ClassifyInternal(Ctx, cast<MatrixSingleSubscriptExpr>(E)->getBase());
+
   // Subscripting matrix types behaves like member accesses.
   case Expr::MatrixSubscriptExprClass:
     return ClassifyInternal(Ctx, cast<MatrixSubscriptExpr>(E)->getBase());
@@ -601,6 +604,13 @@ static Cl::Kinds ClassifyMemberExpr(ASTContext &Ctx, const MemberExpr *E) {
 static Cl::Kinds ClassifyBinaryOp(ASTContext &Ctx, const BinaryOperator *E) {
   assert(Ctx.getLangOpts().CPlusPlus &&
          "This is only relevant for C++.");
+
+  // For binary operators which are unknown due to type dependence, the
+  // convention is to classify them as a prvalue. This does not matter much, but
+  // it needs to agree with how they are created.
+  if (E->getType() == Ctx.DependentTy)
+    return Cl::CL_PRValue;
+
   // C++ [expr.ass]p1: All [...] return an lvalue referring to the left operand.
   // Except we override this for writes to ObjC properties.
   if (E->isAssignmentOp())

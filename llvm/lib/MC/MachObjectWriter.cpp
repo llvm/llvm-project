@@ -28,12 +28,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -383,7 +383,7 @@ const MCSymbol &MachObjectWriter::findAliasedSymbol(const MCSymbol &Sym) const {
 }
 
 void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
-  auto *Symbol = static_cast<const MCSymbolMachO *>(MSD.Symbol);
+  auto *Symbol = MSD.Symbol;
   const auto &Data = static_cast<const MCSymbolMachO &>(*Symbol);
   auto *AliasedSymbol =
       static_cast<const MCSymbolMachO *>(&findAliasedSymbol(*Symbol));
@@ -570,8 +570,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
     //
     // FIXME: Do not hardcode.
     if (Asm.registerSymbol(*ISD.Symbol))
-      static_cast<MCSymbolMachO *>(ISD.Symbol)
-          ->setReferenceTypeUndefinedLazy(true);
+      ISD.Symbol->setReferenceTypeUndefinedLazy(true);
   }
 }
 
@@ -585,7 +584,12 @@ void MachObjectWriter::computeSymbolTable(
   unsigned Index = 1;
   for (MCSection &Sec : Asm)
     SectionIndexMap[&Sec] = Index++;
-  assert(Index <= 256 && "Too many sections!");
+
+  // Section indices begin from 1 in MachO. Only sections 1-255 can be indexed
+  // into section symbols. Referencing a section with index larger than 255 will
+  // not set n_sect for these symbols.
+  if (Index > 255)
+    getContext().reportError(SMLoc(), "Too many sections!");
 
   // Build the string table.
   for (const MCSymbol &Symbol : Asm.symbols()) {
@@ -602,15 +606,16 @@ void MachObjectWriter::computeSymbolTable(
   // match 'as'. Even though it doesn't matter for correctness, this is
   // important for letting us diff .o files.
   for (const MCSymbol &Symbol : Asm.symbols()) {
+    auto &Sym = static_cast<const MCSymbolMachO &>(Symbol);
     // Ignore non-linker visible symbols.
-    if (!static_cast<const MCSymbolMachO &>(Symbol).isSymbolLinkerVisible())
+    if (!Sym.isSymbolLinkerVisible())
       continue;
 
-    if (!Symbol.isExternal() && !Symbol.isUndefined())
+    if (!Sym.isExternal() && !Sym.isUndefined())
       continue;
 
     MachSymbolData MSD;
-    MSD.Symbol = &Symbol;
+    MSD.Symbol = &Sym;
     MSD.StringIndex = StringTable.getOffset(Symbol.getName());
 
     if (Symbol.isUndefined()) {
@@ -621,22 +626,24 @@ void MachObjectWriter::computeSymbolTable(
       ExternalSymbolData.push_back(MSD);
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
-      assert(MSD.SectionIndex && "Invalid section index!");
+      if (!MSD.SectionIndex)
+        getContext().reportError(SMLoc(), "Invalid section index!");
       ExternalSymbolData.push_back(MSD);
     }
   }
 
   // Now add the data for local symbols.
   for (const MCSymbol &Symbol : Asm.symbols()) {
+    auto &Sym = static_cast<const MCSymbolMachO &>(Symbol);
     // Ignore non-linker visible symbols.
-    if (!static_cast<const MCSymbolMachO &>(Symbol).isSymbolLinkerVisible())
+    if (!Sym.isSymbolLinkerVisible())
       continue;
 
-    if (Symbol.isExternal() || Symbol.isUndefined())
+    if (Sym.isExternal() || Sym.isUndefined())
       continue;
 
     MachSymbolData MSD;
-    MSD.Symbol = &Symbol;
+    MSD.Symbol = &Sym;
     MSD.StringIndex = StringTable.getOffset(Symbol.getName());
 
     if (Symbol.isAbsolute()) {
@@ -644,7 +651,8 @@ void MachObjectWriter::computeSymbolTable(
       LocalSymbolData.push_back(MSD);
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
-      assert(MSD.SectionIndex && "Invalid section index!");
+      if (!MSD.SectionIndex)
+        getContext().reportError(SMLoc(), "Invalid section index!");
       LocalSymbolData.push_back(MSD);
     }
   }

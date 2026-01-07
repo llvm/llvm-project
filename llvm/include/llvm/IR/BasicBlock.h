@@ -68,7 +68,7 @@ private:
   // Allow Function to renumber blocks.
   friend class Function;
   /// Per-function unique number.
-  unsigned Number = -1u;
+  unsigned Number = ~0u;
 
   friend class BlockAddress;
   friend class SymbolTableListTraits<BasicBlock>;
@@ -750,7 +750,7 @@ public:
   /// instructions, so the order should be validated no more than once after
   /// each ordering to ensure that transforms have the same algorithmic
   /// complexity when asserts are enabled as when they are disabled.
-  void validateInstrOrdering() const;
+  LLVM_ABI_FOR_TEST void validateInstrOrdering() const;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

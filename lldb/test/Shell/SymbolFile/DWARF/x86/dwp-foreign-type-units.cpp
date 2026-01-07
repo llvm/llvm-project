@@ -16,9 +16,9 @@
 // type unit comes from by looking at the DW_AT_dwo_name attribute in the
 // DW_TAG_type_unit.
 
-// RUN: %clang -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf \
+// RUN: %clangxx -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf \
 // RUN:   -fdebug-types-section -gpubnames -c %s -o %t.main.o
-// RUN: %clang -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf -DVARIANT \
+// RUN: %clangxx -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf -DVARIANT \
 // RUN:   -fdebug-types-section -gpubnames -c %s -o %t.foo.o
 // RUN: ld.lld %t.main.o %t.foo.o -o %t
 
@@ -56,8 +56,8 @@
 // DWPMAIN-NEXT: struct CustomType {
 // DWPMAIN-NEXT:     typedef int IntegerType;
 // DWPMAIN-NEXT:     typedef double FloatType;
-// DWPMAIN-NEXT:     CustomType::IntegerType x;
-// DWPMAIN-NEXT:     CustomType::FloatType y;
+// DWPMAIN-NEXT:     IntegerType x;
+// DWPMAIN-NEXT:     FloatType y;
 // DWPMAIN-NEXT: }
 
 // Next we check when we make the .dwp file with %t.foo.dwo first so it will
@@ -78,8 +78,8 @@
 // DWPFOO-NEXT: struct CustomType {
 // DWPFOO-NEXT:     typedef unsigned int IntegerType;
 // DWPFOO-NEXT:     typedef float FloatType;
-// DWPFOO-NEXT:     CustomType::IntegerType x;
-// DWPFOO-NEXT:     CustomType::FloatType y;
+// DWPFOO-NEXT:     IntegerType x;
+// DWPFOO-NEXT:     FloatType y;
 // DWPFOO-NEXT: }
 
 struct CustomType {

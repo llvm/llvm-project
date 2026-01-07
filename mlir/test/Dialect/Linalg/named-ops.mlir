@@ -706,6 +706,42 @@ func.func @pooling_nhwc_max_tensor(%input: tensor<1x4x4x1xf32>) -> tensor<1x2x2x
 }
 
 // -----
+
+// CHECK-LABEL: func @pooling_nhwc_max_unsigned_i32
+// CHECK:         %{{.+}} = linalg.pooling_nhwc_max_unsigned
+// CHECK-SAME:      ins(%{{.+}}, %{{.+}} : tensor<1x4x4x1xi32>, tensor<3x3xi32>)
+// CHECK-SAME:      outs(%{{.+}} : tensor<1x2x2x1xi32>) -> tensor<1x2x2x1xi32>
+func.func @pooling_nhwc_max_unsigned_i32(%input: tensor<1x4x4x1xi32>) -> tensor<1x2x2x1xi32> {
+  %fake = tensor.empty() : tensor<3x3xi32>
+  %init = tensor.empty() : tensor<1x2x2x1xi32>
+  %cst = arith.constant 0 : i32
+  %fill = linalg.fill ins(%cst : i32) outs(%init : tensor<1x2x2x1xi32>) -> tensor<1x2x2x1xi32>
+  %res = linalg.pooling_nhwc_max_unsigned {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+    ins(%input, %fake: tensor<1x4x4x1xi32>, tensor<3x3xi32>)
+    outs(%fill: tensor<1x2x2x1xi32>) -> tensor<1x2x2x1xi32>
+  return %res : tensor<1x2x2x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @pooling_nwc_max_unsigned_i32
+// CHECK:         %{{.+}} = linalg.pooling_nwc_max_unsigned
+// CHECK-SAME:      dilations = dense<1> : tensor<1xi64>
+// CHECK-SAME:      strides = dense<1> : tensor<1xi64>
+// CHECK-SAME:      ins(%{{.+}}, %{{.+}} : tensor<1x4x1xi32>, tensor<3xi32>)
+// CHECK-SAME:      outs(%{{.+}} : tensor<1x2x1xi32>) -> tensor<1x2x1xi32>
+func.func @pooling_nwc_max_unsigned_i32(%input: tensor<1x4x1xi32>) -> tensor<1x2x1xi32> {
+  %fake = tensor.empty() : tensor<3xi32>
+  %init = tensor.empty() : tensor<1x2x1xi32>
+  %cst = arith.constant 0 : i32
+  %fill = linalg.fill ins(%cst : i32) outs(%init : tensor<1x2x1xi32>) -> tensor<1x2x1xi32>
+  %res = linalg.pooling_nwc_max_unsigned {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+    ins(%input, %fake: tensor<1x4x1xi32>, tensor<3xi32>)
+    outs(%fill: tensor<1x2x1xi32>) -> tensor<1x2x1xi32>
+  return %res : tensor<1x2x1xi32>
+}
+
+// -----
 // CHECK-LABEL: func @pooling_nwc_max_tensor
 // CHECK:         %{{.+}} = linalg.pooling_nwc_max
 // CHECK-SAME:      dilations = dense<1> : tensor<1xi64>
@@ -1017,6 +1053,42 @@ func.func @pooling_nhwc_min_tensor(%input: tensor<1x4x4x1xf32>) -> tensor<1x2x2x
 
 // -----
 
+// CHECK-LABEL: func @pooling_nhwc_min_unsigned_i32
+// CHECK:         %{{.+}} = linalg.pooling_nhwc_min_unsigned
+// CHECK-SAME:      ins(%{{.+}}, %{{.+}} : tensor<1x4x4x1xi32>, tensor<3x3xi32>)
+// CHECK-SAME:      outs(%{{.+}} : tensor<1x2x2x1xi32>) -> tensor<1x2x2x1xi32>
+func.func @pooling_nhwc_min_unsigned_i32(%input: tensor<1x4x4x1xi32>) -> tensor<1x2x2x1xi32> {
+  %fake = tensor.empty() : tensor<3x3xi32>
+  %init = tensor.empty() : tensor<1x2x2x1xi32>
+  %cst = arith.constant 0 : i32
+  %fill = linalg.fill ins(%cst : i32) outs(%init : tensor<1x2x2x1xi32>) -> tensor<1x2x2x1xi32>
+  %res = linalg.pooling_nhwc_min_unsigned {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+    ins(%input, %fake: tensor<1x4x4x1xi32>, tensor<3x3xi32>)
+    outs(%fill: tensor<1x2x2x1xi32>) -> tensor<1x2x2x1xi32>
+  return %res : tensor<1x2x2x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @pooling_nwc_min_unsigned_i32
+// CHECK:         %{{.+}} = linalg.pooling_nwc_min_unsigned
+// CHECK-SAME:      dilations = dense<1> : tensor<1xi64>
+// CHECK-SAME:      strides = dense<1> : tensor<1xi64>
+// CHECK-SAME:      ins(%{{.+}}, %{{.+}} : tensor<1x4x1xi32>, tensor<3xi32>)
+// CHECK-SAME:      outs(%{{.+}} : tensor<1x2x1xi32>) -> tensor<1x2x1xi32>
+func.func @pooling_nwc_min_unsigned_i32(%input: tensor<1x4x1xi32>) -> tensor<1x2x1xi32> {
+  %fake = tensor.empty() : tensor<3xi32>
+  %init = tensor.empty() : tensor<1x2x1xi32>
+  %cst = arith.constant 0 : i32
+  %fill = linalg.fill ins(%cst : i32) outs(%init : tensor<1x2x1xi32>) -> tensor<1x2x1xi32>
+  %res = linalg.pooling_nwc_min_unsigned {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+    ins(%input, %fake: tensor<1x4x1xi32>, tensor<3xi32>)
+    outs(%fill: tensor<1x2x1xi32>) -> tensor<1x2x1xi32>
+  return %res : tensor<1x2x1xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @pooling_nwc_min_tensor
 // CHECK:         %{{.+}} = linalg.pooling_nwc_min
 // CHECK-SAME:      dilations = dense<1> : tensor<1xi64>
@@ -1217,17 +1289,6 @@ func.func @batch_reduce_matmul(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32
   // CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<?x?x?xf32>, memref<?x?x?xf32>)
   // CHECK-SAME: outs(%{{.+}} : memref<?x?xf32>)
   linalg.batch_reduce_matmul ins(%arg0, %arg1 : memref<?x?x?xf32>, memref<?x?x?xf32>) outs(%arg2: memref<?x?xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @matmul_transpose_a
-//       CHECK:   linalg.matmul_transpose_a
-//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<5x3xf32>, memref<5x7xf32>)
-//  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
-func.func @matmul_transpose_a(%arg0: memref<5x3xf32>, %arg1: memref<5x7xf32>, %arg2: memref<3x7xf32>) {
-  linalg.matmul_transpose_a ins(%arg0, %arg1 : memref<5x3xf32>, memref<5x7xf32>) outs(%arg2: memref<3x7xf32>)
   return
 }
 
@@ -1475,17 +1536,6 @@ func.func @matmul_bcast_b_transpose_a(%arg0: memref<5x3xf32>, %arg1: memref<5xf3
 // CHECK:           linalg.matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<5x3xf32>, memref<5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>)
 // CHECK:           return
 // CHECK:         }
-
-// -----
-
-// CHECK-LABEL: func @matmul_transpose_b
-//       CHECK:   linalg.matmul_transpose_b
-//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<3x5xf32>, memref<7x5xf32>)
-//  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
-func.func @matmul_transpose_b(%arg0: memref<3x5xf32>, %arg1: memref<7x5xf32>, %arg2: memref<3x7xf32>) {
-  linalg.matmul_transpose_b ins(%arg0, %arg1 : memref<3x5xf32>, memref<7x5xf32>) outs(%arg2: memref<3x7xf32>)
-  return
-}
 
 // -----
 
@@ -1801,28 +1851,6 @@ func.func @bcast_A_transpose_B(%A: memref<3x5xf32>, %B: memref<2x7x5xf32>, %C: m
                        affine_map<(d0, d1, d2, d3) -> (d1, d2)>
                      ]
                      ins(%A, %B : memref<3x5xf32>, memref<2x7x5xf32>) outs(%C: memref<3x7xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @batchmatmul_transpose_a
-//       CHECK:   linalg.batch_matmul_transpose_a
-//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x5x3xf32>, memref<2x5x7xf32>)
-//  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
-func.func @batchmatmul_transpose_a(%arg0: memref<2x5x3xf32>, %arg1: memref<2x5x7xf32>, %arg2: memref<2x3x7xf32>) {
-  linalg.batch_matmul_transpose_a ins(%arg0, %arg1 : memref<2x5x3xf32>, memref<2x5x7xf32>) outs(%arg2: memref<2x3x7xf32>)
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @batchmatmul_transpose_b
-//       CHECK:   linalg.batch_matmul_transpose_b
-//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x3x5xf32>, memref<2x7x5xf32>)
-//  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
-func.func @batchmatmul_transpose_b(%arg0: memref<2x3x5xf32>, %arg1: memref<2x7x5xf32>, %arg2: memref<2x3x7xf32>) {
-  linalg.batch_matmul_transpose_b ins(%arg0, %arg1 : memref<2x3x5xf32>, memref<2x7x5xf32>) outs(%arg2: memref<2x3x7xf32>)
   return
 }
 

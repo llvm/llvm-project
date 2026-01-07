@@ -653,7 +653,7 @@ public:
   public:
     const_iterator() = default;
     // Placate MSVC by explicitly scoping 'iterator'.
-    const_iterator(typename IntrusiveBackList<T>::iterator X) : N(X.N) {}
+    const_iterator(IntrusiveBackList<T>::iterator X) : N(X.N) {}
     explicit const_iterator(const T *N) : N(N) {}
 
     const_iterator &operator++() {

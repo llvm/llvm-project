@@ -45,18 +45,15 @@ struct LoopUnroll : public affine::impl::AffineLoopUnrollBase<LoopUnroll> {
   const std::function<unsigned(AffineForOp)> getUnrollFactor;
 
   LoopUnroll() : getUnrollFactor(nullptr) {}
-  LoopUnroll(const LoopUnroll &other)
-
-      = default;
+  LoopUnroll(const LoopUnroll &other) = default;
   explicit LoopUnroll(
       std::optional<unsigned> unrollFactor = std::nullopt,
-      bool unrollUpToFactor = false, bool unrollFull = false,
+      bool unrollUpToFactor = false,
       const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr)
       : getUnrollFactor(getUnrollFactor) {
     if (unrollFactor)
       this->unrollFactor = *unrollFactor;
     this->unrollUpToFactor = unrollUpToFactor;
-    this->unrollFull = unrollFull;
   }
 
   void runOnOperation() override;
@@ -85,11 +82,17 @@ static void gatherInnermostLoops(FunctionOpInterface f,
 }
 
 void LoopUnroll::runOnOperation() {
+  if (!(unrollFactor.getValue() > 0 || unrollFactor.getValue() == -1)) {
+    emitError(UnknownLoc::get(&getContext()),
+              "Invalid option: 'unroll-factor' should be greater than 0 or "
+              "equal to -1");
+    return signalPassFailure();
+  }
   FunctionOpInterface func = getOperation();
   if (func.isExternal())
     return;
 
-  if (unrollFull && unrollFullThreshold.hasValue()) {
+  if (unrollFactor.getValue() == -1 && unrollFullThreshold.hasValue()) {
     // Store short loops as we walk.
     SmallVector<AffineForOp, 4> loops;
 
@@ -130,7 +133,7 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
     return loopUnrollByFactor(forOp, getUnrollFactor(forOp),
                               /*annotateFn=*/nullptr, cleanUpUnroll);
   // Unroll completely if full loop unroll was specified.
-  if (unrollFull)
+  if (unrollFactor.getValue() == -1)
     return loopUnrollFull(forOp);
   // Otherwise, unroll by the given unroll factor.
   if (unrollUpToFactor)
@@ -141,9 +144,9 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
 
 std::unique_ptr<InterfacePass<FunctionOpInterface>>
 mlir::affine::createLoopUnrollPass(
-    int unrollFactor, bool unrollUpToFactor, bool unrollFull,
+    int unrollFactor, bool unrollUpToFactor,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(
       unrollFactor == -1 ? std::nullopt : std::optional<unsigned>(unrollFactor),
-      unrollUpToFactor, unrollFull, getUnrollFactor);
+      unrollUpToFactor, getUnrollFactor);
 }

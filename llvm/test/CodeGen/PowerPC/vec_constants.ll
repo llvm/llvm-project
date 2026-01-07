@@ -3,6 +3,10 @@
 ; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi < %s | FileCheck %s --check-prefixes=CHECK,BE
 ; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,LE
 
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple=powerpc64-unknown-linux-gnu -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat < %s | FileCheck %s --check-prefixes=CHECK,BE
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat < %s | FileCheck %s --check-prefixes=CHECK,BE
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple=powerpc64le-unknown-linux-gnu -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat < %s | FileCheck %s --check-prefixes=CHECK,LE
+
 define void @test1(ptr %P1, ptr %P2, ptr %P3) nounwind {
 ; BE-LABEL: test1:
 ; BE:       # %bb.0:

@@ -1,0 +1,985 @@
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+gcie < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
+// RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+gcie < %s \
+// RUN:        | llvm-objdump -d --mattr=+gcie --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+gcie < %s \
+// RUN:        | llvm-objdump -d --mattr=-gcie --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// Disassemble encoding and check the re-encoding (-show-encoding) matches.
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+gcie < %s \
+// RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
+// RUN:        | llvm-mc -triple=aarch64 -mattr=+gcie -disassemble -show-encoding \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+
+//------------------------------------------------------------------------------
+// Armv9.7-A FEAT_GCIE Extensions
+//------------------------------------------------------------------------------
+
+// CPU Interface Registers MRS Instruction - Encodings Checked
+MRS x3, ICC_APR_EL1
+// CHECK-INST:    mrs x3, ICC_APR_EL1
+// CHECK-ENCODING: [0x03,0xc0,0x39,0xd5]
+// CHECK-UNKNOWN: d539c003
+
+MRS x3, ICC_APR_EL3
+// CHECK-INST:    mrs x3, ICC_APR_EL3
+// CHECK-ENCODING: [0x03,0xc8,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec803
+
+MRS x3, ICC_CR0_EL1
+// CHECK-INST:    mrs x3, ICC_CR0_EL1
+// CHECK-ENCODING: [0x23,0xc0,0x39,0xd5]
+// CHECK-UNKNOWN: d539c023
+
+MRS x3, ICC_CR0_EL3
+// CHECK-INST:    mrs x3, ICC_CR0_EL3
+// CHECK-ENCODING: [0x03,0xc9,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec903
+
+MRS x3, ICC_DOMHPPIR_EL3
+// CHECK-INST:    mrs x3, ICC_DOMHPPIR_EL3
+// CHECK-ENCODING: [0x43,0xc8,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec843
+
+MRS x3, ICC_HAPR_EL1
+// CHECK-INST:    mrs x3, ICC_HAPR_EL1
+// CHECK-ENCODING: [0x63,0xc0,0x39,0xd5]
+// CHECK-UNKNOWN: d539c063
+
+MRS x3, ICC_HPPIR_EL1
+// CHECK-INST:    mrs x3, ICC_HPPIR_EL1
+// CHECK-ENCODING: [0x63,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538ca63
+
+MRS x3, ICC_HPPIR_EL3
+// CHECK-INST:    mrs x3, ICC_HPPIR_EL3
+// CHECK-ENCODING: [0x23,0xc9,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec923
+
+MRS x3, ICC_IAFFIDR_EL1
+// CHECK-INST:    mrs x3, ICC_IAFFIDR_EL1
+// CHECK-ENCODING: [0xa3,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538caa3
+
+MRS x3, ICC_ICSR_EL1
+// CHECK-INST:    mrs x3, ICC_ICSR_EL1
+// CHECK-ENCODING: [0x83,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538ca83
+
+MRS x3, ICC_IDR0_EL1
+// CHECK-INST:    mrs x3, ICC_IDR0_EL1
+// CHECK-ENCODING: [0x43,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538ca43
+
+MRS x3, ICC_PCR_EL1
+// CHECK-INST:    mrs x3, ICC_PCR_EL1
+// CHECK-ENCODING: [0x43,0xc0,0x39,0xd5]
+// CHECK-UNKNOWN: d539c043
+
+MRS x3, ICC_PCR_EL3
+// CHECK-INST:    mrs x3, ICC_PCR_EL3
+// CHECK-ENCODING: [0x23,0xc8,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec823
+
+MRS x3, ICC_SRE_EL1
+// CHECK-INST:    mrs x3, ICC_SRE_EL1
+// CHECK-ENCODING: [0xa3,0xcc,0x38,0xd5]
+// CHECK-UNKNOWN: d538cca3
+
+// -----------------------------------------------
+MSR ICC_APR_EL1, x3
+// CHECK-INST:    msr ICC_APR_EL1, x3
+// CHECK-ENCODING: [0x03,0xc0,0x19,0xd5]
+// CHECK-UNKNOWN: d519c003
+
+MSR ICC_APR_EL3, x3
+// CHECK-INST:    msr ICC_APR_EL3, x3
+// CHECK-ENCODING: [0x03,0xc8,0x1e,0xd5]
+// CHECK-UNKNOWN: d51ec803
+
+MSR ICC_CR0_EL1, x3
+// CHECK-INST:    msr ICC_CR0_EL1, x3
+// CHECK-ENCODING: [0x23,0xc0,0x19,0xd5]
+// CHECK-UNKNOWN: d519c023
+
+MSR ICC_CR0_EL3, x3
+// CHECK-INST:    msr ICC_CR0_EL3, x3
+// CHECK-ENCODING: [0x03,0xc9,0x1e,0xd5]
+// CHECK-UNKNOWN: d51ec903
+
+MSR ICC_ICSR_EL1, x3
+// CHECK-INST:    msr ICC_ICSR_EL1, x3
+// CHECK-ENCODING: [0x83,0xca,0x18,0xd5]
+// CHECK-UNKNOWN: d518ca83
+
+MSR ICC_PCR_EL1, x3
+// CHECK-INST:    msr ICC_PCR_EL1, x3
+// CHECK-ENCODING: [0x43,0xc0,0x19,0xd5]
+// CHECK-UNKNOWN: d519c043
+
+MSR ICC_PCR_EL3, x3
+// CHECK-INST:    msr ICC_PCR_EL3, x3
+// CHECK-ENCODING: [0x23,0xc8,0x1e,0xd5]
+// CHECK-UNKNOWN: d51ec823
+
+
+// -----------------------------------------------
+// Virtual CPU Registers MRS Instructions
+
+// The specification says:
+//   "Each ICC_system register that is accessible at EL1 and higher and whose state
+//    is specific to the Virtual Interrupt Domain, has a corresponding virtual
+//    ICV_register. The ICV_registers are accessed using the same system register
+//    encodings as their ICC_counterparts."
+//
+// So expect ICC_* encodings here, not ICV_* encodings
+
+MRS x3, ICV_APR_EL1
+// CHECK-INST:    mrs x3, ICC_APR_EL1
+// CHECK-ENCODING: [0x03,0xc0,0x39,0xd5]
+// CHECK-UNKNOWN: d539c003
+
+MRS x3, ICV_CR0_EL1
+// CHECK-INST:    mrs x3, ICC_CR0_EL1
+// CHECK-ENCODING: [0x23,0xc0,0x39,0xd5]
+// CHECK-UNKNOWN: d539c023
+
+MRS x3, ICV_HAPR_EL1
+// CHECK-INST:    mrs x3, ICC_HAPR_EL1
+// CHECK-ENCODING: [0x63,0xc0,0x39,0xd5]
+// CHECK-UNKNOWN: d539c063
+
+MRS x3, ICV_HPPIR_EL1
+// CHECK-INST:    mrs x3, ICC_HPPIR_EL1
+// CHECK-ENCODING: [0x63,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538ca63
+
+MRS x3, ICV_PCR_EL1
+// CHECK-INST:    mrs x3, ICC_PCR_EL1
+// CHECK-ENCODING: [0x43,0xc0,0x39,0xd5]
+// CHECK-UNKNOWN: d539c043
+
+
+// -----------------------------------------------
+// Likewise here, expect ICC_* encodings here, not ICV_* encodings
+MSR ICV_APR_EL1, x3
+// CHECK-INST:    msr ICC_APR_EL1, x3
+// CHECK-ENCODING: [0x03,0xc0,0x19,0xd5]
+// CHECK-UNKNOWN: d519c003
+
+MSR ICV_CR0_EL1, x3
+// CHECK-INST:    msr ICC_CR0_EL1, x3
+// CHECK-ENCODING: [0x23,0xc0,0x19,0xd5]
+// CHECK-UNKNOWN: d519c023
+
+MSR ICV_PCR_EL1, x3
+// CHECK-INST:    msr ICC_PCR_EL1, x3
+// CHECK-ENCODING: [0x43,0xc0,0x19,0xd5]
+// CHECK-UNKNOWN: d519c043
+
+// -----------------------------------------------
+// PPI Registers MRS Instructions - Encodings Checked
+MRS x3, ICC_PPI_CACTIVER0_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_CACTIVER0_EL1
+// CHECK-ENCODING: [0x03,0xcd,0x38,0xd5]
+// CHECK-UNKNOWN: d538cd03
+
+MRS x3, ICC_PPI_CACTIVER1_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_CACTIVER1_EL1
+// CHECK-ENCODING: [0x23,0xcd,0x38,0xd5]
+// CHECK-UNKNOWN: d538cd23
+
+MRS x3, ICC_PPI_CPENDR0_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_CPENDR0_EL1
+// CHECK-ENCODING: [0x83,0xcd,0x38,0xd5]
+// CHECK-UNKNOWN: d538cd83
+
+MRS x3, ICC_PPI_CPENDR1_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_CPENDR1_EL1
+// CHECK-ENCODING: [0xa3,0xcd,0x38,0xd5]
+// CHECK-UNKNOWN: d538cda3
+
+MRS x3, ICC_PPI_DOMAINR0_EL3
+// CHECK-INST:    mrs x3, ICC_PPI_DOMAINR0_EL3
+// CHECK-ENCODING: [0x83,0xc8,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec883
+
+MRS x3, ICC_PPI_DOMAINR1_EL3
+// CHECK-INST:    mrs x3, ICC_PPI_DOMAINR1_EL3
+// CHECK-ENCODING: [0xa3,0xc8,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec8a3
+
+MRS x3, ICC_PPI_DOMAINR2_EL3
+// CHECK-INST:    mrs x3, ICC_PPI_DOMAINR2_EL3
+// CHECK-ENCODING: [0xc3,0xc8,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec8c3
+
+MRS x3, ICC_PPI_DOMAINR3_EL3
+// CHECK-INST:    mrs x3, ICC_PPI_DOMAINR3_EL3
+// CHECK-ENCODING: [0xe3,0xc8,0x3e,0xd5]
+// CHECK-UNKNOWN: d53ec8e3
+
+MRS x3, ICC_PPI_ENABLER0_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_ENABLER0_EL1
+// CHECK-ENCODING: [0xc3,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538cac3
+
+MRS x3, ICC_PPI_ENABLER1_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_ENABLER1_EL1
+// CHECK-ENCODING: [0xe3,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538cae3
+
+MRS x3, ICC_PPI_PRIORITYR0_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR0_EL1
+// CHECK-ENCODING: [0x03,0xce,0x38,0xd5]
+// CHECK-UNKNOWN: d538ce03
+
+MRS x3, ICC_PPI_PRIORITYR1_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR1_EL1
+// CHECK-ENCODING: [0x23,0xce,0x38,0xd5]
+// CHECK-UNKNOWN: d538ce23
+
+MRS x3, ICC_PPI_PRIORITYR2_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR2_EL1
+// CHECK-ENCODING: [0x43,0xce,0x38,0xd5]
+// CHECK-UNKNOWN: d538ce43
+
+MRS x3, ICC_PPI_PRIORITYR3_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR3_EL1
+// CHECK-ENCODING: [0x63,0xce,0x38,0xd5]
+// CHECK-UNKNOWN: d538ce63
+
+MRS x3, ICC_PPI_PRIORITYR4_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR4_EL1
+// CHECK-ENCODING: [0x83,0xce,0x38,0xd5]
+// CHECK-UNKNOWN: d538ce83
+
+MRS x3, ICC_PPI_PRIORITYR5_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR5_EL1
+// CHECK-ENCODING: [0xa3,0xce,0x38,0xd5]
+// CHECK-UNKNOWN: d538cea3
+
+MRS x3, ICC_PPI_PRIORITYR6_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR6_EL1
+// CHECK-ENCODING: [0xc3,0xce,0x38,0xd5]
+// CHECK-UNKNOWN: d538cec3
+
+MRS x3, ICC_PPI_PRIORITYR7_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR7_EL1
+// CHECK-ENCODING: [0xe3,0xce,0x38,0xd5]
+// CHECK-UNKNOWN: d538cee3
+
+MRS x3, ICC_PPI_PRIORITYR8_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR8_EL1
+// CHECK-ENCODING: [0x03,0xcf,0x38,0xd5]
+// CHECK-UNKNOWN: d538cf03
+
+MRS x3, ICC_PPI_PRIORITYR9_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR9_EL1
+// CHECK-ENCODING: [0x23,0xcf,0x38,0xd5]
+// CHECK-UNKNOWN: d538cf23
+
+MRS x3, ICC_PPI_PRIORITYR10_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR10_EL1
+// CHECK-ENCODING: [0x43,0xcf,0x38,0xd5]
+// CHECK-UNKNOWN: d538cf43
+
+MRS x3, ICC_PPI_PRIORITYR11_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR11_EL1
+// CHECK-ENCODING: [0x63,0xcf,0x38,0xd5]
+// CHECK-UNKNOWN: d538cf63
+
+MRS x3, ICC_PPI_PRIORITYR12_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR12_EL1
+// CHECK-ENCODING: [0x83,0xcf,0x38,0xd5]
+// CHECK-UNKNOWN: d538cf83
+
+MRS x3, ICC_PPI_PRIORITYR13_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR13_EL1
+// CHECK-ENCODING: [0xa3,0xcf,0x38,0xd5]
+// CHECK-UNKNOWN: d538cfa3
+
+MRS x3, ICC_PPI_PRIORITYR14_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR14_EL1
+// CHECK-ENCODING: [0xc3,0xcf,0x38,0xd5]
+// CHECK-UNKNOWN: d538cfc3
+
+MRS x3, ICC_PPI_PRIORITYR15_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_PRIORITYR15_EL1
+// CHECK-ENCODING: [0xe3,0xcf,0x38,0xd5]
+// CHECK-UNKNOWN: d538cfe3
+
+MRS x3, ICC_PPI_SACTIVER0_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_SACTIVER0_EL1
+// CHECK-ENCODING: [0x43,0xcd,0x38,0xd5]
+// CHECK-UNKNOWN: d538cd43
+
+MRS x3, ICC_PPI_SACTIVER1_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_SACTIVER1_EL1
+// CHECK-ENCODING: [0x63,0xcd,0x38,0xd5]
+// CHECK-UNKNOWN: d538cd63
+
+MRS x3, ICC_PPI_SPENDR0_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_SPENDR0_EL1
+// CHECK-ENCODING: [0xc3,0xcd,0x38,0xd5]
+// CHECK-UNKNOWN: d538cdc3
+
+MRS x3, ICC_PPI_SPENDR1_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_SPENDR1_EL1
+// CHECK-ENCODING: [0xe3,0xcd,0x38,0xd5]
+// CHECK-UNKNOWN: d538cde3
+
+MRS x3, ICC_PPI_HMR0_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_HMR0_EL1
+// CHECK-ENCODING: [0x03,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538ca03
+
+MRS x3, ICC_PPI_HMR1_EL1
+// CHECK-INST:    mrs x3, ICC_PPI_HMR1_EL1
+// CHECK-ENCODING: [0x23,0xca,0x38,0xd5]
+// CHECK-UNKNOWN: d538ca23
+
+// -----------------------------------------------
+// MSR PPI Registers Instructions
+MSR ICC_PPI_CACTIVER0_EL1, x3
+// CHECK-INST:    msr ICC_PPI_CACTIVER0_EL1, x3
+// CHECK-ENCODING: [0x03,0xcd,0x18,0xd5]
+// CHECK-UNKNOWN: d518cd03
+
+MSR ICC_PPI_CACTIVER1_EL1, x3
+// CHECK-INST:    msr ICC_PPI_CACTIVER1_EL1, x3
+// CHECK-ENCODING: [0x23,0xcd,0x18,0xd5]
+// CHECK-UNKNOWN: d518cd23
+
+MSR ICC_PPI_CPENDR0_EL1, x3
+// CHECK-INST:    msr ICC_PPI_CPENDR0_EL1, x3
+// CHECK-ENCODING: [0x83,0xcd,0x18,0xd5]
+// CHECK-UNKNOWN: d518cd83
+
+MSR ICC_PPI_CPENDR1_EL1, x3
+// CHECK-INST:    msr ICC_PPI_CPENDR1_EL1, x3
+// CHECK-ENCODING: [0xa3,0xcd,0x18,0xd5]
+// CHECK-UNKNOWN: d518cda3
+
+MSR ICC_PPI_DOMAINR0_EL3, x3
+// CHECK-INST:    msr ICC_PPI_DOMAINR0_EL3, x3
+// CHECK-ENCODING: [0x83,0xc8,0x1e,0xd5]
+// CHECK-UNKNOWN: d51ec883
+
+MSR ICC_PPI_DOMAINR1_EL3, x3
+// CHECK-INST:    msr ICC_PPI_DOMAINR1_EL3, x3
+// CHECK-ENCODING: [0xa3,0xc8,0x1e,0xd5]
+// CHECK-UNKNOWN: d51ec8a3
+
+MSR ICC_PPI_DOMAINR2_EL3, x3
+// CHECK-INST:    msr ICC_PPI_DOMAINR2_EL3, x3
+// CHECK-ENCODING: [0xc3,0xc8,0x1e,0xd5]
+// CHECK-UNKNOWN: d51ec8c3
+
+MSR ICC_PPI_DOMAINR3_EL3, x3
+// CHECK-INST:    msr ICC_PPI_DOMAINR3_EL3, x3
+// CHECK-ENCODING: [0xe3,0xc8,0x1e,0xd5]
+// CHECK-UNKNOWN: d51ec8e3
+
+MSR ICC_PPI_ENABLER0_EL1, x3
+// CHECK-INST:    msr ICC_PPI_ENABLER0_EL1, x3
+// CHECK-ENCODING: [0xc3,0xca,0x18,0xd5]
+// CHECK-UNKNOWN: d518cac3
+
+MSR ICC_PPI_ENABLER1_EL1, x3
+// CHECK-INST:    msr ICC_PPI_ENABLER1_EL1, x3
+// CHECK-ENCODING: [0xe3,0xca,0x18,0xd5]
+// CHECK-UNKNOWN: d518cae3
+
+MSR ICC_PPI_PRIORITYR0_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR0_EL1, x3
+// CHECK-ENCODING: [0x03,0xce,0x18,0xd5]
+// CHECK-UNKNOWN: d518ce03
+
+MSR ICC_PPI_PRIORITYR1_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR1_EL1, x3
+// CHECK-ENCODING: [0x23,0xce,0x18,0xd5]
+// CHECK-UNKNOWN: d518ce23
+
+MSR ICC_PPI_PRIORITYR2_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR2_EL1, x3
+// CHECK-ENCODING: [0x43,0xce,0x18,0xd5]
+// CHECK-UNKNOWN: d518ce43
+
+MSR ICC_PPI_PRIORITYR3_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR3_EL1, x3
+// CHECK-ENCODING: [0x63,0xce,0x18,0xd5]
+// CHECK-UNKNOWN: d518ce63
+
+MSR ICC_PPI_PRIORITYR4_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR4_EL1, x3
+// CHECK-ENCODING: [0x83,0xce,0x18,0xd5]
+// CHECK-UNKNOWN: d518ce83
+
+MSR ICC_PPI_PRIORITYR5_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR5_EL1, x3
+// CHECK-ENCODING: [0xa3,0xce,0x18,0xd5]
+// CHECK-UNKNOWN: d518cea3
+
+MSR ICC_PPI_PRIORITYR6_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR6_EL1, x3
+// CHECK-ENCODING: [0xc3,0xce,0x18,0xd5]
+// CHECK-UNKNOWN: d518cec3
+
+MSR ICC_PPI_PRIORITYR7_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR7_EL1, x3
+// CHECK-ENCODING: [0xe3,0xce,0x18,0xd5]
+// CHECK-UNKNOWN: d518cee3
+
+MSR ICC_PPI_PRIORITYR8_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR8_EL1, x3
+// CHECK-ENCODING: [0x03,0xcf,0x18,0xd5]
+// CHECK-UNKNOWN: d518cf03
+
+MSR ICC_PPI_PRIORITYR9_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR9_EL1, x3
+// CHECK-ENCODING: [0x23,0xcf,0x18,0xd5]
+// CHECK-UNKNOWN: d518cf23
+
+MSR ICC_PPI_PRIORITYR10_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR10_EL1, x3
+// CHECK-ENCODING: [0x43,0xcf,0x18,0xd5]
+// CHECK-UNKNOWN: d518cf43
+
+MSR ICC_PPI_PRIORITYR11_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR11_EL1, x3
+// CHECK-ENCODING: [0x63,0xcf,0x18,0xd5]
+// CHECK-UNKNOWN: d518cf63
+
+MSR ICC_PPI_PRIORITYR12_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR12_EL1, x3
+// CHECK-ENCODING: [0x83,0xcf,0x18,0xd5]
+// CHECK-UNKNOWN: d518cf83
+
+MSR ICC_PPI_PRIORITYR13_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR13_EL1, x3
+// CHECK-ENCODING: [0xa3,0xcf,0x18,0xd5]
+// CHECK-UNKNOWN: d518cfa3
+
+MSR ICC_PPI_PRIORITYR14_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR14_EL1, x3
+// CHECK-ENCODING: [0xc3,0xcf,0x18,0xd5]
+// CHECK-UNKNOWN: d518cfc3
+
+MSR ICC_PPI_PRIORITYR15_EL1, x3
+// CHECK-INST:    msr ICC_PPI_PRIORITYR15_EL1, x3
+// CHECK-ENCODING: [0xe3,0xcf,0x18,0xd5]
+// CHECK-UNKNOWN: d518cfe3
+
+MSR ICC_PPI_SACTIVER0_EL1, x3
+// CHECK-INST:    msr ICC_PPI_SACTIVER0_EL1, x3
+// CHECK-ENCODING: [0x43,0xcd,0x18,0xd5]
+// CHECK-UNKNOWN: d518cd43
+
+MSR ICC_PPI_SACTIVER1_EL1, x3
+// CHECK-INST:    msr ICC_PPI_SACTIVER1_EL1, x3
+// CHECK-ENCODING: [0x63,0xcd,0x18,0xd5]
+// CHECK-UNKNOWN: d518cd63
+
+MSR ICC_PPI_SPENDR0_EL1, x3
+// CHECK-INST:    msr ICC_PPI_SPENDR0_EL1, x3
+// CHECK-ENCODING: [0xc3,0xcd,0x18,0xd5]
+// CHECK-UNKNOWN: d518cdc3
+
+MSR ICC_PPI_SPENDR1_EL1, x3
+// CHECK-INST:    msr ICC_PPI_SPENDR1_EL1, x3
+// CHECK-ENCODING: [0xe3,0xcd,0x18,0xd5]
+// CHECK-UNKNOWN: d518cde3
+
+// -----------------------------------------------
+// Hypervisor Control Register MRS Instructions
+MRS x3, ICH_APR_EL2
+// CHECK-INST:    mrs x3, ICH_APR_EL2
+// CHECK-ENCODING: [0x83,0xc8,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cc883
+
+MRS x3, ICH_CONTEXTR_EL2
+// CHECK-INST:    mrs x3, ICH_CONTEXTR_EL2
+// CHECK-ENCODING: [0xc3,0xcb,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccbc3
+
+MRS x3, ICH_HFGITR_EL2
+// CHECK-INST:    mrs x3, ICH_HFGITR_EL2
+// CHECK-ENCODING: [0xe3,0xc9,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cc9e3
+
+MRS x3, ICH_HFGRTR_EL2
+// CHECK-INST:    mrs x3, ICH_HFGRTR_EL2
+// CHECK-ENCODING: [0x83,0xc9,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cc983
+
+MRS x3, ICH_HFGWTR_EL2
+// CHECK-INST:    mrs x3, ICH_HFGWTR_EL2
+// CHECK-ENCODING: [0xc3,0xc9,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cc9c3
+
+MRS x3, ICH_HPPIR_EL2
+// CHECK-INST:    mrs x3, ICH_HPPIR_EL2
+// CHECK-ENCODING: [0xa3,0xc8,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cc8a3
+
+MRS x3, ICH_PPI_ACTIVER0_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_ACTIVER0_EL2
+// CHECK-ENCODING: [0xc3,0xca,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccac3
+
+MRS x3, ICH_PPI_ACTIVER1_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_ACTIVER1_EL2
+// CHECK-ENCODING: [0xe3,0xca,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccae3
+
+MRS x3, ICH_PPI_DVIR0_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_DVIR0_EL2
+// CHECK-ENCODING: [0x03,0xca,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cca03
+
+MRS x3, ICH_PPI_DVIR1_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_DVIR1_EL2
+// CHECK-ENCODING: [0x23,0xca,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cca23
+
+MRS x3, ICH_PPI_ENABLER0_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_ENABLER0_EL2
+// CHECK-ENCODING: [0x43,0xca,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cca43
+
+MRS x3, ICH_PPI_ENABLER1_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_ENABLER1_EL2
+// CHECK-ENCODING: [0x63,0xca,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cca63
+
+MRS x3, ICH_PPI_PENDR0_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PENDR0_EL2
+// CHECK-ENCODING: [0x83,0xca,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cca83
+
+MRS x3, ICH_PPI_PENDR1_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PENDR1_EL2
+// CHECK-ENCODING: [0xa3,0xca,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccaa3
+
+MRS x3, ICH_PPI_PRIORITYR0_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR0_EL2
+// CHECK-ENCODING: [0x03,0xce,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cce03
+
+MRS x3, ICH_PPI_PRIORITYR1_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR1_EL2
+// CHECK-ENCODING: [0x23,0xce,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cce23
+
+MRS x3, ICH_PPI_PRIORITYR2_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR2_EL2
+// CHECK-ENCODING: [0x43,0xce,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cce43
+
+MRS x3, ICH_PPI_PRIORITYR3_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR3_EL2
+// CHECK-ENCODING: [0x63,0xce,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cce63
+
+MRS x3, ICH_PPI_PRIORITYR4_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR4_EL2
+// CHECK-ENCODING: [0x83,0xce,0x3c,0xd5]
+// CHECK-UNKNOWN: d53cce83
+
+MRS x3, ICH_PPI_PRIORITYR5_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR5_EL2
+// CHECK-ENCODING: [0xa3,0xce,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccea3
+
+MRS x3, ICH_PPI_PRIORITYR6_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR6_EL2
+// CHECK-ENCODING: [0xc3,0xce,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccec3
+
+MRS x3, ICH_PPI_PRIORITYR7_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR7_EL2
+// CHECK-ENCODING: [0xe3,0xce,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccee3
+
+MRS x3, ICH_PPI_PRIORITYR8_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR8_EL2
+// CHECK-ENCODING: [0x03,0xcf,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccf03
+
+MRS x3, ICH_PPI_PRIORITYR9_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR9_EL2
+// CHECK-ENCODING: [0x23,0xcf,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccf23
+
+MRS x3, ICH_PPI_PRIORITYR10_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR10_EL2
+// CHECK-ENCODING: [0x43,0xcf,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccf43
+
+MRS x3, ICH_PPI_PRIORITYR11_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR11_EL2
+// CHECK-ENCODING: [0x63,0xcf,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccf63
+
+MRS x3, ICH_PPI_PRIORITYR12_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR12_EL2
+// CHECK-ENCODING: [0x83,0xcf,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccf83
+
+MRS x3, ICH_PPI_PRIORITYR13_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR13_EL2
+// CHECK-ENCODING: [0xa3,0xcf,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccfa3
+
+MRS x3, ICH_PPI_PRIORITYR14_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR14_EL2
+// CHECK-ENCODING: [0xc3,0xcf,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccfc3
+
+MRS x3, ICH_PPI_PRIORITYR15_EL2
+// CHECK-INST:    mrs x3, ICH_PPI_PRIORITYR15_EL2
+// CHECK-ENCODING: [0xe3,0xcf,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccfe3
+
+MRS x3, ICH_VCTLR_EL2
+// CHECK-INST:    mrs x3, ICH_VCTLR_EL2
+// CHECK-ENCODING: [0x83,0xcb,0x3c,0xd5]
+// CHECK-UNKNOWN: d53ccb83
+
+// -----------------------------------------------
+// Hypervisor Control Register MSR Instructions
+MSR ICH_APR_EL2, x3
+// CHECK-INST:    msr ICH_APR_EL2, x3
+// CHECK-ENCODING: [0x83,0xc8,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cc883
+
+MSR ICH_CONTEXTR_EL2, x3
+// CHECK-INST:    msr ICH_CONTEXTR_EL2, x3
+// CHECK-ENCODING: [0xc3,0xcb,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccbc3
+
+MSR ICH_HFGITR_EL2, x3
+// CHECK-INST:    msr ICH_HFGITR_EL2, x3
+// CHECK-ENCODING: [0xe3,0xc9,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cc9e3
+
+MSR ICH_HFGRTR_EL2, x3
+// CHECK-INST:    msr ICH_HFGRTR_EL2, x3
+// CHECK-ENCODING: [0x83,0xc9,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cc983
+
+MSR ICH_HFGWTR_EL2, x3
+// CHECK-INST:    msr ICH_HFGWTR_EL2, x3
+// CHECK-ENCODING: [0xc3,0xc9,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cc9c3
+
+MSR ICH_PPI_ACTIVER0_EL2, x3
+// CHECK-INST:    msr ICH_PPI_ACTIVER0_EL2, x3
+// CHECK-ENCODING: [0xc3,0xca,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccac3
+
+MSR ICH_PPI_ACTIVER1_EL2, x3
+// CHECK-INST:    msr ICH_PPI_ACTIVER1_EL2, x3
+// CHECK-ENCODING: [0xe3,0xca,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccae3
+
+MSR ICH_PPI_DVIR0_EL2, x3
+// CHECK-INST:    msr ICH_PPI_DVIR0_EL2, x3
+// CHECK-ENCODING: [0x03,0xca,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cca03
+
+MSR ICH_PPI_DVIR1_EL2, x3
+// CHECK-INST:    msr ICH_PPI_DVIR1_EL2, x3
+// CHECK-ENCODING: [0x23,0xca,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cca23
+
+MSR ICH_PPI_ENABLER0_EL2, x3
+// CHECK-INST:    msr ICH_PPI_ENABLER0_EL2, x3
+// CHECK-ENCODING: [0x43,0xca,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cca43
+
+MSR ICH_PPI_ENABLER1_EL2, x3
+// CHECK-INST:    msr ICH_PPI_ENABLER1_EL2, x3
+// CHECK-ENCODING: [0x63,0xca,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cca63
+
+MSR ICH_PPI_PENDR0_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PENDR0_EL2, x3
+// CHECK-ENCODING: [0x83,0xca,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cca83
+
+MSR ICH_PPI_PENDR1_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PENDR1_EL2, x3
+// CHECK-ENCODING: [0xa3,0xca,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccaa3
+
+MSR ICH_PPI_PRIORITYR0_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR0_EL2, x3
+// CHECK-ENCODING: [0x03,0xce,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cce03
+
+MSR ICH_PPI_PRIORITYR1_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR1_EL2, x3
+// CHECK-ENCODING: [0x23,0xce,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cce23
+
+MSR ICH_PPI_PRIORITYR2_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR2_EL2, x3
+// CHECK-ENCODING: [0x43,0xce,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cce43
+
+MSR ICH_PPI_PRIORITYR3_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR3_EL2, x3
+// CHECK-ENCODING: [0x63,0xce,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cce63
+
+MSR ICH_PPI_PRIORITYR4_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR4_EL2, x3
+// CHECK-ENCODING: [0x83,0xce,0x1c,0xd5]
+// CHECK-UNKNOWN: d51cce83
+
+MSR ICH_PPI_PRIORITYR5_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR5_EL2, x3
+// CHECK-ENCODING: [0xa3,0xce,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccea3
+
+MSR ICH_PPI_PRIORITYR6_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR6_EL2, x3
+// CHECK-ENCODING: [0xc3,0xce,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccec3
+
+MSR ICH_PPI_PRIORITYR7_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR7_EL2, x3
+// CHECK-ENCODING: [0xe3,0xce,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccee3
+
+MSR ICH_PPI_PRIORITYR8_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR8_EL2, x3
+// CHECK-ENCODING: [0x03,0xcf,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccf03
+
+MSR ICH_PPI_PRIORITYR9_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR9_EL2, x3
+// CHECK-ENCODING: [0x23,0xcf,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccf23
+
+MSR ICH_PPI_PRIORITYR10_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR10_EL2, x3
+// CHECK-ENCODING: [0x43,0xcf,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccf43
+
+MSR ICH_PPI_PRIORITYR11_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR11_EL2, x3
+// CHECK-ENCODING: [0x63,0xcf,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccf63
+
+MSR ICH_PPI_PRIORITYR12_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR12_EL2, x3
+// CHECK-ENCODING: [0x83,0xcf,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccf83
+
+MSR ICH_PPI_PRIORITYR13_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR13_EL2, x3
+// CHECK-ENCODING: [0xa3,0xcf,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccfa3
+
+MSR ICH_PPI_PRIORITYR14_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR14_EL2, x3
+// CHECK-ENCODING: [0xc3,0xcf,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccfc3
+
+MSR ICH_PPI_PRIORITYR15_EL2, x3
+// CHECK-INST:    msr ICH_PPI_PRIORITYR15_EL2, x3
+// CHECK-ENCODING: [0xe3,0xcf,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccfe3
+
+MSR ICH_VCTLR_EL2, x3
+// CHECK-INST:    msr ICH_VCTLR_EL2, x3
+// CHECK-ENCODING: [0x83,0xcb,0x1c,0xd5]
+// CHECK-UNKNOWN: d51ccb83
+
+// -----------------------------------------------
+// FEAT_GCIE Instructions
+// Current Interrupt Domain
+GIC CDAFF, x3
+// CHECK-INST:    gic cdaff, x3
+// CHECK-ENCODING: [0x63,0xc1,0x08,0xd5]
+// CHECK-UNKNOWN: d508c163 sys #0, c12, c1, #3, x3
+// CHECK-ERROR: error: GIC cdaff requires: gcie
+
+GIC CDDI, x3
+// CHECK-INST:    gic cddi, x3
+// CHECK-ENCODING: [0x03,0xc2,0x08,0xd5]
+// CHECK-UNKNOWN: d508c203 sys #0, c12, c2, #0, x3
+// CHECK-ERROR: error: GIC cddi requires: gcie
+
+GIC CDDIS, x3
+// CHECK-INST:    gic cddis, x3
+// CHECK-ENCODING: [0x03,0xc1,0x08,0xd5]
+// CHECK-UNKNOWN: d508c103 sys #0, c12, c1, #0, x3
+// CHECK-ERROR: error: GIC cddis requires: gcie
+
+GIC CDEN, x3
+// CHECK-INST:    gic cden, x3
+// CHECK-ENCODING: [0x23,0xc1,0x08,0xd5]
+// CHECK-UNKNOWN: d508c123 sys #0, c12, c1, #1, x3
+// CHECK-ERROR: error: GIC cden requires: gcie
+
+GIC CDEOI
+// CHECK-INST:    gic cdeoi
+// CHECK-ENCODING: [0xff,0xc1,0x08,0xd5]
+// CHECK-UNKNOWN: d508c1ff sys #0, c12, c1, #7
+// CHECK-ERROR: error: GIC cdeoi requires: gcie
+
+GIC CDHM, x3
+// CHECK-INST:    gic cdhm, x3
+// CHECK-ENCODING: [0x23,0xc2,0x08,0xd5]
+// CHECK-UNKNOWN: d508c223 sys #0, c12, c2, #1, x3
+// CHECK-ERROR: error: GIC cdhm requires: gcie
+
+GIC CDPEND, x3
+// CHECK-INST:    gic cdpend, x3
+// CHECK-ENCODING: [0x83,0xc1,0x08,0xd5]
+// CHECK-UNKNOWN: d508c183 sys #0, c12, c1, #4, x3
+// CHECK-ERROR: error: GIC cdpend requires: gcie
+
+GIC CDPRI, x3
+// CHECK-INST:    gic cdpri, x3
+// CHECK-ENCODING: [0x43,0xc1,0x08,0xd5]
+// CHECK-UNKNOWN: d508c143 sys #0, c12, c1, #2, x3
+// CHECK-ERROR: error: GIC cdpri requires: gcie
+
+GIC CDRCFG, x3
+// CHECK-INST:    gic cdrcfg, x3
+// CHECK-ENCODING: [0xa3,0xc1,0x08,0xd5]
+// CHECK-UNKNOWN: d508c1a3 sys #0, c12, c1, #5, x3
+// CHECK-ERROR: error: GIC cdrcfg requires: gcie
+
+GICR x3, CDIA
+// CHECK-INST:    gicr x3, cdia
+// CHECK-ENCODING: [0x03,0xc3,0x28,0xd5]
+// CHECK-UNKNOWN: d528c303 sysl x3, #0, c12, c3, #0
+// CHECK-ERROR: error: GICR cdia requires: gcie
+
+GICR x3, CDNMIA
+// CHECK-INST:    gicr x3, cdnmia
+// CHECK-ENCODING: [0x23,0xc3,0x28,0xd5]
+// CHECK-UNKNOWN: d528c323 sysl x3, #0, c12, c3, #1
+// CHECK-ERROR: error: GICR cdnmia requires: gcie
+
+// -----------------------------------------------
+// Virtual Interrupt Domain
+GIC VDAFF, x3
+// CHECK-INST:    gic vdaff, x3
+// CHECK-ENCODING: [0x63,0xc1,0x0c,0xd5]
+// CHECK-UNKNOWN: d50cc163 sys #4, c12, c1, #3, x3
+// CHECK-ERROR: error: GIC vdaff requires: gcie
+
+GIC VDDI, x3
+// CHECK-INST:    gic vddi, x3
+// CHECK-ENCODING: [0x03,0xc2,0x0c,0xd5]
+// CHECK-UNKNOWN: d50cc203 sys #4, c12, c2, #0, x3
+// CHECK-ERROR: error: GIC vddi requires: gcie
+
+GIC VDDIS, x3
+// CHECK-INST:    gic vddis, x3
+// CHECK-ENCODING: [0x03,0xc1,0x0c,0xd5]
+// CHECK-UNKNOWN: d50cc103 sys #4, c12, c1, #0, x3
+// CHECK-ERROR: error: GIC vddis requires: gcie
+
+GIC VDEN, x3
+// CHECK-INST:    gic vden, x3
+// CHECK-ENCODING: [0x23,0xc1,0x0c,0xd5]
+// CHECK-UNKNOWN: d50cc123 sys #4, c12, c1, #1, x3
+// CHECK-ERROR: error: GIC vden requires: gcie
+
+GIC VDHM, x3
+// CHECK-INST:    gic vdhm, x3
+// CHECK-ENCODING: [0x23,0xc2,0x0c,0xd5]
+// CHECK-UNKNOWN: d50cc223 sys #4, c12, c2, #1, x3
+// CHECK-ERROR: error: GIC vdhm requires: gcie
+
+GIC VDPEND, x3
+// CHECK-INST:    gic vdpend, x3
+// CHECK-ENCODING: [0x83,0xc1,0x0c,0xd5]
+// CHECK-UNKNOWN: d50cc183 sys #4, c12, c1, #4, x3
+// CHECK-ERROR: error: GIC vdpend requires: gcie
+
+GIC VDPRI, x3
+// CHECK-INST:    gic vdpri, x3
+// CHECK-ENCODING: [0x43,0xc1,0x0c,0xd5]
+// CHECK-UNKNOWN: d50cc143 sys #4, c12, c1, #2, x3
+// CHECK-ERROR: error: GIC vdpri requires: gcie
+
+GIC VDRCFG, x3
+// CHECK-INST:    gic vdrcfg, x3
+// CHECK-ENCODING: [0xa3,0xc1,0x0c,0xd5]
+// CHECK-UNKNOWN: d50cc1a3 sys #4, c12, c1, #5, x3
+// CHECK-ERROR: error: GIC vdrcfg requires: gcie
+
+// -----------------------------------------------
+// Logical Interrupt Domain
+GIC LDAFF, x3
+// CHECK-INST:    gic ldaff, x3
+// CHECK-ENCODING: [0x63,0xc1,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ec163 sys #6, c12, c1, #3, x3
+// CHECK-ERROR: error: GIC ldaff requires: gcie
+
+GIC LDDI, x3
+// CHECK-INST:    gic lddi, x3
+// CHECK-ENCODING: [0x03,0xc2,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ec203 sys #6, c12, c2, #0, x3
+// CHECK-ERROR: error: GIC lddi requires: gcie
+
+GIC LDDIS, x3
+// CHECK-INST:    gic lddis, x3
+// CHECK-ENCODING: [0x03,0xc1,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ec103 sys #6, c12, c1, #0, x3
+// CHECK-ERROR: error: GIC lddis requires: gcie
+
+GIC LDEN, x3
+// CHECK-INST:    gic lden, x3
+// CHECK-ENCODING: [0x23,0xc1,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ec123 sys #6, c12, c1, #1, x3
+// CHECK-ERROR: error: GIC lden requires: gcie
+
+GIC LDHM, x3
+// CHECK-INST:    gic ldhm, x3
+// CHECK-ENCODING: [0x23,0xc2,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ec223 sys #6, c12, c2, #1, x3
+// CHECK-ERROR: error: GIC ldhm requires: gcie
+
+GIC LDPEND, x3
+// CHECK-INST:    gic ldpend, x3
+// CHECK-ENCODING: [0x83,0xc1,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ec183 sys #6, c12, c1, #4, x3
+// CHECK-ERROR: error: GIC ldpend requires: gcie
+
+GIC LDPRI, x3
+// CHECK-INST:    gic ldpri, x3
+// CHECK-ENCODING: [0x43,0xc1,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ec143 sys #6, c12, c1, #2, x3
+// CHECK-ERROR: error: GIC ldpri requires: gcie
+
+GIC LDRCFG, x3
+// CHECK-INST:    gic ldrcfg, x3
+// CHECK-ENCODING: [0xa3,0xc1,0x0e,0xd5]
+// CHECK-UNKNOWN: d50ec1a3 sys #6, c12, c1, #5, x3
+// CHECK-ERROR: error: GIC ldrcfg requires: gcie
+
+// -----------------------------------------------
+// GIC Synchronization Barrier Instructions
+GSB SYS
+// CHECK-INST:    gsb sys
+// CHECK-ENCODING: [0x1f,0xc0,0x08,0xd5]
+// CHECK-UNKNOWN: d508c01f sys #0, c12, c0, #0
+// CHECK-ERROR: error: GSB sys requires: gcie
+
+GSB ACK
+// CHECK-INST:    gsb ack
+// CHECK-ENCODING: [0x3f,0xc0,0x08,0xd5]
+// CHECK-UNKNOWN: d508c03f sys #0, c12, c0, #1
+// CHECK-ERROR: error: GSB ack requires: gcie

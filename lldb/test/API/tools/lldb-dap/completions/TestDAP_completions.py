@@ -189,7 +189,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             self.dap_server.get_completions("str"),
             [
                 {"text": "struct", "label": "struct"},
-                {"text": "str1", "label": "str1 -- string &"},
+                {"text": "str1", "label": "str1 -- std::string &"},
             ],
         )
 
@@ -244,6 +244,10 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(res["success"])
 
         self.continue_to_next_stop()
+
+        # Stopped at breakpoint 1
+        # 'var' variable is in scope, completions should not show any warning.
+        self.dap_server.get_completions("var ")
         self.continue_to_next_stop()
 
         # We are stopped inside `main`. Variables `var1` and `var2` are in scope.
@@ -267,4 +271,11 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
                 variable_var1_completion,
                 variable_var2_completion,
             ],
+        )
+
+        self.continue_to_exit()
+        console_str = self.get_console()
+        # we check in console to avoid waiting for output event.
+        self.assertNotIn(
+            "Expression 'var' is both an LLDB command and variable", console_str
         )

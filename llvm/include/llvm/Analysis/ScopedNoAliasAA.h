@@ -46,12 +46,12 @@ public:
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2, AAQueryInfo &AAQI);
 
-  LLVM_ABI void
+  LLVM_ABI static void
   collectScopedDomains(const MDNode *NoAlias,
-                       SmallPtrSetImpl<const MDNode *> &Domains) const;
+                       SmallPtrSetImpl<const MDNode *> &Domains);
 
-private:
-  bool mayAliasInScopes(const MDNode *Scopes, const MDNode *NoAlias) const;
+  LLVM_ABI static bool mayAliasInScopes(const MDNode *Scopes,
+                                        const MDNode *NoAlias);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

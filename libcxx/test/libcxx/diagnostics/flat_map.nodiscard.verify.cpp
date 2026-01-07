@@ -6,15 +6,107 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// REQUIRES: std-at-least-c++23
 
 // <flat_map>
 
-// [[nodiscard]] bool empty() const noexcept;
+// Check that functions are marked [[nodiscard]]
 
 #include <flat_map>
+#include <utility>
 
-void f() {
-  std::flat_map<int, int> c;
-  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+template <typename T>
+struct TransparentKey {
+  T t;
+
+  constexpr explicit operator T() const { return t; }
+};
+
+struct TransparentCompare {
+  using is_transparent = void; // This makes the comparator transparent
+
+  template <typename T>
+  constexpr bool operator()(const T& t, const TransparentKey<T>& transparent) const {
+    return t < transparent.t;
+  }
+
+  template <typename T>
+  constexpr bool operator()(const TransparentKey<T>& transparent, const T& t) const {
+    return transparent.t < t;
+  }
+
+  template <typename T>
+  constexpr bool operator()(const T& t1, const T& t2) const {
+    return t1 < t2;
+  }
+};
+
+void test() {
+  std::flat_map<int, int, TransparentCompare> fm;
+  const std::flat_map<int, int, TransparentCompare> cfm{};
+
+  fm.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.begin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.end();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.end();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.rbegin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.rbegin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.rend();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.rend();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.cbegin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.cend();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.crbegin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.crend();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  fm.empty();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.size();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.max_size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  int key = 0;
+  TransparentKey<int> tkey;
+
+  std::flat_map<int, int> nfm;
+  nfm[key];            // no-warning
+  fm[std::move(key)];  // no-warning
+  fm[std::move(tkey)]; // no-warning
+
+  fm.at(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.at(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.at(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.at(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::move(fm).extract(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  fm.key_comp();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.value_comp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.keys();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.values();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  fm.find(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  fm.count(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.count(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  fm.contains(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.contains(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.contains(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.contains(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  fm.lower_bound(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.lower_bound(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.lower_bound(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.lower_bound(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  fm.upper_bound(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.upper_bound(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.upper_bound(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.upper_bound(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  fm.equal_range(key);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.equal_range(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  fm.equal_range(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.equal_range(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

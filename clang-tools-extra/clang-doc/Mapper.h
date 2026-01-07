@@ -19,7 +19,6 @@
 
 #include "Representation.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Tooling/Execution.h"
 
 using namespace clang::comments;
 using namespace clang::tooling;

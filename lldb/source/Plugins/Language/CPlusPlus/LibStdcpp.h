@@ -38,6 +38,10 @@ LibstdcppMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                              lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibStdcppSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibStdcppTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                        lldb::ValueObjectSP);
 

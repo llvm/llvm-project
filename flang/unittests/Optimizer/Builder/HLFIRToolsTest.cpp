@@ -43,8 +43,8 @@ public:
 
   mlir::Value createConstant(std::int64_t cst) {
     mlir::Type indexType = firBuilder->getIndexType();
-    return firBuilder->create<mlir::arith::ConstantOp>(
-        getLoc(), indexType, firBuilder->getIntegerAttr(indexType, cst));
+    return mlir::arith::ConstantOp::create(*firBuilder, getLoc(), indexType,
+        firBuilder->getIntegerAttr(indexType, cst));
   }
 
   mlir::Location getLoc() { return firBuilder->getUnknownLoc(); }

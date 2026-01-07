@@ -52,13 +52,12 @@ define <8 x i1> @test3(<4 x i1> %a) {
 define <8 x i1> @test4(<4 x i1> %a, <4 x i1>%b) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovd2m %xmm1, %k0
-; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovd2m %xmm0, %k1
-; CHECK-NEXT:    kshiftlb $4, %k0, %k0
-; CHECK-NEXT:    korb %k0, %k1, %k0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpslld $31, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovd2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 
   %res = shufflevector <4 x i1> %a, <4 x i1> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -68,13 +67,12 @@ define <8 x i1> @test4(<4 x i1> %a, <4 x i1>%b) {
 define <4 x i1> @test5(<2 x i1> %a, <2 x i1>%b) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllq $63, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovq2m %xmm1, %k0
-; CHECK-NEXT:    vpsllq $63, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovq2m %xmm0, %k1
-; CHECK-NEXT:    kshiftlb $2, %k0, %k0
-; CHECK-NEXT:    korw %k0, %k1, %k0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsllq $63, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovq2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2d %k0, %xmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 
   %res = shufflevector <2 x i1> %a, <2 x i1> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

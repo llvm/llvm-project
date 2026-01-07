@@ -19,7 +19,6 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/BuiltinModules.h"
 #include "flang/Lower/CallInterface.h"
-#include "flang/Lower/Coarray.h"
 #include "flang/Lower/ComponentPath.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
@@ -28,6 +27,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -2750,7 +2750,7 @@ public:
                   fir::unwrapSequenceType(fir::unwrapPassByRefType(argTy))))
             TODO(loc, "passing to an OPTIONAL CONTIGUOUS derived type argument "
                       "with length parameters");
-          if (Fortran::evaluate::IsAssumedRank(*expr))
+          if (Fortran::semantics::IsAssumedRank(*expr))
             TODO(loc, "passing an assumed rank entity to an OPTIONAL "
                       "CONTIGUOUS argument");
           // Assumed shape VALUE are currently TODO in the call interface
@@ -2866,10 +2866,9 @@ public:
                                    /*withElseRegion=*/true)
                           .genThen([&]() {
                             auto rebox =
-                                builder
-                                    .create<fir::ReboxOp>(
-                                        loc, actualTy, box, mlir::Value{},
-                                        /*slice=*/mlir::Value{})
+                                fir::ReboxOp::create(builder, loc, actualTy,
+                                                     box, mlir::Value{},
+                                                     /*slice=*/mlir::Value{})
                                     .getResult();
                             fir::ResultOp::create(builder, loc, rebox);
                           })
@@ -4209,11 +4208,10 @@ private:
       // Adjust indices for any shift of the origin of the array.
       llvm::SmallVector<mlir::Value> indices = fir::factory::originateIndices(
           loc, *builder, tmp.getType(), shape, iters.iterVec());
-      auto addr =
-          builder->create<fir::ArrayCoorOp>(loc, eleRefTy, tmp, shape,
-                                            /*slice=*/mlir::Value{}, indices,
-                                            /*typeParams=*/mlir::ValueRange{});
-      auto load = builder->create<fir::LoadOp>(loc, addr);
+      auto addr = fir::ArrayCoorOp::create(*builder, loc, eleRefTy, tmp, shape,
+                                           /*slice=*/mlir::Value{}, indices,
+                                           /*typeParams=*/mlir::ValueRange{});
+      auto load = fir::LoadOp::create(*builder, loc, addr);
       return builder->createConvert(loc, i1Ty, load);
     };
   }
@@ -4541,7 +4539,7 @@ private:
                                       mlir::ValueRange{}, shape);
     fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
     stmtCtx.attachCleanup(
-        [bldr, loc, temp]() { bldr->create<fir::FreeMemOp>(loc, temp); });
+        [bldr, loc, temp]() { fir::FreeMemOp::create(*bldr, loc, temp); });
     mlir::Value shapeOp = genShapeOp(shape);
     return fir::ArrayLoadOp::create(builder, loc, seqTy, temp, shapeOp,
                                     /*slice=*/mlir::Value{},
@@ -5605,7 +5603,7 @@ private:
                     return newIters;
                   };
                   if (useTripsForSlice) {
-                    LLVM_ATTRIBUTE_UNUSED auto vectorSubscriptShape =
+                    [[maybe_unused]] auto vectorSubscriptShape =
                         getShape(arrayOperands.back());
                     auto undef = fir::UndefOp::create(builder, loc, idxTy);
                     trips.push_back(undef);
@@ -5840,9 +5838,8 @@ private:
           mlir::isa<fir::BaseBoxType>(memref.getType())
               ? fir::ReboxOp::create(builder, loc, boxTy, memref, shape, slice)
                     .getResult()
-              : builder
-                    .create<fir::EmboxOp>(loc, boxTy, memref, shape, slice,
-                                          fir::getTypeParams(extMemref))
+              : fir::EmboxOp::create(builder, loc, boxTy, memref, shape, slice,
+                                     fir::getTypeParams(extMemref))
                     .getResult();
       return [=](IterSpace) -> ExtValue {
         return fir::BoxValue(embox, lbounds, nonDeferredLenParams);
@@ -6540,7 +6537,7 @@ private:
     // Cleanup the temporary.
     fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
     stmtCtx.attachCleanup(
-        [bldr, loc, mem]() { bldr->create<fir::FreeMemOp>(loc, mem); });
+        [bldr, loc, mem]() { fir::FreeMemOp::create(*bldr, loc, mem); });
 
     // Return the continuation.
     if (fir::isa_char(seqTy.getEleTy())) {
@@ -6724,8 +6721,8 @@ private:
     auto loc = getLoc();
     auto newCoorRef = [bldr, coorTy, offsets, currentFunc,
                        loc](mlir::Value val) -> mlir::Value {
-      return bldr->create<fir::CoordinateOp>(loc, bldr->getRefType(coorTy),
-                                             currentFunc(val), offsets);
+      return fir::CoordinateOp::create(*bldr, loc, bldr->getRefType(coorTy),
+                                       currentFunc(val), offsets);
     };
     component.extendCoorRef = newCoorRef;
   }
@@ -6855,7 +6852,8 @@ private:
                       auto loc = getLoc();
                       auto *bldr = &converter.getFirOpBuilder();
                       auto newCoorRef = [=](mlir::Value val) -> mlir::Value {
-                        return bldr->create<fir::LoadOp>(loc, currentFunc(val));
+                        return fir::LoadOp::create(*bldr, loc,
+                                                   currentFunc(val));
                       };
                       components.extendCoorRef = newCoorRef;
                       deref = true;
@@ -7103,7 +7101,7 @@ private:
           }
         } else {
           auto eleVal = convertElementForUpdate(loc, eleTy, iters.getElement());
-          builder->create<fir::StoreOp>(loc, eleVal, addr);
+          fir::StoreOp::create(*builder, loc, eleVal, addr);
         }
         return exv;
       };

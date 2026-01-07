@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 
+#include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -83,7 +84,7 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
   if (basename.empty()) {
     llvm::StringRef context;
     func_name_type |=
-        (ExtractContextAndIdentifier(name.GetCString(), context, basename)
+        (ExtractContextAndIdentifier(name.GetStringRef(), context, basename)
              ? (eFunctionNameTypeMethod | eFunctionNameTypeBase)
              : eFunctionNameTypeFull);
   } else {
@@ -102,9 +103,11 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
     return {func_name_type, ConstString(basename)};
 }
 
-bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
-  const char *mangled_name = mangled.GetMangledName().GetCString();
-  return mangled_name && Mangled::IsMangledName(mangled_name);
+bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
+  auto mangling_scheme =
+      Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
+  return mangling_scheme == Mangled::eManglingSchemeItanium ||
+         mangling_scheme == Mangled::eManglingSchemeMSVC;
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
@@ -187,20 +190,36 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   if (basename.size() <= idx)
     return false; // Empty string or "~"
 
-  if (!std::isalpha(basename[idx]) && basename[idx] != '_')
+  if (!std::isalpha(static_cast<unsigned char>(basename[idx])) &&
+      basename[idx] != '_')
     return false; // First character (after removing the possible '~'') isn't in
                   // [A-Za-z_]
 
   // Read all characters matching [A-Za-z_0-9]
   ++idx;
   while (idx < basename.size()) {
-    if (!std::isalnum(basename[idx]) && basename[idx] != '_')
+    if (!std::isalnum(static_cast<unsigned char>(basename[idx])) &&
+        basename[idx] != '_')
       break;
     ++idx;
   }
 
   // We processed all characters. It is a vaild basename.
   return idx == basename.size();
+}
+
+/// A context is trivial if an only if it matches this pattern.
+/// "^\s*([A-Za-z_:]*)\s*$". for example function `foo::bar::func()`
+/// has a trivial context but. but `foo<int>::bar::func()` doesn't.
+static bool IsTrivialContext(llvm::StringRef context) {
+  // remove trailing or leading whitespace.
+  context = context.trim();
+
+  const auto iter = context.find_if_not([](char current) {
+    return std::isalnum(static_cast<unsigned char>(current)) ||
+           current == '_' || current == ':';
+  });
+  return iter == llvm::StringRef::npos;
 }
 
 /// Writes out the function name in 'full_name' to 'out_stream'
@@ -271,8 +290,25 @@ GetDemangledBasename(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  return demangled_name.slice(info.BasenameRange.first,
-                              info.BasenameRange.second);
+  return CPlusPlusLanguage::GetDemangledBasename(demangled_name, info);
+}
+
+llvm::StringRef
+CPlusPlusLanguage::GetDemangledBasename(llvm::StringRef demangled,
+                                        const DemangledNameInfo &info) {
+  assert(info.hasBasename());
+  return demangled.slice(info.BasenameRange.first, info.BasenameRange.second);
+}
+
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledTemplateArguments(
+    llvm::StringRef demangled, const DemangledNameInfo &info) {
+  if (!info.hasTemplateArguments())
+    return llvm::createStringError(
+        "Template arguments range for '%s' is invalid.", demangled.data());
+
+  return demangled.slice(info.TemplateArgumentsRange.first,
+                         info.TemplateArgumentsRange.second);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -283,12 +319,17 @@ GetDemangledTemplateArguments(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.ArgumentsRange.first < info.BasenameRange.second)
-    return llvm::createStringError("Arguments range for '%s' is invalid.",
-                                   demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledTemplateArguments(demangled_name, info);
+}
 
-  return demangled_name.slice(info.BasenameRange.second,
-                              info.ArgumentsRange.first);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledReturnTypeLHS(llvm::StringRef demangled,
+                                             const DemangledNameInfo &info) {
+  if (info.ScopeRange.first >= demangled.size())
+    return llvm::createStringError(
+        "Scope range for '%s' LHS return type is invalid.", demangled.data());
+
+  return demangled.substr(0, info.ScopeRange.first);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -299,12 +340,18 @@ GetDemangledReturnTypeLHS(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.ScopeRange.first >= demangled_name.size())
-    return llvm::createStringError(
-        "Scope range for '%s' LHS return type is invalid.",
-        demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledReturnTypeLHS(demangled_name, info);
+}
 
-  return demangled_name.substr(0, info.ScopeRange.first);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledFunctionQualifiers(
+    llvm::StringRef demangled, const DemangledNameInfo &info) {
+  if (!info.hasQualifiers())
+    return llvm::createStringError("Qualifiers range for '%s' is invalid.",
+                                   demangled.data());
+
+  return demangled.slice(info.QualifiersRange.first,
+                         info.QualifiersRange.second);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -315,12 +362,20 @@ GetDemangledFunctionQualifiers(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasQualifiers())
-    return llvm::createStringError("Qualifiers range for '%s' is invalid.",
-                                   demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledFunctionQualifiers(demangled_name,
+                                                           info);
+}
 
-  return demangled_name.slice(info.QualifiersRange.first,
-                              info.QualifiersRange.second);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledReturnTypeRHS(llvm::StringRef demangled,
+                                             const DemangledNameInfo &info) {
+  if (info.QualifiersRange.first < info.ArgumentsRange.second)
+    return llvm::createStringError(
+        "Qualifiers range for '%s' RHS return type  is invalid.",
+        demangled.data());
+
+  return demangled.slice(info.ArgumentsRange.second,
+                         info.QualifiersRange.first);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -331,13 +386,17 @@ GetDemangledReturnTypeRHS(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.QualifiersRange.first < info.ArgumentsRange.second)
-    return llvm::createStringError(
-        "Qualifiers range for '%s' RHS return type  is invalid.",
-        demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledReturnTypeRHS(demangled_name, info);
+}
 
-  return demangled_name.slice(info.ArgumentsRange.second,
-                              info.QualifiersRange.first);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledScope(llvm::StringRef demangled,
+                                     const DemangledNameInfo &info) {
+  if (!info.hasScope())
+    return llvm::createStringError("Scope range for '%s' is invalid.",
+                                   demangled.data());
+
+  return demangled.slice(info.ScopeRange.first, info.ScopeRange.second);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -348,15 +407,19 @@ GetDemangledScope(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasScope())
-    return llvm::createStringError("Scope range for '%s' is invalid.",
-                                   demangled_name.data());
-
-  return demangled_name.slice(info.ScopeRange.first, info.ScopeRange.second);
+  return CPlusPlusLanguage::GetDemangledScope(demangled_name, info);
 }
 
-/// Handles anything printed after the FunctionEncoding ItaniumDemangle
-/// node. Most notably the DotSUffix node.
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledFunctionSuffix(llvm::StringRef demangled,
+                                              const DemangledNameInfo &info) {
+  if (!info.hasSuffix())
+    return llvm::createStringError("Suffix range for '%s' is invalid.",
+                                   demangled.data());
+
+  return demangled.slice(info.SuffixRange.first, info.SuffixRange.second);
+}
+
 static llvm::Expected<llvm::StringRef>
 GetDemangledFunctionSuffix(const SymbolContext &sc) {
   auto info_or_err = GetAndValidateInfo(sc);
@@ -365,11 +428,17 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasSuffix())
-    return llvm::createStringError("Suffix range for '%s' is invalid.",
-                                   demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledFunctionSuffix(demangled_name, info);
+}
 
-  return demangled_name.slice(info.SuffixRange.first, info.SuffixRange.second);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledFunctionArguments(
+    llvm::StringRef demangled, const DemangledNameInfo &info) {
+  if (!info.hasArguments())
+    return llvm::createStringError(
+        "Function arguments range for '%s' is invalid.", demangled.data());
+
+  return demangled.slice(info.ArgumentsRange.first, info.ArgumentsRange.second);
 }
 
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
@@ -382,13 +451,19 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
                    "frame-format variable: {0}");
     return false;
   }
+
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasArguments())
+  auto args_or_err =
+      CPlusPlusLanguage::GetDemangledFunctionArguments(demangled_name, info);
+  if (!args_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Language), args_or_err.takeError(),
+                   "Failed to handle ${{function.formatted-arguments}} "
+                   "frame-format variable: {0}");
     return false;
+  }
 
-  s << demangled_name.slice(info.ArgumentsRange.first,
-                            info.ArgumentsRange.second);
+  s << *args_or_err;
 
   return true;
 }
@@ -420,18 +495,17 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
       m_basename = full.substr(basename_begin, basename_end - basename_begin);
     }
 
-    if (IsTrivialBasename(m_basename)) {
+    if (IsTrivialBasename(m_basename) && IsTrivialContext(m_context)) {
       return true;
-    } else {
-      // The C++ basename doesn't match our regular expressions so this can't
-      // be a valid C++ method, clear everything out and indicate an error
-      m_context = llvm::StringRef();
-      m_basename = llvm::StringRef();
-      m_arguments = llvm::StringRef();
-      m_qualifiers = llvm::StringRef();
-      m_return_type = llvm::StringRef();
-      return false;
     }
+    // The C++ basename doesn't match our regular expressions so this can't
+    // be a valid C++ method, clear everything out and indicate an error
+    m_context = llvm::StringRef();
+    m_basename = llvm::StringRef();
+    m_arguments = llvm::StringRef();
+    m_qualifiers = llvm::StringRef();
+    m_return_type = llvm::StringRef();
+    return false;
   }
   return false;
 }
@@ -485,9 +559,8 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
   llvm::StringRef identifier;
   llvm::StringRef context;
-  std::string path_str = path.str();
-  bool success = CPlusPlusLanguage::ExtractContextAndIdentifier(
-      path_str.c_str(), context, identifier);
+  const bool success =
+      CPlusPlusLanguage::ExtractContextAndIdentifier(path, context, identifier);
   if (!success)
     return m_full.GetStringRef().contains(path);
 
@@ -531,7 +604,8 @@ bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
 }
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
-    const char *name, llvm::StringRef &context, llvm::StringRef &identifier) {
+    llvm::StringRef name, llvm::StringRef &context,
+    llvm::StringRef &identifier) {
   if (MSVCUndecoratedNameParser::IsMSVCUndecoratedName(name))
     return MSVCUndecoratedNameParser::ExtractContextAndIdentifier(name, context,
                                                                   identifier);
@@ -544,126 +618,6 @@ bool CPlusPlusLanguage::ExtractContextAndIdentifier(
   }
   return false;
 }
-
-namespace {
-class NodeAllocator {
-  llvm::BumpPtrAllocator Alloc;
-
-public:
-  void reset() { Alloc.Reset(); }
-
-  template <typename T, typename... Args> T *makeNode(Args &&...args) {
-    return new (Alloc.Allocate(sizeof(T), alignof(T)))
-        T(std::forward<Args>(args)...);
-  }
-
-  void *allocateNodeArray(size_t sz) {
-    return Alloc.Allocate(sizeof(llvm::itanium_demangle::Node *) * sz,
-                          alignof(llvm::itanium_demangle::Node *));
-  }
-};
-
-template <typename Derived>
-class ManglingSubstitutor
-    : public llvm::itanium_demangle::AbstractManglingParser<Derived,
-                                                            NodeAllocator> {
-  using Base =
-      llvm::itanium_demangle::AbstractManglingParser<Derived, NodeAllocator>;
-
-public:
-  ManglingSubstitutor() : Base(nullptr, nullptr) {}
-
-  template <typename... Ts>
-  ConstString substitute(llvm::StringRef Mangled, Ts &&...Vals) {
-    this->getDerived().reset(Mangled, std::forward<Ts>(Vals)...);
-    return substituteImpl(Mangled);
-  }
-
-protected:
-  void reset(llvm::StringRef Mangled) {
-    Base::reset(Mangled.begin(), Mangled.end());
-    Written = Mangled.begin();
-    Result.clear();
-    Substituted = false;
-  }
-
-  ConstString substituteImpl(llvm::StringRef Mangled) {
-    Log *log = GetLog(LLDBLog::Language);
-    if (this->parse() == nullptr) {
-      LLDB_LOG(log, "Failed to substitute mangling in {0}", Mangled);
-      return ConstString();
-    }
-    if (!Substituted)
-      return ConstString();
-
-    // Append any trailing unmodified input.
-    appendUnchangedInput();
-    LLDB_LOG(log, "Substituted mangling {0} -> {1}", Mangled, Result);
-    return ConstString(Result);
-  }
-
-  void trySubstitute(llvm::StringRef From, llvm::StringRef To) {
-    if (!llvm::StringRef(currentParserPos(), this->numLeft()).starts_with(From))
-      return;
-
-    // We found a match. Append unmodified input up to this point.
-    appendUnchangedInput();
-
-    // And then perform the replacement.
-    Result += To;
-    Written += From.size();
-    Substituted = true;
-  }
-
-private:
-  /// Input character until which we have constructed the respective output
-  /// already.
-  const char *Written = "";
-
-  llvm::SmallString<128> Result;
-
-  /// Whether we have performed any substitutions.
-  bool Substituted = false;
-
-  const char *currentParserPos() const { return this->First; }
-
-  void appendUnchangedInput() {
-    Result +=
-        llvm::StringRef(Written, std::distance(Written, currentParserPos()));
-    Written = currentParserPos();
-  }
-};
-
-/// Given a mangled function `Mangled`, replace all the primitive function type
-/// arguments of `Search` with type `Replace`.
-class TypeSubstitutor : public ManglingSubstitutor<TypeSubstitutor> {
-  llvm::StringRef Search;
-  llvm::StringRef Replace;
-
-public:
-  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
-             llvm::StringRef Replace) {
-    ManglingSubstitutor::reset(Mangled);
-    this->Search = Search;
-    this->Replace = Replace;
-  }
-
-  llvm::itanium_demangle::Node *parseType() {
-    trySubstitute(Search, Replace);
-    return ManglingSubstitutor::parseType();
-  }
-};
-
-class CtorDtorSubstitutor : public ManglingSubstitutor<CtorDtorSubstitutor> {
-public:
-  llvm::itanium_demangle::Node *
-  parseCtorDtorName(llvm::itanium_demangle::Node *&SoFar, NameState *State) {
-    trySubstitute("C1", "C2");
-    trySubstitute("D1", "D2");
-    return ManglingSubstitutor::parseCtorDtorName(SoFar, State);
-  }
-};
-} // namespace
 
 std::vector<ConstString> CPlusPlusLanguage::GenerateAlternateFunctionManglings(
     const ConstString mangled_name) const {
@@ -692,29 +646,49 @@ std::vector<ConstString> CPlusPlusLanguage::GenerateAlternateFunctionManglings(
     alternates.push_back(ConstString(fixed_scratch));
   }
 
-  TypeSubstitutor TS;
+  auto *log = GetLog(LLDBLog::Language);
+
   // `char` is implementation defined as either `signed` or `unsigned`.  As a
   // result a char parameter has 3 possible manglings: 'c'-char, 'a'-signed
   // char, 'h'-unsigned char.  If we're looking for symbols with a signed char
   // parameter, try finding matches which have the general case 'c'.
-  if (ConstString char_fixup =
-          TS.substitute(mangled_name.GetStringRef(), "a", "c"))
-    alternates.push_back(char_fixup);
+  if (auto char_fixup_or_err =
+          SubstituteType_ItaniumMangle(mangled_name.GetStringRef(), "a", "c")) {
+    // LLDB_LOG(log, "Substituted mangling {0} -> {1}", Mangled, Result);
+    if (*char_fixup_or_err)
+      alternates.push_back(*char_fixup_or_err);
+  } else
+    LLDB_LOG_ERROR(log, char_fixup_or_err.takeError(),
+                   "Failed to substitute 'char' type mangling: {0}");
 
   // long long parameter mangling 'x', may actually just be a long 'l' argument
-  if (ConstString long_fixup =
-          TS.substitute(mangled_name.GetStringRef(), "x", "l"))
-    alternates.push_back(long_fixup);
+  if (auto long_fixup_or_err =
+          SubstituteType_ItaniumMangle(mangled_name.GetStringRef(), "x", "l")) {
+    if (*long_fixup_or_err)
+      alternates.push_back(*long_fixup_or_err);
+  } else
+    LLDB_LOG_ERROR(log, long_fixup_or_err.takeError(),
+                   "Failed to substitute 'long long' type mangling: {0}");
 
   // unsigned long long parameter mangling 'y', may actually just be unsigned
   // long 'm' argument
-  if (ConstString ulong_fixup =
-          TS.substitute(mangled_name.GetStringRef(), "y", "m"))
-    alternates.push_back(ulong_fixup);
+  if (auto ulong_fixup_or_err =
+          SubstituteType_ItaniumMangle(mangled_name.GetStringRef(), "y", "m")) {
+    if (*ulong_fixup_or_err)
+      alternates.push_back(*ulong_fixup_or_err);
+  } else
+    LLDB_LOG_ERROR(
+        log, ulong_fixup_or_err.takeError(),
+        "Failed to substitute 'unsigned long long' type mangling: {0}");
 
-  if (ConstString ctor_fixup =
-          CtorDtorSubstitutor().substitute(mangled_name.GetStringRef()))
-    alternates.push_back(ctor_fixup);
+  if (auto ctor_fixup_or_err = SubstituteStructorAliases_ItaniumMangle(
+          mangled_name.GetStringRef())) {
+    if (*ctor_fixup_or_err) {
+      alternates.push_back(*ctor_fixup_or_err);
+    }
+  } else
+    LLDB_LOG_ERROR(log, ctor_fixup_or_err.takeError(),
+                   "Failed to substitute structor alias manglings: {0}");
 
   return alternates;
 }
@@ -790,31 +764,27 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxStringSummaryProviderASCII,
                 "std::string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char, "
-                "std::__[[:alnum:]]+::char_traits<char>, "
-                "std::__[[:alnum:]]+::allocator<char> >$",
+                "std::__[[:alnum:]]+::char_traits<char>,.*>$",
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderASCII,
                 "std::string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<unsigned char, "
-                "std::__[[:alnum:]]+::char_traits<unsigned char>, "
-                "std::__[[:alnum:]]+::allocator<unsigned char> >$",
+                "std::__[[:alnum:]]+::char_traits<unsigned char>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF16,
                 "std::u16string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char16_t, "
-                "std::__[[:alnum:]]+::char_traits<char16_t>, "
-                "std::__[[:alnum:]]+::allocator<char16_t> >$",
+                "std::__[[:alnum:]]+::char_traits<char16_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF32,
                 "std::u32string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char32_t, "
-                "std::__[[:alnum:]]+::char_traits<char32_t>, "
-                "std::__[[:alnum:]]+::allocator<char32_t> >$",
+                "std::__[[:alnum:]]+::char_traits<char32_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
@@ -825,8 +795,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxWStringSummaryProvider,
                 "std::wstring summary provider",
                 "^std::__[[:alnum:]]+::basic_string<wchar_t, "
-                "std::__[[:alnum:]]+::char_traits<wchar_t>, "
-                "std::__[[:alnum:]]+::allocator<wchar_t> >$",
+                "std::__[[:alnum:]]+::char_traits<wchar_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
@@ -911,11 +880,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator,
-      "libc++ std::list synthetic children",
-      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
-      // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
-      "^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
-      "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
+      "libc++ std::list synthetic children", "^std::__[[:alnum:]]+::list<.+>$",
       stl_deref_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
@@ -943,11 +908,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::unordered containers synthetic children",
       "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
       stl_synth_flags, true);
-  AddCXXSynthetic(
-      cpp_category_sp,
-      lldb_private::formatters::LibcxxInitializerListSyntheticFrontEndCreator,
-      "libc++ std::initializer_list synthetic children",
-      "^std::initializer_list<.+>$", stl_synth_flags, true);
   AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
                   "libc++ std::queue synthetic children",
                   "^std::__[[:alnum:]]+::queue<.+>$", stl_synth_flags, true);
@@ -1042,14 +1002,10 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libc++ std::list summary provider",
       "^std::__[[:alnum:]]+::forward_list<.+>$", stl_summary_flags, true);
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libc++ std::list summary provider",
-      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
-      // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
-      "^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
-      "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
-      stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libc++ std::list summary provider",
+                "^std::__[[:alnum:]]+::list<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::map summary provider",
@@ -1342,24 +1298,16 @@ static void RegisterStdStringSummaryProvider(
 
   category_sp->AddTypeSummary(makeSpecifier(string_ty), summary_sp);
 
-  // std::basic_string<char>
   category_sp->AddTypeSummary(
       makeSpecifier(llvm::formatv("std::basic_string<{}>", char_ty).str()),
       summary_sp);
-  // std::basic_string<char,std::char_traits<char>,std::allocator<char> >
+
   category_sp->AddTypeSummary(
-      makeSpecifier(llvm::formatv("std::basic_string<{0},std::char_traits<{0}>,"
-                                  "std::allocator<{0}> >",
-                                  char_ty)
-                        .str()),
-      summary_sp);
-  // std::basic_string<char, std::char_traits<char>, std::allocator<char> >
-  category_sp->AddTypeSummary(
-      makeSpecifier(
-          llvm::formatv("std::basic_string<{0}, std::char_traits<{0}>, "
-                        "std::allocator<{0}> >",
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          llvm::formatv("^std::basic_string<{0}, ?std::char_traits<{0}>,.*>$",
                         char_ty)
-              .str()),
+              .str(),
+          eFormatterMatchRegex),
       summary_sp);
 }
 
@@ -1404,20 +1352,17 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->AddTypeSummary("std::__cxx11::string", eFormatterMatchExact,
                                   string_summary_sp);
   cpp_category_sp->AddTypeSummary(
-      "std::__cxx11::basic_string<char, std::char_traits<char>, "
-      "std::allocator<char> >",
-      eFormatterMatchExact, string_summary_sp);
-  cpp_category_sp->AddTypeSummary("std::__cxx11::basic_string<unsigned char, "
-                                  "std::char_traits<unsigned char>, "
-                                  "std::allocator<unsigned char> >",
-                                  eFormatterMatchExact, string_summary_sp);
+      "^std::__cxx11::basic_string<char, std::char_traits<char>,.*>$",
+      eFormatterMatchRegex, string_summary_sp);
+  cpp_category_sp->AddTypeSummary("^std::__cxx11::basic_string<unsigned char, "
+                                  "std::char_traits<unsigned char>,.*>$",
+                                  eFormatterMatchRegex, string_summary_sp);
 
   cpp_category_sp->AddTypeSummary("std::__cxx11::wstring", eFormatterMatchExact,
                                   string_summary_sp);
   cpp_category_sp->AddTypeSummary(
-      "std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, "
-      "std::allocator<wchar_t> >",
-      eFormatterMatchExact, string_summary_sp);
+      "^std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>,.*>$",
+      eFormatterMatchRegex, string_summary_sp);
 
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
@@ -1470,6 +1415,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
+
+  AddCXXSynthetic(cpp_category_sp, LibStdcppSpanSyntheticFrontEndCreator,
+                  "libstdc++ std::span synthetic children", "^std::span<.+>$",
+                  stl_deref_flags, true);
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
@@ -1561,6 +1510,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libstdc++ std::span summary provider", "^std::span<.+>$",
+                stl_summary_flags, true);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
@@ -1760,6 +1714,14 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring summary provider"));
 
+  // NOTE: it is loaded as a common formatter because the libc++ version is not
+  // in the `__1` namespace, hence we need to dispatch based on the class
+  // layout.
+  AddCXXSynthetic(cpp_category_sp,
+                  GenericInitializerListSyntheticFrontEndCreator,
+                  "std::initializer_list synthetic children",
+                  "^std::initializer_list<.+>$", stl_synth_flags, true);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
@@ -1803,6 +1765,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_synth_flags,
                   true);
 
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::initializer_list summary provider",
+                "^std::initializer_list<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
                 "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
@@ -2254,6 +2219,7 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
   case FunctionNameRepresentation::eName:
     return false;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 bool CPlusPlusLanguage::HandleFrameFormatVariable(
@@ -2261,7 +2227,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     FormatEntity::Entry::Type type, Stream &s) {
   switch (type) {
   case FormatEntity::Entry::Type::FunctionScope: {
-    auto scope_or_err = GetDemangledScope(sc);
+    auto scope_or_err = ::GetDemangledScope(sc);
     if (!scope_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), scope_or_err.takeError(),
@@ -2275,7 +2241,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   }
 
   case FormatEntity::Entry::Type::FunctionBasename: {
-    auto name_or_err = GetDemangledBasename(sc);
+    auto name_or_err = ::GetDemangledBasename(sc);
     if (!name_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), name_or_err.takeError(),
@@ -2289,7 +2255,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   }
 
   case FormatEntity::Entry::Type::FunctionTemplateArguments: {
-    auto template_args_or_err = GetDemangledTemplateArguments(sc);
+    auto template_args_or_err = ::GetDemangledTemplateArguments(sc);
     if (!template_args_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language),
                      template_args_or_err.takeError(),
@@ -2327,7 +2293,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     return true;
   }
   case FormatEntity::Entry::Type::FunctionReturnRight: {
-    auto return_rhs_or_err = GetDemangledReturnTypeRHS(sc);
+    auto return_rhs_or_err = ::GetDemangledReturnTypeRHS(sc);
     if (!return_rhs_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_rhs_or_err.takeError(),
                      "Failed to handle ${{function.return-right}} frame-format "
@@ -2340,7 +2306,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     return true;
   }
   case FormatEntity::Entry::Type::FunctionReturnLeft: {
-    auto return_lhs_or_err = GetDemangledReturnTypeLHS(sc);
+    auto return_lhs_or_err = ::GetDemangledReturnTypeLHS(sc);
     if (!return_lhs_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_lhs_or_err.takeError(),
                      "Failed to handle ${{function.return-left}} frame-format "
@@ -2353,7 +2319,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     return true;
   }
   case FormatEntity::Entry::Type::FunctionQualifiers: {
-    auto quals_or_err = GetDemangledFunctionQualifiers(sc);
+    auto quals_or_err = ::GetDemangledFunctionQualifiers(sc);
     if (!quals_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), quals_or_err.takeError(),
                      "Failed to handle ${{function.qualifiers}} frame-format "
@@ -2366,7 +2332,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     return true;
   }
   case FormatEntity::Entry::Type::FunctionSuffix: {
-    auto suffix_or_err = GetDemangledFunctionSuffix(sc);
+    auto suffix_or_err = ::GetDemangledFunctionSuffix(sc);
     if (!suffix_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), suffix_or_err.takeError(),
@@ -2381,6 +2347,160 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   default:
     return false;
   }
+}
+
+namespace {
+class NodeAllocator {
+  llvm::BumpPtrAllocator Alloc;
+
+public:
+  void reset() { Alloc.Reset(); }
+
+  template <typename T, typename... Args> T *makeNode(Args &&...args) {
+    return new (Alloc.Allocate(sizeof(T), alignof(T)))
+        T(std::forward<Args>(args)...);
+  }
+
+  void *allocateNodeArray(size_t sz) {
+    return Alloc.Allocate(sizeof(llvm::itanium_demangle::Node *) * sz,
+                          alignof(llvm::itanium_demangle::Node *));
+  }
+};
+
+template <typename Derived>
+class ManglingSubstitutor
+    : public llvm::itanium_demangle::AbstractManglingParser<Derived,
+                                                            NodeAllocator> {
+  using Base =
+      llvm::itanium_demangle::AbstractManglingParser<Derived, NodeAllocator>;
+
+public:
+  ManglingSubstitutor() : Base(nullptr, nullptr) {}
+
+  template <typename... Ts>
+  llvm::Expected<ConstString> substitute(llvm::StringRef Mangled,
+                                         Ts &&...Vals) {
+    this->getDerived().reset(Mangled, std::forward<Ts>(Vals)...);
+    return substituteImpl(Mangled);
+  }
+
+protected:
+  void reset(llvm::StringRef Mangled) {
+    Base::reset(Mangled.begin(), Mangled.end());
+    Written = Mangled.begin();
+    Result.clear();
+    Substituted = false;
+  }
+
+  llvm::Expected<ConstString> substituteImpl(llvm::StringRef Mangled) {
+    if (this->parse() == nullptr)
+      return llvm::createStringError(
+          llvm::formatv("Failed to substitute mangling in '{0}'", Mangled));
+
+    if (!Substituted)
+      return ConstString();
+
+    // Append any trailing unmodified input.
+    appendUnchangedInput();
+    return ConstString(Result);
+  }
+
+  void trySubstitute(llvm::StringRef From, llvm::StringRef To) {
+    if (!llvm::StringRef(currentParserPos(), this->numLeft()).starts_with(From))
+      return;
+
+    // We found a match. Append unmodified input up to this point.
+    appendUnchangedInput();
+
+    // And then perform the replacement.
+    Result += To;
+    Written += From.size();
+    Substituted = true;
+  }
+
+private:
+  /// Input character until which we have constructed the respective output
+  /// already.
+  const char *Written = "";
+
+  llvm::SmallString<128> Result;
+
+  /// Whether we have performed any substitutions.
+  bool Substituted = false;
+
+  const char *currentParserPos() const { return this->First; }
+
+  void appendUnchangedInput() {
+    Result +=
+        llvm::StringRef(Written, std::distance(Written, currentParserPos()));
+    Written = currentParserPos();
+  }
+};
+
+/// Given a mangled function `Mangled`, replace all the primitive function type
+/// arguments of `Search` with type `Replace`.
+class TypeSubstitutor : public ManglingSubstitutor<TypeSubstitutor> {
+  llvm::StringRef Search;
+  llvm::StringRef Replace;
+
+public:
+  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
+             llvm::StringRef Replace) {
+    ManglingSubstitutor::reset(Mangled);
+    this->Search = Search;
+    this->Replace = Replace;
+  }
+
+  llvm::itanium_demangle::Node *parseType() {
+    trySubstitute(Search, Replace);
+    return ManglingSubstitutor::parseType();
+  }
+};
+
+class CtorDtorSubstitutor : public ManglingSubstitutor<CtorDtorSubstitutor> {
+  llvm::StringRef Search;
+  llvm::StringRef Replace;
+
+public:
+  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
+             llvm::StringRef Replace) {
+    ManglingSubstitutor::reset(Mangled);
+    this->Search = Search;
+    this->Replace = Replace;
+  }
+
+  void reset(llvm::StringRef Mangled) { ManglingSubstitutor::reset(Mangled); }
+
+  llvm::itanium_demangle::Node *
+  parseCtorDtorName(llvm::itanium_demangle::Node *&SoFar, NameState *State) {
+    if (!Search.empty() && !Replace.empty()) {
+      trySubstitute(Search, Replace);
+    } else {
+      trySubstitute("D1", "D2");
+      trySubstitute("C1", "C2");
+    }
+    return ManglingSubstitutor::parseCtorDtorName(SoFar, State);
+  }
+};
+} // namespace
+
+llvm::Expected<ConstString>
+CPlusPlusLanguage::SubstituteType_ItaniumMangle(llvm::StringRef mangled_name,
+                                                llvm::StringRef subst_from,
+                                                llvm::StringRef subst_to) {
+  return TypeSubstitutor().substitute(mangled_name, subst_from, subst_to);
+}
+
+llvm::Expected<ConstString> CPlusPlusLanguage::SubstituteStructor_ItaniumMangle(
+    llvm::StringRef mangled_name, llvm::StringRef subst_from,
+    llvm::StringRef subst_to) {
+  return CtorDtorSubstitutor().substitute(mangled_name, subst_from, subst_to);
+}
+
+llvm::Expected<ConstString>
+CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+    llvm::StringRef mangled_name) {
+  return CtorDtorSubstitutor().substitute(mangled_name);
 }
 
 #define LLDB_PROPERTIES_language_cplusplus

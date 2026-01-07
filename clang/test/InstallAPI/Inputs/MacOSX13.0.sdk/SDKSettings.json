@@ -3,7 +3,24 @@
   "Version": "13.0",
   "CanonicalName": "macosx13.0",
   "MaximumDeploymentTarget": "13.0.99",
-  "PropertyConditionFallbackNames": [], "VersionMap": {
+  "PropertyConditionFallbackNames": [],
+  "SupportedTargets": {
+    "macosx": {
+      "Archs": ["x86_64", "x86_64h", "arm64", "arm64e"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "macos",
+      "LLVMTargetTripleEnvironment": "",
+      "SystemPrefix": ""
+    },
+    "iosmac": {
+      "Archs": ["x86_64", "x86_64h", "arm64", "arm64e"],
+      "LLVMTargetTripleVendor": "apple",
+      "LLVMTargetTripleSys": "ios",
+      "LLVMTargetTripleEnvironment": "macabi",
+      "SystemPrefix": "\/System\/iOSSupport"
+    }
+  },
+  "VersionMap": {
     "iOSMac_macOS": {
       "16.1": "13.0",
       "15.0": "12.0",

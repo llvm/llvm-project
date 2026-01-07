@@ -59,6 +59,13 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
 
+    def test_custom_license_and_standards(self):
+        yaml_file = self.source_dir / "input" / "custom.yaml"
+        expected_output_file = self.source_dir / "expected_output" / "custom.h"
+        output_file = self.output_dir / "custom.h"
+        self.run_script(yaml_file, output_file)
+        self.compare_files(output_file, expected_output_file)
+
     def test_generate_json(self):
         yaml_file = self.source_dir / "input/test_small.yaml"
         expected_output_file = self.source_dir / "expected_output/test_small.json"
@@ -66,6 +73,13 @@ class TestHeaderGenIntegration(unittest.TestCase):
 
         self.run_script(yaml_file, output_file, switches=["--json"])
 
+        self.compare_files(output_file, expected_output_file)
+
+    def test_sorting(self):
+        yaml_file = self.source_dir / "input" / "sorting.yaml"
+        expected_output_file = self.source_dir / "expected_output" / "sorting.h"
+        output_file = self.output_dir / "sorting.h"
+        self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
 
 

@@ -85,21 +85,17 @@ public:
   }
 
   using AtomNames = llvm::DenseMap<Atom, std::string>;
-  // Produce a stable human-readable representation of this formula.
-  // For example: (V3 | !(V1 & V2))
-  // If AtomNames is provided, these override the default V0, V1... names.
+  /// Produces a stable human-readable representation of this formula.
+  /// For example: (V3 | !(V1 & V2))
+  /// If AtomNames is provided, these override the default V0, V1... names.
   void print(llvm::raw_ostream &OS, const AtomNames * = nullptr) const;
 
-  // Allocate Formulas using Arena rather than calling this function directly.
+  /// Allocates Formulas using Arena rather than calling this function directly.
   static const Formula &create(llvm::BumpPtrAllocator &Alloc, Kind K,
                                ArrayRef<const Formula *> Operands,
                                unsigned Value = 0);
 
-private:
-  Formula() = default;
-  Formula(const Formula &) = delete;
-  Formula &operator=(const Formula &) = delete;
-
+  /// Count of operands (sub-formulas) associated with Formulas of kind `K`.
   static unsigned numOperands(Kind K) {
     switch (K) {
     case AtomRef:
@@ -115,6 +111,11 @@ private:
     }
     llvm_unreachable("Unhandled Formula::Kind enum");
   }
+
+private:
+  Formula() = default;
+  Formula(const Formula &) = delete;
+  Formula &operator=(const Formula &) = delete;
 
   Kind FormulaKind;
   // Some kinds of formula have scalar values, e.g. AtomRef's atom number.

@@ -62,7 +62,7 @@ TEST(ConstantsTest, UseCounts) {
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;
   IntegerType *Int1 = IntegerType::get(Context, 1);
-  Constant *One = ConstantInt::get(Int1, 1, true);
+  Constant *One = ConstantInt::get(Int1, 1);
   Constant *Zero = ConstantInt::get(Int1, 0);
   Constant *NegOne = ConstantInt::get(Int1, static_cast<uint64_t>(-1), true);
   EXPECT_EQ(NegOne, ConstantInt::getSigned(Int1, -1));
@@ -142,7 +142,9 @@ TEST(ConstantsTest, IntSigns) {
   EXPECT_EQ(206U, ConstantInt::getSigned(Int8Ty, -50)->getZExtValue());
 
   // Overflow is handled by truncation.
-  EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b)->getSExtValue());
+  EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b, /*IsSigned=*/false,
+                                   /*ImplicitTrunc=*/true)
+                      ->getSExtValue());
 }
 
 TEST(ConstantsTest, PointerCast) {
@@ -564,13 +566,17 @@ TEST(ConstantsTest, FoldGlobalVariablePtr) {
 
   Global->setAlignment(Align(4));
 
-  ConstantInt *TheConstant(ConstantInt::get(IntType, 2));
+  ConstantInt *TheConstant = ConstantInt::get(IntType, 2);
 
-  Constant *TheConstantExpr(ConstantExpr::getPtrToInt(Global.get(), IntType));
+  Constant *PtrToInt = ConstantExpr::getPtrToInt(Global.get(), IntType);
+  ASSERT_TRUE(
+      ConstantFoldBinaryInstruction(Instruction::And, PtrToInt, TheConstant)
+          ->isNullValue());
 
-  ASSERT_TRUE(ConstantFoldBinaryInstruction(Instruction::And, TheConstantExpr,
-                                            TheConstant)
-                  ->isNullValue());
+  Constant *PtrToAddr = ConstantExpr::getPtrToAddr(Global.get(), IntType);
+  ASSERT_TRUE(
+      ConstantFoldBinaryInstruction(Instruction::And, PtrToAddr, TheConstant)
+          ->isNullValue());
 }
 
 // Check that containsUndefOrPoisonElement and containsPoisonElement is working
@@ -829,6 +835,37 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
   // Verify that they round-tripped properly
   EXPECT_EQ(Func, OutFunc);
   EXPECT_EQ(&BB, OutBB);
+}
+
+TEST(ConstantsTest, Float128Test) {
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMTypeRef Ty128 = LLVMFP128TypeInContext(C);
+  LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(C);
+  LLVMTypeRef TyFloat = LLVMFloatTypeInContext(C);
+  LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(C);
+  LLVMTypeRef TyHalf = LLVMHalfTypeInContext(C);
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(C);
+  uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
+  uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
+  LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
+  EXPECT_TRUE(val1 != nullptr);
+  LLVMValueRef val2 = LLVMConstFPFromBits(Ty128, m);
+  EXPECT_TRUE(val2 != nullptr);
+  LLVMValueRef val3 = LLVMBuildFAdd(Builder, val1, val2, "test");
+  EXPECT_TRUE(val3 != nullptr);
+  LLVMValueRef val4 = LLVMConstFPFromBits(TyPPC128, n);
+  EXPECT_TRUE(val4 != nullptr);
+  uint64_t p[1] = {0x0000000040000000}; //+2
+  LLVMValueRef val5 = LLVMConstFPFromBits(TyFloat, p);
+  EXPECT_EQ(APFloat(2.0f), unwrap<ConstantFP>(val5)->getValue());
+  uint64_t q[1] = {0x4000000000000000}; //+2
+  LLVMValueRef val6 = LLVMConstFPFromBits(TyDouble, q);
+  EXPECT_EQ(APFloat(2.0), unwrap<ConstantFP>(val6)->getValue());
+  uint64_t r[1] = {0x0000000000003c00}; //+1
+  LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
+  EXPECT_TRUE(val7 != nullptr);
+  LLVMDisposeBuilder(Builder);
+  LLVMContextDispose(C);
 }
 
 } // end anonymous namespace

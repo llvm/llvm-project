@@ -1,3 +1,10 @@
+add_subdirectory(generic)
+set(ARCH_SUBDIRECTORY generic)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+  set(ARCH_SUBDIRECTORY ${LIBC_TARGET_ARCHITECTURE})
+endif()
+
 add_entrypoint_object(
   madvise
   SRCS
@@ -50,6 +57,17 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
+add_header_library(
+  mprotect_common
+  HDRS
+    mprotect_common.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.__support.error_or
+)
+
 add_entrypoint_object(
   mprotect
   SRCS
@@ -61,6 +79,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+    .mprotect_common
 )
 
 add_entrypoint_object(
@@ -167,6 +186,82 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pkey_alloc
+  SRCS
+    pkey_alloc.cpp
+  HDRS
+    ../pkey_alloc.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_header_library(
+  pkey_common
+  HDRS
+    pkey_common.h
+  DEPENDS
+    .${ARCH_SUBDIRECTORY}.pkey_common
+)
+
+add_entrypoint_object(
+  pkey_free
+  SRCS
+    pkey_free.cpp
+  HDRS
+    ../pkey_free.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pkey_get
+  SRCS
+    pkey_get.cpp
+  HDRS
+    ../pkey_get.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    .pkey_common
+)
+
+add_entrypoint_object(
+  pkey_mprotect
+  SRCS
+    pkey_mprotect.cpp
+  HDRS
+    ../pkey_mprotect.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    .mprotect_common
+)
+
+add_entrypoint_object(
+  pkey_set
+  SRCS
+    pkey_set.cpp
+  HDRS
+    ../pkey_set.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    .pkey_common
+)
+
+add_entrypoint_object(
   remap_file_pages
   SRCS
     remap_file_pages.cpp
@@ -184,11 +279,10 @@ add_header_library(
   HDRS
     shm_common.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.__support.CPP.array
     libc.src.__support.CPP.string_view
-    libc.src.__support.CPP.optional
-    libc.src.__support.common
-    libc.src.errno.errno
+    libc.src.__support.error_or
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -199,8 +293,8 @@ add_entrypoint_object(
   HDRS
     ../shm_open.h
   DEPENDS
-    libc.src.fcntl.open
     libc.hdr.types.mode_t
+    libc.src.errno.errno
     .shm_common
 )
 
@@ -211,6 +305,6 @@ add_entrypoint_object(
   HDRS
     ../shm_unlink.h
   DEPENDS
-    libc.src.unistd.unlink
+    libc.src.errno.errno
     .shm_common
 )

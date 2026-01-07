@@ -188,8 +188,8 @@ struct ExecuteRegionOpInterface
     TypeRange newResultTypes(yieldOp.getResults());
 
     // Create new op and move over region.
-    auto newOp =
-        scf::ExecuteRegionOp::create(rewriter, op->getLoc(), newResultTypes);
+    auto newOp = scf::ExecuteRegionOp::create(
+        rewriter, op->getLoc(), newResultTypes, executeRegionOp.getNoInline());
     newOp.getRegion().takeBody(executeRegionOp.getRegion());
 
     // Bufferize every block.
@@ -769,7 +769,8 @@ struct ForOpInterface
     // Construct a new scf.for op with memref instead of tensor values.
     auto newForOp = scf::ForOp::create(
         rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), castedInitArgs);
+        forOp.getStep(), castedInitArgs, /*bodyBuilder=*/nullptr,
+        forOp.getUnsignedCmp());
     newForOp->setAttrs(forOp->getAttrs());
     Block *loopBody = newForOp.getBody();
 

@@ -1,4 +1,4 @@
-//===--- IdentifierNamingCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,7 +33,7 @@ enum StyleKind : int;
 class IdentifierNamingCheck final : public RenamerClangTidyCheck {
 public:
   IdentifierNamingCheck(StringRef Name, ClangTidyContext *Context);
-  ~IdentifierNamingCheck();
+  ~IdentifierNamingCheck() override;
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
@@ -219,6 +219,9 @@ private:
   StyleKind
   findStyleKindForVar(const VarDecl *Var, QualType Type,
                       ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+
+  StyleKind
+  undefinedStyle(ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
 
   /// Stores the style options as a vector, indexed by the specified \ref
   /// StyleKind, for a given directory.

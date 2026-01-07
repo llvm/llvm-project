@@ -46,9 +46,9 @@ bool IoStatementBase::Receive(char *, std::size_t, std::size_t) {
   return false;
 }
 
-Fortran::common::optional<DataEdit> IoStatementBase::GetNextDataEdit(
+common::optional<DataEdit> IoStatementBase::GetNextDataEdit(
     IoStatementState &, int) {
-  return Fortran::common::nullopt;
+  return common::nullopt;
 }
 
 bool IoStatementBase::BeginReadingRecord() { return true; }
@@ -270,13 +270,11 @@ int ExternalIoStatementBase::EndIoStatement() {
     }
   }
 #else
-  // Fetch the unit pointer before *this disappears.
-  ExternalFileUnit *unitPtr{&unit_};
   // The pseudo file units are dynamically allocated
-  // and are not tracked in the unit map.
-  // They have to be destructed and deallocated here.
-  unitPtr->~ExternalFileUnit();
-  FreeMemory(unitPtr);
+  // and are not tracked in any unit map.
+  // They have to be destroyed and deallocated here.
+  unit_.~ExternalFileUnit();
+  FreeMemory(&unit_);
 #endif
   return result;
 }
@@ -351,6 +349,17 @@ void OpenStatementState::CompleteOperation() {
   if (!unit().isUnformatted) {
     // Set default format (C.7.4 point 2).
     unit().isUnformatted = unit().access != Access::Sequential;
+  }
+  if (unit().isUnformatted.value_or(false) && mustBeFormatted_) {
+    // This is an unformatted unit, but the OPEN statement contained at least
+    // one specifier that is not permitted unless the unit is formatted
+    // (e.g., BLANK=).  Programs that want to detect this error (i.e., tests)
+    // should be informed about it, but don't crash the program otherwise
+    // since most other compilers let it slide.
+    if (HasErrorRecovery()) {
+      SignalError("FORM='UNFORMATTED' is not allowed with OPEN specifiers that "
+                  "apply only to formatted units");
+    }
   }
   if (!wasExtant_ && InError()) {
     // Release the new unit on failure
@@ -521,7 +530,7 @@ int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
   return ExternalIoStatementState<DIR>::EndIoStatement();
 }
 
-Fortran::common::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
+common::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
   return common::visit(
       [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
@@ -607,13 +616,13 @@ ExternalFileUnit *IoStatementState::GetExternalFileUnit() const {
       [](auto &x) { return x.get().GetExternalFileUnit(); }, u_);
 }
 
-Fortran::common::optional<char32_t> IoStatementState::GetCurrentCharSlow(
+common::optional<char32_t> IoStatementState::GetCurrentCharSlow(
     std::size_t &byteCount) {
   const char *p{nullptr};
   std::size_t bytes{GetNextInputBytes(p)};
   if (bytes == 0) {
     byteCount = 0;
-    return Fortran::common::nullopt;
+    return common::nullopt;
   } else {
     const ConnectionState &connection{GetConnectionState()};
     if (connection.isUTF8) {
@@ -650,8 +659,8 @@ IoStatementState::FastAsciiField IoStatementState::GetUpcomingFastAsciiField() {
   return FastAsciiField{connection};
 }
 
-Fortran::common::optional<char32_t> IoStatementState::NextInField(
-    Fortran::common::optional<int> &remaining, const DataEdit &edit,
+common::optional<char32_t> IoStatementState::NextInField(
+    common::optional<int> &remaining, const DataEdit &edit,
     FastAsciiField *field) {
   std::size_t byteCount{0};
   if (!remaining) { // Stream, list-directed, NAMELIST, &c.
@@ -669,21 +678,21 @@ Fortran::common::optional<char32_t> IoStatementState::NextInField(
         case '"':
         case '*':
         case '\n': // for stream access
-          return Fortran::common::nullopt;
+          return common::nullopt;
         case '&':
         case '$':
           if (edit.IsNamelist()) {
-            return Fortran::common::nullopt;
+            return common::nullopt;
           }
           break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
-            return Fortran::common::nullopt;
+            return common::nullopt;
           }
           break;
         case ';':
           if (edit.modes.editingFlags & decimalComma) {
-            return Fortran::common::nullopt;
+            return common::nullopt;
           }
           break;
         default:
@@ -701,7 +710,7 @@ Fortran::common::optional<char32_t> IoStatementState::NextInField(
   } else if (*remaining > 0) {
     if (auto next{GetCurrentChar(byteCount, field)}) {
       if (byteCount > static_cast<std::size_t>(*remaining)) {
-        return Fortran::common::nullopt;
+        return common::nullopt;
       }
       *remaining -= byteCount;
       if (field) {
@@ -715,10 +724,10 @@ Fortran::common::optional<char32_t> IoStatementState::NextInField(
     if (CheckForEndOfRecord(0,
             field ? field->connection() : GetConnectionState())) { // do padding
       --*remaining;
-      return Fortran::common::optional<char32_t>{' '};
+      return common::optional<char32_t>{' '};
     }
   }
-  return Fortran::common::nullopt;
+  return common::nullopt;
 }
 
 bool IoStatementState::CheckForEndOfRecord(
@@ -810,7 +819,7 @@ bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
   return true;
 }
 
-Fortran::common::optional<DataEdit>
+common::optional<DataEdit>
 ListDirectedStatementState<Direction::Output>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
   DataEdit edit;
@@ -827,7 +836,7 @@ int ListDirectedStatementState<Direction::Input>::EndIoStatement() {
   return IostatOk;
 }
 
-Fortran::common::optional<DataEdit>
+common::optional<DataEdit>
 ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     IoStatementState &io, int maxRepeat) {
   // N.B. list-directed transfers cannot be nonadvancing (C1221)
@@ -869,6 +878,9 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     edit.descriptor = DataEdit::ListDirectedImaginaryPart;
   }
   auto fastField{io.GetUpcomingFastAsciiField()};
+  // Reaching EOF is okay when peeking at list-directed defined input;
+  // pretend that there's an END= in that case.
+  bool oldHasEnd{maxRepeat == 0 && !io.GetIoErrorHandler().SetHasEnd()};
   auto ch{io.GetNextNonBlank(byteCount, &fastField)};
   if (ch && *ch == comma && eatComma_) {
     // Consume comma & whitespace after previous item.
@@ -879,23 +891,27 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     ch = io.GetNextNonBlank(byteCount, &fastField);
   }
   eatComma_ = true;
-  if (!ch) {
-    return Fortran::common::nullopt;
+  if (maxRepeat == 0 && !oldHasEnd) {
+    io.GetIoErrorHandler().SetHasEnd(false);
   }
-  if (*ch == '/') {
+  if (!ch) { // EOF
+    if (maxRepeat == 0) {
+      return edit; // DataEdit::ListDirected for look-ahead
+    } else {
+      return common::nullopt;
+    }
+  } else if (*ch == '/') {
     hitSlash_ = true;
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
-  }
-  if (*ch == comma) { // separator: null value
+  } else if (*ch == comma) { // separator: null value
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
-  }
-  if (imaginaryPart_) { // can't repeat components
+  } else if (imaginaryPart_) { // can't repeat components
     return edit;
   }
-  if (*ch >= '0' && *ch <= '9' && fastField.MightHaveAsterisk()) {
-    // look for "r*" repetition count
+  if (*ch >= '0' && *ch <= '9' && fastField.MightBeRepetitionCount()) {
+    // There's decimal digits followed by '*'.
     auto start{fastField.connection().positionInRecord};
     int r{0};
     do {
@@ -1065,6 +1081,14 @@ void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
 
 template <Direction DIR, typename CHAR>
 int ChildFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
+  if constexpr (DIR == Direction::Input) {
+    if (auto *listInput{this->child()
+                .parent()
+                .template get_if<
+                    ListDirectedStatementState<Direction::Input>>()}) {
+      listInput->set_eatComma(false);
+    }
+  }
   CompleteOperation();
   return ChildIoStatementState<DIR>::EndIoStatement();
 }
@@ -1079,10 +1103,35 @@ bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
 }
 
 template <Direction DIR>
-bool ChildUnformattedIoStatementState<DIR>::Receive(
-    char *data, std::size_t bytes, std::size_t elementBytes) {
+ChildListIoStatementState<DIR>::ChildListIoStatementState(
+    ChildIo &child, const char *sourceFile, int sourceLine)
+    : ChildIoStatementState<DIR>{child, sourceFile, sourceLine} {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  return this->child().parent().Receive(data, bytes, elementBytes);
+  if (const auto *listParent{
+          child.parent().get_if<ListDirectedStatementState<DIR>>()}) {
+    if constexpr (DIR == Direction::Input) {
+      this->set_eatComma(listParent->eatComma());
+      this->namelistGroup_ = listParent->namelistGroup();
+    }
+    if (auto *childListParent{
+            child.parent().get_if<ChildListIoStatementState<DIR>>()}) {
+      // Child list I/O whose parent is child list I/O: can advance
+      // if the parent can.
+      this->canAdvance_ = childListParent->CanAdvance();
+    } else {
+      // Child list I/O of top-level list I/O: can advance.
+      this->canAdvance_ = true;
+    }
+  }
+#else
+  this->ReportUnsupportedChildIo();
+#endif
+}
+
+template <Direction DIR>
+bool ChildListIoStatementState<DIR>::AdvanceRecord(int n) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  return this->CanAdvance() && this->child().parent().AdvanceRecord(n);
 #else
   this->ReportUnsupportedChildIo();
 #endif
@@ -1090,12 +1139,29 @@ bool ChildUnformattedIoStatementState<DIR>::Receive(
 
 template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
+    if (auto *listInput{this->child()
+                .parent()
+                .template get_if<
+                    ListDirectedStatementState<Direction::Input>>()}) {
+      listInput->set_eatComma(this->eatComma());
+      listInput->set_hitSlash(this->hitSlash());
+    }
     if (int status{ListDirectedStatementState<DIR>::EndIoStatement()};
         status != IostatOk) {
       return status;
     }
   }
   return ChildIoStatementState<DIR>::EndIoStatement();
+}
+
+template <Direction DIR>
+bool ChildUnformattedIoStatementState<DIR>::Receive(
+    char *data, std::size_t bytes, std::size_t elementBytes) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  return this->child().parent().Receive(data, bytes, elementBytes);
+#else
+  this->ReportUnsupportedChildIo();
+#endif
 }
 
 template class InternalIoStatementState<Direction::Output>;

@@ -75,7 +75,7 @@ Vreg1LoweringHelper::Vreg1LoweringHelper(MachineFunction *MF,
 bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
   assert(Changed || ConstrainRegs.empty());
   for (Register Reg : ConstrainRegs)
-    MRI->constrainRegClass(Reg, &AMDGPU::SReg_1_XEXECRegClass);
+    MRI->constrainRegClass(Reg, TII->getRegisterInfo().getWaveMaskRegClass());
   ConstrainRegs.clear();
 
   return Changed;
@@ -417,7 +417,7 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
 
       // Copy into a 32-bit vector register.
       LLVM_DEBUG(dbgs() << "Lower copy from i1: " << MI);
-      DebugLoc DL = MI.getDebugLoc();
+      const DebugLoc &DL = MI.getDebugLoc();
 
       assert(isVRegCompatibleReg(TII->getRegisterInfo(), *MRI, DstReg));
       assert(!MI.getOperand(0).getSubReg());
@@ -616,7 +616,7 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
       if (MI.getOpcode() == AMDGPU::IMPLICIT_DEF)
         continue;
 
-      DebugLoc DL = MI.getDebugLoc();
+      const DebugLoc &DL = MI.getDebugLoc();
       Register SrcReg = MI.getOperand(1).getReg();
       assert(!MI.getOperand(1).getSubReg());
 
@@ -881,9 +881,7 @@ SILowerI1CopiesPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   // TODO: Probably preserves most.
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 
 class SILowerI1CopiesLegacy : public MachineFunctionPass {

@@ -18,7 +18,7 @@ func.func @basic() -> i32 {
 // CHECK-LABEL: func.func @basic_default
 func.func @basic_default() -> i32 {
   // CHECK-NOT: = memref.alloca
-  // CHECK: %[[RES:.*]] = arith.constant 0 : i32
+  // CHECK: %[[RES:.*]] = ub.poison : i32
   // CHECK-NOT: = memref.alloca
   %0 = arith.constant 5 : i32
   %1 = memref.alloca() : memref<i32>

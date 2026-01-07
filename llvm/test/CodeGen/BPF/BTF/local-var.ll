@@ -7,7 +7,7 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
 ; Function Attrs: nounwind
-define dso_local i32 @foo(i8 signext) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @foo(i8 signext) local_unnamed_addr !dbg !7 {
   %2 = alloca i16, align 2
   call void @llvm.dbg.value(metadata i8 %0, metadata !13, metadata !DIExpression()), !dbg !17
   call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %2), !dbg !18
@@ -59,20 +59,16 @@ define dso_local i32 @foo(i8 signext) local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .byte   0
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { argmemonly nounwind }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

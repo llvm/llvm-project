@@ -202,6 +202,14 @@ void Stream::IndentLess(unsigned amount) {
     m_indent_level = 0;
 }
 
+// Create an indentation scope that restores the original indent level when the
+// object goes out of scope (RAII).
+Stream::IndentScope Stream::MakeIndentScope(unsigned indent_amount) {
+  IndentScope indent_scope(*this);
+  IndentMore(indent_amount);
+  return indent_scope;
+}
+
 // Get the address size in bytes
 uint32_t Stream::GetAddressByteSize() const { return m_addr_size; }
 
