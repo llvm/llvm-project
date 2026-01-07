@@ -13,6 +13,7 @@
 
 #include "SPIRV.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -152,22 +153,11 @@ void SPIRVRegularizer::runLowerConstExpr(Function &F) {
   }
 }
 
-static Instruction *createLogicalOp(Value *Op1, Value *Op2, bool UseAnd,
-                                    Constant *TrueVal,
-                                    BasicBlock::iterator InsertPt) {
-  auto *NotOp2 =
-      BinaryOperator::Create(Instruction::Xor, Op2, TrueVal, "", InsertPt);
-  return BinaryOperator::Create(UseAnd ? Instruction::And : Instruction::Or,
-                                Op1, NotOp2, "", InsertPt);
-}
-
 // Lower i1 comparisons with certain predicates to logical operations.
 // The backend treats i1 as boolean values, and SPIR-V only allows logical
 // operations for boolean values. This function lowers i1 comparisons with
 // certain predicates to logical operations to generate valid SPIR-V.
 void SPIRVRegularizer::runLowerI1Comparisons(Function &F) {
-  LLVMContext &Ctx = F.getContext();
-
   for (auto &I : make_early_inc_range(instructions(F))) {
     auto *Cmp = dyn_cast<ICmpInst>(&I);
     if (!Cmp)
@@ -185,33 +175,29 @@ void SPIRVRegularizer::runLowerI1Comparisons(Function &F) {
 
     Value *P = Cmp->getOperand(0);
     Value *Q = Cmp->getOperand(1);
-    auto *TrueVal = ConstantInt::getTrue(Ctx);
 
-    Instruction *Result = nullptr;
+    IRBuilder<> Builder(Cmp);
+    Value *Result = nullptr;
     switch (Pred) {
     case ICmpInst::ICMP_UGT:
     case ICmpInst::ICMP_SLT:
       // Result = p & !q
-      Result =
-          createLogicalOp(P, Q, /*UseAnd=*/true, TrueVal, Cmp->getIterator());
+      Result = Builder.CreateAnd(P, Builder.CreateNot(Q));
       break;
     case ICmpInst::ICMP_ULT:
     case ICmpInst::ICMP_SGT:
       // Result = q & !p
-      Result =
-          createLogicalOp(Q, P, /*UseAnd=*/true, TrueVal, Cmp->getIterator());
+      Result = Builder.CreateAnd(Q, Builder.CreateNot(P));
       break;
     case ICmpInst::ICMP_ULE:
     case ICmpInst::ICMP_SGE:
       // Result = q | !p
-      Result =
-          createLogicalOp(Q, P, /*UseAnd=*/false, TrueVal, Cmp->getIterator());
+      Result = Builder.CreateOr(Q, Builder.CreateNot(P));
       break;
     case ICmpInst::ICMP_UGE:
     case ICmpInst::ICMP_SLE:
       // Result = p | !q
-      Result =
-          createLogicalOp(P, Q, /*UseAnd=*/false, TrueVal, Cmp->getIterator());
+      Result = Builder.CreateOr(P, Builder.CreateNot(Q));
       break;
     default:
       llvm_unreachable("Unexpected predicate");
