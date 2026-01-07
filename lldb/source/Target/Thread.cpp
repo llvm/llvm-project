@@ -739,12 +739,21 @@ bool Thread::ShouldResume(StateType resume_state) {
 
     if (need_to_resume && resume_state != eStateSuspended) {
       m_stop_info_sp.reset();
-      m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
     }
   }
 
   if (need_to_resume) {
     ClearStackFrames();
+
+    // Only reset m_stopped_at_unexecuted_bp if the thread is actually being
+    // resumed. Otherwise, the state of a suspended thread may not be restored
+    // correctly at the next stop. For example, this could happen if the thread
+    // is suspended by ThreadPlanStepOverBreakpoint in another thread, which
+    // temporarily disables the breakpoint that the suspended thread has reached
+    // but not yet executed.
+    if (resume_state != eStateSuspended)
+      m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
+
     // Let Thread subclasses do any special work they need to prior to resuming
     WillResume(resume_state);
   }
