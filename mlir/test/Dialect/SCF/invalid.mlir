@@ -590,7 +590,7 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{op along control flow edge from Operation scf.condition to Region #1: successor operand type #0 'i1' should match successor input type #0 'i32'}}
+  // expected-error@+1 {{along control flow edge from Operation scf.condition to Region #1: successor operand type #0 'i1' should match successor input type #0 'i32'}}
   %0 = scf.while : () -> (i1) {
     // expected-note@+1 {{region branch point}}
     scf.condition(%true) %true : i1
