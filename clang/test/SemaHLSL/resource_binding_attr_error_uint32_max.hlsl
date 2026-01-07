@@ -61,7 +61,7 @@ struct MyResources {
   MySRV TheSRV[10]; // t
   MySampler TheSampler[20]; // s
   MyUAV TheUAV[40]; // u
-}
+};
 
 // no failures here, since only the SRV contributes to the count,
 // and the count + 10 does not exceed uint32 max.
