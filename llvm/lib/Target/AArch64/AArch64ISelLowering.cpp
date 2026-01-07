@@ -28399,6 +28399,7 @@ performRSQRTRefinementCombine(SDNode *N, SelectionDAG &DAG,
 
   // Build the replacement: Est * frsqrts(X * Est, Est).
   SDLoc DL(N);
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N);
   SDValue XTimesEst = DAG.getNode(ISD::FMUL, DL, VT, X, Est);
   SDValue Step = DAG.getNode(AArch64ISD::FRSQRTS, DL, VT, XTimesEst, Est);
   return DAG.getNode(ISD::FMUL, DL, VT, Est, Step);
