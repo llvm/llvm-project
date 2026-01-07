@@ -173,7 +173,7 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
     RegionSuccessor regionSuccessor(region);
     bool found = false;
     for (RegionSuccessor &successor : successors) {
-      if (!successor.isParent()) {
+      if (successor.getSuccessor() == region) {
         LDBG() << "  Found matching region successor: " << successor;
         found = true;
         regionSuccessor = successor;
