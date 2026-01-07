@@ -183,6 +183,14 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   return false;
 }
 
+static bool isMemOpAligned(MachineInstr &MI, Align RequiredAlignment) {
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  Align MMOAlign = MMO->getAlign();
+  if (MMOAlign < RequiredAlignment)
+    return false;
+  return true;
+}
+
 // Convert set of 3 or more LW/SW instructions to QC_LWMI/QC_SWMI/QC_SETWMI.
 // For now this only handles consecutive loads and stores traversing the basic
 // block top-down.
@@ -200,6 +208,9 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
   if (Opc != RISCV::LW && Opc != RISCV::SW)
     return false;
 
+  if (!isMemOpAligned(FirstMI, Align(4)))
+    return false;
+
   // Require simple reg+imm addressing.
   const MachineOperand &BaseOp = FirstMI.getOperand(1);
   const MachineOperand &OffOp = FirstMI.getOperand(2);
@@ -208,11 +219,6 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
 
   Register Base = BaseOp.getReg();
   int64_t BaseOff = OffOp.getImm();
-
-  const MachineMemOperand *MMO = *FirstMI.memoperands_begin();
-  Align MMOAlign = MMO->getAlign();
-  if (MMOAlign < Align(4))
-    return false;
 
   if (!isShiftedUInt<5, 2>(BaseOff))
     return false;
@@ -247,6 +253,8 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
     if (MI.getOpcode() != Opc)
       break;
     if (!TII->isLdStSafeToPair(MI, TRI))
+      break;
+    if (!isMemOpAligned(MI, Align(4)))
       break;
 
     const MachineOperand &BaseMIOp = MI.getOperand(1);
@@ -397,10 +405,7 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   if (Base1 != Base2)
     return false;
 
-  const MachineMemOperand *MMO = *First->memoperands_begin();
-  Align MMOAlign = MMO->getAlign();
-
-  if (MMOAlign < Align(4))
+  if (!isMemOpAligned(*First, Align(4)) || !isMemOpAligned(*Second, Align(4)))
     return false;
 
   auto &FirstOp0 = First->getOperand(0);
@@ -503,10 +508,7 @@ bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
     break;
   }
 
-  const MachineMemOperand *MMO = *First->memoperands_begin();
-  Align MMOAlign = MMO->getAlign();
-
-  if (MMOAlign < RequiredAlignment)
+  if (!isMemOpAligned(*First, RequiredAlignment))
     return false;
 
   int64_t Offset = First->getOperand(2).getImm();
