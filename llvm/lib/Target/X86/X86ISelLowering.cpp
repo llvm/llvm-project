@@ -56602,10 +56602,6 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 // Combine FMSUBADD(A, B, FNEG(C)) -> FMADDSUB(A, B, C)
 static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
                                TargetLowering::DAGCombinerInfo &DCI) {
-  // FIXME: We should check for contract to perform this combine; but this
-  // breaks lowering of certain intrinsics that depend on this combine being
-  // perfomed (i.e.llvm.x86.avx512.mask3.vfmsubadd).
-
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
