@@ -55,7 +55,7 @@ struct SearchedType {
     return StoredType<T>{value_};
   }
 
-  int get_value() const { return value_; }
+  T get_value() const { return value_; }
 
 private:
   T value_;
@@ -76,7 +76,7 @@ struct StoredType {
   // in a container full of StoredType<T>.
   friend bool operator==(StoredType const& lhs, SearchedType<T> const& rhs) { return lhs.value_ == rhs.get_value(); }
 
-  int get_value() const { return value_; }
+  T get_value() const { return value_; }
 
 private:
   T value_;
