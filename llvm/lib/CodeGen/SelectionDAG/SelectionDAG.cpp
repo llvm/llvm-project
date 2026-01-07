@@ -9174,10 +9174,6 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrcpy(SDValue Chain,
   if (LCImpl == RTLIB::Unsupported)
     return {};
 
-  const char *LibCallName = TLI->getLibcallName(RTLIB::STRCPY);
-  assert(LibCallName &&
-         "The LibCall name for RTLIB::STRCPY should not be empty.");
-
   PointerType *PT = PointerType::getUnqual(*getContext());
   TargetLowering::ArgListTy Args = {{Dst, PT}, {Src, PT}};
 
