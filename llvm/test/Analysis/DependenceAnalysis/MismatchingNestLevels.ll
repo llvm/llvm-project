@@ -67,7 +67,8 @@ define dso_local void @test2(i32 noundef zeroext %n, ptr noundef %A, ptr noalias
 ; CHECK-NEXT:  Src: store float 1.230000e+02, ptr %arrayidx7, align 4 --> Dst: store float %conv13, ptr %arrayidx17, align 4
 ; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store float %conv13, ptr %arrayidx17, align 4 --> Dst: store float %conv13, ptr %arrayidx17, align 4
-; CHECK-NEXT:    da analyze - none!
+; TODO: The BanerjeeMIV test can prove independence:
+; CHECK-NEXT:    da analyze - output [* *]!
 ;
 entry:
   %add = add i32 %n, 1

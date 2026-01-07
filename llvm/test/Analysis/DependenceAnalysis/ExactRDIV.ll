@@ -494,11 +494,13 @@ for.end8:                                         ; preds = %for.body4
 ;;    for (long int j = 0; j < 10; j++) {
 ;;      A[11*i - j] = i;
 ;;      *B++ = A[45];
-
+;;
+;; TODO: The BanerjeeMIV test can prove independence for the first store/store pair.
+;;
 define void @rdiv9(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'rdiv9'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -550,11 +552,13 @@ for.end7:                                         ; preds = %for.inc5
 ;;    for (long int j = 0; j < 10; j++) {
 ;;      A[11*i - j] = i;
 ;;      *B++ = A[45];
-
+;;
+;; TODO: The BanerjeeMIV test can prove independence for the first store/store pair.
+;;
 define void @rdiv10(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'rdiv10'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -605,11 +609,13 @@ for.end7:                                         ; preds = %for.inc5
 ;;    for (long int j = 0; j <= 10; j++) {
 ;;      A[11*i - j] = i;
 ;;      *B++ = A[45];
-
+;;
+;; TODO: The BanerjeeMIV test can prove independence for the first store/store pair.
+;;
 define void @rdiv11(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'rdiv11'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
@@ -660,11 +666,13 @@ for.end7:                                         ; preds = %for.inc5
 ;;    for (long int j = 0; j <= 10; j++) {
 ;;      A[11*i - j] = i;
 ;;      *B++ = A[45];
-
+;;
+;; TODO: The BanerjeeMIV test can prove independence for the first store/store pair.
+;;
 define void @rdiv12(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'rdiv12'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
 ; CHECK-NEXT:    da analyze - flow [* *|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
