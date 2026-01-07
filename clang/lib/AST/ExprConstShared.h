@@ -77,9 +77,6 @@ void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
 
-uint64_t GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
-                                const Expr *AllocExpr);
-
 uint8_t GFNIMultiplicativeInverse(uint8_t Byte);
 uint8_t GFNIMul(uint8_t AByte, uint8_t BByte);
 uint8_t GFNIAffine(uint8_t XByte, const llvm::APInt &AQword,

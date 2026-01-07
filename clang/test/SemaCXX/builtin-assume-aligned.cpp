@@ -135,5 +135,14 @@ namespace GH173767 {
     (void)__builtin_assume_aligned(p, alignof(int));
     return 0;
   }();
+
+  // flexible array members as only member are allowed as an extension
+  // and cause the type to have size zero, but should still be aligned
+  // properly for the element type
+  struct G {
+    int x[];
+  };
+
+  constexpr int g1 = (delete (G*)__builtin_assume_aligned(new G, alignof(int)), 0);
 #endif
 } // namespace GH173767

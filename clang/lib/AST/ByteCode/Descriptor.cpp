@@ -499,21 +499,32 @@ uint64_t Descriptor::computeAlignForDynamicAlloc(const ASTContext &Ctx) const {
          "__builtin_operator_new should have been allowed only from "
          "std::allocator::allocate");
 
-  const uint64_t AllocSize = Ctx.getTypeSize(AllocType);
-
-  // Allocating a zero-sized array is allowed, however it doesn't have
-  // any alignment guarantees.
-  if ((AllocKind == DynAllocKind::ArrayNew ||
-       AllocKind == DynAllocKind::StdAllocator) &&
-      AllocSize == 0)
-    return TI.getCharWidth();
-
-  // For the non-array form, the size of the allocated object should be
-  // positive.
-  assert(AllocSize > 0 && "Unknown size for allocated type!");
-
   const uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
   assert(TypeAlignment > 0 && "Unknown alignment for allocated type!");
+
+  const uint64_t AllocSize = Ctx.getTypeSize(AllocType);
+
+  if (AllocSize == 0) {
+    switch (AllocKind) {
+    // Allocating a zero-sized array is allowed, however it doesn't have
+    // any alignment guarantees.
+    case DynAllocKind::ArrayNew:
+    case DynAllocKind::StdAllocator:
+      return TI.getCharWidth();
+
+    // Flexible array members are allowed as only member as an extension.
+    // In this case the size of the type will be zero, but the allocation
+    // should still be suitable for the array element type.
+    case DynAllocKind::New:
+      return TypeAlignment;
+
+    default:
+      llvm_unreachable("Unhandled DynAllocKind");
+    }
+  }
+
+  assert(TypeAlignment <= AllocSize && "Invalid alignment/size for type!");
+  assert(AllocSize % TypeAlignment == 0 && "Invalid alignment/size for type!");
 
   // For new-extended alignment the ::operator new overload with
   // std::align_val_t parameter is used. According to C++
