@@ -307,29 +307,20 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
            "expected the same number of successor inputs as operands");
 
     unsigned firstIndex = 0;
-    if (inputs.size() != lattices.size()) {
-      if (!point->isBlockStart()) {
-        if (!inputs.empty())
-          firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
-        visitNonControlFlowArgumentsImpl(
-            branch,
-            RegionSuccessor(
-                branch, branch->getResults().slice(firstIndex, inputs.size())),
-            lattices, firstIndex);
-      } else {
-        if (!inputs.empty())
-          firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
-        Region *region = point->getBlock()->getParent();
-        visitNonControlFlowArgumentsImpl(
-            branch,
-            RegionSuccessor(region, region->getArguments().slice(
-                                        firstIndex, inputs.size())),
-            lattices, firstIndex);
-      }
+    if (inputs.size() != lattices.size() && point->isBlockStart()) {
+      if (!inputs.empty())
+        firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
+      Region *region = point->getBlock()->getParent();
+      visitNonControlFlowArgumentsImpl(
+          branch,
+          RegionSuccessor(
+              region, region->getArguments().slice(firstIndex, inputs.size())),
+          lattices, firstIndex);
     }
 
-    for (auto it : llvm::zip(*operands, lattices.drop_front(firstIndex)))
-      join(std::get<1>(it), *getLatticeElementFor(point, std::get<0>(it)));
+    for (auto [lattice, operand] :
+         llvm::zip_equal(lattices.drop_front(firstIndex), *operands))
+      join(lattice, *getLatticeElementFor(point, operand));
   }
 }
 
