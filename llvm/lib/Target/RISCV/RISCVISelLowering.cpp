@@ -21041,7 +21041,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       std::swap(N0, N1);
     if (N0.getOpcode() != ISD::SPLAT_VECTOR)
       return SDValue();
-    SDValue SplatN0 = N0->getOperand(0);
+    SDValue SplatN0 = N0.getOperand(0);
     if (SplatN0.getOpcode() != ISD::FNEG || !SplatN0.hasOneUse())
       return SDValue();
     EVT VT = N->getValueType(0);
