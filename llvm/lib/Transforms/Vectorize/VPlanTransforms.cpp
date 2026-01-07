@@ -1484,12 +1484,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
-  if (Def->getNumOperands() == 2 &&
-      match(Def, m_ExtractLane(m_VPValue(), m_VPValue(A))) &&
-      vputils::isSingleScalar(A))
-    return Def->replaceAllUsesWith(A);
-
   uint64_t Idx;
   if (match(Def, m_ExtractElement(m_BuildVector(), m_ConstantInt(Idx)))) {
     auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
@@ -1523,6 +1517,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // below.
   if (!Plan->isUnrolled())
     return;
+
+  // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
+  // After unrolling, extract-lane may be used to extract values from multiple
+  // scalar sources. Only simplify when extracting from a single scalar source.
+  if (Def->getNumOperands() == 2 &&
+      match(Def, m_ExtractLane(m_VPValue(), m_VPValue(A))) &&
+      vputils::isSingleScalar(A)) {
+    return Def->replaceAllUsesWith(A);
+  }
 
   // Hoist an invariant increment Y of a phi X, by having X start at Y.
   if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && isa<VPIRValue>(Y) &&
