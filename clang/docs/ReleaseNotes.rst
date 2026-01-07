@@ -552,6 +552,7 @@ Bug Fixes in This Version
   containing a single colon. (#GH167905)
 - Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
   by diagnosing invalid comma-separated argument lists. (#GH166325)
+- Clang now treats enumeration constants of fixed-underlying enums as the enumerated type. (#GH172118)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

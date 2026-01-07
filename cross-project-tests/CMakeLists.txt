@@ -18,6 +18,12 @@ add_executable(check-lldb-llvm-support-arrayref
 target_link_libraries(check-lldb-llvm-support-arrayref PRIVATE LLVMSupport)
 target_compile_options(check-lldb-llvm-support-arrayref PRIVATE -g -O0)
 
+add_executable(check-lldb-llvm-support-pointer-int-pair
+        debuginfo-tests/llvm-prettyprinters/lldb/pointer-int-pair.cpp
+)
+target_link_libraries(check-lldb-llvm-support-pointer-int-pair PRIVATE LLVMSupport)
+target_compile_options(check-lldb-llvm-support-pointer-int-pair PRIVATE -g -O0)
+
 set(CROSS_PROJECT_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -25,6 +31,7 @@ set(CROSS_PROJECT_TEST_DEPS
   FileCheck
   check-gdb-llvm-support
   check-lldb-llvm-support-arrayref
+  check-lldb-llvm-support-pointer-int-pair
   count
   llvm-ar
   llvm-config
