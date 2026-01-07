@@ -3006,6 +3006,79 @@ LogicalResult NVVM::ReduxOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::TensormapReplaceOp::verify() {
+  auto ord = getOrd();
+  Value newVal = getNewValue();
+  auto newValAttr = getNewValueAttr();
+
+  if (ord && !llvm::is_contained({NVVM::TensormapField::BOX_DIM,
+                                  NVVM::TensormapField::GLOBAL_DIM,
+                                  NVVM::TensormapField::GLOBAL_STRIDE,
+                                  NVVM::TensormapField::ELEMENT_STRIDE},
+                                 getField()))
+    return emitOpError("ordinal is not supported for ")
+           << stringifyEnum(getField()) << " field";
+
+  switch (getField()) {
+  case NVVM::TensormapField::GLOBAL_ADDRESS:
+    if (!(newVal && newVal.getType().isInteger(64)))
+      return emitOpError("new_value must be specified and must be an i64 for "
+                         "global_address field");
+    break;
+  case NVVM::TensormapField::RANK:
+    if (!(newVal && newVal.getType().isInteger(32)))
+      return emitOpError(
+          "new_value must be specified and must be an i32 for rank field");
+    break;
+  case NVVM::TensormapField::GLOBAL_STRIDE:
+    if (!ord)
+      return emitOpError("ordinal is required for global_stride field");
+    if (!(newVal && newVal.getType().isInteger(64)))
+      return emitOpError("new_value must be specified and must be an i64 for "
+                         "global_stride field");
+    break;
+  case NVVM::TensormapField::BOX_DIM:
+  case NVVM::TensormapField::GLOBAL_DIM:
+  case NVVM::TensormapField::ELEMENT_STRIDE:
+    if (!ord)
+      return emitOpError("ordinal is required for ")
+             << stringifyEnum(getField()) << " field";
+    if (!(newVal && newVal.getType().isInteger(32)))
+      return emitOpError("new_value must be specified and must be an i32 for ")
+             << stringifyEnum(getField()) << " field";
+    break;
+  case NVVM::TensormapField::ELEMTYPE:
+    if (!(newValAttr && llvm::isa<TensormapElemtypeAttr>(*newValAttr)))
+      return emitOpError("new_value_attr must be specified and must be a valid "
+                         "elemtype attribute for elemtype field");
+    break;
+  case NVVM::TensormapField::INTERLEAVE_LAYOUT:
+    if (!(newValAttr && llvm::isa<TensormapInterleaveLayoutAttr>(*newValAttr)))
+      return emitOpError(
+          "new_value_attr must be specified and must be a valid "
+          "interleave_layout attribute for interleave_layout field");
+    break;
+  case NVVM::TensormapField::SWIZZLE_MODE:
+    if (!(newValAttr && llvm::isa<TensormapSwizzleModeAttr>(*newValAttr)))
+      return emitOpError("new_value_attr must be specified and must be a valid "
+                         "swizzle_mode attribute for swizzle_mode field");
+    break;
+  case NVVM::TensormapField::SWIZZLE_ATOMICITY:
+    if (!(newValAttr && llvm::isa<TensormapSwizzleAtomicityAttr>(*newValAttr)))
+      return emitOpError(
+          "new_value_attr must be specified and must be a valid "
+          "swizzle_atomicity attribute for swizzle_atomicity field");
+    break;
+  case NVVM::TensormapField::FILL_MODE:
+    if (!(newValAttr && llvm::isa<TensormapFillModeAttr>(*newValAttr)))
+      return emitOpError("new_value_attr must be specified and must be a valid "
+                         "fill_mode attribute for fill_mode field");
+    break;
+  }
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -4773,6 +4846,50 @@ PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   args.push_back(mt.lookupValue(thisOp.getSelector()));
 
   return {IDs[modeIndex], args};
+}
+
+mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::TensormapReplaceOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  if (thisOp.getOrd())
+    args.push_back(builder.getInt32(thisOp.getOrd().value()));
+  if (thisOp.getNewValue())
+    args.push_back(mt.lookupValue(thisOp.getNewValue()));
+  if (auto attr = thisOp.getNewValueAttr()) {
+    auto val =
+        llvm::TypeSwitch<mlir::Attribute, unsigned>(*attr)
+            .Case<TensormapElemtypeAttr, TensormapInterleaveLayoutAttr,
+                  TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr,
+                  TensormapFillModeAttr>([](auto attr) {
+              return static_cast<unsigned>(attr.getValue());
+            })
+            .Default([](auto attr) {
+              llvm_unreachable("Invalid attribute type");
+              return 0;
+            });
+    args.push_back(builder.getInt32(val));
+  }
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_tensormap_replace_global_address,
+      llvm::Intrinsic::nvvm_tensormap_replace_rank,
+      llvm::Intrinsic::nvvm_tensormap_replace_box_dim,
+      llvm::Intrinsic::nvvm_tensormap_replace_global_dim,
+      llvm::Intrinsic::nvvm_tensormap_replace_global_stride,
+      llvm::Intrinsic::nvvm_tensormap_replace_element_stride,
+      llvm::Intrinsic::nvvm_tensormap_replace_elemtype,
+      llvm::Intrinsic::nvvm_tensormap_replace_interleave_layout,
+      llvm::Intrinsic::nvvm_tensormap_replace_swizzle_mode,
+      llvm::Intrinsic::nvvm_tensormap_replace_swizzle_atomicity,
+      llvm::Intrinsic::nvvm_tensormap_replace_fill_mode,
+  };
+
+  unsigned fieldIndex = static_cast<unsigned>(thisOp.getField());
+
+  return {IDs[fieldIndex], args};
 }
 
 //===----------------------------------------------------------------------===//
