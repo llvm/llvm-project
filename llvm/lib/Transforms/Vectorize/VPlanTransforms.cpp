@@ -2530,7 +2530,7 @@ static void licm(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
-      SmallSetVector<VPBasicBlock *, 4> UserVPBBs;
+      SmallPtrSet<VPBasicBlock *, 4> UserVPBBs;
       // Check that R doesn't have any users inside a loop region.
       if (any_of(R.definedValues(), [&UserVPBBs](VPValue *V) {
             return any_of(V->users(), [&UserVPBBs](VPUser *U) {
@@ -2542,11 +2542,13 @@ static void licm(VPlan &Plan) {
         continue;
       if (UserVPBBs.empty())
         continue;
-      VPBasicBlock *SinkVPBB = UserVPBBs.front();
+      VPBasicBlock *SinkVPBB = *UserVPBBs.begin();
       for (auto *UserVPBB : drop_begin(UserVPBBs))
         SinkVPBB = cast<VPBasicBlock>(
             VPDT.findNearestCommonDominator(SinkVPBB, UserVPBB));
-      R.moveBefore(*SinkVPBB, SinkVPBB->begin());
+      assert(VPDT.properlyDominates(R.getParent(), SinkVPBB) &&
+             "R doesn't properly dominate SinkVPBB?");
+      R.moveBefore(*SinkVPBB, SinkVPBB->getFirstNonPhi());
     }
   }
 }
