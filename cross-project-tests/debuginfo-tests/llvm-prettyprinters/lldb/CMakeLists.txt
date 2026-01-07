@@ -1,4 +1,5 @@
-set(LLDB_TEST_DEBUG_COMPILE_OPTIONS -g -O0)
+# Unset _FORTIFY_SOURCE since it's incompatible with -O0.
+set(LLDB_TEST_DEBUG_COMPILE_OPTIONS -g -O0 -U_FORTIFY_SOURCE)
 
 add_executable(check-lldb-llvm-support-arrayref arrayref.cpp)
 target_link_libraries(check-lldb-llvm-support-arrayref PRIVATE LLVMSupport)
