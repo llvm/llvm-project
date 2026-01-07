@@ -12369,7 +12369,7 @@ defm : AVX512_scalar_unary_math_patterns_with_immediate<
 defm : AVX512_scalar_unary_math_patterns_with_immediate<
            X86any_VRndScale, "RNDSCALESD", X86Movsd, v2f64x_info>;
 defm : AVX512_scalar_unary_math_patterns_with_immediate<
-           X86any_VRndScale, "RNDSCALESH", X86Movsd, v2f64x_info>;
+           X86any_VRndScale, "RNDSCALESH", X86Movsh, v8f16x_info>;
 
 //===----------------------------------------------------------------------===//
 // AES instructions
