@@ -140,7 +140,7 @@ public:
     node_type extract(const_iterator position);                                       // C++17
     node_type extract(const key_type& x);                                             // C++17
     template <typename K>
-      size_type erase(K&& k);                                                         // C++23
+      node_type extract(K&& k);                                                       // C++23
 
     insert_return_type insert(node_type&& nh);                                        // C++17
     iterator           insert(const_iterator hint, node_type&& nh);                   // C++17
