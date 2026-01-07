@@ -185,11 +185,6 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   }
 
   // If 0 * +/-inf produces NaN.
-  if (KnownLHS.isKnownNeverInfinity() && KnownRHS.isKnownNeverInfinity()) {
-    Known.knownNot(fcNan);
-    return Known;
-  }
-
   if ((KnownRHS.isKnownNeverInfinity() ||
        KnownLHS.isKnownNeverLogicalZero(Mode)) &&
       (KnownLHS.isKnownNeverInfinity() ||
