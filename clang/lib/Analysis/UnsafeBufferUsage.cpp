@@ -4241,7 +4241,7 @@ getNaiveStrategy(llvm::iterator_range<VarDeclIterTy> UnsafeVars) {
 
 //  Manages variable groups:
 class VariableGroupsManagerImpl : public VariableGroupsManager {
-  const std::vector<VarGrpTy> Groups;
+  const std::vector<VarGrpTy> &Groups;
   const std::map<const VarDecl *, unsigned> &VarGrpMap;
   const llvm::SetVector<const VarDecl *> &GrpsUnionForParms;
 
