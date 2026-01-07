@@ -9188,7 +9188,7 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrcpy(SDValue Chain,
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(RTLIB::STRCPY), CI->getType(),
+          TLI->getLibcallImplCallingConv(LCImpl), CI->getType(),
           getExternalSymbol(LibCallName, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setTailCall(IsTailCall);
