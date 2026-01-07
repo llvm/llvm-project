@@ -114,9 +114,32 @@
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
+; CHECK-NEXT:       Analysis containing CSE Info
+; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Post-Dominator Tree Construction
+; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
-; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       IRTranslator
+; CHECK-NEXT:       Analysis for ComputingKnownBits
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Analysis containing CSE Info
+; CHECK-NEXT:       AArch64PreLegalizerCombiner
+; CHECK-NEXT:       Localizer
+; CHECK-NEXT:       LoadStoreOpt
+; CHECK-NEXT:       Analysis containing CSE Info
+; CHECK-NEXT:       Analysis for ComputingKnownBits
+; CHECK-NEXT:       Legalizer
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       AArch64PostLegalizerCombiner
+; CHECK-NEXT:       AArch64PostLegalizerLowering
+; CHECK-NEXT:       RegBankSelect
+; CHECK-NEXT:       Analysis for ComputingKnownBits
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       InstructionSelect
+; CHECK-NEXT:       AArch64 Post Select Optimizer
+; CHECK-NEXT:       ResetMachineFunction
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Assignment Tracking Analysis

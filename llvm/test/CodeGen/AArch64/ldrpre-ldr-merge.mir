@@ -441,9 +441,9 @@ body:             |
   bb.0:
     liveins: $q0, $x1
     ; CHECK-LABEL: name: 15-ldrqpre-ldrqui-same-dst-reg-no-merge
-    ; CHECK: liveins: $q0, $q1, $x1
+    ; CHECK: liveins: $q0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: early-clobber $x1, dead $q2, renamable $q0 = LDPQpre renamable $x1, 2 :: (load (s128))
+    ; CHECK-NEXT: early-clobber $x1, dead $q1, renamable $q0 = LDPQpre renamable $x1, 2 :: (load (s128))
     ; CHECK-NEXT: STRQui renamable $q0, renamable $x1, 0 :: (store (s128))
     ; CHECK-NEXT: RET undef $lr
     early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))

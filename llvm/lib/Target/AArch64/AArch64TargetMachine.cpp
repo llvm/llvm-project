@@ -160,6 +160,10 @@ static cl::opt<int> EnableGlobalISelAtO(
     cl::desc("Enable GlobalISel at or below an opt level (-1 to disable)"),
     cl::init(0));
 
+static cl::opt<bool> EnableGlobalISelForOptNone(
+    "aarch64-enable-global-isel-for-optnone", cl::Hidden,
+    cl::desc("Route optnone functions through GlobalISel"), cl::init(true));
+
 static cl::opt<bool>
     EnableSVEIntrinsicOpts("aarch64-enable-sve-intrinsic-opts", cl::Hidden,
                            cl::desc("Enable SVE intrinsic opts"),
@@ -387,14 +391,26 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     // for the tiny code model, the maximum TLS size is 1MiB (< 16MiB)
     this->Options.TLSSize = 24;
 
-  // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
-  // MachO/CodeModel::Large, which GlobalISel does not support.
-  if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO &&
+  const bool TargetSupportsGISel =
       TT.getArch() != Triple::aarch64_32 &&
       TT.getEnvironment() != Triple::GNUILP32 &&
-      !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO())) {
-    setGlobalISel(true);
-    setGlobalISelAbort(GlobalISelAbortMode::Disable);
+      !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO());
+
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
+  // MachO/CodeModel::Large, which GlobalISel does not support.
+  if (TargetSupportsGISel) {
+    if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO) {
+      setGlobalISel(true);
+      setGlobalISelAbort(GlobalISelAbortMode::Disable);
+    } else if (!GlobalISelFlag && EnableGlobalISelForOptNone &&
+               !Options.EnableGlobalISel) {
+      setGlobalISel(true);
+      setGlobalISelAbort(GlobalISelAbortMode::Disable);
+      UseGISelForOptNoneOnly = true;
+    }
   }
 
   // AArch64 supports the MachineOutliner.
@@ -548,6 +564,7 @@ public:
   void addIRPasses()  override;
   bool addPreISel() override;
   void addCodeGenPrepare() override;
+  bool useGlobalISelFor(const Function &F) const override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -713,6 +730,12 @@ void AArch64PassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createTypePromotionLegacyPass());
   TargetPassConfig::addCodeGenPrepare();
+}
+
+bool AArch64PassConfig::useGlobalISelFor(const Function &F) const {
+  if (!getAArch64TargetMachine().useGlobalISelForOptNoneOnly())
+    return true;
+  return F.hasOptNone();
 }
 
 bool AArch64PassConfig::addInstSelector() {

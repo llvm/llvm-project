@@ -36,6 +36,12 @@
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -O1 -aarch64-enable-global-isel-at-O=0 \
+; RUN:   | FileCheck %s --check-prefix OPTNONE
+
+; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
+; RUN:   --debugify-and-strip-all-safe=0 \
+; RUN:   -verify-machineinstrs=0 -O1 -aarch64-enable-global-isel-at-O=0 \
+; RUN:   -aarch64-enable-global-isel-for-optnone=false \
 ; RUN:   | FileCheck %s --check-prefix DISABLED
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
@@ -82,7 +88,7 @@
 ; FALLBACK:       AArch64 Instruction Selection
 ; NOFALLBACK-NOT: AArch64 Instruction Selection
 
-; DISABLED-NOT: IRTranslator
+; OPTNONE: IRTranslator
 
 ; DISABLED: AArch64 Instruction Selection
 ; DISABLED: Finalize ISel and expand pseudo-instructions

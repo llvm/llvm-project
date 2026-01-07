@@ -4136,6 +4136,21 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Set the CSEConfig and run the analysis.
   GISelCSEInfo *CSEInfo = nullptr;
   TPC = &getAnalysis<TargetPassConfig>();
+  if (!TPC->useGlobalISelFor(F)) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Skipping GISel as useGlobalISelFor this function is false.\n");
+
+    // Create a block if this would have been the first block
+    // to avoid MachineDominatorTree hitting a sentinel assertion
+    if (MF->empty()) {
+      MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();
+      MF->push_back(EntryBB);
+      MF->getProperties().setFailedISel();
+    }
+    return false;
+  }
+
   bool EnableCSE = EnableCSEInIRTranslator.getNumOccurrences()
                        ? EnableCSEInIRTranslator
                        : TPC->isGISelCSEEnabled();

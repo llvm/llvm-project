@@ -1,18 +1,14 @@
-; RUN: llc -O1 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -O2 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -O3 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -misched-postra -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-MORE
-; RUN: llc -O1 -debug-only=isel %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc -O1 -debug-only=isel -fast-isel=false %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOFAST
+; NOTE: Do not autogenerate
+; RUN: llc -O1 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
+; RUN: llc -O2 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
+; RUN: llc -O3 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
+; RUN: llc -misched-postra -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-MORE
 
-; REQUIRES: asserts, default_triple
+; REQUIRES: asserts
 ; UNSUPPORTED: target=nvptx{{.*}}
 
-; AArch64 uses GlobalISel for optnone functions meaning the output from 'isel' will be empty as it will not be run.
-; XFAIL: target=aarch64{{.*}}
-
 ; This test verifies that we don't run Machine Function optimizations
-; on optnone functions, and that we can turn off FastISel.
+; on optnone functions.
 
 ; Function Attrs: noinline optnone
 define i32 @_Z3fooi(i32 %x) #0 {
@@ -55,7 +51,3 @@ attributes #0 = { optnone noinline }
 
 ; Alternate post-RA scheduler.
 ; LLC-MORE: Skipping pass 'PostRA Machine Instruction Scheduler'
-
-; Selectively disable FastISel for optnone functions.
-; FAST:   FastISel is enabled
-; NOFAST: FastISel is disabled
