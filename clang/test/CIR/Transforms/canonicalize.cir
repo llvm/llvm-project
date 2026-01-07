@@ -1,8 +1,11 @@
 // RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
 
+!s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
 
 module {
   cir.func @redundant_br() {
@@ -114,6 +117,108 @@ module {
   // CHECK:      @cast_poison
   // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !s64i
   // CHECK-NEXT:   cir.return %[[P]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_s32_s64() -> !s64i {
+    %0 = cir.const #cir.int<2> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
+    cir.return %1 : !s64i
+  }
+  // CHECK:      @cast_s32_s64()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<2> : !s64i
+  // CHECK-NEXT:   cir.return %[[P]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_s64_s32() -> !s32i {
+    %0 = cir.const #cir.int<2> : !s64i
+    %1 = cir.cast integral %0 : !s64i -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      @cast_s64_s32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @cast_s32_u32() -> !u32i {
+    %0 = cir.const #cir.int<2> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      @cast_s32_u32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<2> : !u32i
+  // CHECK-NEXT:   cir.return %[[P]] : !u32i
+  // CHECK-NEXT: }
+
+  cir.func @cast_u32_s32() -> !s32i {
+    %0 = cir.const #cir.int<2> : !u32i
+    %1 = cir.cast integral %0 : !u32i -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      @cast_u32_s32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @cast_overflow() -> !s8i {
+    %0 = cir.const #cir.int<259> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s8i
+    cir.return %1 : !s8i
+  }
+  // CHECK:      @cast_overflow()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<3> : !s8i
+  // CHECK-NEXT:   cir.return %[[P]] : !s8i
+  // CHECK-NEXT: }
+
+  cir.func @cast_sext_s32_s64() -> !s64i {
+    %0 = cir.const #cir.int<-1> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
+    cir.return %1 : !s64i
+  }
+  // CHECK:      @cast_sext_s32_s64()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<-1> : !s64i
+  // CHECK-NEXT:   cir.return %[[P]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_sext_s32_u64() -> !u64i {
+    %0 = cir.const #cir.int<-1> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !u64i
+    cir.return %1 : !u64i
+  }
+  // CHECK:      @cast_sext_s32_u64()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<18446744073709551615> : !u64i
+  // CHECK-NEXT:   cir.return %[[P]] : !u64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_sext_twostep_s32_u64() -> !u64i {
+    %0 = cir.const #cir.int<-1> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
+    %2 = cir.cast integral %1 : !s64i -> !u64i
+    cir.return %2 : !u64i
+  }
+
+  // CHECK:      @cast_sext_twostep_s32_u64()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<18446744073709551615> : !u64i
+  // CHECK-NEXT:   cir.return %[[P]] : !u64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_zext_u8_u32() -> !u32i {
+    %0 = cir.const #cir.int<255> : !u8i
+    %1 = cir.cast integral %0 : !u8i -> !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      @cast_zext_u8_u32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<255> : !u32i
+  // CHECK-NEXT:   cir.return %[[P]] : !u32i
+  // CHECK-NEXT: }
+
+  cir.func @cast_zext_u8_s32() -> !s32i {
+    %0 = cir.const #cir.int<255> : !u8i
+    %1 = cir.cast integral %0 : !u8i -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      @cast_zext_u8_s32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<255> : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
   // CHECK-NEXT: }
 
 }
