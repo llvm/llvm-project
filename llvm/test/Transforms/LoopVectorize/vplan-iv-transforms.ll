@@ -99,22 +99,18 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT:     EMIT vp<%n.mod.vf> = urem ir<%n>, ir<8>
 ; CHECK-NEXT:     EMIT vp<%n.vec> = sub ir<%n>, vp<%n.mod.vf>
 ; CHECK-NEXT:     EMIT vp<[[STEP_VECTOR:%.+]]> = step-vector
-; CHECK-NEXT:     EMIT vp<[[BROADCAST_0:%.+]]> = broadcast ir<0>
-; CHECK-NEXT:     EMIT vp<[[BROADCAST_1:%.+]]> = broadcast ir<1>
-; CHECK-NEXT:     EMIT vp<[[MUL:%.+]]> = mul vp<[[STEP_VECTOR]]>, vp<[[BROADCAST_1]]>
-; CHECK-NEXT:     EMIT vp<[[INDUCTION:%.+]]> = add vp<[[BROADCAST_0]]>, vp<[[MUL]]>
-; CHECK-NEXT:     EMIT vp<[[BROADCAST_INC:%.+]]> = broadcast ir<8>
+; CHECK-NEXT:     EMIT vp<[[BROADCAST_8:%.+]]> = broadcast ir<8>
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[INDUCTION]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
+; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[STEP_VECTOR]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:   CLONE ir<%q> = getelementptr ir<%p>, vp<[[SCALAR_PHI]]>
 ; CHECK-NEXT:   WIDEN ir<%x> = load ir<%q>
 ; CHECK-NEXT:   WIDEN ir<%y> = add ir<%x>, ir<%iv>
 ; CHECK-NEXT:   WIDEN store ir<%q>, ir<%y>
 ; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<[[SCALAR_PHI]]>, ir<8>
-; CHECK-NEXT:   EMIT vp<%vec.ind.next> = add ir<%iv>, vp<[[BROADCAST_INC]]>
+; CHECK-NEXT:   EMIT vp<%vec.ind.next> = add ir<%iv>, vp<[[BROADCAST_8]]>
 ; CHECK-NEXT:   EMIT vp<{{%.+}}> = icmp eq vp<%index.next>, vp<%n.vec>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<{{%.+}}>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
