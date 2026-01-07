@@ -1669,6 +1669,9 @@ public:
     return Base + Offset;
   }
 
+  /// This function is used to patch PLT entries to include a BTI instruction.
+  /// This currently only works for binaries linked using LLD.
+  ///
   /// PLT entry before patching:
   ///
   ///    adrp x16, Page(&(.got.plt[n]))
