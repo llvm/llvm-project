@@ -192,6 +192,8 @@ static char *getprogpath(char ret[PATH_MAX], const char *bin) {
 /// GetMainExecutable - Return the path to the main executable, given the
 /// value of argv[0] from program startup.
 std::string getMainExecutable(const char *argv0, void *MainAddr) {
+  auto BypassSandbox = sandbox::scopedDisable();
+
 #if defined(__APPLE__)
   // On OS X the executable path is saved to the stack by dyld. Reading it
   // from there is much faster than calling dladdr, especially for large
