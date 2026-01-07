@@ -2257,8 +2257,7 @@ public:
     }
     // For printf-like functions:
     if (AnyAttr && libc_func_matchers::hasUnsafeFormatOrSArg(
-                       Ctx, CE, UnsafeArg,
-                       FmtIdx, FmtArgIdx)) {
+                       Ctx, CE, UnsafeArg, FmtIdx, FmtArgIdx)) {
       Result.addNode(Tag, DynTypedNode::create(*CE));
       Result.addNode(UnsafeStringTag, DynTypedNode::create(*UnsafeArg));
       return true;
