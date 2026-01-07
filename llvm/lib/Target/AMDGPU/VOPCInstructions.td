@@ -422,6 +422,7 @@ multiclass VOPC_Pseudos <string opName,
 
 }
 
+let PostEncoderMethod = "postEncodeVOPCX" in
 multiclass VOPCX_Pseudos <string opName,
                           VOPC_Profile P, VOPC_Profile P_NoSDst,
                           SDPatternOperator cond = COND_NULL,
@@ -1112,6 +1113,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
   } // end SubtargetPredicate = isGFX11Plus
 }
 
+let PostEncoderMethod = "postEncodeVOPCX" in
 multiclass VOPCX_Class_Pseudos <string opName,
                                 VOPC_Profile P,
                                 VOPC_Profile P_NoSDst> :
@@ -1525,6 +1527,7 @@ class VOPC64_DPP<VOP_DPP_Pseudo ps, string opName = ps.OpName>
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
   let Constraints = ps.Constraints;
+  let PostEncoderMethod = ps.PostEncoderMethod;
 }
 
 class VOPC64_DPP16_Dst<bits<10> op, VOP_DPP_Pseudo ps,
@@ -1565,6 +1568,7 @@ class VOPC64_DPP8<VOP_Pseudo ps, string opName = ps.OpName>
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
   let True16Predicate = ps.True16Predicate;
+  let PostEncoderMethod = ps.PostEncoderMethod;
 }
 
 class VOPC64_DPP8_Dst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
