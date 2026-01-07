@@ -13,7 +13,6 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/common.h"
 #include "src/__support/mathvec/expf_utils.h"
-#include "src/__support/mathvec/vector_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -50,22 +49,16 @@ LIBC_INLINE cpp::simd<double, N> inline_exp(cpp::simd<double, N> x) {
 template <size_t N>
 LIBC_INLINE cpp::simd<float, N> expf(cpp::simd<float, N> x) {
   using FPBits = typename fputil::FPBits<float>;
-  cpp::simd<float, N> ret;
 
-  auto is_inf = cpp::simd_cast<bool>(x >= 0x1.62e38p+9);
-  auto is_zero = cpp::simd_cast<bool>(x <= -0x1.628c2ap+9);
-  auto is_special = is_inf | is_zero;
+  cpp::simd<bool, N> is_inf = x >= 0x1.62e38p+9;
+  cpp::simd<bool, N> is_zero = x <= -0x1.628c2ap+9;
+  cpp::simd<bool, N> is_special = is_inf | is_zero;
 
-  auto special_res =
-      cpp::select(is_inf, cpp::simd<float, N>(FPBits::inf().get_val()),
-                  cpp::simd<float>(0.0f));
+  cpp::simd<float, N> special_res = is_inf ? FPBits::inf().get_val() : 0.0f;
 
-  auto [lo, hi] = vector_float_to_double(x);
-
-  auto lo_res = inline_exp(lo);
-  auto hi_res = inline_exp(hi);
-
-  ret = vector_double_to_float(lo_res, hi_res);
+  cpp::simd<double, N> x_d = cpp::simd_cast<double, float, N>(x);
+  cpp::simd<double, N> y = inline_exp(x_d);
+  cpp::simd<float, N> ret = cpp::simd_cast<float, double, N>(y);
   return cpp::select(is_special, special_res, ret);
 }
 

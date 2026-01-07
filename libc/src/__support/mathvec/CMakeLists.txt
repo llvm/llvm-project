@@ -25,11 +25,3 @@ add_header_library(
     libc.src.__support.mathvec.expf_utils
     libc.src.__support.mathvec.vector_utils
 )
-
-add_header_library(
-  vector_utils
-  HDRS
-    vector_utils.h
-  DEPENDS
-    libc.src.__support.CPP.simd
-)

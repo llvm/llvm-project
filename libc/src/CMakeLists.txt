@@ -30,7 +30,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
 endif()
 
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
-  message(STATUS "Vector math enabled")
   add_subdirectory(mathvec)
 endif()
 

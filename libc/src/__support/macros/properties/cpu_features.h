@@ -56,6 +56,10 @@
 #define LIBC_TARGET_CPU_HAS_AVX512BW
 #endif
 
+#if defined(__AVX512F__) || defined(__AVX2__)
+#define LIBC_TARGET_CPU_HAS_GATHER
+#endif
+
 #if defined(__ARM_FP)
 #if (__ARM_FP & 0x2)
 #define LIBC_TARGET_CPU_HAS_ARM_FPU_HALF

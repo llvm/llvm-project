@@ -21,7 +21,7 @@ LIBC_INLINE cpp::simd<double, N> exp_lookup(cpp::simd<uint64_t, N> u) {
       true, index, common_constants_internal::EXP_MANTISSA);
   auto exponent = (u >> 6) << 52;
   auto result = mantissa | exponent;
-  return reinterpret_cast<cpp::simd<double, N>>(result);
+  return cpp::bit_cast<cpp::simd<double, N>>(result);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
