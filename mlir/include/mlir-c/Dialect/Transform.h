@@ -90,4 +90,6 @@ MLIR_CAPI_EXPORTED MlirType mlirTransformParamTypeGetType(MlirType type);
 }
 #endif
 
+#include "mlir/Dialect/Transform/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_TRANSFORM_H

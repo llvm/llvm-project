@@ -159,6 +159,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Name, Blob);
   case NAMESPACE_PATH:
     return decodeRecord(R, I->Path, Blob);
+  case NAMESPACE_PARENT_USR:
+    return decodeRecord(R, I->ParentUSR, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for NamespaceInfo");
@@ -184,6 +186,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->IsTypeDef, Blob);
   case RECORD_MANGLED_NAME:
     return decodeRecord(R, I->MangledName, Blob);
+  case RECORD_PARENT_USR:
+    return decodeRecord(R, I->ParentUSR, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for RecordInfo");
