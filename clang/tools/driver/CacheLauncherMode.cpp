@@ -36,7 +36,8 @@ static bool isSameProgram(StringRef clangCachePath, StringRef compilerPath) {
 }
 
 static bool shouldCacheInvocation(ArrayRef<const char *> Args,
-                                  IntrusiveRefCntPtr<DiagnosticsEngine> Diags) {
+                                  IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+                                  bool &SupportsMCCAS) {
   SmallVector<const char *, 128> CheckArgs(Args.begin(), Args.end());
   // Make sure "-###" is not present otherwise we won't get an object back.
   CheckArgs.erase(
@@ -70,6 +71,10 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
         << "AS_SECURE_LOG_FILE is set";
     return false;
   }
+
+  llvm::Triple T(CInvok->getTargetOpts().Triple);
+  SupportsMCCAS = T.isOSBinFormatMachO();
+
   return true;
 }
 
@@ -123,7 +128,7 @@ static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
 
 /// Arguments specific to \p clang-cache compiler launcher functionality.
 static void addLauncherArgs(SmallVectorImpl<const char *> &Args,
-                            llvm::StringSaver &Saver) {
+                            llvm::StringSaver &Saver, bool SupportsMCCAS) {
 
   if (const char *DaemonPath =
           ::getenv("CLANG_CACHE_SCAN_DAEMON_SOCKET_PATH")) {
@@ -171,8 +176,8 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &Args,
   }
   Args.append({"-greproducible"});
 
-  if (!llvm::sys::Process::GetEnv("CLANG_CACHE_DISABLE_MCCAS") &&
-      !ServicePath) {
+  if (SupportsMCCAS && !ServicePath &&
+      !llvm::sys::Process::GetEnv("CLANG_CACHE_DISABLE_MCCAS")) {
     Args.push_back("-Xclang");
     Args.push_back("-fcas-backend");
     if (llvm::sys::Process::GetEnv("CLANG_CACHE_VERIFY_MCCAS")) {
@@ -253,12 +258,13 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     Args[0] = Saver.save(compilerPath).data();
 
   if (isSameProgram(clangCachePath, compilerPath)) {
-    if (!shouldCacheInvocation(Args, DiagsPtr)) {
+    bool SupportsMCCAS = false;
+    if (!shouldCacheInvocation(Args, DiagsPtr, SupportsMCCAS)) {
       if (Diags.hasErrorOccurred())
         return 1;
       return std::nullopt;
     }
-    addLauncherArgs(Args, Saver);
+    addLauncherArgs(Args, Saver, SupportsMCCAS);
     return std::nullopt;
   }
 

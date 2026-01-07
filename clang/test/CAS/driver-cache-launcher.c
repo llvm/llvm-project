@@ -42,31 +42,43 @@
 // PLUGIN: "-fcas-plugin-option" "opt2=val2"
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas \
-// RUN: %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=ENABLE-MCCAS -DPREFIX=%t
+// RUN: %clang-cache %clang -target x86_64-apple-darwin10 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=ENABLE-MCCAS -DPREFIX=%t
 // ENABLE-MCCAS: "-fcas-path" "[[PREFIX]]/cas"
 // ENABLE-MCCAS: "-fcas-backend"
 // ENABLE-MCCAS: "-mllvm"
 // ENABLE-MCCAS: "-cas-friendly-debug-info"
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_VERIFY_MCCAS=1 \
-// RUN: %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=ENABLE-MCCAS-VERIFY -DPREFIX=%t
+// RUN: %clang-cache %clang -target x86_64-apple-darwin10 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=ENABLE-MCCAS-VERIFY -DPREFIX=%t
 // ENABLE-MCCAS-VERIFY: "-fcas-path" "[[PREFIX]]/cas"
 // ENABLE-MCCAS-VERIFY: "-fcas-backend"
 // ENABLE-MCCAS-VERIFY: "-fcas-backend-mode=verify"
 // ENABLE-MCCAS-VERIFY: "-mllvm"
 // ENABLE-MCCAS-VERIFY: "-cas-friendly-debug-info"
 
+// ELF/COFF platforms do not support mccas.
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas \
+// RUN: %clang-cache %clang -target x86_64-unknown-linux-gnu -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
+
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas \
+// RUN: %clang-cache %clang -target x86_64-unknown-windows-msvc -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
+
+// Forcing mccas gives an error on ELF/COFF.
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas \
+// RUN: not %clang -target x86_64-unknown-linux-gnu -Xclang -fcas-backend -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=MCCAS_NOT_ALLOWED
+// MCCAS_NOT_ALLOWED: error: -fcas-backend is incompatible with target 'x86_64-unknown-linux-gnu'; requires mach-o object format
+
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_DISABLE_MCCAS=1 \
-// RUN: %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
+// RUN: %clang-cache %clang -target x86_64-apple-darwin10 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH=%t/ccremote \
-// RUN: %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
+// RUN: %clang-cache %clang -target x86_64-apple-darwin10 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH=%t/ccremote CLANG_CACHE_DISABLE_MCCAS=1 \
-// RUN: %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
+// RUN: %clang-cache %clang -target x86_64-apple-darwin10 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH=%t/ccremote CLANG_CACHE_DISABLE_MCCAS=1 CLANG_CACHE_VERIFY_MCCAS=1 \
-// RUN: %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
+// RUN: %clang-cache %clang -target x86_64-apple-darwin10 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=DISABLE-MCCAS -DPREFIX=%t
 
 // DISABLE-MCCAS-NOT: "-fcas-backend"
 // DISABLE-MCCAS-NOT: "-fcas-backend-mode=verify"

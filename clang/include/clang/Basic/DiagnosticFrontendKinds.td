@@ -151,6 +151,8 @@ def err_feature_availability_flag_invalid_value : Error<
 
 def err_fe_incompatible_option_with_remote_cache : Error<
   "'%0' is incompatible with remote caching backend">;
+def err_fe_mccas_incompatible_target : Error<
+  "-fcas-backend is incompatible with target '%0'; requires mach-o object format">;
 def err_fe_unable_to_load_include_tree : Error<
   "unable to load the CAS include-tree '%0': '%1'">;
 def err_unable_to_load_include_tree_node : Error<

@@ -5521,6 +5521,8 @@ bool CompilerInvocation::CreateFromArgsImpl(
       Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
           << "-fcasid-output";
   }
+  if (Res.getCodeGenOpts().UseCASBackend && !T.isOSBinFormatMachO())
+    Diags.Report(diag::err_fe_mccas_incompatible_target) << T.str();
   // END MCCAS
 
   // FIXME: Override value name discarding when asan or msan is used because the
