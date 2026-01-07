@@ -7,6 +7,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx    | FileCheck %s --check-prefixes=AVX,AVX1,X64-AVX,X64-AVX1
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx2     | FileCheck %s --check-prefixes=AVX,AVX2,X86-AVX,X86-AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2   | FileCheck %s --check-prefixes=AVX,AVX2,X64-AVX,X64-AVX2
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512bw,avx512vl   | FileCheck %s --check-prefixes=AVX,AVX512,X86-AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,X64-AVX512
 
 define <4 x i32> @trunc_lshr_v4i64(<4 x i64> %a) nounwind {
 ; SSE2-LABEL: trunc_lshr_v4i64:
@@ -39,6 +41,13 @@ define <4 x i32> @trunc_lshr_v4i64(<4 x i64> %a) nounwind {
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: trunc_lshr_v4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlq $63, %ymm0, %ymm0
+; AVX512-NEXT:    vpmovqd %ymm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = lshr <4 x i64> %a, <i64 63, i64 63, i64 63, i64 63>
   %2 = trunc <4 x i64> %1 to <4 x i32>
   ret <4 x i32> %2
@@ -75,6 +84,13 @@ define <8 x i16> @trunc_lshr_v4i64_bitcast(<4 x i64> %a0) {
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: trunc_lshr_v4i64_bitcast:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlq $49, %ymm0, %ymm0
+; AVX512-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = lshr <4 x i64> %a0, <i64 49, i64 49, i64 49, i64 49>
   %2 = bitcast <4 x i64> %1 to <8 x i32>
   %3 = trunc <8 x i32> %2 to <8 x i16>
@@ -112,6 +128,13 @@ define <8 x i16> @trunc_lshr_v8i32(<8 x i32> %a) nounwind {
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: trunc_lshr_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrld $31, %ymm0, %ymm0
+; AVX512-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = lshr <8 x i32> %a, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
   %2 = trunc <8 x i32> %1 to <8 x i16>
   ret <8 x i16> %2
@@ -165,6 +188,22 @@ define <8 x i16> @trunc_lshr_v4i64_demandedelts(<4 x i64> %a0) {
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    ret{{[l|q]}}
+;
+; X86-AVX512-LABEL: trunc_lshr_v4i64_demandedelts:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; X86-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
+; X86-AVX512-NEXT:    vpmovdw %ymm0, %xmm0
+; X86-AVX512-NEXT:    vzeroupper
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: trunc_lshr_v4i64_demandedelts:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; X64-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vpmovdw %ymm0, %xmm0
+; X64-AVX512-NEXT:    vzeroupper
+; X64-AVX512-NEXT:    retq
   %1 = shl <4 x i64> %a0, <i64 63, i64 0, i64 63, i64 0>
   %2 = lshr <4 x i64> %1, <i64 63, i64 0, i64 63, i64 0>
   %3 = bitcast <4 x i64> %2 to <8 x i32>
@@ -318,6 +357,13 @@ define <16 x i8> @packuswb_icmp_zero_128(<8 x i16> %a0) {
 ; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-AVX-NEXT:    retq
+;
+; AVX512-LABEL: packuswb_icmp_zero_128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vptestnmw %xmm0, %xmm0, %k1
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = icmp eq <8 x i16> %a0, zeroinitializer
   %2 = zext <8 x i1> %1 to <8 x i8>
   %3 = shufflevector <8 x i8> %2, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -397,6 +443,14 @@ define <32 x i8> @packuswb_icmp_zero_256(<16 x i16> %a0) {
 ; AVX2-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackuswb %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: packuswb_icmp_zero_256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsrlw $15, %ymm0, %ymm0
+; AVX512-NEXT:    vpackuswb %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = icmp eq <16 x i16> %a0, zeroinitializer
   %2 = zext <16 x i1> %1 to <16 x i16>
   %3 = bitcast <16 x i16> %2 to <32 x i8>
@@ -439,6 +493,17 @@ define <32 x i8> @packuswb_icmp_zero_trunc_256(<16 x i16> %a0) {
 ; AVX2-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackuswb %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: packuswb_icmp_zero_trunc_256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsrlw $15, %ymm0, %ymm0
+; AVX512-NEXT:    movb $-52, %al
+; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = icmp eq <16 x i16> %a0, zeroinitializer
   %2 = zext <16 x i1> %1 to <16 x i16>
   %3 = shufflevector <16 x i16> zeroinitializer, <16 x i16> %2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
