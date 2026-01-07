@@ -10,12 +10,14 @@ import os
 import subprocess
 import json
 
+
 @contextmanager
 def fifo(*args, **kwargs):
     if sys.platform == "win32":
         comm_file = r"\\.\pipe\lldb-dap-run-in-terminal-comm"
 
         import ctypes
+
         PIPE_ACCESS_DUPLEX = 0x00000003
         PIPE_TYPE_BYTE = 0x00000000
         PIPE_READMODE_BYTE = 0x00000000
@@ -27,7 +29,11 @@ def fifo(*args, **kwargs):
             comm_file,
             PIPE_ACCESS_DUPLEX,
             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-            PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, None
+            PIPE_UNLIMITED_INSTANCES,
+            4096,
+            4096,
+            0,
+            None,
         )
     else:
         comm_file = os.path.join(kwargs["directory"], "comm-file")
@@ -41,11 +47,13 @@ def fifo(*args, **kwargs):
             kernel32.DisconnectNamedPipe(pipe)
             kernel32.CloseHandle(pipe)
 
+
 @skipIfBuildType(["debug"])
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     def read_pid_message(self, fifo_file, pipe):
         if sys.platform == "win32":
             import ctypes
+
             buffer = ctypes.create_string_buffer(4096)
             bytes_read = ctypes.wintypes.DWORD()
             kernel32 = ctypes.windll.kernel32
@@ -61,10 +69,13 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         message = json.dumps({"kind": "didAttach"}) + "\n"
         if sys.platform == "win32":
             import ctypes
+
             kernel32 = ctypes.windll.kernel32
             bytes_written = ctypes.wintypes.DWORD()
             kernel32.ConnectNamedPipe(pipe, None)
-            kernel32.WriteFile(pipe, message.encode(), len(message), ctypes.byref(bytes_written), None)
+            kernel32.WriteFile(
+                pipe, message.encode(), len(message), ctypes.byref(bytes_written), None
+            )
         else:
             with open(fifo_file, "w") as file:
                 file.write(message)
@@ -218,7 +229,10 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
                 stderr=subprocess.PIPE,
             )
 
-            self.assertIn("Failed to launch target process", self.read_error_message(comm_file, pipe))
+            self.assertIn(
+                "Failed to launch target process",
+                self.read_error_message(comm_file, pipe),
+            )
 
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
         with fifo(directory=self.getBuildDir()) as (comm_file, pipe):
