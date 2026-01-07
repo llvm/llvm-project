@@ -1634,3 +1634,113 @@ long double call_powl(long double x, long double y) {
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.pow.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
   // LLVM: }
 }
+
+// acos
+
+float my_acosf(float x) {
+  return __builtin_acosf(x);
+  // CHECK: cir.func dso_local @my_acosf
+  // CHECK:   %{{.+}} = cir.acos %{{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_acosf
+  // LLVM:   %{{.+}} = call float @llvm.acos.f32(float %{{.+}})
+  // LLVM: }
+}
+
+double my_acos(double x) {
+  return __builtin_acos(x);
+  // CHECK: cir.func dso_local @my_acos
+  // CHECK:   %{{.+}} = cir.acos %{{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_acos
+  // LLVM:   %{{.+}} = call double @llvm.acos.f64(double %{{.+}})
+  // LLVM: }
+}
+
+// asin
+
+float my_asinf(float x) {
+  return __builtin_asinf(x);
+  // CHECK: cir.func dso_local @my_asinf
+  // CHECK:   %{{.+}} = cir.asin %{{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_asinf
+  // LLVM:   %{{.+}} = call float @llvm.asin.f32(float %{{.+}})
+  // LLVM: }
+}
+
+double my_asin(double x) {
+  return __builtin_asin(x);
+  // CHECK: cir.func dso_local @my_asin
+  // CHECK:   %{{.+}} = cir.asin %{{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_asin
+  // LLVM:   %{{.+}} = call double @llvm.asin.f64(double %{{.+}})
+  // LLVM: }
+}
+
+// atan
+
+float my_atanf(float x) {
+  return __builtin_atanf(x);
+  // CHECK: cir.func dso_local @my_atanf
+  // CHECK:   %{{.+}} = cir.atan %{{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_atanf
+  // LLVM:   %{{.+}} = call float @llvm.atan.f32(float %{{.+}})
+  // LLVM: }
+}
+
+double my_atan(double x) {
+  return __builtin_atan(x);
+  // CHECK: cir.func dso_local @my_atan
+  // CHECK:   %{{.+}} = cir.atan %{{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_atan
+  // LLVM:   %{{.+}} = call double @llvm.atan.f64(double %{{.+}})
+  // LLVM: }
+}
+
+// atan2
+
+float my_atan2f(float y, float x) {
+  return __builtin_atan2f(y, x);
+  // CHECK: cir.func dso_local @my_atan2f
+  // CHECK:   %{{.+}} = cir.atan2 %{{.+}}, %{{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_atan2f
+  // LLVM:   %{{.+}} = call float @llvm.atan2.f32(float %{{.+}}, float %{{.+}})
+  // LLVM: }
+}
+
+double my_atan2(double y, double x) {
+  return __builtin_atan2(y, x);
+  // CHECK: cir.func dso_local @my_atan2
+  // CHECK:   %{{.+}} = cir.atan2 %{{.+}}, %{{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_atan2
+  // LLVM:   %{{.+}} = call double @llvm.atan2.f64(double %{{.+}}, double %{{.+}})
+  // LLVM: }
+}
+
+// roundeven
+
+float my_roundevenf(float x) {
+  return __builtin_roundevenf(x);
+  // CHECK: cir.func dso_local @my_roundevenf
+  // CHECK:   %{{.+}} = cir.roundeven %{{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_roundevenf
+  // LLVM:   %{{.+}} = call float @llvm.roundeven.f32(float %{{.+}})
+  // LLVM: }
+}
+
+double my_roundeven(double x) {
+  return __builtin_roundeven(x);
+  // CHECK: cir.func dso_local @my_roundeven
+  // CHECK:   %{{.+}} = cir.roundeven %{{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_roundeven
+  // LLVM:   %{{.+}} = call double @llvm.roundeven.f64(double %{{.+}})
+  // LLVM: }
+}

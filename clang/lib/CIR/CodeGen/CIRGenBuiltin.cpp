@@ -302,6 +302,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_acosl:
   case Builtin::BI__builtin_acosf128:
   case Builtin::BI__builtin_elementwise_acos:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ACosOp>(cgf, *e);
   case Builtin::BIasin:
   case Builtin::BIasinf:
   case Builtin::BIasinl:
@@ -311,6 +312,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_asinl:
   case Builtin::BI__builtin_asinf128:
   case Builtin::BI__builtin_elementwise_asin:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ASinOp>(cgf, *e);
   case Builtin::BIatan:
   case Builtin::BIatanf:
   case Builtin::BIatanl:
@@ -320,6 +322,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_atanl:
   case Builtin::BI__builtin_atanf128:
   case Builtin::BI__builtin_elementwise_atan:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ATanOp>(cgf, *e);
   case Builtin::BIatan2:
   case Builtin::BIatan2f:
   case Builtin::BIatan2l:
@@ -329,7 +332,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_atan2l:
   case Builtin::BI__builtin_atan2f128:
   case Builtin::BI__builtin_elementwise_atan2:
-    return RValue::getIgnored();
+    return emitBinaryFPBuiltin<cir::ATan2Op>(cgf, *e);
   case Builtin::BIceil:
   case Builtin::BIceilf:
   case Builtin::BIceill:
@@ -555,7 +558,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_roundevenl:
   case Builtin::BI__builtin_roundevenf128:
   case Builtin::BI__builtin_elementwise_roundeven:
-    return RValue::getIgnored();
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RoundEvenOp>(cgf, *e);
   case Builtin::BIsin:
   case Builtin::BIsinf:
   case Builtin::BIsinl:

@@ -267,6 +267,15 @@ mlir::LogicalResult CIRToLLVMRoundOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMRoundEvenOpLowering::matchAndRewrite(
+    cir::RoundEvenOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::RoundEvenOp>(op, resTy,
+                                                       adaptor.getSrc());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMSinOpLowering::matchAndRewrite(
     cir::SinOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1645,6 +1654,24 @@ mlir::LogicalResult CIRToLLVMFMinNumOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMFMaximumOpLowering::matchAndRewrite(
+    cir::FMaximumOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MaximumOp>(
+      op, resTy, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMFMinimumOpLowering::matchAndRewrite(
+    cir::FMinimumOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MinimumOp>(
+      op, resTy, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMFModOpLowering::matchAndRewrite(
     cir::FModOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1660,6 +1687,15 @@ mlir::LogicalResult CIRToLLVMPowOpLowering::matchAndRewrite(
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::PowOp>(op, resTy, adaptor.getLhs(),
                                                  adaptor.getRhs());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMATan2OpLowering::matchAndRewrite(
+    cir::ATan2Op op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ATan2Op>(op, resTy, adaptor.getLhs(),
+                                                   adaptor.getRhs());
   return mlir::success();
 }
 

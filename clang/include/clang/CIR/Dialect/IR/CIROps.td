@@ -5216,6 +5216,16 @@ def CIR_RoundOp : CIR_UnaryFPToFPBuiltinOp<"round", "RoundOp"> {
   }];
 }
 
+def CIR_RoundEvenOp : CIR_UnaryFPToFPBuiltinOp<"roundeven", "RoundEvenOp"> {
+  let summary = "Rounds floating-point value to nearest integer, ties to even";
+  let description = [{
+    `cir.roundeven` rounds a floating-point operand to the nearest integer
+    value, with ties rounding to even (banker's rounding).
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_SinOp : CIR_UnaryFPToFPBuiltinOp<"sin", "SinOp"> {
   let summary = "Computes the floating-point sine";
   let description = [{
@@ -5318,9 +5328,12 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
 
 def CIR_CopysignOp : CIR_BinaryFPToFPBuiltinOp<"copysign", "CopySignOp">;
 def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp">;
+def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp">;
 def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp">;
+def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp">;
 def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp">;
 def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp">;
+def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op">;
 
 //===----------------------------------------------------------------------===//
 // Variadic Operations
