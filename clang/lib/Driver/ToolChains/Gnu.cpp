@@ -514,6 +514,13 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
+      // For SYCL compilations, pass the linker option '-lsycl' by default to
+      // the clang-linker-wrapper tool which links the SYCL runtime library.
+      if (Args.hasArg(options::OPT_fsycl) &&
+          !Args.hasArg(options::OPT_nolibsycl)) {
+        CmdArgs.push_back("-lsycl");
+      }
+
       // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so
       // forcibly link with libatomic as a workaround.
       // TODO: Issue #41880 and D118021.
