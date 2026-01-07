@@ -651,3 +651,8 @@
 // RUN: %clang -### --target=x86_64-pc-windows-msvc -fno-strict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
 // CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
 // CHECK-NO-STRICT-ALIASING: -relaxed-aliasing
+
+// RUN: %clang -### -ftrap-unreachable %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP
+// RUN: %clang -### -fno-trap-unreachable %s 2>&1 | FileCheck %s -check-prefix=NO-UNREACHABLE-TRAP
+// UNREACHABLE-TRAP: "-ftrap-unreachable"
+// NO-UNREACHABLE-TRAP-NOT: "-ftrap-unreachable"

@@ -434,6 +434,9 @@ CODEGENOPT(DirectAccessExternalData, 1, 0, Benign)
 /// paths that reach the end of a function without executing a required return.
 CODEGENOPT(StrictReturn, 1, 1, Benign)
 
+/// Whether we should use make unreachable trap or not.
+CODEGENOPT(TrapUnreachable, 1, 0, Benign)
+
 /// Whether emit pseudo probes for sample pgo profile collection.
 CODEGENOPT(PseudoProbeForProfiling, 1, 0, Benign)
 

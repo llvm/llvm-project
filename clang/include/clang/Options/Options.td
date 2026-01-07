@@ -4791,6 +4791,13 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
+defm trap_unreachable
+    : BoolFOption<"trap-unreachable", CodeGenOpts<"TrapUnreachable">,
+                  DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Treat unreachable instructions as traps">,
+                  NegFlag<SetFalse>>;
+
 let Flags = [TargetSpecific] in {
 defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
 defm ptrauth_calls : OptInCC1FFlag<"ptrauth-calls", "Enable signing and authentication of all indirect calls">;

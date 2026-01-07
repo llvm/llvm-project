@@ -5849,6 +5849,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fsplit_stack,
                     options::OPT_fno_split_stack);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_ftrap_unreachable,
+                    options::OPT_ftrap_unreachable);
+
   // -fprotect-parens=0 is default.
   if (Args.hasFlag(options::OPT_fprotect_parens,
                    options::OPT_fno_protect_parens, false))
