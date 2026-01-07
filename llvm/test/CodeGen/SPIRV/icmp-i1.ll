@@ -1,8 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown -filetype=obj < %s  | spirv-val %}
 
-target triple = "spirv64-amd-amdhsa"
-
 define spir_func i1 @ugt(i1 %p, i1 %q) addrspace(4) {
   ; CHECK: Begin function ugt
   ; CHECK: OpLogicalNotEqual
