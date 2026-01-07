@@ -114,6 +114,8 @@ MLIR_CAPI_EXPORTED MlirType mlirAnyQuantizedTypeGet(unsigned flags,
                                                     int64_t storageTypeMin,
                                                     int64_t storageTypeMax);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirAnyQuantizedTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // UniformQuantizedType
 //===---------------------------------------------------------------------===//
@@ -129,6 +131,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirUniformQuantizedTypeGetTypeID(void);
 MLIR_CAPI_EXPORTED MlirType mlirUniformQuantizedTypeGet(
     unsigned flags, MlirType storageType, MlirType expressedType, double scale,
     int64_t zeroPoint, int64_t storageTypeMin, int64_t storageTypeMax);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirUniformQuantizedTypeGetName(void);
 
 /// Returns the scale of the given uniform quantized type.
 MLIR_CAPI_EXPORTED double mlirUniformQuantizedTypeGetScale(MlirType type);
@@ -156,6 +160,8 @@ MLIR_CAPI_EXPORTED MlirType mlirUniformQuantizedPerAxisTypeGet(
     unsigned flags, MlirType storageType, MlirType expressedType,
     intptr_t nDims, double *scales, int64_t *zeroPoints,
     int32_t quantizedDimension, int64_t storageTypeMin, int64_t storageTypeMax);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirUniformQuantizedPerAxisTypeGetName(void);
 
 /// Returns the number of axes in the given quantized per-axis type.
 MLIR_CAPI_EXPORTED intptr_t
@@ -200,6 +206,9 @@ MLIR_CAPI_EXPORTED MlirType mlirUniformQuantizedSubChannelTypeGet(
     intptr_t blockSizeInfoLength, int32_t *quantizedDimensions,
     int64_t *blockSizes, int64_t storageTypeMin, int64_t storageTypeMax);
 
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirUniformQuantizedSubChannelTypeGetName(void);
+
 /// Returns the number of block sizes provided in type.
 MLIR_CAPI_EXPORTED intptr_t
 mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(MlirType type);
@@ -235,6 +244,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirCalibratedQuantizedTypeGetTypeID(void);
 /// by the context.
 MLIR_CAPI_EXPORTED MlirType
 mlirCalibratedQuantizedTypeGet(MlirType expressedType, double min, double max);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirCalibratedQuantizedTypeGetName(void);
 
 /// Returns the min value of the given calibrated quantized type.
 MLIR_CAPI_EXPORTED double mlirCalibratedQuantizedTypeGetMin(MlirType type);

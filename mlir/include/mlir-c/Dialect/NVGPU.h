@@ -29,6 +29,8 @@ MLIR_CAPI_EXPORTED MlirType mlirNVGPUTensorMapDescriptorTypeGet(
     MlirContext ctx, MlirType tensorMemrefType, int swizzle, int l2promo,
     int oobFill, int interleave);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirNVGPUTensorMapDescriptorTypeGetName(void);
+
 #ifdef __cplusplus
 }
 #endif

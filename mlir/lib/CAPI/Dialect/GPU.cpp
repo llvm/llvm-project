@@ -27,6 +27,10 @@ MlirType mlirGPUAsyncTokenTypeGet(MlirContext ctx) {
   return wrap(gpu::AsyncTokenType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirGPUAsyncTokenTypeGetName(void) {
+  return wrap(gpu::AsyncTokenType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // ObjectAttr
 //===---------------------------------------------------------------------===//

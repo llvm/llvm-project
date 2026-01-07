@@ -41,6 +41,8 @@ MLIR_CAPI_EXPORTED MlirType mlirEmitCArrayTypeGet(intptr_t nDims,
                                                   int64_t *shape,
                                                   MlirType elementType);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCArrayTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // LValueType
 //===---------------------------------------------------------------------===//
@@ -50,6 +52,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCLValueType(MlirType type);
 MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCLValueTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirEmitCLValueTypeGet(MlirType valueType);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCLValueTypeGetName(void);
 
 //===---------------------------------------------------------------------===//
 // OpaqueType
@@ -62,6 +66,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCOpaqueTypeGetTypeID(void);
 MLIR_CAPI_EXPORTED MlirType mlirEmitCOpaqueTypeGet(MlirContext ctx,
                                                    MlirStringRef value);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCOpaqueTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // PointerType
 //===---------------------------------------------------------------------===//
@@ -71,6 +77,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCPointerType(MlirType type);
 MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCPointerTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirEmitCPointerTypeGet(MlirType pointee);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCPointerTypeGetName(void);
 
 //===---------------------------------------------------------------------===//
 // PtrDiffTType
@@ -82,6 +90,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCPtrDiffTTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirEmitCPtrDiffTTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCPtrDiffTTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // SignedSizeTType
 //===---------------------------------------------------------------------===//
@@ -92,6 +102,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCSignedSizeTTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirEmitCSignedSizeTTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCSignedSizeTTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // SizeTType
 //===---------------------------------------------------------------------===//
@@ -101,6 +113,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAEmitCSizeTType(MlirType type);
 MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCSizeTTypeGetTypeID(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirEmitCSizeTTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCSizeTTypeGetName(void);
 
 //===----------------------------------------------------------------------===//
 // CmpPredicate attribute.

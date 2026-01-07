@@ -759,6 +759,49 @@ def testTypeIDs():
         print(ShapedType(vector_type).typeid == vector_type.typeid)
 
 
+# CHECK-LABEL: TEST: testTypeName
+@run
+def testTypeName():
+    with Context():
+        # CHECK: builtin.integer
+        print(IntegerType.type_name)
+        # CHECK: builtin.index
+        print(IndexType.type_name)
+
+        # CHECK: builtin.f32
+        print(F32Type.type_name)
+        # CHECK: builtin.bf16
+        print(BF16Type.type_name)
+
+        # CHECK: builtin.none
+        print(NoneType.type_name)
+
+        # CHECK: builtin.complex
+        print(ComplexType.type_name)
+
+        # CHECK: builtin.vector
+        print(VectorType.type_name)
+
+        # CHECK: builtin.tensor
+        print(RankedTensorType.type_name)
+        # CHECK: builtin.unranked_tensor
+        print(UnrankedTensorType.type_name)
+
+        # CHECK: builtin.memref
+        print(MemRefType.type_name)
+        # CHECK: builtin.unranked_memref
+        print(UnrankedMemRefType.type_name)
+
+        # CHECK: builtin.tuple
+        print(TupleType.type_name)
+
+        # CHECK: builtin.function
+        print(FunctionType.type_name)
+
+        # CHECK: builtin.opaque
+        print(OpaqueType.type_name)
+
+
 # CHECK-LABEL: TEST: testConcreteTypesRoundTrip
 @run
 def testConcreteTypesRoundTrip():
