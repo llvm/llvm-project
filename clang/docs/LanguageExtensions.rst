@@ -5241,6 +5241,43 @@ returns the bit at the position of the current lane. It is almost equivalent to
 ``(mask & (1 << lane_id)) != 0``, except that its behavior is only defined if
 the given mask has the same value for all active lanes of the current wave.
 
+
+__builtin_amdgcn_global_load_b128 and __builtin_amdgcn_global_store_b128
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Signature:
+
+.. code-block:: c
+
+    typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u;
+    typedef v4u __attribute__((address_space(1))) *global_ptr_to_v4u;
+
+    v4u __builtin_amdgcn_global_load_b128(
+       v4u __attribute__((address_space(1))) *src,
+       const char                            *scope);
+
+    void __builtin_amdgcn_global_store_b128(
+       v4u __attribute__((address_space(1))) *dst,
+       v4u                                    data,
+       const char                            *scope);
+
+Load or store a vector of 4 unsigned integers from or to global memory with
+cache behavior specified by `scope` which must be a string literal.
+
+Valid values for `scope` are:
+
+* ``"wavefront"``       
+* ``"workgroup"``       
+* ``"agent"``           
+* ``""`` (empty string) 
+
+These builtins are supported on gfx9, gfx10, gfx11, and gfx12 targets.
+
+They map to the llvm intrinsics ``llvm.amdgcn.global.load.b128`` and
+``llvm.amdgcn.global.store.b128`` documented in `User Guide for AMDGPU Backend
+<https://llvm.org/docs/AMDGPUUsage.html>`_.
+
+
 ARM/AArch64 Language Extensions
 -------------------------------
 

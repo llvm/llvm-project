@@ -5764,6 +5764,15 @@ void Verifier::visitInstruction(Instruction &I) {
   InstsInThisBlock.insert(&I);
 }
 
+inline MDString *getMetadataValueAsString(MetadataAsValue *MDV) {
+  if (!MDV)
+    return nullptr;
+  auto *MD = dyn_cast<MDTuple>(MDV->getMetadata());
+  if (!MD || MD->getNumOperands() != 1)
+    return nullptr;
+  return dyn_cast<MDString>(MD->getOperand(0));
+}
+
 /// Allow intrinsics to be verified in different ways.
 void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   Function *IF = Call.getCalledFunction();
@@ -6983,11 +6992,29 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call, PtrArg);
 
     // Last argument must be a MD string
-    auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
-    MDNode *MD = cast<MDNode>(Op->getMetadata());
-    Check((MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
+    auto *Op =
+        dyn_cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    Check(getMetadataValueAsString(Op) != nullptr,
           "cooperative atomic intrinsics require that the last argument is a "
           "metadata string",
+          &Call, Op);
+    break;
+  }
+  case Intrinsic::amdgcn_global_load_b128:
+  case Intrinsic::amdgcn_global_store_b128: {
+    auto *Op =
+        dyn_cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    MDString *MDStr = getMetadataValueAsString(Op);
+    Check(MDStr != nullptr,
+          "global load/store intrinsics require that the last argument is a "
+          "metadata string",
+          &Call, Op);
+
+    StringRef Scope = MDStr->getString();
+    Check(Scope == "" || Scope == "agent" || Scope == "workgroup" ||
+              Scope == "wavefront",
+          "'" + Scope +
+              "' is not a valid scope for global load/store intrinsics",
           &Call, Op);
     break;
   }
