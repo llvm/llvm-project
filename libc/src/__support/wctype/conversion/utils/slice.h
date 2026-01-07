@@ -18,7 +18,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal_wctype_conversion_utils {
+namespace wctype_internal {
+
+namespace conversion_utils {
 
 enum class Ordering {
   /// An ordering where a compared value is less than another.
@@ -106,7 +108,10 @@ template <typename T> struct Slice : public cpp::span<T> {
   }
 };
 
-} // namespace internal_wctype_conversion_utils
+
+} // namespace conversion_utils
+
+} // namespace wctype_internal
 
 } // namespace LIBC_NAMESPACE_DECL
 
