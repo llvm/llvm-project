@@ -1290,14 +1290,16 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     uint32_t imm = getZExtIntValueFromConstOp(ops[2]);
     unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
 
-    int64_t indices[16];
+    llvm::SmallVector<mlir::Attribute, 16> indices;
     // If there are more than 8 elements, the immediate is used twice so make
     // sure we handle that.
+    mlir::Type i32Ty = builder.getSInt32Ty();
     for (unsigned i = 0; i != numElts; ++i)
-      indices[i] = ((imm >> (i % 8)) & 0x1) ? numElts + i : i;
+      indices.push_back(
+          cir::IntAttr::get(i32Ty, ((imm >> (i % 8)) & 0x1) ? numElts + i : i));
 
     return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], ops[1],
-                                    ArrayRef(indices, numElts));
+                                    indices);
   }
   case X86::BI__builtin_ia32_pshuflw:
   case X86::BI__builtin_ia32_pshuflw256:
