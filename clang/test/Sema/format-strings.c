@@ -986,9 +986,9 @@ void test_promotion(void) {
 
 void test_bool(_Bool b, _Bool* bp)
 {
-  printf("%zu", b); // expected-warning{{format specifies type 'size_t' (aka 'unsigned long') but the argument has type '_Bool'}}
-  printf("%td", b); // expected-warning{{format specifies type 'ptrdiff_t' (aka 'long') but the argument has type '_Bool'}}
-  printf("%jd", b); // expected-warning{{format specifies type 'intmax_t' (aka 'long') but the argument has type '_Bool'}}
+  printf("%zu", b); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+  printf("%td", b); // expected-warning-re{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+  printf("%jd", b); // expected-warning-re{{format specifies type 'intmax_t' (aka '{{.+}}') but the argument has type '_Bool'}}
   printf("%lld", b); // expected-warning{{format specifies type 'long long' but the argument has type '_Bool'}}
   printf("%ld", b); // expected-warning{{format specifies type 'long' but the argument has type '_Bool'}}
   printf("%d", b); // promoted from _Bool to int
@@ -996,8 +996,8 @@ void test_bool(_Bool b, _Bool* bp)
   printf("%hd", b); // promoted from _Bool to int
 #if !defined(__Fuchsia__) && !defined(__ANDROID__) //'%n' specifier not supported on this platform
   // The n conversion specifier only supports signed types
-  printf("%zn", bp); // expected-warning{{format specifies type 'signed size_t *' (aka 'long *') but the argument has type '_Bool *'}}
-  printf("%jn", bp); // expected-warning{{format specifies type 'intmax_t *' (aka 'long *') but the argument has type '_Bool *'}}
+  printf("%zn", bp); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type '_Bool *'}}
+  printf("%jn", bp); // expected-warning-re{{format specifies type 'intmax_t *' (aka '{{.+}}') but the argument has type '_Bool *'}}
   printf("%lln", bp); // expected-warning{{format specifies type 'long long *' but the argument has type '_Bool *'}}
   printf("%ln", bp); // expected-warning{{format specifies type 'long *' but the argument has type '_Bool *'}}
   printf("%n", bp); // expected-warning{{format specifies type 'int *' but the argument has type '_Bool *'}}
