@@ -1,9 +1,15 @@
-# Unset _FORTIFY_SOURCE since it's incompatible with -O0.
-set(LLDB_TEST_DEBUG_COMPILE_OPTIONS -g -O0 -U_FORTIFY_SOURCE)
+add_library(lldb-formatter-test-settings INTERFACE)
 
-add_executable(check-lldb-llvm-support-arrayref arrayref.cpp)
-target_link_libraries(check-lldb-llvm-support-arrayref PRIVATE LLVMSupport)
-target_compile_options(check-lldb-llvm-support-arrayref PRIVATE ${LLDB_TEST_DEBUG_COMPILE_OPTIONS})
+target_link_libraries(lldb-formatter-test-settings INTERFACE LLVMSupport)
+# Unset _FORTIFY_SOURCE since it's incompatible with -O0.
+target_compile_options(lldb-formatter-test-settings INTERFACE -g -O0 -U_FORTIFY_SOURCE)
+
+macro(add_lldb_test target source)
+    add_executable(${target} ${source})
+    target_link_libraries(${target} PRIVATE lldb-formatter-test-settings)
+endmacro()
+
+add_lldb_test(check-lldb-llvm-support-arrayref arrayref.cpp)
 
 set(LLDB_FORMATTER_TESTS
     check-lldb-llvm-support-arrayref
