@@ -8,42 +8,27 @@
 
 class Parent1 {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  Parent1Foo(int x) {
-    return x;
-  }
+  virtual int Parent1Foo(int x) { return x; }
 };
 
 class Parent2 {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  Parent2Foo(int x) {
-    return 2 * x;
-  }
+  virtual int Parent2Foo(int x) { return 2 * x; }
 };
 
 class Parent3 {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  Parent3Foo(int x) {
-    return 3 * x;
-  }
+  virtual int Parent3Foo(int x) { return 3 * x; }
 };
 
 class Parent4 {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  Parent4Foo(int x) {
-    return 4 * x;
-  }
+  virtual int Parent4Foo(int x) { return 4 * x; }
 };
 
 class Parent5 {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  Parent5Foo(int x) {
-    return 5 * x;
-  }
+  virtual int Parent5Foo(int x) { return 5 * x; }
 };
 
 class Child : public Parent1,
@@ -52,25 +37,13 @@ class Child : public Parent1,
               public Parent4,
               public Parent5 {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) int
-  Parent1Foo(int x) override {
-    return 6 * x;
-  }
-  __attribute__((noinline)) __attribute__((optnone)) int
-  Parent2Foo(int x) override {
-    return 7 * x;
-  }
-  __attribute__((noinline)) __attribute__((optnone)) int
-  Parent3Foo(int x) override {
-    return 8 * x;
-  }
+  int Parent1Foo(int x) override { return 6 * x; }
+  int Parent2Foo(int x) override { return 7 * x; }
+  int Parent3Foo(int x) override { return 8 * x; }
 
   // parent 4 stays the same
 
-  __attribute__((noinline)) __attribute__((optnone)) int
-  Parent5Foo(int x) override {
-    return 10 * x;
-  }
+  int Parent5Foo(int x) override { return 10 * x; }
 };
 
 #pragma omp end declare target

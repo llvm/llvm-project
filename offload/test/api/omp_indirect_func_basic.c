@@ -7,12 +7,8 @@
 #define TEST_VAL 5
 
 #pragma omp declare target indirect
-__attribute__((noinline)) __attribute__((optnone)) int direct(int x) {
-  return 2 * x;
-}
-__attribute__((noinline)) __attribute__((optnone)) int indirect_base(int x) {
-  return -1 * x;
-}
+int direct(int x) { return 2 * x; }
+int indirect_base(int x) { return -1 * x; }
 #pragma omp end declare target
 
 int (*indirect)(int) = indirect_base;

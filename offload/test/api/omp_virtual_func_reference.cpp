@@ -9,16 +9,12 @@
 #pragma omp declare target
 class Base {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int foo(int x) {
-    return x;
-  }
+  virtual int foo(int x) { return x; }
 };
 
 class Derived : public Base {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int foo(int x) {
-    return -x;
-  }
+  virtual int foo(int x) { return -x; }
 };
 #pragma omp end declare target
 

@@ -7,19 +7,10 @@
 #define TEST_VAL 5
 
 #pragma omp declare target indirect
-__attribute__((noinline)) __attribute__((optnone)) int direct_arg(int x) {
-  return 2 * x;
-}
-__attribute__((noinline)) __attribute__((optnone)) int
-indirect_base_arg(int x) {
-  return -1 * x;
-}
-__attribute__((noinline)) __attribute__((optnone)) int direct() {
-  return TEST_VAL;
-}
-__attribute__((noinline)) __attribute__((optnone)) int indirect_base() {
-  return -1 * TEST_VAL;
-}
+int direct_arg(int x) { return 2 * x; }
+int indirect_base_arg(int x) { return -1 * x; }
+int direct() { return TEST_VAL; }
+int indirect_base() { return -1 * TEST_VAL; }
 #pragma omp end declare target
 
 struct indirect_stru {

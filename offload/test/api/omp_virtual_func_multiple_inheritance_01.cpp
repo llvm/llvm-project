@@ -8,46 +8,28 @@
 
 class Mother {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  MotherFoo(int x) {
-    return x;
-  }
+  virtual int MotherFoo(int x) { return x; }
 };
 
 class Father {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  FatherFoo(int x) {
-    return x * 2;
-  }
+  virtual int FatherFoo(int x) { return x * 2; }
 };
 
 class Child_1 : public Mother, public Father {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  FatherFoo(int x) {
-    return x * 3;
-  }
+  virtual int FatherFoo(int x) { return x * 3; }
 };
 
 class Child_2 : public Mother, public Father {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  MotherFoo(int x) {
-    return x * 4;
-  }
+  virtual int MotherFoo(int x) { return x * 4; }
 };
 
 class Child_3 : public Mother, public Father {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  MotherFoo(int x) {
-    return x * 5;
-  }
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  FatherFoo(int x) {
-    return x * 6;
-  }
+  virtual int MotherFoo(int x) { return x * 5; }
+  virtual int FatherFoo(int x) { return x * 6; }
 };
 
 #pragma omp end declare target

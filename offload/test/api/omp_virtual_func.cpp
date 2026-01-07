@@ -9,30 +9,16 @@
 
 class Base {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int foo() {
-    return 1;
-  }
-  __attribute__((noinline)) __attribute__((optnone)) virtual int bar() {
-    return 2;
-  }
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  foo_with_arg(int x) {
-    return x;
-  }
+  virtual int foo() { return 1; }
+  virtual int bar() { return 2; }
+  virtual int foo_with_arg(int x) { return x; }
 };
 
 class Derived : public Base {
 public:
-  __attribute__((noinline)) __attribute__((optnone)) virtual int foo() {
-    return 10;
-  }
-  __attribute__((noinline)) __attribute__((optnone)) virtual int bar() {
-    return 20;
-  }
-  __attribute__((noinline)) __attribute__((optnone)) virtual int
-  foo_with_arg(int x) {
-    return -x;
-  }
+  virtual int foo() { return 10; }
+  virtual int bar() { return 20; }
+  virtual int foo_with_arg(int x) { return -x; }
 };
 
 #pragma omp end declare target
