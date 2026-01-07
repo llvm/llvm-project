@@ -349,10 +349,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
   };
-  auto checkDevice = [&todo](auto op, LogicalResult &result) {
-    if (op.getDevice())
-      result = todo("device");
-  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -456,11 +452,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
             omp::AtomicCaptureOp>([&](auto op) { checkHint(op, result); })
       .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>(
           [&](auto op) { checkDepend(op, result); })
-      .Case<omp::TargetUpdateOp>([&](auto op) {
-        checkDepend(op, result);
-        checkDevice(op, result);
-      })
-      .Case<omp::TargetDataOp>([&](auto op) { checkDevice(op, result); })
+      .Case<omp::TargetUpdateOp>([&](auto op) { checkDepend(op, result); })
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
@@ -5052,7 +5044,7 @@ static LogicalResult
 convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *ifCond = nullptr;
-  int64_t deviceID = llvm::omp::OMP_DEVICEID_UNDEF;
+  llvm::Value *deviceID = builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
   SmallVector<Value> mapVars;
   SmallVector<Value> useDevicePtrVars;
   SmallVector<Value> useDeviceAddrVars;
@@ -5068,6 +5060,11 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   bool isOffloadEntry =
       isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
+  auto getDeviceID = [&](mlir::Value dev) -> llvm::Value * {
+    llvm::Value *v = moduleTranslation.lookupValue(dev);
+    return builder.CreateIntCast(v, builder.getInt64Ty(), /*isSigned=*/true);
+  };
+
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
           .Case([&](omp::TargetDataOp dataOp) {
@@ -5077,10 +5074,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             if (auto ifVar = dataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
 
-            if (auto devId = dataOp.getDevice())
-              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
-                if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
-                  deviceID = intAttr.getInt();
+            if (mlir::Value devId = dataOp.getDevice())
+              deviceID = getDeviceID(devId);
 
             mapVars = dataOp.getMapVars();
             useDevicePtrVars = dataOp.getUseDevicePtrVars();
@@ -5094,10 +5089,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             if (auto ifVar = enterDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
 
-            if (auto devId = enterDataOp.getDevice())
-              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
-                if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
-                  deviceID = intAttr.getInt();
+            if (mlir::Value devId = enterDataOp.getDevice())
+              deviceID = getDeviceID(devId);
+
             RTLFn =
                 enterDataOp.getNowait()
                     ? llvm::omp::OMPRTL___tgt_target_data_begin_nowait_mapper
@@ -5113,10 +5107,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             if (auto ifVar = exitDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
 
-            if (auto devId = exitDataOp.getDevice())
-              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
-                if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
-                  deviceID = intAttr.getInt();
+            if (mlir::Value devId = exitDataOp.getDevice())
+              deviceID = getDeviceID(devId);
 
             RTLFn = exitDataOp.getNowait()
                         ? llvm::omp::OMPRTL___tgt_target_data_end_nowait_mapper
@@ -5132,10 +5124,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             if (auto ifVar = updateDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
 
-            if (auto devId = updateDataOp.getDevice())
-              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
-                if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
-                  deviceID = intAttr.getInt();
+            if (mlir::Value devId = updateDataOp.getDevice())
+              deviceID = getDeviceID(devId);
 
             RTLFn =
                 updateDataOp.getNowait()
@@ -5288,13 +5278,13 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
     if (isa<omp::TargetDataOp>(op))
       return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
-                                          builder.getInt64(deviceID), ifCond,
-                                          info, genMapInfoCB, customMapperCB,
+                                          deviceID, ifCond, info, genMapInfoCB,
+                                          customMapperCB,
                                           /*MapperFunc=*/nullptr, bodyGenCB,
                                           /*DeviceAddrCB=*/nullptr);
-    return ompBuilder->createTargetData(
-        ompLoc, allocaIP, builder.saveIP(), builder.getInt64(deviceID), ifCond,
-        info, genMapInfoCB, customMapperCB, &RTLFn);
+    return ompBuilder->createTargetData(ompLoc, allocaIP, builder.saveIP(),
+                                        deviceID, ifCond, info, genMapInfoCB,
+                                        customMapperCB, &RTLFn);
   }();
 
   if (failed(handleError(afterIP, *op)))
