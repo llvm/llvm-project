@@ -471,7 +471,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by hiding the default
-  suffix when the reason starts with the character ``>`` in the `CustomFunctions`
+  suffix when the reason starts with the character `>` in the `CustomFunctions`
   option.
 
 - Improved :doc:`bugprone-use-after-move
@@ -558,7 +558,7 @@ Changes in existing checks
   <clang-tidy/checks/misc/use-internal-linkage>` check:
   
   - Added suggestion of internal linkage for user-defined types (structs,
-  classes, unions, and enums).
+    classes, unions, and enums).
   
   - Added fine-grained options `AnalyzeFunctions`, `AnalyzeVariables`, 
     `AnalyzeTypes` to control whether the check should diagnose functions,
@@ -662,7 +662,7 @@ Changes in existing checks
   - Now ignores declarations and macros in system headers.
   
   - The documentation is improved to differentiate the general options from the
-  specific ones.
+    specific ones.
   
   - Options for fine-grained control over ``constexpr`` variables were added.
   
@@ -673,7 +673,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
   
   - Now correctly adds parentheses when inner expressions are implicitly
-  converted multiple times.
+    converted multiple times.
   
   - Enabled the check for C99 and later standards. 
   
