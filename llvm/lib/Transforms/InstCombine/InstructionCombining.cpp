@@ -3104,7 +3104,7 @@ static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
 
   // gep (gep %p, C1), %x, C2 is expanded so the two constants can
   // possibly be merged together.
-  auto PtrOpGep = dyn_cast<GEPOperator>(PtrOp);
+  auto *PtrOpGep = dyn_cast<GEPOperator>(PtrOp);
   return PtrOpGep && PtrOpGep->hasAllConstantIndices() &&
          any_of(GEP.indices(), [](Value *V) {
            const APInt *C;

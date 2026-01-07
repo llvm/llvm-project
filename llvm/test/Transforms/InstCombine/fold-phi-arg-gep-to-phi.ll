@@ -51,13 +51,12 @@ define ptr @gep_constant_offset(i1 %cond, ptr %ptr) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[F1:.*]], label %[[F0:.*]]
 ; CHECK:       [[F0]]:
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
 ; CHECK-NEXT:    br label %[[MERGE:.*]]
 ; CHECK:       [[F1]]:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 32
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP0]], %[[F0]] ], [ [[GEP1]], %[[F1]] ]
+; CHECK-NEXT:    [[DOTPN:%.*]] = phi i64 [ 16, %[[F0]] ], [ 32, %[[F1]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 [[DOTPN]]
 ; CHECK-NEXT:    ret ptr [[PHI]]
 ;
 entry:

@@ -552,6 +552,7 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {
     GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V);
+    SmallVector<Value *, 16> GEPIndices;
     if (!GEP || !GEP->hasOneUser() ||
         GEP->getSourceElementType() != FirstInst->getSourceElementType() ||
         GEP->getNumOperands() != FirstInst->getNumOperands())
@@ -570,13 +571,14 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       if (FirstInst->getOperand(Op) == GEP->getOperand(Op))
         continue;
 
-      // Don't merge two GEPs when two operands differ (introducing phi nodes)
-      // if one of the PHIs has a constant for the index.  The index may be
-      // substantially cheaper to compute for the constants, so making it a
-      // variable index could pessimize the path.  This also handles the case
-      // for struct indices, which must always be constant.
-      if (isa<Constant>(FirstInst->getOperand(Op)) ||
-          isa<Constant>(GEP->getOperand(Op)))
+      // Don't merge two GEPs if the GEP indices a struct, because struct
+      // indices must be constant.
+
+      if (Op > 0) // skip base pointer for indeces
+        GEPIndices.push_back(GEP->getOperand(Op));
+
+      if (GEP->getIndexedType(GEP->getSourceElementType(), GEPIndices)
+              ->isStructTy())
         return nullptr;
 
       // Don't merge if there is a mixture of constant and variable indeces for
