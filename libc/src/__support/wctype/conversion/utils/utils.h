@@ -20,7 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal_wctype_conversion_utils {
 
 // Multiplies two 64-bit unsigned integers and returns the high 64 bits
-LIBC_INLINE constexpr uint64_t mul_high(uint64_t a, uint64_t b) {
+LIBC_INLINE static constexpr uint64_t mul_high(uint64_t a, uint64_t b) {
   return (static_cast<UInt128>(a) * static_cast<UInt128>(b)) >> 64;
 }
 
@@ -203,6 +203,171 @@ LIBC_INLINE static constexpr auto array_sort(cpp::array<T, N> &arr) {
     result[ki++] = right[ri++];
 
   return result;
+}
+
+struct Range {
+  int start_range, end_range, step_range;
+
+  struct Iterator {
+    mutable int value;
+    mutable int step;
+
+    LIBC_INLINE constexpr int &operator*() const { return value; }
+
+    LIBC_INLINE constexpr const Iterator &operator++() const {
+      value += step;
+      return *this;
+    }
+
+    LIBC_INLINE constexpr bool operator!=(const Iterator &other) const {
+      return step > 0 ? value < other.value : value > other.value;
+    }
+  };
+
+  LIBC_INLINE constexpr Iterator begin() const {
+    return {start_range, step_range};
+  }
+  LIBC_INLINE constexpr Iterator end() const { return {end_range, step_range}; }
+
+  LIBC_INLINE constexpr auto rev() const {
+    int count = (end_range - start_range + step_range - 1) / step_range;
+    int new_start = start_range + (count - 1) * step_range;
+    int new_end = start_range - step_range;
+    return Range(new_start, new_end, -step_range);
+  }
+
+  LIBC_INLINE constexpr Range(int start, int end, int step = 1)
+      : start_range(start), end_range(end), step_range(step) {}
+
+  LIBC_INLINE constexpr Range(int end)
+      : start_range(0), end_range(end), step_range(1) {}
+
+  LIBC_INLINE constexpr size_t size() const {
+    if (step_range > 0)
+      return (end_range - start_range + step_range - 1) / step_range;
+    return (start_range - end_range - step_range - 1) / (-step_range);
+  }
+};
+
+template <typename T, size_t N> class ChunksMut {
+public:
+  struct Chunk {
+    cpp::array<T, N> &arr;
+    size_t chunk_begin;
+    size_t chunk_end;
+
+    LIBC_INLINE constexpr T &operator[](size_t i) const {
+      return arr[chunk_begin + i];
+    }
+
+    LIBC_INLINE constexpr T &at(size_t i) const {
+      // if (begin + i >= end)
+      //   throw std::out_of_range("Chunk::at");
+      return arr[chunk_begin + i];
+    }
+
+    LIBC_INLINE constexpr T &front() const { return arr[chunk_begin]; }
+
+    LIBC_INLINE constexpr T &back() const { return arr[chunk_end - 1]; }
+
+    LIBC_INLINE constexpr size_t size() const noexcept {
+      return chunk_end - chunk_begin;
+    }
+
+    LIBC_INLINE constexpr bool empty() const noexcept {
+      return chunk_begin == chunk_end;
+    }
+
+    LIBC_INLINE constexpr auto begin_it() const {
+      return arr.begin() + static_cast<ptrdiff_t>(chunk_begin);
+    }
+    LIBC_INLINE constexpr auto end_it() const {
+      return arr.begin() + static_cast<ptrdiff_t>(chunk_end);
+    }
+
+    LIBC_INLINE constexpr auto begin() const { return begin_it(); }
+
+    LIBC_INLINE constexpr auto end() const { return end_it(); }
+
+    LIBC_INLINE constexpr T *data() const { return arr.data() + chunk_begin; }
+  };
+
+  class Iterator {
+  public:
+    LIBC_INLINE constexpr Iterator(cpp::array<T, N> &arr, size_t pos,
+                                   size_t chunk)
+        : arr(arr), index(pos), chunk_size(chunk) {}
+
+    LIBC_INLINE constexpr Chunk operator*() const {
+      size_t end = cpp::min(index + chunk_size, arr.size());
+      return Chunk{arr, index, end};
+    }
+
+    LIBC_INLINE constexpr const Iterator &operator++() const {
+      index += chunk_size;
+      return *this;
+    }
+
+    LIBC_INLINE constexpr bool operator!=(const Iterator &other) const {
+      return index != other.index;
+    }
+
+  private:
+    cpp::array<T, N> &arr;
+    mutable size_t index;
+    mutable size_t chunk_size;
+  };
+
+  LIBC_INLINE constexpr ChunksMut(cpp::array<T, N> &v, size_t chunk)
+      : arr(v), chunk_size(chunk) {
+    // static_assert(chunk_size == 0);
+  }
+
+  /// number of chunks
+  LIBC_INLINE constexpr size_t size() const {
+    return (arr.size() + chunk_size - 1) / chunk_size;
+  }
+
+  LIBC_INLINE constexpr bool empty() const { return arr.empty(); }
+
+  LIBC_INLINE constexpr Chunk operator[](size_t chunk_index) const {
+    // static_assert(chunk_index >= size());
+
+    size_t begin = chunk_index * chunk_size;
+    size_t end = cpp::min(begin + chunk_size, arr.size());
+
+    return Chunk{arr, begin, end};
+  }
+
+  LIBC_INLINE constexpr Iterator begin() const {
+    return Iterator(arr, 0, chunk_size);
+  }
+  LIBC_INLINE constexpr Iterator end() const {
+    return Iterator(arr, arr.size(), chunk_size);
+  }
+
+private:
+  cpp::array<T, N> &arr;
+  size_t chunk_size;
+};
+
+template <typename T, size_t N>
+LIBC_INLINE static constexpr ChunksMut<T, N> chunks_mut(cpp::array<T, N> &arr,
+                                                        size_t chunk_size) {
+  return ChunksMut<T, N>(arr, chunk_size);
+}
+
+template <size_t buckets_total_, size_t buckets_>
+LIBC_INLINE static constexpr auto
+chunks_exact_mut(typename ChunksMut<uint8_t, buckets_total_>::Chunk &pilots) {
+  const auto num_chunks = pilots.size() / buckets_;
+
+  for (size_t i = 0; i < num_chunks; ++i) {
+    size_t begin = pilots.begin_ + i * buckets_;
+    size_t end = cpp::min(begin + buckets_, pilots.arr_.size());
+    auto target_pilots = typename ChunksMut<uint8_t, buckets_total_>::Chunk{
+        pilots.arr_, begin, end};
+  }
 }
 
 } // namespace internal_wctype_conversion_utils
