@@ -1125,6 +1125,7 @@ private:
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);
   SDValue WidenVecRes_UnaryOpWithTwoResults(SDNode *N, unsigned ResNo);
+  SDValue WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N);
   void ReplaceOtherWidenResults(SDNode *N, SDNode *WidenNode,
                                 unsigned WidenResNo);
 
@@ -1159,6 +1160,7 @@ private:
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
   SDValue WidenVecOp_ExpOp(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);
+  SDValue WidenVecOp_PARTIAL_REDUCE_MLA(SDNode *N);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.
