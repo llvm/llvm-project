@@ -617,49 +617,39 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirDenseResourceElementsAttrGetName(void);
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseBoolResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const int *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseUInt8ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const uint8_t *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt8ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const int8_t *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirUnmanagedDenseUInt16ResourceElementsAttrGet(MlirType shapedType,
                                                 MlirStringRef name,
                                                 intptr_t numElements,
                                                 const uint16_t *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt16ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const int16_t *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirUnmanagedDenseUInt32ResourceElementsAttrGet(MlirType shapedType,
                                                 MlirStringRef name,
                                                 intptr_t numElements,
                                                 const uint32_t *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt32ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const int32_t *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirUnmanagedDenseUInt64ResourceElementsAttrGet(MlirType shapedType,
                                                 MlirStringRef name,
                                                 intptr_t numElements,
                                                 const uint64_t *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseInt64ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const int64_t *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseFloatResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const float *elements);
-
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirUnmanagedDenseDoubleResourceElementsAttrGet(MlirType shapedType,
                                                 MlirStringRef name,
