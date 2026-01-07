@@ -5101,7 +5101,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & fcNegative) == fcNone)
         break;
 
-      if (II->getArgOperand(0) != II->getArgOperand(1))
+      if (II->getArgOperand(0) != II->getArgOperand(1) ||
+          !isGuaranteedNotToBeUndef(II->getArgOperand(0), Q.AC, Q.CxtI, Q.DT,
+                                    Depth + 1))
         break;
 
       // The multiply cannot be -0 and therefore the add can't be -0
