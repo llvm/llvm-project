@@ -87,7 +87,7 @@ body:             |
 
   bb.3:
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    $sgpr14 = SI_SPILL_S32_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.1, addrspace 5)
+    $sgpr14 = SI_SPILL_S32_RESTORE %stack.1, 0, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.1, addrspace 5)
     ADJCALLSTACKDOWN 0, 28, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     S_BRANCH %bb.2
 

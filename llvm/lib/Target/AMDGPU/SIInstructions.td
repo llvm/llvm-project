@@ -1126,7 +1126,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 
     def _RESTORE : PseudoInstSI <
       (outs sgpr_class:$data),
-      (ins i32imm:$addr)> {
+      (ins i32imm:$addr, i32imm:$offset)> {
       let mayStore = 0;
       let mayLoad = 1;
     }

@@ -25,7 +25,7 @@ body:             |
   bb.0:
     liveins: $sgpr0
   bb.1:
-    renamable $sgpr0 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    renamable $sgpr0 = SI_SPILL_S32_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr32
     S_ENDPGM 0
 
 ...
