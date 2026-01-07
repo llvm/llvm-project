@@ -33,21 +33,21 @@ void test() {
 
   {
     struct Alloc {
-      typedef int value_type;
+      using value_type = int;
 
       value_type* allocate(std::size_t) { return nullptr; }
     } allocator;
-    typedef std::allocator_traits<Alloc> AllocTraits;
+    using AllocTraits = std::allocator_traits<Alloc>;
 
     struct HintedAlloc {
-      typedef int value_type;
-      typedef std::size_t size_type;
-      typedef const void* const_void_pointer;
+      using value_type         = int;
+      using size_type          = std::size_t;
+      using const_void_pointer = const void*;
 
       value_type* allocate(size_type) { return nullptr; }
       value_type* allocate(size_type, const_void_pointer) { return nullptr; }
     } hintedAllocator;
-    typedef std::allocator_traits<HintedAlloc> HintedAllocTraits;
+    using HintedAllocTraits = std::allocator_traits<HintedAlloc>;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     AllocTraits::allocate(allocator, 1);
@@ -62,15 +62,15 @@ void test() {
 #endif
 
     struct SizedAlloc {
-      typedef int value_type;
-      typedef std::size_t size_type;
+      using value_type = int;
+      using size_type  = std::size_t;
 
       value_type* allocate(std::size_t) { return nullptr; }
       value_type* allocate(std::size_t, const void*) { return nullptr; }
 
       size_type max_size() const { return 0; }
     } sizedAllocator;
-    typedef std::allocator_traits<SizedAlloc> SizedAllocTraits;
+    using SizedAllocTraits = std::allocator_traits<SizedAlloc>;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     SizedAllocTraits::max_size(sizedAllocator);
@@ -78,15 +78,15 @@ void test() {
     AllocTraits::max_size(allocator);
 
     struct SelectAlloc {
-      typedef int value_type;
-      typedef const void* const_void_pointer;
+      using value_type         = int;
+      using const_void_pointer = const void*;
 
       value_type* allocate(std::size_t) { return nullptr; }
       value_type* allocate(std::size_t, const void*) { return nullptr; }
 
       SelectAlloc select_on_container_copy_construction() const { return SelectAlloc(); };
     } selectAllocator;
-    typedef std::allocator_traits<SelectAlloc> SelectAllocTraits;
+    using SelectAllocTraits = std::allocator_traits<SelectAlloc>;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     SelectAllocTraits::select_on_container_copy_construction(selectAllocator);
