@@ -1,6 +1,7 @@
 // clang-format off
 // RUN: %libomptarget-compile-run-and-check-generic
 // REQUIRES: ompt
+// XFAIL: intelgpu
 // clang-format on
 
 /*

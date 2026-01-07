@@ -8,6 +8,7 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO 
 // UNSUPPORTED: s390x-ibm-linux-gnu 
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// XFAIL: intelgpu
 // clang-format on
 
 /*

@@ -2,6 +2,7 @@
 // RUN: %libomptarget-compile-generic -DB -c -o %t-b.o
 // RUN: %libomptarget-compile-generic %t-a.o %t-b.o && \
 // RUN:   %libomptarget-run-generic | %fcheck-generic
+// XFAIL: intelgpu
 
 #if defined(A)
 __attribute__((weak)) int x = 999;

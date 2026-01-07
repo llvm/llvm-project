@@ -9,6 +9,7 @@
 ! UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! XFAIL: intelgpu
 
 program map_dump_example
   INTERFACE

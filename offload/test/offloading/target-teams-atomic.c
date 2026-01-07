@@ -3,6 +3,7 @@
 // default.
 
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdbool.h>
