@@ -812,13 +812,8 @@ void CIRRecordLowering::lowerUnion() {
   }
 
   if (!storageType) {
-    if (layoutSize.isZero())
-      return;
-    // C++ empty unions can have non-zero size/alignment, so use an integer type
-    // sized to the required alignment.
-    CharUnits requiredAlign = astRecordLayout.getAlignment();
-    storageType = getUIntNType(astContext.toBits(requiredAlign));
-    fieldTypes.push_back(storageType);
+    appendPaddingBytes(layoutSize);
+    return;
   }
 
   if (layoutSize < getSize(storageType))
