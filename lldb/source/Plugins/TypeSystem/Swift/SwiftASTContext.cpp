@@ -4136,6 +4136,12 @@ SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
     std::string diagnostic = diagnostic_manager.GetString();
     LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- %s",
                module.path.front().GetCString(), diagnostic.c_str());
+
+    // Poison this context if it was the stdlib. Continuing will not
+    // work and risks crashes.
+    if (module_name == swift::STDLIB_NAME)
+      RaiseFatalError(diagnostic);
+
     return llvm::createStringError(
         llvm::formatv("failed to get module \"{0}\" from AST context:\n{1}",
                       module_name, diagnostic));
