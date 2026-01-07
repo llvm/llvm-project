@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Lex/Preprocessor.h"
@@ -309,6 +309,7 @@ int main(int argc, const char **argv) {
   clang::Interpreter::JITConfig Config;
   Config.IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   Config.OOPExecutor = OOPExecutor;
+  Config.OrcRuntimePath = OrcRuntimePath;
   auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
   if (!SizeOrErr) {
     llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");

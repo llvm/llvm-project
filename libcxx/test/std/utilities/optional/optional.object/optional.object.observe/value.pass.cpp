@@ -56,6 +56,14 @@ int main(int, char**)
         opt.emplace();
         assert(opt.value().test() == 4);
     }
+#if TEST_STD_VER >= 26
+    {
+      X x;
+      optional<X&> opt{x};
+      ASSERT_NOT_NOEXCEPT(opt.value());
+      ASSERT_SAME_TYPE(decltype(opt.value()), X&);
+    }
+#endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         optional<X> opt;

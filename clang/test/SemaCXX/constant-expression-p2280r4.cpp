@@ -278,11 +278,13 @@ namespace dropped_note {
 namespace dynamic {
   struct A {virtual ~A();};
   struct B : A {};
-  void f(A& a) {
+  void f(A& a) { // interpreter-note 2{{declared here}}
     constexpr B* b = dynamic_cast<B*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
+                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                           // interpreter-note {{pointer to 'a' is not a constant expression}}
     constexpr void* b2 = dynamic_cast<void*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
+                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                                  // interpreter-note {{pointer to 'a' is not a constant expression}}
   }
 }
 
@@ -415,9 +417,7 @@ namespace InvalidConstexprFn {
   };
   constexpr int virtual_call(const PolyBase& b) { return b.get(); }
   constexpr auto* type(const PolyBase& b) { return &typeid(b); }
-  // FIXME: Intepreter doesn't support constexpr dynamic_cast yet.
-  constexpr const void* dyncast(const PolyBase& b) { return dynamic_cast<const void*>(&b); } // interpreter-error {{constexpr function never produces a constant expression}} \
-                                                                                             // interpreter-note 2 {{subexpression not valid in a constant expression}}
+  constexpr const void* dyncast(const PolyBase& b) { return dynamic_cast<const void*>(&b); }
   constexpr int sub(const int (&a)[], const int (&b)[]) { return a-b; }
   constexpr const int* add(const int &a) { return &a+3; }
 
@@ -427,7 +427,7 @@ namespace InvalidConstexprFn {
   static_assert(get_derived_member(Derived{}) == 0);
   static_assert(virtual_call(PolyDerived{}) == 1);
   static_assert(type(PolyDerived{}) != nullptr);
-  static_assert(dyncast(PolyDerived{}) != nullptr); // interpreter-error {{static assertion expression is not an integral constant expression}} interpreter-note {{in call}}
+  static_assert(dyncast(PolyDerived{}) != nullptr);
   static_assert(sub(arr, arr) == 0);
   static_assert(add(arr[0]) == &arr[3]);
 }

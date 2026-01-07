@@ -134,6 +134,19 @@ struct identity // NOLINT(readability-identifier-naming)
   }
 };
 
+/// Returns a raw pointer that represents the same address as the argument.
+///
+/// This implementation can be removed once we move to C++20 where it's defined
+/// as std::to_address().
+///
+/// The std::pointer_traits<>::to_address(p) variations of these overloads has
+/// not been implemented.
+template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
+template <class T> constexpr T *to_address(T *P) {
+  static_assert(!std::is_function_v<T>);
+  return P;
+}
+
 //===----------------------------------------------------------------------===//
 //     Features from C++23
 //===----------------------------------------------------------------------===//

@@ -909,7 +909,7 @@ private:
   const ComponentInfo CompInfo[COMPONENTS_NUM];
 
 public:
-  using RegIndices = std::array<unsigned, Component::MAX_OPR_NUM>;
+  using RegIndices = std::array<MCRegister, Component::MAX_OPR_NUM>;
 
   InstInfo(const MCInstrDesc &OpX, const MCInstrDesc &OpY)
       : CompInfo{OpX, OpY} {}
@@ -932,9 +932,10 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
-  bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
-                         const MCRegisterInfo &MRI, bool SkipSrc = false,
-                         bool AllowSameVGPR = false, bool VOPD3 = false) const {
+  bool
+  hasInvalidOperand(std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
+                    const MCRegisterInfo &MRI, bool SkipSrc = false,
+                    bool AllowSameVGPR = false, bool VOPD3 = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
                                       VOPD3)
         .has_value();
@@ -949,14 +950,14 @@ public:
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
   std::optional<unsigned> getInvalidCompOperandIndex(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+      std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI, bool SkipSrc = false,
       bool AllowSameVGPR = false, bool VOPD3 = false) const;
 
 private:
   RegIndices
   getRegIndices(unsigned ComponentIdx,
-                std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                 bool VOPD3) const;
 };
 
@@ -1118,6 +1119,8 @@ struct Waitcnt {
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
         std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt));
   }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait);
 };
 
 // The following methods are only meaningful on targets that support
@@ -1300,43 +1303,43 @@ unsigned decodeFieldVaSsrc(unsigned Encoded);
 unsigned decodeFieldHoldCnt(unsigned Encoded);
 
 /// \returns \p VmVsrc as an encoded Depctr immediate.
-unsigned encodeFieldVmVsrc(unsigned VmVsrc);
+unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VmVsrc.
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc);
 
 /// \returns \p VaVdst as an encoded Depctr immediate.
-unsigned encodeFieldVaVdst(unsigned VaVdst);
+unsigned encodeFieldVaVdst(unsigned VaVdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaVdst.
 unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst);
 
 /// \returns \p SaSdst as an encoded Depctr immediate.
-unsigned encodeFieldSaSdst(unsigned SaSdst);
+unsigned encodeFieldSaSdst(unsigned SaSdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p SaSdst.
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
 
 /// \returns \p VaSdst as an encoded Depctr immediate.
-unsigned encodeFieldVaSdst(unsigned VaSdst);
+unsigned encodeFieldVaSdst(unsigned VaSdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaSdst.
 unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst);
 
 /// \returns \p VaVcc as an encoded Depctr immediate.
-unsigned encodeFieldVaVcc(unsigned VaVcc);
+unsigned encodeFieldVaVcc(unsigned VaVcc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaVcc.
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 
 /// \returns \p HoldCnt as an encoded Depctr immediate.
-unsigned encodeFieldHoldCnt(unsigned HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p HoldCnt.
-unsigned encodeFieldHoldCnt(unsigned HoldCnt, unsigned Encoded);
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt);
 
 /// \returns \p VaSsrc as an encoded Depctr immediate.
-unsigned encodeFieldVaSsrc(unsigned VaSsrc);
+unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaSsrc.
 unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc);
@@ -1513,6 +1516,8 @@ constexpr inline bool isKernel(CallingConv::ID CC) {
   }
 }
 
+inline bool isKernel(const Function &F) { return isKernel(F.getCallingConv()); }
+
 LLVM_READNONE
 constexpr bool canGuaranteeTCO(CallingConv::ID CC) {
   return CC == CallingConv::Fast;
@@ -1599,7 +1604,7 @@ LLVM_READNONE
 MCRegister mc2PseudoReg(MCRegister Reg);
 
 LLVM_READNONE
-bool isInlineValue(unsigned Reg);
+bool isInlineValue(MCRegister Reg);
 
 /// Is this an AMDGPU specific source operand? These include registers,
 /// inline constants, literals and mandatory literals (KImm).
@@ -1798,16 +1803,16 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.
-const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,
                                            const MCRegisterInfo &MRI);
 
 /// \returns the MODE bits which have to be set by the S_SET_VGPR_MSB for the
 /// physical register \p Reg.
-unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI);
+unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
-MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
-                          const MCRegisterInfo &MRI);
+MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
+                           const MCRegisterInfo &MRI);
 
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2

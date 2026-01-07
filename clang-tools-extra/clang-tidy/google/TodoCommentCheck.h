@@ -27,6 +27,8 @@ public:
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
 
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
 private:
   class TodoCommentHandler;
   std::unique_ptr<TodoCommentHandler> Handler;

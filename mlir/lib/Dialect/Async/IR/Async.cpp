@@ -17,8 +17,6 @@ using namespace mlir::async;
 
 #include "mlir/Dialect/Async/IR/AsyncOpsDialect.cpp.inc"
 
-constexpr StringRef AsyncDialect::kAllowedToBlockAttrName;
-
 void AsyncDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
@@ -36,8 +34,9 @@ void AsyncDialect::initialize() {
 
 constexpr char kOperandSegmentSizesAttr[] = "operandSegmentSizes";
 
-OperandRange ExecuteOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBodyRegion() && "invalid region index");
+OperandRange ExecuteOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getBodyRegion() &&
+         "invalid region index");
   return getBodyOperands();
 }
 
@@ -53,8 +52,10 @@ bool ExecuteOp::areTypesCompatible(Type lhs, Type rhs) {
 void ExecuteOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `body` region branch back to the parent operation.
-  if (point == getBodyRegion()) {
-    regions.push_back(RegionSuccessor(getBodyResults()));
+  if (!point.isParent() &&
+      point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+          &getBodyRegion()) {
+    regions.push_back(RegionSuccessor(getOperation(), getBodyResults()));
     return;
   }
 

@@ -75,9 +75,12 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32_fast(ptr addrspace(1) %out
 ; GCN-LABEL: {{^}}s_test_fmin_legacy_ule_f32_nnan_src:
 ; GCN: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
 
-; GCN-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[#LOAD + 2]], 1.0
-; GCN-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[#LOAD + 3]], 2.0
+; SI: s_mov_b64 s[[[#COPY:]]:{{[0-9]+}}], s{{\[}}[[#LOAD + 2]]:[[#LOAD + 3]]{{\]}}
+; SI-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[#COPY]], 1.0
+; SI-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[#COPY + 1]], 2.0
 
+; VI-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[#LOAD + 2]], 1.0
+; VI-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[#LOAD + 3]], 2.0
 ; SI: v_min_legacy_f32_e32 {{v[0-9]+}}, [[ADD_B]], [[ADD_A]]
 
 ; VI: v_cmp_ngt_f32_e32 vcc, [[ADD_A]], [[ADD_B]]
@@ -96,8 +99,12 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32_nnan_src(ptr addrspace(1) 
 ; GCN-LABEL: {{^}}s_test_fmin_legacy_ule_f32_nnan_src_fast:
 ; GCN: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
 
-; GCN-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[#LOAD + 2]], 1.0
-; GCN-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[#LOAD + 3]], 2.0
+; SI: s_mov_b64 s[[[#COPY:]]:{{[0-9]+}}], s{{\[}}[[#LOAD + 2]]:[[#LOAD + 3]]{{\]}}
+; SI-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[#COPY]], 1.0
+; SI-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[#COPY + 1]], 2.0
+
+; VI-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[#LOAD + 2]], 1.0
+; VI-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[#LOAD + 3]], 2.0
 
 ; GCN: v_min_f32_e32 {{v[0-9]+}}, [[ADD_A]], [[ADD_B]]
 define amdgpu_kernel void @s_test_fmin_legacy_ule_f32_nnan_src_fast(ptr addrspace(1) %out, float %a, float %b) #0 {

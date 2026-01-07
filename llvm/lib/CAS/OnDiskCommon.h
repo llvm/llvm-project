@@ -29,7 +29,7 @@ Expected<std::optional<uint64_t>> getOverriddenMaxMappingSize();
 /// Set MaxMappingSize for ondisk CAS. This function is not thread-safe and
 /// should be set before creaing any ondisk CAS and does not affect CAS already
 /// created. Set value 0 to use default size.
-void setMaxMappingSize(uint64_t Size);
+LLVM_ABI_FOR_TEST void setMaxMappingSize(uint64_t Size);
 
 /// Whether to use a small file mapping for ondisk databases created in \p Path.
 ///
@@ -62,6 +62,13 @@ std::error_code tryLockFileThreadSafe(
 /// \returns the new size of the file, or an \c Error.
 Expected<size_t> preallocateFileTail(int FD, size_t CurrentSize,
                                      size_t NewSize);
+
+/// Get boot time for the OS. This can be used to check if the CAS has been
+/// validated since boot.
+///
+/// \returns the boot time in seconds (0 if operation not supported), or an \c
+/// Error.
+Expected<uint64_t> getBootTime();
 
 } // namespace llvm::cas::ondisk
 

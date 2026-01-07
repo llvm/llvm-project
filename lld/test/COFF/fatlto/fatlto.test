@@ -1,0 +1,111 @@
+;; Basic FatLTO tests.
+; REQUIRES: x86
+
+; RUN: rm -rf %t && split-file %s %t && cd %t
+
+;; Ensure that input files contain .llvm.lto section.
+; RUN: llc a-LTO.ll --filetype=obj -o a-fatLTO.o --relocation-model=pic
+; RUN: opt < a-LTO.ll --module-summary -o a-fatLTO.bc
+; RUN: llvm-objcopy --add-section=.llvm.lto=a-fatLTO.bc --set-section-flags=.llvm.lto=exclude a-fatLTO.o
+
+; RUN: llc main-LTO.ll --filetype=obj -o main-fatLTO.o --relocation-model=pic
+; RUN: opt < main-LTO.ll --module-summary -o main-fatLTO.bc
+; RUN: llvm-objcopy --add-section=.llvm.lto=main-fatLTO.bc --set-section-flags=.llvm.lto=exclude main-fatLTO.o
+
+; RUN: llvm-readobj --sections a-fatLTO.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
+; RUN: llvm-readobj --sections main-fatLTO.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
+
+;; Make sure that the section flags are set correctly
+; HAS_LLVM_LTO:          Name: .llvm.lto (2F 34 00 00 00 00 00 00)
+; HAS_LLVM_LTO:          Characteristics [
+; HAS_LLVM_LTO-SAME:     (0xC0000800)
+; HAS_LLVM_LTO-NEXT:       IMAGE_SCN_LNK_REMOVE (0x800)
+; HAS_LLVM_LTO-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; HAS_LLVM_LTO-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; HAS_LLVM_LTO-NEXT:     ]
+
+;; Final executable should not have .llvm.lto section no matter what the target is.
+; RUN: lld-link /timestamp:0 /out:foo-fatLTO /entry:main a-fatLTO.o main-fatLTO.o -fat-lto-objects
+; RUN: llvm-readobj --sections foo-fatLTO | FileCheck --check-prefix=CHECK-LTO-TARGET %s
+
+;; Check that fat objects work w/ --start-lib.
+; RUN: lld-link /out:foo-fatLTO.start_lib /entry:main -start-lib a-fatLTO.o main-fatLTO.o -fat-lto-objects
+; RUN: llvm-readobj --sections foo-fatLTO.start_lib | FileCheck --check-prefix=CHECK-LTO-TARGET %s
+
+;; Check if .llvm.lto section gets aggregated in LTO target.
+; CHECK-LTO-TARGET-NOT: Name: .llvm.lto
+
+;; Final executable should not have .llvm.lto section no matter what the target is.
+; RUN: lld-link /timestamp:0 /out:foo-fatNoLTO /entry:main a-fatLTO.o %/t/main-fatLTO.o
+; RUN: llvm-readobj --sections foo-fatNoLTO | FileCheck --check-prefix=CHECK-NON-LTO-TARGET %s
+
+;; Check if .llvm.lto section gets aggregated in non-LTO target.
+; CHECK-NON-LTO-TARGET-NOT: Name: .llvm.lto
+
+;; Check if the LTO target executable produced from FatLTO object file is
+;; identical to the one produced from LTO modules.
+; RUN: opt < a-LTO.ll --module-summary -o a-LTO.bc
+; RUN: opt < main-LTO.ll --module-summary -o main-LTO.bc
+; RUN: lld-link /timestamp:0 /out:foo-LTO /entry:main a-LTO.bc main-LTO.bc
+; RUN: cmp foo-fatLTO foo-LTO
+
+;; Check if the no-LTO target executable produced from FatLTO object file is
+;; identical to the one produced from regular object files.
+; RUN: llc a-LTO.ll --filetype=obj -o a.o
+; RUN: llc main-LTO.ll --filetype=obj -o main.o
+; RUN: lld-link /timestamp:0 /out:foo-noLTO /entry:main a.o main.o
+; RUN: cmp foo-fatNoLTO foo-noLTO
+
+;; Check archive support.
+; RUN: llvm-ar rcs a.a a-fatLTO.o
+; RUN: lld-link /timestamp:0 /out:foo-fatLTO.archive /entry:main /wholearchive a.a main-LTO.bc -fat-lto-objects
+; RUN: cmp foo-fatLTO.archive foo-LTO
+
+;--- a-LTO.ll
+target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32-a:0:32-S32"
+target triple = "i386-pc-windows-msvc19.33.0"
+
+; Function Attrs: noinline nounwind uwtable
+define dso_local i32 @_start() #0 {
+entry:
+  ret i32 0
+}
+
+attributes #0 = { noinline nounwind uwtable }
+
+!llvm.module.flags = !{!0, !1, !2, !3, !4, !5, !6}
+
+!0 = !{i32 1, !"NumRegisterParameters", i32 0}
+!1 = !{i32 2, !"Debug Info Version", i32 3}
+!2 = !{i32 1, !"wchar_size", i32 2}
+!3 = !{i32 7, !"frame-pointer", i32 2}
+!4 = !{i32 1, !"MaxTLSAlign", i32 65536}
+!5 = !{i32 1, !"ThinLTO", i32 0}
+!6 = !{i32 1, !"EnableSplitLTOUnit", i32 1}
+
+;--- main-LTO.ll
+target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32-a:0:32-S32"
+target triple = "i386-pc-windows-msvc19.33.0"
+
+; Function Attrs: noinline nounwind uwtable
+define dso_local i32 @main() #0 {
+entry:
+  %retval = alloca i32, align 4
+  store i32 0, ptr %retval, align 4
+  %call = call i32 (...) @_start()
+  ret i32 %call
+}
+
+declare i32 @_start(...)
+
+attributes #0 = { noinline nounwind uwtable }
+
+!llvm.module.flags = !{!0, !1, !2, !3, !4, !5, !6}
+
+!0 = !{i32 1, !"NumRegisterParameters", i32 0}
+!1 = !{i32 2, !"Debug Info Version", i32 3}
+!2 = !{i32 1, !"wchar_size", i32 2}
+!3 = !{i32 7, !"frame-pointer", i32 2}
+!4 = !{i32 1, !"MaxTLSAlign", i32 65536}
+!5 = !{i32 1, !"ThinLTO", i32 0}
+!6 = !{i32 1, !"EnableSplitLTOUnit", i32 1}

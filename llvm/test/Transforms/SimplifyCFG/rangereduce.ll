@@ -54,7 +54,7 @@ define i128 @test2(i128 %a) {
 ; CHECK-NEXT:      i128 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i128 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -123,7 +123,7 @@ define i32 @test4(i32 %a) {
 ; CHECK-NEXT:      i32 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -160,7 +160,7 @@ define i32 @test5(i32 %a) {
 ; CHECK-NEXT:      i32 112, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -321,7 +321,7 @@ three:
 !1 = !{!"branch_weights", i32 5, i32 7, i32 11, i32 13, i32 17}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { optsize }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 100}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 48, i32 5}

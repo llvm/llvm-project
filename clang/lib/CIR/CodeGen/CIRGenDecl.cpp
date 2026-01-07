@@ -50,6 +50,41 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
 
   Address address = Address::invalid();
   if (ty->isConstantSizeType()) {
+    // If this value is an array, struct, or vector with a statically
+    // determinable constant initializer, there are optimizations we can do.
+    //
+    // TODO: We should constant-evaluate the initializer of any variable,
+    // as long as it is initialized by a constant expression. Currently,
+    // isConstantInitializer produces wrong answers for structs with
+    // reference or bitfield members, and a few other cases, and checking
+    // for POD-ness protects us from some of these.
+    if (d.getInit() &&
+        (ty->isArrayType() || ty->isRecordType() || ty->isVectorType()) &&
+        (d.isConstexpr() ||
+         ((ty.isPODType(getContext()) ||
+           getContext().getBaseElementType(ty)->isObjCObjectPointerType()) &&
+          d.getInit()->isConstantInitializer(getContext(), false)))) {
+
+      // If the variable's a const type, and it's neither an NRVO
+      // candidate nor a __block variable and has no mutable members,
+      // emit it as a global instead.
+      // Exception is if a variable is located in non-constant address space
+      // in OpenCL.
+      // TODO(cir): perhaps we don't need this at all at CIR since this can
+      // be done as part of lowering down to LLVM.
+      bool needsDtor =
+          d.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
+      if ((!getContext().getLangOpts().OpenCL ||
+           ty.getAddressSpace() == LangAS::opencl_constant) &&
+          (cgm.getCodeGenOpts().MergeAllConstants && !nrvo &&
+           !d.isEscapingByref() &&
+           ty.isConstantStorage(getContext(), true, !needsDtor))) {
+        cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: type constant");
+      }
+      // Otherwise, tell the initialization code that we're in this case.
+      emission.isConstantAggregate = true;
+    }
+
     // A normal fixed sized variable becomes an alloca in the entry block,
     // unless:
     // - it's an NRVO variable.
@@ -63,8 +98,22 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
       if (const RecordDecl *rd = ty->getAsRecordDecl()) {
         if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
             (cxxrd && !cxxrd->hasTrivialDestructor()) ||
-            rd->isNonTrivialToPrimitiveDestroy())
-          cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: set NRVO flag");
+            rd->isNonTrivialToPrimitiveDestroy()) {
+          // In LLVM: Create a flag that is used to indicate when the NRVO was
+          // applied to this variable. Set it to zero to indicate that NRVO was
+          // not applied. For now, use the same approach for CIRGen until we can
+          // be sure it's worth doing something more aggressive.
+          cir::ConstantOp falseNVRO = builder.getFalse(loc);
+          Address nrvoFlag = createTempAlloca(falseNVRO.getType(),
+                                              CharUnits::One(), loc, "nrvo",
+                                              /*arraySize=*/nullptr);
+          assert(builder.getInsertionBlock());
+          builder.createStore(loc, falseNVRO, nrvoFlag);
+
+          // Record the NRVO flag for this variable.
+          nrvoFlags[&d] = nrvoFlag.getPointer();
+          emission.nrvoFlag = nrvoFlag.getPointer();
+        }
       }
     } else {
       // A normal fixed sized variable becomes an alloca in the entry block,
@@ -80,13 +129,13 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     assert(!cir::MissingFeatures::openMP());
     if (!didCallStackSave) {
       // Save the stack.
-      cir::PointerType defaultTy = AllocaInt8PtrTy;
+      cir::PointerType defaultTy = allocaInt8PtrTy;
       CharUnits align = CharUnits::fromQuantity(
           cgm.getDataLayout().getAlignment(defaultTy, false));
       Address stack = createTempAlloca(defaultTy, align, loc, "saved_stack");
 
       mlir::Value v = builder.createStackSave(loc, defaultTy);
-      assert(v.getType() == AllocaInt8PtrTy);
+      assert(v.getType() == allocaInt8PtrTy);
       builder.createStore(loc, v, stack);
 
       didCallStackSave = true;
@@ -129,6 +178,47 @@ bool CIRGenFunction::isTrivialInitializer(const Expr *init) {
         return true;
 
   return false;
+}
+
+static void emitStoresForConstant(CIRGenModule &cgm, const VarDecl &d,
+                                  Address addr, bool isVolatile,
+                                  CIRGenBuilderTy &builder,
+                                  mlir::TypedAttr constant) {
+  mlir::Type ty = constant.getType();
+  cir::CIRDataLayout layout{cgm.getModule()};
+  uint64_t constantSize = layout.getTypeAllocSize(ty);
+  if (!constantSize)
+    return;
+  assert(!cir::MissingFeatures::addAutoInitAnnotation());
+  assert(!cir::MissingFeatures::vectorConstants());
+  assert(!cir::MissingFeatures::shouldUseBZeroPlusStoresToInitialize());
+  assert(!cir::MissingFeatures::shouldUseMemSetToInitialize());
+  assert(!cir::MissingFeatures::shouldSplitConstantStore());
+  assert(!cir::MissingFeatures::shouldCreateMemCpyFromGlobal());
+  // In CIR we want to emit a store for the whole thing, later lowering
+  // prepare to LLVM should unwrap this into the best policy (see asserts
+  // above).
+  //
+  // FIXME(cir): This is closer to memcpy behavior but less optimal, instead of
+  // copy from a global, we just create a cir.const out of it.
+
+  if (addr.getElementType() != ty)
+    addr = addr.withElementType(builder, ty);
+
+  // If the address is an alloca, set the init attribute.
+  // The address is usually and alloca, but there is at least one case where
+  // emitAutoVarInit is called from the OpenACC codegen with an address that
+  // is not an alloca.
+  auto allocaOp = addr.getDefiningOp<cir::AllocaOp>();
+  if (allocaOp)
+    allocaOp.setInitAttr(mlir::UnitAttr::get(&cgm.getMLIRContext()));
+
+  // There are cases where OpenACC codegen calls emitAutoVarInit with a
+  // temporary decl that doesn't have a source range set.
+  mlir::Location loc = builder.getUnknownLoc();
+  if (d.getSourceRange().isValid())
+    loc = cgm.getLoc(d.getSourceRange());
+  builder.createStore(loc, builder.getConstant(loc, constant), addr);
 }
 
 void CIRGenFunction::emitAutoVarInit(
@@ -237,6 +327,9 @@ void CIRGenFunction::emitAutoVarInit(
     return emitStoreThroughLValue(
         RValue::get(builder.getConstant(initLoc, typedConstant)), lv);
   }
+
+  emitStoresForConstant(cgm, d, addr, type.isVolatileQualified(), builder,
+                        typedConstant);
 }
 
 void CIRGenFunction::emitAutoVarCleanups(
@@ -361,7 +454,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   if (supportsCOMDAT() && gv.isWeakForLinker())
     gv.setComdat(true);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (d.getTLSKind())
+    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: TLS");
 
   setGVProperties(gv, &d);
 
@@ -447,7 +541,8 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
   bool needsDtor =
       d.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
-  assert(!cir::MissingFeatures::opGlobalConstant());
+  gv.setConstant(d.getType().isConstantStorage(
+      getContext(), /*ExcludeCtor=*/true, !needsDtor));
   gv.setInitialValueAttr(init);
 
   emitter.finalize(gv);
@@ -649,11 +744,6 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::Import:
   case Decl::MSGuid: // __declspec(uuid("..."))
   case Decl::TemplateParamObject:
-  case Decl::OMPThreadPrivate:
-  case Decl::OMPGroupPrivate:
-  case Decl::OMPAllocate:
-  case Decl::OMPCapturedExpr:
-  case Decl::OMPRequires:
   case Decl::Empty:
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
@@ -687,6 +777,27 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::OpenACCRoutine:
     emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
     return;
+  case Decl::OMPThreadPrivate:
+    emitOMPThreadPrivateDecl(cast<OMPThreadPrivateDecl>(d));
+    return;
+  case Decl::OMPGroupPrivate:
+    emitOMPGroupPrivateDecl(cast<OMPGroupPrivateDecl>(d));
+    return;
+  case Decl::OMPAllocate:
+    emitOMPAllocateDecl(cast<OMPAllocateDecl>(d));
+    return;
+  case Decl::OMPCapturedExpr:
+    emitOMPCapturedExpr(cast<OMPCapturedExprDecl>(d));
+    return;
+  case Decl::OMPRequires:
+    emitOMPRequiresDecl(cast<OMPRequiresDecl>(d));
+    return;
+  case Decl::OMPDeclareMapper:
+    emitOMPDeclareMapper(cast<OMPDeclareMapperDecl>(d));
+    return;
+  case Decl::OMPDeclareReduction:
+    emitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(d));
+    return;
   case Decl::Typedef:     // typedef int X;
   case Decl::TypeAlias: { // using X = int; [C++0x]
     QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
@@ -698,8 +809,6 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
-  case Decl::OMPDeclareMapper:
-  case Decl::OMPDeclareReduction:
     cgm.errorNYI(d.getSourceRange(),
                  std::string("emitDecl: unhandled decl type: ") +
                      d.getDeclKindName());
@@ -718,21 +827,72 @@ namespace {
 struct DestroyObject final : EHScopeStack::Cleanup {
   DestroyObject(Address addr, QualType type,
                 CIRGenFunction::Destroyer *destroyer)
-      : addr(addr), type(type), destroyer(destroyer) {}
+      : addr(addr), type(type), destroyer(destroyer) {
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
+  }
 
   Address addr;
   QualType type;
   CIRGenFunction::Destroyer *destroyer;
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    assert(!cir::MissingFeatures::useEHCleanupForArray());
     cgf.emitDestroy(addr, type, destroyer);
+  }
+};
+
+template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
+  DestroyNRVOVariable(Address addr, QualType type, mlir::Value nrvoFlag)
+      : nrvoFlag(nrvoFlag), addr(addr), ty(type) {}
+
+  mlir::Value nrvoFlag;
+  Address addr;
+  QualType ty;
+
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    // Along the exceptions path we always execute the dtor.
+    bool nrvo = flags.isForNormalCleanup() && nrvoFlag;
+
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    if (nrvo) {
+      // If we exited via NRVO, we skip the destructor call.
+      mlir::Location loc = addr.getPointer().getLoc();
+      mlir::Value didNRVO = builder.createFlagLoad(loc, nrvoFlag);
+      mlir::Value notNRVO = builder.createNot(didNRVO);
+      cir::IfOp::create(builder, loc, notNRVO, /*withElseRegion=*/false,
+                        [&](mlir::OpBuilder &b, mlir::Location) {
+                          static_cast<Derived *>(this)->emitDestructorCall(cgf);
+                          builder.createYield(loc);
+                        });
+    } else {
+      static_cast<Derived *>(this)->emitDestructorCall(cgf);
+    }
+  }
+
+  virtual ~DestroyNRVOVariable() = default;
+};
+
+struct DestroyNRVOVariableCXX final
+    : DestroyNRVOVariable<DestroyNRVOVariableCXX> {
+  DestroyNRVOVariableCXX(Address addr, QualType type,
+                         const CXXDestructorDecl *dtor, mlir::Value nrvoFlag)
+      : DestroyNRVOVariable<DestroyNRVOVariableCXX>(addr, type, nrvoFlag),
+        dtor(dtor) {}
+
+  const CXXDestructorDecl *dtor;
+
+  void emitDestructorCall(CIRGenFunction &cgf) {
+    cgf.emitCXXDestructorCall(dtor, Dtor_Complete,
+                              /*forVirtualBase=*/false,
+                              /*delegating=*/false, addr, ty);
   }
 };
 
 struct CallStackRestore final : EHScopeStack::Cleanup {
   Address stack;
   CallStackRestore(Address stack) : stack(stack) {}
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     mlir::Location loc = stack.getPointer().getLoc();
     mlir::Value v = cgf.getBuilder().createLoad(loc, stack);
     cgf.getBuilder().createStackRestore(loc, v);
@@ -834,6 +994,7 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
     return;
 
   mlir::Value begin = addr.getPointer();
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
   emitArrayDestroy(begin, length, type, elementAlign, destroyer);
 
   // If the array destroy didn't use the length op, we can erase it.
@@ -885,7 +1046,10 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
     // If there's an NRVO flag on the emission, we need a different
     // cleanup.
     if (emission.nrvoFlag) {
-      cgm.errorNYI(var->getSourceRange(), "emitAutoVarTypeCleanup: NRVO");
+      assert(!type->isArrayType());
+      CXXDestructorDecl *dtor = type->getAsCXXRecordDecl()->getDestructor();
+      ehStack.pushCleanup<DestroyNRVOVariableCXX>(cleanupKind, addr, type, dtor,
+                                                  emission.nrvoFlag);
       return;
     }
     // Otherwise, this is handled below.
@@ -903,7 +1067,7 @@ void CIRGenFunction::emitAutoVarTypeCleanup(
   if (!destroyer)
     destroyer = getDestroyer(dtorKind);
 
-  assert(!cir::MissingFeatures::ehCleanupFlags());
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
   ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }
 

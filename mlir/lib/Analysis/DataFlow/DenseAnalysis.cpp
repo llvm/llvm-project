@@ -266,9 +266,10 @@ void AbstractDenseForwardDataFlowAnalysis::visitBlock(Block *block) {
     }
 
     LDBG() << "    Joining state from predecessor " << predecessor;
+    const AbstractDenseLattice &before = *getLatticeFor(
+        point, getProgramPointAfter(predecessor->getTerminator()));
     // Merge in the state from the predecessor's terminator.
-    join(after, *getLatticeFor(
-                    point, getProgramPointAfter(predecessor->getTerminator())));
+    visitBlockTransfer(block, point, predecessor, before, after);
   }
 }
 
@@ -588,7 +589,9 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     // flow, propagate the lattice back along the control flow edge.
     if (auto branch = dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
       LDBG() << "    Exit block of region branch operation";
-      visitRegionBranchOperation(point, branch, block->getParent(), before);
+      auto terminator =
+          cast<RegionBranchTerminatorOpInterface>(block->getTerminator());
+      visitRegionBranchOperation(point, branch, terminator, before);
       return;
     }
 
@@ -612,7 +615,9 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     LDBG() << "    Meeting state from successor " << successor;
     // Merge in the state from the successor: either the first operation, or the
     // block itself when empty.
-    meet(before, *getLatticeFor(point, getProgramPointBefore(successor)));
+    visitBlockTransfer(block, point, successor,
+                       *getLatticeFor(point, getProgramPointBefore(successor)),
+                       before);
   }
 }
 

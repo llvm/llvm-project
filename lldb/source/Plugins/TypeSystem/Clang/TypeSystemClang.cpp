@@ -1000,6 +1000,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
   case DW_ATE_signed:
     if (!type_name.empty()) {
+      if (type_name.starts_with("_BitInt"))
+        return GetType(ast.getBitIntType(/*Unsigned=*/false, bit_size));
       if (type_name == "wchar_t" &&
           QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy) &&
           (getTargetInfo() &&
@@ -1056,6 +1058,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
 
   case DW_ATE_unsigned:
     if (!type_name.empty()) {
+      if (type_name.starts_with("unsigned _BitInt"))
+        return GetType(ast.getBitIntType(/*Unsigned=*/true, bit_size));
       if (type_name == "wchar_t") {
         if (QualTypeMatchesBitSize(bit_size, ast, ast.WCharTy)) {
           if (!(getTargetInfo() &&
@@ -1693,6 +1697,11 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
+  void *insert_pos = nullptr;
+  if (class_template_decl->findSpecialization(args, insert_pos))
+    return nullptr;
+  class_template_decl->AddSpecialization(class_template_specialization_decl,
+                                         insert_pos);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 
@@ -2140,7 +2149,8 @@ PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
   printing_policy.SuppressTagKeyword = true;
   // Inline namespaces are important for some type formatters (e.g., libc++
   // and libstdc++ are differentiated by their inline namespaces).
-  printing_policy.SuppressInlineNamespace = false;
+  printing_policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
   printing_policy.SuppressUnwrittenScope = false;
   // Default arguments are also always important for type formatters. Otherwise
   // we would need to always specify two type names for the setups where we do
@@ -3483,7 +3493,7 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
 }
 
 bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                          uint32_t &count, bool &is_complex) {
+                                          bool &is_complex) {
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
 
@@ -3492,30 +3502,26 @@ bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
       clang::BuiltinType::Kind kind = BT->getKind();
       if (kind >= clang::BuiltinType::Float &&
           kind <= clang::BuiltinType::LongDouble) {
-        count = 1;
         is_complex = false;
         return true;
       }
     } else if (const clang::ComplexType *CT =
                    llvm::dyn_cast<clang::ComplexType>(
                        qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(), count,
+      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(),
                               is_complex)) {
-        count = 2;
         is_complex = true;
         return true;
       }
     } else if (const clang::VectorType *VT = llvm::dyn_cast<clang::VectorType>(
                    qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(), count,
+      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(),
                               is_complex)) {
-        count = VT->getNumElements();
         is_complex = false;
         return true;
       }
     }
   }
-  count = 0;
   is_complex = false;
   return false;
 }
@@ -3865,7 +3871,8 @@ TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
   printing_policy.SuppressTagKeyword = true;
   printing_policy.SuppressScope = false;
   printing_policy.SuppressUnwrittenScope = true;
-  printing_policy.SuppressInlineNamespace = true;
+  printing_policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::All);
   return ConstString(qual_type.getAsString(printing_policy));
 }
 
@@ -3888,6 +3895,13 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
                            ->getModifiedType()
                            .getAsOpaquePtr(),
                        pointee_or_element_clang_type);
+  case clang::Type::BitInt: {
+    uint32_t type_flags = eTypeIsScalar | eTypeIsInteger | eTypeHasValue;
+    if (qual_type->isSignedIntegerType())
+      type_flags |= eTypeIsSigned;
+
+    return type_flags;
+  }
   case clang::Type::Builtin: {
     const clang::BuiltinType *builtin_type =
         llvm::cast<clang::BuiltinType>(qual_type->getCanonicalTypeInternal());
@@ -3960,9 +3974,9 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     if (complex_type) {
       clang::QualType complex_element_type(complex_type->getElementType());
       if (complex_element_type->isIntegerType())
-        complex_type_flags |= eTypeIsFloat;
-      else if (complex_element_type->isFloatingType())
         complex_type_flags |= eTypeIsInteger;
+      else if (complex_element_type->isFloatingType())
+        complex_type_flags |= eTypeIsFloat;
     }
     return complex_type_flags;
   } break;
@@ -4057,12 +4071,17 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     uint32_t vector_type_flags = eTypeHasChildren | eTypeIsVector;
     const clang::VectorType *vector_type = llvm::dyn_cast<clang::VectorType>(
         qual_type->getCanonicalTypeInternal());
-    if (vector_type) {
-      if (vector_type->isIntegerType())
-        vector_type_flags |= eTypeIsFloat;
-      else if (vector_type->isFloatingType())
-        vector_type_flags |= eTypeIsInteger;
-    }
+    if (!vector_type)
+      return 0;
+
+    QualType element_type = vector_type->getElementType();
+    if (element_type.isNull())
+      return 0;
+
+    if (element_type->isIntegerType())
+      vector_type_flags |= eTypeIsInteger;
+    else if (element_type->isFloatingType())
+      vector_type_flags |= eTypeIsFloat;
     return vector_type_flags;
   }
   default:
@@ -4859,12 +4878,10 @@ TypeSystemClang::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
   return {};
 }
 
-lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
-                                            uint64_t &count) {
+lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   if (!type)
     return lldb::eEncodingInvalid;
 
-  count = 1;
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
   switch (qual_type->getTypeClass()) {
@@ -4898,7 +4915,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::DependentVector:
   case clang::Type::ExtVector:
   case clang::Type::Vector:
-    // TODO: Set this to more than one???
     break;
 
   case clang::Type::BitInt:
@@ -5099,11 +5115,10 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       const clang::ComplexType *complex_type =
           qual_type->getAsComplexIntegerType();
       if (complex_type)
-        encoding = GetType(complex_type->getElementType()).GetEncoding(count);
+        encoding = GetType(complex_type->getElementType()).GetEncoding();
       else
         encoding = lldb::eEncodingSint;
     }
-    count = 2;
     return encoding;
   }
 
@@ -5160,7 +5175,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::SubstBuiltinTemplatePack:
     break;
   }
-  count = 0;
+
   return lldb::eEncodingInvalid;
 }
 
@@ -6225,7 +6240,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
     bool &child_is_base_class, bool &child_is_deref_of_parent,
     ValueObject *valobj, uint64_t &language_flags) {
   if (!type)
-    return CompilerType();
+    return llvm::createStringError("invalid type");
 
   auto get_exe_scope = [&exe_ctx]() {
     return exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
@@ -6249,355 +6264,276 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
   int32_t bit_offset;
   switch (parent_type_class) {
   case clang::Type::Builtin:
-    if (idx_is_valid) {
-      switch (llvm::cast<clang::BuiltinType>(parent_qual_type)->getKind()) {
-      case clang::BuiltinType::ObjCId:
-      case clang::BuiltinType::ObjCClass:
-        child_name = "isa";
-        child_byte_size =
-            getASTContext().getTypeSize(getASTContext().ObjCBuiltinClassTy) /
-            CHAR_BIT;
-        return GetType(getASTContext().ObjCBuiltinClassTy);
+    if (!idx_is_valid)
+      return llvm::createStringError("invalid index");
 
-      default:
-        break;
-      }
+    switch (llvm::cast<clang::BuiltinType>(parent_qual_type)->getKind()) {
+    case clang::BuiltinType::ObjCId:
+    case clang::BuiltinType::ObjCClass:
+      child_name = "isa";
+      child_byte_size =
+          getASTContext().getTypeSize(getASTContext().ObjCBuiltinClassTy) /
+          CHAR_BIT;
+      return GetType(getASTContext().ObjCBuiltinClassTy);
+
+    default:
+      break;
     }
     break;
+  case clang::Type::Record: {
+    if (!idx_is_valid)
+      return llvm::createStringError("invalid index");
+    if (!GetCompleteType(type))
+      return llvm::createStringError("cannot complete type");
 
-  case clang::Type::Record:
-    if (idx_is_valid && GetCompleteType(type)) {
-      const clang::RecordType *record_type =
-          llvm::cast<clang::RecordType>(parent_qual_type.getTypePtr());
-      const clang::RecordDecl *record_decl =
-          record_type->getDecl()->getDefinitionOrSelf();
-      const clang::ASTRecordLayout &record_layout =
-          getASTContext().getASTRecordLayout(record_decl);
-      uint32_t child_idx = 0;
+    const clang::RecordType *record_type =
+        llvm::cast<clang::RecordType>(parent_qual_type.getTypePtr());
+    const clang::RecordDecl *record_decl =
+        record_type->getDecl()->getDefinitionOrSelf();
+    const clang::ASTRecordLayout &record_layout =
+        getASTContext().getASTRecordLayout(record_decl);
+    uint32_t child_idx = 0;
 
-      const clang::CXXRecordDecl *cxx_record_decl =
-          llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
-      if (cxx_record_decl) {
-        // We might have base classes to print out first
-        clang::CXXRecordDecl::base_class_const_iterator base_class,
-            base_class_end;
-        for (base_class = cxx_record_decl->bases_begin(),
-            base_class_end = cxx_record_decl->bases_end();
-             base_class != base_class_end; ++base_class) {
-          const clang::CXXRecordDecl *base_class_decl = nullptr;
+    const clang::CXXRecordDecl *cxx_record_decl =
+        llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
+    if (cxx_record_decl) {
+      // We might have base classes to print out first
+      clang::CXXRecordDecl::base_class_const_iterator base_class,
+          base_class_end;
+      for (base_class = cxx_record_decl->bases_begin(),
+          base_class_end = cxx_record_decl->bases_end();
+           base_class != base_class_end; ++base_class) {
+        const clang::CXXRecordDecl *base_class_decl = nullptr;
 
-          // Skip empty base classes
-          if (omit_empty_base_classes) {
+        // Skip empty base classes
+        if (omit_empty_base_classes) {
+          base_class_decl =
+              llvm::cast<clang::CXXRecordDecl>(
+                  base_class->getType()->getAs<clang::RecordType>()->getDecl())
+                  ->getDefinitionOrSelf();
+          if (!TypeSystemClang::RecordHasFields(base_class_decl))
+            continue;
+        }
+
+        if (idx == child_idx) {
+          if (base_class_decl == nullptr)
             base_class_decl = llvm::cast<clang::CXXRecordDecl>(
                                   base_class->getType()
                                       ->getAs<clang::RecordType>()
                                       ->getDecl())
                                   ->getDefinitionOrSelf();
-            if (!TypeSystemClang::RecordHasFields(base_class_decl))
-              continue;
-          }
 
-          if (idx == child_idx) {
-            if (base_class_decl == nullptr)
-              base_class_decl = llvm::cast<clang::CXXRecordDecl>(
-                                    base_class->getType()
-                                        ->getAs<clang::RecordType>()
-                                        ->getDecl())
-                                    ->getDefinitionOrSelf();
-
-            if (base_class->isVirtual()) {
-              bool handled = false;
-              if (valobj) {
-                clang::VTableContextBase *vtable_ctx =
-                    getASTContext().getVTableContext();
-                if (vtable_ctx)
-                  handled = GetVBaseBitOffset(*vtable_ctx, *valobj,
-                                              record_layout, cxx_record_decl,
-                                              base_class_decl, bit_offset);
-              }
-              if (!handled)
-                bit_offset = record_layout.getVBaseClassOffset(base_class_decl)
-                                 .getQuantity() *
-                             8;
-            } else
-              bit_offset = record_layout.getBaseClassOffset(base_class_decl)
+          if (base_class->isVirtual()) {
+            bool handled = false;
+            if (valobj) {
+              clang::VTableContextBase *vtable_ctx =
+                  getASTContext().getVTableContext();
+              if (vtable_ctx)
+                handled = GetVBaseBitOffset(*vtable_ctx, *valobj, record_layout,
+                                            cxx_record_decl, base_class_decl,
+                                            bit_offset);
+            }
+            if (!handled)
+              bit_offset = record_layout.getVBaseClassOffset(base_class_decl)
                                .getQuantity() *
                            8;
+          } else
+            bit_offset = record_layout.getBaseClassOffset(base_class_decl)
+                             .getQuantity() *
+                         8;
 
-            // Base classes should be a multiple of 8 bits in size
-            child_byte_offset = bit_offset / 8;
-            CompilerType base_class_clang_type = GetType(base_class->getType());
-            child_name = base_class_clang_type.GetTypeName().AsCString("");
-            auto size_or_err =
-                base_class_clang_type.GetBitSize(get_exe_scope());
-            if (!size_or_err)
-              return llvm::joinErrors(
-                  llvm::createStringError("no size info for base class"),
-                  size_or_err.takeError());
-
-            uint64_t base_class_clang_type_bit_size = *size_or_err;
-
-            // Base classes bit sizes should be a multiple of 8 bits in size
-            assert(base_class_clang_type_bit_size % 8 == 0);
-            child_byte_size = base_class_clang_type_bit_size / 8;
-            child_is_base_class = true;
-            return base_class_clang_type;
-          }
-          // We don't increment the child index in the for loop since we might
-          // be skipping empty base classes
-          ++child_idx;
-        }
-      }
-      // Make sure index is in range...
-      uint32_t field_idx = 0;
-      clang::RecordDecl::field_iterator field, field_end;
-      for (field = record_decl->field_begin(),
-          field_end = record_decl->field_end();
-           field != field_end; ++field, ++field_idx, ++child_idx) {
-        if (idx == child_idx) {
-          // Print the member type if requested
-          // Print the member name and equal sign
-          child_name.assign(field->getNameAsString());
-
-          // Figure out the type byte size (field_type_info.first) and
-          // alignment (field_type_info.second) from the AST context.
-          CompilerType field_clang_type = GetType(field->getType());
-          assert(field_idx < record_layout.getFieldCount());
-          auto size_or_err = field_clang_type.GetByteSize(get_exe_scope());
+          // Base classes should be a multiple of 8 bits in size
+          child_byte_offset = bit_offset / 8;
+          CompilerType base_class_clang_type = GetType(base_class->getType());
+          child_name = base_class_clang_type.GetTypeName().AsCString("");
+          auto size_or_err = base_class_clang_type.GetBitSize(get_exe_scope());
           if (!size_or_err)
             return llvm::joinErrors(
-                llvm::createStringError("no size info for field"),
+                llvm::createStringError("no size info for base class"),
                 size_or_err.takeError());
 
-          child_byte_size = *size_or_err;
-          const uint32_t child_bit_size = child_byte_size * 8;
+          uint64_t base_class_clang_type_bit_size = *size_or_err;
 
-          // Figure out the field offset within the current struct/union/class
-          // type
-          bit_offset = record_layout.getFieldOffset(field_idx);
-          if (FieldIsBitfield(*field, child_bitfield_bit_size)) {
-            child_bitfield_bit_offset = bit_offset % child_bit_size;
-            const uint32_t child_bit_offset =
-                bit_offset - child_bitfield_bit_offset;
-            child_byte_offset = child_bit_offset / 8;
-          } else {
+          // Base classes bit sizes should be a multiple of 8 bits in size
+          assert(base_class_clang_type_bit_size % 8 == 0);
+          child_byte_size = base_class_clang_type_bit_size / 8;
+          child_is_base_class = true;
+          return base_class_clang_type;
+        }
+        // We don't increment the child index in the for loop since we might
+        // be skipping empty base classes
+        ++child_idx;
+      }
+    }
+    // Make sure index is in range...
+    uint32_t field_idx = 0;
+    clang::RecordDecl::field_iterator field, field_end;
+    for (field = record_decl->field_begin(),
+        field_end = record_decl->field_end();
+         field != field_end; ++field, ++field_idx, ++child_idx) {
+      if (idx == child_idx) {
+        // Print the member type if requested
+        // Print the member name and equal sign
+        child_name.assign(field->getNameAsString());
+
+        // Figure out the type byte size (field_type_info.first) and
+        // alignment (field_type_info.second) from the AST context.
+        CompilerType field_clang_type = GetType(field->getType());
+        assert(field_idx < record_layout.getFieldCount());
+        auto size_or_err = field_clang_type.GetByteSize(get_exe_scope());
+        if (!size_or_err)
+          return llvm::joinErrors(
+              llvm::createStringError("no size info for field"),
+              size_or_err.takeError());
+
+        child_byte_size = *size_or_err;
+        const uint32_t child_bit_size = child_byte_size * 8;
+
+        // Figure out the field offset within the current struct/union/class
+        // type
+        bit_offset = record_layout.getFieldOffset(field_idx);
+        if (FieldIsBitfield(*field, child_bitfield_bit_size)) {
+          child_bitfield_bit_offset = bit_offset % child_bit_size;
+          const uint32_t child_bit_offset =
+              bit_offset - child_bitfield_bit_offset;
+          child_byte_offset = child_bit_offset / 8;
+        } else {
+          child_byte_offset = bit_offset / 8;
+        }
+
+        return field_clang_type;
+      }
+    }
+  } break;
+  case clang::Type::ObjCObject:
+  case clang::Type::ObjCInterface: {
+    if (!idx_is_valid)
+      return llvm::createStringError("invalid index");
+    if (!GetCompleteType(type))
+      return llvm::createStringError("cannot complete type");
+
+    const clang::ObjCObjectType *objc_class_type =
+        llvm::dyn_cast<clang::ObjCObjectType>(parent_qual_type.getTypePtr());
+    assert(objc_class_type);
+    if (!objc_class_type)
+      return llvm::createStringError("unexpected object type");
+
+    uint32_t child_idx = 0;
+    clang::ObjCInterfaceDecl *class_interface_decl =
+        objc_class_type->getInterface();
+
+    if (!class_interface_decl)
+      return llvm::createStringError("cannot get interface decl");
+
+    const clang::ASTRecordLayout &interface_layout =
+        getASTContext().getASTObjCInterfaceLayout(class_interface_decl);
+    clang::ObjCInterfaceDecl *superclass_interface_decl =
+        class_interface_decl->getSuperClass();
+    if (superclass_interface_decl) {
+      if (omit_empty_base_classes) {
+        CompilerType base_class_clang_type = GetType(
+            getASTContext().getObjCInterfaceType(superclass_interface_decl));
+        if (llvm::expectedToStdOptional(base_class_clang_type.GetNumChildren(
+                                            omit_empty_base_classes, exe_ctx))
+                .value_or(0) > 0) {
+          if (idx == 0) {
+            clang::QualType ivar_qual_type(getASTContext().getObjCInterfaceType(
+                superclass_interface_decl));
+
+            child_name.assign(superclass_interface_decl->getNameAsString());
+
+            clang::TypeInfo ivar_type_info =
+                getASTContext().getTypeInfo(ivar_qual_type.getTypePtr());
+
+            child_byte_size = ivar_type_info.Width / 8;
+            child_byte_offset = 0;
+            child_is_base_class = true;
+
+            return GetType(ivar_qual_type);
+          }
+
+          ++child_idx;
+        }
+      } else
+        ++child_idx;
+    }
+
+    const uint32_t superclass_idx = child_idx;
+
+    if (idx < (child_idx + class_interface_decl->ivar_size())) {
+      clang::ObjCInterfaceDecl::ivar_iterator ivar_pos,
+          ivar_end = class_interface_decl->ivar_end();
+
+      for (ivar_pos = class_interface_decl->ivar_begin(); ivar_pos != ivar_end;
+           ++ivar_pos) {
+        if (child_idx == idx) {
+          clang::ObjCIvarDecl *ivar_decl = *ivar_pos;
+
+          clang::QualType ivar_qual_type(ivar_decl->getType());
+
+          child_name.assign(ivar_decl->getNameAsString());
+
+          clang::TypeInfo ivar_type_info =
+              getASTContext().getTypeInfo(ivar_qual_type.getTypePtr());
+
+          child_byte_size = ivar_type_info.Width / 8;
+
+          // Figure out the field offset within the current
+          // struct/union/class type For ObjC objects, we can't trust the
+          // bit offset we get from the Clang AST, since that doesn't
+          // account for the space taken up by unbacked properties, or
+          // from the changing size of base classes that are newer than
+          // this class. So if we have a process around that we can ask
+          // about this object, do so.
+          child_byte_offset = LLDB_INVALID_IVAR_OFFSET;
+          Process *process = nullptr;
+          if (exe_ctx)
+            process = exe_ctx->GetProcessPtr();
+          if (process) {
+            ObjCLanguageRuntime *objc_runtime =
+                ObjCLanguageRuntime::Get(*process);
+            if (objc_runtime != nullptr) {
+              CompilerType parent_ast_type = GetType(parent_qual_type);
+              child_byte_offset = objc_runtime->GetByteOffsetForIvar(
+                  parent_ast_type, ivar_decl->getNameAsString().c_str());
+            }
+          }
+
+          // Setting this to INT32_MAX to make sure we don't compute it
+          // twice...
+          bit_offset = INT32_MAX;
+
+          if (child_byte_offset ==
+              static_cast<int32_t>(LLDB_INVALID_IVAR_OFFSET)) {
+            bit_offset =
+                interface_layout.getFieldOffset(child_idx - superclass_idx);
             child_byte_offset = bit_offset / 8;
           }
 
-          return field_clang_type;
-        }
-      }
-    }
-    break;
+          // Note, the ObjC Ivar Byte offset is just that, it doesn't
+          // account for the bit offset of a bitfield within its
+          // containing object.  So regardless of where we get the byte
+          // offset from, we still need to get the bit offset for
+          // bitfields from the layout.
 
-  case clang::Type::ObjCObject:
-  case clang::Type::ObjCInterface:
-    if (idx_is_valid && GetCompleteType(type)) {
-      const clang::ObjCObjectType *objc_class_type =
-          llvm::dyn_cast<clang::ObjCObjectType>(parent_qual_type.getTypePtr());
-      assert(objc_class_type);
-      if (objc_class_type) {
-        uint32_t child_idx = 0;
-        clang::ObjCInterfaceDecl *class_interface_decl =
-            objc_class_type->getInterface();
+          if (FieldIsBitfield(ivar_decl, child_bitfield_bit_size)) {
+            if (bit_offset == INT32_MAX)
+              bit_offset =
+                  interface_layout.getFieldOffset(child_idx - superclass_idx);
 
-        if (class_interface_decl) {
-
-          const clang::ASTRecordLayout &interface_layout =
-              getASTContext().getASTObjCInterfaceLayout(class_interface_decl);
-          clang::ObjCInterfaceDecl *superclass_interface_decl =
-              class_interface_decl->getSuperClass();
-          if (superclass_interface_decl) {
-            if (omit_empty_base_classes) {
-              CompilerType base_class_clang_type =
-                  GetType(getASTContext().getObjCInterfaceType(
-                      superclass_interface_decl));
-              if (llvm::expectedToStdOptional(
-                      base_class_clang_type.GetNumChildren(
-                          omit_empty_base_classes, exe_ctx))
-                      .value_or(0) > 0) {
-                if (idx == 0) {
-                  clang::QualType ivar_qual_type(
-                      getASTContext().getObjCInterfaceType(
-                          superclass_interface_decl));
-
-                  child_name.assign(
-                      superclass_interface_decl->getNameAsString());
-
-                  clang::TypeInfo ivar_type_info =
-                      getASTContext().getTypeInfo(ivar_qual_type.getTypePtr());
-
-                  child_byte_size = ivar_type_info.Width / 8;
-                  child_byte_offset = 0;
-                  child_is_base_class = true;
-
-                  return GetType(ivar_qual_type);
-                }
-
-                ++child_idx;
-              }
-            } else
-              ++child_idx;
+            child_bitfield_bit_offset = bit_offset % 8;
           }
-
-          const uint32_t superclass_idx = child_idx;
-
-          if (idx < (child_idx + class_interface_decl->ivar_size())) {
-            clang::ObjCInterfaceDecl::ivar_iterator ivar_pos,
-                ivar_end = class_interface_decl->ivar_end();
-
-            for (ivar_pos = class_interface_decl->ivar_begin();
-                 ivar_pos != ivar_end; ++ivar_pos) {
-              if (child_idx == idx) {
-                clang::ObjCIvarDecl *ivar_decl = *ivar_pos;
-
-                clang::QualType ivar_qual_type(ivar_decl->getType());
-
-                child_name.assign(ivar_decl->getNameAsString());
-
-                clang::TypeInfo ivar_type_info =
-                    getASTContext().getTypeInfo(ivar_qual_type.getTypePtr());
-
-                child_byte_size = ivar_type_info.Width / 8;
-
-                // Figure out the field offset within the current
-                // struct/union/class type For ObjC objects, we can't trust the
-                // bit offset we get from the Clang AST, since that doesn't
-                // account for the space taken up by unbacked properties, or
-                // from the changing size of base classes that are newer than
-                // this class. So if we have a process around that we can ask
-                // about this object, do so.
-                child_byte_offset = LLDB_INVALID_IVAR_OFFSET;
-                Process *process = nullptr;
-                if (exe_ctx)
-                  process = exe_ctx->GetProcessPtr();
-                if (process) {
-                  ObjCLanguageRuntime *objc_runtime =
-                      ObjCLanguageRuntime::Get(*process);
-                  if (objc_runtime != nullptr) {
-                    CompilerType parent_ast_type = GetType(parent_qual_type);
-                    child_byte_offset = objc_runtime->GetByteOffsetForIvar(
-                        parent_ast_type, ivar_decl->getNameAsString().c_str());
-                  }
-                }
-
-                // Setting this to INT32_MAX to make sure we don't compute it
-                // twice...
-                bit_offset = INT32_MAX;
-
-                if (child_byte_offset ==
-                    static_cast<int32_t>(LLDB_INVALID_IVAR_OFFSET)) {
-                  bit_offset = interface_layout.getFieldOffset(child_idx -
-                                                               superclass_idx);
-                  child_byte_offset = bit_offset / 8;
-                }
-
-                // Note, the ObjC Ivar Byte offset is just that, it doesn't
-                // account for the bit offset of a bitfield within its
-                // containing object.  So regardless of where we get the byte
-                // offset from, we still need to get the bit offset for
-                // bitfields from the layout.
-
-                if (FieldIsBitfield(ivar_decl, child_bitfield_bit_size)) {
-                  if (bit_offset == INT32_MAX)
-                    bit_offset = interface_layout.getFieldOffset(
-                        child_idx - superclass_idx);
-
-                  child_bitfield_bit_offset = bit_offset % 8;
-                }
-                return GetType(ivar_qual_type);
-              }
-              ++child_idx;
-            }
-          }
+          return GetType(ivar_qual_type);
         }
+        ++child_idx;
       }
     }
-    break;
+  } break;
 
-  case clang::Type::ObjCObjectPointer:
-    if (idx_is_valid) {
-      CompilerType pointee_clang_type(GetPointeeType(type));
-
-      if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
-        child_is_deref_of_parent = false;
-        bool tmp_child_is_deref_of_parent = false;
-        return pointee_clang_type.GetChildCompilerTypeAtIndex(
-            exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-            ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-            child_bitfield_bit_size, child_bitfield_bit_offset,
-            child_is_base_class, tmp_child_is_deref_of_parent, valobj,
-            language_flags);
-      } else {
-        child_is_deref_of_parent = true;
-        const char *parent_name =
-            valobj ? valobj->GetName().GetCString() : nullptr;
-        if (parent_name) {
-          child_name.assign(1, '*');
-          child_name += parent_name;
-        }
-
-        // We have a pointer to an simple type
-        if (idx == 0 && pointee_clang_type.GetCompleteType()) {
-          auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return size_or_err.takeError();
-          child_byte_size = *size_or_err;
-          child_byte_offset = 0;
-          return pointee_clang_type;
-        }
-      }
-    }
-    break;
-
-  case clang::Type::Vector:
-  case clang::Type::ExtVector:
-    if (idx_is_valid) {
-      const clang::VectorType *array =
-          llvm::cast<clang::VectorType>(parent_qual_type.getTypePtr());
-      if (array) {
-        CompilerType element_type = GetType(array->getElementType());
-        if (element_type.GetCompleteType()) {
-          char element_name[64];
-          ::snprintf(element_name, sizeof(element_name), "[%" PRIu64 "]",
-                     static_cast<uint64_t>(idx));
-          child_name.assign(element_name);
-          auto size_or_err = element_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return size_or_err.takeError();
-          child_byte_size = *size_or_err;
-          child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-          return element_type;
-        }
-      }
-    }
-    break;
-
-  case clang::Type::ConstantArray:
-  case clang::Type::IncompleteArray:
-    if (ignore_array_bounds || idx_is_valid) {
-      const clang::ArrayType *array = GetQualType(type)->getAsArrayTypeUnsafe();
-      if (array) {
-        CompilerType element_type = GetType(array->getElementType());
-        if (element_type.GetCompleteType()) {
-          child_name = std::string(llvm::formatv("[{0}]", idx));
-          auto size_or_err = element_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return size_or_err.takeError();
-          child_byte_size = *size_or_err;
-          child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-          return element_type;
-        }
-      }
-    }
-    break;
-
-  case clang::Type::Pointer: {
+  case clang::Type::ObjCObjectPointer: {
+    if (!idx_is_valid)
+      return llvm::createStringError("invalid index");
     CompilerType pointee_clang_type(GetPointeeType(type));
-
-    // Don't dereference "void *" pointers
-    if (pointee_clang_type.IsVoidType())
-      return CompilerType();
 
     if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
       child_is_deref_of_parent = false;
@@ -6610,7 +6546,6 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           language_flags);
     } else {
       child_is_deref_of_parent = true;
-
       const char *parent_name =
           valobj ? valobj->GetName().GetCString() : nullptr;
       if (parent_name) {
@@ -6619,7 +6554,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       }
 
       // We have a pointer to an simple type
-      if (idx == 0) {
+      if (idx == 0 && pointee_clang_type.GetCompleteType()) {
         auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
         if (!size_or_err)
           return size_or_err.takeError();
@@ -6628,51 +6563,127 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
         return pointee_clang_type;
       }
     }
+  } break;
+
+  case clang::Type::Vector:
+  case clang::Type::ExtVector: {
+    if (!idx_is_valid)
+      return llvm::createStringError("invalid index");
+    const clang::VectorType *array =
+        llvm::cast<clang::VectorType>(parent_qual_type.getTypePtr());
+    if (!array)
+      return llvm::createStringError("unexpected vector type");
+
+    CompilerType element_type = GetType(array->getElementType());
+    if (!element_type.GetCompleteType())
+      return llvm::createStringError("cannot complete type");
+
+    char element_name[64];
+    ::snprintf(element_name, sizeof(element_name), "[%" PRIu64 "]",
+               static_cast<uint64_t>(idx));
+    child_name.assign(element_name);
+    auto size_or_err = element_type.GetByteSize(get_exe_scope());
+    if (!size_or_err)
+      return size_or_err.takeError();
+    child_byte_size = *size_or_err;
+    child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+    return element_type;
+  }
+  case clang::Type::ConstantArray:
+  case clang::Type::IncompleteArray: {
+    if (!ignore_array_bounds && !idx_is_valid)
+      return llvm::createStringError("invalid index");
+    const clang::ArrayType *array = GetQualType(type)->getAsArrayTypeUnsafe();
+    if (!array)
+      return llvm::createStringError("unexpected array type");
+    CompilerType element_type = GetType(array->getElementType());
+    if (!element_type.GetCompleteType())
+      return llvm::createStringError("cannot complete type");
+
+    child_name = std::string(llvm::formatv("[{0}]", idx));
+    auto size_or_err = element_type.GetByteSize(get_exe_scope());
+    if (!size_or_err)
+      return size_or_err.takeError();
+    child_byte_size = *size_or_err;
+    child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+    return element_type;
+  }
+  case clang::Type::Pointer: {
+    CompilerType pointee_clang_type(GetPointeeType(type));
+
+    // Don't dereference "void *" pointers
+    if (pointee_clang_type.IsVoidType())
+      return llvm::createStringError("cannot dereference void *");
+
+    if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
+      child_is_deref_of_parent = false;
+      bool tmp_child_is_deref_of_parent = false;
+      return pointee_clang_type.GetChildCompilerTypeAtIndex(
+          exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+          child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, tmp_child_is_deref_of_parent, valobj,
+          language_flags);
+    }
+    child_is_deref_of_parent = true;
+
+    const char *parent_name = valobj ? valobj->GetName().GetCString() : nullptr;
+    if (parent_name) {
+      child_name.assign(1, '*');
+      child_name += parent_name;
+    }
+
+    // We have a pointer to an simple type
+    if (idx == 0) {
+      auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
+      if (!size_or_err)
+        return size_or_err.takeError();
+      child_byte_size = *size_or_err;
+      child_byte_offset = 0;
+      return pointee_clang_type;
+    }
     break;
   }
 
   case clang::Type::LValueReference:
-  case clang::Type::RValueReference:
-    if (idx_is_valid) {
-      const clang::ReferenceType *reference_type =
-          llvm::cast<clang::ReferenceType>(
-              RemoveWrappingTypes(GetQualType(type)).getTypePtr());
-      CompilerType pointee_clang_type =
-          GetType(reference_type->getPointeeType());
-      if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
-        child_is_deref_of_parent = false;
-        bool tmp_child_is_deref_of_parent = false;
-        return pointee_clang_type.GetChildCompilerTypeAtIndex(
-            exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-            ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-            child_bitfield_bit_size, child_bitfield_bit_offset,
-            child_is_base_class, tmp_child_is_deref_of_parent, valobj,
-            language_flags);
-      } else {
-        const char *parent_name =
-            valobj ? valobj->GetName().GetCString() : nullptr;
-        if (parent_name) {
-          child_name.assign(1, '&');
-          child_name += parent_name;
-        }
-
-        // We have a pointer to an simple type
-        if (idx == 0) {
-          auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return size_or_err.takeError();
-          child_byte_size = *size_or_err;
-          child_byte_offset = 0;
-          return pointee_clang_type;
-        }
-      }
+  case clang::Type::RValueReference: {
+    if (!idx_is_valid)
+      return llvm::createStringError("invalid index");
+    const clang::ReferenceType *reference_type =
+        llvm::cast<clang::ReferenceType>(
+            RemoveWrappingTypes(GetQualType(type)).getTypePtr());
+    CompilerType pointee_clang_type = GetType(reference_type->getPointeeType());
+    if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
+      child_is_deref_of_parent = false;
+      bool tmp_child_is_deref_of_parent = false;
+      return pointee_clang_type.GetChildCompilerTypeAtIndex(
+          exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+          child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, tmp_child_is_deref_of_parent, valobj,
+          language_flags);
     }
-    break;
+    const char *parent_name = valobj ? valobj->GetName().GetCString() : nullptr;
+    if (parent_name) {
+      child_name.assign(1, '&');
+      child_name += parent_name;
+    }
+
+    // We have a pointer to an simple type
+    if (idx == 0) {
+      auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
+      if (!size_or_err)
+        return size_or_err.takeError();
+      child_byte_size = *size_or_err;
+      child_byte_offset = 0;
+      return pointee_clang_type;
+    }
+  } break;
 
   default:
     break;
   }
-  return CompilerType();
+  return llvm::createStringError("cannot enumerate children");
 }
 
 uint32_t TypeSystemClang::GetIndexForRecordBase(
@@ -7331,6 +7342,102 @@ CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
   if (type)
     return ClangUtil::RemoveFastQualifiers(CompilerType(weak_from_this(), type));
   return CompilerType();
+}
+
+bool TypeSystemClang::IsPromotableIntegerType(
+    lldb::opaque_compiler_type_t type) {
+  // Unscoped enums are always considered as promotable, even if their
+  // underlying type does not need to be promoted (e.g. "int").
+  bool is_signed = false;
+  bool isUnscopedEnumerationType =
+      IsEnumerationType(type, is_signed) && !IsScopedEnumerationType(type);
+  if (isUnscopedEnumerationType)
+    return true;
+
+  switch (GetBasicTypeEnumeration(type)) {
+  case lldb::eBasicTypeBool:
+  case lldb::eBasicTypeChar:
+  case lldb::eBasicTypeSignedChar:
+  case lldb::eBasicTypeUnsignedChar:
+  case lldb::eBasicTypeShort:
+  case lldb::eBasicTypeUnsignedShort:
+  case lldb::eBasicTypeWChar:
+  case lldb::eBasicTypeSignedWChar:
+  case lldb::eBasicTypeUnsignedWChar:
+  case lldb::eBasicTypeChar16:
+  case lldb::eBasicTypeChar32:
+    return true;
+
+  default:
+    return false;
+  }
+
+  llvm_unreachable("All cases handled above.");
+}
+
+llvm::Expected<CompilerType>
+TypeSystemClang::DoIntegralPromotion(CompilerType from,
+                                     ExecutionContextScope *exe_scope) {
+  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
+    return from;
+
+  if (!from.IsPromotableIntegerType())
+    return from;
+
+  if (from.IsUnscopedEnumerationType()) {
+    EnumDecl *enum_decl = GetAsEnumDecl(from);
+    CompilerType promotion_type = GetType(enum_decl->getPromotionType());
+    return DoIntegralPromotion(promotion_type, exe_scope);
+  }
+
+  lldb::BasicType builtin_type =
+      from.GetCanonicalType().GetBasicTypeEnumeration();
+  uint64_t from_size = 0;
+  if (builtin_type == lldb::eBasicTypeWChar ||
+      builtin_type == lldb::eBasicTypeSignedWChar ||
+      builtin_type == lldb::eBasicTypeUnsignedWChar ||
+      builtin_type == lldb::eBasicTypeChar16 ||
+      builtin_type == lldb::eBasicTypeChar32) {
+    // Find the type that can hold the entire range of values for our type.
+    bool is_signed = from.IsSigned();
+    llvm::Expected<uint64_t> from_size = from.GetByteSize(exe_scope);
+    if (!from_size)
+      return from_size.takeError();
+    CompilerType promote_types[] = {
+        GetBasicTypeFromAST(lldb::eBasicTypeInt),
+        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt),
+        GetBasicTypeFromAST(lldb::eBasicTypeLong),
+        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLong),
+        GetBasicTypeFromAST(lldb::eBasicTypeLongLong),
+        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLongLong),
+    };
+    for (CompilerType &type : promote_types) {
+      llvm::Expected<uint64_t> byte_size = type.GetByteSize(exe_scope);
+      if (!byte_size)
+        return byte_size.takeError();
+      if (*from_size < *byte_size ||
+          (*from_size == *byte_size && is_signed == type.IsSigned())) {
+        return type;
+      }
+    }
+    llvm_unreachable("char type should fit into long long");
+  }
+
+  // Here we can promote only to "int" or "unsigned int".
+  CompilerType int_type = GetBasicTypeFromAST(lldb::eBasicTypeInt);
+  llvm::Expected<uint64_t> int_byte_size = int_type.GetByteSize(exe_scope);
+  if (!int_byte_size)
+    return int_byte_size.takeError();
+
+  // Signed integer types can be safely promoted to "int".
+  if (from.IsSigned()) {
+    return int_type;
+  }
+  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
+  // their entire value range.
+  return (from_size == *int_byte_size)
+             ? GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt)
+             : int_type;
 }
 
 clang::EnumDecl *TypeSystemClang::GetAsEnumDecl(const CompilerType &type) {

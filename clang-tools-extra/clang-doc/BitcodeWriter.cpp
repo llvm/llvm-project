@@ -223,6 +223,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {CONCEPT_IS_TYPE, {"IsType", &genBoolAbbrev}},
           {CONCEPT_CONSTRAINT_EXPRESSION,
            {"ConstraintExpression", &genStringAbbrev}},
+          {CONCEPT_DEFLOCATION, {"DefLocation", &genLocationAbbrev}},
           {CONSTRAINT_EXPRESSION, {"Expression", &genStringAbbrev}},
           {VAR_USR, {"USR", &genSymbolIdAbbrev}},
           {VAR_NAME, {"Name", &genStringAbbrev}},
@@ -295,15 +296,13 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Concept Block
         {BI_CONCEPT_BLOCK_ID,
          {CONCEPT_USR, CONCEPT_NAME, CONCEPT_IS_TYPE,
-          CONCEPT_CONSTRAINT_EXPRESSION}},
+          CONCEPT_CONSTRAINT_EXPRESSION, CONCEPT_DEFLOCATION}},
         // Constraint Block
         {BI_CONSTRAINT_BLOCK_ID, {CONSTRAINT_EXPRESSION}},
         {BI_VAR_BLOCK_ID, {VAR_NAME, VAR_USR, VAR_DEFLOCATION, VAR_IS_STATIC}},
         {BI_FRIEND_BLOCK_ID, {FRIEND_IS_CLASS}}};
 
 // AbbreviationMap
-
-constexpr unsigned char BitCodeConstants::Signature[];
 
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
@@ -494,6 +493,8 @@ void ClangDocBitcodeWriter::emitBlock(const FriendInfo &R) {
       emitBlock(P);
   if (R.ReturnType)
     emitBlock(*R.ReturnType);
+  for (const auto &CI : R.Description)
+    emitBlock(CI);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
@@ -513,6 +514,8 @@ void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
     emitBlock(CI);
   if (T.DefLoc)
     emitRecord(*T.DefLoc, TYPEDEF_DEFLOCATION);
+  if (T.Template)
+    emitBlock(*T.Template);
   emitRecord(T.IsUsing, TYPEDEF_IS_USING);
   emitBlock(T.Underlying);
 }
@@ -700,6 +703,8 @@ void ClangDocBitcodeWriter::emitBlock(const ConceptInfo &I) {
   emitRecord(I.IsType, CONCEPT_IS_TYPE);
   emitRecord(I.ConstraintExpression, CONCEPT_CONSTRAINT_EXPRESSION);
   emitBlock(I.Template);
+  if (I.DefLoc)
+    emitRecord(*I.DefLoc, CONCEPT_DEFLOCATION);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TemplateInfo &T) {
@@ -771,7 +776,9 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
     emitBlock(*static_cast<FriendInfo *>(I));
     break;
   case InfoType::IT_default:
-    llvm::errs() << "Unexpected info, unable to write.\n";
+    unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                        "Unexpected info, unable to write.");
+    Diags.Report(ID);
     return true;
   }
   return false;

@@ -223,15 +223,6 @@ public:
     return std::make_pair(Val->first, *(Val->second));
   }
 
-  std::pair<unsigned, unsigned>
-  getEffectiveWavesPerEU(const Function &F,
-                         std::pair<unsigned, unsigned> WavesPerEU,
-                         std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize,
-                                     getLDSSize(F));
-  }
-
   unsigned getMaxWavesPerEU(const Function &F) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     return ST.getMaxWavesPerEU();
@@ -1555,7 +1546,7 @@ private:
 
   AMDGPU::ClusterDimsAttr Attr;
 
-  static constexpr const char AttrName[] = "amdgpu-cluster-dims";
+  static constexpr char AttrName[] = "amdgpu-cluster-dims";
 };
 
 AAAMDGPUClusterDims &
@@ -1584,7 +1575,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
        &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
        &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID});
+       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1642,6 +1633,10 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       if (Ptr) {
         A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
         A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
+          if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+            A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));
+        }
       }
     }
   }

@@ -48,13 +48,13 @@ static const unsigned ARM64AddrSpaceMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
-  virtual void setDataLayout() = 0;
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   static const char *const GCCRegNames[];
 
@@ -75,7 +75,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasDotProd = false;
   bool HasFP16FML = false;
   bool HasMTE = false;
-  bool HasTME = false;
   bool HasPAuth = false;
   bool HasLS64 = false;
   bool HasRandGen = false;
@@ -275,9 +274,7 @@ public:
   AArch64leTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
   void getTargetDefines(const LangOptions &Opts,
-                            MacroBuilder &Builder) const override;
-private:
-  void setDataLayout() override;
+                        MacroBuilder &Builder) const override;
 };
 
 template <>
@@ -297,8 +294,6 @@ class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
 public:
   WindowsARM64TargetInfo(const llvm::Triple &Triple,
                          const TargetOptions &Opts);
-
-  void setDataLayout() override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override;
 
@@ -333,9 +328,6 @@ public:
   AArch64beTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
-
-private:
-  void setDataLayout() override;
 };
 
 void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,

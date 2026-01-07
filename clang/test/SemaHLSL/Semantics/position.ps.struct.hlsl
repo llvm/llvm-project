@@ -3,17 +3,19 @@
 struct S {
   float4 f0 : SV_Position;
 // CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:10 f0 'float4':'vector<float, 4>'
-// CHECK:   HLSLSV_PositionAttr 0x{{[0-9a-fA-F]+}} <col:15> <<<NULL>>> 0
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:15> "SV_Position" 0
   float4 f1 : SV_Position3;
-// CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:10 f1 'float4':'vector<float, 4>'
-// CHECK:   HLSLSV_PositionAttr 0x{{[0-9a-fA-F]+}} <col:15> <<<NULL>>> 3 SemanticExplicitIndex
+// CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:10 referenced f1 'float4':'vector<float, 4>'
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:15> "SV_Position" 3
 };
 
 // FIXME(Keenuts): add mandatory output semantic once those are implemented.
-float4 main(S s) {
+float4 main(S s) : B {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:8 main 'float4 (S)'
-// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:15 s 'S'
+// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:15 used s 'S'
+// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:4:15> "SV_Position" 0
+// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:7:15> "SV_Position" 3
 
-// CHECK: HLSLSV_PositionAttr 0x{{[0-9a-fA-F]+}} <{{.*}}> Field 0x{{[0-9a-fA-F]+}} 'f0' 'float4':'vector<float, 4>' 0
-// CHECK: HLSLSV_PositionAttr 0x{{[0-9a-fA-F]+}} <{{.*}}> Field 0x{{[0-9a-fA-F]+}} 'f1' 'float4':'vector<float, 4>' 3 SemanticExplicitIndex
+// CHECK:       HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:20> "B" 0
+  return s.f1;
 }

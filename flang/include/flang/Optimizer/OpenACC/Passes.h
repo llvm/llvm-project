@@ -13,6 +13,9 @@
 #ifndef FORTRAN_OPTIMIZER_OPENACC_PASSES_H
 #define FORTRAN_OPTIMIZER_OPENACC_PASSES_H
 
+#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -25,6 +28,7 @@ namespace acc {
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/OpenACC/Passes.h.inc"
 
+std::unique_ptr<mlir::Pass> createACCInitializeFIRAnalysesPass();
 std::unique_ptr<mlir::Pass> createACCRecipeBufferizationPass();
 
 } // namespace acc

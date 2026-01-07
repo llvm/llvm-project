@@ -70,7 +70,9 @@
 ; RUN: split-file %s %t
 
 ; RUN: opt -thinlto-bc %t/main.ll >%t/main.o
-; RUN: opt -thinlto-bc %t/foo.ll >%t/foo.o
+;; Check that -module-summary-max-indirect-edges correctly overrides
+;; -icp-max-prom with a higher max when building summary.
+; RUN: opt -thinlto-bc -icp-max-prom=1 -module-summary-max-indirect-edges=2 %t/foo.ll >%t/foo.o
 
 ;; Check that we get the synthesized callsite records. There should be 2, one
 ;; for each profiled target in the VP metadata. They will have the same stackIds
@@ -86,6 +88,10 @@
 ;; First perform in-process ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:	-enable-memprof-indirect-call-support=true \
+;; Check that -module-summary-max-indirect-edges correctly overrides
+;; -icp-max-prom with a higher max when performing memprof ICP.
+; RUN:	-icp-max-prom=1 \
+; RUN:	-module-summary-max-indirect-edges=2 \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
 ; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
@@ -110,11 +116,17 @@
 ; RUN:	-thinlto-threads=1 \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
 ; RUN:  -pass-remarks=. -save-temps \
+; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=STATS \
 ; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS-MAIN \
 ; RUN:  --check-prefix=REMARKS-FOO --check-prefix=REMARKS-FOO-IMPORT
 
 ; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefix=IR --check-prefix=IR-IMPORT
+
+;; We should print both potential indirect callees after initially matching
+;; stack nodes to the summary.
+; RUN: cat %t.ccg.poststackupdate.dot | FileCheck %s --check-prefix=DOT
+; DOT: {OrigId: 0 NodeId: 10\n_Z3fooR2B0j -\> _ZN1B3barEj\n_Z3fooR2B0j -\> _ZN2B03barEj}
 
 ;; Try again but with distributed ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \

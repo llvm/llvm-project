@@ -153,7 +153,48 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_sample_3d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_3d_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f32_f32:
-  case AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f16_f32: {
+  case AMDGPU::BI__builtin_amdgcn_image_sample_cube_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_1d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_1d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_1darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_1darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_2darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_3d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_3d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_cube_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_lz_cube_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_1d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_1d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_1darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_1darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_3d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_3d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_cube_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_cube_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_1d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_1d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_1darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_1darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32: {
     StringRef FeatureList(
         getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
@@ -213,6 +254,40 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     return (SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
+  }
+  case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8:
+  case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8: {
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8) {
+      if (SemaRef.checkArgCountRange(TheCall, 7, 8))
+        return true;
+      if (TheCall->getNumArgs() == 7)
+        return false;
+    } else if (BuiltinID ==
+               AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8) {
+      if (SemaRef.checkArgCountRange(TheCall, 8, 9))
+        return true;
+      if (TheCall->getNumArgs() == 8)
+        return false;
+    }
+    // Check if the last argument (clamp operand) is a constant and is
+    // convertible to bool.
+    Expr *ClampArg = TheCall->getArg(TheCall->getNumArgs() - 1);
+    // 1) Ensure clamp argument is a constant expression
+    llvm::APSInt ClampValue;
+    if (!SemaRef.VerifyIntegerConstantExpression(ClampArg, &ClampValue)
+             .isUsable())
+      return true;
+    // 2) Check if the argument can be converted to bool type
+    if (!SemaRef.Context.hasSameType(ClampArg->getType(),
+                                     SemaRef.Context.BoolTy)) {
+      // Try to convert to bool
+      QualType BoolTy = SemaRef.Context.BoolTy;
+      ExprResult ClampExpr(ClampArg);
+      SemaRef.CheckSingleAssignmentConstraints(BoolTy, ClampExpr);
+      if (ClampExpr.isInvalid())
+        return true;
+    }
+    return false;
   }
   default:
     return false;
@@ -517,6 +592,8 @@ AMDGPUMaxNumWorkGroupsAttr *SemaAMDGPU::CreateAMDGPUMaxNumWorkGroupsAttr(
     const AttributeCommonInfo &CI, Expr *XExpr, Expr *YExpr, Expr *ZExpr) {
   ASTContext &Context = getASTContext();
   AMDGPUMaxNumWorkGroupsAttr TmpAttr(Context, CI, XExpr, YExpr, ZExpr);
+  assert(!SemaRef.isSFINAEContext() &&
+         "Can't produce SFINAE diagnostic pointing to temporary attribute");
 
   if (checkAMDGPUMaxNumWorkGroupsArguments(SemaRef, XExpr, YExpr, ZExpr,
                                            TmpAttr))

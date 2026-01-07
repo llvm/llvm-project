@@ -385,7 +385,7 @@ define internal void @.omp_outlined..4(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..4
 ; CHECK-SAME: (ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_master(ptr noundef nonnull @[[GLOB0]], i32 [[TMP]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[OMP_IF_END:%.*]], label [[OMP_IF_THEN:%.*]]
@@ -458,7 +458,7 @@ define internal void @.omp_outlined..5(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull @[[GLOB0]]) #[[ATTR19]]
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_single(ptr noundef nonnull @[[GLOB0]], i32 [[TMP]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[OMP_IF_END:%.*]], label [[OMP_IF_THEN:%.*]]
@@ -534,7 +534,7 @@ define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 [[A1]]) #[[ATTR20:[0-9]+]]
 ; CHECK-NEXT:    store i32 1, ptr [[A1]], align 4
 ; CHECK-NEXT:    store ptr [[A1]], ptr [[DOTOMP_REDUCTION_RED_LIST]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4, !invariant.load [[META1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_reduce_nowait(ptr noundef nonnull @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 noundef 1, i64 noundef 8, ptr noundef nonnull align 8 [[DOTOMP_REDUCTION_RED_LIST]], ptr noundef nonnull @.omp.reduction.reduction_func, ptr noundef nonnull @.gomp_critical_user_.reduction.var)
 ; CHECK-NEXT:    switch i32 [[TMP4]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
@@ -646,10 +646,10 @@ define internal void @.omp.reduction.reduction_func(ptr %arg, ptr %arg1) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
 ; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[ARG:%.*]], ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[ARG1:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARG1]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARG1]], align 8, !invariant.load [[META1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[ARG]], align 8, !invariant.load [[META1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4, !invariant.load [[META1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP2]], align 4, !invariant.load [[META1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    ret void

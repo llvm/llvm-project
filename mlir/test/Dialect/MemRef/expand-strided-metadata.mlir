@@ -1455,3 +1455,20 @@ func.func @extract_strided_metadata_of_memory_space_cast_no_base(%base: memref<2
 
 // CHECK-LABEL:  func @extract_strided_metadata_of_memory_space_cast_no_base
 //   CHECK-NOT:  memref.memory_space_cast
+
+// -----
+
+func.func @negative_memref_view_extract_aligned_pointer(%arg0: memref<?xi8>) -> index {
+  // `extract_aligned_pointer_as_index` must not be folded as `memref.view` can change the base pointer
+  // CHECK-LABEL: func @negative_memref_view_extract_aligned_pointer
+  // CHECK-SAME: (%[[ARG0:.*]]: memref<?xi8>)
+  // CHECK: %[[C10:.*]] = arith.constant 10 : index
+  // CHECK: %[[VIEW:.*]] = memref.view %[[ARG0]][%[[C10]]][] : memref<?xi8> to memref<f32>
+  // CHECK: %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[VIEW]] : memref<f32> -> index
+  // CHECK: return %[[PTR]] : index
+
+  %c10 = arith.constant 10 : index
+  %0 = memref.view %arg0[%c10][] : memref<?xi8> to memref<f32>
+  %1 = memref.extract_aligned_pointer_as_index %0: memref<f32> -> index
+  return %1 : index
+}

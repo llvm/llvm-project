@@ -48,11 +48,21 @@ enum SDNF {
   SDNFIsStrictFP,
 };
 
+struct VTByHwModePair {
+  uint8_t Mode;
+  MVT::SimpleValueType VT;
+};
+
 struct SDTypeConstraint {
   SDTC Kind;
-  uint8_t OpNo;
-  uint8_t OtherOpNo;
-  MVT::SimpleValueType VT;
+  uint8_t ConstrainedValIdx;
+  uint8_t ConstrainingValIdx;
+  /// For Kind == SDTCisVT or SDTCVecEltisVT:
+  /// - if not using HwMode, NumHwModes == 0 and VT is MVT::SimpleValueType;
+  /// - otherwise, VT is offset into VTByHwModeTable and NumHwModes specifies
+  ///   the number of entries.
+  uint8_t NumHwModes;
+  uint16_t VT;
 };
 
 using SDNodeTSFlags = uint32_t;
@@ -76,13 +86,15 @@ class SDNodeInfo final {
   unsigned NumOpcodes;
   const SDNodeDesc *Descs;
   StringTable Names;
+  const VTByHwModePair *VTByHwModeTable;
   const SDTypeConstraint *Constraints;
 
 public:
   constexpr SDNodeInfo(unsigned NumOpcodes, const SDNodeDesc *Descs,
-                       StringTable Names, const SDTypeConstraint *Constraints)
+                       StringTable Names, const VTByHwModePair *VTByHwModeTable,
+                       const SDTypeConstraint *Constraints)
       : NumOpcodes(NumOpcodes), Descs(Descs), Names(Names),
-        Constraints(Constraints) {}
+        VTByHwModeTable(VTByHwModeTable), Constraints(Constraints) {}
 
   /// Returns true if there is a generated description for a node with the given
   /// target-specific opcode.

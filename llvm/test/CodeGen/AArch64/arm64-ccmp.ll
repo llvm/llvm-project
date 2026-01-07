@@ -430,12 +430,12 @@ declare i32 @foo()
 
 ; Test case distilled from 126.gcc.
 ; The phi in sw.bb.i.i gets multiple operands for the %entry predecessor.
-define void @build_modify_expr() nounwind ssp {
+define void @build_modify_expr(i32 %cond) nounwind ssp {
 ; CHECK-LABEL: build_modify_expr:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ret
 entry:
-  switch i32 undef, label %sw.bb.i.i [
+  switch i32 %cond, label %sw.bb.i.i [
     i32 69, label %if.end85
     i32 70, label %if.end85
     i32 71, label %if.end85

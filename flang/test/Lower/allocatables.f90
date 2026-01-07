@@ -56,7 +56,7 @@ subroutine foodim1()
   ! CHECK-DAG: fir.load %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 
   deallocate(x)
-  ! CHECK: %[[xAddr1:.*]] = fir.load %1 : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+  ! CHECK: %[[xAddr1:.*]] = fir.load %{{.*}} : !fir.ref<!fir.heap<!fir.array<?xf32>>>
   ! CHECK: fir.freemem %[[xAddr1]]
   ! CHECK: %[[nullAddr1:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   ! CHECK: fir.store %[[nullAddr1]] to %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
@@ -67,10 +67,6 @@ subroutine foodim2()
   ! Test lowering of local allocatable specification
   real, allocatable :: x(:, :)
   ! CHECK-DAG: fir.alloca !fir.heap<!fir.array<?x?xf32>> {{{.*}}uniq_name = "_QFfoodim2Ex.addr"}
-  ! CHECK-DAG: fir.alloca index {{{.*}}uniq_name = "_QFfoodim2Ex.lb0"}
-  ! CHECK-DAG: fir.alloca index {{{.*}}uniq_name = "_QFfoodim2Ex.ext0"}
-  ! CHECK-DAG: fir.alloca index {{{.*}}uniq_name = "_QFfoodim2Ex.lb1"}
-  ! CHECK-DAG: fir.alloca index {{{.*}}uniq_name = "_QFfoodim2Ex.ext1"}
 end subroutine
 
 ! test lowering of character allocatables. Focus is placed on the length handling

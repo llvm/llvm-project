@@ -1498,19 +1498,7 @@ add_entrypoint_object(
   HDRS
     ../exp2m1f16.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.common
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.cpu_features
-    libc.src.__support.math.expxf16_utils
+    libc.src.__support.math.exp2m1f16
 )
 
 add_entrypoint_object(
@@ -1573,18 +1561,7 @@ add_entrypoint_object(
   HDRS
     ../expm1.h
   DEPENDS
-    libc.src.__support.CPP.bit
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.FPUtil.triple_double
-    libc.src.__support.integer_literals
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.common_constants
-    libc.src.errno.errno
+    libc.src.__support.math.expm1
 )
 
 add_entrypoint_object(
@@ -1594,16 +1571,7 @@ add_entrypoint_object(
   HDRS
     ../expm1f.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.common_constants
-    libc.src.errno.errno
+    libc.src.__support.math.expm1f
 )
 
 add_entrypoint_object(
@@ -2662,8 +2630,6 @@ add_entrypoint_object(
     ../fmaximum_mag.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -2674,8 +2640,6 @@ add_entrypoint_object(
     ../fmaximum_magf.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -2686,8 +2650,6 @@ add_entrypoint_object(
     ../fmaximum_magl.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -2735,8 +2697,6 @@ add_entrypoint_object(
     ../fmaximum_mag_num.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -2747,8 +2707,6 @@ add_entrypoint_object(
     ../fmaximum_mag_numf.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -2759,8 +2717,6 @@ add_entrypoint_object(
     ../fmaximum_mag_numl.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -2954,8 +2910,6 @@ add_entrypoint_object(
     ../fminimum_mag.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -2966,8 +2920,6 @@ add_entrypoint_object(
     ../fminimum_magf.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -2978,8 +2930,6 @@ add_entrypoint_object(
     ../fminimum_magl.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -3027,8 +2977,6 @@ add_entrypoint_object(
     ../fminimum_mag_num.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -3039,8 +2987,6 @@ add_entrypoint_object(
     ../fminimum_mag_numf.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -3051,8 +2997,6 @@ add_entrypoint_object(
     ../fminimum_mag_numl.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -4306,7 +4250,7 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl 
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
@@ -4546,8 +4490,6 @@ add_entrypoint_object(
     atan.cpp
   HDRS
     ../atan.h
-  COMPILE_OPTIONS
-    -O3
   DEPENDS
     libc.src.__support.math.atan
 )

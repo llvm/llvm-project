@@ -36,7 +36,7 @@ public:
 
   bool hasPrefix(StringRef Prefix) const {
     for (const auto &It : sections())
-      if (It.Entries.count(Prefix) > 0)
+      if (It.hasPrefix(Prefix))
         return true;
     return false;
   }

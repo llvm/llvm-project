@@ -129,18 +129,17 @@ typename T::mapped_type *const DenseMapTest<T>::dummy_value_ptr = nullptr;
 
 // Register these types for testing.
 // clang-format off
-typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
-                         DenseMap<uint32_t *, uint32_t *>,
-                         DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
-                         DenseMap<EnumClass, uint32_t>,
-                         DenseMap<std::optional<uint32_t>, uint32_t>,
-                         SmallDenseMap<uint32_t, uint32_t>,
-                         SmallDenseMap<uint32_t *, uint32_t *>,
-                         SmallDenseMap<CtorTester, CtorTester, 4,
-                                       CtorTesterMapInfo>,
-                         SmallDenseMap<EnumClass, uint32_t>,
-                         SmallDenseMap<std::optional<uint32_t>, uint32_t>
-                         > DenseMapTestTypes;
+using DenseMapTestTypes = ::testing::Types<
+    DenseMap<uint32_t, uint32_t>,
+    DenseMap<uint32_t *, uint32_t *>,
+    DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
+    DenseMap<EnumClass, uint32_t>,
+    DenseMap<std::optional<uint32_t>, uint32_t>,
+    SmallDenseMap<uint32_t, uint32_t>,
+    SmallDenseMap<uint32_t *, uint32_t *>,
+    SmallDenseMap<CtorTester, CtorTester, 4, CtorTesterMapInfo>,
+    SmallDenseMap<EnumClass, uint32_t>,
+    SmallDenseMap<std::optional<uint32_t>, uint32_t>>;
 // clang-format on
 
 TYPED_TEST_SUITE(DenseMapTest, DenseMapTestTypes, );
@@ -201,6 +200,14 @@ TYPED_TEST(DenseMapTest, AtTest) {
   EXPECT_EQ(this->getValue(0), this->Map.at(this->getKey(0)));
   EXPECT_EQ(this->getValue(1), this->Map.at(this->getKey(1)));
   EXPECT_EQ(this->getValue(2), this->Map.at(this->getKey(2)));
+
+  this->Map.at(this->getKey(0)) = this->getValue(1);
+  EXPECT_EQ(this->getValue(1), this->Map.at(this->getKey(0)));
+
+  const auto &ConstMap = this->Map;
+  EXPECT_EQ(this->getValue(1), ConstMap.at(this->getKey(0)));
+  EXPECT_EQ(this->getValue(1), ConstMap.at(this->getKey(1)));
+  EXPECT_EQ(this->getValue(2), ConstMap.at(this->getKey(2)));
 }
 
 // Test clear() method

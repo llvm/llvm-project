@@ -22,6 +22,7 @@ class RegisterBankInfo;
 ModulePass *createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM);
 FunctionPass *createSPIRVStructurizerPass();
 ModulePass *createSPIRVCBufferAccessLegacyPass();
+ModulePass *createSPIRVPushConstantAccessLegacyPass(SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 FunctionPass *createSPIRVStripConvergenceIntrinsicsPass();
 ModulePass *createSPIRVLegalizeImplicitBindingPass();
@@ -31,6 +32,7 @@ FunctionPass *createSPIRVPreLegalizerCombiner();
 FunctionPass *createSPIRVPreLegalizerPass();
 FunctionPass *createSPIRVPostLegalizerPass();
 ModulePass *createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM);
+ModulePass *createSPIRVPrepareGlobalsPass();
 MachineFunctionPass *createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM);
 InstructionSelector *
 createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
@@ -45,12 +47,14 @@ void initializeSPIRVPreLegalizerCombinerPass(PassRegistry &);
 void initializeSPIRVPostLegalizerPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
+void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 void initializeSPIRVEmitNonSemanticDIPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastPass(PassRegistry &);
 void initializeSPIRVRegularizerPass(PassRegistry &);
 void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
 void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
+void initializeSPIRVPrepareGlobalsPass(PassRegistry &);
 void initializeSPIRVStripConvergentIntrinsicsPass(PassRegistry &);
 void initializeSPIRVLegalizeImplicitBindingPass(PassRegistry &);
 } // namespace llvm

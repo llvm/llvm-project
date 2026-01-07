@@ -41,6 +41,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVPreLegalizerCombiner.cpp
   SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
+  SPIRVPrepareGlobals.cpp
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
@@ -50,6 +51,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVUtils.cpp
   SPIRVEmitNonSemanticDI.cpp
   SPIRVCBufferAccess.cpp
+  SPIRVPushConstantAccess.cpp
 
   LINK_COMPONENTS
   Analysis

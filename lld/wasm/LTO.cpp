@@ -63,6 +63,12 @@ static lto::Config createConfig() {
     c.RelocModel = std::nullopt;
   else if (ctx.isPic)
     c.RelocModel = Reloc::PIC_;
+  else if (ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
+    // With ImportDynamic we also need to use the PIC relocation model so that
+    // external symbols are references via the GOT.
+    // TODO(sbc): This should probably be Reloc::DynamicNoPIC, but the backend
+    // doesn't currently support that.
+    c.RelocModel = Reloc::PIC_;
   else
     c.RelocModel = Reloc::Static;
 

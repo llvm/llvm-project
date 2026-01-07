@@ -29,8 +29,7 @@ inline unsigned encodeSLEB128(int64_t Value, raw_ostream &OS,
     uint8_t Byte = Value & 0x7f;
     // NOTE: this assumes that this signed shift is an arithmetic right shift.
     Value >>= 7;
-    More = !((((Value == 0 ) && ((Byte & 0x40) == 0)) ||
-              ((Value == -1) && ((Byte & 0x40) != 0))));
+    More = Value != ((Byte & 0x40) ? -1 : 0);
     Count++;
     if (More || Count < PadTo)
       Byte |= 0x80; // Mark this byte to show that more bytes will follow.
@@ -58,8 +57,7 @@ inline unsigned encodeSLEB128(int64_t Value, uint8_t *p, unsigned PadTo = 0) {
     uint8_t Byte = Value & 0x7f;
     // NOTE: this assumes that this signed shift is an arithmetic right shift.
     Value >>= 7;
-    More = !((((Value == 0 ) && ((Byte & 0x40) == 0)) ||
-              ((Value == -1) && ((Byte & 0x40) != 0))));
+    More = Value != ((Byte & 0x40) ? -1 : 0);
     Count++;
     if (More || Count < PadTo)
       Byte |= 0x80; // Mark this byte to show that more bytes will follow.

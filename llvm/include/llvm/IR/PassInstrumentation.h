@@ -55,7 +55,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
-#include <type_traits>
 #include <vector>
 
 namespace llvm {

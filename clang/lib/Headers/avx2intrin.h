@@ -2095,9 +2095,8 @@ _mm256_slli_epi16(__m256i __a, int __count) {
 ///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sll_epi16(__m256i __a, __m128i __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sll_epi16(__m256i __a, __m128i __count) {
   return (__m256i)__builtin_ia32_psllw256((__v16hi)__a, (__v8hi)__count);
 }
 
@@ -2134,9 +2133,8 @@ _mm256_slli_epi32(__m256i __a, int __count) {
 ///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sll_epi32(__m256i __a, __m128i __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sll_epi32(__m256i __a, __m128i __count) {
   return (__m256i)__builtin_ia32_pslld256((__v8si)__a, (__v4si)__count);
 }
 
@@ -2173,9 +2171,8 @@ _mm256_slli_epi64(__m256i __a, int __count) {
 ///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sll_epi64(__m256i __a, __m128i __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sll_epi64(__m256i __a, __m128i __count) {
   return __builtin_ia32_psllq256((__v4di)__a, __count);
 }
 
@@ -2214,9 +2211,8 @@ _mm256_srai_epi16(__m256i __a, int __count) {
 ///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sra_epi16(__m256i __a, __m128i __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sra_epi16(__m256i __a, __m128i __count) {
   return (__m256i)__builtin_ia32_psraw256((__v16hi)__a, (__v8hi)__count);
 }
 
@@ -2255,9 +2251,8 @@ _mm256_srai_epi32(__m256i __a, int __count) {
 ///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sra_epi32(__m256i __a, __m128i __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sra_epi32(__m256i __a, __m128i __count) {
   return (__m256i)__builtin_ia32_psrad256((__v8si)__a, (__v4si)__count);
 }
 
@@ -2336,9 +2331,8 @@ _mm256_srli_epi16(__m256i __a, int __count) {
 ///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srl_epi16(__m256i __a, __m128i __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_srl_epi16(__m256i __a, __m128i __count) {
   return (__m256i)__builtin_ia32_psrlw256((__v16hi)__a, (__v8hi)__count);
 }
 
@@ -2375,9 +2369,8 @@ _mm256_srli_epi32(__m256i __a, int __count) {
 ///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srl_epi32(__m256i __a, __m128i __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_srl_epi32(__m256i __a, __m128i __count) {
   return (__m256i)__builtin_ia32_psrld256((__v8si)__a, (__v4si)__count);
 }
 
@@ -2414,9 +2407,8 @@ _mm256_srli_epi64(__m256i __a, int __count) {
 ///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srl_epi64(__m256i __a, __m128i __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_srl_epi64(__m256i __a, __m128i __count) {
   return __builtin_ia32_psrlq256((__v4di)__a, __count);
 }
 
@@ -3214,9 +3206,8 @@ _mm_broadcastq_epi64(__m128i __X) {
 ///    A 256-bit vector of [8 x i32] containing indexes of values to use from
 ///    \a __a.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_permutevar8x32_epi32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_permvarsi256((__v8si)__a, (__v8si)__b);
 }
 
@@ -3272,9 +3263,8 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
 ///    A 256-bit vector of [8 x i32] containing indexes of values to use from
 ///    \a __a.
 /// \returns A 256-bit vector of [8 x float] containing the result.
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
-_mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
-{
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
   return (__m256)__builtin_ia32_permvarsf256((__v8sf)__a, (__v8si)__b);
 }
 

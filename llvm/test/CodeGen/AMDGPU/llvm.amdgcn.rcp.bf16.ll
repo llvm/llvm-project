@@ -11,6 +11,7 @@ declare bfloat @llvm.amdgcn.rcp.bf16(bfloat) #0
 define amdgpu_kernel void @rcp_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; SDAG-TRUE16-LABEL: rcp_bf16:
 ; SDAG-TRUE16:       ; %bb.0:
+; SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; SDAG-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
@@ -20,6 +21,7 @@ define amdgpu_kernel void @rcp_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ;
 ; SDAG-FAKE16-LABEL: rcp_bf16:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; SDAG-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
@@ -34,6 +36,7 @@ define amdgpu_kernel void @rcp_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 define amdgpu_kernel void @rcp_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; SDAG-TRUE16-LABEL: rcp_bf16_constant_4:
 ; SDAG-TRUE16:       ; %bb.0:
+; SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3e80
@@ -43,6 +46,7 @@ define amdgpu_kernel void @rcp_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: rcp_bf16_constant_4:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3e80
 ; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
@@ -56,6 +60,7 @@ define amdgpu_kernel void @rcp_bf16_constant_4(ptr addrspace(1) %out) #1 {
 define amdgpu_kernel void @rcp_bf16_constant_100(ptr addrspace(1) %out) #1 {
 ; SDAG-TRUE16-LABEL: rcp_bf16_constant_100:
 ; SDAG-TRUE16:       ; %bb.0:
+; SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3c24
@@ -65,6 +70,7 @@ define amdgpu_kernel void @rcp_bf16_constant_100(ptr addrspace(1) %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: rcp_bf16_constant_100:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3c24
 ; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
@@ -78,6 +84,7 @@ define amdgpu_kernel void @rcp_bf16_constant_100(ptr addrspace(1) %out) #1 {
 define amdgpu_kernel void @rcp_undef_bf16(ptr addrspace(1) %out) #1 {
 ; SDAG-TRUE16-LABEL: rcp_undef_bf16:
 ; SDAG-TRUE16:       ; %bb.0:
+; SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x7fc0
@@ -87,6 +94,7 @@ define amdgpu_kernel void @rcp_undef_bf16(ptr addrspace(1) %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: rcp_undef_bf16:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7fc0
 ; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0

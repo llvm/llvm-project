@@ -79,14 +79,12 @@ body:             |
     ; CHECK-NEXT: RequiresZASavePseudo
     ; CHECK-NEXT: BL @clobber, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: $x0 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: MSRpstatesvcrImm1 2, 1, implicit-def $nzcv
     ; CHECK-NEXT: [[MRS:%[0-9]+]]:gpr64 = MRS 56965, implicit-def $nzcv
     ; CHECK-NEXT: $x0 = ADDXri %stack.0, 0, 0
     ; CHECK-NEXT: RestoreZAPseudo [[MRS]], $x0, &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0
     ; CHECK-NEXT: MSR 56965, $xzr
-    ; CHECK-NEXT: $x0 = COPY [[COPY2]]
+    ; CHECK-NEXT: $x0 = IMPLICIT_DEF
     ; CHECK-NEXT: $nzcv = IMPLICIT_DEF
     ; CHECK-NEXT: FAKE_USE $x0
     ; CHECK-NEXT: $zab0 = IMPLICIT_DEF

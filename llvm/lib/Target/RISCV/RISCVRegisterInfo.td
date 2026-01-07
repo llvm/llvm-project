@@ -222,6 +222,14 @@ def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
 def XLenPairFVT : ValueTypeByHwMode<[RV32],
                                     [f64]>;
+
+// P extension
+def XLenVecI8VT : ValueTypeByHwMode<[RV32, RV64],
+                                    [v4i8, v8i8]>;
+def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
+                                     [v2i16, v4i16]>;
+def XLenVecI32VT : ValueTypeByHwMode<[RV64],
+                                     [v2i32]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -238,7 +246,9 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
 }
 
 class GPRRegisterClass<dag regList>
-    : RISCVRegisterClass<[XLenVT, XLenFVT], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT,
+                          // P extension packed vector types:
+                          XLenVecI8VT, XLenVecI16VT, XLenVecI32VT], 32, regList> {
   let RegInfos = XLenRI;
 }
 
@@ -756,6 +766,13 @@ class VReg<list<ValueType> regTypes, dag regList, int Vlmul, int nf = 1>
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
                    vbool32_t, vbool64_t];
 
+defvar VMF8VTs = [vint8mf8_t];
+
+defvar VMF4VTs = [vint8mf4_t, vint16mf4_t, vfloat16mf4_t, vbfloat16mf4_t];
+
+defvar VMF2VTs = [vint8mf2_t, vint16mf2_t, vint32mf2_t,
+                 vfloat16mf2_t, vbfloat16mf2_t, vfloat32mf2_t];
+
 defvar VM1VTs = [vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
                  vbfloat16m1_t, vfloat16m1_t, vfloat32m1_t,
                  vfloat64m1_t, vint8mf2_t, vint8mf4_t, vint8mf8_t,
@@ -799,10 +816,21 @@ def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
+// Fractional LMUL register classes for inline assembly.
+def VRMF8 : VReg<VMF8VTs, (add VR), 1>;
+def VRMF8NoV0 : VReg<VMF8VTs, (add VRNoV0), 1>;
+
+def VRMF4 : VReg<VMF4VTs, (add VR), 1>;
+def VRMF4NoV0 : VReg<VMF4VTs, (add VRNoV0), 1>;
+
+def VRMF2 : VReg<VMF2VTs, (add VR), 1>;
+def VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1>;
+
 def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
 // The register class is added for inline assembly for vector mask types.
 def VM : VReg<VMaskVTs, (add VR), 1>;
+def VMNoV0 : VReg<VMaskVTs, (add VRNoV0), 1>;
 
 defvar VTupM1N2VTs = [riscv_nxv8i8x2, riscv_nxv4i8x2, riscv_nxv2i8x2, riscv_nxv1i8x2];
 defvar VTupM1N3VTs = [riscv_nxv8i8x3, riscv_nxv4i8x3, riscv_nxv2i8x3, riscv_nxv1i8x3];

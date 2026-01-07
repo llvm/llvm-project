@@ -27,7 +27,7 @@
 namespace llvm {
 namespace orc {
 
-MemoryMapper::~MemoryMapper() {}
+MemoryMapper::~MemoryMapper() = default;
 
 InProcessMemoryMapper::InProcessMemoryMapper(size_t PageSize)
     : PageSize(PageSize) {}

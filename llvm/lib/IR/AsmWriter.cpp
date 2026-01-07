@@ -53,6 +53,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -105,6 +106,10 @@ static cl::opt<bool> PrintProfData(
 static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder", cl::Hidden, cl::init(false),
     cl::desc("Preserve use-list order when writing LLVM assembly."));
+
+static cl::opt<bool> PrintAddrspaceName("print-addrspace-name", cl::Hidden,
+                                        cl::init(false),
+                                        cl::desc("Print address space names"));
 
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
@@ -542,7 +547,8 @@ namespace {
 
 class TypePrinting {
 public:
-  TypePrinting(const Module *M = nullptr) : DeferredM(M) {}
+  TypePrinting(const Module *M = nullptr)
+      : M(M), TypesIncorporated(M == nullptr) {}
 
   TypePrinting(const TypePrinting &) = delete;
   TypePrinting &operator=(const TypePrinting &) = delete;
@@ -562,8 +568,9 @@ public:
 private:
   void incorporateTypes();
 
-  /// A module to process lazily when needed. Set to nullptr as soon as used.
-  const Module *DeferredM;
+  /// A module to process lazily.
+  const Module *M;
+  bool TypesIncorporated;
 
   TypeFinder NamedTypes;
 
@@ -604,11 +611,11 @@ bool TypePrinting::empty() {
 }
 
 void TypePrinting::incorporateTypes() {
-  if (!DeferredM)
+  if (TypesIncorporated)
     return;
 
-  NamedTypes.run(*DeferredM, false);
-  DeferredM = nullptr;
+  NamedTypes.run(*M, false);
+  TypesIncorporated = true;
 
   // The list of struct types we got back includes all the struct types, split
   // the unnamed ones out to a numbering and remove the anonymous structs.
@@ -627,6 +634,21 @@ void TypePrinting::incorporateTypes() {
   }
 
   NamedTypes.erase(NextToUse, NamedTypes.end());
+}
+
+static void printAddressSpace(const Module *M, unsigned AS, raw_ostream &OS,
+                              StringRef Prefix = " ", StringRef Suffix = "",
+                              bool ForcePrint = false) {
+  if (AS == 0 && !ForcePrint)
+    return;
+  OS << Prefix << "addrspace(";
+  StringRef ASName =
+      PrintAddrspaceName && M ? M->getDataLayout().getAddressSpaceName(AS) : "";
+  if (!ASName.empty())
+    OS << "\"" << ASName << "\"";
+  else
+    OS << AS;
+  OS << ")" << Suffix;
 }
 
 /// Write the specified type to the specified raw_ostream, making use of type
@@ -685,8 +707,7 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::PointerTyID: {
     PointerType *PTy = cast<PointerType>(Ty);
     OS << "ptr";
-    if (unsigned AddressSpace = PTy->getAddressSpace())
-      OS << " addrspace(" << AddressSpace << ')';
+    printAddressSpace(M, PTy->getAddressSpace(), OS);
     return;
   }
   case Type::ArrayTyID: {
@@ -758,14 +779,12 @@ void TypePrinting::printStructBody(StructType *STy, raw_ostream &OS) {
 
 AbstractSlotTrackerStorage::~AbstractSlotTrackerStorage() = default;
 
-namespace llvm {
-
 //===----------------------------------------------------------------------===//
 // SlotTracker Class: Enumerate slot numbers for unnamed values
 //===----------------------------------------------------------------------===//
 /// This class provides computation of slot numbers for LLVM Assembly writing.
 ///
-class SlotTracker : public AbstractSlotTrackerStorage {
+class llvm::SlotTracker : public AbstractSlotTrackerStorage {
 public:
   /// ValueMap - A mapping of Values to slot numbers.
   using ValueMap = DenseMap<const Value *, unsigned>;
@@ -942,8 +961,6 @@ private:
   /// Add all of the metadata from a DbgRecord.
   void processDbgRecordMetadata(const DbgRecord &DVR);
 };
-
-} // end namespace llvm
 
 ModuleSlotTracker::ModuleSlotTracker(SlotTracker &Machine, const Module *M,
                                      const Function *F)
@@ -1677,12 +1694,14 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
   if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CV)) {
     Out << "ptrauth (";
 
-    // ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)
+    // ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC[, ptr DS]?]?]?)
     unsigned NumOpsToWrite = 2;
     if (!CPA->getOperand(2)->isNullValue())
       NumOpsToWrite = 3;
     if (!CPA->getOperand(3)->isNullValue())
       NumOpsToWrite = 4;
+    if (!CPA->getOperand(4)->isNullValue())
+      NumOpsToWrite = 5;
 
     ListSeparator LS;
     for (unsigned i = 0, e = NumOpsToWrite; i != e; ++i) {
@@ -2199,6 +2218,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printString("name", N->getName());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printInt("dataSize", N->getDataSizeInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
   Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
@@ -2934,7 +2954,7 @@ private:
 
   // printInfoComment - Print a little comment after the instruction indicating
   // which slot it occupies.
-  void printInfoComment(const Value &V);
+  void printInfoComment(const Value &V, bool isMaterializable = false);
 
   // printGCRelocateComment - print comment after call to the gc.relocate
   // intrinsic indicating base and derived pointer names.
@@ -3896,10 +3916,10 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   printThreadLocalModel(GV->getThreadLocalMode(), Out);
   StringRef UA = getUnnamedAddrEncoding(GV->getUnnamedAddr());
   if (!UA.empty())
-      Out << UA << ' ';
+    Out << UA << ' ';
 
-  if (unsigned AddressSpace = GV->getType()->getAddressSpace())
-    Out << "addrspace(" << AddressSpace << ") ";
+  printAddressSpace(GV->getParent(), GV->getType()->getAddressSpace(), Out,
+                    /*Prefix=*/"", /*Suffix=*/" ");
   if (GV->isExternallyInitialized()) Out << "externally_initialized ";
   Out << (GV->isConstant() ? "constant " : "global ");
   TypePrinter.print(GV->getValueType(), Out);
@@ -3966,7 +3986,7 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   if (Attrs.hasAttributes())
     Out << " #" << Machine.getAttributeGroupSlot(Attrs);
 
-  printInfoComment(*GV);
+  printInfoComment(*GV, GV->isMaterializable());
 }
 
 void AssemblyWriter::printAlias(const GlobalAlias *GA) {
@@ -4004,7 +4024,7 @@ void AssemblyWriter::printAlias(const GlobalAlias *GA) {
     Out << '"';
   }
 
-  printInfoComment(*GA);
+  printInfoComment(*GA, GA->isMaterializable());
   Out << '\n';
 }
 
@@ -4043,7 +4063,7 @@ void AssemblyWriter::printIFunc(const GlobalIFunc *GI) {
     printMetadataAttachments(MDs, ", ");
   }
 
-  printInfoComment(*GI);
+  printInfoComment(*GI, GI->isMaterializable());
   Out << '\n';
 }
 
@@ -4174,9 +4194,10 @@ void AssemblyWriter::printFunction(const Function *F) {
   // a module with a non-zero program address space or if there is no valid
   // Module* so that the file can be parsed without the datalayout string.
   const Module *Mod = F->getParent();
-  if (F->getAddressSpace() != 0 || !Mod ||
-      Mod->getDataLayout().getProgramAddressSpace() != 0)
-    Out << " addrspace(" << F->getAddressSpace() << ")";
+  bool ForcePrintAddressSpace =
+      !Mod || Mod->getDataLayout().getProgramAddressSpace() != 0;
+  printAddressSpace(Mod, F->getAddressSpace(), Out, /*Prefix=*/" ",
+                    /*Suffix=*/"", ForcePrintAddressSpace);
   if (Attrs.hasFnAttrs())
     Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttrs());
   if (F->hasSection()) {
@@ -4322,13 +4343,12 @@ void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
 
 /// printInfoComment - Print a little comment after the instruction indicating
 /// which slot it occupies.
-void AssemblyWriter::printInfoComment(const Value &V) {
+void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(&V))
     printGCRelocateComment(*Relocate);
 
-  if (AnnotationWriter) {
+  if (AnnotationWriter && !isMaterializable)
     AnnotationWriter->printInfoComment(V, Out);
-  }
 
   if (PrintInstDebugLocs) {
     if (auto *I = dyn_cast<Instruction>(&V)) {
@@ -4353,23 +4373,21 @@ void AssemblyWriter::printInfoComment(const Value &V) {
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,
                                     raw_ostream &Out) {
-  // We print the address space of the call if it is non-zero.
   if (Operand == nullptr) {
     Out << " <cannot get addrspace!>";
     return;
   }
+
+  // We print the address space of the call if it is non-zero.
+  // We also print it if it is zero but not equal to the program address space
+  // or if we can't find a valid Module* to make it possible to parse
+  // the resulting file even without a datalayout string.
   unsigned CallAddrSpace = Operand->getType()->getPointerAddressSpace();
-  bool PrintAddrSpace = CallAddrSpace != 0;
-  if (!PrintAddrSpace) {
-    const Module *Mod = getModuleFromVal(I);
-    // We also print it if it is zero but not equal to the program address space
-    // or if we can't find a valid Module* to make it possible to parse
-    // the resulting file even without a datalayout string.
-    if (!Mod || Mod->getDataLayout().getProgramAddressSpace() != 0)
-      PrintAddrSpace = true;
-  }
-  if (PrintAddrSpace)
-    Out << " addrspace(" << CallAddrSpace << ")";
+  const Module *Mod = getModuleFromVal(I);
+  bool ForcePrintAddrSpace =
+      !Mod || Mod->getDataLayout().getProgramAddressSpace() != 0;
+  printAddressSpace(Mod, CallAddrSpace, Out, /*Prefix=*/" ", /*Suffix=*/"",
+                    ForcePrintAddrSpace);
 }
 
 // This member is called for each Instruction in a function..
@@ -4580,12 +4598,38 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << ' ';
     writeOperand(Operand, false);
     Out << '(';
-    ListSeparator LS;
-    for (unsigned op = 0, Eop = CI->arg_size(); op < Eop; ++op) {
-      Out << LS;
-      writeParamOperand(CI->getArgOperand(op), PAL.getParamAttrs(op));
-    }
+    bool HasPrettyPrintedArgs =
+        isa<IntrinsicInst>(CI) &&
+        Intrinsic::hasPrettyPrintedArgs(CI->getIntrinsicID());
 
+    ListSeparator LS;
+    Function *CalledFunc = CI->getCalledFunction();
+    auto PrintArgComment = [&](unsigned ArgNo) {
+      const auto *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
+      if (!ConstArg)
+        return;
+      std::string ArgComment;
+      raw_string_ostream ArgCommentStream(ArgComment);
+      Intrinsic::ID IID = CalledFunc->getIntrinsicID();
+      Intrinsic::printImmArg(IID, ArgNo, ArgCommentStream, ConstArg);
+      if (ArgComment.empty())
+        return;
+      Out << "/* " << ArgComment << " */ ";
+    };
+    if (HasPrettyPrintedArgs) {
+      for (unsigned ArgNo = 0, NumArgs = CI->arg_size(); ArgNo < NumArgs;
+           ++ArgNo) {
+        Out << LS;
+        PrintArgComment(ArgNo);
+        writeParamOperand(CI->getArgOperand(ArgNo), PAL.getParamAttrs(ArgNo));
+      }
+    } else {
+      for (unsigned ArgNo = 0, NumArgs = CI->arg_size(); ArgNo < NumArgs;
+           ++ArgNo) {
+        Out << LS;
+        writeParamOperand(CI->getArgOperand(ArgNo), PAL.getParamAttrs(ArgNo));
+      }
+    }
     // Emit an ellipsis if this is a musttail call in a vararg function.  This
     // is only to aid readability, musttail calls forward varargs by default.
     if (CI->isMustTailCall() && CI->getParent() &&
@@ -4710,9 +4754,8 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << ", align " << A->value();
     }
 
-    unsigned AddrSpace = AI->getAddressSpace();
-    if (AddrSpace != 0)
-      Out << ", addrspace(" << AddrSpace << ')';
+    printAddressSpace(AI->getModule(), AI->getAddressSpace(), Out,
+                      /*Prefix=*/", ");
   } else if (isa<CastInst>(I)) {
     if (Operand) {
       Out << ' ';
@@ -4840,6 +4883,9 @@ void AssemblyWriter::printDbgVariableRecord(const DbgVariableRecord &DVR) {
     break;
   case DbgVariableRecord::LocationType::Declare:
     Out << "declare";
+    break;
+  case DbgVariableRecord::LocationType::DeclareValue:
+    Out << "declare_value";
     break;
   case DbgVariableRecord::LocationType::Assign:
     Out << "assign";
@@ -5009,12 +5055,10 @@ void AssemblyWriter::printUseLists(const Function *F) {
 //===----------------------------------------------------------------------===//
 
 void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
-                     bool ShouldPreserveUseListOrder,
-                     bool IsForDebug) const {
+                     bool ShouldPreserveUseListOrder, bool IsForDebug) const {
   SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW,
-                   IsForDebug,
+  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printFunction(this);
 }

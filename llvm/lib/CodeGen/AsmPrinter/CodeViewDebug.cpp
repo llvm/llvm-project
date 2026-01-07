@@ -628,10 +628,15 @@ void CodeViewDebug::beginModule(Module *M) {
     // When emitting only compiler information, we may have only NoDebug CUs,
     // which would be skipped by debug_compile_units_begin.
     NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+    if (CUs->operands().empty()) {
+      Asm = nullptr;
+      return;
+    }
     Node = *CUs->operands().begin();
   }
-  const auto *CU = cast<DICompileUnit>(Node);
-  DISourceLanguageName Lang = CU->getSourceLanguage();
+
+  TheCU = cast<DICompileUnit>(Node);
+  DISourceLanguageName Lang = TheCU->getSourceLanguage();
   CurrentSourceLanguage =
       Lang.hasVersionedName()
           ? MapDWARFLanguageToCVLang(
@@ -639,7 +644,7 @@ void CodeViewDebug::beginModule(Module *M) {
           : MapDWARFLanguageToCVLang(
                 static_cast<dwarf::SourceLanguage>(Lang.getName()));
   if (!M->getCodeViewFlag() ||
-      CU->getEmissionKind() == DICompileUnit::NoDebug) {
+      TheCU->getEmissionKind() == DICompileUnit::NoDebug) {
     Asm = nullptr;
     return;
   }
@@ -900,11 +905,10 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.AddComment("CPUType");
   OS.emitInt16(static_cast<uint64_t>(TheCPU));
 
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-  const MDNode *Node = *CUs->operands().begin();
-  const auto *CU = cast<DICompileUnit>(Node);
+  StringRef CompilerVersion = "0";
+  if (TheCU)
+    CompilerVersion = TheCU->getProducer();
 
-  StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
   for (int N : FrontVer.Part) {

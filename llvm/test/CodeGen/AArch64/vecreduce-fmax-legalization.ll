@@ -626,32 +626,32 @@ define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-NOFP-SD-LABEL: test_v2f128:
 ; CHECK-NOFP-SD:       // %bb.0:
 ; CHECK-NOFP-SD-NEXT:    sub sp, sp, #48
-; CHECK-NOFP-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NOFP-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NOFP-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-NOFP-SD-NEXT:    bl __gttf2
-; CHECK-NOFP-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NOFP-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NOFP-SD-NEXT:    cmp w0, #0
 ; CHECK-NOFP-SD-NEXT:    b.le .LBB18_2
 ; CHECK-NOFP-SD-NEXT:  // %bb.1:
-; CHECK-NOFP-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NOFP-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NOFP-SD-NEXT:  .LBB18_2:
-; CHECK-NOFP-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NOFP-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NOFP-SD-NEXT:    add sp, sp, #48
 ; CHECK-NOFP-SD-NEXT:    ret
 ;
 ; CHECK-FP-SD-LABEL: test_v2f128:
 ; CHECK-FP-SD:       // %bb.0:
 ; CHECK-FP-SD-NEXT:    sub sp, sp, #48
-; CHECK-FP-SD-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-FP-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-FP-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-FP-SD-NEXT:    bl __gttf2
-; CHECK-FP-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-FP-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-FP-SD-NEXT:    cmp w0, #0
 ; CHECK-FP-SD-NEXT:    b.le .LBB18_2
 ; CHECK-FP-SD-NEXT:  // %bb.1:
-; CHECK-FP-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-FP-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-FP-SD-NEXT:  .LBB18_2:
-; CHECK-FP-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-FP-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-FP-SD-NEXT:    add sp, sp, #48
 ; CHECK-FP-SD-NEXT:    ret
 ;

@@ -143,9 +143,8 @@ define void @fmaxnm_v16f16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmaxnm z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmaxnm z2.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v16f16:
@@ -347,9 +346,8 @@ define void @fmaxnm_v8f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmaxnm z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmaxnm z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v8f32:
@@ -448,9 +446,8 @@ define void @fmaxnm_v4f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmaxnm z1.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmaxnm z2.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v4f64:
@@ -622,9 +619,8 @@ define void @fminnm_v16f16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fminnm z2.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v16f16:
@@ -826,9 +822,8 @@ define void @fminnm_v8f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fminnm z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v8f32:
@@ -927,9 +922,8 @@ define void @fminnm_v4f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fminnm z2.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v4f64:
@@ -1101,9 +1095,8 @@ define void @fmax_v16f16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmax z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmax z2.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmax_v16f16:
@@ -1305,9 +1298,8 @@ define void @fmax_v8f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmax z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmax z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmax_v8f32:
@@ -1406,9 +1398,8 @@ define void @fmax_v4f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmax z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmax z1.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmax z2.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmax_v4f64:
@@ -1580,9 +1571,8 @@ define void @fmin_v16f16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmin z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmin z2.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmin_v16f16:
@@ -1784,9 +1774,8 @@ define void @fmin_v8f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmin z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmin z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmin_v8f32:
@@ -1885,9 +1874,8 @@ define void @fmin_v4f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmin z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fmin z1.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmin z2.d, p0/m, z2.d, z3.d
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fmin_v4f64:

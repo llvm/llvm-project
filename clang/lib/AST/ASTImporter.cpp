@@ -696,6 +696,10 @@ namespace clang {
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
     ExpectedStmt VisitRequiresExpr(RequiresExpr* E);
     ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr* E);
+    ExpectedStmt
+    VisitSubstNonTypeTemplateParmPackExpr(SubstNonTypeTemplateParmPackExpr *E);
+    ExpectedStmt VisitPseudoObjectExpr(PseudoObjectExpr *E);
+    ExpectedStmt VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -1286,6 +1290,26 @@ bool ASTNodeImporter::hasSameVisibilityContextAndLinkage(TypedefNameDecl *Found,
 //----------------------------------------------------------------------------
 
 using namespace clang;
+
+auto ASTImporter::FunctionDeclImportCycleDetector::makeScopedCycleDetection(
+    const FunctionDecl *D) {
+  const FunctionDecl *LambdaD = nullptr;
+  if (!isCycle(D) && D) {
+    FunctionDeclsWithImportInProgress.insert(D);
+    LambdaD = D;
+  }
+  return llvm::scope_exit([this, LambdaD]() {
+    if (LambdaD) {
+      FunctionDeclsWithImportInProgress.erase(LambdaD);
+    }
+  });
+}
+
+bool ASTImporter::FunctionDeclImportCycleDetector::isCycle(
+    const FunctionDecl *D) const {
+  return FunctionDeclsWithImportInProgress.find(D) !=
+         FunctionDeclsWithImportInProgress.end();
+}
 
 ExpectedType ASTNodeImporter::VisitType(const Type *T) {
   Importer.FromDiag(SourceLocation(), diag::err_unsupported_ast_node)
@@ -2523,8 +2547,7 @@ Error ASTNodeImporter::ImportDefinition(
   // Complete the definition even if error is returned.
   // The RecordDecl may be already part of the AST so it is better to
   // have it in complete state even if something is wrong with it.
-  auto DefinitionCompleterScopeExit =
-      llvm::make_scope_exit(DefinitionCompleter);
+  llvm::scope_exit DefinitionCompleterScopeExit(DefinitionCompleter);
 
   if (Error Err = setTypedefNameForAnonDecl(From, To, Importer))
     return Err;
@@ -4034,7 +4057,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // E.g.: auto foo() { struct X{}; return X(); }
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
-    if (hasReturnTypeDeclaredInside(D)) {
+    // Reuse this approach for auto return types declared as typenames from
+    // template params, tracked in FindFunctionDeclImportCycle.
+    if (hasReturnTypeDeclaredInside(D) ||
+        Importer.FindFunctionDeclImportCycle.isCycle(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
@@ -4057,6 +4083,8 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   Error Err = Error::success();
+  auto ScopedReturnTypeDeclCycleDetector =
+      Importer.FindFunctionDeclImportCycle.makeScopedCycleDetection(D);
   auto T = importChecked(Err, FromTy);
   auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
@@ -9273,6 +9301,50 @@ ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
       const_cast<ImplicitConceptSpecializationDecl *>(CSD), &Satisfaction);
 }
 
+ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmPackExpr(
+    SubstNonTypeTemplateParmPackExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToPackLoc = importChecked(Err, E->getParameterPackLocation());
+  auto ToArgPack = importChecked(Err, E->getArgumentPack());
+  auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext()) SubstNonTypeTemplateParmPackExpr(
+      ToType, E->getValueKind(), ToPackLoc, ToArgPack, ToAssociatedDecl,
+      E->getIndex(), E->getFinal());
+}
+
+ExpectedStmt ASTNodeImporter::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
+  SmallVector<Expr *, 4> ToSemantics(E->getNumSemanticExprs());
+  if (Error Err = ImportContainerChecked(E->semantics(), ToSemantics))
+    return std::move(Err);
+  auto ToSyntOrErr = import(E->getSyntacticForm());
+  if (!ToSyntOrErr)
+    return ToSyntOrErr.takeError();
+  return PseudoObjectExpr::Create(Importer.getToContext(), *ToSyntOrErr,
+                                  ToSemantics, E->getResultExprIndex());
+}
+
+ExpectedStmt
+ASTNodeImporter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToInitLoc = importChecked(Err, E->getInitLoc());
+  auto ToBeginLoc = importChecked(Err, E->getBeginLoc());
+  auto ToEndLoc = importChecked(Err, E->getEndLoc());
+  if (Err)
+    return std::move(Err);
+
+  SmallVector<Expr *, 4> ToArgs(E->getInitExprs().size());
+  if (Error Err = ImportContainerChecked(E->getInitExprs(), ToArgs))
+    return std::move(Err);
+  return CXXParenListInitExpr::Create(Importer.getToContext(), ToArgs, ToType,
+                                      E->getUserSpecifiedInitExprs().size(),
+                                      ToInitLoc, ToBeginLoc, ToEndLoc);
+}
+
 Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,
                                                CXXMethodDecl *FromMethod) {
   Error ImportErrors = Error::success();
@@ -9726,8 +9798,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
 
   // Push FromD to the stack, and remove that when we return.
   ImportPath.push(FromD);
-  auto ImportPathBuilder =
-      llvm::make_scope_exit([this]() { ImportPath.pop(); });
+  llvm::scope_exit ImportPathBuilder([this]() { ImportPath.pop(); });
 
   // Check whether there was a previous failed import.
   // If yes return the existing error.

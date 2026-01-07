@@ -117,8 +117,8 @@ private:
   friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
-  template <class _Tp>
-  friend class optional;
+  template <class _Tp, class>
+  friend struct __optional_iterator;
 };
 
 template <class _Iter1>

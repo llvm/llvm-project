@@ -27,6 +27,14 @@ MlirType mlirLLVMPointerTypeGet(MlirContext ctx, unsigned addressSpace) {
   return wrap(LLVMPointerType::get(unwrap(ctx), addressSpace));
 }
 
+MlirStringRef mlirLLVMPointerTypeGetName(void) {
+  return wrap(LLVM::LLVMPointerType::name);
+}
+
+MlirTypeID mlirLLVMPointerTypeGetTypeID() {
+  return wrap(LLVM::LLVMPointerType::getTypeID());
+}
+
 bool mlirTypeIsALLVMPointerType(MlirType type) {
   return isa<LLVM::LLVMPointerType>(unwrap(type));
 }
@@ -39,8 +47,14 @@ MlirType mlirLLVMVoidTypeGet(MlirContext ctx) {
   return wrap(LLVMVoidType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirLLVMVoidTypeGetName(void) { return wrap(LLVMVoidType::name); }
+
 MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
   return wrap(LLVMArrayType::get(unwrap(elementType), numElements));
+}
+
+MlirStringRef mlirLLVMArrayTypeGetName(void) {
+  return wrap(LLVMArrayType::name);
 }
 
 MlirType mlirLLVMArrayTypeGetElementType(MlirType type) {
@@ -53,6 +67,10 @@ MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
   return wrap(LLVMFunctionType::get(
       unwrap(resultType),
       unwrapList(nArgumentTypes, argumentTypes, argumentStorage), isVarArg));
+}
+
+MlirStringRef mlirLLVMFunctionTypeGetName(void) {
+  return wrap(LLVMFunctionType::name);
 }
 
 intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type) {
@@ -71,6 +89,14 @@ MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type) {
 
 bool mlirTypeIsALLVMStructType(MlirType type) {
   return isa<LLVM::LLVMStructType>(unwrap(type));
+}
+
+MlirTypeID mlirLLVMStructTypeGetTypeID() {
+  return wrap(LLVM::LLVMStructType::getTypeID());
+}
+
+MlirStringRef mlirLLVMStructTypeGetName(void) {
+  return wrap(LLVM::LLVMStructType::name);
 }
 
 bool mlirLLVMStructTypeIsLiteral(MlirType type) {
@@ -159,9 +185,8 @@ MlirAttribute mlirLLVMDIExpressionAttrGet(MlirContext ctx, intptr_t nOperations,
 
   return wrap(DIExpressionAttr::get(
       unwrap(ctx),
-      llvm::map_to_vector(
-          unwrapList(nOperations, operations, attrStorage),
-          [](Attribute a) { return cast<DIExpressionElemAttr>(a); })));
+      llvm::map_to_vector(unwrapList(nOperations, operations, attrStorage),
+                          llvm::CastTo<DIExpressionElemAttr>)));
 }
 
 MlirAttribute mlirLLVMDINullTypeAttrGet(MlirContext ctx) {
@@ -202,7 +227,7 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
       cast<DIExpressionAttr>(unwrap(allocated)),
       cast<DIExpressionAttr>(unwrap(associated)),
       llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
-                          [](Attribute a) { return cast<DINodeAttr>(a); })));
+                          llvm::CastTo<DINodeAttr>)));
 }
 
 MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
@@ -308,7 +333,7 @@ MlirAttribute mlirLLVMDISubroutineTypeAttrGet(MlirContext ctx,
   return wrap(DISubroutineTypeAttr::get(
       unwrap(ctx), callingConvention,
       llvm::map_to_vector(unwrapList(nTypes, types, attrStorage),
-                          [](Attribute a) { return cast<DITypeAttr>(a); })));
+                          llvm::CastTo<DITypeAttr>)));
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGetRecSelf(MlirAttribute recId) {
@@ -338,10 +363,10 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
       cast<DISubroutineTypeAttr>(unwrap(type)),
       llvm::map_to_vector(
           unwrapList(nRetainedNodes, retainedNodes, nodesStorage),
-          [](Attribute a) { return cast<DINodeAttr>(a); }),
+          llvm::CastTo<DINodeAttr>),
       llvm::map_to_vector(
           unwrapList(nAnnotations, annotations, annotationsStorage),
-          [](Attribute a) { return cast<DINodeAttr>(a); })));
+          llvm::CastTo<DINodeAttr>)));
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGetScope(MlirAttribute diSubprogram) {
@@ -398,7 +423,7 @@ MlirAttribute mlirLLVMDIImportedEntityAttrGet(
       cast<DINodeAttr>(unwrap(entity)), cast<DIFileAttr>(unwrap(file)), line,
       cast<StringAttr>(unwrap(name)),
       llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
-                          [](Attribute a) { return cast<DINodeAttr>(a); })));
+                          llvm::CastTo<DINodeAttr>)));
 }
 
 MlirAttribute mlirLLVMDIAnnotationAttrGet(MlirContext ctx, MlirAttribute name,

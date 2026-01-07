@@ -53,7 +53,7 @@ define void @struct_return_1xi64_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 2
+; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
 ; VF2IC2-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 0
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 1
@@ -81,7 +81,7 @@ define void @struct_return_1xi64_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP25:%.*]] = extractvalue { <2 x i64> } [[TMP13]], 0
 ; VF2IC2-NEXT:    [[TMP26:%.*]] = extractvalue { <2 x i64> } [[TMP24]], 0
 ; VF2IC2-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i64, ptr [[OUT_A]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i64, ptr [[TMP27]], i32 2
+; VF2IC2-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i64, ptr [[TMP27]], i64 2
 ; VF2IC2-NEXT:    store <2 x i64> [[TMP25]], ptr [[TMP27]], align 4
 ; VF2IC2-NEXT:    store <2 x i64> [[TMP26]], ptr [[TMP29]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -166,7 +166,7 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    store <4 x float> [[TMP42]], ptr [[TMP45]], align 4
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ;
 ; VF2IC2-LABEL: define void @struct_return_2xf32_replicate(
@@ -178,7 +178,7 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 2
+; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
 ; VF2IC2-NEXT:    [[TMP22:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 0
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 1
@@ -224,16 +224,16 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP43:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP21]], 1
 ; VF2IC2-NEXT:    [[TMP44:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP40]], 1
 ; VF2IC2-NEXT:    [[TMP45:%.*]] = getelementptr inbounds float, ptr [[OUT_A]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds float, ptr [[TMP45]], i32 2
+; VF2IC2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds float, ptr [[TMP45]], i64 2
 ; VF2IC2-NEXT:    store <2 x float> [[TMP41]], ptr [[TMP45]], align 4
 ; VF2IC2-NEXT:    store <2 x float> [[TMP42]], ptr [[TMP47]], align 4
 ; VF2IC2-NEXT:    [[TMP48:%.*]] = getelementptr inbounds float, ptr [[OUT_B]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP50:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i32 2
+; VF2IC2-NEXT:    [[TMP50:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 2
 ; VF2IC2-NEXT:    store <2 x float> [[TMP43]], ptr [[TMP48]], align 4
 ; VF2IC2-NEXT:    store <2 x float> [[TMP44]], ptr [[TMP50]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF2IC2-NEXT:    br i1 [[TMP51]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF2IC2-NEXT:    br i1 [[TMP51]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -336,7 +336,7 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    store <4 x i32> [[TMP63]], ptr [[TMP64]], align 4
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP66:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF4-NEXT:    br i1 [[TMP66]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP66]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ;
 ; VF2IC2-LABEL: define void @struct_return_3xi32_replicate(
@@ -348,7 +348,7 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
+; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; VF2IC2-NEXT:    [[TMP30:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 1
@@ -408,24 +408,24 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    [[TMP57:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP29]], 0
 ; VF2IC2-NEXT:    [[TMP58:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP56]], 0
 ; VF2IC2-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i32, ptr [[DST_A]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i32, ptr [[TMP59]], i32 2
+; VF2IC2-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i32, ptr [[TMP59]], i64 2
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP57]], ptr [[TMP59]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP58]], ptr [[TMP61]], align 4
 ; VF2IC2-NEXT:    [[TMP62:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP29]], 1
 ; VF2IC2-NEXT:    [[TMP63:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP56]], 1
 ; VF2IC2-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i32, ptr [[DST_B]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i32 2
+; VF2IC2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i64 2
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP62]], ptr [[TMP64]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP63]], ptr [[TMP66]], align 4
 ; VF2IC2-NEXT:    [[TMP67:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP29]], 2
 ; VF2IC2-NEXT:    [[TMP68:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[TMP56]], 2
 ; VF2IC2-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i32, ptr [[DST_C]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i32, ptr [[TMP69]], i32 2
+; VF2IC2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i32, ptr [[TMP69]], i64 2
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP67]], ptr [[TMP69]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP68]], ptr [[TMP71]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP72:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF2IC2-NEXT:    br i1 [[TMP72]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF2IC2-NEXT:    br i1 [[TMP72]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -580,7 +580,7 @@ define void @struct_return_2xf32_replicate_predicated(ptr %a) {
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 2
+; VF2IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 2
 ; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 8
 ; VF2IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD]], zeroinitializer

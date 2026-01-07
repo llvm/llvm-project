@@ -9,7 +9,6 @@
 #ifdef cl_khr_extended_bit_ops
 
 #include <clc/integer/clc_bitfield_extract_signed.h>
-#include <clc/opencl/integer/bitfield_extract_signed.h>
 
 #define __CLC_FUNCTION bitfield_extract_signed
 #define __CLC_RETTYPE __CLC_S_GENTYPE

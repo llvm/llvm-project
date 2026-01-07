@@ -114,7 +114,7 @@ define i32 @urem_order1(i32 %n) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 3
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 3
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
@@ -205,13 +205,12 @@ define i64 @test_loop_with_div_order_1(i64 %n) {
 ; CHECK-NEXT:    [[PARITY_CHECK:%.*]] = icmp eq i64 [[IS_ODD]], 0
 ; CHECK-NEXT:    br i1 [[PARITY_CHECK]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UPPER_BOUND]], i64 1)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[DUMMY:%.*]] = load volatile i64, ptr null, align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[UMAX]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[UPPER_BOUND]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]

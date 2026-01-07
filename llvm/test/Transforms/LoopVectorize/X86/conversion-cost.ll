@@ -126,9 +126,9 @@ define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwi
 ; CHECK-NEXT:    [[TMP19:%.*]] = sitofp <2 x i64> [[TMP10]] to <2 x float>
 ; CHECK-NEXT:    [[TMP20:%.*]] = sitofp <2 x i64> [[TMP11]] to <2 x float>
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i32 4
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i32 6
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 4
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 6
 ; CHECK-NEXT:    store <2 x float> [[TMP12]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP18]], ptr [[TMP15]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP19]], ptr [[TMP16]], align 4

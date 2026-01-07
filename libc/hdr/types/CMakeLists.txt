@@ -479,3 +479,11 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.struct_rlimit
     libc.include.sys_resource
 )
+
+add_proxy_header_library(
+  gid_t
+  HDRS
+    gid_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.gid_t
+)

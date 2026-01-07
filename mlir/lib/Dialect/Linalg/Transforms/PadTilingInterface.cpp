@@ -288,10 +288,6 @@ FailureOr<PadTilingInterfaceResult> linalg::rewriteAsPaddedOp(
     return failure();
   }
 
-  OpBuilder::InsertionGuard g(builder);
-  // Set IP after toPad because we also take the dims of toPad's output.
-  builder.setInsertionPointAfter(toPad);
-
   // 1. Get the loopUpperBounds from the TilingInterface.
   SmallVector<Range> iterationDomain = toPad.getIterationDomain(builder);
 

@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -45,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -59,8 +60,7 @@
 #include <optional>
 #include <system_error>
 using namespace clang;
-using namespace clang::driver;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace llvm;
 using namespace llvm::opt;
 
@@ -425,8 +425,11 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   if (!TheTarget)
     return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
-      MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer = [&] {
+    // FIXME(sandboxing): Make this a proper input file.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
+  }();
 
   if (std::error_code EC = Buffer.getError()) {
     return Diags.Report(diag::err_fe_error_reading)
@@ -517,9 +520,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
     Ctx.setCompilationDir(Opts.DebugCompilationDir);
   else {
     // If no compilation dir is set, try to use the current directory.
-    SmallString<128> CWD;
-    if (!sys::fs::current_path(CWD))
-      Ctx.setCompilationDir(CWD);
+    if (auto CWD = VFS->getCurrentWorkingDirectory())
+      Ctx.setCompilationDir(*CWD);
   }
   if (!Opts.DebugPrefixMap.empty())
     for (const auto &KV : Opts.DebugPrefixMap)
@@ -672,7 +674,10 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   DiagClient->setPrefix("clang -cc1as");
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
 
-  auto VFS = vfs::getRealFileSystem();
+  auto VFS = [] {
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return vfs::getRealFileSystem();
+  }();
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -688,8 +693,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     getDriverOptTable().printHelp(
         llvm::outs(), "clang -cc1as [options] file...",
         "Clang Integrated Assembler", /*ShowHidden=*/false,
-        /*ShowAllAliases=*/false,
-        llvm::opt::Visibility(driver::options::CC1AsOption));
+        /*ShowAllAliases=*/false, llvm::opt::Visibility(options::CC1AsOption));
 
     return 0;
   }
