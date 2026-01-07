@@ -1951,11 +1951,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__cpuid:
   case X86::BI__cpuidex: {
     mlir::Location loc = getLoc(expr->getExprLoc());
-    mlir::Type i32Ty = builder.getSInt32Ty();
     mlir::Value subFuncId = builtinID == X86::BI__cpuidex
                                 ? ops[2]
                                 : builder.getConstInt(loc, sInt32Ty, 0);
-    cir::CpuIdOp::create(builder, loc, i32Ty, /*basePtr=*/ops[0],
+    cir::CpuIdOp::create(builder, loc, /*basePtr=*/ops[0],
                          /*funcId=*/ops[1], /*subFuncId=*/subFuncId);
     return mlir::Value{};
   }
