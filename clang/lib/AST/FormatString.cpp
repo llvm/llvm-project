@@ -371,6 +371,9 @@ static clang::analyze_format_string::ArgType::MatchKind
 matchesSizeTPtrdiffT(ASTContext &C, QualType T, QualType E) {
   using MatchKind = clang::analyze_format_string::ArgType::MatchKind;
 
+  if (T->isBooleanType())
+    return MatchKind::NoMatch;
+
   if (!T->isIntegerType())
     return MatchKind::NoMatch;
 
