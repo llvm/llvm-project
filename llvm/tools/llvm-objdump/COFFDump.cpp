@@ -22,6 +22,7 @@
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Win64EH.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,11 +33,6 @@ using namespace llvm::object;
 using namespace llvm::Win64EH;
 
 namespace {
-template <typename T> struct EnumEntry {
-  T Value;
-  StringRef Name;
-};
-
 class COFFDumper : public Dumper {
 public:
   explicit COFFDumper(const llvm::object::COFFObjectFile &O)
@@ -67,22 +63,22 @@ objdump::createCOFFDumper(const object::COFFObjectFile &Obj) {
 }
 
 constexpr EnumEntry<uint16_t> PEHeaderMagic[] = {
-    {uint16_t(COFF::PE32Header::PE32), "PE32"},
-    {uint16_t(COFF::PE32Header::PE32_PLUS), "PE32+"},
+    {"PE32", uint16_t(COFF::PE32Header::PE32)},
+    {"PE32+", uint16_t(COFF::PE32Header::PE32_PLUS)},
 };
 
 constexpr EnumEntry<COFF::WindowsSubsystem> PEWindowsSubsystem[] = {
-    {COFF::IMAGE_SUBSYSTEM_UNKNOWN, "unspecified"},
-    {COFF::IMAGE_SUBSYSTEM_NATIVE, "NT native"},
-    {COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI, "Windows GUI"},
-    {COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI, "Windows CUI"},
-    {COFF::IMAGE_SUBSYSTEM_POSIX_CUI, "POSIX CUI"},
-    {COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI, "Wince CUI"},
-    {COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION, "EFI application"},
-    {COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER, "EFI boot service driver"},
-    {COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER, "EFI runtime driver"},
-    {COFF::IMAGE_SUBSYSTEM_EFI_ROM, "SAL runtime driver"},
-    {COFF::IMAGE_SUBSYSTEM_XBOX, "XBOX"},
+    {"unspecified", COFF::IMAGE_SUBSYSTEM_UNKNOWN},
+    {"NT native", COFF::IMAGE_SUBSYSTEM_NATIVE},
+    {"Windows GUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI},
+    {"Windows CUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI},
+    {"POSIX CUI", COFF::IMAGE_SUBSYSTEM_POSIX_CUI},
+    {"Wince CUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI},
+    {"EFI application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION},
+    {"EFI boot service driver", COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER},
+    {"EFI runtime driver", COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER},
+    {"SAL runtime driver", COFF::IMAGE_SUBSYSTEM_EFI_ROM},
+    {"XBOX", COFF::IMAGE_SUBSYSTEM_XBOX},
 };
 
 template <typename T, typename TEnum>

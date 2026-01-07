@@ -152,6 +152,12 @@ void pointer_indirection() {
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: ImplicitCastExpr, Type : int *)
 // CHECK-NEXT:       Src:  [[O_PP_INNER]] (Decl: pp, Type : int *)
 // CHECK:   OriginFlow:
+// CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: UnaryOperator, Type : int *&)
+// CHECK-NEXT:       Src:  {{[0-9]+}} (Expr: ImplicitCastExpr, Type : int **)
+// CHECK:   OriginFlow:
+// CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: UnaryOperator, Type : int *)
+// CHECK-NEXT:       Src:  {{[0-9]+}} (Expr: ImplicitCastExpr, Type : int *)
+// CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: ImplicitCastExpr, Type : int *)
 // CHECK-NEXT:       Src:  {{[0-9]+}} (Expr: UnaryOperator, Type : int *)
 // CHECK:   OriginFlow:
