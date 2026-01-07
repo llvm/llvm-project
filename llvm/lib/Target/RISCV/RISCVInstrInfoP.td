@@ -1587,6 +1587,10 @@ let Predicates = [HasStdExtP] in {
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
+  def : PatGprGpr<saddsat, SADD>;
+  def : PatGprGpr<ssubsat, SSUB>;
+  def : PatGprGpr<uaddsat, SADDU>;
+  def : PatGprGpr<usubsat, SSUBU>;
   def : PatGprGpr<sshlsat, SSHA>;
 
   // Load/Store patterns
