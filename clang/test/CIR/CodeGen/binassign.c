@@ -24,8 +24,7 @@ void binary_assign(void) {
 // CIR:         %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"]
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store{{.*}} %[[TRUE]], %[[B]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:         %[[CHAR_INI_INIT:.*]] = cir.const #cir.int<65> : !s32i
-// CIR:         %[[CHAR_VAL:.*]] = cir.cast integral %[[CHAR_INI_INIT]] : !s32i -> !s8i
+// CIR:         %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s8i
 // CIR:         cir.store{{.*}} %[[CHAR_VAL]], %[[C]] : !s8i, !cir.ptr<!s8i>
 // CIR:         %[[FLOAT_VAL:.*]] = cir.const #cir.fp<3.140000e+00> : !cir.float
 // CIR:         cir.store{{.*}} %[[FLOAT_VAL]], %[[F]] : !cir.float, !cir.ptr<!cir.float>

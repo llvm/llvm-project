@@ -201,7 +201,6 @@ __m256i test_mm256_mask_i32gather_epi32(__m256i __v1_old, __mmask8 __mask, __m25
 
 __m128i test_mm_ror_epi32(__m128i __A) {
   // CIR-LABEL: test_mm_ror_epi32
-  // CIR: cir.cast integral %{{.*}} : !s32i -> !u32i
   // CIR: cir.vec.splat %{{.*}} : !u32i, !cir.vector<4 x !u32i>
   // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}: (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !u32i>) -> !cir.vector<4 x !s32i>
 
@@ -217,7 +216,6 @@ __m128i test_mm_ror_epi32(__m128i __A) {
 
 __m256i test_mm256_ror_epi32(__m256i __A) {
   // CIR-LABEL: test_mm256_ror_epi32
-  // CIR: cir.cast integral %{{.*}} : !s32i -> !u32i
   // CIR: cir.vec.splat %{{.*}} : !u32i, !cir.vector<8 x !u32i>
   // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}: (!cir.vector<8 x !s32i>, !cir.vector<8 x !s32i>, !cir.vector<8 x !u32i>) -> !cir.vector<8 x !s32i>
 
@@ -233,8 +231,6 @@ __m256i test_mm256_ror_epi32(__m256i __A) {
 
 __m128i test_mm_ror_epi64(__m128i __A) {
   // CIR-LABEL: test_mm_ror_epi64
-  // CIR: cir.cast integral %{{.*}} : !s32i -> !u32i
-  // CIR: cir.cast integral %{{.*}} : !u32i -> !u64i
   // CIR: cir.vec.splat %{{.*}} : !u64i, !cir.vector<2 x !u64i>
   // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}: (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !u64i>) -> !cir.vector<2 x !s64i>
 
@@ -248,8 +244,6 @@ __m128i test_mm_ror_epi64(__m128i __A) {
 
 __m256i test_mm256_ror_epi64(__m256i __A) {
   // CIR-LABEL: test_mm256_ror_epi64
-  // CIR: cir.cast integral %{{.*}} : !s32i -> !u32i
-  // CIR: cir.cast integral %{{.*}} : !u32i -> !u64i
   // CIR: cir.vec.splat %{{.*}} : !u64i, !cir.vector<4 x !u64i>
   // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}: (!cir.vector<4 x !s64i>, !cir.vector<4 x !s64i>, !cir.vector<4 x !u64i>) -> !cir.vector<4 x !s64i>
 
