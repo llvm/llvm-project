@@ -10,7 +10,7 @@
 /// This file implements the IR2VecTool and MIR2VecTool classes for
 /// IR2Vec/MIR2Vec embedding generation.
 ///
-//===------------------------------------------------------------------Fail----===//
+//===----------------------------------------------------------------------===//
 
 #include "utils.h"
 #include "llvm/ADT/ArrayRef.h"
