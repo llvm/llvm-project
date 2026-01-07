@@ -15,36 +15,36 @@
 ;;    *d = -*d;
 ;; }
 
-define dso_local spir_kernel void @foo(double noundef %a1, half addrspace(1)* noundef %h, float addrspace(1)* noundef %b0, double addrspace(1)* noundef %b1, <8 x double> addrspace(1)* noundef %d) {
+define dso_local spir_kernel void @foo(double noundef %a1, ptr addrspace(1) noundef %h, ptr addrspace(1) noundef %b0, ptr addrspace(1) noundef %b1, ptr addrspace(1) noundef %d) {
 entry:
   %a1.addr = alloca double, align 8
-  %h.addr = alloca half addrspace(1)*, align 4
-  %b0.addr = alloca float addrspace(1)*, align 4
-  %b1.addr = alloca double addrspace(1)*, align 4
-  %d.addr = alloca <8 x double> addrspace(1)*, align 4
-  store double %a1, double* %a1.addr, align 8
-  store half addrspace(1)* %h, half addrspace(1)** %h.addr, align 4
-  store float addrspace(1)* %b0, float addrspace(1)** %b0.addr, align 4
-  store double addrspace(1)* %b1, double addrspace(1)** %b1.addr, align 4
-  store <8 x double> addrspace(1)* %d, <8 x double> addrspace(1)** %d.addr, align 4
-  %0 = load half addrspace(1)*, half addrspace(1)** %h.addr, align 4
-  %1 = load half, half addrspace(1)* %0, align 2
+  %h.addr = alloca ptr addrspace(1), align 4
+  %b0.addr = alloca ptr addrspace(1), align 4
+  %b1.addr = alloca ptr addrspace(1), align 4
+  %d.addr = alloca ptr addrspace(1), align 4
+  store double %a1, ptr %a1.addr, align 8
+  store ptr addrspace(1) %h, ptr %h.addr, align 4
+  store ptr addrspace(1) %b0, ptr %b0.addr, align 4
+  store ptr addrspace(1) %b1, ptr %b1.addr, align 4
+  store ptr addrspace(1) %d, ptr %d.addr, align 4
+  %0 = load ptr addrspace(1), ptr %h.addr, align 4
+  %1 = load half, ptr addrspace(1) %0, align 2
   %fneg = fneg half %1
-  %2 = load half addrspace(1)*, half addrspace(1)** %h.addr, align 4
-  store half %fneg, half addrspace(1)* %2, align 2
-  %3 = load float addrspace(1)*, float addrspace(1)** %b0.addr, align 4
-  %4 = load float, float addrspace(1)* %3, align 4
+  %2 = load ptr addrspace(1), ptr %h.addr, align 4
+  store half %fneg, ptr addrspace(1) %2, align 2
+  %3 = load ptr addrspace(1), ptr %b0.addr, align 4
+  %4 = load float, ptr addrspace(1) %3, align 4
   %fneg1 = fneg float %4
-  %5 = load float addrspace(1)*, float addrspace(1)** %b0.addr, align 4
-  store float %fneg1, float addrspace(1)* %5, align 4
-  %6 = load double, double* %a1.addr, align 8
+  %5 = load ptr addrspace(1), ptr %b0.addr, align 4
+  store float %fneg1, ptr addrspace(1) %5, align 4
+  %6 = load double, ptr %a1.addr, align 8
   %fneg2 = fneg double %6
-  %7 = load double addrspace(1)*, double addrspace(1)** %b1.addr, align 4
-  store double %fneg2, double addrspace(1)* %7, align 8
-  %8 = load <8 x double> addrspace(1)*, <8 x double> addrspace(1)** %d.addr, align 4
-  %9 = load <8 x double>, <8 x double> addrspace(1)* %8, align 64
+  %7 = load ptr addrspace(1), ptr %b1.addr, align 4
+  store double %fneg2, ptr addrspace(1) %7, align 8
+  %8 = load ptr addrspace(1), ptr %d.addr, align 4
+  %9 = load <8 x double>, ptr addrspace(1) %8, align 64
   %fneg3 = fneg <8 x double> %9
-  %10 = load <8 x double> addrspace(1)*, <8 x double> addrspace(1)** %d.addr, align 4
-  store <8 x double> %fneg3, <8 x double> addrspace(1)* %10, align 64
+  %10 = load ptr addrspace(1), ptr %d.addr, align 4
+  store <8 x double> %fneg3, ptr addrspace(1) %10, align 64
   ret void
 }

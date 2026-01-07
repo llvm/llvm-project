@@ -16340,10 +16340,18 @@ AArch64TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   EVT VT = Op.getOperand(0).getValueType();
 
   if (VT.getScalarType() == MVT::i1) {
+    SDLoc DL(Op);
+    // There are no operations to extend a nxv1i1 predicate to a nxv1i128 vector
+    // An easy lowering is widening the input predicate to nxv2i1.
+    if (VT == MVT::nxv1i1) {
+      SDValue WidenedPred = DAG.getInsertSubvector(
+          DL, DAG.getPOISON(MVT::nxv2i1), Op->getOperand(0), 0);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Op.getValueType(),
+                         WidenedPred, Op.getOperand(1));
+    }
     // We can't directly extract from an SVE predicate; extend it first.
     // (This isn't the only possible lowering, but it's straightforward.)
     EVT VectorVT = getPromotedVTForPredicate(VT);
-    SDLoc DL(Op);
     SDValue Extend =
         DAG.getNode(ISD::ANY_EXTEND, DL, VectorVT, Op.getOperand(0));
     MVT ExtractTy = VectorVT == MVT::nxv2i64 ? MVT::i64 : MVT::i32;

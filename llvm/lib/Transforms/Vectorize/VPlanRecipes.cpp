@@ -2486,10 +2486,28 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
   // is vector-typed. Thus, to keep the representation compact, we only use
   // vector-typed operands for loop-varying values.
 
-  assert(
-      any_of(operands(),
-             [](VPValue *Op) { return !Op->isDefinedOutsideLoopRegions(); }) &&
-      "Expected at least one loop-variant operand");
+  bool AllOperandsAreInvariant = all_of(operands(), [](VPValue *Op) {
+    return Op->isDefinedOutsideLoopRegions();
+  });
+  if (AllOperandsAreInvariant) {
+    // If we are vectorizing, but the GEP has only loop-invariant operands,
+    // the GEP we build (by only using vector-typed operands for
+    // loop-varying values) would be a scalar pointer. Thus, to ensure we
+    // produce a vector of pointers, we need to either arbitrarily pick an
+    // operand to broadcast, or broadcast a clone of the original GEP.
+    // Here, we broadcast a clone of the original.
+
+    SmallVector<Value *> Ops;
+    for (unsigned I = 0, E = getNumOperands(); I != E; I++)
+      Ops.push_back(State.get(getOperand(I), VPLane(0)));
+
+    auto *NewGEP =
+        State.Builder.CreateGEP(getSourceElementType(), Ops[0], drop_begin(Ops),
+                                "", getGEPNoWrapFlags());
+    Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
+    State.set(this, Splat);
+    return;
+  }
 
   // If the GEP has at least one loop-varying operand, we are sure to
   // produce a vector of pointers unless VF is scalar.

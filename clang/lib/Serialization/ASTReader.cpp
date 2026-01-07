@@ -555,25 +555,7 @@ namespace {
 
 using MacroDefinitionsMap =
     llvm::StringMap<std::pair<StringRef, bool /*IsUndef*/>>;
-
-class DeclsSet {
-  SmallVector<NamedDecl *, 64> Decls;
-  llvm::SmallPtrSet<NamedDecl *, 8> Found;
-
-public:
-  operator ArrayRef<NamedDecl *>() const { return Decls; }
-
-  bool empty() const { return Decls.empty(); }
-
-  bool insert(NamedDecl *ND) {
-    auto [_, Inserted] = Found.insert(ND);
-    if (Inserted)
-      Decls.push_back(ND);
-    return Inserted;
-  }
-};
-
-using DeclsMap = llvm::DenseMap<DeclarationName, DeclsSet>;
+using DeclsMap = llvm::DenseMap<DeclarationName, SmallVector<NamedDecl *, 8>>;
 
 } // namespace
 
@@ -8752,23 +8734,14 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     return false;
 
   // Load the list of declarations.
-  DeclsSet DS;
+  SmallVector<NamedDecl *, 64> Decls;
+  llvm::SmallPtrSet<NamedDecl *, 8> Found;
 
   auto Find = [&, this](auto &&Table, auto &&Key) {
     for (GlobalDeclID ID : Table.find(Key)) {
       NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() != Name)
-        continue;
-      // Special case for namespaces: There can be a lot of redeclarations of
-      // some namespaces, and we import a "key declaration" per imported module.
-      // Since all declarations of a namespace are essentially interchangeable,
-      // we can optimize namespace look-up by only storing the key declaration
-      // of the current TU, rather than storing N key declarations where N is
-      // the # of imported modules that declare that namespace.
-      // TODO: Try to generalize this optimization to other redeclarable decls.
-      if (isa<NamespaceDecl>(ND))
-        ND = cast<NamedDecl>(getKeyDeclaration(ND));
-      DS.insert(ND);
+      if (ND->getDeclName() == Name && Found.insert(ND).second)
+        Decls.push_back(ND);
     }
   };
 
@@ -8803,8 +8776,8 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     Find(It->second.Table, Name);
   }
 
-  SetExternalVisibleDeclsForName(DC, Name, DS);
-  return !DS.empty();
+  SetExternalVisibleDeclsForName(DC, Name, Decls);
+  return !Decls.empty();
 }
 
 void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
@@ -8822,16 +8795,7 @@ void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
 
     for (GlobalDeclID ID : It->second.Table.findAll()) {
       NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      // Special case for namespaces: There can be a lot of redeclarations of
-      // some namespaces, and we import a "key declaration" per imported module.
-      // Since all declarations of a namespace are essentially interchangeable,
-      // we can optimize namespace look-up by only storing the key declaration
-      // of the current TU, rather than storing N key declarations where N is
-      // the # of imported modules that declare that namespace.
-      // TODO: Try to generalize this optimization to other redeclarable decls.
-      if (isa<NamespaceDecl>(ND))
-        ND = cast<NamedDecl>(getKeyDeclaration(ND));
-      Decls[ND->getDeclName()].insert(ND);
+      Decls[ND->getDeclName()].push_back(ND);
     }
 
     // FIXME: Why a PCH test is failing if we remove the iterator after findAll?
@@ -8841,9 +8805,9 @@ void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
   findAll(ModuleLocalLookups, NumModuleLocalVisibleDeclContexts);
   findAll(TULocalLookups, NumTULocalVisibleDeclContexts);
 
-  for (auto &[Name, DS] : Decls)
-    SetExternalVisibleDeclsForName(DC, Name, DS);
-
+  for (DeclsMap::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
+    SetExternalVisibleDeclsForName(DC, I->first, I->second);
+  }
   const_cast<DeclContext *>(DC)->setHasExternalVisibleStorage(false);
 }
 
