@@ -352,7 +352,8 @@ void CIRGenFunction::LexicalScope::cleanup() {
   insertCleanupAndLeave(curBlock);
 }
 
-cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc, bool isImplicit) {
+cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc,
+                                                       bool isImplicit) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   // If we are on a coroutine, add the coro_end builtin call.
