@@ -17321,9 +17321,10 @@ in their handling of :ref:`NaN values <floatnan>`:
    minimumnum/maximumnum. For signaling NaNs, non-deterministically returns
    NaN or the other operand.
 
-Additionally, each of these intrinsics supports two behaviors for signed zeroes.
+Additionally, each of these intrinsics supports two behaviors for signed zeros.
 By default, -0.0 is considered smaller than +0.0. If the ``nsz`` flag is
-specified, the order is non-deterministic.
+specified, the order is non-deterministic: If the two inputs are zeros with
+opposite sign, either input may be returned.
 
 The mapping between the LLVM intrinsics, C functions and IEEE 754 functions is
 as follows (up to divergences permitted by the usual `NaN rules <floatnan>`):
