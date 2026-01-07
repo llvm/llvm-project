@@ -14,6 +14,10 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 
+// This file represents an AIX Big Archive and combines several files into one.
+// It is the default library archive format for the AIX operating system.
+// Ref: https://www.ibm.com/docs/en/aix/7.3.0?topic=formats-ar-file-format-big
+
 class ObjectContainerBigArchive : public lldb_private::ObjectContainer {
 public:
   ObjectContainerBigArchive(const lldb::ModuleSP &module_sp,
