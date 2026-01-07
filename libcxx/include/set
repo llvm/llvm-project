@@ -883,8 +883,7 @@ public:
 
 #  if _LIBCPP_STD_VER >= 20
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
-  template <typename _K2>
-    requires __is_transparent_v<_Compare, _K2>
+  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
   }
@@ -1385,8 +1384,7 @@ public:
 
 #  if _LIBCPP_STD_VER >= 20
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
-  template <typename _K2>
-    requires __is_transparent_v<_Compare, _K2>
+  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
   }
