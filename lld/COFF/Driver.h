@@ -88,13 +88,11 @@ public:
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
                             StringRef parentName);
 
-  enum class InputOpt { None, DefaultLib, WholeArchive };
-  void enqueuePDB(StringRef Path) { enqueuePath(Path, false); }
+  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool lazy,
-                   InputOpt inputOpt = InputOpt::None);
+  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
 
   // Returns a list of chunks of selected symbols.
   std::vector<Chunk *> getChunks() const;
@@ -139,10 +137,6 @@ private:
   //    LIB | {value}        | {value}.dll         | {output name}.dll
   //
   std::string getImportName(bool asLib);
-
-  // Write fullly resolved path to repro file if /linkreprofullpathrsp
-  // is specified.
-  void handleReproFile(StringRef path, InputOpt inputOpt);
 
   void createImportLibrary(bool asLib);
 
@@ -198,9 +192,6 @@ private:
   llvm::SmallString<128> universalCRTLibPath;
   int sdkMajor = 0;
   llvm::SmallString<128> windowsSdkLibPath;
-
-  // For linkreprofullpathrsp
-  std::unique_ptr<llvm::raw_fd_ostream> reproFile;
 
   // Functions below this line are defined in DriverUtils.cpp.
 
