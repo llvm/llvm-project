@@ -3283,7 +3283,7 @@ def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
 // One operand data processing instructions.
 //===----------------------------------------------------------------------===//
 
-defm CLS    : OneOperandData<0b000101, "cls">;
+defm CLS    : OneOperandData<0b000101, "cls", ctls>;
 defm CLZ    : OneOperandData<0b000100, "clz", ctlz>;
 defm RBIT   : OneOperandData<0b000000, "rbit", bitreverse>;
 
@@ -3295,14 +3295,13 @@ def : Pat<(cttz GPR32:$Rn),
           (CLZWr (RBITWr GPR32:$Rn))>;
 def : Pat<(cttz GPR64:$Rn),
           (CLZXr (RBITXr GPR64:$Rn))>;
+// FIXME: Remove these patterns when gisel supports ctls
 def : Pat<(ctlz (or (shl (xor (sra GPR32:$Rn, (i64 31)), GPR32:$Rn), (i64 1)),
                 (i32 1))),
           (CLSWr GPR32:$Rn)>;
 def : Pat<(ctlz (or (shl (xor (sra GPR64:$Rn, (i64 63)), GPR64:$Rn), (i64 1)),
                 (i64 1))),
           (CLSXr GPR64:$Rn)>;
-def : Pat<(int_aarch64_cls GPR32:$Rn), (CLSWr GPR32:$Rn)>;
-def : Pat<(int_aarch64_cls64 GPR64:$Rm), (EXTRACT_SUBREG (CLSXr GPR64:$Rm), sub_32)>;
 
 // Unlike the other one operand instructions, the instructions with the "rev"
 // mnemonic do *not* just different in the size bit, but actually use different
@@ -6555,6 +6554,26 @@ defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
                                     int_aarch64_neon_usqadd>;
+
+// Floating-point conversion patterns.
+multiclass IntegerToFPSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
+  let Predicates = [HasFPRCVT] in {
+  def : Pat<(f64 (OpN (i32 (bitconvert (f32 FPR32:$Rn))))),
+            (!cast<Instruction>(INST # DSr) FPR32:$Rn)>;
+  def : Pat<(f16 (OpN (i32 (bitconvert (f32 FPR32:$Rn))))),
+            (!cast<Instruction>(INST # HSr) FPR32:$Rn)>;
+  def : Pat<(f16 (OpN (i64 (bitconvert (f64 FPR64:$Rn))))),
+            (!cast<Instruction>(INST # HDr) FPR64:$Rn)>;
+  def : Pat<(f32 (OpN (i64 (bitconvert (f64 FPR64:$Rn))))),
+            (!cast<Instruction>(INST # SDr) FPR64:$Rn)>;
+  }
+  def : Pat<(f32 (OpN (i32 (bitconvert (f32 FPR32:$Rn))))),
+            (!cast<Instruction>(INST # v1i32) FPR32:$Rn)>;
+  def : Pat<(f64 (OpN (i64 (bitconvert (f64 FPR64:$Rn))))),
+            (!cast<Instruction>(INST # v1i64) FPR64:$Rn)>;
+}
+defm : IntegerToFPSIMDScalarPatterns<any_sint_to_fp, "SCVTF">;
+defm : IntegerToFPSIMDScalarPatterns<any_uint_to_fp, "UCVTF">;
 
 // Floating-point conversion patterns.
 multiclass FPToIntegerSIMDScalarPatterns<SDPatternOperator OpN, string INST> {

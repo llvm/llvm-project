@@ -117,6 +117,12 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
       return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
+  if (match(V, m_Not(m_VPValue(LHSVal)))) {
+    // not X = xor X, -1 = -1 - X
+    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getMinusSCEV(SE.getMinusOne(Ops[0]->getType()), Ops[0]);
+    });
+  }
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
     const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
     Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
@@ -283,8 +289,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
                                      all_of(Rep->operands(), isSingleScalar));
   }
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe,
-          VPWidenSelectRecipe>(VPV))
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return preservesUniformity(WidenR->getOpcode()) &&

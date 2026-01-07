@@ -1518,18 +1518,19 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     return;
   }
 
-  bool HasKindDecoration = false;
-
+  bool PrintedKindDecoration = false;
   if (T->isCanonicalUnqualified()) {
     if (!Policy.SuppressTagKeyword && !D->getTypedefNameForAnonDecl()) {
-      HasKindDecoration = true;
+      PrintedKindDecoration = true;
       OS << D->getKindName();
       OS << ' ';
     }
   } else {
     OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-    if (T->getKeyword() != ElaboratedTypeKeyword::None)
+    if (T->getKeyword() != ElaboratedTypeKeyword::None) {
+      PrintedKindDecoration = true;
       OS << ' ';
+    }
   }
 
   if (!Policy.FullyQualifiedName && !T->isCanonicalUnqualified()) {
@@ -1543,53 +1544,16 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 
   if (const IdentifierInfo *II = D->getIdentifier())
     OS << II->getName();
-  else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
-    assert(Typedef->getIdentifier() && "Typedef without identifier?");
-    OS << Typedef->getIdentifier()->getName();
-  } else {
-    // Make an unambiguous representation for anonymous types, e.g.
-    //   (anonymous enum at /usr/include/string.h:120:9)
-    OS << (Policy.MSVCFormatting ? '`' : '(');
+  else {
+    clang::PrintingPolicy Copy(Policy);
 
-    if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
-      OS << "lambda";
-      HasKindDecoration = true;
-    } else if ((isa<RecordDecl>(D) && cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
-      OS << "anonymous";
-    } else {
-      OS << "unnamed";
+    // Suppress the redundant tag keyword if we just printed one.
+    if (PrintedKindDecoration) {
+      Copy.SuppressTagKeywordInAnonNames = true;
+      Copy.SuppressTagKeyword = true;
     }
 
-    if (Policy.AnonymousTagLocations) {
-      // Suppress the redundant tag keyword if we just printed one.
-      // We don't have to worry about ElaboratedTypes here because you can't
-      // refer to an anonymous type with one.
-      if (!HasKindDecoration)
-        OS << " " << D->getKindName();
-
-      PresumedLoc PLoc = D->getASTContext().getSourceManager().getPresumedLoc(
-          D->getLocation());
-      if (PLoc.isValid()) {
-        OS << " at ";
-        StringRef File = PLoc.getFilename();
-        llvm::SmallString<1024> WrittenFile(File);
-        if (auto *Callbacks = Policy.Callbacks)
-          WrittenFile = Callbacks->remapPath(File);
-        // Fix inconsistent path separator created by
-        // clang::DirectoryLookup::LookupFile when the file path is relative
-        // path.
-        llvm::sys::path::Style Style =
-            llvm::sys::path::is_absolute(WrittenFile)
-                ? llvm::sys::path::Style::native
-                : (Policy.MSVCFormatting
-                       ? llvm::sys::path::Style::windows_backslash
-                       : llvm::sys::path::Style::posix);
-        llvm::sys::path::native(WrittenFile, Style);
-        OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
-      }
-    }
-
-    OS << (Policy.MSVCFormatting ? '\'' : ')');
+    D->printName(OS, Copy);
   }
 
   // If this is a class template specialization, print the template

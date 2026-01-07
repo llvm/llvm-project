@@ -160,7 +160,7 @@ public:
       if (const auto *Field = dyn_cast<FieldDecl>(Member->getMemberDecl());
           Field->getParent()->isUnion()) {
         const QualType MemberType = Field->getType();
-        if (MemberType.isPointerType() || MemberType.isReferenceType())
+        if (MemberType->isPointerType() || MemberType->isReferenceType())
           return false;
       }
 
