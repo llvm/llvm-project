@@ -109,6 +109,7 @@ if lldb_dap_path is not None:
 if llvm_config.use_llvm_tool("llvm-ar"):
     config.available_features.add("llvm-ar")
 
+
 def configure_dexter_substitutions():
     """Configure substitutions for host platform and return list of dependencies"""
     # Produce dexter path, lldb path, and combine into the %dexter substitution
@@ -340,7 +341,7 @@ if lldb_version_string:
         config.available_features.add("lldb-formatters-compatibility")
     else:
         print(
-            f'Marking some LLDB LLVM data-formatter tests as unsupported: using version {lldb_version_string} whereas a version >= 1900.0 is required',
+            f"Marking some LLDB LLVM data-formatter tests as unsupported: using version {lldb_version_string} whereas a version >= 1900.0 is required",
             file=sys.stderr,
         )
 
