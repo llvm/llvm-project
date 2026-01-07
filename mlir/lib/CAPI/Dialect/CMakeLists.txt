@@ -215,6 +215,7 @@ add_mlir_upstream_c_api_library(MLIRCAPILLVM
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRLLVMDialect
+  MLIRLLVMIRTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIMath
@@ -465,6 +466,7 @@ add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTransformDialect
+  MLIRTransformDialectTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPITransformDialectTransforms
