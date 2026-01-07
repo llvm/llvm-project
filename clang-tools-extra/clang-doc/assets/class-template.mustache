@@ -155,7 +155,7 @@
                         <h1 class="hero__title-large">{{TagType}} {{Name}}</h1>
                         <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
                         {{#Description}}
-                        <div class="hero__subtitle">
+                        <div class="doc-card">
                             {{>Comments}}
                         </div>
                         {{/Description}}
@@ -198,11 +198,9 @@
                 {{#HasPublicFunctions}}
                 <section id="PublicMethods" class="section-container">
                     <h2>Public Methods</h2>
-                    <div>
-                        {{#PublicFunctions}}
-                        {{>FunctionPartial}}
-                        {{/PublicFunctions}}
-                    </div>
+                    {{#PublicFunctions}}
+                    {{>FunctionPartial}}
+                    {{/PublicFunctions}}
                 </section>
                 {{/PublicFunctions}}
                 {{#ProtectedFunction}}

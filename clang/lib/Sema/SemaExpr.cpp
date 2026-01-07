@@ -10293,7 +10293,8 @@ static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
 /// IntTy without losing precision.
 static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
                                       QualType OtherIntTy) {
-  if (Int->get()->containsErrors())
+  Expr *E = Int->get();
+  if (E->containsErrors() || E->isInstantiationDependent())
     return false;
 
   QualType IntTy = Int->get()->getType().getUnqualifiedType();

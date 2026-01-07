@@ -29,6 +29,7 @@ namespace gpu {
 struct AsyncTokenType : PyConcreteType<AsyncTokenType> {
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAGPUAsyncTokenType;
   static constexpr const char *pyClassName = "AsyncTokenType";
+  static inline const MlirStringRef name = mlirGPUAsyncTokenTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
