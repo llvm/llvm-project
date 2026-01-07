@@ -287,3 +287,12 @@ add_mlir_upstream_c_api_library(MLIRCAPISMT
   MLIRCAPIIR
   MLIRSMT
 )
+
+add_mlir_upstream_c_api_library(MLIRCAPIPtrDialect
+  PtrDialect.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRPtrDialect
+)

@@ -518,6 +518,15 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS
 )
 
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/PtrOps.td
+  SOURCES dialects/ptr.py
+  DIALECT_NAME ptr
+  GEN_ENUM_BINDINGS
+)
+
 ################################################################################
 # Python extensions.
 # The sources for these are all in lib/Bindings/Python, but since they have to
@@ -752,6 +761,22 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Nanobind
     MLIRCAPIIR
     MLIRCAPISMT
     MLIRCAPIExportSMTLIB
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Ptr.Nanobind
+  MODULE_NAME _mlirDialectsPtr
+  ADD_TO_PARENT MLIRPythonSources.Dialects.ptr
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
+  SOURCES
+    DialectPtr.cpp
+    # Headers must be included explicitly so they are installed.
+    NanobindUtils.h
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIPtrDialect
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
