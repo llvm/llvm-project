@@ -68,9 +68,9 @@ class FeaturePTX<int version>:
 // represents 'z'), sm_103f, and sm_103 architecture variants. The sm_103 is
 // compatible with sm_103a and sm_103f, and sm_103f is compatible with sm_103a.
 //
-// Encoding := Arch * 10 + suffix_offset
+// Encoding := Arch * 10 + ArchSuffixOffset
 // Arch := X * 10 + Y
-// suffix_offset := 0 (base), 2 ('f'), or 3 ('a')
+// ArchSuffixOffset := 0 (base), 2 ('f'), or 3 ('a')
 //
 // For example, sm_103a is encoded as 1033 (103 * 10 + 3) and sm_103f is
 // encoded as 1032 (103 * 10 + 2).
@@ -81,76 +81,33 @@ class FeaturePTX<int version>:
 //  + Compare within the family by comparing FullSMVersion, given both belongs to
 //    the same family.
 //  + Detect 'a' variants by checking FullSMVersion & 1.
+class Proc<FeatureSM SM>
+ : Processor<SM.Name, NoItineraries, [SM]>;
+
 foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53, 60,
               61, 62, 70, 72, 75, 80, 86, 87, 88, 89,
               90, 100, 101, 103, 110, 120, 121] in {
   // Base SM version (e.g. FullSMVersion for sm_100 is 1000)
   def SM#sm : FeatureSM<""#sm, !mul(sm, 10)>;
+  def : Proc<!cast<FeatureSM>("SM"#sm)>;
 
-  // Family-specific targets which are compatible within same family
-  // (e.g. FullSMVersion for sm_100f is 1002)
-  if !ge(sm, 100) then
+  // Family-specific variants, compatible within same family (e.g. sm_100f = 1002)
+  if !ge(sm, 100) then {
     def SM#sm#f : FeatureSM<""#sm#"f", !add(!mul(sm, 10), 2)>;
+    def : Proc<!cast<FeatureSM>("SM"#sm#"f")>;
+  }
 
-  // Architecture-specific targets which are incompatible across architectures
-  // (e.g. FullSMVersion for sm_100a is 1003)
-  if !ge(sm, 90) then
+  // Architecture-specific variants, incompatible across architectures (e.g. sm_100a = 1003)
+  if !ge(sm, 90) then {
     def SM#sm#a : FeatureSM<""#sm#"a", !add(!mul(sm, 10), 3)>;
+    def : Proc<!cast<FeatureSM>("SM"#sm#"a")>;
+  }
 }
 
 foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65, 70, 71, 72,
                    73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88,
                    90] in
   def PTX#version : FeaturePTX<version>;
-
-//===----------------------------------------------------------------------===//
-// NVPTX supported processors.
-//===----------------------------------------------------------------------===//
-
-class Proc<string Name, list<SubtargetFeature> Features>
- : Processor<Name, NoItineraries, Features>;
-
-def : Proc<"sm_20",   [SM20]>;
-def : Proc<"sm_21",   [SM21]>;
-def : Proc<"sm_30",   [SM30]>;
-def : Proc<"sm_32",   [SM32]>;
-def : Proc<"sm_35",   [SM35]>;
-def : Proc<"sm_37",   [SM37]>;
-def : Proc<"sm_50",   [SM50]>;
-def : Proc<"sm_52",   [SM52]>;
-def : Proc<"sm_53",   [SM53]>;
-def : Proc<"sm_60",   [SM60]>;
-def : Proc<"sm_61",   [SM61]>;
-def : Proc<"sm_62",   [SM62]>;
-def : Proc<"sm_70",   [SM70]>;
-def : Proc<"sm_72",   [SM72]>;
-def : Proc<"sm_75",   [SM75]>;
-def : Proc<"sm_80",   [SM80]>;
-def : Proc<"sm_86",   [SM86]>;
-def : Proc<"sm_87",   [SM87]>;
-def : Proc<"sm_88",   [SM88]>;
-def : Proc<"sm_89",   [SM89]>;
-def : Proc<"sm_90",   [SM90]>;
-def : Proc<"sm_90a",  [SM90a]>;
-def : Proc<"sm_100",  [SM100]>;
-def : Proc<"sm_100a", [SM100a]>;
-def : Proc<"sm_100f", [SM100f]>;
-def : Proc<"sm_101",  [SM101]>;
-def : Proc<"sm_101a", [SM101a]>;
-def : Proc<"sm_101f", [SM101f]>;
-def : Proc<"sm_103",  [SM103]>;
-def : Proc<"sm_103a", [SM103a]>;
-def : Proc<"sm_103f", [SM103f]>;
-def : Proc<"sm_110",  [SM110]>;
-def : Proc<"sm_110a", [SM110a]>;
-def : Proc<"sm_110f", [SM110f]>;
-def : Proc<"sm_120",  [SM120]>;
-def : Proc<"sm_120a", [SM120a]>;
-def : Proc<"sm_120f", [SM120f]>;
-def : Proc<"sm_121",  [SM121]>;
-def : Proc<"sm_121a", [SM121a]>;
-def : Proc<"sm_121f", [SM121f]>;
-
 
 def Is64Bit : Predicate<"Subtarget->getTargetTriple().getArch() == Triple::nvptx64">;
 def NVPTX64 : HwMode<[Is64Bit]>;
