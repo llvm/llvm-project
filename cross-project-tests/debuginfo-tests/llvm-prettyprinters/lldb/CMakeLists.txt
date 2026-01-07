@@ -10,7 +10,9 @@ macro(add_lldb_test target source)
 endmacro()
 
 add_lldb_test(check-lldb-llvm-support-arrayref arrayref.cpp)
+add_lldb_test(check-lldb-llvm-support-pointer-int-pair pointer-int-pair.cpp)
 
 set(LLDB_FORMATTER_TESTS
     check-lldb-llvm-support-arrayref
+    check-lldb-llvm-support-pointer-int-pair
     PARENT_SCOPE)
