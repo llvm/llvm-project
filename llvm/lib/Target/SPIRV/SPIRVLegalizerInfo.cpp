@@ -535,11 +535,6 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
   return ConvReg;
 }
 
-static bool legalizeLoad(LegalizerHelper &Helper, MachineInstr &MI,
-                         SPIRVGlobalRegistry *GR) {
-  return true;
-}
-
 static bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI,
                           SPIRVGlobalRegistry *GR) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -628,8 +623,6 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     }
     return true;
   }
-  case TargetOpcode::G_LOAD:
-    return legalizeLoad(Helper, MI, GR);
   case TargetOpcode::G_STORE:
     return legalizeStore(Helper, MI, GR);
   }
