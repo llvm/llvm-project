@@ -70,6 +70,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMStructType(MlirType type);
 
 MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMStructTypeGetTypeID(void);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMStructTypeGetName(void);
+
 /// Returns `true` if the type is a literal (unnamed) LLVM struct type.
 MLIR_CAPI_EXPORTED bool mlirLLVMStructTypeIsLiteral(MlirType type);
 

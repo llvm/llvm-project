@@ -37,6 +37,7 @@ struct StructType : PyConcreteType<StructType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirLLVMStructTypeGetTypeID;
   static constexpr const char *pyClassName = "StructType";
+  static inline const MlirStringRef name = mlirLLVMStructTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

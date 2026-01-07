@@ -95,6 +95,10 @@ MlirTypeID mlirLLVMStructTypeGetTypeID() {
   return wrap(LLVM::LLVMStructType::getTypeID());
 }
 
+MlirStringRef mlirLLVMStructTypeGetName(void) {
+  return wrap(LLVM::LLVMStructType::name);
+}
+
 bool mlirLLVMStructTypeIsLiteral(MlirType type) {
   return !cast<LLVM::LLVMStructType>(unwrap(type)).isIdentified();
 }
