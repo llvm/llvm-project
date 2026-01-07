@@ -12,7 +12,7 @@ The annotator extracts DWARF debug information to provide:
 * Address ranges where the location is valid
 * Source declaration information
 
-For example, when debugging optimized code:
+For example:
 
     annotator = lldb.SBVariableAnnotator()
     target = lldb.debugger.GetSelectedTarget()
@@ -63,7 +63,7 @@ lldb::SBVariableAnnotator::SBVariableAnnotator;
     * 'type_name' (string): Type name of the variable (optional)
 
     Args:
-        inst: SBInstruction object to annotate
+        inst: SBInstruction object
 
     Returns:
         SBStructuredData containing variable annotation array, or invalid
