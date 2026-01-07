@@ -12,6 +12,10 @@
 // ASM: "-cc1as"
 // ASM-SAME: "--gsframe"
 
+// When aarch64 is supported, this will switch to a positive test.
+// RUN: not %clang -### -c --target=aarch64 -Wa,--gsframe %s 2>&1 | FileCheck %s --check-prefix=NOTARGETAARCH
+// NOTARGETAARCH: error: unsupported option '-Wa,--gsframe' for target '{{.*}}'
+
 // RUN: not %clang -### -c --target=mips64 -Wa,--gsframe %s 2>&1 | FileCheck %s --check-prefix=NOTARGETC
 // NOTARGETC: error: unsupported option '-Wa,--gsframe' for target '{{.*}}'
 
