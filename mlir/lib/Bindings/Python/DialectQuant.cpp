@@ -286,7 +286,7 @@ struct UniformQuantizedPerAxisType
       mlirUniformQuantizedPerAxisTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedPerAxisType";
   static inline const MlirStringRef name =
-    mlirUniformQuantizedPerAxisTypeGetName();
+      mlirUniformQuantizedPerAxisTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -374,7 +374,7 @@ struct UniformQuantizedSubChannelType
       mlirUniformQuantizedSubChannelTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedSubChannelType";
   static inline const MlirStringRef name =
-    mlirUniformQuantizedSubChannelTypeGetName();
+      mlirUniformQuantizedSubChannelTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -468,8 +468,7 @@ struct CalibratedQuantizedType
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirCalibratedQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "CalibratedQuantizedType";
-  static inline const MlirStringRef name =
-    mlirCalibratedQuantizedTypeGetName();
+  static inline const MlirStringRef name = mlirCalibratedQuantizedTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

@@ -206,7 +206,8 @@ MLIR_CAPI_EXPORTED MlirType mlirUniformQuantizedSubChannelTypeGet(
     intptr_t blockSizeInfoLength, int32_t *quantizedDimensions,
     int64_t *blockSizes, int64_t storageTypeMin, int64_t storageTypeMax);
 
-MLIR_CAPI_EXPORTED MlirStringRef mlirUniformQuantizedSubChannelTypeGetName(void);
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirUniformQuantizedSubChannelTypeGetName(void);
 
 /// Returns the number of block sizes provided in type.
 MLIR_CAPI_EXPORTED intptr_t

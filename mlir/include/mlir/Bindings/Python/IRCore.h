@@ -991,7 +991,7 @@ public:
     }
 
     if (DerivedTy::name.length != 0) {
-      cls.def("type_name", [](nanobind::object & /*self*/) {
+      cls.def_prop_ro_static("type_name", [](nanobind::object & /*self*/) {
         return nanobind::str(DerivedTy::name.data, DerivedTy::name.length);
       });
     }

@@ -80,7 +80,9 @@ MlirType mlirPDLRangeTypeGet(MlirType elementType) {
   return wrap(pdl::RangeType::get(unwrap(elementType)));
 }
 
-MlirStringRef mlirPDLRangeTypeGetName(void) { return wrap(pdl::RangeType::name); }
+MlirStringRef mlirPDLRangeTypeGetName(void) {
+  return wrap(pdl::RangeType::name);
+}
 
 MlirType mlirPDLRangeTypeGetElementType(MlirType type) {
   return wrap(cast<pdl::RangeType>(unwrap(type)).getElementType());
@@ -120,4 +122,6 @@ MlirType mlirPDLValueTypeGet(MlirContext ctx) {
   return wrap(pdl::ValueType::get(unwrap(ctx)));
 }
 
-MlirStringRef mlirPDLValueTypeGetName(void) { return wrap(pdl::ValueType::name); }
+MlirStringRef mlirPDLValueTypeGetName(void) {
+  return wrap(pdl::ValueType::name);
+}

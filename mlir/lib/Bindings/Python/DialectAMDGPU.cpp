@@ -48,8 +48,7 @@ struct TDMDescriptorType : PyConcreteType<TDMDescriptorType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirAMDGPUTDMDescriptorTypeGetTypeID;
   static constexpr const char *pyClassName = "TDMDescriptorType";
-  static inline const MlirStringRef name =
-    mlirAMDGPUTDMDescriptorTypeGetName();
+  static inline const MlirStringRef name = mlirAMDGPUTDMDescriptorTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -71,8 +70,7 @@ struct TDMGatherBaseType : PyConcreteType<TDMGatherBaseType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirAMDGPUTDMGatherBaseTypeGetTypeID;
   static constexpr const char *pyClassName = "TDMGatherBaseType";
-  static inline const MlirStringRef name =
-    mlirAMDGPUTDMGatherBaseTypeGetName();
+  static inline const MlirStringRef name = mlirAMDGPUTDMGatherBaseTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
