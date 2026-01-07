@@ -8,6 +8,7 @@ define amdgpu_ps void @flat_prefetch(ptr %ptr) {
 ; GCN-LABEL: flat_prefetch:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    flat_prefetch_b8 v[0:1]
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -19,6 +20,7 @@ define amdgpu_ps void @flat_prefetch_sgpr(ptr inreg %ptr) {
 ; GCN-LABEL: flat_prefetch_sgpr:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    flat_prefetch_b8 v0, s[0:1]
 ; GCN-NEXT:    s_endpgm
@@ -31,6 +33,7 @@ define amdgpu_ps void @flat_prefetch_offset(ptr %ptr) {
 ; GCN-LABEL: flat_prefetch_offset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    flat_prefetch_b8 v[0:1] offset:512
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -43,6 +46,7 @@ define amdgpu_ps void @flat_prefetch_sgpr_voffset(ptr inreg %ptr, i32 %offset) {
 ; GCN-LABEL: flat_prefetch_sgpr_voffset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    flat_prefetch_b8 v0, s[0:1]
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -55,6 +59,7 @@ define amdgpu_ps void @flat_prefetch_sgpr_voffset_offset(ptr inreg %ptr, i32 %of
 ; GCN-LABEL: flat_prefetch_sgpr_voffset_offset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    flat_prefetch_b8 v0, s[0:1] offset:128
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -68,6 +73,7 @@ define amdgpu_ps void @flat_prefetch_se(ptr %ptr) {
 ; GCN-LABEL: flat_prefetch_se:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -79,6 +85,7 @@ define amdgpu_ps void @flat_prefetch_se_nt(ptr %ptr) {
 ; GCN-LABEL: flat_prefetch_se_nt:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    flat_prefetch_b8 v[0:1] th:TH_LOAD_NT scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -90,6 +97,7 @@ define amdgpu_ps void @flat_prefetch_dev_ht(ptr %ptr) {
 ; GCN-LABEL: flat_prefetch_dev_ht:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    flat_prefetch_b8 v[0:1] th:TH_LOAD_HT scope:SCOPE_DEV
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -101,6 +109,7 @@ define amdgpu_ps void @flat_prefetch_sys_lu(ptr %ptr) {
 ; GCN-LABEL: flat_prefetch_sys_lu:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-NEXT:    flat_prefetch_b8 v[0:1] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GCN-NEXT:    s_endpgm
 entry:

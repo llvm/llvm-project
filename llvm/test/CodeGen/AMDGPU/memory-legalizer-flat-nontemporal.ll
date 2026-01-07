@@ -192,6 +192,7 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX1250-LABEL: flat_nontemporal_load_0:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
@@ -548,6 +549,7 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX1250-LABEL: flat_nontemporal_load_1:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
@@ -748,6 +750,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX1250-LABEL: flat_nontemporal_store_0:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
@@ -1092,6 +1095,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX1250-LABEL: flat_nontemporal_store_1:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
@@ -1305,6 +1309,7 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ; GFX1250-LABEL: flat_nontemporal_volatile_load:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8

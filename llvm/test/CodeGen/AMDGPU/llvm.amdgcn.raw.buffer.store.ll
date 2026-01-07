@@ -32,6 +32,7 @@ define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <
 ; GFX1250-LABEL: buffer_store:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_clause 0x2
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null
 ; GFX1250-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], null th:TH_STORE_NT
@@ -63,6 +64,7 @@ define amdgpu_ps void @buffer_store_immoffs(<4 x i32> inreg, <4 x float>) {
 ; GFX1250-LABEL: buffer_store_immoffs:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null offset:42
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -89,6 +91,7 @@ define amdgpu_ps void @buffer_store_ofs(<4 x i32> inreg, <4 x float>, i32) {
 ; GFX1250-LABEL: buffer_store_ofs:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null offen
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -134,6 +137,7 @@ define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float>, i32, i32,
 ; GFX1250-LABEL: buffer_store_wait:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null offen
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v5, s[0:3], null offen
@@ -166,6 +170,7 @@ define amdgpu_ps void @buffer_store_x1(<4 x i32> inreg %rsrc, float %data, i32 %
 ; GFX1250-LABEL: buffer_store_x1:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b32 v0, v1, s[0:3], null offen
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -192,6 +197,7 @@ define amdgpu_ps void @buffer_store_x2(<4 x i32> inreg %rsrc, <2 x float> %data,
 ; GFX1250-LABEL: buffer_store_x2:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null offen
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -223,6 +229,7 @@ define amdgpu_ps void @buffer_store_x1_offen_merged_and(<4 x i32> inreg %rsrc, i
 ; GFX1250-LABEL: buffer_store_x1_offen_merged_and:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v7, 4, v0 :: v_dual_add_nc_u32 v8, 8, v0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v9, 12, v0 :: v_dual_add_nc_u32 v10, 16, v0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v11, 28, v0 :: v_dual_add_nc_u32 v0, 32, v0
@@ -276,6 +283,7 @@ define amdgpu_ps void @buffer_store_x1_offen_merged_or(<4 x i32> inreg %rsrc, i3
 ; GFX1250-LABEL: buffer_store_x1_offen_merged_or:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
@@ -327,6 +335,7 @@ define amdgpu_ps void @buffer_store_x1_offen_merged_glc_slc(<4 x i32> inreg %rsr
 ; GFX1250-LABEL: buffer_store_x1_offen_merged_glc_slc:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v7, 4, v0 :: v_dual_add_nc_u32 v8, 8, v0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v9, 12, v0 :: v_dual_add_nc_u32 v10, 16, v0
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v11, 28, v0 :: v_dual_add_nc_u32 v0, 32, v0
@@ -372,6 +381,7 @@ define amdgpu_ps void @buffer_store_x2_offen_merged_and(<4 x i32> inreg %rsrc, i
 ; GFX1250-LABEL: buffer_store_x2_offen_merged_and:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v1, 4, v0 :: v_dual_add_nc_u32 v0, 12, v0
@@ -408,6 +418,7 @@ define amdgpu_ps void @buffer_store_x2_offen_merged_or(<4 x i32> inreg %rsrc, i3
 ; GFX1250-LABEL: buffer_store_x2_offen_merged_or:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
@@ -445,6 +456,7 @@ define amdgpu_ps void @buffer_store_x1_offset_merged(<4 x i32> inreg %rsrc, floa
 ; GFX1250-LABEL: buffer_store_x1_offset_merged:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null offset:4
 ; GFX1250-NEXT:    buffer_store_b64 v[4:5], off, s[0:3], null offset:28
@@ -477,6 +489,7 @@ define amdgpu_ps void @buffer_store_x2_offset_merged(<4 x i32> inreg %rsrc, <2 x
 ; GFX1250-LABEL: buffer_store_x2_offset_merged:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null offset:4
 ; GFX1250-NEXT:    s_endpgm
   call void @llvm.amdgcn.raw.buffer.store.v2f32(<2 x float> %v1, <4 x i32> %rsrc, i32 4, i32 0, i32 0)
@@ -511,6 +524,7 @@ define amdgpu_ps void @buffer_store_int(<4 x i32> inreg, <4 x i32>, <2 x i32>, i
 ; GFX1250-LABEL: buffer_store_int:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_clause 0x2
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null
 ; GFX1250-NEXT:    buffer_store_b64 v[4:5], off, s[0:3], null th:TH_STORE_NT
@@ -545,6 +559,7 @@ define amdgpu_ps void @raw_buffer_store_byte(<4 x i32> inreg %rsrc, float %v1) {
 ; GFX1250-LABEL: raw_buffer_store_byte:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1250-NEXT:    buffer_store_b8 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_endpgm
@@ -577,6 +592,7 @@ define amdgpu_ps void @raw_buffer_store_short(<4 x i32> inreg %rsrc, float %v1) 
 ; GFX1250-LABEL: raw_buffer_store_short:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1250-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_endpgm
@@ -606,6 +622,7 @@ define amdgpu_ps void @raw_buffer_store_f16(<4 x i32> inreg %rsrc, i32 %v1) {
 ; GFX1250-LABEL: raw_buffer_store_f16:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -643,6 +660,7 @@ define amdgpu_ps void @buffer_store_v2f16(<4 x i32> inreg %rsrc, <2 x half> %dat
 ; GFX1250-LABEL: buffer_store_v2f16:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b32 v0, v1, s[0:3], null offen
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -682,6 +700,7 @@ define amdgpu_ps void @buffer_store_v4f16(<4 x i32> inreg %rsrc, <4 x half> %dat
 ; GFX1250-LABEL: buffer_store_v4f16:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null offen
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -708,6 +727,7 @@ define amdgpu_ps void @raw_buffer_store_i16(<4 x i32> inreg %rsrc, i32 %v1) {
 ; GFX1250-LABEL: raw_buffer_store_i16:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -743,6 +763,7 @@ define amdgpu_ps void @buffer_store_v2i16(<4 x i32> inreg %rsrc, <2 x i16> %data
 ; GFX1250-LABEL: buffer_store_v2i16:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b32 v0, v1, s[0:3], null offen
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -780,6 +801,7 @@ define amdgpu_ps void @buffer_store_v4i16(<4 x i32> inreg %rsrc, <4 x i16> %data
 ; GFX1250-LABEL: buffer_store_v4i16:
 ; GFX1250:       ; %bb.0: ; %main_body
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null offen
 ; GFX1250-NEXT:    s_endpgm
 main_body:
@@ -811,6 +833,7 @@ define amdgpu_ps void @raw_buffer_store_x1_offset_merged(<4 x i32> inreg %rsrc, 
 ; GFX1250-LABEL: raw_buffer_store_x1_offset_merged:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null offset:4
 ; GFX1250-NEXT:    buffer_store_b64 v[4:5], off, s[0:3], null offset:28
@@ -856,6 +879,7 @@ define amdgpu_ps void @raw_buffer_store_x1_offset_swizzled_not_merged_pregfx12(<
 ; GFX1250-LABEL: raw_buffer_store_x1_offset_swizzled_not_merged_pregfx12:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], null offset:4 scope:SCOPE_SE
 ; GFX1250-NEXT:    buffer_store_b64 v[4:5], off, s[0:3], null offset:28 scope:SCOPE_SE
@@ -897,6 +921,7 @@ define amdgpu_ps void @raw_buffer_store_x1_offset_swizzled_not_merged(<4 x i32> 
 ; GFX1250-LABEL: raw_buffer_store_x1_offset_swizzled_not_merged:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_clause 0x5
 ; GFX1250-NEXT:    buffer_store_b32 v0, off, s[0:3], null offset:4
 ; GFX1250-NEXT:    buffer_store_b32 v1, off, s[0:3], null offset:8

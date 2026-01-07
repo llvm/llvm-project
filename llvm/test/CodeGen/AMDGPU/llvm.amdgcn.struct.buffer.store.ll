@@ -27,6 +27,7 @@ define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <
 ; GFX12-LABEL: buffer_store:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    v_mov_b32_e32 v12, 0
 ; GFX12-NEXT:    s_clause 0x2
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v12, s[0:3], null idxen
@@ -56,6 +57,7 @@ define amdgpu_ps void @buffer_store_immoffs(<4 x i32> inreg, <4 x float>) {
 ; GFX12-LABEL: buffer_store_immoffs:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null idxen offset:42
 ; GFX12-NEXT:    s_endpgm
@@ -78,6 +80,7 @@ define amdgpu_ps void @buffer_store_idx(<4 x i32> inreg, <4 x float>, i32) {
 ; GFX12-LABEL: buffer_store_idx:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -105,6 +108,7 @@ define amdgpu_ps void @buffer_store_ofs(<4 x i32> inreg, <4 x float>, i32) {
 ; GFX12-LABEL: buffer_store_ofs:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, 0
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v[4:5], s[0:3], null idxen offen
 ; GFX12-NEXT:    s_endpgm
@@ -127,6 +131,7 @@ define amdgpu_ps void @buffer_store_both(<4 x i32> inreg, <4 x float>, i32, i32)
 ; GFX12-LABEL: buffer_store_both:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v[4:5], s[0:3], null idxen offen
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -150,6 +155,7 @@ define amdgpu_ps void @buffer_store_both_reversed(<4 x i32> inreg, <4 x float>, 
 ; GFX12-LABEL: buffer_store_both_reversed:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    v_dual_mov_b32 v6, v5 :: v_dual_mov_b32 v7, v4
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v[6:7], s[0:3], null idxen offen
 ; GFX12-NEXT:    s_endpgm
@@ -188,6 +194,7 @@ define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float>, i32, i32,
 ; GFX12-LABEL: buffer_store_wait:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null idxen
 ; GFX12-NEXT:    buffer_load_b128 v[0:3], v5, s[0:3], null idxen
@@ -215,6 +222,7 @@ define amdgpu_ps void @buffer_store_x1(<4 x i32> inreg %rsrc, float %data, i32 %
 ; GFX12-LABEL: buffer_store_x1:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    buffer_store_b32 v0, v1, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -236,6 +244,7 @@ define amdgpu_ps void @buffer_store_x2(<4 x i32> inreg %rsrc, <2 x float> %data,
 ; GFX12-LABEL: buffer_store_x2:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -264,6 +273,7 @@ define amdgpu_ps void @buffer_store_int(<4 x i32> inreg, <4 x i32>, <2 x i32>, i
 ; GFX12-LABEL: buffer_store_int:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    v_mov_b32_e32 v7, 0
 ; GFX12-NEXT:    s_clause 0x2
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v7, s[0:3], null idxen
@@ -293,6 +303,7 @@ define amdgpu_ps void @struct_buffer_store_byte(<4 x i32> inreg %rsrc, float %v1
 ; GFX12-LABEL: struct_buffer_store_byte:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX12-NEXT:    buffer_store_b8 v0, v1, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
@@ -325,7 +336,9 @@ define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX12-TRUE16-LABEL: struct_buffer_store_f16:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0
+; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX12-TRUE16-NEXT:    buffer_store_b16 v0, v1, s[0:3], null idxen
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -333,7 +346,9 @@ define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX12-FAKE16-LABEL: struct_buffer_store_f16:
 ; GFX12-FAKE16:       ; %bb.0:
 ; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0
+; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX12-FAKE16-NEXT:    buffer_store_b16 v0, v1, s[0:3], null idxen
 ; GFX12-FAKE16-NEXT:    s_endpgm
@@ -365,6 +380,7 @@ define amdgpu_ps void @struct_buffer_store_v2f16(<4 x i32> inreg %rsrc, <2 x hal
 ; GFX12-LABEL: struct_buffer_store_v2f16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    buffer_store_b32 v0, v1, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.buffer.store.v2f16(<2 x half> %v1, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
@@ -398,6 +414,7 @@ define amdgpu_ps void @struct_buffer_store_v4f16(<4 x i32> inreg %rsrc, <4 x hal
 ; GFX12-LABEL: struct_buffer_store_v4f16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.buffer.store.v4f16(<4 x half> %v1, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
@@ -420,6 +437,7 @@ define amdgpu_ps void @struct_buffer_store_i16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX12-LABEL: struct_buffer_store_i16:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX12-NEXT:    buffer_store_b16 v0, v1, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
@@ -452,6 +470,7 @@ define amdgpu_ps void @struct_buffer_store_vif16(<4 x i32> inreg %rsrc, <2 x i16
 ; GFX12-LABEL: struct_buffer_store_vif16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    buffer_store_b32 v0, v1, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.buffer.store.v2i16(<2 x i16> %v1, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
@@ -483,6 +502,7 @@ define amdgpu_ps void @struct_buffer_store_v4i16(<4 x i32> inreg %rsrc, <4 x i16
 ; GFX12-LABEL: struct_buffer_store_v4i16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null idxen
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.buffer.store.v4i16(<4 x i16> %v1, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)

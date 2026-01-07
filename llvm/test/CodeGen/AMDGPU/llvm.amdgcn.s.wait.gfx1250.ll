@@ -6,6 +6,7 @@ define amdgpu_ps void @test_asynccnt() {
 ; GFX12-LABEL: test_asynccnt:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    s_wait_asynccnt 0x0
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.wait.asynccnt(i16 0)
@@ -16,6 +17,7 @@ define amdgpu_ps void @test_tensorcnt() {
 ; GFX12-LABEL: test_tensorcnt:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-NEXT:    s_wait_tensorcnt 0x0
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)

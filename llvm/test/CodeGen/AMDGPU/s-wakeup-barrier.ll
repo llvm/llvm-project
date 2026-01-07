@@ -8,6 +8,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1250-SDAG-LABEL: kernel1:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GFX1250-SDAG-NEXT:    s_mov_b32 m0, 1
 ; GFX1250-SDAG-NEXT:    s_wakeup_barrier m0
@@ -21,6 +22,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1250-GISEL-LABEL: kernel1:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GFX1250-GISEL-NEXT:    s_wakeup_barrier 1
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0

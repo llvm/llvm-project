@@ -405,6 +405,7 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-SDAG-LABEL: test_v7i16_load_store_kernel:
 ; GCN-SDAG:       ; %bb.0:
 ; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GCN-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
@@ -433,6 +434,7 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-GISEL-LABEL: test_v7i16_load_store_kernel:
 ; GCN-GISEL:       ; %bb.0:
 ; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GCN-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GCN-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x0

@@ -44,6 +44,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/PackedVector.h"
 
@@ -143,6 +144,12 @@ private:
   /// instruction to encourage more coissuing.
   MachineBasicBlock::instr_iterator
   handleCoissue(MachineBasicBlock::instr_iterator I);
+
+  /// Handle S_SETREG_IMM32_B32 targeting MODE register. On certain hardware,
+  /// this instruction clobbers VGPR MSB bits[12:19], so we need to restore
+  /// the current mode. \returns true if the instruction was modified or a
+  /// new one was inserted.
+  bool handleSetregMode(MachineInstr &MI);
 };
 
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
@@ -315,6 +322,66 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   return Prev;
 }
 
+bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
+  using namespace AMDGPU::Hwreg;
+
+  MachineOperand *SIMM16Op = TII->getNamedOperand(MI, AMDGPU::OpName::simm16);
+  if (!SIMM16Op)
+    return false;
+
+  auto [HwRegId, Offset, Size] = HwregEncoding::decode(SIMM16Op->getImm());
+  if (HwRegId != ID_MODE)
+    return false;
+
+  // VGPR MSBs are stored in MODE register bits[12:19].
+  constexpr unsigned VGPRMSBOffset = 12;
+  constexpr unsigned VGPRMSBSize = 8;
+  constexpr unsigned VGPRMSBEnd = VGPRMSBOffset + VGPRMSBSize; // 20
+
+  unsigned End = Offset + Size;
+
+  // Assert that the original instruction doesn't overlap with bits[12:19].
+  assert((End <= VGPRMSBOffset || Offset >= VGPRMSBEnd) &&
+         "S_SETREG_IMM32_B32 should not write to VGPR MSB bits[12:19]");
+
+  MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
+  if (!ImmOp)
+    return false;
+
+  int64_t OldImm = ImmOp->getImm();
+  int64_t ModeValue = static_cast<int64_t>(CurrentMode);
+
+  // Check if we can extend the instruction (no hole).
+  if (End == VGPRMSBOffset) {
+    // Original ends at bit 11, extend to include bits[12:19].
+    // new_size = size + 8, new_imm = old_imm | (CurrentMode << size)
+    unsigned NewSize = Size + VGPRMSBSize;
+    int64_t NewImm = OldImm | (ModeValue << Size);
+    SIMM16Op->setImm(HwregEncoding::encode(HwRegId, Offset, NewSize));
+    ImmOp->setImm(NewImm);
+    return true;
+  }
+  if (Offset == VGPRMSBEnd) {
+    // Original starts at bit 20, extend to include bits[12:19].
+    // new_offset = 12, new_size = size + 8, new_imm = CurrentMode | (old_imm <<
+    // 8)
+    unsigned NewOffset = VGPRMSBOffset;
+    unsigned NewSize = Size + VGPRMSBSize;
+    int64_t NewImm = ModeValue | (OldImm << VGPRMSBSize);
+    SIMM16Op->setImm(HwregEncoding::encode(HwRegId, NewOffset, NewSize));
+    ImmOp->setImm(NewImm);
+    return true;
+  }
+
+  // There's a hole - insert a new S_SETREG_IMM32_B32 after the original.
+  MachineBasicBlock::iterator InsertPt = std::next(MI.getIterator());
+  BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
+          TII->get(AMDGPU::S_SETREG_IMM32_B32))
+      .addImm(ModeValue)
+      .addImm(HwregEncoding::encode(ID_MODE, VGPRMSBOffset, VGPRMSBSize));
+  return true;
+}
+
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.has1024AddressableVGPRs())
@@ -356,6 +423,12 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
         ClauseBreaks = (ClauseLen >> 8) & 15;
         ClauseLen = ClauseRemaining = (ClauseLen & 63) + 1;
         Clause = &MI;
+        continue;
+      }
+
+      if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
+          ST.hasSetregVGPRMSBFixup()) {
+        Changed |= handleSetregMode(MI);
         continue;
       }
 

@@ -14,6 +14,7 @@ define amdgpu_kernel void @tanh_f32(ptr addrspace(1) %out, float %src) #1 {
 ; SDAG-REAL16-LABEL: tanh_f32:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
@@ -24,6 +25,7 @@ define amdgpu_kernel void @tanh_f32(ptr addrspace(1) %out, float %src) #1 {
 ; SDAG-FAKE16-LABEL: tanh_f32:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
@@ -40,6 +42,7 @@ define amdgpu_kernel void @tanh_f32_constant_4.0(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_f32_constant_4.0:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_tanh_f32_e32 v0, 4.0
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -50,6 +53,7 @@ define amdgpu_kernel void @tanh_f32_constant_4.0(ptr addrspace(1) %out) #1 {
 ; SDAG-FAKE16-LABEL: tanh_f32_constant_4.0:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_tanh_f32_e32 v0, 4.0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
@@ -65,6 +69,7 @@ define amdgpu_kernel void @tanh_f32_constant_100.0(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_f32_constant_100.0:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_tanh_f32_e32 v0, 0x42c80000
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -75,6 +80,7 @@ define amdgpu_kernel void @tanh_f32_constant_100.0(ptr addrspace(1) %out) #1 {
 ; SDAG-FAKE16-LABEL: tanh_f32_constant_100.0:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_tanh_f32_e32 v0, 0x42c80000
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
@@ -90,11 +96,13 @@ define amdgpu_kernel void @tanh_undef_f32(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_undef_f32:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: tanh_undef_f32:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_endpgm
   %tanh = call float @llvm.amdgcn.tanh.f32(float undef)
   store float %tanh, ptr addrspace(1) %out, align 4
@@ -105,6 +113,7 @@ define amdgpu_kernel void @tanh_f16(ptr addrspace(1) %out, half %src) #1 {
 ; SDAG-REAL16-LABEL: tanh_f16:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
@@ -115,6 +124,7 @@ define amdgpu_kernel void @tanh_f16(ptr addrspace(1) %out, half %src) #1 {
 ; SDAG-FAKE16-LABEL: tanh_f16:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
@@ -130,6 +140,7 @@ define amdgpu_kernel void @tanh_f16_constant_4.0(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_f16_constant_4.0:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_tanh_f16_e32 v0.l, 4.0
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -140,6 +151,7 @@ define amdgpu_kernel void @tanh_f16_constant_4.0(ptr addrspace(1) %out) #1 {
 ; SDAG-FAKE16-LABEL: tanh_f16_constant_4.0:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, 4.0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
@@ -155,6 +167,7 @@ define amdgpu_kernel void @tanh_f16_constant_100.0(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_f16_constant_100.0:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_tanh_f16_e32 v0.l, 0x5640
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -165,6 +178,7 @@ define amdgpu_kernel void @tanh_f16_constant_100.0(ptr addrspace(1) %out) #1 {
 ; SDAG-FAKE16-LABEL: tanh_f16_constant_100.0:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, 0x5640
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
@@ -180,11 +194,13 @@ define amdgpu_kernel void @tanh_undef_f16(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_undef_f16:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: tanh_undef_f16:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_endpgm
   %tanh = call half @llvm.amdgcn.tanh.f16(half undef)
   store half %tanh, ptr addrspace(1) %out, align 2
@@ -195,6 +211,7 @@ define amdgpu_kernel void @tanh_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; SDAG-REAL16-LABEL: tanh_bf16:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
@@ -205,6 +222,7 @@ define amdgpu_kernel void @tanh_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; SDAG-FAKE16-LABEL: tanh_bf16:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
@@ -220,6 +238,7 @@ define amdgpu_kernel void @tanh_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_bf16_constant_4:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 4.0
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -230,6 +249,7 @@ define amdgpu_kernel void @tanh_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; SDAG-FAKE16-LABEL: tanh_bf16_constant_4:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 4.0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
@@ -245,6 +265,7 @@ define amdgpu_kernel void @tanh_bf16_constant_100(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_bf16_constant_100:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 0x42c8
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -255,6 +276,7 @@ define amdgpu_kernel void @tanh_bf16_constant_100(ptr addrspace(1) %out) #1 {
 ; SDAG-FAKE16-LABEL: tanh_bf16_constant_100:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 0x42c8
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
@@ -270,11 +292,13 @@ define amdgpu_kernel void @tanh_undef_bf16(ptr addrspace(1) %out) #1 {
 ; SDAG-REAL16-LABEL: tanh_undef_bf16:
 ; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: tanh_undef_bf16:
 ; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; SDAG-FAKE16-NEXT:    s_endpgm
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat undef)
   store bfloat %tanh, ptr addrspace(1) %out, align 2

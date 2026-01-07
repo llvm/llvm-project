@@ -102,6 +102,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX1250-LABEL: copy_flat:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s6, 0
@@ -225,6 +226,7 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX1250-LABEL: copy_global:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s6, 0
@@ -352,6 +354,7 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX1250-LABEL: copy_constant:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s6, 0
@@ -479,6 +482,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX1250-LABEL: copy_local:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s2, 0
@@ -651,6 +655,7 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX1250-LABEL: copy_flat_divergent:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s2, 0
@@ -827,6 +832,7 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX1250-LABEL: copy_global_divergent:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_cmp_eq_u32 s0, 0

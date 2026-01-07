@@ -7862,6 +7862,7 @@ define amdgpu_cs void @call_from_entry(<8 x float> %x, ptr %p) {
 ; GFX1250-DAGISEL:       ; %bb.0:
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-DAGISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-DAGISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64
 ; GFX1250-DAGISEL-NEXT:    v_dual_mov_b32 v41, v9 :: v_dual_mov_b32 v40, v8
 ; GFX1250-DAGISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]

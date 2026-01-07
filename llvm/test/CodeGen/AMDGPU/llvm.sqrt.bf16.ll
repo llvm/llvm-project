@@ -9,6 +9,7 @@ define amdgpu_kernel void @sqrt_bf16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-TRUE16-LABEL: sqrt_bf16:
 ; GFX12-TRUE16:       ; %bb.0: ; %entry
 ; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s6, -1
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -28,6 +29,7 @@ define amdgpu_kernel void @sqrt_bf16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-FAKE16-LABEL: sqrt_bf16:
 ; GFX12-FAKE16:       ; %bb.0: ; %entry
 ; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s6, -1
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -54,6 +56,7 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ; GFX12-TRUE16-LABEL: sqrt_v2bf16:
 ; GFX12-TRUE16:       ; %bb.0: ; %entry
 ; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s6, -1
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -76,6 +79,7 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ; GFX12-FAKE16-LABEL: sqrt_v2bf16:
 ; GFX12-FAKE16:       ; %bb.0: ; %entry
 ; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
 ; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s6, -1
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000
