@@ -87,11 +87,11 @@ struct __atomic_wait_timed_backoff_impl {
 };
 
 // The semantics of this function are similar to `atomic`'s
-// `.wait(T old, std::memory_order order)`, but instead of having a hardcoded
+// `.wait(T old, std::memory_order order)` with a timeout, but instead of having a hardcoded
 // predicate (is the loaded value unequal to `old`?), the predicate function is
 // specified as an argument. The loaded value is given as an in-out argument to
 // the predicate. If the predicate function returns `true`,
-// `__atomic_wait_unless` will return. If the predicate function returns
+// `__atomic_wait_unless_with_timeout` will return. If the predicate function returns
 // `false`, it must set the argument to its current understanding of the atomic
 // value. The predicate function must not return `false` spuriously.
 template <class _AtomicWaitable, class _Poll, class _Rep, class _Period>
@@ -100,7 +100,7 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
     memory_order __order,
     _Poll&& __poll,
     chrono::duration<_Rep, _Period> const& __rel_time) {
-  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  static_assert(__atomic_waitable<_AtomicWaitable>, "");
   __atomic_wait_timed_backoff_impl<_AtomicWaitable, __decay_t<_Poll>, _Rep, _Period> __backoff_fn = {
       __a, __poll, __order, __rel_time};
   auto __poll_result = std::__libcpp_thread_poll_with_backoff(
