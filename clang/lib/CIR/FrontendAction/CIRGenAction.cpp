@@ -123,7 +123,6 @@ public:
 
     // Run CIR analysis passes if requested
     if (!FEOptions.ClangIRAnalysisList.empty()) {
-      llvm_unreachable("");
       CIRAnalysisSet AnalysisSet =
           parseCIRAnalysisList(FEOptions.ClangIRAnalysisList);
 
