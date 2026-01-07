@@ -9170,16 +9170,19 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrcpy(SDValue Chain,
                                                     const SDLoc &dl,
                                                     SDValue Dst, SDValue Src,
                                                     const CallInst *CI) {
-  const char *LibCallName = TLI->getLibcallName(RTLIB::STRCPY);
-  if (!LibCallName)
+  if (TLI->getLibcallImpl(RTLIB::STRCPY) == RTLIB::Unsupported)
     return {};
+
+  const char *LibCallName = TLI->getLibcallName(RTLIB::STRCPY);
+  assert(LibCallName &&
+         "The LibCall name for RTLIB::STRCPY should not be empty.");
 
   PointerType *PT = PointerType::getUnqual(*getContext());
   TargetLowering::ArgListTy Args = {{Dst, PT}, {Src, PT}};
 
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall =
-      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
+      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg=*/true);
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
