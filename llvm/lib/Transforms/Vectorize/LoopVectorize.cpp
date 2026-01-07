@@ -7120,7 +7120,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                 cast<CmpInst>(UI)->getPredicate())
           return true;
 
-        // Keep track of how many selects are used for a phi.
+        // Keep track of how many select VPInstructions (not replicates) are
+        // used for a phi.
         if (auto *PHI = dyn_cast<PHINode>(UI)) {
           if (match(&R, m_VPInstruction<Instruction::Select>(
                             m_VPValue(), m_VPValue(), m_VPValue()))) {
