@@ -214,6 +214,7 @@ set(files
   __atomic/atomic_lock_free.h
   __atomic/atomic_ref.h
   __atomic/atomic_sync.h
+  __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
   __atomic/fence.h
@@ -308,6 +309,7 @@ set(files
   __concepts/class_or_enum.h
   __concepts/common_reference_with.h
   __concepts/common_with.h
+  __concepts/comparison_common_type.h
   __concepts/constructible.h
   __concepts/convertible_to.h
   __concepts/copyable.h
@@ -701,6 +703,7 @@ set(files
   __random/uniform_real_distribution.h
   __random/weibull_distribution.h
   __ranges/access.h
+  __ranges/adjacent_transform_view.h
   __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h

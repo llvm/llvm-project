@@ -30,8 +30,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP9]], 8
-; DEFAULT-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP13]], 2
+; DEFAULT-NEXT:    [[TMP13:%.*]] = shl nuw i64 [[TMP9]], 3
+; DEFAULT-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[TMP13]], 1
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP10]]
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[X]], i64 0
@@ -70,7 +70,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT:       [[VEC_EPILOG_PH]]:
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP34:%.*]] = mul nuw i64 [[TMP33]], 4
+; DEFAULT-NEXT:    [[TMP34:%.*]] = shl nuw i64 [[TMP33]], 2
 ; DEFAULT-NEXT:    [[N_MOD_VF5:%.*]] = urem i64 [[TMP0]], [[TMP34]]
 ; DEFAULT-NEXT:    [[N_VEC6:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF5]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
@@ -130,7 +130,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
+; PRED-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 4
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()

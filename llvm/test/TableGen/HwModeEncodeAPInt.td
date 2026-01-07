@@ -165,22 +165,17 @@ def unrelated: Instruction {
 // ENCODER: Value = Inst;
 // ENCODER: switch (HwMode) {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
-// ENCODER: case 0: {
-// ENCODER: op.clearAllBits();
-// ENCODER: getMachineOpValue(MI, MI.getOperand(0), op, Fixups, STI);
-// ENCODER: Value.insertBits(op.extractBitsAsZExtValue(8, 0), 120, 8);
-// ENCODER: break;
-// ENCODER: }
-// ENCODER: case 1: {
-// ENCODER: op.clearAllBits();
-// ENCODER: getMachineOpValue(MI, MI.getOperand(0), op, Fixups, STI);
-// ENCODER: Value.insertBits(op.extractBitsAsZExtValue(8, 0), 112, 8);
-// ENCODER: break;
-// ENCODER: }
+// ENCODER: case 1:
 // ENCODER: case 2: {
 // ENCODER: op.clearAllBits();
 // ENCODER: getMachineOpValue(MI, MI.getOperand(0), op, Fixups, STI);
 // ENCODER: Value.insertBits(op.extractBitsAsZExtValue(8, 0), 112, 8);
+// ENCODER: break;
+// ENCODER: }
+// ENCODER: case 0: {
+// ENCODER: op.clearAllBits();
+// ENCODER: getMachineOpValue(MI, MI.getOperand(0), op, Fixups, STI);
+// ENCODER: Value.insertBits(op.extractBitsAsZExtValue(8, 0), 120, 8);
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 3: {
@@ -214,24 +209,18 @@ def unrelated: Instruction {
 // ENCODER:   unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_EncodingInfo);
 // ENCODER:   switch (HwMode) {
 // ENCODER:   default: llvm_unreachable("Unhandled HwMode");
-// ENCODER:   case 0: {
-// ENCODER:   switch (OpNum) {
-// ENCODER:   case 0:
-// ENCODER:     return 120;
-// ENCODER:   }
-// ENCODER:   break;
-// ENCODER:   }
-// ENCODER:   case 1: {
-// ENCODER:   switch (OpNum) {
-// ENCODER:   case 0:
-// ENCODER:     return 112;
-// ENCODER:   }
-// ENCODER:   break;
-// ENCODER:   }
+// ENCODER:   case 1:
 // ENCODER:   case 2: {
 // ENCODER:   switch (OpNum) {
 // ENCODER:   case 0:
 // ENCODER:     return 112;
+// ENCODER:   }
+// ENCODER:   break;
+// ENCODER:   }
+// ENCODER:   case 0: {
+// ENCODER:   switch (OpNum) {
+// ENCODER:   case 0:
+// ENCODER:     return 120;
 // ENCODER:   }
 // ENCODER:   break;
 // ENCODER:   }

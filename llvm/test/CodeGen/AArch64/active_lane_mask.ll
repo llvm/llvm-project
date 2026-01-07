@@ -453,7 +453,7 @@ entry:
 define <vscale x 16 x i1> @lane_mask_nxv16i1_imm256() vscale_range(16, 16) {
 ; CHECK-LABEL: lane_mask_nxv16i1_imm256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
 entry:
   %active.lane.mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 256)

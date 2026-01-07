@@ -41,11 +41,13 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
+#include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -70,10 +72,11 @@ using namespace clang;
 CompilerInstance::CompilerInstance(
     std::shared_ptr<CompilerInvocation> Invocation,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    ModuleCache *ModCache)
-    : ModuleLoader(/*BuildingModule=*/ModCache),
+    std::shared_ptr<ModuleCache> ModCache)
+    : ModuleLoader(/*BuildingModule=*/ModCache != nullptr),
       Invocation(std::move(Invocation)),
-      ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
+      ModCache(ModCache ? std::move(ModCache)
+                        : createCrossProcessModuleCache()),
       ThePCHContainerOperations(std::move(PCHContainerOps)) {
   assert(this->Invocation && "Invocation must not be null");
 }
@@ -962,7 +965,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // DesiredStackSpace available.
   noteBottomOfStack();
 
-  auto FinishDiagnosticClient = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinishDiagnosticClient([&]() {
     // Notify the diagnostic client that all files were processed.
     getDiagnosticClient().finish();
   });
@@ -1076,6 +1079,16 @@ void CompilerInstance::LoadRequestedPlugins() {
           << Path << Error;
   }
 
+  // Load and store pass plugins for the back-end.
+  for (const std::string &Path : getCodeGenOpts().PassPlugins) {
+    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
+      PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
+    } else {
+      getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
+          << Path << toString(PassPlugin.takeError());
+    }
+  }
+
   // Check if any of the loaded plugins replaces the main AST action
   for (const FrontendPluginRegistry::entry &Plugin :
        FrontendPluginRegistry::entries()) {
@@ -1157,7 +1170,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      std::move(Invocation), getPCHContainerOperations(), &getModuleCache());
+      std::move(Invocation), getPCHContainerOperations(), ModCache);
   auto &Instance = *InstancePtr;
 
   auto &Inv = Instance.getInvocation();
@@ -1548,7 +1561,9 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
   for (auto *MD = LatestLocalMD; MD; MD = MD->getPrevious()) {
     // We only care about the predefines buffer.
     FileID FID = SourceMgr.getFileID(MD->getLocation());
-    if (FID.isInvalid() || FID != PP.getPredefinesFileID())
+    if (FID.isInvalid())
+      continue;
+    if (FID != PP.getPredefinesFileID() && FID != PP.getPCHPredefinesFileID())
       continue;
     if (auto *DMD = dyn_cast<DefMacroDirective>(MD))
       CmdLineDefinition = DMD->getMacroInfo();
@@ -1663,9 +1678,9 @@ bool CompilerInstance::loadModuleFile(
   // If -Wmodule-file-config-mismatch is mapped as an error or worse, allow the
   // ASTReader to diagnose it, since it can produce better errors that we can.
   bool ConfigMismatchIsRecoverable =
-      getDiagnostics().getDiagnosticLevel(diag::warn_module_config_mismatch,
-                                          SourceLocation())
-        <= DiagnosticsEngine::Warning;
+      getDiagnostics().getDiagnosticLevel(diag::warn_ast_file_config_mismatch,
+                                          SourceLocation()) <=
+      DiagnosticsEngine::Warning;
 
   auto Listener = std::make_unique<ReadModuleNames>(*PP);
   auto &ListenerRef = *Listener;
@@ -1685,7 +1700,8 @@ bool CompilerInstance::loadModuleFile(
 
   case ASTReader::ConfigurationMismatch:
     // Ignore unusable module files.
-    getDiagnostics().Report(SourceLocation(), diag::warn_module_config_mismatch)
+    getDiagnostics().Report(SourceLocation(),
+                            diag::warn_ast_file_config_mismatch)
         << FileName;
     // All modules provided by any files we tried and failed to load are now
     // unavailable; includes of those modules should now be handled textually.
@@ -1837,7 +1853,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
       // FIXME: We shouldn't be setting HadFatalFailure below if we only
       // produce a warning here!
       getDiagnostics().Report(SourceLocation(),
-                              diag::warn_module_config_mismatch)
+                              diag::warn_ast_file_config_mismatch)
           << ModuleFilename;
     // Fall through to error out.
     [[fallthrough]];

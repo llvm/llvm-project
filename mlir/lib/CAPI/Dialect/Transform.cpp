@@ -33,6 +33,10 @@ MlirType mlirTransformAnyOpTypeGet(MlirContext ctx) {
   return wrap(transform::AnyOpType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirTransformAnyOpTypeGetName(void) {
+  return wrap(transform::AnyOpType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // AnyParamType
 //===---------------------------------------------------------------------===//
@@ -49,6 +53,10 @@ MlirType mlirTransformAnyParamTypeGet(MlirContext ctx) {
   return wrap(transform::AnyParamType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirTransformAnyParamTypeGetName(void) {
+  return wrap(transform::AnyParamType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // AnyValueType
 //===---------------------------------------------------------------------===//
@@ -63,6 +71,10 @@ MlirTypeID mlirTransformAnyValueTypeGetTypeID(void) {
 
 MlirType mlirTransformAnyValueTypeGet(MlirContext ctx) {
   return wrap(transform::AnyValueType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirTransformAnyValueTypeGetName(void) {
+  return wrap(transform::AnyValueType::name);
 }
 
 //===---------------------------------------------------------------------===//
@@ -83,6 +95,10 @@ MlirType mlirTransformOperationTypeGet(MlirContext ctx,
       transform::OperationType::get(unwrap(ctx), unwrap(operationName)));
 }
 
+MlirStringRef mlirTransformOperationTypeGetName(void) {
+  return wrap(transform::OperationType::name);
+}
+
 MlirStringRef mlirTransformOperationTypeGetOperationName(MlirType type) {
   return wrap(cast<transform::OperationType>(unwrap(type)).getOperationName());
 }
@@ -101,6 +117,10 @@ MlirTypeID mlirTransformParamTypeGetTypeID(void) {
 
 MlirType mlirTransformParamTypeGet(MlirContext ctx, MlirType type) {
   return wrap(transform::ParamType::get(unwrap(ctx), unwrap(type)));
+}
+
+MlirStringRef mlirTransformParamTypeGetName(void) {
+  return wrap(transform::ParamType::name);
 }
 
 MlirType mlirTransformParamTypeGetType(MlirType type) {

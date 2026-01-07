@@ -254,7 +254,7 @@ public:
   /// \returns true to continue receiving the next input file, false to stop.
   virtual bool visitInputFileAsRequested(StringRef FilenameAsRequested,
                                          StringRef Filename, bool isSystem,
-                                         bool isOverridden,
+                                         bool isOverridden, time_t StoredTime,
                                          bool isExplicitModule) {
     return true;
   }
@@ -2024,7 +2024,8 @@ public:
       StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
       const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
       const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
-      const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
+      const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+      StringRef ExistingModuleCachePath,
       bool RequireStrictOptionMatches = false);
 
   /// Returns the suggested contents of the predefines buffer,

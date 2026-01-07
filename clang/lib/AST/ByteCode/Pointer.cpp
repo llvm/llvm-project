@@ -33,13 +33,12 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
 
 Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
+  assert(Pointee);
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
   assert(Base >= Pointee->getDescriptor()->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
-
-  if (Pointee)
-    Pointee->addPointer(this);
+  Pointee->addPointer(this);
 }
 
 Pointer::Pointer(const Pointer &P)
@@ -363,7 +362,13 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
-size_t Pointer::computeOffsetForComparison() const {
+/// Compute an offset that can be used to compare the pointer to another one
+/// with the same base. To get accurate results, we basically _have to_ compute
+/// the lvalue offset using the ASTRecordLayout.
+///
+/// FIXME: We're still mixing values from the record layout with our internal
+/// offsets, which will inevitably lead to cryptic errors.
+size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   switch (StorageKind) {
   case Storage::Int:
     return Int.Value + Offset;
@@ -379,7 +384,6 @@ size_t Pointer::computeOffsetForComparison() const {
   size_t Result = 0;
   Pointer P = *this;
   while (true) {
-
     if (P.isVirtualBaseClass()) {
       Result += getInlineDesc()->Offset;
       P = P.getBase();
@@ -401,28 +405,29 @@ size_t Pointer::computeOffsetForComparison() const {
 
     if (P.isRoot()) {
       if (P.isOnePastEnd())
-        ++Result;
+        Result +=
+            ASTCtx.getTypeSizeInChars(P.getDeclDesc()->getType()).getQuantity();
       break;
     }
 
-    if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
-      if (P.isOnePastEnd())
-        ++Result;
-      // Direct child of a union - all have offset 0.
-      P = P.getBase();
-      continue;
-    }
+    assert(P.getField());
+    const Record *R = P.getBase().getRecord();
+    assert(R);
 
-    // Fields, etc.
-    Result += P.getInlineDesc()->Offset;
+    const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
+    Result += ASTCtx
+                  .toCharUnitsFromBits(
+                      Layout.getFieldOffset(P.getField()->getFieldIndex()))
+                  .getQuantity();
+
     if (P.isOnePastEnd())
-      ++Result;
+      Result +=
+          ASTCtx.getTypeSizeInChars(P.getField()->getType()).getQuantity();
 
     P = P.getBase();
     if (P.isRoot())
       break;
   }
-
   return Result;
 }
 
