@@ -488,7 +488,7 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   // instruction, which we're not considering for further action anyway. For the
   // Xqcilsm load/store, we may not want to do this as the second instruction
   // could possibly be the first in another pair if we do not merge here. This
-  // is handled is the else block after the call to tryConvertToLdStPair below.
+  // is handled in the else block after the call to tryConvertToLdStPair below.
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
 

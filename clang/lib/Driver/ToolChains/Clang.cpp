@@ -6196,6 +6196,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fpartition_static_data_sections,
+                          options::OPT_fno_partition_static_data_sections)) {
+    if (!A->getOption().matches(
+            options::OPT_fno_partition_static_data_sections)) {
+      // This codegen pass is only available on x86 and AArch64 ELF targets.
+      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
+        A->render(Args, CmdArgs);
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-memprof-annotate-static-data-prefix");
+      } else
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << TripleStr;
+    }
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
                   options::OPT_finstrument_functions_after_inlining,
                   options::OPT_finstrument_function_entry_bare);
