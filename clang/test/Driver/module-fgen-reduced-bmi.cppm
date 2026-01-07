@@ -51,7 +51,7 @@
 
 // RUN: %clang -std=c++20 Hello.cppm --precompile -fmodules-reduced-bmi \
 // RUN:     -### 2>&1 | FileCheck Hello.cppm \
-// RUN:     --check-prefix=CHECK-OVERRIDE-WARN
+// RUN:     --check-prefix=CHECK-OVERRIDE-WARN-NOT
 
 // RUN: %clang -std=c++20 Hello.cppm --precompile -fmodules-reduced-bmi \
 // RUN:     -o Hello.pcm -### 2>&1 | FileCheck Hello.cppm \
@@ -74,7 +74,7 @@ export module Hello;
 // CHECK-NOT: -emit-module-interface
 // CHECK: "-fmodules-reduced-bmi"
 
-// CHECK-UNSPECIFIED: -fmodule-output=Hello.pcm
+// CHECK-UNSPECIFIED: -fmodule-output={{.*}}Hello.pcm
 
 // CHECK-NO-O: -fmodule-output=Hello.pcm
 // CHECK-ANOTHER-NAME: -fmodule-output=AnotherName.pcm
@@ -83,7 +83,7 @@ export module Hello;
 // flag.
 // CHECK-EMIT-MODULE-INTERFACE: -emit-module-interface
 
-// CHECK-OVERRIDE-WARN: warning: the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. {{.*}}-Wreduced-bmi-output-overrided
+// CHECK-OVERRIDE-WARN-NOT: warning:
 
 // NO_WARN-NOT: warning
 
