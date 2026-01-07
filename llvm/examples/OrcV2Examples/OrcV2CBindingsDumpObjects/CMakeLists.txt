@@ -12,4 +12,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_example(OrcV2CBindingsDumpObjects
   OrcV2CBindingsDumpObjects.c
+
+  DISABLE_PCH_REUSE # no C++ files, prevent CMake error.
   )
