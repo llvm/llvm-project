@@ -106,6 +106,9 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
   int_pred_ty() : P() {}
 
   bool match(VPValue *VPV) const {
+    auto *VPI = dyn_cast<VPInstruction>(VPV);
+    if (VPI && VPI->getOpcode() == VPInstruction::Broadcast)
+      VPV = VPI->getOperand(0);
     if (!VPV->isLiveIn())
       return false;
     Value *V = VPV->getLiveInIRValue();
@@ -291,7 +294,7 @@ struct Recipe_match {
       return false;
 
     if (R->getNumOperands() != std::tuple_size_v<Ops_t>) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(R);
+      [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(R);
       assert((Opcode == Instruction::PHI ||
               (RepR && std::tuple_size_v<Ops_t> ==
                            RepR->getNumOperands() - RepR->isPredicated())) &&
