@@ -15,7 +15,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal_wctype_conversion_utils {
+namespace wctype_internal {
+
+namespace conversion_utils {
 
 namespace {
 
@@ -67,7 +69,9 @@ LIBC_INLINE static constexpr ZipWrapper<C1, C2> zip(C1 &c1, C2 &c2) {
   return ZipWrapper<C1, C2>(c1, c2);
 }
 
-} // namespace internal_wctype_conversion_utils
+} // namespace conversion_utils
+
+} // namespace wctype_internal
 
 } // namespace LIBC_NAMESPACE_DECL
 
