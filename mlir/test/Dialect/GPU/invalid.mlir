@@ -777,7 +777,7 @@ func.func @alloc() {
 // Number of dynamic dimension operand count greater than memref dynamic dimension count.
 func.func @alloc() {
    %0 = arith.constant 7 : index
-   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   // expected-error@+1 {{incorrect number of dynamic sizes, has 2, expected 1}}
    %1 = gpu.alloc(%0, %0) : memref<2x?xf32, 1>
    return
 }
@@ -787,7 +787,7 @@ func.func @alloc() {
 // Number of dynamic dimension operand count less than memref dynamic dimension count.
 func.func @alloc() {
    %0 = arith.constant 7 : index
-   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
    %1 = gpu.alloc(%0) : memref<2x?x?xf32, 1>
    return
 }
