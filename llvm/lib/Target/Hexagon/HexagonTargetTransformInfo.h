@@ -120,18 +120,10 @@ public:
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override;
-  InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
-  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -165,9 +157,10 @@ public:
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace) const override;
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned AddressSpace) const override;
+                          unsigned AddressSpace,
+                          TTI::MaskKind MaskKind) const override;
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                         TTI::MaskKind MaskKind) const override;
   bool isLegalMaskedGather(Type *Ty, Align Alignment) const override;
   bool isLegalMaskedScatter(Type *Ty, Align Alignment) const override;
   bool forceScalarizeMaskedGather(VectorType *VTy,

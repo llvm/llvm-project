@@ -208,19 +208,6 @@ func.func @subview_negative_stride2(%arg0 : memref<7xf32>) -> memref<?xf32, stri
 
 // -----
 
-// CHECK-LABEL: func @dim_of_sized_view
-//  CHECK-SAME:   %{{[a-z0-9A-Z_]+}}: memref<?xi8>
-//  CHECK-SAME:   %[[SIZE:.[a-z0-9A-Z_]+]]: index
-//       CHECK:   return %[[SIZE]] : index
-func.func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
-  %c0 = arith.constant 0 : index
-  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [1] : memref<?xi8> to memref<?xi8>
-  %1 = memref.dim %0, %c0 : memref<?xi8>
-  return %1 : index
-}
-
-// -----
-
 // CHECK-LABEL: func @no_fold_subview_negative_size
 //  CHECK:        %[[SUBVIEW:.+]] = memref.subview
 //  CHECK:        return %[[SUBVIEW]]
@@ -535,7 +522,7 @@ func.func @fold_collapse_of_expand(%arg0 : memref<12x4xf32>) -> memref<12x4xf32>
   return %1 : memref<12x4xf32>
 }
 // CHECK-LABEL: func @fold_collapse_of_expand
-//   CHECK-NOT:   linalg.{{.*}}_shape
+//   CHECK-NOT:   memref.{{.*}}_shape
 
 // -----
 
@@ -548,7 +535,7 @@ func.func @fold_collapse_collapse_of_expand(%arg0 : memref<?x?xf32>, %sz0: index
   return %1 : memref<?x?xf32>
 }
 // CHECK-LABEL: @fold_collapse_collapse_of_expand
-//   CHECK-NOT:   linalg.{{.*}}_shape
+//   CHECK-NOT:   memref.{{.*}}_shape
 
 // -----
 
@@ -561,6 +548,144 @@ func.func @fold_memref_expand_cast(%arg0 : memref<?x?xf32>) -> memref<2x4x4xf32>
 
 // CHECK-LABEL: @fold_memref_expand_cast
 // CHECK: memref.expand_shape
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_memref_expand_with_static_to_dynamic_cast(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x4xf32>) -> memref<2x1x4x4xf32> {
+// CHECK:           %[[EXPAND_SHAPE_0:.*]] = memref.expand_shape %[[ARG0]] {{\[\[}}0, 1, 2], [3]]
+// CHECK-SAME:                  output_shape [2, 1, 4, 4] : memref<8x4xf32> into memref<2x1x4x4xf32>
+// CHECK:           return %[[EXPAND_SHAPE_0]] : memref<2x1x4x4xf32>
+// CHECK:         }
+func.func @fold_memref_expand_with_static_to_dynamic_cast(%arg0: memref<8x4xf32>) -> memref<2x1x4x4xf32> {
+  %c2 = arith.constant 2 : index
+  %cast = memref.cast %arg0 : memref<8x4xf32> to memref<?x4xf32>
+  %expand_shape = memref.expand_shape %cast [[0, 1, 2], [3]] output_shape [%c2, 1, 4, 4]
+      : memref<?x4xf32> into memref<?x1x4x4xf32>
+  %cast_0 = memref.cast %expand_shape : memref<?x1x4x4xf32> to memref<2x1x4x4xf32>
+  return %cast_0 : memref<2x1x4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_memref_expand_static_to_dynamic_partial(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x?xf32>) -> memref<1x8x1x?xf32> {
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIM1:.*]] = memref.dim %[[ARG0]], %[[C1]] : memref<8x?xf32>
+// CHECK:           %[[EXPAND_SHAPE_0:.*]] = memref.expand_shape %[[ARG0]] {{\[\[}}0, 1], [2, 3]]
+// CHECK-SAME:              output_shape [1, 8, 1, %[[DIM1]]] : memref<8x?xf32> into memref<1x8x1x?xf32>
+// CHECK:           return %[[EXPAND_SHAPE_0]] : memref<1x8x1x?xf32>
+// CHECK:         }
+func.func @fold_memref_expand_static_to_dynamic_partial(%arg0 : memref<8x?xf32>) -> memref<1x8x1x?xf32> {
+  %0 = memref.cast %arg0 : memref<8x?xf32> to memref<?x?xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0 = memref.dim %0, %c0 : memref<?x?xf32>
+  %dim1 = memref.dim %0, %c1 : memref<?x?xf32>
+  %1 = memref.expand_shape %0 [[0, 1], [2, 3]] output_shape [1, %dim0, 1, %dim1]
+      : memref<?x?xf32> into memref<1x?x1x?xf32>
+  %2 = memref.cast %1 : memref<1x?x1x?xf32> to memref<1x8x1x?xf32>
+  return %2 : memref<1x8x1x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_memref_expand_static_to_dynamic_partial_with_arith_const_as_dim(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x?xf32>) -> memref<1x8x1x?xf32> {
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIM1:.*]] = memref.dim %[[ARG0]], %[[C1]] : memref<8x?xf32>
+// CHECK:           %[[EXPAND_SHAPE_0:.*]] = memref.expand_shape %[[ARG0]] {{\[\[}}0, 1], [2, 3]]
+// CHECK-SAME:               output_shape [1, 8, 1, %[[DIM1]]] : memref<8x?xf32> into memref<1x8x1x?xf32>
+// CHECK:           return %[[EXPAND_SHAPE_0]] : memref<1x8x1x?xf32>
+// CHECK:         }
+func.func @fold_memref_expand_static_to_dynamic_partial_with_arith_const_as_dim(%arg0 : memref<8x?xf32>) -> memref<1x8x1x?xf32> {
+  %0 = memref.cast %arg0 : memref<8x?xf32> to memref<?x?xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0 = memref.dim %0, %c0 : memref<?x?xf32>
+  %dim1 = memref.dim %0, %c1 : memref<?x?xf32>
+  %1 = memref.expand_shape %0 [[0, 1], [2, 3]] output_shape [%c1, %dim0, %c1, %dim1]
+      : memref<?x?xf32> into memref<?x?x?x?xf32>
+  %2 = memref.cast %1 : memref<?x?x?x?xf32> to memref<1x8x1x?xf32>
+  return %2 : memref<1x8x1x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_memref_expand_static_to_dynamic_multiple(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x?xf32>,
+// CHECK-SAME:      %[[ARG1:.*]]: index, %[[ARG2:.*]]: index) -> memref<8x1x?x?xf32> {
+// CHECK-NOT:     memref.cast
+// CHECK:           %[[EXPAND_SHAPE_0:.*]] = memref.expand_shape %[[ARG0]] {{\[\[}}0, 1], [2, 3]]
+// CHECK-SAME:        output_shape [8, 1, %[[ARG1]], %[[ARG2]]] : memref<8x?xf32> into memref<8x1x?x?xf32>
+// CHECK-NOT:     memref.cast
+// CHECK:           return %[[EXPAND_SHAPE_0]] : memref<8x1x?x?xf32>
+// CHECK:         }
+func.func @fold_memref_expand_static_to_dynamic_multiple(%arg0 : memref<8x?xf32>, %arg1 : index, %arg2 : index) -> memref<8x1x?x?xf32> {
+  %0 = memref.cast %arg0 : memref<8x?xf32> to memref<?x?xf32>
+  %c0 = arith.constant 0 : index
+  %dim0 = memref.dim %0, %c0 : memref<?x?xf32>
+  %1 = memref.expand_shape %0 [[0, 1], [2, 3]] output_shape [%dim0, 1, %arg1, %arg2]
+      : memref<?x?xf32> into memref<?x1x?x?xf32>
+  %2 = memref.cast %1 : memref<?x1x?x?xf32> to memref<8x1x?x?xf32>
+  return %2 : memref<8x1x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @not_fold_memref_expand_with_dynamic_to_static_cast(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<?x4xf32>) -> memref<2x1x4x4xf32> {
+// CHECK:           %[[CAST_0:.*]] = memref.cast %[[ARG0]] : memref<?x4xf32> to memref<8x4xf32>
+// CHECK:           %[[EXPAND_SHAPE_0:.*]] = memref.expand_shape %[[CAST_0]] {{\[\[}}0, 1, 2], [3]]
+// CHECK-SAME:          output_shape [2, 1, 4, 4] : memref<8x4xf32> into memref<2x1x4x4xf32>
+// CHECK:           return %[[EXPAND_SHAPE_0]] : memref<2x1x4x4xf32>
+// CHECK:         }
+func.func @not_fold_memref_expand_with_dynamic_to_static_cast(%arg0 : memref<?x4xf32>) -> memref<2x1x4x4xf32> {
+  %0 = memref.cast %arg0 : memref<?x4xf32> to memref<8x4xf32>
+  %1 = memref.expand_shape %0 [[0, 1, 2], [3]] output_shape [2, 1, 4, 4]
+      : memref<8x4xf32> into memref<2x1x4x4xf32>
+  return %1 : memref<2x1x4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @not_fold_memref_expand_static_to_dynamic_cast_if_really_dynamic(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x4xf32>,
+// CHECK-SAME:      %[[ARG1:.*]]: index) -> memref<2x1x4x4xf32> {
+// CHECK:           %[[C8:.*]] = arith.constant 8 : index
+// CHECK:           %[[CAST_0:.*]] = memref.cast %[[ARG0]] : memref<8x4xf32> to memref<?x4xf32>
+// CHECK:           %[[DIVUI_0:.*]] = arith.divui %[[C8]], %[[ARG1]] : index
+// CHECK:           %[[EXPAND_SHAPE_0:.*]] = memref.expand_shape %[[CAST_0]] {{\[\[}}0, 1, 2], [3]]
+// CHECK-SAME:          output_shape {{\[}}%[[DIVUI_0]], 1, 4, 4] : memref<?x4xf32> into memref<?x1x4x4xf32>
+// CHECK:           %[[CAST_1:.*]] = memref.cast %[[EXPAND_SHAPE_0]] : memref<?x1x4x4xf32> to memref<2x1x4x4xf32>
+// CHECK:           return %[[CAST_1]] : memref<2x1x4x4xf32>
+// CHECK:         }
+func.func @not_fold_memref_expand_static_to_dynamic_cast_if_really_dynamic(%arg0 : memref<8x4xf32>, %arg1 : index) -> memref<2x1x4x4xf32> {
+  %0 = memref.cast %arg0 : memref<8x4xf32> to memref<?x4xf32>
+  %c0 = arith.constant 0 : index
+  %dim0 = memref.dim %0, %c0 : memref<?x4xf32>
+  %dim_ext = arith.divui %dim0 , %arg1: index
+  %1 = memref.expand_shape %0 [[0, 1, 2], [3]] output_shape [%dim_ext, 1, 4, 4]
+      : memref<?x4xf32> into memref<?x1x4x4xf32>
+  %2 = memref.cast %1 : memref<?x1x4x4xf32> to memref<2x1x4x4xf32>
+  return %2 : memref<2x1x4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_memref_expand_static_to_dynamic_layout(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<8x4xf32>) -> memref<8x1x4xf32> {
+// CHECK:           %[[EXPAND_SHAPE_0:.*]] = memref.expand_shape %[[ARG0]] {{\[\[}}0, 1], [2]]
+// CHECK-SAME:          output_shape [8, 1, 4] : memref<8x4xf32> into memref<8x1x4xf32>
+// CHECK:           return %[[EXPAND_SHAPE_0]] : memref<8x1x4xf32>
+// CHECK:         }
+func.func @fold_memref_expand_static_to_dynamic_layout(%arg0 : memref<8x4xf32>) -> memref<8x1x4xf32> {
+  %0 = memref.cast %arg0 : memref<8x4xf32> to memref<8x4xf32, strided<[?, ?], offset: ?>>
+  %1 = memref.expand_shape %0 [[0, 1], [2]] output_shape [8, 1, 4]
+      : memref<8x4xf32, strided<[?, ?], offset: ?>> into memref<8x1x4xf32, strided<[?,?,?], offset: ?>>
+  %2 = memref.cast %1 : memref<8x1x4xf32, strided<[?,?,?], offset: ?>> to memref<8x1x4xf32>
+  return %2 : memref<8x1x4xf32>
+}
 
 // -----
 
@@ -1349,21 +1474,52 @@ func.func @fold_assume_alignment_chain(%0: memref<128xf32>) -> memref<128xf32> {
 
 // -----
 
+// CHECK-LABEL: func @fold_view_cast
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<128xi8>)
+func.func @fold_view_cast(%0: memref<128xi8>) -> memref<i32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[RES:.*]] = memref.view %[[ARG]][%[[C0]]][] : memref<128xi8> to memref<i32>
+  // CHECK: return %[[RES]]
+  %1 = memref.cast %0 : memref<128xi8> to memref<?xi8>
+  %res = memref.view %1[%c0][] : memref<?xi8> to memref<i32>
+  return %res : memref<i32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_view_same_source_result_types
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<128xi8>)
 func.func @fold_view_same_source_result_types(%0: memref<128xi8>) -> memref<128xi8> {
-  %c0 = arith.constant 0: index
+  %c0 = arith.constant 0 : index
   // CHECK-NOT: memref.view
+  // CHECK: return %[[ARG]]
   %res = memref.view %0[%c0][] : memref<128xi8> to memref<128xi8>
   return %res : memref<128xi8>
 }
 
 // -----
 
-// CHECK-LABEL: func @non_fold_view_same_source_res_types
-//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]
-func.func @non_fold_view_same_source_res_types(%0: memref<?xi8>, %arg0 : index) -> memref<?xi8> {
+// CHECK-LABEL: func @non_fold_view_non_zero_offset
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<128xi8>)
+func.func @non_fold_view_non_zero_offset(%0: memref<128xi8>) -> memref<128xi8> {
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[RES:.*]] = memref.view %[[ARG]][%[[C1]]][] : memref<128xi8> to memref<128xi8>
+  // CHECK: return %[[RES]]
+  %res = memref.view %0[%c1][] : memref<128xi8> to memref<128xi8>
+  return %res : memref<128xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @non_fold_view_same_source_dynamic_size
+//  CHECK-SAME:   (%[[ARG:.*]]: memref<?xi8>, %[[SIZE:.*]]: index)
+func.func @non_fold_view_same_source_dynamic_size(%0: memref<?xi8>, %arg0 : index) -> memref<?xi8> {
   %c0 = arith.constant 0: index
-  // CHECK: memref.view
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[RES:.*]] = memref.view %[[ARG]][%[[C0]]][%[[SIZE]]] : memref<?xi8> to memref<?xi8>
+  // CHECK: return %[[RES]]
   %res = memref.view %0[%c0][%arg0] : memref<?xi8> to memref<?xi8>
   return %res : memref<?xi8>
 }

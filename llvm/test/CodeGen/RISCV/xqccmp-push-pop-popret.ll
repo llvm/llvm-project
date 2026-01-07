@@ -988,9 +988,6 @@ entry:
 
 ; Check that functions with varargs do not use save/restore code
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-
 define i32 @varargs(ptr %fmt, ...) {
 ; RV32IXQCCMP-LABEL: varargs:
 ; RV32IXQCCMP:       # %bb.0:
@@ -1437,8 +1434,6 @@ entry:
 
 ; Check that dynamic allocation calculations remain correct
 
-declare ptr @llvm.stacksave()
-declare void @llvm.stackrestore(ptr)
 declare void @notdead(ptr)
 
 define void @alloca(i32 %n) {
@@ -3732,7 +3727,6 @@ define void @callee_no_irq() {
 }
 
 declare void @bar(ptr, ptr)
-declare ptr @llvm.frameaddress.p0(i32 immarg)
 
 define i32 @use_fp(i32 %x) {
 ; RV32IXQCCMP-LABEL: use_fp:

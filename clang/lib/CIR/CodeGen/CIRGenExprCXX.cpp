@@ -16,6 +16,7 @@
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -240,8 +241,46 @@ static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
   if (base->isEmpty())
     return;
 
-  cgf.cgm.errorNYI(base->getSourceRange(),
-                   "emitNullBaseClassInitialization: not empty");
+  const ASTRecordLayout &layout = cgf.getContext().getASTRecordLayout(base);
+  CharUnits nvSize = layout.getNonVirtualSize();
+
+  // We cannot simply zero-initialize the entire base sub-object if vbptrs are
+  // present, they are initialized by the most derived class before calling the
+  // constructor.
+  SmallVector<std::pair<CharUnits, CharUnits>, 1> stores;
+  stores.emplace_back(CharUnits::Zero(), nvSize);
+
+  // Each store is split by the existence of a vbptr.
+  // TODO(cir): This only needs handling for the MS CXXABI.
+  assert(!cir::MissingFeatures::msabi());
+
+  // If the type contains a pointer to data member we can't memset it to zero.
+  // Instead, create a null constant and copy it to the destination.
+  // TODO: there are other patterns besides zero that we can usefully memset,
+  // like -1, which happens to be the pattern used by member-pointers.
+  // TODO: isZeroInitializable can be over-conservative in the case where a
+  // virtual base contains a member pointer.
+  mlir::TypedAttr nullConstantForBase = cgf.cgm.emitNullConstantForBase(base);
+  if (!cgf.getBuilder().isNullValue(nullConstantForBase)) {
+    cgf.cgm.errorNYI(
+        base->getSourceRange(),
+        "emitNullBaseClassInitialization: base constant is not null");
+  } else {
+    // Otherwise, just memset the whole thing to zero.  This is legal
+    // because in LLVM, all default initializers (other than the ones we just
+    // handled above) are guaranteed to have a bit pattern of all zeros.
+    // TODO(cir): When the MS CXXABI is supported, we will need to iterate over
+    // `stores` and create a separate memset for each one. For now, we know that
+    // there will only be one store and it will begin at offset zero, so that
+    // simplifies this code considerably.
+    assert(stores.size() == 1 && "Expected only one store");
+    assert(stores[0].first == CharUnits::Zero() &&
+           "Expected store to begin at offset zero");
+    CIRGenBuilderTy builder = cgf.getBuilder();
+    mlir::Location loc = cgf.getLoc(base->getBeginLoc());
+    builder.createStore(loc, builder.getConstant(loc, nullConstantForBase),
+                        destPtr);
+  }
 }
 
 void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
@@ -388,7 +427,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     const llvm::APInt &count =
         mlir::cast<cir::IntAttr>(constNumElements).getValue();
 
-    unsigned numElementsWidth = count.getBitWidth();
+    [[maybe_unused]] unsigned numElementsWidth = count.getBitWidth();
     bool hasAnyOverflow = false;
 
     // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
@@ -610,6 +649,36 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   return rv;
 }
 
+RValue CIRGenFunction::emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
+                                                  const CallExpr *callExpr,
+                                                  OverloadedOperatorKind op) {
+  CallArgList args;
+  emitCallArgs(args, type, callExpr->arguments());
+  // Find the allocation or deallocation function that we're calling.
+  ASTContext &astContext = getContext();
+  assert(op == OO_New || op == OO_Delete);
+  DeclarationName name = astContext.DeclarationNames.getCXXOperatorName(op);
+
+  clang::DeclContextLookupResult lookupResult =
+      astContext.getTranslationUnitDecl()->lookup(name);
+  for (const auto *decl : lookupResult) {
+    if (const auto *funcDecl = dyn_cast<FunctionDecl>(decl)) {
+      if (astContext.hasSameType(funcDecl->getType(), QualType(type, 0))) {
+        if (sanOpts.has(SanitizerKind::AllocToken)) {
+          // TODO: Set !alloc_token metadata.
+          assert(!cir::MissingFeatures::allocToken());
+          cgm.errorNYI("Alloc token sanitizer not yet supported!");
+        }
+
+        // Emit the call to operator new/delete.
+        return emitNewDeleteCall(*this, funcDecl, type, args);
+      }
+    }
+  }
+
+  llvm_unreachable("predeclared global operator new/delete is missing");
+}
+
 namespace {
 /// Calls the given 'operator delete' on a single object.
 struct CallObjectDelete final : EHScopeStack::Cleanup {
@@ -621,7 +690,7 @@ struct CallObjectDelete final : EHScopeStack::Cleanup {
                    QualType elementType)
       : ptr(ptr), operatorDelete(operatorDelete), elementType(elementType) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     cgf.emitDeleteCall(operatorDelete, ptr, elementType);
   }
 };
@@ -744,8 +813,27 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   Address allocation = Address::invalid();
   CallArgList allocatorArgs;
   if (allocator->isReservedGlobalPlacementOperator()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXNewExpr: reserved global placement operator");
+    // If the allocator is a global placement operator, just
+    // "inline" it directly.
+    assert(e->getNumPlacementArgs() == 1);
+    const Expr *arg = *e->placement_arguments().begin();
+
+    LValueBaseInfo baseInfo;
+    allocation = emitPointerWithAlignment(arg, &baseInfo);
+
+    // The pointer expression will, in many cases, be an opaque void*.
+    // In these cases, discard the computed alignment and use the
+    // formal alignment of the allocated type.
+    if (baseInfo.getAlignmentSource() != AlignmentSource::Decl)
+      allocation = allocation.withAlignment(allocAlign);
+
+    // Set up allocatorArgs for the call to operator delete if it's not
+    // the reserved global operator.
+    if (e->getOperatorDelete() &&
+        !e->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXNewExpr: reserved placement new with delete");
+    }
   } else {
     const FunctionProtoType *allocatorType =
         allocator->getType()->castAs<FunctionProtoType>();

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_local_size.h>
 #include <clc/workitem/clc_get_local_size.h>
 
 _CLC_OVERLOAD _CLC_DEF size_t get_local_size(uint dim) {

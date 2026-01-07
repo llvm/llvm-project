@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_modf.h>
-#include <clc/opencl/math/modf.h>
 
 #define __CLC_FUNCTION modf
 #define __CLC_BODY <clc/math/unary_def_with_ptr.inc>

@@ -395,7 +395,7 @@ namespace UnionMemberCallDiags {
 }
 #endif
 
-namespace VolatileWrites {
+namespace Volatile {
   constexpr void test1() {// all20-error {{never produces a constant expression}}
     int k;
     volatile int &m = k;
@@ -448,6 +448,30 @@ namespace VolatileWrites {
   }
   static_assert(test7(12)); // all-error {{not an integral constant expression}} \
                             // all-note {{in call to}}
+
+  constexpr int test8(bool b) {
+    if (!b)
+      return -1;
+    struct C {
+      int a;
+    };
+    volatile C c{12}; // all-note {{volatile object declared here}}
+    return ((C&)(c)).a; // all-note {{read of volatile object}}
+  }
+  static_assert(test8(true) == 0); // all-error {{not an integral constant expression}} \
+                                   // all-note {{in call to}}
+
+  struct C {
+    int n;
+    constexpr C() : n(1) { n = 2; int b= n;}
+  };
+  constexpr int f(bool get) {
+    if (get)
+      return -1;
+    volatile C c;
+    return 2;
+  }
+  static_assert(f(false) == 2, "");
 }
 
 namespace AIEWithIndex0Narrows {
@@ -473,3 +497,26 @@ namespace AIEWithIndex0Narrows {
   }
   static_assert(test());
 }
+
+#if __cplusplus >= 202302L
+namespace InactiveLocalsInConditionalOp {
+  struct A { constexpr A(){}; ~A(); constexpr int get() { return 10; } }; // all-note 2{{declared here}}
+  constexpr int get(bool b) {
+    return b ? A().get() : 1; // all-note {{non-constexpr function '~A' cannot be used in a constant expression}}
+  }
+  static_assert(get(false) == 1, "");
+  static_assert(get(true) == 10, ""); // all-error {{not an integral constant expression}} \
+                                      // all-note {{in call to}}
+
+  static_assert( (false ? A().get() : 1) == 1);
+  static_assert( (true ? A().get() : 1) == 1); // all-error {{not an integral constant expression}} \
+                                               // all-note {{non-constexpr function '~A' cannot be used in a constant expression}}
+
+  constexpr bool test2(bool b) {
+    unsigned long __ms = b ? (const unsigned long &)0 : __ms;
+    return true;
+  }
+  static_assert(test2(true));
+
+}
+#endif

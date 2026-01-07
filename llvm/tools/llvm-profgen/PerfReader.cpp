@@ -1284,6 +1284,7 @@ void PerfScriptReader::warnInvalidRange() {
   uint64_t TotalRangeNum = 0;
   uint64_t InstNotBoundary = 0;
   uint64_t UnmatchedRange = 0;
+  uint64_t RecoveredRange = 0;
   uint64_t RangeCrossFunc = 0;
   uint64_t BogusRange = 0;
 
@@ -1309,6 +1310,9 @@ void PerfScriptReader::warnInvalidRange() {
       continue;
     }
 
+    if (FRange->Func->NameStatus != DwarfNameStatus::Matched)
+      RecoveredRange += I.second;
+
     if (EndAddress >= FRange->EndAddress) {
       RangeCrossFunc += I.second;
       WarnInvalidRange(StartAddress, EndAddress, RangeCrossFuncMsg);
@@ -1328,6 +1332,9 @@ void PerfScriptReader::warnInvalidRange() {
   emitWarningSummary(
       UnmatchedRange, TotalRangeNum,
       "of samples are from ranges that do not belong to any functions.");
+  emitWarningSummary(RecoveredRange, TotalRangeNum,
+                     "of samples are from ranges that belong to functions "
+                     "recovered from symbol table.");
   emitWarningSummary(
       RangeCrossFunc, TotalRangeNum,
       "of samples are from ranges that do cross function boundaries.");

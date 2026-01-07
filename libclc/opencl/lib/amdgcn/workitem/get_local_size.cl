@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_local_size.h>
+#include <clc/opencl/opencl-base.h>
 
 uint __clc_amdgcn_get_local_size_x(void) __asm("llvm.r600.read.local.size.x");
 uint __clc_amdgcn_get_local_size_y(void) __asm("llvm.r600.read.local.size.y");

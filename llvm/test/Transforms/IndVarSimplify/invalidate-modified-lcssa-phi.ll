@@ -133,7 +133,7 @@ define i16 @test_pr58515_invalidate_loop_disposition(ptr %a) {
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i16 [[SEL]], [[SUM]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i16 [[IV]], 9
+; CHECK-NEXT:    [[C_2:%.*]] = icmp samesign ult i16 [[IV]], 9
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi i16 [ [[SUM_NEXT]], [[LOOP]] ]

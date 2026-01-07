@@ -95,6 +95,8 @@ struct t12 {
 
 template <decltype(ns::AnonEnum1)> void f10() {}
 
+template <typename T, T V> void f11() {}
+
 int main() {
   struct {
   } A;
@@ -239,8 +241,10 @@ int main() {
   f1<void(t8)>();
   operator_not_really<int>();
   t12 v4;
-  f1<_BitInt(3)>();
-  f1<const unsigned _BitInt(5)>();
+  f11<_BitInt(3), 2>();
+  f11<const unsigned _BitInt(5), 2>();
+  f11<_BitInt(65), 2>();
+  f11<const unsigned _BitInt(65), 2>();
   f1<void(t1<>, t1<>)>();
   f1<int t1<>::*>();
   void fcc() __attribute__((swiftcall));

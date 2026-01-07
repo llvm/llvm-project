@@ -3,7 +3,8 @@
 // RUN: %run uname -n | tr -d '\n' > %t.n
 // RUN: llvm-profdata merge -o %t.profdata %{readfile:%t.n}.%t-%{readfile:%t.n}.profraw_%{readfile:%t.n}
 // RUN: %clang_profuse=%t.profdata -o - -S -emit-llvm %s | FileCheck %s
-// REQUIRES: shell
+// Requires uname
+// UNSUPPORTED: system-windows
 
 int main(int argc, const char *argv[]) {
   // CHECK: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[PD1:[0-9]+]]

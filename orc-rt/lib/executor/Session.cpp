@@ -14,9 +14,14 @@
 
 namespace orc_rt {
 
+Session::ControllerAccess::~ControllerAccess() = default;
+
 Session::~Session() { waitForShutdown(); }
 
 void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
+  // Safe to call concurrently / redundantly.
+  detachFromController();
+
   {
     std::scoped_lock<std::mutex> Lock(M);
     if (SI) {
@@ -36,6 +41,27 @@ void Session::waitForShutdown() {
   shutdown([]() {});
   std::unique_lock<std::mutex> Lock(M);
   SI->CompleteCV.wait(Lock, [&]() { return SI->Complete; });
+}
+
+void Session::addResourceManager(std::unique_ptr<ResourceManager> RM) {
+  std::scoped_lock<std::mutex> Lock(M);
+  assert(!SI && "addResourceManager called after shutdown");
+  ResourceMgrs.push_back(std::move(RM));
+}
+
+void Session::setController(std::shared_ptr<ControllerAccess> CA) {
+  assert(CA && "Cannot attach null controller");
+  std::scoped_lock<std::mutex> Lock(M);
+  assert(!this->CA && "Cannot re-attach controller");
+  assert(!SI && "Cannot attach controller after shutdown");
+  this->CA = std::move(CA);
+}
+
+void Session::detachFromController() {
+  if (auto TmpCA = CA) {
+    TmpCA->doDisconnect();
+    CA = nullptr;
+  }
 }
 
 void Session::shutdownNext(Error Err) {
@@ -70,6 +96,11 @@ void Session::shutdownComplete() {
   }
 
   SI->CompleteCV.notify_all();
+}
+
+void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
+                            orc_rt_WrapperFunctionBuffer ResultBytes) {
+  unwrap(S)->sendWrapperResult(CallId, ResultBytes);
 }
 
 } // namespace orc_rt

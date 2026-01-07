@@ -49,6 +49,12 @@ def N3UnitM : ProcResGroup<[N3UnitM0, N3UnitM1]>;
 def N3UnitL : ProcResGroup<[N3UnitL01, N3UnitL2]>;
 def N3UnitI : ProcResGroup<[N3UnitS, N3UnitM0, N3UnitM1]>;
 
+// Group required for modelling SVE gather loads throughput
+def N3UnitVL : ProcResGroup<[N3UnitL01, N3UnitV0, N3UnitV1]>;
+// Unused group to fix: "error: proc resource group overlaps with N3UnitVL but
+// no supergroup contains both."
+def : ProcResGroup<[N3UnitL01, N3UnitL2, N3UnitV0, N3UnitV1]>;
+
 //===----------------------------------------------------------------------===//
 
 def : ReadAdvance<ReadI,       0>;
@@ -319,6 +325,12 @@ def N3Write_8c_2V_2V1 : SchedWriteRes<[N3UnitV, N3UnitV, N3UnitV1, N3UnitV1]> {
 def N3Write_6c_2I_2L : SchedWriteRes<[N3UnitI, N3UnitI, N3UnitL, N3UnitL]> {
     let Latency = 6;
     let NumMicroOps = 4;
+}
+
+def N3Write_6c_2L01_2V : SchedWriteRes<[N3UnitVL]> {
+    let Latency = 6;
+    let NumMicroOps = 4;
+    let ReleaseAtCycles = [5];
 }
 
 def N3Write_6c_4V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
@@ -1097,7 +1109,7 @@ def : SchedAlias<WriteVq, N3Write_2c_1V>;
 // ASIMD shift accumulate
 def : InstRW<[N3Wr_ADA, N3Rd_ADA], (instregex "^[SU]ABAL?v",
                                           "^[SU]ADALPv",
-                                          "^[SU]R?SRAv")>;
+                                          "^[SU]R?SRA(v|d)")>;
 
 // ASIMD arith, reduce, 4H/4S
 def : InstRW<[N3Write_3c_1V1], (instregex "^[SU]?ADDL?Vv4i(16|32)v$")>;
@@ -1138,30 +1150,30 @@ def : InstRW<[N3Wr_VMAH, N3Rd_VMAH], (instregex "^SQRDMLAHv", "^SQRDMLSHv")>;
 def : InstRW<[N3Wr_VMAL, N3Rd_VMAL], (instregex "^[SU]MLALv", "^[SU]MLSLv")>;
 
 // ASIMD multiply accumulate saturating long
-def : InstRW<[N3Wr_VMASL, N3Rd_VMASL], (instregex "^SQDMLALv", "^SQDMLSLv")>;
+def : InstRW<[N3Wr_VMASL, N3Rd_VMASL], (instregex "^SQDMLAL(v|i16|i32)", "^SQDMLSL(v|i16|i32)")>;
 
 // ASIMD multiply/multiply long (8x8) polynomial, D-form
 // ASIMD multiply/multiply long (8x8) polynomial, Q-form
 def : InstRW<[N3Write_2c_1V0], (instregex "^PMULL?(v8i8|v16i8)$")>;
 
 // ASIMD multiply long
-def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]MULLv", "^SQDMULLv")>;
+def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]MULLv", "^SQDMULL(v|i16|i32)")>;
 
 // ASIMD shift by immed, basic
-def : InstRW<[N3Write_2c_1V1], (instregex "^SHLv", "^SHLLv", "^SHRNv",
-                                          "^SSHLLv", "^SSHRv", "^USHLLv",
-                                          "^USHRv")>;
+def : InstRW<[N3Write_2c_1V1], (instregex "^SHL(v|d)", "^SHLLv", "^SHRNv",
+                                          "^SSHLLv", "^SSHR(v|d)", "^USHLLv",
+                                          "^USHR(v|d)")>;
 
 // ASIMD shift by immed and insert, basic
-def : InstRW<[N3Write_2c_1V1], (instregex "^SLIv", "^SRIv")>;
+def : InstRW<[N3Write_2c_1V1], (instregex "^SLI(v|d)", "^SRI(v|d)")>;
 
 // ASIMD shift by immed, complex
 def : InstRW<[N3Write_4c_1V1],
-             (instregex "^RSHRNv", "^SQRSHRNv", "^SQRSHRUNv",
+             (instregex "^RSHRNv", "^SQRSHRN[vbhs]", "^SQRSHRUN[vbhs]",
                         "^(SQSHLU?|UQSHL)[bhsd]$",
                         "^(SQSHLU?|UQSHL)(v8i8|v16i8|v4i16|v8i16|v2i32|v4i32|v2i64)_shift$",
-                        "^SQSHRNv", "^SQSHRUNv", "^SRSHRv", "^UQRSHRNv",
-                        "^UQSHRNv", "^URSHRv")>;
+                        "^SQSHRN[vbhs]", "^SQSHRUN[vbhs]", "^SRSHR(v|d)",
+                        "^UQRSHRN[vbhs]", "^UQSHRN[vbhs]","^URSHR(v|d)")>;
 
 // ASIMD shift by register, basic
 def : InstRW<[N3Write_2c_1V1], (instregex "^[SU]SHLv")>;
@@ -1197,16 +1209,16 @@ def : InstRW<[N3Write_3c_1V0], (instregex "^FCVTL(v2|v4)i32")>;
 def : InstRW<[N3Write_4c_2V0], (instregex "^FCVTN(v4|v8)i16")>;
 
 // ASIMD FP convert, narrow (F64 to F32)
-def : InstRW<[N3Write_3c_1V0], (instregex "^FCVTN(v2|v4)i32",
+def : InstRW<[N3Write_3c_1V0], (instregex "^FCVTN(v2|v4)i32", "^FCVTXNv1i64",
                                           "^FCVTXN(v2|v4)f32")>;
 
 // ASIMD FP convert, other, D-form F32 and Q-form F64
-def : InstRW<[N3Write_3c_1V0], (instregex "^[FSU]CVT[AMNPZ][SU]v2f(32|64)$",
-                                          "^[SU]CVTFv2f(32|64)$")>;
+def : InstRW<[N3Write_3c_1V0], (instregex "^[FSU]CVT[AMNPZ][SU](v2f(32|64)|s|d|v1i32|v1i64|v2i32_shift|v2i64_shift)$",
+                                          "^[SU]CVTF(v2f(32|64)|s|d|v1i32|v1i64|v2i32_shift|v2i64_shift)$")>;
 
 // ASIMD FP convert, other, D-form F16 and Q-form F32
-def : InstRW<[N3Write_4c_2V0], (instregex "^[FSU]CVT[AMNPZ][SU]v4f(16|32)$",
-                                          "^[SU]CVTFv4f(16|32)$")>;
+def : InstRW<[N3Write_4c_2V0], (instregex "^[FSU]CVT[AMNPZ][SU](v4f(16|32)|v4i(16|32)_shift)$",
+                                          "^[SU]CVTF(v4f(16|32)|v4i(16|32)_shift)$")>;
 
 // ASIMD FP convert, other, Q-form F16
 def : InstRW<[N3Write_6c_4V0], (instregex "^[FSU]CVT[AMNPZ][SU]v8f16$",
@@ -1241,7 +1253,7 @@ def : InstRW<[N3Write_4c_2V], (instregex "^(FMAX|FMIN)(NM)?Vv4(i16|i32)v$")>;
 def : InstRW<[N3Write_6c_3V], (instregex "^(FMAX|FMIN)(NM)?Vv8i16v$")>;
 
 // ASIMD FP multiply
-def : InstRW<[N3Wr_FPM], (instregex "^FMULv", "^FMULXv")>;
+def : InstRW<[N3Wr_FPM], (instregex "^FMULv", "^FMULX(v|32|64)")>;
 
 // ASIMD FP multiply accumulate
 def : InstRW<[N3Wr_FPMA, N3Rd_FPMA], (instregex "^FMLAv", "^FMLSv")>;
@@ -1330,9 +1342,9 @@ def : InstRW<[N3Write_4c_2V0], (instrs URECPEv4i32, URSQRTEv4i32)>;
 
 // ASIMD reciprocal and square root estimate, D-form F32 and scalar forms
 def : InstRW<[N3Write_3c_1V0], (instrs FRECPEv1f16, FRECPEv1i32,
-                                       FRECPEv1i64, FRECPEv2f32,
+                                       FRECPEv1i64, FRECPEv2f32, FRECPEv2f64,
                                        FRSQRTEv1f16, FRSQRTEv1i32,
-                                       FRSQRTEv1i64, FRSQRTEv2f32)>;
+                                       FRSQRTEv1i64, FRSQRTEv2f32, FRSQRTEv2f64)>;
 
 // ASIMD reciprocal and square root estimate, D-form F16 and Q-form F32
 def : InstRW<[N3Write_4c_2V0], (instrs FRECPEv4f16, FRECPEv4f32,
@@ -1345,7 +1357,7 @@ def : InstRW<[N3Write_6c_4V0], (instrs FRECPEv8f16, FRSQRTEv8f16)>;
 def : InstRW<[N3Write_3c_1V0], (instregex "^FRECPXv")>;
 
 // ASIMD reciprocal step
-def : InstRW<[N3Write_4c_1V], (instregex "^FRECPSv", "^FRSQRTSv")>;
+def : InstRW<[N3Write_4c_1V], (instregex "^FRECPS(v|32|64)", "^FRSQRTS(v|32|64)")>;
 
 // ASIMD table lookup, 3 table regs
 def : InstRW<[N3Write_4c_2V], (instrs TBLv8i8Three, TBLv16i8Three)>;
@@ -1703,7 +1715,7 @@ def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUES_[BHSD]")>;
 def : InstRW<[N3Write_2c_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
 
 // Predicate test
-def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[N3Write_2c_1M], (instregex "^TRN[12]_PPP_[BHSDQ]$")>;
@@ -1740,7 +1752,7 @@ def : InstRW<[N3Write_2c_1V],
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
                         "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
@@ -2270,8 +2282,8 @@ def : InstRW<[N3Write_7c_4L], (instregex "^LDNT1[BHW]_ZZR_S$",
                                          "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[N3Write_6c_2L], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
-def : InstRW<[N3Write_6c_2L], (instrs LDNT1D_ZZR_D)>;
+def : InstRW<[N3Write_6c_2L01_2V], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[N3Write_6c_2L01_2V], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
 def : InstRW<[N3Write_6c_1L], (instregex "^LDFF1[BHWD]$",
@@ -2320,11 +2332,11 @@ def : InstRW<[N3Write_7c_4L], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
                                          "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[N3Write_6c_2L], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+def : InstRW<[N3Write_6c_2L01_2V], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
                                          "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 64-bit element size
-def : InstRW<[N3Write_6c_2L],
+def : InstRW<[N3Write_6c_2L01_2V],
              (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW(_SCALED)?$",
                         "^GLD(FF)?1S?[BHW]_D(_SCALED)?$",
                         "^GLD(FF)?1D_[SU]XTW(_SCALED)?$",

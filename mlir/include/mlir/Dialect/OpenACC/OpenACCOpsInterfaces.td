@@ -10,6 +10,7 @@
 #define OPENACC_OPS_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def ComputeRegionOpInterface : OpInterface<"ComputeRegionOpInterface"> {
   let cppNamespace = "::mlir::acc";
@@ -72,7 +73,53 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "isConstant", (ins), [{
         return false;
       }]>,
+    InterfaceMethod<"Get the initialization region (returns nullptr if none)",
+      "::mlir::Region*", "getInitRegion", (ins)>,
   ];
+}
+
+def IndirectGlobalAccessOpInterface : OpInterface<"IndirectGlobalAccessOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations that indirectly access global symbols.
+    This interface provides a way to query which global symbols are referenced
+    by an operation, which is useful for tracking dependencies and performing
+    analysis on global variable usage.
+
+    The symbolTable parameter is optional. If null, implementations will look up
+    their own symbol table. This allows callers to pass a pre-existing symbol
+    table for efficiency when querying multiple operations.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Get the symbols referenced by this operation",
+      "void",
+      "getReferencedSymbols",
+      (ins "::llvm::SmallVectorImpl<::mlir::SymbolRefAttr>&":$symbols,
+           "::mlir::SymbolTable *":$symbolTable)>,
+  ];
+}
+
+def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations that are candidates for rematerialization
+    during outlining. These operations produce synthetic types or values
+    that cannot be passed as arguments to outlined regions and must be
+    rematerialized inside the region instead.
+
+    Operations implementing this interface are expected to be memory effect
+    free. Their results are typically used for type construction or providing
+    metadata (such as shape information for arrays).
+  }];
+
+  let verify = [{
+    if (!::mlir::isMemoryEffectFree($_op))
+      return $_op->emitOpError("must be memory effect free");
+    return ::mlir::success();
+  }];
 }
 
 #endif // OPENACC_OPS_INTERFACES

@@ -32,7 +32,7 @@ public:
     std::string FullCode = R"(
       #define POINT(name) void("__lifetime_test_point_" #name)
 
-      struct MyObj { ~MyObj() {} int i; };
+      struct [[gsl::Owner]] MyObj { ~MyObj() {} int i; };
 
       struct [[gsl::Pointer()]] View { 
         View(const MyObj&);
@@ -59,6 +59,7 @@ public:
     BuildOptions.setAllAlwaysAdd();
     BuildOptions.AddImplicitDtors = true;
     BuildOptions.AddTemporaryDtors = true;
+    BuildOptions.AddLifetime = true;
 
     // Run the main analysis.
     Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr);
@@ -102,8 +103,14 @@ public:
     // This assumes the OriginManager's `get` can find an existing origin.
     // We might need a `find` method on OriginManager to avoid `getOrCreate`
     // logic in a const-query context if that becomes an issue.
-    return const_cast<OriginManager &>(Analysis.getFactManager().getOriginMgr())
-        .get(*VD);
+    OriginList *List =
+        const_cast<OriginManager &>(Analysis.getFactManager().getOriginMgr())
+            .getOrCreateList(VD);
+    if (!List) {
+      ADD_FAILURE() << "No origin list found for Var '" << VarName << "'";
+      return std::nullopt;
+    }
+    return List->getOuterOriginID();
   }
 
   std::vector<LoanID> getLoansForVar(llvm::StringRef VarName) {
@@ -113,9 +120,10 @@ public:
       return {};
     }
     std::vector<LoanID> LID;
-    for (const Loan &L : Analysis.getFactManager().getLoanMgr().getLoans())
-      if (L.Path.D == VD)
-        LID.push_back(L.ID);
+    for (const Loan *L : Analysis.getFactManager().getLoanMgr().getLoans())
+      if (const auto *BL = dyn_cast<PathLoan>(L))
+        if (BL->getAccessPath().D == VD)
+          LID.push_back(L->getID());
     if (LID.empty()) {
       ADD_FAILURE() << "Loan for '" << VarName << "' not found.";
       return {};
@@ -825,7 +833,7 @@ TEST_F(LifetimeAnalysisTest, GslPointerWithConstAndAuto) {
   )");
   EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
   EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p1"));
-  EXPECT_THAT(Origin("v3"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"v2"}, "p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, GslPointerPropagation) {
@@ -878,7 +886,7 @@ TEST_F(LifetimeAnalysisTest, GslPointerConversionOperator) {
       StringView() = default;
     };
 
-    struct String {
+    struct [[gsl::Owner]] String {
       ~String() {}
       operator StringView() const;
     };
@@ -914,24 +922,37 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundSimple) {
   EXPECT_THAT(Origin("v3"), HasLoansTo({"b"}, "p2"));
 }
 
-TEST_F(LifetimeAnalysisTest, LifetimeboundMemberFunction) {
+TEST_F(LifetimeAnalysisTest, LifetimeboundMemberFunctionOfAView) {
   SetupTest(R"(
     struct [[gsl::Pointer()]] MyView {
       MyView(const MyObj& o) {}
-      MyView pass() [[clang::lifetimebound]] { return *this; }
+      MyView& pass() [[clang::lifetimebound]] { return *this; }
     };
     void target() {
       MyObj o;
       MyView v1 = o;
       POINT(p1);
-      MyView v2 = v1.pass();
+      MyView* v2 = &v1.pass();
       POINT(p2);
     }
   )");
   EXPECT_THAT(Origin("v1"), HasLoansTo({"o"}, "p1"));
-  // The call v1.pass() is bound to 'v1'. The origin of v2 should get the loans
-  // from v1.
-  EXPECT_THAT(Origin("v2"), HasLoansTo({"o"}, "p2"));
+  // The call v1.pass() is bound to 'v1'.
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"v1"}, "p2"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundMemberFunction) {
+  SetupTest(R"(
+    struct LifetimeboundMember {
+      View get() [[clang::lifetimebound]];
+    };
+    void target() {
+      LifetimeboundMember o;
+      View v1 = o.get();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"o"}, "p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, LifetimeboundMultipleArgs) {
@@ -1018,7 +1039,6 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundRawPointerParameter) {
   EXPECT_THAT(Origin("v2"), HasLoansTo({"c"}, "p3"));
 }
 
-// FIXME: This can be controversial and may be revisited in the future.
 TEST_F(LifetimeAnalysisTest, LifetimeboundConstRefViewParameter) {
   SetupTest(R"(
     View Identity(const View& v [[clang::lifetimebound]]);
@@ -1029,7 +1049,8 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundConstRefViewParameter) {
       POINT(p1);
     }
   )");
-  EXPECT_THAT(Origin("v2"), HasLoansTo({"o"}, "p1"));
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"o"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"v1"}, "p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, LifetimeboundConstRefObjParam) {
@@ -1066,13 +1087,12 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundReturnReference) {
   EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
   EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p2"));
 
-  // FIXME: Handle reference types. 'v3' should have loan to 'a' instead of 'b'.
-  EXPECT_THAT(Origin("v3"), HasLoansTo({"b"}, "p2"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"a"}, "p2"));
 
   EXPECT_THAT(Origin("v4"), HasLoansTo({"c"}, "p3"));
 }
 
-TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunction) {
+TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunctionReturnRef) {
   SetupTest(R"(
     template <typename T>
     const T& Identity(T&& v [[clang::lifetimebound]]);
@@ -1082,32 +1102,39 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunction) {
       POINT(p1);
 
       View v2 = Identity(v1);
-      const View& v3 = Identity(v1);
+      const View& v3 = Identity(v2);
       POINT(p2);
     }
   )");
   EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
-  EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p2"));
-  EXPECT_THAT(Origin("v3"), HasLoansTo({"a"}, "p2"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({}, "p2"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"v2"}, "p2"));
 }
 
-TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateClass) {
+TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunctionReturnVal) {
   SetupTest(R"(
-    template<typename T>
-    struct [[gsl::Pointer()]] MyTemplateView {
-      MyTemplateView(const T& o) {}
-      MyTemplateView pass() [[clang::lifetimebound]] { return *this; }
-    };
+    template <typename T>
+    T Identity(const T& v [[clang::lifetimebound]]);
+
     void target() {
-      MyObj o;
-      MyTemplateView<MyObj> v1 = o;
+      MyObj a;
+      // FIXME: Captures a reference to temporary MyObj returned by Identity.
+      View v1 = Identity(a);
       POINT(p1);
-      MyTemplateView<MyObj> v2 = v1.pass();
+
+      MyObj b;
+      View v2 = b;
+      View v3 = Identity(v2);
+      const View& v4 = Identity(v3);
       POINT(p2);
     }
   )");
-  EXPECT_THAT(Origin("v1"), HasLoansTo({"o"}, "p1"));
-  EXPECT_THAT(Origin("v2"), HasLoansTo({"o"}, "p2"));
+  EXPECT_THAT(Origin("v1"), HasLoansTo({}, "p1"));
+
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"b"}, "p2"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"v2"}, "p2"));
+  // View temporary on RHS is lifetime-extended.
+  EXPECT_THAT(Origin("v4"), HasLoansTo({}, "p2"));
 }
 
 TEST_F(LifetimeAnalysisTest, LifetimeboundConversionOperator) {
@@ -1307,6 +1334,42 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
   EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {
+  SetupTest(R"(
+    void target() {
+      int *ptr;
+      {
+          int s = 1;
+          ptr = &s;
+      }
+      POINT(p1);    
+      (void)*ptr;
+    }
+  )");
+  EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
+  EXPECT_THAT(Origins({"ptr"}), MustBeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAF) {
+  SetupTest(R"(
+    class S {
+      View a, b;
+    };
+
+    void target() {
+      S* ptr;
+      {
+          S s;
+          ptr = &s;
+      }
+      POINT(p1);
+      (void)ptr;
+    }
+  )");
+  EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
+  EXPECT_THAT(Origins({"ptr"}), MustBeLiveAt("p1"));
+}
+
 TEST_F(LifetimeAnalysisTest, SimpleReturnStackAddress) {
   SetupTest(R"(
     MyObj* target() {
@@ -1504,6 +1567,35 @@ TEST_F(LifetimeAnalysisTest, ReturnBeforeUseAfterScope) {
 
   EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p1"));
   EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAR) {
+  SetupTest(R"(
+    int* target() {
+      int s = 10;
+      int* p = &s;
+      POINT(p1);
+      return p;
+    }
+  )");
+  EXPECT_THAT("s", HasLiveLoanAtExpiry("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAR) {
+  SetupTest(R"(
+    class S {
+      View a, b;
+    };
+
+    S* target() {
+      S *ptr;
+      S s;
+      ptr = &s;
+      POINT(p1);
+      return ptr;
+    }
+  )");
+  EXPECT_THAT("s", HasLiveLoanAtExpiry("p1"));
 }
 
 } // anonymous namespace

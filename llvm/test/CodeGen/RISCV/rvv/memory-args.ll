@@ -2,13 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -O2 < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64IV
 
-declare <vscale x 64 x i8> @llvm.riscv.vmacc.nxv64i8.nxv64i8(
-  <vscale x 64 x i8>,
-  <vscale x 64 x i8>,
-  <vscale x 64 x i8>,
-  i64,
-  i64);
-
 define <vscale x 64 x i8> @callee(<vscale x 64 x i8> %arg0, <vscale x 64 x i8> %arg1, <vscale x 64 x i8> %arg2) {
 ; RV64IV-LABEL: callee:
 ; RV64IV:       # %bb.0:

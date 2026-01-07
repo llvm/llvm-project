@@ -384,6 +384,14 @@ body, html {
     margin-bottom:1rem; 
 }
 
+.nested-delimiter-container {
+    margin-bottom: 1rem;
+}
+
+.nested-delimiter-container:last-of-type {
+    margin-bottom: 0rem;
+}
+
 .resizer {
     width: 5px;
     cursor: col-resize;
@@ -421,8 +429,7 @@ body, html {
 }
 
 .sidebar ul li {
-    padding-right: 1rem;
-    padding-left: 2rem;
+    padding-left: 1rem;
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
 }
@@ -430,8 +437,7 @@ body, html {
 .sidebar-section {
     font-size:1.5rem;
     font-weight: bold;
-    margin-bottom: 1rem;
-    padding: 3rem;
+    padding-left: 1rem;
 }
 .sidebar-section a {
     color: var(--brand)
@@ -444,7 +450,7 @@ body, html {
     left: 250px;
     position: relative;
     width: calc(100% - 250px);
-    height: 100vh;
+    min-height: 100vh;
 }
 
 .sidebar-item {
@@ -472,4 +478,13 @@ a, a:visited, a:hover, a:active {
 
 .code-block {
   white-space: pre-line;
+}
+
+.doc-card {
+  border: 3px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  background: var(--surface1);
+  margin: 14px 0;
+  overflow: hidden;
+  padding: 10px;
 }

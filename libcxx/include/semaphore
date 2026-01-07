@@ -133,7 +133,7 @@ class counting_semaphore {
 public:
   static_assert(__least_max_value >= 0, "The least maximum value must be a positive number");
 
-  static constexpr ptrdiff_t max() noexcept { return __least_max_value; }
+  [[nodiscard]] static constexpr ptrdiff_t max() noexcept { return __least_max_value; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit counting_semaphore(ptrdiff_t __count) : __semaphore_(__count) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -156,12 +156,12 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void acquire() { __semaphore_.acquire(); }
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
     return __semaphore_.try_acquire_for(chrono::duration_cast<chrono::nanoseconds>(__rel_time));
   }
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire() { return __semaphore_.try_acquire(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire() { return __semaphore_.try_acquire(); }
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time) {
     auto const __current = _Clock::now();
     if (__current >= __abs_time)
       return try_acquire();

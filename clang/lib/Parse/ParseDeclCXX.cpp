@@ -2498,40 +2498,13 @@ void Parser::ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS) {
 
   Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
                               ? diag::warn_relocatable_keyword
-                              : diag::ext_relocatable_keyword)
-      << /*relocatable*/ 0;
+                              : diag::ext_relocatable_keyword);
 
   TRS = ConsumeToken();
 }
 
-bool Parser::isCXX2CReplaceableKeyword(Token Tok) const {
-  if (!getLangOpts().CPlusPlus || Tok.isNot(tok::identifier))
-    return false;
-  if (!Ident_replaceable_if_eligible)
-    Ident_replaceable_if_eligible =
-        &PP.getIdentifierTable().get("replaceable_if_eligible");
-  IdentifierInfo *II = Tok.getIdentifierInfo();
-  return II == Ident_replaceable_if_eligible;
-}
-
-bool Parser::isCXX2CReplaceableKeyword() const {
-  return isCXX2CReplaceableKeyword(Tok);
-}
-
-void Parser::ParseCXX2CReplaceableSpecifier(SourceLocation &MRS) {
-  assert(isCXX2CReplaceableKeyword() &&
-         "expected a replaceable_if_eligible specifier");
-
-  Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
-                              ? diag::warn_relocatable_keyword
-                              : diag::ext_relocatable_keyword)
-      << /*replaceable*/ 1;
-
-  MRS = ConsumeToken();
-}
-
 bool Parser::isClassCompatibleKeyword(Token Tok) const {
-  if (isCXX2CTriviallyRelocatableKeyword(Tok) || isCXX2CReplaceableKeyword(Tok))
+  if (isCXX2CTriviallyRelocatableKeyword(Tok))
     return true;
   VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier(Tok);
   return Specifier == VirtSpecifiers::VS_Final ||
@@ -3587,7 +3560,6 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   bool IsFinalSpelledSealed = false;
   bool IsAbstract = false;
   SourceLocation TriviallyRelocatable;
-  SourceLocation Replaceable;
 
   // Parse the optional 'final' keyword.
   if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
@@ -3599,20 +3571,9 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
             auto Skipped = Tok;
             ConsumeToken();
             Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
-                << /*trivial_relocatable*/ 0 << TriviallyRelocatable;
+                << TriviallyRelocatable;
           } else {
             ParseCXX2CTriviallyRelocatableSpecifier(TriviallyRelocatable);
-          }
-          continue;
-        }
-        if (isCXX2CReplaceableKeyword(Tok)) {
-          if (Replaceable.isValid()) {
-            auto Skipped = Tok;
-            ConsumeToken();
-            Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
-                << /*replaceable*/ 1 << Replaceable;
-          } else {
-            ParseCXX2CReplaceableSpecifier(Replaceable);
           }
           continue;
         }
@@ -3654,7 +3615,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
         Diag(FinalLoc, diag::ext_warn_gnu_final);
     }
     assert((FinalLoc.isValid() || AbstractLoc.isValid() ||
-            TriviallyRelocatable.isValid() || Replaceable.isValid()) &&
+            TriviallyRelocatable.isValid()) &&
            "not a class definition");
 
     // Parse any C++11 attributes after 'final' keyword.
@@ -3729,7 +3690,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   if (TagDecl)
     Actions.ActOnStartCXXMemberDeclarations(
         getCurScope(), TagDecl, FinalLoc, IsFinalSpelledSealed, IsAbstract,
-        TriviallyRelocatable, Replaceable, T.getOpenLocation());
+        TriviallyRelocatable, T.getOpenLocation());
 
   // C++ 11p3: Members of a class defined with the keyword class are private
   // by default. Members of a class defined with the keywords struct or union

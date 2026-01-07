@@ -4864,12 +4864,12 @@ let isCommutable = 0 in {
   defm VPSIGND    : SS3I_binop_rm_int<0x0A, "vpsignd",
                                       int_x86_ssse3_psign_d_128,
                                       SchedWriteVecALU.XMM, load, 0>, VEX, VVVV, WIG;
-  defm VPHADDSW   : SS3I_binop_rm_int<0x03, "vphaddsw",
-                                      int_x86_ssse3_phadd_sw_128,
-                                      SchedWritePHAdd.XMM, load, 0>, VEX, VVVV, WIG;
-  defm VPHSUBSW   : SS3I_binop_rm_int<0x07, "vphsubsw",
-                                      int_x86_ssse3_phsub_sw_128,
-                                      SchedWritePHAdd.XMM, load, 0>, VEX, VVVV, WIG;
+  defm VPHADDSW    : SS3I_binop_rm<0x03, "vphaddsw", X86hadds, v8i16, v8i16, VR128,
+                                  load, i128mem,
+                                  SchedWritePHAdd.XMM, 0>, VEX, VVVV, WIG;
+  defm VPHSUBSW    : SS3I_binop_rm<0x07, "vphsubsw", X86hsubs, v8i16, v8i16, VR128,
+                                  load, i128mem,
+                                  SchedWritePHAdd.XMM, 0>, VEX, VVVV, WIG;
 }
 }
 
@@ -4907,12 +4907,12 @@ let isCommutable = 0 in {
                                        SchedWriteVecALU.YMM>, VEX, VVVV, VEX_L, WIG;
   defm VPSIGND   : SS3I_binop_rm_int_y<0x0A, "vpsignd", int_x86_avx2_psign_d,
                                        SchedWriteVecALU.YMM>, VEX, VVVV, VEX_L, WIG;
-  defm VPHADDSW  : SS3I_binop_rm_int_y<0x03, "vphaddsw",
-                                       int_x86_avx2_phadd_sw,
-                                       SchedWritePHAdd.YMM>, VEX, VVVV, VEX_L, WIG;
-  defm VPHSUBSW  : SS3I_binop_rm_int_y<0x07, "vphsubsw",
-                                       int_x86_avx2_phsub_sw,
-                                       SchedWritePHAdd.YMM>, VEX, VVVV, VEX_L, WIG;
+  defm VPHADDSWY  : SS3I_binop_rm<0x03, "vphaddsw", X86hadds, v16i16, v16i16,
+                                  VR256, load, i256mem,
+                                  SchedWritePHAdd.YMM, 0>, VEX, VVVV, VEX_L, WIG;
+  defm VPHSUBSWY  : SS3I_binop_rm<0x07, "vphsubsw", X86hsubs, v16i16, v16i16,
+                                  VR256, load, i256mem,
+                                  SchedWritePHAdd.YMM, 0>, VEX, VVVV, VEX_L, WIG;
 }
 }
 
@@ -4935,12 +4935,10 @@ let isCommutable = 0 in {
                                      SchedWriteVecALU.XMM, memop>;
   defm PSHUFB    : SS3I_binop_rm<0x00, "pshufb", X86pshufb, v16i8, v16i8, VR128,
                                  memop, i128mem, SchedWriteVarShuffle.XMM>;
-  defm PHADDSW   : SS3I_binop_rm_int<0x03, "phaddsw",
-                                     int_x86_ssse3_phadd_sw_128,
-                                     SchedWritePHAdd.XMM, memop>;
-  defm PHSUBSW   : SS3I_binop_rm_int<0x07, "phsubsw",
-                                     int_x86_ssse3_phsub_sw_128,
-                                     SchedWritePHAdd.XMM, memop>;
+  defm PHADDSW   : SS3I_binop_rm<0x03, "phaddsw", X86hadds, v8i16, v8i16, VR128,
+                                 memop, i128mem, SchedWritePHAdd.XMM>;
+  defm PHSUBSW   : SS3I_binop_rm<0x07, "phsubsw", X86hsubs, v8i16, v8i16, VR128,
+                                 memop, i128mem, SchedWritePHAdd.XMM>;
   defm PMADDUBSW : SS3I_binop_rm<0x04, "pmaddubsw", X86vpmaddubsw, v8i16,
                                  v16i8, VR128, memop, i128mem,
                                  SchedWriteVecIMul.XMM>;

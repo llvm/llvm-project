@@ -162,43 +162,125 @@ TEST_CONSTEXPR(match_v32qu(
     216, 109, 218, 110, 220, 111, 222, 112,
     224, 113, 226, 114, 228, 115, 230, 116));
 
+__m128i test_mm_multishift_epi64_epi8(__m128i __X, __m128i __Y) {
+  // CHECK-LABEL: test_mm_multishift_epi64_epi8
+  // CHECK: call <16 x i8> @llvm.x86.avx512.pmultishift.qb.128(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  return _mm_multishift_epi64_epi8(__X, __Y);
+}
+
+TEST_CONSTEXPR(match_v16qu(
+    _mm_multishift_epi64_epi8(
+        (__m128i)(__v16qu){0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56},
+        (__m128i)(__v16qu){0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                          0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}),
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18));
+
 __m128i test_mm_mask_multishift_epi64_epi8(__m128i __W, __mmask16 __M, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_mask_multishift_epi64_epi8
   // CHECK: call <16 x i8> @llvm.x86.avx512.pmultishift.qb.128(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
-  return _mm_mask_multishift_epi64_epi8(__W, __M, __X, __Y); 
+  return _mm_mask_multishift_epi64_epi8(__W, __M, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_v16qu(
+    _mm_mask_multishift_epi64_epi8(
+        (__m128i)(__v16qu){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+        0xAAAA,
+        (__m128i)(__v16qu){0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56},
+        (__m128i)(__v16qu){0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                          0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}),
+    0xFF, 0x02, 0xFF, 0x04, 0xFF, 0x06, 0xFF, 0x08,
+    0xFF, 0x12, 0xFF, 0x14, 0xFF, 0x16, 0xFF, 0x18));
 
 __m128i test_mm_maskz_multishift_epi64_epi8(__mmask16 __M, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_maskz_multishift_epi64_epi8
   // CHECK: call <16 x i8> @llvm.x86.avx512.pmultishift.qb.128(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
-  return _mm_maskz_multishift_epi64_epi8(__M, __X, __Y); 
+  return _mm_maskz_multishift_epi64_epi8(__M, __X, __Y);
 }
 
-__m128i test_mm_multishift_epi64_epi8(__m128i __X, __m128i __Y) {
-  // CHECK-LABEL: test_mm_multishift_epi64_epi8
-  // CHECK: call <16 x i8> @llvm.x86.avx512.pmultishift.qb.128(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  return _mm_multishift_epi64_epi8(__X, __Y); 
+TEST_CONSTEXPR(match_v16qu(
+    _mm_maskz_multishift_epi64_epi8(
+        0x5555,
+        (__m128i)(__v16qu){0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56},
+        (__m128i)(__v16qu){0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                          0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}),
+    0x01, 0, 0x03, 0, 0x05, 0, 0x07, 0,
+    0x11, 0, 0x13, 0, 0x15, 0, 0x17, 0));
+
+__m256i test_mm256_multishift_epi64_epi8(__m256i __X, __m256i __Y) {
+  // CHECK-LABEL: test_mm256_multishift_epi64_epi8
+  // CHECK: call <32 x i8> @llvm.x86.avx512.pmultishift.qb.256(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
+  return _mm256_multishift_epi64_epi8(__X, __Y);
 }
+
+TEST_CONSTEXPR(match_v32qu(
+    _mm256_multishift_epi64_epi8(
+        (__m256i)(__v32qu){0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56},
+        (__m256i)(__v32qu){0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                          0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+                          0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+                          0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38}),
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+    0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+    0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38));
 
 __m256i test_mm256_mask_multishift_epi64_epi8(__m256i __W, __mmask32 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_mask_multishift_epi64_epi8
   // CHECK: call <32 x i8> @llvm.x86.avx512.pmultishift.qb.256(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
-  return _mm256_mask_multishift_epi64_epi8(__W, __M, __X, __Y); 
+  return _mm256_mask_multishift_epi64_epi8(__W, __M, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_v32qu(
+    _mm256_mask_multishift_epi64_epi8(
+        (__m256i)(__v32qu){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+        0xAAAAAAAA,
+        (__m256i)(__v32qu){0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56},
+        (__m256i)(__v32qu){0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                          0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+                          0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+                          0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38}),
+    0xFF, 0x02, 0xFF, 0x04, 0xFF, 0x06, 0xFF, 0x08,
+    0xFF, 0x12, 0xFF, 0x14, 0xFF, 0x16, 0xFF, 0x18,
+    0xFF, 0x22, 0xFF, 0x24, 0xFF, 0x26, 0xFF, 0x28,
+    0xFF, 0x32, 0xFF, 0x34, 0xFF, 0x36, 0xFF, 0x38));
 
 __m256i test_mm256_maskz_multishift_epi64_epi8(__mmask32 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_maskz_multishift_epi64_epi8
   // CHECK: call <32 x i8> @llvm.x86.avx512.pmultishift.qb.256(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
-  return _mm256_maskz_multishift_epi64_epi8(__M, __X, __Y); 
+  return _mm256_maskz_multishift_epi64_epi8(__M, __X, __Y);
 }
 
-__m256i test_mm256_multishift_epi64_epi8(__m256i __X, __m256i __Y) {
-  // CHECK-LABEL: test_mm256_multishift_epi64_epi8
-  // CHECK: call <32 x i8> @llvm.x86.avx512.pmultishift.qb.256(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
-  return _mm256_multishift_epi64_epi8(__X, __Y); 
-}
+TEST_CONSTEXPR(match_v32qu(
+    _mm256_maskz_multishift_epi64_epi8(
+        0x55555555,
+        (__m256i)(__v32qu){0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56,
+                          0, 8, 16, 24, 32, 40, 48, 56},
+        (__m256i)(__v32qu){0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                          0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+                          0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+                          0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38}),
+    0x01, 0, 0x03, 0, 0x05, 0, 0x07, 0,
+    0x11, 0, 0x13, 0, 0x15, 0, 0x17, 0,
+    0x21, 0, 0x23, 0, 0x25, 0, 0x27, 0,
+    0x31, 0, 0x33, 0, 0x35, 0, 0x37, 0));
 

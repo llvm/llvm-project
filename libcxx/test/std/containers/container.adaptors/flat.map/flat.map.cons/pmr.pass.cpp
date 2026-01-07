@@ -166,12 +166,12 @@ int main(int, char**) {
   }
   {
     // flat_map(InputIterator first, InputIterator last, const Allocator& a);
-    using P      = std::pair<int, short>;
+    using P      = std::pair<int, long>;
     P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
     P expected[] = {{1, 1}, {2, 4}, {3, 6}};
     {
       //  cpp17 iterator
-      using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
+      using M = std::flat_map<int, long, std::less<int>, std::pmr::vector<int>, std::pmr::vector<long>>;
       std::pmr::monotonic_buffer_resource mr;
       std::pmr::vector<M> vm(&mr);
       vm.emplace_back(cpp17_input_iterator<const P*>(ar), cpp17_input_iterator<const P*>(ar + 9));
@@ -181,7 +181,7 @@ int main(int, char**) {
       assert(vm[0].values().get_allocator().resource() == &mr);
     }
     {
-      using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
+      using M = std::flat_map<int, long, std::less<int>, std::pmr::vector<int>, std::pmr::vector<long>>;
       std::pmr::monotonic_buffer_resource mr;
       std::pmr::vector<M> vm(&mr);
       vm.emplace_back(ar, ar);
@@ -242,12 +242,12 @@ int main(int, char**) {
   }
   {
     //  flat_map(from_range_t, R&&, const Alloc&);
-    using P      = std::pair<int, short>;
+    using P      = std::pair<int, long>;
     P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
     P expected[] = {{1, 1}, {2, 4}, {3, 6}};
     {
       // input_range
-      using M    = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
+      using M    = std::flat_map<int, long, std::less<int>, std::pmr::vector<int>, std::pmr::vector<long>>;
       using Iter = cpp20_input_iterator<const P*>;
       using Sent = sentinel_wrapper<Iter>;
       using R    = std::ranges::subrange<Iter, Sent>;
@@ -260,7 +260,7 @@ int main(int, char**) {
       assert(vm[0].values().get_allocator().resource() == &mr);
     }
     {
-      using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
+      using M = std::flat_map<int, long, std::less<int>, std::pmr::vector<int>, std::pmr::vector<long>>;
       using R = std::ranges::subrange<const P*>;
       std::pmr::monotonic_buffer_resource mr;
       std::pmr::vector<M> vm(&mr);

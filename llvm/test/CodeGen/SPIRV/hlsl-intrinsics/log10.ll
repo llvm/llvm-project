@@ -7,21 +7,23 @@
 ; CHECK: %[[#v4float:]] = OpTypeVector %[[#float]] 4
 ; CHECK: %[[#float_0_30103001:]] = OpConstant %[[#float]] 0.30103000998497009
 
+@logf = global float 0.0, align 4
+@logf4 = global <4 x float> zeroinitializer, align 16
+
 define void @main(float %f, <4 x float> %f4) {
 entry:
 ; CHECK-DAG: %[[#f:]] = OpFunctionParameter %[[#float]]
 ; CHECK-DAG: %[[#f4:]] = OpFunctionParameter %[[#v4float]]
-  %logf = alloca float, align 4
-  %logf4 = alloca <4 x float>, align 16
-
 
 ; CHECK: %[[#log2:]] = OpExtInst %[[#float]] %[[#extinst]] Log2 %[[#f]]
 ; CHECK: %[[#res:]] = OpFMul %[[#float]] %[[#log2]] %[[#float_0_30103001]]
   %elt.log10 = call float @llvm.log10.f32(float %f)
+  store float %elt.log10, ptr @logf, align 4
 
 ; CHECK: %[[#log2:]] = OpExtInst %[[#v4float]] %[[#extinst]] Log2 %[[#f4]]
 ; CHECK: %[[#res:]] = OpVectorTimesScalar %[[#v4float]] %[[#log2]] %[[#float_0_30103001]]
   %elt.log101 = call <4 x float> @llvm.log10.v4f32(<4 x float> %f4)
+  store <4 x float> %elt.log101, ptr @logf4, align 16
 
   ret void
 }

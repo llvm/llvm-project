@@ -6,9 +6,6 @@
 // clang-format on
 
 // REQUIRES: gpu
-//
-// FIXME: https://github.com/llvm/llvm-project/issues/161265
-// UNSUPPORTED: gpu
 
 #include <stdio.h>
 

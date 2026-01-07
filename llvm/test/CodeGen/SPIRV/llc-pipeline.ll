@@ -11,9 +11,11 @@
 ; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
+; SPIRV-O0-NEXT:Runtime Library Function Analysis
 ; SPIRV-O0-NEXT:Target Pass Configuration
 ; SPIRV-O0-NEXT:Machine Module Information
 ; SPIRV-O0-NEXT:Target Transform Information
+; SPIRV-O0-NEXT:Library Function Lowering Analysis
 ; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Assumption Cache Tracker
 ; SPIRV-O0-NEXT:Profile summary info
@@ -21,8 +23,7 @@
 ; SPIRV-O0-NEXT:  ModulePass Manager
 ; SPIRV-O0-NEXT:    Pre-ISel Intrinsic Lowering
 ; SPIRV-O0-NEXT:    FunctionPass Manager
-; SPIRV-O0-NEXT:      Expand large div/rem
-; SPIRV-O0-NEXT:      Expand fp
+; SPIRV-O0-NEXT:      Expand IR instructions
 ; SPIRV-O0-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-O0-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-O0-NEXT:      Remove unreachable blocks from the CFG
@@ -38,6 +39,7 @@
 ; SPIRV-O0-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-O0-NEXT:    SPIRV Legalize Implicit Binding
 ; SPIRV-O0-NEXT:    SPIRV CBuffer Access
+; SPIRV-O0-NEXT:    SPIRV push constant Access
 ; SPIRV-O0-NEXT:    SPIRV emit intrinsics
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIRV legalize bitcast pass
@@ -83,9 +85,11 @@
 ; SPIRV-O0-NEXT:      Free MachineFunction
 
 ; SPIRV-Opt:Target Library Information
+; SPIRV-Opt-NEXT:Runtime Library Function Analysis
 ; SPIRV-Opt-NEXT:Target Pass Configuration
 ; SPIRV-Opt-NEXT:Machine Module Information
 ; SPIRV-Opt-NEXT:Target Transform Information
+; SPIRV-Opt-NEXT:Library Function Lowering Analysis
 ; SPIRV-Opt-NEXT:Assumption Cache Tracker
 ; SPIRV-Opt-NEXT:Type-Based Alias Analysis
 ; SPIRV-Opt-NEXT:Scoped NoAlias Alias Analysis
@@ -95,8 +99,7 @@
 ; SPIRV-Opt-NEXT:  ModulePass Manager
 ; SPIRV-Opt-NEXT:    Pre-ISel Intrinsic Lowering
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
-; SPIRV-Opt-NEXT:      Expand large div/rem
-; SPIRV-Opt-NEXT:      Expand fp
+; SPIRV-Opt-NEXT:      Expand IR instructions
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; SPIRV-Opt-NEXT:      Natural Loop Information
@@ -141,6 +144,7 @@
 ; SPIRV-Opt-NEXT:      SPIRV strip convergent intrinsics
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Implicit Binding
 ; SPIRV-Opt-NEXT:    SPIRV CBuffer Access
+; SPIRV-Opt-NEXT:    SPIRV push constant Access
 ; SPIRV-Opt-NEXT:    SPIRV emit intrinsics
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIRV legalize bitcast pass

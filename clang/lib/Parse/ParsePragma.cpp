@@ -1614,7 +1614,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
         PP.Lex(Tok); // ,
 
         StateInfo = Tok.getIdentifierInfo();
-        IsScalableStr = StateInfo->getName();
+        IsScalableStr = StateInfo ? StateInfo->getName() : "";
 
         if (IsScalableStr != "scalable" && IsScalableStr != "fixed") {
           Diag(Tok.getLocation(),

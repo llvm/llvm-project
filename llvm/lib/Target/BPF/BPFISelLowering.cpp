@@ -58,7 +58,7 @@ static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
 
 BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
                                      const BPFSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI) {
 
   // Set up the register classes.
   addRegisterClass(MVT::i64, &BPF::GPRRegClass);
@@ -962,7 +962,7 @@ MachineBasicBlock *BPFTargetLowering::EmitInstrWithCustomInserterLDimm64(
   MachineOperand &MO = MI.getOperand(1);
   assert(MO.isBlockAddress() || MO.isGlobal());
 
-  MCRegister ResultReg = MI.getOperand(0).getReg();
+  Register ResultReg = MI.getOperand(0).getReg();
   Register TmpReg = RegInfo.createVirtualRegister(RC);
 
   std::vector<MachineBasicBlock *> Targets;

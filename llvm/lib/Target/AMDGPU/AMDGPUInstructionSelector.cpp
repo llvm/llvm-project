@@ -1216,6 +1216,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap:
     return selectPermlaneSwapIntrin(I, IntrinsicID);
+  case Intrinsic::amdgcn_wave_shuffle:
+    return selectWaveShuffleIntrin(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1946,20 +1948,52 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
   // The resource id offset is computed as (<isa opaque base> + M0[21:16] +
   // offset field) % 64. Some versions of the programming guide omit the m0
   // part, or claim it's from offset 0.
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(gwsIntrinToOpcode(IID)));
+
+  unsigned Opc = gwsIntrinToOpcode(IID);
+  const MCInstrDesc &InstrDesc = TII.get(Opc);
 
   if (HasVSrc) {
     Register VSrc = MI.getOperand(1).getReg();
-    MIB.addReg(VSrc);
 
-    if (!RBI.constrainGenericRegister(VSrc, AMDGPU::VGPR_32RegClass, *MRI))
-      return false;
+    int Data0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
+    const TargetRegisterClass *DataRC = TII.getRegClass(InstrDesc, Data0Idx);
+    const TargetRegisterClass *SubRC =
+        TRI.getSubRegisterClass(DataRC, AMDGPU::sub0);
+
+    if (!SubRC) {
+      // 32-bit normal case.
+      if (!RBI.constrainGenericRegister(VSrc, *DataRC, *MRI))
+        return false;
+
+      BuildMI(*MBB, &MI, DL, InstrDesc)
+        .addReg(VSrc)
+        .addImm(ImmOffset)
+        .cloneMemRefs(MI);
+    } else {
+      // Requires even register alignment, so create 64-bit value and pad the
+      // top half with undef.
+      Register DataReg = MRI->createVirtualRegister(DataRC);
+      if (!RBI.constrainGenericRegister(VSrc, *SubRC, *MRI))
+        return false;
+
+      Register UndefReg = MRI->createVirtualRegister(SubRC);
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::REG_SEQUENCE), DataReg)
+        .addReg(VSrc)
+        .addImm(AMDGPU::sub0)
+        .addReg(UndefReg)
+        .addImm(AMDGPU::sub1);
+
+      BuildMI(*MBB, &MI, DL, InstrDesc)
+        .addReg(DataReg)
+        .addImm(ImmOffset)
+        .cloneMemRefs(MI);
+    }
+  } else {
+    BuildMI(*MBB, &MI, DL, InstrDesc)
+      .addImm(ImmOffset)
+      .cloneMemRefs(MI);
   }
-
-  MIB.addImm(ImmOffset)
-     .cloneMemRefs(MI);
-
-  TII.enforceOperandRCAlignment(*MIB, AMDGPU::OpName::data0);
 
   MI.eraseFromParent();
   return true;
@@ -2360,6 +2394,16 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
+  case Intrinsic::amdgcn_s_wakeup_barrier: {
+    if (!STI.hasSWakeupBarrier()) {
+      Function &F = I.getMF()->getFunction();
+      F.getContext().diagnose(
+          DiagnosticInfoUnsupported(F, "intrinsic not supported on subtarget",
+                                    I.getDebugLoc(), DS_Error));
+      return false;
+    }
+    return selectNamedBarrierInst(I, IntrinsicID);
+  }
   case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
@@ -3852,6 +3896,130 @@ bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
+    MachineInstr &MI) const {
+  assert(MI.getNumOperands() == 4);
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register ValReg = MI.getOperand(2).getReg();
+  Register IdxReg = MI.getOperand(3).getReg();
+
+  const LLT DstTy = MRI->getType(DstReg);
+  unsigned DstSize = DstTy.getSizeInBits();
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const TargetRegisterClass *DstRC =
+      TRI.getRegClassForSizeOnBank(DstSize, *DstRB);
+
+  if (DstTy != LLT::scalar(32))
+    return false;
+
+  // If we can bpermute across the whole wave, then just do that
+  if (Subtarget->supportsWaveWideBPermute()) {
+    Register ShiftIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHLREV_B32_e64), ShiftIdxReg)
+        .addImm(2)
+        .addReg(IdxReg);
+
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), DstReg)
+        .addReg(ShiftIdxReg)
+        .addReg(ValReg)
+        .addImm(0);
+  } else {
+    // Otherwise, we need to make use of whole wave mode
+    assert(Subtarget->isWave64());
+
+    // Set inactive lanes to poison
+    Register UndefValReg =
+        MRI->createVirtualRegister(TRI.getRegClass(AMDGPU::SReg_32RegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefValReg);
+
+    Register UndefExecReg = MRI->createVirtualRegister(
+        TRI.getRegClass(AMDGPU::SReg_64_XEXECRegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefExecReg);
+
+    Register PoisonValReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SET_INACTIVE_B32), PoisonValReg)
+        .addImm(0)
+        .addReg(ValReg)
+        .addImm(0)
+        .addReg(UndefValReg)
+        .addReg(UndefExecReg);
+
+    // ds_bpermute requires index to be multiplied by 4
+    Register ShiftIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHLREV_B32_e64), ShiftIdxReg)
+        .addImm(2)
+        .addReg(IdxReg);
+
+    Register PoisonIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SET_INACTIVE_B32), PoisonIdxReg)
+        .addImm(0)
+        .addReg(ShiftIdxReg)
+        .addImm(0)
+        .addReg(UndefValReg)
+        .addReg(UndefExecReg);
+
+    // Get permutation of each half, then we'll select which one to use
+    Register SameSidePermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), SameSidePermReg)
+        .addReg(PoisonIdxReg)
+        .addReg(PoisonValReg)
+        .addImm(0);
+
+    Register SwappedValReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_PERMLANE64_B32), SwappedValReg)
+        .addReg(PoisonValReg);
+
+    Register OppSidePermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), OppSidePermReg)
+        .addReg(PoisonIdxReg)
+        .addReg(SwappedValReg)
+        .addImm(0);
+
+    Register WWMSwapPermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::STRICT_WWM), WWMSwapPermReg)
+        .addReg(OppSidePermReg);
+
+    // Select which side to take the permute from
+    // We can get away with only using mbcnt_lo here since we're only
+    // trying to detect which side of 32 each lane is on, and mbcnt_lo
+    // returns 32 for lanes 32-63.
+    Register ThreadIDReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MBCNT_LO_U32_B32_e64), ThreadIDReg)
+        .addImm(-1)
+        .addImm(0);
+
+    Register XORReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_XOR_B32_e64), XORReg)
+        .addReg(ThreadIDReg)
+        .addReg(PoisonIdxReg);
+
+    Register ANDReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_AND_B32_e64), ANDReg)
+        .addReg(XORReg)
+        .addImm(32);
+
+    Register CompareReg = MRI->createVirtualRegister(
+        TRI.getRegClass(AMDGPU::SReg_64_XEXECRegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_CMP_EQ_U32_e64), CompareReg)
+        .addReg(ANDReg)
+        .addImm(0);
+
+    // Finally do the selection
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_CNDMASK_B32_e64), DstReg)
+        .addImm(0)
+        .addReg(WWMSwapPermReg)
+        .addImm(0)
+        .addReg(SameSidePermReg)
+        .addReg(CompareReg);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 // Match BITOP3 operation and return a number of matched instructions plus
 // truth table.
 static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
@@ -4169,6 +4337,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ATOMICRMW_UMAX:
   case TargetOpcode::G_ATOMICRMW_UINC_WRAP:
   case TargetOpcode::G_ATOMICRMW_UDEC_WRAP:
+  case TargetOpcode::G_ATOMICRMW_USUB_COND:
+  case TargetOpcode::G_ATOMICRMW_USUB_SAT:
   case TargetOpcode::G_ATOMICRMW_FADD:
   case TargetOpcode::G_ATOMICRMW_FMIN:
   case TargetOpcode::G_ATOMICRMW_FMAX:
@@ -6798,6 +6968,8 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_IMM;
+    case Intrinsic::amdgcn_s_wakeup_barrier:
+      return AMDGPU::S_WAKEUP_BARRIER_IMM;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
@@ -6807,6 +6979,8 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_M0;
+    case Intrinsic::amdgcn_s_wakeup_barrier:
+      return AMDGPU::S_WAKEUP_BARRIER_M0;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };

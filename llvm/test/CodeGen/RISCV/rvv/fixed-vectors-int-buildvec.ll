@@ -2629,7 +2629,7 @@ define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
 ; RVA22U64-NEXT:    or a0, a0, a4
 ; RVA22U64-NEXT:    slli a6, a6, 24
 ; RVA22U64-NEXT:    or a1, a1, a2
-; RVA22U64-NEXT:    add.uw a1, a6, a1
+; RVA22U64-NEXT:    or a1, a6, a1
 ; RVA22U64-NEXT:    or a0, a0, a3
 ; RVA22U64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RVA22U64-NEXT:    vmv.v.x v8, a1

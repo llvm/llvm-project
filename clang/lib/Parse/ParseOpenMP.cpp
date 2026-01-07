@@ -4925,19 +4925,28 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         break;
       Data.MotionModifiers.push_back(Modifier);
       Data.MotionModifiersLoc.push_back(Tok.getLocation());
-      ConsumeToken();
-      if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
-        IsInvalidMapperModifier = parseMapperModifier(Data);
-        if (IsInvalidMapperModifier)
-          break;
-      }
-      // OpenMP < 5.1 doesn't permit a ',' or additional modifiers.
-      if (getLangOpts().OpenMP < 51)
-        break;
-      // OpenMP 5.1 accepts an optional ',' even if the next character is ':'.
-      // TODO: Is that intentional?
-      if (Tok.is(tok::comma))
+      if (PP.getSpelling(Tok) == "iterator" && getLangOpts().OpenMP >= 51) {
+        ExprResult Tail;
+        Tail = ParseOpenMPIteratorsExpr();
+        Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
+                                           /*DiscardedValue=*/false);
+        if (Tail.isUsable())
+          Data.IteratorExpr = Tail.get();
+      } else {
         ConsumeToken();
+        if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
+          IsInvalidMapperModifier = parseMapperModifier(Data);
+          if (IsInvalidMapperModifier)
+            break;
+        }
+        // OpenMP < 5.1 doesn't permit a ',' or additional modifiers.
+        if (getLangOpts().OpenMP < 51)
+          break;
+        // OpenMP 5.1 accepts an optional ',' even if the next character is ':'.
+        // TODO: Is that intentional?
+        if (Tok.is(tok::comma))
+          ConsumeToken();
+      }
     }
     if (!Data.MotionModifiers.empty() && Tok.isNot(tok::colon)) {
       if (!IsInvalidMapperModifier) {
@@ -5010,6 +5019,37 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       ConsumeToken();
       if (Tok.is(tok::colon))
         Data.ColonLoc = Tok.getLocation();
+      if (getLangOpts().OpenMP >= 61) {
+        // Handle the optional fallback argument for the need_device_ptr
+        // modifier.
+        if (Tok.is(tok::l_paren)) {
+          BalancedDelimiterTracker T(*this, tok::l_paren);
+          T.consumeOpen();
+          if (Tok.is(tok::identifier)) {
+            std::string Modifier = PP.getSpelling(Tok);
+            if (Modifier == "fb_nullify" || Modifier == "fb_preserve") {
+              Data.NeedDevicePtrModifier =
+                  Modifier == "fb_nullify" ? OMPC_NEED_DEVICE_PTR_fb_nullify
+                                           : OMPC_NEED_DEVICE_PTR_fb_preserve;
+            } else {
+              Diag(Tok, diag::err_omp_unknown_need_device_ptr_kind);
+              SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
+                        StopBeforeMatch);
+              return false;
+            }
+            ConsumeToken();
+            if (Tok.is(tok::r_paren)) {
+              Data.NeedDevicePtrModifierLoc = Tok.getLocation();
+              ConsumeAnyToken();
+            } else {
+              Diag(Tok, diag::err_expected) << tok::r_paren;
+              SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
+                        StopBeforeMatch);
+              return false;
+            }
+          }
+        }
+      }
       ExpectAndConsume(tok::colon, diag::warn_pragma_expected_colon,
                        "adjust-op");
     }
