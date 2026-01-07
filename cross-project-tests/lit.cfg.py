@@ -289,6 +289,26 @@ def get_clang_default_dwarf_version_string(triple):
     return match.group(1)
 
 
+def get_lldb_version_string():
+    """Return LLDB's version string, or None if lldb cannot be found or the
+    --version output is formatted unexpectedly.
+    """
+    try:
+        lldb_vers_lines = (
+            subprocess.check_output(["lldb", "--version"]).decode().splitlines()
+        )
+    except:
+        return None
+    if len(lldb_vers_lines) < 1:
+        print("Unkown LLDB version format (too few lines)", file=sys.stderr)
+        return None
+    match = re.search(r"lldb.*-((\d|\.)+)", lldb_vers_lines[0].strip())
+    if match is None:
+        print(f"Unkown LLDB version format: {lldb_vers_lines[0]}", file=sys.stderr)
+        return None
+    return match.group(1)
+
+
 # Some cross-project-tests use gdb, but not all versions of gdb are compatible
 # with clang's dwarf. Add feature `gdb-clang-incompatibility` to signal that
 # there's an incompatibility between clang's default dwarf version for this
@@ -309,6 +329,20 @@ if dwarf_version_string and gdb_version_string:
                 "XFAIL some tests: use gdb version >= 10.1 to restore test coverage",
                 file=sys.stderr,
             )
+
+lldb_version_string = get_lldb_version_string()
+if lldb_version_string:
+    try:
+        from packaging import version
+    except:
+        lit_config.fatal("Running lldb tests requires the packaging package")
+    if version.parse(lldb_version_string) >= version.parse("19.0"):
+        config.available_features.add("lldb-formatters-compatibility")
+    else:
+        print(
+            "Marking LLDB LLVM data-formatter tests as unsupported: use LLDB version >= 19.0 to restore test coverage",
+            file=sys.stderr,
+        )
 
 llvm_config.feature_config([("--build-mode", {"Debug|RelWithDebInfo": "debug-info"})])
 
