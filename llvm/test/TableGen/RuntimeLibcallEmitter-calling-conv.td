@@ -44,9 +44,7 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
 // CHECK: if (TT.getArch() == Triple::avr && TT.isOSHurd()) {
 // CHECK-NEXT:   const CallingConv::ID DefaultCC = isFoo() ? CallingConv::Fast : CallingConv::GHC;
-// CHECK-NEXT:   for (CallingConv::ID &Entry : LibcallImplCallingConvs) {
-// CHECK-NEXT:     Entry = DefaultCC;
-// CHECK-NEXT:   }
+// CHECK-NEXT:   setDefaultLibcallImplCallingConv(DefaultCC);
 // CHECK-EMPTY:
 // CHECK-NEXT:   static constexpr LibcallImplBitset SystemAvailableImpls({
 // CHECK-NEXT:     0x0000000000001a
@@ -68,7 +66,7 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-EMPTY:
 // CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls_AlwaysAvailable_AVR_BUILTIN) {
 // CHECK-NEXT:      setAvailable(Impl);
-// CHECK-NEXT:      setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:      setLibcallImplCallingConvOverride(Impl, CallingConv::AVR_BUILTIN);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    return;
@@ -95,7 +93,7 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-EMPTY:
 // CHECK-NEXT:   for (const RTLIB::LibcallImpl Impl : LibraryCalls_AlwaysAvailable_AVR_BUILTIN) {
 // CHECK-NEXT:     setAvailable(Impl);
-// CHECK-NEXT:     setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:     setLibcallImplCallingConvOverride(Impl, CallingConv::AVR_BUILTIN);
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;
@@ -122,7 +120,7 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-EMPTY:
 // CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_anonymous_3_AVR_BUILTIN) {
 // CHECK-NEXT:        setAvailable(Impl);
-// CHECK-NEXT:        setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:        setLibcallImplCallingConvOverride(Impl, CallingConv::AVR_BUILTIN);
 // CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
@@ -134,7 +132,7 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-EMPTY:
 // CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_anonymous_5_MSP430_BUILTIN) {
 // CHECK-NEXT:        setAvailable(Impl);
-// CHECK-NEXT:        setLibcallImplCallingConv(Impl, CallingConv::MSP430_BUILTIN);
+// CHECK-NEXT:        setLibcallImplCallingConvOverride(Impl, CallingConv::MSP430_BUILTIN);
 // CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }

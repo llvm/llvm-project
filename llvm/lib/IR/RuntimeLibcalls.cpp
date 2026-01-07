@@ -71,7 +71,7 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
     for (RTLIB::LibcallImpl Impl :
          {RTLIB::impl_armpl_vfmodq_f32, RTLIB::impl_armpl_vfmodq_f64,
           RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32})
-      setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
+      setLibcallImplCallingConvOverride(Impl, CallingConv::AArch64_VectorCall);
     break;
   default:
     break;
