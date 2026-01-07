@@ -1,0 +1,105 @@
+//===-- llvm/FunctionProperties.def - File that describes Function Properties
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains descriptions of the various LLVM function properties. This
+// is used as a central place for enumerating the different function properties
+// and should eventually be the place to put comments about the function
+// properties.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+// Provide definitions of macros so that users of this file do not have to
+// define everything to use it.
+//
+
+// Basic/Standard Properties
+#ifndef FUNCTION_PROPERTY
+#define FUNCTION_PROPERTY(Name, Description)
+#endif
+
+// Detailed Properties (only processed if DETAILED_FUNCTION_PROPERTY is defined)
+#ifndef DETAILED_FUNCTION_PROPERTY
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)
+#endif
+
+FUNCTION_PROPERTY(BasicBlockCount, "Number of basic blocks")
+FUNCTION_PROPERTY(BlocksReachedFromConditionalInstruction,
+                  "Number of blocks reached from a conditional instruction, or "
+                  "that are 'cases' of a SwitchInstr")
+FUNCTION_PROPERTY(Uses, "Number of uses of this function, plus 1 if the "
+                        "function is callable outside the module")
+FUNCTION_PROPERTY(DirectCallsToDefinedFunctions,
+                  "Number of direct calls made from this function to other "
+                  "functions defined in this module")
+FUNCTION_PROPERTY(LoadInstCount, "Load Instruction Count")
+FUNCTION_PROPERTY(StoreInstCount, "Store Instruction Count")
+FUNCTION_PROPERTY(MaxLoopDepth, "Maximum Loop Depth in the Function")
+FUNCTION_PROPERTY(TopLevelLoopCount,
+                  "Number of Top Level Loops in the Function")
+FUNCTION_PROPERTY(TotalInstructionCount,
+                  "Number of instructions (of all types)")
+DETAILED_FUNCTION_PROPERTY(BasicBlocksWithSingleSuccessor,
+                  "Basic blocks with one successors")
+DETAILED_FUNCTION_PROPERTY(BasicBlocksWithTwoSuccessors,
+                  "Basic blocks with two successors")
+DETAILED_FUNCTION_PROPERTY(BasicBlocksWithMoreThanTwoSuccessors,
+                  "Basic blocks with more than two successors")
+DETAILED_FUNCTION_PROPERTY(BasicBlocksWithSinglePredecessor,
+                  "Basic blocks with one predecessors")
+DETAILED_FUNCTION_PROPERTY(BasicBlocksWithTwoPredecessors,
+                  "Basic blocks with two predecessors")
+DETAILED_FUNCTION_PROPERTY(BasicBlocksWithMoreThanTwoPredecessors,
+                  "Basic blocks with more than two predecessors")
+DETAILED_FUNCTION_PROPERTY(BigBasicBlocks, "Number of big basic blocks")
+DETAILED_FUNCTION_PROPERTY(MediumBasicBlocks, "Number of medium basic blocks")
+DETAILED_FUNCTION_PROPERTY(SmallBasicBlocks, "Number of small basic blocks")
+DETAILED_FUNCTION_PROPERTY(CastInstructionCount,
+                  "The number of cast instructions inside the function")
+DETAILED_FUNCTION_PROPERTY(
+    FloatingPointInstructionCount,
+    "The number of floating point instructions inside the function")
+DETAILED_FUNCTION_PROPERTY(IntegerInstructionCount,
+                  "The number of integer instructions inside the function")
+DETAILED_FUNCTION_PROPERTY(ConstantIntOperandCount, "Constant Int Operand Count")
+DETAILED_FUNCTION_PROPERTY(ConstantFPOperandCount, "Constant FP Operand Count")
+DETAILED_FUNCTION_PROPERTY(ConstantOperandCount, "Constant Operand Count")
+DETAILED_FUNCTION_PROPERTY(InstructionOperandCount, "Instruction Operand Count")
+DETAILED_FUNCTION_PROPERTY(BasicBlockOperandCount, "Basic Block Operand Count")
+DETAILED_FUNCTION_PROPERTY(GlobalValueOperandCount, "Global Value Operand Count")
+DETAILED_FUNCTION_PROPERTY(InlineAsmOperandCount, "Inline Asm Operand Count")
+DETAILED_FUNCTION_PROPERTY(ArgumentOperandCount, "Argument Operand Count")
+DETAILED_FUNCTION_PROPERTY(UnknownOperandCount, "Unknown Operand Count")
+DETAILED_FUNCTION_PROPERTY(CriticalEdgeCount, "Critical Edge Count")
+DETAILED_FUNCTION_PROPERTY(ControlFlowEdgeCount, "Number of basic block successors")
+DETAILED_FUNCTION_PROPERTY(UnconditionalBranchCount,
+                  "Number of unconditional branch instructions")
+DETAILED_FUNCTION_PROPERTY(ConditionalBranchCount,
+                  "Number of conditional branch instructions")
+DETAILED_FUNCTION_PROPERTY(BranchInstructionCount, "Number of branch instructions")
+DETAILED_FUNCTION_PROPERTY(BranchSuccessorCount, "Number of branch successors")
+DETAILED_FUNCTION_PROPERTY(SwitchInstructionCount, "Number of switch instructions")
+DETAILED_FUNCTION_PROPERTY(SwitchSuccessorCount, "Number of switch successors")
+DETAILED_FUNCTION_PROPERTY(IntrinsicCount, "Intrinsic Count")
+DETAILED_FUNCTION_PROPERTY(DirectCallCount, "Direct Call Count")
+DETAILED_FUNCTION_PROPERTY(IndirectCallCount, "Indirect Call Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsIntegerCount, "Call Returns Integer Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsFloatCount, "Call Returns Float Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsPointerCount, "Call Returns Pointer Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsVectorIntCount, "Call Returns Vector Int Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsVectorFloatCount,
+                  "Call Returns Vector Float Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsVectorPointerCount,
+                  "Call Returns Vector Pointer Count")
+DETAILED_FUNCTION_PROPERTY(CallWithManyArgumentsCount, "Call With Many Arguments Count")
+DETAILED_FUNCTION_PROPERTY(CallWithPointerArgumentCount,
+                  "Call With Pointer Argument Count")
+
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY

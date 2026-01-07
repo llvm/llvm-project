@@ -646,13 +646,56 @@ static bool hasMappingSymbols(const ObjectFile &Obj) {
          isRISCVElf(Obj);
 }
 
+/// Get relocation type name, resolving RISCV vendor-specific relocations
+/// when preceded by R_RISCV_VENDOR at the same offset.
+static StringRef getRelocTypeName(const RelocationRef &Rel,
+                                  SmallVectorImpl<char> &RelocName,
+                                  std::string &CurrentRISCVVendorSymbol,
+                                  uint64_t &CurrentRISCVVendorOffset) {
+  Rel.getTypeName(RelocName);
+  const ObjectFile *Obj = Rel.getObject();
+  if (!isRISCVElf(*Obj))
+    return StringRef(RelocName.data(), RelocName.size());
+
+  uint64_t Type = Rel.getType();
+  uint64_t Offset = Rel.getOffset();
+  if (Type == ELF::R_RISCV_VENDOR) {
+    // Store vendor symbol name and offset for the next relocation.
+    symbol_iterator SI = Rel.getSymbol();
+    if (SI != Obj->symbol_end()) {
+      if (Expected<StringRef> SymName = SI->getName())
+        CurrentRISCVVendorSymbol = SymName->str();
+    }
+    CurrentRISCVVendorOffset = Offset;
+  } else if (!CurrentRISCVVendorSymbol.empty()) {
+    // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+    // vendor-specific relocation at the same offset. Clear the vendor symbol
+    // if this relocation doesn't form a valid pair.
+    if (Offset != CurrentRISCVVendorOffset ||
+        Type < ELF::R_RISCV_CUSTOM192 || Type > ELF::R_RISCV_CUSTOM255) {
+      CurrentRISCVVendorSymbol.clear();
+    } else {
+      // Valid vendor relocation pair - use vendor-specific name.
+      StringRef VendorRelocName = object::getRISCVVendorRelocationTypeName(
+          Type, CurrentRISCVVendorSymbol);
+      CurrentRISCVVendorSymbol.clear();
+      if (VendorRelocName != "Unknown")
+        return VendorRelocName;
+    }
+  }
+  return StringRef(RelocName.data(), RelocName.size());
+}
+
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
                             const RelocationRef &Rel, uint64_t Address,
-                            bool Is64Bits) {
+                            bool Is64Bits,
+                            std::string &CurrentRISCVVendorSymbol,
+                            uint64_t &CurrentRISCVVendorOffset) {
   StringRef Fmt = Is64Bits ? "%016" PRIx64 ":  " : "%08" PRIx64 ":  ";
-  SmallString<16> Name;
+  SmallString<16> RelocName;
   SmallString<32> Val;
-  Rel.getTypeName(Name);
+  StringRef Name = getRelocTypeName(Rel, RelocName, CurrentRISCVVendorSymbol,
+                                    CurrentRISCVVendorOffset);
   if (Error E = getRelocationValueString(Rel, SymbolDescription, Val))
     reportError(std::move(E), FileName);
   OS << (Is64Bits || !LeadingAddr ? "\t\t" : "\t\t\t");
@@ -2026,6 +2069,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     std::vector<RelocationRef> Rels = RelocMap[Section];
     std::vector<RelocationRef>::const_iterator RelCur = Rels.begin();
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
+    std::string CurrentRISCVVendorSymbol;
+    uint64_t CurrentRISCVVendorOffset = 0;
 
     // Loop over each chunk of code between two points where at least
     // one symbol is defined.
@@ -2593,7 +2638,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits);
+                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits,
+                            CurrentRISCVVendorSymbol, CurrentRISCVVendorOffset);
             LEP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
@@ -2785,20 +2831,23 @@ void Dumper::printRelocations() {
           continue;
         }
       }
+      std::string CurrentRISCVVendorSymbol;
+      uint64_t CurrentRISCVVendorOffset = 0;
       for (const RelocationRef &Reloc : Section.relocations()) {
         uint64_t Address = Reloc.getOffset();
         SmallString<32> RelocName;
         SmallString<32> ValueStr;
         if (Address < StartAddress || Address > StopAddress || getHidden(Reloc))
           continue;
-        Reloc.getTypeName(RelocName);
+        StringRef Name = getRelocTypeName(Reloc, RelocName,
+                                          CurrentRISCVVendorSymbol,
+                                          CurrentRISCVVendorOffset);
         if (Error E =
                 getRelocationValueString(Reloc, SymbolDescription, ValueStr))
           reportUniqueWarning(std::move(E));
 
         outs() << format(Fmt.data(), Address) << " "
-               << left_justify(RelocName, TypePadding) << " " << ValueStr
-               << "\n";
+               << left_justify(Name, TypePadding) << " " << ValueStr << "\n";
       }
     }
   }
