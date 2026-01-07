@@ -160,10 +160,6 @@ static cl::opt<int> EnableGlobalISelAtO(
     cl::desc("Enable GlobalISel at or below an opt level (-1 to disable)"),
     cl::init(0));
 
-static cl::opt<bool> EnableGlobalISelForOptNone(
-    "aarch64-enable-global-isel-for-optnone", cl::Hidden,
-    cl::desc("Route optnone functions through GlobalISel"), cl::init(true));
-
 static cl::opt<bool>
     EnableSVEIntrinsicOpts("aarch64-enable-sve-intrinsic-opts", cl::Hidden,
                            cl::desc("Enable SVE intrinsic opts"),
@@ -405,8 +401,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO) {
       setGlobalISel(true);
       setGlobalISelAbort(GlobalISelAbortMode::Disable);
-    } else if (!GlobalISelFlag && EnableGlobalISelForOptNone &&
-               !Options.EnableGlobalISel) {
+    } else if (!GlobalISelFlag && !Options.EnableGlobalISel) {
       setGlobalISel(true);
       setGlobalISelAbort(GlobalISelAbortMode::Disable);
       UseGISelForOptNoneOnly = true;

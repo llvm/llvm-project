@@ -1,6 +1,5 @@
 ; NOTE: Do not autogenerate
 ; RUN: llc -mtriple=aarch64-linux-gnu -O2 -verify-machineinstrs -debug %s -o - 2>&1 | FileCheck %s --check-prefix=GISEL
-; RUN: llc -mtriple=aarch64-linux-gnu -O2 -verify-machineinstrs -debug %s -o - 2>&1 -aarch64-enable-global-isel-for-optnone=0 | FileCheck %s --check-prefix=SDAG
 ; REQUIRES: asserts
 
 ; Check both an optnone function and a non-optnone function to ensure that only
@@ -21,8 +20,5 @@ entry:
 
 ; GISEL: Skipping pass 'AArch64PostLegalizerCombiner' on function optnone_fn
 ; GISEL: Creating new node:
-
-; SDAG: Changing optimization level for Function optnone_fn
-; SDAG: Optimized legalized selection DAG: %bb.0 'normal_fn:entry'
 
 attributes #0 = { noinline nounwind optnone uwtable }
