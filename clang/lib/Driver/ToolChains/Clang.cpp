@@ -3783,8 +3783,11 @@ clang::driver::tools::getCXX20NamedModuleOutputPath(const ArgList &Args,
   if (Arg *FinalOutput = Args.getLastArg(options::OPT_o);
       FinalOutput && Args.hasArg(options::OPT_c))
     OutputPath = FinalOutput->getValue();
-  else
-    OutputPath = BaseInput;
+  else{
+    llvm::sys::fs::current_path(OutputPath);
+    llvm::sys::path::append(OutputPath,llvm::sys::path::filename(BaseInput));
+  }
+
 
   const char *Extension = types::getTypeTempSuffix(types::TY_ModuleFile);
   llvm::sys::path::replace_extension(OutputPath, Extension);
