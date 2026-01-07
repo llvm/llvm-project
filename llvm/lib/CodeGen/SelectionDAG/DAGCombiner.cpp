@@ -3164,6 +3164,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
 // Attempt to form avgfloor(A, B) from (A & B) + ((A ^ B) >> 1)
 // Attempt to form avgfloor(A, B) from ((A >> 1) + (B >> 1)) + (A & B & 1)
+// Attempt to form avgceil(A, B) from ((A >> 1) + (B >> 1)) + ((A | B) & 1)
 SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N0.getValueType();
@@ -3188,6 +3189,21 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
                        m_Sra(m_Deferred(A), m_One()),
                        m_Sra(m_Deferred(B), m_One()))))) {
     return DAG.getNode(ISD::AVGFLOORS, DL, VT, A, B);
+  }
+
+  if ((!LegalOperations || hasOperation(ISD::AVGCEILU, VT)) &&
+      sd_match(N,
+               m_ReassociatableAdd(m_And(m_Or(m_Value(A), m_Value(B)), m_One()),
+                                   m_Srl(m_Deferred(A), m_One()),
+                                   m_Srl(m_Deferred(B), m_One())))) {
+    return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
+  }
+  if ((!LegalOperations || hasOperation(ISD::AVGCEILS, VT)) &&
+      sd_match(N,
+               m_ReassociatableAdd(m_And(m_Or(m_Value(A), m_Value(B)), m_One()),
+                                   m_Sra(m_Deferred(A), m_One()),
+                                   m_Sra(m_Deferred(B), m_One())))) {
+    return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
   }
 
   return SDValue();
