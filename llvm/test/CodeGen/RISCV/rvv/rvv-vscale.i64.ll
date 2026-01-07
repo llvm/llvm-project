@@ -199,3 +199,241 @@ entry:
   ret i64 %1
 }
 
+define i64 @vscale_umin() vscale_range(4,1024) nounwind {
+; RV64-VLENUNK-LABEL: vscale_umin:
+; RV64-VLENUNK:       # %bb.0: # %entry
+; RV64-VLENUNK-NEXT:    csrr a0, vlenb
+; RV64-VLENUNK-NEXT:    srli a0, a0, 1
+; RV64-VLENUNK-NEXT:    li a1, 4
+; RV64-VLENUNK-NEXT:    bltu a0, a1, .LBB7_2
+; RV64-VLENUNK-NEXT:  # %bb.1: # %entry
+; RV64-VLENUNK-NEXT:    li a0, 4
+; RV64-VLENUNK-NEXT:  .LBB7_2: # %entry
+; RV64-VLENUNK-NEXT:    ret
+;
+; RV32-LABEL: vscale_umin:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 1
+; RV32-NEXT:    li a1, 4
+; RV32-NEXT:    bltu a0, a1, .LBB7_2
+; RV32-NEXT:  # %bb.1: # %entry
+; RV32-NEXT:    li a0, 4
+; RV32-NEXT:  .LBB7_2: # %entry
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-VLEN256MIN-LABEL: vscale_umin:
+; RV64-VLEN256MIN:       # %bb.0: # %entry
+; RV64-VLEN256MIN-NEXT:    csrr a0, vlenb
+; RV64-VLEN256MIN-NEXT:    srli a0, a0, 1
+; RV64-VLEN256MIN-NEXT:    li a1, 4
+; RV64-VLEN256MIN-NEXT:    bltu a0, a1, .LBB7_2
+; RV64-VLEN256MIN-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256MIN-NEXT:    li a0, 4
+; RV64-VLEN256MIN-NEXT:  .LBB7_2: # %entry
+; RV64-VLEN256MIN-NEXT:    ret
+;
+; RV64-VLEN256MAX-LABEL: vscale_umin:
+; RV64-VLEN256MAX:       # %bb.0: # %entry
+; RV64-VLEN256MAX-NEXT:    li a0, 16
+; RV64-VLEN256MAX-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256MAX-NEXT:    li a0, 4
+; RV64-VLEN256MAX-NEXT:  # %bb.2: # %entry
+; RV64-VLEN256MAX-NEXT:    ret
+;
+; RV64-VLEN256EXACT-LABEL: vscale_umin:
+; RV64-VLEN256EXACT:       # %bb.0: # %entry
+; RV64-VLEN256EXACT-NEXT:    li a0, 16
+; RV64-VLEN256EXACT-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256EXACT-NEXT:    li a0, 4
+; RV64-VLEN256EXACT-NEXT:  # %bb.2: # %entry
+; RV64-VLEN256EXACT-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = mul i64 %0, 4
+  %2 = call i64 @llvm.umin(i64 %1, i64 4)
+  ret i64 %2
+}
+
+
+define i64 @vscale_umax() vscale_range(4,1024) nounwind {
+; RV64-VLENUNK-LABEL: vscale_umax:
+; RV64-VLENUNK:       # %bb.0: # %entry
+; RV64-VLENUNK-NEXT:    csrr a0, vlenb
+; RV64-VLENUNK-NEXT:    srli a0, a0, 1
+; RV64-VLENUNK-NEXT:    lui a1, 1
+; RV64-VLENUNK-NEXT:    bltu a1, a0, .LBB8_2
+; RV64-VLENUNK-NEXT:  # %bb.1: # %entry
+; RV64-VLENUNK-NEXT:    lui a0, 1
+; RV64-VLENUNK-NEXT:  .LBB8_2: # %entry
+; RV64-VLENUNK-NEXT:    ret
+;
+; RV32-LABEL: vscale_umax:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 1
+; RV32-NEXT:    lui a1, 1
+; RV32-NEXT:    bltu a1, a0, .LBB8_2
+; RV32-NEXT:  # %bb.1: # %entry
+; RV32-NEXT:    lui a0, 1
+; RV32-NEXT:  .LBB8_2: # %entry
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-VLEN256MIN-LABEL: vscale_umax:
+; RV64-VLEN256MIN:       # %bb.0: # %entry
+; RV64-VLEN256MIN-NEXT:    csrr a0, vlenb
+; RV64-VLEN256MIN-NEXT:    srli a0, a0, 1
+; RV64-VLEN256MIN-NEXT:    lui a1, 1
+; RV64-VLEN256MIN-NEXT:    bltu a1, a0, .LBB8_2
+; RV64-VLEN256MIN-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256MIN-NEXT:    lui a0, 1
+; RV64-VLEN256MIN-NEXT:  .LBB8_2: # %entry
+; RV64-VLEN256MIN-NEXT:    ret
+;
+; RV64-VLEN256MAX-LABEL: vscale_umax:
+; RV64-VLEN256MAX:       # %bb.0: # %entry
+; RV64-VLEN256MAX-NEXT:    li a0, 16
+; RV64-VLEN256MAX-NEXT:    lui a1, 1
+; RV64-VLEN256MAX-NEXT:    bltu a1, a0, .LBB8_2
+; RV64-VLEN256MAX-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256MAX-NEXT:    lui a0, 1
+; RV64-VLEN256MAX-NEXT:  .LBB8_2: # %entry
+; RV64-VLEN256MAX-NEXT:    ret
+;
+; RV64-VLEN256EXACT-LABEL: vscale_umax:
+; RV64-VLEN256EXACT:       # %bb.0: # %entry
+; RV64-VLEN256EXACT-NEXT:    li a0, 16
+; RV64-VLEN256EXACT-NEXT:    lui a1, 1
+; RV64-VLEN256EXACT-NEXT:    bltu a1, a0, .LBB8_2
+; RV64-VLEN256EXACT-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256EXACT-NEXT:    lui a0, 1
+; RV64-VLEN256EXACT-NEXT:  .LBB8_2: # %entry
+; RV64-VLEN256EXACT-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = mul i64 %0, 4
+  %2 = call i64 @llvm.umax(i64 %1, i64 4096)
+  ret i64 %2
+}
+
+
+define i64 @vscale_smin() vscale_range(4,1024) nounwind {
+; RV64-VLENUNK-LABEL: vscale_smin:
+; RV64-VLENUNK:       # %bb.0: # %entry
+; RV64-VLENUNK-NEXT:    csrr a0, vlenb
+; RV64-VLENUNK-NEXT:    srli a0, a0, 1
+; RV64-VLENUNK-NEXT:    li a1, 4
+; RV64-VLENUNK-NEXT:    blt a0, a1, .LBB9_2
+; RV64-VLENUNK-NEXT:  # %bb.1: # %entry
+; RV64-VLENUNK-NEXT:    li a0, 4
+; RV64-VLENUNK-NEXT:  .LBB9_2: # %entry
+; RV64-VLENUNK-NEXT:    ret
+;
+; RV32-LABEL: vscale_smin:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 1
+; RV32-NEXT:    li a1, 4
+; RV32-NEXT:    blt a0, a1, .LBB9_2
+; RV32-NEXT:  # %bb.1: # %entry
+; RV32-NEXT:    li a0, 4
+; RV32-NEXT:  .LBB9_2: # %entry
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-VLEN256MIN-LABEL: vscale_smin:
+; RV64-VLEN256MIN:       # %bb.0: # %entry
+; RV64-VLEN256MIN-NEXT:    csrr a0, vlenb
+; RV64-VLEN256MIN-NEXT:    srli a0, a0, 1
+; RV64-VLEN256MIN-NEXT:    li a1, 4
+; RV64-VLEN256MIN-NEXT:    blt a0, a1, .LBB9_2
+; RV64-VLEN256MIN-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256MIN-NEXT:    li a0, 4
+; RV64-VLEN256MIN-NEXT:  .LBB9_2: # %entry
+; RV64-VLEN256MIN-NEXT:    ret
+;
+; RV64-VLEN256MAX-LABEL: vscale_smin:
+; RV64-VLEN256MAX:       # %bb.0: # %entry
+; RV64-VLEN256MAX-NEXT:    li a0, 16
+; RV64-VLEN256MAX-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256MAX-NEXT:    li a0, 4
+; RV64-VLEN256MAX-NEXT:  # %bb.2: # %entry
+; RV64-VLEN256MAX-NEXT:    ret
+;
+; RV64-VLEN256EXACT-LABEL: vscale_smin:
+; RV64-VLEN256EXACT:       # %bb.0: # %entry
+; RV64-VLEN256EXACT-NEXT:    li a0, 16
+; RV64-VLEN256EXACT-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256EXACT-NEXT:    li a0, 4
+; RV64-VLEN256EXACT-NEXT:  # %bb.2: # %entry
+; RV64-VLEN256EXACT-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = mul i64 %0, 4
+  %2 = call i64 @llvm.smin(i64 %1, i64 4)
+  ret i64 %2
+}
+
+
+define i64 @vscale_smax() vscale_range(4,1024) nounwind {
+; RV64-VLENUNK-LABEL: vscale_smax:
+; RV64-VLENUNK:       # %bb.0: # %entry
+; RV64-VLENUNK-NEXT:    csrr a0, vlenb
+; RV64-VLENUNK-NEXT:    srli a0, a0, 1
+; RV64-VLENUNK-NEXT:    lui a1, 1
+; RV64-VLENUNK-NEXT:    blt a1, a0, .LBB10_2
+; RV64-VLENUNK-NEXT:  # %bb.1: # %entry
+; RV64-VLENUNK-NEXT:    lui a0, 1
+; RV64-VLENUNK-NEXT:  .LBB10_2: # %entry
+; RV64-VLENUNK-NEXT:    ret
+;
+; RV32-LABEL: vscale_smax:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 1
+; RV32-NEXT:    lui a1, 1
+; RV32-NEXT:    blt a1, a0, .LBB10_2
+; RV32-NEXT:  # %bb.1: # %entry
+; RV32-NEXT:    lui a0, 1
+; RV32-NEXT:  .LBB10_2: # %entry
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-VLEN256MIN-LABEL: vscale_smax:
+; RV64-VLEN256MIN:       # %bb.0: # %entry
+; RV64-VLEN256MIN-NEXT:    csrr a0, vlenb
+; RV64-VLEN256MIN-NEXT:    srli a0, a0, 1
+; RV64-VLEN256MIN-NEXT:    lui a1, 1
+; RV64-VLEN256MIN-NEXT:    blt a1, a0, .LBB10_2
+; RV64-VLEN256MIN-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256MIN-NEXT:    lui a0, 1
+; RV64-VLEN256MIN-NEXT:  .LBB10_2: # %entry
+; RV64-VLEN256MIN-NEXT:    ret
+;
+; RV64-VLEN256MAX-LABEL: vscale_smax:
+; RV64-VLEN256MAX:       # %bb.0: # %entry
+; RV64-VLEN256MAX-NEXT:    li a0, 16
+; RV64-VLEN256MAX-NEXT:    lui a1, 1
+; RV64-VLEN256MAX-NEXT:    blt a1, a0, .LBB10_2
+; RV64-VLEN256MAX-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256MAX-NEXT:    lui a0, 1
+; RV64-VLEN256MAX-NEXT:  .LBB10_2: # %entry
+; RV64-VLEN256MAX-NEXT:    ret
+;
+; RV64-VLEN256EXACT-LABEL: vscale_smax:
+; RV64-VLEN256EXACT:       # %bb.0: # %entry
+; RV64-VLEN256EXACT-NEXT:    li a0, 16
+; RV64-VLEN256EXACT-NEXT:    lui a1, 1
+; RV64-VLEN256EXACT-NEXT:    blt a1, a0, .LBB10_2
+; RV64-VLEN256EXACT-NEXT:  # %bb.1: # %entry
+; RV64-VLEN256EXACT-NEXT:    lui a0, 1
+; RV64-VLEN256EXACT-NEXT:  .LBB10_2: # %entry
+; RV64-VLEN256EXACT-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = mul i64 %0, 4
+  %2 = call i64 @llvm.smax(i64 %1, i64 4096)
+  ret i64 %2
+}
