@@ -127,11 +127,6 @@ land.end:                                         ; preds = %land.rhs, %n.exit.l
   ret void
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
 declare <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16>, i16, i64)
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
 declare void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3), ptr captures(none), <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64 immarg) #1
-
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg)
