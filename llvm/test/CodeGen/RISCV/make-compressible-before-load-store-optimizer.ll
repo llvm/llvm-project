@@ -20,8 +20,7 @@
 ; RV32ICXQCILSM-LABEL: load_large_offset:
 ; RV32ICXQCILSM:       # %bb.0: # %entry
 ; RV32ICXQCILSM-NEXT:    addi a3, a0, 384
-; RV32ICXQCILSM-NEXT:    lw a1, 16(a3)
-; RV32ICXQCILSM-NEXT:    lw a2, 20(a3)
+; RV32ICXQCILSM-NEXT:    qc.lwmi a1, 2, 16(a3)
 ; RV32ICXQCILSM-NEXT:    lw a0, 24(a3)
 ; RV32ICXQCILSM-NEXT:    add a1, a1, a2
 ; RV32ICXQCILSM-NEXT:    add a0, a0, a1
@@ -30,8 +29,7 @@
 ; RV32ICXMIPS-LABEL: load_large_offset:
 ; RV32ICXMIPS:       # %bb.0: # %entry
 ; RV32ICXMIPS-NEXT:    addi a3, a0, 384
-; RV32ICXMIPS-NEXT:    lw a1, 16(a3)
-; RV32ICXMIPS-NEXT:    lw a2, 20(a3)
+; RV32ICXMIPS-NEXT:    mips.lwp a1, a2, 16(a3)
 ; RV32ICXMIPS-NEXT:    lw a0, 24(a3)
 ; RV32ICXMIPS-NEXT:    add a1, a1, a2
 ; RV32ICXMIPS-NEXT:    add a0, a0, a1
