@@ -2716,7 +2716,13 @@ Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
 
 bool FormatEntity::Formatter::IsInvalidRecursiveFormat(Entry::Type type) {
   // It is expected that Scope and Root format entities recursively call Format.
-  if (llvm::is_contained({Entry::Type::Scope, Entry::Type::Root}, type))
+  //
+  // Variable may also be formatted recursively in some special cases. The main
+  // use-case being array summary strings, in which case Format will call itself
+  // with the subrange ValueObject and apply a freshly created Variable entry.
+  // E.g., ${var[1-3]} will format the [1-3] range with ${var%S}.
+  if (llvm::is_contained(
+          {Entry::Type::Scope, Entry::Type::Root, Entry::Type::Variable}, type))
     return false;
 
   return llvm::is_contained(m_entry_type_stack, type);
