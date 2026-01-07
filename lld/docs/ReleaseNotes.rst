@@ -38,6 +38,9 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* ``/linkreprofullpathrsp`` prints the full path to each object passed to the link line to a file.
+  (`https://github.com/llvm/llvm-project/pull/165449`_)
+
 MinGW Improvements
 ------------------
 
