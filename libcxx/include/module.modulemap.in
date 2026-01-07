@@ -1973,6 +1973,7 @@ module std [system] {
 
   module rcu {
     module rcu_domain      { header "__rcu/rcu_domain.h" }
+    module rcu_list        { header "__rcu/rcu_list.h" }
     module rcu_obj_base    { header "__rcu/rcu_obj_base.h" }
     header "rcu"
     export *
