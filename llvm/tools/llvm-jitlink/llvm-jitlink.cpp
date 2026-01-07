@@ -1215,7 +1215,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   if (PerfSupport && TT.isOSBinFormatELF()) {
     if (!ProcessSymsJD) {
-      Err = make_error<StringError>("MachO debugging requires process symbols",
+      Err = make_error<StringError>("ELF perf profiling requires process symbols",
                                     inconvertibleErrorCode());
       return;
     }
