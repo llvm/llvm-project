@@ -278,6 +278,8 @@ the following `lldb-dap` specific key/value pairs:
 | **waitFor**                       | boolean     |     | Wait for the process to launch.
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after attaching.
 | **attachCommands**                | [string]    |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
+| **gdb-remote-port** | int      |     | TCP/IP port to attach to a remote system. Specifying both pid and port is an error.
+| **gdb-remote-host** | string   |     | The hostname to connect to a remote system. The default hostname being used `localhost`.                    
 
 ### Configuring `lldb-dap` defaults
 
@@ -422,4 +424,4 @@ The source code is part of the [LLVM repository](https://github.com/llvm/llvm-pr
 We use Github's [issue tracker](https://github.com/llvm/llvm-project/issues?q=label%3Alldb-dap) and patches can be submitted via [pull requests](https://github.com/llvm/llvm-project/pulls?q=label%3Alldb-dap).
 Furthermore, there is a [LLDB category](https://discourse.llvm.org/c/subprojects/lldb/8) on the LLVM discourse forum.
 
-For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)" guide.
+For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap-contributing.html)" guide.
