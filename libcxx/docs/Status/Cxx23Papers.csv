@@ -30,7 +30,7 @@
 "`P1147R1 <https://wg21.link/P1147R1>`__","Printing ``volatile`` Pointers","2021-10 (Virtual)","|Complete|","14","`#105161 <https://github.com/llvm/llvm-project/issues/105161>`__",""
 "`P1272R4 <https://wg21.link/P1272R4>`__","Byteswapping for fun&&nuf","2021-10 (Virtual)","|Complete|","14","`#105163 <https://github.com/llvm/llvm-project/issues/105163>`__",""
 "`P1675R2 <https://wg21.link/P1675R2>`__","``rethrow_exception`` must be allowed to copy","2021-10 (Virtual)","|Nothing To Do|","","`#105164 <https://github.com/llvm/llvm-project/issues/105164>`__",""
-"`P2077R3 <https://wg21.link/P2077R3>`__","Heterogeneous erasure overloads for associative containers","2021-10 (Virtual)","","","`#105165 <https://github.com/llvm/llvm-project/issues/105165>`__",""
+"`P2077R3 <https://wg21.link/P2077R3>`__","Heterogeneous erasure overloads for associative containers","2021-10 (Virtual)","Complete","22","`#105165 <https://github.com/llvm/llvm-project/issues/105165>`__",""
 "`P2251R1 <https://wg21.link/P2251R1>`__","Require ``span`` & ``basic_string_view`` to be Trivially Copyable","2021-10 (Virtual)","|Complete|","14","`#105166 <https://github.com/llvm/llvm-project/issues/105166>`__",""
 "`P2301R1 <https://wg21.link/P2301R1>`__","Add a ``pmr`` alias for ``std::stacktrace``","2021-10 (Virtual)","","","`#105167 <https://github.com/llvm/llvm-project/issues/105167>`__",""
 "`P2321R2 <https://wg21.link/P2321R2>`__","``zip``","2021-10 (Virtual)","|Complete|","22","`#105169 <https://github.com/llvm/llvm-project/issues/105169>`__",""
