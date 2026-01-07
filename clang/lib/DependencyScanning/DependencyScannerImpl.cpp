@@ -737,7 +737,7 @@ bool DependencyScanningAction::runInvocation(
       *OriginalInvocation, Service, DiagGenerationAsCompilation);
   auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
   ScanInstanceStorage.emplace(std::move(ScanInvocation),
-                              std::move(PCHContainerOps), ModCache.get());
+                              std::move(PCHContainerOps), std::move(ModCache));
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
   ScanInstance.getInvocation().getCASOpts() = CASOpts;
   if (VerboseOS)
@@ -843,12 +843,12 @@ bool CompilerInstanceWithContext::initialize(
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   // Create the CompilerInstance.
-  IntrusiveRefCntPtr<ModuleCache> ModCache =
+  std::shared_ptr<ModuleCache> ModCache =
       makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
   CIPtr = std::make_unique<CompilerInstance>(
       createScanCompilerInvocation(*OriginalInvocation, Worker.Service,
                                    /*DiagGenerationAsCompilation=*/false),
-      Worker.PCHContainerOps, ModCache.get());
+      Worker.PCHContainerOps, std::move(ModCache));
   auto &CI = *CIPtr;
 
   CI.getInvocation().getCASOpts() = Worker.CASOpts;
