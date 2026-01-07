@@ -76,6 +76,7 @@ set(supported_sources
 set(host_sources
   ${FLANG_SOURCE_DIR}/module/iso_fortran_env_impl.f90
   ${FLANG_SOURCE_DIR}/module/iso_c_binding.f90
+  ${FLANG_SOURCE_DIR}/module/iso_c_binding_impl.f90
   command.cpp
   complex-powi.cpp
   complex-reduction.c

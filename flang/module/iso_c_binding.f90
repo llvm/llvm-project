@@ -137,6 +137,15 @@ module iso_c_binding
     c_uint_least64_t = c_uint64_t, &
     c_uint_least128_t = c_uint128_t
 
+  ! Implemented in submodule
+  interface f_c_string
+    module function f_c_string(string, asis) result(res)
+      character(kind=c_char, len=*), intent(in) :: string
+      logical, optional, intent(in) :: asis
+      character(kind=c_char, len=:), allocatable :: res
+    end function f_c_string
+  end interface
+
  contains
 
   subroutine c_f_procpointer(cptr, fptr)
@@ -144,19 +153,5 @@ module iso_c_binding
     procedure(), pointer, intent(out) :: fptr
     ! TODO: implement
   end subroutine c_f_procpointer
-
-  ! F_C_STRING - Convert Fortran string to C null-terminated string
-  ! Fortran 2023 standard intrinsic
-  pure function f_c_string(string, asis) result(res)
-    character(kind=c_char, len=*), intent(in) :: string
-    logical, optional, intent(in) :: asis
-    character(kind=c_char, len=:), allocatable :: res
-
-    if (present(asis) .and. asis) then
-      res = string // c_null_char
-    else
-      res = trim(string) // c_null_char
-    end if
-  end function f_c_string
 
 end module iso_c_binding

@@ -21,19 +21,19 @@ program test
   result = f_c_string(asis=.false., string=str)
   
   ! Invalid: missing required argument
-  !ERROR: Dummy argument 'string=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
+  !ERROR: No specific function of generic 'f_c_string' matches the actual arguments
   result = f_c_string()
   
   ! Invalid: too many arguments
-  !ERROR: Too many actual arguments (3) passed to procedure that expects only 2
+  !ERROR: No specific function of generic 'f_c_string' matches the actual arguments
   result = f_c_string(str, .true., .false.)
   
   ! Invalid: non-character first argument
-  !ERROR: Actual argument type 'INTEGER(4)' is not compatible with dummy argument type 'CHARACTER(KIND=1,LEN=*)'
+  !ERROR: No specific function of generic 'f_c_string' matches the actual arguments
   result = f_c_string(n)
   
   ! Invalid: non-logical second argument
-  !ERROR: Actual argument type 'INTEGER(4)' is not compatible with dummy argument type 'LOGICAL(4)'
+  !ERROR: No specific function of generic 'f_c_string' matches the actual arguments
   result = f_c_string(str, n)
   
 end program
