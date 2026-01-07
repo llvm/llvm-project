@@ -42,7 +42,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
 ; EPILOGUE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; EPILOGUE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -141,7 +141,7 @@ define void @load_store_interleave_group_i32(ptr noalias %data) {
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
 ; EPILOGUE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; EPILOGUE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]

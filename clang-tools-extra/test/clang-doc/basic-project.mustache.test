@@ -36,20 +36,24 @@ HTML-SHAPE:     <div class="container">
 HTML-SHAPE:         <div class="sidebar">
 HTML-SHAPE:             <h2>class Shape</h2>
 HTML-SHAPE:             <ul>
-HTML-SHAPE:                 <li class="sidebar-section">
-HTML-SHAPE:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-SHAPE:                 <li>
+HTML-SHAPE:                     <details open>
+HTML-SHAPE:                         <summary class="sidebar-section">
+HTML-SHAPE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-SHAPE:                         </summary>
+HTML-SHAPE:                         <ul>
+HTML-SHAPE:                             <li class="sidebar-item-container">
+HTML-SHAPE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
+HTML-SHAPE:                             </li>
+HTML-SHAPE:                             <li class="sidebar-item-container">
+HTML-SHAPE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
+HTML-SHAPE:                             </li>
+HTML-SHAPE:                             <li class="sidebar-item-container">
+HTML-SHAPE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">~Shape</a>
+HTML-SHAPE:                             </li>
+HTML-SHAPE:                         </ul>
+HTML-SHAPE:                     </details>
 HTML-SHAPE:                 </li>
-HTML-SHAPE:                 <ul>
-HTML-SHAPE:                     <li class="sidebar-item-container">
-HTML-SHAPE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
-HTML-SHAPE:                     </li>
-HTML-SHAPE:                     <li class="sidebar-item-container">
-HTML-SHAPE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
-HTML-SHAPE:                     </li>
-HTML-SHAPE:                     <li class="sidebar-item-container">
-HTML-SHAPE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">~Shape</a>
-HTML-SHAPE:                     </li>
-HTML-SHAPE:                 </ul>
 HTML-SHAPE:             </ul>
 HTML-SHAPE:         </div>
 HTML-SHAPE:         <div class="resizer" id="resizer"></div>
@@ -143,37 +147,45 @@ HTML-CALC:     <div class="container">
 HTML-CALC:         <div class="sidebar">
 HTML-CALC:             <h2>class Calculator</h2>
 HTML-CALC:             <ul>
-HTML-CALC:                 <li class="sidebar-section">
-HTML-CALC:                     <a class="sidebar-item" href="#PublicMembers">Public Members</a>
+HTML-CALC:                 <li>
+HTML-CALC:                     <details open>
+HTML-CALC:                         <summary class="sidebar-section">
+HTML-CALC:                             <a class="sidebar-item" href="#PublicMembers">Public Members</a>
+HTML-CALC:                         </summary>
+HTML-CALC:                         <ul>
+HTML-CALC:                             <li class="sidebar-item-container">
+HTML-CALC:                                 <a class="sidebar-item" href="#public_val">public_val</a>
+HTML-CALC:                             </li>
+HTML-CALC:                             <li class="sidebar-item-container">
+HTML-CALC:                                 <a class="sidebar-item" href="#static_val">static_val</a>
+HTML-CALC:                             </li>
+HTML-CALC:                         </ul>
+HTML-CALC:                     </details>
 HTML-CALC:                 </li>
-HTML-CALC:                 <ul>
-HTML-CALC:                     <li class="sidebar-item-container">
-HTML-CALC:                         <a class="sidebar-item" href="#public_val">public_val</a>
-HTML-CALC:                     </li>
-HTML-CALC:                     <li class="sidebar-item-container">
-HTML-CALC:                         <a class="sidebar-item" href="#static_val">static_val</a>
-HTML-CALC:                     </li>
-HTML-CALC:                 </ul>
-HTML-CALC:                 <li class="sidebar-section">
-HTML-CALC:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CALC:                 <li>
+HTML-CALC:                     <details open>
+HTML-CALC:                         <summary class="sidebar-section">
+HTML-CALC:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CALC:                         </summary>
+HTML-CALC:                         <ul>
+HTML-CALC:                             <li class="sidebar-item-container">
+HTML-CALC:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">add</a>
+HTML-CALC:                             </li>
+HTML-CALC:                             <li class="sidebar-item-container">
+HTML-CALC:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">subtract</a>
+HTML-CALC:                             </li>
+HTML-CALC:                             <li class="sidebar-item-container">
+HTML-CALC:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">multiply</a>
+HTML-CALC:                             </li>
+HTML-CALC:                             <li class="sidebar-item-container">
+HTML-CALC:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">divide</a>
+HTML-CALC:                             </li>
+HTML-CALC:                             <li class="sidebar-item-container">
+HTML-CALC:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">mod</a>
+HTML-CALC:                             </li>
+HTML-CALC:                         </ul>
+HTML-CALC:                     </details>
 HTML-CALC:                 </li>
-HTML-CALC:                 <ul>
-HTML-CALC:                     <li class="sidebar-item-container">
-HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">add</a>
-HTML-CALC:                     </li>
-HTML-CALC:                     <li class="sidebar-item-container">
-HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">subtract</a>
-HTML-CALC:                     </li>
-HTML-CALC:                     <li class="sidebar-item-container">
-HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">multiply</a>
-HTML-CALC:                     </li>
-HTML-CALC:                     <li class="sidebar-item-container">
-HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">divide</a>
-HTML-CALC:                     </li>
-HTML-CALC:                     <li class="sidebar-item-container">
-HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">mod</a>
-HTML-CALC:                     </li>
-HTML-CALC:                 </ul>
 HTML-CALC:             </ul>
 HTML-CALC:         </div>
 HTML-CALC:         <div class="resizer" id="resizer"></div>
@@ -344,20 +356,24 @@ HTML-RECTANGLE:     <div class="container">
 HTML-RECTANGLE:         <div class="sidebar">
 HTML-RECTANGLE:             <h2>class Rectangle</h2>
 HTML-RECTANGLE:             <ul>
-HTML-RECTANGLE:                 <li class="sidebar-section">
-HTML-RECTANGLE:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-RECTANGLE:                 <li>
+HTML-RECTANGLE:                     <details open>
+HTML-RECTANGLE:                         <summary class="sidebar-section">
+HTML-RECTANGLE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-RECTANGLE:                         </summary>
+HTML-RECTANGLE:                         <ul>
+HTML-RECTANGLE:                             <li class="sidebar-item-container">
+HTML-RECTANGLE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">Rectangle</a>
+HTML-RECTANGLE:                             </li>
+HTML-RECTANGLE:                             <li class="sidebar-item-container">
+HTML-RECTANGLE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
+HTML-RECTANGLE:                             </li>
+HTML-RECTANGLE:                             <li class="sidebar-item-container">
+HTML-RECTANGLE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
+HTML-RECTANGLE:                             </li>
+HTML-RECTANGLE:                         </ul>
+HTML-RECTANGLE:                     </details>
 HTML-RECTANGLE:                 </li>
-HTML-RECTANGLE:                 <ul>
-HTML-RECTANGLE:                     <li class="sidebar-item-container">
-HTML-RECTANGLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">Rectangle</a>
-HTML-RECTANGLE:                     </li>
-HTML-RECTANGLE:                     <li class="sidebar-item-container">
-HTML-RECTANGLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
-HTML-RECTANGLE:                     </li>
-HTML-RECTANGLE:                     <li class="sidebar-item-container">
-HTML-RECTANGLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
-HTML-RECTANGLE:                     </li>
-HTML-RECTANGLE:                 </ul>
 HTML-RECTANGLE:             </ul>
 HTML-RECTANGLE:         </div>
 HTML-RECTANGLE:         <div class="resizer" id="resizer"></div>
@@ -459,20 +475,24 @@ HTML-CIRCLE:     <div class="container">
 HTML-CIRCLE:         <div class="sidebar">
 HTML-CIRCLE:             <h2>class Circle</h2>
 HTML-CIRCLE:             <ul>
-HTML-CIRCLE:                 <li class="sidebar-section">
-HTML-CIRCLE:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CIRCLE:                 <li>
+HTML-CIRCLE:                     <details open>
+HTML-CIRCLE:                         <summary class="sidebar-section">
+HTML-CIRCLE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CIRCLE:                         </summary>
+HTML-CIRCLE:                         <ul>
+HTML-CIRCLE:                             <li class="sidebar-item-container">
+HTML-CIRCLE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">Circle</a>
+HTML-CIRCLE:                             </li>
+HTML-CIRCLE:                             <li class="sidebar-item-container">
+HTML-CIRCLE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
+HTML-CIRCLE:                             </li>
+HTML-CIRCLE:                             <li class="sidebar-item-container">
+HTML-CIRCLE:                                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
+HTML-CIRCLE:                             </li>
+HTML-CIRCLE:                         </ul>
+HTML-CIRCLE:                     </details>
 HTML-CIRCLE:                 </li>
-HTML-CIRCLE:                 <ul>
-HTML-CIRCLE:                     <li class="sidebar-item-container">
-HTML-CIRCLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">Circle</a>
-HTML-CIRCLE:                     </li>
-HTML-CIRCLE:                     <li class="sidebar-item-container">
-HTML-CIRCLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
-HTML-CIRCLE:                     </li>
-HTML-CIRCLE:                     <li class="sidebar-item-container">
-HTML-CIRCLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
-HTML-CIRCLE:                     </li>
-HTML-CIRCLE:                 </ul>
 HTML-CIRCLE:             </ul>
 HTML-CIRCLE:         </div>
 HTML-CIRCLE:         <div class="resizer" id="resizer"></div>

@@ -6,6 +6,7 @@ config.c_compiler = "@LIBFUZZER_TEST_COMPILER@"
 config.stdlib = "@LIBFUZZER_TEST_STDLIB@"
 config.apple_platform = "@LIBFUZZER_TEST_APPLE_PLATFORM@"
 config.apple_platform_min_deployment_target_flag = "@LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
+config.apple_target_is_host = @LIBFUZZER_TEST_APPLE_TARGET_IS_HOST_PYBOOL@
 config.name_suffix = "@LIBFUZZER_TEST_CONFIG_SUFFIX@"
 config.arm_thumb = "@COMPILER_RT_ARM_THUMB@"
 

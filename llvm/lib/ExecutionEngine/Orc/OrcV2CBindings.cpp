@@ -1041,6 +1041,16 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
 }
 
 LLVMOrcObjectLayerRef
+LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManagerReserveAlloc(
+    LLVMOrcExecutionSessionRef ES, LLVMBool ReserveAlloc) {
+  assert(ES && "ES must not be null");
+  return wrap(new RTDyldObjectLinkingLayer(
+      *unwrap(ES), [ReserveAlloc](const MemoryBuffer &) {
+        return std::make_unique<SectionMemoryManager>(nullptr, ReserveAlloc);
+      }));
+}
+
+LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithMCJITMemoryManagerLikeCallbacks(
     LLVMOrcExecutionSessionRef ES, void *CreateContextCtx,
     LLVMMemoryManagerCreateContextCallback CreateContext,

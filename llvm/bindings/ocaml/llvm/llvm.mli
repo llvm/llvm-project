@@ -560,7 +560,7 @@ val get_module_identifier : llmodule -> string
 
 (** [set_module_identifier m id] sets the module identifier of [m]
     to [id]. See the method [llvm::Module::setModuleIdentifier] *)
-val set_module_identifer : llmodule -> string -> unit
+val set_module_identifier : llmodule -> string -> unit
 
 (** [get_module_flag m k] Return the corresponding value if key [k] appears in
     the module flags of [m], otherwise return None
