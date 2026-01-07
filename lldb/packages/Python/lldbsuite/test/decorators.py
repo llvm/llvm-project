@@ -3,6 +3,7 @@
 # allow the use of the `list[str]` type hint in Python 3.8
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import wraps
 from packaging import version
 import ctypes
@@ -808,6 +809,13 @@ def skipIfWindows(func=None, windows_version=None):
     if func is not None:
         return decorator(func)
     return decorator
+
+
+def skipIfWindowsWithoutConPTY(func: Callable):
+    """Decorator to skip tests on Windows without ConPTY support.
+    see https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/
+    """
+    return skipIfWindows(func=func, windows_version=["<", "10.0.17763"])
 
 
 def skipIfWindowsAndNonEnglish(func):

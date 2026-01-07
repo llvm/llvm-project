@@ -14835,7 +14835,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
   if (E->CombinedOp != TreeEntry::NotCombinedOp)
     ShuffleOrOp = E->CombinedOp;
-  SmallSetVector<Value *, 16> UniqueValues(VL.begin(), VL.end());
+  SmallSetVector<Value *, 16> UniqueValues;
+  SmallVector<unsigned, 16> UniqueIndexes;
+  for (auto [Idx, V] : enumerate(VL))
+    if (UniqueValues.insert(V))
+      UniqueIndexes.push_back(Idx);
   const unsigned Sz = UniqueValues.size();
   SmallBitVector UsedScalars(Sz, false);
   for (unsigned I = 0; I < Sz; ++I) {
@@ -15351,13 +15355,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // We cannot retrieve the operand from UniqueValues[Idx] because an
       // interchangeable instruction may be used. The order and the actual
       // operand might differ from what is retrieved from UniqueValues[Idx].
-      Value *Op1 = E->getOperand(0)[Idx];
+      unsigned Lane = UniqueIndexes[Idx];
+      Value *Op1 = E->getOperand(0)[Lane];
       Value *Op2;
       SmallVector<const Value *, 2> Operands(1, Op1);
       if (isa<UnaryOperator>(UniqueValues[Idx])) {
         Op2 = Op1;
       } else {
-        Op2 = E->getOperand(1)[Idx];
+        Op2 = E->getOperand(1)[Lane];
         Operands.push_back(Op2);
       }
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Op1);
@@ -27538,21 +27543,24 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
         V2->getValueOperand()->getType()->getScalarSizeInBits())
       return false;
     // UndefValues are compatible with all other values.
-    if (auto *I1 = dyn_cast<Instruction>(V->getValueOperand()))
-      if (auto *I2 = dyn_cast<Instruction>(V2->getValueOperand())) {
-        DomTreeNodeBase<llvm::BasicBlock> *NodeI1 =
-            DT->getNode(I1->getParent());
-        DomTreeNodeBase<llvm::BasicBlock> *NodeI2 =
-            DT->getNode(I2->getParent());
-        assert(NodeI1 && "Should only process reachable instructions");
-        assert(NodeI2 && "Should only process reachable instructions");
-        assert((NodeI1 == NodeI2) ==
-                   (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
-               "Different nodes should have different DFS numbers");
-        if (NodeI1 != NodeI2)
-          return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
-        return I1->getOpcode() < I2->getOpcode();
-      }
+    auto *I1 = dyn_cast<Instruction>(V->getValueOperand());
+    auto *I2 = dyn_cast<Instruction>(V2->getValueOperand());
+    if (I1 && I2) {
+      DomTreeNodeBase<llvm::BasicBlock> *NodeI1 = DT->getNode(I1->getParent());
+      DomTreeNodeBase<llvm::BasicBlock> *NodeI2 = DT->getNode(I2->getParent());
+      assert(NodeI1 && "Should only process reachable instructions");
+      assert(NodeI2 && "Should only process reachable instructions");
+      assert((NodeI1 == NodeI2) ==
+                 (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
+             "Different nodes should have different DFS numbers");
+      if (NodeI1 != NodeI2)
+        return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
+      return I1->getOpcode() < I2->getOpcode();
+    }
+    if (I1 && !I2)
+      return true;
+    if (!I1 && I2)
+      return false;
     return V->getValueOperand()->getValueID() <
            V2->getValueOperand()->getValueID();
   };
