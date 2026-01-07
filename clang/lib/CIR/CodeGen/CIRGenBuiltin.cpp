@@ -1151,8 +1151,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         convertType(e->getType())));
   }
   case Builtin::BI__builtin_nondeterministic_value:
-  case Builtin::BI__builtin_elementwise_abs:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_elementwise_abs: {
+    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    bool isIntTy = cir::isIntOrVectorOfIntType(cirTy);
+    if (!isIntTy)
+      return emitUnaryFPBuiltin<cir::FAbsOp>(*this, *e);
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    auto call = builder.create<cir::AbsOp>(getLoc(e->getExprLoc()),
+                                           arg.getType(), arg, false);
+    return RValue::get(call->getResult(0));
+  }
   case Builtin::BI__builtin_elementwise_acos:
     return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_asin:
@@ -1160,31 +1169,45 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_atan:
     return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_atan2:
-  case Builtin::BI__builtin_elementwise_ceil:
+    return emitBinaryFPBuiltin<cir::ATan2Op>(*this, *e);
   case Builtin::BI__builtin_elementwise_exp:
+    return emitUnaryFPBuiltin<cir::ExpOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_exp2:
-  case Builtin::BI__builtin_elementwise_exp10:
-  case Builtin::BI__builtin_elementwise_ldexp:
+    return emitUnaryFPBuiltin<cir::Exp2Op>(*this, *e);
   case Builtin::BI__builtin_elementwise_log:
+    return emitUnaryFPBuiltin<cir::LogOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_log2:
+    return emitUnaryFPBuiltin<cir::Log2Op>(*this, *e);
   case Builtin::BI__builtin_elementwise_log10:
-  case Builtin::BI__builtin_elementwise_pow:
-  case Builtin::BI__builtin_elementwise_bitreverse:
-    return errorBuiltinNYI(*this, e, builtinID);
+    return emitUnaryFPBuiltin<cir::Log10Op>(*this, *e);
   case Builtin::BI__builtin_elementwise_cos:
     return emitUnaryFPBuiltin<cir::CosOp>(*this, *e);
-  case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_floor:
+    return emitUnaryFPBuiltin<cir::FloorOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_round:
+    return emitUnaryFPBuiltin<cir::RoundOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_rint:
+    return emitUnaryFPBuiltin<cir::RintOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_nearbyint:
+    return emitUnaryFPBuiltin<cir::NearbyintOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_sin:
+    return emitUnaryFPBuiltin<cir::SinOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_sqrt:
+    return emitUnaryFPBuiltin<cir::SqrtOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_tan:
+    return emitUnaryFPBuiltin<cir::TanOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_trunc:
+    return emitUnaryFPBuiltin<cir::TruncOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_ceil:
+  case Builtin::BI__builtin_elementwise_exp10:
+  case Builtin::BI__builtin_elementwise_ldexp:
+  case Builtin::BI__builtin_elementwise_pow:
+  case Builtin::BI__builtin_elementwise_bitreverse:
+  case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__builtin_elementwise_roundeven:
-  case Builtin::BI__builtin_elementwise_round:
-  case Builtin::BI__builtin_elementwise_rint:
-  case Builtin::BI__builtin_elementwise_nearbyint:
-  case Builtin::BI__builtin_elementwise_sin:
   case Builtin::BI__builtin_elementwise_sinh:
-  case Builtin::BI__builtin_elementwise_tan:
   case Builtin::BI__builtin_elementwise_tanh:
-  case Builtin::BI__builtin_elementwise_trunc:
   case Builtin::BI__builtin_elementwise_canonicalize:
   case Builtin::BI__builtin_elementwise_copysign:
   case Builtin::BI__builtin_elementwise_fma:
