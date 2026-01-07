@@ -21,6 +21,7 @@ omp.private {type = firstprivate} @_QFwsloop_privateEc_firstprivate_ref_c8 : !ll
   omp.yield
 }
 
+// CHECK-LABEL wsloop_private_
 llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {fir.internal_name = "_QPwsloop_private", frame_pointer = #llvm.framePointerKind<all>, target_cpu = "x86-64"} {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x f32 {bindc_name = "x"} : (i64) -> !llvm.ptr
@@ -42,6 +43,46 @@ llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {
       omp.terminator
     }
     omp.terminator
+  }
+  llvm.return
+}
+
+
+// Check for a case where  the barrier should be applied. Regression check for
+// infinite loop.
+omp.private {type = private} @_QFsubEi_private_i32 : i32
+omp.private {type = firstprivate} @_QFsubEp_firstprivate_i32 : i32 copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+
+// CHECK-LABEL: _QPsub
+llvm.func @_QPsub() {
+  %0 = llvm.mlir.constant(100 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x i32 {bindc_name = "p"} : (i64) -> !llvm.ptr
+  %4 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
+  llvm.store %0, %3 : i32, !llvm.ptr
+  omp.wsloop private(@_QFsubEp_firstprivate_i32 %3 -> %arg0, @_QFsubEi_private_i32 %4 -> %arg1 : !llvm.ptr, !llvm.ptr) private_barrier {
+  // CHECK: omp.private.copy:
+  // CHECK: __kmpc_barrier
+  // CHECK: br label
+    omp.loop_nest (%arg2) : i32 = (%1) to (%1) inclusive step (%1) {
+      llvm.store %arg2, %arg1 : i32, !llvm.ptr
+      %5 = llvm.add %arg2, %1 : i32
+      %6 = llvm.icmp "sgt" %5, %1 : i32
+      llvm.cond_br %6, ^bb1, ^bb2
+    ^bb1:  // pred: ^bb0
+      llvm.store %5, %arg1 : i32, !llvm.ptr
+      %7 = llvm.load %arg0 : !llvm.ptr -> i32
+      llvm.store %7, %3 : i32, !llvm.ptr
+      llvm.br ^bb2
+    ^bb2:  // 2 preds: ^bb0, ^bb1
+      omp.yield
+    }
   }
   llvm.return
 }
