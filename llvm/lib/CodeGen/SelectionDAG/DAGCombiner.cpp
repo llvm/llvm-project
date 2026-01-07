@@ -6192,6 +6192,24 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
       return C0 > C1 ? N1 : N0;
   }
 
+  // If we know the range of vscale, see if we can fold it given a constant.
+  if (N0.getOpcode() == ISD::VSCALE) {
+    if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
+      const Function &F = DAG.getMachineFunction().getFunction();
+      ConstantRange Range =
+          getVScaleRange(&F, VT.getScalarSizeInBits())
+              .multiply(ConstantRange(N0.getConstantOperandAPInt(0)));
+
+      const APInt &C1V = C1->getAPIntValue();
+      if ((Opcode == ISD::UMAX && Range.getUnsignedMax().ule(C1V)) ||
+          (Opcode == ISD::UMIN && Range.getUnsignedMin().uge(C1V)) ||
+          (Opcode == ISD::SMAX && Range.getSignedMax().sle(C1V)) ||
+          (Opcode == ISD::SMIN && Range.getSignedMin().sge(C1V))) {
+        return N1;
+      }
+    }
+  }
+
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
