@@ -16,7 +16,7 @@
 .globl _start
 _start:
 ; Valid in avr3, Invalid in avr2
-    call  dummp_symbol
-    jmp   dummp_symbol
+    call  foo
+    jmp   foo
 ; Valid in both
-    rjmp  dummp_symbol
+    rjmp  foo
