@@ -17511,8 +17511,11 @@ Semantics:
 """"""""""
 If either operand is a NaN, returns a :ref:`NaN <floatnan>`. Otherwise returns
 the lesser of the two arguments. -0.0 is considered to be less than +0.0 for
-this intrinsic. Note that these are the semantics of minimum specified in
-IEEE 754-2019, with the usual :ref:`signaling NaN <floatnan>` exception.
+this intrinsic.
+
+This intrinsic follows the semantics of ``fminimum`` in C23 and ``minimum`` in
+IEEE 754-2019, except for signaling NaN inputs, which follow
+:ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
 
 If the ``nsz`` flag is specified, ``llvm.maximum`` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
@@ -17556,8 +17559,11 @@ Semantics:
 """"""""""
 If either operand is a NaN, returns a :ref:`NaN <floatnan>`. Otherwise returns
 the greater of the two arguments. -0.0 is considered to be less than +0.0 for
-this intrinsic. Note that these are the semantics of maximum specified in
-IEEE 754-2019, with the usual :ref:`signaling NaN <floatnan>` exception.
+this intrinsic.
+
+This intrinsic follows the semantics of ``fmaximum`` in C23 and ``maximum`` in
+IEEE 754-2019, except for signaling NaN inputs, which follow
+:ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
 
 If the ``nsz`` flag is specified, ``llvm.maximum`` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
@@ -17610,8 +17616,9 @@ If the ``nsz`` flag is specified, ``llvm.minimumnum`` with one +0.0 and one
 ``nsz`` semantics, if both operands have the same sign, the result must also
 have the same sign.
 
-Note that these are the semantics of minimumNumber specified in
-IEEE-754-2019 with the usual :ref:`signaling NaN <floatnan>` exception.
+This intrinsic follows the semantics of ``fminimum_num`` in C23 and
+``minimumNumber`` in IEEE 754-2019, except for signaling NaN inputs, which
+follow :ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
 
 This intrinsic behaves the same as ``llvm.minnum`` other than its treatment of
 sNaN inputs.
@@ -17663,8 +17670,9 @@ If the ``nsz`` flag is specified, ``llvm.maximumnum`` with one +0.0 and one
 ``nsz`` semantics, if both operands have the same sign, the result must also
 have the same sign.
 
-Note that these are the semantics of maximumNumber specified in
-IEEE-754-2019  with the usual :ref:`signaling NaN <floatnan>` exception.
+This intrinsic follows the semantics of ``fmaximum_num`` in C23 and
+``maximumNumber`` in IEEE 754-2019, except for signaling NaN inputs, which
+follow :ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
 
 This intrinsic behaves the same as ``llvm.maxnum`` other than its treatment of
 sNaN inputs.
