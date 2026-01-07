@@ -12384,7 +12384,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
       const SDValue &ToOp = To[Use.getResNo()];
       ++UI;
       Use.set(ToOp);
-      if (ToOp.getValueType() != MVT::Other)
+      if (ToOp.getValueType() != MVT::Other && ToOp.getValueType() != MVT::Glue)
         To_IsDivergent |= ToOp->isDivergent();
     } while (UI != UE && UI->getUser() == User);
 
@@ -12501,19 +12501,6 @@ public:
 
 } // end anonymous namespace
 
-/// Return true if a glue output should propagate divergence information.
-static bool gluePropagatesDivergence(const SDNode *Node) {
-  switch (Node->getOpcode()) {
-  case ISD::CopyFromReg:
-  case ISD::CopyToReg:
-    return false;
-  default:
-    return true;
-  }
-
-  llvm_unreachable("covered opcode switch");
-}
-
 bool SelectionDAG::calculateDivergence(SDNode *N) {
   if (TLI->isSDNodeAlwaysUniform(N)) {
     assert(!TLI->isSDNodeSourceOfDivergence(N, FLI, UA) &&
@@ -12525,9 +12512,8 @@ bool SelectionDAG::calculateDivergence(SDNode *N) {
   for (const auto &Op : N->ops()) {
     EVT VT = Op.getValueType();
 
-    // Skip Chain. It does not carry divergence.
-    if (VT != MVT::Other && Op.getNode()->isDivergent() &&
-        (VT != MVT::Glue || gluePropagatesDivergence(Op.getNode())))
+    // Skip Chain and Glue. They do not carry divergence.
+    if (VT != MVT::Other && VT != MVT::Glue && Op.getNode()->isDivergent())
       return true;
   }
   return false;
@@ -14159,12 +14145,9 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
     Ops[I].setInitial(Vals[I]);
     EVT VT = Ops[I].getValueType();
 
-    // Skip Chain. It does not carry divergence.
-    if (VT != MVT::Other &&
-        (VT != MVT::Glue || gluePropagatesDivergence(Ops[I].getNode())) &&
-        Ops[I].getNode()->isDivergent()) {
+    // Skip Chain and Glue. They do not carry divergence.
+    if (VT != MVT::Other && VT != MVT::Glue && Ops[I].getNode()->isDivergent())
       IsDivergent = true;
-    }
   }
   Node->NumOperands = Vals.size();
   Node->OperandList = Ops;
