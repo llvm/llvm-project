@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_WCTYPE_CONVERSION_UTILS_ENUMERATE_HPP
-#define LLVM_LIBC_SRC___SUPPORT_WCTYPE_CONVERSION_UTILS_ENUMERATE_HPP
+#ifndef LLVM_LIBC_SRC___SUPPORT_WCTYPE_CONVERSION_UTILS_ENUMERATE_H
+#define LLVM_LIBC_SRC___SUPPORT_WCTYPE_CONVERSION_UTILS_ENUMERATE_H
 
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/tuple.h"
@@ -67,4 +67,4 @@ enumerate(Iterable &&iterable) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_WCTYPE_CONVERSION_UTILS_ENUMERATE_HPP
+#endif // LLVM_LIBC_SRC___SUPPORT_WCTYPE_CONVERSION_UTILS_ENUMERATE_H
