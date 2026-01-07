@@ -302,7 +302,7 @@ def get_lldb_version_string():
     if len(lldb_vers_lines) < 1:
         print("Unkown LLDB version format (too few lines)", file=sys.stderr)
         return None
-    match = re.search(r"lldb.*-((\d|\.)+)", lldb_vers_lines[0].strip())
+    match = re.search(r"lldb.*[ -]((\d|\.)+)", lldb_vers_lines[0].strip())
     if match is None:
         print(f"Unkown LLDB version format: {lldb_vers_lines[0]}", file=sys.stderr)
         return None
@@ -336,11 +336,11 @@ if lldb_version_string:
         from packaging import version
     except:
         lit_config.fatal("Running lldb tests requires the packaging package")
-    if version.parse(lldb_version_string) >= version.parse("19.0"):
+    if version.parse(lldb_version_string) >= version.parse("1900.0"):
         config.available_features.add("lldb-formatters-compatibility")
     else:
         print(
-            "Marking LLDB LLVM data-formatter tests as unsupported: use LLDB version >= 19.0 to restore test coverage",
+            f'Marking LLDB LLVM data-formatter tests as unsupported: using version {lldb_version_string} whereas a version >= 1900.0 is required',
             file=sys.stderr,
         )
 
