@@ -973,7 +973,7 @@ public:
 
   // optional(optional<U>& rhs)
   template <class _Up>
-    requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!__is_std_optional<remove_cvref_t<_Tp>>::value) &&
+    requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
             (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up&>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up&, _Tp&>)
       optional(optional<_Up>& __rhs) noexcept(is_nothrow_constructible_v<_Tp&, _Up&>) {
@@ -981,7 +981,7 @@ public:
   }
 
   template <class _Up>
-    requires __libcpp_opt_ref_ctor_deleted<_Up> && (!__is_std_optional<remove_cvref_t<_Tp>>::value) &&
+    requires __libcpp_opt_ref_ctor_deleted<_Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
                  (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up&>
   constexpr explicit optional(optional<_Up>& __rhs) noexcept = delete;
 
@@ -1005,7 +1005,7 @@ public:
 
   // optional(const optional<U>&&)
   template <class _Up>
-    requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!__is_std_optional<remove_cvref_t<_Tp>>::value) &&
+    requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
             (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!is_convertible_v<const _Up, _Tp&>)
       optional(const optional<_Up>&& __v) noexcept(is_nothrow_constructible_v<_Tp&, const _Up>) {
@@ -1013,7 +1013,7 @@ public:
   }
 
   template <class _Up>
-    requires __libcpp_opt_ref_ctor_deleted<_Up> && (!__is_std_optional<remove_cvref_t<_Tp>>::value) &&
+    requires __libcpp_opt_ref_ctor_deleted<_Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
                  (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>&& __v) noexcept = delete;
 #    endif
