@@ -507,7 +507,7 @@ static bool HasNoThrowOperator(CXXRecordDecl *RD, OverloadedOperatorKind Op,
   return false;
 }
 
-static bool EqualityComparisonIsDefaulted(Sema &S, const TagDecl *Decl,
+static bool equalityComparisonIsDefaulted(Sema &S, const TagDecl *Decl,
                                           SourceLocation KeyLoc) {
   CanQualType T = S.Context.getCanonicalTagType(Decl);
 
@@ -550,7 +550,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
   if (Decl->isLambda())
     return Decl->isCapturelessLambda();
 
-  if (!EqualityComparisonIsDefaulted(S, Decl, KeyLoc))
+  if (!equalityComparisonIsDefaulted(S, Decl, KeyLoc))
     return false;
 
   return llvm::all_of(Decl->bases(),
@@ -571,7 +571,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
            if (Type->isEnumeralType()) {
              EnumDecl *ED =
                  Type->castAs<EnumType>()->getDecl()->getDefinitionOrSelf();
-             return EqualityComparisonIsDefaulted(S, ED, KeyLoc);
+             return equalityComparisonIsDefaulted(S, ED, KeyLoc);
            } else if (const auto *RD = Type->getAsCXXRecordDecl())
              return HasNonDeletedDefaultedEqualityComparison(S, RD, KeyLoc);
            return true;
@@ -588,7 +588,7 @@ static bool isTriviallyEqualityComparableType(Sema &S, QualType Type,
   if (CanonicalType->isEnumeralType()) {
     EnumDecl *ED =
         CanonicalType->castAs<EnumType>()->getDecl()->getDefinitionOrSelf();
-    return EqualityComparisonIsDefaulted(S, ED, KeyLoc);
+    return equalityComparisonIsDefaulted(S, ED, KeyLoc);
   }
 
   if (const auto *RD = CanonicalType->getAsCXXRecordDecl()) {
