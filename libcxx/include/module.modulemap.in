@@ -869,6 +869,7 @@ module std [system] {
     module atomic_lock_free       { header "__atomic/atomic_lock_free.h" }
     module atomic_ref             { header "__atomic/atomic_ref.h" }
     module atomic_sync            { header "__atomic/atomic_sync.h" }
+    module atomic_waitable_traits { header "__atomic/atomic_waitable_traits.h" }
     module atomic {
       header "__atomic/atomic.h"
       export std.atomic.atomic_base // most of std::atomic methods are defined there

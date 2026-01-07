@@ -171,11 +171,27 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
 };
 
 static bool isSupportedReadLaneType(Type type) {
-  // read(first)lane also supports some vector types, but limit it for scalars
-  // for now.
-  return type.isInteger(16) || type.isInteger(32) || type.isInteger(64) ||
-         isa<Float16Type, BFloat16Type, Float32Type, Float64Type,
-             LLVM::LLVMPointerType>(type);
+  // https://llvm.org/docs/AMDGPUUsage.html#llvm-ir-intrinsics
+  if (isa<Float16Type, BFloat16Type, Float32Type, Float64Type,
+          LLVM::LLVMPointerType>(type))
+    return true;
+
+  if (auto intType = dyn_cast<IntegerType>(type))
+    return llvm::is_contained({16, 32, 64},
+                              static_cast<int>(intType.getWidth()));
+
+  if (auto vecType = dyn_cast<VectorType>(type)) {
+    Type elementType = vecType.getElementType();
+    if (elementType.isInteger(32))
+      return true;
+
+    if (vecType.getNumElements() == 2 &&
+        (isa<Float16Type, BFloat16Type>(elementType) ||
+         elementType.isInteger(16)))
+      return true;
+  }
+
+  return false;
 }
 
 struct GPUSubgroupBroadcastOpToROCDL
@@ -186,17 +202,38 @@ struct GPUSubgroupBroadcastOpToROCDL
   matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Value src = adaptor.getSrc();
-    if (!isSupportedReadLaneType(src.getType()))
-      return rewriter.notifyMatchFailure(op, "unsupported readlane type");
-
-    if (adaptor.getBroadcastType() == gpu::BroadcastType::specific_lane) {
-      rewriter.replaceOpWithNewOp<ROCDL::ReadlaneOp>(op, src.getType(), src,
-                                                     adaptor.getLane());
-    } else { // first_active_lane
-      rewriter.replaceOpWithNewOp<ROCDL::ReadfirstlaneOp>(op, src.getType(),
-                                                          src);
+    if (isSupportedReadLaneType(src.getType())) {
+      Value result = createReadlaneOp(op, adaptor, rewriter, src);
+      rewriter.replaceOp(op, result);
+      return success();
     }
+
+    Type i32 = rewriter.getI32Type();
+    Location loc = op.getLoc();
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, src, i32);
+
+    SmallVector<Value> results;
+    results.reserve(decomposed.size());
+    for (Value v : decomposed)
+      results.emplace_back(createReadlaneOp(op, adaptor, rewriter, v));
+
+    Value result = LLVM::composeValue(rewriter, loc, results, src.getType());
+    rewriter.replaceOp(op, result);
     return success();
+  }
+
+private:
+  static Value createReadlaneOp(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &rewriter,
+                                Value src) {
+    if (adaptor.getBroadcastType() == gpu::BroadcastType::specific_lane) {
+      return ROCDL::ReadlaneOp::create(rewriter, op.getLoc(), src.getType(),
+                                       src, adaptor.getLane());
+    } else { // first_active_lane
+      return ROCDL::ReadfirstlaneOp::create(rewriter, op.getLoc(),
+                                            src.getType(), src);
+    }
   }
 };
 
@@ -458,7 +495,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
           /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
           /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
           rocdlDialect->getKernelAttrHelper().getName(),
-          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName()});
+          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName(),
+          /*kernelClusterSizeAttributeName=*/{}});
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {

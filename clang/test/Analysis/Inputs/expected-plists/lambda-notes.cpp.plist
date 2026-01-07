@@ -174,7 +174,7 @@
    <key>type</key><string>Division by zero</string>
    <key>check_name</key><string>core.DivideZero</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>bd4eed3234018edced5efc2ed5562a74</string>
+   <key>issue_hash_content_of_line_in_context</key><string>d3cd158ad0fd8ce44df89c6779a1faec</string>
   <key>issue_context_kind</key><string>C++ method</string>
   <key>issue_context</key><string>operator()</string>
   <key>issue_hash_function_offset</key><string>1</string>

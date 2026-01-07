@@ -290,8 +290,11 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    if (R->getNumOperands() != std::tuple_size<Ops_t>::value) {
-      assert((Opcode == Instruction::PHI || isa<VPReplicateRecipe>(R)) &&
+    if (R->getNumOperands() != std::tuple_size_v<Ops_t>) {
+      [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(R);
+      assert((Opcode == Instruction::PHI ||
+              (RepR && std::tuple_size_v<Ops_t> ==
+                           RepR->getNumOperands() - RepR->isPredicated())) &&
              "non-variadic recipe with matched opcode does not have the "
              "expected number of operands");
       return false;
