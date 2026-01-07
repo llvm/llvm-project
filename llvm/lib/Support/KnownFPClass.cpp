@@ -312,3 +312,20 @@ void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
   propagateDenormal(Src, Mode);
   propagateNaN(Src, /*PreserveSign=*/true);
 }
+
+KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
+                               DenormalMode Mode) {
+  KnownFPClass Known;
+  Known.knownNot(fcNegZero);
+
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
+    Known.knownNot(fcNan);
+
+  if (KnownSrc.isKnownNeverLogicalZero(Mode))
+    Known.knownNot(fcNegInf);
+
+  return Known;
+}
