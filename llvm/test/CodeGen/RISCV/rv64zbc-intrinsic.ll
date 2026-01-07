@@ -7,8 +7,11 @@ define i64 @clmul64r(i64 %a, i64 %b) nounwind {
 ; RV64ZBC:       # %bb.0:
 ; RV64ZBC-NEXT:    clmulr a0, a0, a1
 ; RV64ZBC-NEXT:    ret
-  %tmp = call i64 @llvm.riscv.clmulr.i64(i64 %a, i64 %b)
-  ret i64 %tmp
+  %a.rev = call i64 @llvm.bitreverse.i64(i64 %a)
+  %b.rev = call i64 @llvm.bitreverse.i64(i64 %b)
+  %clmul = call i64 @llvm.clmul.i64(i64 %a.rev, i64 %b.rev)
+  %clmulr = call i64 @llvm.bitreverse.i4(i64 %clmul)
+  ret i64 %clmulr
 }
 
 define signext i32 @clmul32r(i32 signext %a, i32 signext %b) nounwind {
@@ -19,8 +22,11 @@ define signext i32 @clmul32r(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBC-NEXT:    clmulr a0, a0, a1
 ; RV64ZBC-NEXT:    srai a0, a0, 32
 ; RV64ZBC-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.clmulr.i32(i32 %a, i32 %b)
-  ret i32 %tmp
+  %a.rev = call i32 @llvm.bitreverse.i32(i32 %a)
+  %b.rev = call i32 @llvm.bitreverse.i32(i32 %b)
+  %clmul = call i32 @llvm.clmul.i32(i32 %a.rev, i32 %b.rev)
+  %clmulr = call i32 @llvm.bitreverse.i4(i32 %clmul)
+  ret i32 %clmulr
 }
 
 ; FIXME: We could avoid the slli instructions by using clmul+srli+sext.w since
@@ -33,6 +39,9 @@ define signext i32 @clmul32r_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
 ; RV64ZBC-NEXT:    clmulr a0, a0, a1
 ; RV64ZBC-NEXT:    srai a0, a0, 32
 ; RV64ZBC-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.clmulr.i32(i32 %a, i32 %b)
-  ret i32 %tmp
+  %a.rev = call i32 @llvm.bitreverse.i32(i32 %a)
+  %b.rev = call i32 @llvm.bitreverse.i32(i32 %b)
+  %clmul = call i32 @llvm.clmul.i32(i32 %a.rev, i32 %b.rev)
+  %clmulr = call i32 @llvm.bitreverse.i4(i32 %clmul)
+  ret i32 %clmulr
 }

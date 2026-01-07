@@ -9,7 +9,7 @@ define i64 @clmul64(i64 %a, i64 %b) nounwind {
 ; RV64ZBC-ZBKC:       # %bb.0:
 ; RV64ZBC-ZBKC-NEXT:    clmul a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    ret
-  %tmp = call i64 @llvm.riscv.clmul.i64(i64 %a, i64 %b)
+  %tmp = call i64 @llvm.clmul.i64(i64 %a, i64 %b)
   ret i64 %tmp
 }
 
@@ -18,8 +18,12 @@ define i64 @clmul64h(i64 %a, i64 %b) nounwind {
 ; RV64ZBC-ZBKC:       # %bb.0:
 ; RV64ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    ret
-  %tmp = call i64 @llvm.riscv.clmulh.i64(i64 %a, i64 %b)
-  ret i64 %tmp
+  %a.rev = call i64 @llvm.bitreverse.i64(i64 %a)
+  %b.rev = call i64 @llvm.bitreverse.i64(i64 %b)
+  %clmul = call i64 @llvm.clmul.i64(i64 %a.rev, i64 %b.rev)
+  %clmulr = call i64 @llvm.bitreverse.i4(i64 %clmul)
+  %clmulh = lshr i64 %clmulr, 1
+  ret i64 %clmulh
 }
 
 define signext i32 @clmul32(i32 signext %a, i32 signext %b) nounwind {
@@ -28,7 +32,7 @@ define signext i32 @clmul32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBC-ZBKC-NEXT:    clmul a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    sext.w a0, a0
 ; RV64ZBC-ZBKC-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.clmul.i32(i32 %a, i32 %b)
+  %tmp = call i32 @llvm.clmul.i32(i32 %a, i32 %b)
   ret i32 %tmp
 }
 
@@ -40,8 +44,12 @@ define signext i32 @clmul32h(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    srai a0, a0, 32
 ; RV64ZBC-ZBKC-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
-  ret i32 %tmp
+  %a.rev = call i32 @llvm.bitreverse.i32(i32 %a)
+  %b.rev = call i32 @llvm.bitreverse.i32(i32 %b)
+  %clmul = call i32 @llvm.clmul.i32(i32 %a.rev, i32 %b.rev)
+  %clmulr = call i32 @llvm.bitreverse.i4(i32 %clmul)
+  %clmulh = lshr i32 %clmulr, 1
+  ret i32 %clmulh
 }
 
 ; FIXME: We could avoid the slli instructions by using clmul+srai since the
@@ -54,6 +62,10 @@ define signext i32 @clmul32h_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
 ; RV64ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    srai a0, a0, 32
 ; RV64ZBC-ZBKC-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
-  ret i32 %tmp
+  %a.rev = call i32 @llvm.bitreverse.i32(i32 %a)
+  %b.rev = call i32 @llvm.bitreverse.i32(i32 %b)
+  %clmul = call i32 @llvm.clmul.i32(i32 %a.rev, i32 %b.rev)
+  %clmulr = call i32 @llvm.bitreverse.i4(i32 %clmul)
+  %clmulh = lshr i32 %clmulr, 1
+  ret i32 %clmulh
 }

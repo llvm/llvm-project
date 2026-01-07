@@ -9,7 +9,7 @@ define i32 @clmul32(i32 %a, i32 %b) nounwind {
 ; RV32ZBC-ZBKC:       # %bb.0:
 ; RV32ZBC-ZBKC-NEXT:    clmul a0, a0, a1
 ; RV32ZBC-ZBKC-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.clmul.i32(i32 %a, i32 %b)
+  %tmp = call i32 @llvm.clmul.i32(i32 %a, i32 %b)
   ret i32 %tmp
 }
 
@@ -18,6 +18,10 @@ define i32 @clmul32h(i32 %a, i32 %b) nounwind {
 ; RV32ZBC-ZBKC:       # %bb.0:
 ; RV32ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
 ; RV32ZBC-ZBKC-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
-  ret i32 %tmp
+  %a.rev = call i32 @llvm.bitreverse.i32(i32 %a)
+  %b.rev = call i32 @llvm.bitreverse.i32(i32 %b)
+  %clmul = call i32 @llvm.clmul.i32(i32 %a.rev, i32 %b.rev)
+  %clmulr = call i32 @llvm.bitreverse.i4(i32 %clmul)
+  %clmulh = lshr i32 %clmulr, 1
+  ret i32 %clmulh
 }
