@@ -1492,6 +1492,7 @@ private:
 class MLIR_PYTHON_API_EXPORTED PyOpOperand {
 public:
   PyOpOperand(MlirOpOperand opOperand) : opOperand(opOperand) {}
+  operator MlirOpOperand() const { return opOperand; }
 
   nanobind::typed<nanobind::object, PyOpView> getOwner() const;
 
@@ -1596,6 +1597,7 @@ public:
   static constexpr IsAFunctionTy isaFunction = mlirValueIsAOpResult;
   static constexpr const char *pyClassName = "OpResult";
   using PyConcreteValue::PyConcreteValue;
+  operator MlirOpResult() { return mlirValueToOpResult(castFrom(*this)); }
 
   static void bindDerived(ClassTy &c);
 };
@@ -1847,13 +1849,20 @@ private:
 MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);
 MLIR_PYTHON_API_EXPORTED void populateIRCore(nanobind::module_ &m);
 MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
+
+/// Helper for creating an @classmethod.
+template <class Func, typename... Args>
+static nanobind::object classmethod(Func f, Args... args) {
+  nanobind::object cf = nanobind::cpp_function(f, args...);
+  return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
 
 namespace nanobind {
 namespace detail {
-
 template <>
 struct type_caster<
     mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::DefaultingPyMlirContext>

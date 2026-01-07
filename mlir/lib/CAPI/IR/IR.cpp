@@ -30,6 +30,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
@@ -714,6 +715,10 @@ MlirValue mlirOperationGetOperand(MlirOperation op, intptr_t pos) {
   return wrap(unwrap(op)->getOperand(static_cast<unsigned>(pos)));
 }
 
+MlirOpOperand mlirOperationGetOpOperand(MlirOperation op, intptr_t pos) {
+  return wrap(&unwrap(op)->getOpOperand(static_cast<unsigned>(pos)));
+}
+
 void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
                              MlirValue newValue) {
   unwrap(op)->setOperand(static_cast<unsigned>(pos), unwrap(newValue));
@@ -1119,6 +1124,13 @@ bool mlirValueIsABlockArgument(MlirValue value) {
 
 bool mlirValueIsAOpResult(MlirValue value) {
   return llvm::isa<OpResult>(unwrap(value));
+}
+
+/// Cast an MlirValue to an MlirOpResult, asserting in case of a type mismatch.
+MlirOpResult mlirValueToOpResult(MlirValue value) {
+  return TypeSwitch<Value, MlirOpResult>(unwrap(value))
+      .Case<OpResult>([&](OpResult opResult) { return wrap(&opResult); })
+      .DefaultUnreachable("expected an OpResult");
 }
 
 MlirBlock mlirBlockArgumentGetOwner(MlirValue value) {

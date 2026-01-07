@@ -10,7 +10,6 @@
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 // clang-format on
 #include "mlir-c/BuiltinAttributes.h"
@@ -2288,6 +2287,44 @@ PyOpOperandList PyOpOperandList::slice(intptr_t startIndex, intptr_t length,
   return PyOpOperandList(operation, startIndex, length, step);
 }
 
+/// A list of OpOperands. Internally, these are stored as consecutive elements,
+/// random access is cheap. The (returned) OpOperand list is associated with the
+/// operation whose operands these are, and thus extends the lifetime of this
+/// operation.
+class PyOpOpOperandList : public Sliceable<PyOpOpOperandList, PyOpOperand> {
+public:
+  static constexpr const char *pyClassName = "OpOpOperandList";
+  using SliceableT = Sliceable<PyOpOperandList, PyOpOperand>;
+
+  PyOpOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,
+                    intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumOperands(operation->get())
+                               : length,
+                  step),
+        operation(operation) {}
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyOpOpOperandList, PyOpOperand>;
+
+  intptr_t getRawNumElements() {
+    operation->checkValid();
+    return mlirOperationGetNumOperands(operation->get());
+  }
+
+  PyOpOperand getRawElement(intptr_t pos) {
+    MlirOpOperand opOperand = mlirOperationGetOpOperand(operation->get(), pos);
+    return PyOpOperand(opOperand);
+  }
+
+  PyOpOpOperandList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyOpOpOperandList(operation, startIndex, length, step);
+  }
+
+  PyOperationRef operation;
+};
+
 PyOpSuccessors::PyOpSuccessors(PyOperationRef operation, intptr_t startIndex,
                                intptr_t length, intptr_t step)
     : Sliceable(startIndex,
@@ -3553,6 +3590,12 @@ void populateIRCore(nb::module_ &m) {
             return PyOpOperandList(self.getOperation().getRef());
           },
           "Returns the list of operation operands.")
+      .def_prop_ro(
+          "op_operands",
+          [](PyOperationBase &self) {
+            return PyOpOpOperandList(self.getOperation().getRef());
+          },
+          "Returns the list of op operands.")
       .def_prop_ro(
           "regions",
           [](PyOperationBase &self) {
@@ -4834,6 +4877,7 @@ void populateIRCore(nb::module_ &m) {
   PyOpAttributeMap::bind(m);
   PyOpOperandIterator::bind(m);
   PyOpOperandList::bind(m);
+  PyOpOpOperandList::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
   PyRegionIterator::bind(m);
