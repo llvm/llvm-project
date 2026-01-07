@@ -263,19 +263,28 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64common = COPY $x2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.2(0x50000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32))
   ; CHECK-NEXT:   [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY1]], 0 :: (load (s32))
-  ; CHECK-NEXT:   [[SUBSWrs:%[0-9]+]]:gpr32common = SUBSWrs [[LDRWui]], [[LDRWui1]], 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs [[LDRWui]], [[LDRWui1]], 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32all = COPY $wzr
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr32common = COPY [[LDRWui]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr32all = COPY [[COPY3]]
+  ; CHECK-NEXT:   CBZW killed [[SUBSWrs]], %bb.3
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr32sp = COPY [[LDRWui]]
   ; CHECK-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[COPY5]], 1, 0
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gpr32all = COPY [[ADDWri]]
-  ; CHECK-NEXT:   $wzr = SUBSWri [[SUBSWrs]], 0, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY4]], [[COPY5]], 0, implicit $nzcv
-  ; CHECK-NEXT:   STRWui [[CSINCWr]], [[COPY2]], 0 :: (store (s32))
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY4]], %bb.1, [[COPY6]], %bb.2
+  ; CHECK-NEXT:   STRWui [[PHI]], [[COPY2]], 0 :: (store (s32))
   ; CHECK-NEXT:   B %bb.1
   bb.0:
     liveins: $x0, $x1, $x2
