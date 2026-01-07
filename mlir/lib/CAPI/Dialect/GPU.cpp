@@ -52,6 +52,10 @@ MlirAttribute mlirGPUObjectAttrGet(MlirContext mlirCtx, MlirAttribute target,
       StringAttr::get(ctx, object), objectProps, nullptr));
 }
 
+MlirStringRef mlirGPUObjectAttrGetName(void) {
+  return wrap(gpu::ObjectAttr::name);
+}
+
 MlirAttribute mlirGPUObjectAttrGetWithKernels(MlirContext mlirCtx,
                                               MlirAttribute target,
                                               uint32_t format,
