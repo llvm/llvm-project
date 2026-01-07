@@ -443,7 +443,6 @@ static llvm::Error serveConnection(
     TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
                            g_connection_timeout_time_point,
                            connection_timeout_seconds.value());
-  std::condition_variable dap_sessions_condition;
   unsigned int clientCount = 0;
   auto handle = listener->Accept(g_loop, [=, &log, &clientCount](
                                              std::unique_ptr<Socket> sock) {
@@ -676,7 +675,7 @@ int main(int argc, char *argv[]) {
     memory_monitor->Start();
 
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger = llvm::make_scope_exit([&] {
+  llvm::scope_exit terminate_debugger([&] {
     if (memory_monitor)
       memory_monitor->Stop();
     lldb::SBDebugger::Terminate();

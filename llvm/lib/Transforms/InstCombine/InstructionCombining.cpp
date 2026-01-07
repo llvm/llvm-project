@@ -1371,8 +1371,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
-  if (isa<FPMathOperator>(&I)) {
-    FMF = I.getFastMathFlags();
+  if (const auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+    FMF = FPOp->getFastMathFlags();
     Builder.setFastMathFlags(FMF);
   }
 
@@ -1874,6 +1874,50 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
   }
 
   return nullptr;
+}
+
+/// In some cases it is beneficial to fold a select into a binary operator.
+/// For example:
+///   %1 = or %in, 4
+///   %2 = select %cond, %1, %in
+///   %3 = or %2, 1
+/// =>
+///   %1 = select i1 %cond, 5, 1
+///   %2 = or %1, %in
+Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
+  assert(Op.isAssociative() && "The operation must be associative!");
+
+  SelectInst *SI = dyn_cast<SelectInst>(Op.getOperand(0));
+
+  Constant *Const;
+  if (!SI || !match(Op.getOperand(1), m_ImmConstant(Const)) ||
+      !Op.hasOneUse() || !SI->hasOneUse())
+    return nullptr;
+
+  Value *TV = SI->getTrueValue();
+  Value *FV = SI->getFalseValue();
+  Value *Input, *NewTV, *NewFV;
+  Constant *Const2;
+
+  if (TV->hasOneUse() && match(TV, m_BinOp(Op.getOpcode(), m_Specific(FV),
+                                           m_ImmConstant(Const2)))) {
+    NewTV = ConstantFoldBinaryInstruction(Op.getOpcode(), Const, Const2);
+    NewFV = Const;
+    Input = FV;
+  } else if (FV->hasOneUse() &&
+             match(FV, m_BinOp(Op.getOpcode(), m_Specific(TV),
+                               m_ImmConstant(Const2)))) {
+    NewTV = Const;
+    NewFV = ConstantFoldBinaryInstruction(Op.getOpcode(), Const, Const2);
+    Input = TV;
+  } else
+    return nullptr;
+
+  if (!NewTV || !NewFV)
+    return nullptr;
+
+  Value *NewSI = Builder.CreateSelect(SI->getCondition(), NewTV, NewFV);
+  return BinaryOperator::Create(Op.getOpcode(), NewSI, Input);
 }
 
 Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
@@ -4284,26 +4328,32 @@ static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
 Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   Value *Cond = SI.getCondition();
   Value *Op0;
-  ConstantInt *AddRHS;
-  if (match(Cond, m_Add(m_Value(Op0), m_ConstantInt(AddRHS)))) {
-    // Change 'switch (X+4) case 1:' into 'switch (X) case -3'.
-    for (auto Case : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(Case.getCaseValue(), AddRHS);
-      assert(isa<ConstantInt>(NewCase) &&
-             "Result of expression should be constant");
-      Case.setValue(cast<ConstantInt>(NewCase));
-    }
-    return replaceOperand(SI, 0, Op0);
-  }
+  const APInt *CondOpC;
+  using InvertFn = std::function<APInt(const APInt &Case, const APInt &C)>;
 
-  ConstantInt *SubLHS;
-  if (match(Cond, m_Sub(m_ConstantInt(SubLHS), m_Value(Op0)))) {
-    // Change 'switch (1-X) case 1:' into 'switch (X) case 0'.
-    for (auto Case : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(SubLHS, Case.getCaseValue());
-      assert(isa<ConstantInt>(NewCase) &&
-             "Result of expression should be constant");
-      Case.setValue(cast<ConstantInt>(NewCase));
+  auto MaybeInvertible = [&](Value *Cond) -> InvertFn {
+    if (match(Cond, m_Add(m_Value(Op0), m_APInt(CondOpC))))
+      // Change 'switch (X+C) case Case:' into 'switch (X) case Case-C'.
+      return [](const APInt &Case, const APInt &C) { return Case - C; };
+
+    if (match(Cond, m_Sub(m_APInt(CondOpC), m_Value(Op0))))
+      // Change 'switch (C-X) case Case:' into 'switch (X) case C-Case'.
+      return [](const APInt &Case, const APInt &C) { return C - Case; };
+
+    if (match(Cond, m_Xor(m_Value(Op0), m_APInt(CondOpC))) &&
+        !CondOpC->isMinSignedValue() && !CondOpC->isMaxSignedValue())
+      // Change 'switch (X^C) case Case:' into 'switch (X) case Case^C'.
+      // Prevent creation of large case values by excluding extremes.
+      return [](const APInt &Case, const APInt &C) { return Case ^ C; };
+
+    return nullptr;
+  };
+
+  // Attempt to invert and simplify the switch condition.
+  if (auto InvertFn = MaybeInvertible(Cond); InvertFn) {
+    for (auto &Case : SI.cases()) {
+      const APInt &New = InvertFn(Case.getCaseValue()->getValue(), *CondOpC);
+      Case.setValue(ConstantInt::get(SI.getContext(), New));
     }
     return replaceOperand(SI, 0, Op0);
   }

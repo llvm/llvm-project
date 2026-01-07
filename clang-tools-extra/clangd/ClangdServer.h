@@ -155,7 +155,7 @@ public:
     /// Sets an alternate mode of operation. Current effects are:
     /// - Using the current working directory as the working directory for
     ///   fallback commands
-    bool StrongWorkspaceMode;
+    bool StrongWorkspaceMode = false;
 
     /// The resource directory is used to find internal headers, overriding
     /// defaults and -resource-dir compiler flag).

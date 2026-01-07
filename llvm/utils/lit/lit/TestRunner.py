@@ -783,6 +783,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
     procs = []
     proc_not_counts = []
+    proc_not_fail_if_crash = []
     default_stdin = subprocess.PIPE
     stderrTempFiles = []
     opened_files = []
@@ -909,10 +910,14 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # For plain negations, either 'not' without '--crash', or the shell
         # operator '!', leave them out from the command to execute and
-        # invert the result code afterwards.
+        # invert the result code afterwards. If we have a plain not, pass the
+        # args along so we can recognize it later and still fail if the
+        # executed command returns a signal.
         if not_crash:
             args = not_args + args
             not_count = 0
+        elif not_args == ["not"]:
+            pass
         else:
             not_args = []
 
@@ -1008,6 +1013,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if old_umask != -1:
                 os.umask(old_umask)
             proc_not_counts.append(not_count)
+            if not not_crash and not_args == ["not"]:
+                proc_not_fail_if_crash.append(True)
+            else:
+                proc_not_fail_if_crash.append(False)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])
         except OSError as e:
@@ -1063,7 +1072,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
         if proc_not_counts[i] % 2:
-            res = 1 if res == 0 else 0
+            if proc_not_fail_if_crash[i]:
+                res = int(res <= 0)
+            else:
+                res = 1 if res == 0 else 0
         elif proc_not_counts[i] > 1:
             res = 1 if res != 0 else 0
 

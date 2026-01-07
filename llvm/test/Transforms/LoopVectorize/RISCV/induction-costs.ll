@@ -138,7 +138,7 @@ define void @test_3_inductions(ptr noalias %dst, ptr noalias %src, i64 %n) #1 {
 ; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <vscale x 2 x i32> [ [[INDUCTION1]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 2, [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <vscale x 2 x i32> [[VEC_IND2]], [[VEC_IND]]

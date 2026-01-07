@@ -117,6 +117,16 @@ define <16 x float> @splice_v16f32(<16 x float> %a, <16 x float> %b) #0 {
   ret <16 x float> %res
 }
 
+; Check splice.right with 0 offset returns second operand.
+define <16 x i8> @splice_right_0(<16 x i8> %a, <16 x i8> %b) #0 {
+; CHECK-LABEL: splice_right_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %res = call <16 x i8> @llvm.vector.splice.right(<16 x i8> %a, <16 x i8> %b, i32 0)
+  ret <16 x i8> %res
+}
+
 declare <2 x i8> @llvm.vector.splice.v2i8(<2 x i8>, <2 x i8>, i32)
 declare <16 x i8> @llvm.vector.splice.v16i8(<16 x i8>, <16 x i8>, i32)
 declare <8 x i32> @llvm.vector.splice.v8i32(<8 x i32>, <8 x i32>, i32)

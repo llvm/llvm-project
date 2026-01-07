@@ -2384,17 +2384,11 @@
 #    error "__cpp_lib_generic_unordered_lookup should not be defined before c++20"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))
-#    ifndef __cpp_lib_hardware_interference_size
-#      error "__cpp_lib_hardware_interference_size should be defined in c++17"
-#    endif
-#    if __cpp_lib_hardware_interference_size != 201703L
-#      error "__cpp_lib_hardware_interference_size should have the value 201703L in c++17"
-#    endif
-#  else
-#    ifdef __cpp_lib_hardware_interference_size
-#      error "__cpp_lib_hardware_interference_size should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))' is not met!"
-#    endif
+#  ifndef __cpp_lib_hardware_interference_size
+#    error "__cpp_lib_hardware_interference_size should be defined in c++17"
+#  endif
+#  if __cpp_lib_hardware_interference_size != 201703L
+#    error "__cpp_lib_hardware_interference_size should have the value 201703L in c++17"
 #  endif
 
 #  ifndef __cpp_lib_has_unique_object_representations
@@ -3371,8 +3365,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++20"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++20"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -3706,17 +3700,11 @@
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++20"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))
-#    ifndef __cpp_lib_hardware_interference_size
-#      error "__cpp_lib_hardware_interference_size should be defined in c++20"
-#    endif
-#    if __cpp_lib_hardware_interference_size != 201703L
-#      error "__cpp_lib_hardware_interference_size should have the value 201703L in c++20"
-#    endif
-#  else
-#    ifdef __cpp_lib_hardware_interference_size
-#      error "__cpp_lib_hardware_interference_size should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))' is not met!"
-#    endif
+#  ifndef __cpp_lib_hardware_interference_size
+#    error "__cpp_lib_hardware_interference_size should be defined in c++20"
+#  endif
+#  if __cpp_lib_hardware_interference_size != 201703L
+#    error "__cpp_lib_hardware_interference_size should have the value 201703L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_has_unique_object_representations
@@ -4840,8 +4828,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++23"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++23"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -5093,8 +5081,8 @@
 #  ifndef __cpp_lib_flat_map
 #    error "__cpp_lib_flat_map should be defined in c++23"
 #  endif
-#  if __cpp_lib_flat_map != 202207L
-#    error "__cpp_lib_flat_map should have the value 202207L in c++23"
+#  if __cpp_lib_flat_map != 202511L
+#    error "__cpp_lib_flat_map should have the value 202511L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_flat_set
@@ -5220,17 +5208,11 @@
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))
-#    ifndef __cpp_lib_hardware_interference_size
-#      error "__cpp_lib_hardware_interference_size should be defined in c++23"
-#    endif
-#    if __cpp_lib_hardware_interference_size != 201703L
-#      error "__cpp_lib_hardware_interference_size should have the value 201703L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_hardware_interference_size
-#      error "__cpp_lib_hardware_interference_size should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))' is not met!"
-#    endif
+#  ifndef __cpp_lib_hardware_interference_size
+#    error "__cpp_lib_hardware_interference_size should be defined in c++23"
+#  endif
+#  if __cpp_lib_hardware_interference_size != 201703L
+#    error "__cpp_lib_hardware_interference_size should have the value 201703L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_has_unique_object_representations
@@ -6537,8 +6519,8 @@
 #  ifndef __cpp_lib_concepts
 #    error "__cpp_lib_concepts should be defined in c++26"
 #  endif
-#  if __cpp_lib_concepts != 202002L
-#    error "__cpp_lib_concepts should have the value 202002L in c++26"
+#  if __cpp_lib_concepts != 202207L
+#    error "__cpp_lib_concepts should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -6844,8 +6826,8 @@
 #  ifndef __cpp_lib_flat_map
 #    error "__cpp_lib_flat_map should be defined in c++26"
 #  endif
-#  if __cpp_lib_flat_map != 202207L
-#    error "__cpp_lib_flat_map should have the value 202207L in c++26"
+#  if __cpp_lib_flat_map != 202511L
+#    error "__cpp_lib_flat_map should have the value 202511L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_flat_set
@@ -7079,17 +7061,11 @@
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))
-#    ifndef __cpp_lib_hardware_interference_size
-#      error "__cpp_lib_hardware_interference_size should be defined in c++26"
-#    endif
-#    if __cpp_lib_hardware_interference_size != 201703L
-#      error "__cpp_lib_hardware_interference_size should have the value 201703L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_hardware_interference_size
-#      error "__cpp_lib_hardware_interference_size should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))' is not met!"
-#    endif
+#  ifndef __cpp_lib_hardware_interference_size
+#    error "__cpp_lib_hardware_interference_size should be defined in c++26"
+#  endif
+#  if __cpp_lib_hardware_interference_size != 201703L
+#    error "__cpp_lib_hardware_interference_size should have the value 201703L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_has_unique_object_representations
@@ -7156,8 +7132,8 @@
 #  ifndef __cpp_lib_integer_sequence
 #    error "__cpp_lib_integer_sequence should be defined in c++26"
 #  endif
-#  if __cpp_lib_integer_sequence != 201304L
-#    error "__cpp_lib_integer_sequence should have the value 201304L in c++26"
+#  if __cpp_lib_integer_sequence != 202511L
+#    error "__cpp_lib_integer_sequence should have the value 202511L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_integral_constant_callable

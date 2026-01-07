@@ -880,11 +880,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator,
-      "libc++ std::list synthetic children",
-      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
-      // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
-      "^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
-      "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
+      "libc++ std::list synthetic children", "^std::__[[:alnum:]]+::list<.+>$",
       stl_deref_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
@@ -1006,14 +1002,10 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libc++ std::list summary provider",
       "^std::__[[:alnum:]]+::forward_list<.+>$", stl_summary_flags, true);
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libc++ std::list summary provider",
-      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
-      // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
-      "^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
-      "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
-      stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libc++ std::list summary provider",
+                "^std::__[[:alnum:]]+::list<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::map summary provider",
@@ -1722,6 +1714,70 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring summary provider"));
 
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::string_view", "char",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlStringViewSummaryProvider<StringElementType::ASCII>(
+                  valobj, stream, options);
+            return LibStdcppStringViewSummaryProvider<StringElementType::ASCII>(
+                valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u8string_view", "char8_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlStringViewSummaryProvider<StringElementType::UTF8>(
+                  valobj, stream, options);
+            return LibStdcppStringViewSummaryProvider<StringElementType::UTF8>(
+                valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::u8string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u16string_view", "char16_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlStringViewSummaryProvider<StringElementType::UTF16>(
+                  valobj, stream, options);
+            return LibStdcppStringViewSummaryProvider<StringElementType::UTF16>(
+                valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::u16string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u32string_view", "char32_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlStringViewSummaryProvider<StringElementType::UTF32>(
+                  valobj, stream, options);
+            return LibStdcppStringViewSummaryProvider<StringElementType::UTF32>(
+                valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::u32string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::wstring_view", "wchar_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlWStringViewSummaryProvider(valobj, stream, options);
+            return LibStdcppWStringViewSummaryProvider(valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::wstring_view summary provider"));
+
   // NOTE: it is loaded as a common formatter because the libc++ version is not
   // in the `__1` namespace, hence we need to dispatch based on the class
   // layout.
@@ -1857,36 +1913,6 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_summary_flags,
           MsvcStlStringSummaryProvider<StringElementType::UTF32>,
           "MSVC STL std::u32string summary provider"));
-
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::string_view", "char",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags,
-          MsvcStlStringViewSummaryProvider<StringElementType::ASCII>,
-          "MSVC STL std::string_view summary provider"));
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::u8string_view", "char8_t",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags,
-          MsvcStlStringViewSummaryProvider<StringElementType::UTF8>,
-          "MSVC STL std::u8string_view summary provider"));
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::u16string_view", "char16_t",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags,
-          MsvcStlStringViewSummaryProvider<StringElementType::UTF16>,
-          "MSVC STL std::u16string_view summary provider"));
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::u32string_view", "char32_t",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags,
-          MsvcStlStringViewSummaryProvider<StringElementType::UTF32>,
-          "MSVC STL std::u32string_view summary provider"));
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::wstring_view", "wchar_t",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags, MsvcStlWStringViewSummaryProvider,
-          "MSVC STL std::wstring_view summary provider"));
 
   stl_summary_flags.SetDontShowChildren(false);
 

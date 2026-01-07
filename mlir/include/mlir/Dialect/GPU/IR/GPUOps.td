@@ -431,7 +431,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
                        OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
                        GPU_OptionalDimSizeHintAttr:$known_block_size,
-                       GPU_OptionalDimSizeHintAttr:$known_grid_size);
+                       GPU_OptionalDimSizeHintAttr:$known_grid_size,
+                       GPU_OptionalDimSizeHintAttr:$known_cluster_size);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -3252,6 +3253,7 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
   let assemblyFormat = [{
     $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 

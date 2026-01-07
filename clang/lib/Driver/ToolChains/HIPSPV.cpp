@@ -69,11 +69,8 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
       "generic"; // SPIR-V is generic, no specific target ID like -mcpu
   tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
                                     Target, /*IsBitCodeSDL=*/true);
-  LinkArgs.append({"-o", TempFile});
-  const char *LlvmLink =
-      Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         LlvmLink, LinkArgs, Inputs, Output));
+  tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
+                                  TempFile);
 
   // Post-link HIP lowering.
 
@@ -143,8 +140,7 @@ void HIPSPVToolChain::addClangTargetOptions(
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
-                         options::OPT_fvisibility_ms_compat) &&
-      !getDriver().IsFlangMode())
+                         options::OPT_fvisibility_ms_compat))
     CC1Args.append(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 

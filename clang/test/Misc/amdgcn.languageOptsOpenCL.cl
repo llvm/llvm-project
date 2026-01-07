@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
-// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
+// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple amdgcn-unknown-amdhsa -Wpedantic-core-features -DTEST_CORE_FEATURES -DFLAT_SUPPORT
 
 // RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-unknown -target-cpu gfx700 -Wpedantic-core-features -DTEST_CORE_FEATURES -DFLAT_SUPPORT
@@ -161,7 +161,7 @@
 #endif
 #pragma OPENCL EXTENSION cl_amd_media_ops2: enable
 
-#if (__OPENCL_C_VERSION__ >= 300)
+#if (__OPENCL_C_VERSION__ >= 200)
   #ifndef __opencl_c_program_scope_global_variables
     #error "Missing __opencl_c_program_scope_global_variables define"
   #endif
@@ -169,28 +169,48 @@
   #ifndef __opencl_c_read_write_images
     #error "Missing __opencl_c_read_write_images define"
   #endif
+
+  #ifndef __opencl_c_atomic_order_acq_rel
+    #error "Missing __opencl_c_atomic_order_acq_rel define"
+  #endif
+
+  #ifndef __opencl_c_atomic_order_seq_cst
+    #error "Missing __opencl_c_atomic_order_seq_cst define"
+  #endif
+
+  #ifndef __opencl_c_atomic_scope_device
+    #error "Missing __opencl_c_atomic_scope_device define"
+  #endif
+
+  #ifndef __opencl_c_atomic_scope_all_devices
+    #error "Missing __opencl_c_atomic_scope_all_devices define"
+  #endif
+
+  #ifndef __opencl_c_work_group_collective_functions
+    #error "Missing __opencl_c_work_group_collective_functions define"
+  #endif
 #endif
 
-#if (__OPENCL_C_VERSION__ >= 300)
+#if (__OPENCL_C_VERSION__ >= 200)
   #ifdef FLAT_SUPPORT
     #ifndef __opencl_c_generic_address_space
       #error "Missing __opencl_c_generic_address_space define"
+    #endif
+    #ifndef __opencl_c_device_enqueue
+      #error "Missing __opencl_c_device_enqueue define"
+    #endif
+    #ifndef __opencl_c_pipes
+      #error "Missing __opencl_c_pipes define"
     #endif
   #else
     #ifdef __opencl_c_generic_address_space
       #error "Incorrect __opencl_c_generic_address_space define"
     #endif
-  #endif
-#endif
-
-#if (__OPENCL_C_VERSION__ >= 300)
-  #ifdef FLAT_SUPPORT
-    #ifndef __opencl_c_device_enqueue
-      #error "Missing __opencl_c_device_enqueue define"
-    #endif
-  #else
     #ifdef __opencl_c_device_enqueue
       #error "Incorrect __opencl_c_device_enqueue define"
+    #endif
+    #ifdef __opencl_c_pipes
+      #error "Incorrect __opencl_c_pipes define"
     #endif
   #endif
 #endif

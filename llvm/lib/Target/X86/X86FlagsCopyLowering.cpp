@@ -34,17 +34,20 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Pass.h"
@@ -72,16 +75,11 @@ namespace {
 // Convenient array type for storing registers associated with each condition.
 using CondRegArray = std::array<Register, X86::LAST_VALID_COND + 1>;
 
-class X86FlagsCopyLoweringPass : public MachineFunctionPass {
+class X86FlagsCopyLoweringImpl {
 public:
-  X86FlagsCopyLoweringPass() : MachineFunctionPass(ID) {}
+  X86FlagsCopyLoweringImpl(MachineDominatorTree *MDT) : MDT(MDT) {}
 
-  StringRef getPassName() const override { return "X86 EFLAGS copy lowering"; }
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// Pass identification, replacement for typeid.
-  static char ID;
+  bool runOnMachineFunction(MachineFunction &MF);
 
 private:
   MachineRegisterInfo *MRI = nullptr;
@@ -113,20 +111,32 @@ private:
                  const DebugLoc &Loc, MachineInstr &MI, CondRegArray &CondRegs);
 };
 
+class X86FlagsCopyLoweringLegacy : public MachineFunctionPass {
+public:
+  X86FlagsCopyLoweringLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override { return "X86 EFLAGS copy lowering"; }
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  /// Pass identification, replacement for typeid.
+  static char ID;
+};
+
 } // end anonymous namespace
 
-INITIALIZE_PASS_BEGIN(X86FlagsCopyLoweringPass, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(X86FlagsCopyLoweringLegacy, DEBUG_TYPE,
                       "X86 EFLAGS copy lowering", false, false)
-INITIALIZE_PASS_END(X86FlagsCopyLoweringPass, DEBUG_TYPE,
+INITIALIZE_PASS_END(X86FlagsCopyLoweringLegacy, DEBUG_TYPE,
                     "X86 EFLAGS copy lowering", false, false)
 
-FunctionPass *llvm::createX86FlagsCopyLoweringPass() {
-  return new X86FlagsCopyLoweringPass();
+FunctionPass *llvm::createX86FlagsCopyLoweringLegacyPass() {
+  return new X86FlagsCopyLoweringLegacy();
 }
 
-char X86FlagsCopyLoweringPass::ID = 0;
+char X86FlagsCopyLoweringLegacy::ID = 0;
 
-void X86FlagsCopyLoweringPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void X86FlagsCopyLoweringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -257,8 +267,8 @@ static EFLAGSClobber getClobberType(const MachineInstr &MI) {
   return InevitableClobber;
 }
 
-bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
+bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "********** " << PASS_KEY << " : " << MF.getName()
                     << " **********\n");
 
   Subtarget = &MF.getSubtarget<X86Subtarget>();
@@ -280,12 +290,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   // got a valid MDT from the pass manager, use that, otherwise construct one
   // now. This is an optimization that avoids unnecessary MDT construction for
   // functions that have no flag copies.
-
-  auto MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
   std::unique_ptr<MachineDominatorTree> OwnedMDT;
-  if (MDTWrapper) {
-    MDT = &MDTWrapper->getDomTree();
-  } else {
+  if (!MDT) {
     OwnedMDT = std::make_unique<MachineDominatorTree>(MF);
     MDT = OwnedMDT.get();
   }
@@ -424,7 +430,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           "Cannot lower EFLAGS copy unless it is defined in turn by a copy!");
     }
 
-    auto Cleanup = make_scope_exit([&] {
+    llvm::scope_exit Cleanup([&] {
       // All uses of the EFLAGS copy are now rewritten, kill the copy into
       // eflags and if dead the copy from.
       CopyI->eraseFromParent();
@@ -718,7 +724,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
 
 /// Collect any conditions that have already been set in registers so that we
 /// can re-use them rather than adding duplicates.
-CondRegArray X86FlagsCopyLoweringPass::collectCondsInRegs(
+CondRegArray X86FlagsCopyLoweringImpl::collectCondsInRegs(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator TestPos) {
   CondRegArray CondRegs = {};
 
@@ -741,19 +747,24 @@ CondRegArray X86FlagsCopyLoweringPass::collectCondsInRegs(
   return CondRegs;
 }
 
-Register X86FlagsCopyLoweringPass::promoteCondToReg(
+Register X86FlagsCopyLoweringImpl::promoteCondToReg(
     MachineBasicBlock &TestMBB, MachineBasicBlock::iterator TestPos,
     const DebugLoc &TestLoc, X86::CondCode Cond) {
   Register Reg = MRI->createVirtualRegister(PromoteRC);
-  auto SetI = BuildMI(TestMBB, TestPos, TestLoc, TII->get(X86::SETCCr), Reg)
-                  .addImm(Cond);
+  auto SetI =
+      BuildMI(TestMBB, TestPos, TestLoc,
+              TII->get((!Subtarget->hasZU() || Subtarget->preferLegacySetCC())
+                           ? X86::SETCCr
+                           : X86::SETZUCCr),
+              Reg)
+          .addImm(Cond);
   (void)SetI;
   LLVM_DEBUG(dbgs() << "    save cond: "; SetI->dump());
   ++NumSetCCsInserted;
   return Reg;
 }
 
-std::pair<Register, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
+std::pair<Register, bool> X86FlagsCopyLoweringImpl::getCondOrInverseInReg(
     MachineBasicBlock &TestMBB, MachineBasicBlock::iterator TestPos,
     const DebugLoc &TestLoc, X86::CondCode Cond, CondRegArray &CondRegs) {
   Register &CondReg = CondRegs[Cond];
@@ -767,7 +778,7 @@ std::pair<Register, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
     return {InvCondReg, true};
 }
 
-void X86FlagsCopyLoweringPass::insertTest(MachineBasicBlock &MBB,
+void X86FlagsCopyLoweringImpl::insertTest(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator Pos,
                                           const DebugLoc &Loc, Register Reg) {
   auto TestI =
@@ -777,7 +788,7 @@ void X86FlagsCopyLoweringPass::insertTest(MachineBasicBlock &MBB,
   ++NumTestsInserted;
 }
 
-void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &MBB,
+void X86FlagsCopyLoweringImpl::rewriteSetCC(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator Pos,
                                             const DebugLoc &Loc,
                                             MachineInstr &MI,
@@ -789,29 +800,6 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &MBB,
   Register &CondReg = CondRegs[Cond];
   if (!CondReg)
     CondReg = promoteCondToReg(MBB, Pos, Loc, Cond);
-
-  if (X86::isSETZUCC(MI.getOpcode())) {
-    // SETZUCC is generated for register only for now.
-    assert(!MI.mayStore() && "Cannot handle memory variants");
-    assert(MI.getOperand(0).isReg() &&
-           "Cannot have a non-register defined operand to SETZUcc!");
-    Register OldReg = MI.getOperand(0).getReg();
-    // Drop Kill flags on the old register before replacing. CondReg may have
-    // a longer live range.
-    MRI->clearKillFlags(OldReg);
-    for (auto &Use : MRI->use_instructions(OldReg)) {
-      assert(Use.getOpcode() == X86::INSERT_SUBREG &&
-             "SETZUCC should be only used by INSERT_SUBREG");
-      Use.getOperand(2).setReg(CondReg);
-      // Recover MOV32r0 before INSERT_SUBREG, which removed by SETZUCC.
-      Register ZeroReg = MRI->createVirtualRegister(&X86::GR32RegClass);
-      BuildMI(*Use.getParent(), &Use, Use.getDebugLoc(), TII->get(X86::MOV32r0),
-              ZeroReg);
-      Use.getOperand(1).setReg(ZeroReg);
-    }
-    MI.eraseFromParent();
-    return;
-  }
 
   // Rewriting a register def is trivial: we just replace the register and
   // remove the setcc.
@@ -839,7 +827,7 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &MBB,
   MI.eraseFromParent();
 }
 
-void X86FlagsCopyLoweringPass::rewriteArithmetic(
+void X86FlagsCopyLoweringImpl::rewriteArithmetic(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Pos,
     const DebugLoc &Loc, MachineInstr &MI, CondRegArray &CondRegs) {
   // Arithmetic is either reading CF or OF.
@@ -914,7 +902,7 @@ static unsigned getOpcodeWithCC(unsigned Opc, X86::CondCode CC) {
 #undef CASE
 }
 
-void X86FlagsCopyLoweringPass::rewriteMI(MachineBasicBlock &MBB,
+void X86FlagsCopyLoweringImpl::rewriteMI(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator Pos,
                                          const DebugLoc &Loc, MachineInstr &MI,
                                          CondRegArray &CondRegs) {
@@ -944,4 +932,20 @@ void X86FlagsCopyLoweringPass::rewriteMI(MachineBasicBlock &MBB,
 
   MI.findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)->setIsKill(true);
   LLVM_DEBUG(dbgs() << "    fixed instruction: "; MI.dump());
+}
+
+bool X86FlagsCopyLoweringLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MachineDominatorTree *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  return X86FlagsCopyLoweringImpl(MDT).runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86FlagsCopyLoweringPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree *MDT =
+      MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  bool Changed = X86FlagsCopyLoweringImpl(MDT).runOnMachineFunction(MF);
+  return Changed ? PreservedAnalyses::all()
+                 : getMachineFunctionPassPreservedAnalyses();
 }

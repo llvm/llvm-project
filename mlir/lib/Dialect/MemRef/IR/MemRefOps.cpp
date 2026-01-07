@@ -606,6 +606,13 @@ AssumeAlignmentOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getMemrefMutable());
 }
 
+FailureOr<OpFoldResult> AssumeAlignmentOp::reifyDimOfResult(OpBuilder &builder,
+                                                            int resultIndex,
+                                                            int dim) {
+  assert(resultIndex == 0 && "AssumeAlignmentOp has a single result");
+  return getMixedSize(builder, getLoc(), getMemref(), dim);
+}
+
 //===----------------------------------------------------------------------===//
 // DistinctObjectsOp
 //===----------------------------------------------------------------------===//
@@ -850,7 +857,7 @@ void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// If the source/target of a CopyOp is a CastOp that does not modify the shape
 /// and element type, the cast can be skipped. Such CastOps only cast the layout
 /// of the type.
-static LogicalResult FoldCopyOfCast(CopyOp op) {
+static LogicalResult foldCopyOfCast(CopyOp op) {
   for (OpOperand &operand : op->getOpOperands()) {
     auto castOp = operand.get().getDefiningOp<memref::CastOp>();
     if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
@@ -865,7 +872,7 @@ LogicalResult CopyOp::fold(FoldAdaptor adaptor,
                            SmallVectorImpl<OpFoldResult> &results) {
 
   /// copy(memrefcast) -> copy
-  return FoldCopyOfCast(*this);
+  return foldCopyOfCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2504,11 +2511,77 @@ LogicalResult ExpandShapeOp::verify() {
   return success();
 }
 
+struct ExpandShapeOpMemRefCastFolder : public OpRewritePattern<ExpandShapeOp> {
+public:
+  using OpRewritePattern<ExpandShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExpandShapeOp op,
+                                PatternRewriter &rewriter) const override {
+    auto cast = op.getSrc().getDefiningOp<CastOp>();
+    if (!cast)
+      return failure();
+
+    if (!CastOp::canFoldIntoConsumerOp(cast))
+      return failure();
+
+    SmallVector<OpFoldResult> originalOutputShape = op.getMixedOutputShape();
+    SmallVector<OpFoldResult> newOutputShape = originalOutputShape;
+    SmallVector<int64_t> newOutputShapeSizes;
+
+    // Convert output shape dims from dynamic to static where possible.
+    for (auto [dimIdx, dimSize] : enumerate(originalOutputShape)) {
+      std::optional<int64_t> sizeOpt = getConstantIntValue(dimSize);
+      if (!sizeOpt.has_value()) {
+        newOutputShapeSizes.push_back(ShapedType::kDynamic);
+        continue;
+      }
+
+      newOutputShapeSizes.push_back(sizeOpt.value());
+      newOutputShape[dimIdx] = rewriter.getIndexAttr(sizeOpt.value());
+    }
+
+    Value castSource = cast.getSource();
+    auto castSourceType = llvm::cast<MemRefType>(castSource.getType());
+    SmallVector<ReassociationIndices> reassociationIndices =
+        op.getReassociationIndices();
+    for (auto [idx, group] : llvm::enumerate(reassociationIndices)) {
+      auto newOutputShapeSizesSlice =
+          ArrayRef(newOutputShapeSizes).slice(group.front(), group.size());
+      bool newOutputDynamic =
+          llvm::is_contained(newOutputShapeSizesSlice, ShapedType::kDynamic);
+      if (castSourceType.isDynamicDim(idx) != newOutputDynamic)
+        return rewriter.notifyMatchFailure(
+            op, "folding cast will result in changing dynamicity in "
+                "reassociation group");
+    }
+
+    FailureOr<MemRefType> newResultTypeOrFailure =
+        ExpandShapeOp::computeExpandedType(castSourceType, newOutputShapeSizes,
+                                           reassociationIndices);
+
+    if (failed(newResultTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "could not compute new expanded type after folding cast");
+
+    if (*newResultTypeOrFailure == op.getResultType()) {
+      rewriter.modifyOpInPlace(
+          op, [&]() { op.getSrcMutable().assign(castSource); });
+    } else {
+      Value newOp = ExpandShapeOp::create(rewriter, op->getLoc(),
+                                          *newResultTypeOrFailure, castSource,
+                                          reassociationIndices, newOutputShape);
+      rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newOp);
+    }
+    return success();
+  }
+};
+
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<
       ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
-      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(context);
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
+      ExpandShapeOpMemRefCastFolder>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
@@ -3675,7 +3748,8 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
   MemRefType sourceMemrefType = getSource().getType();
   MemRefType resultMemrefType = getResult().getType();
 
-  if (resultMemrefType == sourceMemrefType && resultMemrefType.hasStaticShape())
+  if (resultMemrefType == sourceMemrefType &&
+      resultMemrefType.hasStaticShape() && isZeroInteger(getByteShift()))
     return getViewSource();
 
   return {};
@@ -3684,7 +3758,7 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
 namespace {
 
 struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
-  using OpRewritePattern<ViewOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
@@ -3751,26 +3825,22 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
   }
 };
 
+/// view(memref.cast(%source)) -> view(%source).
 struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
-  using OpRewritePattern<ViewOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
-    Value memrefOperand = viewOp.getOperand(0);
-    CastOp memrefCastOp = memrefOperand.getDefiningOp<CastOp>();
+    auto memrefCastOp = viewOp.getSource().getDefiningOp<CastOp>();
     if (!memrefCastOp)
       return failure();
-    Value allocOperand = memrefCastOp.getOperand();
-    AllocOp allocOp = allocOperand.getDefiningOp<AllocOp>();
-    if (!allocOp)
-      return failure();
-    rewriter.replaceOpWithNewOp<ViewOp>(viewOp, viewOp.getType(), allocOperand,
-                                        viewOp.getByteShift(),
-                                        viewOp.getSizes());
+
+    rewriter.replaceOpWithNewOp<ViewOp>(
+        viewOp, viewOp.getType(), memrefCastOp.getSource(),
+        viewOp.getByteShift(), viewOp.getSizes());
     return success();
   }
 };
-
 } // namespace
 
 void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
