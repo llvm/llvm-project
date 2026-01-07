@@ -54,6 +54,7 @@ Clang-Tidy Checks
    :doc:`abseil-string-find-str-contains <abseil/string-find-str-contains>`, "Yes"
    :doc:`abseil-time-comparison <abseil/time-comparison>`, "Yes"
    :doc:`abseil-time-subtraction <abseil/time-subtraction>`, "Yes"
+   :doc:`abseil-unchecked-statusor-access <abseil/unchecked-statusor-access>`,
    :doc:`abseil-upgrade-duration-conversions <abseil/upgrade-duration-conversions>`, "Yes"
    :doc:`altera-id-dependent-backward-branch <altera/id-dependent-backward-branch>`,
    :doc:`altera-kernel-name-restriction <altera/kernel-name-restriction>`,
