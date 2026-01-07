@@ -4,6 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-tuning-fast-imm-vector-shift,+avx512f,+avx512bw | FileCheck %s --check-prefixes=CHECK,AVX512
 
 ;; Tests vXi8 constant-multiply decomposition into shift/add/sub sequences.
+;; Explicitly disable the `TuningFastImmVectorShift` flag to test that
+;; shift+add/sub is used for targets without fast shift support.
 ;;
 ;; Examples:
 ;;   6 = 2^2 + 2^1 = 4 + 2  (or 8 - 2)

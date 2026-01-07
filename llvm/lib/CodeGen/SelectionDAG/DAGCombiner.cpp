@@ -4836,36 +4836,13 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
   //           x * -0xf800 --> -((x << 16) - (x << 11)) ; (x << 11) - (x << 16)
   if (!UseVP && N1IsConst &&
       TLI.decomposeMulByConstant(*DAG.getContext(), VT, N1)) {
-    // First check if target has custom decomposition info
-    TargetLowering::MulByConstInfo Info =
-        TLI.getMulByConstInfo(VT, ConstValue1);
-    if (Info.IsDecomposable) {
-      // Emit custom decomposition based on target's info
-      SDValue Result;
-      if (Info.NumShifts == 1) {
-        // Single shift: result = N0 << Shift1
-        Result = DAG.getNode(ISD::SHL, DL, VT, N0,
-                             DAG.getConstant(Info.Shift1, DL, VT));
-      } else if (Info.NumShifts == 2) {
-        // Two shifts with add or sub
-        SDValue Shl1 = DAG.getNode(ISD::SHL, DL, VT, N0,
-                                   DAG.getConstant(Info.Shift1, DL, VT));
-        SDValue Shl2 = DAG.getNode(ISD::SHL, DL, VT, N0,
-                                   DAG.getConstant(Info.Shift2, DL, VT));
-        Result =
-            DAG.getNode(Info.IsSub ? ISD::SUB : ISD::ADD, DL, VT, Shl1, Shl2);
-      }
-      if (Info.Negate)
-        Result = DAG.getNegative(Result, DL, VT);
-      return Result;
-    }
-
     // TODO: We could handle more general decomposition of any constant by
     //       having the target set a limit on number of ops and making a
     //       callback to determine that sequence (similar to sqrt expansion).
     unsigned MathOp = ISD::DELETED_NODE;
     APInt MulC = ConstValue1.abs();
-    // The constant `2` should be treated as (2^0 + 1).
+    // Decompose 2^N ± 2^M as 2^(A+B) ± 2^B. The constant `2` should be
+    // treated as (2^0 + 1).
     unsigned TZeros = MulC == 2 ? 0 : MulC.countr_zero();
     MulC.lshrInPlace(TZeros);
     if ((MulC - 1).isPowerOf2())
