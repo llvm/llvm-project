@@ -16,87 +16,99 @@
                 <h2>{{#RecordType}}{{RecordType}} {{/RecordType}}{{Name}}</h2>
                 <ul>
                     {{#HasEnums}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Enums">Enums</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Enums}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Enums}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Enums">Enums</a>
+                            </summary>
+                            <ul>
+                                {{#Enums}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Enums}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasEnums}}
                     {{#HasRecords}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Classes">Inner Classes</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Records}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Records}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Classes">Inner Classes</a>
+                            </summary>
+                            <ul>
+                                {{#Records}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Records}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasRecords}}
                     {{#HasFunctions}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Functions">Functions</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Functions}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}}</a>
-                            </li>
-                            {{/Functions}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Functions">Functions</a>
+                            </summary>
+                            <ul>
+                                {{#Functions}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}}</a>
+                                </li>
+                                {{/Functions}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasFunctions}}
                     {{#HasNamespaces}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Namespaces">Namespaces</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Namespaces}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Namespaces}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+                            </summary>
+                            <ul>
+                                {{#Namespaces}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Namespaces}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasNamespaces}}
                     {{#HasConcepts}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Concepts">Concepts</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Concepts}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Concepts}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Concepts">Concepts</a>
+                            </summary>
+                            <ul>
+                                {{#Concepts}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Concepts}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasConcepts}}
                     {{#HasTypedefs}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Typedefs">Typedefs</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Typedefs}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Typedefs}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Typedefs">Typedefs</a>
+                            </summary>
+                            <ul>
+                                {{#Typedefs}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Typedefs}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasTypedefs}}
                 </ul>

@@ -421,8 +421,7 @@ body, html {
 }
 
 .sidebar ul li {
-    padding-right: 1rem;
-    padding-left: 2rem;
+    padding-left: 1rem;
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
 }
@@ -430,8 +429,7 @@ body, html {
 .sidebar-section {
     font-size:1.5rem;
     font-weight: bold;
-    margin-bottom: 1rem;
-    padding: 3rem;
+    padding-left: 1rem;
 }
 .sidebar-section a {
     color: var(--brand)
