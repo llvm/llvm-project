@@ -4837,12 +4837,203 @@ genACC(Fortran::lower::AbstractConverter &converter,
       atomicConstruct.u);
 }
 
+/// Generate acc.bounds for cache directive. Handles:
+/// - Single element: arr(i) or arr(5)
+/// - Full range: arr(lower:upper)
+/// - Missing upper: arr(lower:) - uses array's upper bound
+/// - Missing lower: arr(:upper) - uses array's lower bound
+static void
+genCacheBounds(Fortran::lower::AbstractConverter &converter,
+               Fortran::semantics::SemanticsContext &semanticsContext,
+               Fortran::lower::StatementContext &stmtCtx,
+               const Fortran::parser::AccObject &accObject,
+               std::stringstream &asFortran,
+               llvm::SmallVectorImpl<mlir::Value> &bounds) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type boundTy = builder.getType<mlir::acc::DataBoundsType>();
+
+  Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
+  Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+
+  std::optional<Fortran::evaluate::DataRef> dataRef;
+  Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
+      [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+  if (designator)
+    dataRef = Fortran::evaluate::ExtractDataRef(*designator);
+
+  if (!dataRef)
+    return;
+
+  auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef)
+    return;
+
+  const auto &subscripts = arrayRef->subscript();
+  int dimension = 0;
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(symbol);
+
+  for (const auto &subscript : subscripts) {
+    if (dimension != 0)
+      asFortran << ',';
+
+    mlir::Value lbound, extent;
+    mlir::Value arrayLb =
+        fir::factory::readLowerBound(builder, loc, dataExv, dimension, one);
+    mlir::Value arrayExtent =
+        fir::factory::readExtent(builder, loc, dataExv, dimension);
+
+    const auto *triplet = std::get_if<Fortran::evaluate::Triplet>(&subscript.u);
+
+    if (triplet) {
+      asFortran << ':';
+
+      // Compute lower bound (use array lb if not specified).
+      Fortran::semantics::MaybeExpr lowerSexpr =
+          Fortran::evaluate::AsGenericExpr(triplet->lower());
+      mlir::Value lb;
+      if (lowerSexpr) {
+        auto lowerConst = Fortran::evaluate::ToInt64(*lowerSexpr);
+        if (lowerConst) {
+          lb = builder.createIntegerConstant(loc, idxTy, *lowerConst);
+        } else {
+          lb = builder.createConvert(
+              loc, idxTy,
+              fir::getBase(converter.genExprValue(loc, *lowerSexpr, stmtCtx)));
+        }
+      } else {
+        lb = arrayLb;
+      }
+
+      // Compute upper bound (use array ub if not specified).
+      Fortran::semantics::MaybeExpr upperSexpr =
+          Fortran::evaluate::AsGenericExpr(triplet->upper());
+      mlir::Value ub;
+      if (upperSexpr) {
+        auto upperConst = Fortran::evaluate::ToInt64(*upperSexpr);
+        if (upperConst) {
+          ub = builder.createIntegerConstant(loc, idxTy, *upperConst);
+        } else {
+          ub = builder.createConvert(
+              loc, idxTy,
+              fir::getBase(converter.genExprValue(loc, *upperSexpr, stmtCtx)));
+        }
+      } else {
+        // arr(lower:) - upper is array's upper bound
+        ub = mlir::arith::AddIOp::create(
+            builder, loc,
+            mlir::arith::SubIOp::create(builder, loc, arrayLb, one),
+            arrayExtent);
+      }
+
+      // Normalize to zero-based and compute extent.
+      lbound = mlir::arith::SubIOp::create(builder, loc, lb, arrayLb);
+      mlir::Value ubound =
+          mlir::arith::SubIOp::create(builder, loc, ub, arrayLb);
+      extent = mlir::arith::AddIOp::create(
+          builder, loc,
+          mlir::arith::SubIOp::create(builder, loc, ubound, lbound), one);
+    } else {
+      // Single element: arr(elem)
+      using IndirectSubscriptIntegerExpr =
+          Fortran::evaluate::IndirectSubscriptIntegerExpr;
+      using SubscriptInteger = Fortran::evaluate::SubscriptInteger;
+      Fortran::evaluate::Expr<SubscriptInteger> scalarExpr =
+          std::get<IndirectSubscriptIntegerExpr>(subscript.u).value();
+      auto elemConst = Fortran::evaluate::ToInt64(scalarExpr);
+
+      mlir::Value elem;
+      if (elemConst) {
+        elem = builder.createIntegerConstant(loc, idxTy, *elemConst);
+      } else {
+        Fortran::semantics::SomeExpr sexpr =
+            Fortran::evaluate::AsGenericExpr(std::move(scalarExpr));
+        elem = builder.createConvert(
+            loc, idxTy,
+            fir::getBase(converter.genExprValue(loc, sexpr, stmtCtx)));
+      }
+
+      lbound = mlir::arith::SubIOp::create(builder, loc, elem, arrayLb);
+      extent = one;
+    }
+
+    mlir::Value bound = mlir::acc::DataBoundsOp::create(
+        builder, loc, boundTy, lbound, /*upperbound=*/mlir::Value{}, extent,
+        /*stride=*/one, /*strideInBytes=*/false, arrayLb);
+    bounds.push_back(bound);
+    ++dimension;
+  }
+}
+
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
        const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-  mlir::Location loc = converter.genLocation(cacheConstruct.source);
-  TODO(loc, "OpenACC cache directive");
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Find enclosing acc.loop
+  auto loopOp = builder.getRegion().getParentOfType<mlir::acc::LoopOp>();
+  if (!loopOp)
+    return;
+
+  // Set insertion point before terminator (after loop variable setup)
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  mlir::Block &loopBody = loopOp.getRegion().front();
+  builder.setInsertionPoint(loopBody.getTerminator());
+
+  const auto &objectListWithModifier =
+      std::get<Fortran::parser::AccObjectListWithModifier>(cacheConstruct.t);
+  const auto &accObjectList =
+      std::get<Fortran::parser::AccObjectList>(objectListWithModifier.t);
+  const auto &modifier =
+      std::get<std::optional<Fortran::parser::AccDataModifier>>(
+          objectListWithModifier.t);
+  mlir::acc::DataClause dataClause =
+      (modifier &&
+       (*modifier).v == Fortran::parser::AccDataModifier::Modifier::ReadOnly)
+          ? mlir::acc::DataClause::acc_cache_readonly
+          : mlir::acc::DataClause::acc_cache;
+
+  Fortran::lower::StatementContext stmtCtx;
+
+  for (const auto &accObject : accObjectList.v) {
+    mlir::Location operandLocation = genOperandLocation(converter, accObject);
+    Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+
+    std::stringstream asFortran;
+    asFortran << symbol.name().ToString();
+
+    fir::factory::AddrAndBoundsInfo info = getDataOperandBaseAddr(
+        converter, builder, symbol, operandLocation, /*unwrapFirBox=*/true);
+    mlir::Value baseAddr = info.addr;
+
+    llvm::SmallVector<mlir::Value> bounds;
+    genCacheBounds(converter, semanticsContext, stmtCtx, accObject, asFortran,
+                   bounds);
+
+    mlir::acc::CacheOp cacheOp = createDataEntryOp<mlir::acc::CacheOp>(
+        builder, operandLocation, baseAddr, asFortran, bounds,
+        /*structured=*/false, /*implicit=*/false, dataClause,
+        baseAddr.getType(),
+        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
+        /*unwrapBoxAddr=*/true, /*isPresent=*/mlir::Value{});
+
+    // Update symbol map so future lowering uses the cache result
+    Fortran::lower::SymMap &symbolMap = converter.getSymbolMap();
+    if (auto hostDef = symbolMap.lookupVariableDefinition(symbol)) {
+      // Clone the host declare with cache result as input
+      // The first operand is the memref/base for both hlfir::DeclareOp and
+      // fir::DeclareOp
+      mlir::Operation *hostDefOp = (*hostDef).getOperation();
+      mlir::IRMapping mapper;
+      mapper.map(hostDefOp->getOperand(0), cacheOp.getAccVar());
+      mlir::Operation *newDef = builder.clone(*hostDefOp, mapper);
+      symbolMap.addVariableDefinition(
+          symbol, llvm::cast<fir::FortranVariableOpInterface>(newDef));
+    }
+  }
 }
 
 mlir::Value Fortran::lower::genOpenACCConstruct(

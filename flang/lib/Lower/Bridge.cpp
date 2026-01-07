@@ -3506,7 +3506,14 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    localSymbols.pushScope();
+
+    // Cache constructs should not push/pop a scope because they need to update
+    // the symbol map for subsequent statements in the same loop body.
+    bool isCacheConstruct =
+        std::holds_alternative<Fortran::parser::OpenACCCacheConstruct>(acc.u);
+
+    if (!isCacheConstruct)
+      localSymbols.pushScope();
     mlir::Value exitCond = genOpenACCConstruct(
         *this, bridge.getSemanticsContext(), getEval(), acc, localSymbols);
 
@@ -3605,7 +3612,8 @@ private:
       for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
         genFIR(e);
     }
-    localSymbols.popScope();
+    if (!isCacheConstruct)
+      localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
 
     if (accLoop && exitCond) {
