@@ -2001,6 +2001,15 @@ namespace {
           FoundDecl = true;
       } else if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(E->getDecl());
                  MD && isLambdaCallOperator(MD)) {
+        // FIXME: This has limitations handling updates to the loop control
+        // variable that occur indirectly inside a lambda called from the loop
+        // body. For example:
+        //
+        //   int a = 0;
+        //   int *c = &a;
+        //   auto incr_c = [c]() { ++*c; };
+        //   for (a = 10; a <= 20; incr_c())
+        //     foo(a);
         for (const auto &Capture : MD->getParent()->captures()) {
           if (!Capture.capturesVariable())
             continue;
