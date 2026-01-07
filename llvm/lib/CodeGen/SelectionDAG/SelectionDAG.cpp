@@ -12384,7 +12384,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
       const SDValue &ToOp = To[Use.getResNo()];
       ++UI;
       Use.set(ToOp);
-      if (ToOp.getValueType() != MVT::Other)
+      if (ToOp.getValueType() != MVT::Other && ToOp.getValueType() != MVT::Glue)
         To_IsDivergent |= ToOp->isDivergent();
     } while (UI != UE && UI->getUser() == User);
 
