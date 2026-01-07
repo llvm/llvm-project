@@ -67,87 +67,87 @@ entry:
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[NumWorkgroups]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 0
   %spv.num.workgroups = call i64 @llvm.spv.num.workgroups.i64(i32 0)
-  store i64 %spv.num.workgroups, i64* @G_spv_num_workgroups_0
+  store i64 %spv.num.workgroups, ptr @G_spv_num_workgroups_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[NumWorkgroups]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 1
   %spv.num.workgroups1 = call i64 @llvm.spv.num.workgroups.i64(i32 1)
-  store i64 %spv.num.workgroups1, i64* @G_spv_num_workgroups_1
+  store i64 %spv.num.workgroups1, ptr @G_spv_num_workgroups_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[NumWorkgroups]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 2
   %spv.num.workgroups2 = call i64 @llvm.spv.num.workgroups.i64(i32 2)
-  store i64 %spv.num.workgroups2, i64* @G_spv_num_workgroups_2
+  store i64 %spv.num.workgroups2, ptr @G_spv_num_workgroups_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[WorkgroupSize]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 0
   %spv.workgroup.size = call i64 @llvm.spv.workgroup.size.i64(i32 0)
-  store i64 %spv.workgroup.size, i64* @G_spv_workgroup_size_0
+  store i64 %spv.workgroup.size, ptr @G_spv_workgroup_size_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[WorkgroupSize]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 1
   %spv.workgroup.size3 = call i64 @llvm.spv.workgroup.size.i64(i32 1)
-  store i64 %spv.workgroup.size3, i64* @G_spv_workgroup_size_1
+  store i64 %spv.workgroup.size3, ptr @G_spv_workgroup_size_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[WorkgroupSize]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 2
   %spv.workgroup.size4 = call i64 @llvm.spv.workgroup.size.i64(i32 2)
-  store i64 %spv.workgroup.size4, i64* @G_spv_workgroup_size_2
+  store i64 %spv.workgroup.size4, ptr @G_spv_workgroup_size_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[WorkgroupId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 0
   %spv.group.id = call i64 @llvm.spv.group.id.i64(i32 0)
-  store i64 %spv.group.id, i64* @G_spv_group_id_0
+  store i64 %spv.group.id, ptr @G_spv_group_id_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[WorkgroupId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 1
   %spv.group.id5 = call i64 @llvm.spv.group.id.i64(i32 1)
-  store i64 %spv.group.id5, i64* @G_spv_group_id_1
+  store i64 %spv.group.id5, ptr @G_spv_group_id_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[WorkgroupId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 2
   %spv.group.id6 = call i64 @llvm.spv.group.id.i64(i32 2)
-  store i64 %spv.group.id6, i64* @G_spv_group_id_2
+  store i64 %spv.group.id6, ptr @G_spv_group_id_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[LocalInvocationId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 0
   %spv.thread.id.in.group = call i64 @llvm.spv.thread.id.in.group.i64(i32 0)
-  store i64 %spv.thread.id.in.group, i64* @G_spv_thread_id_in_group_0
+  store i64 %spv.thread.id.in.group, ptr @G_spv_thread_id_in_group_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[LocalInvocationId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 1
   %spv.thread.id.in.group7 = call i64 @llvm.spv.thread.id.in.group.i64(i32 1)
-  store i64 %spv.thread.id.in.group7, i64* @G_spv_thread_id_in_group_1
+  store i64 %spv.thread.id.in.group7, ptr @G_spv_thread_id_in_group_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[LocalInvocationId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 2
   %spv.thread.id.in.group8 = call i64 @llvm.spv.thread.id.in.group.i64(i32 2)
-  store i64 %spv.thread.id.in.group8, i64* @G_spv_thread_id_in_group_2
+  store i64 %spv.thread.id.in.group8, ptr @G_spv_thread_id_in_group_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalInvocationId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 0
   %spv.thread.id = call i64 @llvm.spv.thread.id.i64(i32 0)
-  store i64 %spv.thread.id, i64* @G_spv_thread_id_0
+  store i64 %spv.thread.id, ptr @G_spv_thread_id_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalInvocationId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 1
   %spv.thread.id9 = call i64 @llvm.spv.thread.id.i64(i32 1)
-  store i64 %spv.thread.id9, i64* @G_spv_thread_id_1
+  store i64 %spv.thread.id9, ptr @G_spv_thread_id_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalInvocationId]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 2
   %spv.thread.id10 = call i64 @llvm.spv.thread.id.i64(i32 2)
-  store i64 %spv.thread.id10, i64* @G_spv_thread_id_2
+  store i64 %spv.thread.id10, ptr @G_spv_thread_id_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalSize]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 0
   %spv.num.workgroups11 = call i64 @llvm.spv.global.size.i64(i32 0)
-  store i64 %spv.num.workgroups11, i64* @G_spv_global_size_0
+  store i64 %spv.num.workgroups11, ptr @G_spv_global_size_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalSize]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 1
   %spv.num.workgroups12 = call i64 @llvm.spv.global.size.i64(i32 1)
-  store i64 %spv.num.workgroups12, i64* @G_spv_global_size_1
+  store i64 %spv.num.workgroups12, ptr @G_spv_global_size_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalSize]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 2
   %spv.num.workgroups13 = call i64 @llvm.spv.global.size.i64(i32 2)
-  store i64 %spv.num.workgroups13, i64* @G_spv_global_size_2
+  store i64 %spv.num.workgroups13, ptr @G_spv_global_size_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalOffset]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 0
   %spv.global.offset = call i64 @llvm.spv.global.offset.i64(i32 0)
-  store i64 %spv.global.offset, i64* @G_spv_global_offset_0
+  store i64 %spv.global.offset, ptr @G_spv_global_offset_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalOffset]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 1
   %spv.global.offset14 = call i64 @llvm.spv.global.offset.i64(i32 1)
-  store i64 %spv.global.offset14, i64* @G_spv_global_offset_1
+  store i64 %spv.global.offset14, ptr @G_spv_global_offset_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I64V3]] [[GlobalOffset]]
 ; CHECK: OpCompositeExtract [[I64]] [[LD]] 2
   %spv.global.offset15 = call i64 @llvm.spv.global.offset.i64(i32 2)
-  store i64 %spv.global.offset15, i64* @G_spv_global_offset_2
+  store i64 %spv.global.offset15, ptr @G_spv_global_offset_2
 ; CHECK: OpLoad %5 [[SubgroupSize]]
   %0 = call i32 @llvm.spv.subgroup.size()
   store i32 %0, ptr %ssize, align 4

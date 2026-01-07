@@ -32,7 +32,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -1285,13 +1284,6 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
-      if (F->arg_size() == 7 &&
-          F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8) {
-        // Legacy wmma iu8 intrinsic without the optional clamp operand.
-        NewFn = nullptr;
-        return true;
-      }
-
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
           Name.consume_front("flat.atomic.")) {
         if (Name.starts_with("fadd") ||
@@ -1372,7 +1364,6 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
               .StartsWith("extract.last.active.", Intrinsic::not_intrinsic)
               .StartsWith("extract.", Intrinsic::vector_extract)
               .StartsWith("insert.", Intrinsic::vector_insert)
-              .StartsWith("splice.", Intrinsic::vector_splice)
               .StartsWith("reverse.", Intrinsic::vector_reverse)
               .StartsWith("interleave2.", Intrinsic::vector_interleave2)
               .StartsWith("deinterleave2.", Intrinsic::vector_deinterleave2)
@@ -1435,6 +1426,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         }
         break; // No other 'expermental.vector.reduce.*'.
       }
+
+      if (Name.consume_front("splice"))
+        return true;
       break; // No other 'experimental.vector.*'.
     }
     if (Name.consume_front("experimental.stepvector.")) {
@@ -1740,6 +1734,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       NewFn = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::var_annotation,
           {{F->arg_begin()->getType(), F->getArg(1)->getType()}});
+      return true;
+    }
+    if (Name.consume_front("vector.splice")) {
+      if (Name.starts_with(".left") || Name.starts_with(".right"))
+        break;
       return true;
     }
     break;
@@ -4621,30 +4620,6 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 //
 static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
                                          Function *F, IRBuilder<> &Builder) {
-  if (CI->arg_size() == 7 &&
-      F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8) {
-    // Legacy WMMA IU8 intrinsic lacked the optional clamp operand. Append
-    // clamp=false for compatibility.
-
-    SmallVector<Value *, 8> Args(CI->args().begin(), CI->args().end());
-    Args.push_back(Builder.getFalse());
-
-    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), Intrinsic::amdgcn_wmma_i32_16x16x64_iu8,
-        {CI->getArgOperand(4)->getType(), CI->getArgOperand(1)->getType()});
-
-    SmallVector<OperandBundleDef, 1> Bundles;
-    CI->getOperandBundlesAsDefs(Bundles);
-
-    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
-    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
-    NewCall->setCallingConv(CI->getCallingConv());
-    NewCall->setAttributes(CI->getAttributes());
-    NewCall->setDebugLoc(CI->getDebugLoc());
-    NewCall->copyMetadata(*CI);
-    return NewCall;
-  }
-
   AtomicRMWInst::BinOp RMWOp =
       StringSwitch<AtomicRMWInst::BinOp>(Name)
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
@@ -4816,6 +4791,19 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
   CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
 }
 
+static Value *upgradeVectorSplice(CallBase *CI, IRBuilder<> &Builder) {
+  auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+  if (!Offset)
+    reportFatalUsageError("Invalid llvm.vector.splice offset argument");
+  int64_t OffsetVal = Offset->getSExtValue();
+  return Builder.CreateIntrinsic(OffsetVal >= 0
+                                     ? Intrinsic::vector_splice_left
+                                     : Intrinsic::vector_splice_right,
+                                 CI->getType(),
+                                 {CI->getArgOperand(0), CI->getArgOperand(1),
+                                  Builder.getInt32(std::abs(OffsetVal))});
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -4843,6 +4831,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
+    bool IsOldSplice =
+        (Name.consume_front("experimental.vector.splice") ||
+         Name.consume_front("vector.splice")) &&
+        !(Name.starts_with(".left") || Name.starts_with(".right"));
     Value *Rep = nullptr;
 
     if (!IsX86 && Name == "stackprotectorcheck") {
@@ -4859,6 +4851,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else if (IsDbg) {
       upgradeDbgIntrinsicToDbgRecord(Name, CI);
+    } else if (IsOldSplice) {
+      Rep = upgradeVectorSplice(CI, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }

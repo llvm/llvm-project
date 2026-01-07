@@ -1133,7 +1133,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                                                   std::move(PCHContainerOps));
 
   // Clean up on error, disengage it if the function returns successfully.
-  auto CleanOnError = llvm::make_scope_exit([&]() {
+  llvm::scope_exit CleanOnError([&]() {
     // Remove the overridden buffer we used for the preamble.
     SavedMainFileBuffer = nullptr;
 
@@ -1431,6 +1431,7 @@ void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
   if (CI.hasTarget())
     Target = CI.getTargetPtr();
   Reader = CI.getASTReader();
+  ModCache = CI.getModuleCachePtr();
   HadModuleLoaderFatalFailure = CI.hadModuleLoaderFatalFailure();
   if (Invocation != CI.getInvocationPtr()) {
     // This happens when Parse creates a copy of \c Invocation to modify.
@@ -2218,7 +2219,7 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
+  std::shared_ptr<ModuleCache> ModCache = createCrossProcessModuleCache();
   ASTWriter Writer(Stream, Buffer, *ModCache, *CodeGenOpts, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }

@@ -276,6 +276,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v16i64, MVT::v16i32, Expand);
 
   setOperationAction(ISD::GlobalAddress, {MVT::i32, MVT::i64}, Custom);
+  setOperationAction(ISD::ExternalSymbol, {MVT::i32, MVT::i64}, Custom);
 
   setOperationAction(ISD::SELECT, MVT::i1, Promote);
   setOperationAction(ISD::SELECT, MVT::i64, Custom);
@@ -6836,6 +6837,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     return LowerGlobalAddress(MFI, Op, DAG);
   }
+  case ISD::ExternalSymbol:
+    return LowerExternalSymbol(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
@@ -7363,6 +7366,84 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
   SDValue UnrolledLaneOp = unrollLaneOp(LaneOp.getNode());
   return DAG.getBitcast(VT, UnrolledLaneOp);
+}
+
+static SDValue lowerWaveShuffle(const SITargetLowering &TLI, SDNode *N,
+                                SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+
+  if (VT.getSizeInBits() != 32)
+    return SDValue();
+
+  SDLoc SL(N);
+
+  SDValue Value = N->getOperand(1);
+  SDValue Index = N->getOperand(2);
+
+  // ds_bpermute requires index to be multiplied by 4
+  SDValue ShiftAmount = DAG.getShiftAmountConstant(2, MVT::i32, SL);
+  SDValue ShiftedIndex =
+      DAG.getNode(ISD::SHL, SL, Index.getValueType(), Index, ShiftAmount);
+
+  // Intrinsics will require i32 to operate on
+  SDValue ValueI32 = DAG.getBitcast(MVT::i32, Value);
+
+  auto MakeIntrinsic = [&DAG, &SL](unsigned IID, MVT RetVT,
+                                   SmallVector<SDValue> IntrinArgs) -> SDValue {
+    SmallVector<SDValue> Operands(1);
+    Operands[0] = DAG.getTargetConstant(IID, SL, MVT::i32);
+    Operands.append(IntrinArgs);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, RetVT, Operands);
+  };
+
+  // If we can bpermute across the whole wave, then just do that
+  if (TLI.getSubtarget()->supportsWaveWideBPermute()) {
+    SDValue BPermute = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute, MVT::i32,
+                                     {ShiftedIndex, ValueI32});
+    return DAG.getBitcast(VT, BPermute);
+  }
+
+  assert(TLI.getSubtarget()->isWave64());
+
+  // Otherwise, we need to make use of whole wave mode
+  SDValue PoisonVal = DAG.getPOISON(ValueI32->getValueType(0));
+
+  // Set inactive lanes to poison
+  SDValue WWMValue = MakeIntrinsic(Intrinsic::amdgcn_set_inactive, MVT::i32,
+                                   {ValueI32, PoisonVal});
+  SDValue WWMIndex = MakeIntrinsic(Intrinsic::amdgcn_set_inactive, MVT::i32,
+                                   {ShiftedIndex, PoisonVal});
+
+  SDValue Swapped =
+      MakeIntrinsic(Intrinsic::amdgcn_permlane64, MVT::i32, {WWMValue});
+
+  // Get permutation of each half, then we'll select which one to use
+  SDValue BPermSameHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute, MVT::i32,
+                                        {WWMIndex, WWMValue});
+  SDValue BPermOtherHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
+                                         MVT::i32, {WWMIndex, Swapped});
+  SDValue BPermOtherHalfWWM =
+      MakeIntrinsic(Intrinsic::amdgcn_wwm, MVT::i32, {BPermOtherHalf});
+
+  // Select which side to take the permute from
+  SDValue ThreadIDMask = DAG.getAllOnesConstant(SL, MVT::i32);
+  // We can get away with only using mbcnt_lo here since we're only
+  // trying to detect which side of 32 each lane is on, and mbcnt_lo
+  // returns 32 for lanes 32-63.
+  SDValue ThreadID =
+      MakeIntrinsic(Intrinsic::amdgcn_mbcnt_lo, MVT::i32,
+                    {ThreadIDMask, DAG.getTargetConstant(0, SL, MVT::i32)});
+
+  SDValue SameOrOtherHalf =
+      DAG.getNode(ISD::AND, SL, MVT::i32,
+                  DAG.getNode(ISD::XOR, SL, MVT::i32, ThreadID, Index),
+                  DAG.getTargetConstant(32, SL, MVT::i32));
+  SDValue UseSameHalf =
+      DAG.getSetCC(SL, MVT::i1, SameOrOtherHalf,
+                   DAG.getConstant(0, SL, MVT::i32), ISD::SETEQ);
+  SDValue Result = DAG.getSelect(SL, MVT::i32, UseSameHalf, BPermSameHalf,
+                                 BPermOtherHalfWWM);
+  return DAG.getBitcast(VT, Result);
 }
 
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
@@ -9019,6 +9100,15 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                          MachineMemOperand::MOInvariant);
 }
 
+SDValue SITargetLowering::LowerExternalSymbol(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  // TODO: Handle this. It should be mostly the same as LowerGlobalAddress.
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn, "unsupported external symbol", Op.getDebugLoc()));
+  return DAG.getPOISON(Op.getValueType());
+}
+
 SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain,
                                    const SDLoc &DL, SDValue V) const {
   // We can't use S_MOV_B32 directly, because there is no way to specify m0 as
@@ -10274,6 +10364,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       Poisons.push_back(DAG.getPOISON(ValTy));
     return DAG.getMergeValues(Poisons, SDLoc(Op));
   }
+  case Intrinsic::amdgcn_wave_shuffle:
+    return lowerWaveShuffle(*this, Op.getNode(), DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))

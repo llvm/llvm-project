@@ -1481,8 +1481,11 @@ WRAPPER_CLASS(ContiguousStmt, std::list<ObjectName>);
 // R846 int-constant-subobject -> constant-subobject
 using ConstantSubobject = Constant<common::Indirection<Designator>>;
 
-// Represents an analyzed expression
+// Represent an analyzed expression
 using TypedExpr = common::ForwardOwningPointer<evaluate::GenericExprWrapper>;
+using TypedCall = common::ForwardOwningPointer<evaluate::ProcedureRef>;
+using TypedAssignment =
+    common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
 
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
@@ -2025,8 +2028,6 @@ struct DeallocateStmt {
 // R1032 assignment-stmt -> variable = expr
 struct AssignmentStmt {
   TUPLE_CLASS_BOILERPLATE(AssignmentStmt);
-  using TypedAssignment =
-      common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
   mutable TypedAssignment typedAssignment;
   std::tuple<Variable, Expr> t;
 };
@@ -2053,7 +2054,7 @@ struct PointerAssignmentStmt {
     std::variant<std::list<BoundsRemapping>, std::list<BoundsSpec>> u;
   };
   TUPLE_CLASS_BOILERPLATE(PointerAssignmentStmt);
-  mutable AssignmentStmt::TypedAssignment typedAssignment;
+  mutable TypedAssignment typedAssignment;
   std::tuple<DataRef, Bounds, Expr> t;
 };
 
@@ -2748,7 +2749,8 @@ struct IoControlSpec {
   WRAPPER_CLASS(Rec, ScalarIntExpr);
   WRAPPER_CLASS(Size, ScalarIntVariable);
   std::variant<IoUnit, Format, Name, CharExpr, Asynchronous, EndLabel, EorLabel,
-      ErrLabel, IdVariable, MsgVariable, StatVariable, Pos, Rec, Size>
+      ErrLabel, IdVariable, MsgVariable, StatVariable, Pos, Rec, Size,
+      ErrorRecovery>
       u;
 };
 
@@ -3298,8 +3300,7 @@ struct CallStmt {
   Call call;
   std::optional<Chevrons> chevrons;
   CharBlock source;
-  mutable common::ForwardOwningPointer<evaluate::ProcedureRef>
-      typedCall; // filled by semantics
+  mutable TypedCall typedCall; // filled by semantics
 };
 
 // R1529 function-subprogram ->
@@ -3968,6 +3969,18 @@ struct OmpDeleteModifier {
 struct OmpDependenceType {
   ENUM_CLASS(Value, Sink, Source);
   WRAPPER_CLASS_BOILERPLATE(OmpDependenceType, Value);
+};
+
+// Ref: [6.0:180-181]
+//
+// depinfo-modifier ->                              // since 6.0
+//    keyword (locator-list-item)
+// keyword ->
+//    IN | INOUT | INOUTSET | MUTEXINOUTSET | OUT   // since 6.0
+struct OmpDepinfoModifier {
+  using Value = common::OmpDependenceKind;
+  TUPLE_CLASS_BOILERPLATE(OmpDepinfoModifier);
+  std::tuple<Value, OmpObject> t;
 };
 
 // Ref: [5.0:170-176], [5.1:197-205], [5.2:276-277]
@@ -4670,6 +4683,19 @@ struct OmpIfClause {
   std::tuple<MODIFIERS(), ScalarLogicalExpr> t;
 };
 
+// Ref: [5.1:217-220], [5.2:293-294], [6.0:180-181]
+//
+// init-clause ->
+//    INIT ([modifier... :] interop-var)            // since 5.1
+// modifier ->
+//    prefer-type | interop-type |                  // since 5.1
+//    depinfo-modifier                              // since 6.0
+struct OmpInitClause {
+  TUPLE_CLASS_BOILERPLATE(OmpInitClause);
+  MODIFIER_BOILERPLATE(OmpPreferType, OmpInteropType, OmpDepinfoModifier);
+  std::tuple<MODIFIERS(), OmpObject> t;
+};
+
 // Ref: [5.0:170-176], [5.1:197-205], [5.2:138-139]
 //
 // in-reduction-clause ->
@@ -5013,20 +5039,6 @@ struct OmpWhenClause {
       t;
 };
 
-// REF: [5.1:217-220], [5.2:293-294]
-//
-// init-clause -> INIT ([interop-modifier,] [interop-type,]
-//                              interop-type: interop-var)
-// interop-modifier: prefer_type(preference-list)
-// interop-type: target, targetsync
-// interop-var: Ompobject
-// There can be at most only two interop-type.
-struct OmpInitClause {
-  TUPLE_CLASS_BOILERPLATE(OmpInitClause);
-  MODIFIER_BOILERPLATE(OmpPreferType, OmpInteropType);
-  std::tuple<MODIFIERS(), OmpObject> t;
-};
-
 // REF: [5.1:217-220], [5.2:294]
 //
 // 14.1.3 use-clause -> USE (interop-var)
@@ -5339,7 +5351,7 @@ struct OpenMPAtomicConstruct : public OmpBlockConstruct {
 
     struct Op {
       int what;
-      AssignmentStmt::TypedAssignment assign;
+      TypedAssignment assign;
     };
     TypedExpr atom, cond;
     Op op0, op1;

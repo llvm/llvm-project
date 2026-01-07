@@ -94,10 +94,10 @@ def testAttrIsInstance():
     with Context():
         a1 = Attribute.parse("42")
         a2 = Attribute.parse("[42]")
-        assert IntegerAttr.isinstance(a1)
-        assert not IntegerAttr.isinstance(a2)
-        assert not ArrayAttr.isinstance(a1)
-        assert ArrayAttr.isinstance(a2)
+        assert isinstance(a1, IntegerAttr)
+        assert not isinstance(a2, IntegerAttr)
+        assert not isinstance(a1, ArrayAttr)
+        assert isinstance(a2, ArrayAttr)
 
 
 # CHECK-LABEL: TEST: testAttrEqDoesNotRaise
