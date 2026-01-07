@@ -1,4 +1,3 @@
-!UNSUPPORTED: system-darwin
 !RUN: %python %S/test_errors.py %s %flang_fc1
 use, intrinsic :: iso_c_binding
 interface c_funloc
