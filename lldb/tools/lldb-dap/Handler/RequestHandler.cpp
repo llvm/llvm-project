@@ -107,7 +107,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
     return comm_file_or_err.takeError();
   FifoFile &comm_file = *comm_file_or_err.get();
 
-  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
+  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file);
 
   lldb::pid_t debugger_pid = LLDB_INVALID_PROCESS_ID;
 #if !defined(_WIN32)
@@ -120,7 +120,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
-
+  comm_file.Connect(); // we need to wait for the client to connect to the pipe.
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
   else

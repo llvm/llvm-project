@@ -71,6 +71,9 @@
 #include <io.h>
 typedef int socklen_t;
 #include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
+#include "lldb/Host/windows/ProcessLauncherWindows.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Program.h"
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -179,6 +182,22 @@ static llvm::Error LaunchClient(const llvm::opt::InputArgList &args) {
   return ClientLauncher::GetLauncher(*client)->Launch(launch_args);
 }
 
+llvm::Error
+notifyError(RunInTerminalLauncherCommChannel &comm_channel, std::string message,
+            std::optional<std::error_code> error_code = std::nullopt) {
+  comm_channel.NotifyError(message);
+
+  std::error_code ec = error_code.value_or(
+#ifdef _WIN32
+      std::error_code(GetLastError(), std::system_category())
+#else
+      llvm::inconvertibleErrorCode()
+#endif
+  );
+
+  return llvm::createStringError(ec, std::move(message));
+}
+
 #if not defined(_WIN32)
 struct FDGroup {
   int GetFlags() const {
@@ -271,10 +290,10 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
                                              lldb::pid_t debugger_pid,
                                              llvm::StringRef stdio,
                                              char *argv[]) {
-#if defined(_WIN32)
-  return llvm::createStringError(
-      "runInTerminal is only supported on POSIX systems");
-#else
+  // This env var should be used only for tests.
+  const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
+  int timeout_in_ms =
+      timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
 
   // On Linux with the Yama security module enabled, a process can only attach
   // to its descendants by default. In the runInTerminal case the target
@@ -285,6 +304,94 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 #endif
 
   lldb_private::FileSystem::Initialize();
+
+#ifdef _WIN32
+  RunInTerminalLauncherCommChannel comm_channel(comm_file);
+
+  auto wcommandLineOrErr =
+      lldb_private::GetFlattenedWindowsCommandStringW(argv);
+  if (!wcommandLineOrErr)
+    return notifyError(comm_channel, "Failed to process arguments");
+
+  STARTUPINFOEXW startupinfoex = {};
+  startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
+  startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+  HANDLE stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
+  HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  HANDLE stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
+  llvm::scope_exit close_handles([&] {
+    if (stdin_handle)
+      ::CloseHandle(stdin_handle);
+    if (stdout_handle)
+      ::CloseHandle(stdout_handle);
+    if (stderr_handle)
+      ::CloseHandle(stderr_handle);
+  });
+
+  auto attributelist_cleanup_or_err =
+      lldb_private::SetupProcThreadAttributeList(startupinfoex);
+  if (!attributelist_cleanup_or_err) {
+    return notifyError(comm_channel, "Could not open inherited handles",
+                       attributelist_cleanup_or_err.getError());
+  }
+  auto attributelist_cleanup = std::move(*attributelist_cleanup_or_err);
+
+  if (!stdio.empty()) {
+    llvm::SmallVector<llvm::StringRef, 3> files;
+    stdio.split(files, ':');
+    while (files.size() < 3)
+      files.push_back(files.back());
+
+    stdin_handle = lldb_private::ProcessLauncherWindows::GetStdioHandle(
+        files[0], STDIN_FILENO);
+    stdout_handle = lldb_private::ProcessLauncherWindows::GetStdioHandle(
+        files[1], STDOUT_FILENO);
+    stderr_handle = lldb_private::ProcessLauncherWindows::GetStdioHandle(
+        files[2], STDERR_FILENO);
+  }
+  auto inherited_handles_or_err =
+      lldb_private::ProcessLauncherWindows::GetInheritedHandles(
+          startupinfoex, /*launch_info*=*/nullptr, stdout_handle, stderr_handle,
+          stdin_handle);
+
+  if (!inherited_handles_or_err)
+    return notifyError(comm_channel, "Failed to get inherited handles",
+                       inherited_handles_or_err.getError());
+  std::vector<HANDLE> inherited_handles = std::move(*inherited_handles_or_err);
+
+  PROCESS_INFORMATION pi = {};
+
+  // Start the process in a suspended state, while we attach the debugger.
+  BOOL result = CreateProcessW(
+      /*lpApplicationName=*/NULL, /*lpCommandLine=*/&(*wcommandLineOrErr)[0],
+      /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
+      /*bInheritHandles=*/!inherited_handles.empty(),
+      /*dwCreationFlags=*/CREATE_SUSPENDED, /*lpEnvironment=*/NULL,
+      /*lpCurrentDirectory=*/NULL,
+      /*lpStartupInfo=*/reinterpret_cast<STARTUPINFOW *>(&startupinfoex),
+      /*lpProcessInformation=*/&pi);
+
+  if (!result)
+    return notifyError(comm_channel, "Failed to launch target process");
+
+  // Notify the pid of the process to debug to the debugger. It will attach to
+  // the newly created process.
+  if (llvm::Error err = comm_channel.NotifyPid(pi.dwProcessId))
+    return err;
+
+  if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
+          std::chrono::milliseconds(timeout_in_ms)))
+    return err;
+
+  // The debugger attached to the process. We can resume it.
+  if (!ResumeThread(pi.hThread))
+    return notifyError(comm_channel, "Failed to resume the target process");
+
+  // Wait for child to complete to match POSIX behavior.
+  WaitForSingleObject(pi.hProcess, INFINITE);
+  ExitProcess(0); // TODO: Should we return the exit code of the process?
+#else
   if (!stdio.empty()) {
     constexpr size_t num_of_stdio = 3;
     llvm::SmallVector<llvm::StringRef, num_of_stdio> stdio_files;
@@ -310,10 +417,6 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   // We will wait to be attached with a timeout. We don't wait indefinitely
   // using a signal to prevent being paused forever.
 
-  // This env var should be used only for tests.
-  const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
-  int timeout_in_ms =
-      timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
   if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
           std::chrono::milliseconds(timeout_in_ms))) {
     return err;
@@ -322,10 +425,7 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   const char *target = target_arg.getValue();
   execvp(target, argv);
 
-  std::string error = std::strerror(errno);
-  comm_channel.NotifyError(error);
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 std::move(error));
+  return notifyError(comm_channel, std::strerror(errno));
 #endif
 }
 

@@ -2,6 +2,7 @@
 Test lldb-dap runInTerminal reverse request
 """
 
+from contextlib import contextmanager
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 import lldbdap_testcase
@@ -9,25 +10,80 @@ import os
 import subprocess
 import json
 
+@contextmanager
+def fifo(*args, **kwargs):
+    if sys.platform == "win32":
+        comm_file = r"\\.\pipe\lldb-dap-run-in-terminal-comm"
+
+        import ctypes
+        PIPE_ACCESS_DUPLEX = 0x00000003
+        PIPE_TYPE_BYTE = 0x00000000
+        PIPE_READMODE_BYTE = 0x00000000
+        PIPE_WAIT = 0x00000000
+        PIPE_UNLIMITED_INSTANCES = 255
+        kernel32 = ctypes.windll.kernel32
+
+        pipe = kernel32.CreateNamedPipeW(
+            comm_file,
+            PIPE_ACCESS_DUPLEX,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+            PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, None
+        )
+    else:
+        comm_file = os.path.join(kwargs["directory"], "comm-file")
+        pipe = None
+        os.mkfifo(comm_file)
+
+    try:
+        yield comm_file, pipe
+    finally:
+        if pipe is not None:
+            kernel32.DisconnectNamedPipe(pipe)
+            kernel32.CloseHandle(pipe)
 
 @skipIfBuildType(["debug"])
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
-    def read_pid_message(self, fifo_file):
-        with open(fifo_file, "r") as file:
-            self.assertIn("pid", file.readline())
+    def read_pid_message(self, fifo_file, pipe):
+        if sys.platform == "win32":
+            import ctypes
+            buffer = ctypes.create_string_buffer(4096)
+            bytes_read = ctypes.wintypes.DWORD()
+            kernel32 = ctypes.windll.kernel32
+            kernel32.ConnectNamedPipe(pipe, None)
+            kernel32.ReadFile(pipe, buffer, 4096, ctypes.byref(bytes_read), None)
+            self.assertIn("pid", buffer.value.decode())
+        else:
+            with open(fifo_file, "r") as file:
+                self.assertIn("pid", file.readline())
 
     @staticmethod
-    def send_did_attach_message(fifo_file):
-        with open(fifo_file, "w") as file:
-            file.write(json.dumps({"kind": "didAttach"}) + "\n")
+    def send_did_attach_message(fifo_file, pipe=None):
+        message = json.dumps({"kind": "didAttach"}) + "\n"
+        if sys.platform == "win32":
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            bytes_written = ctypes.wintypes.DWORD()
+            kernel32.ConnectNamedPipe(pipe, None)
+            kernel32.WriteFile(pipe, message.encode(), len(message), ctypes.byref(bytes_written), None)
+        else:
+            with open(fifo_file, "w") as file:
+                file.write(message)
 
     @staticmethod
-    def read_error_message(fifo_file):
-        with open(fifo_file, "r") as file:
-            return file.readline()
+    def read_error_message(fifo_file, pipe=None):
+        if sys.platform == "win32":
+            import ctypes
+            buffer = ctypes.create_string_buffer(4096)
+            bytes_read = ctypes.wintypes.DWORD()
+            kernel32 = ctypes.windll.kernel32
+            kernel32.ConnectNamedPipe(pipe, None)
+            kernel32.ReadFile(pipe, buffer, 4096, ctypes.byref(bytes_read), None)
+            return buffer.value.decode()
+        else:
+            with open(fifo_file, "r") as file:
+                return file.readline()
 
     @skipIfAsan
-    @skipIfWindows
     def test_runInTerminal(self):
         """
         Tests the "runInTerminal" reverse request. It makes sure that the IDE can
@@ -75,7 +131,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     @skipIfAsan
-    @skipIfWindows
     def test_runInTerminalWithObjectEnv(self):
         """
         Tests the "runInTerminal" reverse request. It makes sure that the IDE can
@@ -99,7 +154,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
         self.continue_to_exit()
 
-    @skipIfWindows
     def test_runInTerminalInvalidTarget(self):
         self.build_and_create_debug_adapter()
         response = self.launch_and_configurationDone(
@@ -114,7 +168,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             response["body"]["error"]["format"],
         )
 
-    @skipIfWindows
     def test_missingArgInRunInTerminalLauncher(self):
         proc = subprocess.run(
             [self.lldbDAPExec, "--launch-target", "INVALIDPROGRAM"],
@@ -150,44 +203,55 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         _, stderr = proc.communicate()
         self.assertIn("No such file or directory", stderr)
 
-    @skipIfWindows
+    @skipUnlessWindows
+    def test_FakeAttachedRunInTerminalLauncherWithInvalidProgramWindows(self):
+        with fifo(directory=self.getBuildDir()) as (comm_file, pipe):
+            subprocess.Popen(
+                [
+                    self.lldbDAPExec,
+                    "--comm-file",
+                    comm_file,
+                    "--launch-target",
+                    "INVALIDPROGRAM",
+                ],
+                universal_newlines=True,
+                stderr=subprocess.PIPE,
+            )
+
+            self.assertIn("Failed to launch target process", self.read_error_message(comm_file, pipe))
+
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
-        comm_file = os.path.join(self.getBuildDir(), "comm-file")
-        os.mkfifo(comm_file)
+        with fifo(directory=self.getBuildDir()) as (comm_file, pipe):
+            proc = subprocess.Popen(
+                [
+                    self.lldbDAPExec,
+                    "--comm-file",
+                    comm_file,
+                    "--launch-target",
+                    "echo",
+                    "foo",
+                ],
+                universal_newlines=True,
+                stdout=subprocess.PIPE,
+            )
 
-        proc = subprocess.Popen(
-            [
-                self.lldbDAPExec,
-                "--comm-file",
-                comm_file,
-                "--launch-target",
-                "echo",
-                "foo",
-            ],
-            universal_newlines=True,
-            stdout=subprocess.PIPE,
-        )
-
-        self.read_pid_message(comm_file)
-        self.send_did_attach_message(comm_file)
+            self.read_pid_message(comm_file, pipe)
+            self.send_did_attach_message(comm_file, pipe)
 
         stdout, _ = proc.communicate()
         self.assertIn("foo", stdout)
 
-    @skipIfWindows
     def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
-        comm_file = os.path.join(self.getBuildDir(), "comm-file")
-        os.mkfifo(comm_file)
+        with fifo(directory=self.getBuildDir()) as (comm_file, pipe):
+            proc = subprocess.Popen(
+                [self.lldbDAPExec, "--comm-file", comm_file, "--launch-target", "env"],
+                universal_newlines=True,
+                stdout=subprocess.PIPE,
+                env={**os.environ, "FOO": "BAR"},
+            )
 
-        proc = subprocess.Popen(
-            [self.lldbDAPExec, "--comm-file", comm_file, "--launch-target", "env"],
-            universal_newlines=True,
-            stdout=subprocess.PIPE,
-            env={**os.environ, "FOO": "BAR"},
-        )
-
-        self.read_pid_message(comm_file)
-        self.send_did_attach_message(comm_file)
+            self.read_pid_message(comm_file, pipe)
+            self.send_did_attach_message(comm_file, pipe)
 
         stdout, _ = proc.communicate()
         self.assertIn("FOO=BAR", stdout)
