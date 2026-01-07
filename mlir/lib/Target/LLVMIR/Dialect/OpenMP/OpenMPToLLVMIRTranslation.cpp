@@ -353,10 +353,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
   };
-  auto checkFinal = [&todo](auto op, LogicalResult &result) {
-    if (op.getFinal())
-      result = todo("final");
-  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -377,10 +373,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   auto checkParLevelSimd = [&todo](auto op, LogicalResult &result) {
     if (op.getParLevelSimd())
       result = todo("parallelization-level");
-  };
-  auto checkPriority = [&todo](auto op, LogicalResult &result) {
-    if (op.getPriority())
-      result = todo("priority");
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if (!op.getPrivateVars().empty() || op.getPrivateSyms())
@@ -2754,8 +2746,8 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Value *ifCond = nullptr;
   llvm::Value *grainsize = nullptr;
   int sched = 0; // default
-  Value grainsizeVal = taskloopOp.getGrainsize();
-  Value numTasksVal = taskloopOp.getNumTasks();
+  mlir::Value grainsizeVal = taskloopOp.getGrainsize();
+  mlir::Value numTasksVal = taskloopOp.getNumTasks();
   if (Value ifVar = taskloopOp.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifVar);
   if (grainsizeVal) {

@@ -82,7 +82,7 @@ llvm.func @_QPtest() {
 // CHECK:   %[[VAL_11:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_8]], i32 0, i32 2
 // CHECK:   %[[VAL_12:.*]] = load i64, ptr %[[VAL_11]], align 4
 // CHECK:   %[[IF_VAL:.*]] = sext i1 %4 to i32
-// CHECK:   call void @__kmpc_taskloop(ptr @1, i32 %omp_global_thread_num, ptr %[[VAL_7]], i32 %[[IF_VAL]], ptr %[[VAL_9]], ptr %[[VAL_10]], i64 %[[VAL_12]], i32 0, i32 0, i64 0, ptr @omp_taskloop_dup)
+// CHECK:   call void @__kmpc_taskloop(ptr @1, i32 %omp_global_thread_num, ptr %[[VAL_7]], i32 %[[IF_VAL]], ptr %[[VAL_9]], ptr %[[VAL_10]], i64 %[[VAL_12]], i32 1, i32 0, i64 0, ptr @omp_taskloop_dup)
 // CHECK:   call void @__kmpc_end_taskgroup(ptr @1, i32 %omp_global_thread_num)
 // CHECK:   br label %taskloop.exit
 

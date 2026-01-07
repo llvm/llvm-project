@@ -68,7 +68,7 @@ llvm.func @_QPtest() {
 // CHECK:   %[[gep_omp_task_context_ptr:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[structArg]], i32 0, i32 3
 // CHECK:   store ptr %[[ctx_ptr]], ptr %[[gep_omp_task_context_ptr]], align 8
 // CHECK:   %[[omp_global_thread_num:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:   call void @__kmpc_taskgroup(ptr @1, i32 %[[omp_global_thread_num]])
+// CHECK-NOT:   call void @__kmpc_taskgroup(ptr @1, i32 %[[omp_global_thread_num]])
 // CHECK:   %[[VAL_5:.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %[[omp_global_thread_num]], i32 1, i64 40, i64 32, ptr @_QPtest..omp_par)
 // CHECK:   %[[VAL_6:.*]] = load ptr, ptr %[[VAL_5]], align 8
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_6]], ptr align 1 %[[structArg]], i64 32, i1 false)

@@ -54,7 +54,7 @@ llvm.func @_QPtest() {
 // CHECK:         %[[VAL_18:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_16]], i32 0, i32 1
 // CHECK:         %[[VAL_19:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_16]], i32 0, i32 2
 // CHECK:         %[[VAL_20:.*]] = load i64, ptr %[[VAL_19]], align 4
-// CHECK:         call void @__kmpc_taskloop(ptr @1, i32 %[[VAL_14]], ptr %[[VAL_15]], i32 1, ptr %[[VAL_17]], ptr %[[VAL_18]], i64 %[[VAL_20]], i32 0, i32 0, i64 0, ptr @omp_taskloop_dup)
+// CHECK:         call void @__kmpc_taskloop(ptr @1, i32 %[[VAL_14]], ptr %[[VAL_15]], i32 1, ptr %[[VAL_17]], ptr %[[VAL_18]], i64 %[[VAL_20]], i32 1, i32 0, i64 0, ptr @omp_taskloop_dup)
 // CHECK:         call void @__kmpc_end_taskgroup(ptr @1, i32 %[[VAL_14]])
 // CHECK:         br label %[[VAL_21:.*]]
 // CHECK:       taskloop.exit:                                    ; preds = %[[VAL_9]]
