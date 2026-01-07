@@ -105,7 +105,7 @@ public:
   FactManager &getFactManager() { return *FactMgr; }
 
 private:
-  const LifetimeSafetyOpts &LSOpts;
+  const LifetimeSafetyOpts LSOpts;
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;
