@@ -203,7 +203,7 @@ void SPIRVRegularizer::runLowerI1Comparisons(Function &F) {
       llvm_unreachable("Unexpected predicate");
     }
 
-    // Replace all uses and erase the old instruction
+    Result->takeName(Cmp);
     Cmp->replaceAllUsesWith(Result);
     Cmp->eraseFromParent();
   }
