@@ -952,7 +952,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 }
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
-  assert(STI->getTargetTriple().isOSBinFormatELF() && "invalid binary format");
+  assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
     RISCVTargetELFStreamer &RTS = static_cast<RISCVTargetELFStreamer &>(
