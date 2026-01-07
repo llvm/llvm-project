@@ -14,11 +14,11 @@ project.
 lldb-dap's source code is [part of the LLVM
 repository](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap)
 on Github. We use Github's [issue
-tracker](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap)
+tracker](https://github.com/llvm/llvm-project/issues)
 and patches can be submitted via [pull
 requests](https://github.com/llvm/llvm-project/pulls).
 
-## Building `lldb-dap` from soruce
+## Building `lldb-dap` from source
 
 To build lldb-dap from source, first need to [setup a LLDB build](https://lldb.llvm.org/resources/build.html).
 After doing so, run `ninja lldb-dap`. To use your freshly built `lldb-dap`
@@ -30,7 +30,7 @@ binary, install the VS Code extension and point it to lldb-dap by setting the
 Under the hood, the UI-based debugging experience is fueled by three separate
 components:
 
-* LLDB provides general, IDE-indepedent debugging features, such as:
+* LLDB provides general, IDE-independent debugging features, such as:
   loading binaries / core dumps, interpreting debug info, setting breakpoints,
   pretty-printing variables, etc. The `lldb` binary exposes this functionality
   via a command line interface.
@@ -99,7 +99,7 @@ changed.
 ### Packaging and installation
 
 ```bash
-cd /path/to/lldb/tools/lldb-dap
+cd /path/to/lldb/tools/lldb-dap/extension
 npm install
 npm run package # This also compiles the extension.
 npm run vscode-install

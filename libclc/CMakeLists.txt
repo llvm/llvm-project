@@ -154,6 +154,7 @@ set( LIBCLC_TARGETS_ALL
   r600--
   nvptx64--
   nvptx64--nvidiacl
+  nvptx64-nvidia-cuda
 )
 
 # The mesa3d environment is only available since LLVM 4.0
@@ -205,6 +206,7 @@ set( clspv--_devices none )
 set( clspv64--_devices none )
 set( nvptx64--_devices none )
 set( nvptx64--nvidiacl_devices none )
+set( nvptx64-nvidia-cuda_devices none )
 set( spirv-mesa3d-_devices none )
 set( spirv64-mesa3d-_devices none )
 
@@ -306,6 +308,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( DARCH amdgcn-amdhsa )
   else()
     set( DARCH ${ARCH} )
+  endif()
+  if ( "${OS}" STREQUAL cuda )
+    set( OS nvidiacl )
   endif()
 
   # Append a variety of target- and triple-based directories to search,

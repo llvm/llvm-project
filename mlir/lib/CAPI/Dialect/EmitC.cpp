@@ -49,6 +49,10 @@ MlirType mlirEmitCArrayTypeGet(intptr_t nDims, int64_t *shape,
       emitc::ArrayType::get(llvm::ArrayRef(shape, nDims), unwrap(elementType)));
 }
 
+MlirStringRef mlirEmitCArrayTypeGetName(void) {
+  return wrap(emitc::ArrayType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // LValueType
 //===---------------------------------------------------------------------===//
@@ -63,6 +67,10 @@ MlirTypeID mlirEmitCLValueTypeGetTypeID(void) {
 
 MlirType mlirEmitCLValueTypeGet(MlirType valueType) {
   return wrap(emitc::LValueType::get(unwrap(valueType)));
+}
+
+MlirStringRef mlirEmitCLValueTypeGetName(void) {
+  return wrap(emitc::LValueType::name);
 }
 
 //===---------------------------------------------------------------------===//
@@ -81,6 +89,10 @@ MlirType mlirEmitCOpaqueTypeGet(MlirContext ctx, MlirStringRef value) {
   return wrap(emitc::OpaqueType::get(unwrap(ctx), unwrap(value)));
 }
 
+MlirStringRef mlirEmitCOpaqueTypeGetName(void) {
+  return wrap(emitc::OpaqueType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // PointerType
 //===---------------------------------------------------------------------===//
@@ -95,6 +107,10 @@ MlirTypeID mlirEmitCPointerTypeGetTypeID(void) {
 
 MlirType mlirEmitCPointerTypeGet(MlirType pointee) {
   return wrap(emitc::PointerType::get(unwrap(pointee)));
+}
+
+MlirStringRef mlirEmitCPointerTypeGetName(void) {
+  return wrap(emitc::PointerType::name);
 }
 
 //===---------------------------------------------------------------------===//
@@ -113,6 +129,10 @@ MlirType mlirEmitCPtrDiffTTypeGet(MlirContext ctx) {
   return wrap(emitc::PtrDiffTType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirEmitCPtrDiffTTypeGetName(void) {
+  return wrap(emitc::PtrDiffTType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // SignedSizeTType
 //===---------------------------------------------------------------------===//
@@ -129,6 +149,10 @@ MlirType mlirEmitCSignedSizeTTypeGet(MlirContext ctx) {
   return wrap(emitc::SignedSizeTType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirEmitCSignedSizeTTypeGetName(void) {
+  return wrap(emitc::SignedSizeTType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // SizeTType
 //===---------------------------------------------------------------------===//
@@ -143,6 +167,10 @@ MlirTypeID mlirEmitCSizeTTypeGetTypeID(void) {
 
 MlirType mlirEmitCSizeTTypeGet(MlirContext ctx) {
   return wrap(emitc::SizeTType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirEmitCSizeTTypeGetName(void) {
+  return wrap(emitc::SizeTType::name);
 }
 
 //===----------------------------------------------------------------------===//

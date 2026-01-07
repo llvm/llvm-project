@@ -47,6 +47,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -882,15 +883,22 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
 /// \param [in] llvmModule LLVM module to lower to assembly/machine-code
 /// \param [in] codeGenOpts options configuring codegen pipeline
 /// \param [out] os Output stream to emit the generated code to
-static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
-                                              llvm::TargetMachine &tm,
-                                              BackendActionTy act,
-                                              llvm::Module &llvmModule,
-                                              const CodeGenOptions &codeGenOpts,
-                                              llvm::raw_pwrite_stream &os) {
+static void generateMachineCodeOrAssemblyImpl(
+    CompilerInstance &ci, clang::DiagnosticsEngine &diags,
+    llvm::TargetMachine &tm, BackendActionTy act, llvm::Module &llvmModule,
+    const CodeGenOptions &codeGenOpts, llvm::raw_pwrite_stream &os) {
   assert(((act == BackendActionTy::Backend_EmitObj) ||
           (act == BackendActionTy::Backend_EmitAssembly)) &&
          "Unsupported action");
+  llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
+                                   ? llvm::CodeGenFileType::AssemblyFile
+                                   : llvm::CodeGenFileType::ObjectFile;
+
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
+    if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
+      return;
 
   // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
   // Currently only the legacy pass manager is supported.
@@ -907,9 +915,6 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
       triple, tm.Options.ExceptionModel, tm.Options.FloatABIType,
       tm.Options.EABIVersion, tm.Options.MCOptions.ABIName, tm.Options.VecLib));
 
-  llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
-                                   ? llvm::CodeGenFileType::AssemblyFile
-                                   : llvm::CodeGenFileType::ObjectFile;
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -943,7 +948,6 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   CompilerInstance &ci = getInstance();
   const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
-  clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   llvm::TargetMachine *targetMachine = &ci.getTargetMachine();
@@ -992,16 +996,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
-  // Attempt to load pass plugins and register their callbacks with PB.
-  for (auto &pluginFile : opts.LLVMPassPlugins) {
-    auto passPlugin = llvm::PassPlugin::Load(pluginFile);
-    if (passPlugin) {
-      passPlugin->registerPassBuilderCallbacks(pb);
-    } else {
-      diags.Report(clang::diag::err_fe_unable_to_load_plugin)
-          << pluginFile << passPlugin.takeError();
-    }
-  }
+  // Register plugin callbacks with PB.
+  for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
+    plugin->registerPassBuilderCallbacks(pb);
   // Register static plugin extensions.
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(pb);
@@ -1185,6 +1182,29 @@ public:
           clang::diag::remark_fe_backend_optimization_remark_analysis);
   }
 
+  void pluginDiagnosticHandler(const llvm::DiagnosticInfo &di) {
+    unsigned diagID;
+    switch (di.getSeverity()) {
+    case llvm::DS_Error:
+      diagID = clang::diag::err_fe_backend_plugin;
+      break;
+    case llvm::DS_Warning:
+      diagID = clang::diag::warn_fe_backend_plugin;
+      break;
+    case llvm::DS_Remark:
+      diagID = clang::diag::remark_fe_backend_plugin;
+      break;
+    case llvm::DS_Note:
+      diagID = clang::diag::note_fe_backend_plugin;
+      break;
+    }
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    llvm::DiagnosticPrinterRawOStream diagPrinter(os);
+    di.print(diagPrinter);
+    diags.Report(diagID) << msg;
+  }
+
   bool handleDiagnostics(const llvm::DiagnosticInfo &di) override {
     switch (di.getKind()) {
     case llvm::DK_OptimizationRemark:
@@ -1210,6 +1230,7 @@ public:
           llvm::cast<llvm::MachineOptimizationRemarkAnalysis>(di));
       break;
     default:
+      pluginDiagnosticHandler(di);
       break;
     }
     return true;
@@ -1438,7 +1459,7 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        diags, targetMachine, action, *llvmModule, codeGenOpts,
+        ci, diags, targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     if (timingMgr.isEnabled())
       llvm::reportAndResetTimings(&ci.getTimingStreamCodeGen());

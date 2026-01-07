@@ -389,14 +389,12 @@ def simm10Scaled : Operand<i64> {
   let ParserMatchClass = SImm10s8Operand;
   let DecoderMethod = "DecodeSImm<10>";
   let PrintMethod = "printImmScale<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm9s16 : Operand<i64> {
   let ParserMatchClass = SImmScaledMemoryIndexed<9, 16>;
   let DecoderMethod = "DecodeSImm<9>";
   let PrintMethod = "printImmScale<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // uimm6 predicate - True if the immediate is in the range [0, 63].
@@ -407,22 +405,18 @@ def UImm6Operand : AsmOperandClass {
 
 def uimm6 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
   let ParserMatchClass = UImm6Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm16 : Operand<i16>, ImmLeaf<i16, [{return Imm >= 0 && Imm < 65536;}]>{
   let ParserMatchClass = AsmImmRange<0, 65535>;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
     let ParserMatchClass = UImm6Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
    let ParserMatchClass = UImm6Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def CmpBranchUImm6Operand_32b
@@ -459,29 +453,24 @@ def UImm6Minus1Operand : AsmOperandClass {
 
 def uimm6p1_32b : Operand<i32> {
   let ParserMatchClass = UImm6Plus1Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6p1_64b : Operand<i64> {
   let ParserMatchClass = UImm6Plus1Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6m1_32b : Operand<i32> {
   let ParserMatchClass = UImm6Minus1Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6m1_64b : Operand<i64> {
   let ParserMatchClass = UImm6Minus1Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SImm9Operand : SImmOperand<9>;
 def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let ParserMatchClass = SImm9Operand;
   let DecoderMethod = "DecodeSImm<9>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // imm0_255 predicate - True if the immediate is in the range [0,255].
@@ -489,57 +478,48 @@ def Imm0_255Operand : AsmImmRange<0,255>;
 
 def uimm8_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
   let ParserMatchClass = Imm0_255Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def uimm8_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 256; }]> {
   let ParserMatchClass = Imm0_255Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SImm8Operand : SImmOperand<8>;
 def simm8_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -128 && Imm < 128; }]> {
   let ParserMatchClass = SImm8Operand;
   let DecoderMethod = "DecodeSImm<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def simm8_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -128 && Imm < 128; }]> {
   let ParserMatchClass = SImm8Operand;
   let DecoderMethod = "DecodeSImm<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SImm6Operand : SImmOperand<6>;
 def simm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -32 && Imm < 32; }]> {
   let ParserMatchClass = SImm6Operand;
   let DecoderMethod = "DecodeSImm<6>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SImm5Operand : SImmOperand<5>;
 def simm5_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -16 && Imm < 16; }]> {
   let ParserMatchClass = SImm5Operand;
   let DecoderMethod = "DecodeSImm<5>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm5_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -16 && Imm < 16; }]> {
   let ParserMatchClass = SImm5Operand;
   let DecoderMethod = "DecodeSImm<5>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm5_8b : Operand<i32>, ImmLeaf<i32, [{ return (int8_t)Imm >= -16 && (int8_t)Imm < 16; }]> {
   let ParserMatchClass = SImm5Operand;
   let DecoderMethod = "DecodeSImm<5>";
   let PrintMethod = "printSImm<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm5_16b : Operand<i32>, ImmLeaf<i32, [{ return (int16_t)Imm >= -16 && (int16_t)Imm < 16; }]> {
   let ParserMatchClass = SImm5Operand;
   let DecoderMethod = "DecodeSImm<5>";
   let PrintMethod = "printSImm<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // simm7sN predicate - True if the immediate is a multiple of N in the range
@@ -552,19 +532,16 @@ def SImm7s16Operand : SImmScaledMemoryIndexed<7, 16>;
 def simm7s4 : Operand<i32> {
   let ParserMatchClass = SImm7s4Operand;
   let PrintMethod = "printImmScale<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm7s8 : Operand<i32> {
   let ParserMatchClass = SImm7s8Operand;
   let PrintMethod = "printImmScale<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm7s16 : Operand<i32> {
   let ParserMatchClass = SImm7s16Operand;
   let PrintMethod = "printImmScale<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def am_sve_fi : ComplexPattern<iPTR, 2, "SelectAddrModeFrameIndexSVE", []>;
@@ -614,21 +591,18 @@ def uimm5s2 : Operand<i64>, ImmLeaf<i64,
                 UImmS2XForm> {
   let ParserMatchClass = UImm5s2Operand;
   let PrintMethod = "printImmScale<2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def uimm5s4 : Operand<i64>, ImmLeaf<i64,
                 [{ return Imm >= 0 && Imm < (32*4) && ((Imm % 4) == 0); }],
                 UImmS4XForm> {
   let ParserMatchClass = UImm5s4Operand;
   let PrintMethod = "printImmScale<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def uimm5s8 : Operand<i64>, ImmLeaf<i64,
                 [{ return Imm >= 0 && Imm < (32*8) && ((Imm % 8) == 0); }],
                 UImmS8XForm> {
   let ParserMatchClass = UImm5s8Operand;
   let PrintMethod = "printImmScale<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // tuimm5sN predicate - similar to uimm5sN, but use TImmLeaf (TargetConstant)
@@ -638,21 +612,18 @@ def tuimm5s2 : Operand<i64>, TImmLeaf<i64,
                 UImmS2XForm> {
   let ParserMatchClass = UImm5s2Operand;
   let PrintMethod = "printImmScale<2>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def tuimm5s4 : Operand<i64>, TImmLeaf<i64,
                 [{ return Imm >= 0 && Imm < (32*4) && ((Imm % 4) == 0); }],
                 UImmS4XForm> {
   let ParserMatchClass = UImm5s4Operand;
   let PrintMethod = "printImmScale<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def tuimm5s8 : Operand<i64>, TImmLeaf<i64,
                 [{ return Imm >= 0 && Imm < (32*8) && ((Imm % 8) == 0); }],
                 UImmS8XForm> {
   let ParserMatchClass = UImm5s8Operand;
   let PrintMethod = "printImmScale<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // uimm6sN predicate - True if the immediate is a multiple of N in the range
@@ -665,31 +636,26 @@ def UImm6s16Operand : UImmScaledMemoryIndexed<6, 16>;
 
 def uimm6s1 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
   let ParserMatchClass = UImm6s1Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def uimm6s2 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm < (64*2) && ((Imm % 2) == 0); }]> {
   let PrintMethod = "printImmScale<2>";
   let ParserMatchClass = UImm6s2Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def uimm6s4 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm < (64*4) && ((Imm % 4) == 0); }]> {
   let PrintMethod = "printImmScale<4>";
   let ParserMatchClass = UImm6s4Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def uimm6s8 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm < (64*8) && ((Imm % 8) == 0); }]> {
   let PrintMethod = "printImmScale<8>";
   let ParserMatchClass = UImm6s8Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def uimm6s16 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm < (64*16) && ((Imm % 16) == 0); }]> {
   let PrintMethod = "printImmScale<16>";
   let ParserMatchClass = UImm6s16Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SImmS2XForm : SDNodeXForm<imm, [{
@@ -714,7 +680,6 @@ def SImm6s1Operand : SImmScaledMemoryIndexed<6, 1>;
 def simm6s1 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -32 && Imm < 32; }]> {
   let ParserMatchClass = SImm6s1Operand;
   let DecoderMethod = "DecodeSImm<6>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // simm4sN predicate - True if the immediate is a multiple of N in the range
@@ -730,7 +695,6 @@ def simm4s1 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >=-8  && Imm <= 7; }]> {
   let ParserMatchClass = SImm4s1Operand;
   let DecoderMethod = "DecodeSImm<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm4s2 : Operand<i64>, ImmLeaf<i64,
@@ -738,7 +702,6 @@ def simm4s2 : Operand<i64>, ImmLeaf<i64,
   let PrintMethod = "printImmScale<2>";
   let ParserMatchClass = SImm4s2Operand;
   let DecoderMethod = "DecodeSImm<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm4s3 : Operand<i64>, ImmLeaf<i64,
@@ -746,7 +709,6 @@ def simm4s3 : Operand<i64>, ImmLeaf<i64,
   let PrintMethod = "printImmScale<3>";
   let ParserMatchClass = SImm4s3Operand;
   let DecoderMethod = "DecodeSImm<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def simm4s4 : Operand<i64>, ImmLeaf<i64,
@@ -754,21 +716,18 @@ def simm4s4 : Operand<i64>, ImmLeaf<i64,
   let PrintMethod = "printImmScale<4>";
   let ParserMatchClass = SImm4s4Operand;
   let DecoderMethod = "DecodeSImm<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def simm4s16 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >=-128  && Imm <= 112 && (Imm % 16) == 0x0; }], SImmS16XForm> {
   let PrintMethod = "printImmScale<16>";
   let ParserMatchClass = SImm4s16Operand;
   let DecoderMethod = "DecodeSImm<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def simm4s32 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >=-256  && Imm <= 224 && (Imm % 32) == 0x0; }], SImmS32XForm> {
   let PrintMethod = "printImmScale<32>";
   let ParserMatchClass = SImm4s32Operand;
   let DecoderMethod = "DecodeSImm<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def Imm1_8Operand : AsmImmRange<1, 8>;
@@ -798,7 +757,6 @@ def MovWSymbolG3AsmOperand : AsmOperandClass {
 
 def movw_symbol_g3 : Operand<i32> {
   let ParserMatchClass = MovWSymbolG3AsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def MovWSymbolG2AsmOperand : AsmOperandClass {
@@ -808,7 +766,6 @@ def MovWSymbolG2AsmOperand : AsmOperandClass {
 
 def movw_symbol_g2 : Operand<i32> {
   let ParserMatchClass = MovWSymbolG2AsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def MovWSymbolG1AsmOperand : AsmOperandClass {
@@ -818,7 +775,6 @@ def MovWSymbolG1AsmOperand : AsmOperandClass {
 
 def movw_symbol_g1 : Operand<i32> {
   let ParserMatchClass = MovWSymbolG1AsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def MovWSymbolG0AsmOperand : AsmOperandClass {
@@ -828,7 +784,6 @@ def MovWSymbolG0AsmOperand : AsmOperandClass {
 
 def movw_symbol_g0 : Operand<i32> {
   let ParserMatchClass = MovWSymbolG0AsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class fixedpoint_i32<ValueType FloatVT>
@@ -837,7 +792,6 @@ class fixedpoint_i32<ValueType FloatVT>
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm32";
   let ParserMatchClass = Imm1_32Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class fixedpoint_i64<ValueType FloatVT>
@@ -846,7 +800,6 @@ class fixedpoint_i64<ValueType FloatVT>
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm64";
   let ParserMatchClass = Imm1_64Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def fixedpoint_f16_i32 : fixedpoint_i32<f16>;
@@ -862,7 +815,6 @@ class fixedpoint_recip_i32<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<32>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm32";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class fixedpoint_recip_i64<ValueType FloatVT>
@@ -870,7 +822,6 @@ class fixedpoint_recip_i64<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<64>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm64";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def fixedpoint_recip_f16_i32 : fixedpoint_recip_i32<f16>;
@@ -887,7 +838,6 @@ def vecshiftR8 : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftR8OpValue";
   let DecoderMethod = "DecodeVecShiftR8Imm";
   let ParserMatchClass = Imm1_8Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftR16 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 17);
@@ -895,7 +845,6 @@ def vecshiftR16 : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftR16OpValue";
   let DecoderMethod = "DecodeVecShiftR16Imm";
   let ParserMatchClass = Imm1_16Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftR16Narrow : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 9);
@@ -903,7 +852,6 @@ def vecshiftR16Narrow : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftR16OpValue";
   let DecoderMethod = "DecodeVecShiftR16ImmNarrow";
   let ParserMatchClass = Imm1_8Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftR32 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 33);
@@ -911,7 +859,6 @@ def vecshiftR32 : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftR32OpValue";
   let DecoderMethod = "DecodeVecShiftR32Imm";
   let ParserMatchClass = Imm1_32Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftR32Narrow : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 17);
@@ -919,7 +866,6 @@ def vecshiftR32Narrow : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftR32OpValue";
   let DecoderMethod = "DecodeVecShiftR32ImmNarrow";
   let ParserMatchClass = Imm1_16Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftR64 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 65);
@@ -927,7 +873,6 @@ def vecshiftR64 : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftR64OpValue";
   let DecoderMethod = "DecodeVecShiftR64Imm";
   let ParserMatchClass = Imm1_64Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftR64Narrow : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 33);
@@ -935,7 +880,6 @@ def vecshiftR64Narrow : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftR64OpValue";
   let DecoderMethod = "DecodeVecShiftR64ImmNarrow";
   let ParserMatchClass = Imm1_32Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def Imm0_0Operand : AsmImmRange<0, 0>;
@@ -955,7 +899,6 @@ def vecshiftL8 : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftL8OpValue";
   let DecoderMethod = "DecodeVecShiftL8Imm";
   let ParserMatchClass = Imm0_7Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftL16 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 16);
@@ -963,7 +906,6 @@ def vecshiftL16 : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftL16OpValue";
   let DecoderMethod = "DecodeVecShiftL16Imm";
   let ParserMatchClass = Imm0_15Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftL32 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 32);
@@ -971,7 +913,6 @@ def vecshiftL32 : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftL32OpValue";
   let DecoderMethod = "DecodeVecShiftL32Imm";
   let ParserMatchClass = Imm0_31Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def vecshiftL64 : Operand<i32>, TImmLeaf<i32, [{
   return (((uint32_t)Imm) < 64);
@@ -979,7 +920,6 @@ def vecshiftL64 : Operand<i32>, TImmLeaf<i32, [{
   let EncoderMethod = "getVecShiftL64OpValue";
   let DecoderMethod = "DecodeVecShiftL64Imm";
   let ParserMatchClass = Imm0_63Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 
@@ -1279,8 +1219,6 @@ class arith_shifted_reg<ValueType Ty, RegisterClass regclass, int width>
       ComplexPattern<Ty, 2, "SelectArithShiftedRegister", []> {
   let PrintMethod = "printShiftedRegister";
   let MIOperandInfo = (ops regclass, !cast<Operand>("arith_shift" # width));
-  let OperandType = "OPERAND_SHIFTED_REGISTER";
-  let OperandNamespace = "AArch64";
 }
 
 def arith_shifted_reg32 : arith_shifted_reg<i32, GPR32, 32>;
@@ -1301,7 +1239,6 @@ class logical_shift<int width> : Operand<i32> {
   let PrintMethod = "printShifter";
   let ParserMatchClass = !cast<AsmOperandClass>(
                          "LogicalShifterOperand" # width);
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def logical_shift32 : logical_shift<32>;
@@ -1312,8 +1249,6 @@ class logical_shifted_reg<ValueType Ty, RegisterClass regclass, Operand shiftop>
       ComplexPattern<Ty, 2, "SelectLogicalShiftedRegister", []> {
   let PrintMethod = "printShiftedRegister";
   let MIOperandInfo = (ops regclass, shiftop);
-  let OperandType = "OPERAND_SHIFTED_REGISTER";
-  let OperandNamespace = "AArch64";
 }
 
 def logical_shifted_reg32 : logical_shifted_reg<i32, GPR32, logical_shift32>;
@@ -1334,8 +1269,6 @@ def logical_vec_shift : Operand<i32> {
   let PrintMethod = "printShifter";
   let EncoderMethod = "getVecShifterOpValue";
   let ParserMatchClass = LogicalVecShifterOperand;
-  let OperandType = "OPERAND_SHIFTED_IMMEDIATE";
-  let OperandNamespace = "AArch64";
 }
 
 // A logical vector half-word shifter operand:
@@ -1345,8 +1278,6 @@ def logical_vec_hw_shift : Operand<i32> {
   let PrintMethod = "printShifter";
   let EncoderMethod = "getVecShifterOpValue";
   let ParserMatchClass = LogicalVecHalfWordShifterOperand;
-  let OperandType = "OPERAND_SHIFTED_IMMEDIATE";
-  let OperandNamespace = "AArch64";
 }
 
 // A vector move shifter operand:
@@ -1381,8 +1312,6 @@ class addsub_shifted_imm<ValueType Ty>
   let EncoderMethod = "getAddSubImmOpValue";
   let ParserMatchClass = AddSubImmOperand;
   let MIOperandInfo = (ops i32imm, i32imm);
-  let OperandType = "OPERAND_SHIFTED_IMMEDIATE";
-  let OperandNamespace = "AArch64";
 }
 
 class addsub_shifted_imm_neg<ValueType Ty>
@@ -1390,8 +1319,6 @@ class addsub_shifted_imm_neg<ValueType Ty>
   let EncoderMethod = "getAddSubImmOpValue";
   let ParserMatchClass = AddSubImmNegOperand;
   let MIOperandInfo = (ops i32imm, i32imm);
-  let OperandType = "OPERAND_SHIFTED_IMMEDIATE";
-  let OperandNamespace = "AArch64";
 }
 
 def addsub_shifted_imm32 : addsub_shifted_imm<i32>;
@@ -1413,8 +1340,6 @@ class neg_addsub_shifted_imm<ValueType Ty>
   let EncoderMethod = "getAddSubImmOpValue";
   let ParserMatchClass = AddSubImmOperand;
   let MIOperandInfo = (ops i32imm, i32imm);
-  let OperandType = "OPERAND_SHIFTED_IMMEDIATE";
-  let OperandNamespace = "AArch64";
 }
 
 def neg_addsub_shifted_imm32 : neg_addsub_shifted_imm<i32>;
@@ -1434,35 +1359,28 @@ def gi_neg_addsub_shifted_imm64 :
 def arith_extend : Operand<i32> {
   let PrintMethod = "printArithExtend";
   let ParserMatchClass = ExtendOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def arith_extend64 : Operand<i32> {
   let PrintMethod = "printArithExtend";
   let ParserMatchClass = ExtendOperand64;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // 'extend' that's a lsl of a 64-bit register.
 def arith_extendlsl64 : Operand<i32> {
   let PrintMethod = "printArithExtend";
   let ParserMatchClass = ExtendOperandLSL64;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class arith_extended_reg32<ValueType Ty> : Operand<Ty>,
                     ComplexPattern<Ty, 2, "SelectArithExtendedRegister", []> {
   let PrintMethod = "printExtendedRegister";
   let MIOperandInfo = (ops GPR32, arith_extend);
-  let OperandType = "OPERAND_SHIFTED_REGISTER";
-  let OperandNamespace = "AArch64";
 }
 
 class arith_extended_reg32to64<ValueType Ty> : Operand<Ty>,
                     ComplexPattern<Ty, 2, "SelectArithExtendedRegister", []> {
   let PrintMethod = "printExtendedRegister";
   let MIOperandInfo = (ops GPR32, arith_extend64);
-  let OperandType = "OPERAND_SHIFTED_REGISTER";
-  let OperandNamespace = "AArch64";
 }
 
 def arith_extended_reg32_i32 : arith_extended_reg32<i32>;
@@ -1544,7 +1462,6 @@ def fpimm64 : Operand<f64>,
 def fpimm8 : Operand<i32> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def fpimm0 : FPImmLeaf<fAny, [{
@@ -1610,7 +1527,6 @@ let OperandNamespace = "AArch64", OperandType = "OPERAND_IMPLICIT_IMM_0",
   defm VectorIndex032b : VectorIndex<i32, VectorIndex0Operand,
                                      [{ return ((uint32_t)Imm) == 0; }]>;
 }
-let OperandType = "OPERAND_IMMEDIATE" in {
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
                                 [{ return ((uint64_t)Imm) == 1; }]>;
 defm VectorIndexB : VectorIndex<i64, VectorIndexBOperand,
@@ -1632,7 +1548,6 @@ defm VectorIndexS32b : VectorIndex<i32, VectorIndexSOperand,
                                    [{ return ((uint64_t)Imm) < 4; }]>;
 defm VectorIndexD32b : VectorIndex<i32, VectorIndexDOperand,
                                    [{ return ((uint64_t)Imm) < 2; }]>;
-}
 
 def SVEVectorIndexExtDupBOperand : AsmVectorIndex<0, 63, "SVE">;
 def SVEVectorIndexExtDupHOperand : AsmVectorIndex<0, 31, "SVE">;
@@ -1640,7 +1555,6 @@ def SVEVectorIndexExtDupSOperand : AsmVectorIndex<0, 15, "SVE">;
 def SVEVectorIndexExtDupDOperand : AsmVectorIndex<0, 7, "SVE">;
 def SVEVectorIndexExtDupQOperand : AsmVectorIndex<0, 3, "SVE">;
 
-let OperandType = "OPERAND_IMMEDIATE" in {
 defm sve_elm_idx_extdup_b
   : VectorIndex<i64, SVEVectorIndexExtDupBOperand,
                 [{ return ((uint64_t)Imm) < 64; }]>;
@@ -1656,7 +1570,6 @@ defm sve_elm_idx_extdup_d
 defm sve_elm_idx_extdup_q
   : VectorIndex<i64, SVEVectorIndexExtDupQOperand,
                 [{ return ((uint64_t)Imm) < 4; }]>;
-}
 
 def sme_elm_idx0_0 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) == 0;
@@ -1672,28 +1585,24 @@ def sme_elm_idx0_1 : Operand<i32>, TImmLeaf<i32, [{
 }]> {
   let ParserMatchClass = Imm0_1Operand;
   let PrintMethod = "printMatrixIndex";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def sme_elm_idx0_3 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) <= 3;
 }]> {
   let ParserMatchClass = Imm0_3Operand;
   let PrintMethod = "printMatrixIndex";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def sme_elm_idx0_7 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) <= 7;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
   let PrintMethod = "printMatrixIndex";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def sme_elm_idx0_15 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) <= 15;
 }]> {
   let ParserMatchClass = Imm0_15Operand;
   let PrintMethod = "printMatrixIndex";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // SME2 vector select offset operands
@@ -1706,7 +1615,6 @@ def uimm3s8 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 56 && ((Imm % 8) == 0); }], UImmS8XForm> {
   let PrintMethod = "printMatrixIndex<8>";
   let ParserMatchClass = UImm3s8Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class UImmScaledMemoryIndexedRange<int Width, int Scale, int OffsetVal> : AsmOperandClass {
@@ -1750,35 +1658,30 @@ def uimm1s2range : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 2 && ((Imm % 2) == 0); }], UImmS2XForm> {
   let PrintMethod = "printImmRangeScale<2, 1>";
   let ParserMatchClass = UImm1s2RangeOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm1s4range : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 4 && ((Imm % 4) == 0); }], UImmS4XForm> {
   let PrintMethod = "printImmRangeScale<4, 3>";
   let ParserMatchClass = UImm1s4RangeOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm2s2range : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 6 && ((Imm % 2) == 0); }], UImmS2XForm> {
   let PrintMethod = "printImmRangeScale<2, 1>";
   let ParserMatchClass = UImm2s2RangeOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm2s4range : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 12 && ((Imm % 4) == 0); }], UImmS4XForm> {
   let PrintMethod = "printImmRangeScale<4, 3>";
   let ParserMatchClass = UImm2s4RangeOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm3s2range : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 14 && ((Imm % 2) == 0); }], UImmS2XForm> {
   let PrintMethod = "printImmRangeScale<2, 1>";
   let ParserMatchClass = UImm3s2RangeOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 
@@ -1797,7 +1700,6 @@ def simdimmtype10 : Operand<i32>,
     }]>> {
   let ParserMatchClass = SIMDImmType10Operand;
   let PrintMethod = "printSIMDType10Operand";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 
@@ -1867,7 +1769,6 @@ def PHintInstOperand : AsmOperandClass {
 def phint_op : Operand<i32> {
     let ParserMatchClass = PHintInstOperand;
    let PrintMethod = "printPHintOp";
-   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class STSHHI
@@ -1888,7 +1789,6 @@ def BarrierAsmOperand : AsmOperandClass {
 def barrier_op : Operand<i32> {
   let PrintMethod = "printBarrierOption";
   let ParserMatchClass = BarrierAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def BarriernXSAsmOperand : AsmOperandClass {
   let Name = "BarriernXS";
@@ -1897,7 +1797,6 @@ def BarriernXSAsmOperand : AsmOperandClass {
 def barrier_nxs_op : Operand<i32> {
   let PrintMethod = "printBarriernXSOption";
   let ParserMatchClass = BarriernXSAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 class CRmSystemI<Operand crmtype, bits<3> opc, string asm,
                  list<dag> pattern = []>
@@ -1932,7 +1831,6 @@ def mrs_sysreg_op : Operand<i32> {
   let ParserMatchClass = MRSSystemRegisterOperand;
   let DecoderMethod = "DecodeMRSSystemRegister";
   let PrintMethod = "printMRSSystemRegister";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def MSRSystemRegisterOperand : AsmOperandClass {
@@ -1944,7 +1842,6 @@ def msr_sysreg_op : Operand<i32> {
   let ParserMatchClass = MSRSystemRegisterOperand;
   let DecoderMethod = "DecodeMSRSystemRegister";
   let PrintMethod = "printMSRSystemRegister";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def PSBHintOperand : AsmOperandClass {
@@ -1961,7 +1858,6 @@ def psbhint_op : Operand<i32> {
       return false;
     return AArch64PSBHint::lookupPSBByEncoding(MCOp.getImm()) != nullptr;
   }];
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def BTIHintOperand : AsmOperandClass {
@@ -1977,7 +1873,6 @@ def btihint_op : Operand<i32> {
       return false;
     return AArch64BTIHint::lookupBTIByEncoding(MCOp.getImm() ^ 32) != nullptr;
   }];
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def CMHPriorityHintOperand : AsmOperandClass {
@@ -1993,7 +1888,6 @@ def CMHPriorityHint_op : Operand<i32> {
       return false;
     return AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(MCOp.getImm()) != nullptr;
   }];
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def TIndexHintOperand : AsmOperandClass {
@@ -2045,7 +1939,6 @@ def pstatefield4_op : Operand<i32> {
       return false;
     return AArch64SVCR::lookupPStateImm0_15ByEncoding(MCOp.getImm()) != nullptr;
   }];
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // Instructions to modify PSTATE, no input reg
@@ -2086,7 +1979,6 @@ def pstatefield1_op : Operand<i32> {
       return false;
     return AArch64SVCR::lookupPStateImm0_1ByEncoding(MCOp.getImm()) != nullptr;
   }];
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class MSRpstateImm0_1
@@ -2117,7 +2009,6 @@ def SysCRAsmOperand : AsmOperandClass {
 def sys_cr_op : Operand<i32> {
   let PrintMethod = "printSysCROperand";
   let ParserMatchClass = SysCRAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class SystemXtI<bit L, string asm>
@@ -2162,7 +2053,6 @@ def rprfop : Operand<i32>, TImmLeaf<i32, [{
   }]> {
   let PrintMethod = "printRPRFMOperand";
   let ParserMatchClass = RangePrefetchOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // Branch (register) instructions:
@@ -2290,7 +2180,6 @@ multiclass AuthLoad<bit M, string asm, Operand opr> {
 def ccode : Operand<i32> {
   let PrintMethod = "printCondCode";
   let ParserMatchClass = CondCode;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def inv_ccode : Operand<i32> {
   // AL and NV are invalid in the aliases which use inv_ccode
@@ -2301,7 +2190,6 @@ def inv_ccode : Operand<i32> {
            MCOp.getImm() != AArch64CC::AL &&
            MCOp.getImm() != AArch64CC::NV;
   }];
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // Conditional branch target. 19-bit immediate. The low two bits of the target
@@ -2398,7 +2286,6 @@ class tbz_imm0_31<AsmOperandClass matcher> : Operand<i64>, ImmLeaf<i64, [{
   return (((uint32_t)Imm) < 32);
 }]> {
   let ParserMatchClass = matcher;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def tbz_imm0_31_diag : tbz_imm0_31<Imm0_31Operand>;
@@ -2408,7 +2295,6 @@ def tbz_imm32_63 : Operand<i64>, ImmLeaf<i64, [{
   return (((uint32_t)Imm) > 31) && (((uint32_t)Imm) < 64);
 }]> {
   let ParserMatchClass = TBZImm32_63Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 class BaseTestBranch<RegisterClass regtype, Operand immtype,
@@ -2923,17 +2809,14 @@ def movimm32_imm : Operand<i32> {
   let ParserMatchClass = AsmImmRange<0, 65535>;
   let EncoderMethod = "getMoveWideImmOpValue";
   let PrintMethod = "printImm";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def movimm32_shift : Operand<i32> {
   let PrintMethod = "printShifter";
   let ParserMatchClass = MovImm32ShifterOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def movimm64_shift : Operand<i32> {
   let PrintMethod = "printShifter";
   let ParserMatchClass = MovImm64ShifterOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
@@ -3750,11 +3633,9 @@ multiclass CondSelectOp<bit op, bits<2> op2, string asm, PatFrag frag> {
 //---
 def maski8_or_more : Operand<i32>,
   ImmLeaf<i32, [{ return (Imm & 0xff) == 0xff; }]> {
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def maski16_or_more : Operand<i32>,
   ImmLeaf<i32, [{ return (Imm & 0xffff) == 0xffff; }]> {
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 
@@ -3812,7 +3693,6 @@ class uimm12_scaled<int Scale> : Operand<i64> {
   let EncoderMethod
    = "getLdStUImm12OpValue<AArch64::fixup_aarch64_ldst_imm12_scale" # Scale # ">";
   let PrintMethod = "printUImm12Offset<" # Scale # ">";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm12s1 : uimm12_scaled<1>;
@@ -3889,7 +3769,6 @@ def PrefetchOperand : AsmOperandClass {
 def prfop : Operand<i32> {
   let PrintMethod = "printPrefetchOp";
   let ParserMatchClass = PrefetchOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
@@ -4025,8 +3904,6 @@ class ro_extend<AsmOperandClass ParserClass, string Reg, int Width>
   let DecoderMethod = "DecodeMemExtend";
   let EncoderMethod = "getMemExtendOpValue";
   let MIOperandInfo = (ops i32imm:$signed, i32imm:$doshift);
-  let OperandType = "OPERAND_SHIFTED_IMMEDIATE";
-  let OperandNamespace = "AArch64";
 }
 
 def ro_Wextend8   : ro_extend<MemWExtend8Operand,   "w", 8>;
@@ -11858,7 +11735,6 @@ def complexrotateop : Operand<i32>, TImmLeaf<i32, [{ return Imm >= 0 && Imm <= 2
 }]>> {
   let ParserMatchClass = ComplexRotationOperand<90, 0, "Even">;
   let PrintMethod = "printComplexRotationOp<90, 0>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 def complexrotateopodd : Operand<i32>, TImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
                                                   SDNodeXForm<imm, [{
@@ -11866,7 +11742,6 @@ def complexrotateopodd : Operand<i32>, TImmLeaf<i32, [{ return Imm >= 0 && Imm <
 }]>> {
   let ParserMatchClass = ComplexRotationOperand<180, 90, "Odd">;
   let PrintMethod = "printComplexRotationOp<180, 90>";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
 class BaseSIMDThreeSameVectorComplex<bit Q, bit U, bits<2> size, bits<3> opcode,
@@ -13260,7 +13135,6 @@ def LSLImm3ShiftOperand : AsmOperandClass {
 def lsl_imm3_shift_operand : Operand<i64> {
   let PrintMethod = "printShifter";
   let ParserMatchClass = LSLImm3ShiftOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // Base CPA scalar add/subtract with lsl #imm3 shift

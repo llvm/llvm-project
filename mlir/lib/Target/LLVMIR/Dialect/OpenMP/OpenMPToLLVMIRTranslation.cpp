@@ -454,12 +454,16 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::SimdOp op) { checkReduction(op, result); })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
             omp::AtomicCaptureOp>([&](auto op) { checkHint(op, result); })
-      .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp, omp::TargetUpdateOp>(
+      .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>(
           [&](auto op) { checkDepend(op, result); })
+      .Case<omp::TargetUpdateOp>([&](auto op) {
+        checkDepend(op, result);
+        checkDevice(op, result);
+      })
+      .Case<omp::TargetDataOp>([&](auto op) { checkDevice(op, result); })
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
-        checkDevice(op, result);
         checkInReduction(op, result);
       })
       .Default([](Operation &) {
@@ -1711,7 +1715,8 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
 /// This can't always be determined statically, but when we can, it is good to
 /// avoid generating compiler-added barriers which will deadlock the program.
 static bool opIsInSingleThread(mlir::Operation *op) {
-  while (mlir::Operation *parent = op->getParentOp()) {
+  for (mlir::Operation *parent = op->getParentOp(); parent != nullptr;
+       parent = parent->getParentOp()) {
     if (mlir::isa<omp::SingleOp, omp::CriticalOp>(parent))
       return true;
 
@@ -5997,6 +6002,13 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
       attrs.LoopTripCount = builder.CreateMul(attrs.LoopTripCount, tripCount,
                                               {}, /*HasNUW=*/true);
     }
+  }
+
+  attrs.DeviceID = builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
+  if (mlir::Value devId = targetOp.getDevice()) {
+    attrs.DeviceID = moduleTranslation.lookupValue(devId);
+    attrs.DeviceID =
+        builder.CreateSExtOrTrunc(attrs.DeviceID, builder.getInt64Ty());
   }
 }
 
