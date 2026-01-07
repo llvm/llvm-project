@@ -150,6 +150,45 @@ static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   return RValue::get(call->getResult(0));
 }
 
+template <typename Op>
+static RValue emitUnaryMaybeConstrainedFPToIntBuiltin(CIRGenFunction &cgf,
+                                                      const CallExpr &e) {
+  mlir::Type resultType = cgf.convertType(e.getType());
+  mlir::Value src = cgf.emitScalarExpr(e.getArg(0));
+
+  assert(!cir::MissingFeatures::fpConstraints());
+
+  auto call = Op::create(cgf.getBuilder(), src.getLoc(), resultType, src);
+  return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
+static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+
+  mlir::Location loc = cgf.getLoc(e.getExprLoc());
+  mlir::Type ty = cgf.convertType(e.getType());
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+
+  return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
+static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
+                                                       const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+
+  mlir::Location loc = cgf.getLoc(e.getExprLoc());
+  mlir::Type ty = cgf.convertType(e.getType());
+
+  assert(!cir::MissingFeatures::fpConstraints());
+
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+  return call->getResult(0);
+}
+
 static RValue errorBuiltinNYI(CIRGenFunction &cgf, const CallExpr *e,
                               unsigned builtinID) {
 
@@ -301,6 +340,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_ceilf128:
     return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(cgf, *e);
   case Builtin::BI__builtin_elementwise_ceil:
+    return RValue::getIgnored();
   case Builtin::BIcopysign:
   case Builtin::BIcopysignf:
   case Builtin::BIcopysignl:
@@ -309,7 +349,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_copysignf16:
   case Builtin::BI__builtin_copysignl:
   case Builtin::BI__builtin_copysignf128:
-    return RValue::getIgnored();
+    return emitBinaryFPBuiltin<cir::CopysignOp>(cgf, *e);
   case Builtin::BIcos:
   case Builtin::BIcosf:
   case Builtin::BIcosl:
@@ -386,6 +426,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fmal:
   case Builtin::BI__builtin_fmaf128:
   case Builtin::BI__builtin_elementwise_fma:
+    return RValue::getIgnored();
   case Builtin::BIfmax:
   case Builtin::BIfmaxf:
   case Builtin::BIfmaxl:
@@ -394,6 +435,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fmaxf16:
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf128:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMaxNumOp>(cgf, *e));
   case Builtin::BIfmin:
   case Builtin::BIfminf:
   case Builtin::BIfminl:
@@ -402,6 +445,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf128:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMinNumOp>(cgf, *e));
   case Builtin::BIfmaximum_num:
   case Builtin::BIfmaximum_numf:
   case Builtin::BIfmaximum_numl:
@@ -418,6 +463,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fminimum_numf16:
   case Builtin::BI__builtin_fminimum_numl:
   case Builtin::BI__builtin_fminimum_numf128:
+    return RValue::getIgnored();
   case Builtin::BIfmod:
   case Builtin::BIfmodf:
   case Builtin::BIfmodl:
@@ -426,7 +472,9 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fmodf16:
   case Builtin::BI__builtin_fmodl:
   case Builtin::BI__builtin_fmodf128:
+    return emitBinaryFPBuiltin<cir::FModOp>(cgf, *e);
   case Builtin::BI__builtin_elementwise_fmod:
+    return RValue::getIgnored();
   case Builtin::BIlog:
   case Builtin::BIlogf:
   case Builtin::BIlogl:
@@ -436,6 +484,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_logl:
   case Builtin::BI__builtin_logf128:
   case Builtin::BI__builtin_elementwise_log:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::LogOp>(cgf, *e);
   case Builtin::BIlog10:
   case Builtin::BIlog10f:
   case Builtin::BIlog10l:
@@ -445,6 +494,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_log10l:
   case Builtin::BI__builtin_log10f128:
   case Builtin::BI__builtin_elementwise_log10:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Log10Op>(cgf, *e);
   case Builtin::BIlog2:
   case Builtin::BIlog2f:
   case Builtin::BIlog2l:
@@ -454,6 +504,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_log2l:
   case Builtin::BI__builtin_log2f128:
   case Builtin::BI__builtin_elementwise_log2:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Log2Op>(cgf, *e);
   case Builtin::BInearbyint:
   case Builtin::BInearbyintf:
   case Builtin::BInearbyintl:
@@ -462,6 +513,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_nearbyintl:
   case Builtin::BI__builtin_nearbyintf128:
   case Builtin::BI__builtin_elementwise_nearbyint:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::NearbyintOp>(cgf, *e);
   case Builtin::BIpow:
   case Builtin::BIpowf:
   case Builtin::BIpowl:
@@ -470,7 +522,10 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_powf16:
   case Builtin::BI__builtin_powl:
   case Builtin::BI__builtin_powf128:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::PowOp>(cgf, *e));
   case Builtin::BI__builtin_elementwise_pow:
+    return RValue::getIgnored();
   case Builtin::BIrint:
   case Builtin::BIrintf:
   case Builtin::BIrintl:
@@ -480,6 +535,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_rintl:
   case Builtin::BI__builtin_rintf128:
   case Builtin::BI__builtin_elementwise_rint:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RintOp>(cgf, *e);
   case Builtin::BIround:
   case Builtin::BIroundf:
   case Builtin::BIroundl:
@@ -489,6 +545,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_roundl:
   case Builtin::BI__builtin_roundf128:
   case Builtin::BI__builtin_elementwise_round:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RoundOp>(cgf, *e);
   case Builtin::BIroundeven:
   case Builtin::BIroundevenf:
   case Builtin::BIroundevenl:
@@ -498,6 +555,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_roundevenl:
   case Builtin::BI__builtin_roundevenf128:
   case Builtin::BI__builtin_elementwise_roundeven:
+    return RValue::getIgnored();
   case Builtin::BIsin:
   case Builtin::BIsinf:
   case Builtin::BIsinl:
@@ -507,6 +565,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_sinl:
   case Builtin::BI__builtin_sinf128:
   case Builtin::BI__builtin_elementwise_sin:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SinOp>(cgf, *e);
   case Builtin::BIsinh:
   case Builtin::BIsinhf:
   case Builtin::BIsinhl:
@@ -527,6 +586,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_sincosf16:
   case Builtin::BI__builtin_sincosl:
   case Builtin::BI__builtin_sincosf128:
+    return RValue::getIgnored();
   case Builtin::BIsqrt:
   case Builtin::BIsqrtf:
   case Builtin::BIsqrtl:
@@ -536,6 +596,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_sqrtl:
   case Builtin::BI__builtin_sqrtf128:
   case Builtin::BI__builtin_elementwise_sqrt:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SqrtOp>(cgf, *e);
   case Builtin::BItan:
   case Builtin::BItanf:
   case Builtin::BItanl:
@@ -545,6 +606,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_tanl:
   case Builtin::BI__builtin_tanf128:
   case Builtin::BI__builtin_elementwise_tan:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TanOp>(cgf, *e);
   case Builtin::BItanh:
   case Builtin::BItanhf:
   case Builtin::BItanhl:
@@ -554,6 +616,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_tanhl:
   case Builtin::BI__builtin_tanhf128:
   case Builtin::BI__builtin_elementwise_tanh:
+    return RValue::getIgnored();
   case Builtin::BItrunc:
   case Builtin::BItruncf:
   case Builtin::BItruncl:
@@ -563,6 +626,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_truncl:
   case Builtin::BI__builtin_truncf128:
   case Builtin::BI__builtin_elementwise_trunc:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TruncOp>(cgf, *e);
   case Builtin::BIlround:
   case Builtin::BIlroundf:
   case Builtin::BIlroundl:
@@ -570,6 +634,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_lroundf:
   case Builtin::BI__builtin_lroundl:
   case Builtin::BI__builtin_lroundf128:
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LroundOp>(cgf, *e);
   case Builtin::BIllround:
   case Builtin::BIllroundf:
   case Builtin::BIllroundl:
@@ -577,6 +642,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_llroundf:
   case Builtin::BI__builtin_llroundl:
   case Builtin::BI__builtin_llroundf128:
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LLroundOp>(cgf, *e);
   case Builtin::BIlrint:
   case Builtin::BIlrintf:
   case Builtin::BIlrintl:
@@ -584,6 +650,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_lrintf:
   case Builtin::BI__builtin_lrintl:
   case Builtin::BI__builtin_lrintf128:
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LrintOp>(cgf, *e);
   case Builtin::BIllrint:
   case Builtin::BIllrintf:
   case Builtin::BIllrintl:
@@ -591,6 +658,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_llrintf:
   case Builtin::BI__builtin_llrintl:
   case Builtin::BI__builtin_llrintf128:
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LLrintOp>(cgf, *e);
   case Builtin::BI__builtin_ldexp:
   case Builtin::BI__builtin_ldexpf:
   case Builtin::BI__builtin_ldexpl:
@@ -1605,8 +1673,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:
-  case Builtin::BIforward_like:
   case Builtin::BIas_const:
+    return RValue::get(emitLValue(e->getArg(0)).getPointer());
+  case Builtin::BIforward_like:
   case Builtin::BI__GetExceptionInfo:
   case Builtin::BI__fastfail:
   case Builtin::BIread_pipe:
@@ -1662,6 +1731,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (getContext().BuiltinInfo.isLibFunction(builtinID))
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
+
+  // If this is a predefined lib function (e.g. malloc), emit the call
+  // using exactly the normal call path.
+  if (getContext().BuiltinInfo.isPredefinedLibFunction(builtinID))
+    return emitLibraryCall(*this, fd, e,
+                           emitScalarExpr(e->getCallee()).getDefiningOp());
 
   // Some target-specific builtins can have aggregate return values, e.g.
   // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force

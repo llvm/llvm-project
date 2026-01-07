@@ -5156,6 +5156,96 @@ def CIR_Exp2Op : CIR_UnaryFPToFPBuiltinOp<"exp2", "Exp2Op"> {
   }];
 }
 
+def CIR_LogOp : CIR_UnaryFPToFPBuiltinOp<"log", "LogOp"> {
+  let summary = "Computes the floating-point natural logarithm";
+  let description = [{
+    `cir.log` computes the natural logarithm of a floating-point operand and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_Log10Op : CIR_UnaryFPToFPBuiltinOp<"log10", "Log10Op"> {
+  let summary = "Computes the floating-point base-10 logarithm";
+  let description = [{
+    `cir.log10` computes the base-10 logarithm of a floating-point operand and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_Log2Op : CIR_UnaryFPToFPBuiltinOp<"log2", "Log2Op"> {
+  let summary = "Computes the floating-point base-2 logarithm";
+  let description = [{
+    `cir.log2` computes the base-2 logarithm of a floating-point operand and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_NearbyintOp : CIR_UnaryFPToFPBuiltinOp<"nearbyint", "NearbyintOp"> {
+  let summary = "Rounds floating-point value to nearest integer";
+  let description = [{
+    `cir.nearbyint` rounds a floating-point operand to the nearest integer value
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_RintOp : CIR_UnaryFPToFPBuiltinOp<"rint", "RintOp"> {
+  let summary = "Rounds floating-point value to nearest integer";
+  let description = [{
+    `cir.rint` rounds a floating-point operand to the nearest integer value
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_RoundOp : CIR_UnaryFPToFPBuiltinOp<"round", "RoundOp"> {
+  let summary = "Rounds floating-point value to nearest integer";
+  let description = [{
+    `cir.round` rounds a floating-point operand to the nearest integer value
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_SinOp : CIR_UnaryFPToFPBuiltinOp<"sin", "SinOp"> {
+  let summary = "Computes the floating-point sine";
+  let description = [{
+    `cir.sin` computes the sine of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_TanOp : CIR_UnaryFPToFPBuiltinOp<"tan", "TanOp"> {
+  let summary = "Computes the floating-point tangent";
+  let description = [{
+    `cir.tan` computes the tangent of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "TruncOp"> {
+  let summary = "Truncates floating-point value to integer";
+  let description = [{
+    `cir.trunc` truncates a floating-point operand to an integer value
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
@@ -5182,6 +5272,55 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
     ```
   }];
 }
+
+class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure]>
+{
+  let arguments = (ins CIR_AnyFloatType:$src);
+  let results = (outs CIR_IntType:$result);
+
+  let summary = [{
+    Builtin function that takes a floating-point value as input and produces an
+    integral value as output.
+  }];
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($result) attr-dict
+  }];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_LroundOp : CIR_UnaryFPToIntBuiltinOp<"lround", "LroundOp">;
+def CIR_LLroundOp : CIR_UnaryFPToIntBuiltinOp<"llround", "LlroundOp">;
+def CIR_LrintOp : CIR_UnaryFPToIntBuiltinOp<"lrint", "LrintOp">;
+def CIR_LLrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp">;
+
+class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let summary = [{
+    libc builtin equivalent ignoring floating-point exceptions and errno.
+  }];
+
+  let arguments = (ins
+    CIR_AnyFloatOrVecOfFloatType:$lhs,
+    CIR_AnyFloatOrVecOfFloatType:$rhs
+  );
+
+  let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
+  }];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_CopysignOp : CIR_BinaryFPToFPBuiltinOp<"copysign", "CopySignOp">;
+def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp">;
+def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp">;
+def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp">;
+def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp">;
 
 //===----------------------------------------------------------------------===//
 // Variadic Operations

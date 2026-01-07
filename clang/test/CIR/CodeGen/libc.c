@@ -27,13 +27,13 @@ void testMemset(void *dst, int val, unsigned long size) {
 double fabs(double);
 double testFabs(double x) {
   return fabs(x);
-  // CHECK: cir.call @fabs
+  // CHECK: cir.fabs %{{.+}} : !cir.double
 }
 
 float fabsf(float);
 float testFabsf(float x) {
   return fabsf(x);
-  // CHECK: cir.call @fabsf
+  // CHECK: cir.fabs %{{.+}} : !cir.float
 }
 
 int abs(int);
