@@ -745,3 +745,5 @@ def testAttrNames():
         print(StridedLayoutAttr.attr_name)
         # CHECK: builtin.dense_resource_elements
         print(DenseResourceElementsAttr.attr_name)
+        # CHECK: builtin.string
+        print(StringAttr.attr_name)
