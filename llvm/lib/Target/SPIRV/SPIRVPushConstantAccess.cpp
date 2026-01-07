@@ -57,10 +57,7 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
           NewGV->getType(), Intrinsic::spv_pushconstant_getpointer, {NewGV});
       GR->buildAssignPtr(Builder, GV->getValueType(), GetPointerCall);
 
-      for (unsigned N = 0; N < I->getNumOperands(); ++N) {
-        if (I->getOperand(N) == GV)
-          I->setOperand(N, GetPointerCall);
-      }
+      I->replaceUsesOfWith(GV, GetPointerCall);
     }
 
     GV->eraseFromParent();
