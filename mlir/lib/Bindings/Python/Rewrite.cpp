@@ -509,26 +509,42 @@ void populateRewriteSubmodule(nb::module_ &m) {
            &PyFrozenRewritePatternSet::createFromCapsule);
   m.def(
        "apply_patterns_and_fold_greedily",
-       [](PyModule &module, PyFrozenRewritePatternSet &set) {
+       [](PyModule &module, PyFrozenRewritePatternSet &set, nb::object config) {
+         if (config.is_none()) {
+           config = nb::cast(PyGreedyRewriteDriverConfig());
+         }
+
          auto status = mlirApplyPatternsAndFoldGreedily(
-             module.get(), set.get(), mlirGreedyRewriteDriverConfigCreate());
+             module.get(), set.get(),
+             nb::cast<PyGreedyRewriteDriverConfig &>(config).get());
          if (mlirLogicalResultIsFailure(status))
            throw std::runtime_error("pattern application failed to converge");
        },
-       "module"_a, "set"_a,
+       "module"_a, "set"_a, "config"_a = nb::none(),
+       // clang-format off
+       nb::sig("def apply_patterns_and_fold_greedily(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ", set: FrozenRewritePatternSet, config: GreedyRewriteDriverConfig | None = None) -> None"),
+       // clang-format on
        "Applys the given patterns to the given module greedily while folding "
        "results.")
       .def(
           "apply_patterns_and_fold_greedily",
-          [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
+          [](PyOperationBase &op, PyFrozenRewritePatternSet &set,
+             nb::object config) {
+            if (config.is_none()) {
+              config = nb::cast(PyGreedyRewriteDriverConfig());
+            }
+
             auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
                 op.getOperation(), set.get(),
-                mlirGreedyRewriteDriverConfigCreate());
+                nb::cast<PyGreedyRewriteDriverConfig &>(config).get());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");
           },
-          "op"_a, "set"_a,
+          "op"_a, "set"_a, "config"_a = nb::none(),
+          // clang-format off
+          nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet, config: GreedyRewriteDriverConfig | None = None) -> None"),
+          // clang-format on
           "Applys the given patterns to the given op greedily while folding "
           "results.")
       .def(
