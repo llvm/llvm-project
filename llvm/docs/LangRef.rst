@@ -17407,7 +17407,8 @@ latter exhibits a subset of behaviors of the former.
 
   If the intrinsic is used without nsz, not all backends currently respect the
   specified signed zero ordering. Do not rely on it until this warning has
-  been removed.
+  been removed. See `issue #174730
+  <https://github.com/llvm/llvm-project/issues/174730>`_.
 
 .. _i_maxnum:
 
@@ -17472,7 +17473,8 @@ latter exhibits a subset of behaviors of the former.
 
   If the intrinsic is used without nsz, not all backends currently respect the
   specified signed zero ordering. Do not rely on it until this warning has
-  been removed.
+  been removed. See `issue #174730
+  <https://github.com/llvm/llvm-project/issues/174730>`_.
 
 .. _i_minimum:
 
