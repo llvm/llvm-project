@@ -382,13 +382,22 @@ before(gmask_t gm, uint l)
 }
 
 // The kind of the smallest block that can hold sz bytes
-static uint
+static kind_t
 size_to_kind(uint sz)
 {
     sz = sz < 16 ? 16 : sz;
     uint b = 31 - OCKL_MANGLE_U32(clz)(sz);
     uint v = 1 << b;
     return ((b - 4) << 1) + (sz > v) + (sz > (v | (v >> 1)));
+}
+
+// Assume size >= align
+static kind_t
+aligned_size_to_kind(uint align, uint sz)
+{
+    kind_t k = size_to_kind(sz);
+    uint a = 1U << (((k >> 1) + 4) - (k & 1));
+    return k + (a < align);
 }
 
 // The size of a block of kind k
@@ -479,7 +488,7 @@ __ockl_dm_dealloc(ulong addr)
 // The is the malloc implementation for sizes greater
 // than ALLOC_THRESHOLD
 static __global void *
-non_slab_malloc(size_t sz)
+non_slab_alloc(size_t sz)
 {
     ulong addr = __ockl_devmem_request(0, sz);
 
@@ -952,9 +961,24 @@ block_find(__global sdata_t *sdp, kind_t k, gmask_t gm)
 
 // This is the malloc implementation for sizes that fit in some kind of block
 static __global void *
-slab_malloc(int sz)
+slab_alloc(uint sz)
 {
     kind_t k = size_to_kind(sz);
+    __global heap_t *hp = get_heap_ptr();
+    gmask_t gm = match(k);
+
+    __global sdata_t *sdp = slab_find(hp, k, gm);
+    if (sdp != (__global sdata_t *)0)
+        return block_find(sdp, k, gm);
+
+    return (__global void *)0;
+}
+
+// This variant returns an aligned address
+static __global void *
+slab_aligned_alloc(uint align, uint sz)
+{
+    kind_t k = aligned_size_to_kind(align, sz);
     __global heap_t *hp = get_heap_ptr();
     gmask_t gm = match(k);
 
@@ -973,9 +997,25 @@ __ockl_dm_alloc(ulong sz)
         return (__global void *)0;
 
     if (sz > ALLOC_THRESHOLD)
-        return non_slab_malloc(sz);
+        return non_slab_alloc(sz);
 
-    return slab_malloc(sz);
+    return slab_alloc(sz);
+}
+
+// public aligned_alloc() entrypoint
+__attribute__((cold)) __global void *
+__ockl_dm_aligned_alloc(ulong align, ulong sz)
+{
+    if (sz == 0)
+        return (__global void *)0;
+
+    sz = sz < align ? align : sz;
+    sz = (align > 1024 && sz > 2048 && sz < 4096) ? 4096 : sz;
+
+    if (sz > ALLOC_THRESHOLD)
+        return non_slab_alloc(sz);
+
+    return slab_aligned_alloc(align, sz);
 }
 
 // Initialize the heap
