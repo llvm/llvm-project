@@ -446,6 +446,47 @@ static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
   return builder.createMul(loc, lhs, rhs);
 }
 
+// Convert f16 half values to floats.
+static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
+                                            mlir::Location loc,
+                                            llvm::ArrayRef<mlir::Value> ops,
+                                            mlir::Type dstTy) {
+  assert((ops.size() == 1 || ops.size() == 3 || ops.size() == 4) &&
+         "Unknown cvtph2ps intrinsic");
+
+  // If the SAE intrinsic doesn't use default rounding then we can't upgrade.
+  if (ops.size() == 4) {
+    auto constOp = ops[3].getDefiningOp<cir::ConstantOp>();
+    assert(constOp && "Expected constant operand");
+    if (constOp.getIntValue().getZExtValue() != 4) {
+      return emitIntrinsicCallOp(builder, loc, "x86.avx512.mask.vcvtph2ps.512",
+                                 dstTy, ops);
+    }
+  }
+
+  unsigned numElts = cast<cir::VectorType>(dstTy).getSize();
+  mlir::Value src = ops[0];
+
+  // Extract the subvector
+  if (numElts != cast<cir::VectorType>(src.getType()).getSize()) {
+    assert(numElts == 4 && "Unexpected vector size");
+    src = builder.createVecShuffle(loc, src, {0, 1, 2, 3});
+  }
+
+  // Bitcast from vXi16 to vXf16.
+  cir::VectorType halfTy =
+      cir::VectorType::get(cir::FP16Type::get(builder.getContext()), numElts);
+
+  src = builder.createCast(cir::CastKind::bitcast, src, halfTy);
+
+  // Perform the fp-extension
+  mlir::Value res = builder.createCast(cir::CastKind::floating, src, dstTy);
+
+  if (ops.size() >= 3)
+    res = emitX86Select(builder, loc, ops[2], res, ops[1]);
+  return res;
+}
+
 static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
                                 llvm::SmallVector<mlir::Value> ops,
                                 bool isSigned) {
@@ -1828,9 +1869,17 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cmpnltsd:
   case X86::BI__builtin_ia32_cmpnlesd:
   case X86::BI__builtin_ia32_cmpordsd:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_vcvtph2ps_mask:
   case X86::BI__builtin_ia32_vcvtph2ps256_mask:
-  case X86::BI__builtin_ia32_vcvtph2ps512_mask:
+  case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    return emitX86CvtF16ToFloatExpr(builder, loc, ops,
+                                    convertType(expr->getType()));
+  }
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask:

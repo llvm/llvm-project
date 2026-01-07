@@ -2971,7 +2971,7 @@ public:
 
   std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const override {
+                        InstructionListType::iterator CallInst) const override {
     MCPhysReg SizeReg = getIntArgRegister(2);
     if (SizeReg == getNoRegister())
       return std::nullopt;
