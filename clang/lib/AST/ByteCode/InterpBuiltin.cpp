@@ -148,7 +148,7 @@ static QualType getElemType(const Pointer &P) {
   if (Desc->isPrimitive())
     return T;
   if (T->isPointerType())
-    return T->getAs<PointerType>()->getPointeeType();
+    return T->castAs<PointerType>()->getPointeeType();
   if (Desc->isArray())
     return Desc->getElemQualType();
   if (const auto *AT = T->getAsArrayTypeUnsafe())
@@ -2935,7 +2935,7 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_select_scalar(InterpState &S,
                                           const CallExpr *Call) {
   unsigned N =
-      Call->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+      Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements();
 
   const Pointer &W = S.Stk.pop<Pointer>();
   const Pointer &A = S.Stk.pop<Pointer>();
@@ -5213,7 +5213,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vperm2f128_si256:
   case X86::BI__builtin_ia32_permti256: {
     unsigned NumElements =
-        Call->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+        Call->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
     unsigned PreservedBitsCnt = NumElements >> 2;
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call,

@@ -69,13 +69,13 @@ void UnusedLocalNonTrivialVariableCheck::registerMatchers(MatchFinder *Finder) {
               unless(isExceptionVariable()), hasLocalStorage(), isDefinition(),
               unless(hasType(isReferenceType())), unless(hasType(isTrivial())),
               unless(explicitMarkUnused()),
-              hasType(hasUnqualifiedDesugaredType(
-                  anyOf(recordType(hasDeclaration(namedDecl(
-                            matchesAnyListedName(IncludeTypes),
-                            unless(matchesAnyListedName(ExcludeTypes))))),
-                        templateSpecializationType(hasDeclaration(namedDecl(
-                            matchesAnyListedName(IncludeTypes),
-                            unless(matchesAnyListedName(ExcludeTypes)))))))))
+              hasType(hasUnqualifiedDesugaredType(anyOf(
+                  recordType(hasDeclaration(namedDecl(
+                      matchesAnyListedRegexName(IncludeTypes),
+                      unless(matchesAnyListedRegexName(ExcludeTypes))))),
+                  templateSpecializationType(hasDeclaration(namedDecl(
+                      matchesAnyListedRegexName(IncludeTypes),
+                      unless(matchesAnyListedRegexName(ExcludeTypes)))))))))
           .bind("var"),
       this);
 }

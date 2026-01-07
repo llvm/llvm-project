@@ -104,7 +104,7 @@ void AssertSideEffectCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void AssertSideEffectCheck::registerMatchers(MatchFinder *Finder) {
   auto IgnoredFunctionsMatcher =
-      matchers::matchesAnyListedName(IgnoredFunctions);
+      matchers::matchesAnyListedRegexName(IgnoredFunctions);
 
   auto DescendantWithSideEffect =
       traverse(TK_AsIs, hasDescendant(expr(hasSideEffect(

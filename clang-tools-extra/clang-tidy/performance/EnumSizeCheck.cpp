@@ -91,7 +91,7 @@ void EnumSizeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       enumDecl(unless(isExpansionInSystemHeader()), isDefinition(),
                hasEnumerators(),
-               unless(matchers::matchesAnyListedName(EnumIgnoreList)))
+               unless(matchers::matchesAnyListedRegexName(EnumIgnoreList)))
           .bind("e"),
       this);
 }

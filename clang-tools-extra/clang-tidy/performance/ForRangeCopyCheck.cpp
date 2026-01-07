@@ -38,7 +38,7 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
   auto HasReferenceOrPointerTypeOrIsAllowed = hasType(qualType(
       unless(anyOf(hasCanonicalType(anyOf(referenceType(), pointerType())),
                    hasDeclaration(namedDecl(
-                       matchers::matchesAnyListedName(AllowedTypes)))))));
+                       matchers::matchesAnyListedRegexName(AllowedTypes)))))));
   auto IteratorReturnsValueType = cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),
       callee(

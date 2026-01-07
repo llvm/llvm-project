@@ -85,7 +85,7 @@ private:
 
 static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
   return anyOf(hasAnyName("::std::move", "::std::forward"),
-               matchers::matchesAnyListedName(InvalidationFunctions));
+               matchers::matchesAnyListedRegexName(InvalidationFunctions));
 }
 
 static StatementMatcher
@@ -138,11 +138,12 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                                        hasAttr(clang::attr::Reinitializes)))),
                  // Functions that are specified in ReinitializationFunctions
                  // option.
-                 callExpr(callee(functionDecl(matchers::matchesAnyListedName(
-                              ReinitializationFunctions))),
-                          anyOf(cxxMemberCallExpr(on(DeclRefMatcher)),
-                                callExpr(unless(cxxMemberCallExpr()),
-                                         hasArgument(0, DeclRefMatcher)))),
+                 callExpr(
+                     callee(functionDecl(matchers::matchesAnyListedRegexName(
+                         ReinitializationFunctions))),
+                     anyOf(cxxMemberCallExpr(on(DeclRefMatcher)),
+                           callExpr(unless(cxxMemberCallExpr()),
+                                    hasArgument(0, DeclRefMatcher)))),
                  // Passing variable to a function as a non-const pointer.
                  callExpr(forEachArgumentWithParam(
                      unaryOperator(hasOperatorName("&"),
