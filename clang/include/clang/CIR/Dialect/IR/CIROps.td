@@ -5914,16 +5914,18 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
 
     As a result, the array of 4 integers is filled with the requested information.
 
+    Note that, since arrays usually decay to pointers, `basePtr` is expected to be
+    just a pointer to integer. Extra verifications are done at the verifier.
+
     Example:
 
     ```mlir
-    cir.cpuid %basePtr, %funcId, %subFuncId
-        : (!cir.ptr<!cir.array<4 x !s32i>>, !s32i, !s32i)
+    cir.cpuid %basePtr, %funcId, %subFuncId : (!cir.ptr<!s32i>, !s32i, !s32i)
     ```
   }];
 
   let arguments =
-      (ins Arg<CIR_PtrToArray, "array address", [MemWrite]>:$basePtr,
+      (ins Arg<CIR_PointerType, "array address", [MemWrite]>:$basePtr,
           CIR_SInt32:$funcId, CIR_SInt32:$subFuncId);
 
   let hasVerifier = 1;
