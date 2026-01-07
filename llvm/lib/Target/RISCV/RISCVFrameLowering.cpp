@@ -32,12 +32,6 @@
 
 using namespace llvm;
 
-static cl::opt<std::string> UserDefinedUncondPrologCSRs(
-    "riscv-user-defined-uncond-prolog-csrs",
-    cl::desc("Comma-separated list of registers that have to be saved / "
-             "restored in prolog / epilog. Used for testing only"),
-    cl::init(""), cl::ReallyHidden);
-
 static Align getABIStackAlignment(RISCVABI::ABI ABI) {
   if (ABI == RISCVABI::ABI_ILP32E)
     return Align(4);
@@ -1593,7 +1587,12 @@ void RISCVFrameLowering::determineUncondPrologCalleeSaves(
     MachineFunction &MF, const MCPhysReg *CSRegs,
     BitVector &UncondPrologCSRs) const {
 
-  StringRef RegString(UserDefinedUncondPrologCSRs);
+  const Function &F = MF.getFunction();
+  if (!F.hasFnAttribute("riscv-user-defined-uncond-prolog-csrs"))
+    return;
+  const AttributeList &Attrs = F.getAttributes();
+  StringRef RegString = Attrs.getFnAttr("riscv-user-defined-uncond-prolog-csrs")
+                            .getValueAsString();
   SmallVector<llvm::StringRef, 4> RegNames;
   llvm::SplitString(RegString, RegNames, ",");
   for (auto &Name : RegNames) {
