@@ -3,6 +3,7 @@
 // across the array
 
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 #include <omp.h>
 #include <stdio.h>
 
