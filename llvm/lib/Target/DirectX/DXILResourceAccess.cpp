@@ -300,19 +300,18 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
   uint64_t GlobalOffsetVal = GlobalOffset->getZExtValue();
   Value *CurrentRow = ConstantInt::get(
       Builder.getInt32Ty(), GlobalOffsetVal / hlsl::CBufferRowSizeInBytes);
-  unsigned int CurrentIndex;
+  unsigned int CurrentIndex =
+      (GlobalOffsetVal % hlsl::CBufferRowSizeInBytes) / Intrin.EltSize;
 
   // Every object in a cbuffer either fits in a row or is aligned to a row. This
   // means that only the very last pointer access can point into a row.
   auto *LastGEP = dyn_cast<GEPOperator>(LI->getPointerOperand());
-  if (!LastGEP) {
+  if (!LastGEP)
     // If we don't have a GEP at all we're just accessing the resource through
     // the result of getpointer directly.
     assert(LI->getPointerOperand() == II &&
            "Unexpected indirect access to resource without GEP");
-    CurrentIndex =
-        (GlobalOffsetVal % hlsl::CBufferRowSizeInBytes) / Intrin.EltSize;
-  } else {
+  else {
     Value *GEPOffset = traverseGEPOffsets(
         DL, Builder, LastGEP->getPointerOperand(), hlsl::CBufferRowSizeInBytes);
     CurrentRow = Builder.CreateAdd(GEPOffset, CurrentRow);
@@ -324,9 +323,7 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
       APInt::udivrem(ConstantOffset, Remainder, ConstantOffset, Remainder);
       CurrentRow = Builder.CreateAdd(
           CurrentRow, ConstantInt::get(Builder.getInt32Ty(), ConstantOffset));
-      CurrentIndex = ((GlobalOffsetVal % hlsl::CBufferRowSizeInBytes) +
-                      Remainder.getZExtValue()) /
-                     Intrin.EltSize;
+      CurrentIndex += Remainder.udiv(Intrin.EltSize).getZExtValue();
     } else {
       assert(LastGEP->getNumIndices() == 1 &&
              "Last GEP of cbuffer access is not array or struct access");
