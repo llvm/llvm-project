@@ -700,8 +700,11 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
     Type *WiderTy = SE.getWiderType(Subscript->getType(), Size->getType());
     Subscript = SE.getNoopOrSignExtend(Subscript, WiderTy);
     Size = SE.getNoopOrSignExtend(Size, WiderTy);
-    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLT, Subscript, Size))
+    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLT, Subscript, Size)) {
+      LLVM_DEBUG(dbgs() << "Range check failed: " << *Subscript << " <s "
+                        << *Size << "\n");
       return false;
+    }
   }
 
   // The offset computation is as follows:
