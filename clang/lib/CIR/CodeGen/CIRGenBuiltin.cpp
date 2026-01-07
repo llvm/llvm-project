@@ -63,25 +63,17 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
 static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
                               cir::SyncScopeKind syncScope) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
+  mlir::Location loc = cgf.getLoc(expr->getSourceRange());
 
-  auto constOrdering = orderingVal.getDefiningOp<cir::ConstantOp>();
+  auto emitAtomicOpCallBackFn = [&](cir::MemOrder memOrder) {
+    cir::AtomicFenceOp::create(
+        builder, loc, memOrder,
+        cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
+  };
 
-  if (!constOrdering) {
-    // TODO(cir): Emit code to switch on `orderingVal`,
-    //            and creating the fence op for valid values.
-    cgf.cgm.errorNYI("Variable atomic fence ordering");
-    return;
-  }
-
-  auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>();
-  assert(constOrderingAttr && "Expected integer constant for ordering");
-
-  auto ordering = static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
-
-  cir::AtomicFenceOp::create(
-      builder, cgf.getLoc(expr->getSourceRange()), ordering,
-      cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
+  cgf.emitAtomicExprWithMemOrder(expr->getArg(0), /*isStore*/ false,
+                                 /*isLoad*/ false, /*isFence*/ true,
+                                 emitAtomicOpCallBackFn);
 }
 
 namespace {
@@ -1338,16 +1330,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__atomic_test_and_set:
   case Builtin::BI__atomic_clear:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__atomic_thread_fence: {
+  case Builtin::BI__atomic_thread_fence:
+  case Builtin::BI__c11_atomic_thread_fence: {
     emitAtomicFenceOp(*this, e, cir::SyncScopeKind::System);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__atomic_signal_fence: {
+  case Builtin::BI__atomic_signal_fence:
+  case Builtin::BI__c11_atomic_signal_fence: {
     emitAtomicFenceOp(*this, e, cir::SyncScopeKind::SingleThread);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__c11_atomic_thread_fence:
-  case Builtin::BI__c11_atomic_signal_fence:
   case Builtin::BI__scoped_atomic_thread_fence:
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:

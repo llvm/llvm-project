@@ -4761,6 +4761,14 @@ def  INT_PTX_SREG_CLUSTER_NCTARANK:
                          int_nvvm_read_ptx_sreg_cluster_nctarank,
                          [hasSM<90>, hasPTX<78>]>;
 
+def INT_PTX_SREG_TOTAL_SMEM_SIZE :
+    PTX_READ_SREG_R32<"total_smem_size", int_nvvm_read_ptx_sreg_total_smem_size>;
+def INT_PTX_SREG_DYNAMIC_SMEM_SIZE :
+    PTX_READ_SREG_R32<"dynamic_smem_size", int_nvvm_read_ptx_sreg_dynamic_smem_size>;
+def INT_PTX_SREG_AGGR_SMEM_SIZE :
+    PTX_READ_SREG_R32<"aggr_smem_size",
+                      int_nvvm_read_ptx_sreg_aggr_smem_size,
+                      [hasSM<90>, hasPTX<81>]>;
 
 def SREG_LANEID : PTX_READ_SREG_R32<"laneid", int_nvvm_read_ptx_sreg_laneid>;
 def SREG_WARPID : PTX_READ_SREG_R32<"warpid", int_nvvm_read_ptx_sreg_warpid>;
@@ -6237,3 +6245,67 @@ foreach sp = [0, 1] in {
   }
 }
 
+//
+// tensormap.replace Instructions
+//
+
+class TensormapReplaceInst_2<string state_space, string field_name, 
+  string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
+  code predicate> :
+  BasicNVPTXInst<(outs), 
+    (ins ADDR:$addr, val_RC:$val), 
+    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
+    [(PatFrag<(ops node:$addr, node:$val),
+       (Intrin node:$addr, node:$val), predicate>
+      addr:$addr, ValTy:$val)]>;
+
+class TensormapReplaceInst_3<string state_space, string field_name, 
+  string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
+  code predicate> :
+  BasicNVPTXInst<(outs), 
+    (ins ADDR:$addr, B32:$ord, val_RC:$val), 
+    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
+    [(PatFrag<(ops node:$addr, node:$ord, node:$val),
+       (Intrin node:$addr, node:$ord, node:$val), predicate>
+      addr:$addr, i32:$ord, ValTy:$val)]>;
+
+foreach ss = ["GLOBAL", "SHARED_CTA"] in {
+  defvar pred = !if(!eq(ss, "GLOBAL"), AS_match.global, AS_match.shared);
+  defvar ss_ptx = !tolower(!subst("_", "::", ss));
+  let Predicates = [callSubtarget<"hasTensormapReplaceSupport">] in {
+    def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss : 
+      TensormapReplaceInst_2<ss_ptx, "global_address", "b64", B64, i64,
+        int_nvvm_tensormap_replace_global_address, pred>;
+
+    foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
+      defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
+      def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss : 
+        TensormapReplaceInst_2<ss_ptx, !tolower(field_name), "b32", B32, i32,
+          intrin, pred>;
+    } // field_name
+
+    def TENSORMAP_REPLACE_TILE_GLOBAL_STRIDE_ # ss : 
+      TensormapReplaceInst_3<ss_ptx, "global_stride", "b64", B64, i64, 
+        int_nvvm_tensormap_replace_global_stride, pred>;
+
+    foreach field_name = ["BOX_DIM", "GLOBAL_DIM", "ELEMENT_STRIDE"] in {
+      defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
+      def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss : 
+        TensormapReplaceInst_3<ss_ptx, !tolower(field_name), "b32", B32, i32, 
+          intrin, pred>;
+    } // field_name
+  } // hasTensormapReplaceSupport
+
+  def TENSORMAP_REPLACE_TILE_ELEMTYPE_ # ss : 
+    TensormapReplaceInst_2<ss_ptx, "elemtype", "b32", B32, i32, 
+      int_nvvm_tensormap_replace_elemtype, pred>;
+
+  def TENSORMAP_REPLACE_SWIZZLE_ATOMICITY_ # ss : 
+    TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", "b32", B32, i32, 
+      int_nvvm_tensormap_replace_swizzle_atomicity, pred>,
+    Requires<[callSubtarget<"hasTensormapReplaceSwizzleAtomicitySupport">]>;
+
+  def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss : 
+    TensormapReplaceInst_2<ss_ptx, "swizzle_mode", "b32", B32, i32, 
+      int_nvvm_tensormap_replace_swizzle_mode, pred>;
+} // state_space

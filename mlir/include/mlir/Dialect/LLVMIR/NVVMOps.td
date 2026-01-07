@@ -243,6 +243,36 @@ class NVVM_IntrOp<string mnem, list<Trait> traits = [],
                     /*list<int> overloadedOperands=*/[],
                     traits, numResults>;
 
+class NVVM_IntrinsicLoweringOp<string mnemonic, list<Trait> traits = []> : 
+    NVVM_Op<mnemonic, traits> {
+  string cppClass = !subst("NVVM_", "", NAME);
+  let extraClassDeclaration = [{
+    static NVVM::IDArgPair
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase &builder);
+  }];
+}
+
+class NVVM_VoidIntrinsicOp<string mnemonic, list<Trait> traits = []> :
+  NVVM_IntrinsicLoweringOp<mnemonic, traits> {
+  let llvmBuilder = [{
+    auto [id, args] = NVVM::}] # cppClass # [{::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
+  }];
+}
+
+class NVVM_SingleResultIntrinsicOp<string mnemonic, list<Trait> traits = [], string resultStr = "$res"> :
+  NVVM_IntrinsicLoweringOp<mnemonic, traits> {
+  string getFuncCall = "get" # !toupper(!substr(resultStr, 1, 1)) # !substr(resultStr, 2);
+  let llvmBuilder = [{
+    auto [id, args] = NVVM::}] # cppClass # [{::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    if (op->getNumResults() > 0)
+      }] # resultStr # [{ = createIntrinsicCall(builder, id, moduleTranslation.convertType(op.}] # getFuncCall # [{().getType()), args);
+    else
+      createIntrinsicCall(builder, id, builder.getVoidTy(), args);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM special register op definitions
 //===----------------------------------------------------------------------===//
@@ -352,6 +382,12 @@ def NVVM_ClusterDimBlocksZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sre
 // CTA index and across Cluster dimensions
 def NVVM_ClusterId : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctarank", [NVVMRequiresSM<90>]>;
 def NVVM_ClusterDim : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctarank">;
+
+//===----------------------------------------------------------------------===//
+// Various configurations of Shared memory sizes
+def NVVM_TotalSmemSize   : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.total.smem.size">;
+def NVVM_DynamicSmemSize : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.dynamic.smem.size">;
+def NVVM_AggrSmemSize    : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.aggr.smem.size", [NVVMRequiresSM<90>]>;
 
 //===----------------------------------------------------------------------===//
 // Clock registers
@@ -543,7 +579,7 @@ def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
 // NVVM Performance Monitor events
 //===----------------------------------------------------------------------===//
 
-def NVVM_PMEventOp : NVVM_Op<"pmevent">,
+def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
   Arguments<(ins OptionalAttr<I16Attr>:$maskedEventId, 
                  OptionalAttr<I32Attr>:$eventId)> {
   let summary = "Trigger one or more Performance Monitor events.";
@@ -563,18 +599,6 @@ def NVVM_PMEventOp : NVVM_Op<"pmevent">,
   
   let assemblyFormat = "attr-dict (`id` `=` $eventId^)? (`mask` `=` $maskedEventId^)?";
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::PMEventOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -624,7 +648,7 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
   }];
 }
 
-def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
+def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval">,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr)> {
   let summary = "MBarrier Invalidation Operation";
   let description = [{
@@ -645,21 +669,9 @@ def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
   }];
 
   let assemblyFormat = "$addr attr-dict `:` type(operands)";
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierInvalOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_MBarrierExpectTxOp : NVVM_Op<"mbarrier.expect_tx"> {
+def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx"> {
   let summary = "MBarrier expect-tx Operation";
   let description = [{
     The `nvvm.mbarrier.expect_tx` operation increases the transaction count
@@ -679,21 +691,9 @@ def NVVM_MBarrierExpectTxOp : NVVM_Op<"mbarrier.expect_tx"> {
   let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
 
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierExpectTxOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_MBarrierCompleteTxOp : NVVM_Op<"mbarrier.complete_tx"> {
+def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx"> {
   let summary = "MBarrier complete-tx Operation";
   let description = [{
     The `nvvm.mbarrier.complete_tx` operation decrements the transaction
@@ -714,21 +714,9 @@ def NVVM_MBarrierCompleteTxOp : NVVM_Op<"mbarrier.complete_tx"> {
   let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
 
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierCompleteTxOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive"> {
+def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive"> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
@@ -774,25 +762,9 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive"> {
   let assemblyFormat = "$addr (`,` $count^)? attr-dict `:` type($addr) (`->` type($res)^)?";
 
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierArriveOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-
-    if (op.getNumResults() > 0)
-      $res = createIntrinsicCall(builder, id, args);
-    else
-      createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_MBarrierArriveDropOp : NVVM_Op<"mbarrier.arrive_drop"> {
+def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop"> {
   let summary = "MBarrier Arrive-Drop Operation";
   let description = [{
     The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
@@ -815,25 +787,9 @@ def NVVM_MBarrierArriveDropOp : NVVM_Op<"mbarrier.arrive_drop"> {
   let assemblyFormat = "$addr (`,` $count^)? attr-dict `:` type($addr) (`->` type($res)^)?";
 
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierArriveDropOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-
-    if (op.getNumResults() > 0)
-      $res = createIntrinsicCall(builder, id, args);
-    else
-      createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
+def NVVM_MBarrierArriveNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive.nocomplete">,
   Results<(outs I64:$res)>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count)> {
@@ -865,21 +821,9 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
   }];
 
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_MBarrierArriveDropNocompleteOp : NVVM_Op<"mbarrier.arrive_drop.nocomplete">,
+def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.nocomplete">,
   Results<(outs I64:$res)>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count)> {
@@ -894,18 +838,6 @@ def NVVM_MBarrierArriveDropNocompleteOp : NVVM_Op<"mbarrier.arrive_drop.nocomple
   }];
 
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierArriveDropNocompleteOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx"> {
@@ -974,7 +906,7 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
   }];
 }
 
-def NVVM_MBarrierArriveDropExpectTxOp : NVVM_Op<"mbarrier.arrive_drop.expect_tx"> {
+def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.expect_tx"> {
   let summary = "MBarrier arrive_drop with expected transaction count";
   let description = [{
     The `nvvm.mbarrier.arrive_drop.expect_tx` operation is similar to the
@@ -993,21 +925,6 @@ def NVVM_MBarrierArriveDropExpectTxOp : NVVM_Op<"mbarrier.arrive_drop.expect_tx"
 
   let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) (`->` type($res)^)?";
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierArriveDropExpectTxOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    if (op.getNumResults() > 0)
-      $res = createIntrinsicCall(builder, id, args);
-    else
-      createIntrinsicCall(builder, id, args);
-  }];
 }
 
 def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity">,  
@@ -1068,7 +985,7 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
   let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
 }
 
-def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait"> {
+def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait"> {
   let summary = "MBarrier Non-Blocking Test Wait Operation";
   let description = [{
     The `nvvm.mbarrier.test.wait` operation performs a non-blocking test for the
@@ -1132,21 +1049,9 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait"> {
 
   let assemblyFormat = "$addr `,` $stateOrPhase attr-dict `:` type(operands) `->` type($res)";
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierTestWaitOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_MBarrierTryWaitOp : NVVM_Op<"mbarrier.try_wait"> {
+def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait"> {
   let summary = "MBarrier try wait on state or phase with an optional timelimit";
   let description = [{
     The `nvvm.mbarrier.try_wait` operation checks whether the specified
@@ -1173,18 +1078,6 @@ def NVVM_MBarrierTryWaitOp : NVVM_Op<"mbarrier.try_wait"> {
 
   let assemblyFormat = "$addr `,` $stateOrPhase (`,` $ticks^)? attr-dict `:` type(operands) `->` type($res)";
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierTryWaitOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1226,7 +1119,7 @@ def BarrierReductionAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
+def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier", [AttrSizedOperandSegments]> {
   let summary = "CTA Barrier Synchronization Op";
   let description = [{
     The `nvvm.barrier` operation performs barrier synchronization and communication 
@@ -1257,12 +1150,6 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     CTA do not reach this instruction.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
-  }];
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::IRBuilderBase& builder);
   }];
 
   let arguments = (ins Optional<I32>:$barrierId, Optional<I32>:$numberOfThreads,
@@ -1776,7 +1663,7 @@ def PermuteModeAttr : EnumAttr<NVVM_Dialect, PermuteMode, "permute_mode"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_PermuteOp : NVVM_Op<"prmt", [Pure]>,
+def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
                      Results<(outs I32:$res)>,
                      Arguments<(ins I32:$lo, Optional<I32>:$hi, I32:$selector,
                          PermuteModeAttr:$mode)> {
@@ -1864,18 +1751,6 @@ def NVVM_PermuteOp : NVVM_Op<"prmt", [Pure]>,
   }];
 
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
-  
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::PermuteOp::getIntrinsicIDAndArgs(
-        *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
 def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
@@ -1941,7 +1816,7 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
   let assemblyFormat = "$n attr-dict";
 }
 
-def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive"> {
+def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arrive"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
   let description = [{
     The `cp.async.mbarrier.arrive` Op makes the *mbarrier object* track
@@ -1960,18 +1835,6 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive"> {
     DefaultValuedAttr<I1Attr, "0">:$noinc);
 
   let assemblyFormat = "$addr attr-dict `:` type(operands)";
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncMBarrierArriveOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2255,7 +2118,7 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
 }
 
 class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstType>
-: NVVM_Op<"convert." # !tolower(srcType) # "x2.to." # !tolower(dstType) # "x2"> {
+: NVVM_SingleResultIntrinsicOp<"convert." # !tolower(srcType) # "x2.to." # !tolower(dstType) # "x2", [], "$dst"> {
   let summary = "Convert a pair of " # !tolower(srcType) # " inputs to " # !tolower(dstType) # "x2";
   let description = [{
     This Op converts the given }] # !tolower(srcType) # [{ inputs in a }] #
@@ -2279,19 +2142,6 @@ class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstTy
          TypeAttr:$srcType));
   let assemblyFormat = "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)";
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt, 
-                          llvm::IRBuilderBase &builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [intId, args] =
-    NVVM::Convert}] # srcType # [{x2To}] # dstType # 
-      [{x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
-    $dst = createIntrinsicCall(builder, intId, args);
-  }];
 }
 
 def NVVM_ConvertF8x2ToF16x2Op :

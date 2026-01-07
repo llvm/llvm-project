@@ -98,11 +98,12 @@ static void insertComment(Object &Description, json::Value &Comment,
   // The comment has a Children array for the actual text, with meta attributes
   // alongside it in the Object.
   if (auto *Obj = Comment.getAsObject()) {
-    if (auto *Children = Obj->getArray("Children"); Children->empty())
+    if (auto *Children = Obj->getArray("Children");
+        Children && Children->empty())
       return;
   }
   // The comment is just an array of text comments.
-  else if (auto *Array = Comment.getAsArray(); Array->empty()) {
+  else if (auto *Array = Comment.getAsArray(); Array && Array->empty()) {
     return;
   }
 
@@ -212,6 +213,8 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
     Child.insert({"Children", TextCommentsArray});
     if (I.Kind == CommentKind::CK_ParamCommandComment)
       insertComment(Description, ChildVal, "ParamComments");
+    if (I.Kind == CommentKind::CK_TParamCommandComment)
+      insertComment(Description, ChildVal, "TParamComments");
     return Obj;
   }
 
@@ -278,7 +281,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
 static void
 serializeCommonAttributes(const Info &I, json::Object &Obj,
                           const std::optional<StringRef> RepositoryUrl) {
-  Obj["Name"] = I.Name;
+  insertNonEmpty("Name", I.Name, Obj);
   Obj["USR"] = toHex(toStringRef(I.USR));
   Obj["InfoType"] = infoTypeToString(I.IT);
   // Conditionally insert fields.
@@ -327,8 +330,14 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
   ReferenceObj["Name"] = Ref.Name;
   ReferenceObj["QualName"] = Ref.QualName;
   ReferenceObj["USR"] = toHex(toStringRef(Ref.USR));
-  if (!Ref.DocumentationFileName.empty())
+  if (!Ref.DocumentationFileName.empty()) {
     ReferenceObj["DocumentationFileName"] = Ref.DocumentationFileName;
+
+    // If the reference is a nested class it will be put into a folder named
+    // after the parent class. We can get that name from the path's stem.
+    if (Ref.Path != "GlobalNamespace")
+      ReferenceObj["PathStem"] = sys::path::stem(Ref.Path);
+  }
 }
 
 // Although namespaces and records both have ScopeChildren, they serialize them
@@ -346,8 +355,10 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
     Obj["HasEnums"] = true;
   }
 
-  if (!Children.Typedefs.empty())
+  if (!Children.Typedefs.empty()) {
     serializeArray(Children.Typedefs, Obj, "Typedefs", SerializeInfo);
+    Obj["HasTypedefs"] = true;
+  }
 
   if (!Children.Records.empty()) {
     serializeArray(Children.Records, Obj, "Records", SerializeReferenceLambda);
@@ -437,7 +448,11 @@ static void serializeInfo(const TypeInfo &I, Object &Obj) {
 
 static void serializeInfo(const FieldTypeInfo &I, Object &Obj) {
   Obj["Name"] = I.Name;
-  Obj["Type"] = I.Type.Name;
+  insertNonEmpty("DefaultValue", I.DefaultValue, Obj);
+  json::Value ReferenceVal = Object();
+  Object &ReferenceObj = *ReferenceVal.getAsObject();
+  serializeReference(I.Type, ReferenceObj);
+  Obj["Type"] = ReferenceVal;
 }
 
 static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
@@ -491,6 +506,8 @@ static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
   auto &TypeObj = *TypeVal.getAsObject();
   serializeInfo(I.Underlying, TypeObj);
   Obj["Underlying"] = TypeVal;
+  if (I.Template)
+    serializeInfo(I.Template.value(), Obj);
 }
 
 static void serializeInfo(const BaseRecordInfo &I, Object &Obj,
@@ -515,6 +532,7 @@ static void serializeInfo(const FriendInfo &I, Object &Obj) {
     serializeInfo(I.ReturnType.value(), ReturnTypeObj);
     Obj["ReturnType"] = std::move(ReturnTypeObj);
   }
+  serializeCommonAttributes(I, Obj, std::nullopt);
 }
 
 static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
@@ -604,8 +622,10 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
 
-  if (!I.Friends.empty())
+  if (!I.Friends.empty()) {
     serializeArray(I.Friends, Obj, "Friends", SerializeInfoLambda);
+    Obj["HasFriends"] = true;
+  }
 
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
@@ -641,8 +661,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["HasFunctions"] = true;
   }
 
-  if (!I.Children.Concepts.empty())
+  if (!I.Children.Concepts.empty()) {
     serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
+    Obj["HasConcepts"] = true;
+  }
 
   if (!I.Children.Variables.empty())
     serializeArray(I.Children.Variables, Obj, "Variables", SerializeInfo);

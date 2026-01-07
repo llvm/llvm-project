@@ -210,6 +210,8 @@ ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy, Benign)
 /// Replace certain message sends with calls to ObjC runtime entrypoints
 CODEGENOPT(ObjCConvertMessagesToRuntimeCalls , 1, 1, Benign)
 CODEGENOPT(ObjCAvoidHeapifyLocalBlocks, 1, 0, Benign)
+/// Generate direct method precondition thunks to expose symbols and optimize nil checks.
+CODEGENOPT(ObjCDirectPreconditionThunk, 1, 0, Benign)
 
 
 // The optimization options affect frontend options, which in turn do affect the AST.
@@ -485,8 +487,11 @@ CODEGENOPT(ImportCallOptimization, 1, 0, Benign)
 /// (BlocksRuntime) on Windows.
 CODEGENOPT(StaticClosure, 1, 0, Benign)
 
-/// Assume that UAVs/SRVs may alias
+/// Assume that UAVs/SRVs may alias if enabled
 CODEGENOPT(ResMayAlias, 1, 0, Benign)
+
+/// Assume that all resources are bound if enabled
+CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 
 /// Controls how unwind v2 (epilog) information should be generated for x64
 /// Windows.

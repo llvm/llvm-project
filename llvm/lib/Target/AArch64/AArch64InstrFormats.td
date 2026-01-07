@@ -1400,8 +1400,6 @@ def gi_arith_extended_reg32to64_i64 :
 
 def arith_uxtx : ComplexPattern<i64, 2, "SelectArithUXTXRegister", []>;
 
-def add_uxtx : ComplexPattern<i64, 2, "SelectAddUXTXRegister", []>;
-
 // Floating-point immediate.
 
 def fpimm16XForm : SDNodeXForm<fpimm, [{
@@ -6576,7 +6574,8 @@ class BaseSIMDThreeVectors<bit Q, bit U, bits<2> size, bits<4> op,
                            RegisterOperand regtype2, string asm,
                            string kind1, string kind2>
   : I<(outs regtype1:$Rd), (ins regtype2:$Rn, regtype2:$Rm), asm,
-      "\t$Rd" # kind1 # ", $Rn" # kind2 # ", $Rm" # kind2, "", []>, Sched<[]> {
+      "\t$Rd" # kind1 # ", $Rn" # kind2 # ", $Rm" # kind2, "", []>,
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -8610,7 +8609,7 @@ class BaseSIMDTableLookupIndexed<bit Q, bits<5> opc,
   : I<(outs V128:$Rd),
       (ins listtype:$Rn, V128:$Rm, idx_type:$idx),
       asm, "\t$Rd" # kind # ", $Rn, $Rm$idx", "", []>,
-    Sched<[]> {
+    Sched<[!if(Q, WriteVq, WriteVd)]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;

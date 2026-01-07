@@ -14,6 +14,7 @@ end module
 program test
   use m
   procedure(sub), pointer :: p
+  !WARNING: Value of local variable 'x' is never used [-Wunused-variable]
   type(t) x
   !PORTABILITY: Procedure binding 'sub' used as target of a pointer assignment [-Wbinding-as-procedure]
   p => x%sub
