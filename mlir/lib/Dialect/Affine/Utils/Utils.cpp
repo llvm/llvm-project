@@ -1868,6 +1868,19 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
     // a trivial (identity) map.
     return memrefType;
   }
+
+  // Only normalize strided layouts that map to a contiguous, zero-based
+  // region. Memrefs with non-zero (or dynamic) offsets or non-contiguous
+  // strides would require expanding the logical domain, which is not safe
+  // without introducing copies.
+  int64_t offset = ShapedType::kDynamic;
+  SmallVector<int64_t, 4> strides;
+  if (succeeded(memrefType.getStridesAndOffset(strides, offset))) {
+    if (ShapedType::isDynamic(offset) || offset != 0)
+      return memrefType;
+    if (!memrefType.areTrailingDimsContiguous(rank))
+      return memrefType;
+  }
   AffineMap layoutMap = memrefType.getLayout().getAffineMap();
   unsigned numSymbolicOperands = layoutMap.getNumSymbols();
 
