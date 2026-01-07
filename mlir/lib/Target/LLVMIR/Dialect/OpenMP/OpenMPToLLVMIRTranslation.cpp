@@ -1711,7 +1711,8 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
 /// This can't always be determined statically, but when we can, it is good to
 /// avoid generating compiler-added barriers which will deadlock the program.
 static bool opIsInSingleThread(mlir::Operation *op) {
-  while (mlir::Operation *parent = op->getParentOp()) {
+  for (mlir::Operation *parent = op->getParentOp(); parent != nullptr;
+       parent = parent->getParentOp()) {
     if (mlir::isa<omp::SingleOp, omp::CriticalOp>(parent))
       return true;
 
