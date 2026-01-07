@@ -690,7 +690,7 @@ define nofpclass(nan) float @ret_no_nan_result__known_negative_non0__fmul__known
 define nofpclass(inf nan) float @ret_noinf_nonan__known_pzero_or_nan__fmul__not_inf_or_nan(float nofpclass(inf sub norm nzero) %pzero.or.nan, float %unknown) {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_noinf_nonan__known_pzero_or_nan__fmul__not_inf_or_nan(
 ; CHECK-SAME: float nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]], float [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN]], 0.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul float %pzero.or.nan, %unknown
@@ -701,7 +701,7 @@ define nofpclass(inf nan) float @ret_noinf_nonan__known_pzero_or_nan__fmul__not_
 define nofpclass(inf nan) float @ret_noinf_nonan__not_inf_or_nan__fmul__known_pzero_or_nan(float nofpclass(inf sub norm nzero) %pzero.or.nan, float %unknown) {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_noinf_nonan__not_inf_or_nan__fmul__known_pzero_or_nan(
 ; CHECK-SAME: float nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]], float [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN]], 0.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul float %pzero.or.nan, %unknown
@@ -950,7 +950,7 @@ define nofpclass(nan) float @ret_no_nan__fmul_pzero__unknown(float %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__fmul_pzero__unknown(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PZERO:%.*]] = call float @returns_pzero()
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[UNKNOWN]], 0.000000e+00
+; CHECK-NEXT:    [[FMUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
   %pzero = call float @returns_pzero()
@@ -962,7 +962,7 @@ define nofpclass(nan) float @ret_no_nan__fmul_unknown__pzero(float %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__fmul_unknown__pzero(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PZERO:%.*]] = call float @returns_pzero()
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[UNKNOWN]], 0.000000e+00
+; CHECK-NEXT:    [[FMUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
   %pzero = call float @returns_pzero()
@@ -974,7 +974,8 @@ define nofpclass(nan) float @ret_no_nan__fmul_nzero__unknown(float %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__fmul_nzero__unknown(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NZERO:%.*]] = call float @returns_nzero()
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[UNKNOWN]], -0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[UNKNOWN]]
+; CHECK-NEXT:    [[FMUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
   %nzero = call float @returns_nzero()
@@ -986,7 +987,8 @@ define nofpclass(nan) float @ret_no_nan__fmul_unknown__nzero(float %unknown) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__fmul_unknown__nzero(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NZERO:%.*]] = call float @returns_nzero()
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[UNKNOWN]], -0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[UNKNOWN]]
+; CHECK-NEXT:    [[FMUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
   %nzero = call float @returns_nzero()
@@ -1022,7 +1024,8 @@ define nofpclass(ninf) float @ret_ninf__fmul_nnan_unknown__zero(float %unknown) 
 define nofpclass(snan) float @known__nzero_or_nan__fmul__not_inf_or_nan(float nofpclass(inf sub norm pzero) %nzero.or.nan, float nofpclass(inf nan) %not.inf.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @known__nzero_or_nan__fmul__not_inf_or_nan(
 ; CHECK-SAME: float nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]], float nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[NZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract float [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call contract float @llvm.copysign.f32(float [[NZERO_OR_NAN]], float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul contract float %nzero.or.nan, %not.inf.or.nan
@@ -1033,7 +1036,8 @@ define nofpclass(snan) float @known__nzero_or_nan__fmul__not_inf_or_nan(float no
 define nofpclass(snan) float @known__not_inf_or_nan__fmul__nzero_or_nan(float nofpclass(inf nan) %not.inf.or.nan, float nofpclass(inf sub norm pzero) %nzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @known__not_inf_or_nan__fmul__nzero_or_nan(
 ; CHECK-SAME: float nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]], float nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[NOT_INF_OR_NAN]], [[NZERO_OR_NAN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract float [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call contract float @llvm.copysign.f32(float [[NZERO_OR_NAN]], float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul contract float %not.inf.or.nan, %nzero.or.nan
@@ -1110,7 +1114,8 @@ define nofpclass(inf) float @ret_noinf__not_inf_or_nan__fmul__nzero_or_nan(float
 define nofpclass(nan) float @ret_nonan__nzero_or_nan__fmul__not_inf_or_nan(float nofpclass(inf sub norm pzero) %nzero.or.nan, float nofpclass(nan) %not.nan) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nonan__nzero_or_nan__fmul__not_inf_or_nan(
 ; CHECK-SAME: float nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NOT_NAN]], -0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul float %nzero.or.nan, %not.nan
@@ -1121,7 +1126,8 @@ define nofpclass(nan) float @ret_nonan__nzero_or_nan__fmul__not_inf_or_nan(float
 define nofpclass(nan) float @ret_nonan__not_inf_or_nan__fmul__nzero_or_nan(float nofpclass(nan) %not.nan, float nofpclass(inf sub norm pzero) %nzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nonan__not_inf_or_nan__fmul__nzero_or_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]], float nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NOT_NAN]], -0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul float %not.nan, %nzero.or.nan
@@ -1132,7 +1138,8 @@ define nofpclass(nan) float @ret_nonan__not_inf_or_nan__fmul__nzero_or_nan(float
 define nofpclass(snan) float @ret__nzero_or_nan__fmul_ninf__not_inf_or_nan(float nofpclass(inf sub norm pzero) %nzero.or.nan, float nofpclass(nan) %not.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret__nzero_or_nan__fmul_ninf__not_inf_or_nan(
 ; CHECK-SAME: float nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[NZERO_OR_NAN]], [[NOT_NAN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg ninf float [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call ninf float @llvm.copysign.f32(float [[NZERO_OR_NAN]], float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul ninf float %nzero.or.nan, %not.nan
@@ -1143,7 +1150,8 @@ define nofpclass(snan) float @ret__nzero_or_nan__fmul_ninf__not_inf_or_nan(float
 define nofpclass(snan) float @ret_not_inf_or_nan__fmul_ninf__nzero_or_nan(float nofpclass(nan) %not.nan, float nofpclass(inf sub norm pzero) %nzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_not_inf_or_nan__fmul_ninf__nzero_or_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]], float nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[NOT_NAN]], [[NZERO_OR_NAN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg ninf float [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call ninf float @llvm.copysign.f32(float [[NZERO_OR_NAN]], float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul ninf float %not.nan, %nzero.or.nan
@@ -1266,7 +1274,7 @@ define nofpclass(inf) float @ret_noinf__not_inf_or_nan__fmul__pzero_or_nan(float
 define nofpclass(snan) float @ret__pzero_or_nan__fmul_ninf__not_inf_or_nan(float nofpclass(inf sub norm nzero) %pzero.or.nan, float nofpclass(nan) %not.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret__pzero_or_nan__fmul_ninf__not_inf_or_nan(
 ; CHECK-SAME: float nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[PZERO_OR_NAN]], [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call ninf float @llvm.copysign.f32(float [[PZERO_OR_NAN]], float [[NOT_NAN]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul ninf float %pzero.or.nan, %not.nan
@@ -1277,7 +1285,7 @@ define nofpclass(snan) float @ret__pzero_or_nan__fmul_ninf__not_inf_or_nan(float
 define nofpclass(snan) float @ret_not_inf_or_nan__fmul_ninf__pzero_or_nan(float nofpclass(nan) %not.nan, float nofpclass(inf sub norm nzero) %pzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_not_inf_or_nan__fmul_ninf__pzero_or_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]], float nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf float [[NOT_NAN]], [[PZERO_OR_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call ninf float @llvm.copysign.f32(float [[PZERO_OR_NAN]], float [[NOT_NAN]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul ninf float %not.nan, %pzero.or.nan
@@ -1364,6 +1372,34 @@ define nofpclass(nan inf norm zero) float @sub_result_demands_norm_source_rhs(i1
 ;
   %norm = call float @returns_norm()
   %select = select i1 %cond, float %norm, float %unknown0
+  %mul = fmul float %unknown1, %select
+  ret float %mul
+}
+
+define nofpclass(nan inf sub zero) float @norm_result_demands_sub_source_lhs(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @norm_result_demands_sub_source_lhs(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call float @returns_sub()
+  %select = select i1 %cond, float %sub, float %unknown0
+  %mul = fmul float %select, %unknown1
+  ret float %mul
+}
+
+define nofpclass(nan inf sub zero) float @norm_result_demands_sub_source_rhs(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @norm_result_demands_sub_source_rhs(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call float @returns_sub()
+  %select = select i1 %cond, float %sub, float %unknown0
   %mul = fmul float %unknown1, %select
   ret float %mul
 }
