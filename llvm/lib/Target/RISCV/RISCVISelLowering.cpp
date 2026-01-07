@@ -376,8 +376,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.is64Bit())
       setOperationAction({ISD::CLMUL, ISD::CLMULH, ISD::CLMULR}, MVT::i32,
                          Custom);
-  }
-  if (Subtarget.hasStdExtZbkc()) {
+  } else if (Subtarget.hasStdExtZbkc()) {
+    // Zbkc is a subset of Zbc.
     setOperationAction({ISD::CLMUL, ISD::CLMULH}, XLenVT, Custom);
     if (Subtarget.is64Bit())
       setOperationAction({ISD::CLMUL, ISD::CLMULH}, MVT::i32, Custom);
@@ -8304,7 +8304,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::CLMUL:
     return DAG.getNode(RISCVISD::CLMUL, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(0), Op.getOperand(1));
-
   case ISD::CLMULH:
     return DAG.getNode(RISCVISD::CLMULH, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(0), Op.getOperand(1));

@@ -77,13 +77,6 @@ let TargetPrefix = "riscv" in {
   // Zbb
   def int_riscv_orc_b : RISCVBitManipGPRIntrinsics;
 
-  // Zbc or Zbkc
-  def int_riscv_clmul  : RISCVBitManipGPRGPRIntrinsics;
-  def int_riscv_clmulh : RISCVBitManipGPRGPRIntrinsics;
-
-  // Zbc
-  def int_riscv_clmulr : RISCVBitManipGPRGPRIntrinsics;
-
   // Zbkb
   def int_riscv_brev8 : RISCVBitManipGPRIntrinsics;
   def int_riscv_zip   : RISCVBitManipGPRIntrinsics;
