@@ -77,8 +77,8 @@ class LongJmpPass : public BinaryFunctionPass {
   void relaxLocalBranches(BinaryFunction &BF);
 
   /// A group of functions that are located within the longest direct
-  /// branch/call instruction distance. Functions withing the cluster do not
-  /// require a thunk for calls with the same cluster. The cluster may include
+  /// branch/call instruction distance. Functions within the cluster do not
+  /// require a thunk for calls in the same cluster. The cluster may include
   /// a set of thunks for covering calls to functions outside.
   struct FunctionCluster {
     /// All functions in this cluster.

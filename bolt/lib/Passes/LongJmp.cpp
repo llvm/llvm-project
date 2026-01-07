@@ -961,7 +961,6 @@ void LongJmpPass::relaxCalls(BinaryContext &BC) {
   // Conservatively estimate emitted function size. Assume the worst case
   // alignment.
   auto estimateFunctionSize = [&](const BinaryFunction &BF) -> uint64_t {
-    // Conservative estimation of the aligned function size.
     if (!BC.shouldEmit(BF))
       return 0;
     uint64_t Size = BF.estimateSize();
@@ -1090,7 +1089,7 @@ void LongJmpPass::relaxCalls(BinaryContext &BC) {
     }
   }
 
-  /// Create a thunk with +-128MB span.
+  // Create a thunk with +-128MB span.
   size_t NumShortThunks = 0;
   auto createShortThunk = [&](const MCSymbol *TargetSymbol) {
     ++NumShortThunks;
@@ -1103,7 +1102,7 @@ void LongJmpPass::relaxCalls(BinaryContext &BC) {
     return ThunkBF;
   };
 
-  /// Create a thunk with +-4GB span.
+  // Create a thunk with +-4GB span.
   size_t NumLongThunks = 0;
   auto createLongThunk = [&](const MCSymbol *TargetSymbol) {
     ++NumLongThunks;
