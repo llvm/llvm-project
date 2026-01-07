@@ -16343,7 +16343,7 @@ AArch64TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     SDLoc DL(Op);
     // There are no operations to extend a nxv1i1 predicate to a nxv1i128 vector
     // An easy lowering is widening the input predicate to nxv2i1.
-    if (VT.getVectorElementCount() == ElementCount::getScalable(1)) {
+    if (VT == MVT::nxv1i1) {
       SDValue WidenedPred = DAG.getInsertSubvector(
           DL, DAG.getPOISON(MVT::nxv2i1), Op->getOperand(0), 0);
       return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Op.getValueType(),
