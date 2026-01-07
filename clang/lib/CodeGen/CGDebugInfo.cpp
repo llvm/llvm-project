@@ -60,10 +60,10 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
-static llvm::cl::opt<bool>
-    UseOldDebugInfoLoc("use-old-debug-info-loc",
-                       llvm::cl::desc("Use old expansion location for debug info"),
-                       llvm::cl::init(false));
+static llvm::cl::opt<bool> DebugInfoMacroExpansionLoc(
+    "debug-info-macro-expansion-loc",
+    llvm::cl::desc("Use expansion location for debug info on macro params"),
+    llvm::cl::init(false));
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
@@ -351,7 +351,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (Loc.isInvalid())
     return;
 
-  if (UseOldDebugInfoLoc)
+  if (DebugInfoMacroExpansionLoc)
     CurLoc = CGM.getContext().getSourceManager().getExpansionLoc(Loc);
   else
     CurLoc = CGM.getContext().getSourceManager().getFileLoc(Loc);
@@ -581,8 +581,8 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    PresumedLoc PLoc =
-        SM.getPresumedLoc(UseOldDebugInfoLoc ? Loc : SM.getFileLoc(Loc));
+    PresumedLoc PLoc = SM.getPresumedLoc(
+        DebugInfoMacroExpansionLoc ? Loc : SM.getFileLoc(Loc));
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
@@ -609,9 +609,10 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(
-      FileName, CSInfo,
-      getSource(SM, SM.getFileID(UseOldDebugInfoLoc ? Loc : SM.getFileLoc(Loc))));
+  return createFile(FileName, CSInfo,
+                    getSource(SM, SM.getFileID(DebugInfoMacroExpansionLoc
+                                                   ? Loc
+                                                   : SM.getFileLoc(Loc))));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -666,7 +667,8 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM.getPresumedLoc(UseOldDebugInfoLoc ? Loc : SM.getFileLoc(Loc))
+  return SM
+      .getPresumedLoc(DebugInfoMacroExpansionLoc ? Loc : SM.getFileLoc(Loc))
       .getLine();
 }
 
@@ -679,9 +681,9 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc.isValid()
-                                           ? (UseOldDebugInfoLoc ? Loc : SM.getFileLoc(Loc))
-                                           : CurLoc);
+  PresumedLoc PLoc = SM.getPresumedLoc(
+      Loc.isValid() ? (DebugInfoMacroExpansionLoc ? Loc : SM.getFileLoc(Loc))
+                    : CurLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
 }
 
@@ -5027,7 +5029,8 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   // Update our current location
   setLocation(Loc);
 
-  if (CurLoc.isInvalid() || (UseOldDebugInfoLoc && CurLoc.isMacroID()) ||
+  if (CurLoc.isInvalid() ||
+      (DebugInfoMacroExpansionLoc && CurLoc.isMacroID()) ||
       LexicalBlockStack.empty())
     return;
 
@@ -6297,7 +6300,7 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
   SourceLocation Loc = S->getStrTokenLoc(0);
   SourceManager &SM = CGM.getContext().getSourceManager();
   PresumedLoc PLoc =
-      SM.getPresumedLoc(UseOldDebugInfoLoc ? Loc : SM.getFileLoc(Loc));
+      SM.getPresumedLoc(DebugInfoMacroExpansionLoc ? Loc : SM.getFileLoc(Loc));
   if (!PLoc.isValid())
     return;
 
