@@ -282,7 +282,7 @@ bool ThreadElfCore::CalculateStopInfo() {
   // with a non-zero value when there is no NT_SIGINFO note. However if this is
   // 0, it's the default value and we have no valid signal and should not report
   // a stop info.
-  if (m_signo == 0)
+  if (m_signo == 0 && m_siginfo_bytes.empty())
     return false;
 
   SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
