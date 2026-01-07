@@ -2410,6 +2410,18 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_any_true)
 __attribute__((convergent)) bool WaveActiveAnyTrue(bool Val);
 
+/// \brief Returns a uint4 containing a bitmask of the evaluation of the
+/// boolean expression for all active lanes in the current wave.
+/// The least-significant bit corresponds to the lane with index zero.
+/// The bits corresponding to inactive lanes will be zero. The bits that
+/// are greater than or equal to WaveGetLaneCount will be zero.
+///
+/// \param Val The boolean expression to evaluate.
+/// \return uint4 bitmask
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_ballot)
+__attribute__((convergent)) uint4 WaveActiveBallot(bool Val);
+
 /// \brief Counts the number of boolean variables which evaluate to true across
 /// all active lanes in the current wave.
 ///
