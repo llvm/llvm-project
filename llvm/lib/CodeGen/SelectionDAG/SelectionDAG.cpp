@@ -3872,9 +3872,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::CTLS: {
     unsigned MinRedundantSignBits =
-        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1) - 1;
     ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
-                        APInt(BitWidth, 32));
+                        APInt(BitWidth, BitWidth));
     Known = Range.toKnownBits();
     break;
   }
