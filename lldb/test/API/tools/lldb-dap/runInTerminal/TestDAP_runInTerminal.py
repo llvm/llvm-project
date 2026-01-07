@@ -14,10 +14,9 @@ import json
 @contextmanager
 def fifo(*args, **kwargs):
     if sys.platform == "win32":
-        comm_file = r"\\.\pipe\lldb-dap-run-in-terminal-comm"
-
         import ctypes
 
+        comm_file = r"\\.\pipe\lldb-dap-run-in-terminal-comm"
         PIPE_ACCESS_DUPLEX = 0x00000003
         PIPE_TYPE_BYTE = 0x00000000
         PIPE_READMODE_BYTE = 0x00000000
@@ -84,6 +83,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     def read_error_message(fifo_file, pipe=None):
         if sys.platform == "win32":
             import ctypes
+
             buffer = ctypes.create_string_buffer(4096)
             bytes_read = ctypes.wintypes.DWORD()
             kernel32 = ctypes.windll.kernel32
