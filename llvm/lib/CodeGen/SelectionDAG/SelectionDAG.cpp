@@ -9170,7 +9170,8 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrcpy(SDValue Chain,
                                                     const SDLoc &dl,
                                                     SDValue Dst, SDValue Src,
                                                     const CallInst *CI) {
-  if (TLI->getLibcallImpl(RTLIB::STRCPY) == RTLIB::Unsupported)
+  RTLIB::LibcallImpl LCImpl = TLI->getLibcallImpl(RTLIB::STRCPY);
+  if (LCImpl == RTLIB::Unsupported)
     return {};
 
   const char *LibCallName = TLI->getLibcallName(RTLIB::STRCPY);
