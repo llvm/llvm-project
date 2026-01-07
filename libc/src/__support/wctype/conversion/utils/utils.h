@@ -17,7 +17,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal_wctype_conversion_utils {
+namespace wctype_internal {
+
+namespace conversion_utils {
 
 // Multiplies two 64-bit unsigned integers and returns the high 64 bits
 LIBC_INLINE static constexpr uint64_t mul_high(uint64_t a, uint64_t b) {
@@ -370,7 +372,9 @@ chunks_exact_mut(typename ChunksMut<uint8_t, buckets_total_>::Chunk &pilots) {
   }
 }
 
-} // namespace internal_wctype_conversion_utils
+} // namespace conversion_utils
+
+} // namespace wctype_internal
 
 } // namespace LIBC_NAMESPACE_DECL
 
