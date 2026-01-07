@@ -94,9 +94,12 @@ MyObj* return_ptr_to_ref(MyObj& a) { // expected-warning {{parameter in intra-TU
   return &a; // expected-note {{param returned here}}
 }
 
-// FIXME: Dereference does not propagate loans.
-MyObj& return_ref_to_ptr(MyObj* a) {
-  return *a;
+MyObj& return_ref_to_ptr(MyObj* a) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return *a;  // expected-note {{param returned here}}
+}
+
+View return_ref_to_ptr_multiple(MyObj* a) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return *(&(*(&(*a))));  // expected-note {{param returned here}}
 }
 
 View return_view_from_reference(MyObj& p) {  // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
