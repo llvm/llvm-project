@@ -2442,8 +2442,10 @@ static bool ValidateRegisterNumber(const StringRef SlotNumStr, Decl *TheDecl,
 
   // after verifying the number doesn't exceed uint32max, we don't need
   // to look further into c or i register types
-  if (RegTy == RegisterType::C || RegTy == RegisterType::I)
+  if (RegTy == RegisterType::C || RegTy == RegisterType::I) {
+    SlotNumStr.getAsInteger(10, Result);
     return false;
+  }
 
   if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
     uint64_t BaseSlot = SlotNum;
@@ -2460,7 +2462,7 @@ static bool ValidateRegisterNumber(const StringRef SlotNumStr, Decl *TheDecl,
     SlotNumStr.getAsInteger(10, Result);
     return false;
   }
-  // handle the cbuffer case
+  // handle the cbuffer/tbuffer case
   if (dyn_cast<HLSLBufferDecl>(TheDecl)) {
     // resources cannot be put within a cbuffer, so no need
     // to analyze the structure since the register number
