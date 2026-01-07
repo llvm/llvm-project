@@ -113,10 +113,10 @@ define double @double_va_arg(double %a, ...) local_unnamed_addr  {
   ; CHECK-NEXT:   renamable $x5 = ADDI8 %fixed-stack.0, 8
   ; CHECK-NEXT:   STD killed renamable $x3, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
   ; CHECK-NEXT:   STD killed renamable $x5, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
-  ; CHECK-NEXT:   renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64))
+  ; CHECK-NEXT:   renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64) from %fixed-stack.0)
   ; CHECK-NEXT:   renamable $x3 = ADDI8 renamable $x4, 8
   ; CHECK-NEXT:   STD killed renamable $x3, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
-  ; CHECK-NEXT:   renamable $f2 = LFD 0, killed renamable $x4 :: (load (s64))
+  ; CHECK-NEXT:   renamable $f2 = LFD 0, killed renamable $x4 :: (load (s64), align 4)
   ; CHECK-NEXT:   renamable $f0 = nofpexcept FADD killed renamable $f0, killed renamable $f1, implicit $rm
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f2, renamable $f2, implicit $rm
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f0, killed renamable $f1, implicit $rm
@@ -145,7 +145,7 @@ define double @double_stack_va_arg(double %one, double %two, double %three, doub
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   liveins: $f1, $f2, $f3, $f4, $f5, $f6, $f7, $f8, $f9, $f10, $f11, $f12, $f13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64))
+  ; CHECK-NEXT:   renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64) from %fixed-stack.0)
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f2, implicit $rm
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f3, implicit $rm
   ; CHECK-NEXT:   renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f4, implicit $rm

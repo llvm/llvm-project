@@ -1287,7 +1287,7 @@ uptr GetPageSize() {
 
 uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
 #  if SANITIZER_HAIKU
-  int32_t cookie = 0;
+  int32 cookie = 0;
   image_info info;
   const char *argv0 = "<UNKNOWN>";
   while (get_next_image_info(B_CURRENT_TEAM, &cookie, &info) == B_OK) {

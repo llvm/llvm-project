@@ -15,9 +15,7 @@
 #include <algorithm>
 #include <cassert>
 #include <deque>
-#if __has_include(<ranges>)
-#  include <ranges>
-#endif
+#include <ranges>
 #include <vector>
 
 #include "test_macros.h"

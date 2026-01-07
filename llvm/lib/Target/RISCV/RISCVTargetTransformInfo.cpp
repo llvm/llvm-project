@@ -972,7 +972,7 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
   // to avoid crashes in getMinRVVVectorSizeInBits()
-  if (ST->enablePExtCodeGen() && isa<FixedVectorType>(Ty)) {
+  if (ST->enablePExtSIMDCodeGen() && isa<FixedVectorType>(Ty)) {
     return 1; // Treat as single instruction cost for now
   }
 
@@ -1697,7 +1697,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
   // to avoid crashes in getMinRVVVectorSizeInBits()
-  if (ST->enablePExtCodeGen() &&
+  if (ST->enablePExtSIMDCodeGen() &&
       (isa<FixedVectorType>(Dst) || isa<FixedVectorType>(Src))) {
     return 1; // Treat as single instruction cost for now
   }
@@ -2403,7 +2403,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
   // to avoid crashes in getMinRVVVectorSizeInBits()
-  if (ST->enablePExtCodeGen() && isa<FixedVectorType>(Val)) {
+  if (ST->enablePExtSIMDCodeGen() && isa<FixedVectorType>(Val)) {
     return 1; // Treat as single instruction cost for now
   }
 

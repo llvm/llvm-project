@@ -170,11 +170,6 @@ getTypeConversionFailure(ConversionPatternRewriter &rewriter, Operation *op) {
   return getTypeConversionFailure(rewriter, op, op->getResultTypes().front());
 }
 
-// TODO: Move to some common place?
-static std::string getDecorationString(spirv::Decoration decor) {
-  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decor));
-}
-
 namespace {
 
 /// Converts elementwise unary, binary and ternary arith operations to SPIR-V

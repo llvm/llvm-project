@@ -8,7 +8,13 @@
 
 #include <clc/clc_as_type.h>
 #include <clc/float/definitions.h>
+#include <clc/math/clc_copysign.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_nextafter.h>
 #include <clc/opencl/opencl-base.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/shared/clc_min.h>
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
@@ -48,32 +54,32 @@
 
 _CLC_DEF _CLC_OVERLOAD float __clc_rtz(float x) {
   /* Handle nan corner case */
-  if (isnan(x))
+  if (__clc_isnan(x))
     return x;
   /* RTZ does not produce Inf for large numbers */
-  if (fabs(x) > 65504.0f && !isinf(x))
-    return copysign(65504.0f, x);
+  if (__clc_fabs(x) > 65504.0f && !__clc_isinf(x))
+    return __clc_copysign(65504.0f, x);
 
   const int exp = (__clc_as_uint(x) >> 23 & 0xff) - 127;
   /* Manage range rounded to +- zero explicitely */
   if (exp < -24)
-    return copysign(0.0f, x);
+    return __clc_copysign(0.0f, x);
 
   /* Remove lower 13 bits to make sure the number is rounded down */
   int mask = 0xffffe000;
   /* Denormals cannot be flushed, and they use different bit for rounding */
   if (exp < -14)
-    mask <<= min(-(exp + 14), 10);
+    mask <<= __clc_min(-(exp + 14), 10);
 
   return __clc_as_float(__clc_as_uint(x) & mask);
 }
 
 _CLC_DEF _CLC_OVERLOAD float __clc_rti(float x) {
   /* Handle nan corner case */
-  if (isnan(x))
+  if (__clc_isnan(x))
     return x;
 
-  const float inf = copysign(INFINITY, x);
+  const float inf = __clc_copysign(INFINITY, x);
   uint ux = __clc_as_uint(x);
 
   /* Manage +- infinity explicitely */
@@ -82,23 +88,23 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rti(float x) {
   }
   /* Manage +- zero explicitely */
   if ((ux & 0x7fffffff) == 0) {
-    return copysign(0.0f, x);
+    return __clc_copysign(0.0f, x);
   }
 
   const int exp = (__clc_as_uint(x) >> 23 & 0xff) - 127;
   /* Manage range rounded to smallest half denormal explicitely */
   if (exp < -24) {
-    return copysign(0x1.0p-24f, x);
+    return __clc_copysign(0x1.0p-24f, x);
   }
 
   /* Set lower 13 bits */
   int mask = (1 << 13) - 1;
   /* Denormals cannot be flushed, and they use different bit for rounding */
   if (exp < -14) {
-    mask = (1 << (13 + min(-(exp + 14), 10))) - 1;
+    mask = (1 << (13 + __clc_min(-(exp + 14), 10))) - 1;
   }
 
-  const float next = nextafter(__clc_as_float(ux | mask), inf);
+  const float next = __clc_nextafter(__clc_as_float(ux | mask), inf);
   return ((ux & mask) == 0) ? __clc_as_float(ux) : next;
 }
 _CLC_DEF _CLC_OVERLOAD float __clc_rtn(float x) {
@@ -116,7 +122,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rte(float x) {
     /* The default assumes lower 13 bits are rounded,
      * but it might be more for denormals.
      * Shifting beyond last == 0b, and qr == 00b is not necessary */
-    shift += min(-(exp + 14), 15);
+    shift += __clc_min(-(exp + 14), 15);
   }
   int mask = (1 << shift) - 1;
   const uint grs = mantissa & mask;

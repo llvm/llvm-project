@@ -511,7 +511,7 @@ elif uname_r.endswith("microsoft-standard-WSL2"):
 if config.has_plugins:
     config.available_features.add("plugins")
 
-if config.build_examples:
+if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:
