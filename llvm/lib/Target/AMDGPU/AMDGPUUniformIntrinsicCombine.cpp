@@ -124,9 +124,8 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 
     // Otherwise, construct a proper call to amdgcn_readlane
     llvm::IRBuilder<> Builder(&II);
-    CallInst *Readlane =
-        Builder.CreateIntrinsic(Builder.getInt32Ty(),
-                                Intrinsic::amdgcn_readlane, {Val, Idx});
+    CallInst *Readlane = Builder.CreateIntrinsic(
+        Builder.getInt32Ty(), Intrinsic::amdgcn_readlane, {Val, Idx});
 
     II.replaceAllUsesWith(Readlane);
     II.eraseFromParent();
