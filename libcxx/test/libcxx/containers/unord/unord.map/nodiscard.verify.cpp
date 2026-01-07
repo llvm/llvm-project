@@ -81,6 +81,10 @@ void test() {
   ctm.equal_range(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
+#if TEST_STD_VER >= 23
+  tm.extract(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+
   m[key];            // no-warning
   m[std::move(key)]; // no-warning
 
