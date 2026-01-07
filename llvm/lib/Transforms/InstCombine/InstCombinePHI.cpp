@@ -579,6 +579,16 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
           isa<Constant>(GEP->getOperand(Op)))
         return nullptr;
 
+      // Don't merge if there is a mixture of constant and variable indeces for
+      // the same operand. If all the indeces are constant, the chance is higher
+      // that we can create a lookup table. Otherwise, we could pessimize the
+      // path.
+      if ((isa<Constant>(FirstInst->getOperand(Op)) &&
+           !isa<Constant>(GEP->getOperand(Op))) ||
+          (!isa<Constant>(FirstInst->getOperand(Op)) &&
+           isa<Constant>(GEP->getOperand(Op))))
+        return nullptr;
+
       if (FirstInst->getOperand(Op)->getType() !=
           GEP->getOperand(Op)->getType())
         return nullptr;
