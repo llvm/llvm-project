@@ -36,6 +36,7 @@ list(APPEND compile_options -nostdlibinc)
 list(APPEND compile_options -fno-rtti)
 list(APPEND compile_options -fno-exceptions)
 list(APPEND compile_options -fconvergent-functions)
+
 if(LLVM_DEFAULT_TARGET_TRIPLE)
   list(APPEND compile_options --target=${LLVM_DEFAULT_TARGET_TRIPLE})
 endif()
@@ -46,7 +47,7 @@ endif()
 # instructions yet and we end up missing out on way more important constant
 # propagation. That said, we will run the vectorizer again after the runtime
 # has been linked into the user program.
-list(APPEND compile_options "SHELL: -mllvm -vectorize-slp=false")
+list(APPEND compile_options -mllvm -vectorize-slp=false)
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
   set(target_name "amdgpu")
@@ -61,85 +62,41 @@ elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv64" OR
   list(APPEND compile_options -emit-llvm -c)
 endif()
 
-# Check if we're building for SPIRV
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" OR
-   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
-  # For SPIRV targets, compile each source file to bitcode individually
-  set(bc_files "")
-  foreach(src_file ${src_files})
-    get_filename_component(basename ${src_file} NAME_WE)
-    set(bc_file "${CMAKE_CURRENT_BINARY_DIR}/${basename}.bc")
-
-    add_custom_command(
-      OUTPUT ${bc_file}
-      COMMAND ${CMAKE_CXX_COMPILER}
-      ARGS ${compile_options}
-           -I${CMAKE_CURRENT_SOURCE_DIR}/include
-           -I${CMAKE_CURRENT_SOURCE_DIR}/../../libc
-           -I${CMAKE_CURRENT_SOURCE_DIR}/../../offload/include
-           $<$<BOOL:${LIBOMPTARGET_GPU_LIBC_SUPPORT}>:-DOMPTARGET_HAS_LIBC>
-           -DSHARED_SCRATCHPAD_SIZE=512
-           -o ${bc_file}
-           ${src_file}
-      DEPENDS ${src_file}
-      COMMENT "Compiling ${src_file} to bitcode"
-    )
-    list(APPEND bc_files ${bc_file})
-  endforeach()
-
-  # Find llvm-link
-  find_program(LLVM_LINK llvm-link HINTS ${LLVM_TOOLS_BINARY_DIR})
-  if(NOT LLVM_LINK)
-    message(FATAL_ERROR "llvm-link not found")
-  endif()
-
-  # Use llvm-link to combine all bitcode files
-  set(output_bc "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/libomptarget-${target_name}.bc")
-  add_custom_command(
-    OUTPUT ${output_bc}
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
-    COMMAND ${LLVM_LINK} ${bc_files} -o ${output_bc}
-    DEPENDS ${bc_files}
-    COMMENT "Linking bitcode files with llvm-link"
-  )
-
-  # Create a target for the linked bitcode
-  add_custom_target(libompdevice ALL DEPENDS ${output_bc})
-
-  # Install the bitcode file
-  install(FILES ${output_bc}
-          PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
-          DESTINATION ${OPENMP_INSTALL_LIBDIR})
-else()   
-  # Trick to combine these into a bitcode file via the linker's LTO pass.
-  add_executable(libompdevice ${src_files})
-  set_target_properties(libompdevice PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
-    LINKER_LANGUAGE CXX
-    BUILD_RPATH ""
-    INSTALL_RPATH ""
-    RUNTIME_OUTPUT_NAME libomptarget-${target_name}.bc)
-
+# Trick to combine these into a bitcode file via the linker's LTO pass.
+add_executable(libompdevice ${src_files})
+set_target_properties(libompdevice PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  LINKER_LANGUAGE CXX
+  BUILD_RPATH ""
+  INSTALL_RPATH ""
+  RUNTIME_OUTPUT_NAME libomptarget-${target_name}.bc)
+ 
   # If the user built with the GPU C library enabled we will use that instead.
   if(TARGET libc)
     target_compile_definitions(libompdevice PRIVATE OMPTARGET_HAS_LIBC)
   endif()
   target_compile_definitions(libompdevice PRIVATE SHARED_SCRATCHPAD_SIZE=512)
-
+  
   target_include_directories(libompdevice PRIVATE
-                           ${CMAKE_CURRENT_SOURCE_DIR}/include
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../../libc
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../../offload/include)
+                             ${CMAKE_CURRENT_SOURCE_DIR}/include
+                             ${CMAKE_CURRENT_SOURCE_DIR}/../../libc
+                             ${CMAKE_CURRENT_SOURCE_DIR}/../../offload/include)
   target_compile_options(libompdevice PRIVATE ${compile_options})
-  target_link_options(libompdevice PRIVATE
+  if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
+     NOT "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")  
+    target_link_options(libompdevice PRIVATE
                     "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
+  else()
+    target_link_options(libompdevice PRIVATE
+                    "-nostdlib" "-emit-llvm" "-Wl")
+  endif()
   if(LLVM_DEFAULT_TARGET_TRIPLE)
     target_link_options(libompdevice PRIVATE "--target=${LLVM_DEFAULT_TARGET_TRIPLE}")
   endif()
   install(TARGETS libompdevice
-        PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
-        DESTINATION ${OPENMP_INSTALL_LIBDIR})
-endif()
+          PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
+          DESTINATION ${OPENMP_INSTALL_LIBDIR})
+
 add_library(ompdevice.all_objs OBJECT IMPORTED)
 set_property(TARGET ompdevice.all_objs APPEND PROPERTY IMPORTED_OBJECTS
              ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/libomptarget-${target_name}.bc)

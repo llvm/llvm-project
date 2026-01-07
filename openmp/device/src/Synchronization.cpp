@@ -259,24 +259,6 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 ///}
 
 #if defined(__SPIRV__)
-typedef enum {
-  CrossDevice = 0,
-  Device = 1,
-  Workgroup = 2,
-  Subgroup = 3,
-  Invocation = 4
-} Scope_t;
-typedef enum {
-  Relaxed = 0x0,
-  Acquire = 0x2,
-  Release = 0x4,
-  AcquireRelease = 0x8,
-  SequentiallyConsistent = 0x10
-} MemorySemantics_t;
-
-extern "C" uint32_t __spirv_AtomicIAdd(uint32_t *, int, int, uint32_t);
-extern "C" void __spirv_MemoryBarrier(int, int);
-extern "C" void __spirv_ControlBarrier(uint32_t, uint32_t, uint32_t);
 
 MemorySemantics_t convertOrderingType(atomic::OrderingTy Ordering) {
   switch (Ordering) {
@@ -299,57 +281,52 @@ uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
   return __spirv_AtomicIAdd(Address, (int)MemScope,
                             convertOrderingType(Ordering), Val);
 }
-void namedBarrierInit() { __builtin_trap(); } // TODO
-void namedBarrier() { __builtin_trap(); }     // TODO
+
+void namedBarrierInit() {} // TODO
+void namedBarrier() {}     // TODO
 void fenceTeam(atomic::OrderingTy Ordering) {
   return __spirv_MemoryBarrier(Scope_t::Workgroup,
-                               convertOrderingType(Ordering));
+                               0x100 | convertOrderingType(Ordering));
 }
 void fenceKernel(atomic::OrderingTy Ordering) {
-  return __spirv_MemoryBarrier(Scope_t::Invocation,
-                               convertOrderingType(Ordering));
+  return __spirv_MemoryBarrier(Scope_t::Device,
+                               0x200 | convertOrderingType(Ordering));
 }
 void fenceSystem(atomic::OrderingTy Ordering) {
-  return __spirv_MemoryBarrier(Scope_t::Device, convertOrderingType(Ordering));
+  return __spirv_MemoryBarrier(Scope_t::CrossDevice, 0x200 | convertOrderingType(Ordering));
 }
 
 void syncWarp(__kmpc_impl_lanemask_t) {
-  __spirv_ControlBarrier(Scope_t::Invocation, Scope_t::Subgroup,
-                         MemorySemantics_t::Acquire);
+  __spirv_ControlBarrier(Scope_t::Subgroup, Scope_t::Subgroup,
+                         0x80 | MemorySemantics_t::SequentiallyConsistent);
 }
 void syncThreads(atomic::OrderingTy Ordering) {
-  __spirv_ControlBarrier(Scope_t::Invocation, Scope_t::Workgroup,
-                         MemorySemantics_t::Acquire);
+  __spirv_ControlBarrier(Scope_t::Workgroup, Scope_t::Workgroup,
+                         0x100 | convertOrderingType(Ordering));
 }
 void unsetLock(omp_lock_t *Lock) {
-  atomic::store((int32_t *)Lock, 0, atomic::release);
+  __spirv_AtomicStore((int32_t *)Lock, Scope_t::CrossDevice, 0x200 | MemorySemantics_t::SequentiallyConsistent, 0);
 }
 int testLock(omp_lock_t *Lock) {
-  return atomic::add((int32_t *)Lock, 0, atomic::relaxed);
+  int32_t *lock_ptr = (int32_t *)Lock;
+  return __spirv_AtomicCompareExchange(lock_ptr, Scope_t::CrossDevice, 
+            0x200 | MemorySemantics_t::SequentiallyConsistent, 
+            0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0);
 }
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   int32_t *lock_ptr = (int32_t *)Lock;
-  bool acquired = false;
-  int32_t expected;
-  while (!acquired) {
-    expected = 0;
-    if (expected == atomic::load(lock_ptr, atomic::relaxed))
-      acquired =
-          atomic::cas(lock_ptr, expected, 1, atomic::acq_rel, atomic::release);
-  }
+  while(__spirv_AtomicCompareExchange(lock_ptr, Scope_t::CrossDevice, 
+            0x200 | MemorySemantics_t::SequentiallyConsistent, 
+            0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0)){}
 }
-extern "C" int __attribute__((overloadable)) sub_group_scan_inclusive_min(int);
+
 void unsetCriticalLock(omp_lock_t *Lock) {
-  int id = mapping::getThreadIdInWarp();
-  if (id == sub_group_scan_inclusive_min(id))
-    unsetLock(Lock);
+  unsetLock(Lock);
 }
 void setCriticalLock(omp_lock_t *Lock) {
-  int id = mapping::getThreadIdInWarp();
-  if (id == sub_group_scan_inclusive_min(id))
-    setLock(Lock);
+  setLock(Lock);
 }
 void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 #endif

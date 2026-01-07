@@ -56,14 +56,14 @@ __gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x);
 _Pragma("omp end declare variant");
 _Pragma("omp end declare target");
 
-#if defined(__SPIRV__)
-#include <spirvintrin.h>
-#elif defined(__NVPTX__)
+#if defined(__NVPTX__)
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
 #include <amdgpuintrin.h>
 #elif !defined(_OPENMP)
 #error "This header is only meant to be used on GPU architectures."
+#elif defined(__SPIRV__)
+#include <spirvintrin.h>
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");

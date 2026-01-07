@@ -22,8 +22,7 @@ _Pragma("omp begin declare variant match(device = {arch(spirv64)})");
 
 // Type aliases to the address spaces used by the SPIR-V backend.
 //
-// TODO: FIX
-#define __gpu_private  
+#define __gpu_private  __attribute__((address_space(0)))
 #define __gpu_constant
 #define __gpu_local
 #define __gpu_global __attribute__((address_space(1)))
@@ -37,12 +36,30 @@ uint64_t __spirv_BuiltInWorkgroupId(int i);
 uint64_t __spirv_BuiltInWorkgroupSize(int i);
 uint64_t __spirv_BuiltInLocalInvocationId(int i);
 
+typedef enum {
+  CrossDevice = 0,
+  Device = 1,
+  Workgroup = 2,
+  Subgroup = 3,
+  Invocation = 4
+} Scope_t;
+
+typedef enum {
+  Relaxed = 0x0,
+  Acquire = 0x2,
+  Release = 0x4,
+  AcquireRelease = 0x8,
+  SequentiallyConsistent = 0x10
+} MemorySemantics_t;
+
+using unsigned ProgramAS = 9;
+
 #ifdef __cplusplus
 template <typename... Args>
 int __spirv_ocl_printf(Args...);
 #endif
 
-// Subgroup functions
+// Subgroup
 __SPIRV_VAR_QUALIFIERS uint32_t __spirv_BuiltInSubgroupLocalInvocationId;
 __SPIRV_VAR_QUALIFIERS uint32_t __spirv_BuiltInSubgroupSize;
 
@@ -54,6 +71,12 @@ uint32_t __spirv_GroupNonUniformShuffle(uint32_t execution_scope, uint32_t value
 // Synchronization
 void __spirv_ControlBarrier(uint32_t execution_scope, uint32_t memory_scope, uint32_t semantics);
 void __spirv_MemoryBarrier(uint32_t memory_scope, uint32_t semantics);
+
+// Atomic
+uint32_t __spirv_AtomicIAdd(uint32_t *, int, int, uint32_t);
+void __spirv_AtomicStore(int32_t *, int, int, int);
+int32_t __spirv_AtomicLoad(int32_t *, int, int);
+int32_t __spirv_AtomicCompareExchange(int32_t *, int, int, int, int, int);
 
 
 // Returns the number of blocks in the 'x' dimension.
@@ -117,14 +140,19 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_thread_id_z(void) {
 }
 
 // Returns the size of a warp, always 32 on NVIDIA hardware.
-_DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_lanes(void) { return __spirv_BuiltInSubgroupSize; }
+_DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_lanes(void) {
+  return __spirv_BuiltInSubgroupSize;
+}
 
 // Returns the id of the thread inside of a warp executing together.
-_DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_lane_id(void) { return __spirv_BuiltInSubgroupLocalInvocationId; }
-
+_DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_lane_id(void) {
+  return __spirv_BuiltInSubgroupLocalInvocationId;
+}
+ 
 // Returns the bit-mask of active threads in the current warp.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_lane_mask(void) { 
- return __spirv_GroupNonUniformBallot(3, 1);
+  uint32_t Size = __gpu_num_lanes();
+  return ((uint64_t)1 << Size) - (uint64_t)1;
 }
 // Copies the value from the first active thread in the warp to the rest.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
@@ -139,11 +167,13 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
 }
 // Waits for all the threads in the block to converge and issues a fence.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_threads(void) {
-   __spirv_ControlBarrier(4, 2, 0x8); // Workgroup scope, acquire/release semantics
+   __spirv_ControlBarrier(Scope_t::Workgroup, Scope_t::Workgroup, 
+      0x100 | MemorySemantics_t::SequentiallyConsistent);
 }
 // Waits for all threads in the warp to reconverge for independent scheduling.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_lane(uint64_t __lane_mask) {
-  __spirv_ControlBarrier(4, 3, 0x8); // Subgroup scope, acquire/release semantics
+   __spirv_ControlBarrier(Scope_t::Subgroup, Scope_t::Subgroup, 
+      0x80 | MemorySemantics_t::SequentiallyConsistent);
 }
 // Shuffles the the lanes inside the warp according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
@@ -190,12 +220,9 @@ _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
 }
 // Terminates execution of the calling thread.
 _DEFAULT_FN_ATTRS [[noreturn]] static __inline__ void __gpu_exit(void) {
-  __builtin_unreachable();
 }
 // Suspend the thread briefly to assist the scheduler during busy loops.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {
-  // SPIR-V doesn't have a direct equivalent, use a memory barrier as hint
-  __spirv_MemoryBarrier(1, 0x100);
 }
 
 _Pragma("omp end declare variant");
