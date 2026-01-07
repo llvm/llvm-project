@@ -345,17 +345,26 @@ bool llvm::hasTrivialLoopLikeBackEdge(BasicBlock *BranchingBB, BasicBlock *PDom,
   const SmallPtrSet<BasicBlock *, 1> PDomSet({PDom});
   const SmallPtrSet<BasicBlock *, 1> BranchBBSet({BranchingBB});
 
+  const BasicBlock *Candidate = nullptr;
   if (isPotentiallyReachable(BB1, BranchingBB, &PDomSet, &DT) &&
       !isPotentiallyReachable(BB2, BranchingBB, &PDomSet, &DT) &&
       !isPotentiallyReachable(BB1, BB2, &BranchBBSet, &DT)) {
-    return getAllReachableBBsExcluding(BB1, PDom).contains(BranchingBB);
+    Candidate = BB1;
+  } else if (isPotentiallyReachable(BB2, BranchingBB, &PDomSet) &&
+             !isPotentiallyReachable(BB1, BranchingBB, &PDomSet) &&
+             !isPotentiallyReachable(BB2, BB1, &BranchBBSet, &DT)) {
+    Candidate = BB2;
   }
-  if (isPotentiallyReachable(BB2, BranchingBB, &PDomSet) &&
-      !isPotentiallyReachable(BB1, BranchingBB, &PDomSet) &&
-      !isPotentiallyReachable(BB2, BB1, &BranchBBSet, &DT)) {
-    return getAllReachableBBsExcluding(BB2, PDom).contains(BranchingBB);
-  }
-  return false;
+  if (Candidate) {
+    auto ReachableBBs = getAllReachableBBsExcluding(Candidate, PDom);
+    bool CandidateReachesBranch = ReachableBBs.contains(BranchingBB);
+    bool OneBranchFromSubgraphToPDom =
+        llvm::count_if(predecessors(PDom), [&](auto *BB) {
+          return ReachableBBs.contains(BB);
+        }) == 1;
+    return CandidateReachesBranch && OneBranchFromSubgraphToPDom;
+  } else
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -7507,6 +7516,20 @@ Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
         HasErrors = true;
       }
     }
+
+    auto diagnoseUnsupportedVectorization = [&]() {
+      std::string ErrMsg;
+      llvm::raw_string_ostream RSO(ErrMsg);
+      RSO << "unsupported vectorization of vector "
+          << (isa<BranchInst>(BranchOrSwitch) ? "branch" : "switch")
+          << " when it applies to a non single-entry-single-exit (SESE) "
+             "region or simple vector loops (one exit)";
+      RSO.flush();
+      DiagnosticInfoRippleWithLoc DI(
+          DS_Error, F, sanitizeRippleLocation(BranchOrSwitch), ErrMsg);
+      F.getContext().diagnose(DI);
+    };
+
     for (auto *IncomingBB : predecessors(BB)) {
       bool ComingFromInBetween = BBsInBetween.contains(IncomingBB);
       bool ComingFromBranchBB = IncomingBB == BBWithVectorSw;
@@ -7517,18 +7540,7 @@ Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
                                        domTree)) ||
           BB->hasAddressTaken()) {
         HasErrors = true;
-        // Show that it's a problem related to if-conversion of the branch
-        // instruction
-        std::string ErrMsg;
-        llvm::raw_string_ostream RSO(ErrMsg);
-        RSO << "ripple cannot vectorize the vector "
-            << (isa<BranchInst>(BranchOrSwitch) ? "branch" : "switch")
-            << " because it applies to a non single-entry-single-exit (SESE) "
-               "region";
-        RSO.flush();
-        DiagnosticInfoRippleWithLoc DI(
-            DS_Error, F, sanitizeRippleLocation(BranchOrSwitch), ErrMsg);
-        F.getContext().diagnose(DI);
+        diagnoseUnsupportedVectorization();
       }
       if (!(ComingFromInBetween || ComingFromBranchBB ||
             hasTrivialLoopLikeBackEdge(BBWithVectorSw, BranchPostDom,
@@ -7588,6 +7600,15 @@ Error Ripple::checkVectorBranch(Instruction *BranchOrSwitch) {
             F.getContext().diagnose(DI);
           }
         }
+      }
+    }
+    for (auto *SuccBB : successors(BB)) {
+      // Detect loop in the sub-graph back to the vector branch (not a SESE
+      // region)
+      if (SuccBB == BBWithVectorSw &&
+          !hasTrivialLoopLikeBackEdge(BBWithVectorSw, BranchPostDom, domTree)) {
+        HasErrors = true;
+        diagnoseUnsupportedVectorization();
       }
     }
   }
