@@ -142,6 +142,8 @@ constexpr int INT_CONVERSION_ERROR = -1004;
 constexpr int FIXED_POINT_CONVERSION_ERROR = -1005;
 constexpr int ALLOCATION_ERROR = -1006;
 constexpr int OVERFLOW_ERROR = -1007;
+constexpr int ILLEGAL_WIDE_CHAR = -1008;
+constexpr int MB_CONVERSION_ERROR = -1009;
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
