@@ -198,6 +198,37 @@ public:
   void removeInstruction(Instruction *I);
 };
 
+/// Context-sensitive CaptureAnalysis provider, which precisely determines
+/// whether an object is captured before a specific instruction using
+/// PointerMayBeCapturedBefore.
+class LLVM_ABI CapturesBeforeAnalysis final : public CaptureAnalysis {
+  const DominatorTree &DT;
+  const LoopInfo *LI;
+
+public:
+  CapturesBeforeAnalysis(const DominatorTree &DT, const LoopInfo *LI = nullptr)
+      : DT(DT), LI(LI) {}
+
+  CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
+                                      bool OrAt) override;
+};
+
+/// A CaptureAnalysis provider that chains EarliestEscapeAnalysis and
+/// CapturesBeforeAnalysis. It favours the former, cached but approximate;
+/// falling back to the latter, precise but expensive, when needed.
+class LLVM_ABI ChainedCaptureAnalysis final : public CaptureAnalysis {
+  EarliestEscapeAnalysis &EEA;
+  CapturesBeforeAnalysis &CBA;
+
+public:
+  ChainedCaptureAnalysis(EarliestEscapeAnalysis &EEA,
+                         CapturesBeforeAnalysis &CBA)
+      : EEA(EEA), CBA(CBA) {}
+
+  CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
+                                      bool OrAt) override;
+};
+
 /// Cache key for BasicAA results. It only includes the pointer and size from
 /// MemoryLocation, as BasicAA is AATags independent. Additionally, it includes
 /// the value of MayBeCrossIteration, which may affect BasicAA results.
@@ -530,22 +561,6 @@ public:
   /// memory locations.
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
                                     const Instruction *I2);
-
-  /// Return information about whether a particular call site modifies
-  /// or reads the specified memory location \p MemLoc before instruction \p I
-  /// in a BasicBlock.
-  ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc,
-                                DominatorTree *DT) {
-    SimpleAAQueryInfo AAQIP(*this);
-    return callCapturesBefore(I, MemLoc, DT, AAQIP);
-  }
-
-  /// A convenience wrapper to synthesize a memory location.
-  ModRefInfo callCapturesBefore(const Instruction *I, const Value *P,
-                                LocationSize Size, DominatorTree *DT) {
-    return callCapturesBefore(I, MemoryLocation(P, Size), DT);
-  }
 
   /// @}
   //===--------------------------------------------------------------------===//

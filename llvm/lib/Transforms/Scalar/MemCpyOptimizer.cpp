@@ -1048,14 +1048,15 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // In addition to knowing that the call does not access src in some
   // unexpected manner, for example via a global, which we deduce from
   // the use analysis, we also need to know that it does not sneakily
-  // access dest.  We rely on AA to figure this out for us.
-  MemoryLocation DestWithSrcSize(cpyDest, LocationSize::precise(srcSize));
-  ModRefInfo MR = BAA.getModRefInfo(C, DestWithSrcSize);
-  // If necessary, perform additional analysis.
-  if (isModOrRefSet(MR))
-    MR = BAA.callCapturesBefore(C, DestWithSrcSize, DT);
-  if (isModOrRefSet(MR))
-    return false;
+  // access dest. We rely on AA with CapturesBeforeAnalysis to figure this out.
+  {
+    MemoryLocation DestWithSrcSize(cpyDest, LocationSize::precise(srcSize));
+    CapturesBeforeAnalysis CBA(*DT);
+    ChainedCaptureAnalysis CCA(*EEA, CBA);
+    BatchAAResults BAAWithCCA(*AA, &CCA);
+    if (isModOrRefSet(BAAWithCCA.getModRefInfo(C, DestWithSrcSize)))
+      return false;
+  }
 
   // We can't create address space casts here because we don't know if they're
   // safe for the target.
