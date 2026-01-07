@@ -2222,3 +2222,9 @@ bool TargetInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
   return MI->isCall() || MI->hasUnmodeledSideEffects() ||
          (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
 }
+
+MachineBasicBlock::iterator
+TargetInstrInfo::getExecAwareInsertPoint(MachineBasicBlock &MBB,
+                                         Register Reg) const {
+  return MBB.SkipPHIsLabelsAndDebug(MBB.begin(), Reg);
+}

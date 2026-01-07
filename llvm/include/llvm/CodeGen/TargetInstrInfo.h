@@ -2166,6 +2166,12 @@ public:
     return false;
   }
 
+  /// Get the insertion point for a live range split copy at the beginning of
+  /// a basic block. This is used by the register allocator's live range
+  /// splitting logic.
+  virtual MachineBasicBlock::iterator
+  getExecAwareInsertPoint(MachineBasicBlock &MBB, Register Reg) const;
+
   /// Allows targets to use appropriate copy instruction while spilitting live
   /// range of a register in register allocation.
   virtual unsigned getLiveRangeSplitOpcode(Register Reg,

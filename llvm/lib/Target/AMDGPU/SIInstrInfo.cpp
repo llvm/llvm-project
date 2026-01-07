@@ -9903,6 +9903,44 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
            MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
+MachineBasicBlock::iterator
+SIInstrInfo::getExecAwareInsertPoint(MachineBasicBlock &MBB,
+                                     Register Reg) const {
+  if (!Reg)
+    return MBB.SkipPHIsLabelsAndDebug(MBB.begin());
+
+  // Instructions using SGPRS are independent of exec mask: skip.
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  const TargetRegisterClass *RC = Reg.isPhysical() ? RI.getPhysRegBaseClass(Reg)
+                                                   : MRI.getRegClassOrNull(Reg);
+  if (RC && RI.isSGPRClass(RC))
+    return MBB.SkipPHIsLabelsAndDebug(MBB.begin(), Reg);
+
+  // For VGPRs, find a safe insert point after exec has been restored.
+  // A standard basic block prologue pattern is:
+  //   BB:
+  //     <PHIs>
+  //     <labels>
+  //     <SGPR spills/restores>
+  //     <scalar copies - live range splits for SGPRs>
+  //     s_or_b32 exec_lo, exec_lo, s_saved
+
+  // Look for exec restore instruction: it could be after the first SGPR copy.
+  MachineBasicBlock::iterator I = MBB.SkipPHIsLabelsAndDebug(MBB.begin(), Reg);
+  MachineBasicBlock::iterator E = MBB.end();
+
+  for (MachineBasicBlock::iterator It = I; It != E; ++It) {
+    if (!It->isTerminator() && It->modifiesRegister(AMDGPU::EXEC, &RI))
+      return std::next(It);
+
+    if (It->mayLoadOrStore() && !isSGPRSpill(It->getOpcode()) &&
+        !isWWMRegSpillOpcode(It->getOpcode()))
+      break;
+  }
+
+  return I;
+}
+
 MachineInstrBuilder
 SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I,

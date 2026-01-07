@@ -1579,6 +1579,9 @@ public:
   bool isBasicBlockPrologue(const MachineInstr &MI,
                             Register Reg = Register()) const override;
 
+  MachineBasicBlock::iterator
+  getExecAwareInsertPoint(MachineBasicBlock &MBB, Register Reg) const override;
+
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,
                                          const DebugLoc &DL, Register Src,
