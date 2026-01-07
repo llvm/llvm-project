@@ -4,24 +4,24 @@
 define double @src_cosh(double noundef %x) {
 ; CHECK-LABEL: @src_cosh(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.cosh.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call fast double @llvm.cosh.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;
 entry:
   %fneg = fneg double %x
-  %1 = tail call double @llvm.cosh.f64(double %fneg)
-  ret double %1
+  %ret = tail call fast double @llvm.cosh.f64(double %fneg)
+  ret double %ret
 }
 
 define double @tgt_cosh(double noundef %x) {
 ; CHECK-LABEL: @tgt_cosh(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.cosh.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call fast double @llvm.cosh.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;
 entry:
-  %1 = tail call double @llvm.cosh.f64(double %x)
-  ret double %1
+  %ret = tail call fast double @llvm.cosh.f64(double %x)
+  ret double %ret
 }
 
 declare double @llvm.cosh.f64(double)
@@ -29,25 +29,25 @@ declare double @llvm.cosh.f64(double)
 define double @src_tanh(double noundef %x) {
 ; CHECK-LABEL: @src_tanh(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FNEG1:%.*]] = call double @llvm.tanh.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[FNEG1:%.*]] = call fast double @llvm.tanh.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[FNEG1]]
 ;
 entry:
   %fneg = fneg double %x
-  %1 = tail call double @llvm.tanh.f64(double %fneg)
-  %fneg1 = fneg double %1
+  %tanhneg = tail call fast double @llvm.tanh.f64(double %fneg)
+  %fneg1 = fneg double %tanhneg
   ret double %fneg1
 }
 
 define double @tgt_tanh(double noundef %x) {
 ; CHECK-LABEL: @tgt_tanh(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.tanh.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call fast double @llvm.tanh.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;
 entry:
-  %1 = tail call double @llvm.tanh.f64(double %x)
-  ret double %1
+  %ret = tail call fast double @llvm.tanh.f64(double %x)
+  ret double %ret
 }
 
 declare double @llvm.tanh.f64(double)
@@ -55,13 +55,13 @@ declare double @llvm.tanh.f64(double)
 define double @src_sinh(double noundef %x) {
 ; CHECK-LABEL: @src_sinh(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FNEG1:%.*]] = call double @llvm.sinh.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[FNEG1:%.*]] = call fast double @llvm.sinh.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[FNEG1]]
 ;
 entry:
   %fneg = fneg double %x
-  %1 = tail call double @llvm.sinh.f64(double %fneg)
-  %fneg1 = fneg double %1
+  %sinhneg = tail call fast double @llvm.sinh.f64(double %fneg)
+  %fneg1 = fneg double %sinhneg
   ret double %fneg1
 }
 
@@ -70,10 +70,10 @@ declare double @llvm.sinh.f64(double)
 define double @tgt_sinh(double noundef %x) {
 ; CHECK-LABEL: @tgt_sinh(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.sinh.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call fast double @llvm.sinh.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;
 entry:
-  %1 = tail call double @llvm.sinh.f64(double %x)
-  ret double %1
+  %ret = tail call fast double @llvm.sinh.f64(double %x)
+  ret double %ret
 }
