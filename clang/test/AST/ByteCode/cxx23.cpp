@@ -395,7 +395,7 @@ namespace UnionMemberCallDiags {
 }
 #endif
 
-namespace VolatileWrites {
+namespace Volatile {
   constexpr void test1() {// all20-error {{never produces a constant expression}}
     int k;
     volatile int &m = k;
@@ -448,10 +448,8 @@ namespace VolatileWrites {
   }
   static_assert(test7(12)); // all-error {{not an integral constant expression}} \
                             // all-note {{in call to}}
-}
 
-namespace VolatileReads {
-  constexpr int test1(bool b) {
+  constexpr int test8(bool b) {
     if (!b)
       return -1;
     struct C {
@@ -460,8 +458,20 @@ namespace VolatileReads {
     volatile C c{12}; // all-note {{volatile object declared here}}
     return ((C&)(c)).a; // all-note {{read of volatile object}}
   }
-  static_assert(test1(true) == 0); // all-error {{not an integral constant expression}} \
+  static_assert(test8(true) == 0); // all-error {{not an integral constant expression}} \
                                    // all-note {{in call to}}
+
+  struct C {
+    int n;
+    constexpr C() : n(1) { n = 2; int b= n;}
+  };
+  constexpr int f(bool get) {
+    if (get)
+      return -1;
+    volatile C c;
+    return 2;
+  }
+  static_assert(f(false) == 2, "");
 }
 
 namespace AIEWithIndex0Narrows {

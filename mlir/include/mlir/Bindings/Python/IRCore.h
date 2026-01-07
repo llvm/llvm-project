@@ -24,6 +24,7 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
+#include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
@@ -888,7 +889,7 @@ public:
   /// is taken by calling this function.
   static PyType createFromCapsule(nanobind::object capsule);
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyType> maybeDownCast();
 
 private:
   MlirType type;
@@ -933,6 +934,7 @@ public:
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   using Base = PyConcreteType;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  static inline const MlirStringRef name{};
 
   PyConcreteType() = default;
   PyConcreteType(PyMlirContextRef contextRef, MlirType t)
@@ -988,6 +990,12 @@ public:
           /*replace*/ true);
     }
 
+    if (DerivedTy::name.length != 0) {
+      cls.def_prop_ro_static("type_name", [](nanobind::object & /*self*/) {
+        return nanobind::str(DerivedTy::name.data, DerivedTy::name.length);
+      });
+    }
+
     DerivedTy::bindDerived(cls);
   }
 
@@ -1014,7 +1022,7 @@ public:
   /// is taken by calling this function.
   static PyAttribute createFromCapsule(const nanobind::object &capsule);
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyAttribute> maybeDownCast();
 
 private:
   MlirAttribute attr;
@@ -1058,6 +1066,7 @@ public:
   using IsAFunctionTy = bool (*)(MlirAttribute);
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  static inline const MlirStringRef name{};
   using Base = PyConcreteAttribute;
 
   PyConcreteAttribute() = default;
@@ -1128,6 +1137,12 @@ public:
           /*replace*/ true);
     }
 
+    if (DerivedTy::name.length != 0) {
+      cls.def_prop_ro_static("attr_name", [](nanobind::object & /*self*/) {
+        return nanobind::str(DerivedTy::name.data, DerivedTy::name.length);
+      });
+    }
+
     DerivedTy::bindDerived(cls);
   }
 
@@ -1143,6 +1158,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirStringAttrGetTypeID;
+  static inline const MlirStringRef name = mlirStringAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -1171,7 +1187,7 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   nanobind::object getCapsule();
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyValue> maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
