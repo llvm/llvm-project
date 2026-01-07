@@ -442,6 +442,31 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
   return src.getTerminatorPredecessorOrNull().getSuccessorOperands(dest);
 }
 
+SmallVector<Value>
+RegionBranchOpInterface::getRegionNonForwardedValues(RegionBranchPoint src,
+                                                     RegionSuccessor dest) {
+  SmallVector<Value> nonForwardValues;
+  OperandRange successorOperands = getSuccessorOperands(src, dest);
+  ValueRange successorInputs = getSuccessorInputs(dest);
+  size_t firstIndex = 0;
+  if (!successorOperands.empty()) {
+    firstIndex =
+        dest.isParent()
+            ? cast<OpResult>(successorInputs.front()).getResultNumber()
+            : cast<BlockArgument>(successorInputs.front()).getArgNumber();
+  }
+  ValueRange values;
+  if (dest.isParent()) {
+    values = this->getOperation()->getResults();
+  } else {
+    values = dest.getSuccessor()->getArguments();
+  }
+  nonForwardValues.append(llvm::to_vector(values.take_front(firstIndex)));
+  nonForwardValues.append(llvm::to_vector(
+      values.drop_front(firstIndex + successorOperands.size())));
+  return nonForwardValues;
+}
+
 static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
   return MutableArrayRef<OpOperand>(operands.getBase(), operands.size());
 }
