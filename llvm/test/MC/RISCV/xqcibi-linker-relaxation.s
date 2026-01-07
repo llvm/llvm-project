@@ -1,4 +1,4 @@
-# RUN: llvm-mc --triple=riscv32 -mattr=+relax,+experimental-xqcilb,+experimental-xqcibi \
+# RUN: llvm-mc --triple=riscv32 -mattr=+relax,+xqcilb,+xqcibi \
 # RUN:    %s -filetype=obj -o - -riscv-add-build-attributes \
 # RUN:    | llvm-objdump -dr -M no-aliases - \
 # RUN:    | FileCheck %s
@@ -15,7 +15,7 @@ branch_over_relaxable:
   jal x1, foo
 # CHECK: qc.e.jal 0x0 <branch_over_relaxable>
 # CHECK-NEXT: R_RISCV_VENDOR QUALCOMM
-# CHECK-NEXT: R_RISCV_CUSTOM195 foo
+# CHECK-NEXT: R_RISCV_QC_E_CALL_PLT foo
 # CHECK-NEXT: R_RISCV_RELAX *ABS*
   bne a0, a1, branch_over_relaxable
 # CHECK-NEXT: bne a0, a1, 0x6 <branch_over_relaxable+0x6>
@@ -24,7 +24,7 @@ branch_over_relaxable:
   qc.e.bnei a0, 0x21, branch_over_relaxable
 # CHECK-NEXT: qc.e.bnei a0, 0x21, 0xa <branch_over_relaxable+0xa>
 # CHECK-NEXT: R_RISCV_VENDOR QUALCOMM
-# CHECK-NEXT: R_RISCV_CUSTOM193 branch_over_relaxable
+# CHECK-NEXT: R_RISCV_QC_E_BRANCH branch_over_relaxable
 # CHECK-NOT: R_RISCV_RELAX
   ret
 # CHECK-NEXT: c.jr ra

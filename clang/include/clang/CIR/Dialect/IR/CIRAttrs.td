@@ -448,6 +448,57 @@ def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// DataMemberAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
+  TypedAttrInterface
+]> {
+  let summary = "Holds a constant data member pointer value";
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::DataMemberType">:$type,
+                        OptionalParameter<
+                            "std::optional<unsigned>">:$member_index);
+  let description = [{
+    A data member attribute is a literal attribute that represents a constant
+    pointer-to-data-member value.
+
+    The `member_index` parameter represents the index of the pointed-to member
+    within its containing record. It is an optional parameter; lack of this
+    parameter indicates a null pointer-to-data-member value.
+
+    Example:
+    ```
+    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+
+    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    ```
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                        "unsigned":$member_index), [{
+      return $_get(type.getContext(), type, member_index);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` ($member_index^):(`null`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isNullPtr() const {
+      return !getMemberIndex().has_value();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 

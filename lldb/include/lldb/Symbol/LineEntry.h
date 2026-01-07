@@ -136,6 +136,10 @@ struct LineEntry {
   /// The section offset address range for this line entry.
   AddressRange range;
 
+  /// This gets set for LineEntries created without a valid address range.
+  /// When set, `LineEntry::IsValid` doesn't check the `range` validity.
+  bool synthetic = false;
+
   /// The source file, possibly mapped by the target.source-map setting.
   SupportFileNSP file_sp;
 

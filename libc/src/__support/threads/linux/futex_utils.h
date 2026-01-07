@@ -16,7 +16,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_word.h"
-#include "src/__support/time/linux/abs_timeout.h"
+#include "src/__support/time/abs_timeout.h"
 #include <linux/errno.h>
 #include <linux/futex.h>
 

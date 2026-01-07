@@ -207,6 +207,9 @@ struct Configuration {
   // Used for /thinlto-remote-compiler-arg:<arg>
   llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
 
+  // Used for /fat-lto-objects
+  bool fatLTOObjects = false;
+
   // Used for /opt:[no]ltodebugpassmanager
   bool ltoDebugPassManager = false;
 

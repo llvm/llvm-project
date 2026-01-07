@@ -803,7 +803,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
 
 // Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
 // feeds into them.
-static bool isPointerUseReplacable(const Use &U) {
+static bool isPointerUseReplacable(const Use &U, bool HasNonAddressBits) {
   unsigned Limit = 40;
   SmallVector<const User *> Worklist({U.getUser()});
   SmallPtrSet<const User *, 8> Visited;
@@ -812,9 +812,11 @@ static bool isPointerUseReplacable(const Use &U) {
     auto *User = Worklist.pop_back_val();
     if (!Visited.insert(User).second)
       continue;
+    if (isa<ICmpInst, PtrToAddrInst>(User))
+      continue;
     // FIXME: The PtrToIntInst case here is not strictly correct, as it
     // changes which provenance is exposed.
-    if (isa<ICmpInst, PtrToIntInst, PtrToAddrInst>(User))
+    if (!HasNonAddressBits && isa<PtrToIntInst>(User))
       continue;
     if (isa<PHINode, SelectInst>(User))
       Worklist.append(User->user_begin(), User->user_end());
@@ -842,9 +844,10 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
 
 bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
                                           const DataLayout &DL) {
-  assert(U->getType() == To->getType() && "values must have matching types");
+  Type *Ty = To->getType();
+  assert(U->getType() == Ty && "values must have matching types");
   // Not a pointer, just return true.
-  if (!To->getType()->isPointerTy())
+  if (!Ty->isPointerTy())
     return true;
 
   // Do not perform replacements in lifetime intrinsic arguments.
@@ -853,7 +856,10 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
 
   if (isPointerAlwaysReplaceable(&*U, To, DL))
     return true;
-  return isPointerUseReplacable(U);
+
+  bool HasNonAddressBits =
+      DL.getAddressSizeInBits(Ty) != DL.getPointerTypeSizeInBits(Ty);
+  return isPointerUseReplacable(U, HasNonAddressBits);
 }
 
 bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,

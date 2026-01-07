@@ -1754,8 +1754,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   // the mutation of replacement values. To do this, we attach a listener to
   // update the replacements as they happen.
   OpBuilder::Listener *previousListener = rewriter.getListener();
-  auto resetListener =
-      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  llvm::scope_exit resetListener(
+      [&]() { rewriter.setListener(previousListener); });
   ReplacementListener replaceListener(replacements, previousListener);
   rewriter.setListener(&replaceListener);
 

@@ -30,8 +30,8 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -520,7 +520,7 @@ bool llvm::runPassPipeline(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
   if (EnableProfcheck)
-    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileVerifierPass()));
+    MPM.addPass(ProfileVerifierPass());
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {

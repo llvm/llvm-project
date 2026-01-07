@@ -71,7 +71,7 @@ body:             |
   ; MM-LABEL: name: a
   ; MM: bb.0.entry:
   ; MM:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
-  ; MM:   $f0 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
+  ; MM:   $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
   ; MM:   BC1EQZC_MMR6 $d0_64, %bb.2, implicit-def $at
   ; MM: bb.1.entry:
   ; MM:   successors: %bb.3(0x80000000)
@@ -86,7 +86,7 @@ body:             |
   ; PIC-LABEL: name: a
   ; PIC: bb.0.entry:
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
-  ; PIC:   $f0 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
+  ; PIC:   $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
   ; PIC:   BC1EQZC_MMR6 $d0_64, %bb.3, implicit-def $at
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -112,7 +112,7 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $d12_64, $d14_64
 
-    $f0 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
+    $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
     BC1NEZC_MMR6 killed $d0_64, %bb.2, implicit-def $at
 
   bb.1.if.then:
@@ -163,7 +163,7 @@ body:             |
   ; MM-LABEL: name: b
   ; MM: bb.0.entry:
   ; MM:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
-  ; MM:   $f0 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
+  ; MM:   $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
   ; MM:   BC1NEZC_MMR6 $d0_64, %bb.2, implicit-def $at
   ; MM: bb.1.entry:
   ; MM:   successors: %bb.3(0x80000000)
@@ -178,7 +178,7 @@ body:             |
   ; PIC-LABEL: name: b
   ; PIC: bb.0.entry:
   ; PIC:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
-  ; PIC:   $f0 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
+  ; PIC:   $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
   ; PIC:   BC1NEZC_MMR6 $d0_64, %bb.3, implicit-def $at
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -204,7 +204,7 @@ body:             |
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
     liveins: $d12_64, $d14_64
 
-    $f0 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
+    $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
     BC1EQZC_MMR6 killed $d0_64, %bb.2, implicit-def $at
 
   bb.1.if.then:

@@ -16,6 +16,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_BITCODEWRITER_H
 
 #include "Representation.h"
+#include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include <vector>
@@ -147,6 +148,7 @@ enum RecordId {
   CONCEPT_NAME,
   CONCEPT_IS_TYPE,
   CONCEPT_CONSTRAINT_EXPRESSION,
+  CONCEPT_DEFLOCATION,
   CONSTRAINT_EXPRESSION,
   VAR_USR,
   VAR_NAME,
@@ -175,7 +177,8 @@ enum class FieldId {
 
 class ClangDocBitcodeWriter {
 public:
-  ClangDocBitcodeWriter(llvm::BitstreamWriter &Stream) : Stream(Stream) {
+  ClangDocBitcodeWriter(llvm::BitstreamWriter &Stream, DiagnosticsEngine &Diags)
+      : Stream(Stream), Diags(Diags) {
     emitHeader();
     emitBlockInfoBlock();
     emitVersionBlock();
@@ -260,6 +263,7 @@ private:
   SmallVector<uint32_t, BitCodeConstants::RecordSize> Record;
   llvm::BitstreamWriter &Stream;
   AbbreviationMap Abbrevs;
+  DiagnosticsEngine &Diags;
 };
 
 } // namespace doc

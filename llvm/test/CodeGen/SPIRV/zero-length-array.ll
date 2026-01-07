@@ -5,9 +5,6 @@
 
 ; For compute, nothing is generated, but compilation doesn't crash.
 ; CHECK: OpName %[[#FOO:]] "foo"
-; CHECK: OpName %[[#RTM:]] "reg2mem alloca point"
-; CHECK: %[[#INT:]] = OpTypeInt 32 0
-; CHECK: %[[#RTM]] = OpConstant %[[#INT]] 0
 ; CHECK: %[[#FOO]] = OpFunction
 ; CHECK-NEXT: = OpLabel
 ; CHECK-NEXT: OpReturn

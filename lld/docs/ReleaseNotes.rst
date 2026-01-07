@@ -38,6 +38,11 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* ``/fat-lto-objects`` addded to support FatLTO. Without ``/fat-lto-objects`` or with ``/fat-lto-objects:no``, LLD will link LLVM FatLTO objects using the relocatable object file.
+  (`#165529 <https://github.com/llvm/llvm-project/pull/165529>`_)
+* ``/linkreprofullpathrsp`` prints the full path to each object passed to the link line to a file.
+  (`#165449 <https://github.com/llvm/llvm-project/pull/165449>`_)
+
 MinGW Improvements
 ------------------
 
