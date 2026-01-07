@@ -2479,6 +2479,37 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
       if (isBoolNot(previous))
         return previous.getInput();
 
+  // Fold constant unary operations.
+  if (auto srcConst = getInput().getDefiningOp<cir::ConstantOp>()) {
+    switch (getKind()) {
+    case cir::UnaryOpKind::Not:
+      if (mlir::isa<cir::IntType>(srcConst.getType())) {
+        APInt val = srcConst.getIntValue();
+        val.flipAllBits();
+        return cir::IntAttr::get(getType(), val);
+      }
+      assert(mlir::isa<cir::BoolType>(srcConst.getType()));
+      return cir::BoolAttr::get(getContext(), !srcConst.getBoolValue());
+    case cir::UnaryOpKind::Plus:
+      return srcConst.getResult();
+    case cir::UnaryOpKind::Minus:
+      if (mlir::isa<cir::FPTypeInterface>(srcConst.getType())) {
+        APFloat val = srcConst.getFloatValue();
+        val.changeSign();
+        return cir::FPAttr::get(getType(), val);
+      }
+      if (mlir::isa<cir::IntType>(srcConst.getType())) {
+        APInt val = srcConst.getIntValue();
+        val.negate();
+        return cir::IntAttr::get(getType(), val);
+      }
+      assert(mlir::isa<cir::BoolType>(srcConst.getType()));
+      return srcConst.getResult();
+    default:
+      return {};
+    }
+  }
+
   return {};
 }
 //===----------------------------------------------------------------------===//
