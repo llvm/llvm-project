@@ -1715,7 +1715,7 @@ public:
     if (!isNoop(*LastII)) {
       errs() << "BOLT-ERROR: Cannot patch PLT entry "
              << PLTFunction.getPrintName()
-             << " to have a BTI landing pad. Relink the workload using LLD.\n";
+             << " to have a BTI landing pad. Relink the binary using LLD.\n";
       exit(1);
     }
     // If the PLT does not have a BTI, and it has nops, create a new instruction
@@ -1726,9 +1726,7 @@ public:
     NewPLTSeq.push_back(BTIInst);
     // Only adding the instructions from the first BB (adrp, ldr, add, br) to
     // NewPLTSeq.
-    for (auto II = FirstBBI->begin(); II != FirstBBI->end(); ++II) {
-      NewPLTSeq.push_back(*II);
-    }
+    NewPLTSeq.insert(NewPLTSeq.end(), FirstBBI->begin(), FirstBBI->end());
     BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
   }
 
