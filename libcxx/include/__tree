@@ -1426,8 +1426,7 @@ private:
 #ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
   _LIBCPP_HIDE_FROM_ABI
 #endif
-  __node_pointer
-  __construct_from_tree(__node_pointer __src, _NodeConstructor __construct) {
+  __node_pointer __construct_from_tree(__node_pointer __src, _NodeConstructor __construct) {
     if (!__src)
       return nullptr;
 
@@ -1472,8 +1471,7 @@ private:
 #ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
   _LIBCPP_HIDE_FROM_ABI
 #endif
-  __node_pointer
-  __assign_from_tree(
+  __node_pointer __assign_from_tree(
       __node_pointer __dest, __node_pointer __src, _Assignment __assign, _ConstructionAlg __construct_subtree) {
     if (!__src) {
       destroy(__dest);

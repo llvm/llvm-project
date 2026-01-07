@@ -231,17 +231,11 @@
 #    error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_associative_heterogeneous_erasure
-#      error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++23"
-#    endif
-#    if __cpp_lib_associative_heterogeneous_erasure != 202110L
-#      error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_associative_heterogeneous_erasure
-#      error "__cpp_lib_associative_heterogeneous_erasure should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_associative_heterogeneous_erasure
+#    error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++23"
+#  endif
+#  if __cpp_lib_associative_heterogeneous_erasure != 202110L
+#    error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++23"
 #  endif
 
 #  ifdef __cpp_lib_associative_heterogeneous_insertion
@@ -312,17 +306,11 @@
 #    error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_associative_heterogeneous_erasure
-#      error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++26"
-#    endif
-#    if __cpp_lib_associative_heterogeneous_erasure != 202110L
-#      error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_associative_heterogeneous_erasure
-#      error "__cpp_lib_associative_heterogeneous_erasure should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_associative_heterogeneous_erasure
+#    error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++26"
+#  endif
+#  if __cpp_lib_associative_heterogeneous_erasure != 202110L
+#    error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
