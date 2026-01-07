@@ -152,4 +152,6 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCOpaqueAttrGetTypeID(void);
 }
 #endif
 
+#include "mlir/Dialect/EmitC/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_EmitC_H

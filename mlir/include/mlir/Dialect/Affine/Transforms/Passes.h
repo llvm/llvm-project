@@ -36,7 +36,7 @@ class AffineForOp;
 enum FusionMode { Greedy, ProducerConsumer, Sibling };
 
 #define GEN_PASS_DECL
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 
 /// Creates a simplification pass for affine structures (maps and sets). In
 /// addition, this pass also normalizes memrefs to have the trivial (identity)
@@ -137,7 +137,7 @@ void populateAffineFoldMemRefAliasOpPatterns(RewritePatternSet &patterns);
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 
 } // namespace affine
 } // namespace mlir
