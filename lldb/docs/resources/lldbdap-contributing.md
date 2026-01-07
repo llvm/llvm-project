@@ -99,7 +99,7 @@ changed.
 ### Packaging and installation
 
 ```bash
-cd /path/to/lldb/tools/lldb-dap
+cd /path/to/lldb/tools/lldb-dap/extension
 npm install
 npm run package # This also compiles the extension.
 npm run vscode-install

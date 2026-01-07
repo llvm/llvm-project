@@ -3410,13 +3410,6 @@ defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Generate the reduced BMI">>;
 
-def fmodules_driver : Flag<["-"], "fmodules-driver">,
-  Group<f_Group>, Visibility<[ClangOption]>,
-  HelpText<"Enable support for driver managed module builds (experimental)">;
-def fno_modules_driver : Flag<["-"], "fno-modules-driver">,
-  Group<f_Group>, Visibility<[ClangOption]>,
-  HelpText<"Disable support for driver managed module builds (experimental)">;
-
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
@@ -3806,6 +3799,11 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   PosFlag<SetTrue, [], [ClangOption], "Try">,
   NegFlag<SetFalse, [], [ClangOption], "Don't try">,
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
+defm objc_direct_precondition_thunk : BoolFOption<"objc-direct-precondition-thunk",
+  CodeGenOpts<"ObjCDirectPreconditionThunk">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Move precondition checks for direct methods into thunks">,
+  NegFlag<SetFalse>>;
 defm disable_block_signature_string : BoolFOption<"disable-block-signature-string",
   CodeGenOpts<"DisableBlockSignatureString">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Disable">,
@@ -7461,6 +7459,10 @@ By default, the heap is used. Allocations of polymorphic types
 are always done on the heap, though this may change in future releases.
   }]>;
 
+defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-pointers",
+  PosFlag<SetTrue, [], [FlangOption, FC1Option], "Optimizations allow for unsafe Cray pointer usages">,
+  NegFlag<SetFalse, [], [FlangOption, FC1Option], "Optimizations don't allow for unsafe Cray pointer usages (default)">>;
+
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
 
@@ -9615,6 +9617,13 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>,
   Visibility<[DXCOption]>;
 
+def dxc_all_resources_bound : DXCFlag<"all-resources-bound">,
+  HelpText<"Enables agressive flattening">;
+def hlsl_all_resources_bound : Option<["/", "-"], "hlsl-all-resources-bound", KIND_FLAG>,
+                      Group<dxc_Group>,
+                      Visibility<[ClangOption, CC1Option]>,
+                      HelpText<"Enables agressive flattening">,
+                      MarshallingInfoFlag<CodeGenOpts<"AllResourcesBound">>;
 def dxc_col_major : DXCFlag<"Zpc">, HelpText<"Pack matrices in column-major order">;
 def dxc_row_major : DXCFlag<"Zpr">, HelpText<"Pack matrices in row-major order">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
