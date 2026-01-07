@@ -36,8 +36,8 @@ VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
   // If there's no canonical IV, retrieve the type from the trip count
   // expression.
   auto *TC = Plan.getTripCount();
-  if (TC->isLiveIn()) {
-    CanonicalIVTy = TC->getLiveInIRValue()->getType();
+  if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {
+    CanonicalIVTy = TCIRV->getType();
     return;
   }
   CanonicalIVTy = cast<VPExpandSCEVRecipe>(TC)->getSCEV()->getType();
@@ -259,9 +259,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn()) {
-    if (auto *IRValue = V->getLiveInIRValue())
-      return IRValue->getType();
+  if (auto *IRV = dyn_cast<VPIRValue>(V))
+    return IRV->getType();
+
+  if (isa<VPSymbolicValue>(V)) {
     // All VPValues without any underlying IR value (like the vector trip count
     // or the backedge-taken count) have the same type as the canonical IV.
     return CanonicalIVTy;
@@ -442,8 +443,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         // FIXME: Might need some motivation why these values are ignored. If
         // for example an argument is used inside the loop it will increase the
         // register pressure (so shouldn't we add it to LoopInvariants).
-        if (!DefR && (!U->getLiveInIRValue() ||
-                      !isa<Instruction>(U->getLiveInIRValue())))
+        auto *IRV = dyn_cast<VPIRValue>(U);
+        if (!DefR && (!IRV || !isa<Instruction>(IRV->getValue())))
           continue;
 
         // If this recipe is outside the loop then record it and continue.
