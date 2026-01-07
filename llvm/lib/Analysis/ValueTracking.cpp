@@ -5305,44 +5305,30 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::experimental_constrained_log2:
     case Intrinsic::amdgcn_log: {
       Type *EltTy = II->getType()->getScalarType();
-      if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
-        Known.knownNot(fcSubnormal);
-
-      Known.knownNot(fcNegZero);
 
       // log(+inf) -> +inf
       // log([+-]0.0) -> -inf
       // log(-inf) -> nan
       // log(-x) -> nan
-      if ((InterestedClasses & (fcNan | fcInf)) == fcNone)
-        break;
+      if ((InterestedClasses & (fcNan | fcInf)) != fcNone) {
+        FPClassTest InterestedSrcs = InterestedClasses;
+        if ((InterestedClasses & fcNegInf) != fcNone)
+          InterestedSrcs |= fcZero | fcSubnormal;
+        if ((InterestedClasses & fcNan) != fcNone)
+          InterestedSrcs |= fcNan | fcNegative;
 
-      FPClassTest InterestedSrcs = InterestedClasses;
-      if ((InterestedClasses & fcNegInf) != fcNone)
-        InterestedSrcs |= fcZero | fcSubnormal;
-      if ((InterestedClasses & fcNan) != fcNone)
-        InterestedSrcs |= fcNan | (fcNegative & ~fcNan);
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Q, Depth + 1);
 
-      KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
-                          KnownSrc, Q, Depth + 1);
+        const Function *F = II->getFunction();
+        DenormalMode Mode = F ? F->getDenormalMode(EltTy->getFltSemantics())
+                              : DenormalMode::getDynamic();
+        Known = KnownFPClass::log(KnownSrc, Mode);
+      }
 
-      if (KnownSrc.isKnownNeverPosInfinity())
-        Known.knownNot(fcPosInf);
-
-      if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
-        Known.knownNot(fcNan);
-
-      const Function *F = II->getFunction();
-      if (!F)
-        break;
-
-      const fltSemantics &FltSem = EltTy->getFltSemantics();
-      DenormalMode Mode = F->getDenormalMode(FltSem);
-
-      if (KnownSrc.isKnownNeverLogicalZero(Mode))
-        Known.knownNot(fcNegInf);
-
+      if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
+        Known.knownNot(fcSubnormal);
       break;
     }
     case Intrinsic::powi: {
