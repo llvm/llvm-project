@@ -13,7 +13,7 @@
 
 #include <cassert>
 
-#if TEST_STD_VER > 23
+#if TEST_STD_VER >= 23
 
 template <typename T>
 struct StoredType;
@@ -119,6 +119,6 @@ void test_non_transparent_extract(Container c) {
   assert(conversions == 3);
 }
 
-#endif // TEST_STD_VER > 23
+#endif // TEST_STD_VER >= 23
 
 #endif // TEST_TRANSPARENT_ASSOCIATIVE_H
