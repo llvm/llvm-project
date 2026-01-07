@@ -2,7 +2,8 @@
 // RUN: split-file %s %t
 // RUN: cd %t
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
-// RUN:   %clang subdir/tu.c -I. -fdiagnostics-absolute-paths -E \
+// RUN:   %clang -target x86_64-apple-macos11 \
+// RUN:   subdir/tu.c -I. -fdiagnostics-absolute-paths -E \
 // RUN:   -Rcompile-job-cache > %t/stdout-miss 2> %t/stderr-miss
 // RUN: FileCheck %s -DPREFIX=%/t -check-prefix=PP -input-file=%t/stdout-miss
 // RUN: FileCheck %s -DPREFIX=%/t -check-prefix=DIAG -input-file=%t/stderr-miss
@@ -10,7 +11,8 @@
 
 // Again, but with a cache hit.
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
-// RUN:   %clang subdir/tu.c -I. -fdiagnostics-absolute-paths -E \
+// RUN:   %clang -target x86_64-apple-macos11 \
+// RUN:   subdir/tu.c -I. -fdiagnostics-absolute-paths -E \
 // RUN:   -Rcompile-job-cache > %t/stdout-hit 2> %t/stderr-hit
 // RUN: FileCheck %s -DPREFIX=%/t -check-prefix=PP -input-file=%t/stdout-hit
 // RUN: FileCheck %s -DPREFIX=%/t -check-prefix=DIAG -input-file=%t/stderr-hit
