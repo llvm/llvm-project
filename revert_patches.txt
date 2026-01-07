@@ -1,3 +1,4 @@
 ---
-XXXXXXXXX
+breaks two downstream clang lit tests: xteam_red_min_max_small_precision.c xteam_red_min_max.cpp
+Reapply [ConstantInt] Disable implicit truncation in ConstantInt::get() (#171456)
 ---
