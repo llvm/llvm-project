@@ -147,6 +147,8 @@ void nestedMultiLine() {
 // Macros are ignored
 #define ENUM(n, a, b) enum n { a, b }
 #define INIT {1, 2}
+#define ITEMS 1,2
 
 ENUM(E1M, Xm, Ym);
 int macroArr[] = INIT;
+int a[] = { ITEMS };

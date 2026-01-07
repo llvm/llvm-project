@@ -131,7 +131,7 @@ void TrailingCommaCheck::checkInitListExpr(
   if (Policy == CommaPolicyKind::Ignore)
     return;
 
-  const Expr *LastInit = LastInit = InitList->inits().back();
+  const Expr *LastInit = InitList->inits().back();
   assert(LastInit);
 
   // Skip pack expansions - they already have special syntax with '...'
