@@ -101,6 +101,9 @@ DIAGOPT(ShowSafeBufferUsageSuggestions, 1, 0)
 // TO_UPSTREAM(BoundsSafety)
 DIAGOPT(BoundsSafetyAdoptionMode, 1, 0)
 
+// TO_UPSTREAM(CAS)
+DIAGOPT(FallbackRealFileSystemAbsolutePaths, 1, 0)
+
 #undef DIAGOPT
 #undef ENUM_DIAGOPT
 #undef VALUE_DIAGOPT

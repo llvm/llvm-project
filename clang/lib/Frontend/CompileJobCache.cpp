@@ -328,6 +328,9 @@ std::optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
     return Error::success();
   };
 
+  // Ensure path canonicalization in text diagnostics.
+  Invocation.getDiagnosticOpts().FallbackRealFileSystemAbsolutePaths = true;
+
   llvm::PrefixMapper PrefixMapper;
   llvm::SmallVector<llvm::MappedPrefix> Split;
   llvm::MappedPrefix::transformPairs(CacheOpts.PathPrefixMappings, Split);
@@ -637,6 +640,9 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
   }
 
   assert(!Clang.getDiagnostics().hasErrorOccurred());
+
+  // Ensure path canonicalization in text diagnostics.
+  Clang.getDiagnosticOpts().FallbackRealFileSystemAbsolutePaths = true;
 
   std::optional<llvm::cas::CASID> MCOutputID;
   ObjectStoreCachingOutputs CachingOutputs(

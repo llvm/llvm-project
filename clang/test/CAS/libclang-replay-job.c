@@ -78,6 +78,25 @@
 // RUN: diff -u %t/t1.d %t/a/b/rel.d
 // FIXME: Get clang's `-working-directory` to affect relative path for serialized diagnostics.
 
+// Check with -fdiagnostics-absolute-path
+// RUN: cd %t
+// RUN: c-index-test core -replay-cached-job -cas-path %t/cas @%t/cache-key \
+// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
+// RUN:   -fcas-plugin-option no-logging \
+// RUN:   -working-dir %t \
+// RUN: -- @%t/cc1.rsp \
+// RUN:   -fdiagnostics-absolute-paths \
+// RUN:   -Rcompile-job-cache-hit \
+// RUN:   -dependency-file %t/t3.d -o %t/output3.o 2> %t/output3.txt
+// RUN: FileCheck %s -input-file=%t/output2.txt -check-prefix=REL_DIAG
+// RUN: FileCheck %s -input-file=%t/output3.txt -check-prefix=ABS_DIAG
+// RUN: diff %t/output1.o %t/output3.o
+// RUN: diff -u %t/t1.d %t/t3.d
+// REL_DIAG: remark: compile job cache hit for
+// REL_DIAG: {{^}}main.c:1:2: warning:
+// ABS_DIAG: remark: compile job cache hit for
+// ABS_DIAG: libclang-replay-job.c.tmp{{.}}main.c:1:2: warning:
+
 // Use relative path to inputs and outputs.
 //--- cdb.json.template
 [{
