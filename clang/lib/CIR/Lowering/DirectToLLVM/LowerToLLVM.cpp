@@ -3470,6 +3470,18 @@ mlir::LogicalResult CIRToLLVMResumeFlatOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMEhTypeIdOpLowering::matchAndRewrite(
+    cir::EhTypeIdOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value addrOp = mlir::LLVM::AddressOfOp::create(
+      rewriter, op.getLoc(),
+      mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+      op.getTypeSymAttr());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::EhTypeidForOp>(
+      op, rewriter.getI32Type(), addrOp);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
     cir::TrapOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
