@@ -42,6 +42,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
@@ -218,6 +219,7 @@ CFG *AnalysisDeclContext::getCFG() {
     return getUnoptimizedCFG();
 
   if (!builtCFG) {
+    llvm::TimeTraceScope TimeProfile("BuildCFG");
     cfg = CFG::buildCFG(D, getBody(), &D->getASTContext(), cfgBuildOptions);
     // Even when the cfg is not successfully built, we don't
     // want to try building it again.
