@@ -111,10 +111,10 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
-- Added a new ``MacroFilter`` configuration option to ``Completion`` to 
-  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting 
-  macros. ``ExactPrefix`` is the default, which retains previous 
-  behavior of suggesting macros which match the prefix exactly.  
+- Added a new ``MacroFilter`` configuration option to ``Completion`` to
+  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting
+  macros. ``ExactPrefix`` is the default, which retains previous
+  behavior of suggesting macros which match the prefix exactly.
 
 Code actions
 ^^^^^^^^^^^^
@@ -205,7 +205,7 @@ Improvements to clang-tidy
 
 - Improved :program:`clang-tidy` by adding the `--removed-arg` option to remove
   arguments sent to the compiler when invoking Clang-Tidy. This option was also
-  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and 
+  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and
   can be configured in the config file through the `RemovedArgs` option.
 
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
@@ -364,7 +364,7 @@ New check aliases
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`google-build-namespaces <clang-tidy/checks/google/build-namespaces>` to
-  :doc:`misc-anonymous-namespace-in-header 
+  :doc:`misc-anonymous-namespace-in-header
   <clang-tidy/checks/misc/anonymous-namespace-in-header>`
   keeping initial check as an alias to the new one.
 
@@ -388,13 +388,13 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check:
-    
+
   - Exceptions from lambda captures are now diagnosed, exceptions in the
-    bodies of lambdas that aren't actually invoked are not. 
-    
+    bodies of lambdas that aren't actually invoked are not.
+
   - Fixed an issue where the check wouldn't diagnose throws in arguments to
     functions or constructors.
-  
+
   - Added fine-grained configuration via options `CheckDestructors`,
     `CheckMoveMemberFunctions`, `CheckMain`, `CheckedSwapFunctions`, and
     `CheckNothrowFunctions`.
@@ -440,26 +440,26 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone/throw-keyword-missing>` check:
-    
+
   - Now it only considers the canonical types of base classes as written.
-  
+
   - Added a note on the base class that triggered the warning.
-  
+
   - Fixed an issue where the check wouldn't fire in constructors or
     (in certain contexts) lambdas.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check:
-  
-  - Added support for ``NullableValue::makeValue`` and 
+
+  - Added support for ``NullableValue::makeValue`` and
     ``NullableValue::makeValueInplace`` to prevent false-positives for
     ``BloombergLP::bdlb::NullableValue``.
-  
+
   - Fixed false-positives for ``bsl::optional`` containing allocator-aware type.
 
   - Added the `IgnoreValueCalls` option to suppress diagnostics for
-    ``optional::value()``. 
-    
+    ``optional::value()``.
+
   - Added the `IgnoreSmartPointerDereference` option to ignore optionals
     reached via smart-pointer-like dereference, while still diagnosing UB-prone
     dereferences via ``operator*`` and ``operator->``.
@@ -476,7 +476,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check:
-  
+
   - Added `InvalidationFunctions` option to support custom invalidation functions.
 
   - Added `ReinitializationFunctions` option to support custom reinitialization
@@ -537,12 +537,12 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
-  
+
   - Fixed false positives when pointers is transferred to non-const references.
 
-  - Fixed false positives of function pointer, on return of non-const pointer, 
+  - Fixed false positives of function pointer, on return of non-const pointer,
     on pointer-to-member operator.
-  
+
   - Fixed false positives when the address of a variable is taken to be passed
     to a function.
 
@@ -556,14 +556,14 @@ Changes in existing checks
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check:
-  
+
   - Added suggestion of internal linkage for user-defined types (structs,
     classes, unions, and enums).
-  
-  - Added fine-grained options `AnalyzeFunctions`, `AnalyzeVariables`, 
+
+  - Added fine-grained options `AnalyzeFunctions`, `AnalyzeVariables`,
     `AnalyzeTypes` to control whether the check should diagnose functions,
     variables, and/or user-defined types.
-  
+
   - Enabled the check for C.
 
 - Improved :doc:`modernize-avoid-c-arrays
@@ -658,25 +658,25 @@ Changes in existing checks
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
-  
+
   - Now ignores declarations and macros in system headers.
-  
+
   - The documentation is improved to differentiate the general options from the
     specific ones.
-  
+
   - Options for fine-grained control over ``constexpr`` variables were added.
-  
+
   - Added default options which simplify configs by removing the need to specify
     each identifier kind separately.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
-  
+
   - Now correctly adds parentheses when inner expressions are implicitly
     converted multiple times.
-  
-  - Enabled the check for C99 and later standards. 
-  
+
+  - Enabled the check for C99 and later standards.
+
   - Now allows implicit conversions from ``bool`` to integer when used as
     operands of logical operators (``&&``, ``||``) in C.
 
