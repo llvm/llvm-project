@@ -82,6 +82,10 @@ void test() {
   ctus.equal_range(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
+#if TEST_STD_VER >= 23
+  tus.extract(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+
   us.bucket_count();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   us.max_bucket_count(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
