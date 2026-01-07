@@ -106,12 +106,17 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 // Convolution matcher utility
 //===----------------------------------------------------------------------===//
 
-/// Given a linalg `op` this function returns true if it is a convolution op of
-/// type `ConvOpTy` and populates `dilations` and `strides` with values inferred
-/// from the indexing maps.
+/// A struct containing dilations and strides inferred from convolution ops.
+struct DilationsAndStrides {
+  SmallVector<int64_t> dilations;
+  SmallVector<int64_t> strides;
+};
+
+/// Given a linalg `op` this function returns DilationsAndStrides if it is a
+/// convolution op of type `ConvOpTy`, otherwise returns std::nullopt. The
+/// dilations and strides are inferred from the indexing maps.
 template <typename ConvOpTy>
-bool isaConvolutionOpOfType(LinalgOp op, SmallVector<int64_t> *dilations,
-                            SmallVector<int64_t> *strides);
+std::optional<DilationsAndStrides> matchConvolutionOpOfType(LinalgOp op);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
