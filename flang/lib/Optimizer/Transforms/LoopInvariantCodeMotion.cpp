@@ -137,6 +137,8 @@ static bool isNonOptionalScalar(Value location) {
           return true;
         }
 
+      // TODO: we can probably use FIR AliasAnalysis' getSource()
+      // method to identify the storage in more cases.
       Value memref = llvm::TypeSwitch<Operation *, Value>(defOp)
                          .Case<fir::DeclareOp, hlfir::DeclareOp>(
                              [](auto op) { return op.getMemref(); })
