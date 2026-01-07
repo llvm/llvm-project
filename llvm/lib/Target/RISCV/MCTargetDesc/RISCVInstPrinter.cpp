@@ -362,7 +362,7 @@ void RISCVInstPrinter::printImmMachO(const MCInst *MI, unsigned OpNo,
 
   uint64_t Imm = Op.getImm();
   if (!STI.hasFeature(RISCV::Feature64Bit))
-    Imm = static_cast<uint32_t>(Imm);
+    Imm &= 0xffffffff;
   markup(O, Markup::Immediate) << formatHex(Imm);
 }
 
