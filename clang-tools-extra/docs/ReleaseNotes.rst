@@ -471,9 +471,9 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check by adding
-  `InvalidationFunctions` option to support custom invalidation functions
-  and `ReinitializationFunctions` option to support custom reinitialization
-  functions.
+  `InvalidationFunctions` option to support custom invalidation functions,
+  `ReinitializationFunctions` option to support custom reinitialization
+  functions, and by enabling the check to handle lambda correctly.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check

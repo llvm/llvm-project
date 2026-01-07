@@ -81,6 +81,16 @@ private:
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
 };
 
+AST_MATCHER_P(CXXRecordDecl, hasCaptureByReference, const ValueDecl *,
+              TargetDecl) {
+  return Node.isLambda() &&
+         llvm::any_of(Node.captures(), [&](const auto &Capture) {
+           return Capture.capturesVariable() &&
+                  Capture.getCaptureKind() == LCK_ByRef &&
+                  Capture.getCapturedVar() == TargetDecl;
+         });
+}
+
 } // namespace
 
 static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
@@ -158,6 +168,62 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                           unless(callee(functionDecl(
                               getNameMatcher(InvalidationFunctions)))))))
       .bind("reinit");
+}
+
+static bool
+isVariableResetInLambda(const Stmt *Body, const ValueDecl *MovedVariable,
+                        ASTContext *Context,
+                        llvm::ArrayRef<StringRef> InvalidationFunctions,
+                        llvm::ArrayRef<StringRef> ReinitializationFunctions) {
+  assert(Body && "There should be a lambda body");
+
+  // If the variable is not mentioned at all in the lambda body,
+  // it cannot be reinitialized.
+  const auto VariableMentionMatcher =
+      stmt(hasDescendant(mapAnyOf(declRefExpr, memberExpr)
+                             .with(hasDeclaration(equalsNode(MovedVariable)))));
+
+  if (match(VariableMentionMatcher, *Body, *Context).empty())
+    return false;
+
+  CFG::BuildOptions Options;
+  Options.AddImplicitDtors = true;
+  Options.AddTemporaryDtors = true;
+  Options.PruneTriviallyFalseEdges = true;
+
+  std::unique_ptr<CFG> TheCFG =
+      CFG::buildCFG(/*D=*/nullptr, const_cast<Stmt *>(Body), Context, Options);
+  if (!TheCFG)
+    return false;
+
+  llvm::SmallPtrSet<const CFGBlock *, 8> VisitedBlocks;
+  llvm::SmallVector<const CFGBlock *, 8> Worklist;
+
+  Worklist.push_back(&TheCFG->getEntry());
+  VisitedBlocks.insert(&TheCFG->getEntry());
+
+  const auto ReinitMatcher = makeReinitMatcher(
+      MovedVariable, InvalidationFunctions, ReinitializationFunctions);
+
+  while (!Worklist.empty()) {
+    const CFGBlock *CurrentBlock = Worklist.pop_back_val();
+
+    // Check for reinitialization within reachable blocks.
+    for (const auto &Elem : *CurrentBlock) {
+      std::optional<CFGStmt> S = Elem.getAs<CFGStmt>();
+      if (!S)
+        continue;
+
+      if (!match(findAll(ReinitMatcher), *S->getStmt(), *Context).empty())
+        return true;
+    }
+
+    for (const auto &Succ : CurrentBlock->succs())
+      if (Succ && VisitedBlocks.insert(Succ).second)
+        Worklist.push_back(Succ);
+  }
+
+  return false;
 }
 
 // Matches nodes that are
@@ -386,6 +452,13 @@ void UseAfterMoveFinder::getReinits(
   const auto ReinitMatcher = makeReinitMatcher(
       MovedVariable, InvalidationFunctions, ReinitializationFunctions);
 
+  // Match calls to lambdas that capture the moved variable by reference.
+  const auto LambdaCallMatcher =
+      cxxOperatorCallExpr(
+          hasOverloadedOperatorName("()"),
+          callee(cxxMethodDecl(ofClass(hasCaptureByReference(MovedVariable)))))
+          .bind("lambda-call");
+
   Stmts->clear();
   DeclRefs->clear();
   for (const auto &Elem : *Block) {
@@ -407,6 +480,29 @@ void UseAfterMoveFinder::getReinits(
         // before adding it to the set.
         if (TheDeclRef)
           DeclRefs->insert(TheDeclRef);
+      }
+    }
+
+    // Check for calls to lambdas that capture the moved variable
+    // by reference and reinitialize it within their body.
+    const SmallVector<BoundNodes, 1> LambdaMatches =
+        match(findAll(LambdaCallMatcher), *S->getStmt(), *Context);
+
+    for (const auto &Match : LambdaMatches) {
+      const auto *Operator =
+          Match.getNodeAs<CXXOperatorCallExpr>("lambda-call");
+
+      assert(Operator && "The lambda call should be a CXXOperatorCallExpr");
+
+      if (BlockMap->blockContainingStmt(Operator) == Block) {
+        const auto *MD = cast<CXXMethodDecl>(Operator->getDirectCallee());
+
+        const auto *LambdaBody = MD->getBody();
+        assert(MD->getParent() && MD->getParent()->isLambda());
+        if (LambdaBody && isVariableResetInLambda(
+                              LambdaBody, MovedVariable, Context,
+                              InvalidationFunctions, ReinitializationFunctions))
+          Stmts->insert(Operator);
       }
     }
   }

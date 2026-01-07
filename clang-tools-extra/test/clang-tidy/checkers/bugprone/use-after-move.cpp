@@ -1706,6 +1706,89 @@ void Run() {
 
 } // namespace custom_invalidation
 
+void lambdaReinitializesVar() {
+  std::string s1;
+  auto reinit1 = [&]() { s1 = std::string(); };
+  std::move(s1);
+  reinit1();
+  s1.empty();
+
+  std::string s2;
+  auto reinit2 = [&]() { s2.clear(); };
+  std::move(s2);
+  reinit2();
+  s2.empty();
+
+  std::string s3;
+  auto reinit3 = [&]() { s3.assign(10, 'a'); };
+  std::move(s3);
+  reinit3();
+  s3.empty();
+}
+
+void lambdaReinitializesVarInLoop() {
+  std::string s;
+  auto reinit = [&]() {
+    s = std::string();
+    return true;
+  };
+  for (int i = 0; i < 10; ++i) {
+    if (reinit()) {
+      if (!s.empty()) {
+        std::move(s);
+      }
+    }
+  }
+}
+
+void lambdaDoesNotReinitializeVar() {
+  {
+    std::string s;
+    auto read = [&]() { return s.empty(); };
+    std::move(s);
+    read();
+    s.empty();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 's' used after it was moved
+    // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
+  }
+
+  {
+    std::string s;
+    auto reinitCopy = [s]() mutable { s = std::string(); };
+    std::move(s);
+    reinitCopy();
+    s.empty();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 's' used after it was moved
+    // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
+  }
+}
+
+void lambdaReinitConditional() {
+  std::string s;
+  auto reinit = [&](bool b) {
+    if (b) s = std::string();
+  };
+  std::move(s);
+  reinit(true);
+  s.empty();
+}
+
+void lambdaReinitInDeadCode() {
+  std::string s;
+  auto g = [&]() {
+    if (false) {
+      s = std::string();
+    }
+  };
+  std::move(s);
+
+  g();
+
+  s.empty();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 's' used after it was moved
+  // CHECK-NOTES: [[@LINE-6]]:3: note: move occurred here
+}
+
 namespace custom_reinitialization {
 
 template <class T = int>
