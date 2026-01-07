@@ -531,26 +531,27 @@ TEST(AsmParserTest, ParserObjectLocations) {
       FileLocRange(FileLoc{3, 4}, FileLoc{3, 14})};
 
   for (const auto &[Inst, ExpectedLoc] : zip(EntryBB, InstructionLocations)) {
-    auto MaybeInstLoc = ParserContext.getInstructionLocation(&Inst);
+    auto MaybeInstLoc = ParserContext.getInstructionOrArgumentLocation(&Inst);
     ASSERT_TRUE(MaybeMainLoc.has_value());
     auto InstLoc = MaybeInstLoc.value();
     ASSERT_EQ_LOC(InstLoc, ExpectedLoc);
-    ASSERT_EQ(ParserContext.getInstructionAtLocation(MaybeInstLoc->Start),
-              ParserContext.getInstructionAtLocation(*MaybeInstLoc));
+    ASSERT_EQ(
+        ParserContext.getInstructionOrArgumentAtLocation(MaybeInstLoc->Start),
+        ParserContext.getInstructionOrArgumentAtLocation(*MaybeInstLoc));
   }
 
   SmallVector<std::optional<FileLocRange>> FunctionArgumentLocations = {
       FileLocRange(FileLoc{0, 21}, FileLoc{0, 25}), std::nullopt};
   for (const auto &[Arg, ExpectedLoc] :
        zip(MainFn->args(), FunctionArgumentLocations)) {
-    auto MaybeArgLoc = ParserContext.getFunctionArgumentLocation(&Arg);
+    auto MaybeArgLoc = ParserContext.getInstructionOrArgumentLocation(&Arg);
     ASSERT_EQ(MaybeArgLoc.has_value(), ExpectedLoc.has_value());
     if (!ExpectedLoc.has_value())
       continue;
     auto ArgLoc = MaybeArgLoc.value();
     ASSERT_EQ_LOC(ArgLoc, ExpectedLoc.value());
-    ASSERT_EQ(ParserContext.getFunctionArgumentAtLocation(ArgLoc.Start),
-              ParserContext.getFunctionArgumentAtLocation(ArgLoc));
+    ASSERT_EQ(ParserContext.getInstructionOrArgumentAtLocation(ArgLoc.Start),
+              ParserContext.getInstructionOrArgumentAtLocation(ArgLoc));
   }
   ASSERT_EQ(&*MainFn->arg_begin(),
             ParserContext.getValueReferencedAtLocation(FileLoc(2, 22)));

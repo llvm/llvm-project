@@ -18,13 +18,6 @@ AsmParserContext::getFunctionLocation(const Function *F) const {
 }
 
 std::optional<FileLocRange>
-AsmParserContext::getFunctionArgumentLocation(const Argument *F) const {
-  if (auto FIt = FunctionArguments.find(F); FIt != FunctionArguments.end())
-    return FIt->second;
-  return std::nullopt;
-}
-
-std::optional<FileLocRange>
 AsmParserContext::getBlockLocation(const BasicBlock *BB) const {
   if (auto BBIt = Blocks.find(BB); BBIt != Blocks.end())
     return BBIt->second;
@@ -32,8 +25,10 @@ AsmParserContext::getBlockLocation(const BasicBlock *BB) const {
 }
 
 std::optional<FileLocRange>
-AsmParserContext::getInstructionLocation(const Instruction *I) const {
-  if (auto IIt = Instructions.find(I); IIt != Instructions.end())
+AsmParserContext::getInstructionOrArgumentLocation(const Value *IA) const {
+  assert(isa<Instruction>(IA) || isa<Argument>(IA));
+  if (auto IIt = InstructionsAndArguments.find(IA);
+      IIt != InstructionsAndArguments.end())
     return IIt->second;
   return std::nullopt;
 }
@@ -50,19 +45,6 @@ Function *AsmParserContext::getFunctionAtLocation(const FileLoc &Query) const {
   return FunctionsInverse.lookup(Query, nullptr);
 }
 
-Argument *AsmParserContext::getFunctionArgumentAtLocation(
-    const FileLocRange &Query) const {
-  auto It = FunctionArgumentsInverse.find(Query.Start);
-  if (It.stop() <= Query.End)
-    return *It;
-  return nullptr;
-}
-
-Argument *
-AsmParserContext::getFunctionArgumentAtLocation(const FileLoc &Query) const {
-  return FunctionArgumentsInverse.lookup(Query, nullptr);
-}
-
 BasicBlock *
 AsmParserContext::getBlockAtLocation(const FileLocRange &Query) const {
   auto It = BlocksInverse.find(Query.Start);
@@ -75,17 +57,17 @@ BasicBlock *AsmParserContext::getBlockAtLocation(const FileLoc &Query) const {
   return BlocksInverse.lookup(Query, nullptr);
 }
 
-Instruction *
-AsmParserContext::getInstructionAtLocation(const FileLocRange &Query) const {
-  auto It = InstructionsInverse.find(Query.Start);
+Value *AsmParserContext::getInstructionOrArgumentAtLocation(
+    const FileLocRange &Query) const {
+  auto It = InstructionsAndArgumentsInverse.find(Query.Start);
   if (It.stop() <= Query.End)
     return *It;
   return nullptr;
 }
 
-Instruction *
-AsmParserContext::getInstructionAtLocation(const FileLoc &Query) const {
-  return InstructionsInverse.lookup(Query, nullptr);
+Value *AsmParserContext::getInstructionOrArgumentAtLocation(
+    const FileLoc &Query) const {
+  return InstructionsAndArgumentsInverse.lookup(Query, nullptr);
 }
 
 Value *AsmParserContext::getValueReferencedAtLocation(
@@ -109,14 +91,6 @@ bool AsmParserContext::addFunctionLocation(Function *F,
   return Inserted;
 }
 
-bool AsmParserContext::addFunctionArgumentLocation(Argument *FA,
-                                                   const FileLocRange &Loc) {
-  bool Inserted = FunctionArguments.insert({FA, Loc}).second;
-  if (Inserted)
-    FunctionArgumentsInverse.insert(Loc.Start, Loc.End, FA);
-  return Inserted;
-}
-
 bool AsmParserContext::addBlockLocation(BasicBlock *BB,
                                         const FileLocRange &Loc) {
   bool Inserted = Blocks.insert({BB, Loc}).second;
@@ -125,11 +99,12 @@ bool AsmParserContext::addBlockLocation(BasicBlock *BB,
   return Inserted;
 }
 
-bool AsmParserContext::addInstructionLocation(Instruction *I,
-                                              const FileLocRange &Loc) {
-  bool Inserted = Instructions.insert({I, Loc}).second;
+bool AsmParserContext::addInstructionOrArgumentLocation(
+    Value *IA, const FileLocRange &Loc) {
+  assert(isa<Instruction>(IA) || isa<Argument>(IA));
+  bool Inserted = InstructionsAndArguments.insert({IA, Loc}).second;
   if (Inserted)
-    InstructionsInverse.insert(Loc.Start, Loc.End, I);
+    InstructionsAndArgumentsInverse.insert(Loc.Start, Loc.End, IA);
   return Inserted;
 }
 

@@ -6949,8 +6949,8 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   Function::arg_iterator ArgIt = Fn->arg_begin();
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i, ++ArgIt) {
     if (ParserContext && ArgList[i].IdentLoc)
-      ParserContext->addFunctionArgumentLocation(&*ArgIt,
-                                                 ArgList[i].IdentLoc.value());
+      ParserContext->addInstructionOrArgumentLocation(
+          &*ArgIt, ArgList[i].IdentLoc.value());
     // If the argument has a name, insert it into the argument symbol table.
     if (ArgList[i].Name.empty()) continue;
 
@@ -7160,7 +7160,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       BB->insertDbgRecordBefore(DR.release(), Inst->getIterator());
     TrailingDbgRecord.clear();
     if (ParserContext) {
-      ParserContext->addInstructionLocation(
+      ParserContext->addInstructionOrArgumentLocation(
           Inst, FileLocRange(InstStart, Lex.getPrevTokEndLineColumnPos()));
     }
   } while (!Inst->isTerminator());

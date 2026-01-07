@@ -40,14 +40,6 @@ class AsmParserContext {
   FMap::Allocator FAllocator;
   FMap FunctionsInverse = FMap(FAllocator);
 
-  DenseMap<Argument *, FileLocRange> FunctionArguments;
-  using FAMap =
-      IntervalMap<FileLoc, Argument *,
-                  IntervalMapImpl::NodeSizer<FileLoc, Argument *>::LeafSize,
-                  IntervalMapHalfOpenInfo<FileLoc>>;
-  FAMap::Allocator FAAllocator;
-  FAMap FunctionArgumentsInverse = FAMap(FAAllocator);
-
   DenseMap<BasicBlock *, FileLocRange> Blocks;
   using BBMap =
       IntervalMap<FileLoc, BasicBlock *,
@@ -55,30 +47,23 @@ class AsmParserContext {
                   IntervalMapHalfOpenInfo<FileLoc>>;
   BBMap::Allocator BBAllocator;
   BBMap BlocksInverse = BBMap(BBAllocator);
-  DenseMap<Instruction *, FileLocRange> Instructions;
-  using IMap =
-      IntervalMap<FileLoc, Instruction *,
-                  IntervalMapImpl::NodeSizer<FileLoc, Instruction *>::LeafSize,
-                  IntervalMapHalfOpenInfo<FileLoc>>;
-  IMap::Allocator IAllocator;
-  IMap InstructionsInverse = IMap(IAllocator);
-
+  DenseMap<Value *, FileLocRange> InstructionsAndArguments;
   using VMap =
       IntervalMap<FileLoc, Value *,
                   IntervalMapImpl::NodeSizer<FileLoc, Value *>::LeafSize,
                   IntervalMapHalfOpenInfo<FileLoc>>;
   VMap::Allocator VAllocator;
+  VMap InstructionsAndArgumentsInverse = VMap(VAllocator);
+
   VMap ReferencedValues = VMap(VAllocator);
 
 public:
   LLVM_ABI std::optional<FileLocRange>
   getFunctionLocation(const Function *) const;
   LLVM_ABI std::optional<FileLocRange>
-  getFunctionArgumentLocation(const Argument *) const;
-  LLVM_ABI std::optional<FileLocRange>
   getBlockLocation(const BasicBlock *) const;
   LLVM_ABI std::optional<FileLocRange>
-  getInstructionLocation(const Instruction *) const;
+  getInstructionOrArgumentLocation(const Value *) const;
   /// Get the function at the requested location range.
   /// If no single function occupies the queried range, or the record is
   /// missing, a nullptr is returned.
@@ -90,14 +75,6 @@ public:
   /// Get the block at the requested location range.
   /// If no single block occupies the queried range, or the record is missing, a
   /// nullptr is returned.
-  Argument *getFunctionArgumentAtLocation(const FileLocRange &) const;
-  /// Get the function at the requested location.
-  /// If no function occupies the queried location, or the record is missing, a
-  /// nullptr is returned.
-  Argument *getFunctionArgumentAtLocation(const FileLoc &) const;
-  /// Get the block at the requested location range.
-  /// If no single block occupies the queried range, or the record is missing, a
-  /// nullptr is returned.
   BasicBlock *getBlockAtLocation(const FileLocRange &) const;
   /// Get the block at the requested location.
   /// If no block occupies the queried location, or the record is missing, a
@@ -106,12 +83,12 @@ public:
   /// Get the instruction at the requested location range.
   /// If no single instruction occupies the queried range, or the record is
   /// missing, a nullptr is returned.
-  Instruction *getInstructionAtLocation(const FileLocRange &) const;
-  /// Get the instruction at the requested location.
+  Value *getInstructionOrArgumentAtLocation(const FileLocRange &) const;
+  /// Get the instruction or function argument at the requested location.
   /// If no instruction occupies the queried location, or the record is missing,
   /// a nullptr is returned.
-  Instruction *getInstructionAtLocation(const FileLoc &) const;
-  /// Get value referenced at the requested location.
+  Value *getInstructionOrArgumentAtLocation(const FileLoc &) const;
+  /// Get value referenced or function argument at the requested location.
   /// If no value occupies the queried location, or the record is missing,
   /// a nullptr is returned.
   Value *getValueReferencedAtLocation(const FileLoc &) const;
@@ -120,9 +97,8 @@ public:
   /// a nullptr is returned.
   Value *getValueReferencedAtLocation(const FileLocRange &) const;
   bool addFunctionLocation(Function *, const FileLocRange &);
-  bool addFunctionArgumentLocation(Argument *, const FileLocRange &);
   bool addBlockLocation(BasicBlock *, const FileLocRange &);
-  bool addInstructionLocation(Instruction *, const FileLocRange &);
+  bool addInstructionOrArgumentLocation(Value *, const FileLocRange &);
   bool addValueReferenceAtLocation(Value *, const FileLocRange &);
 };
 } // namespace llvm
