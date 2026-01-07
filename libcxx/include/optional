@@ -508,7 +508,7 @@ struct __optional_storage_base<_Tp, true> {
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return __value_ != nullptr; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get() const& noexcept { return *__value_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get() const noexcept { return *__value_; }
 
   template <class _UArg>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_UArg&& __val) {
