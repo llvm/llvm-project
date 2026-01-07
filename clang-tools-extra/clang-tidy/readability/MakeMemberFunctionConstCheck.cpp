@@ -157,12 +157,10 @@ public:
 
       // Union members are never safe for pointer/reference types
       // (all union members share memory).
-      if (const auto *Field = dyn_cast<FieldDecl>(Member->getMemberDecl())) {
-        if (Field->getParent()->isUnion()) {
+      if (const auto *Field = dyn_cast<FieldDecl>(Member->getMemberDecl()); Field->getParent()->isUnion()) {
           const QualType MemberType = Field->getType();
           if (MemberType->isPointerType() || MemberType->isReferenceType())
             return false;
-        }
       }
 
       if (Member->getFoundDecl().getAccess() != AS_public &&
