@@ -1138,7 +1138,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       LLVM_DEBUG(dbgs().indent(Depth)
                  << " [lb] " << Idx << "=P" << CheapestPID << "? ");
       BranchSP.add(CheapestPID, Cluster);
-      pickPartition(Depth + 1, Idx + 1, BranchSP);
+      pickPartition(Depth + 1, Idx + 1, std::move(BranchSP));
     }
 
     // ms = most similar = put in partition with the most in common
@@ -1147,7 +1147,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       LLVM_DEBUG(dbgs().indent(Depth)
                  << " [ms] " << Idx << "=P" << MostSimilarPID << "? ");
       BranchSP.add(MostSimilarPID, Cluster);
-      pickPartition(Depth + 1, Idx + 1, BranchSP);
+      pickPartition(Depth + 1, Idx + 1, std::move(BranchSP));
     }
 
     return;
