@@ -5702,7 +5702,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // In streaming regions, NEON is illegal but streaming-SVE is available.
     // Use SVE for copies if we're in a streaming region and SME is available.
     if ((Subtarget.isSVEorStreamingSVEAvailable() &&
-        !Subtarget.isNeonAvailable()) ||
+         !Subtarget.isNeonAvailable()) ||
         isInStreamingCallSiteRegion(MBB, I)) {
       BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
           .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
