@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/IOHandlerCursesGUI.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_CURSES
@@ -5061,8 +5062,8 @@ public:
         const SymbolContext &sc =
             frame_sp->GetSymbolContext(eSymbolContextEverything);
         ExecutionContext exe_ctx(frame_sp);
-        if (FormatEntity::Format(m_format, strm, &sc, &exe_ctx, nullptr,
-                                 nullptr, false, false)) {
+        if (FormatEntity::Formatter(&sc, &exe_ctx, nullptr, false, false)
+                .Format(m_format, strm)) {
           int right_pad = 1;
           window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
         }
@@ -5119,8 +5120,8 @@ public:
     if (thread_sp) {
       StreamString strm;
       ExecutionContext exe_ctx(thread_sp);
-      if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
-                               nullptr, false, false)) {
+      if (FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+              .Format(m_format, strm)) {
         int right_pad = 1;
         window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
@@ -5218,8 +5219,8 @@ public:
     if (process_sp && process_sp->IsAlive()) {
       StreamString strm;
       ExecutionContext exe_ctx(process_sp);
-      if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
-                               nullptr, false, false)) {
+      if (FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+              .Format(m_format, strm)) {
         int right_pad = 1;
         window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
@@ -6750,8 +6751,9 @@ public:
 
       if (StateIsStoppedState(state, true)) {
         StreamString strm;
-        if (thread && FormatEntity::Format(m_format, strm, nullptr, &exe_ctx,
-                                           nullptr, nullptr, false, false)) {
+        if (thread &&
+            FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+                .Format(m_format, strm)) {
           window.MoveCursor(40, 0);
           window.PutCStringTruncated(1, strm.GetString().str().c_str());
         }

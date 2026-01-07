@@ -1745,8 +1745,9 @@ bool Thread::DumpUsingFormat(Stream &strm, uint32_t frame_idx,
     }
   }
 
-  return FormatEntity::Format(*format, strm, frame_sp ? &frame_sc : nullptr,
-                              &exe_ctx, nullptr, nullptr, false, false);
+  return FormatEntity::Formatter(frame_sp ? &frame_sc : nullptr, &exe_ctx,
+                                 nullptr, false, false)
+      .Format(*format, strm);
 }
 
 void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
