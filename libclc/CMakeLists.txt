@@ -38,7 +38,12 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 
 set( LIBCLC_MIN_LLVM 3.9.0 )
 
-set( LIBCLC_TARGETS_TO_BUILD "all"
+# A runtimes cross-build should only use the requested target.
+set( LIBCLC_DEFAULT_TARGET "all" )
+if( LLVM_RUNTIMES_BUILD AND LLVM_DEFAULT_TARGET_TRIPLE MATCHES "^nvptx|^amdgcn" )
+  set( LIBCLC_DEFAULT_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE} )
+endif()
+set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_DEFAULT_TARGET}
     CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
 
 option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
@@ -82,7 +87,10 @@ else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
 
-  set( LLVM_PACKAGE_VERSION ${LLVM_VERSION} )
+  if( NOT LLVM_PACKAGE_VERSION )
+    set( LLVM_PACKAGE_VERSION ${LLVM_VERSION} )
+  endif()
+  set( PACKAGE_VERSION ${LLVM_PACKAGE_VERSION} )
 
   # Note that we check this later (for both build types) but we can provide a
   # more useful error message when built in-tree. We assume that LLVM tools are
