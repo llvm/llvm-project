@@ -99,12 +99,12 @@ int RTDECL(AllocatableCheckLengthParameter)(Descriptor &,
 int RTDECL(AllocatableAllocate)(Descriptor &,
     std::int64_t *asyncObject = nullptr, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0, MemmoveFct memmoveFct = &MemcpyWrapper);
+    int sourceLine = 0, MemcpyFct memcpyFct = &MemcpyWrapper);
 #else
 int RTDECL(AllocatableAllocate)(Descriptor &,
     std::int64_t *asyncObject = nullptr, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0, MemmoveFct memmoveFct = &Fortran::runtime::memcpy);
+    int sourceLine = 0, MemcpyFct memcpyFct = &Fortran::runtime::memcpy);
 #endif
 int RTDECL(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,

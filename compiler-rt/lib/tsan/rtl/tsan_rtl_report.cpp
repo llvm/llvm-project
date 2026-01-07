@@ -111,7 +111,13 @@ static ReportStack *SymbolizeStack(StackTrace trace) {
     // instruction.
     if ((pc & kExternalPCBit) == 0)
       pc1 = StackTrace::GetPreviousInstructionPc(pc);
-    SymbolizedStack *ent = SymbolizeCode(pc1);
+    SymbolizedStack* ent = SymbolizeCode(pc1, si == trace.size - 1);
+#if SANITIZER_GO
+    if (ent == nullptr) {
+      // Go might have 0 frames for this PC (wrapper frames aren't reported).
+      continue;
+    }
+#endif
     CHECK_NE(ent, 0);
     SymbolizedStack *last = ent;
     while (last->next) {

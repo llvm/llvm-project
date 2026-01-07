@@ -22,12 +22,38 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
+  cir.func @scope_yield_value_fold() -> !u32i {
+    %0 = cir.const #cir.int<7> : !u32i
+    %1 = cir.scope {
+      cir.yield %0 : !u32i
+    } : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      cir.func{{.*}} @scope_yield_value_fold() -> !u32i {
+  // CHECK-NEXT:   %[[C:.*]] = cir.const #cir.int<7> : !u32i
+  // CHECK-NOT:    cir.scope
+  // CHECK:        cir.return %[[C]] : !u32i
+  // CHECK-NEXT: }
+
   cir.func @empty_scope() {
     cir.scope {
     }
     cir.return
   }
   // CHECK:      cir.func{{.*}} @empty_scope() {
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @dead_switch() {
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.switch (%0 : !s32i) {
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @dead_switch() {
+  // CHECK-NOT:   %[[Z:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NOT:    cir.switch
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 

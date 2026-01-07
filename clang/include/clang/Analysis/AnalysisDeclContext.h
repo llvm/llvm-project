@@ -20,6 +20,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/CodeInjector.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -37,7 +38,6 @@ class ASTContext;
 class BlockDecl;
 class BlockInvocationContext;
 class CFGReverseBlockReachabilityAnalysis;
-class CFGStmtMap;
 class ImplicitParamDecl;
 class LocationContext;
 class LocationContextManager;
@@ -77,7 +77,7 @@ class AnalysisDeclContext {
   const Decl *const D;
 
   std::unique_ptr<CFG> cfg, completeCFG;
-  std::unique_ptr<CFGStmtMap> cfgStmtMap;
+  std::optional<CFGStmtMap> cfgStmtMap;
 
   CFG::BuildOptions cfgBuildOptions;
   CFG::BuildOptions::ForcedBlkExprs *forcedBlkExprs = nullptr;
@@ -151,7 +151,7 @@ public:
 
   CFG *getCFG();
 
-  CFGStmtMap *getCFGStmtMap();
+  const CFGStmtMap *getCFGStmtMap();
 
   CFGReverseBlockReachabilityAnalysis *getCFGReachablityAnalysis();
 

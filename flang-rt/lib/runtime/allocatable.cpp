@@ -135,7 +135,7 @@ void RTDEF(AllocatableApplyMold)(
 
 int RTDEF(AllocatableAllocate)(Descriptor &descriptor,
     std::int64_t *asyncObject, bool hasStat, const Descriptor *errMsg,
-    const char *sourceFile, int sourceLine, MemmoveFct memmoveFct) {
+    const char *sourceFile, int sourceLine, MemcpyFct memcpyFct) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
@@ -149,7 +149,7 @@ int RTDEF(AllocatableAllocate)(Descriptor &descriptor,
         if (const auto *derived{addendum->derivedType()}) {
           if (!derived->noInitializationNeeded()) {
             stat = Initialize(
-                descriptor, *derived, terminator, hasStat, errMsg, memmoveFct);
+                descriptor, *derived, terminator, hasStat, errMsg, memcpyFct);
           }
         }
       }

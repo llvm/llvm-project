@@ -324,6 +324,8 @@ private:
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
+  bool selectPushConstantGetPointer(Register &ResVReg, const SPIRVType *ResType,
+                                    MachineInstr &I) const;
   bool selectResourceNonUniformIndex(Register &ResVReg,
                                      const SPIRVType *ResType,
                                      MachineInstr &I) const;
@@ -3801,6 +3803,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
+  case Intrinsic::spv_wave_ballot:
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformBallot);
   case Intrinsic::spv_wave_is_first_lane:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_reduce_umax:
@@ -3845,6 +3850,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_resource_getpointer: {
     return selectResourceGetPointer(ResVReg, ResType, I);
+  }
+  case Intrinsic::spv_pushconstant_getpointer: {
+    return selectPushConstantGetPointer(ResVReg, ResType, I);
   }
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
@@ -4122,6 +4130,12 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(
       .addUse(ZeroReg)
       .addUse(IndexReg)
       .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectPushConstantGetPointer(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  MRI->replaceRegWith(ResVReg, I.getOperand(2).getReg());
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectResourceNonUniformIndex(

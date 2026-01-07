@@ -92,7 +92,9 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
         expected_report = textwrap.dedent(
             """\
-            Error: Duplicate entries in 'Changes in existing checks':
+            Error: Duplicate entries in 'Changes in existing checks'.
+
+            Please merge these entries into a single bullet point.
 
             -- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters
 
@@ -269,7 +271,9 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             self.assertEqual(rc, 3)
             expected_report = textwrap.dedent(
                 """\
-                Error: Duplicate entries in 'Changes in existing checks':
+                Error: Duplicate entries in 'Changes in existing checks'.
+
+                Please merge these entries into a single bullet point.
 
                 -- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters
 

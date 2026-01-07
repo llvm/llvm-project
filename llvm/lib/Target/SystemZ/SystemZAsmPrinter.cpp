@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -324,7 +325,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
                                      .addReg(SystemZ::R7D)
                                      .addExpr(Lower.getExpr(MI->getOperand(0),
-                                                            SystemZ::S_PLT)));
+                                                            SystemZ::S_None)));
     emitCallInformation(CallType::BRASL7);
     return;
 
@@ -1114,9 +1115,6 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
     emitIDRLSection(M);
   }
   emitAttributes(M);
-  // Emit the END instruction in case of HLASM output. This must be the last
-  // instruction in the source file.
-  getTargetStreamer()->emitEnd();
 }
 
 void SystemZAsmPrinter::emitADASection() {
@@ -1596,6 +1594,8 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   // Make CELQSTRT symbol.
   const char *StartSymbolName = "CELQSTRT";
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
+  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_OSLinkage);
+  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Global);
 
   // Create symbol and assign to class field for use in PPA1.
   PPA2Sym = OutContext.createTempSymbol("PPA2", false);
@@ -1668,17 +1668,18 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   uint8_t Flgs = static_cast<uint8_t>(PPA2Flags::CompileForBinaryFloatingPoint);
   Flgs |= static_cast<uint8_t>(PPA2Flags::CompiledWithXPLink);
 
+  bool IsASCII = true;
   if (auto *MD = M.getModuleFlag("zos_le_char_mode")) {
     const StringRef &CharMode = cast<MDString>(MD)->getString();
-    if (CharMode == "ascii") {
-      Flgs |= static_cast<uint8_t>(
-          PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
-    } else if (CharMode != "ebcdic") {
-      report_fatal_error(
-          "Only ascii or ebcdic are valid values for zos_le_char_mode "
-          "metadata");
-    }
+    if (CharMode == "ebcdic")
+      IsASCII = false;
+    else if (CharMode != "ascii")
+      OutContext.reportError(
+          {}, "Only ascii or ebcdic are allowed for zos_le_char_mode");
   }
+  if (IsASCII)
+    Flgs |= static_cast<uint8_t>(
+        PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
 
   OutStreamer->emitInt8(Flgs);
   OutStreamer->emitInt8(0x00);    // Reserved.
