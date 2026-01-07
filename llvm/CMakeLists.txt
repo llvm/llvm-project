@@ -110,11 +110,6 @@ endif()
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
 set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;polly")
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-  # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
-  # LLVM_ENABLE_RUNTIMES.
-  list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
-endif()
 
 # The "libc" project, which is not part of "all" projects, could be included in
 # LLVM_ENABLE_PROJECTS.  It is preferred to include "libc" in
