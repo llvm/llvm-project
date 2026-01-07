@@ -2116,12 +2116,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     }
 
     // mul normal, subnormal = normal
-    if (DemandedMask & fcNormal)
-      SrcDemandedMask |= fcSubnormal;
-
     // Normal inputs may result in underflow.
-    if (DemandedMask & fcSubnormal)
-      SrcDemandedMask |= fcNormal;
+    if (DemandedMask & (fcNormal | fcSubnormal))
+      SrcDemandedMask |= fcNormal | fcSubnormal;
 
     if (DemandedMask & fcZero)
       SrcDemandedMask |= fcNormal | fcSubnormal;
