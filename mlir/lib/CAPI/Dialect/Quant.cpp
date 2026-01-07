@@ -125,6 +125,10 @@ MlirType mlirAnyQuantizedTypeGet(unsigned flags, MlirType storageType,
                                            storageTypeMin, storageTypeMax));
 }
 
+MlirStringRef mlirAnyQuantizedTypeGetName(void) {
+  return wrap(quant::AnyQuantizedType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // UniformQuantizedType
 //===---------------------------------------------------------------------===//
@@ -144,6 +148,10 @@ MlirType mlirUniformQuantizedTypeGet(unsigned flags, MlirType storageType,
   return wrap(quant::UniformQuantizedType::get(
       flags, unwrap(storageType), unwrap(expressedType), scale, zeroPoint,
       storageTypeMin, storageTypeMax));
+}
+
+MlirStringRef mlirUniformQuantizedTypeGetName(void) {
+  return wrap(quant::UniformQuantizedType::name);
 }
 
 double mlirUniformQuantizedTypeGetScale(MlirType type) {
@@ -179,6 +187,10 @@ MlirType mlirUniformQuantizedPerAxisTypeGet(
       flags, unwrap(storageType), unwrap(expressedType),
       llvm::ArrayRef(scales, nDims), llvm::ArrayRef(zeroPoints, nDims),
       quantizedDimension, storageTypeMin, storageTypeMax));
+}
+
+MlirStringRef mlirUniformQuantizedPerAxisTypeGetName(void) {
+  return wrap(quant::UniformQuantizedPerAxisType::name);
 }
 
 intptr_t mlirUniformQuantizedPerAxisTypeGetNumDims(MlirType type) {
@@ -238,6 +250,10 @@ MlirType mlirUniformQuantizedSubChannelTypeGet(
       storageTypeMax));
 }
 
+MlirStringRef mlirUniformQuantizedSubChannelTypeGetName(void) {
+  return wrap(quant::UniformQuantizedSubChannelType::name);
+}
+
 intptr_t mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(MlirType type) {
   return cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
       .getBlockSizes()
@@ -282,6 +298,10 @@ MlirType mlirCalibratedQuantizedTypeGet(MlirType expressedType, double min,
                                         double max) {
   return wrap(
       quant::CalibratedQuantizedType::get(unwrap(expressedType), min, max));
+}
+
+MlirStringRef mlirCalibratedQuantizedTypeGetName(void) {
+  return wrap(quant::CalibratedQuantizedType::name);
 }
 
 double mlirCalibratedQuantizedTypeGetMin(MlirType type) {

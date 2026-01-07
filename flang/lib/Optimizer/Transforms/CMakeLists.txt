@@ -9,15 +9,16 @@ add_flang_library(FIRTransforms
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
+  CUDA/CUFAddConstructor.cpp
   CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFComputeSharedMemoryOffsetsAndSize.cpp
   CUDA/CUFDeviceFuncTransform.cpp
+  CUDA/CUFDeviceGlobal.cpp
+  CUDA/CUFFunctionRewrite.cpp
+  CUDA/CUFGPUToLLVMConversion.cpp
   CUDA/CUFLaunchAttachAttr.cpp
+  CUDA/CUFOpConversion.cpp
   CUDA/CUFPredefinedVarToGPU.cpp
-  CUFAddConstructor.cpp
-  CUFDeviceGlobal.cpp
-  CUFOpConversion.cpp
-  CUFGPUToLLVMConversion.cpp
-  CUFComputeSharedMemoryOffsetsAndSize.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
