@@ -819,7 +819,7 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
              !is_convertible_v<_Kp &&, const_iterator>)
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_Kp&& __kp) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_Kp&& __kp) {
     return __tree_.template __node_handle_extract<node_type>(__kp);
   }
 
@@ -1318,7 +1318,7 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
              !is_convertible_v<_Kp &&, const_iterator>)
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_Kp&& __kp) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_Kp&& __kp) {
     return __tree_.template __node_handle_extract<node_type>(__kp);
   }
 
