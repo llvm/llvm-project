@@ -17323,7 +17323,7 @@ Additionally, each of these intrinsics supports two behaviors for signed zeroes.
 By default, -0.0 is considered smaller than +0.0. If the ``nsz`` flag is
 specified, the order is non-deterministic.
 
-The mapping between the LLVM intrinsics, C functions and IEEE-754 functions is
+The mapping between the LLVM intrinsics, C functions and IEEE 754 functions is
 as follows (up to divergences permitted by the usual `NaN rules <floatnan>`):
 
 .. list-table::
@@ -17339,7 +17339,7 @@ as follows (up to divergences permitted by the usual `NaN rules <floatnan>`):
      - fminimum
      - fminimum_num
 
-   * - IEEE-754 function
+   * - IEEE 754 function
      - minNum (2008)
      - minimum (2019)
      - minimumNumber (2019)
