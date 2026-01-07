@@ -3579,7 +3579,8 @@ LogicalResult cir::CpuIdOp::verify() {
   // basePtr points to an array of size at least 4
   auto arrayTy = mlir::dyn_cast<cir::ArrayType>(type);
   if (arrayTy && (arrayTy.getSize() < 4))
-    return emitOpError() << "base pointer must point to an array of size at least 4";
+    return emitOpError()
+           << "base pointer must point to an array of size at least 4";
 
   // Array decay: basePtr points to !s32i
   auto intTy = mlir::dyn_cast<cir::IntType>(type);
