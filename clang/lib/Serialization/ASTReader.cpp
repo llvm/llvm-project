@@ -960,13 +960,12 @@ bool SimpleASTReaderListener::ReadPreprocessorOptions(
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
 /// \returns true when the module cache paths differ.
-static bool checkModuleCachePath(llvm::vfs::FileSystem &VFS,
-                                 StringRef SpecificModuleCachePath,
-                                 StringRef ExistingModuleCachePath,
-                                 StringRef ModuleFilename,
-                                 DiagnosticsEngine *Diags,
-                                 const LangOptions &LangOpts,
-                                 const PreprocessorOptions &PPOpts) {
+static bool checkModuleCachePath(
+    llvm::vfs::FileSystem &VFS, StringRef SpecificModuleCachePath,
+    StringRef ExistingModuleCachePath, StringRef ASTFilename,
+    DiagnosticsEngine *Diags, const LangOptions &LangOpts,
+    const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+    const HeaderSearchOptions &ASTFileHSOpts) {
   if (!LangOpts.Modules || PPOpts.AllowPCHWithDifferentModulesCachePath ||
       SpecificModuleCachePath == ExistingModuleCachePath)
     return false;
@@ -974,21 +973,31 @@ static bool checkModuleCachePath(llvm::vfs::FileSystem &VFS,
       VFS.equivalent(SpecificModuleCachePath, ExistingModuleCachePath);
   if (EqualOrErr && *EqualOrErr)
     return false;
-  if (Diags)
-    Diags->Report(diag::err_ast_file_modulecache_mismatch)
-        << SpecificModuleCachePath << ExistingModuleCachePath << ModuleFilename;
+  if (Diags) {
+    // If the module cache arguments provided from the command line are the
+    // same, the mismatch must come from other arguments of the configuration
+    // and not directly the cache path.
+    EqualOrErr =
+        VFS.equivalent(ASTFileHSOpts.ModuleCachePath, HSOpts.ModuleCachePath);
+    if (EqualOrErr && *EqualOrErr)
+      Diags->Report(clang::diag::warn_ast_file_config_mismatch) << ASTFilename;
+    else
+      Diags->Report(diag::err_ast_file_modulecache_mismatch)
+          << SpecificModuleCachePath << ExistingModuleCachePath << ASTFilename;
+  }
   return true;
 }
 
 bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                           StringRef ModuleFilename,
+                                           StringRef ASTFilename,
                                            StringRef SpecificModuleCachePath,
                                            bool Complain) {
+  const HeaderSearch &HeaderSearchInfo = PP.getHeaderSearchInfo();
   return checkModuleCachePath(
       Reader.getFileManager().getVirtualFileSystem(), SpecificModuleCachePath,
-      PP.getHeaderSearchInfo().getModuleCachePath(), ModuleFilename,
+      HeaderSearchInfo.getModuleCachePath(), ASTFilename,
       Complain ? &Reader.Diags : nullptr, PP.getLangOpts(),
-      PP.getPreprocessorOpts());
+      PP.getPreprocessorOpts(), HeaderSearchInfo.getHeaderSearchOpts(), HSOpts);
 }
 
 void PCHValidator::ReadCounter(const ModuleFile &M, uint32_t Value) {
@@ -4223,7 +4232,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             TULocalLocalOffset ? BaseOffset + TULocalLocalOffset : 0;
 
         DelayedNamespaceOffsetMap[ID] = {
-            {VisibleOffset, TULocalOffset, ModuleLocalOffset}, LexicalOffset};
+            {VisibleOffset, ModuleLocalOffset, TULocalOffset}, LexicalOffset};
 
         assert(!GetExistingDecl(ID) &&
                "We shouldn't load the namespace in the front of delayed "
@@ -5166,7 +5175,7 @@ ASTReader::ReadASTCore(StringRef FileName,
   assert(M && "Missing module file");
 
   bool ShouldFinalizePCM = false;
-  auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinalizeOrDropPCM([&]() {
     auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);
@@ -5763,6 +5772,7 @@ namespace {
     const CodeGenOptions &ExistingCGOpts;
     const TargetOptions &ExistingTargetOpts;
     const PreprocessorOptions &ExistingPPOpts;
+    const HeaderSearchOptions &ExistingHSOpts;
     std::string ExistingModuleCachePath;
     FileManager &FileMgr;
     bool StrictOptionMatches;
@@ -5772,11 +5782,12 @@ namespace {
                        const CodeGenOptions &ExistingCGOpts,
                        const TargetOptions &ExistingTargetOpts,
                        const PreprocessorOptions &ExistingPPOpts,
+                       const HeaderSearchOptions &ExistingHSOpts,
                        StringRef ExistingModuleCachePath, FileManager &FileMgr,
                        bool StrictOptionMatches)
         : ExistingLangOpts(ExistingLangOpts), ExistingCGOpts(ExistingCGOpts),
           ExistingTargetOpts(ExistingTargetOpts),
-          ExistingPPOpts(ExistingPPOpts),
+          ExistingPPOpts(ExistingPPOpts), ExistingHSOpts(ExistingHSOpts),
           ExistingModuleCachePath(ExistingModuleCachePath), FileMgr(FileMgr),
           StrictOptionMatches(StrictOptionMatches) {}
 
@@ -5802,13 +5813,13 @@ namespace {
     }
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                 StringRef ModuleFilename,
+                                 StringRef ASTFilename,
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
-      return checkModuleCachePath(FileMgr.getVirtualFileSystem(),
-                                  SpecificModuleCachePath,
-                                  ExistingModuleCachePath, ModuleFilename,
-                                  nullptr, ExistingLangOpts, ExistingPPOpts);
+      return checkModuleCachePath(
+          FileMgr.getVirtualFileSystem(), SpecificModuleCachePath,
+          ExistingModuleCachePath, ASTFilename, nullptr, ExistingLangOpts,
+          ExistingPPOpts, ExistingHSOpts, HSOpts);
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
@@ -6150,9 +6161,9 @@ bool ASTReader::isAcceptableASTFile(
     StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
     const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
     const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
-    const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
-    bool RequireStrictOptionMatches) {
-  SimplePCHValidator validator(LangOpts, CGOpts, TargetOpts, PPOpts,
+    const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+    StringRef ExistingModuleCachePath, bool RequireStrictOptionMatches) {
+  SimplePCHValidator validator(LangOpts, CGOpts, TargetOpts, PPOpts, HSOpts,
                                ExistingModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
   return !readASTFileControlBlock(Filename, FileMgr, ModCache, PCHContainerRdr,

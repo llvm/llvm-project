@@ -111,10 +111,10 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
-- Added a new ``MacroFilter`` configuration option to ``Completion`` to 
-  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting 
-  macros. ``ExactPrefix`` is the default, which retains previous 
-  behavior of suggesting macros which match the prefix exactly.  
+- Added a new ``MacroFilter`` configuration option to ``Completion`` to
+  allow fuzzy-matching with the ``FuzzyMatch`` option when suggesting
+  macros. ``ExactPrefix`` is the default, which retains previous
+  behavior of suggesting macros which match the prefix exactly.
 
 Code actions
 ^^^^^^^^^^^^
@@ -205,7 +205,7 @@ Improvements to clang-tidy
 
 - Improved :program:`clang-tidy` by adding the `--removed-arg` option to remove
   arguments sent to the compiler when invoking Clang-Tidy. This option was also
-  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and 
+  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and
   can be configured in the config file through the `RemovedArgs` option.
 
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
@@ -264,6 +264,12 @@ New checks
 
   Finds virtual function overrides with different visibility than the function
   in the base class.
+
+- New :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check.
+
+  Detects ``if``/``else`` statements where one branch uses braces and the other
+  does not.
 
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
@@ -357,6 +363,11 @@ New check aliases
   <clang-tidy/checks/misc/multiple-inheritance>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`google-build-namespaces <clang-tidy/checks/google/build-namespaces>` to
+  :doc:`misc-anonymous-namespace-in-header 
+  <clang-tidy/checks/misc/anonymous-namespace-in-header>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`google-readability-casting <clang-tidy/checks/google/readability-casting>` to
   :doc:`modernize-avoid-c-style-cast
   <clang-tidy/checks/modernize/avoid-c-style-cast>`
@@ -369,6 +380,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/chained-comparison>` check by adding a
   new option `IgnoreMacros` to suppress warnings within macro
   expansions.
+
+- Improved :doc:`bugprone-dynamic-static-initializers
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check by
+  avoiding false positives for ``constexpr`` variables whose
+  initializers are value-dependent.
 
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
@@ -391,6 +407,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-invalid-enum-default-initialization
   <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` with new
   `IgnoredEnums` option to ignore specified enums during analysis.
+
+- Improved :doc:`bugprone-macro-parentheses
+  <clang-tidy/checks/bugprone/macro-parentheses>` check by fixing false
+  positives when using C++ template parameters.
 
 - Improved :doc:`bugprone-narrowing-conversions
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
@@ -426,7 +446,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
   the canonical types of base classes as written and adding a note on the base
-  class that triggered the warning.
+  class that triggered the warning. Also, fixed an issue where the check
+  wouldn't fire in constructors or (in certain contexts) lambdas.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting

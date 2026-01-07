@@ -13787,7 +13787,7 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 }
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
-  auto ResetDeclForInitializer = llvm::make_scope_exit([this]() {
+  llvm::scope_exit ResetDeclForInitializer([this]() {
     if (this->ExprEvalContexts.empty())
       this->ExprEvalContexts.back().DeclForInitializer = nullptr;
   });
@@ -13840,8 +13840,15 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       return;
     }
 
-    if (DeduceVariableDeclarationType(VDecl, DirectInit, Init))
+    if (DeduceVariableDeclarationType(VDecl, DirectInit, Init)) {
+      assert(VDecl->isInvalidDecl() &&
+             "decl should be invalidated when deduce fails");
+      if (auto *RecoveryExpr =
+              CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), {Init})
+                  .get())
+        VDecl->setInit(RecoveryExpr);
       return;
+    }
   }
 
   this->CheckAttributesOnDeducedType(RealDecl);
@@ -20815,10 +20822,12 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       NewSign = true;
     } else if (ECD->getType() == BestType) {
       // Already the right type!
-      if (getLangOpts().CPlusPlus)
+      if (getLangOpts().CPlusPlus || (getLangOpts().C23 && Enum->isFixed()))
         // C++ [dcl.enum]p4: Following the closing brace of an
         // enum-specifier, each enumerator has the type of its
         // enumeration.
+        // C23 6.7.3.3p16: The enumeration member type for an enumerated type
+        // with fixed underlying type is the enumerated type.
         ECD->setType(EnumType);
       continue;
     } else {
@@ -20838,10 +20847,13 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       ECD->setInitExpr(ImplicitCastExpr::Create(
           Context, NewTy, CK_IntegralCast, ECD->getInitExpr(),
           /*base paths*/ nullptr, VK_PRValue, FPOptionsOverride()));
-    if (getLangOpts().CPlusPlus)
+    if (getLangOpts().CPlusPlus ||
+        (getLangOpts().C23 && (Enum->isFixed() || !MembersRepresentableByInt)))
       // C++ [dcl.enum]p4: Following the closing brace of an
       // enum-specifier, each enumerator has the type of its
       // enumeration.
+      // C23 6.7.3.3p16: The enumeration member type for an enumerated type
+      // with fixed underlying type is the enumerated type.
       ECD->setType(EnumType);
     else
       ECD->setType(NewTy);

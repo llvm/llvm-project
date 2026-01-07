@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -64,6 +65,17 @@ using namespace llvm;
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AArch64GenInstrInfo.inc"
+
+#define DEBUG_TYPE "AArch64InstrInfo"
+
+STATISTIC(NumCopyInstrs, "Number of COPY instructions expanded");
+STATISTIC(NumZCRegMoveInstrsGPR, "Number of zero-cycle GPR register move "
+                                 "instructions expanded from canonical COPY");
+STATISTIC(NumZCRegMoveInstrsFPR, "Number of zero-cycle FPR register move "
+                                 "instructions expanded from canonical COPY");
+STATISTIC(NumZCZeroingInstrsGPR, "Number of zero-cycle GPR zeroing "
+                                 "instructions expanded from canonical COPY");
+// NumZCZeroingInstrsFPR is counted at AArch64AsmPrinter
 
 static cl::opt<unsigned>
     CBDisplacementBits("aarch64-cb-offset-bits", cl::Hidden, cl::init(9),
@@ -2543,18 +2555,6 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addGlobalAddress(GV, 0, LoFlags)
           .addMemOperand(*MI.memoperands_begin());
     }
-  }
-  // To match MSVC. Unlike x86_64 which uses xor instruction to mix the cookie,
-  // we use sub instruction to mix the cookie on aarch64 for keeping the
-  // existing inlining logic intact.
-  if (Subtarget.getTargetTriple().isOSMSVCRT() &&
-      !Subtarget.getTargetLowering()
-           ->getTargetMachine()
-           .Options.EnableGlobalISel) {
-    BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), Reg)
-        .addReg(AArch64::SP)
-        .addReg(Reg, RegState::Kill)
-        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
   }
 
   MBB.erase(MI);
@@ -5395,6 +5395,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    Register SrcReg, bool KillSrc,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
+  ++NumCopyInstrs;
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       AArch64::GPR32spRegClass.contains(SrcReg)) {
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
@@ -5415,11 +5416,14 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             .addImm(0)
             .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0))
             .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+        ++NumZCRegMoveInstrsGPR;
       } else {
         BuildMI(MBB, I, DL, get(AArch64::ADDWri), DestReg)
             .addReg(SrcReg, getKillRegState(KillSrc))
             .addImm(0)
             .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+        if (Subtarget.hasZeroCycleRegMoveGPR32())
+          ++NumZCRegMoveInstrsGPR;
       }
     } else if (Subtarget.hasZeroCycleRegMoveGPR64() &&
                !Subtarget.hasZeroCycleRegMoveGPR32()) {
@@ -5438,11 +5442,14 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(AArch64::XZR)
           .addReg(SrcRegX, RegState::Undef)
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+      ++NumZCRegMoveInstrsGPR;
     } else {
       // Otherwise, expand to ORR WZR.
       BuildMI(MBB, I, DL, get(AArch64::ORRWrr), DestReg)
           .addReg(AArch64::WZR)
           .addReg(SrcReg, getKillRegState(KillSrc));
+      if (Subtarget.hasZeroCycleRegMoveGPR32())
+        ++NumZCRegMoveInstrsGPR;
     }
     return;
   }
@@ -5457,10 +5464,12 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestRegX)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+      ++NumZCZeroingInstrsGPR;
     } else if (Subtarget.hasZeroCycleZeroingGPR32()) {
       BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+      ++NumZCZeroingInstrsGPR;
     } else {
       BuildMI(MBB, I, DL, get(AArch64::ORRWrr), DestReg)
           .addReg(AArch64::WZR)
@@ -5477,11 +5486,15 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, getKillRegState(KillSrc))
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+      if (Subtarget.hasZeroCycleRegMoveGPR64())
+        ++NumZCRegMoveInstrsGPR;
     } else {
       // Otherwise, expand to ORR XZR.
       BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestReg)
           .addReg(AArch64::XZR)
           .addReg(SrcReg, getKillRegState(KillSrc));
+      if (Subtarget.hasZeroCycleRegMoveGPR64())
+        ++NumZCRegMoveInstrsGPR;
     }
     return;
   }
@@ -5492,6 +5505,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+      ++NumZCZeroingInstrsGPR;
     } else {
       BuildMI(MBB, I, DL, get(AArch64::ORRXrr), DestReg)
           .addReg(AArch64::XZR)
@@ -5661,16 +5675,18 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (AArch64::FPR128RegClass.contains(DestReg) &&
       AArch64::FPR128RegClass.contains(SrcReg)) {
     if (Subtarget.isSVEorStreamingSVEAvailable() &&
-        !Subtarget.isNeonAvailable())
+        !Subtarget.isNeonAvailable()) {
       BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
           .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0));
-    else if (Subtarget.isNeonAvailable())
+    } else if (Subtarget.isNeonAvailable()) {
       BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
           .addReg(SrcReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
-    else {
+      if (Subtarget.hasZeroCycleRegMoveFPR128())
+        ++NumZCRegMoveInstrsFPR;
+    } else {
       BuildMI(MBB, I, DL, get(AArch64::STRQpre))
           .addReg(AArch64::SP, RegState::Define)
           .addReg(SrcReg, getKillRegState(KillSrc))
@@ -5702,9 +5718,12 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcRegQ, RegState::Undef)
           .addReg(SrcRegQ, RegState::Undef)
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+      ++NumZCRegMoveInstrsFPR;
     } else {
       BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
+      if (Subtarget.hasZeroCycleRegMoveFPR64())
+        ++NumZCRegMoveInstrsFPR;
     }
     return;
   }
@@ -5726,6 +5745,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcRegQ, RegState::Undef)
           .addReg(SrcRegQ, RegState::Undef)
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+      ++NumZCRegMoveInstrsFPR;
     } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
                !Subtarget.hasZeroCycleRegMoveFPR32()) {
       MCRegister DestRegD = RI.getMatchingSuperReg(DestReg, AArch64::ssub,
@@ -5739,9 +5759,12 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestRegD)
           .addReg(SrcRegD, RegState::Undef)
           .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+      ++NumZCRegMoveInstrsFPR;
     } else {
       BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
+      if (Subtarget.hasZeroCycleRegMoveFPR32())
+        ++NumZCRegMoveInstrsFPR;
     }
     return;
   }

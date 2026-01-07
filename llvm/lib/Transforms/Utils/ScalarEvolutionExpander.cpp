@@ -2332,8 +2332,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
     ToTy = Type::getInt32Ty(DefI->getContext());
   Instruction *User =
       CastInst::CreateBitOrPointerCast(DefI, ToTy, "tmp.lcssa.user", InsertPt);
-  auto RemoveUserOnExit =
-      make_scope_exit([User]() { User->eraseFromParent(); });
+  llvm::scope_exit RemoveUserOnExit([User]() { User->eraseFromParent(); });
 
   SmallVector<Instruction *, 1> ToUpdate;
   ToUpdate.push_back(DefI);
