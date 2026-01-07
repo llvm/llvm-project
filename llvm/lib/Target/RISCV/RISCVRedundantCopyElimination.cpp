@@ -92,11 +92,13 @@ guaranteesRegEqualsImmInBlock(MachineBasicBlock &MBB,
   assert(Cond.size() == 3 && "Unexpected number of operands");
   assert(TBB != nullptr && "Expected branch target basic block");
   auto Opc = Cond[0].getImm();
-  if ((Opc == RISCV::QC_BEQI || Opc == RISCV::QC_E_BEQI) && Cond[2].isImm() &&
-      Cond[2].getImm() != 0 && TBB == &MBB)
+  if ((Opc == RISCV::QC_BEQI || Opc == RISCV::QC_E_BEQI ||
+       Opc == RISCV::NDS_BEQC) &&
+      Cond[2].isImm() && Cond[2].getImm() != 0 && TBB == &MBB)
     return true;
-  if ((Opc == RISCV::QC_BNEI || Opc == RISCV::QC_E_BNEI) && Cond[2].isImm() &&
-      Cond[2].getImm() != 0 && TBB != &MBB)
+  if ((Opc == RISCV::QC_BNEI || Opc == RISCV::QC_E_BNEI ||
+       Opc == RISCV::NDS_BNEC) &&
+      Cond[2].isImm() && Cond[2].getImm() != 0 && TBB != &MBB)
     return true;
   return false;
 }
@@ -190,7 +192,9 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
           CondBr->getOpcode() == RISCV::QC_BEQI ||
           CondBr->getOpcode() == RISCV::QC_BNEI ||
           CondBr->getOpcode() == RISCV::QC_E_BEQI ||
-          CondBr->getOpcode() == RISCV::QC_E_BNEI) &&
+          CondBr->getOpcode() == RISCV::QC_E_BNEI ||
+          CondBr->getOpcode() == RISCV::NDS_BEQC ||
+          CondBr->getOpcode() == RISCV::NDS_BNEC) &&
          "Unexpected opcode");
   assert(CondBr->getOperand(0).getReg() == TargetReg && "Unexpected register");
 
