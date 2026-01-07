@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -fexperimental-lifetime-safety-inference-post-order -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -fexperimental-lifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wexperimental-lifetime-safety-suggestions -Wexperimental-lifetime-safety -Wno-dangling -I%t -verify %t/test_source.cpp
 
 View definition_before_header(View a);
 
@@ -216,7 +216,6 @@ View return_view_callee(View a) {     // expected-warning {{parameter in intra-T
 namespace incorrect_order_inference_object {
 MyObj* return_object_callee(MyObj* a);
 
-// FIXME: No lifetime annotation suggestion warning when functions are not present in the callee-before-caller pattern
 MyObj* return_object_caller(MyObj* a) {      // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}.
   return return_object_callee(a);            // expected-note {{param returned here}}
 }

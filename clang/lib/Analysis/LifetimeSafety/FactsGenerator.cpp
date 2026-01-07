@@ -392,11 +392,12 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
-  if (!FD || !CallList)
+  const FunctionDecl *CanonicalFD = FD ? FD->getCanonicalDecl() : nullptr;
+  if (!CanonicalFD || !CallList)
     return;
-  auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
+  auto IsArgLifetimeBound = [CanonicalFD](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+    if (const auto *Method = dyn_cast<CXXMethodDecl>(CanonicalFD);
         Method && Method->isInstance()) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
@@ -405,9 +406,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // For explicit arguments, find the corresponding parameter
         // declaration.
         PVD = Method->getParamDecl(I - 1);
-    } else if (I < FD->getNumParams()) {
+    } else if (I < CanonicalFD->getNumParams()) {
       // For free functions or static methods.
-      PVD = FD->getParamDecl(I);
+      PVD = CanonicalFD->getParamDecl(I);
     }
     return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
   };

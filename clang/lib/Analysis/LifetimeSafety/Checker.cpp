@@ -196,20 +196,15 @@ public:
   void inferAnnotations() {
     for (const auto &[ConstPVD, EscapeExpr] : AnnotationWarningsMap) {
       ParmVarDecl *PVD = const_cast<ParmVarDecl *>(ConstPVD);
-      if (!PVD->hasAttr<LifetimeBoundAttr>()) {
-        PVD->addAttr(
+      const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
+      if (!FD)
+        continue;
+      const FunctionDecl *CanonicalFD = FD->getCanonicalDecl();
+      ParmVarDecl *CanonicalPVD = const_cast<ParmVarDecl *>(
+          CanonicalFD->getParamDecl(PVD->getFunctionScopeIndex()));
+      if (!CanonicalPVD->hasAttr<LifetimeBoundAttr>()) {
+        CanonicalPVD->addAttr(
             LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
-        if (const FunctionDecl *FD =
-                dyn_cast<FunctionDecl>(PVD->getDeclContext())) {
-          for (const FunctionDecl *Redecl : FD->redecls()) {
-            if (Redecl != FD)
-              if (const ParmVarDecl *RedeclPVD =
-                      Redecl->getParamDecl(PVD->getFunctionScopeIndex());
-                  RedeclPVD)
-                const_cast<ParmVarDecl *>(RedeclPVD)->addAttr(
-                    LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
-          }
-        }
       }
     }
   }

@@ -23,7 +23,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/Type.h"
@@ -55,6 +54,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <deque>
 #include <iterator>
@@ -2918,42 +2918,29 @@ private:
 } // namespace
 } // namespace clang::lifetimes
 
-class CallGraphBuilder : public clang::RecursiveASTVisitor<CallGraphBuilder> {
-  clang::CallGraph &CG;
-  clang::Sema &S;
-  clang::FunctionDecl *CurrentFD = nullptr;
-
-public:
-  explicit CallGraphBuilder(clang::CallGraph &CG, clang::Sema &S)
-      : CG(CG), S(S) {}
-
-  void addCallsFrom(clang::FunctionDecl *FD) {
-    CurrentFD = FD;
-    if (FD->hasBody())
-      TraverseStmt(FD->getBody());
+static void
+LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
+                         clang::lifetimes::LifetimeSafetyStats &LSStats) {
+  llvm::TimeTraceScope TimeProfile("LifetimeSafetyTUAnalysis");
+  CallGraph CG;
+  CG.addToCallGraph(TU);
+  lifetimes::LifetimeSafetyReporterImpl Reporter(S);
+  for (auto *Node : llvm::post_order(&CG)) {
+    const clang::FunctionDecl *CanonicalFD =
+        dyn_cast_or_null<clang::FunctionDecl>(Node->getDecl());
+    if (!CanonicalFD)
+      continue;
+    const FunctionDecl *FD = CanonicalFD->getDefinition();
+    if (!FD)
+      continue;
+    AnalysisDeclContext AC(nullptr, FD);
+    AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
+    AC.getCFGBuildOptions().AddLifetime = true;
+    AC.getCFGBuildOptions().setAllAlwaysAdd();
+    if (AC.getCFG())
+      runLifetimeSafetyAnalysis(AC, &Reporter, LSStats, S.CollectStats);
   }
-
-  // Visitor for call expressions.
-  bool VisitCallExpr(clang::CallExpr *CE) {
-    if (clang::FunctionDecl *CalleeFD = CE->getDirectCallee()) {
-      const clang::FunctionDecl *Def = nullptr;
-      if (CalleeFD->hasBody(Def) && Def) {
-        if (!S.getSourceManager().isInSystemHeader(Def->getLocation())) {
-          const FunctionDecl *CanonicalCaller = CurrentFD->getCanonicalDecl();
-          const FunctionDecl *CanonicalCallee = Def->getCanonicalDecl();
-
-          clang::CallGraphNode *CallerNode = CG.getOrInsertNode(
-              const_cast<clang::FunctionDecl *>(CanonicalCaller));
-          clang::CallGraphNode *CalleeNode = CG.getOrInsertNode(
-              const_cast<clang::FunctionDecl *>(CanonicalCallee));
-          // Add an edge from caller to callee.
-          CallerNode->addCallee({CalleeNode, CE});
-        }
-      }
-    }
-    return true;
-  }
-};
+}
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
      TranslationUnitDecl *TU) {
@@ -3011,44 +2998,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   if (S.getLangOpts().EnableLifetimeSafety && S.getLangOpts().CPlusPlus &&
-      S.getLangOpts().EnableLifetimeSafetyInferencePostOrder) {
-    llvm::SmallVector<const FunctionDecl *, 64> AllFunctions;
-    auto AddFunctionToList = [&](const Decl *D) -> void {
-      if (const auto *FD = dyn_cast<FunctionDecl>(D))
-        if (FD->doesThisDeclarationHaveABody() &&
-            !S.getSourceManager().isInSystemHeader(FD->getLocation()))
-          AllFunctions.push_back(FD);
-    };
-    CallableVisitor(AddFunctionToList, TU->getOwningModule())
-        .TraverseTranslationUnitDecl(TU);
-
-    if (AllFunctions.empty())
-      return;
-
-    clang::CallGraph CG;
-    for (const clang::FunctionDecl *FD : AllFunctions)
-      CG.getOrInsertNode(const_cast<clang::FunctionDecl *>(FD));
-
-    CallGraphBuilder Builder(CG, S);
-    for (const clang::FunctionDecl *FD : AllFunctions)
-      Builder.addCallsFrom(const_cast<clang::FunctionDecl *>(FD));
-
-    lifetimes::LifetimeSafetyReporterImpl Reporter(S);
-    for (auto *Node : llvm::post_order(&CG)) {
-      if (const clang::FunctionDecl *CanonicalFD =
-              dyn_cast_or_null<clang::FunctionDecl>(Node->getDecl())) {
-        const FunctionDecl *FD = CanonicalFD->getDefinition();
-        if (!FD)
-          continue;
-
-        AnalysisDeclContext AC(nullptr, FD);
-        AC.getCFGBuildOptions().PruneTriviallyFalseEdges = false;
-        AC.getCFGBuildOptions().AddLifetime = true;
-        AC.getCFGBuildOptions().setAllAlwaysAdd();
-        runLifetimeSafetyAnalysis(AC, &Reporter, LSStats, S.CollectStats);
-      }
-    }
-  }
+      S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
+    LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
@@ -3097,7 +3048,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   bool EnableLifetimeSafetyAnalysis =
       S.getLangOpts().EnableLifetimeSafety &&
-      !S.getLangOpts().EnableLifetimeSafetyInferencePostOrder;
+      !S.getLangOpts().EnableLifetimeSafetyTUAnalysis;
 
   if (EnableLifetimeSafetyAnalysis)
     AC.getCFGBuildOptions().AddLifetime = true;
