@@ -991,7 +991,7 @@ void RecursiveSearchSplitting::run() {
   {
     SplitModuleTimer SMT("recursive_search_pick", "partitioning");
     SplitProposal SP(SG, NumParts);
-    pickPartition(/*BranchDepth=*/0, /*Idx=*/0, SP);
+    pickPartition(/*BranchDepth=*/0, /*Idx=*/0, std::move(SP));
   }
 }
 
@@ -1161,7 +1161,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
   SP.setName("recursive_search (depth=" + std::to_string(Depth) + ") #" +
              std::to_string(NumProposalsSubmitted++));
   LLVM_DEBUG(dbgs() << '\n');
-  SubmitProposal(SP);
+  SubmitProposal(std::move(SP));
 }
 
 std::pair<unsigned, CostType>
