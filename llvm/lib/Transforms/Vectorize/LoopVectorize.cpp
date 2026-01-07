@@ -7271,6 +7271,25 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   return BestFactor;
 }
 
+/// Search \p Start's users for a recipe satisfying \p Pred, looking through
+/// recipes with definitions.
+template <typename PredT>
+static VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+  SetVector<VPValue *> Worklist;
+  Worklist.insert(Start);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    VPValue *Cur = Worklist[I];
+    auto *R = Cur->getDefiningRecipe();
+    if (Pred(R))
+      return R;
+    for (VPUser *U : Cur->users()) {
+      for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
+        Worklist.insert(V);
+    }
+  }
+  return nullptr;
+}
+
 static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
   using namespace VPlanPatternMatch;
   assert(RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult &&
@@ -7298,8 +7317,20 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
        EpiRedResult->getOpcode() != VPInstruction::ComputeFindIVResult))
     return;
 
-  auto *EpiRedHeaderPhi =
-      cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
+  // Find the reduction phi by searching users of the backedge value.
+  VPValue *BackedgeVal =
+      EpiRedResult->getOperand(EpiRedResult->getNumOperands() - 1);
+  auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
+      findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+  if (!EpiRedHeaderPhi) {
+    match(BackedgeVal,
+          VPlanPatternMatch::m_Select(VPlanPatternMatch::m_VPValue(),
+                                      VPlanPatternMatch::m_VPValue(BackedgeVal),
+                                      VPlanPatternMatch::m_VPValue()));
+    EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
+        findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+  }
+
   RecurKind Kind = EpiRedHeaderPhi->getRecurrenceKind();
   Value *MainResumeValue;
   if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
@@ -9365,14 +9396,27 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      auto *RdxResult =
-          cast<VPInstruction>(*find_if(ReductionPhi->users(), [](VPUser *U) {
-            auto *VPI = dyn_cast<VPInstruction>(U);
-            return VPI &&
-                   (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-                    VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
-                    VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
-          }));
+      // Find the reduction result by searching users of the phi or its backedge
+      // value.
+      auto IsReductionResult = [](VPRecipeBase *R) {
+        auto *VPI = dyn_cast<VPInstruction>(R);
+        return VPI &&
+               (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+                VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+                VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
+      };
+      auto *RdxResult = cast<VPInstruction>(
+          findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
+      assert(
+          (is_contained(RdxResult->operands(),
+                        ReductionPhi->getBackedgeValue()) ||
+           (isa<VPWidenCastRecipe>(ReductionPhi->getBackedgeValue()) &&
+            is_contained(RdxResult->operands(), ReductionPhi->getBackedgeValue()
+                                                    ->getDefiningRecipe()
+                                                    ->getOperand(0))) ||
+           RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult) &&
+          "expected to find reduction result via backedge");
+
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
       RecurKind RK = ReductionPhi->getRecurrenceKind();
