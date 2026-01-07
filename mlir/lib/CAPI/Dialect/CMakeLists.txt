@@ -380,6 +380,7 @@ add_mlir_upstream_c_api_library(MLIRCAPIShape
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRShapeDialect
+  MLIRShapeOpsTransforms
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIShard
