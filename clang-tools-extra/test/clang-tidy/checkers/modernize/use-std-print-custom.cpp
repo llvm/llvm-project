@@ -80,7 +80,7 @@ int fprintf_uses_return_value(int i) {
   // CHECK-FIXES-NOT: std::println(stderr, "return value {}", i);
 }
 
-// Ensure that MatchesAnyListedNameMatcher::NameMatcher::match() can cope with a
+// Ensure that MatchesAnyListedRegexNameMatcher::NameMatcher::match() can cope with a
 // NamedDecl that has no name when we're trying to match unqualified_printf.
 void no_name(const std::string &in)
 {

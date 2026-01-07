@@ -51,10 +51,10 @@ OptionalValueConversionCheck::getCheckTraversalKind() const {
 }
 
 void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
-  auto BindOptionalType = qualType(
-      hasCleanType(qualType(hasDeclaration(namedDecl(
-                                matchers::matchesAnyListedName(OptionalTypes))))
-                       .bind("optional-type")));
+  auto BindOptionalType = qualType(hasCleanType(
+      qualType(hasDeclaration(namedDecl(
+                   matchers::matchesAnyListedRegexName(OptionalTypes))))
+          .bind("optional-type")));
 
   auto EqualsBoundOptionalType =
       qualType(hasCleanType(equalsBoundNode("optional-type")));
@@ -64,10 +64,11 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
           cxxOperatorCallExpr(hasOverloadedOperatorName("*"),
                               hasUnaryOperand(hasType(EqualsBoundOptionalType)))
               .bind("op-call"),
-          cxxMemberCallExpr(thisPointerType(EqualsBoundOptionalType),
-                            callee(cxxMethodDecl(anyOf(
-                                hasOverloadedOperatorName("*"),
-                                matchers::matchesAnyListedName(ValueMethods)))))
+          cxxMemberCallExpr(
+              thisPointerType(EqualsBoundOptionalType),
+              callee(cxxMethodDecl(
+                  anyOf(hasOverloadedOperatorName("*"),
+                        matchers::matchesAnyListedRegexName(ValueMethods)))))
               .bind("member-call")),
       hasType(qualType().bind("value-type")));
 
@@ -78,34 +79,35 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
       ignoringImpCasts(anyOf(OptionalDerefMatcherImpl, StdMoveCallMatcher));
 
   Finder->addMatcher(
-      expr(anyOf(
-               // construct optional
-               cxxConstructExpr(argumentCountIs(1), hasType(BindOptionalType),
-                                hasArgument(0, OptionalDerefMatcher)),
-               // known template methods in std
-               callExpr(
-                   argumentCountIs(1),
-                   anyOf(
-                       // match std::make_unique std::make_shared
-                       callee(functionDecl(
-                           matchers::matchesAnyListedName(MakeSmartPtrList),
-                           hasTemplateArgument(
-                               0, refersToType(BindOptionalType)))),
-                       // match first std::make_optional by limit argument count
-                       // (1) and template count (1).
-                       // 1. template< class T > constexpr
-                       //    std::optional<decay_t<T>> make_optional(T&& value);
-                       // 2. template< class T, class... Args > constexpr
-                       //    std::optional<T> make_optional(Args&&... args);
-                       callee(functionDecl(templateArgumentCountIs(1),
-                                           hasName(MakeOptional),
-                                           returns(BindOptionalType)))),
-                   hasArgument(0, OptionalDerefMatcher)),
-               callExpr(argumentCountIs(1),
+      expr(
+          anyOf(
+              // construct optional
+              cxxConstructExpr(argumentCountIs(1), hasType(BindOptionalType),
+                               hasArgument(0, OptionalDerefMatcher)),
+              // known template methods in std
+              callExpr(
+                  argumentCountIs(1),
+                  anyOf(
+                      // match std::make_unique std::make_shared
+                      callee(functionDecl(
+                          matchers::matchesAnyListedRegexName(MakeSmartPtrList),
+                          hasTemplateArgument(0,
+                                              refersToType(BindOptionalType)))),
+                      // match first std::make_optional by limit argument count
+                      // (1) and template count (1).
+                      // 1. template< class T > constexpr
+                      //    std::optional<decay_t<T>> make_optional(T&& value);
+                      // 2. template< class T, class... Args > constexpr
+                      //    std::optional<T> make_optional(Args&&... args);
+                      callee(functionDecl(templateArgumentCountIs(1),
+                                          hasName(MakeOptional),
+                                          returns(BindOptionalType)))),
+                  hasArgument(0, OptionalDerefMatcher)),
+              callExpr(argumentCountIs(1),
 
-                        hasArgument(0, OptionalDerefMatcher))),
-           unless(anyOf(hasAncestor(typeLoc()),
-                        hasAncestor(expr(matchers::hasUnevaluatedContext())))))
+                       hasArgument(0, OptionalDerefMatcher))),
+          unless(anyOf(hasAncestor(typeLoc()),
+                       hasAncestor(expr(matchers::hasUnevaluatedContext())))))
           .bind("expr"),
       this);
 }
