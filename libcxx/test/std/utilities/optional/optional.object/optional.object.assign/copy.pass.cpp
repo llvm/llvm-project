@@ -57,8 +57,7 @@ constexpr bool test_ref() {
     mutable int constCopyAssign = 0;
 
     constexpr TraceCopyAssign() = default;
-    constexpr TraceCopyAssign(TraceCopyAssign& r)
-        : copyAssign(r.copyAssign + 1), constCopyAssign(r.constCopyAssign) {}
+    constexpr TraceCopyAssign(TraceCopyAssign& r) : copyAssign(r.copyAssign + 1), constCopyAssign(r.constCopyAssign) {}
     constexpr TraceCopyAssign(const TraceCopyAssign& r)
         : copyAssign(r.copyAssign), constCopyAssign(r.constCopyAssign + 1) {}
     constexpr TraceCopyAssign& operator=(const TraceCopyAssign&) {
