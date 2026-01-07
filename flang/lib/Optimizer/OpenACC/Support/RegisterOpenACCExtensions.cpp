@@ -12,6 +12,8 @@
 
 #include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 
+#include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -83,6 +85,11 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         hlfir::DeclareOp::attachInterface<
             PartialEntityAccessModel<hlfir::DeclareOp>>(*ctx);
       });
+
+  // Register CUF operation interfaces
+  registry.addExtension(+[](mlir::MLIRContext *ctx, cuf::CUFDialect *dialect) {
+    cuf::KernelOp::attachInterface<OffloadRegionModel<cuf::KernelOp>>(*ctx);
+  });
 
   registerAttrsExtensions(registry);
 }

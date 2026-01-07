@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -291,6 +292,10 @@ struct MemrefGlobalVariableModel
   }
 };
 
+struct GPULaunchOffloadRegionModel
+    : public acc::OffloadRegionOpInterface::ExternalModel<
+          GPULaunchOffloadRegionModel, gpu::LaunchOp> {};
+
 /// Helper function for any of the times we need to modify an ArrayAttr based on
 /// a device type list.  Returns a new ArrayAttr with all of the
 /// existingDeviceTypes, plus the effective new ones(or an added none if hte new
@@ -387,6 +392,7 @@ void OpenACCDialect::initialize() {
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
       *getContext());
   memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
+  gpu::LaunchOp::attachInterface<GPULaunchOffloadRegionModel>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//

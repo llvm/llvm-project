@@ -122,4 +122,15 @@ def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationO
   }];
 }
 
+def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations whose regions are targets for offloading
+    and outlining. Operations implementing this interface indicate that
+    their regions will be extracted and compiled separately (e.g., as
+    device kernels or outlined functions).
+  }];
+}
+
 #endif // OPENACC_OPS_INTERFACES
