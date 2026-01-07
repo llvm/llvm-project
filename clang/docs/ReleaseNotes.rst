@@ -552,6 +552,7 @@ Bug Fixes in This Version
   containing a single colon. (#GH167905)
 - Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
   by diagnosing invalid comma-separated argument lists. (#GH166325)
+- Clang now treats enumeration constants of fixed-underlying enums as the enumerated type. (#GH172118)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -633,6 +634,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when evaluating nested requirements in requires-expressions that reference invented parameters. (#GH166325)
 - Fixed a crash when standard comparison categories (e.g. ``std::partial_ordering``) are defined with incorrect static member types. (#GH170015) (#GH56571)
 - Fixed a crash when parsing the ``enable_if`` attribute on C function declarations with identifier-list parameters. (#GH173826)
+- Fixed an assertion failure triggered by nested lambdas during capture handling. (#GH172814)
+- Fixed an assertion failure in vector conversions involving instantiation-dependent template expressions. (#GH173347)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
