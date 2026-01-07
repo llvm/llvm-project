@@ -80,7 +80,7 @@ public:
   /// If no block occupies the queried location, or the record is missing, a
   /// nullptr is returned.
   BasicBlock *getBlockAtLocation(const FileLoc &) const;
-  /// Get the instruction at the requested location range.
+  /// Get the instruction or function argument at the requested location range.
   /// If no single instruction occupies the queried range, or the record is
   /// missing, a nullptr is returned.
   Value *getInstructionOrArgumentAtLocation(const FileLocRange &) const;
@@ -88,7 +88,7 @@ public:
   /// If no instruction occupies the queried location, or the record is missing,
   /// a nullptr is returned.
   Value *getInstructionOrArgumentAtLocation(const FileLoc &) const;
-  /// Get value referenced or function argument at the requested location.
+  /// Get value referenced at the requested location.
   /// If no value occupies the queried location, or the record is missing,
   /// a nullptr is returned.
   Value *getValueReferencedAtLocation(const FileLoc &) const;
