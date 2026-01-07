@@ -28,7 +28,7 @@ define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP9]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP18]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -89,7 +89,7 @@ define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 4
+; ZVFHMIN-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[TMP9]], 2
 ; ZVFHMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP10]]
 ; ZVFHMIN-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -173,7 +173,7 @@ define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP9]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP18]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -234,7 +234,7 @@ define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 4
+; ZVFHMIN-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[TMP9]], 2
 ; ZVFHMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP10]]
 ; ZVFHMIN-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -318,7 +318,7 @@ define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP9]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP9]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP18]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -379,7 +379,7 @@ define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 2
+; ZVFHMIN-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[TMP9]], 1
 ; ZVFHMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP10]]
 ; ZVFHMIN-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -463,7 +463,7 @@ define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP9]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP9]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP18]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -524,7 +524,7 @@ define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 2
+; ZVFHMIN-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[TMP9]], 1
 ; ZVFHMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP10]]
 ; ZVFHMIN-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
