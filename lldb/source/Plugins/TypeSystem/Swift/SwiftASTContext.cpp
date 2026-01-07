@@ -3728,6 +3728,10 @@ void SwiftASTContext::InitializeSearchPathOptions(
   invocation.computeCXXStdlibOptions();
 }
 
+std::optional<clang::DarwinSDKInfo> &SwiftASTContext::GetSDKInfo() {
+  return GetCompilerInvocation().getSDKInfo();
+}
+
 ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   assert(m_initialized_search_path_options &&
          m_initialized_clang_importer_options &&
@@ -3742,7 +3746,8 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
       GetSymbolGraphOptions(), GetCASOptions(), GetSerializationOptions(),
-      GetSourceManager(), GetDiagnosticEngine(), /*OutputBackend=*/nullptr));
+      GetSourceManager(), GetDiagnosticEngine(), GetSDKInfo(),
+      /*OutputBackend=*/nullptr));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
     // NOTE: leaking a swift::PrintingDiagnosticConsumer() here, but
