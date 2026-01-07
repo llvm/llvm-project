@@ -1107,10 +1107,10 @@ public:
   SourceRange getSourceRange() const override LLVM_READONLY {
     SourceLocation BeginLoc = getTemplateParameters()->getTemplateLoc();
     if (BeginLoc.isInvalid() && isAbbreviated()) {
-      // The BeginLoc of FunctionTemplateDecls is derived from the template keyword.
-      // But "pure" abbreviated templates do not use the template keyword.
-      // Hence the BeginLoc is invalid.
-      // Therefore just use the beginning of the templated declaration instead.
+      // The BeginLoc of FunctionTemplateDecls is derived from the template
+      // keyword. But "pure" abbreviated templates do not use the template
+      // keyword. Hence the BeginLoc is invalid. Therefore just use the
+      // beginning of the templated declaration instead.
       BeginLoc = getTemplatedDecl()->getBeginLoc();
     }
 
