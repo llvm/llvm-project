@@ -2706,11 +2706,11 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   // Taskloop divides into an appropriate number of tasks by repeatedly
   // duplicating the original task. Each time this is done, the task context
   // structure must be duplicated too.
-  auto taskDupCB = [&](InsertPointTy AllocaIP, InsertPointTy CodegenIP,
+  auto taskDupCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
                        llvm::Value *destPtr, llvm::Value *srcPtr)
       -> llvm::Expected<llvm::IRBuilderBase::InsertPoint> {
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    builder.restoreIP(CodegenIP);
+    builder.restoreIP(codegenIP);
 
     llvm::Type *ptrTy =
         builder.getPtrTy(srcPtr->getType()->getPointerAddressSpace());
