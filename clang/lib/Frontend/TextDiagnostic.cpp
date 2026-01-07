@@ -37,7 +37,7 @@ static constexpr raw_ostream::Colors SavedColor = raw_ostream::SAVEDCOLOR;
 // is already taken for 'note'. Green is already used to underline
 // source ranges. White and black are bad because of the usual
 // terminal backgrounds. Which leaves us only with TWO options.
-static constexpr raw_ostream::Colors CommentColor = raw_ostream::YELLOW;
+static constexpr raw_ostream::Colors TCommentColor = raw_ostream::YELLOW;
 static constexpr raw_ostream::Colors LiteralColor = raw_ostream::GREEN;
 static constexpr raw_ostream::Colors KeywordColor = raw_ostream::BLUE;
 
@@ -1269,7 +1269,7 @@ highlightLines(StringRef FileData, unsigned StartLineNumber,
       Vec.emplace_back(Start, Start + Length, LiteralColor);
     } else {
       assert(T.is(tok::comment));
-      Vec.emplace_back(Start, Start + Length, CommentColor);
+      Vec.emplace_back(Start, Start + Length, TCommentColor);
     }
   };
 

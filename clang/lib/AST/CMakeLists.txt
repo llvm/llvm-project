@@ -136,6 +136,9 @@ add_clang_library(clangAST
   VTableBuilder.cpp
   VTTBuilder.cpp
 
+  PRECOMPILE_HEADERS
+  [["clang/AST/pch.h"]]
+
   LINK_LIBS
   clangBasic
   clangLex
