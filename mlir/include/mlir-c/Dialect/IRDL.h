@@ -29,12 +29,16 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirLoadIRDLDialects(MlirModule module);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirIRDLVariadicityAttrGet(MlirContext ctx, MlirStringRef value);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirIRDLVariadicityAttrGetName(void);
+
 //===----------------------------------------------------------------------===//
 // VariadicityArrayAttr
 //===----------------------------------------------------------------------===//
 
 MLIR_CAPI_EXPORTED MlirAttribute mlirIRDLVariadicityArrayAttrGet(
     MlirContext ctx, intptr_t nValues, MlirAttribute const *values);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirIRDLVariadicityArrayAttrGetName(void);
 
 #ifdef __cplusplus
 }

@@ -57,6 +57,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirSparseTensorEncodingAttrGet(
     MlirAffineMap lvlTodim, int posWidth, int crdWidth,
     MlirAttribute explicitVal, MlirAttribute implicitVal);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirSparseTensorEncodingAttrGetName(void);
+
 /// Returns the level-rank of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED intptr_t
 mlirSparseTensorEncodingGetLvlRank(MlirAttribute attr);
