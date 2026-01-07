@@ -1592,6 +1592,29 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
   if (!DstEltTy->isIntegerTy() || DstEltBits >= SrcEltBits)
     return false;
 
+  // Check profitability using TTI before collecting users.
+  Type *CondTy = CmpInst::makeCmpResultType(DstEltTy);
+  Type *VecCondTy = CmpInst::makeCmpResultType(SrcVecTy);
+
+  InstructionCost ScalarSelCost =
+      TTI.getCmpSelInstrCost(Instruction::Select, DstEltTy, CondTy,
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  InstructionCost VecSelCost =
+      TTI.getCmpSelInstrCost(Instruction::Select, SrcVecTy, VecCondTy,
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+  // We need at least this many selects for vectorization to be profitable.
+  // VecSelCost < ScalarSelCost * NumSelects => NumSelects > VecSelCost /
+  // ScalarSelCost
+  if (!ScalarSelCost.isValid() || ScalarSelCost == 0)
+    return false;
+
+  unsigned MinSelects = (VecSelCost.getValue() / ScalarSelCost.getValue()) + 1;
+
+  // Quick check: if bitcast doesn't have enough users, bail early.
+  if (!BC->hasNUsesOrMore(MinSelects))
+    return false;
+
   // Collect all select users that match the pattern, grouped by condition.
   // Pattern: select i1 %cond, (extractelement %bc, idx), 0
   DenseMap<Value *, SmallVector<SelectInst *, 8>> CondToSelects;
@@ -1613,24 +1636,13 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
   if (CondToSelects.empty())
     return false;
 
-  // Check profitability using TTI.
-  auto *CondTy = CmpInst::makeCmpResultType(DstEltTy);
-  auto *VecCondTy = CmpInst::makeCmpResultType(SrcVecTy);
-
-  InstructionCost ScalarSelCost =
-      TTI.getCmpSelInstrCost(Instruction::Select, DstEltTy, CondTy,
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  InstructionCost VecSelCost =
-      TTI.getCmpSelInstrCost(Instruction::Select, SrcVecTy, VecCondTy,
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
-
   bool MadeChange = false;
   Value *SrcVec = BC->getOperand(0);
 
   // Process each group of selects with the same condition.
-  for (auto &[Cond, Selects] : CondToSelects) {
+  for (auto [Cond, Selects] : CondToSelects) {
     // Only profitable if vector select cost < total scalar select cost.
-    if (VecSelCost >= ScalarSelCost * Selects.size()) {
+    if (Selects.size() < MinSelects) {
       LLVM_DEBUG(dbgs() << "VectorCombine: foldSelectsFromBitcast not "
                         << "profitable (VecCost=" << VecSelCost
                         << ", ScalarCost=" << ScalarSelCost
