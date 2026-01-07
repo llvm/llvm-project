@@ -310,7 +310,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( DARCH ${ARCH} )
   endif()
   if ( "${OS}" STREQUAL cuda )
-    set( DOS nvidiacl )
+    set( OS nvidiacl )
   endif()
 
   # Append a variety of target- and triple-based directories to search,
