@@ -1,4 +1,4 @@
-//===- XeGPUOptimizeBlockLoads.cpp - XeGPU optimize block loads -*- C++ -*-===//
+//===- XeGPUPeepHoleOptimizer.cpp - XeGPU optimize block loads -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,12 +30,12 @@
 
 namespace mlir {
 namespace xegpu {
-#define GEN_PASS_DEF_XEGPUOPTIMIZEBLOCKLOADS
+#define GEN_PASS_DEF_XEGPUPEEPHOLEOPTIMIZER
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
 
-#define DEBUG_TYPE "xegpu-optimize-block-loads"
+#define DEBUG_TYPE "xegpu-optimize-peephole"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 using namespace mlir;
@@ -416,6 +416,8 @@ public:
   }
 };
 
+/// Performs a reduction over 2 dimensions by decomposing it into two 1D
+/// reductions ordered based on layout to minimize cross-lane communication.
 class MultiRed2dOpPattern
     : public OpConversionPattern<vector::MultiDimReductionOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -500,7 +502,7 @@ private:
 
 } // namespace
 
-void xegpu::populateXeGPUOptimizeBlockLoadsPatterns(
+void xegpu::populateXeGPUPeepHoleOptimizerPatterns(
     RewritePatternSet &patterns) {
   patterns.add<XeGPUCreateNdDescOpPattern, XeGPULoadNdDescOpPattern,
                VectorExtractOpPattern, MultiRed2dOpPattern>(
@@ -509,9 +511,9 @@ void xegpu::populateXeGPUOptimizeBlockLoadsPatterns(
 
 namespace {
 
-struct XeGPUOptimizeBlockLoadsPass final
-    : public xegpu::impl::XeGPUOptimizeBlockLoadsBase<
-          XeGPUOptimizeBlockLoadsPass> {
+struct XeGPUPeepHoleOptimizerPass final
+    : public xegpu::impl::XeGPUPeepHoleOptimizerBase<
+          XeGPUPeepHoleOptimizerPass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     TypeConverter converter;
@@ -528,7 +530,7 @@ struct XeGPUOptimizeBlockLoadsPass final
     });
 
     if (!isTargetSupported) {
-      DBGS() << "XeGPUOptimizeBlockLoadsPass only supports PVC and BMG targets."
+      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC and BMG targets."
              << "\n";
       return;
     }
@@ -573,7 +575,7 @@ struct XeGPUOptimizeBlockLoadsPass final
                            vector::VectorDialect>();
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
-    xegpu::populateXeGPUOptimizeBlockLoadsPatterns(patterns);
+    xegpu::populateXeGPUPeepHoleOptimizerPatterns(patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns)))) {
       DBGS() << "Optimize block loads pass failed.\n";

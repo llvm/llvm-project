@@ -700,7 +700,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
 
     /// Drop the slice dims to get the original layout.
-    SliceAttr dropSliceDims(ArrayRef<int64_t> dimsToDrop);
+    SliceAttr dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop);
 
     /// Check if this is identical to some other layout.
     bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
