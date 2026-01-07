@@ -15,7 +15,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal_wctype_conversion_utils {
+namespace wctype_internal {
+
+namespace conversion_utils {
 
 namespace {
 
@@ -59,7 +61,9 @@ enumerate(Iterable &&iterable) {
   return Enumerate<Iterable>{iterable};
 }
 
-} // namespace internal_wctype_conversion_utils
+} // namespace conversion_utils
+
+} // namespace wctype_internal
 
 } // namespace LIBC_NAMESPACE_DECL
 
