@@ -2,32 +2,32 @@
 # RUN: llc -mtriple=riscv64 -x mir -mattr=+v -start-after=twoaddressinstruction -stop-after=greedy -simplify-mir -verify-machineinstrs < %s | FileCheck %s
 
 --- |
-  define void @subregliveness_greedy_split(i1 %tobool.not) {
+  define void @subregliveness_greedy_split(i1 %cond) {
   entry:
-    %0 = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
-    call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %0, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
+    %index.entry = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
+    call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %index.entry, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
     %call = tail call i32 null()
-    br i1 %tobool.not, label %n.exit.land.end_crit_edge, label %land.rhs
+    br i1 %cond, label %if.then, label %if.else
 
-  n.exit.land.end_crit_edge:                        ; preds = %entry
-    %.pre = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
-    br label %land.end
+  if.then:
+    %index.then = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
+    br label %if.end
 
-  land.rhs:                                         ; preds = %entry
-    %1 = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
-    call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %1, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
-    br label %land.end
+  if.else:
+    %index.else = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
+    call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %index.else, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
+    br label %if.end
 
-  land.end:                                         ; preds = %land.rhs, %n.exit.land.end_crit_edge
-    %.pre-phi = phi <vscale x 16 x i16> [ %.pre, %n.exit.land.end_crit_edge ], [ %1, %land.rhs ]
+  if.end:
+    %index = phi <vscale x 16 x i16> [ %index.then, %if.then ], [ %index.else, %if.else ]
     call void @llvm.memset.p0.i64(ptr align 1 poison, i8 0, i64 9, i1 false)
-    call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %.pre-phi, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
+    call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %index, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
     ret void
   }
 
-  declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg) 
-  declare <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16>, i16, i64) 
-  declare void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3), ptr captures(none), <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64 immarg) 
+  declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg)
+  declare <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16>, i16, i64)
+  declare void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3), ptr captures(none), <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64 immarg)
 ...
 ---
 name:            subregliveness_greedy_split
@@ -110,10 +110,10 @@ body:             |
   ; CHECK-NEXT:   BEQ [[ANDI]], $x0, %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.n.exit.land.end_crit_edge:
+  ; CHECK-NEXT: bb.1.if.then:
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.land.rhs:
+  ; CHECK-NEXT: bb.2.if.else:
   ; CHECK-NEXT:   [[PseudoVRELOAD3_M2_:%[0-9]+]]:vrn3m2 = PseudoVRELOAD3_M2 %stack.0 :: (load (<vscale x 1 x s384>) from %stack.0, align 8)
   ; CHECK-NEXT:   undef [[COPY4:%[0-9]+]].sub_vrm2_0:vrn3m2 = COPY [[PseudoVRELOAD3_M2_]].sub_vrm2_0
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]].sub_vrm2_1:vrn3m2 = COPY [[COPY4]].sub_vrm2_0
@@ -125,7 +125,7 @@ body:             |
   ; CHECK-NEXT:   undef [[PseudoVMV_V_I_M1_1:%[0-9]+]].sub_vrm1_0:vrm4 = PseudoVMV_V_I_M1 undef [[PseudoVMV_V_I_M1_1]].sub_vrm1_0, 9, 0, 4 /* e16 */, 0 /* tu, mu */
   ; CHECK-NEXT:   PseudoVSOXSEG3EI16_V_M4_M2_MASK [[COPY4]], $x0, [[PseudoVMV_V_I_M1_1]], $v0, 0, 3 /* e8 */ :: (store unknown-size, align 1)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.land.end:
+  ; CHECK-NEXT: bb.3.if.end:
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   $x12 = ADDI $x0, 9
   ; CHECK-NEXT:   $x11 = COPY $x0
@@ -164,14 +164,14 @@ body:             |
     BEQ killed %4, $x0, %bb.2
     PseudoBR %bb.1
 
-  bb.1.n.exit.land.end_crit_edge:
+  bb.1.if.then:
     successors: %bb.3(0x80000000)
 
     undef %0.sub_vrm1_0:vrm4 = COPY killed %5
     %42:vrm4 = COPY killed %0
     PseudoBR %bb.3
 
-  bb.2.land.rhs:
+  bb.2.if.else:
     successors: %bb.3(0x80000000)
 
     undef %1.sub_vrm1_0:vrm4 = COPY killed %5
@@ -186,7 +186,7 @@ body:             |
     PseudoVSOXSEG3EI16_V_M4_M2_MASK killed %23, killed %25, %1, killed $v0, 0, 3 /* e8 */ :: (store unknown-size, align 1)
     %42:vrm4 = COPY killed %1
 
-  bb.3.land.end:
+  bb.3.if.end:
     %2:vrm4 = COPY killed %42
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
     %29:gpr = COPY $x0

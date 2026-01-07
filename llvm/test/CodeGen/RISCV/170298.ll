@@ -43,7 +43,7 @@ define void @main(i1 %tobool.not) {
 ; RV64I-NEXT:    vsoxseg3ei16.v v10, (zero), v16, v0.t
 ; RV64I-NEXT:    jalr a1
 ; RV64I-NEXT:    bnez s0, .LBB0_2
-; RV64I-NEXT:  # %bb.1: # %land.rhs
+; RV64I-NEXT:  # %bb.1: # %if.else
 ; RV64I-NEXT:    csrr a0, vlenb
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    add a0, sp, a0
@@ -71,7 +71,7 @@ define void @main(i1 %tobool.not) {
 ; RV64I-NEXT:    vmv.v.i v8, 9
 ; RV64I-NEXT:    vsetivli zero, 0, e8, m2, ta, ma
 ; RV64I-NEXT:    vsoxseg3ei16.v v10, (zero), v8, v0.t
-; RV64I-NEXT:  .LBB0_2: # %land.end
+; RV64I-NEXT:  .LBB0_2: # %if.end
 ; RV64I-NEXT:    li a2, 9
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call memset
@@ -106,24 +106,24 @@ define void @main(i1 %tobool.not) {
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
-  call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %0, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
+  %index.entry = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
+  call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %index.entry, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
   %call = tail call i32 null()
-  br i1 %tobool.not, label %n.exit.land.end_crit_edge, label %land.rhs
+  br i1 %tobool.not, label %if.then, label %if.else
 
-n.exit.land.end_crit_edge:                        ; preds = %entry
-  %.pre = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
-  br label %land.end
+if.then:
+  %index.then = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
+  br label %if.end
 
-land.rhs:                                         ; preds = %entry
-  %1 = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
-  call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %1, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
-  br label %land.end
+if.else:
+  %index.else = tail call <vscale x 16 x i16> @llvm.riscv.vmv.s.x.nxv16i16.i64(<vscale x 16 x i16> poison, i16 9, i64 0)
+  call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %index.else, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
+  br label %if.end
 
-land.end:                                         ; preds = %land.rhs, %n.exit.land.end_crit_edge
-  %.pre-phi = phi <vscale x 16 x i16> [ %.pre, %n.exit.land.end_crit_edge ], [ %1, %land.rhs ]
+if.end:
+  %index = phi <vscale x 16 x i16> [ %index.then, %if.then ], [ %index.else, %if.else ]
   call void @llvm.memset.p0.i64(ptr poison, i8 0, i64 9, i1 false)
-  call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %.pre-phi, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
+  call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv16i8_3t.p0.nxv16i16.nxv16i1.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) zeroinitializer, ptr null, <vscale x 16 x i16> %index, <vscale x 16 x i1> zeroinitializer, i64 0, i64 3)
   ret void
 }
 
