@@ -1884,6 +1884,10 @@ public:
     return RequiresWaitsBeforeSystemScopeStores;
   }
 
+  bool supportsBPermute() const {
+    return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  }
+
   bool supportsWaveWideBPermute() const {
     return (getGeneration() <= AMDGPUSubtarget::GFX9 ||
             getGeneration() == AMDGPUSubtarget::GFX12) ||
