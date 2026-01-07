@@ -746,15 +746,17 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case SystemZ::LOAD_STACK_GUARD:
-    llvm_unreachable("LOAD_STACK_GUARD should have been eliminated by the DAG Combiner.");
+    llvm_unreachable(
+        "LOAD_STACK_GUARD should have been eliminated by the DAG Combiner.");
 
   case SystemZ::MOVE_STACK_GUARD:
   case SystemZ::COMPARE_STACK_GUARD:
-    llvm_unreachable("MOVE_STACK_GUARD and COMPARE_STACK_GUARD should have been expanded by ExpandPostRAPseudo.");
+    llvm_unreachable("MOVE_STACK_GUARD and COMPARE_STACK_GUARD should have "
+                     "been expanded by ExpandPostRAPseudo.");
 
   case SystemZ::LARL:
   case SystemZ::LGRL: {
-    auto & Op = MI->getOperand(1);
+    auto &Op = MI->getOperand(1);
     if (Op.isGlobal() && (Op.getGlobal()->getName() == "__stack_chk_guard"))
       emitStackProtectorLocEntry();
     Lower.lower(MI, LoweredMI);
@@ -777,7 +779,6 @@ void SystemZAsmPrinter::emitStackProtectorLocEntry() {
   OutStreamer->popSection();
   OutStreamer->emitLabel(Sym);
 }
-
 
 // Emit the largest nop instruction smaller than or equal to NumBytes
 // bytes.  Return the size of nop emitted.
