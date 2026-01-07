@@ -861,19 +861,11 @@ MlirAttribute mlirUnmanagedDenseBoolResourceElementsAttrGet(
                                                          numElements, elements);
 }
 
-MlirStringRef mlirDenseBoolResourceElementsAttrGetName(void) {
-  return wrap(DenseBoolResourceElementsAttr::name);
-}
-
 MlirAttribute mlirUnmanagedDenseUInt8ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const uint8_t *elements) {
   return getDenseResource<DenseUI8ResourceElementsAttr>(shapedType, name,
                                                         numElements, elements);
-}
-
-MlirStringRef mlirDenseUInt8ResourceElementsAttrGetName(void) {
-  return wrap(DenseUI8ResourceElementsAttr::name);
 }
 
 MlirAttribute mlirUnmanagedDenseUInt16ResourceElementsAttrGet(
@@ -883,19 +875,11 @@ MlirAttribute mlirUnmanagedDenseUInt16ResourceElementsAttrGet(
                                                          numElements, elements);
 }
 
-MlirStringRef mlirDenseUInt16ResourceElementsAttrGetName(void) {
-  return wrap(DenseUI16ResourceElementsAttr::name);
-}
-
 MlirAttribute mlirUnmanagedDenseUInt32ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const uint32_t *elements) {
   return getDenseResource<DenseUI32ResourceElementsAttr>(shapedType, name,
                                                          numElements, elements);
-}
-
-MlirStringRef mlirDenseUInt32ResourceElementsAttrGetName(void) {
-  return wrap(DenseUI32ResourceElementsAttr::name);
 }
 
 MlirAttribute mlirUnmanagedDenseUInt64ResourceElementsAttrGet(
@@ -905,19 +889,11 @@ MlirAttribute mlirUnmanagedDenseUInt64ResourceElementsAttrGet(
                                                          numElements, elements);
 }
 
-MlirStringRef mlirDenseUInt64ResourceElementsAttrGetName(void) {
-  return wrap(DenseUI64ResourceElementsAttr::name);
-}
-
 MlirAttribute mlirUnmanagedDenseInt8ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const int8_t *elements) {
   return getDenseResource<DenseUI8ResourceElementsAttr>(shapedType, name,
                                                         numElements, elements);
-}
-
-MlirStringRef mlirDenseInt8ResourceElementsAttrGetName(void) {
-  return wrap(DenseUI8ResourceElementsAttr::name);
 }
 
 MlirAttribute mlirUnmanagedDenseInt16ResourceElementsAttrGet(
@@ -927,19 +903,11 @@ MlirAttribute mlirUnmanagedDenseInt16ResourceElementsAttrGet(
                                                          numElements, elements);
 }
 
-MlirStringRef mlirDenseInt16ResourceElementsAttrGetName(void) {
-  return wrap(DenseUI16ResourceElementsAttr::name);
-}
-
 MlirAttribute mlirUnmanagedDenseInt32ResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const int32_t *elements) {
   return getDenseResource<DenseUI32ResourceElementsAttr>(shapedType, name,
                                                          numElements, elements);
-}
-
-MlirStringRef mlirDenseInt32ResourceElementsAttrGetName(void) {
-  return wrap(DenseUI32ResourceElementsAttr::name);
 }
 
 MlirAttribute mlirUnmanagedDenseInt64ResourceElementsAttrGet(
@@ -949,10 +917,6 @@ MlirAttribute mlirUnmanagedDenseInt64ResourceElementsAttrGet(
                                                          numElements, elements);
 }
 
-MlirStringRef mlirDenseInt64ResourceElementsAttrGetName(void) {
-  return wrap(DenseUI64ResourceElementsAttr::name);
-}
-
 MlirAttribute mlirUnmanagedDenseFloatResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const float *elements) {
@@ -960,19 +924,11 @@ MlirAttribute mlirUnmanagedDenseFloatResourceElementsAttrGet(
                                                         numElements, elements);
 }
 
-MlirStringRef mlirDenseFloatResourceElementsAttrGetName(void) {
-  return wrap(DenseF32ResourceElementsAttr::name);
-}
-
 MlirAttribute mlirUnmanagedDenseDoubleResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const double *elements) {
   return getDenseResource<DenseF64ResourceElementsAttr>(shapedType, name,
                                                         numElements, elements);
-}
-
-MlirStringRef mlirDenseDoubleResourceElementsAttrGetName(void) {
-  return wrap(DenseF64ResourceElementsAttr::name);
 }
 
 template <typename U, typename T>
