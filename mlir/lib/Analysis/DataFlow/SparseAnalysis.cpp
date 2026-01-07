@@ -319,7 +319,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
     }
 
     for (auto [lattice, operand] :
-         llvm::zip_equal(lattices.drop_front(firstIndex), *operands))
+         llvm::zip(lattices.drop_front(firstIndex), *operands))
       join(lattice, *getLatticeElementFor(point, operand));
   }
 }
