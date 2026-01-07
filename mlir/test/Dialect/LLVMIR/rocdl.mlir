@@ -843,16 +843,16 @@ llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3
   llvm.return
 }
 
-llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>, %mask: i32) {
   // CHECK-LABEL @rocdl.cluster.load.async.to.lds
-  // CHECK: rocdl.cluster.load.async.to.lds.b8 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b32 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b64 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b128 %{{.*}}, %{{.*}}, 0, 0, 0
-  rocdl.cluster.load.async.to.lds.b8 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b32 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b64 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b128 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: rocdl.cluster.load.async.to.lds.b8 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b32 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b64 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b128 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  rocdl.cluster.load.async.to.lds.b8 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b32 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b64 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b128 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
   llvm.return
 }
 
