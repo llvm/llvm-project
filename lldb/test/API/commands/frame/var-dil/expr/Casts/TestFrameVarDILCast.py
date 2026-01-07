@@ -168,8 +168,6 @@ class TestFrameVarDILCast(TestBase):
             self.expect_var_path("(void*)a", type="void *", value="0x0000000000000001")
             self.expect_var_path("(void*)na", type="void *", value="0xffffffffffffffff")
 
-        self.expect_var_path("(int*&)ap", type="int *")
-
         self.expect(
             "frame variable '(char*) 1.0'",
             error=True,
@@ -228,8 +226,3 @@ class TestFrameVarDILCast(TestBase):
         self.expect_var_path("((int*)arr_2d)[1]", type="int", value="2")
         self.expect_var_path("((int*)arr_2d)[2]", type="int", value="3")
         self.expect_var_path("((int*)arr_2d[1])[1]", type="int", value="5")
-
-        # TestCastReference
-        self.expect_var_path("(int&)arr_1d[0]", type="int", value="1")
-        self.expect_var_path("(int&)arr_1d[1]", type="int", value="2")
-        self.expect_var_path("&(int&)arr_1d", type="int *")

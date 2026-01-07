@@ -906,9 +906,6 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP operand,
     return CastKind::ePointer;
   }
 
-  if (target_type.IsReferenceType())
-    return CastKind::eReference;
-
   // Unsupported cast.
   std::string errMsg = llvm::formatv(
       "casting of {0} to {1} is not implemented yet",
@@ -954,12 +951,6 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
     if (op_type.IsFloat() || op_type.IsInteger() || op_type.IsEnumerationType())
       return operand->CastToEnumType(target_type);
     break;
-  }
-  case CastKind::eReference: {
-    lldb::ValueObjectSP operand_sp(
-        GetDynamicOrSyntheticValue(operand, m_use_dynamic, m_use_synthetic));
-    return lldb::ValueObjectSP(
-        operand_sp->Cast(target_type.GetNonReferenceType()));
   }
   case CastKind::eArithmetic: {
     if (op_type.IsPointerType() || op_type.IsNullPtrType() ||
