@@ -1104,6 +1104,19 @@ public:
   static FunctionTemplateDecl *CreateDeserialized(ASTContext &C,
                                                   GlobalDeclID ID);
 
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    SourceLocation BeginLoc = getTemplateParameters()->getTemplateLoc();
+    if (BeginLoc.isInvalid() && isAbbreviated()) {
+      // The BeginLoc of FunctionTemplateDecls is derived from the template keyword.
+      // But "pure" abbreviated templates do not use the template keyword.
+      // Hence the BeginLoc is invalid.
+      // Therefore just use the beginning of the templated declaration instead.
+      BeginLoc = getTemplatedDecl()->getBeginLoc();
+    }
+
+    return SourceRange(BeginLoc, TemplatedDecl->getSourceRange().getEnd());
+  }
+
   // Implement isa/cast/dyncast support
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == FunctionTemplate; }
