@@ -31,8 +31,8 @@ define <8 x i1> @v8i1_v16i1(<16 x i1>) {
 ; RV32-NEXT:    srli a0, a0, 31
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v9, v9, a2
-; RV32-NEXT:    vmv.v.i v0, 15
 ; RV32-NEXT:    vslide1down.vx v9, v9, a0
+; RV32-NEXT:    vmv.v.i v0, 15
 ; RV32-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; RV32-NEXT:    vand.vi v8, v8, 1
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
@@ -65,8 +65,8 @@ define <8 x i1> @v8i1_v16i1(<16 x i1>) {
 ; RV64-NEXT:    srli a0, a0, 63
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v9, v9, a2
-; RV64-NEXT:    vmv.v.i v0, 15
 ; RV64-NEXT:    vslide1down.vx v9, v9, a0
+; RV64-NEXT:    vmv.v.i v0, 15
 ; RV64-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; RV64-NEXT:    vand.vi v8, v8, 1
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
@@ -79,8 +79,8 @@ define <4 x i32> @v4i32_v8i32(<8 x i32>) {
 ; CHECK-LABEL: v4i32_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v0, 8
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vmv.v.i v0, 8
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
@@ -104,8 +104,8 @@ define <4 x i32> @v4i32_v16i32(<16 x i32>) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v12, v12, 3, v0.t
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vnsrl.wx v10, v8, a0
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v12, v0
 ; CHECK-NEXT:    ret
@@ -246,11 +246,11 @@ define <16 x i32> @v16i32_v4i32(<4 x i32>) {
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    addi a0, a0, -1856
+; CHECK-NEXT:    srli a1, a1, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    srli a1, a1, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma

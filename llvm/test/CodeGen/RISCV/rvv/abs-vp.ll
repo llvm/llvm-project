@@ -513,11 +513,11 @@ define <vscale x 8 x i64> @vp_abs_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32 z
 define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    sub a3, a0, a1
+; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sltu a2, a0, a3
 ; CHECK-NEXT:    addi a2, a2, -1

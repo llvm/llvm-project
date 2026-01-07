@@ -584,15 +584,9 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    srli a1, a1, 21
 ; RV32MV-NEXT:    vslide1down.vx v10, v10, a1
 ; RV32MV-NEXT:    li a1, 2047
-; RV32MV-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32MV-NEXT:    vmv.v.i v11, 1
-; RV32MV-NEXT:    andi a2, a2, 2047
-; RV32MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV32MV-NEXT:    vslide1down.vx v10, v10, a2
-; RV32MV-NEXT:    lui a2, %hi(.LCPI4_1)
-; RV32MV-NEXT:    addi a2, a2, %lo(.LCPI4_1)
 ; RV32MV-NEXT:    addi a3, a3, -1527
-; RV32MV-NEXT:    vsext.vf2 v12, v11
+; RV32MV-NEXT:    andi a2, a2, 2047
+; RV32MV-NEXT:    vslide1down.vx v10, v10, a2
 ; RV32MV-NEXT:    vslidedown.vi v10, v10, 1
 ; RV32MV-NEXT:    vsub.vv v8, v10, v8
 ; RV32MV-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -602,14 +596,20 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vmul.vv v8, v8, v9
 ; RV32MV-NEXT:    vadd.vv v9, v8, v8
 ; RV32MV-NEXT:    vsll.vv v9, v9, v11
-; RV32MV-NEXT:    vle16.v v10, (a2)
+; RV32MV-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32MV-NEXT:    vmv.v.i v10, 1
+; RV32MV-NEXT:    lui a2, %hi(.LCPI4_1)
+; RV32MV-NEXT:    addi a2, a2, %lo(.LCPI4_1)
+; RV32MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32MV-NEXT:    vsext.vf2 v11, v10
 ; RV32MV-NEXT:    vand.vx v8, v8, a1
-; RV32MV-NEXT:    vsrl.vv v8, v8, v12
+; RV32MV-NEXT:    vsrl.vv v8, v8, v11
+; RV32MV-NEXT:    vle16.v v10, (a2)
 ; RV32MV-NEXT:    vor.vv v8, v8, v9
+; RV32MV-NEXT:    vmv.v.i v9, 0
 ; RV32MV-NEXT:    vand.vx v8, v8, a1
 ; RV32MV-NEXT:    vmsltu.vv v0, v10, v8
-; RV32MV-NEXT:    vmv.v.i v8, 0
-; RV32MV-NEXT:    vmerge.vim v8, v8, -1, v0
+; RV32MV-NEXT:    vmerge.vim v8, v9, -1, v0
 ; RV32MV-NEXT:    vslidedown.vi v9, v8, 2
 ; RV32MV-NEXT:    vmv.x.s a1, v8
 ; RV32MV-NEXT:    vslidedown.vi v8, v8, 1
@@ -645,15 +645,9 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    srli a2, a2, 53
 ; RV64MV-NEXT:    vslide1down.vx v10, v10, a2
 ; RV64MV-NEXT:    li a2, 2047
-; RV64MV-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64MV-NEXT:    vmv.v.i v11, 1
-; RV64MV-NEXT:    srli a1, a1, 22
-; RV64MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV64MV-NEXT:    vslide1down.vx v10, v10, a1
-; RV64MV-NEXT:    lui a1, %hi(.LCPI4_1)
-; RV64MV-NEXT:    addi a1, a1, %lo(.LCPI4_1)
 ; RV64MV-NEXT:    addi a3, a3, -1527
-; RV64MV-NEXT:    vsext.vf2 v12, v11
+; RV64MV-NEXT:    srli a1, a1, 22
+; RV64MV-NEXT:    vslide1down.vx v10, v10, a1
 ; RV64MV-NEXT:    vslidedown.vi v10, v10, 1
 ; RV64MV-NEXT:    vsub.vv v8, v10, v8
 ; RV64MV-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -663,14 +657,20 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    vmul.vv v8, v8, v9
 ; RV64MV-NEXT:    vadd.vv v9, v8, v8
 ; RV64MV-NEXT:    vsll.vv v9, v9, v11
-; RV64MV-NEXT:    vle16.v v10, (a1)
+; RV64MV-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64MV-NEXT:    vmv.v.i v10, 1
+; RV64MV-NEXT:    lui a1, %hi(.LCPI4_1)
+; RV64MV-NEXT:    addi a1, a1, %lo(.LCPI4_1)
+; RV64MV-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64MV-NEXT:    vsext.vf2 v11, v10
 ; RV64MV-NEXT:    vand.vx v8, v8, a2
-; RV64MV-NEXT:    vsrl.vv v8, v8, v12
+; RV64MV-NEXT:    vsrl.vv v8, v8, v11
+; RV64MV-NEXT:    vle16.v v10, (a1)
 ; RV64MV-NEXT:    vor.vv v8, v8, v9
+; RV64MV-NEXT:    vmv.v.i v9, 0
 ; RV64MV-NEXT:    vand.vx v8, v8, a2
 ; RV64MV-NEXT:    vmsltu.vv v0, v10, v8
-; RV64MV-NEXT:    vmv.v.i v8, 0
-; RV64MV-NEXT:    vmerge.vim v8, v8, -1, v0
+; RV64MV-NEXT:    vmerge.vim v8, v9, -1, v0
 ; RV64MV-NEXT:    vmv.x.s a1, v8
 ; RV64MV-NEXT:    vslidedown.vi v9, v8, 1
 ; RV64MV-NEXT:    vslidedown.vi v8, v8, 2

@@ -118,8 +118,8 @@ define <32 x half> @trunc_v32f16(<32 x half> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    slli a1, a1, 10
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.h.x fa5, a1
 ; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    fmv.h.x fa5, a1
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
@@ -138,8 +138,8 @@ define <1 x float> @trunc_v1f32(<1 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -158,8 +158,8 @@ define <2 x float> @trunc_v2f32(<2 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -178,8 +178,8 @@ define <4 x float> @trunc_v4f32(<4 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -198,8 +198,8 @@ define <8 x float> @trunc_v8f32(<8 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
@@ -218,8 +218,8 @@ define <16 x float> @trunc_v16f32(<16 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
@@ -234,10 +234,10 @@ define <16 x float> @trunc_v16f32(<16 x float> %x) strictfp {
 define <1 x double> @trunc_v1f64(<1 x double> %x) strictfp {
 ; RV32-LABEL: trunc_v1f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v9, v8
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
@@ -271,10 +271,10 @@ define <1 x double> @trunc_v1f64(<1 x double> %x) strictfp {
 define <2 x double> @trunc_v2f64(<2 x double> %x) strictfp {
 ; RV32-LABEL: trunc_v2f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI12_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI12_0)(a0)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v9, v8
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
@@ -308,10 +308,10 @@ define <2 x double> @trunc_v2f64(<2 x double> %x) strictfp {
 define <4 x double> @trunc_v4f64(<4 x double> %x) strictfp {
 ; RV32-LABEL: trunc_v4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI13_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI13_0)(a0)
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v10, v8
 ; RV32-NEXT:    vmflt.vf v0, v10, fa5
@@ -345,10 +345,10 @@ define <4 x double> @trunc_v4f64(<4 x double> %x) strictfp {
 define <8 x double> @trunc_v8f64(<8 x double> %x) strictfp {
 ; RV32-LABEL: trunc_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI14_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI14_0)(a0)
+; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v12, v8
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5

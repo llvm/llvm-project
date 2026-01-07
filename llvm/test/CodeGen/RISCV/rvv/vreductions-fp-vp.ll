@@ -89,7 +89,7 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; CHECK-NEXT:    srli a1, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v0, a1
+; CHECK-NEXT:    vslidedown.vx v25, v0, a1
 ; CHECK-NEXT:    sub a1, a0, a2
 ; CHECK-NEXT:    sltu a3, a0, a1
 ; CHECK-NEXT:    addi a3, a3, -1
@@ -99,13 +99,13 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v25, fa0
+; CHECK-NEXT:    vfmv.s.f v24, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vfredusum.vs v25, v8, v25, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vfredusum.vs v24, v8, v24, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; CHECK-NEXT:    vfredusum.vs v25, v16, v25, v0.t
-; CHECK-NEXT:    vfmv.f.s fa0, v25
+; CHECK-NEXT:    vfredusum.vs v24, v16, v24, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v24
 ; CHECK-NEXT:    ret
   %r = call reassoc half @llvm.vp.reduce.fadd.nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 64 x i1> %m, i32 %evl)
   ret half %r
@@ -118,7 +118,7 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; CHECK-NEXT:    srli a1, a2, 1
 ; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v0, a1
+; CHECK-NEXT:    vslidedown.vx v25, v0, a1
 ; CHECK-NEXT:    sub a1, a0, a2
 ; CHECK-NEXT:    sltu a3, a0, a1
 ; CHECK-NEXT:    addi a3, a3, -1
@@ -128,13 +128,13 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v25, fa0
+; CHECK-NEXT:    vfmv.s.f v24, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vfredosum.vs v25, v8, v25, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vfredosum.vs v24, v8, v24, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; CHECK-NEXT:    vfredosum.vs v25, v16, v25, v0.t
-; CHECK-NEXT:    vfmv.f.s fa0, v25
+; CHECK-NEXT:    vfredosum.vs v24, v16, v24, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v24
 ; CHECK-NEXT:    ret
   %r = call half @llvm.vp.reduce.fadd.nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 64 x i1> %m, i32 %evl)
   ret half %r

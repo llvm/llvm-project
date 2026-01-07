@@ -9,8 +9,8 @@ define <8 x i7> @vrem_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroex
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsll.vi v9, v9, 1, v0.t
-; CHECK-NEXT:    vsra.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsra.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vsra.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vrem.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret

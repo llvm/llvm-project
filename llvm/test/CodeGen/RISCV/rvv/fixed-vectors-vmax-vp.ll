@@ -9,8 +9,8 @@ define <8 x i7> @vmax_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroex
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsll.vi v9, v9, 1, v0.t
-; CHECK-NEXT:    vsra.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsra.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vsra.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
@@ -254,7 +254,7 @@ define <256 x i8> @vmax_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zero
 ; CHECK-LABEL: vmax_vx_v258i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
@@ -268,7 +268,7 @@ define <256 x i8> @vmax_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zero
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB22_2:
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
@@ -308,11 +308,11 @@ define <256 x i8> @vmax_vx_v258i8_evl129(<256 x i8> %va, i8 %b, <256 x i1> %m) {
 ; CHECK-LABEL: vmax_vx_v258i8_evl129:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v24, (a1)
+; CHECK-NEXT:    vlm.v v25, (a1)
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmax.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    ret

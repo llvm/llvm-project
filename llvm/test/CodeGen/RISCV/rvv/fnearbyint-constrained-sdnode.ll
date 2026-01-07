@@ -255,10 +255,10 @@ define <vscale x 16 x float> @nearbyint_nxv16f32(<vscale x 16 x float> %v) stric
 define <vscale x 1 x double> @nearbyint_nxv1f64(<vscale x 1 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_nxv1f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v9, v8
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
@@ -296,10 +296,10 @@ define <vscale x 1 x double> @nearbyint_nxv1f64(<vscale x 1 x double> %v) strict
 define <vscale x 2 x double> @nearbyint_nxv2f64(<vscale x 2 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_nxv2f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI12_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI12_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v10, v8
 ; RV32-NEXT:    vmflt.vf v0, v10, fa5
@@ -337,10 +337,10 @@ define <vscale x 2 x double> @nearbyint_nxv2f64(<vscale x 2 x double> %v) strict
 define <vscale x 4 x double> @nearbyint_nxv4f64(<vscale x 4 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_nxv4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI13_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI13_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v12, v8
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
@@ -378,10 +378,10 @@ define <vscale x 4 x double> @nearbyint_nxv4f64(<vscale x 4 x double> %v) strict
 define <vscale x 8 x double> @nearbyint_nxv8f64(<vscale x 8 x double> %v) strictfp {
 ; RV32-LABEL: nearbyint_nxv8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI14_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI14_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v16, v8
 ; RV32-NEXT:    vmflt.vf v0, v16, fa5

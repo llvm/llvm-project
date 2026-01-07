@@ -109,6 +109,10 @@ static cl::opt<bool> EnableCFIInstrInserter(
     cl::desc("Enable CFI Instruction Inserter for RISC-V"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> EnableV0Elimination("riscv-enable-v0-elimination",
+                                         cl::desc("Enable V0 Elimination Pass"),
+                                         cl::init(false), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -623,7 +627,8 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
 
-  addPass(createRISCVVMV0EliminationPass());
+  if (EnableV0Elimination)
+    addPass(createRISCVVMV0EliminationPass());
 }
 
 void RISCVPassConfig::addFastRegAlloc() {

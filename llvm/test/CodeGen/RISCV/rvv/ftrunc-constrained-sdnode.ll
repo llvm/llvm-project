@@ -137,8 +137,8 @@ define <vscale x 1 x float> @trunc_nxv1f32(<vscale x 1 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -157,8 +157,8 @@ define <vscale x 2 x float> @trunc_nxv2f32(<vscale x 2 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
@@ -177,8 +177,8 @@ define <vscale x 4 x float> @trunc_nxv4f32(<vscale x 4 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
@@ -197,8 +197,8 @@ define <vscale x 8 x float> @trunc_nxv8f32(<vscale x 8 x float> %x) strictfp {
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v12, v8, v0.t
@@ -217,8 +217,8 @@ define <vscale x 16 x float> @trunc_nxv16f32(<vscale x 16 x float> %x) strictfp 
 ; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
-; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vfabs.v v16, v8
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v16, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v16, v8, v0.t
@@ -233,10 +233,10 @@ define <vscale x 16 x float> @trunc_nxv16f32(<vscale x 16 x float> %x) strictfp 
 define <vscale x 1 x double> @trunc_nxv1f64(<vscale x 1 x double> %x) strictfp {
 ; RV32-LABEL: trunc_nxv1f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v9, v8
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
@@ -270,10 +270,10 @@ define <vscale x 1 x double> @trunc_nxv1f64(<vscale x 1 x double> %x) strictfp {
 define <vscale x 2 x double> @trunc_nxv2f64(<vscale x 2 x double> %x) strictfp {
 ; RV32-LABEL: trunc_nxv2f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI12_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI12_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v10, v8
 ; RV32-NEXT:    vmflt.vf v0, v10, fa5
@@ -307,10 +307,10 @@ define <vscale x 2 x double> @trunc_nxv2f64(<vscale x 2 x double> %x) strictfp {
 define <vscale x 4 x double> @trunc_nxv4f64(<vscale x 4 x double> %x) strictfp {
 ; RV32-LABEL: trunc_nxv4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI13_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI13_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v12, v8
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
@@ -344,10 +344,10 @@ define <vscale x 4 x double> @trunc_nxv4f64(<vscale x 4 x double> %x) strictfp {
 define <vscale x 8 x double> @trunc_nxv8f64(<vscale x 8 x double> %x) strictfp {
 ; RV32-LABEL: trunc_nxv8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI14_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI14_0)(a0)
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v16, v8
 ; RV32-NEXT:    vmflt.vf v0, v16, fa5

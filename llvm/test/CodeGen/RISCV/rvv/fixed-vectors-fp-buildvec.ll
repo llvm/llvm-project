@@ -39,10 +39,11 @@ define void @buildvec_no_vid_v4f32(ptr %x) {
 define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, <8 x float> %y) optsize {
 ; CHECK-LABEL: hang_when_merging_stores_after_legalization:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v12, v10, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v12, v10, 4
 ; CHECK-NEXT:    vslideup.vi v12, v10, 2, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 2
@@ -1758,13 +1759,13 @@ define <8 x float> @buildvec_v8f32_zvl256(float %e0, float %e1, float %e2, float
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa4
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa1
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa2
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa3
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    ret
   %v0 = insertelement <8 x float> poison, float %e0, i64 0
@@ -1809,13 +1810,13 @@ define <8 x double> @buildvec_v8f64_zvl512(double %e0, double %e1, double %e2, d
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, mu
 ; CHECK-NEXT:    vfmv.v.f v8, fa4
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa1
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa2
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
 ; CHECK-NEXT:    vfslide1down.vf v9, v9, fa3
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    ret
   %v0 = insertelement <8 x double> poison, double %e0, i64 0
