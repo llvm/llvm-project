@@ -546,6 +546,16 @@ TargetRegisterInfo::getRegSizeInBits(Register Reg,
   return getRegSizeInBits(*RC);
 }
 
+unsigned
+TargetRegisterInfo::getSubRegIdxFromLaneMask(LaneBitmask LaneMask) const {
+  for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx) {
+    if (getSubRegIndexLaneMask(Idx) == LaneMask)
+      return Idx;
+  }
+
+  return 0 /*NoSubRegister*/;
+}
+
 bool TargetRegisterInfo::getCoveringSubRegIndexes(
     const TargetRegisterClass *RC, LaneBitmask LaneMask,
     SmallVectorImpl<unsigned> &NeededIndexes) const {
