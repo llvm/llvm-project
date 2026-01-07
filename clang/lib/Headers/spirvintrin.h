@@ -55,8 +55,7 @@ typedef enum {
 using unsigned ProgramAS = 9;
 
 #ifdef __cplusplus
-template <typename... Args>
-int __spirv_ocl_printf(Args...);
+template <typename... Args> int __spirv_ocl_printf(Args...);
 #endif
 
 // Subgroup
@@ -64,12 +63,16 @@ __SPIRV_VAR_QUALIFIERS uint32_t __spirv_BuiltInSubgroupLocalInvocationId;
 __SPIRV_VAR_QUALIFIERS uint32_t __spirv_BuiltInSubgroupSize;
 
 // Group non-uniform operations
-uint64_t __spirv_GroupNonUniformBallot(uint32_t execution_scope, bool predicate);
-uint32_t __spirv_GroupNonUniformBroadcastFirst(uint32_t execution_scope, uint32_t value);
-uint32_t __spirv_GroupNonUniformShuffle(uint32_t execution_scope, uint32_t value, uint32_t id);
+uint64_t __spirv_GroupNonUniformBallot(uint32_t execution_scope,
+                                       bool predicate);
+uint32_t __spirv_GroupNonUniformBroadcastFirst(uint32_t execution_scope,
+                                               uint32_t value);
+uint32_t __spirv_GroupNonUniformShuffle(uint32_t execution_scope,
+                                        uint32_t value, uint32_t id);
 
 // Synchronization
-void __spirv_ControlBarrier(uint32_t execution_scope, uint32_t memory_scope, uint32_t semantics);
+void __spirv_ControlBarrier(uint32_t execution_scope, uint32_t memory_scope,
+                            uint32_t semantics);
 void __spirv_MemoryBarrier(uint32_t memory_scope, uint32_t semantics);
 
 // Atomic
@@ -81,17 +84,17 @@ int32_t __spirv_AtomicCompareExchange(int32_t *, int, int, int, int, int);
 
 // Returns the number of blocks in the 'x' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
-   return __spirv_BuiltInNumWorkgroups(0);
+  return __spirv_BuiltInNumWorkgroups(0);
 }
 
 // Returns the number of blocks in the 'y' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_y(void) {
-   return __spirv_BuiltInNumWorkgroups(1);
+  return __spirv_BuiltInNumWorkgroups(1);
 }
 
 // Returns the number of blocks in the 'z' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_z(void) {
-   return __spirv_BuiltInNumWorkgroups(2);
+  return __spirv_BuiltInNumWorkgroups(2);
 }
 
 // Returns the 'x' dimension of the current block's id.
@@ -167,13 +170,13 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
 }
 // Waits for all the threads in the block to converge and issues a fence.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_threads(void) {
-   __spirv_ControlBarrier(Scope_t::Workgroup, Scope_t::Workgroup, 
-      0x100 | MemorySemantics_t::SequentiallyConsistent);
+   __spirv_ControlBarrier(Scope_t::Workgroup, Scope_t::Workgroup,
+                          0x100 | MemorySemantics_t::SequentiallyConsistent);
 }
 // Waits for all threads in the warp to reconverge for independent scheduling.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_lane(uint64_t __lane_mask) {
-   __spirv_ControlBarrier(Scope_t::Subgroup, Scope_t::Subgroup, 
-      0x80 | MemorySemantics_t::SequentiallyConsistent);
+   __spirv_ControlBarrier(Scope_t::Subgroup, Scope_t::Subgroup,
+                          0x80 | MemorySemantics_t::SequentiallyConsistent);
 }
 // Shuffles the the lanes inside the warp according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
@@ -211,12 +214,10 @@ __gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
 // Returns true if the flat pointer points to 'shared' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
   return false; // TODO
-  //return to_local(ptr) != 0;
 }
 // Returns true if the flat pointer points to 'local' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
-  return false;
-  //return to_private(ptr) != 0; // TODO
+  return false; // TODO
 }
 // Terminates execution of the calling thread.
 _DEFAULT_FN_ATTRS [[noreturn]] static __inline__ void __gpu_exit(void) {

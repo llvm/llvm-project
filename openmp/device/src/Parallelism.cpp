@@ -261,7 +261,7 @@ __kmpc_parallel_60(IdentTy *ident, int32_t, int32_t if_expr,
                                           1u, true, ident,
                                           /*ForceTeamState=*/true);
     state::ValueRAII ParallelRegionFnRAII(state::ParallelRegionFn, wrapper_fn,
-                                          (FnPtrTy)nullptr, true, ident,
+                                          (FnPtrTy) nullptr, true, ident,
                                           /*ForceTeamState=*/true);
     state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, true, ident,
                                      /*ForceTeamState=*/true);
