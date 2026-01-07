@@ -16,14 +16,12 @@ define void @test_invar_gep(ptr %dst) #0 {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <vscale x 4 x i64> [[TMP5]], splat (i64 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <vscale x 4 x i64> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP15]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP16]], 1
@@ -63,12 +61,10 @@ define void @test_invar_gep(ptr %dst) #0 {
 ; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; IC2-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; IC2-NEXT:    [[TMP12:%.*]] = mul nsw <vscale x 4 x i64> [[TMP5]], splat (i64 1)
-; IC2-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> zeroinitializer, [[TMP12]]
 ; IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IC2:       vector.body:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IC2-NEXT:    [[DOTSPLAT:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IC2-NEXT:    [[DOTSPLAT:%.*]] = phi <vscale x 4 x i64> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP22:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT]], [[TMP21]]
 ; IC2-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
 ; IC2-NEXT:    [[TMP7:%.*]] = mul nuw i32 [[TMP6]], 4
@@ -127,8 +123,7 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[START]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = mul nsw <vscale x 4 x i64> [[TMP6]], splat (i64 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> [[DOTSPLAT]], [[TMP13]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> [[DOTSPLAT]], [[TMP6]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -179,8 +174,7 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IC2-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[START]], i64 0
 ; IC2-NEXT:    [[VEC_IND:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IC2-NEXT:    [[TMP8:%.*]] = mul nsw <vscale x 4 x i64> [[BROADCAST_SPLAT]], splat (i64 1)
-; IC2-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[TMP8]]
+; IC2-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IC2:       vector.body:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
