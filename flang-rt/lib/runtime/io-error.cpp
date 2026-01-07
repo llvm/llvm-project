@@ -153,7 +153,7 @@ bool IoErrorHandler::GetIoMsg(char *buffer, std::size_t bufferLength) {
   } else if (ok) {
     std::size_t copied{Fortran::runtime::strlen(buffer)};
     if (copied < bufferLength) {
-      std::memset(buffer + copied, ' ', bufferLength - copied);
+      runtime::memset(buffer + copied, ' ', bufferLength - copied);
     }
     return true;
   } else {

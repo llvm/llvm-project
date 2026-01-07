@@ -1,0 +1,20 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+
+!rec_S = !cir.record<struct "S" {!u32i}>
+#bfi_c = #cir.bitfield_info<name = "c", storage_type = !u32i, size = 17, offset = 15, is_signed = true>
+
+// CHECK: #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u32i, size = 17, offset = 15, is_signed = true>
+
+// Use bitfield to enforce printing the attribute
+cir.func dso_local @init(%arg0: !cir.ptr<!rec_S> ){
+  %0 = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64}
+  cir.store %arg0, %0 : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+  %1 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+  %2 = cir.get_member %1[0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
+  %3 = cir.get_bitfield(#bfi_c, %2 : !cir.ptr<!u32i>) -> !s32i
+  cir.return
+}

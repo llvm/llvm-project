@@ -41,8 +41,7 @@ void SemaPPC::checkAIXMemberAlignment(SourceLocation Loc, const Expr *Arg) {
     return;
 
   QualType ArgType = Arg->getType();
-  for (const FieldDecl *FD :
-       ArgType->castAs<RecordType>()->getDecl()->fields()) {
+  for (const FieldDecl *FD : ArgType->castAsRecordDecl()->fields()) {
     if (const auto *AA = FD->getAttr<AlignedAttr>()) {
       CharUnits Alignment = getASTContext().toCharUnitsFromBits(
           AA->getAlignment(getASTContext()));
@@ -88,6 +87,8 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_fetch_and_andlp:
   case PPC::BI__builtin_ppc_fetch_and_orlp:
   case PPC::BI__builtin_ppc_fetch_and_swaplp:
+  case PPC::BI__builtin_amo_lwat:
+  case PPC::BI__builtin_amo_ldat:
     return true;
   }
   return false;
@@ -98,7 +99,6 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
                                           CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
   bool IsTarget64Bit = TI.getTypeWidth(TI.getIntPtrType()) == 64;
-  llvm::APSInt Result;
 
   if (isPPC_64Builtin(BuiltinID) && !IsTarget64Bit)
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
@@ -107,6 +107,11 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     return false;
+  case PPC::BI__builtin_ppc_bcdsetsign:
+  case PPC::BI__builtin_ppc_national2packed:
+  case PPC::BI__builtin_ppc_packed2zoned:
+  case PPC::BI__builtin_ppc_zoned2packed:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_altivec_crypto_vshasigmaw:
   case PPC::BI__builtin_altivec_crypto_vshasigmad:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||
@@ -250,6 +255,19 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_##Name:                                                \
     return BuiltinPPCMMACall(TheCall, BuiltinID, Types);
 #include "clang/Basic/BuiltinsPPC.def"
+  case PPC::BI__builtin_amo_lwat:
+  case PPC::BI__builtin_amo_ldat: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 2, Result))
+      return true;
+    unsigned Val = Result.getZExtValue();
+    static constexpr unsigned ValidFC[] = {0, 1, 2, 3, 4, 6, 8};
+    if (llvm::is_contained(ValidFC, Val))
+      return false;
+    Expr *Arg = TheCall->getArg(2);
+    return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
+           << toString(Result, 10) << "0-4, 6" << "8" << Arg->getSourceRange();
+  }
   }
   llvm_unreachable("must return from switch");
 }

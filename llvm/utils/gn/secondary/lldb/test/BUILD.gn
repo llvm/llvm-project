@@ -1,5 +1,7 @@
 import("//llvm/triples.gni")
 
+import("//llvm/utils/gn/build/buildflags.gni")
+
 #import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
@@ -23,7 +25,6 @@ template("write_lit_cfg") {
       "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
       "LLVM_SOURCE_DIR=" + rebase_path("//llvm"),
       "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
-      "Python3_EXECUTABLE=$python_path",
       "LLVM_TARGET_TRIPLE=$llvm_target_triple",
     ]
     values += invoker.extra_values
@@ -44,7 +45,10 @@ write_lit_cfg("lit_site_cfg") {
   # Fully-qualified instead of relative for LIT_SITE_CFG_IN_HEADER.
   input = "//lldb/test/lit.site.cfg.py.in"
   output = lldb_lit_site_cfg_file
-  extra_values = [ "LLVM_BUILD_MODE=." ]
+  extra_values = [
+    "LLVM_BUILD_MODE=.",
+    "Python3_EXECUTABLE=$python_path",
+  ]
 }
 
 write_lit_cfg("lit_api_site_cfg") {
@@ -63,6 +67,7 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_ENABLE_PYTHON=0",
     "LLDB_HAS_LIBCXX=False",  # FIXME: support this (?)
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
+    "LLDB_PYTHON_API_TEST_EXECUTABLE=$python_path",
     "LLDB_TEST_ARCH=$current_cpu",
     "LLDB_TEST_COMPILER=" + rebase_path("$root_build_dir/bin/clang"),
     "LLDB_TEST_BUILD_DIRECTORY=" + rebase_path("$target_gen_dir/test_build"),
@@ -88,7 +93,14 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_FRAMEWORK_DIR=XXX_framework_dir",
     "CMAKE_CXX_COMPILER=c++",  # XXX use bin/clang++ instead?
     "HOST_OS=$host_os",  # XXX
+    "Python3_ROOT_DIR=",  # FIXME
   ]
+
+  if (is_debug) {
+    extra_values += [ "CMAKE_BUILD_TYPE=Debug" ]
+  } else {
+    extra_values += [ "CMAKE_BUILD_TYPE=Releas" ]
+  }
 
   dir = get_path_info(output, "dir")
   if (host_os == "win") {
@@ -104,8 +116,10 @@ write_lit_cfg("lit_shell_site_cfg") {
   input = "//lldb/test/Shell/lit.site.cfg.py.in"
   output = lldb_lit_shell_site_cfg_file
   extra_values = [
+    "CLANG_RESOURCE_DIR=",
     "DEFAULT_SYSROOT=",
     "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
+    "LLDB_BUILD_LLDBRPC=0",  # FIXME: add lldb-rpc-gen target, enable
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_LZMA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_PYTHON=0",  # FIXME: gn arg, use in Config.h
@@ -128,8 +142,11 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLDB_TOOL_LLDB_SERVER_BUILD=1",
     "LLDB_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLDB_USE_SYSTEM_DEBUGSERVER=1",  # XXX port //lldb/tools/debugserver (?)
+    "LLVM_ENABLE_DIA_SDK=0", # FIXME: option? just enable on windows?
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_USE_SANITIZER=",
+    "Python3_EXECUTABLE=$python_path",
+    "Python3_ROOT_DIR=",  # FIXME
   ]
 
   if (llvm_enable_zlib) {
@@ -154,6 +171,8 @@ write_lit_cfg("lit_unit_site_cfg") {
   extra_values = [
     "LLVM_BUILD_MODE=.",
     "LLVM_USE_SANITIZER=",
+    "Python3_EXECUTABLE=$python_path",
+    "Python3_ROOT_DIR=",  # FIXME
   ]
 }
 
@@ -180,7 +199,7 @@ group("test") {
     "//clang/tools/driver:symlinks",
     "//lld/tools/lld:symlinks",
     "//lldb/tools/driver:lldb",
-    "//lldb/tools/lldb-dap",
+    "//lldb/tools/lldb-dap/tool:lldb-dap",
 
     # XXX lldb-instr, darwin-debug, etc
     "//lldb/tools/lldb-server",

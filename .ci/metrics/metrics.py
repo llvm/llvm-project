@@ -1,12 +1,19 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+"""Collects Github metrics and uploads them to Grafana.
+
+This script contains machinery that will pull metrics periodically from Github
+about workflow runs. It will upload the collected metrics to the specified
+Grafana instance.
+"""
+
 import collections
 import datetime
-import dateutil
 import github
-import json
 import logging
 import os
 import requests
-import sys
 import time
 
 from dataclasses import dataclass
@@ -21,7 +28,10 @@ SCRAPE_INTERVAL_SECONDS = 5 * 60
 # Lists the Github workflows we want to track. Maps the Github job name to
 # the metric name prefix in grafana.
 # This metric name is also used as a key in the job->name map.
-GITHUB_WORKFLOW_TO_TRACK = {"LLVM Premerge Checks": "github_llvm_premerge_checks"}
+GITHUB_WORKFLOW_TO_TRACK = {
+    "CI Checks": "github_llvm_premerge_checks",
+    "Build and Test libc++": "github_libcxx_premerge_checks",
+}
 
 # Lists the Github jobs to track for a given workflow. The key is the stable
 # name (metric name) of the workflow (see GITHUB_WORKFLOW_TO_TRACK).
@@ -29,9 +39,15 @@ GITHUB_WORKFLOW_TO_TRACK = {"LLVM Premerge Checks": "github_llvm_premerge_checks
 # name.
 GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
-        "Linux Premerge Checks (Test Only - Please Ignore Results)": "premerge_linux",
-        "Windows Premerge Checks (Test Only - Please Ignore Results)": "premerge_windows",
-    }
+        "Build and Test Linux": "premerge_linux",
+        "Build and Test Linux AArch64": "premerge_linux_aarch64",
+        "Build and Test Windows": "premerge_windows",
+    },
+    "github_libcxx_premerge_checks": {
+        "stage1": "premerge_libcxx_stage1",
+        "stage2": "premerge_libcxx_stage2",
+        "stage3": "premerge_libcxx_stage3",
+    },
 }
 
 # The number of workflows to pull when sampling Github workflows.
@@ -55,17 +71,6 @@ GITHUB_WORKFLOW_MAX_CREATED_AGE_HOURS = 8
 # by trial and error).
 GRAFANA_METRIC_MAX_AGE_MN = 120
 
-# Lists the BuildKite jobs we want to track. Maps the BuildKite job name to
-# the metric name in Grafana. This is important not to lose metrics history
-# if the workflow name changes.
-BUILDKITE_WORKFLOW_TO_TRACK = {
-    ":linux: Linux x64": "buildkite_linux",
-    ":windows: Windows x64": "buildkite_windows",
-}
-
-# Number of builds to fetch per page. Since we scrape regularly, this can
-# remain small.
-BUILDKITE_GRAPHQL_BUILDS_PER_PAGE = 50
 
 @dataclass
 class JobMetrics:
@@ -73,9 +78,12 @@ class JobMetrics:
     queue_time: int
     run_time: int
     status: int
+    created_at_ns: int
+    started_at_ns: int
     completed_at_ns: int
     workflow_id: int
     workflow_name: str
+
 
 @dataclass
 class GaugeMetric:
@@ -84,179 +92,159 @@ class GaugeMetric:
     time_ns: int
 
 
-def buildkite_fetch_page_build_list(
-    buildkite_token: str, after_cursor: str = None
-) -> list[dict[str, str]]:
-    """Fetches a page of the build list using the GraphQL BuildKite API.
+@dataclass
+class AggregateMetric:
+    aggregate_name: str
+    aggregate_queue_time: int
+    aggregate_run_time: int
+    aggregate_status: int
+    completed_at_ns: int
+    workflow_id: int
 
-    Returns the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE last running/queued builds,
-    or the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE running/queued builds
-    older than the one pointer by |after_cursor| if provided.
-    The |after_cursor| value is taken from the previous page returned by the
-    API.
+
+def _construct_aggregate(ag_name: str, job_list: list[JobMetrics]) -> AggregateMetric:
+    """Create a libc++ AggregateMetric from a list of libc++ JobMetrics
+
+    How aggregates are computed:
+    queue time: Time from when first job in group is created until last job in
+                group has started.
+    run time: Time from when first job in group starts running until last job
+              in group finishes running.
+    status: logical 'and' of all the job statuses in the group.
 
     Args:
-      buildkite_token: the secret token to authenticate GraphQL requests.
-      after_cursor: cursor after which to start the page fetch.
+      ag_name: The name for this particular AggregateMetric
+      job_list: This list of JobMetrics to be combined into the AggregateMetric.
+        The input list should contain all (and only!) the libc++ JobMetrics
+        for a particular stage and a particular workflow_id.
 
     Returns:
-      The most recent builds after cursor (if set) with the following format:
-      [
-        {
-            "cursor": <value>,
-            "number": <build-number>,
-        }
-      ]
+      Returns the AggregateMetric constructed from the inputs.
     """
 
-    BUILDKITE_GRAPHQL_QUERY = """
-    query OrganizationShowQuery {{
-      organization(slug: "llvm-project") {{
-        pipelines(search: "Github pull requests", first: 1) {{
-          edges {{
-            node {{
-              builds (state: [CANCELING, CREATING, FAILING, RUNNING], first: {PAGE_SIZE}, after: {AFTER}) {{
-                edges {{
-                  cursor
-                  node {{
-                    number
-                  }}
-                }}
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}
-    """
-    query = BUILDKITE_GRAPHQL_QUERY.format(
-        PAGE_SIZE=BUILDKITE_GRAPHQL_BUILDS_PER_PAGE,
-        AFTER="null" if after_cursor is None else '"{}"'.format(after_cursor),
+    # Initialize the aggregate values
+    earliest_create = job_list[0].created_at_ns
+    earliest_start = job_list[0].started_at_ns
+    earliest_complete = job_list[0].completed_at_ns
+    latest_start = job_list[0].started_at_ns
+    latest_complete = job_list[0].completed_at_ns
+    ag_status = job_list[0].status
+    ag_workflow_id = job_list[0].workflow_id
+
+    # Go through rest of jobs for this workflow id, if any, updating stats
+    for job in job_list[1:]:
+        # Update the status
+        ag_status = ag_status and job.status
+        # Get the earliest & latest times
+        if job.created_at_ns < earliest_create:
+            earliest_create = job.created_at_ns
+        if job.completed_at_ns < earliest_complete:
+            earliest_complete = job.completed_at_ns
+        if job.started_at_ns > latest_start:
+            latest_start = job.started_at_ns
+        if job.started_at_ns < earliest_start:
+            earliest_start = job.started_at_ns
+        if job.completed_at_ns > latest_complete:
+            latest_complete = job.completed_at_ns
+
+    # Compute aggregate run time (in seconds, not ns)
+    ag_run_time = (latest_complete - earliest_start) / 1000000000
+    # Compute aggregate queue time (in seconds, not ns)
+    ag_queue_time = (latest_start - earliest_create) / 1000000000
+    # Append the aggregate metrics to the workflow metrics list.
+    return AggregateMetric(
+        ag_name, ag_queue_time, ag_run_time, ag_status, latest_complete, ag_workflow_id
     )
-    query = json.dumps({"query": query})
-    url = "https://graphql.buildkite.com/v1"
-    headers = {
-        "Authorization": "Bearer " + buildkite_token,
-        "Content-Type": "application/json",
-    }
-    data = requests.post(url, data=query, headers=headers).json()
-    # De-nest the build list.
-    if "errors" in data:
-        logging.info("Failed to fetch BuildKite jobs: {}".format(data["errors"]))
-        return []
-    builds = data["data"]["organization"]["pipelines"]["edges"][0]["node"]["builds"][
-        "edges"
-    ]
-    # Fold cursor info into the node dictionnary.
-    return [{**x["node"], "cursor": x["cursor"]} for x in builds]
 
 
-def buildkite_get_build_info(build_number: str) -> dict:
-    """Returns all the info associated with the provided build number.
+def create_and_append_libcxx_aggregates(workflow_metrics: list[JobMetrics]):
+    """Find libc++ JobMetric entries and create aggregate metrics for them.
 
-    Note: for unknown reasons, graphql returns no jobs for a given build,
-    while this endpoint does, hence why this uses this API instead of graphql.
+    Sort the libc++ JobMetric entries by workflow id, and for each workflow
+    id group them by stages. Call _construct_aggregate to reate an aggregate
+    metric for each stage for each unique workflow id. Append each aggregate
+    metric to the input workflow_metrics list.
+
+     Args:
+      workflow_metrics: A list of JobMetrics entries collected so far.
+    """
+    # Separate the jobs by workflow_id. Only look at JobMetrics entries.
+    aggregate_data = dict()
+    for job in workflow_metrics:
+        # Only want to look at JobMetrics
+        if not isinstance(job, JobMetrics):
+            continue
+        # Only want libc++ jobs.
+        if job.workflow_name != "Build and Test libc++":
+            continue
+        if job.workflow_id not in aggregate_data.keys():
+            aggregate_data[job.workflow_id] = [job]
+        else:
+            aggregate_data[job.workflow_id].append(job)
+
+    # Go through each aggregate_data list (workflow id) and find all the
+    # needed data
+    for ag_workflow_id in aggregate_data:
+        job_list = aggregate_data[ag_workflow_id]
+        stage1_jobs = list()
+        stage2_jobs = list()
+        stage3_jobs = list()
+        # sort jobs into stage1, stage2, & stage3.
+        for job in job_list:
+            if job.job_name.find("stage1") > 0:
+                stage1_jobs.append(job)
+            elif job.job_name.find("stage2") > 0:
+                stage2_jobs.append(job)
+            elif job.job_name.find("stage3") > 0:
+                stage3_jobs.append(job)
+
+        if len(stage1_jobs) > 0:
+            aggregate = _construct_aggregate(
+                "github_libcxx_premerge_checks_stage1_aggregate", stage1_jobs
+            )
+            workflow_metrics.append(aggregate)
+        if len(stage2_jobs) > 0:
+            aggregate = _construct_aggregate(
+                "github_libcxx_premerge_checks_stage2_aggregate", stage2_jobs
+            )
+            workflow_metrics.append(aggregate)
+        if len(stage3_jobs) > 0:
+            aggregate = _construct_aggregate(
+                "github_libcxx_premerge_checks_stage3_aggregate", stage3_jobs
+            )
+            workflow_metrics.append(aggregate)
+
+
+def clean_up_libcxx_job_name(old_name: str) -> str:
+    """Convert libcxx job names to generically legal strings.
 
     Args:
-      build_number: which build number to fetch info for.
+      old_name: A string with the full name of the libc++ test that was run.
 
     Returns:
-      The info for the target build, a JSON dictionnary.
+      Returns the input string with characters that might not be acceptable
+        in some indentifier strings replaced with safer characters.
+
+    Take a name like 'stage1 (generic-cxx03, clang-22, clang++-22)'
+    and convert it to 'stage1_generic_cxx03__clang_22__clangxx_22'.
+    (Remove parentheses; replace commas, hyphens and spaces with
+    underscores; replace '+' with 'x'.)
     """
+    # Names should have exactly one set of parentheses, so break on that. If
+    # they don't have any parentheses, then don't update them at all.
+    if old_name.find("(") == -1:
+        return old_name
+    stage, remainder = old_name.split("(")
+    stage = stage.strip()
+    if remainder[-1] == ")":
+        remainder = remainder[:-1]
+    remainder = remainder.replace("-", "_")
+    remainder = remainder.replace(",", "_")
+    remainder = remainder.replace(" ", "_")
+    remainder = remainder.replace("+", "x")
+    new_name = stage + "_" + remainder
+    return new_name
 
-    URL = "https://buildkite.com/llvm-project/github-pull-requests/builds/{}.json"
-    return requests.get(URL.format(build_number)).json()
-
-
-def buildkite_get_incomplete_tasks(buildkite_token: str) -> list:
-    """Returns all the running/pending BuildKite builds.
-
-    Args:
-     buildkite_token: the secret token to authenticate GraphQL requests.
-     last_cursor: the cursor to stop at if set. If None, a full page is fetched.
-    """
-    output = []
-    cursor = None
-    while True:
-        page = buildkite_fetch_page_build_list(buildkite_token, cursor)
-        if len(page) == 0:
-            break
-        cursor = page[-1]["cursor"]
-        output += page
-    return output
-
-
-def buildkite_get_metrics(
-    buildkite_token: str, previously_incomplete: set[int]
-) -> (list[JobMetrics], set[int]):
-    """Returns a tuple with:
-
-    - the metrics recorded for newly completed workflow jobs.
-    - the set of workflow still running now.
-
-    Args:
-      buildkite_token: the secret token to authenticate GraphQL requests.
-        previously_incomplete: the set of running workflows the last time this
-        function was called.
-    """
-
-    running_builds = buildkite_get_incomplete_tasks(buildkite_token)
-    incomplete_now = set([x["number"] for x in running_builds])
-    output = []
-
-    for build_id in previously_incomplete:
-        if build_id in incomplete_now:
-            continue
-
-        info = buildkite_get_build_info(build_id)
-        metric_timestamp = dateutil.parser.isoparse(info["finished_at"])
-        for job in info["jobs"]:
-            # This workflow is not interesting to us.
-            if job["name"] not in BUILDKITE_WORKFLOW_TO_TRACK:
-                continue
-
-            # Don't count canceled jobs.
-            if job["canceled_at"]:
-                continue
-
-            created_at = dateutil.parser.isoparse(job["created_at"])
-            scheduled_at = dateutil.parser.isoparse(job["scheduled_at"])
-            started_at = dateutil.parser.isoparse(job["started_at"])
-            finished_at = dateutil.parser.isoparse(job["finished_at"])
-
-            job_name = BUILDKITE_WORKFLOW_TO_TRACK[job["name"]]
-            queue_time = (started_at - scheduled_at).seconds
-            run_time = (finished_at - started_at).seconds
-            status = bool(job["passed"])
-
-            # Grafana will refuse to ingest metrics older than ~2 hours, so we
-            # should avoid sending historical data.
-            metric_age_mn = (
-                datetime.datetime.now(datetime.timezone.utc) - metric_timestamp
-            ).total_seconds() / 60
-            if metric_age_mn > GRAFANA_METRIC_MAX_AGE_MN:
-                logging.warning(
-                    f"Job {job['name']} from workflow {build_id} dropped due"
-                    + f" to staleness: {metric_age_mn}mn old."
-                )
-                continue
-
-            metric_timestamp_ns = int(metric_timestamp.timestamp()) * 10**9
-            workflow_id = build_id
-            workflow_name = "Github pull requests"
-            output.append(
-                JobMetrics(
-                    job_name,
-                    queue_time,
-                    run_time,
-                    status,
-                    metric_timestamp_ns,
-                    workflow_id,
-                    workflow_name,
-                )
-            )
-
-    return output, incomplete_now
 
 def github_get_metrics(
     github_repo: github.Repository, last_workflows_seen_as_completed: set[int]
@@ -323,6 +311,10 @@ def github_get_metrics(
         if task.name not in GITHUB_WORKFLOW_TO_TRACK:
             continue
 
+        libcxx_testing = False
+        if task.name == "Build and Test libc++":
+            libcxx_testing = True
+
         if task.status == "completed":
             workflow_seen_as_completed.add(task.id)
 
@@ -332,37 +324,58 @@ def github_get_metrics(
 
         name_prefix = GITHUB_WORKFLOW_TO_TRACK[task.name]
         for job in task.jobs():
+            if libcxx_testing:
+                # We're not running macos or windows libc++ tests on our
+                # infrastructure.
+                if job.name.find("macos") != -1 or job.name.find("windows") != -1:
+                    continue
             # This job is not interesting to us.
-            if job.name not in GITHUB_JOB_TO_TRACK[name_prefix]:
+            elif job.name not in GITHUB_JOB_TO_TRACK[name_prefix]:
                 continue
 
-            name_suffix = GITHUB_JOB_TO_TRACK[name_prefix][job.name]
+            if libcxx_testing:
+                name_suffix = clean_up_libcxx_job_name(job.name)
+            else:
+                name_suffix = GITHUB_JOB_TO_TRACK[name_prefix][job.name]
             metric_name = name_prefix + "_" + name_suffix
+
+            ag_metric_name = None
+            if libcxx_testing:
+                job_key = None
+                if job.name.find("stage1") != -1:
+                    job_key = "stage1"
+                elif job.name.find("stage2") != -1:
+                    job_key = "stage2"
+                elif job.name.find("stage3") != -1:
+                    job_key = "stage3"
+                if job_key:
+                    ag_name = (
+                        name_prefix + "_" + GITHUB_JOB_TO_TRACK[name_prefix][job_key]
+                    )
 
             if task.status != "completed":
                 if job.status == "queued":
                     queued_count[metric_name] += 1
+                    if libcxx_testing:
+                        queued_count[ag_name] += 1
                 elif job.status == "in_progress":
                     running_count[metric_name] += 1
+                    if libcxx_testing:
+                        running_count[ag_name] += 1
                 continue
 
-            job_result = int(job.conclusion == "success")
-            if job_result:
-                # We still might want to mark the job as a failure if one of the steps
-                # failed. This is required due to use setting continue-on-error in
-                # the premerge pipeline to prevent sending emails while we are
-                # testing the infrastructure.
-                # TODO(boomanaiden154): Remove this once the premerge pipeline is no
-                # longer in a testing state and we can directly assert the workflow
-                # result.
-                for step in job.steps:
-                    if step.conclusion != "success" and step.conclusion != "skipped":
-                        job_result = 0
-                        break
+            job_result = int(job.conclusion == "success" or job.conclusion == "skipped")
 
             created_at = job.created_at
             started_at = job.started_at
             completed_at = job.completed_at
+
+            if completed_at is None:
+                logging.info(
+                    f"Workflow {task.id} is marked completed but has a job without a "
+                    "completion timestamp."
+                )
+                continue
 
             # GitHub API can return results where the started_at is slightly
             # later then the created_at (or completed earlier than started).
@@ -397,8 +410,13 @@ def github_get_metrics(
                 continue
 
             logging.info(f"Adding a job metric for job {job.id} in workflow {task.id}")
-            # The timestamp associated with the event is expected by Grafana to be
-            # in nanoseconds.
+            # The completed_at_ns timestamp associated with the event is
+            # expected by Grafana to be in nanoseconds. Because we do math using
+            # all three times (when creating libc++ aggregates), we need them
+            # all to be in nanoseconds, even though created_at and started_at
+            # are not returned to Grafana.
+            created_at_ns = int(created_at.timestamp()) * 10**9
+            started_at_ns = int(started_at.timestamp()) * 10**9
             completed_at_ns = int(completed_at.timestamp()) * 10**9
             workflow_metrics.append(
                 JobMetrics(
@@ -406,11 +424,17 @@ def github_get_metrics(
                     queue_time.seconds,
                     run_time.seconds,
                     job_result,
+                    created_at_ns,
+                    started_at_ns,
                     completed_at_ns,
                     task.id,
                     task.name,
                 )
             )
+
+    # Finished collecting the JobMetrics for all jobs; now create the
+    # aggregates for any libc++ jobs.
+    create_and_append_libcxx_aggregates(workflow_metrics)
 
     for name, value in queued_count.items():
         workflow_metrics.append(
@@ -467,6 +491,11 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
             metrics_batch.append(
                 f"{name} queue_time={workflow_metric.queue_time},run_time={workflow_metric.run_time},status={workflow_metric.status} {workflow_metric.completed_at_ns}"
             )
+        elif isinstance(workflow_metric, AggregateMetric):
+            name = workflow_metric.aggregate_name.lower().replace(" ", "_")
+            metrics_batch.append(
+                f"{name} queue_time={workflow_metric.aggregate_queue_time},run_time={workflow_metric.aggregate_run_time},status={workflow_metric.aggregate_status} {workflow_metric.completed_at_ns}"
+            )
         else:
             raise ValueError(
                 f"Unsupported object type {type(workflow_metric)}: {str(workflow_metric)}"
@@ -487,7 +516,6 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
 def main():
     # Authenticate with Github
     github_auth = Auth.Token(os.environ["GITHUB_TOKEN"])
-    buildkite_token = os.environ["BUILDKITE_TOKEN"]
     grafana_api_key = os.environ["GRAFANA_API_KEY"]
     grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
 
@@ -495,9 +523,6 @@ def main():
     # Because the Github queries are broken, we'll simply log a 'processed'
     # bit for the last COUNT_TO_PROCESS workflows.
     gh_last_workflows_seen_as_completed = set()
-    # Stores the list of pending/running builds in BuildKite we need to check
-    # at the next iteration.
-    bk_incomplete = set()
 
     # Enter the main loop. Every five minutes we wake up and dump metrics for
     # the relevant jobs.
@@ -509,13 +534,8 @@ def main():
             github_repo, gh_last_workflows_seen_as_completed
         )
 
-        bk_metrics, bk_incomplete = buildkite_get_metrics(
-            buildkite_token, bk_incomplete
-        )
-
-        metrics = gh_metrics + bk_metrics
-        upload_metrics(metrics, grafana_metrics_userid, grafana_api_key)
-        logging.info(f"Uploaded {len(metrics)} metrics")
+        upload_metrics(gh_metrics, grafana_metrics_userid, grafana_api_key)
+        logging.info(f"Uploaded {len(gh_metrics)} metrics")
 
         time.sleep(SCRAPE_INTERVAL_SECONDS)
 

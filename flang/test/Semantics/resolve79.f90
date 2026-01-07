@@ -1,8 +1,8 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
-! C755 The same proc-component-attr-spec shall not appear more than once in a 
+! C755 The same proc-component-attr-spec shall not appear more than once in a
 ! given proc-component-def-stmt.
-! C759 PASS and NOPASS shall not both appear in the same 
+! C759 PASS and NOPASS shall not both appear in the same
 ! proc-component-attr-spec-list.
 !
 ! R741 proc-component-def-stmt ->
@@ -12,17 +12,17 @@ module m
 !    PUBLIC, PRIVATE, NOPASS, PASS, POINTER
 
   type :: procComponentType
-    !WARNING: Attribute 'PUBLIC' cannot be used more than once
+    !WARNING: Attribute 'PUBLIC' cannot be used more than once [-Wredundant-attribute]
     procedure(publicProc), public, pointer, public :: publicField
-    !WARNING: Attribute 'PRIVATE' cannot be used more than once
+    !WARNING: Attribute 'PRIVATE' cannot be used more than once [-Wredundant-attribute]
     procedure(privateProc), private, pointer, private :: privateField
-    !WARNING: Attribute 'NOPASS' cannot be used more than once
+    !WARNING: Attribute 'NOPASS' cannot be used more than once [-Wredundant-attribute]
     procedure(nopassProc), nopass, pointer, nopass :: noPassField
-    !WARNING: Attribute 'PASS' cannot be used more than once
+    !WARNING: Attribute 'PASS' cannot be used more than once [-Wredundant-attribute]
     procedure(passProc), pass, pointer, pass :: passField
     !ERROR: Attributes 'PASS' and 'NOPASS' conflict with each other
     procedure(passNopassProc), pass, pointer, nopass :: passNopassField
-    !WARNING: Attribute 'POINTER' cannot be used more than once
+    !WARNING: Attribute 'POINTER' cannot be used more than once [-Wredundant-attribute]
     procedure(pointerProc), pointer, public, pointer :: pointerField
     !ERROR: Procedure component 'nonpointerfield' must have POINTER attribute
     procedure(publicProc), public :: nonpointerField

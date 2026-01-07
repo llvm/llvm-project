@@ -12,6 +12,7 @@
 #include "ABIMacOSX_arm64.h"
 #include "ABISysV_arm64.h"
 #include "Utility/ARM64_DWARF_Registers.h"
+#include "Utility/ARM64_ehframe_Registers.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 
@@ -19,6 +20,7 @@
 #include <optional>
 
 using namespace lldb;
+using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ABIAArch64)
 
@@ -68,9 +70,9 @@ lldb::addr_t ABIAArch64::FixDataAddress(lldb::addr_t pc) {
 std::pair<uint32_t, uint32_t>
 ABIAArch64::GetEHAndDWARFNums(llvm::StringRef name) {
   if (name == "pc")
-    return {LLDB_INVALID_REGNUM, arm64_dwarf::pc};
+    return {arm64_ehframe::pc, arm64_dwarf::pc};
   if (name == "cpsr")
-    return {LLDB_INVALID_REGNUM, arm64_dwarf::cpsr};
+    return {arm64_ehframe::cpsr, arm64_dwarf::cpsr};
   return MCBasedABI::GetEHAndDWARFNums(name);
 }
 
@@ -84,9 +86,9 @@ std::string ABIAArch64::GetMCName(std::string reg) {
 uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("lr", "x30", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "x31", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "x29", LLDB_REGNUM_GENERIC_FP)
+      .Cases({"lr", "x30"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "x31"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "x29"}, LLDB_REGNUM_GENERIC_FP)
       .Case("cpsr", LLDB_REGNUM_GENERIC_FLAGS)
       .Case("x0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("x1", LLDB_REGNUM_GENERIC_ARG2)
@@ -176,8 +178,8 @@ void ABIAArch64::AugmentRegisterInfo(
                       lldb::eFormatHex);
 
   auto bool_predicate = [](const auto &reg_num) { return bool(reg_num); };
-  bool saw_v_regs = std::any_of(v_regs.begin(), v_regs.end(), bool_predicate);
-  bool saw_z_regs = std::any_of(z_regs.begin(), z_regs.end(), bool_predicate);
+  bool saw_v_regs = llvm::any_of(v_regs, bool_predicate);
+  bool saw_z_regs = llvm::any_of(z_regs, bool_predicate);
 
   // Sn/Dn for Vn.
   if (saw_v_regs) {
@@ -199,4 +201,45 @@ void ABIAArch64::AugmentRegisterInfo(
     addPartialRegisters(regs, z_regs, *z_byte_size, "d{0}", 8,
                         lldb::eEncodingIEEE754, lldb::eFormatFloat);
   }
+}
+
+UnwindPlanSP ABIAArch64::CreateFunctionEntryUnwindPlan() {
+  UnwindPlan::Row row;
+
+  // Our previous Call Frame Address is the stack pointer
+  row.GetCFAValue().SetIsRegisterPlusOffset(LLDB_REGNUM_GENERIC_SP, 0);
+
+  // Our previous PC is in the LR, all other registers are the same.
+  row.SetRegisterLocationToRegister(LLDB_REGNUM_GENERIC_PC,
+                                    LLDB_REGNUM_GENERIC_RA, true);
+
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("arm64 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
+}
+
+UnwindPlanSP ABIAArch64::CreateDefaultUnwindPlan() {
+  UnwindPlan::Row row;
+  const int32_t ptr_size = 8;
+
+  row.GetCFAValue().SetIsRegisterPlusOffset(LLDB_REGNUM_GENERIC_FP,
+                                            2 * ptr_size);
+  row.SetUnspecifiedRegistersAreUndefined(true);
+
+  row.SetRegisterLocationToAtCFAPlusOffset(LLDB_REGNUM_GENERIC_FP,
+                                           ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(LLDB_REGNUM_GENERIC_PC,
+                                           ptr_size * -1, true);
+
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("arm64 default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }

@@ -22,6 +22,7 @@ using namespace llvm::pdb;
 using namespace llvm::pdb::yaml;
 using namespace llvm::yaml;
 
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::CoffSectionHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::NamedStreamMapping)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
@@ -135,6 +136,49 @@ void MappingTraits<msf::SuperBlock>::mapping(IO &IO, msf::SuperBlock &SB) {
   IO.mapOptional("BlockMapAddr", SB.BlockMapAddr, u32(0U));
 }
 
+CoffSectionHeader::CoffSectionHeader() = default;
+
+CoffSectionHeader::CoffSectionHeader(const object::coff_section &Section)
+    : Name(Section.Name), VirtualSize(Section.VirtualSize),
+      VirtualAddress(Section.VirtualAddress),
+      SizeOfRawData(Section.SizeOfRawData),
+      PointerToRawData(Section.PointerToRawData),
+      PointerToRelocations(Section.PointerToRelocations),
+      PointerToLinenumbers(Section.PointerToLinenumbers),
+      NumberOfRelocations(Section.NumberOfRelocations),
+      NumberOfLinenumbers(Section.NumberOfLinenumbers),
+      Characteristics(Section.Characteristics) {}
+
+object::coff_section CoffSectionHeader::toCoffSection() const {
+  object::coff_section Sec;
+  std::memset(Sec.Name, 0, COFF::NameSize);
+  std::memcpy(Sec.Name, Name.data(),
+              std::min(static_cast<size_t>(COFF::NameSize), Name.size()));
+  Sec.VirtualSize = VirtualSize;
+  Sec.VirtualAddress = VirtualAddress;
+  Sec.SizeOfRawData = SizeOfRawData;
+  Sec.PointerToRawData = PointerToRawData;
+  Sec.PointerToRelocations = PointerToRelocations;
+  Sec.PointerToLinenumbers = PointerToLinenumbers;
+  Sec.NumberOfRelocations = NumberOfRelocations;
+  Sec.NumberOfLinenumbers = NumberOfLinenumbers;
+  Sec.Characteristics = Characteristics;
+  return Sec;
+}
+
+void MappingTraits<CoffSectionHeader>::mapping(IO &IO, CoffSectionHeader &Obj) {
+  IO.mapRequired("Name", Obj.Name);
+  IO.mapOptional("VirtualSize", Obj.VirtualSize);
+  IO.mapOptional("VirtualAddress", Obj.VirtualAddress);
+  IO.mapOptional("SizeOfRawData", Obj.SizeOfRawData);
+  IO.mapOptional("PointerToRawData", Obj.PointerToRawData);
+  IO.mapOptional("PointerToRelocations", Obj.PointerToRelocations);
+  IO.mapOptional("PointerToLinenumbers", Obj.PointerToLinenumbers);
+  IO.mapOptional("NumberOfRelocations", Obj.NumberOfRelocations);
+  IO.mapOptional("NumberOfLinenumbers", Obj.NumberOfLinenumbers);
+  IO.mapOptional("Characteristics", Obj.Characteristics);
+}
+
 void MappingTraits<StreamBlockList>::mapping(IO &IO, StreamBlockList &SB) {
   IO.mapRequired("Stream", SB.Blocks);
 }
@@ -155,7 +199,15 @@ void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
   IO.mapOptional("PdbDllRbld", Obj.PdbDllRbld, uint16_t(0U));
   IO.mapOptional("Flags", Obj.Flags, uint16_t(1U));
   IO.mapOptional("MachineType", Obj.MachineType, PDB_Machine::x86);
+  // This is a workaround for IO not having document context with the
+  // machine type. The machine type is needed to properly parse Register enums
+  // in the PDB.
+  if (!IO.getContext()) {
+    Obj.FakeHeader.Machine = static_cast<uint16_t>(Obj.MachineType);
+    IO.setContext(&Obj.FakeHeader);
+  }
   IO.mapOptional("Modules", Obj.ModInfos);
+  IO.mapOptional("SectionHeaders", Obj.SectionHeaders);
 }
 
 void MappingTraits<PdbTpiStream>::mapping(IO &IO,

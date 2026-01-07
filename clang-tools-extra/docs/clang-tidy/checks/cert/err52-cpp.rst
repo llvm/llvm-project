@@ -3,7 +3,9 @@
 cert-err52-cpp
 ==============
 
-This check flags all call expressions involving ``setjmp()`` and ``longjmp()``.
+The `cert-err52-cpp` check is an alias, please see
+:doc:`modernize-avoid-setjmp-longjmp <../modernize/avoid-setjmp-longjmp>`
+for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule
 `ERR52-CPP. Do not use setjmp() or longjmp()

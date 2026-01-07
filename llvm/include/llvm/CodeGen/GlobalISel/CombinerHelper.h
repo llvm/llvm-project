@@ -66,6 +66,7 @@ struct PtrAddChain {
   int64_t Imm;
   Register Base;
   const RegisterBank *Bank;
+  unsigned Flags;
 };
 
 struct RegisterImmPair {
@@ -78,6 +79,15 @@ struct ShiftOfShiftedLogic {
   MachineInstr *Shift2;
   Register LogicNonShiftReg;
   uint64_t ValSum;
+};
+
+struct LshrOfTruncOfLshr {
+  bool Mask = false;
+  APInt MaskVal;
+  Register Src;
+  APInt ShiftAmt;
+  LLT ShiftAmtTy;
+  LLT InnerShiftTy;
 };
 
 using BuildFnTy = std::function<void(MachineIRBuilder &)>;
@@ -142,6 +152,10 @@ public:
   /// \return true if the combine is running prior to legalization, or if \p
   /// Query is legal on the target.
   bool isLegalOrBeforeLegalizer(const LegalityQuery &Query) const;
+
+  /// \return true if \p Query is legal on the target, or if \p Query will
+  /// perform WidenScalar action on the target.
+  bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
 
   /// \return true if the combine is running prior to legalization, or if \p Ty
   /// is a legal integer constant type on the target.
@@ -262,7 +276,6 @@ public:
                                  SmallVector<Register> &Ops) const;
 
   /// Replace \p MI with a build_vector.
-  bool matchCombineShuffleToBuildVector(MachineInstr &MI) const;
   void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
@@ -280,9 +293,7 @@ public:
                                  SmallVectorImpl<Register> &Ops) const;
   /// Replace \p MI with a concat_vectors with \p Ops.
   void applyCombineShuffleVector(MachineInstr &MI,
-                                 const ArrayRef<Register> Ops) const;
-  bool matchShuffleToExtract(MachineInstr &MI) const;
-  void applyShuffleToExtract(MachineInstr &MI) const;
+                                 ArrayRef<Register> Ops) const;
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
@@ -332,6 +343,12 @@ public:
                                 ShiftOfShiftedLogic &MatchInfo) const;
 
   bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
+  /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
+  bool matchLshrOfTruncOfLshr(MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo,
+                              MachineInstr &ShiftMI) const;
+  void applyLshrOfTruncOfLshr(MachineInstr &MI,
+                              LshrOfTruncOfLshr &MatchInfo) const;
 
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal) const;
@@ -623,11 +640,18 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
-  bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  bool matchOrShiftToFunnelShift(MachineInstr &MI, bool AllowScalarConstants,
+                                 BuildFnTy &MatchInfo) const;
   bool matchFunnelShiftToRotate(MachineInstr &MI) const;
   void applyFunnelShiftToRotate(MachineInstr &MI) const;
   bool matchRotateOutOfRange(MachineInstr &MI) const;
   void applyRotateOutOfRange(MachineInstr &MI) const;
+
+  bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                Register &UnmergeSrc) const;
+  void applyCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B,
+                                Register &UnmergeSrc) const;
 
   bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
   void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
@@ -693,20 +717,22 @@ public:
   /// feeding a G_AND instruction \p MI.
   bool matchNarrowBinopFeedingAnd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
-  /// Given an G_UDIV \p MI expressing a divide by constant, return an
-  /// expression that implements it by multiplying by a magic number.
+  /// Given an G_UDIV \p MI or G_UREM \p MI expressing a divide by constant,
+  /// return an expression that implements it by multiplying by a magic number.
   /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-  MachineInstr *buildUDivUsingMul(MachineInstr &MI) const;
-  /// Combine G_UDIV by constant into a multiply by magic constant.
-  bool matchUDivByConst(MachineInstr &MI) const;
-  void applyUDivByConst(MachineInstr &MI) const;
+  MachineInstr *buildUDivOrURemUsingMul(MachineInstr &MI) const;
+  /// Combine G_UDIV or G_UREM by constant into a multiply by magic constant.
+  bool matchUDivOrURemByConst(MachineInstr &MI) const;
+  void applyUDivOrURemByConst(MachineInstr &MI) const;
 
-  /// Given an G_SDIV \p MI expressing a signed divide by constant, return an
-  /// expression that implements it by multiplying by a magic number.
-  /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-  MachineInstr *buildSDivUsingMul(MachineInstr &MI) const;
-  bool matchSDivByConst(MachineInstr &MI) const;
-  void applySDivByConst(MachineInstr &MI) const;
+  /// Given an G_SDIV \p MI or G_SREM \p MI expressing a signed divide by
+  /// constant, return an expression that implements it by multiplying by a
+  /// magic number. Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's
+  /// Guide".
+  MachineInstr *buildSDivOrSRemUsingMul(MachineInstr &MI) const;
+  /// Combine G_SDIV or G_SREM by constant into a multiply by magic constant.
+  bool matchSDivOrSRemByConst(MachineInstr &MI) const;
+  void applySDivOrSRemByConst(MachineInstr &MI) const;
 
   /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
   /// return expressions that implements it by shifting.
@@ -719,6 +745,23 @@ public:
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI) const;
   void applyUMulHToLShr(MachineInstr &MI) const;
+
+  // Combine trunc(smin(smax(x, C1), C2)) -> truncssat_s(x)
+  // or      trunc(smax(smin(x, C2), C1)) -> truncssat_s(x).
+  bool matchTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+  void applyTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+
+  // Combine trunc(smin(smax(x, 0), C)) -> truncssat_u(x)
+  // or      trunc(smax(smin(x, C), 0)) -> truncssat_u(x)
+  // or      trunc(umin(smax(x, 0), C)) -> truncssat_u(x)
+  bool matchTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+  void applyTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+
+  // Combine trunc(umin(x, C)) -> truncusat_u(x).
+  bool matchTruncUSatU(MachineInstr &MI, MachineInstr &MinMI) const;
+
+  // Combine truncusat_u(fptoui(x)) -> fptoui_sat(x)
+  bool matchTruncUSatUToFPTOUISat(MachineInstr &MI, MachineInstr &SrcMI) const;
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
@@ -808,6 +851,10 @@ public:
                                                 BuildFnTy &MatchInfo) const;
 
   bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info) const;
+
+  bool matchRepeatedFPDivisor(MachineInstr &MI,
+                              SmallVector<MachineInstr *> &MatchInfo) const;
+  void applyRepeatedFPDivisor(SmallVector<MachineInstr *> &MatchInfo) const;
 
   /// Transform G_ADD(x, G_SUB(y, x)) to y.
   /// Transform G_ADD(G_SUB(y, x), x) to y.

@@ -35,6 +35,35 @@ func.func @fully_dynamic_bounds(%lb : index, %ub: index, %step: index) -> i32 {
 
 // -----
 
+// CHECK-LABEL:   func.func @static_two_iterations_ub_used_in_loop(
+// CHECK-SAME:                                                         %[[IFM1:.*]]: memref<1xi32>) -> i32 {
+// CHECK:           %[[C7_I32:.*]] = arith.constant 7 : i32
+// CHECK:           %[[C7_IDX:.*]] = arith.constant 7 : index
+// CHECK:           %[[LOAD1:.*]] = memref.load %[[IFM1]]{{\[}}%[[C7_IDX]]] : memref<1xi32>
+// CHECK:           %[[ADDI1:.*]] = arith.addi %[[LOAD1]], %[[C7_I32]] : i32
+// CHECK:           %[[LOAD2:.*]] = memref.load %[[IFM1]]{{\[}}%[[C7_IDX]]] : memref<1xi32>
+// CHECK:           %[[ADDI2:.*]] = arith.addi %[[ADDI1]], %[[LOAD2]] : i32
+// CHECK:           return %[[ADDI2]] : i32
+// CHECK:         }
+
+#map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+func.func @static_two_iterations_ub_used_in_loop(%arg0: memref<1xi32>) -> i32 {
+  %c0_i32 = arith.constant 0 : i32
+  %lb = arith.constant 0 : index
+  %step = arith.constant 4 : index
+  %ub = arith.constant 7 : index
+  %r = scf.for %iv = %lb to %ub step %step iter_args(%arg = %c0_i32) -> i32 {
+    %s = affine.min #map(%ub, %iv)[%step]
+    %casted = arith.index_cast %s : index to i32
+    %0 = arith.addi %arg, %casted : i32
+    %1 = memref.load %arg0[%ub] : memref<1xi32>
+    %result = arith.addi %0, %1 : i32
+    scf.yield %result : i32
+  }
+  return %r : i32
+}
+// -----
+
 //      CHECK: func @fully_static_bounds(
 //  CHECK-DAG:   %[[C0_I32:.*]] = arith.constant 0 : i32
 //  CHECK-DAG:   %[[C1_I32:.*]] = arith.constant 1 : i32
@@ -58,6 +87,41 @@ func.func @fully_static_bounds() -> i32 {
   %r = scf.for %iv = %lb to %ub step %step
                iter_args(%arg = %c0_i32) -> i32 {
     %s = affine.min #map(%ub, %iv)[%step]
+    %casted = arith.index_cast %s : index to i32
+    %0 = arith.addi %arg, %casted : i32
+    scf.yield %0 : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+//      CHECK: func @fully_static_bounds_integers(
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : i32
+//  CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : i32
+//  CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : i32
+//  CHECK-DAG:   %[[C16:.*]] = arith.constant 16 : i32
+//      CHECK:   %[[LOOP:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[C16]]
+// CHECK-SAME:       step %[[C4]] iter_args(%[[ACC:.*]] = %[[C0]]) -> (i32)
+//      CHECK:     %[[MAP:.*]] = affine.min
+//      CHECK:     %[[MAP_CAST:.*]] = arith.index_cast %[[MAP]]
+//      CHECK:     %[[ADD:.*]] = arith.addi %[[ACC]], %[[MAP_CAST]] : i32
+//      CHECK:     scf.yield %[[ADD]]
+//      CHECK:   }
+//      CHECK:   %[[RESULT:.*]] = arith.addi %[[LOOP]], %[[C1]] : i32
+//      CHECK:   return %[[RESULT]]
+#map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+func.func @fully_static_bounds_integers() -> i32 {
+  %c0_i32 = arith.constant 0 : i32
+  %lb = arith.constant 0 : i32
+  %step = arith.constant 4 : i32
+  %ub = arith.constant 17 : i32
+  %r = scf.for %iv = %lb to %ub step %step
+               iter_args(%arg = %c0_i32) -> i32 : i32 {
+    %ub_index = arith.index_cast %ub : i32 to index
+    %iv_index = arith.index_cast %iv : i32 to index
+    %step_index = arith.index_cast %step : i32 to index
+    %s = affine.min #map(%ub_index, %iv_index)[%step_index]
     %casted = arith.index_cast %s : index to i32
     %0 = arith.addi %arg, %casted : i32
     scf.yield %0 : i32
@@ -293,10 +357,9 @@ func.func @regression(%arg0: memref<i64>, %arg1: index) {
 // -----
 
 // Regression test: Make sure that we do not crash.
-
+// The step is 0, the loop will be eliminated.
 // CHECK-LABEL: func @zero_step(
-//       CHECK:   scf.for
-//       CHECK:   scf.for
+//       CHECK-NOT:   scf.for
 func.func @zero_step(%arg0: memref<i64>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

@@ -1,4 +1,4 @@
-//===--- EmptyCatchCheck.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 using ::clang::ast_matchers::internal::Matcher;
@@ -26,7 +25,7 @@ AST_MATCHER(CXXCatchStmt, isInMacro) {
 }
 
 AST_MATCHER_P(CXXCatchStmt, hasHandler, Matcher<Stmt>, InnerMatcher) {
-  Stmt *Handler = Node.getHandlerBlock();
+  const Stmt *Handler = Node.getHandlerBlock();
   if (!Handler)
     return false;
   return InnerMatcher.matches(*Handler, Finder, Builder);
@@ -42,7 +41,7 @@ AST_MATCHER_P(CompoundStmt, hasAnyTextFromList, std::vector<llvm::StringRef>,
     return false;
 
   ASTContext &Context = Finder->getASTContext();
-  SourceManager &SM = Context.getSourceManager();
+  const SourceManager &SM = Context.getSourceManager();
   StringRef Text = Lexer::getSourceText(
       CharSourceRange::getTokenRange(Node.getSourceRange()), SM,
       Context.getLangOpts());

@@ -26,6 +26,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/CodeGen/LoopTraversal.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/InitializePasses.h"
 
 namespace llvm {
@@ -76,27 +77,27 @@ public:
     AllReachingDefs[MBBNumber].resize(NumRegUnits);
   }
 
-  void append(unsigned MBBNumber, unsigned Unit, int Def) {
-    AllReachingDefs[MBBNumber][Unit].push_back(Def);
+  void append(unsigned MBBNumber, MCRegUnit Unit, int Def) {
+    AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].push_back(Def);
   }
 
-  void prepend(unsigned MBBNumber, unsigned Unit, int Def) {
-    auto &Defs = AllReachingDefs[MBBNumber][Unit];
+  void prepend(unsigned MBBNumber, MCRegUnit Unit, int Def) {
+    auto &Defs = AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)];
     Defs.insert(Defs.begin(), Def);
   }
 
-  void replaceFront(unsigned MBBNumber, unsigned Unit, int Def) {
-    assert(!AllReachingDefs[MBBNumber][Unit].empty());
-    *AllReachingDefs[MBBNumber][Unit].begin() = Def;
+  void replaceFront(unsigned MBBNumber, MCRegUnit Unit, int Def) {
+    assert(!AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].empty());
+    *AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].begin() = Def;
   }
 
   void clear() { AllReachingDefs.clear(); }
 
-  ArrayRef<ReachingDef> defs(unsigned MBBNumber, unsigned Unit) const {
+  ArrayRef<ReachingDef> defs(unsigned MBBNumber, MCRegUnit Unit) const {
     if (AllReachingDefs[MBBNumber].empty())
       // Block IDs are not necessarily dense.
       return ArrayRef<ReachingDef>();
-    return AllReachingDefs[MBBNumber][Unit];
+    return AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)];
   }
 
 private:
@@ -110,7 +111,7 @@ private:
 };
 
 /// This class provides the reaching def analysis.
-class ReachingDefAnalysis : public MachineFunctionPass {
+class ReachingDefInfo {
 private:
   MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -156,26 +157,16 @@ private:
   using BlockSet = SmallPtrSetImpl<MachineBasicBlock*>;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  ReachingDefInfo();
+  ReachingDefInfo(ReachingDefInfo &&);
+  ~ReachingDefInfo();
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
 
-  ReachingDefAnalysis() : MachineFunctionPass(ID) {
-    initializeReachingDefAnalysisPass(*PassRegistry::getPassRegistry());
-  }
-  void releaseMemory() override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  void printAllReachingDefs(MachineFunction &MF);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs).set(
-          MachineFunctionProperties::Property::TracksLiveness);
-  }
+  void run(MachineFunction &mf);
+  void print(raw_ostream &OS);
+  void releaseMemory();
 
   /// Re-run the analysis.
   void reset();
@@ -319,6 +310,46 @@ private:
   /// Reg that reaches MI, relative to the begining of MI's basic block.
   /// Note that Reg may represent a stack slot.
   MachineInstr *getReachingLocalMIDef(MachineInstr *MI, Register Reg) const;
+};
+
+class ReachingDefAnalysis : public AnalysisInfoMixin<ReachingDefAnalysis> {
+  friend AnalysisInfoMixin<ReachingDefAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = ReachingDefInfo;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Printer pass for the \c ReachingDefInfo results.
+class ReachingDefPrinterPass : public PassInfoMixin<ReachingDefPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit ReachingDefPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  static bool isRequired() { return true; }
+};
+
+class ReachingDefInfoWrapperPass : public MachineFunctionPass {
+  ReachingDefInfo RDI;
+
+public:
+  static char ID;
+
+  ReachingDefInfoWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  MachineFunctionProperties getRequiredProperties() const override;
+  bool runOnMachineFunction(MachineFunction &F) override;
+  void releaseMemory() override { RDI.releaseMemory(); }
+
+  ReachingDefInfo &getRDI() { return RDI; }
+  const ReachingDefInfo &getRDI() const { return RDI; }
 };
 
 } // namespace llvm

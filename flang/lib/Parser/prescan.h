@@ -91,6 +91,15 @@ public:
     return messages_.Say(std::forward<A>(a)...);
   }
 
+  template <typename... A>
+  Message *Warn(common::UsageWarning warning, A &&...a) {
+    return messages_.Warn(false, features_, warning, std::forward<A>(a)...);
+  }
+  template <typename... A>
+  Message *Warn(common::LanguageFeature feature, A &&...a) {
+    return messages_.Warn(false, features_, feature, std::forward<A>(a)...);
+  }
+
 private:
   struct LineClassification {
     enum class Kind {
@@ -159,6 +168,24 @@ private:
   }
 
   bool InCompilerDirective() const { return directiveSentinel_ != nullptr; }
+  bool InOpenMPConditionalLine() const {
+    return directiveSentinel_ && directiveSentinel_[0] == '$' &&
+        !directiveSentinel_[1];
+  }
+  bool InOpenACCOrCUDAConditionalLine() const {
+    return directiveSentinel_ && directiveSentinel_[0] == '@' &&
+        ((directiveSentinel_[1] == 'a' && directiveSentinel_[2] == 'c' &&
+             directiveSentinel_[3] == 'c') ||
+            (directiveSentinel_[1] == 'c' && directiveSentinel_[2] == 'u' &&
+                directiveSentinel_[3] == 'f')) &&
+        directiveSentinel_[4] == '\0';
+  }
+  bool InConditionalLine() const {
+    return InOpenMPConditionalLine() || InOpenACCOrCUDAConditionalLine();
+  }
+  bool IsOpenMPDirective() const {
+    return directiveSentinel_ && std::strcmp(directiveSentinel_, "$omp") == 0;
+  }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
   }
@@ -198,10 +225,10 @@ private:
   std::optional<std::size_t> IsIncludeLine(const char *) const;
   void FortranInclude(const char *quote);
   const char *IsPreprocessorDirectiveLine(const char *) const;
-  const char *FixedFormContinuationLine(bool mightNeedSpace);
+  const char *FixedFormContinuationLine(bool atNewline);
   const char *FreeFormContinuationLine(bool ampersand);
   bool IsImplicitContinuation() const;
-  bool FixedFormContinuation(bool mightNeedSpace);
+  bool FixedFormContinuation(bool atNewline);
   bool FreeFormContinuation();
   bool Continuation(bool mightNeedFixedFormSpace);
   std::optional<LineClassification> IsFixedFormCompilerDirectiveLine(
@@ -211,7 +238,7 @@ private:
   LineClassification ClassifyLine(const char *) const;
   LineClassification ClassifyLine(
       TokenSequence &, Provenance newlineProvenance) const;
-  void SourceFormChange(std::string &&);
+  bool SourceFormChange(std::string &&);
   bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
   bool SourceLineContinuation(TokenSequence &);
 
@@ -251,10 +278,15 @@ private:
   bool continuationInCharLiteral_{false};
   bool inPreprocessorDirective_{false};
 
-  // In some edge cases of compiler directive continuation lines, it
-  // is necessary to treat the line break as a space character by
-  // setting this flag, which is cleared by EmitChar().
-  bool insertASpace_{false};
+  // True after processing a continuation that can't be allowed
+  // to appear in the middle of an identifier token, but is fixed form,
+  // or is free form and doesn't have a space character handy to use as
+  // a separator when:
+  // a) (standard) doesn't begin with a leading '&' on the continuation
+  //     line, but has a non-blank in column 1, or
+  // b) (extension) does have a leading '&', but didn't have one
+  //    on the continued line.
+  bool brokenToken_{false};
 
   // When a free form continuation marker (&) appears at the end of a line
   // before a INCLUDE or #include, we delete it and omit the newline, so

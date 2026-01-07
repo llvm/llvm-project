@@ -179,7 +179,6 @@ LogicalResult OperationVerifier::verifyOnEntrance(Operation &op) {
   if (!numRegions)
     return success();
   auto kindInterface = dyn_cast<RegionKindInterface>(&op);
-  SmallVector<Operation *> opsWithIsolatedRegions;
   // Verify that all child regions are ok.
   MutableArrayRef<Region> regions = op.getRegions();
   for (unsigned i = 0; i < numRegions; ++i) {
@@ -365,7 +364,7 @@ static void diagnoseInvalidOperandDominance(Operation &op, unsigned operandNo) {
   }
   if (block1 == block2)
     llvm::report_fatal_error("Internal error in dominance verification");
-  int index = std::distance(region2->begin(), block2->getIterator());
+  unsigned index = block2->computeBlockNumber();
   note << "operand defined as a block argument (block #" << index;
   if (region1 == region2)
     note << " in the same region)";

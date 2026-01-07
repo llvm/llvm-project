@@ -37,7 +37,7 @@
 ; CHECK-NOT: DW_TAG
 ; CHECK:     DW_AT_name ("b")
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:       DW_TAG_lexical_block
+; CHECK:       [[LB_DECL:.*]]: DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_variable
 ; CHECK-NOT: DW_TAG
@@ -82,7 +82,9 @@
 
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:     DW_TAG_lexical_block
-; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK-NOT:   {{DW_TAG|NULL}}
+; CHECK:       DW_AT_abstract_origin {{.*}}[[LB_DECL]]
+; CHECK-NOT:   {{DW_TAG|NULL}}
 ; CHECK:       DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:         DW_AT_abstract_origin {{.*}} "s"
@@ -120,8 +122,8 @@ declare void @_Z1fi(i32) #1
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
-attributes #0 = { uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #2 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

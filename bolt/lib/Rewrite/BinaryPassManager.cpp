@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Rewrite/BinaryPassManager.h"
-#include "bolt/Passes/ADRRelaxationPass.h"
+#include "bolt/Passes/AArch64RelaxationPass.h"
 #include "bolt/Passes/Aligner.h"
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
@@ -26,6 +26,8 @@
 #include "bolt/Passes/MCF.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Passes/PointerAuthCFIAnalyzer.h"
+#include "bolt/Passes/PointerAuthCFIFixup.h"
 #include "bolt/Passes/ProfileQualityStats.h"
 #include "bolt/Passes/RegReAssign.h"
 #include "bolt/Passes/ReorderData.h"
@@ -52,6 +54,7 @@ namespace opts {
 extern cl::opt<bool> PrintAll;
 extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
+extern bool shouldDumpDot(const bolt::BinaryFunction &Function);
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
 extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
@@ -126,10 +129,19 @@ static cl::opt<bool> PrintJTFootprintReduction(
     cl::desc("print function after jt-footprint-reduction pass"), cl::Hidden,
     cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-    PrintAdrRelaxation("print-adr-relaxation",
-                       cl::desc("print functions after ADR Relaxation pass"),
-                       cl::Hidden, cl::cat(BoltOptCategory));
+static cl::opt<bool> PrintAArch64Relaxation(
+    "print-adr-ldr-relaxation",
+    cl::desc("print functions after ADR/LDR Relaxation pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
+
+cl::opt<bool> PrintPAuthCFIAnalyzer(
+    "print-pointer-auth-cfi-analyzer",
+    cl::desc("print functions after PointerAuthCFIAnalyzer pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
+static cl::opt<bool> PrintPAuthCFIFixup(
+    "print-pointer-auth-cfi-fixup",
+    cl::desc("print functions after PointerAuthCFIFixup pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintLongJmp("print-longjmp",
@@ -247,7 +259,9 @@ static cl::opt<bool> Stoke("stoke", cl::desc("turn on the stoke analysis"),
 
 static cl::opt<bool> StringOps(
     "inline-memcpy",
-    cl::desc("inline memcpy using 'rep movsb' instruction (X86-only)"),
+    cl::desc(
+        "inline memcpy using size-specific optimized instructions "
+        "(X86: 'rep movsb', AArch64: width-optimized register operations)"),
     cl::cat(BoltOptCategory));
 
 static cl::opt<bool> StripRepRet(
@@ -273,6 +287,12 @@ static cl::opt<bool> ShortenInstructions("shorten-instructions",
                                          cl::desc("shorten instructions"),
                                          cl::init(true),
                                          cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    UpdateBranchProtection("update-branch-protection",
+                           cl::desc("Rewrites pac-ret DWARF CFI instructions "
+                                    "(AArch64-only, on by default)"),
+                           cl::init(true), cl::Hidden, cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
@@ -340,7 +360,7 @@ Error BinaryFunctionPassManager::runPasses() {
 
       Function.print(BC.outs(), Message);
 
-      if (opts::DumpDotAll)
+      if (opts::shouldDumpDot(Function))
         Function.dumpGraphForPass(PassIdName);
     }
   }
@@ -349,6 +369,10 @@ Error BinaryFunctionPassManager::runPasses() {
 
 Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
+
+  if (BC.isAArch64())
+    Manager.registerPass(
+        std::make_unique<PointerAuthCFIAnalyzer>(PrintPAuthCFIAnalyzer));
 
   Manager.registerPass(
       std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
@@ -460,6 +484,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(
       std::make_unique<ReorderFunctions>(PrintReorderedFunctions));
 
+  // Produce the list of functions for the output file in a sorted order.
+  Manager.registerPass(std::make_unique<PopulateOutputFunctions>());
+
   // This is the second run of the SplitFunctions pass required by certain
   // splitting strategies (e.g. cdsplit). Running the SplitFunctions pass again
   // after ReorderFunctions allows the finalized function order to be utilized
@@ -497,14 +524,21 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
+  // Patch original function entries
+  if (BC.HasRelocations)
+    Manager.registerPass(std::make_unique<PatchEntries>());
+
   if (BC.isAArch64()) {
     Manager.registerPass(
-        std::make_unique<ADRRelaxationPass>(PrintAdrRelaxation));
+        std::make_unique<AArch64RelaxationPass>(PrintAArch64Relaxation));
 
     // Tighten branches according to offset differences between branch and
     // targets. No extra instructions after this pass, otherwise we may have
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
+
+    Manager.registerPass(
+        std::make_unique<PointerAuthCFIFixup>(PrintPAuthCFIFixup));
   }
 
   // This pass should always run last.*
@@ -523,10 +557,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   // Assign each function an output section.
   Manager.registerPass(std::make_unique<AssignSections>());
-
-  // Patch original function entries
-  if (BC.HasRelocations)
-    Manager.registerPass(std::make_unique<PatchEntries>());
 
   // This pass turns tail calls into jumps which makes them invisible to
   // function reordering. It's unsafe to use any CFG or instruction analysis

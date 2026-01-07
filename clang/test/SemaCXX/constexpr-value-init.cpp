@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -Wno-uninitialized -std=c++17 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -Wno-uninitialized -std=c++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter
 
 struct A {
   constexpr A() : a(b + 1), b(a + 1) {} // expected-note 5{{outside its lifetime}}

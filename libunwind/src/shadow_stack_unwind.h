@@ -12,8 +12,8 @@
 
 #include "libunwind.h"
 
-// Currently, CET is implemented on Linux x86 platforms.
-#if defined(_LIBUNWIND_TARGET_LINUX) && defined(__CET__) && defined(__SHSTK__)
+// Currently, CET is implemented on some ELF x86 platforms.
+#if defined(__CET__) && defined(__SHSTK__)
 #define _LIBUNWIND_USE_CET 1
 #endif
 

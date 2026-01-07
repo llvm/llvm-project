@@ -94,7 +94,7 @@ def: Flag<["-"], "s">,
   Group<grp_general>;
 
 def flat: F<"flat">,
-  HelpText<"Produce a flat dSYM file (not a bundle).">,
+  HelpText<"Produce a flat dSYM file (not a bundle). Intended for testing and generally unsupported by tools that consume dSYMs.">,
   Group<grp_general>;
 def: Flag<["-"], "f">,
   Alias<flat>,
@@ -200,6 +200,14 @@ def: Joined<["--", "-"], "remarks-output-format=">, Alias<remarks_output_format>
 def remarks_drop_without_debug: Flag<["--", "-"], "remarks-drop-without-debug">,
   HelpText<"Drop remarks without valid debug locations. Without this flags, "
            "all remarks are kept.">,
+  Group<grp_general>;
+
+def include_swiftmodules_from_interface: Flag<["--", "-"], "include-swiftmodules-from-interface">,
+  HelpText<"Whether or not to copy binary swiftmodules built from textual "
+  ".swiftinterface files into the dSYM bundle. These typically come only "
+  "from the SDK (since textual interfaces require library evolution) and "
+  "thus are a waste of space to copy into the bundle. Turn this on if the "
+  "swiftmodules are different from those in the SDK.">,
   Group<grp_general>;
 
 def linker: Separate<["--", "-"], "linker">,

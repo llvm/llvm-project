@@ -1,6 +1,5 @@
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=false -o - | FileCheck --check-prefix=LINEONLY %s
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck --check-prefix=LINEONLY %s
 
 ! This tests checks the debug information for local variables in llvm IR.
 
@@ -20,7 +19,7 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i64 @_QFPfn1
-! BOTH-SAME: (ptr captures(none) %[[ARG1:.*]], ptr captures(none) %[[ARG2:.*]], ptr captures(none) %[[ARG3:.*]])
+! BOTH-SAME: (ptr {{[^%]*}}%[[ARG1:.*]], ptr {{[^%]*}}%[[ARG2:.*]], ptr {{[^%]*}}%[[ARG3:.*]])
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG1]], ![[A1:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG2]], ![[B1:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG3]], ![[C1:.*]], !DIExpression(), !{{.*}})
@@ -29,7 +28,7 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i32 @_QFPfn2
-! BOTH-SAME: (ptr captures(none) %[[FN2ARG1:.*]], ptr captures(none) %[[FN2ARG2:.*]], ptr captures(none) %[[FN2ARG3:.*]])
+! BOTH-SAME: (ptr {{[^%]*}}%[[FN2ARG1:.*]], ptr {{[^%]*}}%[[FN2ARG2:.*]], ptr {{[^%]*}}%[[FN2ARG3:.*]])
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG1]], ![[A2:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG2]], ![[B2:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG3]], ![[C2:.*]], !DIExpression(), !{{.*}})
@@ -38,14 +37,14 @@
 ! BOTH-LABEL: }
 
 program mn
-! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "mn", {{.*}})
+! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "MN", {{.*}})
 
 ! BOTH-DAG: ![[TYI32:.*]] = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
-! BOTH-DAG: ![[TYI64:.*]] = !DIBasicType(name: "integer", size: 64, encoding: DW_ATE_signed)
-! BOTH-DAG: ![[TYL8:.*]]  = !DIBasicType(name: "logical", size: 8, encoding: DW_ATE_boolean)
+! BOTH-DAG: ![[TYI64:.*]] = !DIBasicType(name: "integer(kind=8)", size: 64, encoding: DW_ATE_signed)
+! BOTH-DAG: ![[TYL8:.*]]  = !DIBasicType(name: "logical(kind=1)", size: 8, encoding: DW_ATE_boolean)
 ! BOTH-DAG: ![[TYL32:.*]] = !DIBasicType(name: "logical", size: 32, encoding: DW_ATE_boolean)
 ! BOTH-DAG: ![[TYR32:.*]] = !DIBasicType(name: "real", size: 32, encoding: DW_ATE_float)
-! BOTH-DAG: ![[TYR64:.*]] = !DIBasicType(name: "real", size: 64, encoding: DW_ATE_float)
+! BOTH-DAG: ![[TYR64:.*]] = !DIBasicType(name: "real(kind=8)", size: 64, encoding: DW_ATE_float)
 
 ! BOTH-DAG: ![[I4]] = !DILocalVariable(name: "i4", scope: ![[MAIN]], file: !{{.*}}, line: [[@LINE+6]], type: ![[TYI32]])
 ! BOTH-DAG: ![[I8]] = !DILocalVariable(name: "i8", scope: ![[MAIN]], file: !{{.*}}, line: [[@LINE+6]], type: ![[TYI64]])

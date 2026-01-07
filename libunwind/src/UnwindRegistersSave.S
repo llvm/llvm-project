@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !defined(__wasm__)
+
 #include "assembly.h"
 
 #define FROM_0_TO_15 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
@@ -16,13 +18,16 @@
 
 #if defined(_AIX)
     .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+    .section .text,"axy",@progbits,unique,0
 #else
     .text
 #endif
 
-#if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
+#if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
 
 #
 # extern int __unw_getcontext(unw_context_t* thread_state)
@@ -65,7 +70,49 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   xorl  %eax, %eax    # return UNW_ESUCCESS
   ret
 
+#elif defined(__arm64ec__)
+
+//
+// extern int __unw_getcontext(unw_context_t* thread_state)
+//
+// On entry:
+//  thread_state pointer is in x0
+//
+  .section .text,"xr",discard,"#__unw_getcontext"
+  .p2align 2
+DEFINE_LIBUNWIND_FUNCTION("#__unw_getcontext")
+  stp    x8, x27, [x0, #0x000]  // rax, rbx
+  stp    x0, x1,  [x0, #0x010]  // rcx, rdx
+  stp    x26,x25, [x0, #0x020]  // rdi, rsi
+  mov    x1, sp
+  stp    fp, x1,  [x0, #0x030]  // rbp, rsp
+  stp    x2, x3,  [x0, #0x040]  // r8,  r9
+  stp    x4, x5,  [x0, #0x050]  // r10, r11
+  stp    x19,x20, [x0, #0x060]  // r12, r13
+  stp    x21,x22, [x0, #0x070]  // r14, r15
+  str    x30,     [x0, #0x080]  // store return address as pc
+  stp    q0, q1,  [x0, #0x0b0]  // xmm0, xmm1
+  stp    q2, q3,  [x0, #0x0d0]  // xmm2, xmm3
+  stp    q4, q5,  [x0, #0x0f0]  // xmm4, xmm5
+  stp    q6, q7,  [x0, #0x110]  // xmm6, xmm7
+  stp    q8, q9,  [x0, #0x130]  // xmm8, xmm9
+  stp    q10,q11, [x0, #0x150]  // xmm10,xmm11
+  stp    q12,q13, [x0, #0x170]  // xmm12,xmm13
+  stp    q14,q15, [x0, #0x190]  // xmm14,xmm15
+  mov    x0, #0                 // return UNW_ESUCCESS
+  ret
+
+  .weak_anti_dep __unw_getcontext
+  .set __unw_getcontext, "#__unw_getcontext"
+
+  .section .hybmp$x,"yi"
+  .symidx "#__unw_getcontext"
+  .symidx $ientry_thunk$cdecl$i8$i8
+  .word 1
+  .text
+
 #elif defined(__x86_64__)
+.att_syntax
 
 #
 # extern int __unw_getcontext(unw_context_t* thread_state)
@@ -718,6 +765,10 @@ LnoR2Fix:
 
 #elif defined(__aarch64__)
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)
 //
@@ -726,6 +777,11 @@ LnoR2Fix:
 //
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+
+#if __has_feature(ptrauth_calls)
+  pacibsp
+#endif
+
   stp    x0, x1,  [x0, #0x000]
   stp    x2, x3,  [x0, #0x010]
   stp    x4, x5,  [x0, #0x020]
@@ -766,7 +822,74 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    d31,     [x0, #0x208]
 #endif
   mov    x0, #0                   // return UNW_ESUCCESS
+
+#if __has_feature(ptrauth_calls)
+  retab
+#else
   ret
+#endif
+
+//
+// extern "C" int64_t __libunwind_Registers_arm64_za_disable()
+//
+//   This function implements the requirements of the __arm_za_disable ABI
+//   routine, except that it will not abort; it will return a non-zero value
+//   to signify the routine failed.
+//
+//   Note: This function uses SME instructions. It must only be called if SME
+//   has been confirmed to be available.
+//
+// On return:
+//
+//   A status is placed in x0. A zero value indicates success; any non-zero
+//   value indicates failure.
+//
+  .p2align 2
+DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_za_disable)
+  .variant_pcs __libunwind_Registers_arm64_za_disable
+#if __has_feature(ptrauth_calls)
+  pacibsp
+#endif
+  // If TPIDR2_EL0 is null, the subroutine just disables ZA.
+  .inst 0xd53bd0b0 // mrs x16, TPIDR2_EL0
+  cbz x16, 1f
+
+  // If any of the reserved bytes in the first 16 bytes of the TPIDR2 block are
+  // nonzero, return a non-zero value (libunwind will then abort).
+  ldrh w0, [x16, #10]
+  cbnz w0, 2f
+  ldr w0, [x16, #12]
+  cbnz w0, 2f
+
+  // If num_za_save_slices is zero, the subroutine just disables ZA.
+  ldrh w0, [x16, #8]
+  cbz x0, 1f
+
+  // If za_save_buffer is NULL, the subroutine just disables ZA.
+  ldr x16, [x16]
+  cbz x16, 1f
+
+  // Store ZA to za_save_buffer.
+  mov x15, xzr
+0:
+  .inst 0xe1206200 // str za[w15,0], [x16]
+  .inst 0x04305830 // addsvl x16, x16, #1
+  add x15, x15, #1
+  cmp x0, x15
+  b.ne 0b
+1:
+  // * Set TPIDR2_EL0 to null.
+  .inst 0xd51bd0bf // msr TPIDR2_EL0, xzr
+  // * Set PSTATE.ZA to 0.
+  .inst 0xd503447f // smstop za
+  // * Return zero (success)
+  mov x0, xzr
+2:
+#if __has_feature(ptrauth_calls)
+  retab
+#else
+  ret
+#endif
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
@@ -1181,8 +1304,18 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 
 #endif
 
+#ifdef __arm64ec__
+  .globl "#unw_getcontext"
+  .set "#unw_getcontext", "#__unw_getcontext"
+  .weak_anti_dep unw_getcontext
+  .set unw_getcontext, "#unw_getcontext"
+  EXPORT_SYMBOL(unw_getcontext)
+#else
   WEAK_ALIAS(__unw_getcontext, unw_getcontext)
+#endif
 
-#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__) */
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
 
 NO_EXEC_STACK_DIRECTIVE
+
+#endif /* !defined(__wasm__) */

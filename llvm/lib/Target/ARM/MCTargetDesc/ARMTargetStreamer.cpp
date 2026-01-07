@@ -115,6 +115,9 @@ void ARMTargetStreamer::emitFPU(ARM::FPUKind FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
 void ARMTargetStreamer::annotateTLSDescriptorSequence(
     const MCSymbolRefExpr *SRE) {}
+void ARMTargetStreamer::emitSyntaxUnified() {}
+void ARMTargetStreamer::emitCode16() {}
+void ARMTargetStreamer::emitCode32() {}
 void ARMTargetStreamer::emitThumbFunc(MCSymbol *Symbol) {}
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}
 

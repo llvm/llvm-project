@@ -31,22 +31,17 @@ define <2 x half> @test_pown_reduced_fast_v2f16_known_odd(<2 x half> %x, <2 x i3
 ; GFX9-LABEL: test_pown_reduced_fast_v2f16_known_odd:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_or_b32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_or_b32_e32 v2, 1, v2
+; GFX9-NEXT:    v_or_b32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX9-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v0
-; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX9-NEXT:    v_pack_b32_f16 v1, v1, v2
 ; GFX9-NEXT:    v_pk_mul_f16 v1, v3, v1
-; GFX9-NEXT:    v_bfi_b32 v2, s4, v1, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v1, v0
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %y = or <2 x i32> %y.arg, <i32 1, i32 1>
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
@@ -350,15 +345,13 @@ define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v3
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
 ; GFX9-NEXT:    v_fma_f32 v2, v2, v1, v3
-; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_exp_f32_e32 v2, v2
+; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_not_b32_e32 v3, 63
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; GFX9-NEXT:    v_ldexp_f32 v2, v2, v3
-; GFX9-NEXT:    v_and_b32_e32 v0, v1, v0
-; GFX9-NEXT:    s_brev_b32 s4, -2
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    v_and_or_b32 v0, v1, v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %y = sitofp i32 %y.i to float
   %y.fptosi = fptosi float %y to i32
@@ -375,4 +368,109 @@ define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
   ret float %pow_sign1
 }
 
+define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
+; GFX9-LABEL: test_pow_fast_f64integral_y:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s16, s33
+; GFX9-NEXT:    s_mov_b32 s33, s32
+; GFX9-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GFX9-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_mov_b64 exec, s[18:19]
+; GFX9-NEXT:    v_writelane_b32 v43, s16, 14
+; GFX9-NEXT:    v_writelane_b32 v43, s30, 0
+; GFX9-NEXT:    v_writelane_b32 v43, s31, 1
+; GFX9-NEXT:    v_writelane_b32 v43, s34, 2
+; GFX9-NEXT:    v_writelane_b32 v43, s35, 3
+; GFX9-NEXT:    v_writelane_b32 v43, s36, 4
+; GFX9-NEXT:    v_writelane_b32 v43, s37, 5
+; GFX9-NEXT:    v_writelane_b32 v43, s38, 6
+; GFX9-NEXT:    v_writelane_b32 v43, s39, 7
+; GFX9-NEXT:    v_writelane_b32 v43, s48, 8
+; GFX9-NEXT:    v_writelane_b32 v43, s49, 9
+; GFX9-NEXT:    v_writelane_b32 v43, s50, 10
+; GFX9-NEXT:    s_addk_i32 s32, 0x800
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_writelane_b32 v43, s51, 11
+; GFX9-NEXT:    v_mov_b32_e32 v42, v1
+; GFX9-NEXT:    v_writelane_b32 v43, s52, 12
+; GFX9-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v42
+; GFX9-NEXT:    s_getpc_b64 s[16:17]
+; GFX9-NEXT:    s_add_u32 s16, s16, _Z4log2d@rel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s17, s17, _Z4log2d@rel32@hi+12
+; GFX9-NEXT:    v_writelane_b32 v43, s53, 13
+; GFX9-NEXT:    v_mov_b32_e32 v40, v31
+; GFX9-NEXT:    v_mov_b32_e32 v41, v2
+; GFX9-NEXT:    s_mov_b32 s50, s15
+; GFX9-NEXT:    s_mov_b32 s51, s14
+; GFX9-NEXT:    s_mov_b32 s52, s13
+; GFX9-NEXT:    s_mov_b32 s53, s12
+; GFX9-NEXT:    s_mov_b64 s[34:35], s[10:11]
+; GFX9-NEXT:    s_mov_b64 s[36:37], s[8:9]
+; GFX9-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; GFX9-NEXT:    s_mov_b64 s[48:49], s[4:5]
+; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GFX9-NEXT:    v_cvt_f64_i32_e32 v[2:3], v41
+; GFX9-NEXT:    s_getpc_b64 s[16:17]
+; GFX9-NEXT:    s_add_u32 s16, s16, _Z4exp2d@rel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s17, s17, _Z4exp2d@rel32@hi+12
+; GFX9-NEXT:    s_mov_b64 s[4:5], s[48:49]
+; GFX9-NEXT:    s_mov_b64 s[6:7], s[38:39]
+; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
+; GFX9-NEXT:    s_mov_b64 s[8:9], s[36:37]
+; GFX9-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; GFX9-NEXT:    s_mov_b32 s12, s53
+; GFX9-NEXT:    s_mov_b32 s13, s52
+; GFX9-NEXT:    s_mov_b32 s14, s51
+; GFX9-NEXT:    s_mov_b32 s15, s50
+; GFX9-NEXT:    v_mov_b32_e32 v31, v40
+; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 31, v41
+; GFX9-NEXT:    v_and_b32_e32 v2, v2, v42
+; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX9-NEXT:    v_readlane_b32 s53, v43, 13
+; GFX9-NEXT:    v_readlane_b32 s52, v43, 12
+; GFX9-NEXT:    v_readlane_b32 s51, v43, 11
+; GFX9-NEXT:    v_readlane_b32 s50, v43, 10
+; GFX9-NEXT:    v_readlane_b32 s49, v43, 9
+; GFX9-NEXT:    v_readlane_b32 s48, v43, 8
+; GFX9-NEXT:    v_readlane_b32 s39, v43, 7
+; GFX9-NEXT:    v_readlane_b32 s38, v43, 6
+; GFX9-NEXT:    v_readlane_b32 s37, v43, 5
+; GFX9-NEXT:    v_readlane_b32 s36, v43, 4
+; GFX9-NEXT:    v_readlane_b32 s35, v43, 3
+; GFX9-NEXT:    v_readlane_b32 s34, v43, 2
+; GFX9-NEXT:    v_readlane_b32 s31, v43, 1
+; GFX9-NEXT:    v_readlane_b32 s30, v43, 0
+; GFX9-NEXT:    s_mov_b32 s32, s33
+; GFX9-NEXT:    v_readlane_b32 s4, v43, 14
+; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX9-NEXT:    s_mov_b32 s33, s4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %fabs = call fast double @llvm.fabs.f64(double %x)
+  %log2 = call fast double @_Z4log2d(double %fabs)
+  %pownI2F = sitofp i32 %y.i to double
+  %ylogx = fmul fast double %log2, %pownI2F
+  %exp2 = call fast nofpclass(nan ninf nzero nsub nnorm) double @_Z4exp2d(double %ylogx)
+  %ytou = zext i32 %y.i to i64
+  %yeven = shl i64 %ytou, 63
+  %x.i64 = bitcast double %x to i64
+  %pow_sign = and i64 %yeven, %x.i64
+  %pow_sign.f64 = bitcast i64 %pow_sign to double
+  %pow_sign1 = call fast double @llvm.copysign.f64(double %exp2, double %pow_sign.f64)
+  ret double %pow_sign1
+}
+
+declare hidden double @_Z4exp2d(double) #1
+declare hidden double @_Z4log2d(double) #1
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #1 = { norecurse nounwind memory(read) }

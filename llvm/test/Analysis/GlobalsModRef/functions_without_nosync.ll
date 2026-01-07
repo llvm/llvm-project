@@ -11,28 +11,15 @@ target triple = "nvptx64-nvidia-cuda"
 
 ; CHECK-LABEL: @bar_sync
 ; CHECK: store
-; CHECK: tail call void @llvm.nvvm.bar.sync(i32 0)
+; CHECK: tail call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
 ; CHECK: load
 define dso_local i32 @bar_sync(i32 %0) local_unnamed_addr {
   store i32 %0, ptr addrspacecast (ptr addrspace(3) @s to ptr), align 4
-  tail call void @llvm.nvvm.bar.sync(i32 0)
+  tail call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   %2 = load i32, ptr addrspacecast (ptr addrspace(3) @s to ptr), align 4
   ret i32 %2
 }
 
-declare void @llvm.nvvm.bar.sync(i32) #0
-
-; CHECK-LABEL: @barrier0
-; CHECK: store
-; CHECK: tail call void @llvm.nvvm.barrier0()
-; CHECK: load
-define dso_local i32 @barrier0(i32 %0) local_unnamed_addr  {
-  store i32 %0, ptr addrspacecast (ptr addrspace(3) @s to ptr), align 4
-  tail call void @llvm.nvvm.barrier0()
-  %2 = load i32, ptr addrspacecast (ptr addrspace(3) @s to ptr), align 4
-  ret i32 %2
-}
-
-declare void @llvm.nvvm.barrier0() #0
+declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32) #0
 
 attributes #0 = { convergent nounwind }

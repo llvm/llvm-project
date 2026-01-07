@@ -117,7 +117,7 @@ struct FileHeader {
   llvm::yaml::Hex8 ABIVersion;
   ELF_ET Type;
   std::optional<ELF_EM> Machine;
-  ELF_EF Flags;
+  std::optional<ELF_EF> Flags;
   llvm::yaml::Hex64 Entry;
   std::optional<StringRef> SectionHeaderStringTable;
 
@@ -162,9 +162,11 @@ struct BBAddrMapEntry {
     llvm::yaml::Hex64 AddressOffset;
     llvm::yaml::Hex64 Size;
     llvm::yaml::Hex64 Metadata;
+    std::optional<std::vector<llvm::yaml::Hex64>> CallsiteEndOffsets;
+    std::optional<llvm::yaml::Hex64> Hash;
   };
   uint8_t Version;
-  llvm::yaml::Hex8 Feature;
+  llvm::yaml::Hex16 Feature;
 
   struct BBRangeEntry {
     llvm::yaml::Hex64 BaseAddress;
@@ -180,6 +182,20 @@ struct BBAddrMapEntry {
       return 0;
     return BBRanges->front().BaseAddress;
   }
+
+  // Returns if any BB entries have non-empty callsite offsets.
+  bool hasAnyCallsiteEndOffsets() const {
+    if (!BBRanges)
+      return false;
+    for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *BBRanges) {
+      if (!BBR.BBEntries)
+        continue;
+      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries)
+        if (BBE.CallsiteEndOffsets && !BBE.CallsiteEndOffsets->empty())
+          return true;
+    }
+    return false;
+  }
 };
 
 struct PGOAnalysisMapEntry {
@@ -187,8 +203,10 @@ struct PGOAnalysisMapEntry {
     struct SuccessorEntry {
       uint32_t ID;
       llvm::yaml::Hex32 BrProb;
+      std::optional<uint32_t> PostLinkBrFreq;
     };
     std::optional<uint64_t> BBFreq;
+    std::optional<uint32_t> PostLinkBBFreq;
     std::optional<std::vector<SuccessorEntry>> Successors;
   };
   std::optional<uint64_t> FuncEntryCount;

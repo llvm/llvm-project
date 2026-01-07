@@ -18,6 +18,16 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(macos_version=["<", "15.0"], archs=["arm64", "arm64e"])
+    @skipIf(
+        dwarf_version=["<", "5"],
+        oslist=[lldbplatformutil.getDarwinOSTriples()],
+    )
+    @expectedFailureAll(
+        compiler="clang",
+        compiler_version=["<", "19.0"],
+        oslist=[lldbplatformutil.getDarwinOSTriples()],
+    )
     def test_frame_var(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -32,20 +42,20 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect_var_path("::globalPtr", type="int *")
         self.expect_var_path("::globalRef", type="int &")
 
-        self.expect(
-            "frame variable 'externGlobalVar'",
-            error=True,
-            substrs=["use of undeclared identifier"],
-        )  # 0x00C0FFEE
-        self.expect(
-            "frame variable '::externGlobalVar'",
-            error=True,
-            substrs=["use of undeclared identifier"],
-        )  # ["12648430"])
-
         self.expect_var_path("ns::globalVar", value="13")
         self.expect_var_path("ns::globalPtr", type="int *")
         self.expect_var_path("ns::globalRef", type="int &")
         self.expect_var_path("::ns::globalVar", value="13")
         self.expect_var_path("::ns::globalPtr", type="int *")
         self.expect_var_path("::ns::globalRef", type="int &")
+
+        self.expect_var_path("externGlobalVar", value="2")
+        self.expect_var_path("::externGlobalVar", value="2")
+        self.expect_var_path("ext::externGlobalVar", value="4")
+        self.expect_var_path("::ext::externGlobalVar", value="4")
+
+        self.expect_var_path("ExtStruct::static_inline", value="16")
+
+        # Test local variable priority over global
+        self.expect_var_path("foo", value="1")
+        self.expect_var_path("::foo", value="2")

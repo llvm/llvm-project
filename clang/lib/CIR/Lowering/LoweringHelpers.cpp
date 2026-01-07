@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/LoweringHelpers.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
 mlir::DenseElementsAttr
@@ -63,7 +64,7 @@ void convertToDenseElementsAttrImpl(
   if (auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
     if (auto arrayType = mlir::dyn_cast<cir::ArrayType>(attr.getType())) {
       for (auto element : stringAttr) {
-        auto intAttr = cir::IntAttr::get(arrayType.getEltType(), element);
+        auto intAttr = cir::IntAttr::get(arrayType.getElementType(), element);
         values[currentIndex++] = mlir::dyn_cast<AttrTy>(intAttr).getValue();
       }
       return;
@@ -128,7 +129,7 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
   auto dims = llvm::SmallVector<int64_t, 2>{};
   while (auto arrayType = mlir::dyn_cast<cir::ArrayType>(type)) {
     dims.push_back(arrayType.getSize());
-    type = arrayType.getEltType();
+    type = arrayType.getElementType();
   }
 
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
@@ -138,9 +139,46 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
         constArr, dims, type, converter->convertType(type));
 
-  if (mlir::isa<cir::CIRFPTypeInterface>(type))
+  if (mlir::isa<cir::FPTypeInterface>(type))
     return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
         constArr, dims, type, converter->convertType(type));
 
   return std::nullopt;
+}
+
+mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
+                          mlir::Type typ, const llvm::APInt &val) {
+  return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);
+}
+
+mlir::Value getConst(mlir::OpBuilder &bld, mlir::Location loc, mlir::Type typ,
+                     unsigned val) {
+  return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);
+}
+
+mlir::Value createShL(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+  if (!rhs)
+    return lhs;
+  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return mlir::LLVM::ShlOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+}
+
+mlir::Value createAShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+  if (!rhs)
+    return lhs;
+  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return mlir::LLVM::AShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+}
+
+mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
+                      const llvm::APInt &rhs) {
+  mlir::Value rhsVal = getConstAPInt(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return mlir::LLVM::AndOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+}
+
+mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+  if (!rhs)
+    return lhs;
+  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return mlir::LLVM::LShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }

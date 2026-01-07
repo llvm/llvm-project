@@ -20,6 +20,8 @@
 #include <utility>
 
 namespace llvm {
+class MCGOFFStreamer;
+class SystemZHLASMAsmStreamer;
 
 class SystemZTargetStreamer : public MCTargetStreamer {
 public:
@@ -54,9 +56,7 @@ public:
 
   void emitConstantPools() override;
 
-  virtual void emitMachine(StringRef CPU) {};
-
-  virtual void emitExtern(StringRef Str) {};
+  virtual void emitMachine(StringRef CPUOrCommand) {};
 
   virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                            const MCSymbol *Lo) {
@@ -77,7 +77,7 @@ class SystemZTargetHLASMStreamer : public SystemZTargetStreamer {
 public:
   SystemZTargetHLASMStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : SystemZTargetStreamer(S), OS(OS) {}
-  void emitExtern(StringRef Sym) override;
+  SystemZHLASMAsmStreamer &getHLASMStreamer();
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
 };
@@ -85,7 +85,7 @@ public:
 class SystemZTargetELFStreamer : public SystemZTargetStreamer {
 public:
   SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
-  void emitMachine(StringRef CPU) override {}
+  void emitMachine(StringRef CPUOrCommand) override {}
 };
 
 class SystemZTargetGNUStreamer : public SystemZTargetStreamer {
@@ -94,8 +94,8 @@ class SystemZTargetGNUStreamer : public SystemZTargetStreamer {
 public:
   SystemZTargetGNUStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : SystemZTargetStreamer(S), OS(OS) {}
-  void emitMachine(StringRef CPU) override {
-    OS << "\t.machine " << CPU << "\n";
+  void emitMachine(StringRef CPUOrCommand) override {
+    OS << "\t.machine " << CPUOrCommand << "\n";
   }
 };
 

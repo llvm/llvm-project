@@ -725,3 +725,43 @@ define ptr @postidx64_sw(ptr %src, ptr %out) {
   store i64 %sext, ptr %out, align 8
   ret ptr %ptr
 }
+
+define ptr @postidx32_shalf(ptr %src, ptr %out, half %a) {
+; CHECK64-LABEL: postidx32_shalf:
+; CHECK64:       ; %bb.0:
+; CHECK64-NEXT:    ldr h1, [x0], #4
+; CHECK64-NEXT:    ; kill: def $h0 killed $h0 def $s0
+; CHECK64-NEXT:    fcvt s2, h1
+; CHECK64-NEXT:    fcmp s2, #0.0
+; CHECK64-NEXT:    fcsel s0, s1, s0, mi
+; CHECK64-NEXT:    str h0, [x1]
+; CHECK64-NEXT:    ret
+;
+; GISEL-LABEL: postidx32_shalf:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    ldr h1, [x0], #4
+; GISEL-NEXT:    ; kill: def $h0 killed $h0 def $s0
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    fcvt s2, h1
+; GISEL-NEXT:    fmov w8, s1
+; GISEL-NEXT:    fcmp s2, #0.0
+; GISEL-NEXT:    csel w8, w8, w9, mi
+; GISEL-NEXT:    strh w8, [x1]
+; GISEL-NEXT:    ret
+;
+; CHECK32-LABEL: postidx32_shalf:
+; CHECK32:       ; %bb.0:
+; CHECK32-NEXT:    ldr h1, [x0], #4
+; CHECK32-NEXT:    ; kill: def $h0 killed $h0 def $s0
+; CHECK32-NEXT:    fcvt s2, h1
+; CHECK32-NEXT:    fcmp s2, #0.0
+; CHECK32-NEXT:    fcsel s0, s1, s0, mi
+; CHECK32-NEXT:    str h0, [x1]
+; CHECK32-NEXT:    ret
+  %tmp = load half, ptr %src, align 2
+  %ptr = getelementptr inbounds i32, ptr %src, i64 1
+  %c = fcmp olt half %tmp, 0.0
+  %s = select i1 %c, half %tmp, half %a
+  store half %s, ptr %out, align 8
+  ret ptr %ptr
+}

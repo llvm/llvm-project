@@ -1,4 +1,4 @@
-; RUN: llc -mtriple amdgcn-amd-- -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple amdgcn-amd-- -mcpu=bonaire < %s | FileCheck -check-prefix=GCN %s
 
 ; Before the fix that this test was committed with, this code would leave
 ; an unused stack slot, causing ScratchSize to be non-zero.

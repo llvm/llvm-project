@@ -1,0 +1,19 @@
+static_library("Scalable") {
+  output_name = "clangAnalysisScalable"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Index",
+    "//clang/lib/Lex",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "ASTEntityMapping.cpp",
+    "Model/BuildNamespace.cpp",
+    "Model/EntityIdTable.cpp",
+    "Model/EntityName.cpp",
+  ]
+}

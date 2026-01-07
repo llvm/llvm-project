@@ -14,6 +14,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -22,8 +23,6 @@
 #include <chrono>
 #include <ctime>
 #include <memory>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <system_error>
 #include <tuple>
 
@@ -163,6 +162,8 @@ LockFileManager::LockFileManager(StringRef FileName)
     : FileName(FileName), Owner(OwnerUnknown{}) {}
 
 Expected<bool> LockFileManager::tryLock() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert(std::holds_alternative<OwnerUnknown>(Owner) &&
          "lock has already been attempted");
 
@@ -248,6 +249,8 @@ Expected<bool> LockFileManager::tryLock() {
 }
 
 LockFileManager::~LockFileManager() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (!std::holds_alternative<OwnedByUs>(Owner))
     return;
 
@@ -261,6 +264,8 @@ LockFileManager::~LockFileManager() {
 
 WaitForUnlockResult
 LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   auto *LockFileOwner = std::get_if<OwnedByAnother>(&Owner);
   assert(LockFileOwner &&
          "waiting for lock to be unlocked without knowing the owner");
@@ -290,5 +295,7 @@ LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
 }
 
 std::error_code LockFileManager::unsafeMaybeUnlock() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   return sys::fs::remove(LockFileName);
 }

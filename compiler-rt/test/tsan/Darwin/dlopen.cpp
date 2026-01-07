@@ -9,14 +9,15 @@
 // RUN: %clangxx_tsan %s -o %t.so -shared -DSHARED_LIB
 // RUN: %clangxx_tsan -fno-sanitize=thread %s -o %t
 
-// RUN: TSAN_DYLIB_PATH=`%clangxx_tsan %s -### 2>&1 \
+// RUN: %clangxx_tsan %s -### 2>&1 \
 // RUN:   | grep "libclang_rt.tsan_osx_dynamic.dylib" \
-// RUN:   | sed -e 's/.*"\(.*libclang_rt.tsan_osx_dynamic.dylib\)".*/\1/'`
+// RUN:   | sed -e 's/.*"\(.*libclang_rt.tsan_osx_dynamic.dylib\)".*/\1/' \
+// RUN:   | tr -d '\n' > %t.tsan_dylib_path
 
 // Launching a non-instrumented binary that dlopen's an instrumented library should fail.
 // RUN: not %run %t %t.so 2>&1 | FileCheck %s --check-prefix=CHECK-FAIL
 // Launching a non-instrumented binary with an explicit DYLD_INSERT_LIBRARIES should work.
-// RUN: DYLD_INSERT_LIBRARIES=$TSAN_DYLIB_PATH %run %t %t.so 2>&1 | FileCheck %s
+// RUN: env DYLD_INSERT_LIBRARIES="%{readfile:%t.tsan_dylib_path}" %run %t %t.so 2>&1 | FileCheck %s
 
 #include <dlfcn.h>
 #include <pthread.h>

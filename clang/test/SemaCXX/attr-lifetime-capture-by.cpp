@@ -8,7 +8,7 @@ struct S {
 ///////////////////////////
 // Test for valid usages.
 ///////////////////////////
-[[clang::lifetime_capture_by(unknown)]] // expected-error {{'lifetime_capture_by' attribute only applies to parameters and implicit object parameters}}
+[[clang::lifetime_capture_by(unknown)]] // expected-error {{'clang::lifetime_capture_by' attribute only applies to parameters and implicit object parameters}}
 void nonMember(
     const int &x1 [[clang::lifetime_capture_by(s, t)]],
     S &s,
@@ -44,4 +44,7 @@ struct T {
   {
     s.captureInt(x);
   }
+
+  void explicit_this1(this T& self, const int &x [[clang::lifetime_capture_by(self)]]);
+  void explicit_this2(this T& self, const int &x [[clang::lifetime_capture_by(this)]]); // expected-error {{argument references unavailable implicit 'this'}}
 };

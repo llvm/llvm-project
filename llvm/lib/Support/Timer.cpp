@@ -24,7 +24,6 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signposts.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <optional>
@@ -58,6 +57,7 @@ static SignpostEmitter &signposts();
 static sys::SmartMutex<true> &timerLock();
 static TimerGroup &defaultTimerGroup();
 static Name2PairMap &namedGroupedTimers();
+static bool isTimerGlobalsConstructed();
 
 //===----------------------------------------------------------------------===//
 //
@@ -207,7 +207,7 @@ void TimeRecord::print(const TimeRecord &Total, raw_ostream &OS) const {
 
 namespace {
 
-typedef StringMap<Timer> Name2TimerMap;
+using Name2TimerMap = StringMap<Timer>;
 
 class Name2PairMap {
   StringMap<std::pair<TimerGroup*, Name2TimerMap> > Map;
@@ -240,7 +240,8 @@ private:
   getGroupEntry(StringRef GroupName, StringRef GroupDescription) {
     std::pair<TimerGroup *, Name2TimerMap> &GroupEntry = Map[GroupName];
     if (!GroupEntry.first)
-      GroupEntry.first = new TimerGroup(GroupName, GroupDescription);
+      GroupEntry.first =
+          new TimerGroup(GroupName, GroupDescription, /*PrintOnExit=*/true);
 
     return GroupEntry;
   }
@@ -270,9 +271,10 @@ TimerGroup &NamedRegionTimer::getNamedTimerGroup(StringRef GroupName,
 static TimerGroup *TimerGroupList = nullptr;
 
 TimerGroup::TimerGroup(StringRef Name, StringRef Description,
-                       sys::SmartMutex<true> &lock)
+                       sys::SmartMutex<true> &lock, bool PrintOnExit)
     : Name(Name.begin(), Name.end()),
-      Description(Description.begin(), Description.end()) {
+      Description(Description.begin(), Description.end()),
+      PrintOnExit(PrintOnExit) {
   // Add the group to TimerGroupList.
   sys::SmartScopedLock<true> L(lock);
   if (TimerGroupList)
@@ -282,12 +284,12 @@ TimerGroup::TimerGroup(StringRef Name, StringRef Description,
   TimerGroupList = this;
 }
 
-TimerGroup::TimerGroup(StringRef Name, StringRef Description)
-    : TimerGroup(Name, Description, timerLock()) {}
+TimerGroup::TimerGroup(StringRef Name, StringRef Description, bool PrintOnExit)
+    : TimerGroup(Name, Description, timerLock(), PrintOnExit) {}
 
 TimerGroup::TimerGroup(StringRef Name, StringRef Description,
-                       const StringMap<TimeRecord> &Records)
-    : TimerGroup(Name, Description) {
+                       const StringMap<TimeRecord> &Records, bool PrintOnExit)
+    : TimerGroup(Name, Description, PrintOnExit) {
   TimersToPrint.reserve(Records.size());
   for (const auto &P : Records)
     TimersToPrint.emplace_back(P.getValue(), std::string(P.getKey()),
@@ -301,18 +303,30 @@ TimerGroup::~TimerGroup() {
   while (FirstTimer)
     removeTimer(*FirstTimer);
 
-  if (!TimersToPrint.empty()) {
+  if (!TimersToPrint.empty() && PrintOnExit) {
     std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
     PrintQueuedTimers(*OutStream);
   }
 
+  auto unlink = [&]() {
+    *Prev = Next;
+    if (Next)
+      Next->Prev = Prev;
+  };
+
+  // TimerGlobals is always created implicity, through a call to timerLock(),
+  // when a TimeGroup is created. On CRT shutdown, the TimerGlobals instance
+  // might have been destroyed already. Avoid re-creating it if calling
+  // timerLock().
+  if (!isTimerGlobalsConstructed()) {
+    unlink();
+    return;
+  }
+
   // Remove the group from the TimerGroupList.
   sys::SmartScopedLock<true> L(timerLock());
-  *Prev = Next;
-  if (Next)
-    Next->Prev = Prev;
+  unlink();
 }
-
 
 void TimerGroup::removeTimer(Timer &T) {
   sys::SmartScopedLock<true> L(timerLock());
@@ -442,10 +456,6 @@ void TimerGroup::clearAll() {
 
 void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,
                                 const char *suffix, double Value) {
-  assert(yaml::needsQuotes(Name) == yaml::QuotingType::None &&
-         "TimerGroup name should not need quotes");
-  assert(yaml::needsQuotes(R.Name) == yaml::QuotingType::None &&
-         "Timer name should not need quotes");
   constexpr auto max_digits10 = std::numeric_limits<double>::max_digits10;
   OS << "\t\"time." << Name << '.' << R.Name << suffix
      << "\": " << format("%.*e", max_digits10 - 1, Value);
@@ -522,7 +532,7 @@ public:
 
   sys::SmartMutex<true> TimerLock;
   TimerGroup DefaultTimerGroup{"misc", "Miscellaneous Ungrouped Timers",
-                               TimerLock};
+                               TimerLock, /*PrintOnExit=*/true};
   SignpostEmitter Signposts;
 
   // Order of these members and initialization below is important. For example
@@ -562,3 +572,7 @@ void TimerGroup::constructForStatistics() {
 }
 
 void *TimerGroup::acquireTimerGlobals() { return ManagedTimerGlobals.claim(); }
+
+static bool isTimerGlobalsConstructed() {
+  return ManagedTimerGlobals.isConstructed();
+}

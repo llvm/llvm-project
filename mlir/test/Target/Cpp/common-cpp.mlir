@@ -105,7 +105,34 @@ func.func @apply() -> !emitc.ptr<i32> {
   return %1 : !emitc.ptr<i32>
 }
 
+
+// CHECK-LABEL: void address_of() {
+func.func @address_of() {
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]];
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  // CHECK-NEXT: int32_t* [[V2:[^ ]*]] = &[[V1]];
+  %1 = emitc.address_of %0 : !emitc.lvalue<i32>
+  return
+}
+
+// CHECK-LABEL: void dereference
+// CHECK-SAME:                   (int32_t* [[ARG0:[^ ]*]]) {
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]] = *[[ARG0]];
+  %2 = emitc.dereference %arg0 : !emitc.ptr<i32>
+  emitc.load %2 : !emitc.lvalue<i32>
+  return
+}
+
 // CHECK: void array_type(int32_t v1[3], float v2[10][20])
 func.func @array_type(%arg0: !emitc.array<3xi32>, %arg1: !emitc.array<10x20xf32>) {
+  return
+}
+
+// CHECK: call_opaque_with_template_arg
+func.func @call_opaque_with_template_arg() {
+  emitc.call_opaque "init_tile"() {template_args = [512 : index]} : () -> ()
+  // CHECK-NEXT: init_tile<512>();
+  // CHECK-NEXT: return
   return
 }

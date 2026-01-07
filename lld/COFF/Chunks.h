@@ -193,6 +193,8 @@ public:
   // allowed ranges. Return the additional space required for the extension.
   virtual uint32_t extendRanges() { return 0; };
 
+  virtual Defined *getEntryThunk() const { return nullptr; };
+
   static bool classof(const Chunk *c) { return c->kind() >= OtherKind; }
 
 protected:
@@ -520,6 +522,8 @@ public:
   uint32_t getOutputCharacteristics() const override;
   StringRef getSectionName() const override { return ".bss"; }
 
+  bool live;
+
 private:
   const COFFSymbolRef sym;
 };
@@ -633,7 +637,7 @@ public:
   bool verifyRanges() override;
   uint32_t extendRanges() override;
 
-  Defined *exitThunk;
+  Defined *exitThunk = nullptr;
   Defined *sym = nullptr;
   bool extended = false;
 
@@ -673,6 +677,26 @@ public:
 
 private:
   MachineTypes machine;
+};
+
+// A chunk used to guarantee the same address for a function in both views of
+// a hybrid image. Similar to RangeExtensionThunkARM64 chunks, it calls the
+// target symbol using a BR instruction. It also contains an entry thunk for EC
+// compatibility and additional ARM64X relocations that swap targets between
+// views.
+class SameAddressThunkARM64EC : public RangeExtensionThunkARM64 {
+public:
+  explicit SameAddressThunkARM64EC(Defined *t, Defined *hybridTarget,
+                                   Defined *entryThunk)
+      : RangeExtensionThunkARM64(ARM64EC, t), hybridTarget(hybridTarget),
+        entryThunk(entryThunk) {}
+
+  Defined *getEntryThunk() const override { return entryThunk; }
+  void setDynamicRelocs(COFFLinkerContext &ctx) const;
+
+private:
+  Defined *hybridTarget;
+  Defined *entryThunk;
 };
 
 // Windows-specific.
@@ -843,13 +867,13 @@ class Arm64XRelocVal {
 public:
   Arm64XRelocVal(uint64_t value = 0) : value(value) {}
   Arm64XRelocVal(Defined *sym, int32_t offset = 0) : sym(sym), value(offset) {}
-  Arm64XRelocVal(Chunk *chunk, int32_t offset = 0)
+  Arm64XRelocVal(const Chunk *chunk, int32_t offset = 0)
       : chunk(chunk), value(offset) {}
   uint64_t get() const;
 
 private:
   Defined *sym = nullptr;
-  Chunk *chunk = nullptr;
+  const Chunk *chunk = nullptr;
   uint64_t value;
 };
 
@@ -884,7 +908,7 @@ public:
     arm64xRelocs.emplace_back(type, size, offset, value);
   }
 
-  void set(uint32_t rva, Arm64XRelocVal value);
+  void set(Arm64XRelocVal offset, Arm64XRelocVal value);
 
 private:
   std::vector<Arm64XDynamicRelocEntry> arm64xRelocs;
@@ -940,6 +964,8 @@ inline bool Chunk::isHotPatchable() const {
 inline Defined *Chunk::getEntryThunk() const {
   if (auto *c = dyn_cast<const SectionChunkEC>(this))
     return c->entryThunk;
+  if (auto *c = dyn_cast<const NonSectionChunk>(this))
+    return c->getEntryThunk();
   return nullptr;
 }
 

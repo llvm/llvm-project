@@ -2380,8 +2380,7 @@ define <2 x i1> @icmp_eq_add_non_splat(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_add_undef2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_add_undef2(
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 5)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[ADD]], <i32 10, i32 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 5, i32 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = add <2 x i32> %a, <i32 5, i32 5>
@@ -2391,8 +2390,7 @@ define <2 x i1> @icmp_eq_add_undef2(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_add_non_splat2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_add_non_splat2(
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 5)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[ADD]], <i32 10, i32 11>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 5, i32 6>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = add <2 x i32> %a, <i32 5, i32 5>
@@ -3211,13 +3209,11 @@ entry:
   ret i1 %cmp
 }
 
-; TODO: should be canonicalized to (x - 4) u> 2
 define i1 @zext_range_check_ugt(i8 %x) {
 ; CHECK-LABEL: @zext_range_check_ugt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[CONV]], -7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP0]], -3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[X:%.*]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP0]], -3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -3227,19 +3223,30 @@ entry:
   ret i1 %cmp
 }
 
-; TODO: should be canonicalized to (x - 4) u> 2
 define i1 @zext_range_check_ult_alter(i8 %x) {
 ; CHECK-LABEL: @zext_range_check_ult_alter(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], -3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[X:%.*]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP0]], -3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
   %conv = zext i8 %x to i32
   %add = add i32 %conv, -7
   %cmp = icmp ult i32 %add, -3
+  ret i1 %cmp
+}
+
+define i1 @zext_range_check_ult_alter2(i8 %x) {
+; CHECK-LABEL: @zext_range_check_ult_alter2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = zext i8 %x to i32
+  %add = add i32 %conv, -4
+  %cmp = icmp ult i32 %add, 253
   ret i1 %cmp
 }
 
@@ -3288,17 +3295,224 @@ entry:
   ret i1 %cmp
 }
 
-define i1 @zext_range_check_ult_range_check_failure(i8 %x) {
-; CHECK-LABEL: @zext_range_check_ult_range_check_failure(
+; PR 152851
+
+define i1 @val_is_aligend_const_pow2(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  %num.masked = and i32 %num.biased, -4096
+  %_0 = icmp eq i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_pow2_add_commute(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2_add_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32  4095, %num
+  %num.masked = and i32 %num.biased, -4096
+  %_0 = icmp eq i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_pow2_and_commute(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2_and_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  %num.masked = and i32 -4096, %num.biased
+  %_0 = icmp eq i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_pow2_icm_commute(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2_icm_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  %num.masked = and i32 %num.biased, -4096
+  %_0 = icmp eq i32 %num, %num.masked
+  ret i1 %_0
+}
+
+; Should not work for non-power-of-two cases
+define i1 @val_is_aligend_const_non_pow2(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_non_pow2(
+; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], 6
+; CHECK-NEXT:    [[NUM_MASKED:%.*]] = and i32 [[NUM_BIASED]], -7
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[NUM_MASKED]], [[NUM]]
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 6
+  %num.masked = and i32 %num.biased, -7
+  %_0 = icmp eq i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_pow2_multiuse(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2_multiuse(
+; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    [[NUM_MASKED:%.*]] = and i32 [[NUM_BIASED]], -4096
+; CHECK-NEXT:    call void @use(i32 [[NUM_MASKED]])
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[NUM_MASKED]], [[NUM]]
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  %num.masked = and i32 %num.biased, -4096
+  call void @use(i32 %num.masked)
+  %_0 = icmp eq i32 %num.masked, %num
+  ret i1 %_0
+}
+
+; Applies since number of instructions do not change
+define i1 @val_is_aligend_const_pow2_multiuse1(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2_multiuse1(
+; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    call void @use(i32 [[NUM_BIASED]])
+; CHECK-NEXT:    [[NUM_MASKED:%.*]] = and i32 [[NUM_BIASED]], -4096
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[NUM_MASKED]], [[NUM]]
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  call void @use(i32 %num.biased)
+  %num.masked = and i32 %num.biased, -4096
+  %_0 = icmp eq i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_pow2_ne(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    [[_0:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  %num.masked = and i32 %num.biased, -4096
+  %_0 = icmp ne i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_mismatch(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_mismatch(
+; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    [[NUM_MASKED:%.*]] = and i32 [[NUM_BIASED]], -4095
+; CHECK-NEXT:    [[_0:%.*]] = icmp ne i32 [[NUM_MASKED]], [[NUM]]
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  %num.masked = and i32 %num.biased, -4095
+  %_0 = icmp ne i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_mismatch1(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_mismatch1(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM:%.*]], -4096
+; CHECK-NEXT:    [[NUM_MASKED:%.*]] = add i32 [[TMP1]], 4096
+; CHECK-NEXT:    [[_0:%.*]] = icmp ne i32 [[NUM_MASKED]], [[NUM]]
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4096
+  %num.masked = and i32 %num.biased, -4096
+  %_0 = icmp ne i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_pred_mismatch(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_pred_mismatch(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM:%.*]], -4096
+; CHECK-NEXT:    [[NUM_MASKED:%.*]] = add i32 [[TMP1]], 4096
+; CHECK-NEXT:    [[_0:%.*]] = icmp sge i32 [[NUM_MASKED]], [[NUM]]
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4096
+  %num.masked = and i32 %num.biased, -4096
+  %_0 = icmp sge i32 %num.masked, %num
+  ret i1 %_0
+}
+
+define i1 @icmp_samesign_with_nsw_add(i32 %arg0) {
+; CHECK-LABEL: @icmp_samesign_with_nsw_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 253
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 25
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+entry:
+  %v0 = add nsw i32 %arg0, -18
+  %v1 = icmp samesign ugt i32 %v0, 7
+  ret i1 %v1
+}
+
+; Negative test; Fold shouldn't fire since -124 - 12 causes signed overflow
+define i1 @icmp_samesign_with_nsw_add_neg(i8 %arg0) {
+; CHECK-LABEL: @icmp_samesign_with_nsw_add_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[ARG0:%.*]], -121
+; CHECK-NEXT:    [[V1:%.*]] = icmp ult i8 [[TMP0]], 123
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+entry:
+  %v0 = add nsw i8 %arg0, 12
+  %v1 = icmp samesign ugt i8 %v0, -124
+  ret i1 %v1
+}
+
+define i1 @icmp_with_nuw_add(i32 %arg0) {
+; CHECK-LABEL: @icmp_with_nuw_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V1:%.*]] = icmp ult i32 [[ARG0:%.*]], 11
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+entry:
+  %v0 = add nuw i32 %arg0, 7
+  %v1 = icmp ult i32 %v0, 18
+  ret i1 %v1
+}
+
+define i1 @icmp_partial_negative_samesign_ult_to_slt(i8 range(i8 -1, 5) %x) {
+; CHECK-LABEL: @icmp_partial_negative_samesign_ult_to_slt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
-  %conv = zext i8 %x to i32
-  %add = add i32 %conv, -4
-  %cmp = icmp ult i32 %add, 253
+  %add = add nsw i8 %x, -5
+  %cmp = icmp samesign ult i8 %add, -3
+  ret i1 %cmp
+}
+
+define i1 @icmp_pos_samesign_slt_to_ult(i8 range(i8 1, 5) %x) {
+; CHECK-LABEL: @icmp_pos_samesign_slt_to_ult(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i8 [[X:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add nsw i8 %x, 1
+  %cmp = icmp samesign slt i8 %add, 3
+  ret i1 %cmp
+}
+
+; Since higher priority is given to unsigned predicates, the predicate should
+; not change
+define i1 @icmp_nuw_nsw_samesign(i32 %arg0) {
+; CHECK-LABEL: @icmp_nuw_nsw_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ARG0:%.*]], 9
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %v0 = add nuw nsw i32 %arg0, 1
+  %cmp = icmp samesign ult i32 %v0, 10
   ret i1 %cmp
 }

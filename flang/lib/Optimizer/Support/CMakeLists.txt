@@ -1,6 +1,3 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
-
 add_flang_library(FIRSupport
   DataLayout.cpp
   InitFIR.cpp
@@ -10,9 +7,11 @@ add_flang_library(FIRSupport
   DEPENDS
   FIROpsIncGen
   HLFIROpsIncGen
+  MIFOpsIncGen
 
   LINK_LIBS
   FIRDialect
+  MIFDialect
 
   LINK_COMPONENTS
   TargetParser
@@ -23,12 +22,12 @@ add_flang_library(FIRSupport
   ${extension_libs}
 
   MLIR_LIBS
-  ${dialect_libs}
-  ${extension_libs}
   MLIRBuiltinToLLVMIRTranslation
+  MLIRLLVMToLLVMIRTranslation
   MLIROpenACCToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
-  MLIRLLVMToLLVMIRTranslation
+  MLIRRegisterAllDialects
+  MLIRRegisterAllExtensions
   MLIRTargetLLVMIRExport
   MLIRTargetLLVMIRImport
 )

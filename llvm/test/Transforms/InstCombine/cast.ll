@@ -5,6 +5,7 @@
 ; RUN: opt < %s -passes=instcombine -S -data-layout="E-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,BE
 ; RUN: opt < %s -passes=instcombine -S -data-layout="e-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,LE
 
+declare void @use_i8(i8)
 declare void @use_i32(i32)
 declare void @use_v2i32(<2 x i32>)
 
@@ -149,7 +150,7 @@ lpad:
 
 define ptr @test13(i64 %A) {
 ; ALL-LABEL: @test13(
-; ALL-NEXT:    [[C:%.*]] = getelementptr [0 x i8], ptr @inbuf, i64 0, i64 [[A:%.*]]
+; ALL-NEXT:    [[C:%.*]] = getelementptr i8, ptr @inbuf, i64 [[A:%.*]]
 ; ALL-NEXT:    ret ptr [[C]]
 ;
   %c = getelementptr [0 x i8], ptr @inbuf, i64 0, i64 %A
@@ -2041,6 +2042,120 @@ define <2 x i8> @trunc_lshr_zext_uses1(<2 x i8> %A) {
   ret <2 x i8> %D
 }
 
+define i8 @trunc_lshr_ext_halfWidth(i16 %a, i16 %b, i16 range(i16 0, 8) %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth(
+; ALL-NEXT:    [[ADD:%.*]] = add i16 [[A:%.*]], [[B:%.*]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i16 [[ADD]], [[SHIFTAMT:%.*]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i16 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  %shr = lshr i32 %add, %zext_shiftAmt
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+define i8 @trunc_lshr_ext_halfWidth_rhsOutofRange_neg(i16 %a, i16 %b, i16 range(i16 0, 10) %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_rhsOutofRange_neg(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  %shr = lshr i32 %add, %zext_shiftAmt
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+define i8 @trunc_lshr_ext_halfWidth_rhsNoRange_neg(i16 %a, i16 %b, i16 %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_rhsNoRange_neg(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  %shr = lshr i32 %add, %zext_shiftAmt
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+define i8 @trunc_lshr_ext_halfWidth_twouse_neg1(i16 %a, i16 %b, i16 range(i16 0, 8) %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_twouse_neg1(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    call void @use_i32(i32 [[ADD]])
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  call void @use_i32(i32 %add)
+  %shr = lshr i32 %add, %zext_shiftAmt
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+define i8 @trunc_lshr_ext_halfWidth_twouse_neg2(i16 %a, i16 %b, i16 range(i16 0, 8) %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_twouse_neg2(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
+; ALL-NEXT:    call void @use_i32(i32 [[SHR]])
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  %shr = lshr i32 %add, %zext_shiftAmt
+  call void @use_i32(i32 %shr)
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+; The narrowing transform only happens for integer types.
+define <2 x i8> @trunc_lshr_ext_halfWidth_vector_neg(<2 x i16> %a, <2 x i16> %b) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_vector_neg(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext <2 x i16> [[B:%.*]] to <2 x i32>
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i32> [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[ADD]], splat (i32 6)
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc <2 x i32> [[SHR]] to <2 x i8>
+; ALL-NEXT:    ret <2 x i8> [[TRUNC]]
+;
+  %zext_a = zext <2 x i16> %a to <2 x i32>
+  %zext_b = zext <2 x i16> %b to <2 x i32>
+  %add = add nuw nsw <2 x i32> %zext_a, %zext_b
+  %shr = lshr <2 x i32> %add, <i32 6, i32 6>
+  %trunc = trunc <2 x i32> %shr to <2 x i8>
+  ret <2 x i8> %trunc
+}
+
 ; The following four tests sext + lshr + trunc patterns.
 ; PR33078
 
@@ -2122,4 +2237,148 @@ define i32 @test95(i32 %x) {
   %4 = or i8 %3, 40
   %5 = zext i8 %4 to i32
   ret i32 %5
+}
+
+define i16 @test96(i16 %x, i16 %y) {
+; ALL-LABEL: @test96(
+; ALL-NEXT:    [[A:%.*]] = add i16 [[X:%.*]], [[Y:%.*]]
+; ALL-NEXT:    [[B:%.*]] = add i16 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul i16 [[A]], 3
+; ALL-NEXT:    [[T:%.*]] = or i16 [[B]], [[C]]
+; ALL-NEXT:    ret i16 [[T]]
+;
+  %zx = zext i16 %x to i32
+  %zy = zext i16 %y to i32
+  %a = add i32 %zx, %zy
+  %b = add i32 %a, 5
+  %c = mul i32 %a, 3
+  %d = or i32 %b, %c
+  %t = trunc i32 %d to i16
+  ret i16 %t
+}
+
+define i16 @test97(i16 %x, i16 %y) {
+; ALL-LABEL: @test97(
+; ALL-NEXT:    [[ZX:%.*]] = zext i16 [[X:%.*]] to i32
+; ALL-NEXT:    [[ZY:%.*]] = zext i16 [[Y:%.*]] to i32
+; ALL-NEXT:    [[A:%.*]] = add nuw nsw i32 [[ZX]], [[ZY]]
+; ALL-NEXT:    [[B:%.*]] = add nuw nsw i32 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul nuw nsw i32 [[A]], 3
+; ALL-NEXT:    [[D:%.*]] = or i32 [[B]], [[C]]
+; ALL-NEXT:    call void @use_i32(i32 [[A]])
+; ALL-NEXT:    [[T:%.*]] = trunc i32 [[D]] to i16
+; ALL-NEXT:    ret i16 [[T]]
+;
+  %zx = zext i16 %x to i32
+  %zy = zext i16 %y to i32
+  %a = add i32 %zx, %zy
+  %b = add i32 %a, 5
+  %c = mul i32 %a, 3
+  %d = or i32 %b, %c
+  call void @use_i32(i32 %a)
+  %t = trunc i32 %d to i16
+  ret i16 %t
+}
+
+; expected not to narrow operations to i16 due to a loop in use chains
+define i16 @test98(i16 %x, i16 %n) {
+; ALL-LABEL: @test98(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
+; ALL-NEXT:    br label [[LOOP:%.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[P:%.*]] = phi i32 [ [[Z]], [[ENTRY:%.*]] ], [ [[A:%.*]], [[LOOP]] ]
+; ALL-NEXT:    [[A]] = add i32 [[P]], 1
+; ALL-NEXT:    [[T:%.*]] = trunc i32 [[A]] to i16
+; ALL-NEXT:    [[COND:%.*]] = icmp ugt i16 [[N:%.*]], [[T]]
+; ALL-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; ALL:       exit:
+; ALL-NEXT:    ret i16 [[T]]
+;
+entry:
+  %z = zext i16 %x to i32
+  br label %loop
+
+loop:
+  %p = phi i32 [ %z, %entry ], [ %a, %loop ]
+  %a = add i32 %p, 1
+  %t = trunc i32 %a to i16
+  %cond = icmp ult i16 %t, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i16 %t
+}
+
+define i32 @test99(i32 %x, i32 %y) {
+; ALL-LABEL: @test99(
+; ALL-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; ALL-NEXT:    [[B:%.*]] = add i32 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul i32 [[A]], 3
+; ALL-NEXT:    [[D:%.*]] = or i32 [[B]], [[C]]
+; ALL-NEXT:    [[SEXT:%.*]] = shl i32 [[D]], 16
+; ALL-NEXT:    [[S:%.*]] = ashr exact i32 [[SEXT]], 16
+; ALL-NEXT:    ret i32 [[S]]
+;
+  %tx = trunc i32 %x to i16
+  %ty = trunc i32 %y to i16
+  %a = add i16 %tx, %ty
+  %b = add i16 %a, 5
+  %c = mul i16 %a, 3
+  %d = or i16 %b, %c
+  %t = sext i16 %d to i32
+  ret i32 %t
+}
+
+define i32 @test100(i32 %x, i32 %y) {
+; ALL-LABEL: @test100(
+; ALL-NEXT:    [[TX:%.*]] = trunc i32 [[X:%.*]] to i8
+; ALL-NEXT:    [[TY:%.*]] = trunc i32 [[Y:%.*]] to i8
+; ALL-NEXT:    [[A:%.*]] = add i8 [[TX]], [[TY]]
+; ALL-NEXT:    [[B:%.*]] = add i8 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul i8 [[A]], 3
+; ALL-NEXT:    [[D:%.*]] = or i8 [[B]], [[C]]
+; ALL-NEXT:    call void @use_i8(i8 [[A]])
+; ALL-NEXT:    [[T:%.*]] = sext i8 [[D]] to i32
+; ALL-NEXT:    ret i32 [[T]]
+;
+  %tx = trunc i32 %x to i8
+  %ty = trunc i32 %y to i8
+  %a = add i8 %tx, %ty
+  %b = add i8 %a, 5
+  %c = mul i8 %a, 3
+  %d = or i8 %b, %c
+  call void @use_i8(i8 %a)
+  %t = sext i8 %d to i32
+  ret i32 %t
+}
+
+; expected not to extend operations to i32 due to a loop in use chains
+define i32 @test101(i32 %x, i8 %n) {
+; ALL-LABEL: @test101(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; ALL-NEXT:    br label [[LOOP:%.*]]
+; ALL:       loop:
+; ALL-NEXT:    [[P:%.*]] = phi i8 [ [[T]], [[ENTRY:%.*]] ], [ [[A:%.*]], [[LOOP]] ]
+; ALL-NEXT:    [[A]] = add i8 [[P]], 1
+; ALL-NEXT:    [[COND:%.*]] = icmp ult i8 [[A]], [[N:%.*]]
+; ALL-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; ALL:       exit:
+; ALL-NEXT:    [[S:%.*]] = sext i8 [[A]] to i32
+; ALL-NEXT:    ret i32 [[S]]
+;
+entry:
+  %t = trunc i32 %x to i8
+  br label %loop
+
+loop:
+  %p = phi i8 [ %t, %entry ], [ %a, %loop ]
+  %a = add i8 %p, 1
+  %cond = icmp ult i8 %a, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  %s = sext i8 %a to i32
+  ret i32 %s
 }

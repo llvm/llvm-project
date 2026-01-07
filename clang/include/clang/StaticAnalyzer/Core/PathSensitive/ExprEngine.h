@@ -196,6 +196,7 @@ public:
   ASTContext &getContext() const { return AMgr.getASTContext(); }
 
   AnalysisManager &getAnalysisManager() { return AMgr; }
+  const AnalysisManager &getAnalysisManager() const { return AMgr; }
 
   AnalysisDeclContextManager &getAnalysisDeclContextManager() {
     return AMgr.getAnalysisDeclContextManager();
@@ -206,8 +207,10 @@ public:
   }
 
   SValBuilder &getSValBuilder() { return svalBuilder; }
+  const SValBuilder &getSValBuilder() const { return svalBuilder; }
 
   BugReporter &getBugReporter() { return BR; }
+  const BugReporter &getBugReporter() const { return BR; }
 
   cross_tu::CrossTranslationUnitContext *
   getCrossTranslationUnitContext() {
@@ -222,11 +225,11 @@ public:
   const Stmt *getStmt() const;
 
   const LocationContext *getRootLocationContext() const {
-    assert(G.roots_begin() != G.roots_end());
-    return (*G.roots_begin())->getLocation().getLocationContext();
+    assert(G.getRoot());
+    return G.getRoot()->getLocation().getLocationContext();
   }
 
-  CFGBlock::ConstCFGElementRef getCFGElementRef() const {
+  ConstCFGElementRef getCFGElementRef() const {
     const CFGBlock *blockPtr = currBldrCtx ? currBldrCtx->getBlock() : nullptr;
     return {blockPtr, currStmtIdx};
   }
@@ -321,6 +324,10 @@ public:
                                NodeBuilderWithSinks &nodeBuilder,
                                ExplodedNode *Pred);
 
+  void runCheckersForBlockEntrance(const NodeBuilderContext &BldCtx,
+                                   const BlockEntrance &Entrance,
+                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
+
   /// ProcessBranch - Called by CoreEngine. Used to generate successor nodes by
   /// processing the 'effects' of a branch condition. If the branch condition
   /// is a loop condition, IterationsCompletedInLoop is the number of completed
@@ -412,10 +419,17 @@ public:
                  unsigned int Space, bool IsDot) const;
 
   ProgramStateManager &getStateManager() { return StateMgr; }
+  const ProgramStateManager &getStateManager() const { return StateMgr; }
 
   StoreManager &getStoreManager() { return StateMgr.getStoreManager(); }
+  const StoreManager &getStoreManager() const {
+    return StateMgr.getStoreManager();
+  }
 
   ConstraintManager &getConstraintManager() {
+    return StateMgr.getConstraintManager();
+  }
+  const ConstraintManager &getConstraintManager() const {
     return StateMgr.getConstraintManager();
   }
 
@@ -425,6 +439,7 @@ public:
   }
 
   SymbolManager &getSymbolManager() { return SymMgr; }
+  const SymbolManager &getSymbolManager() const { return SymMgr; }
   MemRegionManager &getRegionManager() { return MRMgr; }
 
   DataTag::Factory &getDataTags() { return Engine.getDataTags(); }
@@ -494,9 +509,6 @@ public:
   /// VisitGuardedExpr - Transfer function logic for ?, __builtin_choose
   void VisitGuardedExpr(const Expr *Ex, const Expr *L, const Expr *R,
                         ExplodedNode *Pred, ExplodedNodeSet &Dst);
-
-  void VisitInitListExpr(const InitListExpr *E, ExplodedNode *Pred,
-                         ExplodedNodeSet &Dst);
 
   /// VisitAttributedStmt - Transfer function logic for AttributedStmt.
   void VisitAttributedStmt(const AttributedStmt *A, ExplodedNode *Pred,
@@ -587,6 +599,10 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
+  void ConstructInitList(const Expr *Source, ArrayRef<Expr *> Args,
+                         bool IsTransparent, ExplodedNode *Pred,
+                         ExplodedNodeSet &Dst);
+
   /// evalEagerlyAssumeBifurcation - Given the nodes in 'Src', eagerly assume
   /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.
   void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
@@ -655,7 +671,7 @@ private:
   /// evalBind - Handle the semantics of binding a value to a specific location.
   ///  This method is used by evalStore, VisitDeclStmt, and others.
   void evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE, ExplodedNode *Pred,
-                SVal location, SVal Val, bool atDeclInit = false,
+                SVal location, SVal Val, bool AtDeclInit = false,
                 const ProgramPoint *PP = nullptr);
 
   ProgramStateRef

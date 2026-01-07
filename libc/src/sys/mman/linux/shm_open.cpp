@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/mman/shm_open.h"
+
+#include "hdr/fcntl_macros.h"
 #include "hdr/types/mode_t.h"
+#include "src/__support/OSUtil/fcntl.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/fcntl/open.h"
 #include "src/sys/mman/linux/shm_common.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -17,10 +20,19 @@ namespace LIBC_NAMESPACE_DECL {
 static constexpr int DEFAULT_OFLAGS = O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK;
 
 LLVM_LIBC_FUNCTION(int, shm_open, (const char *name, int oflags, mode_t mode)) {
-  using namespace shm_common;
-  if (cpp::optional<SHMPath> buffer = translate_name(name))
-    return open(buffer->data(), oflags | DEFAULT_OFLAGS, mode);
-  return -1;
+  auto path_result = shm_common::translate_name(name);
+  if (!path_result.has_value()) {
+    libc_errno = path_result.error();
+    return -1;
+  }
+
+  auto open_result =
+      internal::open(path_result->data(), oflags | DEFAULT_OFLAGS, mode);
+  if (!open_result.has_value()) {
+    libc_errno = open_result.error();
+    return -1;
+  }
+  return open_result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

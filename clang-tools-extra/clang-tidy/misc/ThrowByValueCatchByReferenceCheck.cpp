@@ -1,4 +1,4 @@
-//===--- ThrowByValueCatchByReferenceCheck.cpp - clang-tidy----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,6 @@
 
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/OperationKinds.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -78,9 +77,8 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
       return;
     // If it's a variable from a catch statement, we return as well.
     auto *DeclRef = dyn_cast<DeclRefExpr>(Inner);
-    if (DeclRef && isCatchVariable(DeclRef)) {
+    if (DeclRef && isCatchVariable(DeclRef))
       return;
-    }
     diag(SubExpr->getBeginLoc(), "throw expression throws a pointer; it should "
                                  "throw a non-pointer value instead");
   }

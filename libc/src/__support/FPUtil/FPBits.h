@@ -15,6 +15,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
@@ -26,8 +27,6 @@
 #include "src/__support/sign.h"                    // Sign
 #include "src/__support/uint128.h"
 
-#include <stdint.h>
-
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
@@ -38,6 +37,7 @@ enum class FPType {
   IEEE754_Binary64,
   IEEE754_Binary128,
   X86_Binary80,
+  BFloat16
 };
 
 // The classes hierarchy is as follows:
@@ -136,6 +136,14 @@ template <> struct FPLayout<FPType::X86_Binary80> {
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN - 1;
+};
+
+template <> struct FPLayout<FPType::BFloat16> {
+  using StorageType = uint16_t;
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
+  LIBC_INLINE_VAR static constexpr int EXP_LEN = 8;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 7;
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN;
 };
 
 // FPStorage derives useful constants from the FPLayout above.
@@ -757,7 +765,7 @@ public:
       result.set_significand(number);
       result.set_biased_exponent(static_cast<StorageType>(ep + 1));
     } else {
-      result.set_significand(number >> -ep);
+      result.set_significand(number >> static_cast<unsigned>(-ep));
     }
     return RetT(result.uintval());
   }
@@ -781,16 +789,16 @@ struct FPRep : public FPRepImpl<fp_type, FPRep<fp_type>> {
 // Returns the FPType corresponding to C++ type T on the host.
 template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   using UnqualT = cpp::remove_cv_t<T>;
-  if constexpr (cpp::is_same_v<UnqualT, float> && __FLT_MANT_DIG__ == 24)
+  if constexpr (cpp::is_same_v<UnqualT, float> && FLT_MANT_DIG == 24)
     return FPType::IEEE754_Binary32;
-  else if constexpr (cpp::is_same_v<UnqualT, double> && __DBL_MANT_DIG__ == 53)
+  else if constexpr (cpp::is_same_v<UnqualT, double> && DBL_MANT_DIG == 53)
     return FPType::IEEE754_Binary64;
   else if constexpr (cpp::is_same_v<UnqualT, long double>) {
-    if constexpr (__LDBL_MANT_DIG__ == 53)
+    if constexpr (LDBL_MANT_DIG == 53)
       return FPType::IEEE754_Binary64;
-    else if constexpr (__LDBL_MANT_DIG__ == 64)
+    else if constexpr (LDBL_MANT_DIG == 64)
       return FPType::X86_Binary80;
-    else if constexpr (__LDBL_MANT_DIG__ == 113)
+    else if constexpr (LDBL_MANT_DIG == 113)
       return FPType::IEEE754_Binary128;
   }
 #if defined(LIBC_TYPES_HAS_FLOAT16)
@@ -801,6 +809,8 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   else if constexpr (cpp::is_same_v<UnqualT, float128>)
     return FPType::IEEE754_Binary128;
 #endif
+  else if constexpr (cpp::is_same_v<UnqualT, bfloat16>)
+    return FPType::BFloat16;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }

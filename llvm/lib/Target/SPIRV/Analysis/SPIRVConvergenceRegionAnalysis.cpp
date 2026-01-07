@@ -21,6 +21,7 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include <optional>
 #include <queue>
+#include <unordered_set>
 
 #define DEBUG_TYPE "spirv-convergence-region-analysis"
 
@@ -269,8 +270,7 @@ public:
       ToProcess.pop();
 
       auto CT = getConvergenceToken(L->getHeader());
-      SmallPtrSet<BasicBlock *, 8> RegionBlocks(L->block_begin(),
-                                                L->block_end());
+      SmallPtrSet<BasicBlock *, 8> RegionBlocks(llvm::from_range, L->blocks());
       SmallVector<BasicBlock *> LoopExits;
       L->getExitingBlocks(LoopExits);
       if (CT.has_value()) {

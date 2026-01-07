@@ -1,10 +1,11 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-unknown-shadermodel6.3-library -S -finclude-default-header -fnative-half-type -ast-dump  -x hlsl %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.3-library -S -finclude-default-header -fnative-half-type -fnative-int16-type -ast-dump  -x hlsl %s | FileCheck %s
 
 
 // CHECK: HLSLBufferDecl {{.*}} cbuffer A
 cbuffer A
 {
     // CHECK-NEXT:-HLSLResourceClassAttr {{.*}} Implicit CBuffer
+    // CHECK-NEXT: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
     // CHECK-NEXT: VarDecl {{.*}} A1 'hlsl_constant float4'
     // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 0
     float4 A1 : packoffset(c);

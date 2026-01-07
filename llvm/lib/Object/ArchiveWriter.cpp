@@ -700,7 +700,7 @@ static bool isECObject(object::SymbolicFile &Obj) {
         getBitcodeTargetTriple(Obj.getMemoryBufferRef());
     if (!TripleStr)
       return false;
-    Triple T(*TripleStr);
+    Triple T(std::move(*TripleStr));
     return T.isWindowsArm64EC() || T.getArch() == Triple::x86_64;
   }
 
@@ -719,7 +719,7 @@ static bool isAnyArm64COFF(object::SymbolicFile &Obj) {
         getBitcodeTargetTriple(Obj.getMemoryBufferRef());
     if (!TripleStr)
       return false;
-    Triple T(*TripleStr);
+    Triple T(std::move(*TripleStr));
     return T.isOSWindows() && T.getArch() == Triple::aarch64;
   }
 
@@ -1119,10 +1119,26 @@ Error writeArchiveToStream(raw_ostream &Out,
     // to switch to 64-bit. Note that the file can be larger than 4GB as long as
     // the last member starts before the 4GB offset.
     if (*HeadersSize + LastMemberHeaderOffset >= Sym64Threshold) {
-      if (Kind == object::Archive::K_DARWIN)
+      switch (Kind) {
+      case object::Archive::K_COFF:
+        // COFF format has no 64-bit version, so we use GNU64 instead.
+        if (!SymMap.Map.empty() && !SymMap.ECMap.empty())
+          // Only the COFF format supports the ECSYMBOLS section, so don’t use
+          // GNU64 when two symbol maps are required.
+          return make_error<object::GenericBinaryError>(
+              "Archive is too large: ARM64X does not support archives larger "
+              "than 4GB");
+        // Since this changes the headers, we need to recalculate everything.
+        return writeArchiveToStream(Out, NewMembers, WriteSymtab,
+                                    object::Archive::K_GNU64, Deterministic,
+                                    Thin, IsEC, Warn);
+      case object::Archive::K_DARWIN:
         Kind = object::Archive::K_DARWIN64;
-      else
+        break;
+      default:
         Kind = object::Archive::K_GNU64;
+        break;
+      }
       HeadersSize.reset();
     }
   }

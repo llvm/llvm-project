@@ -57,7 +57,7 @@ public:
     Int16Type = SignedInt;
     Char32Type = UnsignedLong;
     SigAtomicType = SignedChar;
-    resetDataLayout("e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -124,7 +124,9 @@ public:
       Info.setAllowsRegister();
       return true;
     case 'I': // 6-bit positive integer constant
-      Info.setRequiresImmediate(0, 63);
+      // Due to issue https://github.com/llvm/llvm-project/issues/51513, we
+      // allow value 64 in the frontend and let it be denied in the backend.
+      Info.setRequiresImmediate(0, 64);
       return true;
     case 'J': // 6-bit negative integer constant
       Info.setRequiresImmediate(-63, 0);

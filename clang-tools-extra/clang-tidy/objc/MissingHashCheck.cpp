@@ -1,4 +1,4 @@
-//===--- MissingHashCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,11 +25,9 @@ AST_MATCHER_P(ObjCImplementationDecl, hasInterface,
 AST_MATCHER_P(ObjCContainerDecl, hasInstanceMethod,
               ast_matchers::internal::Matcher<ObjCMethodDecl>, Base) {
   // Check each instance method against the provided matcher.
-  for (const auto *I : Node.instance_methods()) {
-    if (Base.matches(*I, Finder, Builder))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Node.instance_methods(), [&](const ObjCMethodDecl *I) {
+    return Base.matches(*I, Finder, Builder);
+  });
 }
 
 } // namespace

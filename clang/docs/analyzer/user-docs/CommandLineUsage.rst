@@ -16,18 +16,19 @@ It is possible, however, to invoke the static analyzer from the command line in 
 The following tools are used commonly to run the analyzer from the command line.
 Both tools are wrapper scripts to drive the analysis and the underlying invocations of the Clang compiler:
 
-1. scan-build_ is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser.
+1. scan-build_ is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser; the utility script ``scan-view`` can provide a trivial HTTP server that servers these result files.
+    - Is available as a part of the LLVM project (together with ``scan-view``).
     - Useful for individual developers who simply want to view static analysis results at their desk, or in a very simple collaborative environment.
     - Works on all major platforms (Windows, Linux, macOS) and is available as a package in many Linux distributions.
     - Does not include support for cross-translation-unit analysis.
 
 2. CodeChecker_ is a driver and web server that runs the static analyzer on your projects on demand and maintains a database of issues.
+    - Open source, but out-of-tree, i.e. not part of the LLVM project.
     - Perfect for managing large amounts of thee static analyzer warnings in a collaborative environment.
     - Generally much more feature-rich than scan-build.
     - Supports incremental analysis: Results can be stored in a database, subsequent analysis runs can be compared to list the newly added defects.
     - :doc:`CrossTranslationUnit` is supported fully on Linux via CodeChecker.
-    - Can run clang-tidy checkers too.
-    - Open source, but out-of-tree, i.e. not part of the LLVM project.
+    - Can also run clang-tidy checks and various other analysis tools.
 
 scan-build
 ----------
@@ -193,6 +194,8 @@ When compiling your application to run on the simulator, it is important that **
 **scan-build** provides the ``--use-cc`` and ``--use-c++`` options to hardwire which compiler scan-build should use for building your code. Note that although you are chiefly interested in analyzing your project, keep in mind that running the analyzer is intimately tied to the build, and not being able to compile your code means it won't get fully analyzed (if at all).
 
 If you aren't certain which compiler Xcode uses to build your project, try just running ``xcodebuild`` (without **scan-build**). You should see the full path to the compiler that Xcode is using, and use that as an argument to ``--use-cc``.
+
+.. _command-line-usage-CodeChecker:
 
 CodeChecker
 -----------

@@ -11,6 +11,7 @@
 #include "PdbYaml.h"
 #include "llvm-pdbutil.h"
 
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugUnknownSubsection.h"
@@ -73,7 +74,15 @@ Error YAMLOutputStyle::dump() {
   if (auto EC = dumpPublics())
     return EC;
 
+  // Fake Coff header for dumping register enumerations.
+  COFF::header Header;
+  auto MachineType =
+      Obj.DbiStream ? Obj.DbiStream->MachineType : PDB_Machine::Unknown;
+  Header.Machine = static_cast<uint16_t>(MachineType);
+  Out.setContext(&Header);
   flush();
+  Out.setContext(nullptr);
+
   return Error::success();
 }
 
@@ -276,6 +285,24 @@ Error YAMLOutputStyle::dumpDbiStream() {
       }
     }
   }
+
+  if (opts::pdb2yaml::DumpSectionHeaders) {
+    for (const auto &Section : DS.getSectionHeaders()) {
+      yaml::CoffSectionHeader Hdr;
+      Hdr.Name = Section.Name;
+      Hdr.VirtualSize = Section.VirtualSize;
+      Hdr.VirtualAddress = Section.VirtualAddress;
+      Hdr.SizeOfRawData = Section.SizeOfRawData;
+      Hdr.PointerToRawData = Section.PointerToRawData;
+      Hdr.PointerToRelocations = Section.PointerToRelocations;
+      Hdr.PointerToLinenumbers = Section.PointerToLinenumbers;
+      Hdr.NumberOfRelocations = Section.NumberOfRelocations;
+      Hdr.NumberOfLinenumbers = Section.NumberOfLinenumbers;
+      Hdr.Characteristics = Section.Characteristics;
+      Obj.DbiStream->SectionHeaders.emplace_back(Hdr);
+    }
+  }
+
   return Error::success();
 }
 

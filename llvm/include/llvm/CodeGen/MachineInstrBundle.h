@@ -15,6 +15,8 @@
 #define LLVM_CODEGEN_MACHINEINSTRBUNDLE_H
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -24,21 +26,22 @@ namespace llvm {
 /// IsInternalRead markers to MachineOperands which are defined inside the
 /// bundle, and it copies externally visible defs and uses to the BUNDLE
 /// instruction.
-void finalizeBundle(MachineBasicBlock &MBB,
-                    MachineBasicBlock::instr_iterator FirstMI,
-                    MachineBasicBlock::instr_iterator LastMI);
+LLVM_ABI void finalizeBundle(MachineBasicBlock &MBB,
+                             MachineBasicBlock::instr_iterator FirstMI,
+                             MachineBasicBlock::instr_iterator LastMI);
 
 /// finalizeBundle - Same functionality as the previous finalizeBundle except
 /// the last instruction in the bundle is not provided as an input. This is
 /// used in cases where bundles are pre-determined by marking instructions
 /// with 'InsideBundle' marker. It returns the MBB instruction iterator that
 /// points to the end of the bundle.
-MachineBasicBlock::instr_iterator finalizeBundle(MachineBasicBlock &MBB,
-                    MachineBasicBlock::instr_iterator FirstMI);
+LLVM_ABI MachineBasicBlock::instr_iterator
+finalizeBundle(MachineBasicBlock &MBB,
+               MachineBasicBlock::instr_iterator FirstMI);
 
 /// finalizeBundles - Finalize instruction bundles in the specified
 /// MachineFunction. Return true if any bundles are finalized.
-bool finalizeBundles(MachineFunction &MF);
+LLVM_ABI bool finalizeBundles(MachineFunction &MF);
 
 /// Returns an iterator to the first instruction in the bundle containing \p I.
 inline MachineBasicBlock::instr_iterator getBundleStart(
@@ -237,13 +240,13 @@ struct VirtRegInfo {
 /// @param Ops When set, this vector will receive an (MI, OpNum) entry for
 ///            each operand referring to Reg.
 /// @returns A filled-in RegInfo struct.
-VirtRegInfo AnalyzeVirtRegInBundle(
+LLVM_ABI VirtRegInfo AnalyzeVirtRegInBundle(
     MachineInstr &MI, Register Reg,
     SmallVectorImpl<std::pair<MachineInstr *, unsigned>> *Ops = nullptr);
 
 /// Return a pair of lane masks (reads, writes) indicating which lanes this
 /// instruction uses with Reg.
-std::pair<LaneBitmask, LaneBitmask>
+LLVM_ABI std::pair<LaneBitmask, LaneBitmask>
 AnalyzeVirtRegLanesInBundle(const MachineInstr &MI, Register Reg,
                             const MachineRegisterInfo &MRI,
                             const TargetRegisterInfo &TRI);
@@ -288,8 +291,15 @@ struct PhysRegInfo {
 ///
 /// @param Reg The physical register to analyze.
 /// @returns A filled-in PhysRegInfo struct.
-PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
-                                   const TargetRegisterInfo *TRI);
+LLVM_ABI PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI,
+                                            Register Reg,
+                                            const TargetRegisterInfo *TRI);
+
+class FinalizeBundleTestPass : public PassInfoMixin<FinalizeBundleTestPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
 
 } // End llvm namespace
 

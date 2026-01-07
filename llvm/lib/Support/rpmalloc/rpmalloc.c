@@ -275,9 +275,11 @@ typedef volatile long atomic32_t;
 typedef volatile long long atomic64_t;
 typedef volatile void *atomicptr_t;
 
-static FORCEINLINE int32_t atomic_load32(atomic32_t *src) { return *src; }
+static FORCEINLINE int32_t atomic_load32(atomic32_t *src) {
+  return (int32_t)InterlockedOr(src, 0);
+}
 static FORCEINLINE void atomic_store32(atomic32_t *dst, int32_t val) {
-  *dst = val;
+  InterlockedExchange(dst, val);
 }
 static FORCEINLINE int32_t atomic_incr32(atomic32_t *val) {
   return (int32_t)InterlockedIncrement(val);
@@ -293,20 +295,22 @@ static FORCEINLINE int atomic_cas32_acquire(atomic32_t *dst, int32_t val,
   return (InterlockedCompareExchange(dst, val, ref) == ref) ? 1 : 0;
 }
 static FORCEINLINE void atomic_store32_release(atomic32_t *dst, int32_t val) {
-  *dst = val;
+  InterlockedExchange(dst, val);
 }
-static FORCEINLINE int64_t atomic_load64(atomic64_t *src) { return *src; }
+static FORCEINLINE int64_t atomic_load64(atomic64_t *src) {
+  return (int64_t)InterlockedOr64(src, 0);
+}
 static FORCEINLINE int64_t atomic_add64(atomic64_t *val, int64_t add) {
   return (int64_t)InterlockedExchangeAdd64(val, add) + add;
 }
 static FORCEINLINE void *atomic_load_ptr(atomicptr_t *src) {
-  return (void *)*src;
+  return InterlockedCompareExchangePointer(src, 0, 0);
 }
 static FORCEINLINE void atomic_store_ptr(atomicptr_t *dst, void *val) {
-  *dst = val;
+  InterlockedExchangePointer(dst, val);
 }
 static FORCEINLINE void atomic_store_ptr_release(atomicptr_t *dst, void *val) {
-  *dst = val;
+  InterlockedExchangePointer(dst, val);
 }
 static FORCEINLINE void *atomic_exchange_ptr_acquire(atomicptr_t *dst,
                                                      void *val) {
@@ -965,6 +969,50 @@ static void _rpmalloc_spin(void) {
 }
 
 #if defined(_WIN32) && (!defined(BUILD_DYNAMIC_LINK) || !BUILD_DYNAMIC_LINK)
+
+static void NTAPI RPMallocTlsOnThreadExit(PVOID module, DWORD reason,
+                                          PVOID reserved) {
+  switch (reason) {
+  case DLL_PROCESS_ATTACH:
+    break;
+  case DLL_PROCESS_DETACH:
+    rpmalloc_finalize();
+    break;
+  case DLL_THREAD_ATTACH:
+    break;
+  case DLL_THREAD_DETACH:
+    rpmalloc_thread_finalize(1);
+    break;
+  }
+}
+
+#ifdef _WIN64
+#pragma comment(linker, "/INCLUDE:_tls_used")
+#pragma comment(linker, "/INCLUDE:rpmalloc_tls_thread_exit_callback")
+
+// .CRT$XL* is an array of PIMAGE_TLS_CALLBACK on Windows. It is executed
+// alphabetically (A-Z) during CRT calls. As an allocator, the allocator must be
+// deinitialized last. Therefore, Y(.CRT$XLY) is used here.
+#pragma const_seg(".CRT$XLY")
+
+extern const PIMAGE_TLS_CALLBACK rpmalloc_tls_thread_exit_callback;
+const PIMAGE_TLS_CALLBACK rpmalloc_tls_thread_exit_callback =
+    RPMallocTlsOnThreadExit;
+
+// Reset const section
+#pragma const_seg()
+#else // _WIN64
+#pragma comment(linker, "/INCLUDE:__tls_used")
+#pragma comment(linker, "/INCLUDE:_rpmalloc_tls_thread_exit_callback")
+
+#pragma data_seg(".CRT$XLY")
+
+PIMAGE_TLS_CALLBACK rpmalloc_tls_thread_exit_callback = RPMallocTlsOnThreadExit;
+
+// Reset data section
+#pragma data_seg()
+#endif // _WIN64
+
 static void NTAPI _rpmalloc_thread_destructor(void *value) {
 #if ENABLE_OVERRIDE
   // If this is called on main thread it means rpmalloc_finalize

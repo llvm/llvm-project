@@ -1,0 +1,4 @@
+BasedOnStyle: LLVM
+
+# Preferred indentions of preprocessor statements.
+IndentPPDirectives: AfterHash

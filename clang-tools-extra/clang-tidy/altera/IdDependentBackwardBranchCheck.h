@@ -1,4 +1,4 @@
-//===--- IdDependentBackwardBranchCheck.h - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::altera {
 /// degradation.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/altera/id-dependent-backward-branch.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/altera/id-dependent-backward-branch.html
 class IdDependentBackwardBranchCheck : public ClangTidyCheck {
 private:
   enum LoopType { UnknownLoop = -1, DoLoop = 0, WhileLoop = 1, ForLoop = 2 };
@@ -44,10 +44,10 @@ private:
   std::map<const FieldDecl *, IdDependencyRecord> IdDepFieldsMap;
   /// Returns an IdDependencyRecord if the Expression contains an ID-dependent
   /// variable, returns a nullptr otherwise.
-  IdDependencyRecord *hasIdDepVar(const Expr *Expression);
+  const IdDependencyRecord *hasIdDepVar(const Expr *Expression);
   /// Returns an IdDependencyRecord if the Expression contains an ID-dependent
   /// field, returns a nullptr otherwise.
-  IdDependencyRecord *hasIdDepField(const Expr *Expression);
+  const IdDependencyRecord *hasIdDepField(const Expr *Expression);
   /// Stores the location an ID-dependent variable is created from a call to
   /// an ID function in IdDepVarsMap.
   void saveIdDepVar(const Stmt *Statement, const VarDecl *Variable);

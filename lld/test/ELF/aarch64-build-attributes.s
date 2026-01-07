@@ -1,26 +1,50 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -triple=aarch64 %s -filetype=obj -o %t.o
-// RUN: ld.lld %t.o --shared -o %t.so
-// RUN: llvm-readelf --sections %t.so | FileCheck %s
-// RUN: ld.lld %t.o -o %t
-// RUN: llvm-readelf --sections %t | FileCheck %s
-// RUN: ld.lld -r %t.o -o %t2.o
-// RUN: llvm-readelf --sections %t2.o | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
 
-/// File has a Build attributes section. This should not appear in
-/// ET_EXEC or ET_SHARED files as there is no requirement for it to
-/// do so. FIXME, the ld -r (relocatable link) should output a single
-/// merged build attributes section. When full support is added in
-/// ld.lld this test should be updated.
+// RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o 1.o
+// RUN: llvm-mc -triple=aarch64 -filetype=obj pauth-bti-gcs.s -o 2.o
+// RUN: llvm-mc -triple=aarch64 -filetype=obj pauth-bti-pac.s -o 3.o
+// RUN: ld.lld -r 1.o 2.o 3.o -o merged.o
+// RUN: llvm-readelf -n merged.o | FileCheck %s --check-prefix=NOTE
 
+/// This test merges three object files with AArch64 build attributes.
+/// All contain identical PAuth ABI info (platform/version), which must be preserved.
+/// Only BTI is common across all three in the AND feature set, so the merged output
+/// must show BTI only. PAC and GCS are present in subsets and should not appear.
+
+// NOTE: Displaying notes found in: .note.gnu.property
+// NOTE-NEXT:  Owner                Data size 	Description
+// NOTE-NEXT:  GNU                  0x00000028	NT_GNU_PROPERTY_TYPE_0 (property note)
+// NOTE-NEXT:    Properties:    aarch64 feature: BTI
+// NOTE-NEXT:        AArch64 PAuth ABI core info: platform 0x31 (unknown), version 0x13
+
+// CHECK: .note.gnu.property
 // CHECK-NOT: .ARM.attributes
 
+.aeabi_subsection aeabi_pauthabi, required, uleb128
+.aeabi_attribute Tag_PAuth_Platform, 49
+.aeabi_attribute Tag_PAuth_Schema, 19
 .aeabi_subsection aeabi_feature_and_bits, optional, uleb128
 .aeabi_attribute Tag_Feature_BTI, 1
 .aeabi_attribute Tag_Feature_PAC, 1
 .aeabi_attribute Tag_Feature_GCS, 1
 
-.global _start
-.type _start, %function
-_start:
-ret
+
+//--- pauth-bti-gcs.s
+.aeabi_subsection aeabi_pauthabi, required, uleb128
+.aeabi_attribute Tag_PAuth_Platform, 49
+.aeabi_attribute Tag_PAuth_Schema, 19
+.aeabi_subsection aeabi_feature_and_bits, optional, uleb128
+.aeabi_attribute Tag_Feature_BTI, 1
+.aeabi_attribute Tag_Feature_PAC, 0
+.aeabi_attribute Tag_Feature_GCS, 1
+
+
+//--- pauth-bti-pac.s
+.aeabi_subsection aeabi_pauthabi, required, uleb128
+.aeabi_attribute Tag_PAuth_Platform, 49
+.aeabi_attribute Tag_PAuth_Schema, 19
+.aeabi_subsection aeabi_feature_and_bits, optional, uleb128
+.aeabi_attribute Tag_Feature_BTI, 1
+.aeabi_attribute Tag_Feature_PAC, 1
+.aeabi_attribute Tag_Feature_GCS, 0

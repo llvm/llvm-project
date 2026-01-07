@@ -1,0 +1,80 @@
+# REQUIRES: python, native && system-darwin
+
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/interactive_crashlog/multithread-test.yaml > %t.dir/multithread-test
+# RUN: %lldb -o 'command script import lldb.macosx.crashlog' \
+# RUN: -o 'crashlog -a -t %t.dir/multithread-test %S/Inputs/interactive_crashlog/multithread-test.ips' \
+# RUN: -o "thread list" -o "bt all" -o "register read" 2>&1 | FileCheck %s
+
+# CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
+
+# CHECK: (lldb) process status
+# CHECK-NEXT: Process 22511 stopped
+# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:     frame #0: 0x0000000100ec58f4 multithread-test`bar
+
+# CHECK: (lldb) thread backtrace
+# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:   * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [synthetic]
+# CHECK-NEXT:     frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [synthetic]
+# CHECK-NEXT:     frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [synthetic]
+
+# CHECK: (lldb) thread list
+# CHECK-NEXT: Process 22511 stopped
+# CHECK-NEXT:   thread #1: tid = 0x23c7fe, 0x000000019cc40b84{{.*}}, queue = 'com.apple.main-thread'
+# CHECK-NEXT:   thread #2: tid = 0x23c800, 0x000000019cc42c9c{{.*}}
+# CHECK-NEXT: * thread #3: tid = 0x23c801, 0x0000000100ec58f4 multithread-test`bar{{.*}}, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+
+# CHECK: (lldb) bt all
+# CHECK:  thread #1, queue = 'com.apple.main-thread'
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc40b84{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5b3b multithread-test`main{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x00000002230f8da7{{.*}} [synthetic]
+# CHECK-NEXT:  thread #2
+# CHECK-NEXT:    frame #0: 0x000000019cc42c9c{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5957 multithread-test`call_and_wait{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [synthetic]
+# CHECK-NEXT:* thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:  * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [synthetic]
+# CHECK-NEXT:    frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [synthetic]
+# CHECK-NEXT:    frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [synthetic]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [synthetic]
+
+# CHECK: (lldb) register read
+# CHECK: General Purpose Registers:
+# CHECK:         x0 = 0x000000000000002a
+# CHECK:         x1 = 0x0000600001d291b0
+# CHECK:         x2 = 0x000000019cbbf000
+# CHECK:         x3 = 0x0000000000000000
+# CHECK:         x4 = 0x00000000000030a0
+# CHECK:         x5 = 0x00000000190008ff
+# CHECK:         x6 = 0x0000000000000000
+# CHECK:         x7 = 0x0000000000000000
+# CHECK:         x8 = 0x0000000000000001
+# CHECK:         x9 = 0x0000000000000000
+# CHECK:        x10 = 0xfffffffe634277cf
+# CHECK:        x11 = 0x0000010000000102
+# CHECK:        x12 = 0x0000010000000102
+# CHECK:        x13 = 0x0000010000000100
+# CHECK:        x14 = 0x0000010000000000
+# CHECK:        x15 = 0x0000000000000001
+# CHECK:        x16 = 0x000000019cc78ea8
+# CHECK:        x17 = 0x00000001fd0a7698
+# CHECK:        x18 = 0x0000000000000000
+# CHECK:        x19 = 0x000000016f04f000
+# CHECK:        x20 = 0x0000000000000000
+# CHECK:        x21 = 0x0000000000000000
+# CHECK:        x22 = 0x0000000000000000
+# CHECK:        x23 = 0x0000000000000000
+# CHECK:        x24 = 0x0000000000000000
+# CHECK:        x25 = 0x0000000000000000
+# CHECK:        x26 = 0x0000000000000000
+# CHECK:        x27 = 0x0000000000000000
+# CHECK:        x28 = 0x0000000000000000
+# CHECK:        x29 = 0x000000016f04ef00
+# CHECK:        x30 = 0x0000000100ec591c
+# CHECK:         sp = 0x000000016f04eee0
+# CHECK:         pc = 0x0000000100ec58f4
+# CHECK:       cpsr = 0x80001000

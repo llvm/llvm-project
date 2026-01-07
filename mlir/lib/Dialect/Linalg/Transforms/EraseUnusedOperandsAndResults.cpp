@@ -200,10 +200,10 @@ static void populateOpPayload(
   SmallVector<OpOperand *> newInputOperands = newOp.getDpsInputOperands();
   updateReplacements(origInputOperands, newInputOperands, origInsToNewInsPos);
 
-  SmallVector<OpOperand *> origOutputOperands = llvm::to_vector(llvm::map_range(
-      genericOp.getDpsInitsMutable(), [](OpOperand &o) { return &o; }));
-  SmallVector<OpOperand *> newOutputOperands = llvm::to_vector(llvm::map_range(
-      newOp.getDpsInitsMutable(), [](OpOperand &o) { return &o; }));
+  SmallVector<OpOperand *> origOutputOperands =
+      llvm::to_vector(llvm::make_pointer_range(genericOp.getDpsInitsMutable()));
+  SmallVector<OpOperand *> newOutputOperands =
+      llvm::to_vector(llvm::make_pointer_range(newOp.getDpsInitsMutable()));
   updateReplacements(origOutputOperands, newOutputOperands,
                      origOutsToNewOutsPos);
 
@@ -259,8 +259,8 @@ mlir::linalg::deduplicateOperandsAndRemoveDeadResults(
   for (Value v : newOutputOperands)
     if (isa<TensorType>(v.getType()))
       newResultTypes.push_back(v.getType());
-  auto newOp = rewriter.create<GenericOp>(
-      loc, newResultTypes, newInputOperands, newOutputOperands,
+  auto newOp = GenericOp::create(
+      rewriter, loc, newResultTypes, newInputOperands, newOutputOperands,
       rewriter.getAffineMapArrayAttr(newIndexingMaps),
       genericOp.getIteratorTypes(), genericOp.getDocAttr(),
       genericOp.getLibraryCallAttr(),

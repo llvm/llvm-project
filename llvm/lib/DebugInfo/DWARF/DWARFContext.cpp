@@ -621,8 +621,6 @@ public:
     else
       return getNormalTypeUnitMap();
   }
-
-
 };
 
 class ThreadSafeState : public ThreadUnsafeDWARFContextState {
@@ -1346,9 +1344,20 @@ void DWARFContext::dump(
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint64_t Hash, bool IsDWO) {
   DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
-    if (const auto *R = TUI.getFromHash(Hash))
-      return dyn_cast_or_null<DWARFTypeUnit>(
-          DWOUnits.getUnitForIndexEntry(*R));
+    if (const auto *R = TUI.getFromHash(Hash)) {
+      if (TUI.getVersion() >= 5) {
+        return dyn_cast_or_null<DWARFTypeUnit>(
+            DWOUnits.getUnitForIndexEntry(*R, DW_SECT_INFO));
+      } else {
+        DWARFUnit *TypesUnit = nullptr;
+        getDWARFObj().forEachTypesDWOSections([&](const DWARFSection &S) {
+          if (!TypesUnit)
+            TypesUnit =
+                DWOUnits.getUnitForIndexEntry(*R, DW_SECT_EXT_TYPES, &S);
+        });
+        return dyn_cast_or_null<DWARFTypeUnit>(TypesUnit);
+      }
+    }
     return nullptr;
   }
   return State->getTypeUnitMap(IsDWO).lookup(Hash);
@@ -1360,7 +1369,7 @@ DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
       return dyn_cast_or_null<DWARFCompileUnit>(
-          DWOUnits.getUnitForIndexEntry(*R));
+          DWOUnits.getUnitForIndexEntry(*R, DW_SECT_INFO));
     return nullptr;
   }
 
@@ -1904,8 +1913,8 @@ static Error createError(const Twine &Reason, llvm::Error E) {
 /// SymInfo contains information about symbol: it's address
 /// and section index which is -1LL for absolute symbols.
 struct SymInfo {
-  uint64_t Address;
-  uint64_t SectionIndex;
+  uint64_t Address = 0;
+  uint64_t SectionIndex = 0;
 };
 
 /// Returns the address of symbol relocation used against and a section index.
@@ -1923,7 +1932,7 @@ static Expected<SymInfo> getSymbolInfo(const object::ObjectFile &Obj,
   // in the object file
   if (Sym != Obj.symbol_end()) {
     bool New;
-    std::tie(CacheIt, New) = Cache.insert({*Sym, {0, 0}});
+    std::tie(CacheIt, New) = Cache.try_emplace(*Sym);
     if (!New)
       return CacheIt->second;
 
@@ -2262,7 +2271,7 @@ public:
           continue;
       }
 
-      if (Section.relocation_begin() == Section.relocation_end())
+      if (Section.relocations().empty())
         continue;
 
       // Symbol to [address, section index] cache mapping.

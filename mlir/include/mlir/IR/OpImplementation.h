@@ -130,10 +130,35 @@ public:
   /// Return the raw output stream used by this printer.
   virtual raw_ostream &getStream() const;
 
+  /// Print a newline and indent the printer to the start of the current
+  /// operation/attribute/type.
+  /// Note: For attributes and types this method should only be used in
+  /// custom dialects. Usage in upstream MLIR dialects is currently disallowed.
+  virtual void printNewline();
+
+  /// Increase indentation.
+  virtual void increaseIndent();
+
+  /// Decrease indentation.
+  virtual void decreaseIndent();
+
   /// Print the given floating point value in a stabilized form that can be
   /// roundtripped through the IR. This is the companion to the 'parseFloat'
   /// hook on the AsmParser.
   virtual void printFloat(const APFloat &value);
+
+  /// Print the given integer value. This is useful to force a uint8_t/int8_t to
+  /// be printed as an integer instead of a char.
+  template <typename IntT>
+  std::enable_if_t<std::is_integral_v<IntT>, void> printInteger(IntT value) {
+    // Handle int8_t/uint8_t specially to avoid printing as char
+    if constexpr (std::is_same_v<IntT, int8_t> ||
+                  std::is_same_v<IntT, uint8_t>) {
+      getStream() << static_cast<int>(value);
+    } else {
+      getStream() << value;
+    }
+  }
 
   virtual void printType(Type type);
   virtual void printAttribute(Attribute attr);
@@ -193,6 +218,9 @@ public:
   /// Print the given attribute without its type. The corresponding parser must
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
+
+  /// Print the given named attribute.
+  virtual void printNamedAttribute(NamedAttribute attr);
 
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
@@ -432,16 +460,6 @@ public:
   /// Print a loc(...) specifier if printing debug info is enabled.
   virtual void printOptionalLocationSpecifier(Location loc) = 0;
 
-  /// Print a newline and indent the printer to the start of the current
-  /// operation.
-  virtual void printNewline() = 0;
-
-  /// Increase indentation.
-  virtual void increaseIndent() = 0;
-
-  /// Decrease indentation.
-  virtual void decreaseIndent() = 0;
-
   /// Print a block argument in the usual format of:
   ///   %ssaName : type {attr1=42} loc("here")
   /// where location printing is controlled by the standard internal option.
@@ -655,6 +673,12 @@ public:
 
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
+
+  /// Parse a '/' token.
+  virtual ParseResult parseSlash() = 0;
+
+  /// Parse a '/' token if present.
+  virtual ParseResult parseOptionalSlash() = 0;
 
   /// Parse a '-' token.
   virtual ParseResult parseMinus() = 0;

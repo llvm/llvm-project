@@ -13,7 +13,7 @@ struct Empty {
 };
 
 bool foo(Empty e) {
-// CHECK: @_Z3foo5Empty(ptr noundef %e)
+// CHECK: @_Z3foo5Empty(ptr dead_on_return noundef %e)
 // CHECK: call {{.*}} @_ZN5Empty5checkEv(ptr {{[^,]*}} %e)
   return e.check();
 }
@@ -21,6 +21,6 @@ bool foo(Empty e) {
 void caller(Empty &e) {
 // CHECK: @_Z6callerR5Empty(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %e)
 // CHECK: call {{.*}} @_ZN5EmptyC1ERKS_(ptr {{[^,]*}} [[NEWTMP:%.*]], ptr
-// CHECK: call {{.*}} @_Z3foo5Empty(ptr noundef [[NEWTMP]])
+// CHECK: call {{.*}} @_Z3foo5Empty(ptr dead_on_return noundef [[NEWTMP]])
   foo(e);
 }

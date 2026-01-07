@@ -4,6 +4,9 @@
 # a DW_TAG_variable DIE, whose parent DIE is only
 # a forward declaration.
 
+# UNSUPPORTED: system-darwin
+# UNSUPPORTED: system-windows
+
 # RUN: %clangxx_host %S/Inputs/dwo-static-data-member.cpp \
 # RUN:   -g -gdwarf-5 -gsplit-dwarf -flimit-debug-info -o %t
 # RUN: %lldb %t -s %s -o exit 2>&1 | FileCheck %s

@@ -206,7 +206,7 @@ public:
           getI()->getOpcode(), I->getType(), TargetTransformInfo::TCK_Latency,
           {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
           {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
-      auto TotalCost = Scaled64::get(*Cost.getValue());
+      auto TotalCost = Scaled64::get(Cost.getValue());
       if (auto *OpI = dyn_cast<Instruction>(I->getOperand(1 - CondIdx))) {
         auto It = InstCostMap.find(OpI);
         if (It != InstCostMap.end())
@@ -313,6 +313,9 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
     return Impl.runOnFunction(F, *this);
   }
 
@@ -502,7 +505,7 @@ static Value *getTrueOrFalseValue(
   } else {
     assert((isa<AShrOperator>(AuxI) || isa<SExtInst>(AuxI)) &&
            "Unexpected opcode");
-    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), -1));
+    CBO->setOperand(CondIdx, ConstantInt::getAllOnesValue(CBO->getType()));
   }
 
   unsigned OtherIdx = 1 - CondIdx;
@@ -1380,8 +1383,8 @@ std::optional<uint64_t>
 SelectOptimizeImpl::computeInstCost(const Instruction *I) {
   InstructionCost ICost =
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
-  if (auto OC = ICost.getValue())
-    return std::optional<uint64_t>(*OC);
+  if (ICost.isValid())
+    return std::optional<uint64_t>(ICost.getValue());
   return std::nullopt;
 }
 

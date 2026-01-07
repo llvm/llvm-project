@@ -466,9 +466,10 @@ func.func @invalid_splat(%v : f32) {
 
 // -----
 
-func.func @invalid_splat(%v : vector<8xf32>) {
-  // expected-error@+1 {{must be integer/index/float type}}
-  %w = tensor.splat %v : tensor<8xvector<8xf32>>
+// expected-note@+1 {{prior use here}}
+func.func @invalid_splat(%v : f32) {
+  // expected-error@+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
+  %w = tensor.splat %v : tensor<1xi32>
   return
 }
 
@@ -680,3 +681,12 @@ func.func @bitcast_index_1(%arg0 : tensor<?xindex>) -> tensor<?xi64> {
   %0 = tensor.bitcast %arg0 : tensor<?xindex> to tensor<?xi64>
   return %0 : tensor<?xi64>
 }
+
+// -----
+
+func.func @test_empty_reassociation(%arg0: tensor<1x?xf32>) -> tensor<?x10xf32> {
+  // expected-error@below {{'tensor.collapse_shape' op reassociation indices must not be empty}}
+  %0 = tensor.collapse_shape %arg0 [[0, 1], []] : tensor<1x?xf32> into tensor<?x10xf32>
+  return %0 : tensor<?x10xf32>
+}
+

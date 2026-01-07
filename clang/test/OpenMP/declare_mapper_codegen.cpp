@@ -1055,4 +1055,106 @@ void foo(int a){
 
 #endif // CK4
 
+///==========================================================================///
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp -fopenmp-version=52 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm -femit-all-decls -disable-llvm-passes %s -o - | FileCheck --check-prefix CK5 %s
+// RUN: %clang_cc1 -DCK5 -fopenmp -fopenmp-version=52 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -femit-all-decls -disable-llvm-passes -o %t %s
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp-version=52 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm -femit-all-decls -disable-llvm-passes %s -o - | FileCheck --check-prefix CK5 %s
+// RUN: %clang_cc1 -DCK5 -fopenmp -fopenmp-version=52 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -femit-all-decls -disable-llvm-passes -o %t %s
+
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -fopenmp-version=52 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm -femit-all-decls -disable-llvm-passes %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK5 -fopenmp-simd -fopenmp-version=52 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -femit-all-decls -disable-llvm-passes -o %t %s
+// RUN: %clang_cc1 -DCK5 -verify -fopenmp-simd -fopenmp-version=52 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm -femit-all-decls -disable-llvm-passes %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK5 -fopenmp-simd -fopenmp-version=52 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -femit-all-decls -disable-llvm-passes -o %t %s
+
+#ifdef CK5
+typedef struct myvec {
+    int a;
+    double *b;
+} myvec_t;
+
+#pragma omp declare mapper(id: myvec_t v) map(iterator(it=0:v.a), tofrom: v.b[it])
+// CK5: @[[ITER:[a-zA-Z0-9_]+]] = global i32 0, align 4
+
+void foo(){ 
+  myvec_t s;
+  #pragma omp target map(mapper(id), to:s)
+  {
+  }
+}
+
+// CK5: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*myvec[.]id]](ptr noundef [[HANDLE:%.+]], ptr noundef [[BPTR:%.+]], ptr noundef [[BEGIN:%.+]], i64 noundef [[BYTESIZE:%.+]], i64 noundef [[TYPE:%.+]], ptr{{.*}})
+// CK5-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], {{.*}}
+// CK5-DAG: [[PTREND:%.+]] = getelementptr %struct.myvec, ptr [[BEGIN]], i64 [[SIZE]]
+// CK5-DAG: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
+// CK5-DAG: [[PTRSNE:%.+]] = icmp ne ptr [[BPTR]], [[BEGIN]]
+// CK5-DAG: [[PTRANDOBJ:%.+]] = and i64 [[TYPE]], 16
+// CK5-DAG: [[ISPTRANDOBJ:%.+]] = icmp ne i64 [[PTRANDOBJ]], 0
+// CK5-DAG: [[CMPA:%.+]] = and i1 [[PTRSNE]], [[ISPTRANDOBJ]]
+// CK5-DAG: [[CMP:%.+]] = or i1 [[ISARRAY]], [[CMPA]]
+// CK5-DAG: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
+// CK5-DAG: [[ISNOTDEL:%.+]] = icmp eq i64 [[TYPEDEL]], 0
+// CK5-DAG: [[CMP1:%.+]] = and i1 [[CMP]], [[ISNOTDEL]]
+// CK5: br i1 [[CMP1]], label %[[INITEVALDEL:[^,]+]], label %[[LHEAD:[^,]+]]
+
+// CK5: [[INITEVALDEL]]
+// CK5-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], {{.*}}
+
+// Remove movement mappings and mark as implicit
+// CK5-DAG: [[ITYPE:%.+]] = and i64 [[TYPE]], -4
+// CK5-DAG: [[ITYPE1:%.+]] = or i64 [[ITYPE]], 512
+// CK5: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BPTR]], ptr [[BEGIN]], i64 [[ARRSIZE]], i64 [[ITYPE1]], {{.*}})
+// CK5: br label %[[LHEAD:[^,]+]]
+
+// CK5: [[LHEAD]]
+// CK5: [[ISEMPTY:%.+]] = icmp eq ptr [[BEGIN]], [[PTREND]]
+// CK5: br i1 [[ISEMPTY]], label %[[DONE:[^,]+]], label %[[LBODY:[^,]+]]
+// CK5: [[LBODY]]
+// CK5: [[PTR:%.+]] = phi ptr [ [[BEGIN]], %{{.+}} ], [ [[PTRNEXT:%.+]], %[[LCORRECT:[^,]+]] ]
+// CK5-DAG: [[ABEGIN:%.+]] = getelementptr inbounds nuw %struct.myvec, ptr [[PTR]], i32 0, i32 1
+// CK5-DAG: load i32, ptr @[[ITER]], align 4
+// CK5-DAG: [[PRESIZE:%.+]] = call i64 @__tgt_mapper_num_components(ptr [[HANDLE]])
+// CK5-DAG: [[SHIPRESIZE:%.+]] = shl i64 [[PRESIZE]], 48
+// CK5-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 0, [[SHIPRESIZE]]
+// CK5-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
+// CK5-DAG: [[ISALLOC:%.+]] = icmp eq i64 [[TYPETF]], 0
+// CK5-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
+// CK5-DAG: [[ALLOC]]
+// CK5-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK5-DAG: br label %[[TYEND:[^,]+]]
+// CK5-DAG: [[ALLOCELSE]]
+// CK5-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
+// CK5-DAG: br i1 [[ISTO]], label %[[TO:[^,]+]], label %[[TOELSE:[^,]+]]
+// CK5-DAG: [[TO]]
+// CK5-DAG: [[TOTYPE:%.+]] = and i64 [[MEMBERTYPE]], -3
+// CK5-DAG: br label %[[TYEND]]
+// CK5-DAG: [[TOELSE]]
+// CK5-DAG: [[ISFROM:%.+]] = icmp eq i64 [[TYPETF]], 2
+// CK5-DAG: br i1 [[ISFROM]], label %[[FROM:[^,]+]], label %[[TYEND]]
+// CK5-DAG: [[FROM]]
+// CK5-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
+// CK5-DAG: br label %[[TYEND]]
+// CK5-DAG: [[TYEND]]
+// CK5-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK5: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 {{.*}}, i64 [[TYPE1]], {{.*}})
+// CK5: [[PTRNEXT]] = getelementptr %struct.myvec, ptr [[PTR]], i32 1
+// CK5: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
+// CK5: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
+
+// CK5: [[LEXIT]]
+// CK5: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
+// CK5: [[TYPEDEL:%.+]] = and i64 [[TYPE]], 8
+// CK5: [[ISNOTDEL:%.+]] = icmp ne i64 [[TYPEDEL]], {{.*}}
+// CK5: [[CMP1:%.+]] = and i1 [[ISARRAY]], [[ISNOTDEL]]
+// CK5-DAG: [[ARRSIZE:%.+]] = mul nuw i64 [[SIZE]], {{.*}}
+
+// Remove movement mappings and mark as implicit
+// CK5-DAG: [[DTYPE:%.+]] = and i64 [[TYPE]], -4
+// CK5-DAG: [[DTYPE1:%.+]] = or i64 [[DTYPE]], 512
+// CK5: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BPTR]], ptr [[BEGIN]], i64 [[ARRSIZE]], i64 [[DTYPE1]], {{.*}})
+// CK5: br label %[[DONE]]
+// CK5: [[DONE]]
+// CK5: ret void
+
+#endif // CK5
+
 #endif // HEADER

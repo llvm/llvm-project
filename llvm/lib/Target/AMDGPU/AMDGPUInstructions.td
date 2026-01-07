@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class AddressSpacesImpl {
+def AddrSpaces {
   int Flat = 0;
   int Global = 1;
   int Region = 2;
@@ -20,8 +20,6 @@ class AddressSpacesImpl {
   int Private = 5;
   int Constant32Bit = 6;
 }
-
-def AddrSpaces : AddressSpacesImpl;
 
 
 class AMDGPUInst <dag outs, dag ins, string asm = "",
@@ -35,12 +33,6 @@ class AMDGPUInst <dag outs, dag ins, string asm = "",
   let AsmString = asm;
   let Pattern = pattern;
   let Itinerary = NullALU;
-
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<128> SoftFail = 0; // FIXME: If this is smaller than largest instruction, DecodeEmitter crashes
 
   let DecoderNamespace = Namespace;
 
@@ -94,7 +86,8 @@ def FP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().F
 def NoFP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
 def NoFP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals == DenormalMode::getPreserveSign()">;
 def NoFP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
-def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
+def IEEEModeEnabled : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
+def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().IEEE">;
 }
 
 def FMA : Predicate<"Subtarget->hasFMA()">;
@@ -451,7 +444,9 @@ def LoadAddress_constant : AddressSpaceList<[ AddrSpaces.Constant,
 def LoadAddress_global : AddressSpaceList<[ AddrSpaces.Global,
                                             AddrSpaces.Constant,
                                             AddrSpaces.Constant32Bit ]>;
-def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global ]>;
+def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global,
+                                             AddrSpaces.Constant,
+                                             AddrSpaces.Constant32Bit ]>;
 
 def LoadAddress_flat : AddressSpaceList<[ AddrSpaces.Flat,
                                           AddrSpaces.Global,
@@ -502,19 +497,19 @@ def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextloadi16 node:$ptr)> {
   let IsLoad = 1;
 }
 
-def atomic_load_8_#as : PatFrag<(ops node:$ptr), (atomic_load_8 node:$ptr)> {
+def atomic_load_nonext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_16 node:$ptr)> {
   let IsAtomic = 1;
 }
 
-def atomic_load_16_#as : PatFrag<(ops node:$ptr), (atomic_load_16 node:$ptr)> {
+def atomic_load_nonext_32_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_32 node:$ptr)> {
   let IsAtomic = 1;
 }
 
-def atomic_load_32_#as : PatFrag<(ops node:$ptr), (atomic_load_32 node:$ptr)> {
+def atomic_load_nonext_64_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_64 node:$ptr)> {
   let IsAtomic = 1;
 }
 
-def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
+def atomic_load_nonext_128_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_128 node:$ptr)> {
   let IsAtomic = 1;
 }
 
@@ -526,11 +521,19 @@ def atomic_load_sext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_8 node:$
   let IsAtomic = 1;
 }
 
+def atomic_load_aext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_8 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
 def atomic_load_zext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_zext_16 node:$ptr)> {
   let IsAtomic = 1;
 }
 
 def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_16 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_aext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_16 node:$ptr)> {
   let IsAtomic = 1;
 }
 
@@ -574,6 +577,8 @@ def atomic_store_32_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_32 node:$val, node:$ptr)>;
 def atomic_store_64_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_64 node:$val, node:$ptr)>;
+def atomic_store_128_#as : PatFrag<(ops node:$val, node:$ptr),
+                                   (atomic_store_128 node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = ...
 } // End foreach as
 
@@ -631,15 +636,11 @@ multiclass local_addr_space_atomic_op {
     }
 }
 
-defm int_amdgcn_global_atomic_csub : noret_op;
 defm int_amdgcn_global_atomic_ordered_add_b64 : noret_op;
 defm int_amdgcn_flat_atomic_fmin_num : noret_op;
 defm int_amdgcn_flat_atomic_fmax_num : noret_op;
 defm int_amdgcn_global_atomic_fmin_num : noret_op;
 defm int_amdgcn_global_atomic_fmax_num : noret_op;
-defm int_amdgcn_atomic_cond_sub_u32 : local_addr_space_atomic_op;
-defm int_amdgcn_atomic_cond_sub_u32 : flat_addr_space_atomic_op;
-defm int_amdgcn_atomic_cond_sub_u32 : global_addr_space_atomic_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op> {
   let HasNoUse = true in
@@ -690,6 +691,8 @@ defm atomic_load_fmin : binary_atomic_op_fp_all_as<atomic_load_fmin>;
 defm atomic_load_fmax : binary_atomic_op_fp_all_as<atomic_load_fmax>;
 defm atomic_load_uinc_wrap : binary_atomic_op_all_as<atomic_load_uinc_wrap>;
 defm atomic_load_udec_wrap : binary_atomic_op_all_as<atomic_load_udec_wrap>;
+defm atomic_load_usub_cond : binary_atomic_op_all_as<atomic_load_usub_cond>;
+defm atomic_load_usub_sat : binary_atomic_op_all_as<atomic_load_usub_sat>;
 defm AMDGPUatomic_cmp_swap : binary_atomic_op_all_as<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
@@ -799,12 +802,6 @@ class BitConvert <ValueType dt, ValueType st, RegisterClass rc> : AMDGPUPat <
 class DwordAddrPat<ValueType vt, RegisterClass rc> : AMDGPUPat <
   (vt (AMDGPUdwordaddr (vt rc:$addr))),
   (vt rc:$addr)
->;
-
-// rotr pattern
-class ROTRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
-  (rotr i32:$src0, i32:$src1),
-  (BIT_ALIGN $src0, $src0, $src1)
 >;
 
 // Special conversion patterns

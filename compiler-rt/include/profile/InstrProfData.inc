@@ -405,14 +405,14 @@ typedef struct ValueProfRecord {
   /*!
    * Read data from this record and save it to Record.
    */
-  void deserializeTo(InstrProfRecord &Record,
+  LLVM_ABI void deserializeTo(InstrProfRecord &Record,
                      InstrProfSymtab *SymTab);
   /*
    * In-place byte swap:
    * Do byte swap for this instance. \c Old is the original order before
    * the swap, and \c New is the New byte order.
    */
-  void swapBytes(llvm::endianness Old, llvm::endianness New);
+  LLVM_ABI void swapBytes(llvm::endianness Old, llvm::endianness New);
 #endif
 } ValueProfRecord;
 
@@ -449,41 +449,41 @@ typedef struct ValueProfData {
    * Return the total size in bytes of the on-disk value profile data
    * given the data stored in Record.
    */
-  static uint32_t getSize(const InstrProfRecord &Record);
+  LLVM_ABI static uint32_t getSize(const InstrProfRecord &Record);
   /*!
    * Return a pointer to \c ValueProfData instance ready to be streamed.
    */
-  static std::unique_ptr<ValueProfData>
+  LLVM_ABI static std::unique_ptr<ValueProfData>
   serializeFrom(const InstrProfRecord &Record);
   /*!
    * Check the integrity of the record.
    */
-  Error checkIntegrity();
+  LLVM_ABI Error checkIntegrity();
   /*!
    * Return a pointer to \c ValueProfileData instance ready to be read.
    * All data in the instance are properly byte swapped. The input
    * data is assumed to be in little endian order.
    */
-  static Expected<std::unique_ptr<ValueProfData>>
+  LLVM_ABI static Expected<std::unique_ptr<ValueProfData>>
   getValueProfData(const unsigned char *SrcBuffer,
                    const unsigned char *const SrcBufferEnd,
                    llvm::endianness SrcDataEndianness);
   /*!
    * Swap byte order from \c Endianness order to host byte order.
    */
-  void swapBytesToHost(llvm::endianness Endianness);
+  LLVM_ABI void swapBytesToHost(llvm::endianness Endianness);
   /*!
    * Swap byte order from host byte order to \c Endianness order.
    */
-  void swapBytesFromHost(llvm::endianness Endianness);
+  LLVM_ABI void swapBytesFromHost(llvm::endianness Endianness);
   /*!
    * Return the total size of \c ValueProfileData.
    */
-  uint32_t getSize() const { return TotalSize; }
+  LLVM_ABI uint32_t getSize() const { return TotalSize; }
   /*!
    * Read data from this data and save it to \c Record.
    */
-  void deserializeTo(InstrProfRecord &Record,
+  LLVM_ABI void deserializeTo(InstrProfRecord &Record,
                      InstrProfSymtab *SymTab);
   void operator delete(void *ptr) { ::operator delete(ptr); }
 #endif
@@ -722,7 +722,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Raw profile format version (start from 1). */
 #define INSTR_PROF_RAW_VERSION 10
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 12
+#define INSTR_PROF_INDEX_VERSION 13
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 6
 

@@ -9,7 +9,7 @@ define <4 x i32> @test(<2 x i64> %v, ptr %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[P]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, <2 x ptr> [[TMP1]], <2 x i64> [[TMP4]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> [[TMP2]], i32 2, <2 x i1> splat (i1 true), <2 x i16> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> align 2 [[TMP2]], <2 x i1> splat (i1 true), <2 x i16> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> zeroinitializer, <4 x i32> [[TMP6]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>

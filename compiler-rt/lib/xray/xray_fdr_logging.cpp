@@ -73,7 +73,7 @@ static_assert(std::is_trivially_destructible<ThreadLocalData>::value,
 static pthread_key_t Key;
 
 // Global BufferQueue.
-static std::byte BufferQueueStorage[sizeof(BufferQueue)];
+alignas(BufferQueue) static std::byte BufferQueueStorage[sizeof(BufferQueue)];
 static BufferQueue *BQ = nullptr;
 
 // Global thresholds for function durations.

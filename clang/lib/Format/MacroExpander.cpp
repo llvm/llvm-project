@@ -20,10 +20,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Lex/ModuleLoader.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -89,7 +86,7 @@ private:
   }
 
   bool parseExpansion() {
-    if (!Current->isOneOf(tok::equal, tok::eof))
+    if (Current->isNoneOf(tok::equal, tok::eof))
       return false;
     if (Current->is(tok::equal))
       nextToken();
@@ -229,7 +226,7 @@ MacroExpander::expand(FormatToken *ID,
     New->MacroCtx = MacroExpansion(MR_Hidden);
     pushToken(New);
   }
-  assert(Result.size() >= 1 && Result.back()->is(tok::eof));
+  assert(!Result.empty() && Result.back()->is(tok::eof));
   if (Result.size() > 1) {
     ++Result[0]->MacroCtx->StartOfExpansion;
     ++Result[Result.size() - 2]->MacroCtx->EndOfExpansion;

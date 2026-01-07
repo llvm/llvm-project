@@ -41,16 +41,15 @@ static std::string serializeSarifDocument(llvm::json::Object &&Doc) {
 class SarifDocumentWriterTest : public ::testing::Test {
 protected:
   SarifDocumentWriterTest()
-      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(
+            llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
-        DiagID(new DiagnosticIDs()), DiagOpts(new DiagnosticOptions()),
-        Diags(DiagID, DiagOpts.get(), new IgnoringDiagConsumer()),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr) {}
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
@@ -291,7 +290,7 @@ TEST_F(SarifDocumentWriterTest, checkSerializingResultsWithCustomRuleConfig) {
 TEST_F(SarifDocumentWriterTest, checkSerializingArtifacts) {
   // GIVEN:
   const std::string ExpectedOutput =
-      R"({"$schema":"https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json","runs":[{"artifacts":[{"length":40,"location":{"index":0,"uri":"file:///main.cpp"},"mimeType":"text/plain","roles":["resultFile"]}],"columnKind":"unicodeCodePoints","results":[{"level":"error","locations":[{"physicalLocation":{"artifactLocation":{"index":0,"uri":"file:///main.cpp"},"region":{"endColumn":14,"startColumn":14,"startLine":3}}}],"message":{"text":"expected ';' after top level declarator"},"ruleId":"clang.unittest","ruleIndex":0}],"tool":{"driver":{"fullName":"sarif test runner","informationUri":"https://clang.llvm.org/docs/UsersManual.html","language":"en-US","name":"sarif test","rules":[{"defaultConfiguration":{"enabled":true,"level":"warning","rank":-1},"fullDescription":{"text":"Example rule created during unit tests"},"id":"clang.unittest","name":"clang unit test"}],"version":"1.0.0"}}}],"version":"2.1.0"})";
+      R"({"$schema":"https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json","runs":[{"artifacts":[{"length":40,"location":{"index":0,"uri":"file:///main.cpp"},"mimeType":"text/plain","roles":["resultFile"]}],"columnKind":"unicodeCodePoints","results":[{"level":"error","locations":[{"physicalLocation":{"artifactLocation":{"index":0,"uri":"file:///main.cpp"},"region":{"endColumn":14,"startColumn":14,"startLine":3}}}],"message":{"text":"expected ';' after top level declarator"},"relatedLocations":[{"physicalLocation":{"artifactLocation":{"index":0,"uri":"file:///main.cpp"},"region":{"endColumn":14,"startColumn":14,"startLine":3}}}],"ruleId":"clang.unittest","ruleIndex":0}],"tool":{"driver":{"fullName":"sarif test runner","informationUri":"https://clang.llvm.org/docs/UsersManual.html","language":"en-US","name":"sarif test","rules":[{"defaultConfiguration":{"enabled":true,"level":"warning","rank":-1},"fullDescription":{"text":"Example rule created during unit tests"},"id":"clang.unittest","name":"clang unit test"}],"version":"1.0.0"}}}],"version":"2.1.0"})";    
 
   SarifDocumentWriter Writer{SourceMgr};
   const SarifRule &Rule =
@@ -313,12 +312,12 @@ TEST_F(SarifDocumentWriterTest, checkSerializingArtifacts) {
       registerSource("/main.cpp", SourceText, /* IsMainFile = */ true);
   CharSourceRange SourceCSR =
       getFakeCharSourceRange(MainFileID, {3, 14}, {3, 14});
-
   DiagLocs.push_back(SourceCSR);
 
   const SarifResult &Result =
       SarifResult::create(RuleIdx)
-          .setLocations(DiagLocs)
+          .addLocations(DiagLocs)
+          .addRelatedLocations(DiagLocs)
           .setDiagnosticMessage("expected ';' after top level declarator")
           .setDiagnosticLevel(SarifResultLevel::Error);
   Writer.appendResult(Result);
@@ -378,7 +377,7 @@ TEST_F(SarifDocumentWriterTest, checkSerializingCodeflows) {
   unsigned RuleIdx = Writer.createRule(Rule);
   const SarifResult &Result =
       SarifResult::create(RuleIdx)
-          .setLocations({DiagLoc})
+          .addLocations({DiagLoc})
           .setDiagnosticMessage("Redefinition of 'foo'")
           .setThreadFlows(Threadflows)
           .setDiagnosticLevel(SarifResultLevel::Warning);

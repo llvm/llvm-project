@@ -28,7 +28,7 @@ class MCSubtargetInfo;
 class StringRef;
 
 /// Convert `Bytes' to a hex string and output to `OS'
-void dumpBytes(ArrayRef<uint8_t> Bytes, raw_ostream &OS);
+LLVM_ABI void dumpBytes(ArrayRef<uint8_t> Bytes, raw_ostream &OS);
 
 namespace HexStyle {
 
@@ -43,7 +43,7 @@ struct AliasMatchingData;
 
 /// This is an instance of a target assembly language printer that
 /// converts an MCInst to valid target assembly syntax.
-class MCInstPrinter {
+class LLVM_ABI MCInstPrinter {
 protected:
   /// A stream that comments can be emitted to if desired.  Each comment
   /// must end with a newline.  This will be null if verbose assembly emission
@@ -101,9 +101,10 @@ public:
 
   class WithMarkup {
   public:
-    LLVM_CTOR_NODISCARD WithMarkup(MCInstPrinter &IP, raw_ostream &OS, Markup M,
-                                   bool EnableMarkup, bool EnableColor);
-    ~WithMarkup();
+    LLVM_CTOR_NODISCARD LLVM_ABI WithMarkup(MCInstPrinter &IP, raw_ostream &OS,
+                                            Markup M, bool EnableMarkup,
+                                            bool EnableColor);
+    LLVM_ABI ~WithMarkup();
 
     template <typename T> WithMarkup &operator<<(T &O) {
       OS << O;
@@ -200,17 +201,18 @@ struct AliasPattern {
 
 struct AliasPatternCond {
   enum CondKind : uint8_t {
-    K_Feature,       // Match only if a feature is enabled.
-    K_NegFeature,    // Match only if a feature is disabled.
-    K_OrFeature,     // Match only if one of a set of features is enabled.
-    K_OrNegFeature,  // Match only if one of a set of features is disabled.
-    K_EndOrFeatures, // Note end of list of K_Or(Neg)?Features.
-    K_Ignore,        // Match any operand.
-    K_Reg,           // Match a specific register.
-    K_TiedReg,       // Match another already matched register.
-    K_Imm,           // Match a specific immediate.
-    K_RegClass,      // Match registers in a class.
-    K_Custom,        // Call custom matcher by index.
+    K_Feature,          // Match only if a feature is enabled.
+    K_NegFeature,       // Match only if a feature is disabled.
+    K_OrFeature,        // Match only if one of a set of features is enabled.
+    K_OrNegFeature,     // Match only if one of a set of features is disabled.
+    K_EndOrFeatures,    // Note end of list of K_Or(Neg)?Features.
+    K_Ignore,           // Match any operand.
+    K_Reg,              // Match a specific register.
+    K_TiedReg,          // Match another already matched register.
+    K_Imm,              // Match a specific immediate.
+    K_RegClass,         // Match registers in a class.
+    K_RegClassByHwMode, // Match registers in a class (by HwMode)
+    K_Custom,           // Call custom matcher by index.
   };
 
   CondKind Kind;

@@ -191,6 +191,8 @@ int LLLexer::getNextChar() {
 }
 
 lltok::Kind LLLexer::LexToken() {
+  // Set token end to next location, since the end is exclusive.
+  PrevTokEnd = CurPtr;
   while (true) {
     TokStart = CurPtr;
 
@@ -679,11 +681,15 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_cs_chain_preserve);
   KEYWORD(amdgpu_kernel);
   KEYWORD(amdgpu_gfx);
+  KEYWORD(amdgpu_gfx_whole_wave);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);
+  KEYWORD(cheriot_compartmentcallcc);
+  KEYWORD(cheriot_compartmentcalleecc);
+  KEYWORD(cheriot_librarycallcc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -701,6 +707,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(write);
   KEYWORD(readwrite);
   KEYWORD(argmem);
+  KEYWORD(target_mem0);
+  KEYWORD(target_mem1);
   KEYWORD(inaccessiblemem);
   KEYWORD(errnomem);
   KEYWORD(argmemonly);
@@ -749,6 +757,8 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   KEYWORD(xchg); KEYWORD(nand); KEYWORD(max); KEYWORD(min); KEYWORD(umax);
   KEYWORD(umin); KEYWORD(fmax); KEYWORD(fmin);
+  KEYWORD(fmaximum);
+  KEYWORD(fminimum);
   KEYWORD(uinc_wrap);
   KEYWORD(udec_wrap);
   KEYWORD(usub_cond);
@@ -925,6 +935,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(fptoui,      FPToUI);
   INSTKEYWORD(fptosi,      FPToSI);
   INSTKEYWORD(inttoptr,    IntToPtr);
+  INSTKEYWORD(ptrtoaddr,   PtrToAddr);
   INSTKEYWORD(ptrtoint,    PtrToInt);
   INSTKEYWORD(bitcast,     BitCast);
   INSTKEYWORD(addrspacecast, AddrSpaceCast);
@@ -975,6 +986,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(ATE, DwarfAttEncoding);
   DWKEYWORD(VIRTUALITY, DwarfVirtuality);
   DWKEYWORD(LANG, DwarfLang);
+  DWKEYWORD(LNAME, DwarfSourceLangName);
   DWKEYWORD(CC, DwarfCC);
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);
@@ -995,6 +1007,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DBGRECORDTYPEKEYWORD(declare);
   DBGRECORDTYPEKEYWORD(assign);
   DBGRECORDTYPEKEYWORD(label);
+  DBGRECORDTYPEKEYWORD(declare_value);
 #undef DBGRECORDTYPEKEYWORD
 
   if (Keyword.starts_with("DIFlag")) {
@@ -1116,15 +1129,25 @@ lltok::Kind LLLexer::Lex0x() {
     HexToIntPair(TokStart+3, CurPtr, Pair);
     APFloatVal = APFloat(APFloat::PPCDoubleDouble(), APInt(128, Pair));
     return lltok::APFloat;
-  case 'H':
-    APFloatVal = APFloat(APFloat::IEEEhalf(),
-                         APInt(16,HexIntToVal(TokStart+3, CurPtr)));
+  case 'H': {
+    uint64_t Val = HexIntToVal(TokStart + 3, CurPtr);
+    if (!llvm::isUInt<16>(Val)) {
+      LexError("hexadecimal constant too large for half (16-bit)");
+      return lltok::Error;
+    }
+    APFloatVal = APFloat(APFloat::IEEEhalf(), APInt(16, Val));
     return lltok::APFloat;
-  case 'R':
+  }
+  case 'R': {
     // Brain floating point
-    APFloatVal = APFloat(APFloat::BFloat(),
-                         APInt(16, HexIntToVal(TokStart + 3, CurPtr)));
+    uint64_t Val = HexIntToVal(TokStart + 3, CurPtr);
+    if (!llvm::isUInt<16>(Val)) {
+      LexError("hexadecimal constant too large for bfloat (16-bit)");
+      return lltok::Error;
+    }
+    APFloatVal = APFloat(APFloat::BFloat(), APInt(16, Val));
     return lltok::APFloat;
+  }
   }
 }
 

@@ -17,7 +17,6 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/PrintCallHelper.h"
-#include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -25,8 +24,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/StringRef.h"
-#include <functional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTCONTROLFLOWTOLLVMPASS
@@ -44,9 +41,10 @@ namespace {
 /// lowering.
 struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
   explicit AssertOpLowering(const LLVMTypeConverter &typeConverter,
-                            bool abortOnFailedAssert = true)
+                            bool abortOnFailedAssert = true,
+                            SymbolTableCollection *symbolTables = nullptr)
       : ConvertOpToLLVMPattern<cf::AssertOp>(typeConverter, /*benefit=*/1),
-        abortOnFailedAssert(abortOnFailedAssert) {}
+        abortOnFailedAssert(abortOnFailedAssert), symbolTables(symbolTables) {}
 
   LogicalResult
   matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
@@ -64,7 +62,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
     auto createResult = LLVM::createPrintStrCall(
         rewriter, loc, module, "assert_msg", op.getMsg(), *getTypeConverter(),
         /*addNewLine=*/false,
-        /*runtimeFunctionName=*/"puts");
+        /*runtimeFunctionName=*/"puts", symbolTables);
     if (createResult.failed())
       return failure();
 
@@ -75,13 +73,13 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(module.getBody());
         auto abortFuncTy = LLVM::LLVMFunctionType::get(getVoidType(), {});
-        abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
-                                                      "abort", abortFuncTy);
+        abortFunc = LLVM::LLVMFuncOp::create(rewriter, rewriter.getUnknownLoc(),
+                                             "abort", abortFuncTy);
       }
-      rewriter.create<LLVM::CallOp>(loc, abortFunc, std::nullopt);
-      rewriter.create<LLVM::UnreachableOp>(loc);
+      LLVM::CallOp::create(rewriter, loc, abortFunc, ValueRange());
+      LLVM::UnreachableOp::create(rewriter, loc);
     } else {
-      rewriter.create<LLVM::BrOp>(loc, ValueRange(), continuationBlock);
+      LLVM::BrOp::create(rewriter, loc, ValueRange(), continuationBlock);
     }
 
     // Generate assertion test.
@@ -96,6 +94,8 @@ private:
   /// If set to `false`, messages are printed but program execution continues.
   /// This is useful for testing asserts.
   bool abortOnFailedAssert = true;
+
+  SymbolTableCollection *symbolTables = nullptr;
 };
 
 /// Helper function for converting branch ops. This function converts the
@@ -125,24 +125,35 @@ static FailureOr<Block *> getConvertedBlock(ConversionPatternRewriter &rewriter,
   return rewriter.applySignatureConversion(block, *conversion, converter);
 }
 
+/// Flatten the given value ranges into a single vector of values.
+static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+  SmallVector<Value> result;
+  for (const ValueRange &vals : values)
+    llvm::append_range(result, vals);
+  return result;
+}
+
 /// Convert the destination block signature (if necessary) and lower the branch
 /// op to llvm.br.
 struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
   using ConvertOpToLLVMPattern<cf::BranchOp>::ConvertOpToLLVMPattern;
+  using Adaptor = ConvertOpToLLVMPattern<cf::BranchOp>::OneToNOpAdaptor;
 
   LogicalResult
-  matchAndRewrite(cf::BranchOp op, typename cf::BranchOp::Adaptor adaptor,
+  matchAndRewrite(cf::BranchOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> flattenedAdaptor = flattenValues(adaptor.getOperands());
     FailureOr<Block *> convertedBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getSuccessor(),
-                          TypeRange(adaptor.getOperands()));
+                          TypeRange(ValueRange(flattenedAdaptor)));
     if (failed(convertedBlock))
       return failure();
+    DictionaryAttr attrs = op->getAttrDictionary();
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
-        op, adaptor.getOperands(), *convertedBlock);
+        op, flattenedAdaptor, *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(op->getAttrDictionary());
+    newOp->setAttrs(attrs);
     return success();
   }
 };
@@ -151,28 +162,36 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
 /// branch op to llvm.cond_br.
 struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
   using ConvertOpToLLVMPattern<cf::CondBranchOp>::ConvertOpToLLVMPattern;
+  using Adaptor = ConvertOpToLLVMPattern<cf::CondBranchOp>::OneToNOpAdaptor;
 
   LogicalResult
-  matchAndRewrite(cf::CondBranchOp op,
-                  typename cf::CondBranchOp::Adaptor adaptor,
+  matchAndRewrite(cf::CondBranchOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> flattenedAdaptorTrue =
+        flattenValues(adaptor.getTrueDestOperands());
+    SmallVector<Value> flattenedAdaptorFalse =
+        flattenValues(adaptor.getFalseDestOperands());
+    if (!llvm::hasSingleElement(adaptor.getCondition()))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected single element condition");
     FailureOr<Block *> convertedTrueBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getTrueDest(),
-                          TypeRange(adaptor.getTrueDestOperands()));
+                          TypeRange(ValueRange(flattenedAdaptorTrue)));
     if (failed(convertedTrueBlock))
       return failure();
     FailureOr<Block *> convertedFalseBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getFalseDest(),
-                          TypeRange(adaptor.getFalseDestOperands()));
+                          TypeRange(ValueRange(flattenedAdaptorFalse)));
     if (failed(convertedFalseBlock))
       return failure();
-    Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, adaptor.getCondition(), *convertedTrueBlock,
-        adaptor.getTrueDestOperands(), *convertedFalseBlock,
-        adaptor.getFalseDestOperands());
+    DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+    auto newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
+        op, llvm::getSingleElement(adaptor.getCondition()),
+        flattenedAdaptorTrue, flattenedAdaptorFalse, op.getBranchWeightsAttr(),
+        *convertedTrueBlock, *convertedFalseBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(op->getAttrDictionary());
+    newOp->setDiscardableAttrs(attrs);
     return success();
   }
 };
@@ -183,7 +202,7 @@ struct SwitchOpLowering : public ConvertOpToLLVMPattern<cf::SwitchOp> {
   using ConvertOpToLLVMPattern<cf::SwitchOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(cf::SwitchOp op, typename cf::SwitchOp::Adaptor adaptor,
+  matchAndRewrite(cf::SwitchOp op, cf::SwitchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Get or convert default block.
     FailureOr<Block *> convertedDefaultBlock = getConvertedBlock(
@@ -227,8 +246,8 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
 
 void mlir::cf::populateAssertToLLVMConversionPattern(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool abortOnFailure) {
-  patterns.add<AssertOpLowering>(converter, abortOnFailure);
+    bool abortOnFailure, SymbolTableCollection *symbolTables) {
+  patterns.add<AssertOpLowering>(converter, abortOnFailure, symbolTables);
 }
 
 //===----------------------------------------------------------------------===//

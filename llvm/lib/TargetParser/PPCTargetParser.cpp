@@ -15,6 +15,10 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/Host.h"
 
+#define GET_SUBTARGETFEATURES_ENUM
+#define GET_SUBTARGETFEATURES_KV
+#include "llvm/TargetParser/PPCGenTargetFeatures.inc"
+
 namespace llvm {
 namespace PPC {
 
@@ -44,9 +48,9 @@ StringRef normalizeCPUName(StringRef CPUName) {
   // accepting it. Clang has always ignored it and passed the
   // generic CPU ID to the back end.
   return StringSwitch<StringRef>(CPUName)
-      .Cases("common", "405", "generic")
-      .Cases("ppc440", "440fp", "440")
-      .Cases("630", "power3", "pwr3")
+      .Cases({"common", "405"}, "generic")
+      .Cases({"ppc440", "440fp"}, "440")
+      .Cases({"630", "power3"}, "pwr3")
       .Case("G3", "g3")
       .Case("G4", "g4")
       .Case("G4+", "g4+")
@@ -65,7 +69,7 @@ StringRef normalizeCPUName(StringRef CPUName) {
       .Case("power9", "pwr9")
       .Case("power10", "pwr10")
       .Case("power11", "pwr11")
-      .Cases("powerpc", "powerpc32", "ppc")
+      .Cases({"powerpc", "powerpc32"}, "ppc")
       .Case("powerpc64", "ppc64")
       .Case("powerpc64le", "ppc64le")
       .Default(CPUName);
@@ -117,5 +121,29 @@ StringRef getNormalizedPPCTuneCPU(const Triple &T, StringRef CPUName) {
   return getNormalizedPPCTargetCPU(T, CPUName);
 }
 
+std::optional<StringMap<bool>> getPPCDefaultTargetFeatures(const Triple &T,
+                                                           StringRef CPU) {
+  std::optional<StringMap<bool>> FeaturesOpt =
+      getCPUDefaultTargetFeatures(CPU, BasicPPCSubTypeKV, BasicPPCFeatureKV);
+
+  if (!FeaturesOpt.has_value())
+    return std::nullopt;
+
+  StringMap<bool> Features = FeaturesOpt.value();
+  // FIXME: We need to check for the processor model 8548, since the backend
+  // does not support this processor. When this processor model is implemented
+  // within the backend, the following code can be removed.
+  if (CPU == "8548")
+    Features["spe"] = true;
+
+  // The target feature `quadword-atomics` is only supported for 64-bit
+  // POWER8 and above.
+  if (!T.isArch64Bit()) {
+    auto It = Features.find("quadword-atomics");
+    if (It != Features.end())
+      It->second = false;
+  }
+  return Features;
+}
 } // namespace PPC
 } // namespace llvm

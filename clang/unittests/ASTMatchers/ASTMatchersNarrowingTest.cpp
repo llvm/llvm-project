@@ -26,6 +26,19 @@ TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesInFile) {
   EXPECT_TRUE(matches(input, binaryOperator(isExpandedFromMacro("MY_MACRO"))));
 }
 
+static std::string constructMacroName(llvm::StringRef A, llvm::StringRef B) {
+  return (A + "_" + B).str();
+}
+
+TEST_P(ASTMatchersTest, IsExpandedFromMacro_ConstructedMacroName) {
+  StringRef input = R"cc(
+#define MY_MACRO(a) (4 + (a))
+    void Test() { MY_MACRO(4); }
+  )cc";
+  auto matcher = isExpandedFromMacro(constructMacroName("MY", "MACRO"));
+  EXPECT_TRUE(matches(input, binaryOperator(matcher)));
+}
+
 TEST_P(ASTMatchersTest, IsExpandedFromMacro_MatchesNested) {
   StringRef input = R"cc(
 #define MY_MACRO(a) (4 + (a))
@@ -1172,8 +1185,8 @@ TEST_P(ASTMatchersTest, IsDerivedFrom_ElaboratedType) {
     return;
   }
 
-  DeclarationMatcher IsDerivenFromBase =
-      cxxRecordDecl(isDerivedFrom(decl().bind("typedef")));
+  DeclarationMatcher IsDerivenFromBase = cxxRecordDecl(
+      isDerivedFrom(decl().bind("typedef")), unless(isImplicit()));
 
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "struct AnInterface {};"
@@ -2302,10 +2315,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(elaboratedType(namesType(
-                templateSpecializationType(hasDeclaration(classTemplateDecl(
-                    has(cxxRecordDecl(has(cxxMethodDecl(hasName("mem"))
-                                              .bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
 
     EXPECT_TRUE(
@@ -2323,10 +2335,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(has(
-                        fieldDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
 
@@ -2341,10 +2352,9 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(
-                hasType(elaboratedType(namesType(templateSpecializationType(
-                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                        has(varDecl(hasName("mem")).bind("templMem")))))))))))),
+            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
+                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
   {
@@ -2699,23 +2709,46 @@ TEST_P(ASTMatchersTest, HasName_MatchesAnonymousNamespaces) {
   EXPECT_TRUE(matches(code, recordDecl(hasName("::a::C"))));
 }
 
-TEST_P(ASTMatchersTest, HasName_MatchesAnonymousOuterClasses) {
+TEST_P(ASTMatchersTest, HasName_MatchesUnnamedOuterClasses) {
   if (!GetParam().isCXX()) {
     return;
   }
 
   EXPECT_TRUE(matches("class A { class { class C; } x; };",
-                      recordDecl(hasName("A::(anonymous class)::C"))));
+                      recordDecl(hasName("A::(unnamed class)::C"))));
   EXPECT_TRUE(matches("class A { class { class C; } x; };",
-                      recordDecl(hasName("::A::(anonymous class)::C"))));
+                      recordDecl(hasName("::A::(unnamed class)::C"))));
   EXPECT_FALSE(matches("class A { class { class C; } x; };",
                        recordDecl(hasName("::A::C"))));
   EXPECT_TRUE(matches("class A { struct { class C; } x; };",
-                      recordDecl(hasName("A::(anonymous struct)::C"))));
+                      recordDecl(hasName("A::(unnamed struct)::C"))));
   EXPECT_TRUE(matches("class A { struct { class C; } x; };",
-                      recordDecl(hasName("::A::(anonymous struct)::C"))));
+                      recordDecl(hasName("::A::(unnamed struct)::C"))));
   EXPECT_FALSE(matches("class A { struct { class C; } x; };",
                        recordDecl(hasName("::A::C"))));
+}
+
+TEST_P(ASTMatchersTest, HasName_MatchesAnonymousOuterClasses) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      "class A { struct { struct { class C; } x; }; };",
+      recordDecl(hasName("A::(anonymous struct)::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { struct { struct { class C; } x; }; };",
+      recordDecl(hasName("::A::(anonymous struct)::(unnamed struct)::C"))));
+  EXPECT_FALSE(matches("class A { struct { struct { class C; } x; }; };",
+                       recordDecl(hasName("A::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { class { public: struct { class C; } x; }; };",
+      recordDecl(hasName("A::(anonymous class)::(unnamed struct)::C"))));
+  EXPECT_TRUE(matches(
+      "class A { class { public: struct { class C; } x; }; };",
+      recordDecl(hasName("::A::(anonymous class)::(unnamed struct)::C"))));
+  EXPECT_FALSE(matches("class A { class { public: struct { class C; } x; }; };",
+                       recordDecl(hasName("A::(unnamed struct)::C"))));
 }
 
 TEST_P(ASTMatchersTest, HasName_MatchesFunctionScope) {
@@ -2925,6 +2958,19 @@ TEST_P(ASTMatchersTest, IsBitField) {
                          fieldDecl(isBitField(), hasName("b"))));
   EXPECT_TRUE(matches("struct C { int a : 2; int b : 4; };",
                       fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  if (GetParam().isCXX()) {
+    // This test verifies 2 things:
+    // (1) That templates work correctly.
+    // (2) That the matcher does not crash on template-dependent bit widths.
+    EXPECT_TRUE(matches("template<int N> "
+                        "struct C { "
+                        "explicit C(bool x) : a(x) { } "
+                        "int a : N; "
+                        "int b : 4; "
+                        "}; "
+                        "template struct C<2>;",
+                        fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  }
 }
 
 TEST_P(ASTMatchersTest, HasInClassInitializer) {

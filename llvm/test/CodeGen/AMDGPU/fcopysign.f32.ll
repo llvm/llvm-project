@@ -569,14 +569,13 @@ define amdgpu_kernel void @s_test_copysign_v3f32(ptr addrspace(1) %out, <3 x flo
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v3, s12
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s14 :: v_dual_mov_b32 v1, s13
-; GFX11-NEXT:    v_mov_b32_e32 v3, s12
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_bfi_b32 v2, 0x7fffffff, s10, v0
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, s9, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, s8, v3
 ; GFX11-NEXT:    global_store_b96 v4, v[0:2], s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -1002,7 +1001,7 @@ define amdgpu_kernel void @s_test_copysign_f32_fpext_f16(ptr addrspace(1) %out, 
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e64 v0, 16, s3
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, s3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, s2, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
@@ -1097,7 +1096,7 @@ define amdgpu_kernel void @s_test_copysign_f32_fpext_bf16(ptr addrspace(1) %out,
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e64 v0, 16, s3
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, s3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, s2, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
@@ -1106,6 +1105,126 @@ define amdgpu_kernel void @s_test_copysign_f32_fpext_bf16(ptr addrspace(1) %out,
   %result = call float @llvm.copysign.f32(float %mag, float %sign.ext)
   store float %result, ptr addrspace(1) %out, align 4
   ret void
+}
+
+define amdgpu_ps i32 @s_copysign_f32_0_f32(float inreg %sign) {
+; SIVI-LABEL: s_copysign_f32_0_f32:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_and_b32 s0, s0, 0x80000000
+; SIVI-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_f32_0_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x80000000
+; GFX11-NEXT:    ; return to shader part epilog
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign)
+  %cast = bitcast float %result to i32
+  ret i32 %cast
+}
+
+define float @v_copysign_f32_0_f32(float %sign) {
+; SIVI-LABEL: v_copysign_f32_0_f32:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SIVI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_copysign_f32_0_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign)
+  ret float %result
+}
+
+define amdgpu_ps i32 @s_copysign_f32_0_f64(double inreg %sign) {
+; SIVI-LABEL: s_copysign_f32_0_f64:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SIVI-NEXT:    v_readfirstlane_b32 s0, v0
+; SIVI-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_f32_0_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
+  %sign.trunc = fptrunc double %sign to float
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign.trunc)
+  %cast = bitcast float %result to i32
+  ret i32 %cast
+}
+
+define float @v_copysign_f32_0_f64(double %sign) {
+; SIVI-LABEL: v_copysign_f32_0_f64:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v1
+; SIVI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_copysign_f32_0_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %sign.trunc = fptrunc double %sign to float
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign.trunc)
+  ret float %result
+}
+
+define amdgpu_ps i32 @s_copysign_f32_0_f16(half inreg %sign) {
+; SI-LABEL: s_copysign_f32_0_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_and_b32 s0, s0, 0x80000000
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: s_copysign_f32_0_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; VI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; VI-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_f32_0_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
+  %sign.ext = fpext half %sign to float
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign.ext)
+  %cast = bitcast float %result to i32
+  ret i32 %cast
+}
+
+define float @v_copysign_f32_0_f16(half %sign) {
+; SI-LABEL: v_copysign_f32_0_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_copysign_f32_0_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_copysign_f32_0_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_and_b16 v0.h, 0x8000, v0.l
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %sign.ext = fpext half %sign to float
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign.ext)
+  ret float %result
 }
 
 declare float @llvm.copysign.f32(float, float) #0

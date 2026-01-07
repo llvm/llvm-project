@@ -3,11 +3,13 @@
 ; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx803 -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck -check-prefixes=ALL,GFX8 %s
 ; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck -check-prefixes=ALL,GFX9 %s
 ; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1030 -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck -check-prefixes=ALL,GFX10 %s
+; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck -check-prefixes=GFX1250 %s
 
 ; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck -check-prefixes=ALL-SIZE,BASE-SIZE %s
 ; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx803 -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck -check-prefixes=ALL-SIZE,GFX8-SIZE %s
 ; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck -check-prefixes=ALL-SIZE,GFX9-SIZE %s
 ; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1030 -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck -check-prefixes=ALL-SIZE,GFX10-SIZE %s
+; RUN: opt < %s -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck -check-prefixes=GFX1250-SIZE %s
 
 define void @canonicalize_f16() {
 ; BASE-LABEL: 'canonicalize_f16'
@@ -22,12 +24,12 @@ define void @canonicalize_f16() {
 ;
 ; GFX8-LABEL: 'canonicalize_f16'
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.canonicalize.f16(half undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.canonicalize.v5f16(<5 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.canonicalize.v17f16(<17 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.canonicalize.v5f16(<5 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17f16 = call <17 x half> @llvm.canonicalize.v17f16(<17 x half> undef)
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX9-LABEL: 'canonicalize_f16'
@@ -62,12 +64,12 @@ define void @canonicalize_f16() {
 ;
 ; GFX8-SIZE-LABEL: 'canonicalize_f16'
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.canonicalize.f16(half undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.canonicalize.v5f16(<5 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.canonicalize.v17f16(<17 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.canonicalize.v5f16(<5 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17f16 = call <17 x half> @llvm.canonicalize.v17f16(<17 x half> undef)
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX9-SIZE-LABEL: 'canonicalize_f16'
@@ -141,6 +143,16 @@ define void @canonicalize_bf16() {
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = call <17 x bfloat> @llvm.canonicalize.v17bf16(<17 x bfloat> undef)
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX1250-LABEL: 'canonicalize_bf16'
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %bf16 = call bfloat @llvm.canonicalize.bf16(bfloat undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v2bf16 = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v3bf16 = call <3 x bfloat> @llvm.canonicalize.v3bf16(<3 x bfloat> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v4bf16 = call <4 x bfloat> @llvm.canonicalize.v4bf16(<4 x bfloat> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v5bf16 = call <5 x bfloat> @llvm.canonicalize.v5bf16(<5 x bfloat> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 8 for instruction:   %v16bf16 = call <16 x bfloat> @llvm.canonicalize.v16bf16(<16 x bfloat> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 48 for instruction:   %v17bf16 = call <17 x bfloat> @llvm.canonicalize.v17bf16(<17 x bfloat> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 10 for instruction:   ret void
+;
 ; BASE-SIZE-LABEL: 'canonicalize_bf16'
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.canonicalize.bf16(bfloat undef)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> undef)
@@ -181,6 +193,15 @@ define void @canonicalize_bf16() {
 ; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = call <17 x bfloat> @llvm.canonicalize.v17bf16(<17 x bfloat> undef)
 ; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
+; GFX1250-SIZE-LABEL: 'canonicalize_bf16'
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %bf16 = call bfloat @llvm.canonicalize.bf16(bfloat undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v2bf16 = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v3bf16 = call <3 x bfloat> @llvm.canonicalize.v3bf16(<3 x bfloat> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v4bf16 = call <4 x bfloat> @llvm.canonicalize.v4bf16(<4 x bfloat> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v5bf16 = call <5 x bfloat> @llvm.canonicalize.v5bf16(<5 x bfloat> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 8 for instruction:   %v16bf16 = call <16 x bfloat> @llvm.canonicalize.v16bf16(<16 x bfloat> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 48 for instruction:   %v17bf16 = call <17 x bfloat> @llvm.canonicalize.v17bf16(<17 x bfloat> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   ret void
   %bf16 = call bfloat @llvm.canonicalize.bf16(bfloat undef) #1
   %v2bf16 = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> undef) #1
   %v3bf16 = call <3 x bfloat> @llvm.canonicalize.v3bf16(<3 x bfloat> undef) #1
@@ -203,6 +224,17 @@ define void @canonicalize_f32() {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v16f32 = call <16 x float> @llvm.canonicalize.v16f32(<16 x float> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX1250-LABEL: 'canonicalize_f32'
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %f32 = call float @llvm.canonicalize.f32(float undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v2f32 = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v3f32 = call <3 x float> @llvm.canonicalize.v3f32(<3 x float> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v4f32 = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 3 for instruction:   %v5f32 = call <5 x float> @llvm.canonicalize.v5f32(<5 x float> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v8f32 = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 15 for instruction:   %v9f32 = call <9 x float> @llvm.canonicalize.v9f32(<9 x float> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 24 for instruction:   %v16f32 = call <16 x float> @llvm.canonicalize.v16f32(<16 x float> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 10 for instruction:   ret void
+;
 ; ALL-SIZE-LABEL: 'canonicalize_f32'
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f32 = call float @llvm.canonicalize.f32(float undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32 = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> undef)
@@ -214,6 +246,16 @@ define void @canonicalize_f32() {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v16f32 = call <16 x float> @llvm.canonicalize.v16f32(<16 x float> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
+; GFX1250-SIZE-LABEL: 'canonicalize_f32':
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %f32 = call float @llvm.canonicalize.f32(float undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v2f32 = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v3f32 = call <3 x float> @llvm.canonicalize.v3f32(<3 x float> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v4f32 = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 3 for instruction:   %v5f32 = call <5 x float> @llvm.canonicalize.v5f32(<5 x float> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v8f32 = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 15 for instruction:   %v9f32 = call <9 x float> @llvm.canonicalize.v9f32(<9 x float> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 24 for instruction:   %v16f32 = call <16 x float> @llvm.canonicalize.v16f32(<16 x float> undef)
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   ret void
   %f32 = call float @llvm.canonicalize.f32(float undef) #1
   %v2f32 = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> undef) #1
   %v3f32 = call <3 x float> @llvm.canonicalize.v3f32(<3 x float> undef) #1
@@ -236,6 +278,16 @@ define void @canonicalize_f64() {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v16f64 = call <16 x double> @llvm.canonicalize.v16f64(<16 x double> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX1250-LABEL: 'canonicalize_f64'
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %f64 = call double @llvm.canonicalize.f64(double undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 8 for instruction:   %v2f64 = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 12 for instruction:   %v3f64 = call <3 x double> @llvm.canonicalize.v3f64(<3 x double> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 16 for instruction:   %v4f64 = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 96 for instruction:   %v5f64 = call <5 x double> @llvm.canonicalize.v5f64(<5 x double> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 96 for instruction:   %v8f64 = call <8 x double> @llvm.canonicalize.v8f64(<8 x double> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 320 for instruction:   %v16f64 = call <16 x double> @llvm.canonicalize.v16f64(<16 x double> undef)
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 10 for instruction:   ret void
+;
 ; ALL-SIZE-LABEL: 'canonicalize_f64'
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64 = call double @llvm.canonicalize.f64(double undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> undef)
@@ -246,6 +298,16 @@ define void @canonicalize_f64() {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v16f64 = call <16 x double> @llvm.canonicalize.v16f64(<16 x double> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
+; GFX1250-SIZE-LABEL: 'canonicalize_f64'
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64 = call double @llvm.canonicalize.f64(double undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f64 = call <3 x double> @llvm.canonicalize.v3f64(<3 x double> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5f64 = call <5 x double> @llvm.canonicalize.v5f64(<5 x double> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v8f64 = call <8 x double> @llvm.canonicalize.v8f64(<8 x double> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v16f64 = call <16 x double> @llvm.canonicalize.v16f64(<16 x double> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
   %f64 = call double @llvm.canonicalize.f64(double undef) #1
   %v2f64 = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> undef) #1
   %v3f64 = call <3 x double> @llvm.canonicalize.v3f64(<3 x double> undef) #1
@@ -255,9 +317,3 @@ define void @canonicalize_f64() {
   %v16f64 = call <16 x double> @llvm.canonicalize.v16f64(<16 x double> undef) #1
   ret void
 }
-
-
-
-
-
-

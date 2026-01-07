@@ -154,6 +154,27 @@ static constexpr OptionEnumValueElement g_running_mode[] = {
      "Run only this thread while stepping"},
 };
 
+static constexpr OptionEnumValueElement g_exception_stage[] = {
+    {lldb::eExceptionStageThrow, "throw", "Stop when the exception is thrown."},
+    {lldb::eExceptionStageReThrow, "re-throw",
+     "Stop when the exception is re-thrown."},
+    {lldb::eExceptionStageCatch, "catch", "Stop when the exception is caught."},
+};
+
+static constexpr OptionEnumValueElement g_name_match_style[] = {
+    {lldb::eNameMatchStyleAuto, "auto",
+     "Match against the leaf nodes of the identifier, or against methods or "
+     "selectors."},
+    {lldb::eNameMatchStyleFull, "full", "Match the full identifier name."},
+    {lldb::eNameMatchStyleBase, "base",
+     "Match against the leaf node of the identifier."},
+    {lldb::eNameMatchStyleMethod, "method", "Match only against method names."},
+    {lldb::eNameMatchStyleSelector, "selector",
+     "Match only against selector names."},
+    {lldb::eNameMatchStyleRegex, "regex",
+     "Match the identifier using a regular expression."},
+};
+
 static constexpr OptionEnumValueElement g_completion_type[] = {
     {lldb::eNoCompletion, "none", "No completion."},
     {lldb::eSourceFileCompletion, "source-file", "Completes to a source file."},
@@ -314,6 +335,10 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeModule, "module", lldb::CompletionType::eModuleCompletion, {}, { nullptr, false }, "The name of a module loaded into the current target." },
     { lldb::eArgTypeCPUName, "cpu-name", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a CPU." },
     { lldb::eArgTypeCPUFeatures, "cpu-features", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The CPU feature string." },
+    { lldb::eArgTypeManagedPlugin, "managed-plugin", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Plugins managed by the PluginManager" },
+    { lldb::eArgTypeProtocol, "protocol", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of the protocol." },
+    { lldb::eArgTypeExceptionStage, "exception-stage", lldb::CompletionType::eNoCompletion, g_exception_stage, { nullptr, false }, "Specify at which stage of the exception raise to stop." },
+    { lldb::eArgTypeNameMatchStyle, "match-style", lldb::CompletionType::eNoCompletion, g_name_match_style, { nullptr, false }, "Specify the kind of match to use when looking up names." },
     // clang-format on
 };
 

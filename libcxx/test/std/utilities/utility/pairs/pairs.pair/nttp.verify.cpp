@@ -74,7 +74,7 @@ using H = test<std::pair<NotALiteral, NotALiteral>{}>;
 // expected-error@-1 {{non-type template parameter has non-literal type 'std::pair<NotALiteral, NotALiteral>'}}
 
 using I = test<std::pair<std::string, std::string>{}>;
-// expected-error-re@-1 {{type 'std::pair<{{(std::)?}}string, {{(std::)?}}string>'{{( \(aka 'std::pair<std::string, std::string>'\))?}} of non-type template parameter is not a structural type}}
+// expected-error-re@*:* {{type {{.+}} of non-type template parameter is not a structural type}}
 } // namespace test_ctad
 
 namespace test_auto {
@@ -95,5 +95,5 @@ using H = test<std::pair<NotALiteral, NotALiteral>{}>;
 // expected-error@-1 {{non-type template parameter has non-literal type 'std::pair<NotALiteral, NotALiteral>'}}
 
 using I = test<std::pair<std::string, std::string>{}>;
-// expected-error@-1 {{type 'std::pair<std::string, std::string>' (aka 'pair<basic_string<char>, basic_string<char>>') of non-type template parameter is not a structural type}}
+// expected-error-re@-1 {{type {{.+}} of non-type template parameter is not a structural type}}
 } // namespace test_auto

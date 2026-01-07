@@ -1,2 +1,2 @@
-if config.root.host_os != "Windows":
+if config.root.target_os != "Windows":
     config.unsupported = True

@@ -28,13 +28,8 @@ class SyntheticChildrenFrontEnd {
 protected:
   ValueObject &m_backend;
 
-  void SetValid(bool valid) { m_valid = valid; }
-
-  bool IsValid() { return m_valid; }
-
 public:
-  SyntheticChildrenFrontEnd(ValueObject &backend)
-      : m_backend(backend), m_valid(true) {}
+  SyntheticChildrenFrontEnd(ValueObject &backend) : m_backend(backend) {}
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
@@ -51,15 +46,15 @@ public:
 
   virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) = 0;
 
-  virtual size_t GetIndexOfChildWithName(ConstString name) = 0;
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) = 0;
 
   /// This function is assumed to always succeed and if it fails, the front-end
   /// should know to deal with it in the correct way (most probably, by refusing
   /// to return any children). The return value of \ref Update should actually
-  /// be interpreted as "ValueObjectSyntheticFilter cache is good/bad". If this
+  /// be interpreted as "ValueObjectSynthetic cache is good/bad". If this
   /// function returns \ref lldb::ChildCacheState::eReuse, \ref
-  /// ValueObjectSyntheticFilter is allowed to use the children it fetched
-  /// previously and cached. Otherwise, \ref ValueObjectSyntheticFilter must
+  /// ValueObjectSynthetic is allowed to use the children it fetched
+  /// previously and cached. Otherwise, \ref ValueObjectSynthetic must
   /// throw away its cache, and query again for children.
   virtual lldb::ChildCacheState Update() = 0;
 
@@ -92,7 +87,7 @@ protected:
   lldb::ValueObjectSP
   CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
-                               CompilerType type);
+                               CompilerType type, bool do_deref = true);
 
   lldb::ValueObjectSP CreateValueObjectFromData(llvm::StringRef name,
                                                 const DataExtractor &data,
@@ -100,7 +95,6 @@ protected:
                                                 CompilerType type);
 
 private:
-  bool m_valid;
   SyntheticChildrenFrontEnd(const SyntheticChildrenFrontEnd &) = delete;
   const SyntheticChildrenFrontEnd &
   operator=(const SyntheticChildrenFrontEnd &) = delete;
@@ -117,8 +111,9 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return UINT32_MAX;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
   lldb::ChildCacheState Update() override {
@@ -272,9 +267,14 @@ public:
 
   uint32_t &GetRevision() { return m_my_revision; }
 
+  uint32_t GetPtrMatchDepth() { return m_ptr_match_depth; }
+
+  void SetPtrMatchDepth(uint32_t value) { m_ptr_match_depth = value; }
+
 protected:
   uint32_t m_my_revision = 0;
   Flags m_flags;
+  uint32_t m_ptr_match_depth = 1;
 
 private:
   SyntheticChildren(const SyntheticChildren &) = delete;
@@ -343,7 +343,7 @@ public:
 
     bool MightHaveChildren() override { return filter->GetCount() > 0; }
 
-    size_t GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 
@@ -442,7 +442,7 @@ public:
 
     bool MightHaveChildren() override;
 
-    size_t GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
     lldb::ValueObjectSP GetSyntheticValue() override;
 

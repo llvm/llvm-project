@@ -17,6 +17,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/IR/GlobalValue.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -51,6 +52,12 @@ protected:
     return ClangUtil::GetQualType(
         m_ast->GetBuiltinTypeByName(ConstString(name)));
   }
+
+  CompilerType GetBuiltinTypeForDWARFEncodingAndBitSize(
+      llvm::StringRef type_name, uint32_t encoding, uint32_t bit_size) const {
+    return m_ast->GetBuiltinTypeForDWARFEncodingAndBitSize(type_name, encoding,
+                                                           bit_size);
+  }
 };
 
 TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
@@ -76,6 +83,8 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
                                   context.getComplexType(context.FloatTy)));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeHalf), context.HalfTy));
+  EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeFloat128),
+                                  context.Float128Ty));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeInt), context.IntTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeInt128),
@@ -159,6 +168,9 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromName) {
   EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128_t"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
             GetBasicQualType("__uint128_t"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
+            GetBasicQualType("unsigned __int128"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeVoid), GetBasicQualType("void"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeBool), GetBasicQualType("bool"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeFloat), GetBasicQualType("float"));
@@ -232,6 +244,91 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEncodingAndBitSize) {
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
 }
 
+TEST_F(TestTypeSystemClang, TestGetBuiltinTypeForDWARFEncodingAndBitSize) {
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitIn", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt(2)", llvm::dwarf::DW_ATE_signed_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt", llvm::dwarf::DW_ATE_signed_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt(2)", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "_BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(2)", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeName(),
+            "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeName(),
+            "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(129)", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitIn", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_unsigned_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned_char, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+  EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                   "unsigned _BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                   .IsValid());
+
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(2)", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeName(),
+            "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeName(),
+            "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(129)", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+}
+
+TEST_F(TestTypeSystemClang, TestBitIntTypeInfo) {
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
+                .GetTypeInfo(),
+            eTypeIsSigned | eTypeIsScalar | eTypeHasValue | eTypeIsInteger);
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
+                .GetTypeInfo(),
+            eTypeIsScalar | eTypeHasValue | eTypeIsInteger);
+}
+
 TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
   // Test that we can access type-info of builtin Clang AST
   // types without crashing even when the target triple is
@@ -245,7 +342,7 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
 
   EXPECT_FALSE(ast.GetBuiltinTypeByName(ConstString("int")).IsValid());
   EXPECT_FALSE(ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-                      "char", dwarf::DW_ATE_signed_char, 8)
+                      "char", llvm::dwarf::DW_ATE_signed_char, 8)
                    .IsValid());
   EXPECT_FALSE(ast.GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint, 8)
                    .IsValid());
@@ -866,11 +963,10 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   clang::TranslationUnitDecl *TU = m_ast->GetTranslationUnitDecl();
 
   // Prepare the declarations/types we need for the template.
-  CompilerType clang_type =
-      m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
+  CompilerType clang_type = m_ast->CreateFunctionType(int_type, {}, false, 0U);
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
       TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
-      false);
+      false, /*asm_label=*/{});
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
@@ -895,14 +991,13 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   clang::TagDecl *record = ClangUtil::GetAsTagDecl(record_type);
 
   // Prepare the declarations/types we need for the template.
-  CompilerType clang_type =
-      m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
+  CompilerType clang_type = m_ast->CreateFunctionType(int_type, {}, false, 0U);
   // We create the FunctionDecl for the template in the TU DeclContext because:
   // 1. FunctionDecls can't be in a Record (only CXXMethodDecls can).
   // 2. It is mirroring the behavior of DWARFASTParserClang::ParseSubroutine.
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
       TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
-      false);
+      false, /*asm_label=*/{});
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
@@ -930,10 +1025,9 @@ TEST_F(TestTypeSystemClang, TestDeletingImplicitCopyCstrDueToMoveCStr) {
 
   // Create a move constructor that will delete the implicit copy constructor.
   CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
-  CompilerType param_type = t.GetRValueReferenceType();
-  CompilerType function_type =
-      m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
-                                /*variadic=*/false, /*quals*/ 0U);
+  std::array<CompilerType, 1> args{t.GetRValueReferenceType()};
+  CompilerType function_type = m_ast->CreateFunctionType(
+      return_type, args, /*variadic=*/false, /*quals*/ 0U);
   bool is_virtual = false;
   bool is_static = false;
   bool is_inline = false;
@@ -941,7 +1035,7 @@ TEST_F(TestTypeSystemClang, TestDeletingImplicitCopyCstrDueToMoveCStr) {
   bool is_attr_used = false;
   bool is_artificial = false;
   m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), class_name, nullptr, function_type,
+      t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
       lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
       is_explicit, is_attr_used, is_artificial);
 
@@ -974,23 +1068,23 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
   bool is_artificial = false;
   // Create a move constructor.
   {
-    CompilerType param_type = t.GetRValueReferenceType();
-    CompilerType function_type =
-        m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
-                                  /*variadic=*/false, /*quals*/ 0U);
+    std::array<CompilerType, 1> args{t.GetRValueReferenceType()};
+    CompilerType function_type = m_ast->CreateFunctionType(
+        return_type, args, /*variadic=*/false, /*quals*/ 0U);
     m_ast->AddMethodToCXXRecordType(
-        t.GetOpaqueQualType(), class_name, nullptr, function_type,
+        t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
         lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
   }
   // Create a copy constructor.
   {
-    CompilerType param_type = t.GetLValueReferenceType().AddConstModifier();
+    std::array<CompilerType, 1> args{
+        t.GetLValueReferenceType().AddConstModifier()};
     CompilerType function_type =
-        m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
+        m_ast->CreateFunctionType(return_type, args,
                                   /*variadic=*/false, /*quals*/ 0U);
     m_ast->AddMethodToCXXRecordType(
-        t.GetOpaqueQualType(), class_name, nullptr, function_type,
+        t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
         lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
   }
@@ -1012,10 +1106,9 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
 
   // Add a method to the interface.
   std::vector<CompilerType> args;
-  CompilerType func_type =
-      m_ast->CreateFunctionType(m_ast->GetBasicType(lldb::eBasicTypeInt),
-                                args.data(), args.size(), /*variadic*/ false,
-                                /*quals*/ 0, clang::CallingConv::CC_C);
+  CompilerType func_type = m_ast->CreateFunctionType(
+      m_ast->GetBasicType(lldb::eBasicTypeInt), args, /*variadic*/ false,
+      /*quals*/ 0, clang::CallingConv::CC_C);
   bool variadic = false;
   bool artificial = false;
   bool objc_direct = false;
@@ -1098,11 +1191,11 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   llvm::SmallVector<CompilerType> param_types{
       m_ast->GetBasicType(lldb::eBasicTypeInt),
       m_ast->GetBasicType(lldb::eBasicTypeShort)};
-  CompilerType function_type = m_ast->CreateFunctionType(
-      return_type, param_types.data(), /*num_params*/ param_types.size(),
-      /*variadic=*/false, /*quals*/ 0U);
+  CompilerType function_type =
+      m_ast->CreateFunctionType(return_type, param_types,
+                                /*variadic=*/false, /*quals*/ 0U);
   m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "myFunc", nullptr, function_type,
+      t.GetOpaqueQualType(), "myFunc", /*asm_label=*/{}, function_type,
       lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
       is_explicit, is_attr_used, is_artificial);
 
@@ -1120,3 +1213,154 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   EXPECT_EQ(method_it->getParamDecl(0)->getDeclContext(), *method_it);
   EXPECT_EQ(method_it->getParamDecl(1)->getDeclContext(), *method_it);
 }
+
+TEST_F(TestTypeSystemClang, TestGetTypeInfo) {
+  // Tests TypeSystemClang::GetTypeInfo
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  CompilerType complex_int = m_ast->GetType(ast.getComplexType(ast.IntTy));
+  EXPECT_EQ(complex_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType complex_float = m_ast->GetType(ast.getComplexType(ast.FloatTy));
+  EXPECT_EQ(complex_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType vector_of_int =
+      m_ast->GetType(ast.getVectorType(ast.IntTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsVector | eTypeHasChildren));
+
+  CompilerType vector_of_float =
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsVector | eTypeHasChildren));
+}
+
+TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
+  // Tests TypeSystemClang::DeclGetMangledName for constructors/destructors
+  // with and without AsmLabels.
+
+  llvm::StringRef class_name = "S";
+  CompilerType t = clang_utils::createRecord(*m_ast, class_name);
+  m_ast->StartTagDeclarationDefinition(t);
+
+  CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  const bool is_virtual = false;
+  const bool is_static = false;
+  const bool is_inline = false;
+  const bool is_explicit = true;
+  const bool is_attr_used = false;
+  const bool is_artificial = false;
+
+  CompilerType function_type =
+      m_ast->CreateFunctionType(return_type, {},
+                                /*variadic=*/false, /*quals*/ 0U);
+  auto *ctor_nolabel = m_ast->AddMethodToCXXRecordType(
+      t.GetOpaqueQualType(), "S", /*asm_label=*/{}, function_type,
+      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+      is_explicit, is_attr_used, is_artificial);
+
+  auto *dtor_nolabel = m_ast->AddMethodToCXXRecordType(
+      t.GetOpaqueQualType(), "~S", /*asm_label=*/{}, function_type,
+      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+      is_explicit, is_attr_used, is_artificial);
+
+  auto *ctor = m_ast->AddMethodToCXXRecordType(
+      t.GetOpaqueQualType(), "S", /*asm_label=*/"$__lldb_func::0x0:0x0:S",
+      function_type, lldb::AccessType::eAccessPublic, is_virtual, is_static,
+      is_inline, is_explicit, is_attr_used, is_artificial);
+
+  auto *dtor = m_ast->AddMethodToCXXRecordType(
+      t.GetOpaqueQualType(), "~S", /*asm_label=*/"$__lldb_func::0x0:0x0:~S",
+      function_type, lldb::AccessType::eAccessPublic, is_virtual, is_static,
+      is_inline, is_explicit, is_attr_used, is_artificial);
+
+  m_ast->CompleteTagDeclarationDefinition(t);
+
+  ASSERT_TRUE(ctor_nolabel);
+  ASSERT_TRUE(dtor_nolabel);
+  ASSERT_TRUE(ctor);
+  ASSERT_TRUE(dtor);
+
+#ifdef _WIN32
+  EXPECT_STREQ(m_ast->DeclGetMangledName(ctor_nolabel).GetCString(),
+               "??0S@@QEAA@XZ");
+  EXPECT_STREQ(m_ast->DeclGetMangledName(dtor_nolabel).GetCString(),
+               "??_DS@@QEAAXXZ");
+#else
+  EXPECT_STREQ(m_ast->DeclGetMangledName(ctor_nolabel).GetCString(),
+               "_ZN1SC1Ev");
+  EXPECT_STREQ(m_ast->DeclGetMangledName(dtor_nolabel).GetCString(),
+               "_ZN1SD1Ev");
+#endif
+
+  EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
+                   m_ast->DeclGetMangledName(ctor).GetStringRef())
+                   .data(),
+               "$__lldb_func:C0:0x0:0x0:S");
+  EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
+                   m_ast->DeclGetMangledName(dtor).GetStringRef())
+                   .data(),
+               "$__lldb_func:D1:0x0:0x0:~S");
+}
+
+struct AsmLabelTestCase {
+  llvm::StringRef mangled;
+  llvm::StringRef expected;
+};
+
+class TestTypeSystemClangAsmLabel
+    : public testing::TestWithParam<AsmLabelTestCase> {
+public:
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
+
+  void SetUp() override {
+    m_holder =
+        std::make_unique<clang_utils::TypeSystemClangHolder>("test ASTContext");
+    m_ast = m_holder->GetAST();
+  }
+
+  void TearDown() override {
+    m_ast = nullptr;
+    m_holder.reset();
+  }
+
+protected:
+  TypeSystemClang *m_ast = nullptr;
+  std::unique_ptr<clang_utils::TypeSystemClangHolder> m_holder;
+};
+
+static AsmLabelTestCase g_asm_label_test_cases[] = {
+    {/*mangled=*/"$__lldb_func::0x0:0x0:_Z3foov",
+     /*expected=*/"_Z3foov"},
+    {/*mangled=*/"$__lldb_func::0x0:0x0:foo",
+     /*expected=*/"$__lldb_func::0x0:0x0:foo"},
+    {/*mangled=*/"foo",
+     /*expected=*/"foo"},
+    {/*mangled=*/"_Z3foov",
+     /*expected=*/"_Z3foov"},
+    {/*mangled=*/"$__lldb_func:",
+     /*expected=*/"$__lldb_func:"},
+};
+
+TEST_P(TestTypeSystemClangAsmLabel, DeclGetMangledName) {
+  const auto &[mangled, expected] = GetParam();
+
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  clang::TranslationUnitDecl *TU = m_ast->GetTranslationUnitDecl();
+
+  // Prepare the declarations/types we need for the template.
+  CompilerType clang_type = m_ast->CreateFunctionType(int_type, {}, false, 0U);
+  FunctionDecl *func = m_ast->CreateFunctionDeclaration(
+      TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
+      false, /*asm_label=*/mangled);
+
+  ASSERT_EQ(llvm::GlobalValue::dropLLVMManglingEscape(
+                m_ast->DeclGetMangledName(func).GetStringRef()),
+            expected);
+}
+
+INSTANTIATE_TEST_SUITE_P(AsmLabelTests, TestTypeSystemClangAsmLabel,
+                         testing::ValuesIn(g_asm_label_test_cases));

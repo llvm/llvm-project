@@ -355,49 +355,25 @@ define <8 x i16> @combine_v8i16_undef(<4 x i16> %0, <4 x i16> %1) {
   ret <8 x i16> %3
 }
 
-; FIXME: This could be zip1 too, 8,0,9,1... pattern is handled
 define <16 x i8> @combine_v8i16_8first(<8 x i8> %0, <8 x i8> %1) {
-; CHECK-SD-LABEL: combine_v8i16_8first:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
-; CHECK-SD-NEXT:    adrp x8, .LCPI25_0
-; CHECK-SD-NEXT:    fmov d2, d0
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI25_0]
-; CHECK-SD-NEXT:    tbl.16b v0, { v1, v2 }, v3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_v8i16_8first:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI25_0
-; CHECK-GI-NEXT:    fmov d31, d1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI25_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v31, v0 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_v8i16_8first:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    zip1.16b v0, v0, v1
+; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
   ret <16 x i8> %3
 }
 
 
-; FIXME: This could be zip1 too, 8,0,9,1... pattern is handled
 define <16 x i8> @combine_v8i16_8firstundef(<8 x i8> %0, <8 x i8> %1) {
-; CHECK-SD-LABEL: combine_v8i16_8firstundef:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
-; CHECK-SD-NEXT:    adrp x8, .LCPI26_0
-; CHECK-SD-NEXT:    fmov d2, d0
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI26_0]
-; CHECK-SD-NEXT:    tbl.16b v0, { v1, v2 }, v3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_v8i16_8firstundef:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI26_0
-; CHECK-GI-NEXT:    fmov d31, d1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI26_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v31, v0 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_v8i16_8firstundef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    zip1.16b v0, v0, v1
+; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 undef>
   ret <16 x i8> %3
 }
@@ -405,8 +381,7 @@ define <16 x i8> @combine_v8i16_8firstundef(<8 x i8> %0, <8 x i8> %1) {
 define <4 x float> @shuffle_zip1(<4 x float> %arg) {
 ; CHECK-LABEL: shuffle_zip1:
 ; CHECK:       // %bb.0: // %bb
-; CHECK-NEXT:    movi.2d v1, #0000000000000000
-; CHECK-NEXT:    fcmgt.4s v0, v0, v1
+; CHECK-NEXT:    fcmgt.4s v0, v0, #0.0
 ; CHECK-NEXT:    uzp1.8h v1, v0, v0
 ; CHECK-NEXT:    xtn.4h v0, v0
 ; CHECK-NEXT:    xtn.4h v1, v1
@@ -414,7 +389,7 @@ define <4 x float> @shuffle_zip1(<4 x float> %arg) {
 ; CHECK-NEXT:    fmov.4s v1, #1.00000000
 ; CHECK-NEXT:    zip1.4h v0, v0, v0
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v1, v0
+; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ret
 bb:
   %inst = fcmp olt <4 x float> zeroinitializer, %arg
@@ -455,7 +430,7 @@ define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
 ; CHECK-NEXT:    zip2.4h v0, v0, v1
 ; CHECK-NEXT:    movi.4s v1, #1
 ; CHECK-NEXT:    zip1.4h v0, v0, v0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    ret
 bb:

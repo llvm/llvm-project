@@ -1,7 +1,7 @@
 import os
+from pathlib import Path
 
 from clang.cindex import (
-    Config,
     Cursor,
     File,
     SourceLocation,
@@ -9,12 +9,12 @@ from clang.cindex import (
     TranslationUnit,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import unittest
 
 from .util import get_cursor, get_tu
+
+INPUTS_DIR = Path(__file__).parent / "INPUTS"
 
 BASE_INPUT = "int one;\nint two;\n"
 
@@ -151,3 +151,21 @@ int one;
         assert l_t1_12 < l_t2_13 < l_t1_14
         assert not l_t2_13 < l_t1_12
         assert not l_t1_14 < l_t2_13
+
+    def test_equality(self):
+        path = INPUTS_DIR / "testfile.c"
+        path_a = INPUTS_DIR / "a.inc"
+        tu = TranslationUnit.from_source(path)
+        main_file = File.from_name(tu, path)
+        a_file = File.from_name(tu, path_a)
+
+        location1 = SourceLocation.from_position(tu, main_file, 1, 3)
+        location2 = SourceLocation.from_position(tu, main_file, 2, 2)
+        location1_2 = SourceLocation.from_position(tu, main_file, 1, 3)
+        file2_location1 = SourceLocation.from_position(tu, a_file, 1, 3)
+
+        self.assertEqual(location1, location1)
+        self.assertEqual(location1, location1_2)
+        self.assertNotEqual(location1, location2)
+        self.assertNotEqual(location1, file2_location1)
+        self.assertNotEqual(location1, "foo")

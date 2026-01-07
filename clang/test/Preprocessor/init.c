@@ -1106,19 +1106,19 @@
 // SPARC:#define __INT_LEAST8_MAX__ 127
 // SPARC:#define __INT_LEAST8_TYPE__ signed char
 // SPARC:#define __INT_MAX__ 2147483647
-// SPARC:#define __LDBL_DENORM_MIN__ 4.9406564584124654e-324L
-// SPARC:#define __LDBL_DIG__ 15
-// SPARC:#define __LDBL_EPSILON__ 2.2204460492503131e-16L
+// SPARC:#define __LDBL_DENORM_MIN__ 6.47517511943802511092443895822764655e-4966L
+// SPARC:#define __LDBL_DIG__ 33
+// SPARC:#define __LDBL_EPSILON__ 1.92592994438723585305597794258492732e-34L
 // SPARC:#define __LDBL_HAS_DENORM__ 1
 // SPARC:#define __LDBL_HAS_INFINITY__ 1
 // SPARC:#define __LDBL_HAS_QUIET_NAN__ 1
-// SPARC:#define __LDBL_MANT_DIG__ 53
-// SPARC:#define __LDBL_MAX_10_EXP__ 308
-// SPARC:#define __LDBL_MAX_EXP__ 1024
-// SPARC:#define __LDBL_MAX__ 1.7976931348623157e+308L
-// SPARC:#define __LDBL_MIN_10_EXP__ (-307)
-// SPARC:#define __LDBL_MIN_EXP__ (-1021)
-// SPARC:#define __LDBL_MIN__ 2.2250738585072014e-308L
+// SPARC:#define __LDBL_MANT_DIG__ 113
+// SPARC:#define __LDBL_MAX_10_EXP__ 4932
+// SPARC:#define __LDBL_MAX_EXP__ 16384
+// SPARC:#define __LDBL_MAX__ 1.18973149535723176508575932662800702e+4932L
+// SPARC:#define __LDBL_MIN_10_EXP__ (-4931)
+// SPARC:#define __LDBL_MIN_EXP__ (-16381)
+// SPARC:#define __LDBL_MIN__ 3.36210314311209350626267781732175260e-4932L
 // SPARC:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // SPARC:#define __LONG_MAX__ 2147483647L
 // SPARC-NOT:#define __LP64__
@@ -1134,7 +1134,7 @@
 // SPARC:#define __SIZEOF_DOUBLE__ 8
 // SPARC:#define __SIZEOF_FLOAT__ 4
 // SPARC:#define __SIZEOF_INT__ 4
-// SPARC:#define __SIZEOF_LONG_DOUBLE__ 8
+// SPARC:#define __SIZEOF_LONG_DOUBLE__ 16
 // SPARC:#define __SIZEOF_LONG_LONG__ 8
 // SPARC:#define __SIZEOF_LONG__ 4
 // SPARC:#define __SIZEOF_POINTER__ 4
@@ -1622,6 +1622,19 @@
 // RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC-N %s
 // OPENBSD-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
 //
+// RUN: %clang_cc1 -x c -std=c11 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// RUN: %clang_cc1 -x c -std=gnu11 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// RUN: %clang_cc1 -x c -std=c17 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC %s
+// DRAGONFLY-STDC:#define __STDC_NO_THREADS__ 1
+//
+// RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=x86_64-unknown-dragonfly < /dev/null | FileCheck -match-full-lines -check-prefix DRAGONFLY-STDC-N %s
+// DRAGONFLY-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
+//
+// RUN: %clang_cc1 -triple=aarch64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
+// RUN: %clang_cc1 -triple=riscv64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-managarm-mlibc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MANAGARM %s
+// MANAGARM: #define __managarm__ 1
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=xcore-none-none < /dev/null | FileCheck -match-full-lines -check-prefix XCORE %s
 // XCORE:#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // XCORE:#define __LITTLE_ENDIAN__ 1
@@ -1876,6 +1889,7 @@
 // WEBASSEMBLY64-NEXT:#define __LONG_MAX__ 9223372036854775807L
 // WEBASSEMBLY64-NEXT:#define __LONG_WIDTH__ 64
 // WEBASSEMBLY64-NEXT:#define __LP64__ 1
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_CLUSTR 5
 // WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1
 // WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4
 // WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0
@@ -2090,12 +2104,6 @@
 // WEBASSEMBLY-CXX-ATOMICS:#define _REENTRANT 1
 // WEBASSEMBLY-CXX-ATOMICS:#define __STDCPP_THREADS__ 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple i686-windows-cygnus < /dev/null | FileCheck -match-full-lines -check-prefix CYGWIN-X32 %s
-// CYGWIN-X32: #define __USER_LABEL_PREFIX__ _
-
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple x86_64-windows-cygnus < /dev/null | FileCheck -match-full-lines -check-prefix CYGWIN-X64 %s
-// CYGWIN-X64: #define __USER_LABEL_PREFIX__
-
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=avr \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=AVR %s
@@ -2209,6 +2217,7 @@
 // AVR:#define __LDBL_MIN__ 1.17549435e-38L
 // AVR:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // AVR:#define __LONG_MAX__ 2147483647L
+// AVR:#define __MEMORY_SCOPE_CLUSTR 5
 // AVR:#define __MEMORY_SCOPE_DEVICE 1
 // AVR:#define __MEMORY_SCOPE_SINGLE 4
 // AVR:#define __MEMORY_SCOPE_SYSTEM 0
@@ -2514,6 +2523,7 @@
 // RISCV32: #define __LITTLE_ENDIAN__ 1
 // RISCV32: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV32: #define __LONG_MAX__ 2147483647L
+// RISCV32: #define __MEMORY_SCOPE_CLUSTR 5
 // RISCV32: #define __MEMORY_SCOPE_DEVICE 1
 // RISCV32: #define __MEMORY_SCOPE_SINGLE 4
 // RISCV32: #define __MEMORY_SCOPE_SYSTEM 0
@@ -2738,6 +2748,7 @@
 // RISCV64: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV64: #define __LONG_MAX__ 9223372036854775807L
 // RISCV64: #define __LP64__ 1
+// RISCV64: #define __MEMORY_SCOPE_CLUSTR 5
 // RISCV64: #define __MEMORY_SCOPE_DEVICE 1
 // RISCV64: #define __MEMORY_SCOPE_SINGLE 4
 // RISCV64: #define __MEMORY_SCOPE_SYSTEM 0
@@ -2835,6 +2846,7 @@
 // RISCV64-LINUX: #define unix 1
 
 // RUN: %clang_cc1 -dM -triple=x86_64-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
+// RUN: %clang_cc1 -dM -triple=x86_64-unknown-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
 
 // UEFI: #define __UEFI__ 1
 
@@ -2929,11 +2941,11 @@
 // XTENSA: #define __GXX_ABI_VERSION {{.*}}
 // XTENSA: #define __ILP32__ 1
 // XTENSA: #define __INT16_C(c) c
-// XTENSA: #define __INT16_C_SUFFIX__ 
+// XTENSA: #define __INT16_C_SUFFIX__
 // XTENSA: #define __INT16_MAX__ 32767
 // XTENSA: #define __INT16_TYPE__ short
 // XTENSA: #define __INT32_C(c) c
-// XTENSA: #define __INT32_C_SUFFIX__ 
+// XTENSA: #define __INT32_C_SUFFIX__
 // XTENSA: #define __INT32_MAX__ 2147483647
 // XTENSA: #define __INT32_TYPE__ int
 // XTENSA: #define __INT64_C(c) c##LL
@@ -2941,7 +2953,7 @@
 // XTENSA: #define __INT64_MAX__ 9223372036854775807LL
 // XTENSA: #define __INT64_TYPE__ long long int
 // XTENSA: #define __INT8_C(c) c
-// XTENSA: #define __INT8_C_SUFFIX__ 
+// XTENSA: #define __INT8_C_SUFFIX__
 // XTENSA: #define __INT8_MAX__ 127
 // XTENSA: #define __INT8_TYPE__ signed char
 // XTENSA: #define __INTMAX_C(c) c##LL
@@ -3000,6 +3012,7 @@
 // XTENSA: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // XTENSA: #define __LONG_MAX__ 2147483647L
 // XTENSA: #define __LONG_WIDTH__ 32
+// XTENSA: #define __MEMORY_SCOPE_CLUSTR 5
 // XTENSA: #define __MEMORY_SCOPE_DEVICE 1
 // XTENSA: #define __MEMORY_SCOPE_SINGLE 4
 // XTENSA: #define __MEMORY_SCOPE_SYSTEM 0
@@ -3042,7 +3055,7 @@
 // XTENSA: #define __STDC_VERSION__ 201710L
 // XTENSA: #define __STDC__ 1
 // XTENSA: #define __UINT16_C(c) c
-// XTENSA: #define __UINT16_C_SUFFIX__ 
+// XTENSA: #define __UINT16_C_SUFFIX__
 // XTENSA: #define __UINT16_MAX__ 65535
 // XTENSA: #define __UINT16_TYPE__ unsigned short
 // XTENSA: #define __UINT32_C(c) c##U
@@ -3054,7 +3067,7 @@
 // XTENSA: #define __UINT64_MAX__ 18446744073709551615ULL
 // XTENSA: #define __UINT64_TYPE__ long long unsigned int
 // XTENSA: #define __UINT8_C(c) c
-// XTENSA: #define __UINT8_C_SUFFIX__ 
+// XTENSA: #define __UINT8_C_SUFFIX__
 // XTENSA: #define __UINT8_MAX__ 255
 // XTENSA: #define __UINT8_TYPE__ unsigned char
 // XTENSA: #define __UINTMAX_C(c) c##ULL
@@ -3081,7 +3094,7 @@
 // XTENSA: #define __UINT_LEAST64_TYPE__ long long unsigned int
 // XTENSA: #define __UINT_LEAST8_MAX__ 255
 // XTENSA: #define __UINT_LEAST8_TYPE__ unsigned char
-// XTENSA: #define __USER_LABEL_PREFIX__ 
+// XTENSA: #define __USER_LABEL_PREFIX__
 // XTENSA: #define __WCHAR_MAX__ 2147483647
 // XTENSA: #define __WCHAR_TYPE__ int
 // XTENSA: #define __WCHAR_WIDTH__ 32

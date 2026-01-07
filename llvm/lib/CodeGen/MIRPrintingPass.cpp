@@ -27,12 +27,10 @@ PreservedAnalyses PrintMIRPreparePass::run(Module &M, ModuleAnalysisManager &) {
 
 PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
-  auto &MAMP = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
-  Module *M = MF.getFunction().getParent();
-  const MachineModuleInfo &MMI =
-      MAMP.getCachedResult<MachineModuleAnalysis>(*M)->getMMI();
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
 
-  printMIR(OS, MMI, MF);
+  printMIR(OS, FAM, MF);
   return PreservedAnalyses::all();
 }
 
@@ -59,10 +57,10 @@ struct MIRPrintingPass : public MachineFunctionPass {
     std::string Str;
     raw_string_ostream StrOS(Str);
 
-    const MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+    MachineModuleInfo *MMI =
+        &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
-    printMIR(StrOS, MMI, MF);
+    printMIR(StrOS, *MMI, MF);
     MachineFunctions.append(Str);
     return false;
   }
@@ -81,10 +79,6 @@ char MIRPrintingPass::ID = 0;
 char &llvm::MIRPrintingPassID = MIRPrintingPass::ID;
 INITIALIZE_PASS(MIRPrintingPass, "mir-printer", "MIR Printer", false, false)
 
-namespace llvm {
-
-MachineFunctionPass *createPrintMIRPass(raw_ostream &OS) {
+MachineFunctionPass *llvm::createPrintMIRPass(raw_ostream &OS) {
   return new MIRPrintingPass(OS);
 }
-
-} // end namespace llvm

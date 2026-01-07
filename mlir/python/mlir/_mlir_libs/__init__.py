@@ -31,6 +31,7 @@ def get_include_dirs() -> Sequence[str]:
 #   1. Attempting to load initializer modules, specific to the distribution.
 #   2. Defining the concrete mlir.ir.Context that does site specific
 #      initialization.
+#   3. Registering container classes with their respective protocols.
 #
 # Aside from just being far more convenient to do this at the Python level,
 # it is actually quite hard/impossible to have such __init__ hooks, given
@@ -147,7 +148,9 @@ def _site_initialize():
         if not process_initializer_module(module_name):
             break
 
-    class Context(ir._BaseContext):
+    ir._Context = ir.Context
+
+    class Context(ir._Context):
         def __init__(
             self, load_on_create_dialects=None, thread_pool=None, *args, **kwargs
         ):
@@ -230,6 +233,18 @@ def _site_initialize():
             return s
 
     ir.MLIRError = MLIRError
+
+    # Register containers as Sequences, so they can be used with `match`.
+
+    Sequence.register(ir.BlockArgumentList)
+    Sequence.register(ir.BlockList)
+    Sequence.register(ir.BlockSuccessors)
+    Sequence.register(ir.BlockPredecessors)
+    Sequence.register(ir.OperationList)
+    Sequence.register(ir.OpOperandList)
+    Sequence.register(ir.OpResultList)
+    Sequence.register(ir.OpSuccessors)
+    Sequence.register(ir.RegionSequence)
 
 
 _site_initialize()

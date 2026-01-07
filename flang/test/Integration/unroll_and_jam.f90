@@ -4,7 +4,9 @@
 subroutine unroll_and_jam_dir
   integer :: a(10)
   !dir$ unroll_and_jam 4
-  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[ANNOTATION:.*]]
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
+  ! CHECK-NOT: !llvm.loop
+  ! CHECK:   br label {{.*}}, !llvm.loop ![[ANNOTATION:.*]]
   do i=1,10
      a(i)=i
   end do
@@ -14,7 +16,9 @@ end subroutine unroll_and_jam_dir
 subroutine unroll_and_jam_dir_0
   integer :: a(10)
   !dir$ unroll_and_jam 0
-  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[ANNOTATION_DISABLE:.*]]
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
+  ! CHECK-NOT: !llvm.loop
+  ! CHECK:   br label {{.*}}, !llvm.loop ![[ANNOTATION_DISABLE:.*]]
   do i=1,10
   a(i)=i
   end do
@@ -23,8 +27,10 @@ end subroutine unroll_and_jam_dir_0
 ! CHECK-LABEL: unroll_and_jam_dir_1
 subroutine unroll_and_jam_dir_1
   integer :: a(10)
-  !dir$ unroll_and_jam 1 
-  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[ANNOTATION_DISABLE]]
+  !dir$ unroll_and_jam 1
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
+  ! CHECK-NOT: !llvm.loop
+  ! CHECK:   br label {{.*}}, !llvm.loop ![[ANNOTATION_DISABLE]]
   do i=1,10
   a(i)=i
   end do
@@ -34,7 +40,9 @@ end subroutine unroll_and_jam_dir_1
 subroutine nounroll_and_jam_dir
   integer :: a(10)
   !dir$ nounroll_and_jam
-  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[ANNOTATION_DISABLE]]
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
+  ! CHECK-NOT: !llvm.loop
+  ! CHECK:   br label {{.*}}, !llvm.loop ![[ANNOTATION_DISABLE]]
   do i=1,10
   a(i)=i
   end do
@@ -44,7 +52,9 @@ end subroutine nounroll_and_jam_dir
 subroutine unroll_and_jam_dir_no_factor
   integer :: a(10)
   !dir$ unroll_and_jam
-  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[ANNOTATION_NO_FACTOR:.*]]
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
+  ! CHECK-NOT: !llvm.loop
+  ! CHECK:   br label {{.*}}, !llvm.loop ![[ANNOTATION_NO_FACTOR:.*]]
   do i=1,10
   a(i)=i
   end do

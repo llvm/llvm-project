@@ -15,9 +15,11 @@
 #define LLVM_SUPPORT_KNOWNFPCLASS_H
 
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
+class APFloat;
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -26,6 +28,9 @@ struct KnownFPClass {
   /// std::nullopt if the sign bit is unknown, true if the sign bit is
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
+
+  KnownFPClass() = default;
+  KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
     return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
@@ -78,13 +83,13 @@ struct KnownFPClass {
   /// Return true if it's know this can never be interpreted as a zero. This
   /// extends isKnownNeverZero to cover the case where the assumed
   /// floating-point mode for the function interprets denormals as zero.
-  bool isKnownNeverLogicalZero(DenormalMode Mode) const;
+  LLVM_ABI bool isKnownNeverLogicalZero(DenormalMode Mode) const;
 
   /// Return true if it's know this can never be interpreted as a negative zero.
-  bool isKnownNeverLogicalNegZero(DenormalMode Mode) const;
+  LLVM_ABI bool isKnownNeverLogicalNegZero(DenormalMode Mode) const;
 
   /// Return true if it's know this can never be interpreted as a positive zero.
-  bool isKnownNeverLogicalPosZero(DenormalMode Mode) const;
+  LLVM_ABI bool isKnownNeverLogicalPosZero(DenormalMode Mode) const;
 
   static constexpr FPClassTest OrderedLessThanZeroMask =
       fcNegSubnormal | fcNegNormal | fcNegInf;
@@ -154,6 +159,15 @@ struct KnownFPClass {
     signBitMustBeZero();
   }
 
+  /// Apply the canonicalize intrinsic to this value. This is essentially a
+  /// stronger form of propagateCanonicalizingSrc.
+  LLVM_ABI static KnownFPClass
+  canonicalize(const KnownFPClass &Src,
+               DenormalMode DenormMode = DenormalMode::getDynamic());
+
+  /// Report known values for exp, exp2 and exp10.
+  LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
+
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
 
@@ -209,7 +223,7 @@ struct KnownFPClass {
   ///
   /// This assumes a copy-like operation and will replace any currently known
   /// information.
-  void propagateDenormal(const KnownFPClass &Src, DenormalMode Mode);
+  LLVM_ABI void propagateDenormal(const KnownFPClass &Src, DenormalMode Mode);
 
   /// Report known classes if \p Src is evaluated through a potentially
   /// canonicalizing operation. We can assume signaling nans will not be
@@ -217,7 +231,8 @@ struct KnownFPClass {
   ///
   /// This assumes a copy-like operation and will replace any currently known
   /// information.
-  void propagateCanonicalizingSrc(const KnownFPClass &Src, DenormalMode Mode);
+  LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
+                                           DenormalMode Mode);
 
   void resetAll() { *this = KnownFPClass(); }
 };

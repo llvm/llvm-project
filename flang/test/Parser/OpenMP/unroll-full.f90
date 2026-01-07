@@ -17,6 +17,6 @@ subroutine openmp_parse_unroll(x)
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = unroll
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = unroll
 !PARSE-TREE: OmpClauseList -> OmpClause -> Full
 END subroutine openmp_parse_unroll

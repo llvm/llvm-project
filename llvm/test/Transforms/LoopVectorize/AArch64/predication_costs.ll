@@ -19,7 +19,7 @@ target triple = "aarch64--linux-gnu"
 ;   (udiv(2) + extractelement(8) + insertelement(4)) / 2 = 7
 ;
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
-; CHECK: Found an estimated cost of 7 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp2, %tmp3
 ;
 define i32 @predicated_udiv(ptr %a, ptr %b, i1 %c, i64 %n) {
 entry:
@@ -60,7 +60,7 @@ for.end:
 ;   (store(4) + extractelement(4)) / 2 = 4
 ;
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %tmp0, align 4
-; CHECK: Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
 ;
 define void @predicated_store(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -93,8 +93,8 @@ for.end:
 ; CHECK: Found scalar instruction:   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Found scalar instruction:   %addr.next = getelementptr inbounds i32, ptr %addr, i64 1
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %addr, align 4
-; CHECK: Found an estimated cost of 0 for VF 2 For instruction:   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
-; CHECK: Found an estimated cost of 4 for VF 2 For instruction: store i32 %tmp2, ptr %addr, align 4
+; CHECK: Cost of 0 for VF 2: induction instruction   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
+; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %addr, align 4
 ;
 define void @predicated_store_phi(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -135,9 +135,10 @@ for.end:
 ;
 ; CHECK: Scalarizing: %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
-; CHECK: Found an estimated cost of 3 for VF 2 For instruction: %tmp3 = add nsw i32 %tmp2, %x
-; CHECK: Found an estimated cost of 5 for VF 2 For instruction: %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Cost of 5 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp3 = add nsw i32 %tmp2, %x
 ;
+
 define i32 @predicated_udiv_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
   br label %for.body
@@ -180,8 +181,8 @@ for.end:
 ;
 ; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %tmp0, align 4
-; CHECK: Found an estimated cost of 3 for VF 2 For instruction: %tmp2 = add nsw i32 %tmp1, %x
-; CHECK: Found an estimated cost of 2 for VF 2 For instruction: store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp2 = add nsw i32 %tmp1, %x
 ;
 define void @predicated_store_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -232,11 +233,11 @@ for.end:
 ; CHECK:     Scalarizing and predicating: %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK:     Scalarizing: %tmp5 = sub i32 %tmp4, %x
 ; CHECK:     Scalarizing and predicating: store i32 %tmp5, ptr %tmp0, align 4
-; CHECK:     Found an estimated cost of 1 for VF 2 For instruction: %tmp2 = add i32 %tmp1, %x
-; CHECK:     Found an estimated cost of 7 for VF 2 For instruction: %tmp3 = sdiv i32 %tmp1, %tmp2
-; CHECK:     Found an estimated cost of 7 for VF 2 For instruction: %tmp4 = udiv i32 %tmp3, %tmp2
-; CHECK:     Found an estimated cost of 3 for VF 2 For instruction: %tmp5 = sub i32 %tmp4, %x
-; CHECK:     Found an estimated cost of 2 for VF 2 For instruction: store i32 %tmp5, ptr %tmp0, align 4
+; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp3 = sdiv i32 %tmp1, %tmp2
+; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp3, %tmp2
+; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp5, ptr %tmp0, align 4
+; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp5 = sub i32 %tmp4, %x
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%tmp2> = add ir<%tmp1>, ir<%x>
 ;
 define void @predication_multi_context(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:

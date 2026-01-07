@@ -75,7 +75,8 @@ static void initializeUsedResources(InstrDesc &ID,
       WithColor::warning()
           << "Ignoring invalid write of zero cycles on processor resource "
           << PR.Name << "\n";
-      WithColor::note() << "found in scheduling class " << SCDesc.Name
+      WithColor::note() << "found in scheduling class "
+                        << SM.getSchedClassName(ID.SchedClassID)
                         << " (write index #" << I << ")\n";
 #endif
       continue;
@@ -631,6 +632,12 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
     return std::move(Err);
 
   // Now add the new descriptor.
+
+  if (IM.canCustomize(IVec)) {
+    IM.customize(IVec, *ID);
+    return *CustomDescriptors.emplace_back(std::move(ID));
+  }
+
   bool IsVariadic = MCDesc.isVariadic();
   if ((ID->IsRecyclable = !IsVariadic && !IsVariant)) {
     auto DKey = std::make_pair(MCI.getOpcode(), SchedClassID);
@@ -675,7 +682,9 @@ STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
                                 const SmallVector<Instrument *> &IVec) {
-  Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI, IVec);
+  Expected<const InstrDesc &> DescOrErr = IM.canCustomize(IVec)
+                                              ? createInstrDescImpl(MCI, IVec)
+                                              : getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;

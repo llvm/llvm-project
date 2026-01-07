@@ -29,7 +29,7 @@ S2 f2() {
 
 // Pass and return for type size > 16 bytes.
 // CHECK: define {{.*}} void @{{.*}}f3{{.*}}(ptr dead_on_unwind noalias writable sret(%struct.S3) align 4 %agg.result)
-// CHECK: call void {{.*}}func3{{.*}}(ptr dead_on_unwind writable sret(%struct.S3) align 4 %agg.result, ptr noundef %agg.tmp)
+// CHECK: call void {{.*}}func3{{.*}}(ptr dead_on_unwind writable sret(%struct.S3) align 4 %agg.result, ptr dead_on_return noundef %agg.tmp)
 struct S3 {
   int a[5];
 };
@@ -57,7 +57,7 @@ S4 f4() {
 
 // Pass and return from instance method called from instance method.
 // CHECK: define {{.*}} void @{{.*}}bar@Q1{{.*}}(ptr {{[^,]*}} %this, ptr dead_on_unwind inreg noalias writable sret(%class.P1) align 1 %agg.result)
-// CHECK: call void {{.*}}foo@P1{{.*}}(ptr noundef{{[^,]*}} %ref.tmp, ptr dead_on_unwind inreg writable sret(%class.P1) align 1 %agg.result, i8 %0)
+// CHECK: call void {{.*}}foo@P1{{.*}}(ptr noundef{{[^,]*}} %ref.tmp, ptr dead_on_unwind inreg writable sret(%class.P1) align 1 %agg.result, i64 %coerce.val.ii)
 
 class P1 {
 public:
@@ -76,7 +76,7 @@ P1 Q1::bar() {
 
 // Pass and return from instance method called from free function.
 // CHECK: define {{.*}} void {{.*}}bar{{.*}}()
-// CHECK: call void {{.*}}foo@P2{{.*}}(ptr noundef{{[^,]*}} %ref.tmp, ptr dead_on_unwind inreg writable sret(%class.P2) align 1 %retval, i8 %0)
+// CHECK: call void {{.*}}foo@P2{{.*}}(ptr noundef{{[^,]*}} %ref.tmp, ptr dead_on_unwind inreg writable sret(%class.P2) align 1 %retval, i64 %coerce.val.ii)
 class P2 {
 public:
   P2 foo(P2 x);

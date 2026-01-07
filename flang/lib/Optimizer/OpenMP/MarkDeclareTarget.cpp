@@ -21,6 +21,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace flangomp {
 #define GEN_PASS_DEF_MARKDECLARETARGETPASS
@@ -31,9 +32,93 @@ namespace {
 class MarkDeclareTargetPass
     : public flangomp::impl::MarkDeclareTargetPassBase<MarkDeclareTargetPass> {
 
-  void markNestedFuncs(mlir::omp::DeclareTargetDeviceType parentDevTy,
-                       mlir::omp::DeclareTargetCaptureClause parentCapClause,
-                       mlir::Operation *currOp,
+  struct ParentInfo {
+    mlir::omp::DeclareTargetDeviceType devTy;
+    mlir::omp::DeclareTargetCaptureClause capClause;
+    bool automap;
+  };
+
+  void processSymbolRef(mlir::SymbolRefAttr symRef, ParentInfo parentInfo,
+                        llvm::SmallPtrSet<mlir::Operation *, 16> visited) {
+    if (auto currFOp =
+            getOperation().lookupSymbol<mlir::func::FuncOp>(symRef)) {
+      auto current = llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(
+          currFOp.getOperation());
+
+      if (current.isDeclareTarget()) {
+        auto currentDt = current.getDeclareTargetDeviceType();
+
+        // Found the same function twice, with different device_types,
+        // mark as Any as it belongs to both
+        if (currentDt != parentInfo.devTy &&
+            currentDt != mlir::omp::DeclareTargetDeviceType::any) {
+          current.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
+                                   current.getDeclareTargetCaptureClause(),
+                                   current.getDeclareTargetAutomap());
+        }
+      } else {
+        current.setDeclareTarget(parentInfo.devTy, parentInfo.capClause,
+                                 parentInfo.automap);
+      }
+
+      markNestedFuncs(parentInfo, currFOp, visited);
+    }
+  }
+
+  void processReductionRefs(std::optional<mlir::ArrayAttr> symRefs,
+                            ParentInfo parentInfo,
+                            llvm::SmallPtrSet<mlir::Operation *, 16> visited) {
+    if (!symRefs)
+      return;
+
+    for (auto symRef : symRefs->getAsRange<mlir::SymbolRefAttr>()) {
+      if (auto declareReductionOp =
+              getOperation().lookupSymbol<mlir::omp::DeclareReductionOp>(
+                  symRef)) {
+        markNestedFuncs(parentInfo, declareReductionOp, visited);
+      }
+    }
+  }
+
+  void
+  processReductionClauses(mlir::Operation *op, ParentInfo parentInfo,
+                          llvm::SmallPtrSet<mlir::Operation *, 16> visited) {
+    llvm::TypeSwitch<mlir::Operation &>(*op)
+        .Case([&](mlir::omp::LoopOp op) {
+          processReductionRefs(op.getReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::ParallelOp op) {
+          processReductionRefs(op.getReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::SectionsOp op) {
+          processReductionRefs(op.getReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::SimdOp op) {
+          processReductionRefs(op.getReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::TargetOp op) {
+          processReductionRefs(op.getInReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::TaskgroupOp op) {
+          processReductionRefs(op.getTaskReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::TaskloopOp op) {
+          processReductionRefs(op.getReductionSyms(), parentInfo, visited);
+          processReductionRefs(op.getInReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::TaskOp op) {
+          processReductionRefs(op.getInReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::TeamsOp op) {
+          processReductionRefs(op.getReductionSyms(), parentInfo, visited);
+        })
+        .Case([&](mlir::omp::WsloopOp op) {
+          processReductionRefs(op.getReductionSyms(), parentInfo, visited);
+        })
+        .Default([](mlir::Operation &) {});
+  }
+
+  void markNestedFuncs(ParentInfo parentInfo, mlir::Operation *currOp,
                        llvm::SmallPtrSet<mlir::Operation *, 16> visited) {
     if (visited.contains(currOp))
       return;
@@ -43,30 +128,10 @@ class MarkDeclareTargetPass
       if (auto callOp = llvm::dyn_cast<mlir::CallOpInterface>(op)) {
         if (auto symRef = llvm::dyn_cast_if_present<mlir::SymbolRefAttr>(
                 callOp.getCallableForCallee())) {
-          if (auto currFOp =
-                  getOperation().lookupSymbol<mlir::func::FuncOp>(symRef)) {
-            auto current = llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(
-                currFOp.getOperation());
-
-            if (current.isDeclareTarget()) {
-              auto currentDt = current.getDeclareTargetDeviceType();
-
-              // Found the same function twice, with different device_types,
-              // mark as Any as it belongs to both
-              if (currentDt != parentDevTy &&
-                  currentDt != mlir::omp::DeclareTargetDeviceType::any) {
-                current.setDeclareTarget(
-                    mlir::omp::DeclareTargetDeviceType::any,
-                    current.getDeclareTargetCaptureClause());
-              }
-            } else {
-              current.setDeclareTarget(parentDevTy, parentCapClause);
-            }
-
-            markNestedFuncs(parentDevTy, parentCapClause, currFOp, visited);
-          }
+          processSymbolRef(symRef, parentInfo, visited);
         }
       }
+      processReductionClauses(op, parentInfo, visited);
     });
   }
 
@@ -79,9 +144,10 @@ class MarkDeclareTargetPass
           functionOp.getOperation());
       if (declareTargetOp.isDeclareTarget()) {
         llvm::SmallPtrSet<mlir::Operation *, 16> visited;
-        markNestedFuncs(declareTargetOp.getDeclareTargetDeviceType(),
-                        declareTargetOp.getDeclareTargetCaptureClause(),
-                        functionOp, visited);
+        ParentInfo parentInfo{declareTargetOp.getDeclareTargetDeviceType(),
+                              declareTargetOp.getDeclareTargetCaptureClause(),
+                              declareTargetOp.getDeclareTargetAutomap()};
+        markNestedFuncs(parentInfo, functionOp, visited);
       }
     }
 
@@ -92,11 +158,13 @@ class MarkDeclareTargetPass
     // the contents of the device clause
     getOperation()->walk([&](mlir::omp::TargetOp tarOp) {
       llvm::SmallPtrSet<mlir::Operation *, 16> visited;
-      markNestedFuncs(mlir::omp::DeclareTargetDeviceType::nohost,
-                      mlir::omp::DeclareTargetCaptureClause::to, tarOp,
-                      visited);
+      ParentInfo parentInfo = {
+          /*devTy=*/mlir::omp::DeclareTargetDeviceType::nohost,
+          /*capClause=*/mlir::omp::DeclareTargetCaptureClause::to,
+          /*automap=*/false,
+      };
+      markNestedFuncs(parentInfo, tarOp, visited);
     });
   }
 };
-
 } // namespace

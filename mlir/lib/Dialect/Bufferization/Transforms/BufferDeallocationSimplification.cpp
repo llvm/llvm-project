@@ -37,8 +37,12 @@ using namespace mlir::bufferization;
 /// Given a memref value, return the "base" value by skipping over all
 /// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
 static Value getViewBase(Value value) {
-  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
+  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>()) {
+    if (value != viewLikeOp.getViewDest()) {
+      break;
+    }
     value = viewLikeOp.getViewSource();
+  }
   return value;
 }
 
@@ -167,8 +171,8 @@ struct RemoveDeallocMemrefsContainedInRetained
       std::optional<bool> analysisResult =
           analysis.isSameAllocation(retained, memref);
       if (analysisResult == true) {
-        auto disjunction = rewriter.create<arith::OrIOp>(
-            deallocOp.getLoc(), updatedCondition, cond);
+        auto disjunction = arith::OrIOp::create(rewriter, deallocOp.getLoc(),
+                                                updatedCondition, cond);
         rewriter.replaceAllUsesExcept(updatedCondition, disjunction.getResult(),
                                       disjunction);
       }
@@ -247,16 +251,16 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
         continue;
       }
 
-      replacements.push_back(rewriter.create<arith::ConstantOp>(
-          deallocOp.getLoc(), rewriter.getBoolAttr(false)));
+      replacements.push_back(arith::ConstantOp::create(
+          rewriter, deallocOp.getLoc(), rewriter.getBoolAttr(false)));
     }
 
     if (newRetainedMemrefs.size() == deallocOp.getRetained().size())
       return failure();
 
-    auto newDeallocOp = rewriter.create<DeallocOp>(
-        deallocOp.getLoc(), deallocOp.getMemrefs(), deallocOp.getConditions(),
-        newRetainedMemrefs);
+    auto newDeallocOp =
+        DeallocOp::create(rewriter, deallocOp.getLoc(), deallocOp.getMemrefs(),
+                          deallocOp.getConditions(), newRetainedMemrefs);
     int i = 0;
     for (auto &repl : replacements) {
       if (!repl)
@@ -326,8 +330,8 @@ struct SplitDeallocWhenNotAliasingAnyOther
       }
 
       // Create new bufferization.dealloc op for `memref`.
-      auto newDeallocOp = rewriter.create<DeallocOp>(loc, memref, cond,
-                                                     deallocOp.getRetained());
+      auto newDeallocOp = DeallocOp::create(rewriter, loc, memref, cond,
+                                            deallocOp.getRetained());
       updatedConditions.push_back(
           llvm::to_vector(ValueRange(newDeallocOp.getUpdatedConditions())));
     }
@@ -337,8 +341,9 @@ struct SplitDeallocWhenNotAliasingAnyOther
       return failure();
 
     // Create bufferization.dealloc op for all remaining memrefs.
-    auto newDeallocOp = rewriter.create<DeallocOp>(
-        loc, remainingMemrefs, remainingConditions, deallocOp.getRetained());
+    auto newDeallocOp =
+        DeallocOp::create(rewriter, loc, remainingMemrefs, remainingConditions,
+                          deallocOp.getRetained());
 
     // Bit-or all conditions.
     SmallVector<Value> replacements =
@@ -347,8 +352,8 @@ struct SplitDeallocWhenNotAliasingAnyOther
       assert(replacements.size() == additionalConditions.size() &&
              "expected same number of updated conditions");
       for (int64_t i = 0, e = replacements.size(); i < e; ++i) {
-        replacements[i] = rewriter.create<arith::OrIOp>(
-            loc, replacements[i], additionalConditions[i]);
+        replacements[i] = arith::OrIOp::create(rewriter, loc, replacements[i],
+                                               additionalConditions[i]);
       }
     }
     rewriter.replaceOp(deallocOp, replacements);

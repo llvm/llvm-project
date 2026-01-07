@@ -15,12 +15,10 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "UnwindInfoSection.h"
 #include "Writer.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
 
 using namespace llvm;
@@ -65,15 +63,13 @@ void lld::macho::addInputSection(InputSection *inputSection) {
     isec->parent = osec;
     inputSections.push_back(isec);
   } else if (auto *isec = dyn_cast<CStringInputSection>(inputSection)) {
-    if (isec->getName() == section_names::objcMethname) {
-      if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
-        in.objcMethnameSection->inputOrder = inputSectionsOrder++;
-      in.objcMethnameSection->addInput(isec);
-    } else {
-      if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
-        in.cStringSection->inputOrder = inputSectionsOrder++;
-      in.cStringSection->addInput(isec);
-    }
+    bool useSectionName = config->separateCstringLiteralSections ||
+                          isec->getName() == section_names::objcMethname;
+    auto *osec = in.getOrCreateCStringSection(
+        useSectionName ? isec->getName() : section_names::cString);
+    if (osec->inputOrder == UnspecifiedInputOrder)
+      osec->inputOrder = inputSectionsOrder++;
+    osec->addInput(isec);
   } else if (auto *isec = dyn_cast<WordLiteralInputSection>(inputSection)) {
     if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
       in.wordLiteralSection->inputOrder = inputSectionsOrder++;
@@ -352,6 +348,9 @@ WordLiteralInputSection::WordLiteralInputSection(const Section &section,
 }
 
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
+  if (off >= data.size())
+    fatal(toString(this) + ": offset is outside the section");
+
   auto *osec = cast<WordLiteralSection>(parent);
   const uintptr_t buf = reinterpret_cast<uintptr_t>(data.data());
   switch (sectionType(getFlags())) {

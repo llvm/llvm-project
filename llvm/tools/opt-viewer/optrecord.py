@@ -19,35 +19,18 @@ import functools
 from multiprocessing import Lock
 import os, os.path
 import subprocess
-
-try:
-    # The previously builtin function `intern()` was moved
-    # to the `sys` module in Python 3.
-    from sys import intern
-except:
-    pass
-
+from sys import intern
 import re
 
 import optpmap
 
-try:
-    dict.iteritems
-except AttributeError:
-    # Python 3
-    def itervalues(d):
-        return iter(d.values())
 
-    def iteritems(d):
-        return iter(d.items())
+def itervalues(d):
+    return iter(d.values())
 
-else:
-    # Python 2
-    def itervalues(d):
-        return d.itervalues()
 
-    def iteritems(d):
-        return d.iteritems()
+def iteritems(d):
+    return iter(d.items())
 
 
 def html_file_name(filename):
@@ -361,6 +344,8 @@ def find_opt_files(*dirs_or_files):
                     d for d in subdirs if not os.path.ismount(os.path.join(dir, d))
                 ]
                 for file in files:
-                    if fnmatch.fnmatch(file, "*.opt.yaml*"):
+                    if fnmatch.fnmatch(file, "*.opt.yaml*") or fnmatch.fnmatch(
+                        file, "*.opt.ld.yaml*"
+                    ):
                         all.append(os.path.join(dir, file))
     return all

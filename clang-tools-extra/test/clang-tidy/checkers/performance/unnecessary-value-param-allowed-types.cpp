@@ -67,7 +67,7 @@ void negative_smart_ref(smart_ref r) {
 }
 
 void positiveOtherType(OtherType O) {
-  // CHECK-MESSAGES: [[@LINE-1]]:34: warning: the parameter 'O' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:34: warning: the parameter 'O' of type 'OtherType' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   // CHECK-FIXES: void positiveOtherType(const OtherType& O) {
 }
 

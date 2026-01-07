@@ -122,6 +122,11 @@ namespace std {
 #else
 #  include <__config>
 
+// standard-mandated includes
+
+// [syncstream.syn]
+#  include <ostream>
+
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__mutex/lock_guard.h>
@@ -130,16 +135,10 @@ namespace std {
 #    include <iosfwd> // required for declaration of default arguments
 #    include <streambuf>
 #    include <string>
-
 #    if _LIBCPP_HAS_THREADS
 #      include <map>
 #      include <shared_mutex>
 #    endif
-
-// standard-mandated includes
-
-// [syncstream.syn]
-#    include <ostream>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header
@@ -318,9 +317,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool emit() { return emit(false); }
 
-  _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __wrapped_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __wrapped_; }
 
-  _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __str_.get_allocator(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __str_.get_allocator(); }
 
   _LIBCPP_HIDE_FROM_ABI void set_emit_on_sync(bool __b) noexcept { __emit_on_sync_ = __b; }
 
@@ -497,9 +496,9 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __sb_.get_wrapped(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI streambuf_type* get_wrapped() const noexcept { return __sb_.get_wrapped(); }
 
-  _LIBCPP_HIDE_FROM_ABI syncbuf_type* rdbuf() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI syncbuf_type* rdbuf() const noexcept {
     return const_cast<syncbuf_type*>(std::addressof(__sb_));
   }
 

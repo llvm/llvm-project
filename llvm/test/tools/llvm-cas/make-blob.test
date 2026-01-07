@@ -1,0 +1,41 @@
+RUN: rm -rf %t %t.cas
+RUN: mkdir %t
+
+RUN: llvm-cas --cas %t.cas --make-blob \
+RUN:   --data - </dev/null >%t/empty.casid
+RUN: sed -e 's,^.,CHECK: ,' <%t/empty.casid >%t/empty.check
+RUN: llvm-cas --cas %t.cas --make-blob \
+RUN:   --data /dev/null | FileCheck %t/empty.check
+RUN: echo "abc" | \
+RUN:   llvm-cas --cas %t.cas --make-blob \
+RUN:   --data - >%t/abc.casid
+RUN: llvm-cas --cas %t.cas --make-blob \
+RUN:   --data %S/Inputs/oneline >%t/oneline.casid
+RUN: llvm-cas --cas %t.cas --make-blob \
+RUN:   --data %S/Inputs/oneline-nonewline >%t/oneline-nonewline.casid
+
+RUN: llvm-cas --cas %t.cas --cat-node-data @%t/empty.casid |\
+RUN:   FileCheck %s -check-prefix CHECK-EMPTY -allow-empty
+CHECK-EMPTY-NOT: {{.}}
+
+RUN: llvm-cas --cas %t.cas --cat-node-data @%t/abc.casid |\
+RUN:   FileCheck %s -check-prefix CHECK-ABC
+CHECK-ABC: abc
+
+RUN: llvm-cas --cas %t.cas --cat-node-data @%t/oneline-nonewline.casid |\
+RUN:   FileCheck %s -check-prefix CHECK-ONELINE
+RUN: llvm-cas --cas %t.cas --cat-node-data @%t/oneline.casid |\
+RUN:   FileCheck %s -check-prefix CHECK-ONELINE
+CHECK-ONELINE: content
+
+# Double-check newlines.
+RUN: llvm-cas --cas %t.cas --cat-node-data @%t/oneline-nonewline.casid \
+RUN:   >%t/oneline-nonewline
+RUN: diff %S/Inputs/oneline-nonewline %t/oneline-nonewline
+RUN: llvm-cas --cas %t.cas --cat-node-data @%t/oneline.casid \
+RUN:   >%t/oneline
+RUN: diff %S/Inputs/oneline %t/oneline
+
+# Validate
+RUN: llvm-cas --cas %t.cas --validate-object @%t/oneline-nonewline.casid
+RUN: llvm-cas --cas %t.cas --validate-object @%t/oneline.casid

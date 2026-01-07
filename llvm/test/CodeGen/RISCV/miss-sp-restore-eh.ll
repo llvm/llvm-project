@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+m < %s \
 ; RUN:     | FileCheck %s
 
-
 @_ZTIi = external dso_local constant ptr
 
 declare void @_Z3fooiiiiiiiiiiPi(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3, i32 signext %4, i32 signext %5, i32 signext %6, i32 signext %7, i32 %8, i32 %9, i32 %10)
@@ -27,14 +26,6 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    li a7, 0
 ; CHECK-NEXT:    call _Z3fooiiiiiiiiiiPi
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:  .Ltmp1:
@@ -91,8 +82,6 @@ ehcleanup:
 }
 
 declare i32 @__gxx_personality_v0(...)
-
-declare i32 @llvm.eh.typeid.for(ptr)
 
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()

@@ -268,3 +268,82 @@ define i1 @test_fcmp_select_var_const_unordered(double %x, double %y) {
   %cmp2 = fcmp ugt double %sel, 0x3E80000000000000
   ret i1 %cmp2
 }
+
+define i1 @test_fcmp_ord_select_fcmp_oeq_var_const(double %x) {
+; CHECK-LABEL: @test_fcmp_ord_select_fcmp_oeq_var_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp1 = fcmp ord double %x, 0.000000e+00
+  %sel = select i1 %cmp1, double %x, double 0.000000e+00
+  %cmp2 = fcmp oeq double %sel, 1.000000e+00
+  ret i1 %cmp2
+}
+
+; Make sure that we recognize the SPF correctly.
+
+define float @test_select_nnan_nsz_fcmp_olt(float %x) {
+; CHECK-LABEL: @test_select_nnan_nsz_fcmp_olt(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
+; CHECK-NEXT:    ret float [[SEL1]]
+;
+  %cmp = fcmp olt float %x, 0.000000e+00
+  %sel = select nnan nsz i1 %cmp, float %x, float -0.000000e+00
+  ret float %sel
+}
+
+define float @test_select_nnan_nsz_fcmp_ult(float %x) {
+; CHECK-LABEL: @test_select_nnan_nsz_fcmp_ult(
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[SEL1]]
+;
+  %cmp = fcmp ult float %x, 0.000000e+00
+  %sel = select nnan nsz i1 %cmp, float %x, float -0.000000e+00
+  ret float %sel
+}
+
+define float @test_select_fcmp_sitofp_max(i8 %x) {
+; CHECK-LABEL: @test_select_fcmp_sitofp_max(
+; CHECK-NEXT:    [[F:%.*]] = sitofp i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[F]]
+;
+  %f = sitofp i8 %x to float
+  %cmp = fcmp ole float %f, -1.280000e+02
+  %sel = select i1 %cmp, float -1.280000e+02, float %f
+  ret float %sel
+}
+
+define <2 x float> @test_select_fcmp_sitofp_max_vec(<2 x i8> %x) {
+; CHECK-LABEL: @test_select_fcmp_sitofp_max_vec(
+; CHECK-NEXT:    [[F:%.*]] = sitofp <2 x i8> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[F]]
+;
+  %f = sitofp <2 x i8> %x to <2 x float>
+  %cmp = fcmp ole <2 x float> %f, splat (float -1.280000e+02)
+  %sel = select <2 x i1> %cmp, <2 x float> splat (float -1.280000e+02), <2 x float> %f
+  ret <2 x float> %sel
+}
+
+define float @test_select_fcmp_sitofp_min(i8 %x) {
+; CHECK-LABEL: @test_select_fcmp_sitofp_min(
+; CHECK-NEXT:    [[F:%.*]] = sitofp i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[F]]
+;
+  %f = sitofp i8 %x to float
+  %cmp = fcmp oge float %f, 1.270000e+02
+  %sel = select i1 %cmp, float 1.270000e+02, float %f
+  ret float %sel
+}
+
+define float @test_select_fcmp_uitofp_min(i8 %x) {
+; CHECK-LABEL: @test_select_fcmp_uitofp_min(
+; CHECK-NEXT:    [[F:%.*]] = uitofp i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[F]]
+;
+  %f = uitofp i8 %x to float
+  %cmp = fcmp oge float %f, 2.550000e+02
+  %sel = select i1 %cmp, float 2.550000e+02, float %f
+  ret float %sel
+}

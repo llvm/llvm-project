@@ -49,7 +49,7 @@ static StringRef getRCPrefix(dxil::ResourceClass RC) {
 
 static StringRef getFormatName(const dxil::ResourceTypeInfo &RI) {
   if (RI.isTyped()) {
-    switch (RI.getTyped().ElementTy) {
+    switch (RI.getTyped().DXILStorageTy) {
     case dxil::ElementType::I1:
       return "i1";
     case dxil::ElementType::I16:
@@ -291,7 +291,7 @@ INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
   const DXILResourceMap &DRM =
-      getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
   prettyPrintResources(OS, DRM, DRTM);

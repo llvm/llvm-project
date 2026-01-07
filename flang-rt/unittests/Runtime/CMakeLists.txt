@@ -10,14 +10,17 @@ add_flangrt_unittest(RuntimeTests
   AccessTest.cpp
   Allocatable.cpp
   ArrayConstructor.cpp
+  Assign.cpp
   BufferTest.cpp
   CharacterTest.cpp
   CommandTest.cpp
   Complex.cpp
   CrashHandlerFixture.cpp
   Derived.cpp
+  Descriptor.cpp
   ExternalIOTest.cpp
   Format.cpp
+  InputExtensions.cpp
   Inquiry.cpp
   ListInputTest.cpp
   LogicalFormatTest.cpp
@@ -37,6 +40,7 @@ add_flangrt_unittest(RuntimeTests
   Time.cpp
   TemporaryStack.cpp
   Transformational.cpp
+  TypeCode.cpp
 
   LINK_LIBS
     flang_rt.runtime.unittest

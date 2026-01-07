@@ -4,15 +4,14 @@
 define i64 @f(i64 %0, i64 %1) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr x9, x1, #0x1
-; CHECK-NEXT:    add x10, x0, x0
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    lsl x10, x9, #1
-; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    cinv x8, x8, ge
-; CHECK-NEXT:    cmp x9, x10, asr #1
-; CHECK-NEXT:    csel x0, x8, x10, ne
+; CHECK-NEXT:    orr x8, x1, #0x1
+; CHECK-NEXT:    add x9, x0, x0
+; CHECK-NEXT:    mov x10, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    adds x8, x8, x9
+; CHECK-NEXT:    lsl x9, x8, #1
+; CHECK-NEXT:    cinv x10, x10, pl
+; CHECK-NEXT:    cmp x8, x9, asr #1
+; CHECK-NEXT:    csel x0, x10, x9, ne
 ; CHECK-NEXT:    ret
   %3 = or i64 1, %1
   %4 = add i64 %3, %0

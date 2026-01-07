@@ -218,7 +218,7 @@ namespace test27 {
 namespace Test1 {
   // CHECK-LABEL: define hidden void @_ZN5Test11fEv
   void HIDDEN f() { }
-  
+
 }
 
 namespace Test2 {
@@ -230,7 +230,7 @@ namespace Test2 {
   // CHECK-LABEL: define hidden void @_ZN5Test21A1fEv
   void A::f() { }
 }
- 
+
 namespace Test3 {
   struct HIDDEN A {
     struct B {
@@ -240,7 +240,7 @@ namespace Test3 {
 
   // B is a nested class where its parent class is hidden.
   // CHECK-LABEL: define hidden void @_ZN5Test31A1B1fEv
-  void A::B::f() { }  
+  void A::B::f() { }
 }
 
 namespace Test4 HIDDEN {
@@ -248,15 +248,15 @@ namespace Test4 HIDDEN {
 
   // Test4::g is in a hidden namespace.
   // CHECK-LABEL: define hidden void @_ZN5Test41gEv
-  void g() { } 
-  
+  void g() { }
+
   struct DEFAULT A {
     void f();
   };
-  
+
   // A has default visibility.
   // CHECK-LABEL: define void @_ZN5Test41A1fEv
-  void A::f() { } 
+  void A::f() { }
 }
 
 namespace Test5 {
@@ -266,7 +266,7 @@ namespace Test5 {
     // CHECK-LABEL: define hidden void @_ZN5Test52NS1fEv()
     void f() { }
   }
-  
+
   namespace NS {
     // g is in NS, but this NS decl is not hidden.
     // CHECK-LABEL: define void @_ZN5Test52NS1gEv
@@ -1498,4 +1498,65 @@ namespace test73 {
   }
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test731sIiE22should_not_be_exportedIiEET_v(
   // CHECK-HIDDEN-LABEL: define linkonce_odr noundef i32 @_ZN6test731sIiE22should_not_be_exportedIiEET_v(
+}
+
+namespace test74 {
+  template <typename> struct T;
+  template <typename R>
+  struct T<void (R::*)()> {
+    template <typename M>
+    static __attribute__((__visibility__("hidden"))) void Invoke(M) {
+    }
+  };
+
+  struct C;
+  void (C::*MM)();
+
+  void Fun() {
+    T<decltype(MM)>::Invoke(0);
+  }
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test741TIMNS_1CEFvvEE6InvokeIiEEvT_(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test741TIMNS_1CEFvvEE6InvokeIiEEvT_(
+}
+
+namespace test75 {
+  template <class> struct T;
+  template <class C, class Ret>
+  struct T<Ret C::*> {
+    template <class M>
+    static __attribute__((__visibility__("hidden")))
+    void Invoke(M) {
+    }
+  };
+
+  struct A;
+  void Fun() {
+    T<void (A::*)()>::Invoke(0);
+  }
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test751TIMNS_1AEFvvEE6InvokeIiEEvT_(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test751TIMNS_1AEFvvEE6InvokeIiEEvT_(
+}
+
+#pragma clang attribute push([[gnu::visibility("hidden")]], apply_to=function)
+
+namespace pragma_test {
+  struct S {
+    S();
+  };
+
+  S::S() = default;
+  // CHECK-LABEL: define hidden void @_ZN11pragma_test1SC2Ev(
+  // CHECK-HIDDEN-LABEL: define hidden void @_ZN11pragma_test1SC2Ev(
+}
+
+#pragma clang attribute pop
+
+namespace no_pragma_test {
+  struct S {
+    S();
+  };
+
+  S::S() = default;
+  // CHECK-LABEL: define void @_ZN14no_pragma_test1SC2Ev(
+  // CHECK-HIDDEN-LABEL: define hidden void @_ZN14no_pragma_test1SC2Ev(
 }

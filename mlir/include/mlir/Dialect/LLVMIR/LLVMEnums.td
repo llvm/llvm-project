@@ -110,6 +110,8 @@ def AtomicBinOpUSubCond : LLVM_EnumAttrCase<"usub_cond",
                                             "usub_cond", "USubCond", 17>;
 def AtomicBinOpUSubSat : LLVM_EnumAttrCase<"usub_sat",
                                            "usub_sat", "USubSat", 18>;
+def AtomicBinOpFMaximum : LLVM_EnumAttrCase<"fmaximum", "fmaximum", "FMaximum", 19>;
+def AtomicBinOpFMinimum : LLVM_EnumAttrCase<"fminimum", "fminimum", "FMinimum", 20>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -122,7 +124,8 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
-     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat],
+     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat,
+     AtomicBinOpFMaximum, AtomicBinOpFMinimum],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -601,7 +604,7 @@ def FCmpPredicate : LLVM_EnumAttr<
 def ICmpPredicate : LLVM_EnumAttr<
     "ICmpPredicate",
     "::llvm::CmpInst::Predicate",
-    "lvm.icmp comparison predicate",
+    "llvm.icmp comparison predicate",
     [ICmpPredicateEQ, ICmpPredicateNE, ICmpPredicateSLT, ICmpPredicateSLE,
      ICmpPredicateSGT, ICmpPredicateSGE, ICmpPredicateULT, ICmpPredicateULE,
      ICmpPredicateUGT, ICmpPredicateUGE],
@@ -755,13 +758,16 @@ def FramePointerKindAll
     : LLVM_EnumAttrCase<"All", "all", "All", 2>;
 def FramePointerKindReserved
     : LLVM_EnumAttrCase<"Reserved", "reserved", "Reserved", 3>;
+def FramePointerKindNonLeafNoReserve
+    : LLVM_EnumAttrCase<"NonLeafNoReserve", "non-leaf-no-reserve", "NonLeafNoReserve", 4>;
 
 def FramePointerKindEnum : LLVM_EnumAttr<
     "FramePointerKind",
     "::llvm::FramePointerKind",
     "LLVM FramePointerKind",
     [FramePointerKindNone, FramePointerKindNonLeaf,
-     FramePointerKindAll, FramePointerKindReserved]> {
+     FramePointerKindAll, FramePointerKindReserved,
+     FramePointerKindNonLeafNoReserve]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 
@@ -823,7 +829,7 @@ def FPExceptionBehaviorAttr : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// Module Flag Behavior
+// Module Flags
 //===----------------------------------------------------------------------===//
 
 // These values must match llvm::Module::ModFlagBehavior ones.
@@ -855,6 +861,21 @@ def ModFlagBehaviorAttr : LLVM_EnumAttr<
   let cppNamespace = "::mlir::LLVM";
 }
 
+def LLVM_ProfileSummaryFormatSampleProfile : I64EnumAttrCase<"SampleProfile",
+                                                             0>;
+def LLVM_ProfileSummaryFormatInstrProf : I64EnumAttrCase<"InstrProf", 1>;
+def LLVM_ProfileSummaryFormatCSInstrProf : I64EnumAttrCase<"CSInstrProf", 2>;
+
+def LLVM_ProfileSummaryFormatKind : I64EnumAttr<
+    "ProfileSummaryFormatKind",
+    "LLVM ProfileSummary format kinds", [
+      LLVM_ProfileSummaryFormatSampleProfile,
+      LLVM_ProfileSummaryFormatInstrProf,
+      LLVM_ProfileSummaryFormatCSInstrProf,
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
 //===----------------------------------------------------------------------===//
 // UWTableKind
 //===----------------------------------------------------------------------===//
@@ -874,6 +895,34 @@ def UWTableKindEnum : LLVM_EnumAttr<
     "LLVM Unwind Behavior",
     [UWTableKindNone, UWTableKindSync, UWTableKindAsync]> {
   let cppNamespace = "::mlir::LLVM::uwtable";
+}
+
+//===----------------------------------------------------------------------===//
+// GEPNoWrapFlags
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::GEPNoWrapFlags ones.
+// See llvm/include/llvm/IR/GEPNoWrapFlags.h.
+// Since inbounds implies nusw, create an inboundsFlag that represents the
+// concept of raw inbounds with no nusw implication and the actual inbounds
+// literal will be captured as the combination of inboundsFlag and nusw.
+
+def GEPNone : I32BitEnumCaseNone<"none">;
+def GEPInboundsFlag : I32BitEnumCaseBit<"inboundsFlag", 0, "inbounds_flag">;
+def GEPNusw : I32BitEnumCaseBit<"nusw", 1>;
+def GEPNuw : I32BitEnumCaseBit<"nuw", 2>;
+def GEPInbounds : BitEnumCaseGroup<"inbounds", [GEPInboundsFlag, GEPNusw]>;
+
+def GEPNoWrapFlags : I32BitEnum<
+    "GEPNoWrapFlags",
+    "::mlir::LLVM::GEPNoWrapFlags",
+    [GEPNone, GEPInboundsFlag, GEPNusw, GEPNuw, GEPInbounds]> {
+  let cppNamespace = "::mlir::LLVM";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def GEPNoWrapFlagsProp : EnumProp<GEPNoWrapFlags> {
+  let defaultValue = interfaceType # "::none";
 }
 
 #endif // LLVMIR_ENUMS

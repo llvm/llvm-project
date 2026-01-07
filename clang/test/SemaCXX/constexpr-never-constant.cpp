@@ -24,3 +24,10 @@ constexpr void other_func() {
 
   throw 12;
 }
+
+namespace GH149041 {
+  // Make sure these don't trigger the diagnostic.
+  extern const bool& b;
+  constexpr bool fun1() { return b; }
+  constexpr bool fun2(const bool& b) { return b; }
+}

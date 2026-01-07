@@ -26,7 +26,9 @@ def eager_load_pcm : F<"eager-load-pcm", "Load PCM files eagerly (instead of laz
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
 
 defm compilation_database : Eq<"compilation-database", "Compilation database">;
-defm module_name : Eq<"module-name", "the module of which the dependencies are to be computed">;
+defm module_names
+    : Eq<"module-names", "A comma separated list of names of modules of which "
+                         "the dependencies are to be computed">;
 defm dependency_target : Eq<"dependency-target", "The names of dependency targets for the dependency file">;
 
 defm tu_buffer_path: Eq<"tu-buffer-path", "The path to the translation unit for depscan. Not compatible with -module-name">;
@@ -37,8 +39,13 @@ defm resource_dir_recipe : Eq<"resource-dir-recipe", "How to produce missing '-r
 
 def print_timing : F<"print-timing", "Print timing information">;
 
+def emit_visible_modules
+    : F<"emit-visible-modules", "emit visible modules in primary output">;
+
 def verbose : F<"v", "Use verbose output">;
 
 def round_trip_args : F<"round-trip-args", "verify that command-line arguments are canonical by parsing and re-serializing">;
+
+def verbatim_args : F<"verbatim-args", "Pass commands to the scanner verbatim without adjustments">;
 
 def DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>;

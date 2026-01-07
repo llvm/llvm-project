@@ -27,7 +27,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
-cl::opt<bool> NoKernelInfoEndLTO(
+cl::opt<bool> llvm::NoKernelInfoEndLTO(
     "no-kernel-info-end-lto",
     cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
     cl::init(false), cl::Hidden);
@@ -119,6 +119,19 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
+    // Linkers do not currently support PT_GNU_RELRO for SHF_X86_64_LARGE
+    // sections; that would require the linker to emit more than one
+    // PT_GNU_RELRO because large sections are discontiguous by design, and most
+    // ELF dynamic loaders do not support that (bionic appears to support it but
+    // glibc/musl/FreeBSD/NetBSD/OpenBSD appear not to). With current linkers
+    // these sections will end up in .ldata which results in silently disabling
+    // RELRO. If this ever gets supported by downstream components in the future
+    // we could add an opt-in flag for moving these sections to .ldata.rel.ro
+    // which would trigger the creation of a second PT_GNU_RELRO.
+    if (!GV->isDeclarationForLinker() &&
+        TargetLoweringObjectFile::getKindForGlobal(GV, *this)
+            .isReadOnlyWithRel())
+      return false;
     const DataLayout &DL = GV->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;
@@ -145,11 +158,9 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
     Options.X = F.getFnAttribute(Y).getValueAsBool();     \
   } while (0)
 
-  RESET_OPTION(UnsafeFPMath, "unsafe-fp-math");
   RESET_OPTION(NoInfsFPMath, "no-infs-fp-math");
   RESET_OPTION(NoNaNsFPMath, "no-nans-fp-math");
   RESET_OPTION(NoSignedZerosFPMath, "no-signed-zeros-fp-math");
-  RESET_OPTION(ApproxFuncFPMath, "approx-func-fp-math");
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,

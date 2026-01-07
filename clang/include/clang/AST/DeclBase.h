@@ -410,9 +410,6 @@ protected:
 
   virtual ~Decl();
 
-  /// Update a potentially out-of-date declaration.
-  void updateOutOfDate(IdentifierInfo &II) const;
-
   Linkage getCachedLinkage() const {
     return static_cast<Linkage>(CacheValidAndLinkage);
   }
@@ -625,6 +622,12 @@ public:
 
   void setReferenced(bool R = true) { Referenced = R; }
 
+  /// When doing manipulations which might change the computed linkage,
+  /// such as changing the DeclContext after the declaration has already been
+  /// used, invalidating the cache will make sure its linkage will be
+  /// recomputed.
+  void invalidateCachedLinkage() { setCachedLinkage(Linkage::Invalid); }
+
   /// Whether this declaration is a top-level declaration (function,
   /// global variable, etc.) that is lexically inside an objc container
   /// definition.
@@ -645,6 +648,10 @@ public:
   bool isModulePrivate() const {
     return getModuleOwnershipKind() == ModuleOwnershipKind::ModulePrivate;
   }
+
+  /// Whether this declaration was a local declaration to a C++20
+  /// named module.
+  bool isModuleLocal() const;
 
   /// Whether this declaration was exported in a lexical context.
   /// e.g.:
@@ -1560,13 +1567,6 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsFreeStanding : 1;
 
-    /// Indicates whether it is possible for declarations of this kind
-    /// to have an out-of-date definition.
-    ///
-    /// This option is only enabled when modules are enabled.
-    LLVM_PREFERRED_TYPE(bool)
-    uint64_t MayHaveOutOfDateDef : 1;
-
     /// Has the full definition of this type been required by a use somewhere in
     /// the TU.
     LLVM_PREFERRED_TYPE(bool)
@@ -2239,9 +2239,13 @@ public:
     return DC && this->getPrimaryContext() == DC->getPrimaryContext();
   }
 
-  /// Determine whether this declaration context encloses the
+  /// Determine whether this declaration context semantically encloses the
   /// declaration context DC.
   bool Encloses(const DeclContext *DC) const;
+
+  /// Determine whether this declaration context lexically encloses the
+  /// declaration context DC.
+  bool LexicallyEncloses(const DeclContext *DC) const;
 
   /// Find the nearest non-closure ancestor of this context,
   /// i.e. the innermost semantic parent of this context which is not
@@ -2638,7 +2642,7 @@ public:
 
   using udir_iterator_base =
       llvm::iterator_adaptor_base<udir_iterator, lookup_iterator,
-                                  typename lookup_iterator::iterator_category,
+                                  lookup_iterator::iterator_category,
                                   UsingDirectiveDecl *>;
 
   struct udir_iterator : udir_iterator_base {

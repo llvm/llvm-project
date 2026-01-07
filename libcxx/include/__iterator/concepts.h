@@ -29,16 +29,19 @@
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/readable_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/common_reference.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/disjunction.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_referenceable.h>
+#include <__type_traits/is_valid_expansion.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
@@ -114,15 +117,12 @@ template <class _Tp>
 concept __signed_integer_like = signed_integral<_Tp>;
 
 template <class _Ip>
-concept weakly_incrementable =
-    // TODO: remove this once the clang bug is fixed (bugs.llvm.org/PR48173).
-    !same_as<_Ip, bool> && // Currently, clang does not handle bool correctly.
-    movable<_Ip> && requires(_Ip __i) {
-      typename iter_difference_t<_Ip>;
-      requires __signed_integer_like<iter_difference_t<_Ip>>;
-      { ++__i } -> same_as<_Ip&>; // not required to be equality-preserving
-      __i++;                      // not required to be equality-preserving
-    };
+concept weakly_incrementable = movable<_Ip> && requires(_Ip __i) {
+  typename iter_difference_t<_Ip>;
+  requires __signed_integer_like<iter_difference_t<_Ip>>;
+  { ++__i } -> same_as<_Ip&>; // not required to be equality-preserving
+  __i++;                      // not required to be equality-preserving
+};
 
 // [iterator.concept.inc]
 template <class _Ip>
@@ -150,6 +150,42 @@ concept sized_sentinel_for =
       { __s - __i } -> same_as<iter_difference_t<_Ip>>;
       { __i - __s } -> same_as<iter_difference_t<_Ip>>;
     };
+
+template <class _Iter>
+struct __iter_traits_cache {
+  using type _LIBCPP_NODEBUG =
+      _If<__is_primary_template<iterator_traits<_Iter> >::value, _Iter, iterator_traits<_Iter> >;
+};
+template <class _Iter>
+using _ITER_TRAITS _LIBCPP_NODEBUG = typename __iter_traits_cache<_Iter>::type;
+
+struct __iter_concept_concept_test {
+  template <class _Iter>
+  using _Apply _LIBCPP_NODEBUG = typename _ITER_TRAITS<_Iter>::iterator_concept;
+};
+struct __iter_concept_category_test {
+  template <class _Iter>
+  using _Apply _LIBCPP_NODEBUG = typename _ITER_TRAITS<_Iter>::iterator_category;
+};
+struct __iter_concept_random_fallback {
+  template <class _Iter>
+  using _Apply _LIBCPP_NODEBUG =
+      __enable_if_t<__is_primary_template<iterator_traits<_Iter> >::value, random_access_iterator_tag>;
+};
+
+template <class _Iter, class _Tester>
+struct __test_iter_concept : _IsValidExpansion<_Tester::template _Apply, _Iter>, _Tester {};
+
+template <class _Iter>
+struct __iter_concept_cache {
+  using type _LIBCPP_NODEBUG =
+      _Or<__test_iter_concept<_Iter, __iter_concept_concept_test>,
+          __test_iter_concept<_Iter, __iter_concept_category_test>,
+          __test_iter_concept<_Iter, __iter_concept_random_fallback> >;
+};
+
+template <class _Iter>
+using _ITER_CONCEPT _LIBCPP_NODEBUG = typename __iter_concept_cache<_Iter>::type::template _Apply<_Iter>;
 
 // [iterator.concept.input]
 template <class _Ip>

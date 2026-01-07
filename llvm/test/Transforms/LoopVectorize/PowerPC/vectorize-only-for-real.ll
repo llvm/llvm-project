@@ -10,11 +10,11 @@ define zeroext i32 @test() #0 {
 entry:
   %a = alloca [1600 x i32], align 4
   %c = alloca [1600 x i32], align 4
-  call void @llvm.lifetime.start(i64 6400, ptr %a) #3
+  call void @llvm.lifetime.start(ptr %a) #3
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body
-  call void @llvm.lifetime.start(i64 6400, ptr %c) #3
+  call void @llvm.lifetime.start(ptr %c) #3
   %call = call signext i32 @bar(ptr %a, ptr %c) #3
   br label %for.body6
 
@@ -28,8 +28,8 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond27, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup5:                                ; preds = %for.body6
-  call void @llvm.lifetime.end(i64 6400, ptr nonnull %c) #3
-  call void @llvm.lifetime.end(i64 6400, ptr %a) #3
+  call void @llvm.lifetime.end(ptr nonnull %c) #3
+  call void @llvm.lifetime.end(ptr %a) #3
   ret i32 %add
 
 for.body6:                                        ; preds = %for.body6, %for.cond.cleanup
@@ -44,10 +44,10 @@ for.body6:                                        ; preds = %for.body6, %for.con
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start(ptr nocapture) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end(ptr nocapture) #1
 
 declare signext i32 @bar(ptr, ptr) #2
 

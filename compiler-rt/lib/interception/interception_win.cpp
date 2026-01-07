@@ -646,6 +646,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xC033:  // 33 C0 : xor eax, eax
     case 0xC933:  // 33 C9 : xor ecx, ecx
     case 0xD233:  // 33 D2 : xor edx, edx
+    case 0xFF33:  // 33 FF : xor edi, edi
     case 0x9066:  // 66 90 : xchg %ax,%ax (Two-byte NOP)
     case 0xDB84:  // 84 DB : test bl,bl
     case 0xC084:  // 84 C0 : test al,al
@@ -754,10 +755,17 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x7B81:  // 81 7B YY XX XX XX XX  cmp DWORD PTR [rbx+YY], XX XX XX XX
     case 0x7981:  // 81 79 YY XX XX XX XX  cmp dword ptr [rcx+YY], XX XX XX XX
       return 7;
+
+    case 0xb848:  // 48 b8 XX XX XX XX XX XX XX XX :
+                  //   movabsq XX XX XX XX XX XX XX XX, rax
+    case 0xba48:  // 48 ba XX XX XX XX XX XX XX XX :
+                  //   movabsq XX XX XX XX XX XX XX XX, rdx
+      return 10;
   }
 
   switch (0x00FFFFFF & *(u32 *)address) {
     case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
+    case 0x02b70f:    // 0f b7 02 : movzx eax, WORD PTR [rdx]
     case 0xc00b4d:    // 4d 0b c0 : or r8, r8
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d
     case 0xc08548:    // 48 85 c0 : test rax, rax
@@ -793,6 +801,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xc9854d:    // 4d 85 c9 : test r9, r9
     case 0xc98b4c:    // 4c 8b c9 : mov r9, rcx
     case 0xd12948:    // 48 29 d1 : sub rcx, rdx
+    case 0xc22b4c:    // 4c 2b c2 : sub r8, rdx
     case 0xca2b48:    // 48 2b ca : sub rcx, rdx
     case 0xca3b48:    // 48 3b ca : cmp rcx, rdx
     case 0xd12b48:    // 48 2b d1 : sub rdx, rcx
@@ -807,6 +816,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xd9f748:    // 48 f7 d9 : neg rcx
     case 0xc03145:    // 45 31 c0 : xor r8d,r8d
     case 0xc93145:    // 45 31 c9 : xor r9d,r9d
+    case 0xd23345:    // 45 33 d2 : xor r10d, r10d
     case 0xdb3345:    // 45 33 db : xor r11d, r11d
     case 0xc08445:    // 45 84 c0 : test r8b,r8b
     case 0xd28445:    // 45 84 d2 : test r10b,r10b

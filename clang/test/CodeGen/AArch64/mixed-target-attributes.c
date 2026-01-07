@@ -4,19 +4,19 @@
 
 // The following is guarded because in NOFMV we get an error for redefining the default.
 #ifdef __HAVE_FUNCTION_MULTI_VERSIONING
-int explicit_default(void) { return 0; }
-__attribute__((target_version("jscvt"))) int explicit_default(void) { return 1; }
-__attribute__((target_clones("dotprod", "lse"))) int explicit_default(void) { return 2; }
-__attribute__((target_version("rdma"))) int explicit_default(void) { return 3; }
-
-int foo(void) { return explicit_default(); }
-#endif
-
+int implicit_default(void) { return 0; }
 __attribute__((target_version("jscvt"))) int implicit_default(void) { return 1; }
 __attribute__((target_clones("dotprod", "lse"))) int implicit_default(void) { return 2; }
 __attribute__((target_version("rdma"))) int implicit_default(void) { return 3; }
 
-int bar(void) { return implicit_default(); }
+int foo(void) { return implicit_default(); }
+#endif
+
+__attribute__((target_version("jscvt"))) int explicit_default(void) { return 1; }
+__attribute__((target_clones("dotprod", "lse", "default"))) int explicit_default(void) { return 2; }
+__attribute__((target_version("rdma"))) int explicit_default(void) { return 3; }
+
+int bar(void) { return explicit_default(); }
 
 // These shouldn't generate anything.
 int unused_version_declarations(void);
@@ -30,78 +30,40 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @explicit_default = weak_odr ifunc i32 (), ptr @explicit_default.resolver
 // CHECK: @implicit_default = weak_odr ifunc i32 (), ptr @implicit_default.resolver
+// CHECK: @explicit_default = weak_odr ifunc i32 (), ptr @explicit_default.resolver
 // CHECK: @default_def_with_version_decls = weak_odr ifunc i32 (), ptr @default_def_with_version_decls.resolver
 //.
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@explicit_default.default
+// CHECK-LABEL: define {{[^@]+}}@implicit_default.default
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@explicit_default._Mjscvt
+// CHECK-LABEL: define {{[^@]+}}@implicit_default._Mjscvt
 // CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@explicit_default._Mdotprod
+// CHECK-LABEL: define {{[^@]+}}@implicit_default._Mdotprod
 // CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@explicit_default._Mlse
+// CHECK-LABEL: define {{[^@]+}}@implicit_default._Mlse
 // CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@explicit_default.resolver() comdat {
-// CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @__init_cpu_features_resolver()
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048832
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048832
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
-// CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @explicit_default._Mjscvt
-// CHECK:       resolver_else:
-// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 832
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 832
-// CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
-// CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
-// CHECK:       resolver_return1:
-// CHECK-NEXT:    ret ptr @explicit_default._Mrdm
-// CHECK:       resolver_else2:
-// CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 784
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 784
-// CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
-// CHECK-NEXT:    br i1 [[TMP11]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
-// CHECK:       resolver_return3:
-// CHECK-NEXT:    ret ptr @explicit_default._Mdotprod
-// CHECK:       resolver_else4:
-// CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 128
-// CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP13]], 128
-// CHECK-NEXT:    [[TMP15:%.*]] = and i1 true, [[TMP14]]
-// CHECK-NEXT:    br i1 [[TMP15]], label [[RESOLVER_RETURN5:%.*]], label [[RESOLVER_ELSE6:%.*]]
-// CHECK:       resolver_return5:
-// CHECK-NEXT:    ret ptr @explicit_default._Mlse
-// CHECK:       resolver_else6:
-// CHECK-NEXT:    ret ptr @explicit_default.default
-//
-//
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@explicit_default._Mrdm
+// CHECK-LABEL: define {{[^@]+}}@implicit_default._Mrdm
 // CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
@@ -111,32 +73,62 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-LABEL: define {{[^@]+}}@foo
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @explicit_default()
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @implicit_default()
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@implicit_default._Mjscvt
+// CHECK-LABEL: define {{[^@]+}}@explicit_default._Mjscvt
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@implicit_default._Mdotprod
+// CHECK-LABEL: define {{[^@]+}}@explicit_default._Mdotprod
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@implicit_default._Mlse
+// CHECK-LABEL: define {{[^@]+}}@explicit_default._Mlse
 // CHECK-SAME: () #[[ATTR3]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@implicit_default.resolver() comdat {
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@explicit_default.default
+// CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@explicit_default._Mrdm
+// CHECK-SAME: () #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 3
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@bar
+// CHECK-SAME: () #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @explicit_default()
+// CHECK-NEXT:    ret i32 [[CALL]]
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.default
+// CHECK-SAME: () #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@implicit_default.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -174,36 +166,47 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NEXT:    ret ptr @implicit_default.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@implicit_default._Mrdm
-// CHECK-SAME: () #[[ATTR4]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 3
+// CHECK-LABEL: define {{[^@]+}}@explicit_default.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
+// CHECK-NEXT:  resolver_entry:
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1048832
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1048832
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
+// CHECK:       resolver_return:
+// CHECK-NEXT:    ret ptr @explicit_default._Mjscvt
+// CHECK:       resolver_else:
+// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 832
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 832
+// CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
+// CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
+// CHECK:       resolver_return1:
+// CHECK-NEXT:    ret ptr @explicit_default._Mrdm
+// CHECK:       resolver_else2:
+// CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 784
+// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 784
+// CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
+// CHECK-NEXT:    br i1 [[TMP11]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
+// CHECK:       resolver_return3:
+// CHECK-NEXT:    ret ptr @explicit_default._Mdotprod
+// CHECK:       resolver_else4:
+// CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 128
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP13]], 128
+// CHECK-NEXT:    [[TMP15:%.*]] = and i1 true, [[TMP14]]
+// CHECK-NEXT:    br i1 [[TMP15]], label [[RESOLVER_RETURN5:%.*]], label [[RESOLVER_ELSE6:%.*]]
+// CHECK:       resolver_return5:
+// CHECK-NEXT:    ret ptr @explicit_default._Mlse
+// CHECK:       resolver_else6:
+// CHECK-NEXT:    ret ptr @explicit_default.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@bar
-// CHECK-SAME: () #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @implicit_default()
-// CHECK-NEXT:    ret i32 [[CALL]]
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.default
-// CHECK-SAME: () #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@implicit_default.default
-// CHECK-SAME: () #[[ATTR6:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@default_def_with_version_decls.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -234,7 +237,7 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
-// CHECK-NOFMV-LABEL: define {{[^@]+}}@implicit_default
+// CHECK-NOFMV-LABEL: define {{[^@]+}}@explicit_default
 // CHECK-NOFMV-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 2
@@ -244,7 +247,7 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@bar
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
-// CHECK-NOFMV-NEXT:    [[CALL:%.*]] = call i32 @implicit_default()
+// CHECK-NOFMV-NEXT:    [[CALL:%.*]] = call i32 @explicit_default()
 // CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //

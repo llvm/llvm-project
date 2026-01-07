@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -53,7 +54,7 @@ enum class ModRefInfo : uint8_t {
 }
 
 /// Debug print ModRefInfo.
-raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
 /// The locations at which a function might access memory.
 enum class IRMemLocation {
@@ -65,10 +66,15 @@ enum class IRMemLocation {
   ErrnoMem = 2,
   /// Any other memory.
   Other = 3,
+  /// Represents target specific state.
+  TargetMem0 = 4,
+  TargetMem1 = 5,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  Last = Other,
+  FirstTarget = TargetMem0,
+  // TargetMem IDs must be at the end of the list.
+  Last = TargetMem1,
 };
 
 template <typename LocationEnum> class MemoryEffectsBase {
@@ -295,7 +301,7 @@ public:
 using MemoryEffects = MemoryEffectsBase<IRMemLocation>;
 
 /// Debug print MemoryEffects.
-raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 
 // Legacy alias.
 using FunctionModRefBehavior = MemoryEffects;
@@ -344,7 +350,7 @@ inline bool capturesAll(CaptureComponents CC) {
   return CC == CaptureComponents::All;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
 
 /// Represents which components of the pointer may be captured in which
 /// location. This represents the captures(...) attribute in IR.
@@ -433,7 +439,7 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
 
 } // namespace llvm
 

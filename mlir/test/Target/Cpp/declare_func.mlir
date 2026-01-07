@@ -24,3 +24,20 @@ emitc.declare_func @array_arg
 emitc.func @array_arg(%arg0: !emitc.array<3xi32>) {
     emitc.return
 }
+
+// CHECK: int32_t foo1(int32_t [[V1:[^ ]*]]);
+emitc.declare_func @foo1
+// CHECK: int32_t foo2(int32_t [[V1]]);
+emitc.declare_func @foo2
+// CHECK: int32_t foo1(int32_t [[V1]]) {
+emitc.func @foo1(%arg0: i32) -> i32 {
+    // CHECK-NOT: int32_t [[V1]] = 0;
+    %0 = "emitc.constant"() <{value = 0 : i32}> : () -> i32
+    // CHECK: return [[V1]];
+    emitc.return %arg0 : i32
+}
+// CHECK: int32_t foo2(int32_t [[V1]]) {
+emitc.func @foo2(%arg0: i32) -> i32 {
+    // CHECK: return [[V1]];
+    emitc.return %arg0 : i32
+}

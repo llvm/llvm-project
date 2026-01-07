@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include <optional>
 
 namespace fir {
@@ -96,6 +97,13 @@ public:
   }
   mlir::Type getElementOrSequenceType() const {
     return hlfir::getFortranElementOrSequenceType(getType());
+  }
+  /// Return the fir.class or fir.box type needed to describe this entity.
+  fir::BaseBoxType getBoxType() const {
+    if (isBoxAddressOrValue())
+      return llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(getType()));
+    const bool isVolatile = fir::isa_volatile_type(getType());
+    return fir::BoxType::get(getElementOrSequenceType(), isVolatile);
   }
 
   bool hasLengthParameters() const {
@@ -223,8 +231,9 @@ fir::FortranVariableOpInterface
 genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
            const fir::ExtendedValue &exv, llvm::StringRef name,
            fir::FortranVariableFlagsAttr flags,
-           mlir::Value dummyScope = nullptr,
-           cuf::DataAttributeAttr dataAttr = {});
+           mlir::Value dummyScope = nullptr, mlir::Value storage = nullptr,
+           std::uint64_t storageOffset = 0,
+           cuf::DataAttributeAttr dataAttr = {}, unsigned dummyArgNo = 0);
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
@@ -322,6 +331,10 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
 mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
 
+/// Return character length if known at compile time. Unlike genCharLength
+/// it does not create any new op as specifically is intended for analysis.
+std::optional<std::int64_t> getCharLengthIfConst(Entity entity);
+
 mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
                     Entity entity, mlir::Type resultType);
 
@@ -373,12 +386,14 @@ struct LoopNest {
 /// loop constructs currently.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
                      mlir::ValueRange extents, bool isUnordered = false,
-                     bool emitWorkshareLoop = false);
+                     bool emitWorkshareLoop = false,
+                     bool couldVectorize = true);
 inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
                             mlir::Value shape, bool isUnordered = false,
-                            bool emitWorkshareLoop = false) {
+                            bool emitWorkshareLoop = false,
+                            bool couldVectorize = true) {
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
-                     isUnordered, emitWorkshareLoop);
+                     isUnordered, emitWorkshareLoop, couldVectorize);
 }
 
 /// The type of a callback that generates the body of a reduction
@@ -435,6 +450,41 @@ mlir::Value inlineElementalOp(
     mlir::IRMapping &mapper,
     const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
 
+/// Generate an element-by-element assignment from \p rhs to \p lhs for arrays
+/// that are known not to alias. The assignment is performed using a loop nest
+/// over the optimal extents deduced from both shapes. If \p emitWorkshareLoop
+/// is true, a workshare loop construct may be emitted when available.
+/// Allocatable LHS must be allocated with the right shape and parameters.
+void genNoAliasArrayAssignment(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    hlfir::Entity lhs, bool emitWorkshareLoop = false,
+    bool temporaryLHS = false,
+    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
+                                hlfir::Entity, hlfir::Entity)> *combiner =
+        nullptr);
+
+/// Generate an assignment from \p rhs to \p lhs when they are known not to
+/// alias. Handles both arrays and scalars: for arrays, delegates to
+/// genNoAliasArrayAssignment; for scalars, performs load/store for trivial
+/// scalar types and falls back to hlfir.assign otherwise.
+/// Allocatable LHS must be allocated with the right shape and parameters.
+void genNoAliasAssignment(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    hlfir::Entity lhs, bool emitWorkshareLoop = false,
+    bool temporaryLHS = false,
+    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
+                                hlfir::Entity, hlfir::Entity)> *combiner =
+        nullptr);
+inline void genNoAliasAssignment(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
+    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
+                                hlfir::Entity, hlfir::Entity)>
+        combiner) {
+  genNoAliasAssignment(loc, builder, rhs, lhs, emitWorkshareLoop, temporaryLHS,
+                       &combiner);
+}
+
 /// Create a new temporary with the shape and parameters of the provided
 /// hlfir.eval_in_mem operation and clone the body of the hlfir.eval_in_mem
 /// operating on this new temporary.  returns the temporary and whether the
@@ -477,9 +527,18 @@ hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
 /// would be incorrect.
 bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 
-std::pair<hlfir::Entity, mlir::Value>
-createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
-                   hlfir::Entity mold);
+/// Create a new temporary based on the provided \p mold entity.
+///
+/// The returned temporary has the same element type, shape and type parameters
+/// as the mold. When possible, the storage is stack-allocated; otherwise it is
+/// heap-allocated (for instance for arrays with dynamic shape or polymorphic
+/// cases). The bool result indicates whether heap allocation was used.
+///
+/// If the returned bool is true, callers are responsible for arranging cleanup
+/// (e.g., generating destruction/deallocation code at an appropriate point).
+std::pair<hlfir::Entity, bool> createTempFromMold(mlir::Location loc,
+                                                  fir::FirOpBuilder &builder,
+                                                  hlfir::Entity mold);
 
 // TODO: this does not support polymorphic molds
 hlfir::Entity createStackTempFromMold(mlir::Location loc,
@@ -533,6 +592,20 @@ Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
                     mlir::ArrayRef<mlir::Value> extents,
                     mlir::ValueRange oneBasedIndices,
                     mlir::ArrayRef<mlir::Value> typeParams);
+
+/// Return true iff the given hlfir.designate produces
+/// a contiguous part of the memref object given that it is
+/// contiguous.
+bool designatePreservesContinuity(hlfir::DesignateOp op);
+
+/// Return true iff the given \p base desribes an object
+/// that is contiguous. If \p checkWhole is true, then
+/// the object must be contiguous in all dimensions,
+/// otherwise, it must be contiguous in the innermost dimension.
+/// This function is an extension of hlfir::Entity::isSimplyContiguous(),
+/// and it can be used on pure FIR representation as well as on HLFIR.
+bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

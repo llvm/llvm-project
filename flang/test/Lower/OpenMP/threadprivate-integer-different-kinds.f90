@@ -1,7 +1,6 @@
 ! This test checks lowering of OpenMP Threadprivate Directive.
 ! Test for variables with different kind.
 
-!REQUIRES: shell
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 program test

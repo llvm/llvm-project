@@ -55,7 +55,7 @@ struct PerfState {
   std::unique_ptr<raw_fd_ostream> Dumpstream;
 
   // perf mmap marker
-  void *MarkerAddr = NULL;
+  void *MarkerAddr = nullptr;
 };
 
 // prevent concurrent dumps from messing up the output file
@@ -395,7 +395,7 @@ static Error registerJITLoaderPerfEndImpl() {
   return Error::success();
 }
 
-extern "C" llvm::orc::shared::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_registerJITLoaderPerfImpl(const char *ArgData, size_t ArgSize) {
   using namespace orc::shared;
   return WrapperFunction<SPSError(SPSPerfJITRecordBatch)>::handle(
@@ -403,7 +403,7 @@ llvm_orc_registerJITLoaderPerfImpl(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-extern "C" llvm::orc::shared::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_registerJITLoaderPerfStart(const char *ArgData, size_t ArgSize) {
   using namespace orc::shared;
   return WrapperFunction<SPSError()>::handle(ArgData, ArgSize,
@@ -411,7 +411,7 @@ llvm_orc_registerJITLoaderPerfStart(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-extern "C" llvm::orc::shared::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_registerJITLoaderPerfEnd(const char *ArgData, size_t ArgSize) {
   using namespace orc::shared;
   return WrapperFunction<SPSError()>::handle(ArgData, ArgSize,
@@ -433,7 +433,7 @@ static Error badOS() {
 
 static Error badOSBatch(PerfJITRecordBatch &Batch) { return badOS(); }
 
-extern "C" llvm::orc::shared::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_registerJITLoaderPerfImpl(const char *ArgData, size_t ArgSize) {
   using namespace shared;
   return WrapperFunction<SPSError(SPSPerfJITRecordBatch)>::handle(
@@ -441,13 +441,13 @@ llvm_orc_registerJITLoaderPerfImpl(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-extern "C" llvm::orc::shared::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_registerJITLoaderPerfStart(const char *ArgData, size_t ArgSize) {
   using namespace shared;
   return WrapperFunction<SPSError()>::handle(ArgData, ArgSize, badOS).release();
 }
 
-extern "C" llvm::orc::shared::CWrapperFunctionResult
+extern "C" llvm::orc::shared::CWrapperFunctionBuffer
 llvm_orc_registerJITLoaderPerfEnd(const char *ArgData, size_t ArgSize) {
   using namespace shared;
   return WrapperFunction<SPSError()>::handle(ArgData, ArgSize, badOS).release();

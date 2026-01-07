@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -53,8 +54,9 @@ public:
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::vfs::createPhysicalFileSystem();
+    DiagnosticOptions DiagOpts;
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
+        CompilerInstance::createDiagnostics(*VFS, DiagOpts);
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
     CIOpts.VFS = VFS;
@@ -78,9 +80,8 @@ public:
         createInvocation(Args, CIOpts);
     EXPECT_TRUE(Invocation);
 
-    CompilerInstance Instance;
-    Instance.setDiagnostics(Diags.get());
-    Instance.setInvocation(Invocation);
+    CompilerInstance Instance(std::move(Invocation));
+    Instance.setDiagnostics(Diags);
     Instance.getFrontendOpts().OutputFile = CacheBMIPath;
     // Avoid memory leaks.
     Instance.getFrontendOpts().DisableFree = false;

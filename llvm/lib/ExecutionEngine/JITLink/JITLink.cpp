@@ -15,8 +15,9 @@
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/XCOFF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
-#include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/systemz.h"
+#include "llvm/ExecutionEngine/JITLink/x86.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -280,6 +281,9 @@ std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
 void LinkGraph::dump(raw_ostream &OS) {
   DenseMap<Block *, std::vector<Symbol *>> BlockSymbols;
 
+  OS << "LinkGraph \"" << getName()
+     << "\" (triple = " << getTargetTriple().str() << ")\n";
+
   // Map from blocks to the symbols pointing at them.
   for (auto *Sym : defined_symbols())
     BlockSymbols[&Sym->getBlock()].push_back(Sym);
@@ -421,15 +425,21 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     raw_string_ostream ErrStream(ErrMsg);
     Section &Sec = B.getSection();
     ErrStream << "In graph " << G.getName() << ", section " << Sec.getName()
-              << ": relocation target ";
-    if (E.getTarget().hasName()) {
-      ErrStream << "\"" << E.getTarget().getName() << "\"";
-    } else
-      ErrStream << E.getTarget().getSection().getName() << " + "
-                << formatv("{0:x}", E.getOffset());
-    ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
-              << " is out of range of " << G.getEdgeKindName(E.getKind())
-              << " fixup at " << formatv("{0:x}", B.getFixupAddress(E)) << " (";
+              << ": relocation target "
+              << formatv("{0:x}", E.getTarget().getAddress() + E.getAddend())
+              << " (";
+    if (E.getTarget().hasName())
+      ErrStream << E.getTarget().getName();
+    else
+      ErrStream << "<anonymous symbol>";
+    if (E.getAddend()) {
+      // Target address includes non-zero added, so break down the arithmetic.
+      ErrStream << formatv(":{0:x}", E.getTarget().getAddress()) << " + "
+                << formatv("{0:x}", E.getAddend());
+    }
+    ErrStream << ") is out of range of " << G.getEdgeKindName(E.getKind())
+              << " fixup at address "
+              << formatv("{0:x}", E.getTarget().getAddress()) << " (";
 
     Symbol *BestSymbolForBlock = nullptr;
     for (auto *Sym : Sec.symbols())
@@ -466,10 +476,12 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
   case Triple::x86_64:
     return x86_64::createAnonymousPointer;
   case Triple::x86:
-    return i386::createAnonymousPointer;
+    return x86::createAnonymousPointer;
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointer;
+  case Triple::systemz:
+    return systemz::createAnonymousPointer;
   default:
     return nullptr;
   }
@@ -482,10 +494,12 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
   case Triple::x86_64:
     return x86_64::createAnonymousPointerJumpStub;
   case Triple::x86:
-    return i386::createAnonymousPointerJumpStub;
+    return x86::createAnonymousPointerJumpStub;
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointerJumpStub;
+  case Triple::systemz:
+    return systemz::createAnonymousPointerJumpStub;
   default:
     return nullptr;
   }

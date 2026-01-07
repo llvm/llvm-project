@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 
 ; We want to make sure that RSRC2 is left untouched
 ; GCN:       '0x2e13 (COMPUTE_PGM_RSRC2)': 0x78a

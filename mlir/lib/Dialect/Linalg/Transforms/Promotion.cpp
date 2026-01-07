@@ -18,11 +18,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -30,7 +26,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -67,11 +62,11 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
     staticBufferType =
         MemRefType::Builder(staticBufferType).setMemorySpace(memorySpaceAttr);
     if (options.useAlloca) {
-      return b.create<memref::AllocaOp>(staticBufferType, ValueRange{},
-                                        alignmentAttr);
+      return memref::AllocaOp::create(b, staticBufferType, ValueRange{},
+                                      alignmentAttr);
     }
-    return b.create<memref::AllocOp>(staticBufferType, ValueRange{},
-                                     alignmentAttr);
+    return memref::AllocOp::create(b, staticBufferType, ValueRange{},
+                                   alignmentAttr);
   }
 
   // Fallback dynamic buffer.
@@ -80,10 +75,10 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
   dynamicBufferType =
       MemRefType::Builder(dynamicBufferType).setMemorySpace(memorySpaceAttr);
   Value mul = b.createOrFold<arith::MulIOp>(
-      b.create<arith::ConstantIndexOp>(width), allocSize);
+      arith::ConstantIndexOp::create(b, width), allocSize);
   if (options.useAlloca)
-    return b.create<memref::AllocaOp>(dynamicBufferType, mul, alignmentAttr);
-  return b.create<memref::AllocOp>(dynamicBufferType, mul, alignmentAttr);
+    return memref::AllocaOp::create(b, dynamicBufferType, mul, alignmentAttr);
+  return memref::AllocOp::create(b, dynamicBufferType, mul, alignmentAttr);
 }
 
 /// Default allocation callback function. This allocates a promoted buffer when
@@ -96,8 +91,8 @@ static std::optional<Value> defaultAllocBufferCallBack(
     std::optional<unsigned> alignment, DataLayout &layout) {
   ShapedType viewType = subView.getType();
   ImplicitLocOpBuilder b(subView.getLoc(), builder);
-  auto zero = b.create<arith::ConstantIndexOp>(0);
-  auto one = b.create<arith::ConstantIndexOp>(1);
+  auto zero = arith::ConstantIndexOp::create(b, 0);
+  auto one = arith::ConstantIndexOp::create(b, 1);
 
   Attribute memorySpaceAttr;
   if (options.memorySpace.has_value())
@@ -127,8 +122,8 @@ defaultDeallocBufferCallBack(const LinalgPromotionOptions &options,
                              OpBuilder &b, Value fullLocalView) {
   if (!options.useAlloca) {
     auto viewOp = cast<memref::ViewOp>(fullLocalView.getDefiningOp());
-    b.create<memref::DeallocOp>(viewOp.getSource().getLoc(),
-                                viewOp.getSource());
+    memref::DeallocOp::create(b, viewOp.getSource().getLoc(),
+                              viewOp.getSource());
   }
   return success();
 }
@@ -148,6 +143,9 @@ struct LinalgOpInstancePromotionOptions {
   llvm::SmallSet<int64_t, 4> operandsNumbersToCopyIn;
   /// True if the full view should be used for the promoted buffer.
   DenseMap<Value, bool> useFullTileBuffers;
+  /// True if the original subview size should be used. This means the full tile
+  /// buffer is the same size as the partial view.
+  bool useOriginalSubviewSize;
 
   /// Callback functions for allocation and deallocation of promoted buffers, as
   /// well as to copy the data into and out of these buffers.
@@ -170,6 +168,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
       options.useFullTileBuffers.value_or(llvm::SmallBitVector());
   vUseFullTileBuffers.resize(linalgOp->getNumOperands(),
                              options.useFullTileBuffersDefault);
+  useOriginalSubviewSize = options.useOriginalSubviewSize;
 
   for (OpOperand &opOperand : linalgOp->getOpOperands()) {
     int64_t operandNumber = opOperand.getOperandNumber();
@@ -211,7 +210,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
   Location loc = linalgOp.getLoc();
   auto defaultCopyCallBack = [loc](OpBuilder &b, Value src,
                                    Value dst) -> LogicalResult {
-    b.create<linalg::CopyOp>(loc, src, dst);
+    linalg::CopyOp::create(b, loc, src, dst);
     return success();
   };
   copyInFn = (options.copyInFn ? *(options.copyInFn) : defaultCopyCallBack);
@@ -237,7 +236,8 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
 // by a partial `copy` op.
 FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     OpBuilder &b, Location loc, memref::SubViewOp subView,
-    const AllocBufferCallbackFn &allocationFn, DataLayout &layout) {
+    bool useOriginalSubviewSize, const AllocBufferCallbackFn &allocationFn,
+    DataLayout &layout) {
   auto viewType = subView.getType();
   auto rank = viewType.getRank();
   SmallVector<Value, 4> fullSizes;
@@ -254,7 +254,8 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     // to look for the bound.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
     Value size;
-    if (auto attr = llvm::dyn_cast_if_present<Attribute>(rangeValue.size)) {
+    if (llvm::isa_and_present<Attribute>(rangeValue.size) ||
+        useOriginalSubviewSize) {
       size = getValueOrCreateConstantIndexOp(b, loc, rangeValue.size);
     } else {
       FailureOr<int64_t> upperBound =
@@ -263,14 +264,13 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
               /*stopCondition=*/nullptr, /*closedUB=*/true);
       size = failed(upperBound)
                  ? getValueOrCreateConstantIndexOp(b, loc, rangeValue.size)
-                 : b.create<arith::ConstantIndexOp>(loc, *upperBound);
+                 : arith::ConstantIndexOp::create(b, loc, *upperBound);
     }
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
     partialSizes.push_back(
         b.createOrFold<memref::DimOp>(loc, subView, resultDimIdx++));
   }
-  SmallVector<int64_t, 4> dynSizes(fullSizes.size(), ShapedType::kDynamic);
   // If a callback is not specified, then use the default implementation for
   // allocating the promoted buffer.
   std::optional<Value> fullLocalView =
@@ -296,7 +296,8 @@ promoteSubViews(ImplicitLocOpBuilder &b,
     memref::SubViewOp subView =
         cast<memref::SubViewOp>(v.second.getDefiningOp());
     auto promotionInfo = promoteSubviewAsNewBuffer(
-        b, b.getLoc(), subView, options.allocationFn, layout);
+        b, b.getLoc(), subView, options.useOriginalSubviewSize,
+        options.allocationFn, layout);
     if (failed(promotionInfo))
       return failure();
     promotionInfoMap[v.first] = *promotionInfo;
@@ -308,23 +309,23 @@ promoteSubViews(ImplicitLocOpBuilder &b,
     Value fillVal =
         llvm::TypeSwitch<Type, Value>(subviewEltType)
             .Case([&](FloatType t) {
-              return b.create<arith::ConstantOp>(FloatAttr::get(t, 0.0));
+              return arith::ConstantOp::create(b, FloatAttr::get(t, 0.0));
             })
             .Case([&](IntegerType t) {
-              return b.create<arith::ConstantOp>(IntegerAttr::get(t, 0));
+              return arith::ConstantOp::create(b, IntegerAttr::get(t, 0));
             })
             .Case([&](ComplexType t) {
               Value tmp;
               if (auto et = dyn_cast<FloatType>(t.getElementType()))
-                tmp = b.create<arith::ConstantOp>(FloatAttr::get(et, 0.0));
+                tmp = arith::ConstantOp::create(b, FloatAttr::get(et, 0.0));
               else if (auto et = cast<IntegerType>(t.getElementType()))
-                tmp = b.create<arith::ConstantOp>(IntegerAttr::get(et, 0));
-              return b.create<complex::CreateOp>(t, tmp, tmp);
+                tmp = arith::ConstantOp::create(b, IntegerAttr::get(et, 0));
+              return complex::CreateOp::create(b, t, tmp, tmp);
             })
-            .Default([](auto) { return Value(); });
+            .Default(nullptr);
     if (!fillVal)
       return failure();
-    b.create<linalg::FillOp>(fillVal, promotionInfo->fullLocalView);
+    linalg::FillOp::create(b, fillVal, promotionInfo->fullLocalView);
   }
 
   // Copy data into the promoted buffers. Use callback if provided.
@@ -457,9 +458,9 @@ static std::optional<Value> allocateSubviewGPUMemoryInAddressSpace(
       gpu::AddressSpaceAttr::get(builder.getContext(), addressSpace));
   Value buffer;
   if (addressSpace == gpu::GPUDialect::getWorkgroupAddressSpace()) {
-    buffer = builder.create<memref::AllocOp>(funcOp.getLoc(), type);
+    buffer = memref::AllocOp::create(builder, funcOp.getLoc(), type);
   } else if (addressSpace == gpu::GPUDialect::getPrivateAddressSpace()) {
-    buffer = builder.create<memref::AllocaOp>(funcOp.getLoc(), type);
+    buffer = memref::AllocaOp::create(builder, funcOp.getLoc(), type);
   } else {
     return std::nullopt;
   }
@@ -485,9 +486,9 @@ LogicalResult mlir::linalg::deallocateWorkgroupMemory(OpBuilder &,
 /// the copy operation to ensure data integrity.
 LogicalResult mlir::linalg::copyToWorkgroupMemory(OpBuilder &b, Value src,
                                                   Value dst) {
-  b.create<gpu::BarrierOp>(src.getLoc());
-  Operation *copyOp = b.create<memref::CopyOp>(src.getLoc(), src, dst);
-  b.create<gpu::BarrierOp>(copyOp->getLoc());
+  gpu::BarrierOp::create(b, src.getLoc());
+  Operation *copyOp = memref::CopyOp::create(b, src.getLoc(), src, dst);
+  gpu::BarrierOp::create(b, copyOp->getLoc());
   return success();
 }
 
@@ -502,7 +503,7 @@ std::optional<Value> mlir::linalg::allocateGPUPrivateMemory(
 /// Normal copy to between src and dst.
 LogicalResult mlir::linalg::copyToGPUPrivateMemory(OpBuilder &b, Value src,
                                                    Value dst) {
-  b.create<memref::CopyOp>(src.getLoc(), src, dst);
+  memref::CopyOp::create(b, src.getLoc(), src, dst);
   return success();
 }
 

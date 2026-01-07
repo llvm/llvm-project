@@ -873,7 +873,7 @@ bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM) {
     auto MIBLO = buildMI(MBB, MBBI, Opc);
     buildMI(MBB, MBBI, AVR::MOVRdRr)
         .addReg(DstLoReg, RegState::Define)
-        .addReg(AVR::R0, RegState::Kill);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
     MIBLO.setMemRefs(MI.memoperands());
     // Increase the Z register by 1.
     if (STI.hasADDSUBIW()) {
@@ -901,7 +901,7 @@ bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsELPM) {
     auto MIBHI = buildMI(MBB, MBBI, Opc);
     buildMI(MBB, MBBI, AVR::MOVRdRr)
         .addReg(DstHiReg, RegState::Define)
-        .addReg(AVR::R0, RegState::Kill);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
     MIBHI.setMemRefs(MI.memoperands());
   }
 
@@ -972,7 +972,7 @@ bool AVRExpandPseudo::expandLPMBELPMB(Block &MBB, BlockIt MBBI, bool IsELPM) {
     auto MILB = buildMI(MBB, MBBI, Opc);
     buildMI(MBB, MBBI, AVR::MOVRdRr)
         .addReg(DstReg, RegState::Define)
-        .addReg(AVR::R0, RegState::Kill);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
     MILB.setMemRefs(MI.memoperands());
   }
 
@@ -2531,27 +2531,47 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   unsigned Flags = MI.getFlags();
   TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
-  buildMI(MBB, MBBI, AVR::INRdA)
-      .addReg(STI.getTmpRegister(), RegState::Define)
-      .addImm(STI.getIORegSREG())
-      .setMIFlags(Flags);
+  // From the XMEGA series manual:
+  // To prevent corruption when updating the stack pointer from software,
+  // a write to SPL will automatically disable interrupts
+  // for up to four instructions or until the next I/O memory write.
+  if (STI.getELFArch() >= 102) { // An XMEGA device
 
-  buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
+    buildMI(MBB, MBBI, AVR::OUTARr)
+        .addImm(STI.getIORegSPL())
+        .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+        .setMIFlags(Flags);
 
-  buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(0x3e)
-      .addReg(SrcHiReg, getKillRegState(SrcIsKill))
-      .setMIFlags(Flags);
+    buildMI(MBB, MBBI, AVR::OUTARr)
+        .addImm(STI.getIORegSPH())
+        .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+        .setMIFlags(Flags);
 
-  buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(STI.getIORegSREG())
-      .addReg(STI.getTmpRegister(), RegState::Kill)
-      .setMIFlags(Flags);
+  } else { // Disable interrupts for older devices (3 extra instructions)
 
-  buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(0x3d)
-      .addReg(SrcLoReg, getKillRegState(SrcIsKill))
-      .setMIFlags(Flags);
+    buildMI(MBB, MBBI, AVR::INRdA)
+        .addReg(STI.getTmpRegister(), RegState::Define)
+        .addImm(STI.getIORegSREG())
+        .setMIFlags(Flags);
+
+    buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
+
+    if (STI.getIORegSPH() != -1)
+      buildMI(MBB, MBBI, AVR::OUTARr)
+          .addImm(STI.getIORegSPH())
+          .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+          .setMIFlags(Flags);
+
+    buildMI(MBB, MBBI, AVR::OUTARr)
+        .addImm(STI.getIORegSREG())
+        .addReg(STI.getTmpRegister(), RegState::Kill)
+        .setMIFlags(Flags);
+
+    buildMI(MBB, MBBI, AVR::OUTARr)
+        .addImm(STI.getIORegSPL())
+        .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+        .setMIFlags(Flags);
+  }
 
   MI.eraseFromParent();
   return true;

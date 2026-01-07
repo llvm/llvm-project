@@ -1,4 +1,4 @@
-# REQUIRES: shell, aarch64-registered-target
+# REQUIRES: aarch64-registered-target
 # UNSUPPORTED: system-windows
 
 # Merge two object files having cgdata (__llvm_outline)
@@ -7,14 +7,18 @@ RUN: split-file %s %t
 
 # Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
 RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
-RUN: od -t x1 -j 32 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-1-bytes.txt
-RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-1-template.ll > %t/merge-1.ll
+RUN: echo -n "s/<RAW_1_BYTES>/" > %t/raw-1-sed.txt
+RUN: od -t x1 -j 32 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' >> %t/raw-1-sed.txt
+RUN: echo "/g" >> %t/raw-1-sed.txt
+RUN: sed -f %t/raw-1-sed.txt %t/merge-1-template.ll > %t/merge-1.ll
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-1.ll -o %t/merge-1.o
 
 # Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
 RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
-RUN: od -t x1 -j 32 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-2-bytes.txt
-RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-2-template.ll > %t/merge-2.ll
+RUN: echo -n "s/<RAW_2_BYTES>/" > %t/raw-2-sed.txt
+RUN: od -t x1 -j 32 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' >> %t/raw-2-sed.txt
+RUN: echo "/g" >> %t/raw-2-sed.txt
+RUN: sed -f %t/raw-2-sed.txt %t/merge-2-template.ll > %t/merge-2.ll
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-2.ll -o %t/merge-2.o
 
 # Merge two object files into the codegen data file.

@@ -5,7 +5,8 @@
 ! Same list item can not be present multiple times or in multipe
 ! USE_DEVICE_ADDR clauses.
 
-subroutine omp_target_data
+subroutine omp_target_data(asa)
+   integer :: asa(*)
    integer :: a(1024)
    integer, target :: b(1024)
    type my_type
@@ -30,4 +31,7 @@ subroutine omp_target_data
       b = a
    !$omp end target data
 
+   !ERROR: Whole assumed-size arrays are not allowed on USE_DEVICE_ADDR clause
+   !$omp target data use_device_addr(asa)
+   !$omp end target data
 end subroutine omp_target_data

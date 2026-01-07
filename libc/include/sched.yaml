@@ -18,6 +18,13 @@ functions:
     arguments:
       - type: size_t
       - type: const cpu_set_t *
+  - name: getcpu
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: unsigned int *
+      - type: unsigned int *
   - name: sched_get_priority_max
     standards:
       - POSIX

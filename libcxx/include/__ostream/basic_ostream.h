@@ -15,6 +15,9 @@
 
 #  include <__exception/operations.h>
 #  include <__fwd/memory.h>
+#  include <__iterator/ostreambuf_iterator.h>
+#  include <__locale_dir/num.h>
+#  include <__locale_dir/pad_and_output.h>
 #  include <__memory/addressof.h>
 #  include <__memory/unique_ptr.h>
 #  include <__new/exceptions.h>
@@ -27,7 +30,6 @@
 #  include <__utility/declval.h>
 #  include <bitset>
 #  include <ios>
-#  include <locale>
 #  include <streambuf>
 #  include <string_view>
 
@@ -172,7 +174,7 @@ public:
   basic_ostream& flush();
 
   // 27.7.2.5 seeks:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 pos_type tellp();
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 pos_type tellp();
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& seekp(pos_type __pos);
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& seekp(off_type __off, ios_base::seekdir __dir);
 

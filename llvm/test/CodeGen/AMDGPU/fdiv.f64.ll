@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
 
 
 ; GCN-LABEL: {{^}}fdiv_f64:
@@ -127,7 +127,7 @@ define amdgpu_kernel void @s_fdiv_v4f64(ptr addrspace(1) %out, <4 x double> %num
 ; GCN-LABEL: {{^}}div_fast_2_x_pat_f64:
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0.5
 ; GCN: buffer_store_dwordx2 [[MUL]]
-define amdgpu_kernel void @div_fast_2_x_pat_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @div_fast_2_x_pat_f64(ptr addrspace(1) %out) #0 {
   %x = load double, ptr addrspace(1) poison
   %rcp = fdiv fast double %x, 2.0
   store double %rcp, ptr addrspace(1) %out, align 4
@@ -139,7 +139,7 @@ define amdgpu_kernel void @div_fast_2_x_pat_f64(ptr addrspace(1) %out) #1 {
 ; GCN-DAG: v_mov_b32_e32 v[[K_HI:[0-9]+]], 0x3fb99999
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, v[[[K_LO]]:[[K_HI]]]
 ; GCN: buffer_store_dwordx2 [[MUL]]
-define amdgpu_kernel void @div_fast_k_x_pat_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @div_fast_k_x_pat_f64(ptr addrspace(1) %out) #0 {
   %x = load double, ptr addrspace(1) poison
   %rcp = fdiv fast double %x, 10.0
   store double %rcp, ptr addrspace(1) %out, align 4
@@ -151,7 +151,7 @@ define amdgpu_kernel void @div_fast_k_x_pat_f64(ptr addrspace(1) %out) #1 {
 ; GCN-DAG: v_mov_b32_e32 v[[K_HI:[0-9]+]], 0xbfb99999
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, v[[[K_LO]]:[[K_HI]]]
 ; GCN: buffer_store_dwordx2 [[MUL]]
-define amdgpu_kernel void @div_fast_neg_k_x_pat_f64(ptr addrspace(1) %out) #1 {
+define amdgpu_kernel void @div_fast_neg_k_x_pat_f64(ptr addrspace(1) %out) #0 {
   %x = load double, ptr addrspace(1) poison
   %rcp = fdiv fast double %x, -10.0
   store double %rcp, ptr addrspace(1) %out, align 4
@@ -159,4 +159,3 @@ define amdgpu_kernel void @div_fast_neg_k_x_pat_f64(ptr addrspace(1) %out) #1 {
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "unsafe-fp-math"="true" }

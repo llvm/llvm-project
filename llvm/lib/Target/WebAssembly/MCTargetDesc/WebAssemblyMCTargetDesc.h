@@ -39,13 +39,6 @@ createWebAssemblyWasmObjectWriter(bool Is64Bit, bool IsEmscripten);
 
 namespace WebAssembly {
 
-// Exception handling / setjmp-longjmp handling command-line options
-extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
-extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
-extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
-extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
-extern cl::opt<bool> WasmUseLegacyEH;  // Legacy Wasm EH
-
 enum OperandType {
   /// Basic block label in a branch construct.
   OPERAND_BASIC_BLOCK = MCOI::OPERAND_FIRST_TARGET,
@@ -615,9 +608,9 @@ inline bool isLocalTee(unsigned Opc) {
 static const unsigned UnusedReg = -1u;
 
 // For a given stackified WAReg, return the id number to print with push/pop.
-unsigned inline getWARegStackId(unsigned Reg) {
-  assert(Reg & INT32_MIN);
-  return Reg & INT32_MAX;
+unsigned inline getWARegStackId(MCRegister Reg) {
+  assert(Reg.id() & INT32_MIN);
+  return Reg.id() & INT32_MAX;
 }
 
 } // end namespace WebAssembly

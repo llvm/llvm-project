@@ -1141,10 +1141,10 @@ define i64 @test59(ptr %foo, i64 %i) {
 
 define i64 @test60(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[GEP1_IDX]], [[I:%.*]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[GEP1_OFFS]]
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i64 [[GEP1_OFFS]], -4200
+; CHECK-NEXT:    [[GEP1_SPLIT_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[GEP1_SPLIT_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i64 [[TMP1]], -4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
@@ -1160,10 +1160,10 @@ define i64 @test60(ptr %foo, i64 %i, i64 %j) {
 
 define i64 @test60_nuw(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_nuw(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nuw i64 [[J:%.*]], 100
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nuw i64 [[GEP1_IDX]], [[I:%.*]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[FOO:%.*]], i64 [[GEP1_OFFS]]
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[GEP1_OFFS]], -4200
+; CHECK-NEXT:    [[GEP1_SPLIT_IDX:%.*]] = mul nuw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 [[GEP1_SPLIT_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[FOO:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[TMP1]], -4200
 ; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
@@ -1178,10 +1178,10 @@ define i64 @test60_nuw(ptr %foo, i64 %i, i64 %j) {
 
 define i64 @test61(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test61(
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[GEP2_IDX]], [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[GEP2_OFFS]]
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 4200, [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEP2_SPLIT_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[GEP2_SPLIT_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 4200, [[TMP1]]
 ; CHECK-NEXT:    store ptr [[GEP2]], ptr @dummy_global2, align 8
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;

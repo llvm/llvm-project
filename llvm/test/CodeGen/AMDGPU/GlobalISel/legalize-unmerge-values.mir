@@ -101,15 +101,10 @@ name: test_unmerge_s16_v3s16
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_unmerge_s16_v3s16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](s32)
-    ; CHECK-NEXT: $vgpr1 = COPY [[LSHR]](s32)
-    ; CHECK-NEXT: $vgpr2 = COPY [[BITCAST1]](s32)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[DEF]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[DEF]](s32)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(s16), %2:_(s16),  %3:_(s16) = G_UNMERGE_VALUES %0
     %4:_(s32) = G_ANYEXT %1
@@ -869,10 +864,9 @@ name: test_unmerge_v2s1
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_unmerge_v2s1
-    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[UV]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[UV1]](s32)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[DEF]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[DEF]](s32)
     ; CHECK-NEXT: S_NOP 0, implicit [[TRUNC]](s1)
     ; CHECK-NEXT: S_NOP 0, implicit [[TRUNC1]](s1)
     %0:_(<2 x s1>) = G_IMPLICIT_DEF
@@ -1089,4 +1083,25 @@ body: |
     $vgpr6_vgpr7_vgpr8 = COPY %7
     $vgpr9_vgpr10_vgpr11 = COPY %8
 
+...
+
+---
+name: test_unmerge_through_copy
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_unmerge_through_copy
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16), %2:_(s16) = G_UNMERGE_VALUES %0:_(s32)
+    %3:_(s16) = COPY %1:_(s16)
+    %4:_(s8), %5:_(s8) = G_UNMERGE_VALUES %3:_(s16)
+    %6:_(s32) = G_ZEXT %4:_(s8)
+    $vgpr0 = COPY %6:_(s32)
 ...

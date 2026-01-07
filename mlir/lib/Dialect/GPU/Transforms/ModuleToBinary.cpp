@@ -13,14 +13,7 @@
 
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -46,10 +39,10 @@ void GpuModuleToBinaryPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   auto targetFormat =
       llvm::StringSwitch<std::optional<CompilationTarget>>(compilationTarget)
-          .Cases("offloading", "llvm", CompilationTarget::Offload)
-          .Cases("assembly", "isa", CompilationTarget::Assembly)
-          .Cases("binary", "bin", CompilationTarget::Binary)
-          .Cases("fatbinary", "fatbin", CompilationTarget::Fatbin)
+          .Cases({"offloading", "llvm"}, CompilationTarget::Offload)
+          .Cases({"assembly", "isa"}, CompilationTarget::Assembly)
+          .Cases({"binary", "bin"}, CompilationTarget::Binary)
+          .Cases({"fatbinary", "fatbin"}, CompilationTarget::Fatbin)
           .Default(std::nullopt);
   if (!targetFormat)
     getOperation()->emitError() << "Invalid format specified.";
@@ -115,8 +108,8 @@ LogicalResult moduleSerializer(GPUModuleOp op,
       !handler && moduleHandler)
     handler = moduleHandler;
   builder.setInsertionPointAfter(op);
-  builder.create<gpu::BinaryOp>(op.getLoc(), op.getName(), handler,
-                                builder.getArrayAttr(objects));
+  gpu::BinaryOp::create(builder, op.getLoc(), op.getName(), handler,
+                        builder.getArrayAttr(objects));
   op->erase();
   return success();
 }

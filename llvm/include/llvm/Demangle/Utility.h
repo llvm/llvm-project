@@ -81,7 +81,7 @@ public:
   OutputBuffer(const OutputBuffer &) = delete;
   OutputBuffer &operator=(const OutputBuffer &) = delete;
 
-  virtual ~OutputBuffer() {}
+  virtual ~OutputBuffer() = default;
 
   operator std::string_view() const {
     return std::string_view(Buffer, CurrentPosition);
@@ -104,18 +104,32 @@ public:
   unsigned CurrentPackIndex = std::numeric_limits<unsigned>::max();
   unsigned CurrentPackMax = std::numeric_limits<unsigned>::max();
 
-  /// When zero, we're printing template args and '>' needs to be parenthesized.
-  /// Use a counter so we can simply increment inside parentheses.
-  unsigned GtIsGt = 1;
+  struct {
+    /// The depth of '(' and ')' inside the currently printed template
+    /// arguments.
+    unsigned ParenDepth = 0;
 
-  bool isGtInsideTemplateArgs() const { return GtIsGt == 0; }
+    /// True if we're currently printing a template argument.
+    bool InsideTemplate = false;
+  } TemplateTracker;
+
+  /// Returns true if we're currently between a '(' and ')' when printing
+  /// template args.
+  bool isInParensInTemplateArgs() const {
+    return TemplateTracker.ParenDepth > 0;
+  }
+
+  /// Returns true if we're printing template args.
+  bool isInsideTemplateArgs() const { return TemplateTracker.InsideTemplate; }
 
   void printOpen(char Open = '(') {
-    GtIsGt++;
+    if (isInsideTemplateArgs())
+      TemplateTracker.ParenDepth++;
     *this += Open;
   }
   void printClose(char Close = ')') {
-    GtIsGt--;
+    if (isInsideTemplateArgs())
+      TemplateTracker.ParenDepth--;
     *this += Close;
   }
 
@@ -136,6 +150,8 @@ public:
 
   OutputBuffer &prepend(std::string_view R) {
     size_t Size = R.size();
+    if (!Size)
+      return *this;
 
     grow(Size);
     std::memmove(Buffer + Size, Buffer, CurrentPosition);

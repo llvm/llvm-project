@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 class TestSharedPtrDbgInfoContent(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIf(macos_version=["<", "15.0"])
     def test(self):
         self.build()
 
@@ -22,7 +23,7 @@ class TestSharedPtrDbgInfoContent(TestBase):
         self.expect_expr(
             "s",
             result_type="std::shared_ptr<Foo>",
-            result_children=[ValueCheck(name="__ptr_")],
+            result_children=[ValueCheck(name="pointer")],
         )
         self.expect_expr("s->a", result_type="int", result_value="3")
         self.expect_expr("s->a = 5", result_type="int", result_value="5")

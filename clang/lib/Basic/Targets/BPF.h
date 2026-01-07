@@ -34,11 +34,7 @@ public:
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
     RegParmMax = 5;
-    if (Triple.getArch() == llvm::Triple::bpfeb) {
-      resetDataLayout("E-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
-    } else {
-      resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
-    }
+    resetDataLayout();
     MaxAtomicPromoteWidth = 64;
     MaxAtomicInlineWidth = 64;
     TLSSupported = false;
@@ -94,7 +90,7 @@ public:
     default:
       return CCCR_Warning;
     case CC_C:
-    case CC_OpenCLKernel:
+    case CC_DeviceKernel:
       return CCCR_OK;
     }
   }

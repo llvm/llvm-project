@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -emit-llvm -triple i686-mingw32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-w64-mingw32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i686-pc-cygwin %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-pc-cygwin %s -o - | FileCheck %s
 
 #define JOIN2(x, y) x##y
 #define JOIN(x, y) JOIN2(x, y)
@@ -7,11 +10,16 @@
 
 template <class T>
 class c {
+public:
+  c(const c &) {}
+  c(c &&) noexcept {}
   void f() {}
 };
 
 template class __declspec(dllexport) c<int>;
 
+// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIiEC1ERKS0_
+// CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIiEC1EOS0_
 // CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIiE1fEv
 
 extern template class __declspec(dllexport) c<char>;
@@ -23,6 +31,18 @@ extern template class c<double>;
 template class __declspec(dllexport) c<double>;
 
 // CHECK-NOT: define {{.*}} dllexport {{.*}} @_ZN1cIdE1fEv
+
+extern template class __declspec(dllimport) c<short>;
+
+// CHECK: declare dllimport {{.*}} @_ZN1cIsEC1ERKS0_
+// CHECK: declare dllimport {{.*}} @_ZN1cIsEC1EOS0_
+// CHECK: declare dllimport {{.*}} @_ZN1cIsE1fEv
+
+void use_ctors(c<short> &&x) {
+  c<short> y{x};
+  c<short> z{static_cast<c<short> &&>(x)};
+  z.f();
+}
 
 template <class T>
 struct outer {

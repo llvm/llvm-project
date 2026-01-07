@@ -17,7 +17,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -29,8 +28,6 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
-
-#include "Utility/ARM64_DWARF_Registers.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -342,48 +339,6 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   }
 
   return error;
-}
-
-UnwindPlanSP ABIMacOSX_arm64::CreateFunctionEntryUnwindPlan() {
-  uint32_t lr_reg_num = arm64_dwarf::lr;
-  uint32_t sp_reg_num = arm64_dwarf::sp;
-  uint32_t pc_reg_num = arm64_dwarf::pc;
-
-  UnwindPlan::Row row;
-
-  // Our previous Call Frame Address is the stack pointer
-  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
-
-  // Our previous PC is in the LR, all other registers are the same.
-  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
-
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("arm64 at-func-entry default");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  return plan_sp;
-}
-
-UnwindPlanSP ABIMacOSX_arm64::CreateDefaultUnwindPlan() {
-  uint32_t fp_reg_num = arm64_dwarf::fp;
-  uint32_t pc_reg_num = arm64_dwarf::pc;
-
-  UnwindPlan::Row row;
-  const int32_t ptr_size = 8;
-
-  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row.SetUnspecifiedRegistersAreUndefined(true);
-
-  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
-
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("arm64-apple-darwin default unwind plan");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return plan_sp;
 }
 
 // AAPCS64 (Procedure Call Standard for the ARM 64-bit Architecture) says
@@ -802,42 +757,39 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
-  addr_t pac_sign_extension = 0x0080000000000000ULL;
-  addr_t tbi_mask = 0xff80000000000000ULL;
-  addr_t mask = 0;
+constexpr addr_t tbi_mask = 0xff80000000000000ULL;
+constexpr addr_t pac_sign_extension = 0x0080000000000000ULL;
 
-  if (ProcessSP process_sp = GetProcessSP()) {
-    mask = process_sp->GetCodeAddressMask();
-    if (pc & pac_sign_extension) {
-      addr_t highmem_mask = process_sp->GetHighmemCodeAddressMask();
-      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
-        mask = highmem_mask;
-    }
-  }
+/// Consults the process for its {code, data} address masks and applies it to
+/// `addr`.
+static addr_t DoFixAddr(addr_t addr, bool is_code, ProcessSP process_sp) {
+  if (!process_sp)
+    return addr;
+
+  addr_t mask = is_code ? process_sp->GetCodeAddressMask()
+                        : process_sp->GetDataAddressMask();
   if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
-  return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
+  if (addr & pac_sign_extension) {
+    addr_t highmem_mask = is_code ? process_sp->GetHighmemCodeAddressMask()
+                                  : process_sp->GetHighmemCodeAddressMask();
+    if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
+      return addr | highmem_mask;
+    return addr | mask;
+  }
+
+  return addr & (~mask);
 }
 
-addr_t ABIMacOSX_arm64::FixDataAddress(addr_t pc) {
-  addr_t pac_sign_extension = 0x0080000000000000ULL;
-  addr_t tbi_mask = 0xff80000000000000ULL;
-  addr_t mask = 0;
+addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
+  ProcessSP process_sp = GetProcessSP();
+  return DoFixAddr(pc, true /*is_code*/, GetProcessSP());
+}
 
-  if (ProcessSP process_sp = GetProcessSP()) {
-    mask = process_sp->GetDataAddressMask();
-    if (pc & pac_sign_extension) {
-      addr_t highmem_mask = process_sp->GetHighmemDataAddressMask();
-      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
-        mask = highmem_mask;
-    }
-  }
-  if (mask == LLDB_INVALID_ADDRESS_MASK)
-    mask = tbi_mask;
-
-  return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
+addr_t ABIMacOSX_arm64::FixDataAddress(addr_t addr) {
+  ProcessSP process_sp = GetProcessSP();
+  return DoFixAddr(addr, false /*is_code*/, GetProcessSP());
 }
 
 void ABIMacOSX_arm64::Initialize() {

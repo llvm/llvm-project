@@ -17,7 +17,7 @@ func.func @entry() {
   %za_s_size = arith.muli %svl_s, %svl_s : index
 
   // Allocate memory.
-  %mem1 = memref.alloca(%za_s_size) : memref<?xi32>
+  %mem1 = memref.alloca(%svl_s, %svl_s) : memref<?x?xi32>
 
   // Fill each "row" of "mem1" with row number.
   //
@@ -29,15 +29,15 @@ func.func @entry() {
   //   3, 3, 3, 3
   //
   %init_0 = arith.constant 0 : i32
-  scf.for %i = %c0 to %za_s_size step %svl_s iter_args(%val = %init_0) -> (i32) {
+  scf.for %i = %c0 to %svl_s step %c1 iter_args(%val = %init_0) -> (i32) {
     %splat_val = vector.broadcast %val : i32 to vector<[4]xi32>
-    vector.store %splat_val, %mem1[%i] : memref<?xi32>, vector<[4]xi32>
+    vector.store %splat_val, %mem1[%i, %c0] : memref<?x?xi32>, vector<[4]xi32>
     %val_next = arith.addi %val, %c1_i32 : i32
     scf.yield %val_next : i32
   }
 
   // Load tile from "mem1" vertically.
-  %0 = arm_sme.tile_load %mem1[%c0, %c0] layout<vertical> : memref<?xi32>, vector<[4]x[4]xi32>
+  %0 = arm_sme.tile_load %mem1[%c0, %c0] layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
 
   // 1. ORIGINAL HORIZONTAL LAYOUT
   // Dump "mem1". The smallest SVL is 128-bits so the tile will be at least
@@ -50,8 +50,8 @@ func.func @entry() {
   // CHECK-NEXT: ( 3, 3, 3, 3
   // CHECK:      TILE END
   vector.print str "TILE BEGIN\n"
-  scf.for %i = %c0 to %za_s_size step %svl_s {
-    %tileslice = vector.load %mem1[%i] : memref<?xi32>, vector<[4]xi32>
+  scf.for %i = %c0 to %svl_s step %c1 {
+    %tileslice = vector.load %mem1[%i, %c0] : memref<?x?xi32>, vector<[4]xi32>
     vector.print %tileslice : vector<[4]xi32>
   }
   vector.print str "TILE END\n"

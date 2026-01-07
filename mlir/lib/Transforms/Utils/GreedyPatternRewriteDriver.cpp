@@ -15,6 +15,8 @@
 #include "mlir/Config/mlir-config.h"
 #include "mlir/IR/Action.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
@@ -23,8 +25,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -179,9 +180,8 @@ static Operation *getDumpRootOp(Operation *op) {
   return op;
 }
 static void logSuccessfulFolding(Operation *op) {
-  llvm::dbgs() << "// *** IR Dump After Successful Folding ***\n";
-  op->dump();
-  llvm::dbgs() << "\n\n";
+  LDBG() << "// *** IR Dump After Successful Folding ***\n"
+         << OpWithFlags(op, OpPrintingFlags().elideLargeElementsAttrs());
 }
 #endif // NDEBUG
 
@@ -395,8 +395,12 @@ private:
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
 #ifndef NDEBUG
+  /// A raw output stream used to prefix the debug log.
+
+  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + ":1] ").str(),
+                                  llvm::dbgs()};
   /// A logger used to emit information during the application process.
-  llvm::ScopedPrinter logger{llvm::dbgs()};
+  llvm::ScopedPrinter logger{os};
 #endif
 
   /// The low-level pattern applicator.
@@ -416,7 +420,8 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
       // clang-format off
       , expensiveChecks(
           /*driver=*/this,
-          /*topLevel=*/config.scope ? config.scope->getParentOp() : nullptr)
+          /*topLevel=*/config.getScope() ? config.getScope()->getParentOp()
+                                         : nullptr)
 // clang-format on
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 {
@@ -596,7 +601,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 #ifdef NDEBUG
     // Optimization: PatternApplicator callbacks are not needed when running in
     // optimized mode and without a listener.
-    if (!config.listener) {
+    if (!config.getListener()) {
       canApply = nullptr;
       onFailure = nullptr;
       onSuccess = nullptr;
@@ -604,11 +609,10 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 #endif // NDEBUG
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-    if (config.scope) {
-      expensiveChecks.computeFingerPrints(config.scope->getParentOp());
+    if (config.getScope()) {
+      expensiveChecks.computeFingerPrints(config.getScope()->getParentOp());
     }
-    auto clearFingerprints =
-        llvm::make_scope_exit([&]() { expensiveChecks.clear(); });
+    llvm::scope_exit clearFingerprints([&]() { expensiveChecks.clear(); });
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
     LogicalResult matchResult =
@@ -707,7 +711,7 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
 
     Operation *otherUser = nullptr;
     bool hasMoreThanTwoUses = false;
-    for (auto user : operand.getUsers()) {
+    for (auto *user : operand.getUsers()) {
       if (user == op || user == otherUser)
         continue;
       if (!otherUser) {
@@ -871,7 +875,18 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 
     ctx->executeAction<GreedyPatternRewriteIteration>(
         [&] {
-          continueRewrites = processWorklist();
+          continueRewrites = false;
+
+          // Erase unreachable blocks
+          // Operations like:
+          //   %add = arith.addi %add, %add : i64
+          // are legal in unreachable code. Unfortunately many patterns would be
+          // unsafe to apply on such IR and can lead to crashes or infinite
+          // loops.
+          continueRewrites |=
+              succeeded(eraseUnreachableBlocks(rewriter, region));
+
+          continueRewrites |= processWorklist();
 
           // After applying patterns, make sure that the CFG of each of the
           // regions is kept up to date.
@@ -908,7 +923,7 @@ mlir::applyPatternsGreedily(Region &region,
     config.setScope(&region);
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  if (failed(verify(config.scope->getParentOp())))
+  if (failed(verify(config.getScope()->getParentOp())))
     llvm::report_fatal_error(
         "greedy pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -917,10 +932,9 @@ mlir::applyPatternsGreedily(Region &region,
   RegionPatternRewriteDriver driver(region.getContext(), patterns, config,
                                     region);
   LogicalResult converged = std::move(driver).simplify(changed);
-  LLVM_DEBUG(if (failed(converged)) {
-    llvm::dbgs() << "The pattern rewrite did not converge after scanning "
-                 << config.getMaxIterations() << " times\n";
-  });
+  if (failed(converged))
+    LDBG() << "The pattern rewrite did not converge after scanning "
+           << config.getMaxIterations() << " times";
   return converged;
 }
 
@@ -1039,7 +1053,7 @@ LogicalResult mlir::applyOpPatternsGreedily(
   }
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  if (config.scope && failed(verify(config.scope->getParentOp())))
+  if (config.getScope() && failed(verify(config.getScope()->getParentOp())))
     llvm::report_fatal_error(
         "greedy pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -1052,9 +1066,8 @@ LogicalResult mlir::applyOpPatternsGreedily(
   LogicalResult converged = std::move(driver).simplify(ops, changed);
   if (allErased)
     *allErased = surviving.empty();
-  LLVM_DEBUG(if (failed(converged)) {
-    llvm::dbgs() << "The pattern rewrite did not converge after "
-                 << config.getMaxNumRewrites() << " rewrites";
-  });
+  if (failed(converged))
+    LDBG() << "The pattern rewrite did not converge after "
+           << config.getMaxNumRewrites() << " rewrites";
   return converged;
 }

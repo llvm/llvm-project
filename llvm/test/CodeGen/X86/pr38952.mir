@@ -1,4 +1,5 @@
 # RUN: llc %s -run-pass=postra-machine-sink -o - | FileCheck %s
+# RUN: llc %s -passes='postra-machine-sink' -o - | FileCheck %s
 --- |
   ; Module stripped of everything, MIR below is what's interesting
   ; ModuleID = '<stdin>'
@@ -59,8 +60,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:

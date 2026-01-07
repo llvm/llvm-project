@@ -14,7 +14,27 @@
 
 #include <optional>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+
+// Test SFINAE.
+static_assert(HasOperatorLessThan<std::optional<ThreeWayComparable>, int>);
+static_assert(HasOperatorLessThan<std::optional<ThreeWayComparable>, ThreeWayComparable>);
+
+static_assert(!HasOperatorLessThan<std::optional<NonComparable>, NonComparable>);
+static_assert(!HasOperatorLessThan<std::optional<ThreeWayComparable>, NonComparable>);
+static_assert(!HasOperatorLessThan<std::optional<NonComparable>, ThreeWayComparable>);
+
+static_assert(HasOperatorLessThan<int, std::optional<ThreeWayComparable>>);
+static_assert(HasOperatorLessThan<ThreeWayComparable, std::optional<ThreeWayComparable>>);
+
+static_assert(!HasOperatorLessThan<NonComparable, std::optional<NonComparable>>);
+static_assert(!HasOperatorLessThan<NonComparable, std::optional<ThreeWayComparable>>);
+static_assert(!HasOperatorLessThan<ThreeWayComparable, std::optional<NonComparable>>);
+
+#endif
 
 using std::optional;
 

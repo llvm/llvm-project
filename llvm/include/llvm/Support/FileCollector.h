@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 #include <string>
@@ -19,7 +20,7 @@ namespace llvm {
 class FileCollectorFileSystem;
 class Twine;
 
-class FileCollectorBase {
+class LLVM_ABI FileCollectorBase {
 public:
   FileCollectorBase();
   virtual ~FileCollectorBase();
@@ -66,7 +67,7 @@ protected:
 ///
 /// In order to preserve the relative topology of files we use their real paths
 /// as relative paths inside of the Root.
-class FileCollector : public FileCollectorBase {
+class LLVM_ABI FileCollector : public FileCollectorBase {
 public:
   /// Helper utility that encapsulates the logic for canonicalizing a virtual
   /// path and a path to copy from.
@@ -78,7 +79,13 @@ public:
     };
 
     /// Canonicalize a pair of virtual and real paths.
-    PathStorage canonicalize(StringRef SrcPath);
+    LLVM_ABI PathStorage canonicalize(StringRef SrcPath);
+
+    /// Return the underlying file system.
+    vfs::FileSystem &getFileSystem() const { return *VFS; };
+
+    explicit PathCanonicalizer(IntrusiveRefCntPtr<vfs::FileSystem> VFS)
+        : VFS(std::move(VFS)) {}
 
   private:
     /// Replace with a (mostly) real path, or don't modify. Resolves symlinks
@@ -86,13 +93,16 @@ public:
     /// leaves the filename as a possible symlink.
     void updateWithRealPath(SmallVectorImpl<char> &Path);
 
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
+
     StringMap<std::string> CachedDirs;
   };
 
   /// \p Root is the directory where collected files are will be stored.
   /// \p OverlayRoot is VFS mapping root.
   /// \p Root directory gets created in copyFiles unless it already exists.
-  FileCollector(std::string Root, std::string OverlayRoot);
+  FileCollector(std::string Root, std::string OverlayRoot,
+                IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   /// Write the yaml mapping (for the VFS) to the given file.
   std::error_code writeMapping(StringRef MappingFile);

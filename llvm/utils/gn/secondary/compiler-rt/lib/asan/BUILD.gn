@@ -7,6 +7,7 @@ if (current_toolchain == host_toolchain) {
   }
 } else {
   asan_sources = [
+    "asan_aix.cpp",
     "asan_activation.cpp",
     "asan_activation.h",
     "asan_activation_flags.inc",
@@ -68,6 +69,7 @@ if (current_toolchain == host_toolchain) {
     if (current_os != "win") {
       cflags += [ "-ftls-model=initial-exec" ]
     } else {
+      cflags += [ "/MD" ]
       ldflags = [ "/OPT:NOICF" ]
     }
 

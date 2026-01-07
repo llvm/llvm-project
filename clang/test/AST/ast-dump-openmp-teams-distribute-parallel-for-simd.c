@@ -71,8 +71,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | | | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:5:1) *const restrict'
 // CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -99,8 +99,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |   | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:5:1) *const restrict'
 // CHECK-NEXT: |       | | | |   |   `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -127,8 +127,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | | | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:5:1) *const restrict'
 // CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -155,8 +155,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:5:1) *const restrict'
 // CHECK-NEXT: |       | | | |   `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -211,8 +211,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | | | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:5:1) *const restrict'
 // CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -239,8 +239,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |   | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:5:1) *const restrict'
 // CHECK-NEXT: |       |   |   |   `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -267,8 +267,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | | | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:5:1) *const restrict'
 // CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -295,8 +295,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | `-NullStmt {{.*}} <line:7:5>
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:5:1) *const restrict'
 // CHECK-NEXT: |       |   |   `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -363,8 +363,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | | |   `-NullStmt {{.*}} <line:15:7>
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:12:1) *const restrict'
 // CHECK-NEXT: |       | | | |   | | | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -407,8 +407,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |   |   `-NullStmt {{.*}} <line:15:7>
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:12:1) *const restrict'
 // CHECK-NEXT: |       | | | |   |   |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -451,8 +451,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | | |   `-NullStmt {{.*}} <line:15:7>
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:12:1) *const restrict'
 // CHECK-NEXT: |       | | | | | | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -495,8 +495,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |   `-NullStmt {{.*}} <line:15:7>
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:12:1) *const restrict'
 // CHECK-NEXT: |       | | | |   |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -568,8 +568,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | | |   `-NullStmt {{.*}} <line:15:7>
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:12:1) *const restrict'
 // CHECK-NEXT: |       |   |   | | | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -612,8 +612,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |   |   `-NullStmt {{.*}} <line:15:7>
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:12:1) *const restrict'
 // CHECK-NEXT: |       |   |   |   |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -656,8 +656,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | | |   `-NullStmt {{.*}} <line:15:7>
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:12:1) *const restrict'
 // CHECK-NEXT: |       |   | | | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -700,8 +700,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |   `-NullStmt {{.*}} <line:15:7>
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:12:1) *const restrict'
 // CHECK-NEXT: |       |   |   |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -775,8 +775,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | | |   `-NullStmt {{.*}} <line:23:7>
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:20:1) *const restrict'
 // CHECK-NEXT: |       | | | |   | | | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -819,8 +819,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |   |   `-NullStmt {{.*}} <line:23:7>
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:20:1) *const restrict'
 // CHECK-NEXT: |       | | | |   |   |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -863,8 +863,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | | |   `-NullStmt {{.*}} <line:23:7>
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:20:1) *const restrict'
 // CHECK-NEXT: |       | | | | | | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -907,8 +907,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |   `-NullStmt {{.*}} <line:23:7>
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:20:1) *const restrict'
 // CHECK-NEXT: |       | | | |   |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -984,8 +984,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | | |   `-NullStmt {{.*}} <line:23:7>
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:20:1) *const restrict'
 // CHECK-NEXT: |       |   |   | | | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1028,8 +1028,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |   |   `-NullStmt {{.*}} <line:23:7>
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:20:1) *const restrict'
 // CHECK-NEXT: |       |   |   |   |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1072,8 +1072,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | | |   `-NullStmt {{.*}} <line:23:7>
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:20:1) *const restrict'
 // CHECK-NEXT: |       |   | | | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1116,8 +1116,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |   `-NullStmt {{.*}} <line:23:7>
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:20:1) *const restrict'
 // CHECK-NEXT: |       |   |   |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1191,8 +1191,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | | |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:28:1) *const restrict'
 // CHECK-NEXT: |       | | | |   | | | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1235,8 +1235,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |   |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:28:1) *const restrict'
 // CHECK-NEXT: |       | | | |   |   |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1279,8 +1279,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | | |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:28:1) *const restrict'
 // CHECK-NEXT: |       | | | | | | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1323,8 +1323,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:28:1) *const restrict'
 // CHECK-NEXT: |       | | | |   |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1419,8 +1419,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | | |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:28:1) *const restrict'
 // CHECK-NEXT: |       |   |   | | | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1463,8 +1463,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |   |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:28:1) *const restrict'
 // CHECK-NEXT: |       |   |   |   |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1507,8 +1507,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | | |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:28:1) *const restrict'
 // CHECK-NEXT: |       |   | | | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1551,8 +1551,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |   `-NullStmt {{.*}} <line:31:7>
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT: |       |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:28:1) *const restrict'
 // CHECK-NEXT: |       |   |   |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1659,8 +1659,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   | | | |     `-NullStmt {{.*}} <line:40:9>
 // CHECK-NEXT:         | | | |   | | | |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT:         | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT:         | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT:         | | | |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:36:1) *const restrict'
 // CHECK-NEXT:         | | | |   | | | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | | |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1719,8 +1719,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   |   |     `-NullStmt {{.*}} <line:40:9>
 // CHECK-NEXT:         | | | |   |   |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT:         | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT:         | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT:         | | | |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:36:1) *const restrict'
 // CHECK-NEXT:         | | | |   |   |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | | |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1779,8 +1779,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | | | | |     `-NullStmt {{.*}} <line:40:9>
 // CHECK-NEXT:         | | | | | | |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT:         | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT:         | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT:         | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:36:1) *const restrict'
 // CHECK-NEXT:         | | | | | | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1839,8 +1839,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   |     `-NullStmt {{.*}} <line:40:9>
 // CHECK-NEXT:         | | | |   |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT:         | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT:         | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT:         | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:36:1) *const restrict'
 // CHECK-NEXT:         | | | |   |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -1952,8 +1952,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   | | | |     `-NullStmt {{.*}} <line:40:9>
 // CHECK-NEXT:         |   |   | | | |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT:         |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT:         |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT:         |   |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:36:1) *const restrict'
 // CHECK-NEXT:         |   |   | | | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -2012,8 +2012,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   |   |     `-NullStmt {{.*}} <line:40:9>
 // CHECK-NEXT:         |   |   |   |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT:         |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT:         |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT:         |   |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:36:1) *const restrict'
 // CHECK-NEXT:         |   |   |   |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -2072,8 +2072,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   | | | |     `-NullStmt {{.*}} <line:40:9>
 // CHECK-NEXT:         |   | | | |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT:         |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT:         |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT:         |   | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:36:1) *const restrict'
 // CHECK-NEXT:         |   | | | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
@@ -2132,8 +2132,8 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   |     `-NullStmt {{.*}} <line:40:9>
 // CHECK-NEXT:         |   |   |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const unsigned long'
-// CHECK-NEXT:         |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const unsigned long'
+// CHECK-NEXT:         |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
 // CHECK-NEXT:         |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for-simd.c:36:1) *const restrict'
 // CHECK-NEXT:         |   |   |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0

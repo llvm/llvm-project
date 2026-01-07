@@ -18,6 +18,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -41,13 +42,13 @@ namespace classic {
 ///
 /// All interactions with the MC layer that is used to build the debug
 /// information binary representation are handled in this class.
-class DwarfStreamer : public DwarfEmitter {
+class LLVM_ABI DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(DWARFLinkerBase::OutputFileType OutFileType,
                 raw_pwrite_stream &OutFile,
                 DWARFLinkerBase::MessageHandlerTy Warning)
       : OutFile(OutFile), OutFileType(OutFileType), WarningHandler(Warning) {}
-  virtual ~DwarfStreamer() = default;
+  ~DwarfStreamer() override = default;
 
   static Expected<std::unique_ptr<DwarfStreamer>> createStreamer(
       const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,

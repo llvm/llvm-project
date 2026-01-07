@@ -8,90 +8,28 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "Watchpoint.h"
 #include <set>
 
 namespace lldb_dap {
 
-// "SetDataBreakpointsRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Replaces all existing data breakpoints with new data
-//     breakpoints.\nTo clear all data breakpoints, specify an empty
-//     array.\nWhen a data breakpoint is hit, a `stopped` event (with reason
-//     `data breakpoint`) is generated.\nClients should only call this request
-//     if the corresponding capability `supportsDataBreakpoints` is true.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "setDataBreakpoints" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/SetDataBreakpointsArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "SetDataBreakpointsArguments": {
-//   "type": "object",
-//   "description": "Arguments for `setDataBreakpoints` request.",
-//   "properties": {
-//     "breakpoints": {
-//       "type": "array",
-//       "items": {
-//         "$ref": "#/definitions/DataBreakpoint"
-//       },
-//       "description": "The contents of this array replaces all existing data
-//       breakpoints. An empty array clears all data breakpoints."
-//     }
-//   },
-//   "required": [ "breakpoints" ]
-// },
-// "SetDataBreakpointsResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `setDataBreakpoints` request.\nReturned is
-//     information about each breakpoint created by this request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "breakpoints": {
-//             "type": "array",
-//             "items": {
-//               "$ref": "#/definitions/Breakpoint"
-//             },
-//             "description": "Information about the data breakpoints. The array
-//             elements correspond to the elements of the input argument
-//             `breakpoints` array."
-//           }
-//         },
-//         "required": [ "breakpoints" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-void SetDataBreakpointsRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  lldb::SBError error;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  const auto *breakpoints = arguments->getArray("breakpoints");
-  llvm::json::Array response_breakpoints;
+/// Replaces all existing data breakpoints with new data breakpoints.
+/// To clear all data breakpoints, specify an empty array.
+/// When a data breakpoint is hit, a stopped event (with reason data breakpoint)
+/// is generated. Clients should only call this request if the corresponding
+/// capability supportsDataBreakpoints is true.
+llvm::Expected<protocol::SetDataBreakpointsResponseBody>
+SetDataBreakpointsRequestHandler::Run(
+    const protocol::SetDataBreakpointsArguments &args) const {
+  std::vector<protocol::Breakpoint> response_breakpoints;
+
   dap.target.DeleteAllWatchpoints();
   std::vector<Watchpoint> watchpoints;
-  if (breakpoints) {
-    for (const auto &bp : *breakpoints) {
-      const auto *bp_obj = bp.getAsObject();
-      if (bp_obj)
-        watchpoints.emplace_back(dap, *bp_obj);
-    }
-  }
+  for (const auto &bp : args.breakpoints)
+    watchpoints.emplace_back(dap, bp);
+
   // If two watchpoints start at the same address, the latter overwrite the
   // former. So, we only enable those at first-seen addresses when iterating
   // backward.
@@ -103,12 +41,10 @@ void SetDataBreakpointsRequestHandler::operator()(
     }
   }
   for (auto wp : watchpoints)
-    AppendBreakpoint(&wp, response_breakpoints);
+    response_breakpoints.push_back(wp.ToProtocolBreakpoint());
 
-  llvm::json::Object body;
-  body.try_emplace("breakpoints", std::move(response_breakpoints));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return protocol::SetDataBreakpointsResponseBody{
+      std::move(response_breakpoints)};
 }
 
 } // namespace lldb_dap

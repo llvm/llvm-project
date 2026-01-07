@@ -33,6 +33,7 @@ static_library("cppcoreguidelines") {
     "OwningMemoryCheck.cpp",
     "PreferMemberInitializerCheck.cpp",
     "ProBoundsArrayToPointerDecayCheck.cpp",
+    "ProBoundsAvoidUncheckedContainerAccessCheck.cpp",
     "ProBoundsConstantArrayIndexCheck.cpp",
     "ProBoundsPointerArithmeticCheck.cpp",
     "ProTypeConstCastCheck.cpp",
@@ -45,6 +46,7 @@ static_library("cppcoreguidelines") {
     "RvalueReferenceParamNotMovedCheck.cpp",
     "SlicingCheck.cpp",
     "SpecialMemberFunctionsCheck.cpp",
+    "UseEnumClassCheck.cpp",
     "VirtualClassDestructorCheck.cpp",
   ]
 }

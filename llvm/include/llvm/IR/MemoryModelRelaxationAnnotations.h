@@ -20,7 +20,9 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
-#include <tuple> // for std::pair
+#include "llvm/Support/Compiler.h"
+
+#include <utility>
 
 namespace llvm {
 
@@ -52,8 +54,8 @@ public:
   /// \name Constructors
   /// @{
   MMRAMetadata() = default;
-  MMRAMetadata(const Instruction &I);
-  MMRAMetadata(MDNode *MD);
+  LLVM_ABI MMRAMetadata(const Instruction &I);
+  LLVM_ABI MMRAMetadata(MDNode *MD);
   /// @}
 
   /// \name Metadata Helpers & Builders
@@ -61,25 +63,25 @@ public:
 
   /// Combines \p A and \p B according to MMRA semantics.
   /// \returns !mmra metadata for the combined MMRAs.
-  static MDNode *combine(LLVMContext &Ctx, const MMRAMetadata &A,
-                         const MMRAMetadata &B);
+  LLVM_ABI static MDNode *combine(LLVMContext &Ctx, const MMRAMetadata &A,
+                                  const MMRAMetadata &B);
 
   /// Creates !mmra metadata for a single tag.
   ///
   /// !mmra metadata can either be a single tag, or a MDTuple containing
   /// multiple tags.
-  static MDTuple *getTagMD(LLVMContext &Ctx, StringRef Prefix,
-                           StringRef Suffix);
+  LLVM_ABI static MDTuple *getTagMD(LLVMContext &Ctx, StringRef Prefix,
+                                    StringRef Suffix);
   static MDTuple *getTagMD(LLVMContext &Ctx, const TagT &T) {
     return getTagMD(Ctx, T.first, T.second);
   }
 
   /// Creates !mmra metadata from \p Tags.
   /// \returns nullptr or a MDTuple* from \p Tags.
-  static MDTuple *getMD(LLVMContext &Ctx, ArrayRef<TagT> Tags);
+  LLVM_ABI static MDTuple *getMD(LLVMContext &Ctx, ArrayRef<TagT> Tags);
 
   /// \returns true if \p MD is a well-formed MMRA tag.
-  static bool isTagMD(const Metadata *MD);
+  LLVM_ABI static bool isTagMD(const Metadata *MD);
 
   /// @}
 
@@ -92,25 +94,25 @@ public:
   }
 
   /// \returns whether this set of tags is compatible with \p Other.
-  bool isCompatibleWith(const MMRAMetadata &Other) const;
+  LLVM_ABI bool isCompatibleWith(const MMRAMetadata &Other) const;
 
   /// @}
 
   /// \name Content Queries
   /// @{
 
-  bool hasTag(StringRef Prefix, StringRef Suffix) const;
-  bool hasTagWithPrefix(StringRef Prefix) const;
+  LLVM_ABI bool hasTag(StringRef Prefix, StringRef Suffix) const;
+  LLVM_ABI bool hasTagWithPrefix(StringRef Prefix) const;
 
-  const_iterator begin() const;
-  const_iterator end() const;
-  bool empty() const;
-  unsigned size() const;
+  LLVM_ABI const_iterator begin() const;
+  LLVM_ABI const_iterator end() const;
+  LLVM_ABI bool empty() const;
+  LLVM_ABI unsigned size() const;
 
   /// @}
 
-  void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 
   operator bool() const { return !Tags.empty(); }
   bool operator==(const MMRAMetadata &Other) const {
@@ -125,7 +127,7 @@ private:
 };
 
 /// \returns true if \p I can have !mmra metadata.
-bool canInstructionHaveMMRAs(const Instruction &I);
+LLVM_ABI bool canInstructionHaveMMRAs(const Instruction &I);
 
 } // namespace llvm
 

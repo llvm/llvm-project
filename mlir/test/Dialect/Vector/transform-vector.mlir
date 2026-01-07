@@ -121,6 +121,13 @@ func.func @arith_to_outerproduct_trans_rhs_f32(%lhs: vector<16xf32>, %rhs: vecto
   return %mul: vector<8x16xf32>
 }
 
+// See https://github.com/llvm/llvm-project/pull/152957
+// CHECK-LABEL: func.func @negative_non_vector_type
+func.func @negative_non_vector_type(%lhs: f32, %rhs: f32) -> f32 {
+  %mul = arith.mulf %lhs, %rhs : f32
+  return %mul: f32
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op

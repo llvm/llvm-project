@@ -34,6 +34,7 @@ class ParsedCommandTestCase(TestBase):
             else:
                 (short_opt, type, long_opt) = elem
                 substrs.append(f"-{short_opt} <{type}> ( --{long_opt} <{type}> )")
+
         self.expect("help " + cmd_name, substrs=substrs)
 
     def run_one_repeat(self, commands, expected_num_errors):
@@ -215,6 +216,19 @@ class ParsedCommandTestCase(TestBase):
                 "bool-arg (set: True): False",
                 "shlib-name (set: True): Something",
                 "disk-file-name (set: False):",
+                "flag-value (set: False):",
+                "line-num (set: False):",
+                "enum-option (set: False):",
+            ],
+        )
+        # Make sure flag values work:
+        self.expect(
+            "no-args -b false -s Something -f",
+            substrs=[
+                "bool-arg (set: True): False",
+                "shlib-name (set: True): Something",
+                "disk-file-name (set: False):",
+                "flag-value (set: True):",
                 "line-num (set: False):",
                 "enum-option (set: False):",
             ],
@@ -295,7 +309,7 @@ class ParsedCommandTestCase(TestBase):
 
         # no-args turns off auto-repeat
         results = self.run_one_repeat("no-args\n\n", 1)
-        self.assertIn("No auto repeat", results, "Got auto-repeat error")
+        self.assertIn("no auto repeat", results, "Got auto-repeat error")
 
         # one-args does the normal repeat
         results = self.run_one_repeat("one-arg-no-opt ONE_ARG\n\n", 0)

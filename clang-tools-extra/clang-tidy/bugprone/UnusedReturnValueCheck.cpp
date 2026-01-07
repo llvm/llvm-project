@@ -1,4 +1,4 @@
-//===--- UnusedReturnValueCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,6 @@
 #include "UnusedReturnValueCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -26,7 +25,8 @@ namespace {
 // member function are matched directly with InnerMatcher.
 AST_MATCHER_P(FunctionDecl, isInstantiatedFrom, Matcher<FunctionDecl>,
               InnerMatcher) {
-  FunctionDecl *InstantiatedFrom = Node.getInstantiatedFromMemberFunction();
+  const FunctionDecl *InstantiatedFrom =
+      Node.getInstantiatedFromMemberFunction();
   return InnerMatcher.matches(InstantiatedFrom ? *InstantiatedFrom : Node,
                               Finder, Builder);
 }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98 -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
 
@@ -204,5 +204,51 @@ A GetA() {
   A result{};
   return result;
 }
+}
+#endif
+
+namespace ForwardDeclaredMember {
+  struct A;
+  struct A {
+    int x = 0;
+    // cxx98-warning@-1 {{default member initializer for non-static data member is a C++11 extension}}
+    // cxx98-note@-2 {{because field 'x' has an initializer}}
+  };
+  struct B {
+    struct {
+      A y;
+      // cxx98-error@-1 {{anonymous struct member 'y' has a non-trivial default constructor}}
+    };
+  };
+}
+
+#if __cplusplus >= 201103L
+namespace GH167217 {
+
+struct NonMovable {
+  NonMovable(const NonMovable&) = delete;
+};
+
+struct Wrapper {
+  struct {
+    NonMovable v;
+  };
+};
+
+static_assert(!__is_constructible(Wrapper, const Wrapper&), "");
+static_assert(!__is_constructible(Wrapper, Wrapper), "");
+
+template<class T>
+struct WrapperTmpl {
+  struct {
+    NonMovable v;
+  };
+};
+
+using Wrapper2 = WrapperTmpl<NonMovable>;
+
+static_assert(!__is_constructible(Wrapper2, const Wrapper2&), "");
+static_assert(!__is_constructible(Wrapper2, Wrapper2), "");
+
 }
 #endif

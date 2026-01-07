@@ -53,7 +53,6 @@
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -132,25 +131,6 @@ public:
   virtual ~VariadicABIInfo() = default;
 };
 
-// Module implements getFunction() which returns nullptr on missing declaration
-// and getOrInsertFunction which creates one when absent. Intrinsics.h only
-// implements getDeclaration which creates one when missing. Checking whether
-// an intrinsic exists thus inserts it in the module and it then needs to be
-// deleted again to clean up.
-// The right name for the two functions on intrinsics would match Module::,
-// but doing that in a single change would introduce nullptr dereferences
-// where currently there are none. The minimal collateral damage approach
-// would split the change over a release to help downstream branches. As it
-// is unclear what approach will be preferred, implementing the trivial
-// function here in the meantime to decouple from that discussion.
-Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
-                                    ArrayRef<Type *> Tys = {}) {
-  if (Tys.empty())
-    return Intrinsic::getDeclarationIfExists(M, Id);
-  auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
-  return Intrinsic::getDeclarationIfExists(M, Id, Tys, FT);
-}
-
 class ExpandVariadics : public ModulePass {
 
   // The pass construction sets the default to optimize when called from middle
@@ -201,7 +181,7 @@ public:
     bool Changed = false;
     const DataLayout &DL = M.getDataLayout();
     if (Function *Intrinsic =
-            getPreexistingDeclaration(&M, ID, {IntrinsicArgType})) {
+            Intrinsic::getDeclarationIfExists(&M, ID, {IntrinsicArgType})) {
       for (User *U : make_early_inc_range(Intrinsic->users()))
         if (auto *I = dyn_cast<InstructionType>(U))
           Changed |= expandVAIntrinsicCall(Builder, DL, I);
@@ -243,13 +223,6 @@ public:
     ArgTypes.push_back(ABI->vaListParameterType(M));
     return FunctionType::get(FTy->getReturnType(), ArgTypes,
                              /*IsVarArgs=*/false);
-  }
-
-  static ConstantInt *sizeOfAlloca(LLVMContext &Ctx, const DataLayout &DL,
-                                   AllocaInst *Alloced) {
-    std::optional<TypeSize> AllocaTypeSize = Alloced->getAllocationSize(DL);
-    uint64_t AsInt = AllocaTypeSize ? AllocaTypeSize->getFixedValue() : 0;
-    return ConstantInt::get(Type::getInt64Ty(Ctx), AsInt);
   }
 
   bool expansionApplicableToFunction(Module &M, Function *F) {
@@ -407,7 +380,7 @@ bool ExpandVariadics::runOnModule(Module &M) {
           if (CB->isIndirectCall()) {
             FunctionType *FTy = CB->getFunctionType();
             if (FTy->isVarArg())
-              Changed |= expandCall(M, Builder, CB, FTy, 0);
+              Changed |= expandCall(M, Builder, CB, FTy, /*NF=*/nullptr);
           }
         }
       }
@@ -448,6 +421,13 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
       defineVariadicWrapper(M, Builder, VariadicWrapper, FixedArityReplacement);
   assert(VariadicWrapperDefine == VariadicWrapper);
   assert(!VariadicWrapper->isDeclaration());
+
+  // Add the prof metadata from the original function to the wrapper. Because
+  // FixedArityReplacement is the owner of original function's prof metadata
+  // after the splice, we need to transfer it to VariadicWrapper.
+  VariadicWrapper->setMetadata(
+      LLVMContext::MD_prof,
+      FixedArityReplacement->getMetadata(LLVMContext::MD_prof));
 
   // We now have:
   // 1. the original function, now as a declaration with no uses
@@ -508,7 +488,6 @@ ExpandVariadics::replaceAllUsesWithNewDeclaration(Module &M,
   Function *NF = Function::Create(FTy, F.getLinkage(), F.getAddressSpace());
 
   NF->setName(F.getName() + ".varargs");
-  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
 
@@ -550,7 +529,6 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   NF->setComdat(F.getComdat());
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
   NF->setName(F.getName() + ".valist");
-  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   AttrBuilder ParamAttrs(Ctx);
 
@@ -598,15 +576,12 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
   AllocaInst *VaListInstance =
       Builder.CreateAlloca(VaListTy, nullptr, "va_start");
 
-  Builder.CreateLifetimeStart(VaListInstance,
-                              sizeOfAlloca(Ctx, DL, VaListInstance));
+  Builder.CreateLifetimeStart(VaListInstance);
 
   Builder.CreateIntrinsic(Intrinsic::vastart, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
 
-  SmallVector<Value *> Args;
-  for (Argument &A : F.args())
-    Args.push_back(&A);
+  SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
 
   Type *ParameterType = ABI->vaListParameterType(M);
   if (ABI->vaListPassedInSSARegister())
@@ -618,8 +593,7 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
 
   Builder.CreateIntrinsic(Intrinsic::vaend, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
-  Builder.CreateLifetimeEnd(VaListInstance,
-                            sizeOfAlloca(Ctx, DL, VaListInstance));
+  Builder.CreateLifetimeEnd(VaListInstance);
 
   if (Result->getType()->isVoidTy())
     Builder.CreateRetVoid();
@@ -769,7 +743,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
 
   // Initialize the fields in the struct
   Builder.SetInsertPoint(CB);
-  Builder.CreateLifetimeStart(Alloced, sizeOfAlloca(Ctx, DL, Alloced));
+  Builder.CreateLifetimeStart(Alloced);
   Frame.initializeStructAlloca(DL, Builder, Alloced);
 
   const unsigned NumArgs = FuncType->getNumParams();
@@ -785,7 +759,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
       Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
       VaList = Builder.CreateAlloca(VaListTy, nullptr, "va_argument");
       Builder.SetInsertPoint(CB);
-      Builder.CreateLifetimeStart(VaList, sizeOfAlloca(Ctx, DL, VaList));
+      Builder.CreateLifetimeStart(VaList);
     }
     Builder.SetInsertPoint(CB);
     Args.push_back(ABI->initializeVaList(M, Ctx, Builder, VaList, Alloced));
@@ -825,9 +799,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   }
 
   if (VaList)
-    Builder.CreateLifetimeEnd(VaList, sizeOfAlloca(Ctx, DL, VaList));
+    Builder.CreateLifetimeEnd(VaList);
 
-  Builder.CreateLifetimeEnd(Alloced, sizeOfAlloca(Ctx, DL, Alloced));
+  Builder.CreateLifetimeEnd(Alloced);
 
   NewCB->setAttributes(PAL);
   NewCB->takeName(CB);

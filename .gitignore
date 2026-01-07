@@ -52,6 +52,13 @@ autoconf/autom4te.cache
 # CLion project configuration
 /.idea
 /cmake-build*
+# Coding assistants' stuff
+/CLAUDE.md
+.claude/
+/GEMINI.md
+.gemini/
+AGENTS.md
+.codex/
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
@@ -66,6 +73,7 @@ pythonenv*
 # clangd index. (".clangd" is a config file now, thus trailing slash)
 .clangd/
 .cache
+.clangd
 # static analyzer regression testing project files
 /clang/utils/analyzer/projects/*/CachedSource
 /clang/utils/analyzer/projects/*/PatchedSource

@@ -46,12 +46,10 @@ struct RecordsEntry {
   void dump() const;
 
   RecordsEntry() = default;
-  RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
-  RecordsEntry(std::unique_ptr<ForeachLoop> Loop) : Loop(std::move(Loop)) {}
-  RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
-      : Assertion(std::move(Assertion)) {}
-  RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump)
-      : Dump(std::move(Dump)) {}
+  RecordsEntry(std::unique_ptr<Record> Rec);
+  RecordsEntry(std::unique_ptr<ForeachLoop> Loop);
+  RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion);
+  RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump);
 };
 
 /// ForeachLoop - Record the iteration state associated with a for loop.
@@ -131,7 +129,7 @@ public:
   }
 
   void addVar(StringRef Name, const Init *I) {
-    bool Ins = Vars.try_emplace(std::string(Name), I).second;
+    bool Ins = Vars.try_emplace(Name.str(), I).second;
     (void)Ins;
     assert(Ins && "Local variable already exists");
   }
@@ -161,15 +159,15 @@ class TGParser {
   // Record tracker
   RecordKeeper &Records;
 
-  // A "named boolean" indicating how to parse identifiers.  Usually
+  // A "named boolean" indicating how to parse identifiers. Usually
   // identifiers map to some existing object but in special cases
   // (e.g. parsing def names) no such object exists yet because we are
-  // in the middle of creating in.  For those situations, allow the
+  // in the middle of creating in. For those situations, allow the
   // parser to ignore missing object errors.
   enum IDParseMode {
-    ParseValueMode,   // We are parsing a value we expect to look up.
-    ParseNameMode,    // We are parsing a name of an object that does not yet
-                      // exist.
+    ParseValueMode, // We are parsing a value we expect to look up.
+    ParseNameMode,  // We are parsing a name of an object that does not yet
+                    // exist.
   };
 
   bool NoWarnOnUnusedTemplateArgs = false;
@@ -183,7 +181,7 @@ public:
         NoWarnOnUnusedTemplateArgs(NoWarnOnUnusedTemplateArgs),
         TrackReferenceLocs(TrackReferenceLocs) {}
 
-  /// ParseFile - Main entrypoint for parsing a tblgen file.  These parser
+  /// ParseFile - Main entrypoint for parsing a tblgen file. These parser
   /// routines return true on error, or false on success.
   bool ParseFile();
 
@@ -191,9 +189,7 @@ public:
     PrintError(L, Msg);
     return true;
   }
-  bool TokError(const Twine &Msg) const {
-    return Error(Lex.getLoc(), Msg);
-  }
+  bool TokError(const Twine &Msg) const { return Error(Lex.getLoc(), Msg); }
   const TGLexer::DependenciesSetTy &getDependencies() const {
     return Lex.getDependencies();
   }
@@ -257,7 +253,7 @@ private: // Semantic analysis methods.
                                     ArrayRef<const ArgumentInit *> ArgValues,
                                     const Init *DefmName, SMLoc Loc);
 
-private:  // Parser methods.
+private: // Parser methods.
   bool consume(tgtok::TokKind K);
   bool ParseObjectList(MultiClass *MC = nullptr);
   bool ParseObject(MultiClass *MC);

@@ -132,7 +132,7 @@ Once we have set up the `PATH` environment variable and we activated the python 
 
 .. code-block:: bash
 
-  $ CodeChecker analyze --ctu compile_commands.json -o reports
+  $ CodeChecker analyze --ctu --ctu-ast-mode load-from-pch compile_commands.json -o reports
   $ ls -F
   compile_commands.json  foo.cpp  foo.cpp.ast  main.cpp  reports/
   $ tree reports
@@ -318,7 +318,7 @@ Once we have set up the `PATH` environment variable and we activated the python 
 
 .. code-block:: bash
 
-  $ CodeChecker analyze --ctu --ctu-ast-loading-mode on-demand compile_commands.json -o reports
+  $ CodeChecker analyze --ctu compile_commands.json -o reports
   $ ls -F
   compile_commands.json  foo.cpp main.cpp  reports/
   $ tree reports

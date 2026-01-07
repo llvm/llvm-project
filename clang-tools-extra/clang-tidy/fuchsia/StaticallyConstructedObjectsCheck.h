@@ -1,4 +1,4 @@
-//===--- StaticallyConstructedObjectsCheck.h - clang-tidy--------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_STATICALLY_CONSTRUCTED_OBJECTS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_STATICALLY_CONSTRUCTED_OBJECTS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_STATICALLYCONSTRUCTEDOBJECTSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_STATICALLYCONSTRUCTEDOBJECTSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
 namespace clang::tidy::fuchsia {
 
 /// Constructing global, non-trivial objects with static storage is
-/// disallowed, unless the object is statically initialized with a constexpr 
+/// disallowed, unless the object is statically initialized with a constexpr
 /// constructor or has no explicit constructor.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/statically-constructed-objects.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/statically-constructed-objects.html
 class StaticallyConstructedObjectsCheck : public ClangTidyCheck {
 public:
   StaticallyConstructedObjectsCheck(StringRef Name, ClangTidyContext *Context)
@@ -32,4 +32,4 @@ public:
 
 } // namespace clang::tidy::fuchsia
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_STATICALLY_CONSTRUCTED_OBJECTS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_STATICALLYCONSTRUCTEDOBJECTSCHECK_H

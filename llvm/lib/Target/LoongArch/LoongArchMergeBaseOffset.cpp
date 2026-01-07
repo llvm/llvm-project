@@ -58,8 +58,7 @@ public:
   LoongArchMergeBaseOffsetOpt() : MachineFunctionPass(ID) {}
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -759,6 +758,10 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
         case MachineOperand::MO_BlockAddress:
           MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
                         LoongArchII::getDirectFlags(ImmOp));
+          break;
+        case MachineOperand::MO_ConstantPoolIndex:
+          MO.ChangeToCPI(ImmOp.getIndex(), ImmOp.getOffset(),
+                         LoongArchII::getDirectFlags(ImmOp));
           break;
         default:
           report_fatal_error("unsupported machine operand type");

@@ -451,12 +451,6 @@ def FeatureVirtualization : SubtargetFeature<"virtualization",
                                              "Supports Virtualization extension",
                                              [FeatureHWDivThumb, FeatureHWDivARM]>;
 
-// Special TRAP encoding for NaCl, which looks like a TRAP in Thumb too.
-// See ARMInstrInfo.td for details.
-// True if NaCl TRAP instruction is generated instead of the regular TRAP.
-def FeatureNaClTrap       : SubtargetFeature<"nacl-trap", "UseNaClTrap", "true",
-                                             "NaCl trap">;
-
 // True if the subtarget disallows unaligned memory
 // accesses for some types.  For details, see
 // ARMTargetLowering::allowsMisalignedMemoryAccesses().
@@ -717,6 +711,11 @@ def HasV9_5aOps   : SubtargetFeature<"v9.5a", "HasV9_5aOps", "true",
 def HasV9_6aOps   : SubtargetFeature<"v9.6a", "HasV9_6aOps", "true",
                                    "Support ARM v9.6a instructions",
                                    [HasV9_5aOps]>;
+
+// Armv9.7-A is a v9-only architecture.
+def HasV9_7aOps   : SubtargetFeature<"v9.7a", "HasV9_7aOps", "true",
+                                   "Support ARM v9.7a instructions",
+                                   [HasV9_6aOps]>;
 
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",

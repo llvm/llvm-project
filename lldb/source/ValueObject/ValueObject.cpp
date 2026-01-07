@@ -41,13 +41,12 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectCast.h"
 #include "lldb/ValueObject/ValueObjectChild.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectDynamicValue.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
-#include "lldb/ValueObject/ValueObjectSyntheticFilter.h"
+#include "lldb/ValueObject/ValueObjectSynthetic.h"
 #include "lldb/ValueObject/ValueObjectVTable.h"
 #include "lldb/lldb-private-types.h"
 
@@ -403,7 +402,8 @@ ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
   return root;
 }
 
-size_t ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
+llvm::Expected<size_t>
+ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
   bool omit_empty_base_classes = true;
   return GetCompilerType().GetIndexOfChildWithName(name,
                                                    omit_empty_base_classes);
@@ -656,9 +656,7 @@ bool ValueObject::IsCStringContainer(bool check_pointer) {
     return true;
   if (type_flags.Test(eTypeIsArray))
     return true;
-  addr_t cstr_address = LLDB_INVALID_ADDRESS;
-  AddressType cstr_address_type = eAddressTypeInvalid;
-  cstr_address = GetPointerValue(&cstr_address_type);
+  addr_t cstr_address = GetPointerValue().address;
   return (cstr_address != LLDB_INVALID_ADDRESS);
 }
 
@@ -707,9 +705,8 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
     lldb::DataBufferSP data_sp(heap_buf_ptr =
                                    new lldb_private::DataBufferHeap());
 
-    AddressType addr_type;
-    lldb::addr_t addr = is_pointer_type ? GetPointerValue(&addr_type)
-                                        : GetAddressOf(true, &addr_type);
+    auto [addr, addr_type] =
+        is_pointer_type ? GetPointerValue() : GetAddressOf(true);
 
     switch (addr_type) {
     case eAddressTypeFile: {
@@ -733,11 +730,13 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
     } break;
     case eAddressTypeLoad: {
       ExecutionContext exe_ctx(GetExecutionContextRef());
-      Process *process = exe_ctx.GetProcessPtr();
-      if (process) {
+      if (Target *target = exe_ctx.GetTargetPtr()) {
         heap_buf_ptr->SetByteSize(bytes);
-        size_t bytes_read = process->ReadMemory(
-            addr + offset, heap_buf_ptr->GetBytes(), bytes, error);
+        Address target_addr;
+        target_addr.SetLoadAddress(addr + offset, target);
+        size_t bytes_read =
+            target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
+                               error, /*force_live_memory=*/true);
         if (error.Success() || bytes_read > 0) {
           data.SetData(data_sp);
           return bytes_read;
@@ -791,8 +790,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
     return false;
   }
 
-  uint64_t count = 0;
-  const Encoding encoding = GetCompilerType().GetEncoding(count);
+  const Encoding encoding = GetCompilerType().GetEncoding();
 
   const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
@@ -899,8 +897,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
   const Flags type_flags(GetTypeInfo(&elem_or_pointee_compiler_type));
   if (type_flags.AnySet(eTypeIsArray | eTypeIsPointer) &&
       elem_or_pointee_compiler_type.IsCharType()) {
-    addr_t cstr_address = LLDB_INVALID_ADDRESS;
-    AddressType cstr_address_type = eAddressTypeInvalid;
+    AddrAndType cstr_address;
 
     size_t cstr_len = 0;
     bool capped_data = false;
@@ -915,14 +912,15 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
           cstr_len = max_length;
         }
       }
-      cstr_address = GetAddressOf(true, &cstr_address_type);
+      cstr_address = GetAddressOf(true);
     } else {
       // We have a pointer
-      cstr_address = GetPointerValue(&cstr_address_type);
+      cstr_address = GetPointerValue();
     }
 
-    if (cstr_address == 0 || cstr_address == LLDB_INVALID_ADDRESS) {
-      if (cstr_address_type == eAddressTypeHost && is_array) {
+    if (cstr_address.address == 0 ||
+        cstr_address.address == LLDB_INVALID_ADDRESS) {
+      if (cstr_address.type == eAddressTypeHost && is_array) {
         const char *cstr = GetDataExtractor().PeekCStr(0);
         if (cstr == nullptr) {
           s << "<invalid address>";
@@ -941,7 +939,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       }
     }
 
-    Address cstr_so_addr(cstr_address);
+    Address cstr_so_addr(cstr_address.address);
     DataExtractor data;
     if (cstr_len > 0 && honor_array) {
       // I am using GetPointeeData() here to abstract the fact that some
@@ -1196,7 +1194,7 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
       return value_or_err->isNonZero();
   }
   if (val_type.IsArrayType())
-    return GetAddressOf() != 0;
+    return GetAddressOf().address != 0;
 
   return llvm::make_error<llvm::StringError>("type cannot be converted to bool",
                                              llvm::inconvertibleErrorCode());
@@ -1467,8 +1465,9 @@ bool ValueObject::DumpPrintableRepresentation(
           (custom_format == eFormatComplexFloat) ||
           (custom_format == eFormatDecimal) || (custom_format == eFormatHex) ||
           (custom_format == eFormatHexUppercase) ||
-          (custom_format == eFormatFloat) || (custom_format == eFormatOctal) ||
-          (custom_format == eFormatOSType) ||
+          (custom_format == eFormatFloat) ||
+          (custom_format == eFormatFloat128) ||
+          (custom_format == eFormatOctal) || (custom_format == eFormatOSType) ||
           (custom_format == eFormatUnicode16) ||
           (custom_format == eFormatUnicode32) ||
           (custom_format == eFormatUnsigned) ||
@@ -1597,70 +1596,55 @@ bool ValueObject::DumpPrintableRepresentation(
   return var_success;
 }
 
-addr_t ValueObject::GetAddressOf(bool scalar_is_load_address,
-                                 AddressType *address_type) {
+ValueObject::AddrAndType
+ValueObject::GetAddressOf(bool scalar_is_load_address) {
   // Can't take address of a bitfield
   if (IsBitfield())
-    return LLDB_INVALID_ADDRESS;
+    return {};
 
   if (!UpdateValueIfNeeded(false))
-    return LLDB_INVALID_ADDRESS;
+    return {};
 
   switch (m_value.GetValueType()) {
   case Value::ValueType::Invalid:
-    return LLDB_INVALID_ADDRESS;
+    return {};
   case Value::ValueType::Scalar:
     if (scalar_is_load_address) {
-      if (address_type)
-        *address_type = eAddressTypeLoad;
-      return m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+      return {m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS),
+              eAddressTypeLoad};
     }
-    break;
+    return {};
 
   case Value::ValueType::LoadAddress:
-  case Value::ValueType::FileAddress: {
-    if (address_type)
-      *address_type = m_value.GetValueAddressType();
-    return m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-  } break;
-  case Value::ValueType::HostAddress: {
-    if (address_type)
-      *address_type = m_value.GetValueAddressType();
-    return LLDB_INVALID_ADDRESS;
-  } break;
+  case Value::ValueType::FileAddress:
+    return {m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS),
+            m_value.GetValueAddressType()};
+  case Value::ValueType::HostAddress:
+    return {LLDB_INVALID_ADDRESS, m_value.GetValueAddressType()};
   }
-  if (address_type)
-    *address_type = eAddressTypeInvalid;
-  return LLDB_INVALID_ADDRESS;
+  llvm_unreachable("Unhandled value type!");
 }
 
-addr_t ValueObject::GetPointerValue(AddressType *address_type) {
-  addr_t address = LLDB_INVALID_ADDRESS;
-  if (address_type)
-    *address_type = eAddressTypeInvalid;
-
+ValueObject::AddrAndType ValueObject::GetPointerValue() {
   if (!UpdateValueIfNeeded(false))
-    return address;
+    return {};
 
   switch (m_value.GetValueType()) {
   case Value::ValueType::Invalid:
-    return LLDB_INVALID_ADDRESS;
+    return {};
   case Value::ValueType::Scalar:
-    address = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-    break;
+    return {m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS),
+            GetAddressTypeOfChildren()};
 
   case Value::ValueType::HostAddress:
   case Value::ValueType::LoadAddress:
   case Value::ValueType::FileAddress: {
     lldb::offset_t data_offset = 0;
-    address = m_data.GetAddress(&data_offset);
-  } break;
+    return {m_data.GetAddress(&data_offset), GetAddressTypeOfChildren()};
+  }
   }
 
-  if (address_type)
-    *address_type = GetAddressTypeOfChildren();
-
-  return address;
+  llvm_unreachable("Unhandled value type!");
 }
 
 static const char *ConvertBoolean(lldb::LanguageType language_type,
@@ -1684,8 +1668,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
     return false;
   }
 
-  uint64_t count = 0;
-  const Encoding encoding = GetCompilerType().GetEncoding(count);
+  const Encoding encoding = GetCompilerType().GetEncoding();
 
   const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
@@ -2202,6 +2185,45 @@ void ValueObject::GetExpressionPath(Stream &s,
   }
 }
 
+// Return the alternate value (synthetic if the input object is non-synthetic
+// and otherwise) this is permitted by the expression path options.
+static ValueObjectSP GetAlternateValue(
+    ValueObject &valobj,
+    ValueObject::GetValueForExpressionPathOptions::SyntheticChildrenTraversal
+        synth_traversal) {
+  using SynthTraversal =
+      ValueObject::GetValueForExpressionPathOptions::SyntheticChildrenTraversal;
+
+  if (valobj.IsSynthetic()) {
+    if (synth_traversal == SynthTraversal::FromSynthetic ||
+        synth_traversal == SynthTraversal::Both)
+      return valobj.GetNonSyntheticValue();
+  } else {
+    if (synth_traversal == SynthTraversal::ToSynthetic ||
+        synth_traversal == SynthTraversal::Both)
+      return valobj.GetSyntheticValue();
+  }
+  return nullptr;
+}
+
+// Dereference the provided object or the alternate value, if permitted by the
+// expression path options.
+static ValueObjectSP DereferenceValueOrAlternate(
+    ValueObject &valobj,
+    ValueObject::GetValueForExpressionPathOptions::SyntheticChildrenTraversal
+        synth_traversal,
+    Status &error) {
+  error.Clear();
+  ValueObjectSP result = valobj.Dereference(error);
+  if (!result || error.Fail()) {
+    if (ValueObjectSP alt_obj = GetAlternateValue(valobj, synth_traversal)) {
+      error.Clear();
+      result = alt_obj->Dereference(error);
+    }
+  }
+  return result;
+}
+
 ValueObjectSP ValueObject::GetValueForExpressionPath(
     llvm::StringRef expression, ExpressionPathScanEndReason *reason_to_stop,
     ExpressionPathEndResultType *final_value_type,
@@ -2234,7 +2256,8 @@ ValueObjectSP ValueObject::GetValueForExpressionPath(
                               : dummy_final_task_on_target) ==
         ValueObject::eExpressionPathAftermathDereference) {
       Status error;
-      ValueObjectSP final_value = ret_val->Dereference(error);
+      ValueObjectSP final_value = DereferenceValueOrAlternate(
+          *ret_val, options.m_synthetic_children_traversal, error);
       if (error.Fail() || !final_value.get()) {
         if (reason_to_stop)
           *reason_to_stop =
@@ -2348,144 +2371,45 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
       temp_expression = temp_expression.drop_front(); // skip . or >
 
       size_t next_sep_pos = temp_expression.find_first_of("-.[", 1);
-      if (next_sep_pos == llvm::StringRef::npos) // if no other separator just
-                                                 // expand this last layer
-      {
+      if (next_sep_pos == llvm::StringRef::npos) {
+        // if no other separator just expand this last layer
         llvm::StringRef child_name = temp_expression;
         ValueObjectSP child_valobj_sp =
             root->GetChildMemberWithName(child_name);
-
-        if (child_valobj_sp.get()) // we know we are done, so just return
-        {
+        if (!child_valobj_sp) {
+          if (ValueObjectSP altroot = GetAlternateValue(
+                  *root, options.m_synthetic_children_traversal))
+            child_valobj_sp = altroot->GetChildMemberWithName(child_name);
+        }
+        if (child_valobj_sp) {
           *reason_to_stop =
               ValueObject::eExpressionPathScanEndReasonEndOfString;
           *final_result = ValueObject::eExpressionPathEndResultTypePlain;
           return child_valobj_sp;
-        } else {
-          switch (options.m_synthetic_children_traversal) {
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              None:
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              FromSynthetic:
-            if (root->IsSynthetic()) {
-              child_valobj_sp = root->GetNonSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              ToSynthetic:
-            if (!root->IsSynthetic()) {
-              child_valobj_sp = root->GetSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              Both:
-            if (root->IsSynthetic()) {
-              child_valobj_sp = root->GetNonSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            } else {
-              child_valobj_sp = root->GetSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          }
         }
-
-        // if we are here and options.m_no_synthetic_children is true,
-        // child_valobj_sp is going to be a NULL SP, so we hit the "else"
-        // branch, and return an error
-        if (child_valobj_sp.get()) // if it worked, just return
-        {
-          *reason_to_stop =
-              ValueObject::eExpressionPathScanEndReasonEndOfString;
-          *final_result = ValueObject::eExpressionPathEndResultTypePlain;
-          return child_valobj_sp;
-        } else {
-          *reason_to_stop =
-              ValueObject::eExpressionPathScanEndReasonNoSuchChild;
-          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
-          return nullptr;
-        }
-      } else // other layers do expand
-      {
-        llvm::StringRef next_separator = temp_expression.substr(next_sep_pos);
-        llvm::StringRef child_name = temp_expression.slice(0, next_sep_pos);
-
-        ValueObjectSP child_valobj_sp =
-            root->GetChildMemberWithName(child_name);
-        if (child_valobj_sp.get()) // store the new root and move on
-        {
-          root = child_valobj_sp;
-          remainder = next_separator;
-          *final_result = ValueObject::eExpressionPathEndResultTypePlain;
-          continue;
-        } else {
-          switch (options.m_synthetic_children_traversal) {
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              None:
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              FromSynthetic:
-            if (root->IsSynthetic()) {
-              child_valobj_sp = root->GetNonSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              ToSynthetic:
-            if (!root->IsSynthetic()) {
-              child_valobj_sp = root->GetSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              Both:
-            if (root->IsSynthetic()) {
-              child_valobj_sp = root->GetNonSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            } else {
-              child_valobj_sp = root->GetSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          }
-        }
-
-        // if we are here and options.m_no_synthetic_children is true,
-        // child_valobj_sp is going to be a NULL SP, so we hit the "else"
-        // branch, and return an error
-        if (child_valobj_sp.get()) // if it worked, move on
-        {
-          root = child_valobj_sp;
-          remainder = next_separator;
-          *final_result = ValueObject::eExpressionPathEndResultTypePlain;
-          continue;
-        } else {
-          *reason_to_stop =
-              ValueObject::eExpressionPathScanEndReasonNoSuchChild;
-          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
-          return nullptr;
-        }
+        *reason_to_stop = ValueObject::eExpressionPathScanEndReasonNoSuchChild;
+        *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+        return nullptr;
       }
-      break;
+
+      llvm::StringRef next_separator = temp_expression.substr(next_sep_pos);
+      llvm::StringRef child_name = temp_expression.slice(0, next_sep_pos);
+
+      ValueObjectSP child_valobj_sp = root->GetChildMemberWithName(child_name);
+      if (!child_valobj_sp) {
+        if (ValueObjectSP altroot = GetAlternateValue(
+                *root, options.m_synthetic_children_traversal))
+          child_valobj_sp = altroot->GetChildMemberWithName(child_name);
+      }
+      if (child_valobj_sp) {
+        root = child_valobj_sp;
+        remainder = next_separator;
+        *final_result = ValueObject::eExpressionPathEndResultTypePlain;
+        continue;
+      }
+      *reason_to_stop = ValueObject::eExpressionPathScanEndReasonNoSuchChild;
+      *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+      return nullptr;
     }
     case '[': {
       if (!root_compiler_type_info.Test(eTypeIsArray) &&
@@ -2601,7 +2525,8 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
                                                              // a bitfield
               pointee_compiler_type_info.Test(eTypeIsScalar)) {
             Status error;
-            root = root->Dereference(error);
+            root = DereferenceValueOrAlternate(
+                *root, options.m_synthetic_children_traversal, error);
             if (error.Fail() || !root) {
               *reason_to_stop =
                   ValueObject::eExpressionPathScanEndReasonDereferencingFailed;
@@ -2746,7 +2671,8 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
                        ValueObject::eExpressionPathAftermathDereference &&
                    pointee_compiler_type_info.Test(eTypeIsScalar)) {
           Status error;
-          root = root->Dereference(error);
+          root = DereferenceValueOrAlternate(
+              *root, options.m_synthetic_children_traversal, error);
           if (error.Fail() || !root) {
             *reason_to_stop =
                 ValueObject::eExpressionPathScanEndReasonDereferencingFailed;
@@ -2804,7 +2730,7 @@ ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {
 
     valobj_sp = ValueObjectConstResult::Create(
         exe_ctx.GetBestExecutionContextScope(), GetCompilerType(), name, data,
-        GetAddressOf());
+        GetAddressOf().address);
   }
 
   if (!valobj_sp) {
@@ -2850,78 +2776,62 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
   if (m_deref_valobj)
     return m_deref_valobj->GetSP();
 
-  const bool is_pointer_or_reference_type = IsPointerOrReferenceType();
-  if (is_pointer_or_reference_type) {
-    bool omit_empty_base_classes = true;
-    bool ignore_array_bounds = false;
+  std::string deref_name_str;
+  uint32_t deref_byte_size = 0;
+  int32_t deref_byte_offset = 0;
+  CompilerType compiler_type = GetCompilerType();
+  uint64_t language_flags = 0;
 
-    std::string child_name_str;
-    uint32_t child_byte_size = 0;
-    int32_t child_byte_offset = 0;
-    uint32_t child_bitfield_bit_size = 0;
-    uint32_t child_bitfield_bit_offset = 0;
-    bool child_is_base_class = false;
-    bool child_is_deref_of_parent = false;
-    const bool transparent_pointers = false;
-    CompilerType compiler_type = GetCompilerType();
-    uint64_t language_flags = 0;
+  ExecutionContext exe_ctx(GetExecutionContextRef());
 
-    ExecutionContext exe_ctx(GetExecutionContextRef());
+  CompilerType deref_compiler_type;
+  auto deref_compiler_type_or_err = compiler_type.GetDereferencedType(
+      &exe_ctx, deref_name_str, deref_byte_size, deref_byte_offset, this,
+      language_flags);
 
-    CompilerType child_compiler_type;
-    auto child_compiler_type_or_err = compiler_type.GetChildCompilerTypeAtIndex(
-        &exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
-        ignore_array_bounds, child_name_str, child_byte_size, child_byte_offset,
-        child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
-        child_is_deref_of_parent, this, language_flags);
-    if (!child_compiler_type_or_err)
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
-                     child_compiler_type_or_err.takeError(),
-                     "could not find child: {0}");
-    else
-      child_compiler_type = *child_compiler_type_or_err;
+  std::string deref_error;
+  if (deref_compiler_type_or_err) {
+    deref_compiler_type = *deref_compiler_type_or_err;
+  } else {
+    deref_error = llvm::toString(deref_compiler_type_or_err.takeError());
+    LLDB_LOG(GetLog(LLDBLog::Types), "could not find child: {0}", deref_error);
+  }
 
-    if (child_compiler_type && child_byte_size) {
-      ConstString child_name;
-      if (!child_name_str.empty())
-        child_name.SetCString(child_name_str.c_str());
+  if (deref_compiler_type && deref_byte_size) {
+    ConstString deref_name;
+    if (!deref_name_str.empty())
+      deref_name.SetCString(deref_name_str.c_str());
 
-      m_deref_valobj = new ValueObjectChild(
-          *this, child_compiler_type, child_name, child_byte_size,
-          child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, eAddressTypeInvalid,
-          language_flags);
-    }
+    m_deref_valobj =
+        new ValueObjectChild(*this, deref_compiler_type, deref_name,
+                             deref_byte_size, deref_byte_offset, 0, 0, false,
+                             true, eAddressTypeInvalid, language_flags);
+  }
 
-    // In case of incomplete child compiler type, use the pointee type and try
-    // to recreate a new ValueObjectChild using it.
-    if (!m_deref_valobj) {
-      // FIXME(#59012): C++ stdlib formatters break with incomplete types (e.g.
-      // `std::vector<int> &`). Remove ObjC restriction once that's resolved.
-      if (Language::LanguageIsObjC(GetPreferredDisplayLanguage()) &&
-          HasSyntheticValue()) {
-        child_compiler_type = compiler_type.GetPointeeType();
+  // In case of incomplete deref compiler type, use the pointee type and try
+  // to recreate a new ValueObjectChild using it.
+  if (!m_deref_valobj) {
+    // FIXME(#59012): C++ stdlib formatters break with incomplete types (e.g.
+    // `std::vector<int> &`). Remove ObjC restriction once that's resolved.
+    if (Language::LanguageIsObjC(GetPreferredDisplayLanguage()) &&
+        HasSyntheticValue()) {
+      deref_compiler_type = compiler_type.GetPointeeType();
 
-        if (child_compiler_type) {
-          ConstString child_name;
-          if (!child_name_str.empty())
-            child_name.SetCString(child_name_str.c_str());
+      if (deref_compiler_type) {
+        ConstString deref_name;
+        if (!deref_name_str.empty())
+          deref_name.SetCString(deref_name_str.c_str());
 
-          m_deref_valobj = new ValueObjectChild(
-              *this, child_compiler_type, child_name, child_byte_size,
-              child_byte_offset, child_bitfield_bit_size,
-              child_bitfield_bit_offset, child_is_base_class,
-              child_is_deref_of_parent, eAddressTypeInvalid, language_flags);
-        }
+        m_deref_valobj = new ValueObjectChild(
+            *this, deref_compiler_type, deref_name, deref_byte_size,
+            deref_byte_offset, 0, 0, false, true, eAddressTypeInvalid,
+            language_flags);
       }
     }
-
-  } else if (HasSyntheticValue()) {
-    m_deref_valobj =
-        GetSyntheticValue()->GetChildMemberWithName("$$dereference$$").get();
-  } else if (IsSynthetic()) {
-    m_deref_valobj = GetChildMemberWithName("$$dereference$$").get();
   }
+
+  if (!m_deref_valobj && IsSynthetic())
+    m_deref_valobj = GetChildMemberWithName("$$dereference$$").get();
 
   if (m_deref_valobj) {
     error.Clear();
@@ -2930,13 +2840,13 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     StreamString strm;
     GetExpressionPath(strm);
 
-    if (is_pointer_or_reference_type)
+    if (deref_error.empty())
       error = Status::FromErrorStringWithFormat(
           "dereference failed: (%s) %s",
           GetTypeName().AsCString("<invalid type>"), strm.GetData());
     else
       error = Status::FromErrorStringWithFormat(
-          "not a pointer or reference type: (%s) %s",
+          "dereference failed: %s: (%s) %s", deref_error.c_str(),
           GetTypeName().AsCString("<invalid type>"), strm.GetData());
     return ValueObjectSP();
   }
@@ -2946,9 +2856,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
   if (m_addr_of_valobj_sp)
     return m_addr_of_valobj_sp;
 
-  AddressType address_type = eAddressTypeInvalid;
-  const bool scalar_is_load_address = false;
-  addr_t addr = GetAddressOf(scalar_is_load_address, &address_type);
+  auto [addr, address_type] = GetAddressOf(/*scalar_is_load_address=*/false);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {
     switch (address_type) {
@@ -2966,10 +2874,13 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
         std::string name(1, '&');
         name.append(m_name.AsCString(""));
         ExecutionContext exe_ctx(GetExecutionContextRef());
+
+        lldb::DataBufferSP buffer(
+            new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            compiler_type.GetPointerType(), ConstString(name.c_str()), addr,
-            eAddressTypeInvalid, m_data.GetAddressByteSize());
+            compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
+            endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize());
       }
     } break;
     default:
@@ -3032,8 +2943,7 @@ lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {
 ValueObjectSP ValueObject::CastPointerType(const char *name,
                                            CompilerType &compiler_type) {
   ValueObjectSP valobj_sp;
-  AddressType address_type;
-  addr_t ptr_value = GetPointerValue(&address_type);
+  addr_t ptr_value = GetPointerValue().address;
 
   if (ptr_value != LLDB_INVALID_ADDRESS) {
     Address ptr_addr(ptr_value);
@@ -3046,8 +2956,7 @@ ValueObjectSP ValueObject::CastPointerType(const char *name,
 
 ValueObjectSP ValueObject::CastPointerType(const char *name, TypeSP &type_sp) {
   ValueObjectSP valobj_sp;
-  AddressType address_type;
-  addr_t ptr_value = GetPointerValue(&address_type);
+  addr_t ptr_value = GetPointerValue().address;
 
   if (ptr_value != LLDB_INVALID_ADDRESS) {
     Address ptr_addr(ptr_value);
@@ -3059,11 +2968,9 @@ ValueObjectSP ValueObject::CastPointerType(const char *name, TypeSP &type_sp) {
 }
 
 lldb::addr_t ValueObject::GetLoadAddress() {
-  lldb::addr_t addr_value = LLDB_INVALID_ADDRESS;
   if (auto target_sp = GetTargetSP()) {
     const bool scalar_is_load_address = true;
-    AddressType addr_type;
-    addr_value = GetAddressOf(scalar_is_load_address, &addr_type);
+    auto [addr_value, addr_type] = GetAddressOf(scalar_is_load_address);
     if (addr_type == eAddressTypeFile) {
       lldb::ModuleSP module_sp(GetModule());
       if (!module_sp)
@@ -3076,8 +2983,9 @@ lldb::addr_t ValueObject::GetLoadAddress() {
     } else if (addr_type == eAddressTypeHost ||
                addr_type == eAddressTypeInvalid)
       addr_value = LLDB_INVALID_ADDRESS;
+    return addr_value;
   }
-  return addr_value;
+  return LLDB_INVALID_ADDRESS;
 }
 
 llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
@@ -3319,8 +3227,8 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         llvm::APSInt ext =
             int_value_or_err->extOrTrunc(type_byte_size * CHAR_BIT);
         Scalar scalar_int(ext);
-        llvm::APFloat f = scalar_int.CreateAPFloatFromAPSInt(
-            type.GetCanonicalType().GetBasicTypeEnumeration());
+        llvm::APFloat f =
+            scalar_int.CreateAPFloatFromAPSInt(type.GetBasicTypeEnumeration());
         return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                          "result");
       } else {
@@ -3336,7 +3244,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         if (int_value_or_err) {
           Scalar scalar_int(*int_value_or_err);
           llvm::APFloat f = scalar_int.CreateAPFloatFromAPSInt(
-              type.GetCanonicalType().GetBasicTypeEnumeration());
+              type.GetBasicTypeEnumeration());
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
@@ -3352,7 +3260,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         if (float_value_or_err) {
           Scalar scalar_float(*float_value_or_err);
           llvm::APFloat f = scalar_float.CreateAPFloatFromAPFloat(
-              type.GetCanonicalType().GetBasicTypeEnumeration());
+              type.GetBasicTypeEnumeration());
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
@@ -3678,6 +3586,13 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAPFloat(
     lldb::TargetSP target, const llvm::APFloat &v, CompilerType type,
     llvm::StringRef name) {
   return CreateValueObjectFromAPInt(target, v.bitcastToAPInt(), type, name);
+}
+
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromScalar(
+    lldb::TargetSP target, Scalar &s, CompilerType type, llvm::StringRef name) {
+  ExecutionContext exe_ctx(target.get(), false);
+  return ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(),
+                                        type, s, ConstString(name));
 }
 
 lldb::ValueObjectSP
