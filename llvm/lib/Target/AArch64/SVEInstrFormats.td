@@ -2905,7 +2905,6 @@ multiclass sve2_fp_convert_up_long_z<string asm, string op> {
 multiclass sve2_fp_convert_down_narrow_z<string asm, string op> {
   def _StoH : sve2_fp_convert_precision<0b1000, 0b0, asm,  ZPR16, ZPR32, /*destructive*/ true>;
   def _DtoS : sve2_fp_convert_precision<0b1110, 0b0, asm,  ZPR32, ZPR64, /*destructive*/ true>;
-
   def : SVE_3_Op_Pat<nxv8f16, !cast<SDPatternOperator>(op # _f16f32), nxv8f16, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _StoH)>;
   def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
