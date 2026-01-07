@@ -412,8 +412,8 @@ const LiveInterval::SubRange &getSubRangeForMaskExact(LaneBitmask LM,
   return getSubrangeImpl(LM, LI);
 }
 
-static LiveInterval::SubRange *getPtrOfSubRangeForMaskExact(LaneBitmask LM,
-                                                            LiveInterval &LI) {
+static LiveInterval::SubRange *findSubRangeForMaskExact(LaneBitmask LM,
+                                                        LiveInterval &LI) {
   for (LiveInterval::SubRange &S : LI.subranges())
     if (S.LaneMask == LM)
       return &S;
@@ -1341,7 +1341,7 @@ void SplitEditor::extendPHIKillRanges() {
         continue;
       unsigned RegIdx = RegAssign.lookup(V->def);
       LiveInterval &LI = LIS.getInterval(Edit->get(RegIdx));
-      LiveInterval::SubRange *S = getPtrOfSubRangeForMaskExact(PS.LaneMask, LI);
+      LiveInterval::SubRange *S = findSubRangeForMaskExact(PS.LaneMask, LI);
       // The SubRange maybe empty and removed by removeEmptySubRanges.
       // Skip if we can't find the exact subrange
       if (!S)
