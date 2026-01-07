@@ -533,6 +533,11 @@ def CUFDeviceFuncTransform
                         /*default=*/"0", "CUDA compute capability version">];
 }
 
+def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
+  let summary = "Convert some CUDA Fortran specific call";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
   let summary = "Attach CUDA attribute to CUF kernel generated launch";
   let description = [{
