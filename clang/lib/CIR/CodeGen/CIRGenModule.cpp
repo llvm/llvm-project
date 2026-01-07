@@ -1536,7 +1536,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
       return {};
     }
 
-    auto methodFuncOp = getAddrOfFunction(methodDecl);
+    cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl);
     return cir::ConstantOp::create(builder, loc,
                                    builder.getMethodAttr(ty, methodFuncOp));
   }

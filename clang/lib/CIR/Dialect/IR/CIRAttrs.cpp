@@ -313,7 +313,7 @@ Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
 
   // Try to parse the null pointer constant.
   if (parser.parseOptionalKeyword("null").succeeded()) {
-    if (parser.parseGreater())
+    if (parser.parseGreater().failed())
       return {};
     return get(ty);
   }
@@ -321,11 +321,12 @@ Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
   // Try to parse a flat symbol ref for a pointer to non-virtual member
   // function.
   FlatSymbolRefAttr symbol;
-  auto parseSymbolRefResult = parser.parseOptionalAttribute(symbol);
+  mlir::OptionalParseResult parseSymbolRefResult =
+      parser.parseOptionalAttribute(symbol);
   if (parseSymbolRefResult.has_value()) {
     if (parseSymbolRefResult.value().failed())
       return {};
-    if (parser.parseGreater())
+    if (parser.parseGreater().failed())
       return {};
     return get(ty, symbol);
   }

@@ -137,6 +137,10 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
     cir::MethodAttr attr, const mlir::DataLayout &layout,
     const mlir::TypeConverter &typeConverter) const {
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
+
+  // lowerMethodType returns the CIR type used to represent the method pointer
+  // in an ABI-specific way. That's why lowerMethodType returns cir::RecordType
+  // here.
   auto loweredMethodTy = mlir::cast<cir::RecordType>(
       lowerMethodType(attr.getType(), typeConverter));
 

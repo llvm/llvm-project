@@ -579,7 +579,7 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
   }
 
   if (auto intTy = mlir::dyn_cast<cir::IntType>(globalAttr.getType())) {
-    auto llvmDstTy = converter->convertType(globalAttr.getType());
+    mlir::Type llvmDstTy = converter->convertType(globalAttr.getType());
     return mlir::LLVM::PtrToIntOp::create(rewriter, parentOp->getLoc(),
                                           llvmDstTy, addrOp);
   }
