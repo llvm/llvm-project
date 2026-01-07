@@ -216,7 +216,7 @@ define dso_local void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind
 ; CHECK-AIX-64-P9-NEXT:    std r0, 144(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r3, 120(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r4, 112(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .strcpy[PR]
+; CHECK-AIX-64-P9-NEXT:    bl .___strcpy64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 128
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)

@@ -168,7 +168,7 @@ define void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
 ; CHECK-AIX-32-P9-NEXT:    stw r0, 88(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r3, 72(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r4, 64(r1)
-; CHECK-AIX-32-P9-NEXT:    bl .strcpy[PR]
+; CHECK-AIX-32-P9-NEXT:    bl .___strcpy[PR]
 ; CHECK-AIX-32-P9-NEXT:    nop
 ; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 80
 ; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
