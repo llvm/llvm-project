@@ -5389,6 +5389,31 @@ void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
   }
 }
 
+/// Returns true if the instruction at I is in a streaming call site region,
+/// within a single basic block.
+/// A "call site streaming region" starts after smstart and ends at smstop
+/// around a call to a streaming function. This walks backward from I.
+static bool isInStreamingCallSiteRegion(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator I) {
+  MachineFunction &MF = *MBB.getParent();
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  // Walk backwards to find smstart/smstop
+  for (MachineInstr &MI : reverse(make_range(MBB.begin(), I))) {
+    unsigned Opc = MI.getOpcode();
+    if (Opc == AArch64::MSRpstatesvcrImm1 || Opc == AArch64::MSRpstatePseudo) {
+      // Check if this is SM change (not ZA)
+      int64_t PState = MI.getOperand(0).getImm();
+      if (PState == AArch64SVCR::SVCRSM || PState == AArch64SVCR::SVCRSMZA) {
+        // Operand 1 is 1 for start, 0 for stop
+        return MI.getOperand(1).getImm() == 1;
+      }
+    }
+  }
+  return false;
+}
+
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, Register DestReg,
@@ -5674,8 +5699,11 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR128RegClass.contains(DestReg) &&
       AArch64::FPR128RegClass.contains(SrcReg)) {
-    if (Subtarget.isSVEorStreamingSVEAvailable() &&
-        !Subtarget.isNeonAvailable()) {
+    // In streaming regions, NEON is illegal but streaming-SVE is available.
+    // Use SVE for copies if we're in a streaming region and SME is available.
+    if ((Subtarget.isSVEorStreamingSVEAvailable() &&
+        !Subtarget.isNeonAvailable()) ||
+        isInStreamingCallSiteRegion(MBB, I)) {
       BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
           .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
@@ -5705,7 +5733,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR64RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
+        !isInStreamingCallSiteRegion(MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::dsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::dsub,
@@ -5732,7 +5761,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR32RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
+        !isInStreamingCallSiteRegion(MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::ssub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::ssub,
@@ -5773,7 +5803,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR16RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
+        !isInStreamingCallSiteRegion(MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
@@ -5814,7 +5845,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::FPR8RegClass.contains(SrcReg)) {
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable()) {
+        !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable() &&
+        !isInStreamingCallSiteRegion(MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
