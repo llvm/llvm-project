@@ -843,16 +843,16 @@ llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3
   llvm.return
 }
 
-llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+llvm.func @rocdl.cluster.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>, %mask: i32) {
   // CHECK-LABEL @rocdl.cluster.load.async.to.lds
-  // CHECK: rocdl.cluster.load.async.to.lds.b8 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b32 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b64 %{{.*}}, %{{.*}}, 0, 0, 0
-  // CHECK: rocdl.cluster.load.async.to.lds.b128 %{{.*}}, %{{.*}}, 0, 0, 0
-  rocdl.cluster.load.async.to.lds.b8 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b32 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b64 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
-  rocdl.cluster.load.async.to.lds.b128 %src, %dst, 0, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: rocdl.cluster.load.async.to.lds.b8 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b32 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b64 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  // CHECK: rocdl.cluster.load.async.to.lds.b128 %{{.*}}, %{{.*}}, 0, 0, %{{.*}}
+  rocdl.cluster.load.async.to.lds.b8 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b32 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b64 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
+  rocdl.cluster.load.async.to.lds.b128 %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
   llvm.return
 }
 
@@ -961,7 +961,7 @@ llvm.func @rocdl.global.prefetch(%ptr : !llvm.ptr<1>) {
 
 llvm.func @rocdl.flat.prefetch(%ptr : !llvm.ptr) {
   // CHECK-LABEL: rocdl.flat.prefetch
-  // CHECK: rocdl.flat.prefetch %{{.*}}, scope 0 : !llvm.ptr 
+  // CHECK: rocdl.flat.prefetch %{{.*}}, scope 0 : !llvm.ptr
   rocdl.flat.prefetch %ptr, scope 0 : !llvm.ptr
   llvm.return
 }
@@ -1187,6 +1187,13 @@ llvm.func @rocdl.s.sleep() {
   // CHECK-LABEL: rocdl.s.sleep
   // CHECK: rocdl.s.sleep 0
   rocdl.s.sleep 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.nop() {
+  // CHECK-LABEL: rocdl.s.nop
+  // CHECK: rocdl.s.nop 0
+  rocdl.s.nop 0
   llvm.return
 }
 

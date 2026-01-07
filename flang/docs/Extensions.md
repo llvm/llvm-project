@@ -474,6 +474,10 @@ end
   with an optional compilation-time warning.  When executed, it
   is treated as an 'nX' positioning control descriptor that skips
   over the same number of characters, without comparison.
+* A passed-object dummy argument for a procedure binding is allowed
+  to be a pointer so long as it is `INTENT(IN)`.
+  (This extension is not yet supported for procedure pointer component
+  interfaces.)
 
 ### Extensions supported when enabled by options
 
@@ -971,6 +975,10 @@ print *, [(j,j=1,10)]
   In this one, truncation is optional; it occurs by default,
   but it can be disabled via `FORT_TRUNCATE_STREAM=0` in the
   environment at execution time.
+
+* Some expression errors, like out-of-range known subscript values,
+  are noted only as warnings when they appear in code known to be
+  dead anyway at compilation time.
 
 ## De Facto Standard Features
 

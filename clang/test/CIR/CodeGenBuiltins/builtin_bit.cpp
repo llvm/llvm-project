@@ -18,7 +18,7 @@ int test_builtin_clrsb(int x) {
 // LLVM-NEXT:    %[[X_NOT:.+]] = xor i32 %[[X]], -1
 // LLVM-NEXT:    %[[P:.+]] = select i1 %[[X_NEG]], i32 %[[X_NOT]], i32 %[[X]]
 // LLVM-NEXT:    %[[LZ:.+]] = call i32 @llvm.ctlz.i32(i32 %[[P]], i1 false)
-// LLVM-NEXT:    %{{.+}} = sub i32 %[[LZ]], 1
+// LLVM-NEXT:    %{{.+}} = sub nuw i32 %[[LZ]], 1
 
 // OGCG-LABEL: _Z18test_builtin_clrsbi
 // OGCG:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
@@ -26,7 +26,7 @@ int test_builtin_clrsb(int x) {
 // OGCG-NEXT:    %[[X_NOT:.+]] = xor i32 %[[X]], -1
 // OGCG-NEXT:    %[[P:.+]] = select i1 %[[X_NEG]], i32 %[[X_NOT]], i32 %[[X]]
 // OGCG-NEXT:    %[[LZ:.+]] = call i32 @llvm.ctlz.i32(i32 %[[P]], i1 false)
-// OGCG-NEXT:    %{{.+}} = sub i32 %[[LZ]], 1
+// OGCG-NEXT:    %{{.+}} = sub nuw i32 %[[LZ]], 1
 
 int test_builtin_clrsbl(long x) {
   return __builtin_clrsbl(x);
@@ -42,7 +42,7 @@ int test_builtin_clrsbl(long x) {
 // LLVM-NEXT:    %[[X_NOT:.+]] = xor i64 %[[X]], -1
 // LLVM-NEXT:    %[[P:.+]] = select i1 %[[X_NEG]], i64 %[[X_NOT]], i64 %[[X]]
 // LLVM-NEXT:    %[[LZ:.+]] = call i64 @llvm.ctlz.i64(i64 %[[P]], i1 false)
-// LLVM-NEXT:    %{{.+}} = sub i64 %[[LZ]], 1
+// LLVM-NEXT:    %{{.+}} = sub nuw i64 %[[LZ]], 1
 
 // OGCG-LABEL: _Z19test_builtin_clrsbll
 // OGCG:         %[[X:.+]] = load i64, ptr %{{.+}}, align 8
@@ -50,7 +50,7 @@ int test_builtin_clrsbl(long x) {
 // OGCG-NEXT:    %[[X_NOT:.+]] = xor i64 %[[X]], -1
 // OGCG-NEXT:    %[[P:.+]] = select i1 %[[X_NEG]], i64 %[[X_NOT]], i64 %[[X]]
 // OGCG-NEXT:    %[[LZ:.+]] = call i64 @llvm.ctlz.i64(i64 %[[P]], i1 false)
-// OGCG-NEXT:    %{{.+}} = sub i64 %[[LZ]], 1
+// OGCG-NEXT:    %{{.+}} = sub nuw i64 %[[LZ]], 1
 
 int test_builtin_clrsbll(long long x) {
   return __builtin_clrsbll(x);
@@ -66,7 +66,7 @@ int test_builtin_clrsbll(long long x) {
 // LLVM-NEXT:    %[[X_NOT:.+]] = xor i64 %[[X]], -1
 // LLVM-NEXT:    %[[P:.+]] = select i1 %[[X_NEG]], i64 %[[X_NOT]], i64 %[[X]]
 // LLVM-NEXT:    %[[LZ:.+]] = call i64 @llvm.ctlz.i64(i64 %[[P]], i1 false)
-// LLVM-NEXT:    %{{.+}} = sub i64 %[[LZ]], 1
+// LLVM-NEXT:    %{{.+}} = sub nuw i64 %[[LZ]], 1
 
 // OGCG-LABEL: _Z20test_builtin_clrsbllx
 // OGCG:         %[[X:.+]] = load i64, ptr %{{.+}}, align 8
@@ -74,7 +74,7 @@ int test_builtin_clrsbll(long long x) {
 // OGCG-NEXT:    %[[X_NOT:.+]] = xor i64 %[[X]], -1
 // OGCG-NEXT:    %[[P:.+]] = select i1 %[[X_NEG]], i64 %[[X_NOT]], i64 %[[X]]
 // OGCG-NEXT:    %[[LZ:.+]] = call i64 @llvm.ctlz.i64(i64 %[[P]], i1 false)
-// OGCG-NEXT:    %{{.+}} = sub i64 %[[LZ]], 1
+// OGCG-NEXT:    %{{.+}} = sub nuw i64 %[[LZ]], 1
 
 int test_builtin_ctzs(unsigned short x) {
   return __builtin_ctzs(x);

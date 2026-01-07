@@ -24,6 +24,7 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
@@ -1775,10 +1776,124 @@ void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
     Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
   }
 
+  // Register the indirect Vtable:
+  // This is similar to OMPTargetGlobalVarEntryIndirect, except that the
+  // size field refers to the size of memory pointed to, not the size of
+  // the pointer symbol itself (which is implicitly the size of a pointer).
   OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
       Name, Addr, CGM.GetTargetTypeStoreSize(CGM.VoidPtrTy).getQuantity(),
       llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect,
       llvm::GlobalValue::WeakODRLinkage);
+}
+
+void CGOpenMPRuntime::registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
+                                                 const VarDecl *VD) {
+  // TODO: add logic to avoid duplicate vtable registrations per
+  // translation unit; though for external linkage, this should no
+  // longer be an issue - or at least we can avoid the issue by
+  // checking for an existing offloading entry.  But, perhaps the
+  // better approach is to defer emission of the vtables and offload
+  // entries until later (by tracking a list of items that need to be
+  // emitted).
+
+  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+
+  // Generate a new externally visible global to point to the
+  // internally visible vtable. Doing this allows us to keep the
+  // visibility and linkage of the associated vtable unchanged while
+  // allowing the runtime to access its value.  The externally
+  // visible global var needs to be emitted with a unique mangled
+  // name that won't conflict with similarly named (internal)
+  // vtables in other translation units.
+
+  // Register vtable with source location of dynamic object in map
+  // clause.
+  llvm::TargetRegionEntryInfo EntryInfo = getEntryInfoFromPresumedLoc(
+      CGM, OMPBuilder, VD->getCanonicalDecl()->getBeginLoc(),
+      VTable->getName());
+
+  llvm::GlobalVariable *Addr = VTable;
+  SmallString<128> AddrName;
+  OMPBuilder.OffloadInfoManager.getTargetRegionEntryFnName(AddrName, EntryInfo);
+  AddrName.append("addr");
+
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    Addr = new llvm::GlobalVariable(
+        CGM.getModule(), VTable->getType(),
+        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, VTable,
+        AddrName,
+        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+        CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
+    Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+  }
+  OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
+      AddrName, VTable,
+      CGM.getDataLayout().getTypeAllocSize(VTable->getInitializer()->getType()),
+      llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable,
+      llvm::GlobalValue::WeakODRLinkage);
+}
+
+void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
+                                            CXXRecordDecl *CXXRecord,
+                                            const VarDecl *VD) {
+  // Register C++ VTable to OpenMP Offload Entry if it's a new
+  // CXXRecordDecl.
+  if (CXXRecord && CXXRecord->isDynamicClass() &&
+      !CGM.getOpenMPRuntime().VTableDeclMap.contains(CXXRecord)) {
+    auto Res = CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
+    if (Res.second) {
+      CGM.EmitVTable(CXXRecord);
+      CodeGenVTables VTables = CGM.getVTables();
+      llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
+      assert(VTablesAddr && "Expected non-null VTable address");
+      CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
+      // Emit VTable for all the fields containing dynamic CXXRecord
+      for (const FieldDecl *Field : CXXRecord->fields()) {
+        if (CXXRecordDecl *RecordDecl = Field->getType()->getAsCXXRecordDecl())
+          emitAndRegisterVTable(CGM, RecordDecl, VD);
+      }
+      // Emit VTable for all dynamic parent class
+      for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
+        if (CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl())
+          emitAndRegisterVTable(CGM, BaseDecl, VD);
+      }
+    }
+  }
+}
+
+void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
+  // Register VTable by scanning through the map clause of OpenMP target region.
+  // Get CXXRecordDecl and VarDecl from Expr.
+  auto GetVTableDecl = [](const Expr *E) {
+    QualType VDTy = E->getType();
+    CXXRecordDecl *CXXRecord = nullptr;
+    if (const auto *RefType = VDTy->getAs<LValueReferenceType>())
+      VDTy = RefType->getPointeeType();
+    if (VDTy->isPointerType())
+      CXXRecord = VDTy->getPointeeType()->getAsCXXRecordDecl();
+    else
+      CXXRecord = VDTy->getAsCXXRecordDecl();
+
+    const VarDecl *VD = nullptr;
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      VD = cast<VarDecl>(DRE->getDecl());
+    } else if (auto *MRE = dyn_cast<MemberExpr>(E)) {
+      if (auto *BaseDRE = dyn_cast<DeclRefExpr>(MRE->getBase())) {
+        if (auto *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl()))
+          VD = BaseVD;
+      }
+    }
+    return std::pair<CXXRecordDecl *, const VarDecl *>(CXXRecord, VD);
+  };
+  // Collect VTable from OpenMP map clause.
+  for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
+    for (const auto *E : C->varlist()) {
+      auto DeclPair = GetVTableDecl(E);
+      // Ensure VD is not null
+      if (DeclPair.second)
+        emitAndRegisterVTable(CGM, DeclPair.first, DeclPair.second);
+    }
+  }
 }
 
 Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
@@ -2832,24 +2947,23 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
     }
     switch (Kind) {
     case llvm::OpenMPIRBuilder::EMIT_MD_TARGET_REGION_ERROR: {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error, "Offloading entry for target region in "
-                                    "%0 is incorrect: either the "
-                                    "address or the ID is invalid.");
-      CGM.getDiags().Report(Loc, DiagID) << EntryInfo.ParentName;
+      CGM.getDiags().Report(Loc,
+                            diag::err_target_region_offloading_entry_incorrect)
+          << EntryInfo.ParentName;
     } break;
     case llvm::OpenMPIRBuilder::EMIT_MD_DECLARE_TARGET_ERROR: {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error, "Offloading entry for declare target "
-                                    "variable %0 is incorrect: the "
-                                    "address is invalid.");
-      CGM.getDiags().Report(Loc, DiagID) << EntryInfo.ParentName;
+      CGM.getDiags().Report(
+          Loc, diag::err_target_var_offloading_entry_incorrect_with_parent)
+          << EntryInfo.ParentName;
     } break;
     case llvm::OpenMPIRBuilder::EMIT_MD_GLOBAL_VAR_LINK_ERROR: {
+      CGM.getDiags().Report(diag::err_target_var_offloading_entry_incorrect);
+    } break;
+    case llvm::OpenMPIRBuilder::EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR: {
       unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "Offloading entry for declare target variable is incorrect: the "
-          "address is invalid.");
+          DiagnosticsEngine::Error, "Offloading entry for indirect declare "
+                                    "target variable is incorrect: the "
+                                    "address is invalid.");
       CGM.getDiags().Report(DiagID);
     } break;
     }
@@ -6256,6 +6370,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         CGM.handleAMDGPUWavesPerEUAttr(OutlinedFn, Attr);
     }
   }
+  registerVTable(D);
 }
 
 /// Checks if the expression is constant or does not have non-trivial function
@@ -8341,13 +8456,25 @@ private:
           ElementType = CAT->getElementType().getTypePtr();
         else if (VAT)
           ElementType = VAT->getElementType().getTypePtr();
-        else
-          assert(&Component == &*Components.begin() &&
-                 "Only expect pointer (non CAT or VAT) when this is the "
-                 "first Component");
-        // If ElementType is null, then it means the base is a pointer
-        // (neither CAT nor VAT) and we'll attempt to get ElementType again
-        // for next iteration.
+        else if (&Component == &*Components.begin()) {
+          // If the base is a raw pointer (e.g. T *data with data[a:b:c]),
+          // there was no earlier CAT/VAT/array handling to establish
+          // ElementType. Capture the pointee type now so that subsequent
+          // components (offset/length/stride) have a concrete element type to
+          // work with. This makes pointer-backed sections behave consistently
+          // with CAT/VAT/array bases.
+          if (const auto *PtrType = Ty->getAs<PointerType>())
+            ElementType = PtrType->getPointeeType().getTypePtr();
+        } else {
+          // Any component after the first should never have a raw pointer type;
+          // by this point. ElementType must already be known (set above or in
+          // prior array / CAT / VAT handling).
+          assert(!Ty->isPointerType() &&
+                 "Non-first components should not be raw pointers");
+        }
+
+        // At this stage, if ElementType was a base pointer and we are in the
+        // first iteration, it has been computed.
         if (ElementType) {
           // For the case that having pointer as base, we need to remove one
           // level of indirection.
@@ -9097,12 +9224,20 @@ private:
         // If there is an entry in PartialStruct it means we have a struct with
         // individual members mapped. Emit an extra combined entry.
         if (PartialStruct.Base.isValid()) {
-          GroupUnionCurInfo.NonContigInfo.Dims.push_back(0);
+          // Prepend a synthetic dimension of length 1 to represent the
+          // aggregated struct object. Using 1 (not 0, as 0 produced an
+          //    incorrect non-contiguous descriptor (DimSize==1), causing the
+          //    non-contiguous motion clause path to be skipped.) is important:
+          //  * It preserves the correct rank so targetDataUpdate() computes
+          //    DimSize == 2 for cases like strided array sections originating
+          //    from user-defined mappers (e.g. test with s.data[0:8:2]).
+          GroupUnionCurInfo.NonContigInfo.Dims.insert(
+              GroupUnionCurInfo.NonContigInfo.Dims.begin(), 1);
           emitCombinedEntry(
               CurInfo, GroupUnionCurInfo.Types, PartialStruct, AttachInfo,
-              /*IsMapThis*/ !VD, OMPBuilder, VD,
+              /*IsMapThis=*/!VD, OMPBuilder, VD,
               /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
-              /*NotTargetParam=*/true);
+              /*NotTargetParams=*/true);
         }
 
         // Append this group's results to the overall CurInfo in the correct
@@ -10890,6 +11025,17 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   if (!S)
     return;
 
+  // Register vtable from device for target data and target directives.
+  // Add this block here since scanForTargetRegionsFunctions ignores
+  // target data by checking if S is a executable directive (target).
+  if (auto *E = dyn_cast<OMPExecutableDirective>(S);
+      E && isOpenMPTargetDataManagementDirective(E->getDirectiveKind())) {
+    // Don't need to check if it's device compile
+    // since scanForTargetRegionsFunctions currently only called
+    // in device compilation.
+    registerVTable(*E);
+  }
+
   // Codegen OMP target directives that offload compute to the device.
   bool RequiresDeviceCodegen =
       isa<OMPExecutableDirective>(S) &&
@@ -11988,20 +12134,14 @@ static void emitAArch64DeclareSimdFunction(
   // Check the values provided via `simdlen` by the user.
   // 1. A `simdlen(1)` doesn't produce vector signatures,
   if (UserVLEN == 1) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Warning,
-        "The clause simdlen(1) has no effect when targeting aarch64.");
-    CGM.getDiags().Report(SLoc, DiagID);
+    CGM.getDiags().Report(SLoc, diag::warn_simdlen_1_no_effect);
     return;
   }
 
   // 2. Section 3.3.1, item 1: user input must be a power of 2 for
   // Advanced SIMD output.
   if (ISA == 'n' && UserVLEN && !llvm::isPowerOf2_32(UserVLEN)) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Warning, "The value specified in simdlen must be a "
-                                    "power of 2 when targeting Advanced SIMD.");
-    CGM.getDiags().Report(SLoc, DiagID);
+    CGM.getDiags().Report(SLoc, diag::warn_simdlen_requires_power_of_2);
     return;
   }
 
@@ -12009,12 +12149,7 @@ static void emitAArch64DeclareSimdFunction(
   // limits.
   if (ISA == 's' && UserVLEN != 0) {
     if ((UserVLEN * WDS > 2048) || (UserVLEN * WDS % 128 != 0)) {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Warning, "The clause simdlen must fit the %0-bit "
-                                      "lanes in the architectural constraints "
-                                      "for SVE (min is 128-bit, max is "
-                                      "2048-bit, by steps of 128-bit)");
-      CGM.getDiags().Report(SLoc, DiagID) << WDS;
+      CGM.getDiags().Report(SLoc, diag::warn_simdlen_must_fit_lanes) << WDS;
       return;
     }
   }

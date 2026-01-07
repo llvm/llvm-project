@@ -1938,7 +1938,7 @@ static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
-  SmallVector<IdentifierInfo *, 8> CPUs;
+  SmallVector<const IdentifierInfo *, 8> CPUs;
   for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
     if (!AL.isArgIdent(ArgNo)) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
@@ -2042,7 +2042,7 @@ static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   return false;
 }
 
-void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
+void clang::inferNoReturnAttr(Sema &S, Decl *D) {
   auto *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
     return;
@@ -2054,7 +2054,6 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
   if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;
 
-  auto *NonConstFD = const_cast<FunctionDecl *>(FD);
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
       Diags.isIgnored(diag::warn_suggest_noreturn_function, FD->getLocation()))
@@ -2062,7 +2061,7 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
 
   if (!FD->isNoReturn() && !FD->hasAttr<InferredNoReturnAttr>() &&
       isKnownToAlwaysThrow(FD)) {
-    NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
+    FD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
 
     // [[noreturn]] can only be added to lambdas since C++23
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -2292,7 +2291,7 @@ static void handleAttrWithMessage(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool checkAvailabilityAttr(Sema &S, SourceRange Range,
-                                  IdentifierInfo *Platform,
+                                  const IdentifierInfo *Platform,
                                   VersionTuple Introduced,
                                   VersionTuple Deprecated,
                                   VersionTuple Obsoleted) {
@@ -2349,11 +2348,11 @@ static bool versionsMatch(const VersionTuple &X, const VersionTuple &Y,
 }
 
 AvailabilityAttr *Sema::mergeAvailabilityAttr(
-    NamedDecl *D, const AttributeCommonInfo &CI, IdentifierInfo *Platform,
+    NamedDecl *D, const AttributeCommonInfo &CI, const IdentifierInfo *Platform,
     bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
     VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
     bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-    int Priority, IdentifierInfo *Environment) {
+    int Priority, const IdentifierInfo *Environment) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2381,13 +2380,13 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
         continue;
       }
 
-      IdentifierInfo *OldPlatform = OldAA->getPlatform();
+      const IdentifierInfo *OldPlatform = OldAA->getPlatform();
       if (OldPlatform != Platform) {
         ++i;
         continue;
       }
 
-      IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
+      const IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
       if (OldEnvironment != Environment) {
         ++i;
         continue;
@@ -2980,6 +2979,10 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                    : Ty->castAs<BlockPointerType>()
                                          ->getPointeeType()
                                          ->castAs<FunctionType>();
+      if (isa<FunctionNoProtoType>(FT)) {
+        S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_named_arguments);
+        return;
+      }
       if (!cast<FunctionProtoType>(FT)->isVariadic()) {
         int m = Ty->isFunctionPointerType() ? 0 : 1;
         S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_not_variadic) << m;
@@ -3511,10 +3514,12 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (S.ARM().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams,
+                                        AL.getLoc()))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isX86()) {
-    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
+                                      AL.getLoc()))
       return;
   }
   Params.clear();
@@ -3784,7 +3789,7 @@ ErrorAttr *Sema::mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
 }
 
 FormatAttr *Sema::mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
-                                  IdentifierInfo *Format, int FormatIdx,
+                                  const IdentifierInfo *Format, int FormatIdx,
                                   int FirstArg) {
   // Check whether we already have an equivalent format attribute.
   for (auto *F : D->specific_attrs<FormatAttr>()) {
@@ -3804,7 +3809,7 @@ FormatAttr *Sema::mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
 
 FormatMatchesAttr *Sema::mergeFormatMatchesAttr(Decl *D,
                                                 const AttributeCommonInfo &CI,
-                                                IdentifierInfo *Format,
+                                                const IdentifierInfo *Format,
                                                 int FormatIdx,
                                                 StringLiteral *FormatStr) {
   // Check whether we already have an equivalent FormatMatches attribute.
@@ -4758,7 +4763,7 @@ static void handleModeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
-                       IdentifierInfo *Name, bool InInstantiation) {
+                       const IdentifierInfo *Name, bool InInstantiation) {
   StringRef Str = Name->getName();
   normalizeName(Str);
   SourceLocation AttrLoc = CI.getLoc();
@@ -7084,7 +7089,7 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
 }
 
 static bool modularFormatAttrsEquiv(const ModularFormatAttr *Existing,
-                                    IdentifierInfo *ModularImplFn,
+                                    const IdentifierInfo *ModularImplFn,
                                     StringRef ImplName,
                                     ArrayRef<StringRef> Aspects) {
   return Existing->getModularImplFn() == ModularImplFn &&
@@ -7093,10 +7098,9 @@ static bool modularFormatAttrsEquiv(const ModularFormatAttr *Existing,
          llvm::equal(Existing->aspects(), Aspects);
 }
 
-ModularFormatAttr *
-Sema::mergeModularFormatAttr(Decl *D, const AttributeCommonInfo &CI,
-                             IdentifierInfo *ModularImplFn, StringRef ImplName,
-                             MutableArrayRef<StringRef> Aspects) {
+ModularFormatAttr *Sema::mergeModularFormatAttr(
+    Decl *D, const AttributeCommonInfo &CI, const IdentifierInfo *ModularImplFn,
+    StringRef ImplName, MutableArrayRef<StringRef> Aspects) {
   if (const auto *Existing = D->getAttr<ModularFormatAttr>()) {
     if (!modularFormatAttrsEquiv(Existing, ModularImplFn, ImplName, Aspects)) {
       Diag(Existing->getLocation(), diag::err_duplicate_attribute) << *Existing;
@@ -7856,6 +7860,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLVkExtBuiltinInput:
     S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkPushConstant:
+    S.HLSL().handleVkPushConstantAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLVkConstantId:
     S.HLSL().handleVkConstantIdAttr(D, AL);

@@ -20,7 +20,6 @@
 #include "WinException.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -37,6 +36,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
@@ -150,6 +150,7 @@ enum class PGOMapFeaturesEnum {
   FuncEntryCount,
   BBFreq,
   BrProb,
+  PropellerCFG,
   All,
 };
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
@@ -165,6 +166,12 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
+
+static cl::opt<bool> PgoAnalysisMapEmitBBSectionsCfg(
+    "pgo-analysis-map-emit-bb-sections-cfg",
+    cl::desc("Enable the post-link cfg information from the basic block "
+             "sections profile in the PGO analysis map"),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
     "basic-block-address-map-skip-bb-entries",
@@ -479,6 +486,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   if (EmitBBHash)
     AU.addRequired<MachineBlockHashInfo>();
+  AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -585,8 +593,8 @@ bool AsmPrinter::doInitialization(Module &M) {
     bool EmitCodeView = M.getCodeViewFlag();
     // On Windows targets, emit minimal CodeView compiler info even when debug
     // info is disabled.
-    if ((Target.isOSWindows() && M.getNamedMetadata("llvm.dbg.cu")) ||
-        (Target.isUEFI() && EmitCodeView))
+    if ((Target.isOSWindows() || (Target.isUEFI() && EmitCodeView)) &&
+        M.getNamedMetadata("llvm.dbg.cu"))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -1409,7 +1417,7 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 
 static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
-                    bool HasCalls) {
+                    bool HasCalls, const CFGProfile *FuncCFGProfile) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
@@ -1431,17 +1439,17 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+  bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
-        "BB entries info is required for BBFreq and BrProb "
-        "features");
+        "BB entries info is required for BBFreq and BrProb features");
   }
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
-          static_cast<bool>(EmitBBHash), false};
+          static_cast<bool>(EmitBBHash), PostLinkCfgEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1449,6 +1457,14 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
   bool HasCalls = !CurrentFnCallsiteEndSymbols.empty();
+
+  const BasicBlockSectionsProfileReader *BBSPR = nullptr;
+  if (auto *BBSPRPass =
+          getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
+    BBSPR = &BBSPRPass->getBBSPR();
+  const CFGProfile *FuncCFGProfile = nullptr;
+  if (BBSPR)
+    FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1458,8 +1474,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls);
-  OutStreamer->emitInt8(Features.encode());
+  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls,
+                                      FuncCFGProfile);
+  OutStreamer->emitInt16(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
     OutStreamer->AddComment("number of basic block ranges");
@@ -1563,6 +1580,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
           OutStreamer->AddComment("basic block frequency");
           OutStreamer->emitULEB128IntValue(
               MBFI->getBlockFreq(&MBB).getFrequency());
+          if (Features.PostLinkCfg) {
+            OutStreamer->AddComment("basic block frequency (propeller)");
+            OutStreamer->emitULEB128IntValue(
+                FuncCFGProfile->getBlockCount(*MBB.getBBID()));
+          }
         }
         if (Features.BrProb) {
           unsigned SuccCount = MBB.succ_size();
@@ -1574,6 +1596,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
             OutStreamer->AddComment("successor branch probability");
             OutStreamer->emitULEB128IntValue(
                 MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator());
+            if (Features.PostLinkCfg) {
+              OutStreamer->AddComment("successor branch frequency (propeller)");
+              OutStreamer->emitULEB128IntValue(FuncCFGProfile->getEdgeCount(
+                  *MBB.getBBID(), *SuccMBB->getBBID()));
+            }
           }
         }
       }
@@ -1983,7 +2010,33 @@ void AsmPrinter::emitFunctionBody() {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
+
+    // Helper to emit a symbol for the prefetch target associated with the given
+    // callsite index in the current MBB.
+    auto EmitPrefetchTargetSymbol = [&](unsigned CallsiteIndex) {
+      MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
+          Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
+          Twine(MBB.getBBID()->BaseID) + Twine("_") +
+          Twine(static_cast<unsigned>(CallsiteIndex)));
+      // If the function is weak-linkage it may be replaced by a strong
+      // version, in which case the prefetch targets should also be replaced.
+      OutStreamer->emitSymbolAttribute(
+          PrefetchTargetSymbol,
+          MF->getFunction().isWeakForLinker() ? MCSA_Weak : MCSA_Global);
+      OutStreamer->emitLabel(PrefetchTargetSymbol);
+    };
+    SmallVector<unsigned> PrefetchTargets =
+        MBB.getPrefetchTargetCallsiteIndexes();
+    auto PrefetchTargetIt = PrefetchTargets.begin();
+    unsigned LastCallsiteIndex = 0;
+
     for (auto &MI : MBB) {
+      if (PrefetchTargetIt != PrefetchTargets.end() &&
+          *PrefetchTargetIt == LastCallsiteIndex) {
+        EmitPrefetchTargetSymbol(*PrefetchTargetIt);
+        ++PrefetchTargetIt;
+      }
+
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
@@ -2121,8 +2174,11 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
 
-      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
-        OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+      if (MI.isCall()) {
+        if (MF->getTarget().Options.BBAddrMap)
+          OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+        LastCallsiteIndex++;
+      }
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
         handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
@@ -2133,6 +2189,12 @@ void AsmPrinter::emitFunctionBody() {
 
       for (auto &Handler : Handlers)
         Handler->endInstruction();
+    }
+    // Emit the last prefetch target in case the last instruction was a call.
+    if (PrefetchTargetIt != PrefetchTargets.end() &&
+        *PrefetchTargetIt == LastCallsiteIndex) {
+      EmitPrefetchTargetSymbol(*PrefetchTargetIt);
+      ++PrefetchTargetIt;
     }
 
     // We must emit temporary symbol for the end of this basic block, if either

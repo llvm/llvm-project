@@ -2153,50 +2153,51 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(nxv8bf16 (concat_vectors nxv4bf16:$v1, nxv4bf16:$v2)),
             (UZP1_ZZZ_H $v1, $v2)>;
 
-  // Splice with lane equal to -1
-  def : Pat<(nxv16i8 (vector_splice nxv16i8:$Z1, nxv16i8:$Z2, (i64 -1))),
+  // Splice right with offset equal to 1
+  def : Pat<(nxv16i8 (vector_splice_right nxv16i8:$Z1, nxv16i8:$Z2, (i64 1))),
             (INSR_ZV_B ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
             (LASTB_VPZ_B (PTRUE_B 31), ZPR:$Z1), bsub))>;
-  def : Pat<(nxv8i16 (vector_splice nxv8i16:$Z1, nxv8i16:$Z2, (i64 -1))),
+  def : Pat<(nxv8i16 (vector_splice_right nxv8i16:$Z1, nxv8i16:$Z2, (i64 1))),
             (INSR_ZV_H ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
             (LASTB_VPZ_H (PTRUE_H 31), ZPR:$Z1), hsub))>;
-  def : Pat<(nxv4i32 (vector_splice nxv4i32:$Z1, nxv4i32:$Z2, (i64 -1))),
+  def : Pat<(nxv4i32 (vector_splice_right nxv4i32:$Z1, nxv4i32:$Z2, (i64 1))),
             (INSR_ZV_S ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
             (LASTB_VPZ_S (PTRUE_S 31), ZPR:$Z1), ssub))>;
-  def : Pat<(nxv2i64 (vector_splice nxv2i64:$Z1, nxv2i64:$Z2, (i64 -1))),
+  def : Pat<(nxv2i64 (vector_splice_right nxv2i64:$Z1, nxv2i64:$Z2, (i64 1))),
             (INSR_ZV_D ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
             (LASTB_VPZ_D (PTRUE_D 31), ZPR:$Z1), dsub))>;
 
-  // Splice with lane bigger or equal to 0
+  // Splice left
   foreach VT = [nxv16i8] in {
-    def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_255 i32:$index)))),
+    def : Pat<(VT(vector_splice_left VT:$Z1, VT:$Z2,
+                  (i64(sve_ext_imm_0_255 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
     let AddedComplexity = 1 in
-      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_255 i32:$index)))),
-                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+    def : Pat<(VT (vector_splice_left VT:$Z1, VT:$Z1, (i64(sve_ext_imm_0_255 i32:$index)))),
+              (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
   }
 
   foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in {
-    def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_127 i32:$index)))),
+    def : Pat<(VT (vector_splice_left VT:$Z1, VT:$Z2, (i64(sve_ext_imm_0_127 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
     let AddedComplexity = 1 in
-      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_127 i32:$index)))),
+      def : Pat<(VT (vector_splice_left VT:$Z1, VT:$Z1, (i64(sve_ext_imm_0_127 i32:$index)))),
                 (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
   }
 
   foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in {
-    def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_63 i32:$index)))),
+    def : Pat<(VT (vector_splice_left VT:$Z1, VT:$Z2, (i64(sve_ext_imm_0_63 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
     let AddedComplexity = 1 in
-      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_63 i32:$index)))),
+      def : Pat<(VT (vector_splice_left VT:$Z1, VT:$Z1, (i64(sve_ext_imm_0_63 i32:$index)))),
                 (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
   }
 
   foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in {
-    def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_31 i32:$index)))),
+    def : Pat<(VT( vector_splice_left VT:$Z1, VT:$Z2, (i64(sve_ext_imm_0_31 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
     let AddedComplexity = 1 in
-      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_31 i32:$index)))),
+      def : Pat<(VT (vector_splice_left VT:$Z1, VT:$Z1, (i64(sve_ext_imm_0_31 i32:$index)))),
                 (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
   }
 
@@ -4270,12 +4271,12 @@ let Predicates = [HasSVEAES2, HasNonStreamingSVE_or_SSVE_AES] in {
   def AESE_2ZZI_B    : sve_crypto_binary_multi2<0b000, "aese">;
   def AESD_2ZZI_B    : sve_crypto_binary_multi2<0b010, "aesd">;
   def AESEMC_2ZZI_B  : sve_crypto_binary_multi2<0b100, "aesemc">;
-  def AESDMIC_2ZZI_B : sve_crypto_binary_multi2<0b110, "aesdimc">;
+  def AESDIMC_2ZZI_B : sve_crypto_binary_multi2<0b110, "aesdimc">;
   // SVE_AES2 multi-vector instructions (x4)
   def AESE_4ZZI_B    : sve_crypto_binary_multi4<0b0000, "aese">;
   def AESD_4ZZI_B    : sve_crypto_binary_multi4<0b0100, "aesd">;
   def AESEMC_4ZZI_B  : sve_crypto_binary_multi4<0b1000, "aesemc">;
-  def AESDMIC_4ZZI_B : sve_crypto_binary_multi4<0b1100, "aesdimc">;
+  def AESDIMC_4ZZI_B : sve_crypto_binary_multi4<0b1100, "aesdimc">;
 
   // SVE_AES2 multi-vector polynomial multiply
   def PMLAL_2ZZZ_Q : sve_crypto_pmlal_multi<"pmlal">;
@@ -4537,7 +4538,7 @@ defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
 } // HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos
 
 let Predicates = [HasSVEBFSCALE] in {
-  def BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", DestructiveBinary>;
+  defm BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", int_aarch64_sve_fscale, DestructiveBinary>;
 } // HasSVEBFSCALE
 //===----------------------------------------------------------------------===//
 // SME2.1 or SVE2.1 instructions

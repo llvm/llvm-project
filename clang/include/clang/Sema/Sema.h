@@ -66,6 +66,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SemaConcept.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/APInt.h"
@@ -843,7 +844,7 @@ enum Specifier { None, CPU, Tune };
 enum AttrName { Target, TargetClones, TargetVersion };
 } // end namespace DiagAttrParams
 
-void inferNoReturnAttr(Sema &S, const Decl *D);
+void inferNoReturnAttr(Sema &S, Decl *D);
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -1069,8 +1070,7 @@ public:
   /// \param BlockType The type of the block expression, if D is a BlockDecl.
   PoppedFunctionScopePtr
   PopFunctionScopeInfo(const sema::AnalysisBasedWarnings::Policy *WP = nullptr,
-                       const Decl *D = nullptr,
-                       QualType BlockType = QualType());
+                       Decl *D = nullptr, QualType BlockType = QualType());
 
   sema::FunctionScopeInfo *getEnclosingFunction() const;
 
@@ -1294,6 +1294,8 @@ public:
     }
 
     ~CompoundScopeRAII() { S.ActOnFinishOfCompoundStmt(); }
+    CompoundScopeRAII(const CompoundScopeRAII &) = delete;
+    CompoundScopeRAII &operator=(const CompoundScopeRAII &) = delete;
 
   private:
     Sema &S;
@@ -2065,6 +2067,9 @@ public:
   public:
     PragmaStackSentinelRAII(Sema &S, StringRef SlotLabel, bool ShouldAct);
     ~PragmaStackSentinelRAII();
+    PragmaStackSentinelRAII(const PragmaStackSentinelRAII &) = delete;
+    PragmaStackSentinelRAII &
+    operator=(const PragmaStackSentinelRAII &) = delete;
 
   private:
     Sema &S;
@@ -3501,6 +3506,8 @@ public:
     }
 
     ~ContextRAII() { pop(); }
+    ContextRAII(const ContextRAII &) = delete;
+    ContextRAII &operator=(const ContextRAII &) = delete;
   };
 
   void DiagnoseInvalidJumps(Stmt *Body);
@@ -4913,12 +4920,14 @@ public:
   bool CheckAttrTarget(const ParsedAttr &CurrAttr);
   bool CheckAttrNoArgs(const ParsedAttr &CurrAttr);
 
-  AvailabilityAttr *mergeAvailabilityAttr(
-      NamedDecl *D, const AttributeCommonInfo &CI, IdentifierInfo *Platform,
-      bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
-      VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
-      bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-      int Priority, IdentifierInfo *IIEnvironment);
+  AvailabilityAttr *
+  mergeAvailabilityAttr(NamedDecl *D, const AttributeCommonInfo &CI,
+                        const IdentifierInfo *Platform, bool Implicit,
+                        VersionTuple Introduced, VersionTuple Deprecated,
+                        VersionTuple Obsoleted, bool IsUnavailable,
+                        StringRef Message, bool IsStrict, StringRef Replacement,
+                        AvailabilityMergeKind AMK, int Priority,
+                        const IdentifierInfo *IIEnvironment);
 
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -4949,16 +4958,16 @@ public:
   ErrorAttr *mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
                             StringRef NewUserDiagnostic);
   FormatAttr *mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
-                              IdentifierInfo *Format, int FormatIdx,
+                              const IdentifierInfo *Format, int FormatIdx,
                               int FirstArg);
   FormatMatchesAttr *mergeFormatMatchesAttr(Decl *D,
                                             const AttributeCommonInfo &CI,
-                                            IdentifierInfo *Format,
+                                            const IdentifierInfo *Format,
                                             int FormatIdx,
                                             StringLiteral *FormatStr);
   ModularFormatAttr *mergeModularFormatAttr(Decl *D,
                                             const AttributeCommonInfo &CI,
-                                            IdentifierInfo *ModularImplFn,
+                                            const IdentifierInfo *ModularImplFn,
                                             StringRef ImplName,
                                             MutableArrayRef<StringRef> Aspects);
 
@@ -4984,8 +4993,8 @@ public:
   void CheckAlignasUnderalignment(Decl *D);
 
   /// AddModeAttr - Adds a mode attribute to a particular declaration.
-  void AddModeAttr(Decl *D, const AttributeCommonInfo &CI, IdentifierInfo *Name,
-                   bool InInstantiation = false);
+  void AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
+                   const IdentifierInfo *Name, bool InInstantiation = false);
   AlwaysInlineAttr *mergeAlwaysInlineAttr(Decl *D,
                                           const AttributeCommonInfo &CI,
                                           const IdentifierInfo *Ident);
@@ -7405,6 +7414,9 @@ public:
   ExprResult CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                                              Expr *Idx, SourceLocation RLoc);
 
+  ExprResult CreateBuiltinMatrixSingleSubscriptExpr(Expr *Base, Expr *RowIdx,
+                                                    SourceLocation RBLoc);
+
   ExprResult CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
                                               Expr *ColumnIdx,
                                               SourceLocation RBLoc);
@@ -7865,7 +7877,9 @@ public:
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc,
                                       BinaryOperatorKind Opc);
-
+  QualType CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
   // type checking for sizeless vector binary operators.
   QualType CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
                                        SourceLocation Loc, bool IsCompAssign,
@@ -8442,6 +8456,8 @@ public:
                      bool Enabled = true);
 
     ~CXXThisScopeRAII();
+    CXXThisScopeRAII(const CXXThisScopeRAII &) = delete;
+    CXXThisScopeRAII &operator=(const CXXThisScopeRAII &) = delete;
   };
 
   /// Make sure the value of 'this' is actually available in the current
@@ -10030,6 +10046,8 @@ public:
       S.DeferDiags = SavedDeferDiags || DeferDiags;
     }
     ~DeferDiagsRAII() { S.DeferDiags = SavedDeferDiags; }
+    DeferDiagsRAII(const DeferDiagsRAII &) = delete;
+    DeferDiagsRAII &operator=(const DeferDiagsRAII &) = delete;
   };
 
   /// Flag indicating if Sema is building a recovery call expression.
@@ -11315,6 +11333,8 @@ public:
       S.FpPragmaStack.Stack.clear();
     }
     ~FpPragmaStackSaveRAII() { S.FpPragmaStack = std::move(SavedStack); }
+    FpPragmaStackSaveRAII(const FpPragmaStackSaveRAII &) = delete;
+    FpPragmaStackSaveRAII &operator=(const FpPragmaStackSaveRAII &) = delete;
 
   private:
     Sema &S;
@@ -12414,6 +12434,8 @@ public:
   protected:
     Sema &S;
     ~SFINAEContextBase() { S.CurrentSFINAEContext = Prev; }
+    SFINAEContextBase(const SFINAEContextBase &) = delete;
+    SFINAEContextBase &operator=(const SFINAEContextBase &) = delete;
 
   private:
     SFINAETrap *Prev;
@@ -12485,6 +12507,9 @@ public:
     ~TentativeAnalysisScope() {
       SemaRef.DisableTypoCorrection = PrevDisableTypoCorrection;
     }
+
+    TentativeAnalysisScope(const TentativeAnalysisScope &) = delete;
+    TentativeAnalysisScope &operator=(const TentativeAnalysisScope &) = delete;
   };
 
   /// For each declaration that involved template argument deduction, the
@@ -13058,6 +13083,9 @@ public:
       }
     }
 
+    RecursiveInstGuard(const RecursiveInstGuard &) = delete;
+    RecursiveInstGuard &operator=(const RecursiveInstGuard &) = delete;
+
     operator bool() const { return Key.getOpaqueValue() == nullptr; }
 
   private:
@@ -13531,6 +13559,10 @@ public:
       S.PopExpressionEvaluationContext();
       S.PopFunctionScopeInfo();
     }
+
+    SynthesizedFunctionScope(const SynthesizedFunctionScope &) = delete;
+    SynthesizedFunctionScope &
+    operator=(const SynthesizedFunctionScope &) = delete;
   };
 
   /// List of active code synthesis contexts.
@@ -13608,6 +13640,8 @@ public:
           OldSubstIndex(std::exchange(Self.ArgPackSubstIndex, NewSubstIndex)) {}
 
     ~ArgPackSubstIndexRAII() { Self.ArgPackSubstIndex = OldSubstIndex; }
+    ArgPackSubstIndexRAII(const ArgPackSubstIndexRAII &) = delete;
+    ArgPackSubstIndexRAII &operator=(const ArgPackSubstIndexRAII &) = delete;
   };
 
   bool pushCodeSynthesisContext(CodeSynthesisContext Ctx);
@@ -13738,6 +13772,8 @@ public:
       TI.setEvaluateConstraints(false);
     }
     ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
+    ConstraintEvalRAII(const ConstraintEvalRAII &) = delete;
+    ConstraintEvalRAII &operator=(const ConstraintEvalRAII &) = delete;
   };
 
   // Must be used instead of SubstExpr at 'constraint checking' time.
@@ -13986,6 +14022,10 @@ public:
           S.PendingLocalImplicitInstantiations);
     }
 
+    LocalEagerInstantiationScope(const LocalEagerInstantiationScope &) = delete;
+    LocalEagerInstantiationScope &
+    operator=(const LocalEagerInstantiationScope &) = delete;
+
   private:
     Sema &S;
     bool AtEndOfTU;
@@ -14058,6 +14098,11 @@ public:
         S.SavedPendingInstantiations.pop_back();
       }
     }
+
+    GlobalEagerInstantiationScope(const GlobalEagerInstantiationScope &) =
+        delete;
+    GlobalEagerInstantiationScope &
+    operator=(const GlobalEagerInstantiationScope &) = delete;
 
   private:
     Sema &S;
@@ -14293,6 +14338,11 @@ private:
              "there shouldn't be any pending delayed exception spec checks");
       swapSavedState();
     }
+
+    SavePendingParsedClassStateRAII(const SavePendingParsedClassStateRAII &) =
+        delete;
+    SavePendingParsedClassStateRAII &
+    operator=(const SavePendingParsedClassStateRAII &) = delete;
 
   private:
     Sema &S;
@@ -14793,6 +14843,10 @@ public:
     ~SatisfactionStackResetRAII() {
       SemaRef.SwapSatisfactionStack(BackupSatisfactionStack);
     }
+
+    SatisfactionStackResetRAII(const SatisfactionStackResetRAII &) = delete;
+    SatisfactionStackResetRAII &
+    operator=(const SatisfactionStackResetRAII &) = delete;
   };
 
   void SwapSatisfactionStack(
