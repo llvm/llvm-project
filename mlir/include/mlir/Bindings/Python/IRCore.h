@@ -1222,6 +1222,8 @@ public:
   PyAffineExpr ceilDiv(const PyAffineExpr &other) const;
   PyAffineExpr mod(const PyAffineExpr &other) const;
 
+  nanobind::typed<nanobind::object, PyAffineExpr> maybeDownCast();
+
 private:
   MlirAffineExpr affineExpr;
 };
