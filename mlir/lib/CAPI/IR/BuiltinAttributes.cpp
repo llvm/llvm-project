@@ -920,7 +920,6 @@ MlirAttribute mlirUnmanagedDenseDoubleResourceElementsAttrGet(
   return getDenseResource<DenseF64ResourceElementsAttr>(shapedType, name,
                                                         numElements, elements);
 }
-
 template <typename U, typename T>
 static T getDenseResourceVal(MlirAttribute attr, intptr_t pos) {
   return (*llvm::cast<U>(unwrap(attr)).tryGetAsArrayRef())[pos];
