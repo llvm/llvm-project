@@ -1066,6 +1066,7 @@ public:
   using IsAFunctionTy = bool (*)(MlirAttribute);
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  static inline const MlirStringRef name{};
   using Base = PyConcreteAttribute;
 
   PyConcreteAttribute() = default;
@@ -1134,6 +1135,12 @@ public:
                 return pyAttribute;
               })),
           /*replace*/ true);
+    }
+
+    if (DerivedTy::name.length != 0) {
+      cls.def_prop_ro_static("attr_name", [](nanobind::object & /*self*/) {
+        return nanobind::str(DerivedTy::name.data, DerivedTy::name.length);
+      });
     }
 
     DerivedTy::bindDerived(cls);
