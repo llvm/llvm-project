@@ -592,7 +592,7 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
   std::string thread_name =
       llvm::formatv("lldb.DAP.client.{}.event_handler", client_name);
   if (thread_name.length() > llvm::get_max_thread_name_length())
-    thread_name = llvm::formatv("DAP.{}.evnt", client_name);
+    thread_name = llvm::formatv("DAP.{}.evt", client_name);
   llvm::set_thread_name(thread_name);
 
   lldb::SBListener listener = debugger.GetListener();
