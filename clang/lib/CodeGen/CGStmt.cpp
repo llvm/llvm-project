@@ -746,13 +746,15 @@ CodeGenFunction::getXteamRedSentinel(llvm::Type *RedVarType,
                                     Opcode == CodeGenModule::XR_OP_add ? 0
                                     : Opcode == CodeGenModule::XR_OP_min
                                         ? std::numeric_limits<int16_t>::max()
-                                        : std::numeric_limits<int16_t>::min());
+                                        : std::numeric_limits<int16_t>::min(),
+                                   /*IsSigned=*/false, /*ImplicitTrunc=*/true);
     else if (RedVarType->getPrimitiveSizeInBits() == 32)
       return llvm::ConstantInt::get(Int32Ty,
                                     Opcode == CodeGenModule::XR_OP_add ? 0
                                     : Opcode == CodeGenModule::XR_OP_min
                                         ? std::numeric_limits<int32_t>::max()
-                                        : std::numeric_limits<int32_t>::min());
+                                        : std::numeric_limits<int32_t>::min(),
+                                   /*IsSigned=*/false, /*ImplicitTrunc=*/true);
     else {
       assert(RedVarType->getPrimitiveSizeInBits() == 64 &&
              "Expected a 64-bit integer");
@@ -760,7 +762,8 @@ CodeGenFunction::getXteamRedSentinel(llvm::Type *RedVarType,
                                     Opcode == CodeGenModule::XR_OP_add ? 0
                                     : Opcode == CodeGenModule::XR_OP_min
                                         ? std::numeric_limits<int64_t>::max()
-                                        : std::numeric_limits<int64_t>::min());
+                                        : std::numeric_limits<int64_t>::min(),
+                                    /*IsSigned=*/false, /*ImplicitTrunc=*/true);
     }
   }
   llvm_unreachable(
