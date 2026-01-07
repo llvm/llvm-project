@@ -2039,7 +2039,7 @@ namespace {
 
     bool FoundDeclInUse() { return FoundDecl; }
 
-  }; // end class DeclMatcher
+  };  // end class DeclMatcher
 
   void CheckForLoopConditionalStatement(Sema &S, Expr *Second,
                                         Expr *Third, Stmt *Body) {
