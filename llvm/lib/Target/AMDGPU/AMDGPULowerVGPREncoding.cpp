@@ -47,6 +47,7 @@
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/PackedVector.h"
+#include "llvm/ADT/bit.h"
 
 using namespace llvm;
 
@@ -325,17 +326,20 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
 bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   using namespace AMDGPU::Hwreg;
 
+  assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
+         "only handle S_SETREG_IMM32_B32 currently");
+
   MachineOperand *SIMM16Op = TII->getNamedOperand(MI, AMDGPU::OpName::simm16);
-  if (!SIMM16Op)
-    return false;
+  assert(SIMM16Op && "SIMM16Op must be present");
 
   auto [HwRegId, Offset, Size] = HwregEncoding::decode(SIMM16Op->getImm());
   if (HwRegId != ID_MODE)
     return false;
 
   // VGPR MSBs are stored in MODE register bits[12:19].
-  constexpr unsigned VGPRMSBOffset = 12;
-  constexpr unsigned VGPRMSBSize = 8;
+  constexpr uint32_t VGPRMSBMask = VGPR_MSB_MASK;
+  constexpr unsigned VGPRMSBOffset = llvm::countr_zero_constexpr(VGPRMSBMask);
+  constexpr unsigned VGPRMSBSize = llvm::popcount(VGPRMSBMask);
   constexpr unsigned VGPRMSBEnd = VGPRMSBOffset + VGPRMSBSize; // 20
 
   unsigned End = Offset + Size;
@@ -345,8 +349,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
          "S_SETREG_IMM32_B32 should not write to VGPR MSB bits[12:19]");
 
   MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
-  if (!ImmOp)
-    return false;
+  assert(ImmOp && "ImmOp must be present");
 
   int64_t OldImm = ImmOp->getImm();
   int64_t ModeValue = static_cast<int64_t>(CurrentMode);
