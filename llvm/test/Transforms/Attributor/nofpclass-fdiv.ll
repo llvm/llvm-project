@@ -609,7 +609,7 @@ define float @ret_fdiv_f32_known_zero_lhs(float nofpclass(nan inf norm sub) %arg
 }
 
 define float @ret_fdiv_f32_known_zero_rhs(float %arg0, float nofpclass(nan inf norm sub) %arg1) {
-; CHECK-LABEL: define float @ret_fdiv_f32_known_zero_rhs
+; CHECK-LABEL: define nofpclass(zero sub norm) float @ret_fdiv_f32_known_zero_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -649,7 +649,7 @@ define float @ret_fdiv_f32_known_pzero_lhs(float nofpclass(nan inf norm sub nzer
 }
 
 define float @ret_fdiv_f32_known_pzero_rhs(float %arg0, float nofpclass(nan inf norm sub nzero) %arg1) {
-; CHECK-LABEL: define float @ret_fdiv_f32_known_pzero_rhs
+; CHECK-LABEL: define nofpclass(zero sub norm) float @ret_fdiv_f32_known_pzero_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan inf nzero sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -689,7 +689,7 @@ define float @ret_fdiv_f32_known_nzero_lhs(float nofpclass(nan inf norm sub pzer
 }
 
 define float @ret_fdiv_f32_known_nzero_rhs(float %arg0, float nofpclass(nan inf norm sub pzero) %arg1) {
-; CHECK-LABEL: define float @ret_fdiv_f32_known_nzero_rhs
+; CHECK-LABEL: define nofpclass(zero sub norm) float @ret_fdiv_f32_known_nzero_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan inf pzero sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -780,7 +780,7 @@ define float @ret_fdiv_f32_known_ninf_or_nan_rhs(float %arg0, float nofpclass(pi
 
 ; -> nan
 define float @ret_known_inf_fdiv_known_zero(float nofpclass(nan norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_known_inf_fdiv_known_zero
+; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_known_inf_fdiv_known_zero
 ; CHECK-SAME: (float nofpclass(nan zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -789,9 +789,9 @@ define float @ret_known_inf_fdiv_known_zero(float nofpclass(nan norm sub zero) %
   ret float %fdiv
 }
 
-; -> nan
+; -> inf or nan
 define float @ret_known_inf_or_nan_fdiv_known_zero(float nofpclass(norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
-; CHECK-LABEL: define float @ret_known_inf_or_nan_fdiv_known_zero
+; CHECK-LABEL: define nofpclass(zero sub norm) float @ret_known_inf_or_nan_fdiv_known_zero
 ; CHECK-SAME: (float nofpclass(zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -811,9 +811,9 @@ define float @ret_known_inf_fdiv_known_zero_or_nan(float nofpclass(nan norm sub 
   ret float %fdiv
 }
 
-; -> nan
+; -> inf
 define float @ret_known_ninf_fdiv_known_zero(float nofpclass(nan pinf norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_known_ninf_fdiv_known_zero
+; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_known_ninf_fdiv_known_zero
 ; CHECK-SAME: (float nofpclass(nan pinf zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -822,9 +822,9 @@ define float @ret_known_ninf_fdiv_known_zero(float nofpclass(nan pinf norm sub z
   ret float %fdiv
 }
 
-; -> nan
+; -> pinf
 define float @ret_known_pinf_fdiv_known_zero(float nofpclass(nan ninf norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_known_pinf_fdiv_known_zero
+; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_known_pinf_fdiv_known_zero
 ; CHECK-SAME: (float nofpclass(nan ninf zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -833,9 +833,9 @@ define float @ret_known_pinf_fdiv_known_zero(float nofpclass(nan ninf norm sub z
   ret float %fdiv
 }
 
-; -> nan
+; -> zero
 define float @ret_known_zero_fdiv_known_inf(float nofpclass(nan inf norm sub) %arg0, float nofpclass(nan norm sub zero) %arg1) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_known_zero_fdiv_known_inf
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_known_zero_fdiv_known_inf
 ; CHECK-SAME: (float nofpclass(nan inf sub norm) [[ARG0:%.*]], float nofpclass(nan zero sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -844,7 +844,7 @@ define float @ret_known_zero_fdiv_known_inf(float nofpclass(nan inf norm sub) %a
   ret float %fdiv
 }
 
-; -> nan
+; -> zero
 define float @ret_known_zero_fdiv_known_inf_or_nan(float nofpclass(nan inf norm sub) %arg0, float nofpclass(norm sub zero) %arg1) {
 ; CHECK-LABEL: define float @ret_known_zero_fdiv_known_inf_or_nan
 ; CHECK-SAME: (float nofpclass(nan inf sub norm) [[ARG0:%.*]], float nofpclass(zero sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
@@ -855,7 +855,7 @@ define float @ret_known_zero_fdiv_known_inf_or_nan(float nofpclass(nan inf norm 
   ret float %fdiv
 }
 
-; -> nan
+; -> zero or nan
 define float @ret_known_zero_or_nan_fdiv_known_inf(float nofpclass(inf norm sub) %arg0, float nofpclass(nan norm sub zero) %arg1) {
 ; CHECK-LABEL: define float @ret_known_zero_or_nan_fdiv_known_inf
 ; CHECK-SAME: (float nofpclass(inf sub norm) [[ARG0:%.*]], float nofpclass(nan zero sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
@@ -995,7 +995,7 @@ define float @ret_known_inf_or_nan_fdiv_known_inf(float nofpclass(norm sub zero)
 
 ; Could be zero of either sign
 define float @ret_known_zero_fdiv_known_zero(float nofpclass(inf norm sub nan) %arg0, float nofpclass(inf norm sub nan) %arg1) {
-; CHECK-LABEL: define float @ret_known_zero_fdiv_known_zero
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_known_zero_fdiv_known_zero
 ; CHECK-SAME: (float nofpclass(nan inf sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
@@ -1017,7 +1017,7 @@ define float @ret_known_zero_fdiv_known_zero_or_nan(float nofpclass(inf norm sub
 
 ; Could be zero of either sign, or nan
 define float @ret_known_zero_or_nan_fdiv_known_zero(float nofpclass(inf norm sub) %arg0, float nofpclass(inf norm sub nan) %arg1) {
-; CHECK-LABEL: define float @ret_known_zero_or_nan_fdiv_known_zero
+; CHECK-LABEL: define nofpclass(zero sub norm) float @ret_known_zero_or_nan_fdiv_known_zero
 ; CHECK-SAME: (float nofpclass(inf sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FDIV]]
