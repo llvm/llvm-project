@@ -24,7 +24,7 @@
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_AFFINEFOLDMEMREFALIASOPS
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
