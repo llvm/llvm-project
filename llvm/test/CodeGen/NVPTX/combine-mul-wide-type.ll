@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -O3 -debug-only=dagcombine 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -O3 -debug-only=dagcombine 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that combineMulWide creates the constant with the correct type (FromVT).
