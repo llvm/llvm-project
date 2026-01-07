@@ -38,6 +38,82 @@ static cl::opt<bool> NoF32x2("nvptx-no-f32x2", cl::Hidden,
 // Pin the vtable to this file.
 void NVPTXSubtarget::anchor() {}
 
+// Returns the minimum PTX version required for a given SM target.
+// This must be kept in sync with the "Supported Targets" column of the
+// "PTX Release History" table in the PTX ISA documentation:
+// https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#release-notes-ptx-release-history
+//
+// Note: LLVM's minimum supported PTX version is 3.2 (see FeaturePTX in
+// NVPTX.td), so older SMs that supported earlier PTX versions instead use 3.2
+// as their effective minimum.
+//
+// The FullSmVersion encoding is: SM * 10 + suffix_offset
+// where suffix_offset is: 0 (base), 2 ('f' suffix), or 3 ('a' suffix)
+// For example: sm_100 = 1000, sm_100f = 1002, sm_100a = 1003
+static unsigned getMinPTXVersionForSM(unsigned FullSmVersion) {
+  switch (FullSmVersion) {
+  case 200: // sm_20
+  case 210: // sm_21
+  case 300: // sm_30
+  case 350: // sm_35
+    return 32;
+  case 320: // sm_32
+  case 500: // sm_50
+    return 40;
+  case 370: // sm_37
+  case 520: // sm_52
+    return 41;
+  case 530: // sm_53
+    return 42;
+  case 600: // sm_60
+  case 610: // sm_61
+  case 620: // sm_62
+    return 50;
+  case 700: // sm_70
+    return 60;
+  case 720: // sm_72
+    return 61;
+  case 750: // sm_75
+    return 63;
+  case 800: // sm_80
+    return 70;
+  case 860: // sm_86
+    return 71;
+  case 870: // sm_87
+    return 74;
+  case 890: // sm_89
+  case 900: // sm_90
+    return 78;
+  case 903: // sm_90a
+    return 80;
+  case 1000: // sm_100
+  case 1003: // sm_100a
+  case 1010: // sm_101
+  case 1013: // sm_101a
+    return 86;
+  case 1200: // sm_120
+  case 1203: // sm_120a
+    return 87;
+  case 1002: // sm_100f
+  case 1012: // sm_101f
+  case 1030: // sm_103
+  case 1032: // sm_103f
+  case 1033: // sm_103a
+  case 1202: // sm_120f
+  case 1210: // sm_121
+  case 1212: // sm_121f
+  case 1213: // sm_121a
+    return 88;
+  case 880:  // sm_88
+  case 1100: // sm_110
+  case 1102: // sm_110f
+  case 1103: // sm_110a
+    return 90;
+  default:
+    llvm_unreachable("Unknown SM version");
+  }
+}
+
 NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
   TargetName = std::string(CPU);
@@ -49,9 +125,19 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
   // sm_90a, which would *not* be a subset of sm_91.
   SmVersion = getSmVersion();
 
-  // Set default to PTX 6.0 (CUDA 9.0)
+  unsigned MinPTX = getMinPTXVersionForSM(FullSmVersion);
+
   if (PTXVersion == 0) {
-    PTXVersion = 60;
+    // User didn't request a specific PTX version; use the minimum for this SM.
+    PTXVersion = MinPTX;
+  } else if (PTXVersion < MinPTX) {
+    // User explicitly requested an insufficient PTX version.
+    report_fatal_error(formatv(
+        "PTX version {0}.{1} does not support target '{2}'. "
+        "Minimum required PTX version is {3}.{4}. "
+        "Either remove the PTX version to use the default, "
+        "or increase it to at least {3}.{4}.",
+        PTXVersion / 10, PTXVersion % 10, CPU, MinPTX / 10, MinPTX % 10));
   }
 
   return *this;
