@@ -1,12 +1,12 @@
-; RUN: llc < %s -mtriple=arm64-linux-gnu | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-CPU --match-full-lines
-; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=generic | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-CPU --match-full-lines
-; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 | FileCheck %s -check-prefixes=ALL,ZCM-FPR128-CPU --match-full-lines
-; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr128 | FileCheck %s -check-prefixes=ALL,NOZCM-FPR128-ATTR --match-full-lines
-; RUN: llc < %s -mtriple=arm64-apple-macosx -mattr=+zcm-fpr128 | FileCheck %s -check-prefixes=ALL,ZCM-FPR128-ATTR --match-full-lines
+; RUN: llc < %s -mtriple=arm64-linux-gnu | FileCheck %s -check-prefixes=CHECK,NOZCM-FPR128-CPU --match-full-lines
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=generic | FileCheck %s -check-prefixes=CHECK,NOZCM-FPR128-CPU --match-full-lines
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 | FileCheck %s -check-prefixes=CHECK,ZCM-FPR128-CPU --match-full-lines
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr128 | FileCheck %s -check-prefixes=CHECK,NOZCM-FPR128-ATTR --match-full-lines
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mattr=+zcm-fpr128 | FileCheck %s -check-prefixes=CHECK,ZCM-FPR128-ATTR --match-full-lines
 
 define void @zero_cycle_regmove_FPR64(double %a, double %b, double %c, double %d) {
 entry:
-; ALL-LABEL: {{_?zero_cycle_regmove_FPR64}}:{{ *}}{{(;|//)}}{{ *}}@zero_cycle_regmove_FPR64
+; CHECK-LABEL: {{_?zero_cycle_regmove_FPR64}}:{{ *}}{{(;|//)}}{{ *}}@zero_cycle_regmove_FPR64
 
 ; NOZCM-FPR128-CPU: fmov d0, d2
 ; NOZCM-FPR128-CPU: fmov d1, d3
@@ -48,7 +48,7 @@ declare float @foo_double(double, double)
 
 define void @zero_cycle_regmove_FPR32(float %a, float %b, float %c, float %d) {
 entry:
-; ALL-LABEL: {{_?zero_cycle_regmove_FPR32}}:{{ *}}{{(;|//)}}{{ *}}@zero_cycle_regmove_FPR32
+; CHECK-LABEL: {{_?zero_cycle_regmove_FPR32}}:{{ *}}{{(;|//)}}{{ *}}@zero_cycle_regmove_FPR32
 
 ; NOZCM-FPR128-CPU: fmov s0, s2
 ; NOZCM-FPR128-CPU: fmov s1, s3
@@ -90,7 +90,7 @@ declare float @foo_float(float, float)
 
 define void @zero_cycle_regmove_FPR16(half %a, half %b, half %c, half %d) {
 entry:
-; ALL-LABEL: {{_?zero_cycle_regmove_FPR16}}:{{ *}}{{(;|//)}}{{ *}}@zero_cycle_regmove_FPR16
+; CHECK-LABEL: {{_?zero_cycle_regmove_FPR16}}:{{ *}}{{(;|//)}}{{ *}}@zero_cycle_regmove_FPR16
 
 ; NOZCM-FPR128-CPU: fmov s0, s2
 ; NOZCM-FPR128-CPU: fmov s1, s3
