@@ -21039,7 +21039,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue N1 = N->getOperand(1);
     if (N0.getOpcode() != ISD::SPLAT_VECTOR)
       std::swap(N0, N1);
-    if (N0->getOpcode() != ISD::SPLAT_VECTOR)
+    if (N0.getOpcode() != ISD::SPLAT_VECTOR)
       return SDValue();
     SDValue SplatN0 = N0->getOperand(0);
     if (SplatN0.getOpcode() != ISD::FNEG || !SplatN0.hasOneUse())
