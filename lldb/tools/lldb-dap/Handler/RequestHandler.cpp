@@ -275,19 +275,18 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
   OS << "To get started with the debug console try ";
   switch (dap.repl_mode) {
   case ReplMode::Auto:
-    OS << "\"<variable>\", \"<lldb-cmd>\" or \"help [<lldb-cmd>]\" for more "
-          "information.\r\n";
+    OS << "\"<variable>\", \"<lldb-cmd>\" or \"help [<lldb-cmd>]\"\r\n";
     break;
   case ReplMode::Command:
-    OS << "\"<lldb-cmd>\" or \"help [<lldb-cmd>]\" for more information.\r\n";
+    OS << "\"<lldb-cmd>\" or \"help [<lldb-cmd>]\".\r\n";
     break;
   case ReplMode::Variable:
     OS << "\"<variable>\" or \"" << dap.configuration.commandEscapePrefix
-       << "help [<lldb-cmd>]\" for more information.\r\n";
+       << "help [<lldb-cmd>]\".\r\n";
     break;
   }
 
-  OS << "For more information visit " LLDB_DAP_README_URL "\r\n";
+  OS << "For more information visit " LLDB_DAP_README_URL ".\r\n";
 
   dap.SendOutput(OutputType::Console, message);
 }
@@ -296,13 +295,12 @@ void BaseRequestHandler::PrintIntroductionMessage() const {
   std::string msg;
   llvm::raw_string_ostream os(msg);
   if (dap.target && dap.target.GetExecutable()) {
-    char path[PATH_MAX] = {0};
-    dap.target.GetExecutable().GetPath(path, sizeof(path));
+    std::string path = GetSBFileSpecPath(dap.target.GetExecutable());
     os << llvm::formatv("Executable binary set to '{0}' ({1}).\r\n", path,
                         dap.target.GetTriple());
   }
   if (dap.target.GetProcess()) {
-    os << llvm::formatv("Attached to process {0}\r\n",
+    os << llvm::formatv("Attached to process {0}.\r\n",
                         dap.target.GetProcess().GetProcessID());
   }
   dap.SendOutput(OutputType::Console, msg);
