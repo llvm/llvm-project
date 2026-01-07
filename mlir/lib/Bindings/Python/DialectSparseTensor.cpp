@@ -46,6 +46,8 @@ struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
   static constexpr IsAFunctionTy isaFunction =
       mlirAttributeIsASparseTensorEncodingAttr;
   static constexpr const char *pyClassName = "EncodingAttr";
+  static inline const MlirStringRef name =
+      mlirSparseTensorEncodingAttrGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

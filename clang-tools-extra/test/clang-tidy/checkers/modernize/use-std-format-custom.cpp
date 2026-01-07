@@ -44,7 +44,7 @@ std::string StrFormat_strict_conversion() {
   // CHECK-FIXES-STRICT: return fmt::format("Integer {} from unsigned char\n", static_cast<signed char>(uc));
 }
 
-// Ensure that MatchesAnyListedNameMatcher::NameMatcher::match() can cope with a
+// Ensure that MatchesAnyListedRegexNameMatcher::NameMatcher::match() can cope with a
 // NamedDecl that has no name when we're trying to match unqualified_strprintf.
 std::string A(const std::string &in)
 {

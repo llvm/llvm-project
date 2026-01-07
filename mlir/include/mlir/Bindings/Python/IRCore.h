@@ -24,6 +24,7 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
+#include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
@@ -933,6 +934,7 @@ public:
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   using Base = PyConcreteType;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  static inline const MlirStringRef name{};
 
   PyConcreteType() = default;
   PyConcreteType(PyMlirContextRef contextRef, MlirType t)
@@ -986,6 +988,12 @@ public:
           nanobind::cast<nanobind::callable>(nanobind::cpp_function(
               [](PyType pyType) -> DerivedTy { return pyType; })),
           /*replace*/ true);
+    }
+
+    if (DerivedTy::name.length != 0) {
+      cls.def_prop_ro_static("type_name", [](nanobind::object & /*self*/) {
+        return nanobind::str(DerivedTy::name.data, DerivedTy::name.length);
+      });
     }
 
     DerivedTy::bindDerived(cls);
@@ -1058,6 +1066,7 @@ public:
   using IsAFunctionTy = bool (*)(MlirAttribute);
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  static inline const MlirStringRef name{};
   using Base = PyConcreteAttribute;
 
   PyConcreteAttribute() = default;
@@ -1128,6 +1137,12 @@ public:
           /*replace*/ true);
     }
 
+    if (DerivedTy::name.length != 0) {
+      cls.def_prop_ro_static("attr_name", [](nanobind::object & /*self*/) {
+        return nanobind::str(DerivedTy::name.data, DerivedTy::name.length);
+      });
+    }
+
     DerivedTy::bindDerived(cls);
   }
 
@@ -1143,6 +1158,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirStringAttrGetTypeID;
+  static inline const MlirStringRef name = mlirStringAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };
@@ -1205,6 +1221,8 @@ public:
   PyAffineExpr floorDiv(const PyAffineExpr &other) const;
   PyAffineExpr ceilDiv(const PyAffineExpr &other) const;
   PyAffineExpr mod(const PyAffineExpr &other) const;
+
+  nanobind::typed<nanobind::object, PyAffineExpr> maybeDownCast();
 
 private:
   MlirAffineExpr affineExpr;
