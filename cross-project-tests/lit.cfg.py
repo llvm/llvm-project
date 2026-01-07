@@ -309,6 +309,7 @@ def get_lldb_version_string():
         return None
     return match.group(1)
 
+
 def set_lldb_formatters_compatibility_feature():
     lldb_version_string = get_lldb_version_string()
     if lldb_version_string is None:
@@ -321,10 +322,11 @@ def set_lldb_formatters_compatibility_feature():
         return False
 
     if version.parse(lldb_version_string) < version.parse("1900.0"):
-        return False;
+        return False
 
     config.available_features.add("lldb-formatters-compatibility")
     return True
+
 
 # Some cross-project-tests use gdb, but not all versions of gdb are compatible
 # with clang's dwarf. Add feature `gdb-clang-incompatibility` to signal that
