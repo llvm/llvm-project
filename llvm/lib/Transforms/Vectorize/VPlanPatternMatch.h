@@ -106,6 +106,9 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
   int_pred_ty() : P() {}
 
   bool match(VPValue *VPV) const {
+    auto *VPI = dyn_cast<VPInstruction>(VPV);
+    if (VPI && VPI->getOpcode() == VPInstruction::Broadcast)
+      VPV = VPI->getOperand(0);
     if (!VPV->isLiveIn())
       return false;
     Value *V = VPV->getLiveInIRValue();
