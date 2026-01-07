@@ -125,39 +125,40 @@ void ScriptLexer::lex() {
     }
 
     // In Script and Expr states, recognize compound assignment operators.
-    auto doAssign = [&]() -> std::optional<StringRef> {
+    auto recognizeAssign = [&]() -> bool {
       if (s.starts_with("<<=") || s.starts_with(">>=")) {
         curTok = s.substr(0, 3);
         s = s.substr(3);
-        return s;
+        return true;
       }
       if (s.size() > 1 && (s[1] == '=' && strchr("+-*/!&^|", s[0]))) {
         curTok = s.substr(0, 2);
         s = s.substr(2);
-        return s;
+        return true;
       }
-      return {};
+      return false;
     };
 
     // Unquoted token. The non-expression token is more relaxed than tokens in
     // C-like languages, so that you can write "file-name.cpp" as one bare
     // token.
     size_t pos;
-    constexpr StringRef scriptChars =
+    constexpr StringRef scriptAndVersionChars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
         "0123456789_.$/\\~=+[]*?-!^:";
+    constexpr StringRef exprChars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+        "0123456789_.$";
     switch (lexState) {
     case State::Script:
-      if (auto ret = doAssign())
+      if (recognizeAssign())
         return;
-      pos = s.find_first_not_of(scriptChars);
+      pos = s.find_first_not_of(scriptAndVersionChars);
       break;
     case State::Expr:
-      if (auto ret = doAssign())
+      if (recognizeAssign())
         return;
-      pos = s.find_first_not_of(
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-          "0123456789_.$");
+      pos = s.find_first_not_of(exprChars);
       if (pos == 0 && s.size() >= 2 &&
           ((s[0] == s[1] && strchr("<>&|", s[0])) ||
            is_contained({"==", "!=", "<=", ">=", "<<", ">>"}, s.substr(0, 2))))
@@ -174,7 +175,7 @@ void ScriptLexer::lex() {
             ++pos;
             continue;
           }
-        } else if (scriptChars.contains(s[pos]))
+        } else if (scriptAndVersionChars.contains(s[pos]))
           continue;
         break;
       }
