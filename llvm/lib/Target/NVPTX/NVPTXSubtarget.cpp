@@ -46,68 +46,64 @@ void NVPTXSubtarget::anchor() {}
 // Note: LLVM's minimum supported PTX version is 3.2 (see FeaturePTX in
 // NVPTX.td), so older SMs that supported earlier PTX versions instead use 3.2
 // as their effective minimum.
-//
-// The FullSmVersion encoding is: SM * 10 + suffix_offset
-// where suffix_offset is: 0 (base), 2 ('f' suffix), or 3 ('a' suffix)
-// For example: sm_100 = 1000, sm_100f = 1002, sm_100a = 1003
 static unsigned getMinPTXVersionForSM(unsigned FullSmVersion) {
   switch (FullSmVersion) {
-  case 200: // sm_20
-  case 210: // sm_21
-  case 300: // sm_30
-  case 350: // sm_35
+  case SM(20):
+  case SM(21):
+  case SM(30):
+  case SM(35):
     return 32;
-  case 320: // sm_32
-  case 500: // sm_50
+  case SM(32):
+  case SM(50):
     return 40;
-  case 370: // sm_37
-  case 520: // sm_52
+  case SM(37):
+  case SM(52):
     return 41;
-  case 530: // sm_53
+  case SM(53):
     return 42;
-  case 600: // sm_60
-  case 610: // sm_61
-  case 620: // sm_62
+  case SM(60):
+  case SM(61):
+  case SM(62):
     return 50;
-  case 700: // sm_70
+  case SM(70):
     return 60;
-  case 720: // sm_72
+  case SM(72):
     return 61;
-  case 750: // sm_75
+  case SM(75):
     return 63;
-  case 800: // sm_80
+  case SM(80):
     return 70;
-  case 860: // sm_86
+  case SM(86):
     return 71;
-  case 870: // sm_87
+  case SM(87):
     return 74;
-  case 890: // sm_89
-  case 900: // sm_90
+  case SM(89):
+  case SM(90):
     return 78;
-  case 903: // sm_90a
+  case SMA(90):
     return 80;
-  case 1000: // sm_100
-  case 1003: // sm_100a
-  case 1010: // sm_101
-  case 1013: // sm_101a
+  case SM(100):
+  case SMA(100):
+  case SM(101):
+  case SMA(101):
     return 86;
-  case 1200: // sm_120
-  case 1203: // sm_120a
+  case SM(120):
+  case SMA(120):
     return 87;
-  case 1002: // sm_100f
-  case 1012: // sm_101f
-  case 1030: // sm_103
-  case 1032: // sm_103f
-  case 1033: // sm_103a
-  case 1202: // sm_120f
-  case 1210: // sm_121
-  case 1212: // sm_121f
-  case 1213: // sm_121a
+  case SMF(100):
+  case SMF(101):
+  case SM(103):
+  case SMF(103):
+  case SMA(103):
+  case SMF(120):
+  case SM(121):
+  case SMF(121):
+  case SMA(121):
     return 88;
-  case 880:  // sm_88
-  case 1100: // sm_110
-  case 1102: // sm_110f
-  case 1103: // sm_110a
+  case SM(88):
+  case SM(110):
+  case SMF(110):
+  case SMA(110):
     return 90;
   default:
     llvm_unreachable("Unknown SM version");
