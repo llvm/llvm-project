@@ -41,7 +41,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation/EscapeAnalysis.h"
+#include "llvm/Analysis/EscapeAnalysis.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -85,8 +85,13 @@ static cl::opt<bool>
     ClOmitNonCaptured("tsan-omit-by-pointer-capturing", cl::init(true),
                       cl::desc("Omit accesses due to pointer capturing"),
                       cl::Hidden);
+
+// Analyzes local variables and heap allocations to identify those that do not
+// escape the current function's scope. Accesses to such thread-local memory
+// cannot participate in data races and are safe to exclude from
+// instrumentation.
 static cl::opt<bool> ClUseEscapeAnalysis(
-    "tsan-use-escape-analysis", cl::init(false),
+    "tsan-use-escape-analysis", cl::init(true),
     cl::desc("Use EscapeAnalysis to filter memory accesses to non-escaping "
              "objects"),
     cl::Hidden);
