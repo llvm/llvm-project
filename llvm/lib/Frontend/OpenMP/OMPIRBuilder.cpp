@@ -2205,7 +2205,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 
     Value *ThreadID = getOrCreateThreadID(Ident);
 
-    if(!NoGroup) {
+    if (!NoGroup) {
       // Emit runtime call for @__kmpc_taskgroup
       Function *TaskgroupFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskgroup);
@@ -2274,7 +2274,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Value *IfCondVal =
         IfCond ? Builder.CreateIntCast(IfCond, Builder.getInt32Ty(), true)
                : Builder.getInt32(1);
-    // As __kmpc_taskgroup is called manually in OMPIRBuilder, NoGroupVal should always be 1 when calling __kmpc_taskloop to ensure it is not called again
+    // As __kmpc_taskgroup is called manually in OMPIRBuilder, NoGroupVal should
+    // always be 1 when calling __kmpc_taskloop to ensure it is not called again
     Value *NoGroupVal = Builder.getInt32(1);
     Value *SchedVal = Builder.getInt32(Sched);
     Value *GrainSizeVal =
