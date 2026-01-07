@@ -63,6 +63,7 @@ define i32 @cls_i32_knownbits_2(i16 signext %x) {
   ret i32 %e
 }
 
+; There are at least 24 redundant sign bits so we don't need an ori after the clsw.
 define i32 @cls_i32_knownbits_3(i8 signext %x) {
 ; CHECK-LABEL: cls_i32_knownbits_3:
 ; CHECK:       // %bb.0:
