@@ -1,13 +1,11 @@
 # Getting started with `lldb-dap`
 
-Welcome to the `lldb-dap` documentation!
-
-`lldb-dap` brings the power of `lldb` into any editor or IDE that supports the
+`lldb-dap` brings the power of `lldb` to any editor or IDE that supports the
 [Debug Adapter Protocol (DAP)](https://microsoft.github.io/debug-adapter-protocol/).
 
 ## Responsibilities of LLDB, `lldb-dap` and IDE Integrations
 
-Under the hood, the UI-based debugging experience is fueled by three separate
+Under the hood, the UI-based debugging experience is powered by three separate
 components:
 
 - LLDB provides general, IDE-independent debugging features, such as:
