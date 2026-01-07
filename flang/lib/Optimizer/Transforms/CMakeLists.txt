@@ -20,11 +20,6 @@ add_flang_library(FIRTransforms
   CUDA/CUFLaunchAttachAttr.cpp
   CUDA/CUFOpConversion.cpp
   CUDA/CUFPredefinedVarToGPU.cpp
-  CUFAddConstructor.cpp
-  CUFComputeSharedMemoryOffsetsAndSize.cpp
-  CUFDeviceGlobal.cpp
-  CUFGPUToLLVMConversion.cpp
-  CUFOpConversion.cpp
   CharacterConversion.cpp
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
