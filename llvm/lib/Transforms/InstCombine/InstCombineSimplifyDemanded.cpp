@@ -2467,6 +2467,43 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       Known = KnownFPClass::exp(KnownSrc);
       break;
     }
+    case Intrinsic::log:
+    case Intrinsic::log2:
+    case Intrinsic::log10: {
+      FPClassTest DemandedSrcMask = DemandedMask & (fcNan | fcPosInf);
+
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+      // log(x < 0) = nan
+      if (DemandedMask & fcNan)
+        DemandedSrcMask |= (fcNegative & ~fcNegZero);
+
+      // log(0) = -inf
+      if (DemandedMask & fcNegInf) {
+        DemandedSrcMask |= fcZero;
+
+        // No value produces subnormal result.
+        if (Mode.inputsMayBeZero())
+          DemandedSrcMask |= fcSubnormal;
+      }
+
+      if (DemandedMask & fcNormal)
+        DemandedSrcMask |= fcNormal | fcSubnormal;
+
+      // log(1) = 0
+      if (DemandedMask & fcZero)
+        DemandedSrcMask |= fcPosNormal;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(I, 0, DemandedSrcMask, KnownSrc, Depth + 1))
+        return I;
+
+      Known = KnownFPClass::log(KnownSrc, Mode);
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
+    }
     case Intrinsic::canonicalize: {
       Type *EltTy = VTy->getScalarType();
 
