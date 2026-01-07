@@ -329,11 +329,9 @@ struct VPlanTransforms {
 
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
-  /// one step backwards.
-  static void
-  optimizeInductionExitUsers(VPlan &Plan,
-                             DenseMap<VPValue *, VPValue *> &EndValues,
-                             PredicatedScalarEvolution &PSE);
+  /// one step backwards. Also optimize resume phis in the scalar preheader.
+  static void optimizeInductionExitUsers(VPlan &Plan,
+                                         PredicatedScalarEvolution &PSE);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
@@ -415,11 +413,8 @@ struct VPlanTransforms {
                                     std::optional<unsigned> VScaleForTuning);
 
   /// Update the resume phis in the scalar preheader after creating wide recipes
-  /// for first-order recurrences, reductions and inductions. End values for
-  /// inductions are added to \p IVEndValues.
-  static void
-  updateScalarResumePhis(VPlan &Plan,
-                         DenseMap<VPValue *, VPValue *> &IVEndValues);
+  /// for first-order recurrences, reductions and inductions.
+  static void updateScalarResumePhis(VPlan &Plan);
 
   /// Handle users in the exit block for first order reductions in the original
   /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
