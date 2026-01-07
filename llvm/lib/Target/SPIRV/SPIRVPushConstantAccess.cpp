@@ -63,7 +63,7 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
     GV->eraseFromParent();
   }
 
-  return true;
+  return !PushConstants.empty();
 }
 
 PreservedAnalyses SPIRVPushConstantAccess::run(Module &M,
