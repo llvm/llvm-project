@@ -34,7 +34,6 @@
 #include "llvm/Target/RegisterTargetPassConfigCallback.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-
 using namespace llvm;
 
 static cl::opt<bool>
