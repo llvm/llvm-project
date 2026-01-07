@@ -99,10 +99,9 @@ namespace {
 
 /// Returns true if all users of the given value are inside the region.
 static bool allUsersAreInsideRegion(Value val, Region &region) {
-  for (Operation *user : val.getUsers()) {
+  for (Operation *user : val.getUsers())
     if (!region.isAncestor(user->getParentRegion()))
       return false;
-  }
   return true;
 }
 
