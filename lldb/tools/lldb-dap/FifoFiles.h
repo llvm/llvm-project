@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_FIFOFILES_H
 #define LLDB_TOOLS_LLDB_DAP_FIFOFILES_H
 
+#include "lldb/Host/windows/PipeWindows.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 
@@ -20,11 +21,18 @@ namespace lldb_dap {
 ///
 /// The file is destroyed when the destructor is invoked.
 struct FifoFile {
-  FifoFile(llvm::StringRef path);
+  FifoFile(llvm::StringRef path, lldb::pipe_t pipe = LLDB_INVALID_PIPE);
 
   ~FifoFile();
 
+  void Connect();
+
+  void WriteLine(std::string line);
+
+  std::string ReadLine();
+
   std::string m_path;
+  lldb::pipe_t m_pipe;
 };
 
 /// Create a fifo file in the filesystem.
@@ -45,7 +53,7 @@ public:
   /// \param[in] other_endpoint_name
   ///     A human readable name for the other endpoint that will communicate
   ///     using this file. This is used for error messages.
-  FifoFileIO(llvm::StringRef fifo_file, llvm::StringRef other_endpoint_name);
+  FifoFileIO(FifoFile fifo_file, llvm::StringRef other_endpoint_name);
 
   /// Read the next JSON object from the underlying input fifo file.
   ///
@@ -76,7 +84,7 @@ public:
       std::chrono::milliseconds timeout = std::chrono::milliseconds(20000));
 
 private:
-  std::string m_fifo_file;
+  FifoFile m_fifo_file;
   std::string m_other_endpoint_name;
 };
 

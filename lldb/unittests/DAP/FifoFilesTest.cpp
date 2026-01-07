@@ -45,8 +45,8 @@ TEST(FifoFilesTest, SendAndReceiveJSON) {
   auto fifo = CreateFifoFile(fifo_path);
   EXPECT_THAT_EXPECTED(fifo, llvm::Succeeded());
 
-  FifoFileIO writer(fifo_path, "writer");
-  FifoFileIO reader(fifo_path, "reader");
+  FifoFileIO writer(*fifo.get(), "writer");
+  FifoFileIO reader(*fifo.get(), "reader");
 
   llvm::json::Object obj;
   obj["foo"] = "bar";
@@ -79,7 +79,7 @@ TEST(FifoFilesTest, ReadTimeout) {
   auto fifo = CreateFifoFile(fifo_path);
   EXPECT_THAT_EXPECTED(fifo, llvm::Succeeded());
 
-  FifoFileIO reader(fifo_path, "reader");
+  FifoFileIO reader(*fifo.get(), "reader");
 
   // No writer, should timeout.
   auto result = reader.ReadJSON(std::chrono::milliseconds(100));
@@ -91,7 +91,7 @@ TEST(FifoFilesTest, WriteTimeout) {
   auto fifo = CreateFifoFile(fifo_path);
   EXPECT_THAT_EXPECTED(fifo, llvm::Succeeded());
 
-  FifoFileIO writer(fifo_path, "writer");
+  FifoFileIO writer(*fifo.get(), "writer");
 
   // No reader, should timeout.
   llvm::json::Object obj;
