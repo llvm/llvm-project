@@ -169,6 +169,7 @@ struct PointerType : PyConcreteType<PointerType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirLLVMPointerTypeGetTypeID;
   static constexpr const char *pyClassName = "PointerType";
+  static inline const MlirStringRef name = mlirLLVMPointerTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
