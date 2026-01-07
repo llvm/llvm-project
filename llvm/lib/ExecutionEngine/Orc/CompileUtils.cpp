@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -47,12 +46,6 @@ Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
     raw_svector_ostream ObjStream(ObjBufferSV);
 
     legacy::PassManager PM;
-
-    const TargetOptions &Options = TM.Options;
-    PM.add(new RuntimeLibraryInfoWrapper(
-        M.getTargetTriple(), Options.ExceptionModel, Options.FloatABIType,
-        Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
-
     MCContext *Ctx;
     if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
       return make_error<StringError>("Target does not support MC emission",

@@ -8,7 +8,6 @@
 
 #include "MCJIT.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
@@ -157,11 +156,6 @@ std::unique_ptr<MemoryBuffer> MCJIT::emitObject(Module *M) {
   // generateCodeForModule.
 
   legacy::PassManager PM;
-
-  const TargetOptions &Options = TM->Options;
-  PM.add(new RuntimeLibraryInfoWrapper(
-      M->getTargetTriple(), Options.ExceptionModel, Options.FloatABIType,
-      Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
 
   // The RuntimeDyld will take ownership of this shortly
   SmallVector<char, 4096> ObjBufferSV;
