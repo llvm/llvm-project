@@ -2573,6 +2573,10 @@ llvm_target_lib_list = [lib for lib in [
                 ],
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/Hexagon/HexagonGenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/Hexagon/HexagonGenSubtargetInfo.inc",
             ),
@@ -3327,6 +3331,13 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenGlobalISel.inc",
             ),
             (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=X86PreLegalizerCombiner",
+                ],
+                "lib/Target/X86/X86GenPreLegalizeGICombiner.inc",
+            ),
+            (
                 ["-gen-callingconv"],
                 "lib/Target/X86/X86GenCallingConv.inc",
             ),
@@ -3898,6 +3909,31 @@ cc_library(
 )
 
 cc_library(
+    name = "Plugins",
+    srcs = ["lib/Plugins/PassPlugin.cpp"],
+    hdrs = ["include/llvm/Plugins/PassPlugin.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
+    name = "DTLTO",
+    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    hdrs = ["include/llvm/DTLTO/DTLTO.h"],
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":Core",
+        ":LTO",
+        ":Object",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "LTO",
     srcs = glob([
         "lib/LTO/*.cpp",
@@ -3926,6 +3962,7 @@ cc_library(
         ":ObjCARC",
         ":Object",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -4556,6 +4593,7 @@ cc_binary(
         ":IRReader",
         ":MC",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -5289,6 +5327,7 @@ cc_binary(
         ":Core",
         ":LTO",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Support",
     ],
@@ -6077,6 +6116,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -6315,6 +6355,7 @@ cc_binary(
         ":IRReader",
         ":Linker",
         ":Passes",
+        ":Plugins",
         ":Scalar",
         ":Support",
         ":TargetParser",
@@ -6391,6 +6432,7 @@ cc_binary(
         ":Object",
         ":OrcJIT",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
