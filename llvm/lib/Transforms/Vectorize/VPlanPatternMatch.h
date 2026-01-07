@@ -109,13 +109,11 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
     auto *VPI = dyn_cast<VPInstruction>(VPV);
     if (VPI && VPI->getOpcode() == VPInstruction::Broadcast)
       VPV = VPI->getOperand(0);
-    if (!VPV->isLiveIn())
+    auto *IRV = dyn_cast<VPIRValue>(VPV);
+    if (!IRV)
       return false;
-    Value *V = VPV->getLiveInIRValue();
-    if (!V)
-      return false;
-    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(V);
+    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
     if (!CI)
       return false;
 
@@ -185,13 +183,11 @@ struct bind_apint {
   bind_apint(const APInt *&Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
-    if (!VPV->isLiveIn())
+    auto *IRV = dyn_cast<VPIRValue>(VPV);
+    if (!IRV)
       return false;
-    Value *V = VPV->getLiveInIRValue();
-    if (!V)
-      return false;
-    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
-    const auto *CI = dyn_cast<ConstantInt>(V);
+    assert(!IRV->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(IRV->getValue());
     if (!CI)
       return false;
     Res = &CI->getValue();
@@ -865,7 +861,7 @@ struct IntrinsicID_match {
       return R->getCalledScalarFunction()->getIntrinsicID() == ID;
 
     auto MatchCalleeIntrinsic = [&](VPValue *CalleeOp) {
-      if (!CalleeOp->isLiveIn())
+      if (!isa<VPIRValue>(CalleeOp))
         return false;
       auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
       return F->getIntrinsicID() == ID;
@@ -945,8 +941,7 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
 
 struct live_in_vpvalue {
   template <typename ITy> bool match(ITy *V) const {
-    VPValue *Val = dyn_cast<VPValue>(V);
-    return Val && Val->isLiveIn();
+    return isa<VPIRValue, VPSymbolicValue>(V);
   }
 };
 
