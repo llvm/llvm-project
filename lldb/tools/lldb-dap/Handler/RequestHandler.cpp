@@ -28,8 +28,7 @@
 
 #ifndef LLDB_DAP_README_URL
 #define LLDB_DAP_README_URL                                                    \
-  "https://github.com/llvm/llvm-project/blob/main/lldb/tools/lldb-dap/"        \
-  "README.md#debug-console"
+  "https://lldb.llvm.org/use/lldbdap.html#debug-console"
 #endif
 
 using namespace lldb_dap::protocol;
