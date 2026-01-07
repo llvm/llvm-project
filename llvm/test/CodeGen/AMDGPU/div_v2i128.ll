@@ -7,36 +7,37 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG:       ; %bb.0: ; %_udiv-special-cases_udiv-special-cases
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_i32_e32 v16, vcc, 0, v0
+; SDAG-NEXT:    v_mov_b32_e32 v20, 0
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v24, 31, v3
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v25, 31, v11
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0x7f
 ; SDAG-NEXT:    v_subb_u32_e32 v17, vcc, 0, v1, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v26, v24
 ; SDAG-NEXT:    v_mov_b32_e32 v27, v25
-; SDAG-NEXT:    v_subb_u32_e32 v20, vcc, 0, v2, vcc
+; SDAG-NEXT:    v_subb_u32_e32 v21, vcc, 0, v2, vcc
 ; SDAG-NEXT:    v_cmp_gt_i64_e64 s[4:5], 0, v[2:3]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v19, v1, v17, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v18, v0, v16, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v0, vcc, 0, v3, vcc
-; SDAG-NEXT:    v_cndmask_b32_e64 v16, v2, v20, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v16, v2, v21, s[4:5]
 ; SDAG-NEXT:    v_ffbh_u32_e32 v1, v18
 ; SDAG-NEXT:    v_ffbh_u32_e32 v2, v19
 ; SDAG-NEXT:    v_cndmask_b32_e64 v17, v3, v0, s[4:5]
 ; SDAG-NEXT:    v_or_b32_e32 v0, v18, v16
 ; SDAG-NEXT:    v_sub_i32_e32 v3, vcc, 0, v8
-; SDAG-NEXT:    v_add_i32_e64 v20, s[4:5], 32, v1
-; SDAG-NEXT:    v_ffbh_u32_e32 v21, v16
+; SDAG-NEXT:    v_add_i32_e64 v21, s[4:5], 32, v1
+; SDAG-NEXT:    v_ffbh_u32_e32 v22, v16
 ; SDAG-NEXT:    v_or_b32_e32 v1, v19, v17
-; SDAG-NEXT:    v_subb_u32_e32 v22, vcc, 0, v9, vcc
-; SDAG-NEXT:    v_min_u32_e32 v2, v20, v2
-; SDAG-NEXT:    v_add_i32_e64 v20, s[4:5], 32, v21
-; SDAG-NEXT:    v_ffbh_u32_e32 v21, v17
+; SDAG-NEXT:    v_subb_u32_e32 v23, vcc, 0, v9, vcc
+; SDAG-NEXT:    v_min_u32_e32 v2, v21, v2
+; SDAG-NEXT:    v_add_i32_e64 v21, s[4:5], 32, v22
+; SDAG-NEXT:    v_ffbh_u32_e32 v22, v17
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[0:1]
 ; SDAG-NEXT:    v_cmp_gt_i64_e64 s[6:7], 0, v[10:11]
-; SDAG-NEXT:    v_cndmask_b32_e64 v28, v9, v22, s[6:7]
+; SDAG-NEXT:    v_cndmask_b32_e64 v28, v9, v23, s[6:7]
 ; SDAG-NEXT:    v_subb_u32_e32 v0, vcc, 0, v10, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v29, v8, v3, s[6:7]
-; SDAG-NEXT:    v_min_u32_e32 v1, v20, v21
+; SDAG-NEXT:    v_min_u32_e32 v1, v21, v22
 ; SDAG-NEXT:    v_add_i32_e64 v3, s[8:9], 64, v2
 ; SDAG-NEXT:    v_addc_u32_e64 v8, s[8:9], 0, 0, s[8:9]
 ; SDAG-NEXT:    v_subb_u32_e32 v9, vcc, 0, v11, vcc
@@ -45,17 +46,17 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e64 v10, v8, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v8, v3, v1, vcc
 ; SDAG-NEXT:    v_ffbh_u32_e32 v1, v29
-; SDAG-NEXT:    v_ffbh_u32_e32 v20, v28
+; SDAG-NEXT:    v_ffbh_u32_e32 v21, v28
 ; SDAG-NEXT:    v_cndmask_b32_e64 v3, v11, v9, s[6:7]
 ; SDAG-NEXT:    v_or_b32_e32 v0, v29, v2
 ; SDAG-NEXT:    v_add_i32_e32 v9, vcc, 32, v1
 ; SDAG-NEXT:    v_ffbh_u32_e32 v11, v2
 ; SDAG-NEXT:    v_or_b32_e32 v1, v28, v3
-; SDAG-NEXT:    v_min_u32_e32 v9, v9, v20
+; SDAG-NEXT:    v_min_u32_e32 v9, v9, v21
 ; SDAG-NEXT:    v_add_i32_e32 v11, vcc, 32, v11
-; SDAG-NEXT:    v_ffbh_u32_e32 v20, v3
+; SDAG-NEXT:    v_ffbh_u32_e32 v21, v3
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; SDAG-NEXT:    v_min_u32_e32 v0, v11, v20
+; SDAG-NEXT:    v_min_u32_e32 v0, v11, v21
 ; SDAG-NEXT:    v_add_i32_e64 v1, s[6:7], 64, v9
 ; SDAG-NEXT:    v_addc_u32_e64 v9, s[6:7], 0, 0, s[6:7]
 ; SDAG-NEXT:    v_cmp_ne_u64_e64 s[6:7], 0, v[2:3]
@@ -63,19 +64,19 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[6:7]
 ; SDAG-NEXT:    s_or_b64 s[6:7], vcc, s[4:5]
 ; SDAG-NEXT:    v_sub_i32_e32 v8, vcc, v0, v8
-; SDAG-NEXT:    s_subb_u32 s8, 0, 0
 ; SDAG-NEXT:    v_subb_u32_e32 v9, vcc, v9, v10, vcc
-; SDAG-NEXT:    s_subb_u32 s9, 0, 0
 ; SDAG-NEXT:    v_xor_b32_e32 v0, 0x7f, v8
-; SDAG-NEXT:    v_or_b32_e32 v0, s8, v0
-; SDAG-NEXT:    v_or_b32_e32 v1, s9, v9
-; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[10:11], v[8:9]
-; SDAG-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
-; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v11, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v10, vcc, 0, v20, vcc
+; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[10:11], v[8:9]
+; SDAG-NEXT:    v_cndmask_b32_e64 v21, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v11, vcc, 0, v20, vcc
+; SDAG-NEXT:    v_or_b32_e32 v0, v0, v10
+; SDAG-NEXT:    v_or_b32_e32 v1, v9, v11
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; SDAG-NEXT:    v_cndmask_b32_e64 v20, 0, 1, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, v11, v10, s[4:5]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[10:11]
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v20, v21, s[4:5]
 ; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; SDAG-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
@@ -83,35 +84,33 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, v16, 0, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v20, v19, 0, s[4:5]
-; SDAG-NEXT:    s_and_b64 s[10:11], s[6:7], vcc
+; SDAG-NEXT:    s_and_b64 s[8:9], s[6:7], vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v21, v18, 0, s[4:5]
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[10:11]
+; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; SDAG-NEXT:    s_cbranch_execz .LBB0_6
 ; SDAG-NEXT:  ; %bb.1: ; %udiv-bb15
-; SDAG-NEXT:    v_mov_b32_e32 v0, s8
-; SDAG-NEXT:    v_mov_b32_e32 v1, s9
 ; SDAG-NEXT:    v_add_i32_e32 v30, vcc, 1, v8
-; SDAG-NEXT:    v_sub_i32_e64 v10, s[4:5], 63, v8
+; SDAG-NEXT:    v_sub_i32_e64 v0, s[4:5], 63, v8
 ; SDAG-NEXT:    v_addc_u32_e32 v31, vcc, 0, v9, vcc
-; SDAG-NEXT:    v_lshl_b64 v[9:10], v[18:19], v10
-; SDAG-NEXT:    v_addc_u32_e32 v32, vcc, 0, v0, vcc
-; SDAG-NEXT:    v_addc_u32_e32 v33, vcc, 0, v1, vcc
-; SDAG-NEXT:    v_or_b32_e32 v0, v30, v32
-; SDAG-NEXT:    v_sub_i32_e32 v8, vcc, 0x7f, v8
-; SDAG-NEXT:    v_or_b32_e32 v1, v31, v33
-; SDAG-NEXT:    v_lshl_b64 v[20:21], v[16:17], v8
-; SDAG-NEXT:    v_sub_i32_e32 v11, vcc, 64, v8
-; SDAG-NEXT:    v_lshl_b64 v[22:23], v[18:19], v8
-; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; SDAG-NEXT:    v_lshr_b64 v[0:1], v[18:19], v11
-; SDAG-NEXT:    v_or_b32_e32 v1, v21, v1
-; SDAG-NEXT:    v_or_b32_e32 v0, v20, v0
-; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v8
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, v10, v1, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, v9, v0, s[4:5]
+; SDAG-NEXT:    v_lshl_b64 v[0:1], v[18:19], v0
+; SDAG-NEXT:    v_addc_u32_e32 v32, vcc, 0, v10, vcc
+; SDAG-NEXT:    v_addc_u32_e32 v33, vcc, 0, v11, vcc
+; SDAG-NEXT:    v_or_b32_e32 v9, v30, v32
+; SDAG-NEXT:    v_sub_i32_e32 v34, vcc, 0x7f, v8
+; SDAG-NEXT:    v_or_b32_e32 v10, v31, v33
+; SDAG-NEXT:    v_lshl_b64 v[20:21], v[16:17], v34
+; SDAG-NEXT:    v_sub_i32_e32 v8, vcc, 64, v34
+; SDAG-NEXT:    v_lshl_b64 v[22:23], v[18:19], v34
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[9:10]
+; SDAG-NEXT:    v_lshr_b64 v[8:9], v[18:19], v8
+; SDAG-NEXT:    v_or_b32_e32 v9, v21, v9
+; SDAG-NEXT:    v_or_b32_e32 v8, v20, v8
+; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v34
+; SDAG-NEXT:    v_cndmask_b32_e64 v1, v1, v9, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v8, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v11, 0, v23, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v10, 0, v22, s[4:5]
-; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v8
+; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v34
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, v1, v17, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v16, s[4:5]
 ; SDAG-NEXT:    v_mov_b32_e32 v8, 0
@@ -203,6 +202,7 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v18, 31, v7
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v19, 31, v15
 ; SDAG-NEXT:    v_sub_i32_e32 v2, vcc, 0, v4
+; SDAG-NEXT:    v_mov_b32_e32 v11, 0
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0x7f
 ; SDAG-NEXT:    v_mov_b32_e32 v22, v18
 ; SDAG-NEXT:    v_mov_b32_e32 v23, v19
@@ -219,71 +219,69 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_sub_i32_e32 v7, vcc, 0, v12
 ; SDAG-NEXT:    v_or_b32_e32 v2, v4, v8
 ; SDAG-NEXT:    v_ffbh_u32_e32 v10, v8
-; SDAG-NEXT:    v_add_i32_e64 v11, s[4:5], 32, v3
-; SDAG-NEXT:    v_subb_u32_e32 v16, vcc, 0, v13, vcc
+; SDAG-NEXT:    v_add_i32_e64 v16, s[4:5], 32, v3
+; SDAG-NEXT:    v_subb_u32_e32 v17, vcc, 0, v13, vcc
 ; SDAG-NEXT:    v_or_b32_e32 v3, v5, v9
 ; SDAG-NEXT:    v_add_i32_e64 v10, s[4:5], 32, v10
-; SDAG-NEXT:    v_ffbh_u32_e32 v17, v9
-; SDAG-NEXT:    v_min_u32_e32 v6, v11, v6
-; SDAG-NEXT:    v_subb_u32_e32 v11, vcc, 0, v14, vcc
+; SDAG-NEXT:    v_ffbh_u32_e32 v30, v9
+; SDAG-NEXT:    v_min_u32_e32 v6, v16, v6
+; SDAG-NEXT:    v_subb_u32_e32 v16, vcc, 0, v14, vcc
 ; SDAG-NEXT:    v_cmp_gt_i64_e64 s[4:5], 0, v[14:15]
-; SDAG-NEXT:    v_cndmask_b32_e64 v28, v13, v16, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v28, v13, v17, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v29, v12, v7, s[4:5]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], 0, v[2:3]
-; SDAG-NEXT:    v_min_u32_e32 v3, v10, v17
+; SDAG-NEXT:    v_min_u32_e32 v3, v10, v30
 ; SDAG-NEXT:    v_add_i32_e64 v6, s[8:9], 64, v6
 ; SDAG-NEXT:    v_addc_u32_e64 v7, s[8:9], 0, 0, s[8:9]
 ; SDAG-NEXT:    v_subb_u32_e32 v10, vcc, 0, v15, vcc
-; SDAG-NEXT:    v_cndmask_b32_e64 v2, v14, v11, s[4:5]
-; SDAG-NEXT:    v_ffbh_u32_e32 v11, v29
-; SDAG-NEXT:    v_ffbh_u32_e32 v12, v28
+; SDAG-NEXT:    v_cndmask_b32_e64 v2, v14, v16, s[4:5]
+; SDAG-NEXT:    v_ffbh_u32_e32 v12, v29
+; SDAG-NEXT:    v_ffbh_u32_e32 v13, v28
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
-; SDAG-NEXT:    v_cndmask_b32_e64 v13, v7, 0, vcc
-; SDAG-NEXT:    v_cndmask_b32_e32 v14, v6, v3, vcc
+; SDAG-NEXT:    v_cndmask_b32_e64 v14, v7, 0, vcc
+; SDAG-NEXT:    v_cndmask_b32_e32 v16, v6, v3, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v3, v15, v10, s[4:5]
 ; SDAG-NEXT:    v_or_b32_e32 v6, v29, v2
 ; SDAG-NEXT:    v_ffbh_u32_e32 v10, v2
-; SDAG-NEXT:    v_add_i32_e32 v11, vcc, 32, v11
+; SDAG-NEXT:    v_add_i32_e32 v12, vcc, 32, v12
 ; SDAG-NEXT:    v_or_b32_e32 v7, v28, v3
 ; SDAG-NEXT:    v_add_i32_e32 v10, vcc, 32, v10
 ; SDAG-NEXT:    v_ffbh_u32_e32 v15, v3
-; SDAG-NEXT:    v_min_u32_e32 v11, v11, v12
+; SDAG-NEXT:    v_min_u32_e32 v12, v12, v13
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[6:7]
 ; SDAG-NEXT:    v_min_u32_e32 v6, v10, v15
-; SDAG-NEXT:    v_add_i32_e64 v7, s[4:5], 64, v11
+; SDAG-NEXT:    v_add_i32_e64 v7, s[4:5], 64, v12
 ; SDAG-NEXT:    v_addc_u32_e64 v10, s[4:5], 0, 0, s[4:5]
 ; SDAG-NEXT:    s_or_b64 s[6:7], vcc, s[6:7]
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v10, v10, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v6, v7, v6, vcc
-; SDAG-NEXT:    v_sub_i32_e32 v6, vcc, v6, v14
-; SDAG-NEXT:    s_subb_u32 s8, 0, 0
-; SDAG-NEXT:    v_subb_u32_e32 v7, vcc, v10, v13, vcc
-; SDAG-NEXT:    s_subb_u32 s9, 0, 0
-; SDAG-NEXT:    v_xor_b32_e32 v10, 0x7f, v6
-; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[10:11], v[6:7]
-; SDAG-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc
-; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v13, 0, 1, s[4:5]
-; SDAG-NEXT:    v_or_b32_e32 v11, s9, v7
-; SDAG-NEXT:    v_or_b32_e32 v10, s8, v10
-; SDAG-NEXT:    v_cmp_eq_u64_e64 vcc, s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e32 v12, v13, v12, vcc
+; SDAG-NEXT:    v_sub_i32_e32 v6, vcc, v6, v16
+; SDAG-NEXT:    v_subb_u32_e32 v7, vcc, v10, v14, vcc
+; SDAG-NEXT:    v_xor_b32_e32 v12, 0x7f, v6
+; SDAG-NEXT:    v_subb_u32_e32 v10, vcc, 0, v11, vcc
+; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[10:11], v[6:7]
+; SDAG-NEXT:    v_cndmask_b32_e64 v14, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v11, vcc, 0, v11, vcc
+; SDAG-NEXT:    v_or_b32_e32 v12, v12, v10
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
-; SDAG-NEXT:    v_and_b32_e32 v10, 1, v12
-; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v10
+; SDAG-NEXT:    v_cndmask_b32_e64 v15, 0, 1, vcc
+; SDAG-NEXT:    v_or_b32_e32 v13, v7, v11
+; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[10:11]
+; SDAG-NEXT:    v_cndmask_b32_e32 v14, v15, v14, vcc
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[12:13]
+; SDAG-NEXT:    v_and_b32_e32 v12, 1, v14
+; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v12
 ; SDAG-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v15, v9, 0, s[4:5]
 ; SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v14, v8, 0, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v11, v5, 0, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v10, v4, 0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v13, v5, 0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v12, v4, 0, s[4:5]
 ; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], vcc
 ; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB0_12
 ; SDAG-NEXT:  ; %bb.7: ; %udiv-bb1
-; SDAG-NEXT:    v_mov_b32_e32 v11, s9
-; SDAG-NEXT:    v_mov_b32_e32 v10, s8
 ; SDAG-NEXT:    v_add_i32_e32 v30, vcc, 1, v6
 ; SDAG-NEXT:    v_sub_i32_e64 v12, s[4:5], 63, v6
 ; SDAG-NEXT:    v_addc_u32_e32 v31, vcc, 0, v7, vcc
@@ -390,8 +388,8 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v4, 31, v11
 ; SDAG-NEXT:    v_lshl_b64 v[2:3], v[10:11], 1
 ; SDAG-NEXT:    v_or_b32_e32 v14, v14, v4
-; SDAG-NEXT:    v_or_b32_e32 v11, v13, v3
-; SDAG-NEXT:    v_or_b32_e32 v10, v12, v2
+; SDAG-NEXT:    v_or_b32_e32 v13, v13, v3
+; SDAG-NEXT:    v_or_b32_e32 v12, v12, v2
 ; SDAG-NEXT:  .LBB0_12: ; %Flow12
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SDAG-NEXT:    v_xor_b32_e32 v3, v27, v26
@@ -404,14 +402,14 @@ define <2 x i128> @v_sdiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_xor_b32_e32 v0, v21, v2
 ; SDAG-NEXT:    v_xor_b32_e32 v8, v15, v7
 ; SDAG-NEXT:    v_xor_b32_e32 v9, v14, v6
-; SDAG-NEXT:    v_xor_b32_e32 v11, v11, v7
+; SDAG-NEXT:    v_xor_b32_e32 v10, v13, v7
 ; SDAG-NEXT:    v_sub_i32_e32 v0, vcc, v0, v2
 ; SDAG-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v2, vcc, v5, v2, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v3, vcc, v4, v3, vcc
-; SDAG-NEXT:    v_xor_b32_e32 v4, v10, v6
+; SDAG-NEXT:    v_xor_b32_e32 v4, v12, v6
 ; SDAG-NEXT:    v_sub_i32_e32 v4, vcc, v4, v6
-; SDAG-NEXT:    v_subb_u32_e32 v5, vcc, v11, v7, vcc
+; SDAG-NEXT:    v_subb_u32_e32 v5, vcc, v10, v7, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v6, vcc, v9, v6, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v7, vcc, v8, v7, vcc
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -842,7 +840,8 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_ffbh_u32_e32 v25, v17
 ; SDAG-NEXT:    v_ffbh_u32_e32 v26, v0
 ; SDAG-NEXT:    v_ffbh_u32_e32 v27, v1
-; SDAG-NEXT:    s_mov_b64 s[10:11], 0x7f
+; SDAG-NEXT:    v_mov_b32_e32 v28, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], 0x7f
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[18:19]
 ; SDAG-NEXT:    v_add_i32_e64 v2, s[6:7], 32, v20
@@ -858,26 +857,26 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_addc_u32_e64 v20, s[4:5], 0, 0, vcc
 ; SDAG-NEXT:    v_add_i32_e32 v19, vcc, 64, v19
 ; SDAG-NEXT:    v_addc_u32_e64 v21, s[4:5], 0, 0, vcc
-; SDAG-NEXT:    s_subb_u32 s8, 0, 0
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v22, v20, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[16:17]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v3, v21, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v18, v19, v18, vcc
-; SDAG-NEXT:    s_subb_u32 s9, 0, 0
 ; SDAG-NEXT:    v_sub_i32_e32 v20, vcc, v2, v18
-; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v18, 0, 1, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v21, vcc, v22, v3, vcc
 ; SDAG-NEXT:    v_xor_b32_e32 v2, 0x7f, v20
-; SDAG-NEXT:    v_or_b32_e32 v2, s8, v2
-; SDAG-NEXT:    v_or_b32_e32 v3, s9, v21
-; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[10:11], v[20:21]
+; SDAG-NEXT:    v_subb_u32_e32 v22, vcc, 0, v28, vcc
+; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[8:9], v[20:21]
+; SDAG-NEXT:    v_cndmask_b32_e64 v18, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v23, vcc, 0, v28, vcc
+; SDAG-NEXT:    v_or_b32_e32 v2, v2, v22
+; SDAG-NEXT:    v_or_b32_e32 v3, v21, v23
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v19, 0, 1, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v2, v18, v19, s[4:5]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[22:23]
+; SDAG-NEXT:    v_cndmask_b32_e64 v2, v19, v18, s[4:5]
 ; SDAG-NEXT:    v_and_b32_e32 v2, 1, v2
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v2
 ; SDAG-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
@@ -885,32 +884,30 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, v16, 0, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v18, v1, 0, s[4:5]
-; SDAG-NEXT:    s_and_b64 s[10:11], s[6:7], vcc
+; SDAG-NEXT:    s_and_b64 s[8:9], s[6:7], vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v19, v0, 0, s[4:5]
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[10:11]
+; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; SDAG-NEXT:    s_cbranch_execz .LBB1_6
 ; SDAG-NEXT:  ; %bb.1: ; %udiv-bb15
-; SDAG-NEXT:    v_mov_b32_e32 v2, s8
-; SDAG-NEXT:    v_mov_b32_e32 v3, s9
 ; SDAG-NEXT:    v_add_i32_e32 v26, vcc, 1, v20
-; SDAG-NEXT:    v_sub_i32_e64 v18, s[4:5], 63, v20
+; SDAG-NEXT:    v_sub_i32_e64 v2, s[4:5], 63, v20
 ; SDAG-NEXT:    v_addc_u32_e32 v27, vcc, 0, v21, vcc
-; SDAG-NEXT:    v_lshl_b64 v[18:19], v[0:1], v18
-; SDAG-NEXT:    v_addc_u32_e32 v28, vcc, 0, v2, vcc
-; SDAG-NEXT:    v_addc_u32_e32 v29, vcc, 0, v3, vcc
-; SDAG-NEXT:    v_or_b32_e32 v2, v26, v28
+; SDAG-NEXT:    v_lshl_b64 v[2:3], v[0:1], v2
+; SDAG-NEXT:    v_addc_u32_e32 v28, vcc, 0, v22, vcc
+; SDAG-NEXT:    v_addc_u32_e32 v29, vcc, 0, v23, vcc
+; SDAG-NEXT:    v_or_b32_e32 v18, v26, v28
 ; SDAG-NEXT:    v_sub_i32_e32 v24, vcc, 0x7f, v20
-; SDAG-NEXT:    v_or_b32_e32 v3, v27, v29
+; SDAG-NEXT:    v_or_b32_e32 v19, v27, v29
 ; SDAG-NEXT:    v_lshl_b64 v[20:21], v[16:17], v24
 ; SDAG-NEXT:    v_sub_i32_e32 v25, vcc, 64, v24
 ; SDAG-NEXT:    v_lshl_b64 v[22:23], v[0:1], v24
-; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
-; SDAG-NEXT:    v_lshr_b64 v[2:3], v[0:1], v25
-; SDAG-NEXT:    v_or_b32_e32 v3, v21, v3
-; SDAG-NEXT:    v_or_b32_e32 v2, v20, v2
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
+; SDAG-NEXT:    v_lshr_b64 v[18:19], v[0:1], v25
+; SDAG-NEXT:    v_or_b32_e32 v19, v21, v19
+; SDAG-NEXT:    v_or_b32_e32 v18, v20, v18
 ; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v24
-; SDAG-NEXT:    v_cndmask_b32_e64 v3, v19, v3, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v2, v18, v2, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v3, v3, v19, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v2, v2, v18, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v19, 0, v23, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v18, 0, v22, s[4:5]
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v24
@@ -1014,7 +1011,8 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_ffbh_u32_e32 v21, v7
 ; SDAG-NEXT:    v_ffbh_u32_e32 v22, v4
 ; SDAG-NEXT:    v_ffbh_u32_e32 v23, v5
-; SDAG-NEXT:    s_mov_b64 s[10:11], 0x7f
+; SDAG-NEXT:    v_mov_b32_e32 v24, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], 0x7f
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[8:9]
 ; SDAG-NEXT:    v_add_i32_e64 v0, s[6:7], 32, v10
@@ -1030,24 +1028,24 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_addc_u32_e64 v10, s[4:5], 0, 0, vcc
 ; SDAG-NEXT:    v_add_i32_e32 v9, vcc, 64, v9
 ; SDAG-NEXT:    v_addc_u32_e64 v11, s[4:5], 0, 0, vcc
-; SDAG-NEXT:    s_subb_u32 s8, 0, 0
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v10, v10, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, v11, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v8, v9, v8, vcc
-; SDAG-NEXT:    s_subb_u32 s9, 0, 0
 ; SDAG-NEXT:    v_sub_i32_e32 v0, vcc, v0, v8
-; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v11, 0, 1, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v1, vcc, v10, v1, vcc
 ; SDAG-NEXT:    v_xor_b32_e32 v8, 0x7f, v0
-; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[10:11], v[0:1]
-; SDAG-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
-; SDAG-NEXT:    v_or_b32_e32 v9, s9, v1
-; SDAG-NEXT:    v_or_b32_e32 v8, s8, v8
-; SDAG-NEXT:    v_cmp_eq_u64_e64 vcc, s[8:9], 0
+; SDAG-NEXT:    v_subb_u32_e32 v16, vcc, 0, v24, vcc
+; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[8:9], v[0:1]
+; SDAG-NEXT:    v_cndmask_b32_e64 v10, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v17, vcc, 0, v24, vcc
+; SDAG-NEXT:    v_or_b32_e32 v8, v8, v16
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[16:17]
+; SDAG-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc
+; SDAG-NEXT:    v_or_b32_e32 v9, v1, v17
+; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[16:17]
 ; SDAG-NEXT:    v_cndmask_b32_e32 v10, v11, v10, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
 ; SDAG-NEXT:    v_and_b32_e32 v8, 1, v10
@@ -1062,27 +1060,25 @@ define <2 x i128> @v_udiv_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB1_12
 ; SDAG-NEXT:  ; %bb.7: ; %udiv-bb1
-; SDAG-NEXT:    v_mov_b32_e32 v8, s8
-; SDAG-NEXT:    v_mov_b32_e32 v9, s9
 ; SDAG-NEXT:    v_add_i32_e32 v22, vcc, 1, v0
-; SDAG-NEXT:    v_sub_i32_e64 v10, s[4:5], 63, v0
+; SDAG-NEXT:    v_sub_i32_e64 v8, s[4:5], 63, v0
 ; SDAG-NEXT:    v_addc_u32_e32 v23, vcc, 0, v1, vcc
-; SDAG-NEXT:    v_lshl_b64 v[10:11], v[4:5], v10
-; SDAG-NEXT:    v_addc_u32_e32 v24, vcc, 0, v8, vcc
-; SDAG-NEXT:    v_addc_u32_e32 v25, vcc, 0, v9, vcc
-; SDAG-NEXT:    v_or_b32_e32 v8, v22, v24
+; SDAG-NEXT:    v_lshl_b64 v[8:9], v[4:5], v8
+; SDAG-NEXT:    v_addc_u32_e32 v24, vcc, 0, v16, vcc
+; SDAG-NEXT:    v_addc_u32_e32 v25, vcc, 0, v17, vcc
+; SDAG-NEXT:    v_or_b32_e32 v10, v22, v24
 ; SDAG-NEXT:    v_sub_i32_e32 v20, vcc, 0x7f, v0
-; SDAG-NEXT:    v_or_b32_e32 v9, v23, v25
+; SDAG-NEXT:    v_or_b32_e32 v11, v23, v25
 ; SDAG-NEXT:    v_lshl_b64 v[0:1], v[6:7], v20
 ; SDAG-NEXT:    v_sub_i32_e32 v21, vcc, 64, v20
 ; SDAG-NEXT:    v_lshl_b64 v[16:17], v[4:5], v20
-; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
-; SDAG-NEXT:    v_lshr_b64 v[8:9], v[4:5], v21
-; SDAG-NEXT:    v_or_b32_e32 v1, v1, v9
-; SDAG-NEXT:    v_or_b32_e32 v0, v0, v8
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; SDAG-NEXT:    v_lshr_b64 v[10:11], v[4:5], v21
+; SDAG-NEXT:    v_or_b32_e32 v1, v1, v11
+; SDAG-NEXT:    v_or_b32_e32 v0, v0, v10
 ; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v20
-; SDAG-NEXT:    v_cndmask_b32_e64 v1, v11, v1, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, v10, v0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v1, v9, v1, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v8, v0, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v11, 0, v17, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v10, 0, v16, s[4:5]
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v20
@@ -1550,6 +1546,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SDAG-NEXT:    v_sub_i32_e32 v16, vcc, 0, v0
+; SDAG-NEXT:    v_mov_b32_e32 v19, 0
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v28, 31, v3
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0x7f
 ; SDAG-NEXT:    v_subb_u32_e32 v17, vcc, 0, v1, vcc
@@ -1561,42 +1558,42 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_subb_u32_e32 v1, vcc, 0, v3, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, v18, s[4:5]
 ; SDAG-NEXT:    v_ffbh_u32_e32 v18, v16
-; SDAG-NEXT:    v_ffbh_u32_e32 v19, v17
-; SDAG-NEXT:    v_sub_i32_e32 v20, vcc, 0, v8
+; SDAG-NEXT:    v_ffbh_u32_e32 v20, v17
+; SDAG-NEXT:    v_sub_i32_e32 v21, vcc, 0, v8
 ; SDAG-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
 ; SDAG-NEXT:    v_or_b32_e32 v2, v16, v0
 ; SDAG-NEXT:    v_add_i32_e64 v18, s[4:5], 32, v18
-; SDAG-NEXT:    v_ffbh_u32_e32 v21, v0
-; SDAG-NEXT:    v_subb_u32_e32 v22, vcc, 0, v9, vcc
+; SDAG-NEXT:    v_ffbh_u32_e32 v22, v0
+; SDAG-NEXT:    v_subb_u32_e32 v23, vcc, 0, v9, vcc
 ; SDAG-NEXT:    v_or_b32_e32 v3, v17, v1
-; SDAG-NEXT:    v_min_u32_e32 v18, v18, v19
-; SDAG-NEXT:    v_add_i32_e64 v19, s[4:5], 32, v21
-; SDAG-NEXT:    v_ffbh_u32_e32 v21, v1
+; SDAG-NEXT:    v_min_u32_e32 v18, v18, v20
+; SDAG-NEXT:    v_add_i32_e64 v20, s[4:5], 32, v22
+; SDAG-NEXT:    v_ffbh_u32_e32 v22, v1
 ; SDAG-NEXT:    v_cmp_gt_i64_e64 s[4:5], 0, v[10:11]
-; SDAG-NEXT:    v_cndmask_b32_e64 v30, v9, v22, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v30, v9, v23, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v9, vcc, 0, v10, vcc
-; SDAG-NEXT:    v_cndmask_b32_e64 v31, v8, v20, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v31, v8, v21, s[4:5]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], 0, v[2:3]
-; SDAG-NEXT:    v_min_u32_e32 v3, v19, v21
+; SDAG-NEXT:    v_min_u32_e32 v3, v20, v22
 ; SDAG-NEXT:    v_add_i32_e64 v8, s[8:9], 64, v18
 ; SDAG-NEXT:    v_addc_u32_e64 v18, s[8:9], 0, 0, s[8:9]
-; SDAG-NEXT:    v_subb_u32_e32 v19, vcc, 0, v11, vcc
+; SDAG-NEXT:    v_subb_u32_e32 v20, vcc, 0, v11, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, v10, v9, s[4:5]
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v18, v18, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v10, v8, v3, vcc
 ; SDAG-NEXT:    v_ffbh_u32_e32 v9, v31
-; SDAG-NEXT:    v_ffbh_u32_e32 v20, v30
-; SDAG-NEXT:    v_cndmask_b32_e64 v3, v11, v19, s[4:5]
+; SDAG-NEXT:    v_ffbh_u32_e32 v21, v30
+; SDAG-NEXT:    v_cndmask_b32_e64 v3, v11, v20, s[4:5]
 ; SDAG-NEXT:    v_or_b32_e32 v8, v31, v2
 ; SDAG-NEXT:    v_add_i32_e32 v11, vcc, 32, v9
-; SDAG-NEXT:    v_ffbh_u32_e32 v19, v2
+; SDAG-NEXT:    v_ffbh_u32_e32 v20, v2
 ; SDAG-NEXT:    v_or_b32_e32 v9, v30, v3
-; SDAG-NEXT:    v_min_u32_e32 v11, v11, v20
-; SDAG-NEXT:    v_add_i32_e32 v19, vcc, 32, v19
-; SDAG-NEXT:    v_ffbh_u32_e32 v20, v3
+; SDAG-NEXT:    v_min_u32_e32 v11, v11, v21
+; SDAG-NEXT:    v_add_i32_e32 v20, vcc, 32, v20
+; SDAG-NEXT:    v_ffbh_u32_e32 v21, v3
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
-; SDAG-NEXT:    v_min_u32_e32 v8, v19, v20
+; SDAG-NEXT:    v_min_u32_e32 v8, v20, v21
 ; SDAG-NEXT:    v_add_i32_e64 v9, s[4:5], 64, v11
 ; SDAG-NEXT:    v_addc_u32_e64 v11, s[4:5], 0, 0, s[4:5]
 ; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], 0, v[2:3]
@@ -1604,19 +1601,19 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, v9, v8, s[4:5]
 ; SDAG-NEXT:    s_or_b64 s[6:7], vcc, s[6:7]
 ; SDAG-NEXT:    v_sub_i32_e32 v10, vcc, v8, v10
-; SDAG-NEXT:    s_subb_u32 s8, 0, 0
 ; SDAG-NEXT:    v_subb_u32_e32 v11, vcc, v11, v18, vcc
-; SDAG-NEXT:    s_subb_u32 s9, 0, 0
 ; SDAG-NEXT:    v_xor_b32_e32 v8, 0x7f, v10
-; SDAG-NEXT:    v_or_b32_e32 v8, s8, v8
-; SDAG-NEXT:    v_or_b32_e32 v9, s9, v11
-; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[10:11], v[10:11]
-; SDAG-NEXT:    v_cndmask_b32_e64 v18, 0, 1, vcc
-; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v19, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v18, vcc, 0, v19, vcc
+; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[10:11], v[10:11]
+; SDAG-NEXT:    v_cndmask_b32_e64 v20, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v19, vcc, 0, v19, vcc
+; SDAG-NEXT:    v_or_b32_e32 v8, v8, v18
+; SDAG-NEXT:    v_or_b32_e32 v9, v11, v19
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
+; SDAG-NEXT:    v_cndmask_b32_e64 v21, 0, 1, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v8, v19, v18, s[4:5]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[18:19]
+; SDAG-NEXT:    v_cndmask_b32_e64 v8, v21, v20, s[4:5]
 ; SDAG-NEXT:    v_and_b32_e32 v8, 1, v8
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v8
 ; SDAG-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
@@ -1624,32 +1621,30 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, v0, 0, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v33, v17, 0, s[4:5]
-; SDAG-NEXT:    s_and_b64 s[10:11], s[6:7], vcc
+; SDAG-NEXT:    s_and_b64 s[8:9], s[6:7], vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v34, v16, 0, s[4:5]
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[10:11]
+; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; SDAG-NEXT:    s_cbranch_execz .LBB2_6
 ; SDAG-NEXT:  ; %bb.1: ; %udiv-bb15
-; SDAG-NEXT:    v_mov_b32_e32 v8, s8
-; SDAG-NEXT:    v_mov_b32_e32 v9, s9
 ; SDAG-NEXT:    v_add_i32_e32 v32, vcc, 1, v10
-; SDAG-NEXT:    v_sub_i32_e64 v18, s[4:5], 63, v10
+; SDAG-NEXT:    v_sub_i32_e64 v8, s[4:5], 63, v10
 ; SDAG-NEXT:    v_addc_u32_e32 v33, vcc, 0, v11, vcc
-; SDAG-NEXT:    v_lshl_b64 v[18:19], v[16:17], v18
-; SDAG-NEXT:    v_addc_u32_e32 v34, vcc, 0, v8, vcc
-; SDAG-NEXT:    v_addc_u32_e32 v35, vcc, 0, v9, vcc
-; SDAG-NEXT:    v_or_b32_e32 v8, v32, v34
+; SDAG-NEXT:    v_lshl_b64 v[8:9], v[16:17], v8
+; SDAG-NEXT:    v_addc_u32_e32 v34, vcc, 0, v18, vcc
+; SDAG-NEXT:    v_addc_u32_e32 v35, vcc, 0, v19, vcc
+; SDAG-NEXT:    v_or_b32_e32 v18, v32, v34
 ; SDAG-NEXT:    v_sub_i32_e32 v22, vcc, 0x7f, v10
-; SDAG-NEXT:    v_or_b32_e32 v9, v33, v35
+; SDAG-NEXT:    v_or_b32_e32 v19, v33, v35
 ; SDAG-NEXT:    v_lshl_b64 v[10:11], v[0:1], v22
 ; SDAG-NEXT:    v_sub_i32_e32 v23, vcc, 64, v22
 ; SDAG-NEXT:    v_lshl_b64 v[20:21], v[16:17], v22
-; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
-; SDAG-NEXT:    v_lshr_b64 v[8:9], v[16:17], v23
-; SDAG-NEXT:    v_or_b32_e32 v9, v11, v9
-; SDAG-NEXT:    v_or_b32_e32 v8, v10, v8
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
+; SDAG-NEXT:    v_lshr_b64 v[18:19], v[16:17], v23
+; SDAG-NEXT:    v_or_b32_e32 v11, v11, v19
+; SDAG-NEXT:    v_or_b32_e32 v10, v10, v18
 ; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v22
-; SDAG-NEXT:    v_cndmask_b32_e64 v9, v19, v9, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v8, v18, v8, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v9, v9, v11, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v8, v8, v10, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v19, 0, v21, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v18, 0, v20, s[4:5]
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v22
@@ -1743,6 +1738,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v32, 31, v7
 ; SDAG-NEXT:    v_sub_i32_e32 v10, vcc, 0, v4
+; SDAG-NEXT:    v_mov_b32_e32 v19, 0
 ; SDAG-NEXT:    s_mov_b64 s[10:11], 0x7f
 ; SDAG-NEXT:    v_mov_b32_e32 v35, v32
 ; SDAG-NEXT:    v_subb_u32_e32 v11, vcc, 0, v5, vcc
@@ -1753,32 +1749,32 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_subb_u32_e32 v5, vcc, 0, v7, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v4, v6, v18, s[4:5]
 ; SDAG-NEXT:    v_ffbh_u32_e32 v18, v10
-; SDAG-NEXT:    v_ffbh_u32_e32 v19, v11
+; SDAG-NEXT:    v_ffbh_u32_e32 v20, v11
 ; SDAG-NEXT:    v_cndmask_b32_e64 v5, v7, v5, s[4:5]
-; SDAG-NEXT:    v_sub_i32_e32 v20, vcc, 0, v12
+; SDAG-NEXT:    v_sub_i32_e32 v21, vcc, 0, v12
 ; SDAG-NEXT:    v_or_b32_e32 v6, v10, v4
-; SDAG-NEXT:    v_ffbh_u32_e32 v21, v4
+; SDAG-NEXT:    v_ffbh_u32_e32 v22, v4
 ; SDAG-NEXT:    v_add_i32_e64 v18, s[4:5], 32, v18
-; SDAG-NEXT:    v_subb_u32_e32 v22, vcc, 0, v13, vcc
+; SDAG-NEXT:    v_subb_u32_e32 v23, vcc, 0, v13, vcc
 ; SDAG-NEXT:    v_or_b32_e32 v7, v11, v5
-; SDAG-NEXT:    v_add_i32_e64 v21, s[4:5], 32, v21
-; SDAG-NEXT:    v_ffbh_u32_e32 v23, v5
-; SDAG-NEXT:    v_min_u32_e32 v18, v18, v19
-; SDAG-NEXT:    v_subb_u32_e32 v19, vcc, 0, v14, vcc
+; SDAG-NEXT:    v_add_i32_e64 v22, s[4:5], 32, v22
+; SDAG-NEXT:    v_ffbh_u32_e32 v24, v5
+; SDAG-NEXT:    v_min_u32_e32 v18, v18, v20
+; SDAG-NEXT:    v_subb_u32_e32 v20, vcc, 0, v14, vcc
 ; SDAG-NEXT:    v_cmp_gt_i64_e64 s[4:5], 0, v[14:15]
-; SDAG-NEXT:    v_cndmask_b32_e64 v36, v13, v22, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v37, v12, v20, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v36, v13, v23, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v37, v12, v21, s[4:5]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], 0, v[6:7]
-; SDAG-NEXT:    v_min_u32_e32 v7, v21, v23
+; SDAG-NEXT:    v_min_u32_e32 v7, v22, v24
 ; SDAG-NEXT:    v_add_i32_e64 v12, s[8:9], 64, v18
 ; SDAG-NEXT:    v_addc_u32_e64 v13, s[8:9], 0, 0, s[8:9]
 ; SDAG-NEXT:    v_subb_u32_e32 v18, vcc, 0, v15, vcc
-; SDAG-NEXT:    v_cndmask_b32_e64 v6, v14, v19, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v6, v14, v20, s[4:5]
 ; SDAG-NEXT:    v_ffbh_u32_e32 v14, v37
-; SDAG-NEXT:    v_ffbh_u32_e32 v19, v36
+; SDAG-NEXT:    v_ffbh_u32_e32 v20, v36
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v20, v13, 0, vcc
-; SDAG-NEXT:    v_cndmask_b32_e32 v21, v12, v7, vcc
+; SDAG-NEXT:    v_cndmask_b32_e64 v21, v13, 0, vcc
+; SDAG-NEXT:    v_cndmask_b32_e32 v22, v12, v7, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v7, v15, v18, s[4:5]
 ; SDAG-NEXT:    v_or_b32_e32 v12, v37, v6
 ; SDAG-NEXT:    v_ffbh_u32_e32 v15, v6
@@ -1786,7 +1782,7 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_or_b32_e32 v13, v36, v7
 ; SDAG-NEXT:    v_add_i32_e32 v15, vcc, 32, v15
 ; SDAG-NEXT:    v_ffbh_u32_e32 v18, v7
-; SDAG-NEXT:    v_min_u32_e32 v14, v14, v19
+; SDAG-NEXT:    v_min_u32_e32 v14, v14, v20
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[12:13]
 ; SDAG-NEXT:    v_min_u32_e32 v12, v15, v18
 ; SDAG-NEXT:    v_add_i32_e64 v13, s[4:5], 64, v14
@@ -1795,53 +1791,51 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v14, v14, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v12, v13, v12, vcc
-; SDAG-NEXT:    v_sub_i32_e32 v12, vcc, v12, v21
-; SDAG-NEXT:    s_subb_u32 s8, 0, 0
-; SDAG-NEXT:    v_subb_u32_e32 v13, vcc, v14, v20, vcc
-; SDAG-NEXT:    s_subb_u32 s9, 0, 0
+; SDAG-NEXT:    v_sub_i32_e32 v12, vcc, v12, v22
+; SDAG-NEXT:    v_subb_u32_e32 v13, vcc, v14, v21, vcc
 ; SDAG-NEXT:    v_xor_b32_e32 v14, 0x7f, v12
-; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[10:11], v[12:13]
-; SDAG-NEXT:    v_cndmask_b32_e64 v18, 0, 1, vcc
-; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v19, 0, 1, s[4:5]
-; SDAG-NEXT:    v_or_b32_e32 v15, s9, v13
-; SDAG-NEXT:    v_or_b32_e32 v14, s8, v14
-; SDAG-NEXT:    v_cmp_eq_u64_e64 vcc, s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e32 v18, v19, v18, vcc
+; SDAG-NEXT:    v_subb_u32_e32 v18, vcc, 0, v19, vcc
+; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[10:11], v[12:13]
+; SDAG-NEXT:    v_cndmask_b32_e64 v20, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v19, vcc, 0, v19, vcc
+; SDAG-NEXT:    v_or_b32_e32 v14, v14, v18
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
+; SDAG-NEXT:    v_cndmask_b32_e64 v21, 0, 1, vcc
+; SDAG-NEXT:    v_or_b32_e32 v15, v13, v19
+; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[18:19]
+; SDAG-NEXT:    v_cndmask_b32_e32 v20, v21, v20, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
-; SDAG-NEXT:    v_and_b32_e32 v14, 1, v18
+; SDAG-NEXT:    v_and_b32_e32 v14, 1, v20
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v14
 ; SDAG-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v15, v5, 0, s[4:5]
 ; SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v14, v4, 0, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v19, v11, 0, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v18, v10, 0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v20, v11, 0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v21, v10, 0, s[4:5]
 ; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], vcc
 ; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB2_12
 ; SDAG-NEXT:  ; %bb.7: ; %udiv-bb1
-; SDAG-NEXT:    v_mov_b32_e32 v15, s9
-; SDAG-NEXT:    v_mov_b32_e32 v14, s8
 ; SDAG-NEXT:    v_add_i32_e32 v38, vcc, 1, v12
-; SDAG-NEXT:    v_sub_i32_e64 v18, s[4:5], 63, v12
+; SDAG-NEXT:    v_sub_i32_e64 v14, s[4:5], 63, v12
 ; SDAG-NEXT:    v_addc_u32_e32 v39, vcc, 0, v13, vcc
-; SDAG-NEXT:    v_lshl_b64 v[18:19], v[10:11], v18
-; SDAG-NEXT:    v_addc_u32_e32 v48, vcc, 0, v14, vcc
-; SDAG-NEXT:    v_addc_u32_e32 v49, vcc, 0, v15, vcc
-; SDAG-NEXT:    v_or_b32_e32 v13, v38, v48
+; SDAG-NEXT:    v_lshl_b64 v[13:14], v[10:11], v14
+; SDAG-NEXT:    v_addc_u32_e32 v48, vcc, 0, v18, vcc
+; SDAG-NEXT:    v_addc_u32_e32 v49, vcc, 0, v19, vcc
+; SDAG-NEXT:    v_or_b32_e32 v18, v38, v48
 ; SDAG-NEXT:    v_sub_i32_e32 v15, vcc, 0x7f, v12
-; SDAG-NEXT:    v_or_b32_e32 v14, v39, v49
+; SDAG-NEXT:    v_or_b32_e32 v19, v39, v49
 ; SDAG-NEXT:    v_lshl_b64 v[20:21], v[4:5], v15
 ; SDAG-NEXT:    v_sub_i32_e32 v12, vcc, 64, v15
 ; SDAG-NEXT:    v_lshl_b64 v[22:23], v[10:11], v15
-; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[13:14]
-; SDAG-NEXT:    v_lshr_b64 v[12:13], v[10:11], v12
-; SDAG-NEXT:    v_or_b32_e32 v13, v21, v13
-; SDAG-NEXT:    v_or_b32_e32 v12, v20, v12
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
+; SDAG-NEXT:    v_lshr_b64 v[18:19], v[10:11], v12
+; SDAG-NEXT:    v_or_b32_e32 v12, v21, v19
+; SDAG-NEXT:    v_or_b32_e32 v18, v20, v18
 ; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v15
-; SDAG-NEXT:    v_cndmask_b32_e64 v14, v19, v13, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v18, v18, v12, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v14, v14, v12, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v18, v13, v18, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v13, 0, v23, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v12, 0, v22, s[4:5]
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v15
@@ -1929,46 +1923,46 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v20, 31, v13
 ; SDAG-NEXT:    v_lshl_b64 v[12:13], v[12:13], 1
 ; SDAG-NEXT:    v_or_b32_e32 v14, v14, v20
-; SDAG-NEXT:    v_or_b32_e32 v19, v19, v13
-; SDAG-NEXT:    v_or_b32_e32 v18, v18, v12
+; SDAG-NEXT:    v_or_b32_e32 v20, v19, v13
+; SDAG-NEXT:    v_or_b32_e32 v21, v18, v12
 ; SDAG-NEXT:  .LBB2_12: ; %Flow12
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
-; SDAG-NEXT:    v_mul_lo_u32 v23, v34, v3
+; SDAG-NEXT:    v_mul_lo_u32 v18, v34, v3
 ; SDAG-NEXT:    v_mad_u64_u32 v[12:13], s[4:5], v34, v2, 0
-; SDAG-NEXT:    v_mul_lo_u32 v24, v33, v2
+; SDAG-NEXT:    v_mul_lo_u32 v19, v33, v2
 ; SDAG-NEXT:    v_mul_lo_u32 v25, v9, v31
 ; SDAG-NEXT:    v_mul_lo_u32 v26, v8, v30
-; SDAG-NEXT:    v_mad_u64_u32 v[20:21], s[4:5], v31, v34, 0
-; SDAG-NEXT:    v_mov_b32_e32 v22, 0
-; SDAG-NEXT:    v_mul_lo_u32 v9, v18, v7
-; SDAG-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v18, v6, 0
-; SDAG-NEXT:    v_mul_lo_u32 v27, v19, v6
+; SDAG-NEXT:    v_mad_u64_u32 v[22:23], s[4:5], v31, v34, 0
+; SDAG-NEXT:    v_mov_b32_e32 v24, 0
+; SDAG-NEXT:    v_mul_lo_u32 v9, v21, v7
+; SDAG-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v21, v6, 0
+; SDAG-NEXT:    v_mul_lo_u32 v27, v20, v6
 ; SDAG-NEXT:    v_mul_lo_u32 v38, v15, v37
 ; SDAG-NEXT:    v_mul_lo_u32 v39, v14, v36
-; SDAG-NEXT:    v_add_i32_e32 v13, vcc, v13, v23
-; SDAG-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], v30, v34, v[21:22]
-; SDAG-NEXT:    v_sub_i32_e32 v20, vcc, v16, v20
+; SDAG-NEXT:    v_add_i32_e32 v13, vcc, v13, v18
+; SDAG-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], v30, v34, v[23:24]
+; SDAG-NEXT:    v_sub_i32_e32 v18, vcc, v16, v22
 ; SDAG-NEXT:    v_add_i32_e64 v3, s[4:5], v3, v9
-; SDAG-NEXT:    v_add_i32_e64 v13, s[4:5], v13, v24
-; SDAG-NEXT:    v_mov_b32_e32 v21, v6
-; SDAG-NEXT:    v_mad_u64_u32 v[15:16], s[4:5], v31, v33, v[21:22]
-; SDAG-NEXT:    v_xor_b32_e32 v23, v20, v28
+; SDAG-NEXT:    v_add_i32_e64 v13, s[4:5], v13, v19
+; SDAG-NEXT:    v_mov_b32_e32 v23, v6
+; SDAG-NEXT:    v_mad_u64_u32 v[15:16], s[4:5], v31, v33, v[23:24]
+; SDAG-NEXT:    v_xor_b32_e32 v18, v18, v28
 ; SDAG-NEXT:    v_add_i32_e64 v3, s[4:5], v3, v27
 ; SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v8, v31, v[12:13]
 ; SDAG-NEXT:    v_add_i32_e64 v6, s[4:5], v7, v16
 ; SDAG-NEXT:    v_addc_u32_e64 v7, s[4:5], 0, 0, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v12, vcc, v17, v15, vcc
 ; SDAG-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v14, v37, v[2:3]
-; SDAG-NEXT:    v_mad_u64_u32 v[20:21], s[4:5], v37, v18, 0
+; SDAG-NEXT:    v_mad_u64_u32 v[22:23], s[4:5], v37, v21, 0
 ; SDAG-NEXT:    v_add_i32_e64 v9, s[4:5], v25, v9
 ; SDAG-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], v30, v33, v[6:7]
 ; SDAG-NEXT:    v_xor_b32_e32 v16, v12, v29
 ; SDAG-NEXT:    v_add_i32_e64 v3, s[4:5], v38, v3
-; SDAG-NEXT:    v_mad_u64_u32 v[12:13], s[4:5], v36, v18, v[21:22]
+; SDAG-NEXT:    v_mad_u64_u32 v[12:13], s[4:5], v36, v21, v[23:24]
 ; SDAG-NEXT:    v_add_i32_e64 v9, s[4:5], v26, v9
 ; SDAG-NEXT:    v_add_i32_e64 v3, s[4:5], v39, v3
-; SDAG-NEXT:    v_mov_b32_e32 v21, v12
-; SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[4:5], v37, v19, v[21:22]
+; SDAG-NEXT:    v_mov_b32_e32 v23, v12
+; SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[4:5], v37, v20, v[23:24]
 ; SDAG-NEXT:    v_add_i32_e64 v6, s[4:5], v6, v8
 ; SDAG-NEXT:    v_addc_u32_e64 v8, s[4:5], v7, v9, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v0, vcc, v0, v6, vcc
@@ -1976,15 +1970,15 @@ define <2 x i128> @v_srem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_addc_u32_e64 v7, s[4:5], 0, 0, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v1, vcc, v1, v8, vcc
 ; SDAG-NEXT:    v_xor_b32_e32 v8, v0, v28
-; SDAG-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], v36, v19, v[6:7]
+; SDAG-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], v36, v20, v[6:7]
 ; SDAG-NEXT:    v_xor_b32_e32 v9, v1, v29
-; SDAG-NEXT:    v_sub_i32_e32 v0, vcc, v23, v28
+; SDAG-NEXT:    v_sub_i32_e32 v0, vcc, v18, v28
 ; SDAG-NEXT:    v_add_i32_e64 v6, s[4:5], v6, v2
 ; SDAG-NEXT:    v_addc_u32_e64 v7, s[4:5], v7, v3, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v1, vcc, v16, v29, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v2, vcc, v8, v28, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v3, vcc, v9, v29, vcc
-; SDAG-NEXT:    v_sub_i32_e32 v8, vcc, v10, v20
+; SDAG-NEXT:    v_sub_i32_e32 v8, vcc, v10, v22
 ; SDAG-NEXT:    v_subb_u32_e32 v9, vcc, v11, v14, vcc
 ; SDAG-NEXT:    v_xor_b32_e32 v8, v8, v32
 ; SDAG-NEXT:    v_subb_u32_e32 v4, vcc, v4, v6, vcc
@@ -2454,7 +2448,8 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_ffbh_u32_e32 v25, v3
 ; SDAG-NEXT:    v_ffbh_u32_e32 v26, v0
 ; SDAG-NEXT:    v_ffbh_u32_e32 v27, v1
-; SDAG-NEXT:    s_mov_b64 s[10:11], 0x7f
+; SDAG-NEXT:    v_mov_b32_e32 v28, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], 0x7f
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[16:17]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[18:19]
 ; SDAG-NEXT:    v_add_i32_e64 v16, s[6:7], 32, v20
@@ -2470,26 +2465,26 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_addc_u32_e64 v20, s[4:5], 0, 0, vcc
 ; SDAG-NEXT:    v_add_i32_e32 v19, vcc, 64, v19
 ; SDAG-NEXT:    v_addc_u32_e64 v21, s[4:5], 0, 0, vcc
-; SDAG-NEXT:    s_subb_u32 s8, 0, 0
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v20, v20, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v16, v17, v16, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v17, v21, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v18, v19, v18, vcc
-; SDAG-NEXT:    s_subb_u32 s9, 0, 0
 ; SDAG-NEXT:    v_sub_i32_e32 v18, vcc, v16, v18
-; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v21, 0, 1, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v19, vcc, v20, v17, vcc
 ; SDAG-NEXT:    v_xor_b32_e32 v16, 0x7f, v18
-; SDAG-NEXT:    v_or_b32_e32 v16, s8, v16
-; SDAG-NEXT:    v_or_b32_e32 v17, s9, v19
-; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[10:11], v[18:19]
-; SDAG-NEXT:    v_cndmask_b32_e64 v20, 0, 1, vcc
+; SDAG-NEXT:    v_subb_u32_e32 v20, vcc, 0, v28, vcc
+; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[8:9], v[18:19]
+; SDAG-NEXT:    v_cndmask_b32_e64 v22, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v21, vcc, 0, v28, vcc
+; SDAG-NEXT:    v_or_b32_e32 v16, v16, v20
+; SDAG-NEXT:    v_or_b32_e32 v17, v19, v21
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[20:21]
+; SDAG-NEXT:    v_cndmask_b32_e64 v23, 0, 1, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[16:17]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v16, v21, v20, s[4:5]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[20:21]
+; SDAG-NEXT:    v_cndmask_b32_e64 v16, v23, v22, s[4:5]
 ; SDAG-NEXT:    v_and_b32_e32 v16, 1, v16
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v16
 ; SDAG-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
@@ -2497,35 +2492,33 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v16, v2, 0, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v32, v1, 0, s[4:5]
-; SDAG-NEXT:    s_and_b64 s[10:11], s[6:7], vcc
+; SDAG-NEXT:    s_and_b64 s[8:9], s[6:7], vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v33, v0, 0, s[4:5]
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[10:11]
+; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; SDAG-NEXT:    s_cbranch_execz .LBB3_6
 ; SDAG-NEXT:  ; %bb.1: ; %udiv-bb15
-; SDAG-NEXT:    v_mov_b32_e32 v17, s9
-; SDAG-NEXT:    v_mov_b32_e32 v16, s8
 ; SDAG-NEXT:    v_add_i32_e32 v30, vcc, 1, v18
-; SDAG-NEXT:    v_sub_i32_e64 v20, s[4:5], 63, v18
+; SDAG-NEXT:    v_sub_i32_e64 v16, s[4:5], 63, v18
 ; SDAG-NEXT:    v_addc_u32_e32 v31, vcc, 0, v19, vcc
-; SDAG-NEXT:    v_lshl_b64 v[19:20], v[0:1], v20
-; SDAG-NEXT:    v_addc_u32_e32 v32, vcc, 0, v16, vcc
-; SDAG-NEXT:    v_addc_u32_e32 v33, vcc, 0, v17, vcc
-; SDAG-NEXT:    v_or_b32_e32 v16, v30, v32
-; SDAG-NEXT:    v_sub_i32_e32 v18, vcc, 0x7f, v18
-; SDAG-NEXT:    v_or_b32_e32 v17, v31, v33
-; SDAG-NEXT:    v_lshl_b64 v[21:22], v[2:3], v18
-; SDAG-NEXT:    v_sub_i32_e32 v25, vcc, 64, v18
-; SDAG-NEXT:    v_lshl_b64 v[23:24], v[0:1], v18
-; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[16:17]
-; SDAG-NEXT:    v_lshr_b64 v[16:17], v[0:1], v25
-; SDAG-NEXT:    v_or_b32_e32 v17, v22, v17
-; SDAG-NEXT:    v_or_b32_e32 v16, v21, v16
-; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v18
-; SDAG-NEXT:    v_cndmask_b32_e64 v17, v20, v17, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v16, v19, v16, s[4:5]
+; SDAG-NEXT:    v_lshl_b64 v[16:17], v[0:1], v16
+; SDAG-NEXT:    v_addc_u32_e32 v32, vcc, 0, v20, vcc
+; SDAG-NEXT:    v_addc_u32_e32 v33, vcc, 0, v21, vcc
+; SDAG-NEXT:    v_or_b32_e32 v19, v30, v32
+; SDAG-NEXT:    v_sub_i32_e32 v25, vcc, 0x7f, v18
+; SDAG-NEXT:    v_or_b32_e32 v20, v31, v33
+; SDAG-NEXT:    v_lshl_b64 v[21:22], v[2:3], v25
+; SDAG-NEXT:    v_sub_i32_e32 v18, vcc, 64, v25
+; SDAG-NEXT:    v_lshl_b64 v[23:24], v[0:1], v25
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[19:20]
+; SDAG-NEXT:    v_lshr_b64 v[18:19], v[0:1], v18
+; SDAG-NEXT:    v_or_b32_e32 v19, v22, v19
+; SDAG-NEXT:    v_or_b32_e32 v18, v21, v18
+; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v25
+; SDAG-NEXT:    v_cndmask_b32_e64 v17, v17, v19, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v16, v16, v18, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v21, 0, v24, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v20, 0, v23, s[4:5]
-; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v18
+; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v25
 ; SDAG-NEXT:    v_cndmask_b32_e64 v17, v17, v3, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v16, v16, v2, s[4:5]
 ; SDAG-NEXT:    v_mov_b32_e32 v18, 0
@@ -2626,7 +2619,8 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_ffbh_u32_e32 v27, v7
 ; SDAG-NEXT:    v_ffbh_u32_e32 v28, v4
 ; SDAG-NEXT:    v_ffbh_u32_e32 v29, v5
-; SDAG-NEXT:    s_mov_b64 s[10:11], 0x7f
+; SDAG-NEXT:    v_mov_b32_e32 v30, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], 0x7f
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[18:19]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[20:21]
 ; SDAG-NEXT:    v_add_i32_e64 v18, s[6:7], 32, v22
@@ -2642,59 +2636,57 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_addc_u32_e64 v22, s[4:5], 0, 0, vcc
 ; SDAG-NEXT:    v_add_i32_e32 v21, vcc, 64, v21
 ; SDAG-NEXT:    v_addc_u32_e64 v23, s[4:5], 0, 0, vcc
-; SDAG-NEXT:    s_subb_u32 s8, 0, 0
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v22, v22, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v18, v19, v18, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v19, v23, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v20, v21, v20, vcc
-; SDAG-NEXT:    s_subb_u32 s9, 0, 0
 ; SDAG-NEXT:    v_sub_i32_e32 v20, vcc, v18, v20
-; SDAG-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e64 v23, 0, 1, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v21, vcc, v22, v19, vcc
 ; SDAG-NEXT:    v_xor_b32_e32 v18, 0x7f, v20
-; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[10:11], v[20:21]
-; SDAG-NEXT:    v_cndmask_b32_e64 v22, 0, 1, vcc
-; SDAG-NEXT:    v_or_b32_e32 v19, s9, v21
-; SDAG-NEXT:    v_or_b32_e32 v18, s8, v18
-; SDAG-NEXT:    v_cmp_eq_u64_e64 vcc, s[8:9], 0
-; SDAG-NEXT:    v_cndmask_b32_e32 v22, v23, v22, vcc
+; SDAG-NEXT:    v_subb_u32_e32 v22, vcc, 0, v30, vcc
+; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[8:9], v[20:21]
+; SDAG-NEXT:    v_cndmask_b32_e64 v24, 0, 1, s[4:5]
+; SDAG-NEXT:    v_subb_u32_e32 v23, vcc, 0, v30, vcc
+; SDAG-NEXT:    v_or_b32_e32 v18, v18, v22
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[22:23]
+; SDAG-NEXT:    v_cndmask_b32_e64 v25, 0, 1, vcc
+; SDAG-NEXT:    v_or_b32_e32 v19, v21, v23
+; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[22:23]
+; SDAG-NEXT:    v_cndmask_b32_e32 v24, v25, v24, vcc
 ; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
-; SDAG-NEXT:    v_and_b32_e32 v18, 1, v22
+; SDAG-NEXT:    v_and_b32_e32 v18, 1, v24
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v18
 ; SDAG-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v19, v7, 0, s[4:5]
 ; SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_cndmask_b32_e64 v18, v6, 0, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v23, v5, 0, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v22, v4, 0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v24, v5, 0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v25, v4, 0, s[4:5]
 ; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], vcc
 ; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB3_12
 ; SDAG-NEXT:  ; %bb.7: ; %udiv-bb1
-; SDAG-NEXT:    v_mov_b32_e32 v19, s9
-; SDAG-NEXT:    v_mov_b32_e32 v18, s8
 ; SDAG-NEXT:    v_add_i32_e32 v34, vcc, 1, v20
-; SDAG-NEXT:    v_sub_i32_e64 v22, s[4:5], 63, v20
+; SDAG-NEXT:    v_sub_i32_e64 v18, s[4:5], 63, v20
 ; SDAG-NEXT:    v_addc_u32_e32 v35, vcc, 0, v21, vcc
-; SDAG-NEXT:    v_lshl_b64 v[21:22], v[4:5], v22
-; SDAG-NEXT:    v_addc_u32_e32 v36, vcc, 0, v18, vcc
-; SDAG-NEXT:    v_addc_u32_e32 v37, vcc, 0, v19, vcc
-; SDAG-NEXT:    v_or_b32_e32 v18, v34, v36
+; SDAG-NEXT:    v_lshl_b64 v[18:19], v[4:5], v18
+; SDAG-NEXT:    v_addc_u32_e32 v36, vcc, 0, v22, vcc
+; SDAG-NEXT:    v_addc_u32_e32 v37, vcc, 0, v23, vcc
+; SDAG-NEXT:    v_or_b32_e32 v21, v34, v36
 ; SDAG-NEXT:    v_sub_i32_e32 v27, vcc, 0x7f, v20
-; SDAG-NEXT:    v_or_b32_e32 v19, v35, v37
+; SDAG-NEXT:    v_or_b32_e32 v22, v35, v37
 ; SDAG-NEXT:    v_lshl_b64 v[23:24], v[6:7], v27
 ; SDAG-NEXT:    v_sub_i32_e32 v20, vcc, 64, v27
 ; SDAG-NEXT:    v_lshl_b64 v[25:26], v[4:5], v27
-; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[18:19]
-; SDAG-NEXT:    v_lshr_b64 v[18:19], v[4:5], v20
-; SDAG-NEXT:    v_or_b32_e32 v19, v24, v19
-; SDAG-NEXT:    v_or_b32_e32 v18, v23, v18
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[21:22]
+; SDAG-NEXT:    v_lshr_b64 v[20:21], v[4:5], v20
+; SDAG-NEXT:    v_or_b32_e32 v21, v24, v21
+; SDAG-NEXT:    v_or_b32_e32 v20, v23, v20
 ; SDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], 64, v27
-; SDAG-NEXT:    v_cndmask_b32_e64 v19, v22, v19, s[4:5]
-; SDAG-NEXT:    v_cndmask_b32_e64 v18, v21, v18, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v19, v19, v21, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v18, v18, v20, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v21, 0, v26, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v20, 0, v25, s[4:5]
 ; SDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v27
@@ -2782,54 +2774,54 @@ define <2 x i128> @v_urem_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v24, 31, v21
 ; SDAG-NEXT:    v_lshl_b64 v[20:21], v[20:21], 1
 ; SDAG-NEXT:    v_or_b32_e32 v18, v18, v24
-; SDAG-NEXT:    v_or_b32_e32 v23, v23, v21
-; SDAG-NEXT:    v_or_b32_e32 v22, v22, v20
+; SDAG-NEXT:    v_or_b32_e32 v24, v23, v21
+; SDAG-NEXT:    v_or_b32_e32 v25, v22, v20
 ; SDAG-NEXT:  .LBB3_12: ; %Flow12
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
-; SDAG-NEXT:    v_mul_lo_u32 v27, v33, v11
-; SDAG-NEXT:    v_mad_u64_u32 v[20:21], s[4:5], v33, v10, 0
+; SDAG-NEXT:    v_mul_lo_u32 v23, v33, v11
+; SDAG-NEXT:    v_mad_u64_u32 v[26:27], s[4:5], v33, v10, 0
 ; SDAG-NEXT:    v_mul_lo_u32 v28, v32, v10
 ; SDAG-NEXT:    v_mul_lo_u32 v29, v17, v8
 ; SDAG-NEXT:    v_mul_lo_u32 v30, v16, v9
-; SDAG-NEXT:    v_mad_u64_u32 v[24:25], s[4:5], v8, v33, 0
-; SDAG-NEXT:    v_mov_b32_e32 v26, 0
-; SDAG-NEXT:    v_mul_lo_u32 v17, v22, v15
-; SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[4:5], v22, v14, 0
-; SDAG-NEXT:    v_mul_lo_u32 v31, v23, v14
-; SDAG-NEXT:    v_mul_lo_u32 v19, v19, v12
-; SDAG-NEXT:    v_mul_lo_u32 v34, v18, v13
-; SDAG-NEXT:    v_add_i32_e32 v21, vcc, v21, v27
-; SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[4:5], v9, v33, v[25:26]
-; SDAG-NEXT:    v_sub_i32_e32 v0, vcc, v0, v24
+; SDAG-NEXT:    v_mad_u64_u32 v[20:21], s[4:5], v8, v33, 0
+; SDAG-NEXT:    v_mov_b32_e32 v22, 0
+; SDAG-NEXT:    v_mul_lo_u32 v17, v25, v15
+; SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[4:5], v25, v14, 0
+; SDAG-NEXT:    v_mul_lo_u32 v31, v24, v14
+; SDAG-NEXT:    v_mul_lo_u32 v34, v19, v12
+; SDAG-NEXT:    v_mul_lo_u32 v35, v18, v13
+; SDAG-NEXT:    v_add_i32_e32 v19, vcc, v27, v23
+; SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[4:5], v9, v33, v[21:22]
+; SDAG-NEXT:    v_sub_i32_e32 v0, vcc, v0, v20
 ; SDAG-NEXT:    v_add_i32_e64 v11, s[4:5], v11, v17
-; SDAG-NEXT:    v_add_i32_e64 v21, s[4:5], v21, v28
-; SDAG-NEXT:    v_mov_b32_e32 v25, v14
-; SDAG-NEXT:    v_mad_u64_u32 v[24:25], s[4:5], v8, v32, v[25:26]
+; SDAG-NEXT:    v_add_i32_e64 v27, s[4:5], v19, v28
+; SDAG-NEXT:    v_mov_b32_e32 v21, v14
+; SDAG-NEXT:    v_mad_u64_u32 v[19:20], s[4:5], v8, v32, v[21:22]
 ; SDAG-NEXT:    v_add_i32_e64 v11, s[4:5], v11, v31
-; SDAG-NEXT:    v_mad_u64_u32 v[16:17], s[4:5], v16, v8, v[20:21]
-; SDAG-NEXT:    v_add_i32_e64 v14, s[4:5], v15, v25
+; SDAG-NEXT:    v_mad_u64_u32 v[16:17], s[4:5], v16, v8, v[26:27]
+; SDAG-NEXT:    v_add_i32_e64 v14, s[4:5], v15, v20
 ; SDAG-NEXT:    v_addc_u32_e64 v15, s[4:5], 0, 0, s[4:5]
-; SDAG-NEXT:    v_subb_u32_e32 v1, vcc, v1, v24, vcc
+; SDAG-NEXT:    v_subb_u32_e32 v1, vcc, v1, v19, vcc
 ; SDAG-NEXT:    v_mad_u64_u32 v[10:11], s[4:5], v18, v12, v[10:11]
-; SDAG-NEXT:    v_mad_u64_u32 v[24:25], s[4:5], v12, v22, 0
+; SDAG-NEXT:    v_mad_u64_u32 v[20:21], s[4:5], v12, v25, 0
 ; SDAG-NEXT:    v_add_i32_e64 v17, s[4:5], v29, v17
 ; SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v9, v32, v[14:15]
-; SDAG-NEXT:    v_add_i32_e64 v11, s[4:5], v19, v11
-; SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[4:5], v13, v22, v[25:26]
+; SDAG-NEXT:    v_add_i32_e64 v11, s[4:5], v34, v11
+; SDAG-NEXT:    v_mad_u64_u32 v[14:15], s[4:5], v13, v25, v[21:22]
 ; SDAG-NEXT:    v_add_i32_e64 v17, s[4:5], v30, v17
-; SDAG-NEXT:    v_add_i32_e64 v18, s[4:5], v34, v11
-; SDAG-NEXT:    v_mov_b32_e32 v25, v14
-; SDAG-NEXT:    v_mad_u64_u32 v[11:12], s[4:5], v12, v23, v[25:26]
+; SDAG-NEXT:    v_add_i32_e64 v18, s[4:5], v35, v11
+; SDAG-NEXT:    v_mov_b32_e32 v21, v14
+; SDAG-NEXT:    v_mad_u64_u32 v[11:12], s[4:5], v12, v24, v[21:22]
 ; SDAG-NEXT:    v_add_i32_e64 v8, s[4:5], v8, v16
 ; SDAG-NEXT:    v_addc_u32_e64 v14, s[4:5], v9, v17, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v2, vcc, v2, v8, vcc
 ; SDAG-NEXT:    v_add_i32_e64 v8, s[4:5], v15, v12
 ; SDAG-NEXT:    v_addc_u32_e64 v9, s[4:5], 0, 0, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v3, vcc, v3, v14, vcc
-; SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v13, v23, v[8:9]
+; SDAG-NEXT:    v_mad_u64_u32 v[8:9], s[4:5], v13, v24, v[8:9]
 ; SDAG-NEXT:    v_add_i32_e32 v8, vcc, v8, v10
 ; SDAG-NEXT:    v_addc_u32_e32 v9, vcc, v9, v18, vcc
-; SDAG-NEXT:    v_sub_i32_e32 v4, vcc, v4, v24
+; SDAG-NEXT:    v_sub_i32_e32 v4, vcc, v4, v20
 ; SDAG-NEXT:    v_subb_u32_e32 v5, vcc, v5, v11, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v6, vcc, v6, v8, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v7, vcc, v7, v9, vcc
