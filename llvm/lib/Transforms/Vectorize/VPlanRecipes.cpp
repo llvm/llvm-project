@@ -854,17 +854,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return State.VF.isScalar() ? Res : Builder.CreateOrReduce(Res);
   }
   case VPInstruction::ExtractLane: {
+    assert(getNumOperands() != 2 && "Extract lane from single source should be "
+                                    "handled in convertToConcreteRecipes()");
     Value *LaneToExtract = State.get(getOperand(0), true);
     Type *IdxTy = State.TypeAnalysis.inferScalarType(getOperand(0));
     Value *Res = nullptr;
-
-    // Just create an extractelement when extracting from a single vector.
-    if (getNumOperands() == 2)
-      return State.VF.isScalar() ? State.get(getOperand(1))
-                                 : Builder.CreateExtractElement(
-                                       State.get(getOperand(1)), LaneToExtract);
-
     Value *RuntimeVF = getRuntimeVF(Builder, IdxTy, State.VF);
+
     for (unsigned Idx = 1; Idx != getNumOperands(); ++Idx) {
       Value *VectorStart =
           Builder.CreateMul(RuntimeVF, ConstantInt::get(IdxTy, Idx - 1));

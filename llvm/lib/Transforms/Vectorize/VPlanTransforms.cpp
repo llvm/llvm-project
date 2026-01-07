@@ -3892,6 +3892,20 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      // Lower ExtractLane with single source to ExtractElement.
+      VPValue *LaneToExtract, *Source;
+      if (R.getNumOperands() == 2 &&
+          match(&R,
+                m_ExtractLane(m_VPValue(LaneToExtract), m_VPValue(Source)))) {
+        auto *ExtractLane = cast<VPInstruction>(&R);
+        auto *ExtractElement = Builder.createNaryOp(Instruction::ExtractElement,
+                                                    {Source, LaneToExtract},
+                                                    ExtractLane->getDebugLoc());
+        ExtractLane->replaceAllUsesWith(ExtractElement);
+        ToRemove.push_back(ExtractLane);
+        continue;
+      }
+
       VPValue *VectorStep;
       VPValue *ScalarStep;
       if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
