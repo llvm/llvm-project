@@ -1022,7 +1022,8 @@ define nofpclass(ninf) float @ret_ninf__fmul_nnan_unknown__zero(float %unknown) 
 define nofpclass(snan) float @known__nzero_or_nan__fmul__not_inf_or_nan(float nofpclass(inf sub norm pzero) %nzero.or.nan, float nofpclass(inf nan) %not.inf.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @known__nzero_or_nan__fmul__not_inf_or_nan(
 ; CHECK-SAME: float nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]], float nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[NZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract float [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call contract float @llvm.copysign.f32(float [[NZERO_OR_NAN]], float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul contract float %nzero.or.nan, %not.inf.or.nan
@@ -1033,7 +1034,8 @@ define nofpclass(snan) float @known__nzero_or_nan__fmul__not_inf_or_nan(float no
 define nofpclass(snan) float @known__not_inf_or_nan__fmul__nzero_or_nan(float nofpclass(inf nan) %not.inf.or.nan, float nofpclass(inf sub norm pzero) %nzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @known__not_inf_or_nan__fmul__nzero_or_nan(
 ; CHECK-SAME: float nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]], float nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[NOT_INF_OR_NAN]], [[NZERO_OR_NAN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract float [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call contract float @llvm.copysign.f32(float [[NZERO_OR_NAN]], float [[TMP1]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul contract float %not.inf.or.nan, %nzero.or.nan

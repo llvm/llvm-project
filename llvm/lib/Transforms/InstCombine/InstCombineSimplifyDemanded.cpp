@@ -2177,8 +2177,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     // X * -0.0 --> copysign(0.0, -X)
 
     // TODO: Apply knowledge of no-infinity returns to sources.
-
-    // TODO: Known -0, turn into copysign(y, fneg(x)) like visitFMul.
     if (KnownLHS.isKnownNeverInfOrNaN() &&
         KnownRHS.isKnownAlways(fcPosZero | fcNan)) {
       // => copysign(+0, lhs)
@@ -2193,6 +2191,26 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       // => copysign(+0, rhs)
       // Note: Dropping canonicalize
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
+      Copysign->takeName(I);
+      return Copysign;
+    }
+
+    if (KnownLHS.isKnownNeverInfOrNaN() &&
+        KnownRHS.isKnownAlways(fcNegZero | fcNan)) {
+      // => copysign(0, fneg(lhs))
+      // Note: Dropping canonicalize
+      Value *Copysign =
+          Builder.CreateCopySign(Y, Builder.CreateFNegFMF(X, FMF), FMF);
+      Copysign->takeName(I);
+      return Copysign;
+    }
+
+    if (KnownLHS.isKnownAlways(fcNegZero | fcNan) &&
+        KnownRHS.isKnownNeverInfOrNaN()) {
+      // => copysign(+0, fneg(rhs))
+      // Note: Dropping canonicalize
+      Value *Copysign =
+          Builder.CreateCopySign(X, Builder.CreateFNegFMF(Y, FMF), FMF);
       Copysign->takeName(I);
       return Copysign;
     }
