@@ -104,4 +104,8 @@ void test() {
   ts.equal_range(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cts.equal_range(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
+
+#if TEST_STD_VER >= 23
+  ts.extract(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
 }
