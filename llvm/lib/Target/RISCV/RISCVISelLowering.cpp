@@ -21046,7 +21046,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue();
     EVT VT = N->getValueType(0);
     SDValue Splat =
-        DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0->getOperand(0));
+        DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0.getOperand(0));
     SDValue Fneg = DAG.getNode(ISD::FNEG, DL, VT, Splat);
     return DAG.getNode(ISD::FMA, DL, VT, Fneg, N1, N->getOperand(2));
   }
