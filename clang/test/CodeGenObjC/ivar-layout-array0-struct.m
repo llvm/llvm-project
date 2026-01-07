@@ -18,5 +18,5 @@ typedef struct {
 @end
 
 @implementation Test @end
-// CHECK-LP64: L_OBJC_CLASS_NAME_.4:
+// CHECK-LP64: L_OBJC_LAYOUT_BITMAP_:
 // CHECK-LP64-NEXT: .asciz      "\001\020"
