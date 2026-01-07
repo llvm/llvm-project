@@ -269,6 +269,9 @@ void myprintf_2(const char *, int, const char *) __attribute__((__format__ (__pr
 void myprintf_3(const char *, const char *, int, const char *) __attribute__((__format__ (__printf__, 2, 4)));
 void myscanf(const char *, ...) __attribute__((__format__ (__scanf__, 1, 2)));
 
+void myprintf_default(const char *, const char * Fmt = "hello %s",
+                      int X = 0, const char * Str = "world") __attribute__((__format__ (__printf__, 2, 4)));
+
 struct FormatAttrTestMember {
   void myprintf(const char *, ...) __attribute__((__format__ (__printf__, 2, 3)));
   void myprintf_2(const char *, int, const char *) __attribute__((__format__ (__printf__, 2, 4)));
@@ -277,6 +280,12 @@ struct FormatAttrTestMember {
 
   void operator()(const char * Fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
   void operator[](const char * Fmt) __attribute__((__format__ (__printf__, 2, 3)));
+
+
+  static const char * StrField;
+
+  void myprintf_default(const char *, const char * Fmt = "hello %s",
+			int X = 0, const char * Str = StrField) __attribute__((__format__ (__printf__, 3, 5)));
 };
 
 struct FormatAttrTestMember2 {
@@ -298,9 +307,10 @@ void test_format_attr(char * Str, std::string StdStr) {
   myprintf_3("irrelevant", "hello %s", 0, StdStr.c_str());
   myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{function 'myprintf_3' is unsafe}} \
 			               expected-note{{string argument is not guaranteed to be null-terminated}}
-
   myscanf("hello %s");
   myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
+
+  myprintf_default("irrelevant");
 
   int X;
 
@@ -328,6 +338,9 @@ void test_format_attr(char * Str, std::string StdStr) {
   Obj.myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
 
   Obj.myscanf("hello %d", &X); // expected-warning{{function 'myscanf' is unsafe}}
+
+  Obj.myprintf_default("irrelevant"); // expected-warning{{function 'myprintf_default' is unsafe}}
+  // expected-note@*{{string argument is not guaranteed to be null-terminated}}
 
   Obj("hello", Str);
   Obj("hello %s", StdStr.c_str());

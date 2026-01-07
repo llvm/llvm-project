@@ -755,6 +755,9 @@ static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
 // A pointer type expression is known to be null-terminated, if it has the
 // form: E.c_str(), for any expression E of `std::string` type.
 static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
+  // Strip CXXDefaultArgExpr before check:
+  if (const auto *DefaultArgE = dyn_cast<CXXDefaultArgExpr>(Ptr))
+    Ptr = DefaultArgE->getExpr();
   Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
   if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
@@ -2255,7 +2258,6 @@ public:
     // For printf-like functions:
     if (AnyAttr && libc_func_matchers::hasUnsafeFormatOrSArg(
                        Ctx, CE, UnsafeArg,
-                       // FormatAttribute indexes are 1-based:
                        FmtIdx, FmtArgIdx)) {
       Result.addNode(Tag, DynTypedNode::create(*CE));
       Result.addNode(UnsafeStringTag, DynTypedNode::create(*UnsafeArg));
