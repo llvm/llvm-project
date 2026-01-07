@@ -1606,23 +1606,23 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETULT)),
            (PMSLTU_H GPR:$rs1, GPR:$rs2)>;
   // a <= b => !(b < a)
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETLE)),
-           (XORI (PMSLT_B GPR:$rs2, GPR:$rs1), -1)>;
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETULE)),
-           (XORI (PMSLTU_B GPR:$rs2, GPR:$rs1), -1)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETLE)),
-           (XORI (PMSLT_H GPR:$rs2, GPR:$rs1), -1)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETULE)),
-           (XORI (PMSLTU_H GPR:$rs2, GPR:$rs1), -1)>;
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs2), (XLenVecI8VT GPR:$rs1), SETLE)),
+           (XORI (PMSLT_B GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs2), (XLenVecI8VT GPR:$rs1), SETULE)),
+           (XORI (PMSLTU_B GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs2), (XLenVecI16VT GPR:$rs1), SETLE)),
+           (XORI (PMSLT_H GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs2), (XLenVecI16VT GPR:$rs1), SETULE)),
+           (XORI (PMSLTU_H GPR:$rs1, GPR:$rs2), -1)>;
   // a > b => b < a
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETGT)),
-           (PMSLT_B GPR:$rs2, GPR:$rs1)>;
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETUGT)),
-           (PMSLTU_B GPR:$rs2, GPR:$rs1)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETGT)),
-           (PMSLT_H GPR:$rs2, GPR:$rs1)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETUGT)),
-           (PMSLTU_H GPR:$rs2, GPR:$rs1)>;
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs2), (XLenVecI8VT GPR:$rs1), SETGT)),
+           (PMSLT_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs2), (XLenVecI8VT GPR:$rs1), SETUGT)),
+           (PMSLTU_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs2), (XLenVecI16VT GPR:$rs1), SETGT)),
+           (PMSLT_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs2), (XLenVecI16VT GPR:$rs1), SETUGT)),
+           (PMSLTU_H GPR:$rs1, GPR:$rs2)>;
   // a >= b => !(a < b)
   def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETGE)),
            (XORI (PMSLT_B GPR:$rs1, GPR:$rs2), -1)>;
@@ -1704,15 +1704,15 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETULT)),
            (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
   // a <= b => !(b < a)
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETLE)),
-           (XORI (PMSLT_W GPR:$rs2, GPR:$rs1), -1)>;
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETULE)),
-           (XORI (PMSLTU_W GPR:$rs2, GPR:$rs1), -1)>;
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETLE)),
+           (XORI (PMSLT_W GPR:$rs1, GPR:$rs2), -1)>;
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETULE)),
+           (XORI (PMSLTU_W GPR:$rs1, GPR:$rs2), -1)>;
   // a > b => b < a
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETGT)),
-           (PMSLT_W GPR:$rs2, GPR:$rs1)>;
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETUGT)),
-           (PMSLTU_W GPR:$rs2, GPR:$rs1)>;
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETGT)),
+           (PMSLT_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETUGT)),
+           (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
   // a >= b => !(a < b)
   def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETGE)),
            (XORI (PMSLT_W GPR:$rs1, GPR:$rs2), -1)>;
