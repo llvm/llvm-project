@@ -284,5 +284,5 @@ int main(int, char**)
     static_assert(test_ref());
 #endif
 
-  return 0;
+    return 0;
 }
