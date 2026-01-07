@@ -6,6 +6,22 @@ if(WIN32 OR STUBS_LIBRARY)
   return()
 endif()
 
+# Make the targets default_gtest and default_gtest_main available.
+if (OPENMP_STANDALONE_BUILD)
+  set(LLVM_RUNTIMES_BUILD 1)
+  if (EXISTS "${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h")
+    add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
+  else()
+    message(WARNING "OpenMP unit tests will be skipped as LLVM third-party unittest directory is not available at: ${LLVM_THIRD_PARTY_DIR}/unittest")
+    return()
+  endif()
+elseif ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
+  # llvm_gtest should already exist
+else ()
+  # LLVM_ENABLE_RUNTIMES build
+  build_gtest()
+endif ()
+
 # Build a testing version of libomp that exports all symbols for unit tests.
 # This library uses the same compiled objects as libomp, but with all symbols
 # exported to allow testing internal functions.
@@ -30,9 +46,6 @@ target_include_directories(omp_testing PUBLIC
   ${LIBOMP_INCLUDE_DIR}
   ${LIBOMP_SRC_DIR}
 )
-
-# Make the targets default_gtest and default_gtest_main available.
-add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
 
 function(add_openmp_unittest test_name)
   add_unittest(OpenMPUnitTests ${test_name} ${ARGN})
