@@ -108,7 +108,6 @@ template <typename T> struct Slice : public cpp::span<T> {
   }
 };
 
-
 } // namespace conversion_utils
 
 } // namespace wctype_internal
