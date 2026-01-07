@@ -58,3 +58,6 @@ entry:
 }
 
 declare void @outs(ptr noundef, ...)
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"zos_le_char_mode", !"ebcdic"}
