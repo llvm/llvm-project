@@ -1036,8 +1036,8 @@ public:
 #  endif
 
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 map(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  map(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
       : map(__f, __l, key_compare(), __a) {}
 
 #  if _LIBCPP_STD_VER >= 23
@@ -1349,7 +1349,7 @@ public:
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract<node_type>(__it.__i_);
+    return __tree_.template __node_handle_extract_iterator<node_type>(__it.__i_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
@@ -2014,8 +2014,8 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(key_type const& __key) {
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract<node_type>(__it.__i_);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
+    return __tree_.template __node_handle_extract_iterator<node_type>(__it.__i_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
