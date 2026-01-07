@@ -6,17 +6,21 @@
 ! CHECK: #                                        #
 ! CHECK: PASS
 program zero_len_blank_pad01
-  INTEGER CALLED
-  CHARACTER (LEN=0) , DIMENSION(0)  :: ZEROZERO
-  CHARACTER (LEN=4),  DIMENSION(10) :: TENTEN
-  ZEROZERO = ""
-  TENTEN = "ABCD"
-  TENTEN(1:) = ZEROZERO(CALLED(1):)(:CALLED(0))
-  print *, "#", TENTEN, "#"
+  implicit none
+  character(len=0), dimension(0)  :: zla
+  character(len=4), dimension(10) :: dest
+  zla = ""
+  dest = "ABCD"
+  dest(1:) = zla(called(1):)(:called(0))
+  print *, "#", dest, "#"
   print *, "PASS"
+
+contains
+
+  pure integer function called(i)
+    integer, intent(in) :: i
+    called = i
+  END
+
 end
 
-INTEGER FUNCTION CALLED(I)
-  integer, intent(in) :: I
-  CALLED = I
-END
