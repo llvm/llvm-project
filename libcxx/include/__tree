@@ -1239,10 +1239,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __node_handle_merge_multi(__tree<_Tp, _Comp2, _Allocator>& __source);
 
+  template <class _NodeHandle, class _Key>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle __node_handle_extract(const _Key&);
   template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle __node_handle_extract(key_type const&);
-  template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle __node_handle_extract(const_iterator);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle __node_handle_extract_iterator(const_iterator);
 #endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator erase(const_iterator __p);
@@ -2089,7 +2089,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(_NodeHandle&& __n
   if (__nh.empty())
     return _InsertReturnType{end(), false, _NodeHandle()};
 
-  __node_pointer __ptr = __nh.__ptr_;
+  __node_pointer __ptr     = __nh.__ptr_;
   auto [__parent, __child] = __find_equal(__ptr->__get_value());
   if (__child != nullptr)
     return _InsertReturnType{
@@ -2120,19 +2120,19 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(const_iterator __
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-template <class _NodeHandle>
+template <class _NodeHandle, class _Key>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle
-__tree<_Tp, _Compare, _Allocator>::__node_handle_extract(key_type const& __key) {
+__tree<_Tp, _Compare, _Allocator>::__node_handle_extract(const& _Key __key) {
   iterator __it = __lower_bound_multi(__key);
   if (__it == end() || __value_comp_(__key, *__it))
     return _NodeHandle();
-  return __node_handle_extract<_NodeHandle>(__it);
+  return __node_handle_extract_iterator<_NodeHandle>(__it);
 }
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _NodeHandle>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle
-__tree<_Tp, _Compare, _Allocator>::__node_handle_extract(const_iterator __p) {
+__tree<_Tp, _Compare, _Allocator>::__node_handle_extract_iterator(const_iterator __p) {
   __node_pointer __np = __p.__get_np();
   __remove_node_pointer(__np);
   return _NodeHandle(__np, __alloc());
