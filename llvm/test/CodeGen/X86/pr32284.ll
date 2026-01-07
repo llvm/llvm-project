@@ -3,6 +3,14 @@
 ; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -o - %s | FileCheck %s --check-prefix=X64
 ; RUN: llc -O0 -mtriple=i686-unknown   -mcpu=skx -o - %s | FileCheck %s --check-prefix=X86-O0
 ; RUN: llc     -mtriple=i686-unknown   -mcpu=skx -o - %s | FileCheck %s --check-prefix=X86
+; RUN: llc -O0 -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu -o - %s | FileCheck %s --check-prefix=X64-O0-SETZUCC
+; RUN: llc -O0 -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu,+prefer-legacy-setcc -o - %s | FileCheck %s --check-prefix=X64-O0-NO-SETZUCC
+; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu -o - %s | FileCheck %s --check-prefix=X64-SETZUCC
+; RUN: llc     -mtriple=x86_64-unknown -mcpu=skx -mattr=+zu,+prefer-legacy-setcc -o - %s | FileCheck %s --check-prefix=X64-NO-SETZUCC
+
+; The test is to check if setzucc instruction is emitted when zu feature is
+; specified in llc option or setcc instruction is emitted when
+; prefer-legacy-setcc is specified.
 
 @c = external dso_local constant i8, align 1
 
@@ -89,6 +97,84 @@ define void @foo() {
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
+;
+; X64-O0-SETZUCC-LABEL: foo:
+; X64-O0-SETZUCC:       # %bb.0: # %entry
+; X64-O0-SETZUCC-NEXT:    movzbl c, %ecx
+; X64-O0-SETZUCC-NEXT:    xorl %eax, %eax
+; X64-O0-SETZUCC-NEXT:    subl %ecx, %eax
+; X64-O0-SETZUCC-NEXT:    movslq %eax, %rcx
+; X64-O0-SETZUCC-NEXT:    xorl %eax, %eax
+; X64-O0-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-SETZUCC-NEXT:    subq %rcx, %rax
+; X64-O0-SETZUCC-NEXT:    # kill: def $al killed $al killed $rax
+; X64-O0-SETZUCC-NEXT:    cmpb $0, %al
+; X64-O0-SETZUCC-NEXT:    setzune %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; X64-O0-SETZUCC-NEXT:    cmpb $0, c
+; X64-O0-SETZUCC-NEXT:    setzune %al
+; X64-O0-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-SETZUCC-NEXT:    movzbl c, %ecx
+; X64-O0-SETZUCC-NEXT:    cmpl %ecx, %eax
+; X64-O0-SETZUCC-NEXT:    setzule %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-SETZUCC-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-O0-SETZUCC-NEXT:    retq
+;
+; X64-O0-NO-SETZUCC-LABEL: foo:
+; X64-O0-NO-SETZUCC:       # %bb.0: # %entry
+; X64-O0-NO-SETZUCC-NEXT:    movzbl c, %ecx
+; X64-O0-NO-SETZUCC-NEXT:    xorl %eax, %eax
+; X64-O0-NO-SETZUCC-NEXT:    subl %ecx, %eax
+; X64-O0-NO-SETZUCC-NEXT:    movslq %eax, %rcx
+; X64-O0-NO-SETZUCC-NEXT:    xorl %eax, %eax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-NO-SETZUCC-NEXT:    subq %rcx, %rax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $al killed $al killed $rax
+; X64-O0-NO-SETZUCC-NEXT:    cmpb $0, %al
+; X64-O0-NO-SETZUCC-NEXT:    setne %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; X64-O0-NO-SETZUCC-NEXT:    cmpb $0, c
+; X64-O0-NO-SETZUCC-NEXT:    setne %al
+; X64-O0-NO-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-NO-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-NO-SETZUCC-NEXT:    movzbl c, %ecx
+; X64-O0-NO-SETZUCC-NEXT:    cmpl %ecx, %eax
+; X64-O0-NO-SETZUCC-NEXT:    setle %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-NO-SETZUCC-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-O0-NO-SETZUCC-NEXT:    retq
+;
+; X64-SETZUCC-LABEL: foo:
+; X64-SETZUCC:       # %bb.0: # %entry
+; X64-SETZUCC-NEXT:    movzbl c(%rip), %eax
+; X64-SETZUCC-NEXT:    testl %eax, %eax
+; X64-SETZUCC-NEXT:    setzune %cl
+; X64-SETZUCC-NEXT:    setne -{{[0-9]+}}(%rsp)
+; X64-SETZUCC-NEXT:    cmpl %eax, %ecx
+; X64-SETZUCC-NEXT:    setzule %al
+; X64-SETZUCC-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-SETZUCC-NEXT:    retq
+;
+; X64-NO-SETZUCC-LABEL: foo:
+; X64-NO-SETZUCC:       # %bb.0: # %entry
+; X64-NO-SETZUCC-NEXT:    movzbl c(%rip), %eax
+; X64-NO-SETZUCC-NEXT:    testl %eax, %eax
+; X64-NO-SETZUCC-NEXT:    setzune %cl
+; X64-NO-SETZUCC-NEXT:    setne -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-NEXT:    cmpl %eax, %ecx
+; X64-NO-SETZUCC-NEXT:    setzule %al
+; X64-NO-SETZUCC-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-NEXT:    retq
 entry:
   %a = alloca i8, align 1
   %b = alloca i32, align 4
@@ -255,6 +341,112 @@ define void @f1() {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
+;
+; X64-O0-SETZUCC-LABEL: f1:
+; X64-O0-SETZUCC:       # %bb.0: # %entry
+; X64-O0-SETZUCC-NEXT:    movslq var_5, %rax
+; X64-O0-SETZUCC-NEXT:    movabsq $8381627093, %rcx # imm = 0x1F3957AD5
+; X64-O0-SETZUCC-NEXT:    addq %rcx, %rax
+; X64-O0-SETZUCC-NEXT:    cmpq $0, %rax
+; X64-O0-SETZUCC-NEXT:    setzune %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; X64-O0-SETZUCC-NEXT:    movl var_5, %eax
+; X64-O0-SETZUCC-NEXT:    xorl $-1, %eax
+; X64-O0-SETZUCC-NEXT:    cmpl $0, %eax
+; X64-O0-SETZUCC-NEXT:    setzune %al
+; X64-O0-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-SETZUCC-NEXT:    movslq var_5, %rcx
+; X64-O0-SETZUCC-NEXT:    addq $7093, %rcx # imm = 0x1BB5
+; X64-O0-SETZUCC-NEXT:    cmpq %rcx, %rax
+; X64-O0-SETZUCC-NEXT:    setzug %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-SETZUCC-NEXT:    movq %rax, var_57
+; X64-O0-SETZUCC-NEXT:    movl var_5, %eax
+; X64-O0-SETZUCC-NEXT:    xorl $-1, %eax
+; X64-O0-SETZUCC-NEXT:    cmpl $0, %eax
+; X64-O0-SETZUCC-NEXT:    setzune %al
+; X64-O0-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-SETZUCC-NEXT:    movq %rax, _ZN8struct_210member_2_0E
+; X64-O0-SETZUCC-NEXT:    retq
+;
+; X64-O0-NO-SETZUCC-LABEL: f1:
+; X64-O0-NO-SETZUCC:       # %bb.0: # %entry
+; X64-O0-NO-SETZUCC-NEXT:    movslq var_5, %rax
+; X64-O0-NO-SETZUCC-NEXT:    movabsq $8381627093, %rcx # imm = 0x1F3957AD5
+; X64-O0-NO-SETZUCC-NEXT:    addq %rcx, %rax
+; X64-O0-NO-SETZUCC-NEXT:    cmpq $0, %rax
+; X64-O0-NO-SETZUCC-NEXT:    setne %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; X64-O0-NO-SETZUCC-NEXT:    movl var_5, %eax
+; X64-O0-NO-SETZUCC-NEXT:    xorl $-1, %eax
+; X64-O0-NO-SETZUCC-NEXT:    cmpl $0, %eax
+; X64-O0-NO-SETZUCC-NEXT:    setne %al
+; X64-O0-NO-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-NO-SETZUCC-NEXT:    movslq var_5, %rcx
+; X64-O0-NO-SETZUCC-NEXT:    addq $7093, %rcx # imm = 0x1BB5
+; X64-O0-NO-SETZUCC-NEXT:    cmpq %rcx, %rax
+; X64-O0-NO-SETZUCC-NEXT:    setg %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-NO-SETZUCC-NEXT:    movq %rax, var_57
+; X64-O0-NO-SETZUCC-NEXT:    movl var_5, %eax
+; X64-O0-NO-SETZUCC-NEXT:    xorl $-1, %eax
+; X64-O0-NO-SETZUCC-NEXT:    cmpl $0, %eax
+; X64-O0-NO-SETZUCC-NEXT:    setne %al
+; X64-O0-NO-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-NO-SETZUCC-NEXT:    movq %rax, _ZN8struct_210member_2_0E
+; X64-O0-NO-SETZUCC-NEXT:    retq
+;
+; X64-SETZUCC-LABEL: f1:
+; X64-SETZUCC:       # %bb.0: # %entry
+; X64-SETZUCC-NEXT:    movslq var_5(%rip), %rax
+; X64-SETZUCC-NEXT:    movabsq $-8381627093, %rcx # imm = 0xFFFFFFFE0C6A852B
+; X64-SETZUCC-NEXT:    cmpq %rcx, %rax
+; X64-SETZUCC-NEXT:    setne -{{[0-9]+}}(%rsp)
+; X64-SETZUCC-NEXT:    cmpq $-1, %rax
+; X64-SETZUCC-NEXT:    setzue %cl
+; X64-SETZUCC-NEXT:    cmpl $-1, %eax
+; X64-SETZUCC-NEXT:    setzue %dl
+; X64-SETZUCC-NEXT:    addq $7093, %rax # imm = 0x1BB5
+; X64-SETZUCC-NEXT:    cmpq %rax, %rdx
+; X64-SETZUCC-NEXT:    setzug %al
+; X64-SETZUCC-NEXT:    movq %rax, var_57(%rip)
+; X64-SETZUCC-NEXT:    movq %rcx, _ZN8struct_210member_2_0E(%rip)
+; X64-SETZUCC-NEXT:    retq
+;
+; X64-NO-SETZUCC-LABEL: f1:
+; X64-NO-SETZUCC:       # %bb.0: # %entry
+; X64-NO-SETZUCC-NEXT:    movslq var_5(%rip), %rax
+; X64-NO-SETZUCC-NEXT:    movabsq $-8381627093, %rcx # imm = 0xFFFFFFFE0C6A852B
+; X64-NO-SETZUCC-NEXT:    cmpq %rcx, %rax
+; X64-NO-SETZUCC-NEXT:    setne -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-NEXT:    cmpq $-1, %rax
+; X64-NO-SETZUCC-NEXT:    setzue %cl
+; X64-NO-SETZUCC-NEXT:    cmpl $-1, %eax
+; X64-NO-SETZUCC-NEXT:    setzue %dl
+; X64-NO-SETZUCC-NEXT:    addq $7093, %rax # imm = 0x1BB5
+; X64-NO-SETZUCC-NEXT:    cmpq %rax, %rdx
+; X64-NO-SETZUCC-NEXT:    setzug %al
+; X64-NO-SETZUCC-NEXT:    movq %rax, var_57(%rip)
+; X64-NO-SETZUCC-NEXT:    movq %rcx, _ZN8struct_210member_2_0E(%rip)
+; X64-NO-SETZUCC-NEXT:    retq
 entry:
   %a = alloca i8, align 1
   %0 = load i32, ptr @var_5, align 4
@@ -376,6 +568,84 @@ define void @f2() {
 ; X86-NEXT:    addl $2, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
+;
+; X64-O0-SETZUCC-LABEL: f2:
+; X64-O0-SETZUCC:       # %bb.0: # %entry
+; X64-O0-SETZUCC-NEXT:    movzbl var_7, %eax
+; X64-O0-SETZUCC-NEXT:    cmpb $0, var_7
+; X64-O0-SETZUCC-NEXT:    setzune %cl
+; X64-O0-SETZUCC-NEXT:    xorb $-1, %cl
+; X64-O0-SETZUCC-NEXT:    andb $1, %cl
+; X64-O0-SETZUCC-NEXT:    movzbl %cl, %ecx
+; X64-O0-SETZUCC-NEXT:    xorl %ecx, %eax
+; X64-O0-SETZUCC-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-O0-SETZUCC-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-O0-SETZUCC-NEXT:    movzbl var_7, %eax
+; X64-O0-SETZUCC-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-O0-SETZUCC-NEXT:    cmpw $0, %ax
+; X64-O0-SETZUCC-NEXT:    setzune %al
+; X64-O0-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-SETZUCC-NEXT:    movzbl var_7, %ecx
+; X64-O0-SETZUCC-NEXT:    cmpl %ecx, %eax
+; X64-O0-SETZUCC-NEXT:    setzue %al
+; X64-O0-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-SETZUCC-NEXT:    movw %ax, %cx
+; X64-O0-SETZUCC-NEXT:    # implicit-def: $rax
+; X64-O0-SETZUCC-NEXT:    movw %cx, (%rax)
+; X64-O0-SETZUCC-NEXT:    retq
+;
+; X64-O0-NO-SETZUCC-LABEL: f2:
+; X64-O0-NO-SETZUCC:       # %bb.0: # %entry
+; X64-O0-NO-SETZUCC-NEXT:    movzbl var_7, %eax
+; X64-O0-NO-SETZUCC-NEXT:    cmpb $0, var_7
+; X64-O0-NO-SETZUCC-NEXT:    setne %cl
+; X64-O0-NO-SETZUCC-NEXT:    xorb $-1, %cl
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %cl
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %cl, %ecx
+; X64-O0-NO-SETZUCC-NEXT:    xorl %ecx, %eax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-O0-NO-SETZUCC-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-O0-NO-SETZUCC-NEXT:    movzbl var_7, %eax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-O0-NO-SETZUCC-NEXT:    cmpw $0, %ax
+; X64-O0-NO-SETZUCC-NEXT:    setne %al
+; X64-O0-NO-SETZUCC-NEXT:    xorb $-1, %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-NO-SETZUCC-NEXT:    movzbl var_7, %ecx
+; X64-O0-NO-SETZUCC-NEXT:    cmpl %ecx, %eax
+; X64-O0-NO-SETZUCC-NEXT:    sete %al
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %al
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %al, %eax
+; X64-O0-NO-SETZUCC-NEXT:    movw %ax, %cx
+; X64-O0-NO-SETZUCC-NEXT:    # implicit-def: $rax
+; X64-O0-NO-SETZUCC-NEXT:    movw %cx, (%rax)
+; X64-O0-NO-SETZUCC-NEXT:    retq
+;
+; X64-SETZUCC-LABEL: f2:
+; X64-SETZUCC:       # %bb.0: # %entry
+; X64-SETZUCC-NEXT:    movzbl var_7(%rip), %eax
+; X64-SETZUCC-NEXT:    testl %eax, %eax
+; X64-SETZUCC-NEXT:    setzue %cl
+; X64-SETZUCC-NEXT:    xorl %eax, %ecx
+; X64-SETZUCC-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; X64-SETZUCC-NEXT:    setzue %al
+; X64-SETZUCC-NEXT:    movw %ax, (%rax)
+; X64-SETZUCC-NEXT:    retq
+;
+; X64-NO-SETZUCC-LABEL: f2:
+; X64-NO-SETZUCC:       # %bb.0: # %entry
+; X64-NO-SETZUCC-NEXT:    movzbl var_7(%rip), %eax
+; X64-NO-SETZUCC-NEXT:    testl %eax, %eax
+; X64-NO-SETZUCC-NEXT:    setzue %cl
+; X64-NO-SETZUCC-NEXT:    xorl %eax, %ecx
+; X64-NO-SETZUCC-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-NEXT:    setzue %al
+; X64-NO-SETZUCC-NEXT:    movw %ax, (%rax)
+; X64-NO-SETZUCC-NEXT:    retq
 entry:
   %a = alloca i16, align 2
   %0 = load i8, ptr @var_7, align 1
@@ -516,6 +786,106 @@ define void @f3() #0 {
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
+;
+; X64-O0-SETZUCC-LABEL: f3:
+; X64-O0-SETZUCC:       # %bb.0: # %entry
+; X64-O0-SETZUCC-NEXT:    movl var_13, %eax
+; X64-O0-SETZUCC-NEXT:    xorl $-1, %eax
+; X64-O0-SETZUCC-NEXT:    movl %eax, %eax
+; X64-O0-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-SETZUCC-NEXT:    cmpl $0, var_13
+; X64-O0-SETZUCC-NEXT:    setzune %cl
+; X64-O0-SETZUCC-NEXT:    xorb $-1, %cl
+; X64-O0-SETZUCC-NEXT:    andb $1, %cl
+; X64-O0-SETZUCC-NEXT:    movzbl %cl, %ecx
+; X64-O0-SETZUCC-NEXT:    # kill: def $rcx killed $ecx
+; X64-O0-SETZUCC-NEXT:    movl var_13, %edx
+; X64-O0-SETZUCC-NEXT:    xorl $-1, %edx
+; X64-O0-SETZUCC-NEXT:    xorl var_16, %edx
+; X64-O0-SETZUCC-NEXT:    movl %edx, %edx
+; X64-O0-SETZUCC-NEXT:    # kill: def $rdx killed $edx
+; X64-O0-SETZUCC-NEXT:    andq %rdx, %rcx
+; X64-O0-SETZUCC-NEXT:    orq %rcx, %rax
+; X64-O0-SETZUCC-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; X64-O0-SETZUCC-NEXT:    movl var_13, %eax
+; X64-O0-SETZUCC-NEXT:    xorl $-1, %eax
+; X64-O0-SETZUCC-NEXT:    movl %eax, %eax
+; X64-O0-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-SETZUCC-NEXT:    cmpl $0, var_13
+; X64-O0-SETZUCC-NEXT:    setzune %cl
+; X64-O0-SETZUCC-NEXT:    xorb $-1, %cl
+; X64-O0-SETZUCC-NEXT:    andb $1, %cl
+; X64-O0-SETZUCC-NEXT:    movzbl %cl, %ecx
+; X64-O0-SETZUCC-NEXT:    # kill: def $rcx killed $ecx
+; X64-O0-SETZUCC-NEXT:    andq $0, %rcx
+; X64-O0-SETZUCC-NEXT:    orq %rcx, %rax
+; X64-O0-SETZUCC-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-O0-SETZUCC-NEXT:    movl %eax, var_46
+; X64-O0-SETZUCC-NEXT:    retq
+;
+; X64-O0-NO-SETZUCC-LABEL: f3:
+; X64-O0-NO-SETZUCC:       # %bb.0: # %entry
+; X64-O0-NO-SETZUCC-NEXT:    movl var_13, %eax
+; X64-O0-NO-SETZUCC-NEXT:    xorl $-1, %eax
+; X64-O0-NO-SETZUCC-NEXT:    movl %eax, %eax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-NO-SETZUCC-NEXT:    cmpl $0, var_13
+; X64-O0-NO-SETZUCC-NEXT:    setne %cl
+; X64-O0-NO-SETZUCC-NEXT:    xorb $-1, %cl
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %cl
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %cl, %ecx
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rcx killed $ecx
+; X64-O0-NO-SETZUCC-NEXT:    movl var_13, %edx
+; X64-O0-NO-SETZUCC-NEXT:    xorl $-1, %edx
+; X64-O0-NO-SETZUCC-NEXT:    xorl var_16, %edx
+; X64-O0-NO-SETZUCC-NEXT:    movl %edx, %edx
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rdx killed $edx
+; X64-O0-NO-SETZUCC-NEXT:    andq %rdx, %rcx
+; X64-O0-NO-SETZUCC-NEXT:    orq %rcx, %rax
+; X64-O0-NO-SETZUCC-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; X64-O0-NO-SETZUCC-NEXT:    movl var_13, %eax
+; X64-O0-NO-SETZUCC-NEXT:    xorl $-1, %eax
+; X64-O0-NO-SETZUCC-NEXT:    movl %eax, %eax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rax killed $eax
+; X64-O0-NO-SETZUCC-NEXT:    cmpl $0, var_13
+; X64-O0-NO-SETZUCC-NEXT:    setne %cl
+; X64-O0-NO-SETZUCC-NEXT:    xorb $-1, %cl
+; X64-O0-NO-SETZUCC-NEXT:    andb $1, %cl
+; X64-O0-NO-SETZUCC-NEXT:    movzbl %cl, %ecx
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $rcx killed $ecx
+; X64-O0-NO-SETZUCC-NEXT:    andq $0, %rcx
+; X64-O0-NO-SETZUCC-NEXT:    orq %rcx, %rax
+; X64-O0-NO-SETZUCC-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-O0-NO-SETZUCC-NEXT:    movl %eax, var_46
+; X64-O0-NO-SETZUCC-NEXT:    retq
+;
+; X64-SETZUCC-LABEL: f3:
+; X64-SETZUCC:       # %bb.0: # %entry
+; X64-SETZUCC-NEXT:    movl var_13(%rip), %eax
+; X64-SETZUCC-NEXT:    testl %eax, %eax
+; X64-SETZUCC-NEXT:    notl %eax
+; X64-SETZUCC-NEXT:    setzue %cl
+; X64-SETZUCC-NEXT:    movl var_16(%rip), %edx
+; X64-SETZUCC-NEXT:    xorl %eax, %edx
+; X64-SETZUCC-NEXT:    andl %edx, %ecx
+; X64-SETZUCC-NEXT:    orl %eax, %ecx
+; X64-SETZUCC-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-SETZUCC-NEXT:    movl %eax, var_46(%rip)
+; X64-SETZUCC-NEXT:    retq
+;
+; X64-NO-SETZUCC-LABEL: f3:
+; X64-NO-SETZUCC:       # %bb.0: # %entry
+; X64-NO-SETZUCC-NEXT:    movl var_13(%rip), %eax
+; X64-NO-SETZUCC-NEXT:    testl %eax, %eax
+; X64-NO-SETZUCC-NEXT:    notl %eax
+; X64-NO-SETZUCC-NEXT:    setzue %cl
+; X64-NO-SETZUCC-NEXT:    movl var_16(%rip), %edx
+; X64-NO-SETZUCC-NEXT:    xorl %eax, %edx
+; X64-NO-SETZUCC-NEXT:    andl %edx, %ecx
+; X64-NO-SETZUCC-NEXT:    orl %eax, %ecx
+; X64-NO-SETZUCC-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-NO-SETZUCC-NEXT:    movl %eax, var_46(%rip)
+; X64-NO-SETZUCC-NEXT:    retq
 entry:
   %a = alloca i64, align 8
   %0 = load i32, ptr @var_13, align 4

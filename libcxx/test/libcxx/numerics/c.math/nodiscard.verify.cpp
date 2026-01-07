@@ -38,6 +38,12 @@ void test() {
   std::trunc(0.);                // expected-warning-re {{ignoring return value of function declared with {{.*}} attribute}}
 #endif
 
+  std::abs(0l);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::abs(0ll); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::abs(0.f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::abs(0.);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::abs(0.l); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
   std::signbit(0.f);             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::signbit(0.);              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::signbit(0.l);             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
