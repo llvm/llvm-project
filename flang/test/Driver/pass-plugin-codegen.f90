@@ -1,9 +1,12 @@
-! This test checks that the plugin back-end hook is executed before the code
-! generation pipeline and can also replace the output with its own.
+! This test checks that the pre-codegen hook of LLVM pass plugins is executed
+! before the code generation pipeline. The hook can also replace the output
+! with its own.
 
 ! UNSUPPORTED: system-windows
 
-! REQUIRES: plugins, shell, examples
+! REQUIRES: plugins, examples
+! Plugins are currently broken on AIX, at least in the CI.
+! XFAIL: system-aix
 
 ! Without -last-words the pass does nothing, flang emits assembly.
 ! RUN: %flang_fc1 -S %s -o - %loadbye \
@@ -15,7 +18,7 @@
 ! RUN: | FileCheck %s --check-prefix=CHECK-ACTIVE
 
 ! When emitting LLVM IR, no back-end is executed and therefore no
-! back-end plugins are executed.
+! pre-codegen hook of LLVM pass plugins are executed.
 ! RUN: %flang_fc1 -emit-llvm %s -o - %loadbye -mllvm -last-words \
 ! RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-LLVM
 

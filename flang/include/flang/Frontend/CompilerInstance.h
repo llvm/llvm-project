@@ -61,7 +61,7 @@ class CompilerInstance {
 
   std::unique_ptr<llvm::TargetMachine> targetMachine;
 
-  /// Back-end pass plugins.
+  /// LLVM pass plugins.
   std::vector<std::unique_ptr<llvm::PassPlugin>> passPlugins;
 
   /// The stream for diagnostics from Semantics
@@ -266,7 +266,7 @@ public:
                           llvm::StringRef extension = "");
 
   /// }
-  /// @name Back-end Pass Plugins
+  /// @name LLVM Pass Plugins
   /// @{
 
   void addPassPlugin(std::unique_ptr<llvm::PassPlugin> plugin) {

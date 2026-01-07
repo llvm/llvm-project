@@ -178,7 +178,7 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
     }
   }
 
-  // Load and store pass plugins for the back-end.
+  // Load and store LLVM pass plugins.
   for (const std::string &path :
        flang->getInvocation().getCodeGenOpts().LLVMPassPlugins) {
     if (llvm::Expected<llvm::PassPlugin> passPlugin =

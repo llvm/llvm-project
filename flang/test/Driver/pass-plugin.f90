@@ -3,7 +3,9 @@
 
 ! UNSUPPORTED: system-windows
 
-! REQUIRES: plugins, shell, examples
+! REQUIRES: plugins, examples
+! Plugins are currently broken on AIX, at least in the CI.
+! XFAIL: system-aix
 
 ! RUN: %flang -S %s %loadbye -mllvm -wave-goodbye -o /dev/null \
 ! RUN: 2>&1 | FileCheck %s
