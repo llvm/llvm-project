@@ -498,7 +498,8 @@ Improvements to Clang's diagnostics
 - Clang now generates a fix-it for C++20 designated initializers when the 
   initializers do not match the declaration order in the structure. 
 
-- The ``-Wloop-analysis`` warning now handles variable modifications inside lambda expressions (#GH132038).
+- The ``-Wloop-analysis`` warning has been extended to catch more cases of
+  variable modification inside lambda expressions (#GH132038).
 
 Improvements to Clang's time-trace
 ----------------------------------
