@@ -20,14 +20,3 @@ class myArraySynthProvider:
         if index >= max_idx:
             return None
         return arr.GetChildAtIndex(index)
-
-    def get_child_index(self, name):
-        if name == "[0]":
-            return 0
-        if name == "[1]":
-            return
-        if name == "[2]":
-            return 2
-        if name == "[3]":
-            return 3
-        return -1
