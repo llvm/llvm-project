@@ -1280,7 +1280,7 @@ public:
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract<node_type>(__it.__i_);
+    return __tree_.template __node_handle_extract_iterator<node_type>(__it.__i_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(map<key_type, mapped_type, _Compare2, allocator_type>& __source) {
@@ -1339,9 +1339,8 @@ public:
 
 #  if _LIBCPP_STD_VER >= 20
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
-  template <typename _K2,
-            enable_if_t<__is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>,
-                        int> = 0>
+  template <typename _K2>
+    requires __is_transparent_v<_Compare, _K2> || __is_transparently_comparable_v<_Compare, key_type, _K2>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
   }
@@ -1880,7 +1879,7 @@ public:
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract<node_type>(__it.__i_);
+    return __tree_.template __node_handle_extract_iterator<node_type>(__it.__i_);
   }
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>& __source) {
@@ -1939,7 +1938,8 @@ public:
 
 #  if _LIBCPP_STD_VER >= 20
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2>
+    requires __is_transparent_v<_Compare, _K2>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
   }
