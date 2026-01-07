@@ -3996,7 +3996,7 @@ void RewriteInstance::emitAndLink() {
 
   if (opts::PrintCacheMetrics) {
     BC->outs() << "BOLT-INFO: cache metrics after emitting functions:\n";
-    CacheMetrics::printAll(BC->outs(), BC->getSortedFunctions());
+    CacheMetrics::printAll(BC->outs(), BC->getAllBinaryFunctions());
   }
 }
 
@@ -4079,11 +4079,13 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
                                        : (A->getName() < B->getName());
     }
 
-    // Place movers before anything else.
-    if (A->getName() == BC->getHotTextMoverSectionName())
-      return true;
-    if (B->getName() == BC->getHotTextMoverSectionName())
-      return false;
+    // Place hot text movers before anything else.
+    if (opts::HotText) {
+      if (A->getName() == BC->getHotTextMoverSectionName())
+        return true;
+      if (B->getName() == BC->getHotTextMoverSectionName())
+        return false;
+    }
 
     // Depending on opts::HotFunctionsAtEnd, place main and warm sections in
     // order.
@@ -4104,6 +4106,28 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
 
   // Determine the order of sections.
   llvm::stable_sort(CodeSections, compareSections);
+
+#ifndef NDEBUG
+  // Verify that the order of sections and functions is consistent.
+  uint32_t Index = 1;
+  for (BinarySection *Sec : CodeSections)
+    Sec->setIndex(Index++);
+
+  uint32_t LastIndex = 0;
+  for (const BinaryFunction *BF : BC->getOutputBinaryFunctions()) {
+    if (!BF->isEmitted() || BF->isPatch())
+      continue;
+
+    ErrorOr<BinarySection &> Sec = BF->getCodeSection();
+    if (!Sec)
+      continue;
+
+    assert(Sec->getIndex() >= LastIndex &&
+           "Section order does not match function order");
+
+    LastIndex = Sec->getIndex();
+  }
+#endif
 
   return CodeSections;
 }

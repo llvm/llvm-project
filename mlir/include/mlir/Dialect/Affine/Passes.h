@@ -19,6 +19,7 @@
 #include <limits>
 
 namespace mlir {
+class RewritePatternSet;
 
 namespace func {
 class FuncOp;
@@ -125,6 +126,10 @@ std::unique_ptr<Pass> createAffineExpandIndexOpsPass();
 /// Creates a pass to expand affine index operations into affine.apply
 /// operations.
 std::unique_ptr<Pass> createAffineExpandIndexOpsAsAffinePass();
+
+/// Appends patterns for folding memref aliasing ops into affine load/store
+/// ops into `patterns`.
+void populateAffineFoldMemRefAliasOpPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 // Registration

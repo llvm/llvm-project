@@ -1323,6 +1323,15 @@ defm SHL : SHIFT<"shl.b", shl>;
 defm SRA : SHIFT<"shr.s", sra>;
 defm SRL : SHIFT<"shr.u", srl>;
 
+// Shift with clamping semantics - these have defined behavior for shift amounts
+// >= BitWidth (returning 0 for logical shifts). Used to optimize guarded shift
+// patterns like `shift >= 32 ? 0 : x >> shift`.
+def shl_clamp : SDNode<"NVPTXISD::SHL_CLAMP", SDTIntShiftOp, []>;
+def srl_clamp : SDNode<"NVPTXISD::SRL_CLAMP", SDTIntShiftOp, []>;
+
+defm SHL_CLAMP : SHIFT<"shl.b", shl_clamp>;
+defm SRL_CLAMP : SHIFT<"shr.u", srl_clamp>;
+
 // Bit-reverse
 foreach t = [I64RT, I32RT] in
   def BREV_ # t.PtxType :
@@ -2392,36 +2401,17 @@ foreach t = [I32RT, I64RT] in {
 // BRX
 //
 
-def SDTBrxStartProfile : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def SDTBrxItemProfile : SDTypeProfile<0, 1, [SDTCisVT<0, OtherVT>]>;
-def SDTBrxEndProfile : SDTypeProfile<0, 3, [SDTCisVT<0, OtherVT>, SDTCisInt<1>, SDTCisInt<2>]>;
-
-def brx_start :
-  SDNode<"NVPTXISD::BrxStart", SDTBrxStartProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPSideEffect]>;
-def brx_item :
-  SDNode<"NVPTXISD::BrxItem", SDTBrxItemProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def brx_end :
-  SDNode<"NVPTXISD::BrxEnd", SDTBrxEndProfile,
-         [SDNPHasChain, SDNPInGlue, SDNPSideEffect]>;
-
 let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in {
 
   def BRX_START :
-    NVPTXInst<(outs), (ins i32imm:$id),
-              "$$L_brx_$id: .branchtargets",
-              [(brx_start (i32 imm:$id))]>;
+    NVPTXInst<(outs), (ins i32imm:$id), "$$L_brx_$id: .branchtargets">;
 
   def BRX_ITEM :
-    NVPTXInst<(outs), (ins brtarget:$target),
-              "\t$target,",
-              [(brx_item bb:$target)]>;
+    NVPTXInst<(outs), (ins brtarget:$target), "\t$target,">;
 
   def BRX_END :
     NVPTXInst<(outs), (ins brtarget:$target, B32:$val, i32imm:$id),
-              "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;",
-              [(brx_end bb:$target, i32:$val, (i32 imm:$id))]> {
+              "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;"> {
       let isBarrier = 1;
     }
 }

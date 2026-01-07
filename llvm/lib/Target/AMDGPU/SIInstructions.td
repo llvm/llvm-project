@@ -969,7 +969,11 @@ class SI_INDIRECT_DST<RegisterClass rc> : VPseudoInstSI <
 
 def SI_INDIRECT_SRC_V1 : SI_INDIRECT_SRC<VGPR_32>;
 def SI_INDIRECT_SRC_V2 : SI_INDIRECT_SRC<VReg_64>;
+def SI_INDIRECT_SRC_V3 : SI_INDIRECT_SRC<VReg_96>;
 def SI_INDIRECT_SRC_V4 : SI_INDIRECT_SRC<VReg_128>;
+def SI_INDIRECT_SRC_V5 : SI_INDIRECT_SRC<VReg_160>;
+def SI_INDIRECT_SRC_V6 : SI_INDIRECT_SRC<VReg_192>;
+def SI_INDIRECT_SRC_V7 : SI_INDIRECT_SRC<VReg_224>;
 def SI_INDIRECT_SRC_V8 : SI_INDIRECT_SRC<VReg_256>;
 def SI_INDIRECT_SRC_V9 : SI_INDIRECT_SRC<VReg_288>;
 def SI_INDIRECT_SRC_V10 : SI_INDIRECT_SRC<VReg_320>;
@@ -980,7 +984,11 @@ def SI_INDIRECT_SRC_V32 : SI_INDIRECT_SRC<VReg_1024>;
 
 def SI_INDIRECT_DST_V1 : SI_INDIRECT_DST<VGPR_32>;
 def SI_INDIRECT_DST_V2 : SI_INDIRECT_DST<VReg_64>;
+def SI_INDIRECT_DST_V3 : SI_INDIRECT_DST<VReg_96>;
 def SI_INDIRECT_DST_V4 : SI_INDIRECT_DST<VReg_128>;
+def SI_INDIRECT_DST_V5 : SI_INDIRECT_DST<VReg_160>;
+def SI_INDIRECT_DST_V6 : SI_INDIRECT_DST<VReg_192>;
+def SI_INDIRECT_DST_V7 : SI_INDIRECT_DST<VReg_224>;
 def SI_INDIRECT_DST_V8 : SI_INDIRECT_DST<VReg_256>;
 def SI_INDIRECT_DST_V9 : SI_INDIRECT_DST<VReg_288>;
 def SI_INDIRECT_DST_V10 : SI_INDIRECT_DST<VReg_320>;
@@ -1026,6 +1034,8 @@ def V_INDIRECT_REG_WRITE_MOVREL_B32_V2 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V3 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_96>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V4 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_128>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V5 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_160>;
+def V_INDIRECT_REG_WRITE_MOVREL_B32_V6 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_192>;
+def V_INDIRECT_REG_WRITE_MOVREL_B32_V7 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_224>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V8 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_256>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V9 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_288>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V10 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_320>;
@@ -1039,6 +1049,8 @@ def S_INDIRECT_REG_WRITE_MOVREL_B32_V2 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V3 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_96>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V4 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_128>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V5 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_160>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V6 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_192>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V7 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_224>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V8 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_256>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V9 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_288>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V10 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_320>;
@@ -1071,6 +1083,8 @@ def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V2 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VR
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V3 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_96>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V4 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_128>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V5 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_160>;
+def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V6 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_192>;
+def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V7 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_224>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V8 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_256>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V9 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_288>;
 def V_INDIRECT_REG_WRITE_GPR_IDX_B32_V10 : V_INDIRECT_REG_WRITE_GPR_IDX_pseudo<VReg_320>;
@@ -1091,6 +1105,8 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V2 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V3 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_96>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V4 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_128>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V5 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_160>;
+def V_INDIRECT_REG_READ_GPR_IDX_B32_V6 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_192>;
+def V_INDIRECT_REG_READ_GPR_IDX_B32_V7 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_224>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V8 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_256>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V9 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_288>;
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V10 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_320>;
@@ -2260,9 +2276,31 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (UniformBinFrag<fcopysign> (fp16vt fpimm_pos_zero), fp16vt:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x00008000)), SReg_32:$src1)
+>;
+
+def : GCNPat <
+  (fcopysign (fp16vt fpimm_pos_zero), fp16vt:$src1),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src1)
+>;
+
+def : GCNPat <
   (fcopysign f32:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
              (V_LSHLREV_B32_e64 (i32 16), $src1))
+>;
+
+def : GCNPat <
+  (UniformBinFrag<fcopysign> (f32 fpimm_pos_zero), fp16vt:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x80000000)),
+             (S_LSHL_B32 SReg_32:$src1, (i32 16)))
+>;
+
+def : GCNPat <
+  (fcopysign (f32 fpimm_pos_zero), fp16vt:$src1),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x80000000)),
+                 (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
 >;
 
 def : GCNPat <
@@ -2280,6 +2318,18 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (UniformBinFrag<fcopysign> (fp16vt fpimm_pos_zero), f32:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x00008000)),
+             (S_LSHR_B32 SReg_32:$src1, (i32 16)))
+>;
+
+def : GCNPat <
+  (fcopysign (fp16vt fpimm_pos_zero), f32:$src1),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x00008000)),
+                 (V_LSHRREV_B32_e64 (i32 16), VGPR_32:$src1))
+>;
+
+def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0,
              (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
@@ -2293,10 +2343,25 @@ def : GCNPat <
     (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
 >;
 
+// TODO: Scalar case for 0 magnitude special case
+def : GCNPat <
+  (fcopysign (fp16vt fpimm_pos_zero), fp16vt:$src1),
+  (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)), 0, VGPR_16:$src1)
+>;
+
+// TODO: Handle 0 magnitude special case
 def : GCNPat <
   (fcopysign f32:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
              (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src1, hi16))
+>;
+
+// TODO: Scalar case for 0 magnitude special case
+def : GCNPat <
+  (fcopysign (f32 fpimm_pos_zero), fp16vt:$src1),
+  (REG_SEQUENCE VGPR_32,
+    (V_MOV_B16_t16_e64 0, (i16 0), 0), lo16,
+    (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)), 0, VGPR_16:$src1), hi16)
 >;
 
 def : GCNPat <
@@ -2314,6 +2379,13 @@ def : GCNPat <
              (V_LSHRREV_B32_e64 (i32 16), $src1)), lo16)
 >;
 
+// TODO: Scalar case for 0 magnitude special case
+def : GCNPat <
+  (fcopysign (fp16vt fpimm_pos_zero), f32:$src1),
+  (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)),
+                     0, (EXTRACT_SUBREG VGPR_32:$src1, hi16))
+>;
+
 def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
@@ -2329,6 +2401,16 @@ foreach fp16vt = [v2f16, v2bf16] in {
 def : GCNPat <
   (fcopysign fp16vt:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fff7fff)), $src0, $src1)
+>;
+
+def : GCNPat <
+  (UniformBinFrag<fcopysign> build_vector_fpimm_pos_zero_v2<fp16vt>, fp16vt:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x80008000)), SReg_32:$src1)
+>;
+
+def : GCNPat <
+  (fcopysign build_vector_fpimm_pos_zero_v2<fp16vt>, fp16vt:$src1),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src1)
 >;
 
 }
@@ -2660,9 +2742,31 @@ def : AMDGPUPat <
 >;
 
 def : AMDGPUPat <
+  (UniformBinFrag<fcopysign> (f32 fpimm_pos_zero), (f32 SReg_32:$src1)),
+  (S_AND_B32 (S_MOV_B32 (i32 0x80000000)), $src1)
+>;
+
+def : AMDGPUPat <
+  (fcopysign (f32 fpimm_pos_zero), (f32 VGPR_32:$src1)),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x80000000)), $src1)
+>;
+
+def : AMDGPUPat <
   (fcopysign f32:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
              (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1)))
+>;
+
+def : AMDGPUPat <
+  (UniformBinFrag<fcopysign> (f32 fpimm_pos_zero), SReg_64:$src1),
+  (S_AND_B32 (i32 (S_MOV_B32 (i32 0x80000000))),
+             (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1)))
+>;
+
+def : AMDGPUPat <
+  (fcopysign (f32 fpimm_pos_zero), VReg_64:$src1),
+  (V_AND_B32_e32 (i32 (S_MOV_B32 (i32 0x80000000))),
+                 (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1)))
 >;
 
 def : AMDGPUPat <
@@ -2779,7 +2883,11 @@ multiclass SI_INDIRECT_Pattern <ValueType vt, ValueType eltvt, string VecSize> {
 }
 
 defm : SI_INDIRECT_Pattern <v2f32, f32, "V2">;
+defm : SI_INDIRECT_Pattern<v3f32, f32, "V3">;
 defm : SI_INDIRECT_Pattern <v4f32, f32, "V4">;
+defm : SI_INDIRECT_Pattern<v5f32, f32, "V5">;
+defm : SI_INDIRECT_Pattern<v6f32, f32, "V6">;
+defm : SI_INDIRECT_Pattern<v7f32, f32, "V7">;
 defm : SI_INDIRECT_Pattern <v8f32, f32, "V8">;
 defm : SI_INDIRECT_Pattern <v9f32, f32, "V9">;
 defm : SI_INDIRECT_Pattern <v10f32, f32, "V10">;
@@ -2789,7 +2897,11 @@ defm : SI_INDIRECT_Pattern <v16f32, f32, "V16">;
 defm : SI_INDIRECT_Pattern <v32f32, f32, "V32">;
 
 defm : SI_INDIRECT_Pattern <v2i32, i32, "V2">;
+defm : SI_INDIRECT_Pattern<v3i32, i32, "V3">;
 defm : SI_INDIRECT_Pattern <v4i32, i32, "V4">;
+defm : SI_INDIRECT_Pattern<v5i32, i32, "V5">;
+defm : SI_INDIRECT_Pattern<v6i32, i32, "V6">;
+defm : SI_INDIRECT_Pattern<v7i32, i32, "V7">;
 defm : SI_INDIRECT_Pattern <v8i32, i32, "V8">;
 defm : SI_INDIRECT_Pattern <v9i32, i32, "V9">;
 defm : SI_INDIRECT_Pattern <v10i32, i32, "V10">;

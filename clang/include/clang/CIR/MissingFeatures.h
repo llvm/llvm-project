@@ -93,7 +93,6 @@ struct MissingFeatures {
   static bool opFuncNoReturn() { return false; }
   static bool setFunctionAttributes() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
-  static bool setFunctionPersonality() { return false; }
 
   // CallOp handling
   static bool opCallAggregateArgs() { return false; }
@@ -155,6 +154,7 @@ struct MissingFeatures {
   static bool coroOutsideFrameMD() { return false; }
   static bool coroCoReturn() { return false; }
   static bool coroCoYield() { return false; }
+  static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -264,6 +264,7 @@ struct MissingFeatures {
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehCleanupBranchFixups() { return false; }
+  static bool ehScopeFilter() { return false; }
   static bool ehstackBranches() { return false; }
   static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
@@ -279,6 +280,7 @@ struct MissingFeatures {
 
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
+  static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
@@ -376,7 +378,6 @@ struct MissingFeatures {
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
-  static bool catchParamOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +amx-tf32 -target-feature +amx-transpose  \
+// RUN: -target-feature +amx-tf32 \
 // RUN: -target-feature +amx-bf16 -target-feature +avx512f \
 // RUN: -emit-llvm -o - -Werror -pedantic | FileCheck %s
 

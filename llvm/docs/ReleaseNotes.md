@@ -112,6 +112,8 @@ Changes to the AArch64 Backend
 * `FEAT_TME` support has been removed, as it has been withdrawn from
    all future versions of the A-profile architecture.
 
+* Added support for C1-Nano, C1-Pro, C1-Premium, and C1-Ultra CPUs.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -156,6 +158,7 @@ Changes to the RISC-V Backend
 * Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the RISC-V platform.
+* The Xqci Qualcomm uC Vendor Extension is no longger marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -243,6 +246,9 @@ Changes to the LLVM tools
 * `llvm-config` gained a new flag `--quote-paths` which quotes and escapes paths
   emitted on stdout, to account for spaces or other special characters in path.
   (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
+
+* `llvm-objdump` now supports using `--mcpu=help` and `--mattr=help` with the `--triple` option
+  without requiring an input file or the `-d` (disassemble) flag.
 
 Changes to LLDB
 ---------------------------------

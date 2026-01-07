@@ -68,6 +68,11 @@ to override it with custom paths. With Clang, this can be done with:
 The option ``-Wl,-rpath,<install>/lib`` adds a runtime library search path, which causes the system's
 dynamic linker to look for libc++ in ``<install>/lib`` whenever the program is loaded.
 
+.. note::
+  If the runtimes were built using the "per-target runtime directory" layout,
+  they will be in ``<install>/lib/<target-triple>`` instead of ``<install>/lib``.
+  In this case, use the former path for all library paths in the command above
+  (the path to include files does not change).
 
 The Bootstrapping build
 =======================
@@ -81,14 +86,15 @@ CMake invocation at ``<monorepo>/llvm``:
 .. code-block:: bash
 
   $ mkdir build
+  $ # Configure
   $ cmake -G Ninja -S llvm -B build                                       \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo                               \
-          -DLLVM_ENABLE_PROJECTS="clang"                                  \  # Configure
+          -DLLVM_ENABLE_PROJECTS="clang"                                  \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
           -DLLVM_RUNTIME_TARGETS="<target-triple>"
-  $ ninja -C build runtimes                                                  # Build
-  $ ninja -C build check-runtimes                                            # Test
-  $ ninja -C build install-runtimes                                          # Install
+  $ ninja -C build runtimes          # Build
+  $ ninja -C build check-runtimes    # Test
+  $ ninja -C build install-runtimes  # Install
 
 .. note::
   - This type of build is also commonly called a "Runtimes build", but we would like to move

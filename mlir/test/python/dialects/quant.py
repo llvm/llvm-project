@@ -24,23 +24,28 @@ def test_type_hierarchy():
         )
         calibrated = Type.parse("!quant.calibrated<f32<-0.998:1.2321>>")
 
-        assert not quant.QuantizedType.isinstance(i8)
-        assert quant.QuantizedType.isinstance(any)
-        assert quant.QuantizedType.isinstance(uniform)
-        assert quant.QuantizedType.isinstance(per_axis)
-        assert quant.QuantizedType.isinstance(sub_channel)
-        assert quant.QuantizedType.isinstance(calibrated)
+        assert not isinstance(i8, quant.QuantizedType)
+        assert isinstance(any, quant.QuantizedType)
+        assert isinstance(uniform, quant.QuantizedType)
+        assert isinstance(per_axis, quant.QuantizedType)
+        assert isinstance(sub_channel, quant.QuantizedType)
+        assert isinstance(calibrated, quant.QuantizedType)
 
-        assert quant.AnyQuantizedType.isinstance(any)
-        assert quant.UniformQuantizedType.isinstance(uniform)
-        assert quant.UniformQuantizedPerAxisType.isinstance(per_axis)
-        assert quant.UniformQuantizedSubChannelType.isinstance(sub_channel)
-        assert quant.CalibratedQuantizedType.isinstance(calibrated)
+        assert isinstance(any, quant.AnyQuantizedType)
+        assert isinstance(uniform, quant.UniformQuantizedType)
+        assert isinstance(per_axis, quant.UniformQuantizedPerAxisType)
+        assert isinstance(sub_channel, quant.UniformQuantizedSubChannelType)
+        assert isinstance(calibrated, quant.CalibratedQuantizedType)
 
-        assert not quant.AnyQuantizedType.isinstance(uniform)
-        assert not quant.UniformQuantizedType.isinstance(per_axis)
-        assert not quant.UniformQuantizedType.isinstance(sub_channel)
-        assert not quant.UniformQuantizedPerAxisType.isinstance(sub_channel)
+        assert not isinstance(uniform, quant.AnyQuantizedType)
+        assert not isinstance(per_axis, quant.UniformQuantizedType)
+        assert not isinstance(sub_channel, quant.UniformQuantizedType)
+        assert not isinstance(sub_channel, quant.UniformQuantizedPerAxisType)
+
+        generic_t = Type(uniform)
+        assert type(generic_t) is Type
+        r = quant.QuantizedType.cast_to_storage_type(generic_t)
+        assert isinstance(r, IntegerType)
 
 
 # CHECK-LABEL: TEST: test_any_quantized_type

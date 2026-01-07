@@ -464,14 +464,12 @@ def MOV16sd : MxMoveToSR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
 /// --------------------------------------------------
 let Uses = [SR] in {
 class MxMoveFromSR_R
-    : MxInst<(outs MxDRD16:$dst), (ins SRC:$src), "move.w\t$src, $dst", []>,
-      Requires<[ AtLeastM68010 ]> {
+    : MxInst<(outs MxDRD16:$dst), (ins SRC:$src), "move.w\t$src, $dst", []> {
   let Inst = (descend 0b0100000011, MxEncAddrMode_d<"dst">.EA);
 }
 
 class MxMoveFromSR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
-    : MxInst<(outs), (ins MEMOp:$dst, SRC:$src), "move.w\t$src, $dst", []>,
-      Requires<[ AtLeastM68010 ]> {
+    : MxInst<(outs), (ins MEMOp:$dst, SRC:$src), "move.w\t$src, $dst", []> {
   let Inst = (ascend
     (descend 0b0100000011, DST_ENC.EA),
     DST_ENC.Supplement

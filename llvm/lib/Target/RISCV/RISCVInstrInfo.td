@@ -489,9 +489,6 @@ def csr_sysreg : RISCVOp, TImmLeaf<XLenVT, "return isUInt<12>(Imm);"> {
   let OperandType = "OPERAND_UIMM12";
 }
 
-// A parameterized register class alternative to i32imm/i64imm from Target.td.
-def ixlenimm : Operand<XLenVT>;
-
 // Condition code used by select and short forward branch pseudos.
 def cond_code : RISCVOp {
   let OperandType = "OPERAND_COND_CODE";

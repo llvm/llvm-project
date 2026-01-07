@@ -317,9 +317,7 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
   for (const CallArg &arg : args)
     argTypes.push_back(cgt.getASTContext().getCanonicalParamType(arg.ty));
 
-  CanQualType retType = fnType->getReturnType()
-                            ->getCanonicalTypeUnqualified()
-                            .getUnqualifiedType();
+  CanQualType retType = fnType->getReturnType()->getCanonicalTypeUnqualified();
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   return cgt.arrangeCIRFunctionInfo(retType, argTypes, required);
@@ -381,10 +379,9 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
     argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  return arrangeCIRFunctionInfo(proto->getReturnType()
-                                    ->getCanonicalTypeUnqualified()
-                                    .getUnqualifiedType(),
-                                argTypes, required);
+  return arrangeCIRFunctionInfo(
+      proto->getReturnType()->getCanonicalTypeUnqualified(), argTypes,
+      required);
 }
 
 const CIRGenFunctionInfo &

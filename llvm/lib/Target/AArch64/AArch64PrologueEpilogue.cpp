@@ -162,8 +162,7 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   }
   TypeSize Scale = TypeSize::getFixed(1), Width = TypeSize::getFixed(0);
   int64_t MinOffset, MaxOffset;
-  bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(
-      NewOpc, Scale, Width, MinOffset, MaxOffset);
+  bool Success = TII->getMemOpInfo(NewOpc, Scale, Width, MinOffset, MaxOffset);
   (void)Success;
   assert(Success && "unknown load/store opcode");
 
@@ -1123,7 +1122,12 @@ void AArch64PrologueEmitter::emitWindowsStackProbe(
         .setMIFlags(MachineInstr::FrameSetup);
   }
 
-  const char *ChkStk = Subtarget.getChkStkName();
+  const AArch64TargetLowering *TLI = Subtarget.getTargetLowering();
+  RTLIB::LibcallImpl ChkStkLibcall = TLI->getLibcallImpl(RTLIB::STACK_PROBE);
+  if (ChkStkLibcall == RTLIB::Unsupported)
+    reportFatalUsageError("no available implementation of __chkstk");
+
+  const char *ChkStk = TLI->getLibcallImplName(ChkStkLibcall).data();
   switch (MF.getTarget().getCodeModel()) {
   case CodeModel::Tiny:
   case CodeModel::Small:

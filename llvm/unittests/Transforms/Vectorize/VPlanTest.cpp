@@ -1040,31 +1040,6 @@ TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   delete Fn;
 }
 
-TEST_F(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
-  VPlan &Plan = getPlan();
-  IntegerType *Int1 = IntegerType::get(C, 1);
-  IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *SelectI = SelectInst::Create(
-      PoisonValue::get(Int1), PoisonValue::get(Int32), PoisonValue::get(Int32));
-  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPValue *Op3 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  SmallVector<VPValue *, 4> Args;
-  Args.push_back(Op1);
-  Args.push_back(Op2);
-  Args.push_back(Op3);
-  VPWidenSelectRecipe WidenSelectR(SelectI,
-                                   make_range(Args.begin(), Args.end()));
-
-  checkVPRecipeCastImpl<VPWidenSelectRecipe, VPUser, VPIRMetadata>(
-      &WidenSelectR);
-
-  VPValue *VPV = &WidenSelectR;
-  EXPECT_EQ(&WidenSelectR, VPV->getDefiningRecipe());
-
-  delete SelectI;
-}
-
 TEST_F(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
@@ -1243,7 +1218,7 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true, false, {},
                                {});
-  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, *EVL, Mask);
+  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, StoredVal, *EVL, Mask);
 
   checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 
@@ -1251,7 +1226,6 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
 }
 
 TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
-  IntegerType *Int1 = IntegerType::get(C, 1);
   IntegerType *Int32 = IntegerType::get(C, 32);
   PointerType *Int32Ptr = PointerType::get(C, 0);
   VPlan &Plan = getPlan();
@@ -1270,25 +1244,6 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
     delete AI;
-  }
-
-  {
-    auto *SelectI =
-        SelectInst::Create(PoisonValue::get(Int1), PoisonValue::get(Int32),
-                           PoisonValue::get(Int32));
-    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-    VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPValue *Op3 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    SmallVector<VPValue *, 4> Args;
-    Args.push_back(Op1);
-    Args.push_back(Op2);
-    Args.push_back(Op3);
-    VPWidenSelectRecipe Recipe(SelectI, make_range(Args.begin(), Args.end()));
-    EXPECT_FALSE(Recipe.mayHaveSideEffects());
-    EXPECT_FALSE(Recipe.mayReadFromMemory());
-    EXPECT_FALSE(Recipe.mayWriteToMemory());
-    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
-    delete SelectI;
   }
 
   {

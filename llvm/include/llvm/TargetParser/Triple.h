@@ -153,6 +153,7 @@ public:
 
     AArch64SubArch_arm64e,
     AArch64SubArch_arm64ec,
+    AArch64SubArch_lfi,
 
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
@@ -769,7 +770,7 @@ public:
   bool isOSGlibc() const {
     return (getOS() == Triple::Linux || getOS() == Triple::KFreeBSD ||
             getOS() == Triple::Hurd) &&
-           !isAndroid() && !isMusl();
+           !isAndroid() && !isMusl() && getEnvironment() != Triple::PAuthTest;
   }
 
   /// Tests whether the OS is AIX.
@@ -936,6 +937,12 @@ public:
   /// Tests whether the target is ARM (little and big endian).
   bool isARM() const {
     return getArch() == Triple::arm || getArch() == Triple::armeb;
+  }
+
+  /// Tests whether the target is LFI.
+  bool isLFI() const {
+    return getArch() == Triple::aarch64 &&
+           getSubArch() == Triple::AArch64SubArch_lfi;
   }
 
   /// Tests whether the target supports the EHABI exception

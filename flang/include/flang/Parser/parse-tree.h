@@ -1481,8 +1481,11 @@ WRAPPER_CLASS(ContiguousStmt, std::list<ObjectName>);
 // R846 int-constant-subobject -> constant-subobject
 using ConstantSubobject = Constant<common::Indirection<Designator>>;
 
-// Represents an analyzed expression
+// Represent an analyzed expression
 using TypedExpr = common::ForwardOwningPointer<evaluate::GenericExprWrapper>;
+using TypedCall = common::ForwardOwningPointer<evaluate::ProcedureRef>;
+using TypedAssignment =
+    common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
 
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
@@ -2025,8 +2028,6 @@ struct DeallocateStmt {
 // R1032 assignment-stmt -> variable = expr
 struct AssignmentStmt {
   TUPLE_CLASS_BOILERPLATE(AssignmentStmt);
-  using TypedAssignment =
-      common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
   mutable TypedAssignment typedAssignment;
   std::tuple<Variable, Expr> t;
 };
@@ -2053,7 +2054,7 @@ struct PointerAssignmentStmt {
     std::variant<std::list<BoundsRemapping>, std::list<BoundsSpec>> u;
   };
   TUPLE_CLASS_BOILERPLATE(PointerAssignmentStmt);
-  mutable AssignmentStmt::TypedAssignment typedAssignment;
+  mutable TypedAssignment typedAssignment;
   std::tuple<DataRef, Bounds, Expr> t;
 };
 
@@ -2748,7 +2749,8 @@ struct IoControlSpec {
   WRAPPER_CLASS(Rec, ScalarIntExpr);
   WRAPPER_CLASS(Size, ScalarIntVariable);
   std::variant<IoUnit, Format, Name, CharExpr, Asynchronous, EndLabel, EorLabel,
-      ErrLabel, IdVariable, MsgVariable, StatVariable, Pos, Rec, Size>
+      ErrLabel, IdVariable, MsgVariable, StatVariable, Pos, Rec, Size,
+      ErrorRecovery>
       u;
 };
 
@@ -3298,8 +3300,7 @@ struct CallStmt {
   Call call;
   std::optional<Chevrons> chevrons;
   CharBlock source;
-  mutable common::ForwardOwningPointer<evaluate::ProcedureRef>
-      typedCall; // filled by semantics
+  mutable TypedCall typedCall; // filled by semantics
 };
 
 // R1529 function-subprogram ->
@@ -3970,6 +3971,18 @@ struct OmpDependenceType {
   WRAPPER_CLASS_BOILERPLATE(OmpDependenceType, Value);
 };
 
+// Ref: [6.0:180-181]
+//
+// depinfo-modifier ->                              // since 6.0
+//    keyword (locator-list-item)
+// keyword ->
+//    IN | INOUT | INOUTSET | MUTEXINOUTSET | OUT   // since 6.0
+struct OmpDepinfoModifier {
+  using Value = common::OmpDependenceKind;
+  TUPLE_CLASS_BOILERPLATE(OmpDepinfoModifier);
+  std::tuple<Value, OmpObject> t;
+};
+
 // Ref: [5.0:170-176], [5.1:197-205], [5.2:276-277]
 //
 // device-modifier ->
@@ -4029,40 +4042,6 @@ struct OmpExpectation {
 struct OmpFallbackModifier {
   ENUM_CLASS(Value, Abort, Default_Mem, Null);
   WRAPPER_CLASS_BOILERPLATE(OmpFallbackModifier, Value);
-};
-
-// Ref: [6.0:470-471]
-//
-// preference-selector ->                           // since 6.0
-//    FR(foreign-runtime-identifier) |
-//    ATTR(preference-property-extension, ...)
-struct OmpPreferenceSelector {
-  UNION_CLASS_BOILERPLATE(OmpPreferenceSelector);
-  using ForeignRuntimeIdentifier = common::Indirection<Expr>;
-  using PreferencePropertyExtension = common::Indirection<Expr>;
-  using Extensions = std::list<PreferencePropertyExtension>;
-  std::variant<ForeignRuntimeIdentifier, Extensions> u;
-};
-
-// Ref: [6.0:470-471]
-//
-// preference-specification ->
-//    {preference-selector...} |                    // since 6.0
-//    foreign-runtime-identifier                    // since 5.1
-struct OmpPreferenceSpecification {
-  UNION_CLASS_BOILERPLATE(OmpPreferenceSpecification);
-  using ForeignRuntimeIdentifier =
-      OmpPreferenceSelector::ForeignRuntimeIdentifier;
-  std::variant<std::list<OmpPreferenceSelector>, ForeignRuntimeIdentifier> u;
-};
-
-// REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
-//
-// prefer-type ->                                   // since 5.1
-//    PREFER_TYPE(preference-specification...)
-struct OmpPreferType {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpPreferType, std::list<OmpPreferenceSpecification>);
 };
 
 // REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
@@ -4182,6 +4161,40 @@ struct OmpOrderModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Value);
 };
 
+// Ref: [6.0:470-471]
+//
+// preference-selector ->                           // since 6.0
+//    FR(foreign-runtime-identifier) |
+//    ATTR(preference-property-extension, ...)
+struct OmpPreferenceSelector {
+  UNION_CLASS_BOILERPLATE(OmpPreferenceSelector);
+  using ForeignRuntimeIdentifier = common::Indirection<Expr>;
+  using PreferencePropertyExtension = common::Indirection<Expr>;
+  using Extensions = std::list<PreferencePropertyExtension>;
+  std::variant<ForeignRuntimeIdentifier, Extensions> u;
+};
+
+// Ref: [6.0:470-471]
+//
+// preference-specification ->
+//    {preference-selector...} |                    // since 6.0
+//    foreign-runtime-identifier                    // since 5.1
+struct OmpPreferenceSpecification {
+  UNION_CLASS_BOILERPLATE(OmpPreferenceSpecification);
+  using ForeignRuntimeIdentifier =
+      OmpPreferenceSelector::ForeignRuntimeIdentifier;
+  std::variant<std::list<OmpPreferenceSelector>, ForeignRuntimeIdentifier> u;
+};
+
+// REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
+//
+// prefer-type ->                                   // since 5.1
+//    PREFER_TYPE(preference-specification...)
+struct OmpPreferType {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpPreferType, std::list<OmpPreferenceSpecification>);
+};
+
 // Ref: [5.1:166-171], [5.2:269-270]
 //
 // prescriptiveness ->
@@ -4256,7 +4269,7 @@ struct OmpStepSimpleModifier {
 //    MUTEXINOUTSET | DEPOBJ |                      // since 5.0
 //    INOUTSET                                      // since 5.2
 struct OmpTaskDependenceType {
-  ENUM_CLASS(Value, In, Out, Inout, Inoutset, Mutexinoutset, Depobj)
+  using Value = common::OmpDependenceKind;
   WRAPPER_CLASS_BOILERPLATE(OmpTaskDependenceType, Value);
 };
 
@@ -4393,6 +4406,14 @@ struct OmpBindClause {
 struct OmpCancellationConstructTypeClause {
   TUPLE_CLASS_BOILERPLATE(OmpCancellationConstructTypeClause);
   std::tuple<OmpDirectiveName, std::optional<ScalarLogicalExpr>> t;
+};
+
+// Ref: [6.0:262]
+//
+// combiner-clause ->                               // since 6.0
+//    COMBINER(combiner-expr)
+struct OmpCombinerClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpCombinerClause, OmpCombinerExpression);
 };
 
 // Ref: [5.2:214]
@@ -4660,6 +4681,19 @@ struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);
   MODIFIER_BOILERPLATE(OmpDirectiveNameModifier);
   std::tuple<MODIFIERS(), ScalarLogicalExpr> t;
+};
+
+// Ref: [5.1:217-220], [5.2:293-294], [6.0:180-181]
+//
+// init-clause ->
+//    INIT ([modifier... :] interop-var)            // since 5.1
+// modifier ->
+//    prefer-type | interop-type |                  // since 5.1
+//    depinfo-modifier                              // since 6.0
+struct OmpInitClause {
+  TUPLE_CLASS_BOILERPLATE(OmpInitClause);
+  MODIFIER_BOILERPLATE(OmpPreferType, OmpInteropType, OmpDepinfoModifier);
+  std::tuple<MODIFIERS(), OmpObject> t;
 };
 
 // Ref: [5.0:170-176], [5.1:197-205], [5.2:138-139]
@@ -5005,20 +5039,6 @@ struct OmpWhenClause {
       t;
 };
 
-// REF: [5.1:217-220], [5.2:293-294]
-//
-// init-clause -> INIT ([interop-modifier,] [interop-type,]
-//                              interop-type: interop-var)
-// interop-modifier: prefer_type(preference-list)
-// interop-type: target, targetsync
-// interop-var: Ompobject
-// There can be at most only two interop-type.
-struct OmpInitClause {
-  TUPLE_CLASS_BOILERPLATE(OmpInitClause);
-  MODIFIER_BOILERPLATE(OmpPreferType, OmpInteropType);
-  std::tuple<MODIFIERS(), OmpObject> t;
-};
-
 // REF: [5.1:217-220], [5.2:294]
 //
 // 14.1.3 use-clause -> USE (interop-var)
@@ -5331,7 +5351,7 @@ struct OpenMPAtomicConstruct : public OmpBlockConstruct {
 
     struct Op {
       int what;
-      AssignmentStmt::TypedAssignment assign;
+      TypedAssignment assign;
     };
     TypedExpr atom, cond;
     Op op0, op1;

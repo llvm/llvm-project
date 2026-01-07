@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualOutputBackends.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -269,6 +270,8 @@ static sys::fs::OpenFlags generateFlagsFromConfig(OutputConfig Config) {
 }
 
 Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Create a temporary file.
   // Insert -%%%%%%%% before the extension (if any), and because some tools
   // (noticeable, clang's own GlobalModuleIndex.cpp) glob for build
@@ -298,6 +301,8 @@ Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
 }
 
 Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert(OutputPath != "-" && "Unexpected request for FD of stdout");
 
   // Disable temporary file for other non-regular files, and if we get a status
@@ -340,6 +345,8 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
 }
 
 Error OnDiskOutputFile::initializeStream() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Open the file stream.
   if (OutputPath == "-") {
     std::error_code EC;
@@ -444,6 +451,8 @@ areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
 }
 
 Error OnDiskOutputFile::reset() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Destroy the streams to flush them.
   BufferOS.reset();
   if (!FileOS)
@@ -458,11 +467,13 @@ Error OnDiskOutputFile::reset() {
 }
 
 Error OnDiskOutputFile::keep() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (auto E = reset())
     return E;
 
   // Close the file descriptor and remove crash cleanup before exit.
-  auto RemoveDiscardOnSignal = make_scope_exit([&]() {
+  llvm::scope_exit RemoveDiscardOnSignal([&]() {
     if (Config.getDiscardOnSignal())
       sys::DontRemoveFileOnSignal(TempPath ? *TempPath : OutputPath);
   });
@@ -562,6 +573,8 @@ Error OnDiskOutputFile::keep() {
 }
 
 Error OnDiskOutputFile::discard() {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Destroy the streams to flush them.
   if (auto E = reset())
     return E;
@@ -584,6 +597,8 @@ Error OnDiskOutputFile::discard() {
 }
 
 Error OnDiskOutputBackend::makeAbsolute(SmallVectorImpl<char> &Path) const {
+  // FIXME: Should this really call sys::fs::make_absolute?
+  auto BypassSandbox = sys::sandbox::scopedDisable();
   return convertToOutputError(StringRef(Path.data(), Path.size()),
                               sys::fs::make_absolute(Path));
 }
@@ -591,6 +606,8 @@ Error OnDiskOutputBackend::makeAbsolute(SmallVectorImpl<char> &Path) const {
 Expected<std::unique_ptr<OutputFileImpl>>
 OnDiskOutputBackend::createFileImpl(StringRef Path,
                                     std::optional<OutputConfig> Config) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<256> AbsPath;
   if (Path != "-") {
     AbsPath = Path;
