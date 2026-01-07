@@ -1272,6 +1272,10 @@ def skipIfFBSDVMCoreSupportMissing(func):
     return _get_bool_config_skip_if_decorator("fbsdvmcore")(func)
 
 
+def skipIfZLIBSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("zlib")(func)
+
+
 def skipIfLLVMTargetMissing(target):
     config = lldb.SBDebugger.GetBuildConfiguration()
     targets = config.GetValueForKey("targets").GetValueForKey("value")
