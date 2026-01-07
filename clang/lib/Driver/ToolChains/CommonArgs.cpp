@@ -3649,3 +3649,28 @@ void tools::setComplexRange(const Driver &D, StringRef NewOpt,
   LastOpt = NewOpt;
   Range = NewRange;
 }
+
+void tools::constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                                     const JobAction &JA,
+                                     const InputInfoList &JobInputs,
+                                     const ArgStringList &LinkerInputs,
+                                     const InputInfo &Output,
+                                     const llvm::opt::ArgList &Args,
+                                     const char *OutputFilename) {
+  // Construct llvm-link command.
+  // The output from llvm-link is a bitcode file.
+
+  assert(!LinkerInputs.empty() && !JobInputs.empty() &&
+         "Must have at least one input.");
+
+  ArgStringList LlvmLinkArgs(
+      {"-o", OutputFilename ? OutputFilename : Output.getFilename()});
+
+  LlvmLinkArgs.append(LinkerInputs);
+
+  const ToolChain &TC = T.getToolChain();
+  const char *LlvmLink = Args.MakeArgString(TC.GetProgramPath("llvm-link"));
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         LlvmLink, LlvmLinkArgs, JobInputs,
+                                         Output));
+}

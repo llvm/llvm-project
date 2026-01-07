@@ -6574,6 +6574,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   RuntimeAttrs.TargetThreadLimit[0] = Builder.getInt32(20);
   RuntimeAttrs.TeamsThreadLimit[0] = Builder.getInt32(30);
   RuntimeAttrs.MaxThreads = Builder.getInt32(40);
+  RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
@@ -6929,6 +6930,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
   RuntimeAttrs.LoopTripCount = Builder.getInt64(1000);
+  RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);

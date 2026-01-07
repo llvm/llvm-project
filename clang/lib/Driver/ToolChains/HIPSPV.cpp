@@ -71,11 +71,8 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
                                     Target, /*IsBitCodeSDL=*/true,
                                     /*PostClangLink=*/false);
 
-  LinkArgs.append({"-o", TempFile});
-  const char *LlvmLink =
-      Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         LlvmLink, LinkArgs, Inputs, Output));
+  tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
+                                  TempFile);
 
   // Post-link HIP lowering.
 
