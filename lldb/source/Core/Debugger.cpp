@@ -1607,8 +1607,9 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
       (prev_sc->function == nullptr && prev_sc->symbol == nullptr)) {
     initial_function = true;
   }
-  return FormatEntity::Format(*format, s, sc, exe_ctx, addr, nullptr,
-                              function_changed, initial_function);
+  return FormatEntity::Formatter(sc, exe_ctx, addr, function_changed,
+                                 initial_function)
+      .Format(*format, s);
 }
 
 void Debugger::AssertCallback(llvm::StringRef message,
