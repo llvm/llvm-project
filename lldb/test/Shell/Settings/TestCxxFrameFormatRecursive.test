@@ -19,5 +19,4 @@ run
 bt
 
 # CHECK: bt
-# CHECK-NOT: custom-frame
-# CHECK: main
+# CHECK: custom-frame 'main
