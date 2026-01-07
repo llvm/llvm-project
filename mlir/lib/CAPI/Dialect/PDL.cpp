@@ -40,6 +40,10 @@ MlirType mlirPDLAttributeTypeGet(MlirContext ctx) {
   return wrap(pdl::AttributeType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirPDLAttributeTypeGetName(void) {
+  return wrap(pdl::AttributeType::name);
+}
+
 //===---------------------------------------------------------------------===//
 // OperationType
 //===---------------------------------------------------------------------===//
@@ -54,6 +58,10 @@ MlirTypeID mlirPDLOperationTypeGetTypeID(void) {
 
 MlirType mlirPDLOperationTypeGet(MlirContext ctx) {
   return wrap(pdl::OperationType::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirPDLOperationTypeGetName(void) {
+  return wrap(pdl::OperationType::name);
 }
 
 //===---------------------------------------------------------------------===//
@@ -71,6 +79,8 @@ MlirTypeID mlirPDLRangeTypeGetTypeID(void) {
 MlirType mlirPDLRangeTypeGet(MlirType elementType) {
   return wrap(pdl::RangeType::get(unwrap(elementType)));
 }
+
+MlirStringRef mlirPDLRangeTypeGetName(void) { return wrap(pdl::RangeType::name); }
 
 MlirType mlirPDLRangeTypeGetElementType(MlirType type) {
   return wrap(cast<pdl::RangeType>(unwrap(type)).getElementType());
@@ -92,6 +102,8 @@ MlirType mlirPDLTypeTypeGet(MlirContext ctx) {
   return wrap(pdl::TypeType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirPDLTypeTypeGetName(void) { return wrap(pdl::TypeType::name); }
+
 //===---------------------------------------------------------------------===//
 // ValueType
 //===---------------------------------------------------------------------===//
@@ -107,3 +119,5 @@ MlirTypeID mlirPDLValueTypeGetTypeID(void) {
 MlirType mlirPDLValueTypeGet(MlirContext ctx) {
   return wrap(pdl::ValueType::get(unwrap(ctx)));
 }
+
+MlirStringRef mlirPDLValueTypeGetName(void) { return wrap(pdl::ValueType::name); }

@@ -10,6 +10,7 @@
 #define MLIR_BINDINGS_PYTHON_IRTYPES_H
 
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir/Bindings/Python/IRCore.h"
 
 namespace mlir {
 namespace python {
@@ -24,6 +25,7 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirIntegerTypeGetTypeID;
   static constexpr const char *pyClassName = "IntegerType";
+  static inline const MlirStringRef name = mlirIntegerTypeGetName();
   using PyConcreteType::PyConcreteType;
 
   enum Signedness { Signless, Signed, Unsigned };
