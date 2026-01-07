@@ -24,6 +24,7 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
+#include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
@@ -933,6 +934,7 @@ public:
   using GetTypeIDFunctionTy = MlirTypeID (*)();
   using Base = PyConcreteType;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction = nullptr;
+  static inline const MlirStringRef name{};
 
   PyConcreteType() = default;
   PyConcreteType(PyMlirContextRef contextRef, MlirType t)
@@ -986,6 +988,12 @@ public:
           nanobind::cast<nanobind::callable>(nanobind::cpp_function(
               [](PyType pyType) -> DerivedTy { return pyType; })),
           /*replace*/ true);
+    }
+
+    if (DerivedTy::name.length != 0) {
+      cls.def_prop_ro_static("type_name", [](nanobind::object & /*self*/) {
+        return nanobind::str(DerivedTy::name.data, DerivedTy::name.length);
+      });
     }
 
     DerivedTy::bindDerived(cls);
