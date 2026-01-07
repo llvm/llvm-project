@@ -2172,12 +2172,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       KnownRHS.knownNot(fcNan);
     }
 
+    if (FMF.noInfs()) {
+      // Flag implies inputs cannot be infinity.
+      KnownLHS.knownNot(fcInf);
+      KnownRHS.knownNot(fcInf);
+    }
+
+    bool NonNanResult = (DemandedMask & fcNan) == fcNone;
+
     // With no-nans/no-infs:
     // X * 0.0 --> copysign(0.0, X)
     // X * -0.0 --> copysign(0.0, -X)
-
-    // TODO: Apply knowledge of no-infinity returns to sources.
-    if (KnownLHS.isKnownNeverInfOrNaN() &&
+    if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
         KnownRHS.isKnownAlways(fcPosZero | fcNan)) {
       // => copysign(+0, lhs)
       // Note: Dropping canonicalize
@@ -2187,7 +2193,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     }
 
     if (KnownLHS.isKnownAlways(fcPosZero | fcNan) &&
-        KnownRHS.isKnownNeverInfOrNaN()) {
+        (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
       // => copysign(+0, rhs)
       // Note: Dropping canonicalize
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
@@ -2195,7 +2201,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
       return Copysign;
     }
 
-    if (KnownLHS.isKnownNeverInfOrNaN() &&
+    if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
         KnownRHS.isKnownAlways(fcNegZero | fcNan)) {
       // => copysign(0, fneg(lhs))
       // Note: Dropping canonicalize
@@ -2206,7 +2212,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     }
 
     if (KnownLHS.isKnownAlways(fcNegZero | fcNan) &&
-        KnownRHS.isKnownNeverInfOrNaN()) {
+        (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
       // => copysign(+0, fneg(rhs))
       // Note: Dropping canonicalize
       Value *Copysign =
