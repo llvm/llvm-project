@@ -9158,6 +9158,15 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
       Function::Create(FnTy, GlobalValue::InternalLinkage, FuncName, M);
   MapperFn->addFnAttr(Attribute::NoInline);
   MapperFn->addFnAttr(Attribute::NoUnwind);
+  // Disabling opts for user-defined mappers since, in some cases (see
+  // `default-mapper-nested-derived-type.f90`), some optimizations and
+  // instrumentations causes runtime crashes on the host. In particular, the
+  // following:
+  // - ths `X86DAGToDAGISel` pass and
+  // - `OptNoneInstrumentation` (TODO zoom in further on passes that use this
+  // instrumention object to find out the exact pass(es) causing the crash).
+  MapperFn->addFnAttr(Attribute::OptimizeNone);
+
   MapperFn->addParamAttr(0, Attribute::NoUndef);
   MapperFn->addParamAttr(1, Attribute::NoUndef);
   MapperFn->addParamAttr(2, Attribute::NoUndef);
