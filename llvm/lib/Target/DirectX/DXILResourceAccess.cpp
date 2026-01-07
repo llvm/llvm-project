@@ -306,12 +306,12 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
   // Every object in a cbuffer either fits in a row or is aligned to a row. This
   // means that only the very last pointer access can point into a row.
   auto *LastGEP = dyn_cast<GEPOperator>(LI->getPointerOperand());
-  if (!LastGEP)
+  if (!LastGEP) {
     // If we don't have a GEP at all we're just accessing the resource through
     // the result of getpointer directly.
     assert(LI->getPointerOperand() == II &&
            "Unexpected indirect access to resource without GEP");
-  else {
+  } else {
     Value *GEPOffset = traverseGEPOffsets(
         DL, Builder, LastGEP->getPointerOperand(), hlsl::CBufferRowSizeInBytes);
     CurrentRow = Builder.CreateAdd(GEPOffset, CurrentRow);
