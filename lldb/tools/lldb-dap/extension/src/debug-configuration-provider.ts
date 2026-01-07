@@ -5,7 +5,7 @@ import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
 import { ErrorWithNotification } from "./ui/error-with-notification";
-import { LogFilePathProvider } from "./logging";
+import { ConfigureButton } from "./ui/show-error-message";
 import { AndroidConfigurationBuilder } from "./android/android-configuration-builder";
 
 const exec = util.promisify(child_process.execFile);
