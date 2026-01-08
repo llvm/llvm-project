@@ -323,7 +323,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
   let verify = [{
     static_assert(!ConcreteOp::template hasTrait<OpTrait::ZeroRegions>(),
                   "expected operation to have non-zero regions");
-    return detail::verifyTypesAlongControlFlowEdges($_op);
+    return detail::verifyRegionBranchOpInterface($_op);
   }];
   let verifyWithRegions = 1;
 
