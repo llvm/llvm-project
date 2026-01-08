@@ -127,7 +127,6 @@ private:
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
-  bool foldSelectsFromBitcast(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoad(Instruction &I);
@@ -1545,121 +1544,6 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   replaceValue(I, *NewExt);
   ++NumVecCmpBO;
   return true;
-}
-
-/// Try to fold scalar selects that select between extracted elements and zero
-/// into extracting from a vector select. This is rooted at the bitcast.
-///
-/// This pattern arises when a vector is bitcast to a smaller element type,
-/// elements are extracted, and then conditionally selected with zero:
-///
-///   %bc = bitcast <4 x i32> %src to <16 x i8>
-///   %e0 = extractelement <16 x i8> %bc, i32 0
-///   %s0 = select i1 %cond, i8 %e0, i8 0
-///   %e1 = extractelement <16 x i8> %bc, i32 1
-///   %s1 = select i1 %cond, i8 %e1, i8 0
-///   ...
-///
-/// Transforms to:
-///   %sel = select i1 %cond, <4 x i32> %src, <4 x i32> zeroinitializer
-///   %bc = bitcast <4 x i32> %sel to <16 x i8>
-///   %e0 = extractelement <16 x i8> %bc, i32 0
-///   %e1 = extractelement <16 x i8> %bc, i32 1
-///   ...
-///
-/// This is profitable because vector select on wider types produces fewer
-/// select/cndmask instructions than scalar selects on each element.
-bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
-  auto *BC = dyn_cast<BitCastInst>(&I);
-  if (!BC)
-    return false;
-
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(BC->getSrcTy());
-  auto *DstVecTy = dyn_cast<FixedVectorType>(BC->getDestTy());
-  if (!SrcVecTy || !DstVecTy)
-    return false;
-
-  // Source must be 32-bit or 64-bit elements, destination must be smaller
-  // integer elements. Zero in all these types is all-bits-zero.
-  Type *SrcEltTy = SrcVecTy->getElementType();
-  Type *DstEltTy = DstVecTy->getElementType();
-  unsigned SrcEltBits = SrcEltTy->getPrimitiveSizeInBits();
-  unsigned DstEltBits = DstEltTy->getPrimitiveSizeInBits();
-
-  if (SrcEltBits != 32 && SrcEltBits != 64)
-    return false;
-
-  if (!DstEltTy->isIntegerTy() || DstEltBits >= SrcEltBits)
-    return false;
-
-  // Collect all select users that match the pattern, grouped by condition.
-  // Pattern: select i1 %cond, (extractelement %bc, idx), 0
-  DenseMap<Value *, SmallVector<SelectInst *, 8>> CondToSelects;
-
-  for (User *U : BC->users()) {
-    auto *Ext = dyn_cast<ExtractElementInst>(U);
-    if (!Ext)
-      continue;
-
-    for (User *ExtUser : Ext->users()) {
-      Value *Cond;
-      // Match: select i1 %cond, %ext, 0
-      if (match(ExtUser, m_Select(m_Value(Cond), m_Specific(Ext), m_Zero())) &&
-          Cond->getType()->isIntegerTy(1))
-        CondToSelects[Cond].push_back(cast<SelectInst>(ExtUser));
-    }
-  }
-
-  if (CondToSelects.empty())
-    return false;
-
-  // Check profitability using TTI.
-  auto *CondTy = CmpInst::makeCmpResultType(DstEltTy);
-  auto *VecCondTy = CmpInst::makeCmpResultType(SrcVecTy);
-
-  InstructionCost ScalarSelCost =
-      TTI.getCmpSelInstrCost(Instruction::Select, DstEltTy, CondTy,
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  InstructionCost VecSelCost =
-      TTI.getCmpSelInstrCost(Instruction::Select, SrcVecTy, VecCondTy,
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
-
-  bool MadeChange = false;
-  Value *SrcVec = BC->getOperand(0);
-
-  // Process each group of selects with the same condition.
-  for (auto &[Cond, Selects] : CondToSelects) {
-    // Only profitable if vector select cost < total scalar select cost.
-    if (VecSelCost >= ScalarSelCost * Selects.size()) {
-      LLVM_DEBUG(dbgs() << "VectorCombine: foldSelectsFromBitcast not "
-                        << "profitable (VecCost=" << VecSelCost
-                        << ", ScalarCost=" << ScalarSelCost
-                        << ", NumSelects=" << Selects.size() << ")\n");
-      continue;
-    }
-
-    // Create the vector select and bitcast once for this condition.
-    Builder.SetInsertPoint(BC->getNextNode());
-    Value *VecSel =
-        Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
-    Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);
-
-    // Replace each scalar select with an extract from the new bitcast.
-    for (SelectInst *Sel : Selects) {
-      auto *Ext = cast<ExtractElementInst>(Sel->getTrueValue());
-      Value *Idx = Ext->getIndexOperand();
-
-      Builder.SetInsertPoint(Sel);
-      Value *NewExt = Builder.CreateExtractElement(NewBC, Idx);
-      replaceValue(*Sel, *NewExt);
-      MadeChange = true;
-    }
-
-    LLVM_DEBUG(dbgs() << "VectorCombine: folded " << Selects.size()
-                      << " selects into vector select\n");
-  }
-
-  return MadeChange;
 }
 
 static void analyzeCostOfVecReduction(const IntrinsicInst &II,
@@ -5157,8 +5041,6 @@ bool VectorCombine::run() {
         break;
       case Instruction::BitCast:
         if (foldBitcastShuffle(I))
-          return true;
-        if (foldSelectsFromBitcast(I))
           return true;
         break;
       case Instruction::And:

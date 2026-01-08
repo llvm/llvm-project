@@ -978,6 +978,18 @@ def SVCVTXNT_F32_F64   : SInst<"svcvtxnt_f32[_f64]", "MMPd", "d", MergeOp1, "aar
 //  SVCVTXNT_X_F32_F64 : Implemented as macro by SveEmitter.cpp
 }
 
+let SVETargetGuard = "sve2p2|sme2p2", SMETargetGuard = "sve2p2|sme2p2" in {
+
+def SVCVTNT_Z_F16_F32  : SInst<"svcvtnt_f16[_f32]_z",  "hhPd", "f", MergeNone, "aarch64_sve_fcvtnt_z_f16f32", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTNT_Z_F32_F64  : SInst<"svcvtnt_f32[_f64]_z",  "hhPd", "d", MergeNone, "aarch64_sve_fcvtnt_z_f32f64", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTNT_Z_BF16_F32 : SInst<"svcvtnt_bf16[_f32]_z", "$$Pd", "f", MergeNone, "aarch64_sve_fcvtnt_z_bf16f32", [IsOverloadNone, VerifyRuntimeMode]>;
+
+def SVCVTXNT_Z_F32_F64 : SInst<"svcvtxnt_f32[_f64]_z", "MMPd", "d", MergeNone, "aarch64_sve_fcvtxnt_z_f32f64", [IsOverloadNone, VerifyRuntimeMode]>;
+
+def SVCVTLT_Z_F32_F16  : SInst<"svcvtlt_f32[_f16]", "dPh", "f", MergeZeroExp, "aarch64_sve_fcvtlt_f32f16", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTLT_Z_F64_F32  : SInst<"svcvtlt_f64[_f32]", "dPh", "d", MergeZeroExp, "aarch64_sve_fcvtlt_f64f32",  [IsOverloadNone, VerifyRuntimeMode]>;
+
+}
 ////////////////////////////////////////////////////////////////////////////////
 // Permutations and selection
 
