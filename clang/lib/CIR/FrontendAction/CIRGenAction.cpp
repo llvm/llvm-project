@@ -142,13 +142,7 @@ public:
             // INFO: This is not full
             Decl *D = getDeclByName(S.getASTContext(), FuncOp.getName());
             const CheckFallThroughDiagnostics &CD =
-                (isa<BlockDecl>(D) ? CheckFallThroughDiagnostics::makeForBlock()
-                 : (isa<CXXMethodDecl>(D) &&
-                    cast<CXXMethodDecl>(D)->getOverloadedOperator() ==
-                        OO_Call &&
-                    cast<CXXMethodDecl>(D)->getParent()->isLambda())
-                     ? CheckFallThroughDiagnostics::makeForLambda()
-                     : CheckFallThroughDiagnostics::makeForFunction(S, D));
+                    CheckFallThroughDiagnostics::makeForFunction(S, D);
             // Run fall-through analysis on this function
             FallThroughPass.checkFallThroughForFuncBody(C, CI.getDiagnostics(), FuncOp, FuncType,
                                                         CD);

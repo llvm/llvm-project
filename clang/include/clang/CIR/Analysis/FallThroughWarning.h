@@ -21,7 +21,6 @@
 #include "clang/Sema/AnalysisBasedWarnings.h"
 
 #include "mlir/IR/Block.h"
-#include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 namespace cir {

@@ -1,6 +1,4 @@
 #include "clang/CIR/Analysis/FallThroughWarning.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
-#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
@@ -11,17 +9,13 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
-#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <unordered_map>
-#include <unordered_set>
 
 #define DEBUG_TYPE "cir-fallthrough"
 
@@ -32,7 +26,7 @@ using namespace clang;
 namespace clang {
 
 class FallthroughInstance {
-  std::unordered_map<mlir::Operation *, ControlFlowKind> fallthroughContainer;
+  DenseMap<mlir::Operation *, ControlFlowKind> fallthroughContainer;
 
   ControlFlowKind getCfkFor(mlir::Operation *op) {
     if (auto it = fallthroughContainer.find(op); it != fallthroughContainer.end())
@@ -43,10 +37,8 @@ class FallthroughInstance {
                                         ControlFlowKind cfk,
                                         ControlFlowKind newCfk) {
     cfk = std::min(cfk, newCfk);
-
     if (parentOp)
        fallthroughContainer[parentOp] = std::min(cfk, getCfkFor(parentOp));
-    
     return cfk;
   }
 
@@ -131,30 +123,6 @@ CheckFallThroughDiagnostics::makeForFunction(Sema &s, const Decl *func) {
   return d;
 }
 
-CheckFallThroughDiagnostics
-CheckFallThroughDiagnostics::makeForCoroutine(const Decl *func) {
-  CheckFallThroughDiagnostics d;
-  d.funcLoc = func->getLocation();
-  d.diagFallThroughReturnsNonVoid = diag::warn_falloff_nonvoid;
-  d.funKind = diag::FalloffFunctionKind::Coroutine;
-  return d;
-}
-
-CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForBlock() {
-  CheckFallThroughDiagnostics D;
-  D.diagFallThroughHasNoReturn = diag::err_noreturn_has_return_expr;
-  D.diagFallThroughReturnsNonVoid = diag::err_falloff_nonvoid;
-  D.funKind = diag::FalloffFunctionKind::Block;
-  return D;
-}
-
-CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForLambda() {
-  CheckFallThroughDiagnostics d;
-  d.diagFallThroughHasNoReturn = diag::err_noreturn_has_return_expr;
-  d.diagFallThroughReturnsNonVoid = diag::warn_falloff_nonvoid;
-  d.funKind = diag::FalloffFunctionKind::Lambda;
-  return d;
-}
 
 //===----------------------------------------------------------------------===//
 // Check for phony return values (returning uninitialized __retval)
@@ -179,47 +147,7 @@ CheckFallThroughDiagnostics CheckFallThroughDiagnostics::makeForLambda() {
 bool isPhonyReturn(cir::ReturnOp returnOp) {
   assert(returnOp && "ReturnOp should be non-null");
 
-  if (returnOp.getIsImplicit())
-    return true;
-
-  // Get the returned value - return operations use $input as the operand
-  if (!returnOp.hasOperand())
-    return false;
-
-  auto returnValue = returnOp.getInput()[0];
-
-  auto loadOp = returnValue.getDefiningOp<cir::LoadOp>();
-  if (!loadOp)
-    return false;
-
-  // Check if the load is from an alloca
-  auto allocaOp = loadOp.getAddr().getDefiningOp<cir::AllocaOp>();
-  if (!allocaOp)
-    return false;
-
-  // Check if the alloca is named "__retval"
-  auto name = allocaOp.getName();
-  if (name != "__retval")
-    return false;
-
-  // Check if there are ANY stores to __retval in the entire function.
-  // This is intentionally path-INsensitive - if there are stores on some
-  // paths, then this return is considered non-phony.
-  // The control flow analysis (hasLiveReturn + hasPlainEdge) will determine
-  // if all paths return properly.
-  mlir::Value allocaResult = allocaOp.getResult();
-
-  for (auto *user : allocaResult.getUsers()) {
-    if (auto storeOp = dyn_cast<cir::StoreOp>(user)) {
-      if (storeOp.getAddr() == allocaResult) {
-        // There's a store to __retval somewhere - not a phony return
-        return false;
-      }
-    }
-  }
-
-  // No stores to __retval anywhere - this is a phony return (uninitialized)
-  return true;
+  return returnOp.getIsImplicit();
 }
 
 //===----------------------------------------------------------------------===//
