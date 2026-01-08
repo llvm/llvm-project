@@ -8495,8 +8495,7 @@ public:
   }
   void Post(const parser::ImportStmt &x) {
     auto &[kind, names]{x.t};
-    if (kind == common::ImportKind::None ||
-        kind == common::ImportKind::Only) {
+    if (kind == common::ImportKind::None || kind == common::ImportKind::Only) {
       if (!nestedScopes_.front().importOnly.has_value()) {
         nestedScopes_.front().importOnly.emplace();
       }
