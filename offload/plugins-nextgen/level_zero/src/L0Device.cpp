@@ -537,26 +537,26 @@ Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
   return Plugin::success();
 }
 
-const char *L0DeviceTy::getArchCStr() const{
-  switch(getDeviceArch()){
-    case DeviceArchTy::DeviceArch_Gen:
-      return "Intel GPU Xe";
-    case DeviceArchTy::DeviceArch_XeLPG:
-      return "Intel GPU Xe LPG";
-    case DeviceArchTy::DeviceArch_XeHPC:
-      return "Intel GPU Xe HPC";
-    case DeviceArchTy::DeviceArch_XeHPG:
-      return "Intel GPU Xe HPG";
-    case DeviceArchTy::DeviceArch_Xe2LP:
-      return "Intel GPU Xe2 LP";
-    case DeviceArchTy::DeviceArch_Xe2HP:
-      return "Intel GPU Xe HP";
-    case DeviceArchTy::DeviceArch_x86_64:
-      return "Intel X86 64";
-    default:
-      return "Intel GPU Unknown";
+const char *L0DeviceTy::getArchCStr() const {
+  switch (getDeviceArch()) {
+  case DeviceArchTy::DeviceArch_Gen:
+    return "Intel GPU Xe";
+  case DeviceArchTy::DeviceArch_XeLPG:
+    return "Intel GPU Xe LPG";
+  case DeviceArchTy::DeviceArch_XeHPC:
+    return "Intel GPU Xe HPC";
+  case DeviceArchTy::DeviceArch_XeHPG:
+    return "Intel GPU Xe HPG";
+  case DeviceArchTy::DeviceArch_Xe2LP:
+    return "Intel GPU Xe2 LP";
+  case DeviceArchTy::DeviceArch_Xe2HP:
+    return "Intel GPU Xe HP";
+  case DeviceArchTy::DeviceArch_x86_64:
+    return "Intel X86 64";
+  default:
+    return "Intel GPU Unknown";
   }
- }
+}
 
 static const char *DriverVersionToStrTable[] = {
     "1.0", "1.1", "1.2", "1.3",  "1.4",  "1.5", "1.6",
