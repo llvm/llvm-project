@@ -1049,9 +1049,11 @@ TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   // Test Zca+Zcb+Zcmp+Zcmt implies Zce behavior.
 
   // RV32 Zca+Zcb+Zcmp+Zcmt without F implies Zce
-  auto MaybeRV32IZcaZcbZcmpZcmt = RISCVISAInfo::parseArchString("rv32i_zca_zcb_zcmp_zcmt", true);
+  auto MaybeRV32IZcaZcbZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv32i_zca_zcb_zcmp_zcmt", true);
   ASSERT_THAT_EXPECTED(MaybeRV32IZcaZcbZcmpZcmt, Succeeded());
-  const auto &ExtsRV32IZcaZcbZcmpZcmt = (*MaybeRV32IZcaZcbZcmpZcmt)->getExtensions();
+  const auto &ExtsRV32IZcaZcbZcmpZcmt =
+      (*MaybeRV32IZcaZcbZcmpZcmt)->getExtensions();
   EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.size(), 8UL);
   EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("i"), 1U);
   EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("c"), 1U);
@@ -1063,9 +1065,11 @@ TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("zcmt"), 1U);
 
   // RV32 Zca+Zcb+Zcmp+Zcmt with Zcf implies Zce
-  auto MaybeRV32IZcaZcbZcfZcmpZcmt = RISCVISAInfo::parseArchString("rv32i_zca_zcb_zcf_zcmp_zcmt", true);
+  auto MaybeRV32IZcaZcbZcfZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv32i_zca_zcb_zcf_zcmp_zcmt", true);
   ASSERT_THAT_EXPECTED(MaybeRV32IZcaZcbZcfZcmpZcmt, Succeeded());
-  const auto &ExtsRV32IZcaZcbZcfZcmpZcmt = (*MaybeRV32IZcaZcbZcfZcmpZcmt)->getExtensions();
+  const auto &ExtsRV32IZcaZcbZcfZcmpZcmt =
+      (*MaybeRV32IZcaZcbZcfZcmpZcmt)->getExtensions();
   EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.size(), 10UL);
   EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("i"), 1U);
   EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("f"), 1U);
@@ -1079,9 +1083,11 @@ TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("zcmt"), 1U);
 
   // RV32 with F but not Zcf, does not imply Zce
-  auto MaybeRV32IFZcaZcbZcmpZcmt = RISCVISAInfo::parseArchString("rv32if_zca_zcb_zcmp_zcmt", true);
+  auto MaybeRV32IFZcaZcbZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv32if_zca_zcb_zcmp_zcmt", true);
   ASSERT_THAT_EXPECTED(MaybeRV32IFZcaZcbZcmpZcmt, Succeeded());
-  const auto &ExtsRV32IFZcaZcbZcfZcmpZcmt = (*MaybeRV32IFZcaZcbZcmpZcmt)->getExtensions();
+  const auto &ExtsRV32IFZcaZcbZcfZcmpZcmt =
+      (*MaybeRV32IFZcaZcbZcmpZcmt)->getExtensions();
   EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.size(), 7UL);
   EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("i"), 1U);
   EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("f"), 1U);
@@ -1092,9 +1098,11 @@ TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("zcmt"), 1U);
 
   // RV64 Zca+Zcb+Zcmp+Zcmt without F implies Zce
-  auto MaybeRV64IZcaZcbZcmpZcmt = RISCVISAInfo::parseArchString("rv64i_zca_zcb_zcmp_zcmt", true);
+  auto MaybeRV64IZcaZcbZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv64i_zca_zcb_zcmp_zcmt", true);
   ASSERT_THAT_EXPECTED(MaybeRV64IZcaZcbZcmpZcmt, Succeeded());
-  const auto &ExtsRV64IZcaZcbZcmpZcmt = (*MaybeRV64IZcaZcbZcmpZcmt)->getExtensions();
+  const auto &ExtsRV64IZcaZcbZcmpZcmt =
+      (*MaybeRV64IZcaZcbZcmpZcmt)->getExtensions();
   EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.size(), 8UL);
   EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("i"), 1U);
   EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("c"), 1U);
@@ -1106,9 +1114,11 @@ TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("zcmt"), 1U);
 
   // RV64 Zca+Zcb+Zcmp+Zcmt with F implies Zce
-  auto MaybeRV64IFZcaZcbZcmpZcmt = RISCVISAInfo::parseArchString("rv64if_zca_zcb_zcmp_zcmt", true);
+  auto MaybeRV64IFZcaZcbZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv64if_zca_zcb_zcmp_zcmt", true);
   ASSERT_THAT_EXPECTED(MaybeRV64IFZcaZcbZcmpZcmt, Succeeded());
-  const auto &ExtsRV64IFZcaZcbZcmpZcmt = (*MaybeRV64IFZcaZcbZcmpZcmt)->getExtensions();
+  const auto &ExtsRV64IFZcaZcbZcmpZcmt =
+      (*MaybeRV64IFZcaZcbZcmpZcmt)->getExtensions();
   EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.size(), 9UL);
   EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("i"), 1U);
   EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("f"), 1U);

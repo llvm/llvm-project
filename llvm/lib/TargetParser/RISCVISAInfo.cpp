@@ -906,7 +906,7 @@ void RISCVISAInfo::updateImplication() {
     }
   }
 
-  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb")  &&
+  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb") &&
       Exts.count("zcmp") && Exts.count("zcmt")) {
     bool ShouldAddZce = false;
     if (XLen == 32) {
