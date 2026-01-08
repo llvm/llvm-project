@@ -173,7 +173,17 @@ namespace std {
 #  if _LIBCPP_STD_VER >= 23
 #    include <__stacktrace/basic_stacktrace.h>
 #    include <__stacktrace/stacktrace_entry.h>
-#    include <compare> // per [stacktrace.syn]
+// standard-mandated includes
+
+// [iterator.range]
+#    include <__iterator/access.h>
+#    include <__iterator/data.h>
+#    include <__iterator/empty.h>
+#    include <__iterator/reverse_access.h>
+#    include <__iterator/size.h>
+
+// [stacktrace.syn]
+#    include <compare>
 #  endif
 
 #  include <version>
