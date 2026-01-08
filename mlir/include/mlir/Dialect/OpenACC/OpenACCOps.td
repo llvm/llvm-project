@@ -1685,6 +1685,7 @@ def OpenACC_ParallelOp
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "parallel construct";
@@ -1885,6 +1886,7 @@ def OpenACC_SerialOp
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "serial construct";
@@ -2025,6 +2027,7 @@ def OpenACC_KernelsOp
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "kernels construct";
