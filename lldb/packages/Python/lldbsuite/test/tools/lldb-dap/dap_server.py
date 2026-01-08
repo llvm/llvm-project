@@ -46,7 +46,8 @@ DEFAULT_TIMEOUT: Final[float] = 50 * (10 if ("ASAN_OPTIONS" in os.environ) else 
 class SpawnHelperCallback(Protocol):
     def __call__(
         self, executable: str, args: List[str], extra_env: List[str], **kwargs
-    ) -> subprocess.Popen: ...
+    ) -> subprocess.Popen: 
+        ...
 
 
 ## DAP type references
