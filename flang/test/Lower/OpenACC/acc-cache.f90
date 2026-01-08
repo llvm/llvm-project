@@ -99,15 +99,20 @@ subroutine test_cache_2d_array()
   end do
 
 ! CHECK: acc.loop
-! Dimension 1: lowerbound = 1-1 = 0, extent = 5-1+1 = 5
-! CHECK: arith.constant 1 : index
-! CHECK: arith.constant 5 : index
+! CHECK-DAG: arith.constant 1 : index
+! CHECK-DAG: arith.constant 5 : index
+! Dimension 1: lowerbound = 1-1 = 0, extent = 5-0+1 = 5
+! CHECK: %[[LB1:.*]] = arith.subi %{{.*}}, %{{.*}} : index
 ! CHECK: arith.subi
-! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
-! Dimension 2: lowerbound = 1-1 = 0, extent = 5-1+1 = 5
-! CHECK: arith.constant 5 : index
 ! CHECK: arith.subi
-! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: arith.addi
+! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB1]] : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! Dimension 2: lowerbound = 1-1 = 0, extent = 5-0+1 = 5
+! CHECK: %[[LB2:.*]] = arith.subi %{{.*}}, %{{.*}} : index
+! CHECK: arith.subi
+! CHECK: arith.subi
+! CHECK: arith.addi
+! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {{{.*}}name = "b
 ! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_2d_arrayEb"}
 end subroutine
@@ -126,12 +131,101 @@ subroutine test_cache_loop_var()
   end do
 
 ! CHECK: acc.loop
-! CHECK: fir.load
-! CHECK: fir.convert
-! CHECK: fir.load
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
+! b(i:i+2): lowerbound = i-1, extent = (i+2)-(i)+1 = 3
+! CHECK: fir.convert %{{.*}} : (i64) -> index
 ! CHECK: arith.addi
-! CHECK: fir.convert
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: fir.convert %{{.*}} : (i64) -> index
+! CHECK: %[[LB:.*]] = arith.subi %{{.*}}, %[[C1]] : index
+! CHECK: %[[UB:.*]] = arith.subi %{{.*}}, %[[C1]] : index
+! CHECK: %[[TMP:.*]] = arith.subi %[[UB]], %[[LB]] : index
+! CHECK: %[[EXT:.*]] = arith.addi %[[TMP]], %[[C1]] : index
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
 ! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_loop_varEb"}
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_2d_loop_vars()
+! Test 2D cache with swapped loop variables inside nested loop: b(j:j+1, i:i+1)
+subroutine test_cache_2d_loop_vars()
+  integer, parameter :: n = 10
+  real, dimension(n, n) :: a, b
+  integer :: i, j
+
+  !$acc loop
+  do i = 1, n-1
+    do j = 1, n-1
+      !$acc cache(b(j:j+1, i:i+1))
+      a(i,j) = b(j,i) + b(j+1,i+1)
+    end do
+  end do
+
+! CHECK: acc.loop
+! The cache is generated inside fir.do_loop (the inner j loop)
+! CHECK: fir.do_loop
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
+! Dimension 1: j to j+1, extent = 2
+! CHECK: %[[LB1:.*]] = arith.subi %{{.*}}, %[[C1]] : index
+! CHECK: arith.subi
+! CHECK: arith.subi
+! CHECK: arith.addi
+! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB1]] : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! Dimension 2: i to i+1, extent = 2
+! CHECK: %[[LB2:.*]] = arith.subi %{{.*}}, %[[C1]] : index
+! CHECK: arith.subi
+! CHECK: arith.subi
+! CHECK: arith.addi
+! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {{{.*}}name = "b
+! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_2d_loop_varsEb"}
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_single_element()
+! Test cache with single element access: b(i)
+subroutine test_cache_single_element()
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+  integer :: i
+
+  !$acc loop
+  do i = 1, n
+    !$acc cache(b(i))
+    a(i) = b(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
+! Single element b(i): lowerbound = i-1, extent = 1
+! CHECK: %[[I_IDX:.*]] = fir.convert %{{.*}} : (i64) -> index
+! CHECK: %[[LB:.*]] = arith.subi %[[I_IDX]], %[[C1]] : index
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[C1]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
+! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_single_elementEb"}
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_mixed_bounds()
+! Test cache with mixed constant and variable bounds: b(1:i)
+subroutine test_cache_mixed_bounds()
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+  integer :: i
+
+  !$acc loop
+  do i = 1, n
+    !$acc cache(b(1:i))
+    a(i) = b(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: arith.constant 1 : index
+! CHECK: arith.constant 1 : index
+! b(1:i): lowerbound = 1-1 = 0, extent = (i-1) - 0 + 1 = i
+! CHECK: fir.convert %{{.*}} : (i64) -> index
+! CHECK: %[[LB:.*]] = arith.subi %{{.*}}, %{{.*}} : index
+! CHECK: %[[UB:.*]] = arith.subi %{{.*}}, %{{.*}} : index
+! CHECK: %[[TMP:.*]] = arith.subi %[[UB]], %[[LB]] : index
+! CHECK: %[[EXT:.*]] = arith.addi %[[TMP]], %{{.*}} : index
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
+! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_mixed_boundsEb"}
 end subroutine

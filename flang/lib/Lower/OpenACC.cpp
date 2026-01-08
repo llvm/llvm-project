@@ -4953,15 +4953,10 @@ genACC(Fortran::lower::AbstractConverter &converter,
        const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  // Find enclosing acc.loop
+  // Verify we're inside an acc.loop region.
   auto loopOp = builder.getRegion().getParentOfType<mlir::acc::LoopOp>();
   if (!loopOp)
     return;
-
-  // Set insertion point before terminator (after loop variable setup)
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::Block &loopBody = loopOp.getRegion().front();
-  builder.setInsertionPoint(loopBody.getTerminator());
 
   const auto &objectListWithModifier =
       std::get<Fortran::parser::AccObjectListWithModifier>(cacheConstruct.t);
