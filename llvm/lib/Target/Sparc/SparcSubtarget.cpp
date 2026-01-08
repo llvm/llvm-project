@@ -40,8 +40,8 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
   // Parse features string.
   ParseSubtargetFeatures(CPUName, TuneCPU, FS);
 
-  FeatureBitset Features = getFeatureBits();
   if (!Is64Bit && TT.isSPARC64()) {
+    FeatureBitset Features = getFeatureBits();
     setFeatureBits(Features.set(Sparc::Feature64Bit));
     Is64Bit = true;
   }
