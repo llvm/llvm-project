@@ -979,10 +979,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
   addRulesForGOpcs({G_FLDEXP}, Standard)
-      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}})
-      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr32}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
 
