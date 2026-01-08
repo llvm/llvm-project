@@ -286,14 +286,13 @@ define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i16> @llvm.stepvector.nxv2i16()
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <vscale x 2 x i16> [[TMP7]], splat (i16 4)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i16> zeroinitializer, [[TMP8]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i16> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i16> [ [[TMP8]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 256, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i16
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i16 4, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shl i16 [[TMP10]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i16> poison, i16 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext <vscale x 2 x i16> [[VEC_IND]] to <vscale x 2 x i64>
