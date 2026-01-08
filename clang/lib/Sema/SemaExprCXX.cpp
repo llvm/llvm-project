@@ -644,8 +644,10 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   }
 
   // Find the std::type_info type.
-  if (!getStdNamespace())
-    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+  if (!getStdNamespace()) {
+    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                     << (getLangOpts().CPlusPlus20 ? 1 : 0));
+  }
 
   if (!CXXTypeInfoDecl) {
     IdentifierInfo *TypeInfoII = &PP.getIdentifierTable().get("type_info");
@@ -659,7 +661,8 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
       CXXTypeInfoDecl = R.getAsSingle<RecordDecl>();
     }
     if (!CXXTypeInfoDecl)
-      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                       << (getLangOpts().CPlusPlus20 ? 1 : 0));
   }
 
   if (!getLangOpts().RTTI) {
@@ -5212,6 +5215,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_HLSL_Vector_Truncation:
   case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
+  case ICK_HLSL_Matrix_Splat:
     llvm_unreachable("Improper second standard conversion");
   }
 
@@ -5229,6 +5233,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       From = ImpCastExprToType(Elem, ToType, CK_VectorSplat, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
+      break;
+    }
+    case ICK_HLSL_Matrix_Splat: {
+      // Matrix splat from any arithmetic type to a matrix.
+      Expr *Elem = prepareMatrixSplat(ToType, From).get();
+      From =
+          ImpCastExprToType(Elem, ToType, CK_HLSLAggregateSplatCast, VK_PRValue,
+                            /*BasePath=*/nullptr, CCK)
+              .get();
       break;
     }
     case ICK_HLSL_Vector_Truncation: {
@@ -7955,7 +7968,9 @@ concepts::Requirement *Sema::ActOnNestedRequirement(Expr *Constraint) {
 concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
+  LocalInstantiationScope Scope(*this);
   if (!Constraint->isInstantiationDependent() &&
+      !Constraint->isValueDependent() &&
       CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))

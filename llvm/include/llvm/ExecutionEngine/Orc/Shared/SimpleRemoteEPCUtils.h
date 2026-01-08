@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
@@ -50,8 +51,6 @@ struct SimpleRemoteEPCExecutorInfo {
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
-using SimpleRemoteEPCArgBytesVector = SmallVector<char, 128>;
-
 class LLVM_ABI SimpleRemoteEPCTransportClient {
 public:
   enum HandleMessageAction { ContinueSession, EndSession };
@@ -65,7 +64,7 @@ public:
   /// otherwise.
   virtual Expected<HandleMessageAction>
   handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
-                SimpleRemoteEPCArgBytesVector ArgBytes) = 0;
+                shared::WrapperFunctionBuffer ArgBytes) = 0;
 
   /// Handle a disconnection from the underlying transport. No further messages
   /// should be sent to handleMessage after this is called.

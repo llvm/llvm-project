@@ -1807,6 +1807,51 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
   return NewBinop;
 }
 
+static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
+  Value *Arg0 = II->getArgOperand(0);
+  auto *ShiftConst = dyn_cast<Constant>(II->getArgOperand(1));
+  if (!ShiftConst)
+    return nullptr;
+
+  int ElemBits = Arg0->getType()->getScalarSizeInBits();
+  bool AllPositive = true;
+  bool AllNegative = true;
+
+  auto Check = [&](Constant *C) -> bool {
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(C)) {
+      const APInt &V = CI->getValue();
+      if (V.isNonNegative()) {
+        AllNegative = false;
+        return AllPositive && V.ult(ElemBits);
+      }
+      AllPositive = false;
+      return AllNegative && V.sgt(-ElemBits);
+    }
+    return false;
+  };
+
+  if (auto *VTy = dyn_cast<FixedVectorType>(Arg0->getType())) {
+    for (unsigned I = 0, E = VTy->getNumElements(); I < E; ++I) {
+      if (!Check(ShiftConst->getAggregateElement(I)))
+        return nullptr;
+    }
+
+  } else if (!Check(ShiftConst))
+    return nullptr;
+
+  IRBuilderBase &B = IC.Builder;
+  if (AllPositive)
+    return IC.replaceInstUsesWith(*II, B.CreateShl(Arg0, ShiftConst));
+
+  Value *NegAmt = B.CreateNeg(ShiftConst);
+  Intrinsic::ID IID = II->getIntrinsicID();
+  const bool IsSigned =
+      IID == Intrinsic::arm_neon_vshifts || IID == Intrinsic::aarch64_neon_sshl;
+  Value *Result =
+      IsSigned ? B.CreateAShr(Arg0, NegAmt) : B.CreateLShr(Arg0, NegAmt);
+  return IC.replaceInstUsesWith(*II, Result);
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -3338,6 +3383,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::arm_neon_vshifts:
+  case Intrinsic::arm_neon_vshiftu:
+  case Intrinsic::aarch64_neon_sshl:
+  case Intrinsic::aarch64_neon_ushl:
+    return foldNeonShift(II, *this);
   case Intrinsic::hexagon_V6_vandvrt:
   case Intrinsic::hexagon_V6_vandvrt_128B: {
     // Simplify Q -> V -> Q conversion.
@@ -4164,7 +4214,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     for (Value *Op : II->args()) {
       if (auto *Sel = dyn_cast<SelectInst>(Op)) {
         bool IsVectorCond = Sel->getCondition()->getType()->isVectorTy();
-        if (IsVectorCond && !isNotCrossLaneOperation(II))
+        if (IsVectorCond &&
+            (!isNotCrossLaneOperation(II) || !II->getType()->isVectorTy()))
           continue;
         // Don't replace a scalar select with a more expensive vector select if
         // we can't simplify both arms of the select.

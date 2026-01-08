@@ -640,6 +640,7 @@ private:
   void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
+  void WriteRISCVIntrinsicPragmas(Sema &SemaRef);
 
   unsigned DeclParmVarAbbrev = 0;
   unsigned DeclContextLexicalAbbrev = 0;

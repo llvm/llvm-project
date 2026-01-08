@@ -196,6 +196,14 @@
     __attribute__((availability(bridgeos, strict, introduced = 6.0)))                                             \
     __attribute__((availability(driverkit, strict, introduced = 21.3)))
 
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__  < 101300) || \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 150000) || \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)     && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__     < 150000) || \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__  < 70000)  || \
+      (defined(__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__ < 190000)
+#  warning "The selected platform is no longer supported by libc++."
+#  endif
+
 #else
 
 // ...New vendors can add availability markup here...

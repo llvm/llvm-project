@@ -60,7 +60,7 @@ static std::pair<std::size_t, bool> countCaseLabels(const SwitchStmt *Switch) {
     CurrentCase = CurrentCase->getNextSwitchCase();
   }
 
-  return std::make_pair(CaseCount, HasDefault);
+  return {CaseCount, HasDefault};
 }
 
 /// This function calculate 2 ** Bits and returns

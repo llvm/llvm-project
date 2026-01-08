@@ -99,7 +99,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 define void @stride3(half %k, i32 %width_) {
 entry:
 
-; CHECK: LV: Found an estimated cost of 18 for VF 32 For instruction:   %0 = load half
+; CHECK: LV: Found an estimated cost of 18 for VF 32 For instruction: %0 = load half, ptr %arrayidx, align 4
 
   %cmp27 = icmp sgt i32 %width_, 0
   br i1 %cmp27, label %for.body.lr.ph, label %for.cond.cleanup
