@@ -8,20 +8,24 @@
 ; RUN: llvm-profdata merge --memprof-version=4 memprof-no-dap.yaml -o memprof-no-dap.profdata
 
 ;; Run optimizer pass on an IR module without IR functions, and test that global
-;; variables in the module could be annotated (i.e., no early return),
-; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
+;; variables in the module could be annotated even if there are no IR functions
+;; in the module.
+; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-type=readwrite \
+; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR,STAT
+
+; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-type=readwrite \
 ; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR,STAT
 
 ;; Run optimizer pass on the IR, and check the section prefix.
-; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
+; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-type=readwrite \
 ; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR,STAT
 
 ;; Run memprof without providing memprof data. Test that IR has module flag
 ;; `EnableDataAccessProf` as 0.
-; RUN: opt -passes='memprof-use<profile-filename=memprof-no-dap.profdata>' -memprof-annotate-static-data-prefix \
+; RUN: opt -passes='memprof-use<profile-filename=memprof-no-dap.profdata>' -memprof-annotate-static-data-type=readwrite \
 ; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefix=FLAG
 
-;; Run memprof without explicitly setting -memprof-annotate-static-data-prefix.
+;; Run memprof without explicitly setting -memprof-annotate-static-data-type.
 ;; The output text IR shouldn't have `section_prefix` or EnableDataAccessProf module flag.
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' \
 ; RUN: -debug-only=memprof -stats -S input.ll -o - | FileCheck %s --check-prefix=FLAGLESS --implicit-check-not="section_prefix"
@@ -114,7 +118,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @.str = unnamed_addr constant [5 x i8] c"abcde"
 @var1 = global i32 123
-@var2.llvm.125 = global i64 0 
+@var2.llvm.125 = global i64 0
 @bar = global i16 3
 @foo = global i8 2
 @var3 = constant [2 x i32][i32 12345, i32 6789], section "sec1"
