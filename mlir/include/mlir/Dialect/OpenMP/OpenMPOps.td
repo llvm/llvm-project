@@ -948,7 +948,6 @@ def TaskOp
 def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
     DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
     DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
