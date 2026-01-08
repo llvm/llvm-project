@@ -1724,15 +1724,23 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VPFunnelShift(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
   unsigned Opcode = N->getOpcode();
-  SDValue X = ZExtPromotedInteger(N->getOperand(0));
-  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
 
   SDLoc DL(N);
   EVT OldVT = N->getOperand(0).getValueType();
-  EVT VT = X.getValueType();
+  EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), OldVT);
 
-  if (Opcode == ISD::CLMUL)
+  if (Opcode == ISD::CLMUL) {
+    if (!TLI.isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT)) {
+      if (SDValue Res = TLI.expandCLMUL(N, DAG))
+        return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
+    }
+    SDValue X = GetPromotedInteger(N->getOperand(0));
+    SDValue Y = GetPromotedInteger(N->getOperand(1));
     return DAG.getNode(ISD::CLMUL, DL, VT, X, Y);
+  }
+
+  SDValue X = ZExtPromotedInteger(N->getOperand(0));
+  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
 
   unsigned OldBits = OldVT.getScalarSizeInBits();
   unsigned NewBits = VT.getScalarSizeInBits();
