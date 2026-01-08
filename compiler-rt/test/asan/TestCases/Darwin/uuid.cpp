@@ -5,7 +5,7 @@
 // RUN: %env_asan_opts=print_module_map=2:halt_on_error=0     %run %t 2>&1 | FileCheck %s
 
 // We can't run system("otool") in the simulator.
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 
 #include <stdio.h>
 #include <stdlib.h>

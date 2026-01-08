@@ -8,7 +8,7 @@
 // REQUIRES: asan-64-bits
 
 // Path returned by `which atos` is invalid on iOS.
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 
 #include <stdlib.h>
 #include <string.h>
